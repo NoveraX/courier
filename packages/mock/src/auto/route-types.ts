@@ -1,5 +1,6 @@
 import type { Transport } from "@noverax/courier";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { ChannelShape } from "../server/prefix-route-types";
 
 /**
  * Type definitions for route analysis.
@@ -39,6 +40,8 @@ export interface RouteInfo {
   transport?: Transport;
   /** True for WS bidirectional channel endpoints (have a `receive` schema) */
   isChannel?: boolean;
+  /** For a WS endpoint: what the proxy's WebSocket route checks a subscription against */
+  channel?: ChannelShape;
 }
 
 export type CrudOperation =
@@ -60,4 +63,6 @@ export interface SchemaMetadata {
   transport?: Transport;
   /** WS receive schema — present means bidirectional channel, absent means push-only */
   receive?: StandardSchemaV1;
+  /** Set when the channel declares what it receives, with or without a schema */
+  bidirectional?: true;
 }

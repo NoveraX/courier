@@ -6,12 +6,12 @@ import type { WebSocketServer as WSServerType } from "ws";
 import type { MockRegistry } from "../../registry";
 import type { MockHistoryEntry } from "../../types";
 import type { PrefixMapping } from "../prefix-routes";
-
-import { activateConnection, type WSRequestHooks } from "./connection-handler";
+import { acceptProxySocket, PROXY_WS_PATH } from "../proxy-ws";
+import type { RequestHooks } from "../route-types";
+import { activateConnection } from "./connection-handler";
 import { WSConnectionRegistry } from "./connection-registry";
-import { isOriginAllowed, resolveWSRoute } from "./route-resolver";
+import { isOriginAllowed, requestPath, resolveWSRoute } from "./route-resolver";
 
-export type { WSRequestHooks } from "./connection-handler";
 export { WSConnectionRegistry } from "./connection-registry";
 
 /** Default maximum WebSocket payload — 1 MiB. Override per server via config. */
@@ -25,8 +25,8 @@ export interface WSHandlerConfig {
   mappings: PrefixMapping[];
   /** Request history (shared with HTTP routes) */
   history: MockHistoryEntry[];
-  /** Optional studio hooks */
-  hooks?: WSRequestHooks;
+  /** Told of each channel subscription as it opens and ends — Studio's mock logs */
+  hooks?: RequestHooks;
   /** Get current scenario state */
   getScenarioState: () => string;
   /**
@@ -39,23 +39,6 @@ export interface WSHandlerConfig {
   maxPayload?: number;
 }
 
-/**
- * Create a WS upgrade handler for the mock server.
- *
- * Attaches to a Node.js HTTP server's "upgrade" event and routes incoming
- * connections to mock channel handlers via path → registry lookup.
- *
- * Path pattern: `/{groupPrefix}/{declared path}` (matches `buildDirectWSUrl`).
- * Protocol: subset of Courier WS protocol — `subscribe` (auto-fired by client
- * on connect), `message` (client→server), `data` (server→client),
- * `unsubscribe`, `ping`/`pong`.
- *
- * Each connection routes to exactly one channel handler. Broadcasts use
- * an in-memory per-topic registry to fan out to other connections.
- *
- * Returns an async upgrade handler. The first call lazy-loads the `ws`
- * package so users who don't mock any WS endpoints don't pay the cost.
- */
 /** What `createMockWSHandler` hands the server: the upgrade route, and its shutdown */
 export interface MockWSHandler {
   /** Accept an HTTP upgrade onto a mock channel, or refuse it */
@@ -70,8 +53,28 @@ export interface MockWSHandler {
 
 const CLOSE_GRACE_MS = 1000;
 
+/**
+ * Create a WS upgrade handler for the mock server. Two routes upgrade:
+ *
+ * - `/api/ws`, where a Courier proxy serves its channels: one socket carries
+ *   every subscription a proxy caller makes, each by its topic.
+ * - A channel's declared path under its group, `/{groupPrefix}/{path}`, where
+ *   a direct caller connects (matches `buildDirectWSUrl`): one channel a socket.
+ *
+ * Both speak the Courier WS protocol, and a channel's broadcasts reach every
+ * subscriber to its topic on either. The first upgrade loads the `ws`
+ * package, so a server that serves no channel never loads it.
+ */
 export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
   const connections = new WSConnectionRegistry();
+  const proxyConfig = {
+    registry: config.registry,
+    mappings: config.mappings,
+    history: config.history,
+    getScenarioState: config.getScenarioState,
+    connections,
+    hooks: config.hooks,
+  };
   const maxPayload = config.maxPayload ?? DEFAULT_MAX_PAYLOAD;
 
   // Lazy-load the `ws` package once on first upgrade — cached for the
@@ -112,6 +115,10 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
     }
 
     const url = req.url ?? "";
+    if (requestPath(url) === PROXY_WS_PATH) {
+      await upgradeProxy(req, socket, head);
+      return;
+    }
     const route = resolveWSRoute(url, config.mappings);
     if (!route) {
       reject(socket, 404);
@@ -143,6 +150,12 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
         scenarioState: config.getScenarioState(),
       });
     });
+  }
+
+  async function upgradeProxy(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
+    const wss = await loadWSServer();
+    if (!wss) return reject(socket, 500);
+    acceptProxySocket(wss, { req, socket, head }, proxyConfig);
   }
 
   return { handleUpgrade, close };

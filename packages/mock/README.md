@@ -91,6 +91,29 @@ export default defineMocks({
 - `overrides` and `scenarios` are checked against `source`: `mock` takes the source's group and endpoint names and each endpoint's response type. Write a scenario with `defineScenario<typeof api>(...)` to have it checked the same way; one without the type argument fits every mock. An endpoint declared outside any group is mocked under the collection its path starts with, `mock("users", "listUsers")`, which is not checked.
 - Editing `courier.mocks.ts`, or a module it imports, restarts a running mock whose declaration changed, or something that declaration uses — a declaration beside it, an import and every module that import reaches, a statement of the file that declares nothing. The other mocks keep running, with their records: adding a mock does not restart the ones already running. A mocks file whose mocks Studio cannot tell apart — its keys spread in or computed, or a CommonJS file — restarts every running mock on each edit. `autoStart` applies when Studio first reads the definition, or when an edit turns it on — not again after you stop the mock.
 
+### A proxy caller pointed at the mock
+
+A mock stands in for the API itself, where a direct caller goes, and also for a Courier proxy, where a proxy caller goes. It serves the proxy's three routes:
+
+| Route | For | As a Courier proxy serves it |
+| --- | --- | --- |
+| `GET`/`POST /api/request` | an HTTP call | the endpoint named by `_s`, `_g` and `_m` in the query; a read's variables in `_v`, a write's in the JSON or form body |
+| `GET /api/sse` | a stream | the stream's events, the variables in `_v` |
+| `/api/ws` (WebSocket) | a channel | every channel a caller subscribes to, on one socket, each by its topic |
+
+```ts
+import { createProxyCaller } from "@noverax/courier"
+import { api as source } from "./src/api"
+
+const mock = "http://localhost:7001"
+const api = createProxyCaller("api", {
+  source,
+  proxyPath: { http: `${mock}/api/request`, sse: `${mock}/api/sse`, ws: "ws://localhost:7001/api/ws" },
+})
+```
+
+On `/api/ws` a subscription goes as it does on a Courier server. The variables are checked against the channel's schema, and a subscription that fails them ends with code 4422. Its topic is keyed as the channel's `.topic()` says, with a `renamed` frame first when that differs from the topic asked for, so subscribers who share a key share the channel's broadcasts. Each message is checked against what the channel `.send()`s, and one that fails is refused with 4422 while the subscription goes on. A channel that is not mocked ends with 4404, naming it and the scenario state. `ctx.close()` ends that one subscription and leaves the socket's others open. A mock built without a source checks nothing and keys each topic by its variables. Studio's mock logs show each subscription as it opens and ends.
+
 <br />
 
 ## Test utilities

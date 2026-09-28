@@ -3,7 +3,7 @@ import { type ChannelHandlers, describeFailure } from "@noverax/courier/realtime
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { MockChannelFn, MockHistoryEntry, MockRequestContext } from "../../types";
-
+import type { RequestHooks } from "../route-types";
 import { buildChannelContext, refuseOnSubscribe } from "./channel-context";
 import type { WSConnectionRegistry } from "./connection-registry";
 import {
@@ -13,13 +13,7 @@ import {
   parseMessage,
 } from "./message-router";
 import { generateConnectionId } from "./protocol";
-import { parseVariablesFromUrl, type WSRoute } from "./route-resolver";
-
-/** Hooks for emitting WS lifecycle events to Studio (set by the worker Studio runs a mock in) */
-export interface WSRequestHooks {
-  onConnect?(connectionId: string, group: string, method: string): void;
-  onDisconnect?(connectionId: string): void;
-}
+import { parseVariablesFromUrl, requestPath, type WSRoute } from "./route-resolver";
 
 /** Per-connection activation parameters */
 export interface ActivateConnectionParams {
@@ -28,7 +22,8 @@ export interface ActivateConnectionParams {
   channelFn: MockChannelFn;
   url: string;
   history: MockHistoryEntry[];
-  hooks?: WSRequestHooks;
+  /** Told of the channel as it opens and ends — Studio's mock logs */
+  hooks?: RequestHooks;
   registry: WSConnectionRegistry;
   scenarioState: string;
 }
@@ -60,7 +55,12 @@ export function activateConnection(params: ActivateConnectionParams): void {
     channel: true,
   };
   history.push(historyEntry);
-  hooks?.onConnect?.(connectionId, route.group, route.method);
+  const path = requestPath(url) ?? url;
+  hooks?.onStart?.(connectionId, "GET", path, route.group, route.method, variables);
+  const ended = (): number => {
+    historyEntry.duration = performance.now() - startedAt;
+    return historyEntry.duration;
+  };
 
   // Build user channel handlers — failures here are fatal for the connection
   let handlers: ChannelHandlers<unknown, unknown>;
@@ -74,10 +74,11 @@ export function activateConnection(params: ActivateConnectionParams): void {
     handlers = channelFn(ctx);
   } catch (err) {
     logger.warn("MockWS", `channelFn threw (${connectionId})`, err);
-    refuseOnSubscribe(ws, topic, describeFailure(err, "Subscription failed"));
+    const failure = describeFailure(err, "Subscription failed");
+    refuseOnSubscribe(ws, topic, failure);
     ws.on("close", () => {
-      historyEntry.duration = performance.now() - startedAt;
-      hooks?.onDisconnect?.(connectionId);
+      const duration = ended();
+      hooks?.onError?.(connectionId, failure.code, failure.message, duration);
     });
     return;
   }
@@ -99,8 +100,8 @@ export function activateConnection(params: ActivateConnectionParams): void {
 
   ws.on("close", async () => {
     await callOnLeaveOnce(state, handlers, channelCtx, registry, ws);
-    historyEntry.duration = performance.now() - startedAt;
-    hooks?.onDisconnect?.(connectionId);
+    const duration = ended();
+    hooks?.onEnd?.(connectionId, 101, undefined, duration, 0, scenarioState);
   });
 
   ws.on("error", (err: Error) => {

@@ -44,6 +44,7 @@ export function buildPrefixMappings(
       httpMethod: route.httpMethod,
       transport: route.transport,
       isChannel: route.isChannel,
+      ...(route.channel && { channel: route.channel }),
     };
     const existing = byGroup.get(route.group);
     if (existing) {

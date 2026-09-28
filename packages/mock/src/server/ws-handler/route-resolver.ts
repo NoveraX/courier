@@ -22,7 +22,7 @@ export interface WSRoute {
  * Returns null when no mapping matches the path.
  */
 export function resolveWSRoute(url: string, mappings: PrefixMapping[]): WSRoute | null {
-  const pathname = parsePathname(url);
+  const pathname = requestPath(url);
   if (pathname == null) return null;
 
   for (const mapping of mappings) {
@@ -90,6 +90,16 @@ export function isOriginAllowed(
   return allowlist.includes(origin);
 }
 
-function parsePathname(url: string): string | null {
+/**
+ * The path an upgrade request asks for, without its query.
+ *
+ * @param url - The request's URL, as `req.url` gives it
+ * @returns The path, or `null` for a URL that cannot be read
+ * @example
+ * ```ts
+ * requestPath("/api/ws?token=abc"); // → "/api/ws"
+ * ```
+ */
+export function requestPath(url: string): string | null {
   return URL.canParse(url, "http://localhost") ? new URL(url, "http://localhost").pathname : null;
 }

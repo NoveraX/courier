@@ -42,9 +42,6 @@ export function createServerLifecycle(
     async start() {
       const { serve } = await import("@hono/node-server");
 
-      // WS upgrade handler — only attached when prefix mappings exist (i.e.
-      // the server has any routable WS endpoints). Avoids importing `ws`
-      // when the user only mocks HTTP/SSE.
       wsUpgrade = createWSUpgrade(ws);
 
       const onServer = (nodeServer: ServerType) => {

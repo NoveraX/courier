@@ -2,6 +2,7 @@
  * OpenAPI 3.x specification parser.
  */
 
+import { componentIdentifier } from "./component-identifier";
 import { isOperationKey, isSupportedMethod } from "./http-methods";
 import { buildGroups } from "./openapi-groups";
 import { parseOpenApi3Operation } from "./parse-openapi3-operation";
@@ -14,7 +15,6 @@ import {
   specText,
   stripHtml,
   stripHtmlPreserveNewlines,
-  toSafeIdentifier,
 } from "./utils";
 
 export function parseOpenApi3(spec: SpecNode): ParsedSpec {
@@ -50,16 +50,8 @@ function parseSchemas(spec: SpecNode): Record<string, ReturnType<typeof convertS
   if (!declared) return schemas;
 
   for (const [name, schema] of Object.entries(declared)) {
-    /* Two spec names can normalise to one identifier — `user-id` and `user.id`
-       both become `UserId`. Dropping the second lost a definition every
-       reference to it still named. */
-    let safeName = toSafeIdentifier(name);
-    if (schemas[safeName]) {
-      let n = 2;
-      while (schemas[`${safeName}${n}`]) n += 1;
-      safeName = `${safeName}${n}`;
-    }
-    schemas[safeName] = convertSchema(safeName, asNode(schema), spec);
+    const identifier = componentIdentifier(spec, name);
+    schemas[identifier] = convertSchema(identifier, asNode(schema), spec);
   }
   return schemas;
 }

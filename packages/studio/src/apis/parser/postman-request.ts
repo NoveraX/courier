@@ -101,6 +101,27 @@ export function requestBody(body: SpecNode | undefined): ParsedSchema | null {
   return Object.keys(shape).length > 0 ? inferSchemaFromValue("RequestBody", shape) : null;
 }
 
+/** Media type of each body mode `requestBody` reads a shape from; a raw one only when it is JSON. */
+const MODE_MEDIA_TYPES: ReadonlyMap<unknown, string> = new Map([
+  ["raw", "application/json"],
+  ["urlencoded", "application/x-www-form-urlencoded"],
+  ["formdata", "multipart/form-data"],
+]);
+
+/**
+ * The media type a body is sent as.
+ *
+ * @param body - The request's body
+ * @returns The type its mode sends, or `undefined` for a mode with no shape to read
+ * @example
+ * ```ts
+ * requestBodyMediaType({ mode: "urlencoded", urlencoded: [] }); // → "application/x-www-form-urlencoded"
+ * ```
+ */
+export function requestBodyMediaType(body: SpecNode | undefined): string | undefined {
+  return MODE_MEDIA_TYPES.get(body?.mode);
+}
+
 /** The authentication scheme a collection or a request declares. */
 export function authScheme(auth: SpecNode | undefined): ParsedSecurityScheme | undefined {
   const type = auth?.type;

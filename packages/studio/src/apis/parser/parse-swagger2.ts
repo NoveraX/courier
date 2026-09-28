@@ -91,7 +91,7 @@ function convertBody(op: SpecNode, spec: SpecNode): void {
     if (typeof field.name !== "string") continue;
     properties[field.name] = {
       type: field.type === "file" ? "string" : (field.type ?? "string"),
-      ...(field.format && { format: field.format }),
+      ...(field.type === "file" ? { format: "binary" } : field.format && { format: field.format }),
       ...(field.enum && { enum: field.enum }),
       ...(field.description && { description: field.description }),
     };
@@ -100,16 +100,39 @@ function convertBody(op: SpecNode, spec: SpecNode): void {
 
   op.requestBody = {
     content: {
-      [bodyMediaType(op, spec)]: { schema: { type: "object", properties, required } },
+      [formMediaType(op, spec, formFields)]: {
+        schema: { type: "object", properties, required },
+      },
     },
   };
   op.parameters = parameters.filter((p) => p?.in !== "formData");
 }
 
-function bodyMediaType(op: SpecNode, spec: SpecNode): string {
+function consumesOf(op: SpecNode, spec: SpecNode): unknown[] {
   const consumes = Array.isArray(op.consumes) ? op.consumes : spec.consumes;
-  const first = Array.isArray(consumes) ? consumes[0] : undefined;
+  return Array.isArray(consumes) ? consumes : [];
+}
+
+function bodyMediaType(op: SpecNode, spec: SpecNode): string {
+  const [first] = consumesOf(op, spec);
   return typeof first === "string" ? first : "application/json";
+}
+
+const URLENCODED = "application/x-www-form-urlencoded";
+const MULTIPART = "multipart/form-data";
+
+/**
+ * The media type a form is sent as.
+ *
+ * Swagger 2.0 sends form fields url-encoded or as multipart, and a form that
+ * uploads a file only as multipart. Taking the first type `consumes` lists
+ * called a form described beside `application/json` a JSON body, and a form
+ * whose operation lists nothing was taken for JSON too.
+ */
+function formMediaType(op: SpecNode, spec: SpecNode, fields: SpecNode[]): string {
+  if (fields.some((field) => field?.type === "file")) return MULTIPART;
+  const declared = consumesOf(op, spec).find((type) => type === URLENCODED || type === MULTIPART);
+  return typeof declared === "string" ? declared : URLENCODED;
 }
 
 /** Swagger 2.0 puts a response schema directly on the response. */

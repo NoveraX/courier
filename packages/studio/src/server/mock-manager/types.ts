@@ -2,6 +2,7 @@ import type { ChildScenarioMeta, DescribedRoute } from "@noverax/courier-mock/ma
 import type { Namespace } from "socket.io";
 
 import type { MockRegistry } from "../mock-registry";
+import type { MockLog } from "../storage/mock-log";
 import type { WatcherStatus } from "../watcher-status";
 import type { CommandReply } from "./command-replies";
 
@@ -55,6 +56,8 @@ export interface CoordinatorConfig {
   watcherStatus?: WatcherStatus;
   /** Where Studio keeps the transforms of the project's modules now, told to each worker it starts. */
   transformCacheDirectory: () => string | null;
+  /** Keeps the requests each mock answered, for the pages that connect later. */
+  mockLog?: MockLog;
 }
 
 /** What a mock's worker is started with. */

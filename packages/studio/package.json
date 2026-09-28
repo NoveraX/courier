@@ -25,7 +25,7 @@
   },
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "bin": {
     "courier-studio": "./lib/cli.js"

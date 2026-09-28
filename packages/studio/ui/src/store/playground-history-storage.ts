@@ -1,8 +1,6 @@
 import type { PlaygroundHistoryEntry } from "./types-ui"
 import { PLAYGROUND_MAX_HISTORY } from "./constants"
 
-export const PLAYGROUND_HISTORY_KEY = "courier-studio-v2-playground-history"
-
 /* An answer bigger than this is not kept across reloads; its entry says so. */
 const MAX_KEPT_ANSWER = 64 * 1024
 /* A stream keeps its latest messages. */
@@ -11,47 +9,41 @@ const MAX_KEPT_CHUNKS = 50
 const INTERRUPTED = "The page was reloaded before the answer arrived."
 
 /**
- * The Playground history this browser kept, as it was before the page reloaded.
+ * The Playground history Studio kept for the project, as the page left it.
  *
  * A call still running then never gets its answer, so it is shown as
- * interrupted rather than as pending for good.
+ * interrupted rather than as pending for good. An entry this page cannot
+ * read is left out.
  *
- * @returns The entries, newest first; none when nothing was kept or it cannot be read
+ * @param raw - What Studio sent with `playground:history`
+ * @returns The entries, newest first; none for anything that is not a history
  *
  * @example
  * ```ts
- * playgroundHistory: loadPlaygroundHistory()
+ * socket.on("playground:history", (raw) => setHistory(readPlaygroundHistory(raw)))
  * ```
  */
-export function loadPlaygroundHistory(): PlaygroundHistoryEntry[] {
-  try {
-    const raw = localStorage.getItem(PLAYGROUND_HISTORY_KEY)
-    if (!raw) return []
-    const parsed: unknown = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(isEntry).slice(0, PLAYGROUND_MAX_HISTORY).map(settled)
-  } catch (err) {
-    console.warn("The Playground history this browser kept could not be read", err)
-    return []
-  }
+export function readPlaygroundHistory(raw: unknown): PlaygroundHistoryEntry[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(isEntry).slice(0, PLAYGROUND_MAX_HISTORY).map(settled)
 }
 
 /**
- * Keep the Playground history in this browser, for the next time the page loads.
+ * The Playground history as Studio keeps it: an answer too large to keep is
+ * a note that says so, and a stream keeps its latest messages.
  *
  * @param entries - The history, newest first
+ * @returns The entries to keep
  *
  * @example
  * ```ts
- * savePlaygroundHistory(useStudioStore.getState().playgroundHistory)
+ * socket.emit("playground:history:save", keptPlaygroundHistory(history))
  * ```
  */
-export function savePlaygroundHistory(entries: readonly PlaygroundHistoryEntry[]): void {
-  try {
-    localStorage.setItem(PLAYGROUND_HISTORY_KEY, JSON.stringify(entries.map(kept)))
-  } catch (err) {
-    console.warn("The Playground history could not be kept in this browser", err)
-  }
+export function keptPlaygroundHistory(
+  entries: readonly PlaygroundHistoryEntry[],
+): PlaygroundHistoryEntry[] {
+  return entries.map(kept)
 }
 
 function kept(entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry {

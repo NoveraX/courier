@@ -42,7 +42,9 @@ export function createActions(set: StudioSet, get: StudioGet): Omit<StudioState,
         }
         return { requests: [], droppedRequests: 0 }
       }),
-    loadRequests: (requests) => set({ requests, droppedRequests: 0 }),
+    showSession: (shownSession, requests) =>
+      set({ shownSession, requests, droppedRequests: 0, paused: true }),
+    showLive: () => set({ shownSession: null, requests: [], droppedRequests: 0, paused: false }),
     togglePin: (id) =>
       set((s) => ({
         requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),

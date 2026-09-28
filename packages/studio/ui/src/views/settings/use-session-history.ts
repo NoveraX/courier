@@ -57,10 +57,9 @@ export function useSessionHistory() {
     const requests = session.requests
       .map(requestFromSaved)
       .filter((r): r is RequestEntry => r !== undefined);
-    /* Recording pauses, so live traffic does not mix into the session shown. */
-    const store = useStudioStore.getState();
-    store.loadRequests(requests);
-    if (!store.paused) store.togglePaused();
+    /* Recording pauses, so live traffic does not mix into the session shown;
+       Studio keeps it shown, across a reload, until the page goes back to live. */
+    useStudioStore.getState().showSession({ id, name: String(session.name) }, requests);
     toast.success(`Loaded ${requests.length} requests from "${String(session.name)}"; recording paused`);
   }
 

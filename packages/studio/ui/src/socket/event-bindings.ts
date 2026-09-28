@@ -6,9 +6,11 @@ import type { StudioEvent } from "@/store/types-events"
 import { handleMockEvent, isMockEvent } from "@/store/handle-mock-events"
 import { isStudioEvent } from "./event-guards"
 import { createEventQueue } from "./event-queue"
+import { replayMockEvents } from "./replay-mock-events"
+import { shownSessionOf } from "./shown-session-of"
 
 /** The part of the store runtime events write. */
-export type EventsStore = Pick<StudioState, "handleEvents" | "replayEvents">
+export type EventsStore = Pick<StudioState, "handleEvents" | "replayEvents" | "showSession">
 
 type EventPayload = StudioEvent & Record<string, unknown>
 
@@ -16,6 +18,9 @@ type EventPayload = StudioEvent & Record<string, unknown>
  * Listen for runtime events: each live `event` as it arrives, gathered into
  * batches, and the `events:replay` Studio sends on connect with the requests
  * it captured before. A mock-server event goes to the mock store at once.
+ * When the pages show a saved session, Studio sends it after the replay, as
+ * `view:session`, and it is shown in place of the live requests. The
+ * requests the mocks answered come as `mock:events:replay`.
  *
  * @param socket - The `/ui` socket
  * @param store - Reads the store's event actions
@@ -43,11 +48,26 @@ export function bindEvents(socket: Socket, store: () => EventsStore): () => void
     store().replayEvents(data.filter((e): e is EventPayload => isStudioEvent(e) && !isMockEvent(e.type)))
   }
 
+  const onView = (data: unknown): void => {
+    const shown = shownSessionOf(data)
+    if (!shown) return
+    queue.flush()
+    store().showSession(shown.session, shown.requests)
+  }
+
+  const onMockReplay = (data: unknown): void => {
+    if (Array.isArray(data)) replayMockEvents(data)
+  }
+
   socket.on("event", onEvent)
   socket.on("events:replay", onReplay)
+  socket.on("view:session", onView)
+  socket.on("mock:events:replay", onMockReplay)
   return () => {
     socket.off("event", onEvent)
     socket.off("events:replay", onReplay)
+    socket.off("view:session", onView)
+    socket.off("mock:events:replay", onMockReplay)
     queue.flush()
   }
 }

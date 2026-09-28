@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Monitor, Moon, Pause, Sun, Trash2 } from "lucide-react";
 
 import { useStudioStore } from "@/store";
+import { useBackToLive } from "@/hooks/use-back-to-live";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import { NAV_GROUPS } from "@/app-config";
 import {
@@ -34,6 +35,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
   const setTheme = useStudioStore((s) => s.setTheme);
   const paused = useStudioStore((s) => s.paused);
   const togglePaused = useStudioStore((s) => s.togglePaused);
+  const shownSession = useStudioStore((s) => s.shownSession);
+  const backToLive = useBackToLive();
   const clearRequests = useClearRequests();
 
   const run = useCallback(
@@ -70,13 +73,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
 
         <CommandGroup heading="Recording">
           <CommandItem
-            value={paused ? "resume recording" : "pause recording"}
-            onSelect={() => run(togglePaused)}
+            value={shownSession ? "back to live requests" : paused ? "resume recording" : "pause recording"}
+            onSelect={() => run(shownSession ? backToLive : togglePaused)}
           >
             {paused ? (
               <>
                 <Pause aria-hidden className="size-4 text-muted-foreground" />
-                <span>Resume recording</span>
+                <span>{shownSession ? "Back to live requests" : "Resume recording"}</span>
                 <span className="ml-auto rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning-foreground">
                   Paused
                 </span>

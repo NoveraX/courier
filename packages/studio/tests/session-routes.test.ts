@@ -7,9 +7,10 @@
  * keeps in `.courier`: it used to list, read, write and delete JSON files
  * wherever the link pointed.
  */
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { io as connect, type Socket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
@@ -154,59 +155,101 @@ describe("a session request Studio cannot read", () => {
   });
 });
 
-describe(".courier/sessions that is a link out of the project", () => {
-  let outside: string;
-
-  beforeEach(() => {
-    outside = join(scratch, "outside");
+describe("a .courier/sessions folder, as sessions were once kept", () => {
+  it("is never read or written, even as a link out of the project", async () => {
+    const outside = join(scratch, "outside");
     mkdirSync(outside);
     writeFileSync(join(outside, "victim.json"), JSON.stringify({ id: "victim", secret: true }));
-    writeFileSync(join(outside, "package.json"), "{}");
-    mkdirSync(join(root, ".courier"));
     symlinkSync(outside, join(root, ".courier", "sessions"), "dir");
-  });
 
-  it.each([
-    ["list", {}],
-    ["load", { id: "victim" }],
-    ["export", { id: "victim", format: "json" }],
-    ["delete", { id: "package" }],
-    ["save", { requests: REQUESTS }],
-  ])("is refused by %s with 409, and nothing there changes", async (route, body) => {
-    const reply = await call(route, body);
+    const saved = await call("save", { requests: REQUESTS });
+    const listed = await call("list", {});
+    const victim = await call("load", { id: "victim" });
 
-    expect(reply.status).toBe(409);
-    expect(field(reply.body, "code")).toBe("COURIER_DIR_UNSAFE");
-    expect(readdirSync(outside).sort()).toEqual(["package.json", "victim.json"]);
+    expect(saved.status).toBe(200);
+    expect(listed.body).toEqual([expect.objectContaining({ id: field(saved.body, "id") })]);
+    expect(victim.status).toBe(404);
+    expect(readdirSync(outside)).toEqual(["victim.json"]);
   });
 });
 
-describe("a session file that is a link", () => {
-  it("is neither listed nor loaded", async () => {
-    const secret = join(scratch, "secret.json");
-    writeFileSync(secret, JSON.stringify({ id: "linked", name: "secret" }));
-    mkdirSync(join(root, ".courier", "sessions"), { recursive: true });
-    symlinkSync(secret, join(root, ".courier", "sessions", "linked.json"));
-
-    expect((await call("list", {})).body).toEqual([]);
-    expect((await call("load", { id: "linked" })).status).toBe(404);
-    expect(existsSync(secret)).toBe(true);
+/** Stop the Studio running on the project and start another on it. */
+async function restart(): Promise<void> {
+  await studio?.close();
+  url = await new Promise<string>((resolve, reject) => {
+    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
   });
-});
+}
 
 describe(".courier that is a link", () => {
-  it("is refused with 409", async () => {
+  it("has Studio keep its sessions in memory, and write nothing through it", async () => {
+    await studio?.close();
     const elsewhere = join(scratch, "elsewhere");
     mkdirSync(elsewhere);
+    rmSync(join(root, ".courier"), { recursive: true, force: true });
     symlinkSync(elsewhere, join(root, ".courier"), "dir");
+    await restart();
 
-    for (const [route, body] of [
-      ["list", {}],
-      ["save", { requests: REQUESTS }],
-    ] as const) {
-      const reply = await call(route, body);
-      expect(reply.status).toBe(409);
-    }
+    const saved = await call("save", { requests: REQUESTS });
+    const listed = await call("list", {});
+
+    expect(saved.status).toBe(200);
+    expect(listed.body).toHaveLength(1);
     expect(readdirSync(elsewhere)).toEqual([]);
+  });
+});
+
+describe("a saved session", () => {
+  it("outlives the Studio that saved it", async () => {
+    const saved = await call("save", { name: "login flow", requests: REQUESTS });
+    await restart();
+
+    const listed = await call("list", {});
+    const loaded = await call("load", { id: field(saved.body, "id") });
+
+    expect(listed.body).toEqual([expect.objectContaining({ name: "login flow" })]);
+    expect(field(loaded.body, "requests")).toHaveLength(2);
+  });
+});
+
+/** A page that connects, with the session it is shown and the replays it is sent. */
+async function page(): Promise<{ socket: Socket; shown: unknown[]; replays: unknown[] }> {
+  const socket = connect(`${url}/ui`, { transports: ["websocket"], reconnection: false });
+  const seen = { socket, shown: [] as unknown[], replays: [] as unknown[] };
+  socket.on("view:session", (session: unknown) => seen.shown.push(session));
+  socket.on("events:replay", (events: unknown) => seen.replays.push(events));
+  await new Promise<void>((resolve) => socket.once("connect", () => resolve()));
+  return seen;
+}
+
+describe("the session a page loads", () => {
+  it("is shown to a page that connects, across a restart, until one goes back to live", async () => {
+    const saved = await call("save", { name: "login flow", requests: REQUESTS });
+    await call("load", { id: field(saved.body, "id") });
+    await restart();
+
+    const reloaded = await page();
+    await expect.poll(() => reloaded.shown.length).toBe(1);
+    reloaded.socket.emit("view:live");
+    await expect.poll(() => reloaded.replays.length).toBe(2);
+    reloaded.socket.disconnect();
+    const next = await page();
+    await expect.poll(() => next.replays.length).toBe(1);
+
+    expect(reloaded.shown[0]).toMatchObject({ name: "login flow" });
+    expect(next.shown).toEqual([]);
+    next.socket.disconnect();
+  });
+
+  it("is shown no more once it is deleted", async () => {
+    const saved = await call("save", { requests: REQUESTS });
+    await call("load", { id: field(saved.body, "id") });
+    await call("delete", { id: field(saved.body, "id") });
+
+    const next = await page();
+    await expect.poll(() => next.replays.length).toBe(1);
+
+    expect(next.shown).toEqual([]);
+    next.socket.disconnect();
   });
 });

@@ -4,12 +4,13 @@
 /**
  * Settings → Session History against a real Studio server: Save current
  * sends the requests this page recorded, the session lands in the
- * project's `.courier/sessions` and is listed, and a save Studio refuses
- * says why and keeps the dialog open.
+ * project's Studio database, `.courier/studio.db`, and is listed, and a save
+ * Studio refuses says why and keeps the dialog open.
  */
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -74,9 +75,12 @@ describe("saving the current session", () => {
     await screen.findByText("1 saved session");
     expect(toast.success).toHaveBeenCalledWith("Session saved");
     expect(screen.getByText("Debugging auth")).toBeTruthy();
-    const [file] = readdirSync(join(root, ".courier/sessions"));
-    const saved: unknown = JSON.parse(readFileSync(join(root, ".courier/sessions", file ?? ""), "utf-8"));
-    expect(saved).toMatchObject({ name: "Debugging auth", stats: { totalRequests: 2, errorCount: 1 } });
+    const db = new DatabaseSync(join(root, ".courier", "studio.db"), { readOnly: true });
+    const rows = db.prepare("SELECT body FROM sessions").all();
+    db.close();
+    expect(rows.map((row) => JSON.parse(String(row.body)))).toEqual([
+      expect.objectContaining({ name: "Debugging auth", stats: expect.objectContaining({ totalRequests: 2, errorCount: 1 }) }),
+    ]);
     expect(screen.queryByLabelText("Session name")).toBeNull();
   });
 

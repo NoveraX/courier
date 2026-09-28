@@ -36,11 +36,10 @@ export interface CatalogGroup {
 export interface CatalogEntry {
   baseURL: string
   /**
-   * The user-app's own HTTP origin (e.g. `http://localhost:3000`) declared
-   * via `instrumentServer({ appOrigin })`. Used by the Playground to
-   * resolve relative `proxyPath` values into full clickable URLs. Omitted
-   * when the connecting process never declared one (e.g. browser-only
-   * `connectStudio` flow).
+   * The user-app's own HTTP origin (e.g. `http://localhost:3000`): the one
+   * its runtime listens on, or `runtime.appOrigin` in courier.config. Used
+   * by the Playground to resolve relative `proxyPath` values into full
+   * clickable URLs. Omitted when Studio knows none.
    */
   appOrigin?: string
   /**

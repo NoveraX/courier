@@ -24,6 +24,7 @@ import {
 } from "./app-namespace-mock-handlers";
 import { broadcastRuntimeEvent } from "./broadcast-runtime-event";
 import type { BindingTable } from "./catalog/binding-table";
+import type { ConfigSourceNamer } from "./catalog/config-source-names";
 import { mockServers, socketMockServers } from "./runtime-namespace-state";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import { handleAnnounce, handleDisconnect, handleHello } from "./runtime-registration";
@@ -41,6 +42,12 @@ export interface SetupRuntimeNamespaceDeps {
    * in-flight rid when the runtime socket disconnects.
    */
   playgroundRouter?: RuntimePlaygroundRouter;
+  /**
+   * Names the config source an event's call was made against. A runtime
+   * reports the name its own copy of the definition carries, which outside
+   * the registry is only derived from the baseURL host.
+   */
+  nameSource?: ConfigSourceNamer;
 }
 
 export function setupRuntimeNamespace(
@@ -66,7 +73,7 @@ export function setupRuntimeNamespace(
     }
 
     socket.on("event", (event: unknown) => {
-      handleRuntimeEvent(event, socket, deps.uiNamespace);
+      handleRuntimeEvent(event, socket, deps);
     });
 
     socket.on("disconnect", () => {
@@ -85,11 +92,7 @@ export function setupRuntimeNamespace(
  * every event the UI consumes. Identity and topology information ride on
  * the `runtime:hello` + `runtime:announce` handshake instead.
  */
-function handleRuntimeEvent(
-  raw: unknown,
-  socket: Socket,
-  uiNamespace: Namespace | undefined,
-): void {
+function handleRuntimeEvent(raw: unknown, socket: Socket, deps: SetupRuntimeNamespaceDeps): void {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return;
   const event = raw as Record<string, unknown>;
   if (event.type === "mock:server:connect") {
@@ -99,7 +102,22 @@ function handleRuntimeEvent(
   } else if (event.type === "mock:network:config") {
     handleMockNetworkConfig(event);
   }
-  broadcastRuntimeEvent(uiNamespace, event, log);
+  broadcastRuntimeEvent(deps.uiNamespace, attributed(event, deps.nameSource), log);
+}
+
+/** The event with its `source` named by the config key, when it names a call. */
+function attributed(
+  event: Record<string, unknown>,
+  nameSource: ConfigSourceNamer | undefined,
+): Record<string, unknown> {
+  const { source, group, method } = event;
+  if (!nameSource || typeof source !== "string" || typeof method !== "string") return event;
+  const named = nameSource({
+    source,
+    group: typeof group === "string" ? group : undefined,
+    method,
+  });
+  return named === source ? event : { ...event, source: named };
 }
 
 /**

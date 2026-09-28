@@ -74,6 +74,12 @@ export function trackDownload(
         });
         controller.enqueue(chunk);
       },
+      /* Without a declared length every event said 0%, the last one too, so a
+         progress bar never finished; the end is reported once it arrives. */
+      flush() {
+        if (total > 0) return;
+        onProgress({ percent: 1, transferredBytes: received, totalBytes: received });
+      },
     }),
   );
   return new Response(counted, {

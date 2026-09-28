@@ -24,7 +24,10 @@ export const buildResponse = (
       return withUpstreamCookies(
         new Response(response.data, {
           status: response.status,
-          headers: filterResponseHeaders(response.headers, { streamed: true }),
+          headers: withUpstreamLength(
+            filterResponseHeaders(response.headers, { streamed: true }),
+            response.headers,
+          ),
         }),
         response.headers,
       );
@@ -93,5 +96,17 @@ export const buildErrorResponse = (
  */
 function withUpstreamCookies(target: Response, upstream: Headers | undefined): Response {
   for (const cookie of upstream?.getSetCookie() ?? []) target.headers.append("set-cookie", cookie);
+  return target;
+}
+
+/**
+ * Pass on the length of a body that goes through unchanged.
+ *
+ * Fetch has already decompressed an encoded body, so its declared length
+ * counts bytes the browser never receives and is left out.
+ */
+function withUpstreamLength(target: Headers, upstream: Headers): Headers {
+  const length = upstream.get("content-length");
+  if (length !== null && !upstream.has("content-encoding")) target.set("content-length", length);
   return target;
 }

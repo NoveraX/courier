@@ -117,3 +117,20 @@ describe("the frame limit", () => {
     warn.mockRestore();
   });
 });
+
+describe("detaching", () => {
+  it("closes each connection it accepted with 1012, so the client reconnects later", async () => {
+    let detach: () => void = () => undefined;
+    const url = await listen((s) => {
+      detach = courier(s);
+    });
+    const client = new WebSocket(`${url}/api/ws`);
+    clients.push(client);
+    await new Promise((resolve) => client.once("message", resolve));
+    const closed = new Promise<number>((resolve) => client.once("close", resolve));
+
+    detach();
+
+    expect(await closed).toBe(1012);
+  });
+});

@@ -213,8 +213,12 @@ if (isHTTPError(error) && error.status === 499) {
   // Request was aborted (by deduplicate or manual AbortController)
 }
 
-// 4. JSON parse errors — response is not valid JSON
-// Thrown when responseType is "json" but the body cannot be parsed
+// 4. JSON parse errors — a success whose body is not valid JSON
+// Thrown when responseType is "json" but a 2xx body cannot be parsed:
+// an HTTPError carrying the upstream's own status (e.g. 200), with the
+// SyntaxError as its cause. Through the proxy it arrives as a 502.
+// An error answer whose body is not JSON is not a parse error: its
+// text becomes error.data.
 ```
 
 ## Next Steps

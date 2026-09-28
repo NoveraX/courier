@@ -53,9 +53,13 @@ describe("a malformed body is still an error", () => {
   });
 
   it("carries the response status on the error", async () => {
-    await expect(getResponseData(json("{ not json", 500), "json")).rejects.toMatchObject({
-      status: 500,
+    await expect(getResponseData(json("{ not json", 201), "json")).rejects.toMatchObject({
+      status: 201,
     });
+  });
+
+  it("is kept as text when the answer is itself an error", async () => {
+    expect(await getResponseData(json("{ not json", 500), "json")).toBe("{ not json");
   });
 });
 

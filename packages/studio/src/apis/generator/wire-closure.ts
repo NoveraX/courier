@@ -8,7 +8,8 @@
  * the JSON body, and zod and valibot, validating the body, dropped them
  * first; a DELETE with a body sent its fields as query parameters. Such an
  * endpoint is addressed by a closure that says where each variable goes, and
- * so is one whose answer is not JSON, or whose fields are sent url-encoded.
+ * so is one whose answer is not JSON, whose fields are sent url-encoded, or
+ * whose query parameters are written in a style of their own.
  */
 
 import { toInternalMethod } from "@noverax/courier";
@@ -16,7 +17,8 @@ import type { ParsedEndpoint } from "../parser/types";
 import { callOptions as options } from "./call-options";
 import { formClosure } from "./form-closure";
 import { bodyKey, type RequestBodyKind } from "./request-body";
-import type { ResponseReading } from "./response-reading";
+import { isEventStream, type ResponseReading } from "./response-reading";
+import { hasStyledQuery, styledQuery } from "./styled-query";
 import { urlEncodedClosure } from "./url-encoded-closure";
 import { destructure } from "./variable-bindings";
 
@@ -45,8 +47,13 @@ export function wireClosure(
   const method = toInternalMethod(ep.httpMethod);
   const at = JSON.stringify(path);
   const placed = placingClosure(ep, method, at, kind, read);
-  if (placed !== null || read === null) return placed;
-  return `(http, vars) => http.${method}(${at}, vars, { ${read} })`;
+  if (placed !== null) return placed;
+  /* A stream is subscribed to by its address alone, so its query keeps the
+     default style. */
+  const styled = hasStyledQuery(ep) && !isEventStream(ep);
+  if (read === null && !styled) return null;
+  const vars = styled ? styledQuery("vars", ep.parameters) : "vars";
+  return `(http, vars) => http.${method}(${at}, ${vars}${read === null ? "" : `, { ${read} }`})`;
 }
 
 const WRITES = new Set(["post", "put", "patch", "del"]);

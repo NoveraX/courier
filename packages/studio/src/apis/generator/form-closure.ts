@@ -5,6 +5,7 @@
 import type { ParsedParameter } from "../parser/types";
 import { callOptions } from "./call-options";
 import { objectKey } from "./literals";
+import { styledQuery } from "./styled-query";
 
 /**
  * Place a form's entries on the wire, when its verb cannot.
@@ -38,7 +39,8 @@ export function formClosure(
       ? `(http, form) => http.del(${at}, undefined, { ${callOptions("body: form", null, read)} })`
       : null;
   }
-  const searchParams = `{ ${query.map((param) => `${objectKey(param.name)}: ${entry(param)}`).join(", ")} }`;
+  const values = `{ ${query.map((param) => `${objectKey(param.name)}: ${entry(param)}`).join(", ")} }`;
+  const searchParams = styledQuery(values, query);
   const send =
     method === "del"
       ? `http.del(${at}, undefined, { ${callOptions("body", searchParams, read)} })`

@@ -47,7 +47,8 @@ export function endpointImports(context: EndpointContext): string[] {
  */
 /**
  * The import of what a file defines its endpoints with: `courier`, the
- * definer, and `formBody` when a closure writes a url-encoded body.
+ * definer, `formBody` when a closure writes a url-encoded body, and
+ * `formQuery` when one writes query values in a style of their own.
  *
  * @param context - The file's endpoints, written
  * @param definer - `defineGroup` for a group's file, `defineApi` for a flat source's
@@ -61,7 +62,12 @@ export function defineImport(
   context: EndpointContext,
   definer: "defineGroup" | "defineApi",
 ): string {
-  const names = ["courier", definer, ...(context.uses.formBody ? ["formBody"] : [])];
+  const names = [
+    "courier",
+    definer,
+    ...(context.uses.formBody ? ["formBody"] : []),
+    ...(context.uses.formQuery ? ["formQuery"] : []),
+  ];
   return `import { ${names.join(", ")} } from "@noverax/courier/define";`;
 }
 

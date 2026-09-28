@@ -2,6 +2,7 @@
  * OpenAPI 3.x operation parser — converts a single path+method into ParsedEndpoint.
  */
 
+import { collectionEncoding, declaredEncoding, isDefaultEncoding } from "./field-encoding";
 import { parseRequestBody } from "./parse-request-body";
 import { parseResponse } from "./parse-response";
 import type { ParsedEndpoint, ParsedParameter, SpecNode } from "./types";
@@ -81,9 +82,22 @@ function parseParameters(op: SpecNode, spec: SpecNode): ParsedParameter[] {
       ...(shape.format && { format: shape.format }),
       ...(shape.items && { items: convertSchemaInline(shape.items, spec) }),
       ...(isStructured(shape) && { schema: convertSchemaInline(shape, spec) }),
+      ...queryEncoding(resolved),
     });
   }
   return parameters;
+}
+
+/* How a query parameter is written, when not as OpenAPI's default: its own
+   `style` and `explode`, or, for a Swagger 2.0 list, its `collectionFormat`
+   — a Swagger 2.0 parameter carries its type itself, with no schema. */
+function queryEncoding(param: SpecNode): Pick<ParsedParameter, "encoding"> {
+  if (param.in !== "query") return {};
+  const swaggerList = param.schema === undefined && param.type === "array";
+  const encoding = swaggerList
+    ? collectionEncoding(param.collectionFormat)
+    : declaredEncoding(param.style, param.explode);
+  return encoding && !isDefaultEncoding(encoding) ? { encoding } : {};
 }
 
 /** Whether a parameter's schema is more than a type name and its values. */

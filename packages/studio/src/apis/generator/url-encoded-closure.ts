@@ -1,6 +1,6 @@
-import type { FieldEncoding, ParsedEndpoint } from "../parser/types";
+import type { ParsedEndpoint } from "../parser/types";
 import { callOptions } from "./call-options";
-import { objectKey } from "./literals";
+import { encodingLiteral } from "./encoding-literal";
 import { destructure } from "./variable-bindings";
 
 /**
@@ -35,15 +35,4 @@ export function urlEncodedClosure(
   const bindings = pattern ? `${pattern}, ...body` : "...body";
   const options = callOptions(`body: formBody(body${encoding})`, searchParams, read);
   return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options} })`;
-}
-
-function encodingLiteral(encoding: Record<string, FieldEncoding>): string {
-  const fields = Object.entries(encoding).map(([name, field]) => {
-    const parts = [
-      field.style === undefined ? null : `style: ${JSON.stringify(field.style)}`,
-      field.explode === undefined ? null : `explode: ${field.explode}`,
-    ].filter((part) => part !== null);
-    return `${objectKey(name)}: { ${parts.join(", ")} }`;
-  });
-  return `{ ${fields.join(", ")} }`;
 }

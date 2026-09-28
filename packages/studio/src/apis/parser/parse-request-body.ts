@@ -1,3 +1,4 @@
+import { declaredEncoding } from "./field-encoding";
 import { firstSchemaIn } from "./media-schemas";
 import type { FieldEncoding, ParsedEndpoint, SpecNode } from "./types";
 import { convertSchemaInline, resolveRef } from "./utils";
@@ -62,21 +63,10 @@ function fieldEncodings(encoding: SpecNode | undefined): Record<string, FieldEnc
   if (!encoding) return undefined;
   const fields: Record<string, FieldEncoding> = {};
   for (const [name, entry] of Object.entries(encoding)) {
-    const style = styleOf(entry?.style);
-    const explode = typeof entry?.explode === "boolean" ? entry.explode : undefined;
-    if (style === undefined && explode === undefined) continue;
-    fields[name] = { ...(style && { style }), ...(explode !== undefined && { explode }) };
+    const declared = declaredEncoding(entry?.style, entry?.explode);
+    if (declared) fields[name] = declared;
   }
   return Object.keys(fields).length > 0 ? fields : undefined;
-}
-
-function styleOf(value: unknown): FieldEncoding["style"] {
-  return value === "form" ||
-    value === "spaceDelimited" ||
-    value === "pipeDelimited" ||
-    value === "deepObject"
-    ? value
-    : undefined;
 }
 
 /** The first media type a body declares with no schema, unless it is JSON. */

@@ -22,6 +22,7 @@ import {
   objectWithBody,
   schemaToValidation,
 } from "./schema-utils";
+import { hasStyledQuery } from "./styled-query";
 import { sendsUrlEncoded, wireClosure } from "./wire-closure";
 
 /** The validators whose generated objects are loose. */
@@ -64,6 +65,7 @@ export function buildEndpointDefinition(
   const kind = requestBodyKind(ep, context.spec);
   if (sendsUrlEncoded(ep, kind)) context.uses.formBody = true;
   const closure = wireClosure(ep, path, kind, reading);
+  if (closure !== null && hasStyledQuery(ep)) context.uses.formQuery = true;
   /* A stream of events is subscribed to, and its answer is each event. */
   const head = isEventStream(ep) && closure === null ? "stream" : "endpoint";
   context.uses.bases.add(head);

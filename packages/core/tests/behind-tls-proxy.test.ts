@@ -54,6 +54,30 @@ describe("an app behind a TLS-terminating proxy", () => {
     expect(response.status).not.toBe(403);
   });
 
+  /**
+   * The forwarded headers are believed from a local peer, so a request that
+   * reaches the app through a proxy passing the client's own copies could
+   * name the attacker's site as the app's and match its own Origin. A
+   * browser's page cannot forge `Sec-Fetch-Site`, and that decides.
+   */
+  it("refuses another site's page that names itself in the forwarded host", async () => {
+    const url = await serveBehindProxy();
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: "https://evil.example",
+        "Sec-Fetch-Site": "cross-site",
+        "X-Forwarded-Proto": "https",
+        "X-Forwarded-Host": "evil.example",
+      },
+      body: JSON.stringify({ _s: "api", _m: "missing" }),
+    });
+
+    expect(response.status).toBe(403);
+  });
+
   it("still refuses another site's page", async () => {
     const url = await serveBehindProxy();
 

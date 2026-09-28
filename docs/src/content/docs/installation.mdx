@@ -130,6 +130,12 @@ never declared there: `courier.config.ts` has no `mocks` key.
 All framework packages and integrations are optional. The core `@noverax/courier` package works standalone for direct API calls from any runtime.
 </Callout>
 
+## Requirements
+
+- **Node.js 22** or later for every package; Studio needs 22.13, for the SQLite built into Node. In the browser, the core needs only `fetch`.
+- **ES modules.** The packages are published as ES modules only. A CommonJS project loads them with `require()` on Node.js 22.12 or later, which loads an ES module synchronously; with TypeScript, set `"module": "nodenext"`, under which it allows that `require`.
+- **TypeScript 6.0** or later, with `strict` on. The published declarations compile with `skipLibCheck` off in a project typed for Node.js alone, without the DOM library; in one resolving modules as a bundler does; in a browser project; and in a CommonJS one.
+
 ## TypeScript configuration
 
 Courier ships type declarations. Enable strict mode for the best type inference:
@@ -144,6 +150,8 @@ Courier ships type declarations. Enable strict mode for the best type inference:
   }
 }
 ```
+
+A project Node.js runs without a bundler resolves modules as Node does instead: `"module": "nodenext"`, which also sets `moduleResolution`.
 
 ## Environment variables
 

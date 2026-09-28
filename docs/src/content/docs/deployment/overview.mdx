@@ -56,6 +56,8 @@ Use these with Kubernetes, Docker health checks, or load balancer configuration.
 
 Courier writes `info` and `debug` lines to stdout and `warn` and `error` lines to stderr, so a log router that tells the two streams apart sees Courier's failures as errors. A failure carries the error's stack and `cause` chain. `COURIER_LOG_LEVEL` sets the lowest level printed — `debug`, `info` (the default), `warn`, `error` or `silent` — and a container's log gets plain text, since colour is written only to a terminal (`FORCE_COLOR=1` keeps it, `NO_COLOR` removes it everywhere).
 
+A browser that cancels a call is not a failure, and is logged at `debug`: an upload it stopped sending, a query it stopped waiting for, a stream it stopped reading. The proxy stops its upstream request and answers such a call with status `499`, which only an access log ever sees.
+
 ## Behind a Reverse Proxy
 
 The proxy route refuses a request another site's page made — the check that stops another site's page from calling your API with your users' cookies. A current browser says where a request comes from in `Sec-Fetch-Site`, and where it does, that decides, whatever name the app thinks it has. Where it does not — an older browser, or a site served over plain HTTP — the page's `Origin` is compared with the origin the request was sent to. Behind nginx, a cloud load balancer or a CDN that terminates TLS, the app itself sees plain HTTP, and often the upstream's name in `Host`, so it needs the proxy to say what the browser used.

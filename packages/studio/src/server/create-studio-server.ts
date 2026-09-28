@@ -8,6 +8,7 @@ import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config
 import express from "express";
 import { setProjectRoot } from "../context";
 import { BindingTable } from "./catalog/binding-table";
+import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { listenStudio } from "./listen-studio";
 import { createLifecycleCoordinator } from "./mock-manager";
@@ -58,7 +59,14 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   const bindingTable = new BindingTable();
   const playgroundRouter = createRuntimePlaygroundRouter({ bindingTable, uiNamespace });
-  setupRuntimeNamespace(runtimeNamespace, { bindingTable, uiNamespace, playgroundRouter });
+  /* Read on each event, by which time the project below exists. */
+  const nameSource = createConfigSourceNamer(() => project.snapshot().running?.config);
+  setupRuntimeNamespace(runtimeNamespace, {
+    bindingTable,
+    uiNamespace,
+    playgroundRouter,
+    nameSource,
+  });
 
   // ── Watcher Status (unified hot reload indicator) ──────────────────────────
 

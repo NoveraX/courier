@@ -12,27 +12,11 @@
  * the unit test in `__tests__/binding-guards.test.ts`.
  */
 
+import { isPlainObject } from "./is-plain-object"
 import type { BindingErrorPayload, BindingSnapshot, BindingTransport } from "@/store/types-ui"
 
 const VALID_TRANSPORTS: ReadonlyArray<BindingTransport> = ["http", "sse", "ws"]
 const VALID_STATUSES = ["bound", "orphan", "conflict"] as const
-
-/**
- * Reject objects whose own keys include prototype-tampering names so a
- * hostile sender cannot smuggle `__proto__` mutations into the Zustand
- * store via spread/merge downstream. Mirrors the convention in
- * `packages/studio/src/server/sanitize-runtime-events.ts` and
- * `sanitize-mock-events.ts`.
- */
-function isPlainObject(raw: unknown): raw is Record<string, unknown> {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return false
-  const proto: unknown = Object.getPrototypeOf(raw)
-  if (proto !== Object.prototype && proto !== null) return false
-  for (const key of Object.keys(raw)) {
-    if (key === "__proto__" || key === "constructor" || key === "prototype") return false
-  }
-  return true
-}
 
 export function isBindingSnapshot(data: unknown): data is BindingSnapshot {
   if (!isPlainObject(data)) return false

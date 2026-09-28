@@ -1,5 +1,5 @@
 import { storedSettings } from "./stored-settings"
-import type { Theme, TimelineFilters, Settings } from "./types"
+import type { TimelineFilters, Settings } from "./types"
 
 export const PLAYGROUND_MAX_HISTORY = 50
 
@@ -45,15 +45,8 @@ export const DEFAULT_SETTINGS: Settings = {
 
 // ── Safe localStorage reads (v2 prefix to avoid conflicts) ──────────────────
 
-export const THEME_STORAGE_KEY = "courier-studio-v2-theme"
 export const SETTINGS_STORAGE_KEY = "courier-studio-v2-settings"
 export const SESSION_STARTED_KEY = "courier-studio-v2-session-started"
-
-const VALID_THEMES: ReadonlySet<string> = new Set<Theme>(["dark", "light", "system"])
-export function loadTheme(): Theme {
-  const raw = localStorage.getItem(THEME_STORAGE_KEY)
-  return raw && VALID_THEMES.has(raw) ? (raw as Theme) : "dark"
-}
 
 export function loadSettings(): Settings {
   try {

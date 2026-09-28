@@ -1,6 +1,7 @@
 import type { CourierConfig } from "@noverax/courier/config";
 import { ConfigLoaderError } from "./config-loader-errors";
 import { importEntryProblem } from "./import-entry-problem";
+import { isPlainObject } from "./is-plain-object";
 import { isRecord } from "./mocks-edit/is-record";
 import type { ProjectInputs } from "./read-project-inputs";
 
@@ -72,15 +73,6 @@ function importsProblem(imports: unknown): string | null {
     return `courier.config.imports.${name}${problem.startsWith("is ") ? " " : "."}${problem}`;
   }
   return null;
-}
-
-/* A module namespace Node imports has a null prototype; one the loader
-   transpiles has `Object.prototype`. The config is evaluated in Studio's own
-   realm, so that `Object.prototype` is this one. */
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (!isRecord(value) || Array.isArray(value)) return false;
-  const proto: unknown = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
 }
 
 function describe(value: unknown): string {

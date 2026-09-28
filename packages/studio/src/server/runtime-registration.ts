@@ -79,12 +79,10 @@ export function handleDisconnect(
   const runtimeId = ref.runtimeId;
   if (!runtimeId) return;
   ref.runtimeId = undefined;
-  // Another process still runs under this id; its bindings stay.
+  /* What this socket was serving ends with it, even while another process
+     under its id keeps the bindings. */
+  deps.playgroundRouter?.onRuntimeDisconnect(socket.id);
   if (releaseRuntimeSocket(runtimeId, socket) === "remaining") return;
-  // Synthesize errors for any playground requests still in-flight on this
-  // runtime BEFORE the registry entry is removed — the router needs the
-  // mapping intact to find the originating UI sockets.
-  deps.playgroundRouter?.onRuntimeDisconnect(runtimeId);
   unregisterRuntime(runtimeId);
   deps.bindingTable.detachRuntime(runtimeId);
   emitBindingSnapshot(deps);

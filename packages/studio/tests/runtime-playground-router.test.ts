@@ -161,8 +161,8 @@ describe("createRuntimePlaygroundRouter", () => {
       transport: "sse",
     });
 
-    router.forwardChunk({ rid: "r-2", chunk: { kind: "sse-event", event: { data: "x" } } }, "rt-1");
-    router.forwardChunk({ rid: "unknown-rid", chunk: { kind: "sse-event", event: { data: "y" } } }, "rt-1");
+    router.forwardChunk({ rid: "r-2", chunk: { kind: "sse-event", event: { data: "x" } } }, "rt-sock-1");
+    router.forwardChunk({ rid: "unknown-rid", chunk: { kind: "sse-event", event: { data: "y" } } }, "rt-sock-1");
 
     expect(ui.emit).toHaveBeenCalledWith(
       "playground:chunk",
@@ -186,7 +186,7 @@ describe("createRuntimePlaygroundRouter", () => {
       transport: "http",
     });
     expect(router._inFlightSize()).toBe(1);
-    router.forwardEnd({ rid: "r-end", summary: { durationMs: 50 } }, "rt-1");
+    router.forwardEnd({ rid: "r-end", summary: { durationMs: 50 } }, "rt-sock-1");
     expect(router._inFlightSize()).toBe(0);
 
     // biome-ignore lint/suspicious/noExplicitAny: stub
@@ -198,7 +198,7 @@ describe("createRuntimePlaygroundRouter", () => {
       transport: "http",
     });
     expect(router._inFlightSize()).toBe(1);
-    router.forwardError({ rid: "r-err", error: { message: "boom" } }, "rt-1");
+    router.forwardError({ rid: "r-err", error: { message: "boom" } }, "rt-sock-1");
     expect(router._inFlightSize()).toBe(0);
   });
 
@@ -223,7 +223,7 @@ describe("createRuntimePlaygroundRouter", () => {
     });
     expect(router._inFlightSize()).toBe(2);
 
-    router.onRuntimeDisconnect("rt-1");
+    router.onRuntimeDisconnect("rt-sock-1");
 
     expect(router._inFlightSize()).toBe(0);
     const errorCalls = ui.emit.mock.calls.filter(
@@ -269,7 +269,7 @@ describe("createRuntimePlaygroundRouter", () => {
     expect(runtimeSock.emit).toHaveBeenCalledWith("playground:cancel", { rid: "r-cancel" });
     expect(router._inFlightSize()).toBe(1);
 
-    router.forwardEnd({ rid: "r-cancel", summary: { durationMs: 10 } }, "rt-1");
+    router.forwardEnd({ rid: "r-cancel", summary: { durationMs: 10 } }, "rt-sock-1");
     expect(router._inFlightSize()).toBe(0);
   });
 
@@ -479,9 +479,9 @@ describe("createRuntimePlaygroundRouter", () => {
     });
     ui.emit.mockClear();
 
-    router.forwardChunk({ rid: "r-bad", chunk: { kind: "unknown-kind" } }, "rt-1");
-    router.forwardChunk({ rid: "r-bad", chunk: null }, "rt-1");
-    router.forwardChunk({ rid: "r-bad" }, "rt-1");
+    router.forwardChunk({ rid: "r-bad", chunk: { kind: "unknown-kind" } }, "rt-sock-1");
+    router.forwardChunk({ rid: "r-bad", chunk: null }, "rt-sock-1");
+    router.forwardChunk({ rid: "r-bad" }, "rt-sock-1");
 
     expect(ui.emit).not.toHaveBeenCalledWith("playground:chunk", expect.anything());
   });

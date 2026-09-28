@@ -57,10 +57,12 @@ export {
 } from "./errors";
 export { createFetch, type FetchClient, type FetchClientOptions } from "./fetch";
 export type {
+  BaseOptions,
   CallOptions,
   Context,
   HttpResponse,
   RequestContext,
+  SearchParamsSerializer,
   UploadProgress,
 } from "./http-client/types";
 export { createLogger, type Logger, type LogLevel, logger, type ScopedLogger } from "./logger";

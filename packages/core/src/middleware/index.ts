@@ -5,6 +5,7 @@ export {
   rateLimitMiddleware,
   retryMiddleware,
 } from "./builtin";
+export type { CacheEntry, CacheOptions, CacheScope, CacheStore } from "./cache";
 export { composeMiddleware } from "./compose";
 export { defineMiddleware } from "./define";
 export type {

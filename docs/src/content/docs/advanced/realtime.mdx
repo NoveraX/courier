@@ -36,6 +36,13 @@ A stream or channel served with `.implement()` is reached through the server tha
 
 A direct caller, `createCaller` or `createQueryCaller`, sends everything to the API's `baseURL`, which is the upstream's address. Nothing serves this process's streams and channels there, so calling one through a direct caller throws `ConfigurationError("DIRECT_CALL_TO_SERVED_ENDPOINT")`, naming it, when it is called — the React hooks report it through `error` — and the rest of the API stays callable. A stream or channel addressed with `.get()`, `.connect()` or `.via()` is another process's, and a direct caller opens it at `baseURL`.
 
+A proxy caller reaches another process's stream or channel too: the proxy relays it, opening it where its definition says. A stream is opened with the source's `headers`, the request headers the proxy lets through, and whatever the source's middleware sets. A browser reaches a third party's stream through its own server, with no CORS to configure and no key of its own to hold. A channel is subscribed to as a direct caller in the server's process would subscribe to it. The proxy relays the streams and channels it would forward as endpoints: one a `defineBoundary` leaves out stays unreachable.
+
+- A stream's events pass on as they came: ids, event names, and data that is not JSON as its text. A dropped upstream connection is reopened from the last event id, while the client's stays open. The client's `Last-Event-ID` is sent upstream when it resumes.
+- The stream ends as the upstream's ends. It fails as the upstream's fails: a refusal carries the upstream's status as code `4000 + status`, so a `401` arrives as `4401`. A client that leaves closes the upstream stream.
+- A channel's frames pass both ways, and it ends as its upstream subscription ends, with its code. Subscribers of the server with equal variables share one upstream subscription.
+- A path parameter that is empty, `.` or `..` is refused before anything is sent, as it is for an HTTP call. Otherwise it would reach a route above the declared one with the server's credentials.
+
 ## Topics
 
 Every subscription to a channel is on a topic: the endpoint, `source.group.method`, qualified by a key. `ctx.topic` is the subscriber's own, and `ctx.broadcast(topic, data)` sends to every other subscriber on it — every replica's, with a [`pubsub` adapter](/docs/deployment/redis).

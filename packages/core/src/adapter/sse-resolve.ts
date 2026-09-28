@@ -6,13 +6,26 @@ import { ValidationError, validateSchema } from "../validation";
 import { isExposedToWire } from "./exposure";
 import { errorResponse } from "./parse";
 
+/**
+ * The stream a proxy request names: one this process serves with
+ * `.implement()`, or one another server serves, which the proxy relays.
+ */
+export interface ResolvedStream {
+  /** The source it belongs to */
+  api: Sources[string];
+  endpoint: unknown;
+  schema: SchemaMetadata | undefined;
+  /** Served elsewhere: opened where its definition says, and relayed */
+  relayed: boolean;
+}
+
 /** Resolve SSE endpoint from sources, validate transport type */
 export function resolveSSEEndpoint(
   sources: Sources,
   source: string,
   group: string | undefined,
   method: string,
-): { endpoint: unknown; schema: SchemaMetadata | undefined } | Response {
+): ResolvedStream | Response {
   const notFound = `[${source}][${group ?? ""}][${method}]: method not found`;
 
   const dataSource = Object.hasOwn(sources, source) ? sources[source] : undefined;
@@ -33,14 +46,7 @@ export function resolveSSEEndpoint(
   if (schema?.transport !== "sse") {
     return errorResponse(400, `[${method}]: endpoint is not an SSE transport`);
   }
-  if (!served) {
-    return errorResponse(
-      400,
-      `[${method}]: endpoint describes where to connect rather than serving the stream — ` +
-        "define it with .implement() to serve it from this process",
-    );
-  }
-  return { endpoint, schema };
+  return { api: dataSource, endpoint, schema, relayed: !served };
 }
 
 /** Decode the SSE variables from the `_v` parameter and check them against the endpoint schema */

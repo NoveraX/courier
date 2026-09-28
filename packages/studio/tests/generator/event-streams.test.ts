@@ -3,7 +3,8 @@
  * stream a client subscribes to, `stream.get(…)`, and its events are typed
  * by the schema the specification gives them. It used to be generated as a
  * JSON GET, which read the stream as one body and failed. A POST that answers
- * with events has no stream builder, and stays an HTTP endpoint.
+ * with events has no stream builder, and stays an HTTP endpoint. Through the
+ * proxy, the stream is relayed from the API.
  */
 import { createProxyCaller } from "@noverax/courier";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -157,21 +158,21 @@ describe("through the proxy", () => {
     await proxy.close();
   });
 
-  /* A stream another server serves is opened by a direct caller; the proxy
-     serves the streams the app implements, and says so for any other. */
-  it("is refused with the reason, as a stream the app does not serve", async () => {
+  /* The proxy opens a stream the API serves and relays it, as it forwards
+     the API's other endpoints. */
+  it("reaches the API's stream, relayed event by event", async () => {
     const caller = createProxyCaller("shop", { source, proxyPath: { http: proxy.url, sse: proxy.url } });
+    upstream.requests.length = 0;
 
-    const failure = await received(endpointAt(caller, "orders", "watchOrder")({ id: "o1" })).catch(
-      (error: unknown) => error,
-    );
+    const got = await received(endpointAt(caller, "orders", "watchOrder")({ id: "o1", since: "2026" }));
 
-    expect(failure).toBeInstanceOf(Error);
-    expect(String(failure)).toContain("describes where to connect rather than serving the stream");
+    expect(got).toEqual([{ status: "paid" }, { status: "shipped" }]);
+    expect(upstream.requests[0]?.path).toBe("/v1/orders/o1/events");
+    expect(upstream.requests[0]?.query).toContainEqual(["since", "2026"]);
   });
 
   it("says so in the generated comment", () => {
-    expect(groupFile({})).toContain("A stream the API serves: a direct caller opens it.");
+    expect(groupFile({})).toContain("A stream the API serves: a direct caller opens it, and the proxy relays it");
   });
 });
 

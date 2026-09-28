@@ -84,8 +84,8 @@ export interface Endpoint<T extends AnyEndpointTypes> {
   /**
    * Is the closure the implementation, rather than a description of a wire?
    *
-   * `.implement()` sets it; `.via()` clears it. A stream or channel server can
-   * then refuse an endpoint that only describes where to connect, instead of
+   * `.implement()` sets it; `.via()` clears it. A stream or channel server
+   * then relays an endpoint that only describes where to connect, instead of
    * invoking its closure as a generator and failing on the result.
    */
   readonly served: boolean;

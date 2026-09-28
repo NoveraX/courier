@@ -31,6 +31,10 @@ export function resolveSubscribeTopic(
       endpoint: unknown;
       schema: SchemaMetadata;
       topicKey?: TopicKeyReader;
+      /** The source it belongs to */
+      api: object;
+      /** Served by this process; otherwise another server serves it, and this one relays it */
+      served: boolean;
     }
   | undefined {
   const { source, group, method } = parseTopic(topic);
@@ -53,18 +57,25 @@ export function resolveSubscribeTopic(
     group,
     method,
   );
-  /* A channel that only describes where to connect has no implementation to
-     run here; invoking its closure would yield a wire description, not
-     messages. */
+  /* A channel another server serves is relayed rather than run here. */
   if (
     typeof endpoint !== "function" ||
     schema?.transport !== "ws" ||
-    !served ||
     !isExposedToWire(dataSource, group, method)
   ) {
     sendSubscriptionEnd(ctx, topic, msg.id, REJECTED);
     return undefined;
   }
 
-  return { source, group, method, endpoint, schema, topicKey: options?.topicKey };
+  const topicKey = options?.topicKey;
+  return {
+    source,
+    group,
+    method,
+    endpoint,
+    schema,
+    topicKey,
+    api: dataSource,
+    served: served === true,
+  };
 }

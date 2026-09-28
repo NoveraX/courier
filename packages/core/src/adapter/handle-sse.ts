@@ -8,6 +8,7 @@ import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
 import { servedSources } from "./served-sources";
 import type { InternalSSERegistry } from "./sse-registry";
+import { relayStream } from "./sse-relay";
 import { resolveSSEEndpoint, resolveSSEVariables } from "./sse-resolve";
 import { createSSEStream } from "./sse-stream";
 import { createLifetimeSignal } from "./sse-utils";
@@ -140,7 +141,9 @@ export function createSSEHandler(
       headers,
     };
 
-    const sseHandler = resolved.endpoint as unknown as SSEHandler<unknown, unknown>;
+    const sseHandler = resolved.relayed
+      ? relayStream(resolved.api, group ?? "", method)
+      : (resolved.endpoint as unknown as SSEHandler<unknown, unknown>);
     const stream = createSSEStream(sseHandler, sseCtx, {
       connectionId,
       requestId,

@@ -14,7 +14,7 @@ import { isEventStream } from "./response-reading";
 
 /* Said of a stream the API serves, which the proxy does not open for a page. */
 const STREAM_NOTE =
-  "A stream the API serves: a direct caller opens it. The proxy serves only the streams this app implements.";
+  "A stream the API serves: a direct caller opens it, and the proxy relays it to a proxy caller.";
 
 /* Said of an endpoint taking bytes, which only a direct caller can send. */
 const BYTES_NOTE =

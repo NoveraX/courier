@@ -24,7 +24,7 @@ const api = defineApi({
   },
 });
 
-describe("an SSE server refuses what it cannot serve", () => {
+describe("an SSE server resolves the streams it serves and relays", () => {
   it("resolves an endpoint implemented here", () => {
     const result = resolveSSEEndpoint({ api }, "api", "events", "served");
 
@@ -32,11 +32,11 @@ describe("an SSE server refuses what it cannot serve", () => {
     expect((result as { endpoint: unknown }).endpoint).toBeTypeOf("function");
   });
 
-  it("refuses one that only describes where to connect", async () => {
-    const result = resolveSSEEndpoint({ api }, "api", "events", "remote");
+  it("resolves one another server serves as relayed, and one implemented here as not", () => {
+    const remote = resolveSSEEndpoint({ api }, "api", "events", "remote");
+    const served = resolveSSEEndpoint({ api }, "api", "events", "served");
 
-    expect(result).toBeInstanceOf(Response);
-    expect((result as Response).status).toBe(400);
-    await expect((result as Response).text()).resolves.toContain(".implement()");
+    expect(remote).toMatchObject({ relayed: true, api });
+    expect(served).toMatchObject({ relayed: false });
   });
 });

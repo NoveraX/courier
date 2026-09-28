@@ -2,6 +2,7 @@ import type { ResolvedEndpointOptions, RetryOptions } from "../define/options";
 import type { BoundMethodOptions } from "../http-client/types";
 import { retryMiddleware } from "../middleware/retry";
 import type { Middleware, MiddlewareResponse } from "../middleware/types";
+import { anySignal } from "./any-signal";
 
 /**
  * Order the middleware a request runs through.
@@ -77,5 +78,5 @@ export function withCallerSignal<T extends Partial<BoundMethodOptions>>(
 ): T {
   if (!request) return baseOptions;
   const own = baseOptions.signal;
-  return { ...baseOptions, signal: own ? AbortSignal.any([own, request.signal]) : request.signal };
+  return { ...baseOptions, signal: own ? anySignal([own, request.signal]) : request.signal };
 }

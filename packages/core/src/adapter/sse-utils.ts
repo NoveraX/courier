@@ -1,3 +1,4 @@
+import { anySignal } from "../utils/any-signal";
 import { LIMITS } from "./limits";
 
 /**
@@ -21,5 +22,5 @@ export function createLifetimeSignal(
   const ttlSignal = ttl > 0 ? AbortSignal.timeout(ttl) : undefined;
   if (ttlSignal) signals.push(ttlSignal);
 
-  return { signal: AbortSignal.any(signals), ttlSignal };
+  return { signal: anySignal(signals), ttlSignal };
 }

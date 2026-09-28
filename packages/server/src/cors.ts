@@ -34,7 +34,11 @@ export function handleCors(
      socket is plain HTTP, and the core handler and the WebSocket check
      already take the proxy's forwarded scheme and host into account. */
   const self = extractOriginFromNodeRequest(req) ?? null;
-  const allowed = isOriginAccepted(origin, self, allowedOrigins);
+  /* The browser's own verdict decides where it is present, as it does in the
+     core handler: a same-origin page behind a proxy this server does not
+     trust with X-Forwarded-* is still its own, and a cross-site request
+     without an Origin is still cross-site. */
+  const allowed = isOriginAccepted(origin, self, allowedOrigins, req.headers["sec-fetch-site"]);
 
   if (req.method === "OPTIONS" && origin) {
     if (!allowed) {

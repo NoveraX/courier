@@ -9,10 +9,12 @@ import { defineApi } from "@noverax/courier/define"
 ## Signature
 
 ```ts
-function defineApi<G extends GroupRecord>(
+function defineApi<G extends OwnGroups>(
   options: BaseOptions & { groups: G }
 ): DefinedApi<G>
 ```
+
+`groups` takes any name but `raw` or `with`, and the flat `endpoints` any name but `options`, `raw` or `with`: see [Reserved names](/docs/core-concepts/defining-apis#reserved-names). A reserved name is a type error and throws `ConfigurationError("RESERVED_ENDPOINT_NAME")` when the source is defined.
 
 ## Parameters
 

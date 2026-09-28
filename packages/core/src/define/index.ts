@@ -48,5 +48,6 @@ export type {
   EndpointRecord,
   GroupRecord,
   OwnEndpoints,
+  OwnGroups,
   Sources,
 } from "./types";

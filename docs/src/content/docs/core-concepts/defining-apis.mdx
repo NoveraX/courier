@@ -183,18 +183,28 @@ caller.users.getById(vars)    // group: "users", method: "getById"
 caller.posts.create(vars)     // group: "posts", method: "create"
 ```
 
-### Names the client also answers to
+### Reserved names
 
-A client answers `raw` and `with` itself, and the runtime reads `then`, `toJSON` and `valueOf` from any object. A group or endpoint you declare under one of these names is still reached by it, as long as the client knows the source — `createCaller`, and `createProxyCaller` given `source` or `boundary`:
+Three names cannot be given to an endpoint or a group. Each is a type error and throws `ConfigurationError("RESERVED_ENDPOINT_NAME")` when the group or the source is defined, with a message that names the clash and suggests another name:
+
+| Name | Refused for | Why |
+|------|-------------|-----|
+| `options` | endpoints | It holds the group's or the source's own settings beside its endpoints. |
+| `raw` | endpoints and groups | Every client answers it with `.raw`, at its root, on each group and on each flat endpoint. |
+| `with` | endpoints and groups | Every client answers it with `.with()`, in the same places. |
+
+A path of that name is fine: `getRaw: endpoint.get(":id/raw")` reaches it.
+
+### Names the runtime reads
+
+The runtime reads `then`, `toJSON` and `valueOf` from any object. A group or endpoint you declare under one of these names is still reached by it, as long as the client knows the source — `createCaller`, and `createProxyCaller` given `source` or `boundary`:
 
 ```ts
-caller.files.raw({ id })      // the endpoint named raw
-caller.files.raw.list()       // .raw still reaches the group's other endpoints
-caller.files.with({ id })     // the endpoint named with; call .with() on the client instead
+caller.files.toJSON()         // the endpoint named toJSON
 caller.then.list()            // a group named then; the client is still not a promise
 ```
 
-One name stays out of reach: a flat endpoint named `then` at the root. It would make every awaited client call it, so rename it. A proxy client given only a source name cannot tell a declared member from an accessor, and answers these names itself.
+One name stays out of reach: a flat endpoint named `then` at the root. It would make every awaited client call it, so rename it. A proxy client given only a source name cannot tell a declared member from a runtime hook, and answers these names as absent.
 
 ## Next Steps
 

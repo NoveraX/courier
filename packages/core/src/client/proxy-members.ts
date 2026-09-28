@@ -48,17 +48,6 @@ export function listing(names: () => readonly string[], read: (name: string) => 
   };
 }
 
-/**
- * A member called as one thing and read as another: an endpoint or group
- * named `raw` is called as itself, while the names read from it still reach
- * the `.raw` accessor the types promise there too.
- */
-export function calledAs(called: Callable, readFrom: (prop: string) => object): Callable {
-  return new Proxy<Callable>(called, {
-    get: (_, prop) => (typeof prop === "symbol" ? undefined : Reflect.get(readFrom(prop), prop)),
-  });
-}
-
 /** Read like `target`, but not callable — so never taken for a promise. */
 export function uncallable(target: () => object): object {
   return new Proxy<object>(Object.create(null), {

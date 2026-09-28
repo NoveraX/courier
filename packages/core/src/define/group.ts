@@ -5,7 +5,8 @@ import type { DefinedGroup, DefineGroupConfig, OwnEndpoints } from "./types";
  * Define an endpoint group with a prefix and typed endpoints.
  *
  * @throws ConfigurationError `RESERVED_ENDPOINT_NAME` for an endpoint named
- *   `options`, the key the group's own settings are kept under
+ *   `options`, the key the group's own settings are kept under, or `raw` or
+ *   `with`, which a client answers with its own accessors
  *
  * @example
  * const api = courier()

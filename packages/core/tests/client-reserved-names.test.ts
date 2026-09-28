@@ -1,11 +1,12 @@
 /**
- * Groups and endpoints whose names the client also answers to.
+ * Groups and endpoints whose names the runtime reads as hooks.
  *
- * `raw` and `with` are the client's own accessors, and `then`, `toJSON` and
- * `valueOf` are read by the runtime itself — `await`, `JSON.stringify`,
- * coercion. The client answered those names before looking at the source,
- * so a group or an endpoint called by one of them, which the types offered
- * and a generator emits from an ordinary tag or operationId, was unreachable.
+ * `then`, `toJSON` and `valueOf` are read by the runtime itself — `await`,
+ * `JSON.stringify`, coercion. The client answered those names before looking
+ * at the source, so a group or an endpoint called by one of them, which the
+ * types offered and a generator emits from an ordinary tag or operationId,
+ * was unreachable. The client's own accessors, `raw` and `with`, are refused
+ * as names when the source is defined instead.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -32,15 +33,12 @@ function namesApi() {
       files: defineGroup({
         prefix: "files",
         endpoints: {
-          raw: endpoint.get(":id/raw").variables<{ id: string }>(),
-          with: endpoint.get(":id/with").variables<{ id: string }>(),
           valueOf: endpoint.get("value-of"),
           toJSON: endpoint.get("to-json"),
           then: endpoint.get("then"),
           list: endpoint.get(""),
         },
       }),
-      raw: defineGroup({ prefix: "raw-group", endpoints: { listD: endpoint.get("list") } }),
       valueOf: defineGroup({ prefix: "value-group", endpoints: { list: endpoint.get("") } }),
       then: defineGroup({ prefix: "then-group", endpoints: { list: endpoint.get("") } }),
     },
@@ -50,27 +48,6 @@ function namesApi() {
 function urls(): string[] {
   return upstream.received.map((request) => request.url);
 }
-
-describe("an endpoint named like a client accessor", () => {
-  it("is called as raw", async () => {
-    await createCaller(namesApi()).files.raw({ id: "1" });
-
-    expect(urls()).toEqual(["/files/1/raw"]);
-  });
-
-  it("leaves .raw reaching the group's other endpoints", async () => {
-    const response = await createCaller(namesApi()).files.raw.list();
-
-    expect(response.status).toBe(200);
-    expect(urls()).toEqual(["/files"]);
-  });
-
-  it("is called as with", async () => {
-    await createCaller(namesApi()).files.with({ id: "1" });
-
-    expect(urls()).toEqual(["/files/1/with"]);
-  });
-});
 
 describe("an endpoint named like a runtime hook", () => {
   it.each([
@@ -82,19 +59,16 @@ describe("an endpoint named like a runtime hook", () => {
 
     expect(urls()).toEqual([url]);
   });
+
+  it("leaves .raw reaching the group's endpoints", async () => {
+    const response = await createCaller(namesApi()).files.raw.list();
+
+    expect(response.status).toBe(200);
+    expect(urls()).toEqual(["/files"]);
+  });
 });
 
-describe("a group named like a client accessor or a runtime hook", () => {
-  it("is reached as raw, while .raw still reaches the other groups", async () => {
-    const client = createCaller(namesApi());
-
-    await client.raw.listD();
-    const response = await client.raw.files.list();
-
-    expect(urls()).toEqual(["/raw-group/list", "/files"]);
-    expect(response.status).toBe(200);
-  });
-
+describe("a group named like a runtime hook", () => {
   it("is reached as valueOf", async () => {
     await createCaller(namesApi()).valueOf.list();
 
@@ -109,6 +83,13 @@ describe("a group named like a client accessor or a runtime hook", () => {
 
     expect(urls()).toEqual(["/then-group"]);
     expect(awaited).toBe(client);
+  });
+
+  it("is reached through .raw as well", async () => {
+    const response = await createCaller(namesApi()).raw.then.list();
+
+    expect(response.status).toBe(200);
+    expect(urls()).toEqual(["/then-group"]);
   });
 
   it("is not a promise in a spread copy of the client either", async () => {

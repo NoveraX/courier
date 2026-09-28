@@ -2,7 +2,6 @@ import { createDualProxy } from "./dual-proxy";
 import { mergeCallOptions } from "./merge-call-options";
 import {
   type Callable,
-  calledAs,
   listing,
   memo,
   RUNTIME_HOOKS,
@@ -33,17 +32,15 @@ function buildRoot(
   const declaredMemo = memo<object>();
   const member = (prop: string) =>
     memberMemo(prop, () => createDualProxy(backend, prop, options, raw, shape));
-  const rawClient = () => accessorMemo("raw", () => buildRoot(backend, options, true, shape));
   const names = () => (shape ? [...shape.groups.keys(), ...shape.endpoints] : []);
   let withFn: WithFn<object> | undefined;
 
   const read = (prop: string): unknown => {
     if (shape?.groups.has(prop) || shape?.endpoints.has(prop)) {
-      const keep = (make: () => object) => declaredMemo(prop, make);
-      return declaredMember(prop, shape, raw, member, keep, rawClient);
+      return declaredMember(prop, shape, member, (make) => declaredMemo(prop, make));
     }
     if (RUNTIME_HOOKS.has(prop)) return undefined;
-    if (prop === "raw") return rawClient();
+    if (prop === "raw") return accessorMemo("raw", () => buildRoot(backend, options, true, shape));
     if (prop === "with") {
       withFn ??= (next) => buildRoot(backend, mergeCallOptions(options, next), raw, shape);
       return withFn;
@@ -64,22 +61,15 @@ function buildRoot(
  *
  * A callable `then` would make every awaited client call it: a flat endpoint
  * of that name stays out of reach, and a group of that name is handed out as
- * an object rather than a function.
+ * an object rather than a function. `raw` and `with` never get here: a
+ * source cannot declare either.
  */
 function declaredMember(
   prop: string,
   shape: ClientShape,
-  raw: boolean,
   member: (prop: string) => Callable,
   keep: (make: () => object) => object,
-  rawClient: () => object,
 ): unknown {
-  if (prop === "then") {
-    return shape.endpoints.has(prop) ? undefined : keep(() => uncallable(() => member(prop)));
-  }
-  if (prop !== "raw" || raw) return member(prop);
-  const groupMethods = shape.groups.get(prop);
-  return keep(() =>
-    calledAs(member(prop), (name) => (groupMethods?.has(name) ? member(prop) : rawClient())),
-  );
+  if (prop !== "then") return member(prop);
+  return shape.endpoints.has(prop) ? undefined : keep(() => uncallable(() => member(prop)));
 }

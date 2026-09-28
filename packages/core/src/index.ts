@@ -44,7 +44,6 @@ export {
   type TypedClient,
   type WithOptions,
 } from "./client";
-export type {} from "./define/types";
 export {
   ConfigurationError,
   type ConfigurationErrorCode,

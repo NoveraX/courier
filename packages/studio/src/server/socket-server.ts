@@ -1,4 +1,4 @@
-import type { Server as HttpServer } from "node:http";
+import type { Server as HttpServer, IncomingMessage, ServerResponse } from "node:http";
 import { createLogger } from "@noverax/courier";
 import { type Namespace, type Socket, Server as SocketIOServer } from "socket.io";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
@@ -19,9 +19,13 @@ export interface StudioSockets {
 /**
  * Open Studio's Socket.IO server with the origin policy enforced.
  *
- * The handshake admits runtimes, the wider group; the UI namespace then
- * admits only the UI. `cors` alone guarded nothing: it shapes polling
- * responses, and a WebSocket upgrade from any page was accepted.
+ * Every Engine.IO request admits runtimes, the wider group; the UI namespace
+ * then admits only the UI. `cors` alone guarded nothing: it shapes polling
+ * responses, and a WebSocket upgrade from any page was accepted. Checking
+ * only the handshake was not enough either: a browser sends a same-origin
+ * GET without an Origin, so a page on a domain rebound to this machine
+ * opened a polling session, and its POSTs and its upgrade, which name the
+ * page, were never read.
  *
  * A message may be as large as {@link MAX_MESSAGE_BYTES}; a connection that
  * breaks, over a larger one or anything else, is logged with the reason.
@@ -39,15 +43,18 @@ export function createStudioSockets(
   policy: StudioOriginPolicy,
 ): StudioSockets {
   const io = new SocketIOServer(httpServer, {
-    allowRequest: (req, callback) => {
-      callback(null, policy.isRuntimeCaller(req.headers.origin, req.headers.host));
-    },
     cors: {
       origin: (origin, callback) => callback(null, policy.isRuntimeCaller(origin, undefined)),
       methods: ["GET", "POST"],
     },
     maxHttpBufferSize: MAX_MESSAGE_BYTES,
     serveClient: false,
+  });
+  /* The handshake, every polling request after it, and the upgrade to a WebSocket. */
+  io.engine.use((req: IncomingMessage, _res: ServerResponse, next: (err?: Error) => void) => {
+    const { origin, host } = req.headers;
+    if (policy.isRuntimeCaller(origin, host)) next();
+    else next(new Error(`Studio's sockets do not answer ${origin ?? `a page at ${host}`}`));
   });
 
   const uiNamespace = io.of("/ui");

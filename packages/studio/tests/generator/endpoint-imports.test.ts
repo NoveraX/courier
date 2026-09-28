@@ -98,14 +98,14 @@ beforeAll(() => {
   const files = CASES.flatMap(({ label, groupBy, options }) =>
     generateCode(SPEC, { type: "openapi", outputDir: label, groupBy, ...options }, "shop"),
   );
-  const dir = writeProject("endpoint-imports", files);
+  const dir = writeProject("endpoint-imports/all", files);
   const roots = CASES.map(({ label }) => `${label}/shop/index.ts`);
   const found = compileProject(dir, roots, { ...STRICT, verbatimModuleSyntax: true });
   problems = new Map(CASES.map(({ label }) => [label, found.filter((p) => p.startsWith(`${label}/`))]));
 }, 120_000);
 
 afterAll(() => {
-  removeProjects();
+  removeProjects("endpoint-imports");
 });
 
 describe("the files an import generates", () => {

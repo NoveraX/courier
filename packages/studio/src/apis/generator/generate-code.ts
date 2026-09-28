@@ -7,6 +7,7 @@ import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
 import { buildSchemaRecord } from "./build-schema-record";
 import { SINGLE_GROUP } from "./endpoint-placements";
 import { extractEndpointTypes } from "./extract-endpoint-types";
+import { type ExtractedTypeNames, extractedTypeNames } from "./extracted-type-names";
 import { generateFlatSourceFile } from "./generate-flat-source";
 import { generateGroupFile } from "./generate-group";
 import { generateIndexFile } from "./generate-index";
@@ -43,15 +44,22 @@ export function generateCode(
   /* A selection names endpoints by the specification's own groups. */
   const selected = selectedEndpoints(spec.groups, opts.selectedEndpoints);
   const transformed = transformSpec(spec, opts, selected);
+  /* Named over the whole import, whatever is selected. */
+  const whole = selected === null ? transformed : transformSpec(spec, opts, null);
+  const names = extractedTypeNames(whole.groups, Object.keys(spec.schemas));
 
   if (opts.groupBy === "single") {
-    return generateFlat(transformed, opts);
+    return generateFlat(transformed, opts, names);
   }
 
-  return generateGrouped(transformed, opts);
+  return generateGrouped(transformed, opts, names);
 }
 
-function generateFlat(spec: ParsedSpec, opts: ResolvedGenerateOptions): GeneratedFile[] {
+function generateFlat(
+  spec: ParsedSpec,
+  opts: ResolvedGenerateOptions,
+  names: ExtractedTypeNames,
+): GeneratedFile[] {
   const files: GeneratedFile[] = [];
   const flatGroup: ParsedGroup = {
     name: SINGLE_GROUP,
@@ -60,7 +68,7 @@ function generateFlat(spec: ParsedSpec, opts: ResolvedGenerateOptions): Generate
     endpoints: spec.groups.flatMap((g) => g.endpoints),
   };
 
-  const { group: processed, schemas: extracted } = extractEndpointTypes(flatGroup);
+  const { group: processed, schemas: extracted, params } = extractEndpointTypes(flatGroup, names);
   const groupSchemas = buildSchemaRecord(processed, spec, extracted);
 
   const schemaMap = new Map<string, Set<string>>();
@@ -71,19 +79,23 @@ function generateFlat(spec: ParsedSpec, opts: ResolvedGenerateOptions): Generate
   }
 
   const declared = schemasFile ? groupSchemas : {};
-  files.push(generateFlatSourceFile(processed.endpoints, spec, opts, declared, extracted));
+  files.push(generateFlatSourceFile(processed.endpoints, spec, opts, declared, params));
   /* The barrel re-exports the schemas file only when one was written. */
   files.push(generateIndexFile(spec, [], opts, schemaMap, true));
 
   return files;
 }
 
-function generateGrouped(spec: ParsedSpec, opts: ResolvedGenerateOptions): GeneratedFile[] {
+function generateGrouped(
+  spec: ParsedSpec,
+  opts: ResolvedGenerateOptions,
+  names: ExtractedTypeNames,
+): GeneratedFile[] {
   const files: GeneratedFile[] = [];
   const groupSchemaMap = new Map<string, Set<string>>();
 
   for (const group of spec.groups) {
-    const { group: processed, schemas: extracted } = extractEndpointTypes(group);
+    const { group: processed, schemas: extracted, params } = extractEndpointTypes(group, names);
     const groupSchemas = buildSchemaRecord(processed, spec, extracted);
 
     const schemasFile = schemaFileFor(groupSchemas, opts, group.name);
@@ -93,7 +105,7 @@ function generateGrouped(spec: ParsedSpec, opts: ResolvedGenerateOptions): Gener
     }
 
     const declared = schemasFile ? groupSchemas : {};
-    files.push(generateGroupFile(processed, spec, opts, declared, extracted));
+    files.push(generateGroupFile(processed, spec, opts, declared, params));
   }
 
   files.push(generateSourceFile(spec.groups, spec, opts));

@@ -3,7 +3,8 @@
  * both write them.
  */
 
-import type { ParsedEndpoint, ParsedSchema } from "../parser/types";
+import { ownValue } from "../own-value";
+import type { ParsedEndpoint } from "../parser/types";
 import { buildEndpointDefinition } from "./build-endpoint";
 import type { EndpointContext } from "./endpoint-context";
 import { jsdocText } from "./jsdoc-text";
@@ -21,24 +22,26 @@ const BYTES_NOTE =
  *
  * @param endpoints - The endpoints, in order
  * @param context - The file they are written into
- * @param extracted - The types extracted from these endpoints, by name
+ * @param paramsTypes - The type naming each endpoint's variables, by the endpoint's name
  * @returns The lines, indented to sit inside `endpoints: { … }`
  * @example
  * ```ts
- * endpointEntries(group.endpoints, context, extracted);
+ * endpointEntries(group.endpoints, context, paramsTypes);
  * // ['    getPet: endpoint.get(":petId").variables<{ petId: number }>().response(PetSchema),']
  * ```
  */
 export function endpointEntries(
   endpoints: readonly ParsedEndpoint[],
   context: EndpointContext,
-  extracted: Readonly<Record<string, ParsedSchema>>,
+  paramsTypes: Readonly<Record<string, string>>,
 ): string[] {
   const lines: string[] = [];
   for (const ep of endpoints) {
     const doc = context.options.includeComments ? comment(ep, context) : "";
     if (doc) lines.push(`    /** ${jsdocText(doc)} */`);
-    lines.push(`    ${objectKey(ep.name)}: ${buildEndpointDefinition(ep, context, extracted)},`);
+    lines.push(
+      `    ${objectKey(ep.name)}: ${buildEndpointDefinition(ep, context, ownValue(paramsTypes, ep.name))},`,
+    );
   }
   return lines;
 }

@@ -84,3 +84,31 @@ describe("the source catalogue", () => {
     expect(sources).toEqual([{ name: "pets", isImported: true, hasClient: false }]);
   }, 30_000);
 });
+
+describe("an endpoint in the source catalogue", () => {
+  it("says how a stream is carried and which middleware its source runs", async () => {
+    const config = [
+      `import { courier, defineApi, defineGroup } from "@noverax/courier/define";`,
+      `import { defineMiddleware } from "@noverax/courier/middleware";`,
+      `const { endpoint, stream } = courier();`,
+      `const stamp = defineMiddleware("stamp", "before", async () => {});`,
+      `const live = defineGroup({ prefix: "live", endpoints: {`,
+      `  ticks: stream.response<{ n: number }>().get("sse"),`,
+      `  list: endpoint.get("items").response<unknown>(),`,
+      `} });`,
+      `export default { sources: { api: defineApi({ baseURL: "https://api.example", middleware: [stamp], groups: { live } }) } };`,
+    ].join("\n");
+    writeFileSync(join(root, "courier.config.ts"), config);
+    const loaded = await loadCourierConfig(root);
+
+    const { sources } = buildSourceScan(loaded, importsSnapshotOf(loaded.config.imports, root), root);
+
+    const endpoints = sources[0]?.groups[0]?.endpoints ?? [];
+    expect(endpoints.find((e) => e.name === "ticks")?.analysis).toMatchObject({
+      path: "sse",
+      transport: "sse",
+      middleware: ["stamp"],
+    });
+    expect(endpoints.find((e) => e.name === "list")?.analysis).not.toHaveProperty("transport");
+  }, 30_000);
+});

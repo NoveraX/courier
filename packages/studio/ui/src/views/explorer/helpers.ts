@@ -4,9 +4,12 @@ import type { RequestEntry, SourceMap } from "@/store/types";
 
 /**
  * Resolves the full URL path for an endpoint (e.g. `/users/:id`).
- * Extracts path from actual request URLs when available, generalizing
- * numeric/UUID segments into `:param` placeholders.
- * Falls back to group prefix when no requests exist.
+ *
+ * A declared endpoint's path is its group prefix and its own path. A stream
+ * or channel declared with no path is served by the app itself and has no
+ * URL path of its own. For an endpoint known from traffic alone, the path
+ * is read from a request's URL, generalizing numeric/UUID segments into
+ * `:param` placeholders, and falls back to the group prefix.
  */
 export function resolveFullPath(
   source: string,
@@ -19,11 +22,12 @@ export function resolveFullPath(
   const baseURL = src?.baseURL ?? "";
   const grp = src?.groups[group];
   const prefix = grp?.prefix || (group ? `/${group}` : "");
-  const endpointPath = grp?.endpoints[method]?.path;
+  const endpoint = grp?.endpoints[method];
 
-  // 1. Use probed path template from SourceMap (e.g. ":id" → "/users/:id")
-  if (endpointPath) {
-    return prefix ? `${prefix}/${endpointPath}` : `/${endpointPath}`;
+  // 1. The declared path (e.g. prefix "users" and ":id" → "/users/:id")
+  if (endpoint && endpoint.origin !== "runtime" && endpoint.path !== undefined) {
+    if (endpoint.path === "" && endpoint.transport) return "";
+    return joinPath(prefix, endpoint.path);
   }
 
   // 2. Try to extract path from the first request with a URL
@@ -41,6 +45,12 @@ export function resolveFullPath(
 
   // 3. Fallback to group prefix or /methodName for flat endpoints
   return prefix || `/${method}`;
+}
+
+/** Join path parts into one path with a single leading slash, e.g. `/users/:id`. */
+function joinPath(...parts: string[]): string {
+  const segments = parts.flatMap((part) => part.split("/")).filter((segment) => segment !== "");
+  return `/${segments.join("/")}`;
 }
 
 /** Strips baseURL, generalizes dynamic segments into `:param` */

@@ -28,6 +28,8 @@ export interface CallTarget extends CallRequest {
   endpointGroup: Resolved["endpointGroup"];
   schema: Resolved["schema"];
   endpointOptions: Resolved["options"];
+  /** The verb the endpoint was addressed with, as HTTP spells it */
+  httpMethod: Resolved["httpMethod"];
 }
 
 /** The target of a call, or the answer that refuses it. */
@@ -83,6 +85,7 @@ export function resolveCallTarget(
     endpointGroup,
     schema,
     options: endpointOptions,
+    httpMethod,
   } = resolveEndpoint(dataSource, group, method);
   if (typeof endpoint !== "function") return refuse(400, notFound);
 
@@ -109,6 +112,14 @@ export function resolveCallTarget(
     );
   }
 
-  const target = { ...call, dataSource, endpoint, endpointGroup, schema, endpointOptions };
+  const target = {
+    ...call,
+    dataSource,
+    endpoint,
+    endpointGroup,
+    schema,
+    endpointOptions,
+    httpMethod,
+  };
   return { target };
 }

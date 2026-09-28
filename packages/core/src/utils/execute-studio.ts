@@ -17,17 +17,28 @@ export type StudioContext = {
   dt: StudioHooks;
 };
 
-/** Emit onRequestStart event if studio is active */
-export function emitRequestStart(
-  dCtx: StudioContext,
-  source: unknown,
-  group: unknown,
-  method: unknown,
-  variables: unknown,
-  mode: string,
-  middlewareCount: number,
-  schema: SchemaMetadata | undefined,
-): void {
+/** What a request is, as Studio is told when it starts. */
+export interface RequestStart {
+  source: unknown;
+  group: unknown;
+  method: unknown;
+  variables: unknown;
+  mode: "direct" | "proxy";
+  middlewareCount: number;
+  schema: SchemaMetadata | undefined;
+  /** The endpoint's HTTP verb, when it declares one. */
+  httpMethod: string | undefined;
+}
+
+/**
+ * Emit onRequestStart event if studio is active.
+ *
+ * The verb and whether the endpoint reads or writes go with it: a request
+ * that fails before it is sent — its variables refused, a middleware thrown —
+ * never reports them later, and was shown as a GET query.
+ */
+export function emitRequestStart(dCtx: StudioContext, start: RequestStart): void {
+  const { source, group, method, variables, schema } = start;
   dCtx.dt.onRequestStart?.({
     id: dCtx.requestId,
     source: String(source),
@@ -35,9 +46,11 @@ export function emitRequestStart(
     method: String(method),
     /* Studio receives events as JSON, where a FormData would arrive as `{}`. */
     variables: isFormData(variables) ? describeFormData(variables) : variables,
-    mode: mode as "direct" | "proxy",
-    middlewareCount,
+    mode: start.mode,
+    middlewareCount: start.middlewareCount,
     hasValidation: { variables: !!schema?.variables, response: !!schema?.response },
+    ...(start.httpMethod && { httpMethod: start.httpMethod }),
+    ...(schema?.type && { endpointType: schema.type }),
     timestamp: Date.now(),
   });
 }

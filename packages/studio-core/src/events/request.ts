@@ -11,6 +11,10 @@ export interface RequestStartEvent extends StudioEvent {
   mode: "direct" | "proxy";
   middlewareCount: number;
   hasValidation: { variables: boolean; response: boolean };
+  /** The endpoint's HTTP verb (`"GET"`, `"DELETE"`), when it declares one. */
+  httpMethod?: string;
+  /** Whether the endpoint reads or writes. */
+  endpointType?: "query" | "mutation";
 }
 
 export interface RequestEndEvent extends StudioEvent {

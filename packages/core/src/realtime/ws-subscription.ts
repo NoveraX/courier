@@ -3,7 +3,7 @@ import { createConnectionState } from "./connection-state";
 import { forwardConnectionStatus } from "./forward-status";
 import { createEventQueue } from "./sse/event-queue";
 import type { ConnectionStatus, SSESubscription } from "./types";
-import { qualifyTopic } from "./ws/topic-hash";
+import { qualifyTopic } from "./ws/topic-key";
 import type { WSConnectionConfig } from "./ws/ws-types";
 
 /**

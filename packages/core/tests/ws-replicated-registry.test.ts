@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { courier } from "../src/define/courier";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
-import { qualifyTopic } from "../src/realtime/ws/topic-hash";
+import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 import { createSharedBus } from "./helpers/shared-pubsub";
 

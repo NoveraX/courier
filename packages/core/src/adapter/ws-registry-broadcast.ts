@@ -66,7 +66,7 @@ export async function broadcastToAll(
  * @returns Resolves once every subscriber was sent the frame
  *
  * @example
- * await broadcastToTopic(targets, "api.chat.room#1a2b3c4d", { text: "hi" });
+ * await broadcastToTopic(targets, 'api.chat.room#{"room":"a"}', { text: "hi" });
  */
 export async function broadcastToTopic(
   targets: BroadcastTargets,

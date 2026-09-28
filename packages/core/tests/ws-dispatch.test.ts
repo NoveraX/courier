@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { handleSubscribe, handleMessage, handleUnsubscribe } from "../src/adapter/ws-dispatch";
-import { qualifyTopic } from "../src/realtime/ws/topic-hash";
+import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { ENDPOINT_SCHEMA } from "../src/validation";

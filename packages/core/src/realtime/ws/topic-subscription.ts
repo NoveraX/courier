@@ -29,7 +29,7 @@ export interface Subscription {
  * @returns The subscription
  *
  * @example
- * const s = createSubscription("api.chat.room#1a2b3c4d", { room: "a" }, "api.chat.room");
+ * const s = createSubscription('api.chat.room#{"room":"a"}', { room: "a" }, "api.chat.room");
  */
 export function createSubscription(
   topic: string,

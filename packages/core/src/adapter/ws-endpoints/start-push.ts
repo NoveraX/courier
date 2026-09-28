@@ -18,7 +18,7 @@ const log = createLogger("WS");
  * as a data message to the client. Registers subscription in topicManager.
  *
  * @param ctx - Per-connection socket context
- * @param topic - Qualified topic string (e.g. "api.chat.feed#abc")
+ * @param topic - Qualified topic string (e.g. 'api.chat.feed#{"room":"a"}')
  * @param endpoint - Push endpoint function (async generator factory)
  * @param variables - Validated subscription variables
  * @param subscribeId - The id of the client's subscribe message, if any

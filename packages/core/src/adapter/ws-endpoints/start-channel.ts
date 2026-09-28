@@ -23,7 +23,7 @@ const log = createLogger("WS");
  * - onLeave throws → logged, does not block cleanup
  *
  * @param ctx - Per-connection socket context
- * @param topic - Qualified topic string (e.g. "api.chat.room#abc")
+ * @param topic - Qualified topic string (e.g. 'api.chat.room#{"room":"a"}')
  * @param endpoint - Channel endpoint function (ChannelHandlers factory)
  * @param variables - Validated subscription variables
  * @param subscribeId - The id of the client's subscribe message, if any

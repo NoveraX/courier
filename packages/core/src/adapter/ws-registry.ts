@@ -24,8 +24,8 @@ import type { ServerTopicManager } from "./ws-topics";
  * @example
  * const registry = createConnectionRegistry();
  * registry.add({ connectionId, meta, connectedAt, sendRaw, close });
- * registry.broadcastToTopic("chat.room#abc", { text: "hi" });
- * registry.broadcastToBaseTopic("chat.room", { text: "to all rooms" });
+ * registry.broadcastToTopic('api.chat.room#{"room":"a"}', { text: "hi" });
+ * registry.broadcastToBaseTopic("api.chat.room", { text: "to all rooms" });
  * registry.sendToConnection(connId, "notifications", { alert: true });
  */
 export function createConnectionRegistry(): InternalConnectionRegistry {

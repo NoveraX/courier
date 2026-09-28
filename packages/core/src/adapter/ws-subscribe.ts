@@ -1,6 +1,6 @@
 import { createLogger } from "../logger";
 import { describeFailure } from "../realtime/describe-failure";
-import { qualifyTopic, unqualifyTopic } from "../realtime/ws/topic-hash";
+import { qualifyTopic, unqualifyTopic } from "../realtime/ws/topic-key";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { authorizeSubscription } from "./ws-authorize-subscription";
@@ -70,7 +70,7 @@ async function openSubscription(
   const variables = await validateVariablesSafe(ctx, msg, resolved.schema);
   if (variables === VALIDATION_FAILED) return;
 
-  /* The client sends the topic already qualified with a hash of its own
+  /* The client sends the topic already qualified with the key of its own
      variables, and the two were never checked against each other: a caller
      could pass validation and authorization with variables of its own while
      subscribing under the qualifier of someone else's. Derive the qualifier

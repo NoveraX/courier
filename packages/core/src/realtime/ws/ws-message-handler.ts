@@ -1,6 +1,6 @@
 import type { ScopedLogger } from "../../logger";
 import { fromErrorCode, type RealtimeError } from "../errors";
-import { unqualifyTopic } from "./topic-hash";
+import { unqualifyTopic } from "./topic-key";
 import type { TopicRegistry } from "./topic-registry-types";
 import type { createPendingRegistry } from "./ws-pending";
 import { encodeMessage, type WSMessage } from "./ws-protocol";

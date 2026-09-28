@@ -1,6 +1,6 @@
 import type { Sources } from "../../define/types";
 import type { ChannelHandlers } from "../../realtime/types";
-import { qualifyTopic } from "../../realtime/ws/topic-hash";
+import { qualifyTopic } from "../../realtime/ws/topic-key";
 import { generateRequestId } from "../../studio";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { instrumentWSChannel } from "../instrument";

@@ -1,4 +1,4 @@
-import { unqualifyTopic } from "../realtime/ws/topic-hash";
+import { unqualifyTopic } from "../realtime/ws/topic-key";
 import type { WSSubscriptionEntry } from "./ws-types";
 
 /** Optional lifecycle hooks for pub/sub bridge integration */

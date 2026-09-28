@@ -1,4 +1,4 @@
-import { unqualifyTopic } from "../realtime/ws/topic-hash";
+import { unqualifyTopic } from "../realtime/ws/topic-key";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import type { SchemaMetadata } from "../validation";
@@ -6,7 +6,7 @@ import { isExposedToWire } from "./exposure";
 import type { WSSocketContext } from "./ws-context";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
 
-/** Parse "source.group.method" or "source.group.method#hash" topic format */
+/** Parse "source.group.method" or "source.group.method#key" topic format */
 export function parseTopic(topic: string): { source?: string; group?: string; method: string } {
   const { baseTopic } = unqualifyTopic(topic);
   const [first, second, third] = baseTopic.split(".");

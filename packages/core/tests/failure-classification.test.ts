@@ -9,6 +9,8 @@
  * caller's own mistakes — a middleware that threw, a BigInt in the body —
  * came back dressed as HTTP failures.
  */
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createHandler } from "../src/adapter";
@@ -16,6 +18,7 @@ import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import { HTTPError } from "../src/errors";
 import { defineMiddleware } from "../src/middleware";
+import { sendWebResponse, toWebRequest } from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { startUpstream, type Upstream } from "./helpers/upstream";
@@ -115,6 +118,35 @@ describe("a failure in the caller's own code", () => {
 
     expect(error).toBeInstanceOf(TypeError);
     expect(upstream.received).toEqual([]);
+  });
+});
+
+describe("a proxy call the caller cancels", () => {
+  it("rejects with the reason it gave", async () => {
+    const source = api();
+    registerSources({ calls: source });
+    const handler = createHandler();
+    const proxy = createServer(async (req, res) => {
+      await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
+    });
+    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+    const { port } = proxy.address() as AddressInfo;
+    const client = createProxyCaller<typeof source>("calls", {
+      source,
+      proxyPath: { http: `http://127.0.0.1:${port}/api/request` },
+    });
+    const reason = new Error("user navigated away");
+    const controller = new AbortController();
+
+    try {
+      const pending = rejection(client.slow.with({ signal: controller.signal })());
+      setTimeout(() => controller.abort(reason), 50);
+
+      expect(await pending).toBe(reason);
+    } finally {
+      proxy.closeAllConnections();
+      await new Promise<void>((resolve) => proxy.close(() => resolve()));
+    }
   });
 });
 

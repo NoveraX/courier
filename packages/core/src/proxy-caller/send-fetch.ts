@@ -30,7 +30,7 @@ export async function sendFetch(
     await ctx.onSuccess?.(data);
     return data;
   } catch (error) {
-    const failure = asProxyFailure(error);
+    const failure = asProxyFailure(error, signalOf(options));
     if (failure instanceof HTTPError) await ctx.onError?.(failure);
     throw failure;
   } finally {
@@ -88,4 +88,8 @@ function withUploadInstrumentation(options: Record<string, unknown>): Record<str
       }
     },
   };
+}
+
+function signalOf(options: Record<string, unknown>): AbortSignal | undefined {
+  return options.signal instanceof AbortSignal ? options.signal : undefined;
 }

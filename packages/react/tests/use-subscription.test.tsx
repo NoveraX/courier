@@ -318,3 +318,68 @@ describe("useSubscription", () => {
     expect(subscribeFn).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("useSubscription's status", () => {
+  /* A stream that stays open once it has said one thing. */
+  const openStream: SubscribeFn = () =>
+    createMockSSESubscription(async function* () {
+      yield { data: { n: 1 }, id: "1" };
+      await new Promise(() => undefined);
+    });
+
+  it("is connecting from the first render, before the stream reports", () => {
+    const { result } = renderHook(() => useSubscription(openStream, "live", "feed"), {
+      wrapper,
+    });
+
+    expect(result.current.status).toBe("connecting");
+  });
+
+  it("starts over as connecting when the variables name another stream", async () => {
+    const { result, rerender } = renderHook(
+      ({ room }) => useSubscription(openStream, "live", "feed", { variables: { room } }),
+      { wrapper, initialProps: { room: "a" } },
+    );
+    await waitFor(() => expect(result.current.status).toBe("connected"));
+
+    rerender({ room: "b" });
+
+    expect(result.current.status).toBe("connecting");
+    await waitFor(() => expect(result.current.status).toBe("connected"));
+  });
+
+  it("is disconnected in the very render that disables it", async () => {
+    const seen: string[] = [];
+    const { result, rerender } = renderHook(
+      ({ enabled }) => {
+        const sub = useSubscription(openStream, "live", "feed", { enabled });
+        seen.push(sub.status);
+        return sub;
+      },
+      { wrapper, initialProps: { enabled: true } },
+    );
+    await waitFor(() => expect(result.current.status).toBe("connected"));
+    seen.length = 0;
+
+    rerender({ enabled: false });
+
+    expect(seen[0]).toBe("disconnected");
+    expect(result.current.status).toBe("disconnected");
+  });
+
+  it("is disconnected, with the reason, when the stream cannot be opened", async () => {
+    const onStatusChange = vi.fn();
+    const refused: SubscribeFn = () => {
+      throw new Error("no stream here");
+    };
+
+    const { result } = renderHook(
+      () => useSubscription(refused, "live", "feed", { onStatusChange }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.error?.message).toBe("no stream here"));
+    expect(result.current.status).toBe("disconnected");
+    expect(onStatusChange).toHaveBeenLastCalledWith("disconnected");
+  });
+});

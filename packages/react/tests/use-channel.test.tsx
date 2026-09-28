@@ -200,7 +200,7 @@ describe("useChannel", () => {
 
     const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
 
-    // The hook starts out "disconnected", so wait on the error, not the status.
+    // The status passes through "connected" before the join is refused, so wait on the error.
     await waitFor(() => expect(result.current.error).toBeDefined());
     expect(result.current.error?.message).toBe("Not a member of this room");
     await waitFor(() => expect(result.current.status).toBe("disconnected"));
@@ -321,5 +321,48 @@ describe("useChannel", () => {
 
     // StrictMode dev double-mount must not produce a phantom channel
     expect(channelFn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("useChannel's status", () => {
+  it("is connecting from the first render, before the channel reports", () => {
+    const { channelFn } = createChannelSpy();
+
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
+
+    expect(result.current.status).toBe("connecting");
+  });
+
+  it("starts over as connecting when the variables name another channel", async () => {
+    const { channelFn } = createChannelSpy();
+    const { result, rerender } = renderHook(
+      ({ room }) => useChannel(channelFn, "chat", "room", { variables: { room } }),
+      { wrapper, initialProps: { room: "a" } },
+    );
+    await waitFor(() => expect(result.current.status).toBe("connected"));
+
+    rerender({ room: "b" });
+
+    expect(result.current.status).toBe("connecting");
+    await waitFor(() => expect(result.current.status).toBe("connected"));
+  });
+
+  it("is disconnected in the very render that disables it", async () => {
+    const { channelFn } = createChannelSpy();
+    const seen: string[] = [];
+    const { result, rerender } = renderHook(
+      ({ enabled }) => {
+        const channel = useChannel(channelFn, "chat", "room", { enabled });
+        seen.push(channel.status);
+        return channel;
+      },
+      { wrapper, initialProps: { enabled: true } },
+    );
+    await waitFor(() => expect(result.current.status).toBe("connected"));
+    seen.length = 0;
+
+    rerender({ enabled: false });
+
+    expect(seen[0]).toBe("disconnected");
   });
 });

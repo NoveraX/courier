@@ -32,14 +32,17 @@ export type CourierSubscriptionOptions<TResponse, TVariables> = WithVariables<TV
 /**
  * Reactive state returned by useSubscription. It belongs to the stream the
  * current method and variables name: when either changes, `data`, `events`
- * and `error` start over.
+ * and `error` start over, and `status` is `connecting` again.
  */
 export interface SubscriptionResult<TData> {
   /** Latest event payload, or `optimisticData` until the first one arrives */
   data: TData | undefined;
   /** Every event this stream has delivered, oldest first */
   events: SSEEvent<TData>[];
-  /** Current connection status */
+  /**
+   * The stream's connection status: `connecting` until it says otherwise,
+   * `disconnected` while disabled or once it could not be opened
+   */
   status: ConnectionStatus;
   /** Why the stream failed or could not be opened; cleared by the next event */
   error: Error | undefined;
@@ -73,12 +76,15 @@ export type CourierChannelOptions<TReceive, TVariables> = WithVariables<TVariabl
 /**
  * Reactive state returned by useChannel. It belongs to the channel the
  * current method and variables name: when either changes, `lastMessage` and
- * `error` start over.
+ * `error` start over, and `status` is `connecting` again.
  */
 export interface ChannelResult<TSend, TReceive> {
   /** Latest message received from the server */
   lastMessage: TReceive | undefined;
-  /** Current connection status */
+  /**
+   * The channel's connection status: `connecting` until it says otherwise,
+   * `disconnected` while disabled or once it could not be opened
+   */
   status: ConnectionStatus;
   /** The last error reported on this channel; cleared on reconnect */
   error: ChannelError | undefined;

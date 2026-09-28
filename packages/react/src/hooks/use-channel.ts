@@ -6,6 +6,7 @@ import type { ConnectionStatus, WSChannel } from "@noverax/courier/realtime";
 import * as React from "react";
 
 import type { ChannelError, ChannelResult, CourierChannelOptions } from "../types";
+import { useKeyedStatus } from "./keyed-status";
 import { streamKeyOf } from "./stream-key";
 
 const log = createLogger("React");
@@ -30,10 +31,11 @@ interface ChannelState<TReceive> {
 /**
  * Subscribe to a bidirectional WebSocket channel with automatic lifecycle management.
  *
- * A change of method or variables joins another channel, and `lastMessage`
- * and `error` start over with it in the same render. Messages sent before the
- * channel exists — from a mount effect, say — wait for it and go out once it
- * does; one sent while no channel is on its way is dropped with a warning.
+ * A change of method or variables joins another channel, and `lastMessage`,
+ * `error` and the status — `connecting` — start over with it in the same
+ * render. Messages sent before the channel exists — from a mount effect, say —
+ * wait for it and go out once it does; one sent while no channel is on its
+ * way is dropped with a warning.
  *
  * @param channel - Factory that creates a WSChannel (injected by createGroupHooks)
  * @param group - API group name
@@ -53,9 +55,9 @@ export function useChannel<TSend, TReceive>(
   const { key, variablesKey } = streamKeyOf(group, method, variables);
 
   const [state, setState] = React.useState<ChannelState<TReceive>>(() => emptyChannel(key));
-  const [status, setStatus] = React.useState<ConnectionStatus>("disconnected");
   const current = state.key === key ? state : emptyChannel<TReceive>(key);
   if (current !== state) setState(current);
+  const [status, reportStatus] = useKeyedStatus(key, enabled);
 
   // Stable refs for callbacks — avoids re-connecting on handler identity change
   const callbacksRef = React.useRef({ onData, onError, onStatusChange });
@@ -81,10 +83,7 @@ export function useChannel<TSend, TReceive>(
   }, []);
 
   React.useEffect(() => {
-    if (!enabled) {
-      setStatus("disconnected");
-      return;
-    }
+    if (!enabled) return;
 
     const vars = variablesKey ? (JSON.parse(variablesKey) as unknown) : undefined;
     const pending: TSend[] = [];
@@ -97,6 +96,13 @@ export function useChannel<TSend, TReceive>(
       if (!active) return;
       setState((prev) => (prev.key === key ? { ...prev, error } : prev));
       callbacksRef.current.onError?.(error);
+    };
+    const report = (next: ConnectionStatus) => {
+      reportStatus({ key, status: next });
+      if (next === "connected") {
+        setState((prev) => (prev.key === key ? { ...prev, error: undefined } : prev));
+      }
+      callbacksRef.current.onStatusChange?.(next);
     };
 
     // Defer the actual channel creation to a microtask so React 19 StrictMode
@@ -111,19 +117,14 @@ export function useChannel<TSend, TReceive>(
         if (!isConfigurationError(error)) throw error;
         pendingRef.current = null;
         fail(error);
+        report("disconnected");
         return;
       }
       channelRef.current = ch;
       pendingRef.current = null;
 
       unsubscribe.push(
-        ch.on("status", (s: ConnectionStatus) => {
-          setStatus(s);
-          if (s === "connected") {
-            setState((prev) => (prev.key === key ? { ...prev, error: undefined } : prev));
-          }
-          callbacksRef.current.onStatusChange?.(s);
-        }),
+        ch.on("status", report),
         ch.on("data", (message: unknown) => {
           const typed = message as TReceive;
           setState((prev) => (prev.key === key ? { ...prev, lastMessage: typed } : prev));
@@ -142,8 +143,9 @@ export function useChannel<TSend, TReceive>(
       ch?.close();
       if (pendingRef.current === pending) pendingRef.current = null;
       if (channelRef.current === ch) channelRef.current = null;
+      reportStatus(undefined);
     };
-  }, [enabled, group, method, key, variablesKey, channel]);
+  }, [enabled, group, method, key, variablesKey, channel, reportStatus]);
 
   return { lastMessage: current.lastMessage, status, error: current.error, send, close };
 }

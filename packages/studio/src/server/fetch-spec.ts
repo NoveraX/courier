@@ -30,6 +30,10 @@ const DEADLINE_MS = 60_000;
  * only for such a host. An address that means every interface is never
  * reached.
  *
+ * The headers given — an import's `auth` — go only to the URL's own
+ * origin: a redirect elsewhere is followed without them, so a server that
+ * redirects cannot hand a private token to another host.
+ *
  * A URL Studio refuses is the request's fault: its error is `refused`.
  * Everything that goes wrong once a request is sent is the host's — no
  * answer, an error status, a redirect Studio cannot follow, a body cut off,
@@ -37,6 +41,7 @@ const DEADLINE_MS = 60_000;
  *
  * @param url - The URL the developer asked Studio to read
  * @param allowlist - The private hosts the project names, read when a hop needs them
+ * @param headers - Headers to send the URL's own origin, such as an import's auth
  * @returns The specification's text
  * @throws {SpecFetchError} When the URL is refused or cannot be fetched
  * @throws {SpecHostsUnavailableError} For a private host, while Studio cannot read the project's list
@@ -46,9 +51,14 @@ const DEADLINE_MS = 60_000;
  * const raw = await fetchSpec("https://api.example.com/openapi.json", specHostAllowlist(project, root));
  * ```
  */
-export async function fetchSpec(url: string, allowlist: SpecHostAllowlist): Promise<string> {
+export async function fetchSpec(
+  url: string,
+  allowlist: SpecHostAllowlist,
+  headers: Readonly<Record<string, string>> = {},
+): Promise<string> {
   const deadline = Date.now() + DEADLINE_MS;
   let current = specUrl(url);
+  const { origin } = current;
   let loopback = true;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const remaining = deadline - Date.now();
@@ -62,6 +72,7 @@ export async function fetchSpec(url: string, allowlist: SpecHostAllowlist): Prom
       current,
       hopPolicy(current, loopback, allowlist),
       remaining,
+      current.origin === origin ? headers : {},
     );
     if (answer.kind === "body") return answer.text;
     /* A redirect may lead to this machine only from this machine: once a hop

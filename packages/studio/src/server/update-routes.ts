@@ -34,7 +34,7 @@ export function registerUpdateFlowRoutes(app: RouteApp, deps: ApisRouteDeps): vo
       const body = validateUpdatePreviewBody(req.body, res);
       if (!body) return;
       const declarations = await readDeclarations(project, projectRoot, "show");
-      const result = handlePreviewUpdate(
+      const result = await handlePreviewUpdate(
         body,
         importsSnapshotOf(declarations, projectRoot),
         projectRootAt(projectRoot),
@@ -53,7 +53,7 @@ export function registerUpdateFlowRoutes(app: RouteApp, deps: ApisRouteDeps): vo
        the declaration saved meanwhile. */
     void withImportsLock(async () => {
       const declarations = await readDeclarations(project, projectRoot, "act");
-      const result = handleApplyUpdate(
+      const result = await handleApplyUpdate(
         body,
         importsSnapshotOf(declarations, projectRoot),
         projectRootAt(projectRoot),

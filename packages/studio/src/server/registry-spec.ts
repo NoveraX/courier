@@ -6,12 +6,14 @@ import { createLogger } from "@noverax/courier";
 import type { CourierImportEntry } from "@noverax/courier/config";
 import { computeSpecHash, parseSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
+import { authHeaders } from "./auth-headers";
 import { fetchSpec } from "./fetch-spec";
 import { isUrl } from "./fs-helpers";
 import type { ProjectRoot } from "./project-fs/project-root";
 import { readProjectText } from "./project-fs/read-project-text";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse } from "./route-types";
+import { checkPinnedHash } from "./spec-as-declared";
 import { SpecFetchError } from "./spec-fetch-error";
 import type { SpecHostAllowlist } from "./spec-host-allowlist";
 import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
@@ -28,6 +30,7 @@ const log = createLogger("Studio");
  * @param res - The route's response, answered when there is no text
  * @param allowlist - The private hosts the project names, read only for a private host
  * @param root - The project a spec file is read from
+ * @param headers - Headers to fetch a URL with, such as the import's auth
  * @returns The specification's text, or `null` once the route is answered
  *
  * @example
@@ -41,10 +44,11 @@ export async function fetchSpecRaw(
   res: JsonResponse,
   allowlist: SpecHostAllowlist,
   root: ProjectRoot,
+  headers: Readonly<Record<string, string>> = {},
 ): Promise<string | null> {
   if (isUrl(specUrl)) {
     try {
-      return await fetchSpec(specUrl, allowlist);
+      return await fetchSpec(specUrl, allowlist, headers);
     } catch (err) {
       log.warn(`Studio could not fetch the spec from ${specUrl}`, err);
       if (err instanceof SpecHostsUnavailableError) {
@@ -70,9 +74,11 @@ export async function fetchSpecRaw(
 
 /**
  * Check whether an import's upstream specification changed since it was
- * written. Every failure is the import's own result, so one import that
- * cannot be read does not fail a check of all of them.
+ * written, fetching it with the import's auth. Every failure is the
+ * import's own result, so one import that cannot be read does not fail a
+ * check of all of them; a specification other than the one pinned is one.
  *
+ * @param name - The import's key under `imports`
  * @param entry - The import's declaration
  * @param state - What Studio recorded when it wrote the import
  * @param allowlist - The private hosts the project names, shared by every import of the check
@@ -80,10 +86,11 @@ export async function fetchSpecRaw(
  *
  * @example
  * ```ts
- * const result = await checkSingleSource(entry, getImportState(imports, name), allowlist);
+ * const result = await checkSingleSource(name, entry, getImportState(imports, name), allowlist);
  * ```
  */
 export async function checkSingleSource(
+  name: string,
   entry: CourierImportEntry,
   state: ImportStateEntry | undefined,
   allowlist: SpecHostAllowlist,
@@ -93,8 +100,9 @@ export async function checkSingleSource(
   if (!specUrl) return { changed: false };
 
   try {
-    const raw = await fetchSpec(specUrl, allowlist);
+    const raw = await fetchSpec(specUrl, allowlist, authHeaders(entry.auth));
     const newSpec = parseSpec(raw);
+    checkPinnedHash(name, entry, newSpec);
     return { changed: computeSpecHash(newSpec) !== state?.specHash };
   } catch (err) {
     return { changed: false, error: err instanceof Error ? err.message : "Check failed" };

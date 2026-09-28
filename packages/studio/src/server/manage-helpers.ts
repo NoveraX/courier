@@ -29,6 +29,7 @@ interface InventoryRequest {
  * @param body - The import's name, and the spec to compare with
  * @param imports - The declarations of the config Studio runs, with the imports state
  * @param root - The project
+ * @param specHash - The hash of the spec as sent, when the declaration reshaped it
  * @returns The inventory, or the error to answer with and its status
  *
  * @example
@@ -40,6 +41,7 @@ export function handleInventory(
   body: InventoryRequest,
   imports: ImportsSnapshot,
   root: ProjectRoot,
+  specHash?: string,
 ): EndpointInventory | { error: string; status: number } {
   const entry = getImportEntry(imports, body.name);
   if (!entry) return { error: `Source "${body.name}" not found`, status: 404 };
@@ -56,7 +58,7 @@ export function handleInventory(
   /* Listed as the import's files hold them: by its grouping, under the names it generates. */
   const listed = transformSpec(spec, { groupBy: entry.groupBy ?? "tag" });
   const inventory = buildEndpointInventory(listed, diskGroups, fingerprints, existingFiles);
-  inventory.specChanged = computeSpecHash(spec) !== (state?.specHash ?? "");
+  inventory.specChanged = (specHash ?? computeSpecHash(spec)) !== (state?.specHash ?? "");
 
   return inventory;
 }

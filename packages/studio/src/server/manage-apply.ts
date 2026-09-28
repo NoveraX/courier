@@ -31,7 +31,8 @@ export function handleManageApply(
   | { error: string; status: number } {
   const planned = planManage(body, imports, root);
   if ("error" in planned) return planned;
-  const spec = { specHash: computeSpecHash(body.spec), digest: createSpecDigest(body.spec) };
+  const specHash = body.specHash ?? computeSpecHash(body.spec);
+  const spec = { specHash, digest: createSpecDigest(body.spec) };
   const now = new Date().toISOString();
   const report = runPlan(
     root,

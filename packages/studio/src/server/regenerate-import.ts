@@ -1,6 +1,6 @@
 import { CourierError } from "@noverax/courier";
 import type { GenerateOptions, ParsedSpec } from "../apis";
-import { computeSpecHash, createSpecDigest, generateCode } from "../apis";
+import { createSpecDigest, generateCode } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import type { ImportLayout } from "../apis/layout";
 import type { ApplyReport } from "./import-files/apply-file-plan";
@@ -18,7 +18,10 @@ export interface Regeneration {
   root: ProjectRoot;
   name: string;
   layout: ImportLayout;
+  /** The specification the files are generated from. */
   spec: ParsedSpec;
+  /** The hash of the specification as sent, before any transform or selection: what an update check compares. */
+  specHash: string;
   options: GenerateOptions;
   /** What Studio recorded about the import, if anything. */
   entry: ImportStateEntry | undefined;
@@ -60,8 +63,8 @@ export function applyRegeneration(
   quoting: PlanQuoting,
 ): { report: ApplyReport; leftBehind: string[] } {
   const { plan, leftBehind } = planRegeneration(regeneration);
-  const { root, name, spec, entry } = regeneration;
-  const applied = { specHash: computeSpecHash(spec), digest: createSpecDigest(spec) };
+  const { root, name, spec, specHash, entry } = regeneration;
+  const applied = { specHash, digest: createSpecDigest(spec) };
   const now = new Date().toISOString();
   const report = runPlan(
     root,

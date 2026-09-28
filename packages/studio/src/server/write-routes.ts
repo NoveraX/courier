@@ -10,6 +10,7 @@ import { readConfigToAct } from "./project-state/read-config-to-act";
 import { applyRegeneration } from "./regenerate-import";
 import { sendRouteFailure } from "./route-failure";
 import type { RouteApp } from "./route-types";
+import { declaredSpec } from "./spec-as-declared";
 import { readWriteBody } from "./write-body";
 import type { WriteBody, WriteResult } from "./write-types";
 
@@ -73,7 +74,7 @@ async function writeImport(
       root: projectRootAt(projectRoot),
       name,
       layout,
-      spec: body.spec,
+      ...(await declaredSpec(entry, name, body.spec)),
       options: body.options,
       entry: getImportState(imports, name),
     },

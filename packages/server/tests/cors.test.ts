@@ -138,6 +138,84 @@ describe("handleCors — the request itself", () => {
   });
 });
 
+describe("handleCors — the browser's own verdict", () => {
+  /**
+   * Behind a proxy that terminates TLS on an address the server does not
+   * trust with X-Forwarded-*, the socket says http while the page is https.
+   * The browser still knows the page is the server's own.
+   */
+  it("serves a page the browser calls same-origin whatever its Origin says", () => {
+    const res = createMockRes();
+    const req = createMockReq({
+      method: "POST",
+      headers: {
+        host: "api.example.com",
+        origin: "https://api.example.com",
+        "sec-fetch-site": "same-origin",
+      },
+    });
+
+    expect(handleCors(req, res, undefined)).toBe(false);
+    expect(res._status).toBe(0);
+  });
+
+  it("refuses a request the browser calls cross-site even when it carries no Origin", () => {
+    const res = createMockRes();
+    const req = createMockReq({
+      headers: { host: "api.example.com", "sec-fetch-site": "cross-site" },
+    });
+
+    expect(handleCors(req, res, ["https://app.example.com"])).toBe(true);
+    expect(res._status).toBe(403);
+  });
+
+  it("serves a configured page the browser calls cross-site", () => {
+    const res = createMockRes();
+    const req = createMockReq({
+      headers: {
+        host: "api.example.com",
+        origin: "https://app.example.com",
+        "sec-fetch-site": "cross-site",
+      },
+    });
+
+    expect(handleCors(req, res, ["https://app.example.com"])).toBe(false);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBe("https://app.example.com");
+  });
+});
+
+describe("the origin gate on a running server", () => {
+  it("serves a same-origin POST whose Origin differs from the socket's scheme", async () => {
+    const upstream = createServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: true }));
+    });
+    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+    const { endpoint } = courier();
+    const api = defineApi({
+      baseURL: `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`,
+      endpoints: { save: endpoint.post("save") },
+    });
+    const server = createCourierServer({ sources: { api }, port: 0, signals: false });
+    const url = await server.ready;
+
+    const res = await fetch(`${url}/api/request`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: url.replace("http://", "https://"),
+        "Sec-Fetch-Site": "same-origin",
+      },
+      body: JSON.stringify({ source: "api", method: "save", variables: {} }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true });
+    await server.stop();
+    await new Promise<void>((resolve) => upstream.close(() => resolve()));
+  });
+});
+
 describe("a cross-origin answer", () => {
   it("lets the page read the headers the proxy passes back", async () => {
     const upstream = createServer((_req, res) => {

@@ -65,4 +65,15 @@ describe("a source with its endpoints inline", () => {
     expect(content).toContain("mine:")
     expect(content).toContain("create:")
   })
+
+  it("keeps an option the user added to the declaration, and says so", () => {
+    const fingerprints: FingerprintResult = {
+      endpoints: { getAll: "modified", create: "new", mine: "modified" },
+      existingCode: {},
+    }
+    const { content, changes } = mergeGroupFile(USER_EDITED, GENERATED, fingerprints)
+
+    expect(content).toContain('proxyPath: { http: "/api/relay" },')
+    expect(changes).toContainEqual({ type: "preserved", target: "option:proxyPath", detail: "added by hand" })
+  })
 })

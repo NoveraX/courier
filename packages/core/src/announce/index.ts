@@ -14,8 +14,6 @@
 import type { AnySource } from "../define";
 import { getSources } from "../sources";
 
-export { deferAnnounce } from "./defer";
-
 /** Transports a runtime claims it can serve for the listed sources */
 export type RuntimeTransport = "http" | "sse" | "ws";
 
@@ -94,6 +92,12 @@ export function announceHosting(input: AnnounceHostingInput): void {
  * works whenever `registerSources()` or `attachRuntime()` runs. A request
  * that arrives before any registration is answered by the handler itself,
  * which names the missing registry.
+ *
+ * Reading the registry as a factory ran broke real setups: `next build`
+ * evaluates every route module long before any `register()` hook, and a
+ * Hono or Express app may mount its routes before awaiting
+ * `attachRuntime()`. Waiting costs nothing — an announcement tells Studio
+ * which runtime serves which sources, and nothing is served before a request.
  *
  * @param input - What the adapter hosts, without the sources
  * @returns A function to call on each request

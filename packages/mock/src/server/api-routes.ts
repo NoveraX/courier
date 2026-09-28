@@ -9,8 +9,39 @@
 
 import type { Hono, Context as HonoContext } from "hono";
 
+import type { PrefixMapping } from "./prefix-routes";
+import { registerPrefixRoutes } from "./prefix-routes";
 import { handleMockRequest } from "./route-generator";
 import type { RouteConfig } from "./route-types";
+
+/**
+ * Register every route that answers a mocked endpoint: the proxy's HTTP and
+ * stream routes, REST-style addressing by name, and — for a server built
+ * from a source — each group's routes at the paths it declares.
+ *
+ * @param app      The mock server's Hono app
+ * @param config   The route config every request is handled with
+ * @param mappings The groups' prefixes and endpoints, for a server built from a source
+ * @returns Nothing; the routes are added to `app`
+ * @example
+ * ```ts
+ * registerRequestRoutes(app, routeConfig, buildPrefixMappings(api, analyzeRoutes(api)));
+ * ```
+ */
+export function registerRequestRoutes(
+  app: Hono,
+  config: RouteConfig,
+  mappings: PrefixMapping[] | undefined,
+): void {
+  registerProxyRoute(app, config);
+  registerProxySSERoute(app, config);
+  registerRestRoutes(app, config);
+  if (!mappings?.length) return;
+  registerPrefixRoutes(app, mappings, {
+    handleRequest: (c, group, method, variables) =>
+      handleMockRequest(c, group, method, variables, config),
+  });
+}
 
 /** Register the main courier proxy route: POST /api/request */
 export function registerProxyRoute(app: Hono, config: RouteConfig): void {

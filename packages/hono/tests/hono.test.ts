@@ -297,3 +297,14 @@ describe("courierWSHandler", () => {
     expect(fakeWS.send).toHaveBeenCalledWith("hello");
   });
 });
+
+describe("the metadata courierWSHandler's hooks receive", () => {
+  it("is typed from what onConnect returns", () => {
+    const factory = courierWSHandler({
+      onConnect: () => ({ userId: "u1" }),
+      authorize: ({ meta }) => meta.userId.length > 0,
+    });
+
+    expect(factory).toBeTypeOf("function");
+  });
+});

@@ -1,5 +1,6 @@
 import type { Sources } from "../define/types";
 import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
+import type { WSConnectionMeta, WSConnectResult } from "./ws-connection-meta";
 import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry-types";
 
@@ -9,8 +10,11 @@ import type { ConnectionRegistry } from "./ws-registry-types";
  * Framework adapters call `createWSHandler()` with just the behavioral
  * options, and sources are read from the core global registry when each
  * connection opens.
+ *
+ * `TConnect` is what `onConnect` returns, which types the `meta` every other
+ * hook receives; it is inferred from `onConnect` itself.
  */
-export interface WSHandlerConfig {
+export interface WSHandlerConfig<TConnect extends WSConnectResult = WSConnectResult> {
   /**
    * The sources this handler answers for. Left out, it answers for the
    * process-wide registry that `attachRuntime()` and `registerSources` fill.
@@ -61,38 +65,39 @@ export interface WSHandlerConfig {
    */
   clientIp?: ClientIPResolver;
   /** Per-subscription authorization — throw or return false to reject */
-  authorize?: (info: {
+  authorize?(info: {
     connectionId: string;
-    meta: unknown;
+    meta: WSConnectionMeta<TConnect>;
     source: string;
     group: string | undefined;
     method: string;
     topic: string;
     variables: unknown;
-  }) => boolean | Promise<boolean>;
+  }): boolean | Promise<boolean>;
   /**
-   * Called after upgrade, before subscriptions. Return metadata, or throw to
-   * refuse the connection: it is closed with 4401 "Connection rejected", and
-   * what was thrown is logged, never sent.
+   * Called after upgrade, before subscriptions. Return the connection's
+   * metadata — an object — or nothing, or throw to refuse the connection: it
+   * is closed with 4401 "Connection rejected", and what was thrown is logged,
+   * never sent. What it returns types `meta` in the hooks written after it.
    */
-  onConnect?: (info: { connectionId: string; request: Request }) => unknown | Promise<unknown>;
+  onConnect?(info: { connectionId: string; request: Request }): TConnect;
   /** Called after socket close + topic cleanup */
-  onDisconnect?: (info: {
+  onDisconnect?(info: {
     connectionId: string;
-    meta: unknown;
+    meta: WSConnectionMeta<TConnect>;
     code: number;
-  }) => void | Promise<void>;
+  }): void | Promise<void>;
   /**
    * Called on connection-level error, with the Error the socket reported —
    * such as the RangeError of a frame over the size limit.
    */
-  onError?: (info: { connectionId: string; meta: unknown; error: Error }) => void;
+  onError?(info: { connectionId: string; meta: WSConnectionMeta<TConnect>; error: Error }): void;
   /** Called when an outbound message is dropped due to buffer overflow */
-  onMessageDrop?: (info: {
+  onMessageDrop?(info: {
     connectionId: string;
     topic: string | undefined;
     bufferedAmount: number;
-  }) => void;
+  }): void;
   /** Max consecutive message drops before force-closing a slow connection (default 50, 0 = disabled) */
   maxConsecutiveDrops?: number;
   /**
@@ -102,18 +107,18 @@ export interface WSHandlerConfig {
    * is not set — leaves the deadline `sendAuthRequired` set, so the
    * connection is closed at it.
    */
-  onTokenRefresh?: (info: {
+  onTokenRefresh?(info: {
     connectionId: string;
     token: string;
-    meta: Record<string, unknown>;
-  }) => Record<string, unknown> | Promise<Record<string, unknown>>;
+    meta: WSConnectionMeta<TConnect>;
+  }): WSConnectionMeta<TConnect> | Promise<WSConnectionMeta<TConnect>>;
   /** Per-message authorization — return false or throw to reject with 4403 */
-  authorizeMessage?: (info: {
+  authorizeMessage?(info: {
     connectionId: string;
-    meta: Record<string, unknown>;
+    meta: WSConnectionMeta<TConnect>;
     topic: string;
     payload: unknown;
-  }) => boolean | Promise<boolean>;
+  }): boolean | Promise<boolean>;
   /** Timeout in ms for token refresh after sending auth_required (default 30000) */
   authRequiredTimeoutMs?: number;
 }

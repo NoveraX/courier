@@ -2,6 +2,7 @@ import type {
   ConnectionRegistry,
   HandlerConfig,
   SSEConnectionRegistry,
+  WSConnectResult,
   WSHandlerConfig,
 } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
@@ -17,9 +18,9 @@ import type { Sources } from "@noverax/courier/define";
  * `maxMessagesPerSecond`, `authorize`, `authorizeMessage` and
  * `onTokenRefresh`.
  */
-export interface CourierServerOptions
+export interface CourierServerOptions<TConnect extends WSConnectResult = WSConnectResult>
   extends Omit<HandlerConfig, "sources" | "allowedOrigins">,
-    Omit<WSHandlerConfig, "sources" | "allowedOrigins"> {
+    Omit<WSHandlerConfig<TConnect>, "sources" | "allowedOrigins"> {
   /**
    * The API sources this server answers for. They stay its own: another
    * server or a `registerSources` call in the same process does not change

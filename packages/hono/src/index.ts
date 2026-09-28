@@ -1,4 +1,4 @@
-import type { HandlerConfig, WSHandlerConfig } from "@noverax/courier";
+import type { HandlerConfig, WSConnectResult, WSHandlerConfig } from "@noverax/courier";
 import { createHandler, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverAppOrigin } from "@noverax/courier/internal";
@@ -81,7 +81,9 @@ export type HonoWSEvents = {
  * serve({ fetch: app.fetch, port: 3001, websocket: { server: wss } });
  * ```
  */
-export function courierWSHandler(options?: WSHandlerConfig): (c: Context) => HonoWSEvents {
+export function courierWSHandler<TConnect extends WSConnectResult = WSConnectResult>(
+  options?: WSHandlerConfig<TConnect>,
+): (c: Context) => HonoWSEvents {
   const wsHandler = createWSHandler(options);
   const announce = announceWhenRegistered({ transports: ["ws"], framework: "hono" });
 

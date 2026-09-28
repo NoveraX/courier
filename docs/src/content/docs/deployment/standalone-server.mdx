@@ -158,13 +158,15 @@ const server = await createCourierServer({
     return { userId }  // stored as connection metadata
   },
   onDisconnect: ({ connectionId, meta, code }) => {
-    console.log(`WS ${connectionId} closed with code ${code}`, meta)
+    console.log(`WS ${connectionId} of ${meta.userId} closed with code ${code}`)
   },
   onError: ({ connectionId, meta, error }) => {
-    console.error(`WS error:`, error)
+    console.error(`WS error for ${meta.userId}:`, error)
   },
 })
 ```
+
+What `onConnect` returns is the connection's metadata, and it types `meta` in the hooks written after it — `authorize`, `authorizeMessage`, `onTokenRefresh`, `onDisconnect`, `onError` — so `meta.userId` above is a string. Return an object, or nothing for a connection with no metadata; anything else refuses the connection, as a throw does.
 
 <Callout variant="tip" title="Reject connections">
   Throw from `onConnect` to refuse a WebSocket connection: the server closes it with code `4401` and the reason "Connection rejected", which each channel and subscription on it reads as an `AuthError`, and the client does not reconnect. Throw from `onSSEConnect` to refuse a stream: it is answered `403` "Connection rejected", which the client reads as a `ForbiddenError`. What you threw is logged on the server and never sent, since it may carry a connection string or a token.

@@ -15,8 +15,11 @@ export {
   type SSELifecycleConfig,
   sendAuthRequired,
   type WebSocketLike,
+  type WSConnectionMeta,
+  type WSConnectResult,
   type WSHandler,
   type WSHandlerConfig,
+  type WSNoMeta,
 } from "./adapter";
 export {
   detectAppOrigin,

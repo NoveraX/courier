@@ -147,3 +147,21 @@ describe("WebSocket options", () => {
     expect(await reply).toMatchObject({ type: "error", error: { code: 4413 } });
   });
 });
+
+describe("the metadata a standalone server's WebSocket hooks receive", () => {
+  it("is typed from what onConnect returns", () => {
+    /* Only compiled: a server made here would listen on a port. */
+    function typed(): void {
+      createCourierServer({
+        sources: {},
+        onConnect: () => ({ userId: "u1" }),
+        onDisconnect: ({ meta }) => {
+          const userId: string = meta.userId;
+          expect(userId).toBeTypeOf("string");
+        },
+      });
+    }
+
+    expect(typed).toBeTypeOf("function");
+  });
+});

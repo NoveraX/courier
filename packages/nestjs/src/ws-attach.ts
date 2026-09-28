@@ -1,5 +1,5 @@
 import type { Server } from "node:http";
-import type { WSHandlerConfig } from "@noverax/courier";
+import type { WSConnectResult, WSHandlerConfig } from "@noverax/courier";
 import { createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
@@ -10,7 +10,8 @@ import {
 } from "@noverax/courier/node";
 
 /** Options for `courierWSAttach`: the WebSocket handler's, plus where it listens. */
-export interface CourierWSAttachOptions extends WSHandlerConfig {
+export interface CourierWSAttachOptions<TConnect extends WSConnectResult = WSConnectResult>
+  extends WSHandlerConfig<TConnect> {
   /**
    * Pathname to answer upgrades on — the `proxyPath.ws` the client connects
    * to. Upgrades on any other path are left to the application's own
@@ -41,9 +42,9 @@ export interface CourierWSAttachOptions extends WSHandlerConfig {
  * await app.listen(3000);
  * ```
  */
-export function courierWSAttach(
+export function courierWSAttach<TConnect extends WSConnectResult = WSConnectResult>(
   server: Server,
-  options: CourierWSAttachOptions = {},
+  options: CourierWSAttachOptions<TConnect> = {},
 ): () => Promise<void> {
   const { path = DEFAULT_WS_PATH, ...handlerOptions } = options;
   const wsHandler = createWSHandler(handlerOptions);

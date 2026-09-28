@@ -64,3 +64,17 @@ describe("courierWSAttach and the message limit", () => {
     expect(code).toBe(1009);
   });
 });
+
+describe("the metadata the attached handler's hooks receive", () => {
+  it("is typed from what onConnect returns", () => {
+    /* Only compiled: the hooks are what the compiler is asked about. */
+    function typed(): void {
+      courierWSAttach(createServer(), {
+        onConnect: async () => ({ userId: "u1" }),
+        authorize: ({ meta }) => meta.userId.length > 0,
+      });
+    }
+
+    expect(typed).toBeTypeOf("function");
+  });
+});

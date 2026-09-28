@@ -20,6 +20,8 @@
 npm install @noverax/courier-redis @noverax/courier ioredis
 ```
 
+`ioredis` 5.3 or later: its named `Redis` export is what the types use.
+
 <br />
 
 ## Usage

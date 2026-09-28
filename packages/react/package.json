@@ -55,7 +55,7 @@
   },
   "peerDependencies": {
     "@noverax/courier": "*",
-    "@tanstack/react-query": ">=5",
+    "@tanstack/react-query": "^5.80.0",
     "react": ">=18"
   },
   "devDependencies": {

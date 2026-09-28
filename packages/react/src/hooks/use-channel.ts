@@ -5,28 +5,13 @@ import type { ConnectionStatus, WSChannel } from "@noverax/courier/realtime";
    a client-only hook such as useState among its imports. */
 import * as React from "react";
 
-import type { ChannelError, ChannelResult } from "../types";
+import type { ChannelError, ChannelResult, CourierChannelOptions } from "../types";
 import { streamKeyOf } from "./stream-key";
 
 const log = createLogger("React");
 
-export interface UseChannelOptions<TReceive> {
-  /** Variables passed to the WS channel endpoint */
-  variables?: unknown;
-  /** Disable the channel (default: true) */
-  enabled?: boolean;
-  /** Called on each incoming message from the server */
-  onData?: (message: TReceive) => void;
-  /**
-   * Called when the server refuses a message, a handler fails, or the
-   * channel ends with a reason — with the `RealtimeError`, whose `code`
-   * tells them apart (4403 forbidden, 4422 invalid, …) — or when the channel
-   * cannot be opened at all, with the `ConfigurationError` that says why
-   */
-  onError?: (error: ChannelError) => void;
-  /** Called on connection status changes */
-  onStatusChange?: (status: ConnectionStatus) => void;
-}
+/** A group hook's options, as `useChannel` takes them untyped. */
+export type UseChannelOptions<TReceive> = CourierChannelOptions<TReceive, unknown>;
 
 /** Internal factory type — creates WSChannel from group+method+variables */
 export type ChannelFn = (

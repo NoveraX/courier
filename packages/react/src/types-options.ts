@@ -110,5 +110,6 @@ export type CourierComputedQueryOptions<
   enabled?: boolean;
   /** react-query staleTime */
   staleTime?: number;
+  /** Per-request options for the HTTP query */
   requestOptions?: CallOptions;
 };

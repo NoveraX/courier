@@ -92,7 +92,7 @@ export function createQueryHooks(
       });
     },
 
-    useComputedQuery(method: string, options: UseComputedQueryOptions<unknown, unknown, unknown>) {
+    useComputedQuery(method: string, options: UseComputedQueryOptions<unknown, unknown>) {
       return useComputedQueryHook(
         (variables, signal) => call.fetch(method, variables, options.requestOptions, signal),
         subscribeFn,

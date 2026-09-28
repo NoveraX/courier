@@ -8,16 +8,12 @@ export {
 
 export { createProxyQueryCaller } from "./create-proxy-query-caller";
 export { createQueryCaller, type QueryCallerDefaults } from "./create-query-caller";
-export { useChannel } from "./hooks/use-channel";
-export type { UseComputedQueryOptions } from "./hooks/use-computed-query";
-export { useComputedQuery } from "./hooks/use-computed-query";
 export type {
   ConnectionStatusResult,
   ConnectionStatusSource,
   StatusEventSource,
 } from "./hooks/use-connection-status";
 export { useConnectionStatus } from "./hooks/use-connection-status";
-export { useSubscription } from "./hooks/use-subscription";
 export { createProxyQueryKeys, createQueryKeys, type QueryKeyFactory } from "./keys";
 export type { OptimisticConfig } from "./optimistic";
 export { optimisticOptions } from "./optimistic";

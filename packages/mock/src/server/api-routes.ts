@@ -14,6 +14,7 @@ import { registerPrefixRoutes } from "./prefix-routes";
 import { readJsonBody } from "./read-json-body";
 import { readProxyCall } from "./read-proxy-call";
 import { handleMockRequest } from "./route-generator";
+import { parseQueryParams } from "./route-helpers";
 import type { RouteConfig } from "./route-types";
 
 /**
@@ -95,7 +96,8 @@ export function registerRestRoutes(app: Hono, config: RouteConfig): void {
     const group = c.req.param("group") ?? "";
     const method = c.req.param("method") ?? "";
     if (c.req.method === "GET") {
-      const query = Object.fromEntries(new URL(c.req.url).searchParams);
+      /* Typed as the mapped routes type theirs: `42` a number, `007` a string. */
+      const query = parseQueryParams(new URL(c.req.url).searchParams);
       return handleMockRequest(c, group, method, query, config);
     }
     const body = await readJsonBody(c);

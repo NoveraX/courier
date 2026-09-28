@@ -16,9 +16,8 @@ import type { Hono, Context as HonoContext } from "hono";
 
 import { createFaultError, pickFault, shouldFail } from "../network/failure";
 import type { MockRequestContext } from "../types";
-import { isMockHttpError } from "./errors";
 import { computeBandwidthDelay, resolveDelay, resolveNetConfig } from "./route-network";
-import { buildResponse, pushHistory } from "./route-response";
+import { buildResponse, handlerFailure, pushHistory } from "./route-response";
 import type { RouteConfig } from "./route-types";
 import { handleSSEMock } from "./sse-handler";
 
@@ -146,21 +145,9 @@ export async function handleMockRequest(
   } catch (err) {
     const duration = performance.now() - start;
     config.networkState?.trackRequest(duration, true);
-    if (isMockHttpError(err)) {
-      pushHistory(config, {
-        group,
-        method,
-        variables,
-        start,
-        status: err.status,
-        error: err.message,
-      });
-      config.hooks?.onError?.(requestId, err.status, err.message, duration);
-      return c.json({ error: err.message }, err.status as 404);
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    pushHistory(config, { group, method, variables, start, status: 500, error: message });
-    config.hooks?.onError?.(requestId, 500, message, duration);
-    return c.json({ error: message }, 500);
+    const { status, body, message } = handlerFailure(err);
+    pushHistory(config, { group, method, variables, start, status, error: message });
+    config.hooks?.onError?.(requestId, status, message, duration);
+    return c.json(body, status as 500);
   }
 }

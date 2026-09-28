@@ -7,7 +7,10 @@
  * studio bridge, tests, and admin API can read back.
  */
 
+import { HTTPError } from "@noverax/courier";
 import type { Context as HonoContext } from "hono";
+
+import { isMockHttpError } from "./errors";
 import type { RouteConfig } from "./route-types";
 
 /**
@@ -45,6 +48,38 @@ export function buildResponse(
   }
 
   return res;
+}
+
+/** How a handler that threw is answered */
+export interface HandlerFailure {
+  status: number;
+  body: unknown;
+  message: string;
+}
+
+/**
+ * The answer for a handler that threw. An `HTTPError` — the error a real
+ * call fails with, and what a replayed recording rejects with — answers
+ * with its own status and body; a `MockHttpError` with its status and
+ * `{ error }`; anything else with 500.
+ *
+ * @param err What the handler threw
+ * @returns The status, body and message to answer and log
+ * @example
+ * ```ts
+ * handlerFailure(new MockHttpError(404, "users with id 9 not found"));
+ * // { status: 404, body: { error: "users with id 9 not found" }, message: "users with id 9 not found" }
+ * ```
+ */
+export function handlerFailure(err: unknown): HandlerFailure {
+  if (err instanceof HTTPError && err.status >= 400 && err.status <= 599) {
+    return { status: err.status, body: err.data, message: err.message };
+  }
+  if (isMockHttpError(err)) {
+    return { status: err.status, body: { error: err.message }, message: err.message };
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  return { status: 500, body: { error: message }, message };
 }
 
 /** History entry shape for `pushHistory` — flattened request/response details */

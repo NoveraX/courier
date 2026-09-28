@@ -3,12 +3,13 @@ import type { WebSocketLike } from "../realtime/adapters";
 import { createHeartbeat } from "../realtime/ws/heartbeat";
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
-import { isHostAllowed } from "./host-policy";
 import { LIMITS } from "./limits";
-import { isOriginAllowed } from "./origin-policy";
 import { rememberPeerAddress } from "./peer-address";
+import { admitSocket } from "./ws-admission";
+import type { WSConnectResult } from "./ws-connection-meta";
+import { connectionMetaOf } from "./ws-connection-meta-of";
 import { buildContext, type WSSocketContext } from "./ws-context";
-import { createIPTracker, extractClientIP } from "./ws-ip-tracker";
+import { createIPTracker } from "./ws-ip-tracker";
 import { wireEvents } from "./ws-lifecycle";
 import { createPubSubBridge } from "./ws-pubsub-bridge";
 import { createConnectionRegistry } from "./ws-registry";
@@ -38,6 +39,9 @@ const log = createLogger("WS");
  * ws.handleSocket(socket, request);
  * ws.connections.broadcast({ type: "system", text: "Welcome!" });
  */
+export function createWSHandler<TConnect extends WSConnectResult = WSConnectResult>(
+  config?: WSHandlerConfig<TConnect>,
+): WSHandler;
 export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   if (config.sources !== undefined) {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
@@ -58,20 +62,8 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
 
   function handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): void {
     rememberPeerAddress(request, peerAddress);
-    if (!isHostAllowed(request, config.allowedHosts)) {
-      ws.close(4421, "Host not allowed");
-      return;
-    }
-    if (!isOriginAllowed(request, config.allowedOrigins)) {
-      ws.close(4403, "Origin not allowed");
-      return;
-    }
-
-    const ip = extractClientIP(request, config.clientIp);
-    if (!ipTracker.acquire(ip)) {
-      ws.close(4429, "Too many connections");
-      return;
-    }
+    const ip = admitSocket(ws, request, config, ipTracker);
+    if (ip === undefined) return;
 
     const ctx = buildContext(ws, config, topicManager, registry, bridge, request);
     ctx.clientIP = ip;
@@ -97,7 +89,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       const onConnect = config.onConnect;
       if (onConnect) {
         const result = await onConnect({ connectionId: ctx.connectionId, request: ctx.request });
-        ctx.meta = (result as Record<string, unknown>) ?? {};
+        ctx.meta = connectionMetaOf(result, "onConnect");
       }
     } catch (err) {
       log.warn("Connection rejected by onConnect", err);

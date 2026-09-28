@@ -97,3 +97,14 @@ describe("courierWSHandler under the plugin's frame limit", () => {
     wss.close();
   });
 });
+
+describe("the metadata the handler's hooks receive", () => {
+  it("is typed from what onConnect returns", () => {
+    const handler = courierWSHandler({
+      onConnect: () => ({ userId: "u1" }),
+      authorize: ({ meta }) => meta.userId.length > 0,
+    });
+
+    expect(handler).toBeTypeOf("function");
+  });
+});

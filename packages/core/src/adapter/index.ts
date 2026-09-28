@@ -13,6 +13,7 @@ export type {
   SSEConnectionRegistry,
   SSELifecycleConfig,
 } from "./sse-types";
+export type { WSConnectionMeta, WSConnectResult, WSNoMeta } from "./ws-connection-meta";
 export type { ConnectionInfo, ConnectionRegistry } from "./ws-registry-types";
 export { sendAuthRequired } from "./ws-token-refresh";
 export type { WSHandler, WSHandlerConfig } from "./ws-types";

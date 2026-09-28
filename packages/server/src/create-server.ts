@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
+import type { WSConnectResult } from "@noverax/courier";
 import { ConfigurationError, createHandler, createLogger, createWSHandler } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 import { attachWebSocketUpgrade } from "@noverax/courier/node";
@@ -36,6 +37,9 @@ const DEFAULT_HOST = "127.0.0.1";
  * // await server.stop() — graceful shutdown
  * ```
  */
+export function createCourierServer<TConnect extends WSConnectResult = WSConnectResult>(
+  config: CourierServerOptions<TConnect>,
+): CourierServer;
 export function createCourierServer(config: CourierServerOptions): CourierServer {
   const {
     sources,

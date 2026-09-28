@@ -4,6 +4,7 @@ import { reportingUploads, uploadProgressOf } from "../studio/report-upload";
 import { newStudioRequestId, STUDIO_REQUEST_HEADER } from "../studio/studio-request-id";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
+import { isRecord } from "../utils/is-record";
 import { asProxyFailure, readProxyAnswer } from "./proxy-answer";
 
 export async function sendFetch(
@@ -104,10 +105,6 @@ function headersOf(value: unknown): Headers {
     if (typeof content === "string") headers.set(name, content);
   }
   return headers;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function signalOf(options: Record<string, unknown>): AbortSignal | undefined {

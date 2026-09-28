@@ -1,4 +1,4 @@
-import type { WebSocketLike, WSHandlerConfig } from "@noverax/courier";
+import type { WebSocketLike, WSConnectResult, WSHandlerConfig } from "@noverax/courier";
 import { ConfigurationError, createLogger, createWSHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
@@ -38,8 +38,8 @@ const log = createLogger("Fastify");
  * fastify.get("/api/ws", { websocket: true }, courierWSHandler());
  * ```
  */
-export function courierWSHandler(
-  options?: WSHandlerConfig,
+export function courierWSHandler<TConnect extends WSConnectResult = WSConnectResult>(
+  options?: WSHandlerConfig<TConnect>,
 ): (socket: WebSocketLike, request: FastifyRequest) => void {
   const wsHandler = createWSHandler(options);
   const maxMessageSize = options?.maxMessageSize ?? DEFAULT_WS_MAX_MESSAGE_SIZE;

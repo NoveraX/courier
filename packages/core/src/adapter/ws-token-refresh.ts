@@ -1,5 +1,6 @@
 import { createLogger } from "../logger";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
+import { connectionMetaOf } from "./ws-connection-meta-of";
 import type { WSSocketContext } from "./ws-context";
 import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-registry-types";
 
@@ -40,7 +41,7 @@ export async function handleTokenRefresh(ctx: WSSocketContext, msg: WSMessage): 
     if (ctx.closed) return;
 
     // Update meta in context and registry
-    Object.assign(ctx.meta, newMeta);
+    Object.assign(ctx.meta, connectionMetaOf(newMeta, "onTokenRefresh"));
     ctx.registry.updateMeta(ctx.connectionId, ctx.meta);
     liftAuthDeadline(ctx);
 

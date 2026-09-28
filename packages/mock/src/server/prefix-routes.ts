@@ -16,6 +16,7 @@ import type { Hono } from "hono";
 import { registerDeclaredRoutes } from "./declared-routes";
 import type { PrefixMapping, PrefixRouteConfig } from "./prefix-route-types";
 import { registerSSERoutes } from "./prefix-static-routes";
+import { readJsonBody } from "./read-json-body";
 import {
   buildIdVars,
   parseId,
@@ -83,7 +84,9 @@ export function registerPrefixRoutes(
 
     // POST /prefix → create endpoint
     app.post(`/${prefix}`, async (c) => {
-      const body = await c.req.json().catch(() => ({}));
+      const read = await readJsonBody(c);
+      if ("error" in read) return c.json({ error: read.error }, 400);
+      const body = read.value ?? {};
       const ep = resolveByOperation(eps, "create");
       const method =
         ep?.name ??
@@ -94,7 +97,9 @@ export function registerPrefixRoutes(
     // PUT /prefix/:id → replace/upsert endpoint
     app.put(`/${prefix}/:id`, async (c) => {
       const id = parseId(c.req.param("id") ?? "");
-      const body = await c.req.json().catch(() => ({}));
+      const read = await readJsonBody(c);
+      if ("error" in read) return c.json({ error: read.error }, 400);
+      const body = read.value ?? {};
       const ep = resolveByOperation(eps, "replace");
       const method =
         ep?.name ??
@@ -108,7 +113,9 @@ export function registerPrefixRoutes(
     // PATCH /prefix/:id → update endpoint
     app.patch(`/${prefix}/:id`, async (c) => {
       const id = parseId(c.req.param("id") ?? "");
-      const body = await c.req.json().catch(() => ({}));
+      const read = await readJsonBody(c);
+      if ("error" in read) return c.json({ error: read.error }, 400);
+      const body = read.value ?? {};
       const ep = resolveByOperation(eps, "update");
       const method =
         ep?.name ??

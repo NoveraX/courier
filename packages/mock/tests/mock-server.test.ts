@@ -85,7 +85,8 @@ describe("createMockServer", () => {
       const res = await fetch(`${baseUrl}/api/users/getById?id=99`);
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.id).toBe("99");
+      /* Typed as the mapped routes type it. */
+      expect(data.id).toBe(99);
     });
 
     it("handles POST with JSON body", async () => {

@@ -46,11 +46,14 @@ export function generateIndexFile(
   }
   /* The proxy caller needs the source's type alone. Imported as a value, a
      bundler keeping every import as written — `verbatimModuleSyntax` — put
-     the source, its upstream address and its headers in the browser. */
-  lines.push(
-    `import ${hasDirect ? "" : "type "}{ ${name} } from "./source${options.importExtension}";`,
-  );
-  lines.push("");
+     the source, its upstream address and its headers in the browser. With
+     no caller the source is not imported at all: nothing would read it. */
+  if (hasDirect || hasProxy) {
+    lines.push(
+      `import ${hasDirect ? "" : "type "}{ ${name} } from "./source${options.importExtension}";`,
+      "",
+    );
+  }
 
   if (hasDirect) {
     lines.push(...callerDoc(spec, "DIRECT", DIRECT_HINT));

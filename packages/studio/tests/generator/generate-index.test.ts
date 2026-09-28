@@ -77,3 +77,19 @@ describe("a barrel for proxy mode only", () => {
     expect(bundle).not.toContain("defineApi");
   });
 });
+
+describe("a barrel generated with no caller", () => {
+  const files = generateCode(
+    SPEC,
+    { type: "openapi", outputDir: "src/api", generateClient: "none" },
+    "shop",
+  );
+  const dir = writeProject("generate-index/none", files);
+
+  it("imports nothing it does not read", () => {
+    const index = files.find((file) => file.path === "src/api/shop/index.ts")?.content ?? "";
+
+    expect(index).not.toContain("./source");
+    expect(compileProject(dir, ["src/api/shop/index.ts"], { ...STRICT, noUnusedLocals: true })).toEqual([]);
+  }, 60_000);
+});

@@ -2,6 +2,7 @@ import compression from "compression";
 import express from "express";
 
 import { apiErrors } from "./api-errors";
+import { apiNotFound } from "./api-not-found";
 import { type ApisRouteDeps, registerApisRoutes } from "./apis-routes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
@@ -19,8 +20,8 @@ export interface RestApiDeps {
 
 /**
  * Mount Studio's REST API: compression, the origin guard, JSON bodies, the
- * health check, the API and session routes, and JSON answers for the errors
- * they raise.
+ * health check, the API and session routes, and JSON answers for a route
+ * Studio does not have and for the errors the routes raise.
  *
  * @param app - The Studio server's Express app
  * @param policy - Decides who counts as the Studio UI
@@ -49,5 +50,6 @@ export function registerRestApi(
   registerApisRoutes(app, apis);
   registerSessionRoutes(app);
   registerMockDeclareRoutes(app, mocksEdit);
+  app.use("/api", apiNotFound);
   app.use("/api", apiErrors);
 }

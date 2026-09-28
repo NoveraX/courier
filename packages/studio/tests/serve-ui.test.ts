@@ -80,6 +80,18 @@ describe("serveStudioUi installed under a folder whose name starts with a dot", 
   });
 });
 
+describe("an asset the build does not have", () => {
+  it("is answered 404, uncached, not with the app", async () => {
+    const url = await serve(builtUi("node_modules", "@noverax", "courier-studio", "ui", "dist"));
+
+    const response = await fetch(`${url}/assets/app-0000000.js`);
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type") ?? "").not.toContain("text/html");
+    expect(response.headers.get("cache-control") ?? "").not.toContain("immutable");
+  });
+});
+
 describe("serveStudioUi in a plain install", () => {
   it("answers a page with the app", async () => {
     const url = await serve(builtUi("node_modules", "@noverax", "courier-studio", "ui", "dist"));

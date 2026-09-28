@@ -20,16 +20,17 @@ export interface LatencyFormValues {
 
 export const LATENCY_PRESETS = [
   { value: "none" as const, label: "Off", icon: Gauge },
-  { value: "3g" as const, label: "3G · 450ms" },
-  { value: "4g" as const, label: "4G · 120ms" },
+  { value: "3g" as const, label: "3G · 600ms" },
+  { value: "4g" as const, label: "4G · 225ms" },
   { value: "satellite" as const, label: "Satellite · 700ms" },
   { value: "custom" as const, label: "Custom", icon: Clock },
 ];
 
 export const PRESET_VALUES: Record<LatencyPreset, { min: number; max: number; jitter: number }> = {
   none: { min: 0, max: 0, jitter: 0 },
-  "3g": { min: 300, max: 600, jitter: 100 },
-  "4g": { min: 80, max: 160, jitter: 30 },
+  /* The ranges the mock itself gives these profiles. */
+  "3g": { min: 300, max: 900, jitter: 150 },
+  "4g": { min: 100, max: 350, jitter: 60 },
   satellite: { min: 600, max: 800, jitter: 150 },
   custom: { min: 300, max: 600, jitter: 50 },
 };

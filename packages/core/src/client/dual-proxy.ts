@@ -1,3 +1,4 @@
+import { mergeCallOptions } from "./merge-call-options";
 import {
   type Callable,
   calledAs,
@@ -47,7 +48,8 @@ export function createDualProxy(
       if (RUNTIME_HOOKS.has(prop)) return undefined;
       if (prop === "raw") return rawSelf();
       if (prop === "with") {
-        withFn ??= (next) => createDualProxy(backend, name, { ...options, ...next }, raw, shape);
+        withFn ??= (next) =>
+          createDualProxy(backend, name, mergeCallOptions(options, next), raw, shape);
         return withFn;
       }
       if (FUNCTION_MEMBERS.has(prop)) return Reflect.get(target, prop);

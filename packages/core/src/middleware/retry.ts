@@ -1,3 +1,4 @@
+import { ValidationError } from "../validation";
 import { defineMiddleware } from "./compose";
 import type { Middleware, MiddlewareResponse } from "./types";
 
@@ -57,12 +58,14 @@ export function retryMiddleware(options?: {
  *
  * Without a condition every error is worth another attempt. With one, a status
  * the caller can read decides; an error carrying no status is retried, since
- * the condition cannot speak to it.
+ * the condition cannot speak to it. A response that failed its schema is
+ * never retried: the same answer fails the same way every time.
  */
 function shouldRetryError(
   error: unknown,
   retryOn: ((response: MiddlewareResponse) => boolean) | undefined,
 ): boolean {
+  if (error instanceof ValidationError) return false;
   if (!retryOn) return true;
   const status = (error as { status?: unknown })?.status;
   if (typeof status !== "number") return true;

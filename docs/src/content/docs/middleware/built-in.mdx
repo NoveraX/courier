@@ -1,6 +1,6 @@
-export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, and caching middleware shipped with Courier.", mode: "both" }
+export const metadata = { title: "Built-in Middleware", description: "Reference for retry, auth, logging, rate limiting, caching and header-variable middleware shipped with Courier.", mode: "both" }
 
-Courier ships five production-ready middleware functions. Import them from `@noverax/courier/middleware`:
+Courier ships six production-ready middleware functions. Import them from `@noverax/courier/middleware`:
 
 ```ts
 import {
@@ -9,6 +9,7 @@ import {
   logMiddleware,
   rateLimitMiddleware,
   cacheMiddleware,
+  headerVariablesMiddleware,
 } from "@noverax/courier/middleware"
 ```
 
@@ -268,6 +269,39 @@ function invalidateCache() {
 <Callout variant="warning" title="Variables affect the cache key">
 Two requests to the same endpoint with different variables produce different cache keys. `users:getById` with `{ id: 1 }` and `{ id: 2 }` are cached separately.
 </Callout>
+
+---
+
+## headerVariablesMiddleware
+
+Sends some of a call's variables as request headers instead of in its path, query or body: an API's header parameters, such as a digest or a version the caller picks per call. Generated clients use it for the header parameters an OpenAPI document declares.
+
+```ts title="signature"
+declare function headerVariablesMiddleware(names: readonly string[]): Middleware
+```
+
+```ts title="lib/sources.ts"
+import { createCaller } from "@noverax/courier"
+import { courier, defineApi } from "@noverax/courier/define"
+import { headerVariablesMiddleware } from "@noverax/courier/middleware"
+
+const { endpoint } = courier()
+
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  endpoints: {
+    find: endpoint
+      .get("things")
+      .variables<{ q: string; "X-Digest"?: string }>()
+      .use(headerVariablesMiddleware(["X-Digest"])),
+  },
+})
+
+// GET /things?q=red, with the header X-Digest: sha-256=abc
+await createCaller(api).find({ q: "red", "X-Digest": "sha-256=abc" })
+```
+
+The variables are validated whole, then the named ones are taken out and set as headers under their own names; one left unset sends no header. A list is written comma-separated and an object as its keys and values in turn, as OpenAPI's `simple` style writes a header. For a call through the proxy it runs in your application's server, so the values travel with the variables and the browser sets no such header itself.
 
 ---
 

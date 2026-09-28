@@ -33,6 +33,7 @@
   "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
+    "./package.json": "./package.json",
     ".": {
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js",

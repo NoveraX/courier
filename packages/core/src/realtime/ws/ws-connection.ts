@@ -57,7 +57,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
   });
 
   const sendRaw = (data: string): void => {
-    if (!refs.ws || refs.ws.readyState !== 1) return;
+    if (refs.ws?.readyState !== 1) return;
     if (refs.ws.bufferedAmount > maxBuffered) {
       log.warn("Backpressure — dropped");
       return;

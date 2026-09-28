@@ -3,7 +3,6 @@ export {
   type ClientConnection,
   type ConnectionInfo,
   type ConnectionRegistry,
-  type CourierWSOptions,
   createHandler,
   createWSHandler,
   type HandlerConfig,

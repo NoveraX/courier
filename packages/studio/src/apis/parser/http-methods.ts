@@ -18,8 +18,16 @@ export const OPERATION_KEYS = [
   "trace",
 ] as const;
 
-/** The verbs the builder API can express: `endpoint.get`, `.head`, `.post`, … */
-export const SUPPORTED_METHODS = ["get", "head", "post", "put", "patch", "delete"] as const;
+/** The verbs the builder API can express: `endpoint.get`, `.head`, `.options`, `.post`, … */
+export const SUPPORTED_METHODS = [
+  "get",
+  "head",
+  "options",
+  "post",
+  "put",
+  "patch",
+  "delete",
+] as const;
 
 export type SupportedHttpMethod = (typeof SUPPORTED_METHODS)[number];
 

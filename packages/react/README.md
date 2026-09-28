@@ -87,7 +87,11 @@ Every hook types its error as `Error`, as TanStack Query does: an `HTTPError` fo
 ```tsx
 import { isHTTPError } from "@noverax/courier"
 
-if (isHTTPError(error) && error.status === 404) return <NotFound />
+function User({ id }: { id: string }) {
+  const { data, error } = q.users.useQuery("getById", { variables: { id } })
+  if (isHTTPError(error) && error.status === 404) return <NotFound />
+  return <p>{data?.name}</p>
+}
 ```
 
 With variables:

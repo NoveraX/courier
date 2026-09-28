@@ -9,9 +9,9 @@ import { defineGroup } from "@noverax/courier/define"
 ## Signature
 
 ```ts
-function defineGroup<E extends EndpointRecord>(
-  config: DefineGroupConfig<E>
-): DefinedGroup<E>
+declare function defineGroup<TEndpoints extends OwnEndpoints>(
+  config: DefineGroupConfig<TEndpoints>
+): DefinedGroup<TEndpoints>
 ```
 
 ## Parameters
@@ -112,9 +112,11 @@ endpoint.get(":id").variables<{ id: string }>().response<User>()
 An endpoint is an inert descriptor, not a callable. Three types name one:
 
 ```ts
-type HttpEndpoint<Response, Variables, Kind extends "query" | "mutation">
-type StreamEndpoint<Response, Variables>
-type ChannelEndpoint<Response, Variables, Send>
+import type {
+  ChannelEndpoint,  // ChannelEndpoint<Response, Variables, Send>
+  HttpEndpoint,     // HttpEndpoint<Response, Variables, Kind extends "query" | "mutation">
+  StreamEndpoint,   // StreamEndpoint<Response, Variables>
+} from "@noverax/courier/define"
 ```
 
 Read the types back off an endpoint with the inference helpers, which is how a

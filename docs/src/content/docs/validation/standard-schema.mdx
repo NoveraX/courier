@@ -125,9 +125,11 @@ const event = await caller.events.get({ id: 1 })
 When validation fails, Courier throws a `ValidationError` with structured issue data:
 
 ```ts title="types"
-class ValidationError extends Error {
-  /** Which schema failed: "response" or "variables" */
-  readonly target: "response" | "variables"
+import { CourierError } from "@noverax/courier"
+
+declare class ValidationError extends CourierError<"VALIDATION_ERROR"> {
+  /** Which schema failed: the answer's, the call's variables, or a message a channel received */
+  readonly target: "response" | "variables" | "receive"
 
   /** Array of validation issues */
   readonly issues: readonly ValidationIssue[]

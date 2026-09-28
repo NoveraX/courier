@@ -164,7 +164,7 @@ const users = await caller.users.getAll()
 
 // Direct mode — server calls backend directly, no proxy hop
 // Server → GET https://internal-api.company.com/users
-const users = await directCaller.users.getAll()
+const sameUsers = await directCaller.users.getAll()
 ```
 
 <Callout variant="info" title="Same API definitions">

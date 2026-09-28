@@ -2,25 +2,23 @@ export const metadata = { title: "Error Handling", description: "Handle HTTP err
 
 ## The HTTPError Class
 
-When a request fails with an HTTP error status (400 or above), Courier throws an `HTTPError`. This class extends the native `Error` and adds `status`, `headers`, and a typed `data` property containing the parsed response body:
+When a request fails with an HTTP error status (400 or above), or gets no answer at all, Courier throws an `HTTPError`. This class extends Courier's `CourierError`, itself an `Error`, and adds `status`, `headers`, and a typed `data` property containing the parsed response body:
 
 ```typescript
-import { HTTPError } from "@noverax/courier"
+import { CourierError } from "@noverax/courier"
 
-// HTTPError extends the native Error class
-class HTTPError<R = unknown> extends Error {
-  status: number    // HTTP status code (400, 404, 500, ...)
-  headers: Headers  // Response headers
-  data: R           // Parsed response body — typed with the R generic
+declare class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
+  readonly status: number    // HTTP status code (400, 404, 500, ...); 0 when there was no answer
+  readonly headers: Headers  // Response headers
+  readonly data: TData       // Parsed response body — typed with the TData generic
 }
 
-// The error message is automatically set to "HTTP {status}"
-// error.message → "HTTP 404"
+// error.message → "HTTP 404", or "Network request failed" / "Request timed out" with no answer
 // error.name → "HTTPError"
 ```
 
 <Callout variant="info" title="Typed error data">
-The `HTTPError<R>` generic lets you type the error response body. If your backend returns `{ "message": "Not found", "code": "NOT_FOUND" }`, you can access it as `error.data.message` with full type safety.
+The `HTTPError<TData>` generic lets you type the error response body. If your backend returns `{ "message": "Not found", "code": "NOT_FOUND" }`, you can access it as `error.data.message` with full type safety.
 </Callout>
 
 ## The isHTTPError Type Guard
@@ -130,7 +128,7 @@ import { isHTTPError } from "@noverax/courier"
 import { users } from "./users"
 import { posts } from "./posts"
 
-const errorMiddleware = defineMiddleware(async (ctx, next) => {
+const errorMiddleware = defineMiddleware("errors", "wrap", async (ctx, next) => {
   try {
     return await next()
   } catch (error) {

@@ -13,7 +13,7 @@ The first middleware in the array is the **outermost** layer: it runs first on t
 
 ## Core Types
 
-Every middleware function receives a `MiddlewareContext` and a `NextFn`:
+A middleware is a name, a phase and a handler. Every handler receives a `MiddlewareContext`:
 
 ```ts title="types"
 type MiddlewareContext = {
@@ -27,6 +27,10 @@ type MiddlewareContext = {
   variables?: unknown
   /** Request headers — can be modified by middleware */
   headers: Headers
+  /** "http" for requests, "sse" or "ws" for streams and channels */
+  transport?: "http" | "sse" | "ws"
+  /** The incoming request, before `allowedHeaders` narrowed it, when a proxy runs the call */
+  request?: Request
   /** Whether the endpoint reads or writes */
   kind?: "query" | "mutation"
   /** Fires when the caller stops waiting: the call's own signal, or the incoming request's in a proxy */
@@ -41,20 +45,39 @@ type MiddlewareResponse = {
 
 type NextFn = () => Promise<MiddlewareResponse>
 
-type MiddlewareFn = (
+/** Runs before the call: can change the context, never sees the response */
+type BeforeHandler = (ctx: MiddlewareContext) => void | Promise<void>
+
+/** Runs after the call: receives the response and returns it, changed or not */
+type AfterHandler = (
   ctx: MiddlewareContext,
-  next: NextFn,
-) => Promise<MiddlewareResponse>
+  response: MiddlewareResponse,
+) => MiddlewareResponse | Promise<MiddlewareResponse>
+
+/** Wraps the call: decides whether, and how often, to call `next()` */
+type WrapHandler = (ctx: MiddlewareContext, next: NextFn) => Promise<MiddlewareResponse>
 ```
 
 ## defineMiddleware
 
-The `defineMiddleware` helper provides type inference for your middleware function. It returns the same function you pass in -- no wrapping, no overhead:
+`defineMiddleware(name, phase, handler)` builds a middleware. The name is what Studio shows for it in each request's middleware timeline; the phase says what the handler receives:
 
 ```ts title="lib/middleware.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 
-const timing = defineMiddleware(async (ctx, next) => {
+/* "before": change the request, then let it go on */
+const auth = defineMiddleware("auth", "before", (ctx) => {
+  ctx.headers.set("Authorization", "Bearer my-token")
+})
+
+/* "after": read or change the response on its way back */
+const stamp = defineMiddleware("stamp", "after", (_ctx, response) => {
+  response.headers.set("x-received-at", new Date().toISOString())
+  return response
+})
+
+/* "wrap": both, around a call to next() */
+const timing = defineMiddleware("timing", "wrap", async (ctx, next) => {
   const start = performance.now()
   const response = await next()
   const ms = Math.round(performance.now() - start)
@@ -64,19 +87,20 @@ const timing = defineMiddleware(async (ctx, next) => {
 })
 ```
 
+Use `before` or `after` when a middleware only needs one side of the call — they cannot forget to call `next()` — and `wrap` for timing, retries, short-circuiting and error handling.
+
 ## composeMiddleware
 
-`composeMiddleware` combines an array of middleware into a single `MiddlewareFn`. Middleware execute in array order -- the first element is the outermost layer:
+`composeMiddleware` combines an array of middleware into one wrap handler, `(ctx, next) => Promise<MiddlewareResponse>`; `defineMiddleware(name, "wrap", …)` makes it a middleware of its own. Middleware execute in array order — the first element is the outermost layer:
 
 ```ts title="lib/middleware.ts"
 import { composeMiddleware, defineMiddleware } from "@noverax/courier/middleware"
 
-const auth = defineMiddleware(async (ctx, next) => {
+const auth = defineMiddleware("auth", "before", (ctx) => {
   ctx.headers.set("Authorization", "Bearer my-token")
-  return next()
 })
 
-const logger = defineMiddleware(async (ctx, next) => {
+const logger = defineMiddleware("logger", "wrap", async (ctx, next) => {
   console.log(`→ ${ctx.method}`)
   const res = await next()
   console.log(`← ${res.status}`)
@@ -130,13 +154,13 @@ Middleware can do any of the following:
 
 | Capability | How |
 |---|---|
-| **Modify request headers** | Set values on `ctx.headers` before calling `next()` |
-| **Modify variables** | Reassign `ctx.variables` before calling `next()` |
-| **Transform response** | Await `next()`, then return a modified `MiddlewareResponse` |
-| **Short-circuit** | Return a `MiddlewareResponse` without calling `next()` |
-| **Retry** | Call `next()` multiple times |
-| **Measure timing** | Record `performance.now()` before and after `next()` |
-| **Handle errors** | Wrap `next()` in try/catch |
+| **Modify request headers** | A `before` handler sets values on `ctx.headers` |
+| **Modify variables** | A `before` handler reassigns `ctx.variables` |
+| **Transform response** | An `after` handler returns a changed `MiddlewareResponse` |
+| **Short-circuit** | A `wrap` handler returns a `MiddlewareResponse` without calling `next()` |
+| **Retry** | A `wrap` handler calls `next()` more than once |
+| **Measure timing** | A `wrap` handler records `performance.now()` before and after `next()` |
+| **Handle errors** | A `wrap` handler puts `next()` in try/catch |
 
 ## Next Steps
 

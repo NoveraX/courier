@@ -158,7 +158,7 @@ const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
     retryMiddleware({ limit: 3 }),
-    authMiddleware({ getToken: () => localStorage.getItem("token") }),
+    authMiddleware({ getToken: () => localStorage.getItem("token") ?? "" }),
   ],
   groups: { users },
 })

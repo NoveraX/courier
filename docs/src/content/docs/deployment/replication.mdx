@@ -83,7 +83,7 @@ const server = await createCourierServer({
     return { userId }
   },
   onDisconnect: ({ meta, code }) => {
-    console.log(`WS closed: user=${meta.userId} code=${code}`)
+    console.log("WS closed", { meta, code })
   },
 
   onReady: (url) => console.log(`Courier ready at ${url}`),
@@ -215,7 +215,7 @@ const cleanupWS = courierWSAttach(server, {
     return { userId }
   },
   onDisconnect: ({ meta, code }) => {
-    console.log(`WS closed: ${meta.userId}, code ${code}`)
+    console.log("WS closed", { meta, code })
   },
 })
 
@@ -293,7 +293,7 @@ fastify.get("/ws", { websocket: true }, courierWSHandler({
     return { userId }
   },
   onDisconnect: ({ meta, code }) => {
-    console.log(`WS closed: ${meta.userId}, code ${code}`)
+    console.log("WS closed", { meta, code })
   },
 }))
 
@@ -355,7 +355,7 @@ const ws = courierWSHandler({
     return { userId }
   },
   onDisconnect: ({ meta, code }) => {
-    console.log(`WS closed: ${meta.userId}, code ${code}`)
+    console.log("WS closed", { meta, code })
   },
 })
 app.get("/ws", upgradeWebSocket((c) => ws(c)))
@@ -408,7 +408,7 @@ async function bootstrap(): Promise<void> {
       return { userId }
     },
     onDisconnect: ({ meta, code }) => {
-      console.log(`WS closed: ${meta.userId}, code ${code}`)
+      console.log("WS closed", { meta, code })
     },
   })
 

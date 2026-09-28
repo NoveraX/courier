@@ -6,7 +6,7 @@ Under the hood, Courier uses an `HttpClient` class that wraps the native `fetch`
 
 ## HTTP Methods
 
-Every endpoint passes `.via()` a closure that receives an `http` object with six HTTP helpers: `get`, `post`, `put`, `patch`, `del`, and `head`.
+An endpoint names its HTTP method with a head — `endpoint.get(path)`, `.post`, `.put`, `.patch`, `.del` or `.head`. One whose path or body its variables have to be worked into passes `.via()` a closure instead, which receives an `http` object with the same helpers.
 
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"
@@ -49,17 +49,23 @@ The key difference between methods is how they handle variables:
 - **POST, PUT, PATCH** — variables are automatically sent as a JSON body.
 
 ```typescript
+import { courier } from "@noverax/courier/define"
+
+const { endpoint } = courier()
+
 // GET, DELETE, HEAD — variables sent as search params
-(http) => http.get("/search")
+const search = endpoint.get("search").variables<{ page: number; limit: number }>()
 // → GET /users/search?page=1&limit=10
 
 // POST, PUT, PATCH — variables sent as JSON body
-(http, vars) => http.post("", vars)
+const create = endpoint.post("").variables<{ name: string; email: string }>()
 // → POST /users  body: { name: "Jane", email: "jane@test.com" }
 
-// You can also pass a sub-path
-(http, vars) => http.post("bulk", vars)
-// → POST /users/bulk
+// A closure, for a path the variables are worked into
+const archive = endpoint
+  .variables<{ year: number; ids: string[] }>()
+  .via((http, vars) => http.post(`archive/${vars.year}`, { ids: vars.ids }))
+// → POST /users/archive/2025  body: { ids: [...] }
 ```
 
 <Callout variant="tip" title="Automatic serialization">

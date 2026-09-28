@@ -5,8 +5,9 @@ export const metadata = { title: "useQuery", description: "Fetch data with autom
 Access `useQuery` through the query caller's dot-notation API. Types are fully inferred from your endpoint definitions:
 
 ```ts
-const result = q.{group}.useQuery(method, options?)
+const result = q.users.useQuery("getAll", options)
 
+// q.<group>.useQuery(method, options?)
 // group   — endpoint group name (e.g. "users")
 // method  — method name within the group (e.g. "getAll")
 // options — { variables?, requestOptions?, ...reactQueryOptions }

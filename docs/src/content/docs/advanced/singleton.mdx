@@ -10,10 +10,15 @@ Every Courier factory learns your API's type in one place: from the API object y
 
 ```ts
 // Without it, every file builds its own client and names the type again:
-const users = await createProxyCaller<typeof api>("api", { boundary }).users.getAll()
+import { createProxyCaller } from "@noverax/courier"
 
+const users = await createProxyCaller<typeof api>("api", { boundary }).users.getAll()
+```
+
+```ts
 // With it, every file imports the one client:
 import { caller } from "@/lib/caller"
+
 const users = await caller.users.getAll()
 ```
 

@@ -151,7 +151,9 @@ export async function saveUser(_: ActionState<User>, form: FormData): Promise<Ac
 ```ts
 // Main entry
 import { apiRoute, createAction } from "@noverax/courier-next"
+```
 
+```ts
 // Actions-only entry (for "use server" files)
 import { createAction } from "@noverax/courier-next/actions"
 ```

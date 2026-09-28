@@ -75,6 +75,42 @@ describe("the source catalogue", () => {
     expect(sources).toEqual([{ name: "pets", isImported: true, hasClient: true }]);
   }, 30_000);
 
+  it("describes each endpoint as the Playground sends it: its transport, variables and proxy routes", async () => {
+    const api = [
+      'import { courier, defineApi, defineGroup } from "@noverax/courier/define";',
+      "const { endpoint, stream } = courier();",
+      "const users = defineGroup({ prefix: \"v2/users\", endpoints: {",
+      '  byId: endpoint.get(":id").variables<{ id: number }>(),',
+      '  create: endpoint.post("").variables<{ name: string }>(),',
+      "  ticks: stream.response<{ n: number }>().implement(async function* () {}),",
+      "} });",
+      "export const api = defineApi({",
+      '  baseURL: "http://localhost:7501",',
+      '  proxyPath: { http: "/api/request", sse: "/api/sse" },',
+      "  groups: { users },",
+      "});",
+    ].join("\n");
+    mkdirSync(join(root, "src"));
+    writeFileSync(join(root, "src/api.ts"), api);
+    writeFileSync(join(root, "courier.config.ts"), 'import { api } from "./src/api";\nexport default { sources: { api } };\n');
+
+    const loaded = await loadCourierConfig(root);
+    const [source] = buildSourceScan(loaded, importsSnapshotOf(undefined, root), root).sources;
+    const [users] = source?.groups ?? [];
+    const analyses = new Map(users?.endpoints.map((e) => [e.name, e.analysis]));
+
+    expect(source?.proxyPath).toEqual({ http: "/api/request", sse: "/api/sse" });
+    expect(users?.prefix).toBe("v2/users");
+    expect(analyses.get("byId")).toEqual(
+      expect.objectContaining({ httpMethod: "get", path: ":id", type: "query" }),
+    );
+    expect(analyses.get("byId")).not.toHaveProperty("transport");
+    expect(analyses.get("create")).toEqual(
+      expect.objectContaining({ httpMethod: "post", path: "", type: "mutation" }),
+    );
+    expect(analyses.get("ticks")).toEqual(expect.objectContaining({ transport: "sse" }));
+  }, 30_000);
+
   it("says an import declared without a client has none, though its barrel and groups have index files", async () => {
     generate("none");
 

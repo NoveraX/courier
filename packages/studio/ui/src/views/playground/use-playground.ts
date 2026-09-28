@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 
+import { useCatalog } from "@/hooks/use-catalog";
 import { useStudioStore } from "@/store";
 import type { CatalogEndpoint, CatalogEntry } from "@/store/types-ui";
-import { buildCatalogFromRequests } from "@/store/build-catalog-from-requests";
+import { sendableCatalog } from "./sendable-catalog";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -39,9 +40,14 @@ export interface PlaygroundInitParams {
 }
 
 export function usePlayground(init?: PlaygroundInitParams) {
-  const requests = useStudioStore((s) => s.requests);
+  const catalog = useCatalog();
+  const declared = useStudioStore((s) => s.scanSources);
+  const bindingRows = useStudioStore((s) => s.bindingSnapshot.rows);
   const jsonIndent = useStudioStore((s) => s.settings.jsonIndent);
-  const sourceMap = useMemo(() => buildCatalogFromRequests(requests), [requests]);
+  const sourceMap = useMemo(
+    () => sendableCatalog(catalog, declared, bindingRows),
+    [catalog, declared, bindingRows],
+  );
   const sourceKeys = useMemo(() => Object.keys(sourceMap), [sourceMap]);
 
   const [source, setSource] = useState<string | null>(init?.source ?? null);

@@ -10,7 +10,8 @@ import { isPlainObject } from "./is-plain-object";
 const IMPORT_TYPES: ReadonlySet<unknown> = new Set(["url", "file", "raw"]);
 const HTTP_METHODS: ReadonlySet<unknown> = new Set(["get", "post", "put", "patch", "delete"]);
 const ENDPOINT_TYPES: ReadonlySet<unknown> = new Set(["query", "mutation", null]);
-const TRANSPORTS: ReadonlySet<unknown> = new Set(["sse", "ws"]);
+const STREAM_TRANSPORTS: ReadonlySet<unknown> = new Set(["sse", "ws"]);
+const TRANSPORTS: ReadonlySet<string> = new Set(["http", "sse", "ws"]);
 
 /**
  * Whether an entry of a `registry:updated` list is an import the UI can
@@ -60,7 +61,15 @@ export function isScannedSource(item: unknown): item is ScannedSource {
     isListOf(item.groups, isScannedGroup) &&
     (item.inlineEndpoints === undefined || isListOf(item.inlineEndpoints, isScannedEndpoint)) &&
     typeof item.isImported === "boolean" &&
-    typeof item.hasClient === "boolean"
+    typeof item.hasClient === "boolean" &&
+    (item.proxyPath === undefined || isProxyPath(item.proxyPath))
+  );
+}
+
+function isProxyPath(item: unknown): boolean {
+  return (
+    isPlainObject(item) &&
+    Object.keys(item).every((key) => TRANSPORTS.has(key) && typeof item[key] === "string")
   );
 }
 
@@ -89,8 +98,10 @@ function isScannedEndpoint(item: unknown): item is ScannedEndpoint {
     typeof analysis.hasResponseType === "boolean" &&
     typeof analysis.hasVariablesType === "boolean" &&
     typeof analysis.hasValidation === "boolean" &&
-    (analysis.transport === undefined || TRANSPORTS.has(analysis.transport)) &&
-    (analysis.middleware === undefined || isListOf(analysis.middleware, isString))
+    (analysis.transport === undefined || STREAM_TRANSPORTS.has(analysis.transport)) &&
+    (analysis.middleware === undefined || isListOf(analysis.middleware, isString)) &&
+    (analysis.variablesStub === undefined || isPlainObject(analysis.variablesStub)) &&
+    (analysis.hasReceiveSchema === undefined || analysis.hasReceiveSchema === true)
   );
 }
 

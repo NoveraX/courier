@@ -10,6 +10,7 @@
  */
 
 import { join, relative } from "node:path";
+import type { ProxyPath } from "@noverax/courier";
 import { extractSourceMap } from "@noverax/courier-studio-core";
 import type { LoadedCourierConfig } from "./config-loader";
 import { findSourceDeclaration } from "./find-source-declaration";
@@ -28,6 +29,10 @@ export interface ScannedEndpointAnalysis {
   transport?: "sse" | "ws";
   /** The source's middleware, in the order it runs. */
   middleware?: string[];
+  /** The variables its schema describes, with a placeholder for each field. */
+  variablesStub?: Record<string, unknown>;
+  /** A channel whose messages from the client have a schema. */
+  hasReceiveSchema?: true;
 }
 
 export interface ScannedEndpoint {
@@ -50,6 +55,8 @@ export interface ScannedSource {
   inlineEndpoints?: ScannedEndpoint[];
   isImported: boolean;
   hasClient: boolean;
+  /** Where the source's proxy routes are served, as `defineApi({ proxyPath })` sets them. */
+  proxyPath?: ProxyPath;
 }
 
 export interface ScanResult {
@@ -129,6 +136,7 @@ export function buildSourceScan(
         paths.source ?? findSourceDeclaration(name, deps, root) ?? relative(root, configFile),
       groups,
       ...(inlineEndpoints && { inlineEndpoints }),
+      ...(source.proxyPath && { proxyPath: source.proxyPath }),
       isImported,
       /* Studio writes the caller into the import's own `index.ts` unless it
          is declared with `generateClient: "none"`. */
@@ -157,6 +165,8 @@ function describeEndpoint(name: string, endpoint: MapEndpoint): ScannedEndpoint 
       type: endpoint.type ?? null,
       ...(endpoint.transport && { transport: endpoint.transport }),
       ...(endpoint.middleware?.length && { middleware: [...endpoint.middleware] }),
+      ...(endpoint.variablesStub && { variablesStub: endpoint.variablesStub }),
+      ...(endpoint.hasReceiveSchema && { hasReceiveSchema: true as const }),
     },
   };
 }

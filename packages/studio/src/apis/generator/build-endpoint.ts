@@ -9,6 +9,7 @@ import { buildEndpointChain } from "./build-endpoint-helpers";
 import { type EndpointContext, schemaConstant, typeName } from "./endpoint-context";
 import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
 import { extendSchemaWithParams, getSchemaRefName } from "./schema-utils";
+import { wireClosure } from "./wire-closure";
 
 /**
  * The chain describing one endpoint.
@@ -29,8 +30,10 @@ export function buildEndpointDefinition(
 ): string {
   const variables = variablesSchema(ep, context);
   const response = responseSchema(ep, context);
+  const path = endpointPath(ep);
   return buildEndpointChain({
-    address: address(ep),
+    address: `endpoint.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
+    closure: wireClosure(ep, path),
     variablesSchema: variables,
     variablesType: variables
       ? null
@@ -41,16 +44,14 @@ export function buildEndpointDefinition(
 }
 
 /**
- * Where the endpoint is, named by the verb that reaches it.
+ * Where the endpoint is, as both its addressed form and its closure write it.
  *
  * An endpoint on a host of its own is addressed by its full URL, which the
  * client sends there whatever the group's prefix and the source's base.
  */
-function address(ep: ParsedEndpoint): string {
-  const method = toInternalMethod(ep.httpMethod);
-  if (ep.origin) return `endpoint.${method}("${ep.origin}${convertPathParams(ep.fullPath)}")`;
-  const path = ep.path === "/" ? "" : ep.path.replace(/^\//, "");
-  return `endpoint.${method}("${path}")`;
+function endpointPath(ep: ParsedEndpoint): string {
+  if (ep.origin) return `${ep.origin}${convertPathParams(ep.fullPath)}`;
+  return ep.path === "/" ? "" : ep.path.replace(/^\//, "");
 }
 
 /** The extracted type naming the endpoint's parameters, when there is one. */
@@ -75,14 +76,18 @@ function variablesSchema(ep: ParsedEndpoint, context: EndpointContext): string |
   if (!ref || !constant) return null;
 
   const body = listOf(constant, ep.requestBody, context);
-  const pathParams = ep.parameters.filter((p) => p.in === "path");
-  if (pathParams.length === 0) return body;
+  /* The query parameters belong to the variables as much as the path's do:
+     left out, zod and valibot stripped them before the call was made. */
+  const params = (["path", "query"] as const).flatMap((place) =>
+    ep.parameters.filter((param) => param.in === place),
+  );
+  if (params.length === 0) return body;
 
   /* Only an object can be extended; a list or a set of alternatives has to be
-     intersected with the path parameters instead. */
+     intersected with the parameters instead. */
   const isObject = ep.requestBody?.type !== "array" && context.spec.schemas[ref]?.type !== "union";
   context.uses.validator = true;
-  return extendSchemaWithParams(body, pathParams, context.options, isObject);
+  return extendSchemaWithParams(body, params, context.options, isObject);
 }
 
 /**

@@ -66,6 +66,20 @@ function collection(): string {
               },
             },
           },
+          {
+            name: "Refresh",
+            request: {
+              method: "POST",
+              url: {
+                raw: `${auth.url}/auth/refresh?scope=read`,
+                protocol: "http",
+                host: [hostname],
+                port,
+                path: ["auth", "refresh"],
+                query: [{ key: "scope", value: "read" }],
+              },
+            },
+          },
           onBase("Verify", "POST", ["auth", "verify"]),
         ],
       },
@@ -103,5 +117,21 @@ describe("a collection whose requests name {{baseUrl}}", () => {
 
     expect(auth.requests.at(-1)).toMatchObject({ method: "POST", path: "/auth/login" });
     expect(api.requests.slice(before)).toMatchObject([{ method: "POST", path: "/pm/auth/verify" }]);
+  });
+
+  /* A write with a query parameter is sent through a closure, which has to
+     name the other host as well. */
+  it.each(GROUPINGS)("sends a write with a query parameter to its own host (%s)", async (groupBy) => {
+    const before = api.requests.length;
+
+    await caller(groupBy).auth("refresh")({ scope: "write" });
+
+    expect(auth.requests.at(-1)).toMatchObject({
+      method: "POST",
+      path: "/auth/refresh",
+      query: [["scope", "write"]],
+      body: "",
+    });
+    expect(api.requests.length).toBe(before);
   });
 });

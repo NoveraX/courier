@@ -1,6 +1,12 @@
 import { normalizeHttpMethod } from "@noverax/courier";
 import { recordParam } from "../server/path-shape";
-import { extractSchema, isEndpoint, normalizePrefix, probeEndpoint } from "./endpoint-probe";
+import {
+  extractSchema,
+  isEndpoint,
+  normalizePrefix,
+  probeEndpoint,
+  realtimePath,
+} from "./endpoint-probe";
 import { detectOperation } from "./operation-detect";
 import type { RouteInfo, SourceGroup } from "./route-types";
 
@@ -93,15 +99,17 @@ function analyzeEndpoint(
   const transport = schema?.transport;
 
   // SSE/WS endpoints don't accept an http argument — skip probing to avoid
-  // calling the generator/channel factory with garbage. They live at a
-  // path equal to the endpoint name (e.g. "feed" → /notifications/feed).
+  // calling the generator/channel factory with garbage. They live at the
+  // path they declare, where a direct client connects (`stream.get("feed")`
+  // → /notifications/feed), or at their name when they declare none.
   if (transport === "sse" || transport === "ws") {
-    const fullPath = `${prefix}/${endpointName}`.replace(/\/+/g, "/");
+    const path = realtimePath(endpointFn, endpointName);
+    const fullPath = `${prefix}/${path}`.replace(/\/+/g, "/");
     routes.push({
       group: groupName,
       endpoint: endpointName,
       httpMethod: "GET",
-      path: endpointName,
+      path,
       fullPath,
       hasIdParam: false,
       operation: "custom",

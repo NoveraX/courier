@@ -45,7 +45,7 @@ export interface WSHandlerConfig {
  * Attaches to a Node.js HTTP server's "upgrade" event and routes incoming
  * connections to mock channel handlers via path → registry lookup.
  *
- * Path pattern: `/{groupPrefix}/{methodName}` (matches `buildDirectWSUrl`).
+ * Path pattern: `/{groupPrefix}/{declared path}` (matches `buildDirectWSUrl`).
  * Protocol: subset of Courier WS protocol — `subscribe` (auto-fired by client
  * on connect), `message` (client→server), `data` (server→client),
  * `unsubscribe`, `ping`/`pong`.

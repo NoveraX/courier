@@ -1,24 +1,35 @@
 /**
  * Registration of SSE endpoints, which MUST be added before the catch-all
  * `/:id` route to prevent the param matcher from shadowing them.
- *
- * `registerSSERoutes` exposes direct-mode SSE endpoints at `/{prefix}/{name}`
- * so REST-style SSE clients (built by `buildDirectSSEUrl`) hit the same path.
  */
 
 import type { Hono } from "hono";
 
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
-import { parseQueryParams } from "./route-helpers";
+import { parsePathParams, parseQueryParams } from "./route-helpers";
 
 /**
- * Register SSE endpoints as explicit GET routes at `/{prefix}/{name}`.
+ * Register SSE endpoints as GET routes at the path each declares.
  *
- * Direct-mode SSE clients use REST-style URLs (built by `buildDirectSSEUrl`),
- * so the mock server must serve them at the same path. Variables are passed
- * as query string params and forwarded to the streamFn via handleMockRequest.
+ * A direct-mode client builds its URL from the endpoint's declared path —
+ * `stream.get("stream")` is requested at `/{prefix}/stream`, and a path
+ * parameter is filled in from the call's variables — so the mock serves it
+ * there. The rest of the variables arrive as the query string; both are
+ * forwarded to the stream function.
  *
  * Must be called before `/:id` to prevent the catch-all from matching first.
+ *
+ * @param app       The mock server's Hono app
+ * @param prefix    Group prefix without its leading slash
+ * @param endpoints The group's analyzed endpoints
+ * @param group     Group name the handlers are registered under
+ * @param config    Request entry point
+ * @returns Nothing; the routes are added to `app`
+ * @example
+ * ```ts
+ * registerSSERoutes(app, "live", endpoints, "live", config);
+ * // GET /live/stream → live.ticker
+ * ```
  */
 export function registerSSERoutes(
   app: Hono,
@@ -30,9 +41,10 @@ export function registerSSERoutes(
   for (const ep of endpoints) {
     if (ep.transport !== "sse") continue;
 
-    const routePath = `/${prefix}/${ep.name}`;
-    app.get(routePath, (c) => {
-      const variables = parseQueryParams(new URL(c.req.url).searchParams);
+    const path = (ep.path || ep.name).split("/").filter(Boolean).join("/");
+    app.get(`/${prefix}/${path}`, (c) => {
+      const query = parseQueryParams(new URL(c.req.url).searchParams);
+      const variables = { ...query, ...parsePathParams(c.req.param()) };
       return config.handleRequest(c, group, ep.name, variables);
     });
   }

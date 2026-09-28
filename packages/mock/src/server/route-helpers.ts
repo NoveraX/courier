@@ -87,3 +87,12 @@ export function parseQueryParams(params: URLSearchParams): Record<string, unknow
   for (const [key, value] of params) result[key] = parseId(value);
   return result;
 }
+
+/** Parse a route's path parameters, turning values written as numbers into numbers */
+export function parsePathParams(params: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string") result[key] = parseId(value);
+  }
+  return result;
+}

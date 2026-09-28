@@ -3,7 +3,7 @@ import type { Context, Hono } from "hono";
 import type { PathShape } from "./path-shape";
 import { pathShape } from "./path-shape";
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
-import { parseId, parseQueryParams } from "./route-helpers";
+import { parsePathParams, parseQueryParams } from "./route-helpers";
 
 const METHODS = new Set<string>(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 const WITHOUT_BODY = new Set<string>(["GET", "DELETE"]);
@@ -52,7 +52,10 @@ export function registerDeclaredRoutes(
     app.on(method, path, async (c) => {
       const input = await inputOf(c, method);
       if (!input) return c.json({ error: "The request body is not a JSON object" }, 400);
-      return config.handleRequest(c, group, ep.name, { ...input, ...paramsOf(c) });
+      return config.handleRequest(c, group, ep.name, {
+        ...input,
+        ...parsePathParams(c.req.param()),
+      });
     });
   }
 }
@@ -73,12 +76,6 @@ function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
       .map((segment) => (segment.startsWith(":") ? "1" : "0"))
       .join("");
   return rank(a).localeCompare(rank(b));
-}
-
-function paramsOf(c: Context): Record<string, unknown> {
-  const params: Record<string, unknown> = {};
-  for (const [name, value] of Object.entries(c.req.param())) params[name] = parseId(value);
-  return params;
 }
 
 /** The query of a GET or DELETE, the JSON body of anything else; `undefined` for a body that is not JSON */

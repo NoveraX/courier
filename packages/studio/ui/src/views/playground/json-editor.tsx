@@ -29,7 +29,8 @@ export function JsonEditor({
 }: JsonEditorProps): React.ReactElement {
   const jsonIndent = useStudioStore((s) => s.settings.jsonIndent);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isValid = isValidJsonc(value);
+  /* An empty editor holds nothing to send, which is not an error. */
+  const isValid = value.trim() === "" || isValidJsonc(value);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const ta = e.currentTarget;

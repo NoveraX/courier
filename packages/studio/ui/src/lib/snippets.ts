@@ -62,14 +62,6 @@ function mergeContentType(
   return merged;
 }
 
-/** Replace `:param` placeholders in URL with values from variables */
-export function resolvePathParams(url: string, variables: Record<string, unknown>): string {
-  return url.replace(/:(\w+)/g, (_, key) => {
-    const val = variables[key];
-    return val !== undefined && val !== "" ? String(val) : `:${key}`;
-  });
-}
-
 export function safeStringify(value: unknown, indent = 0): string {
   try { return JSON.stringify(value, null, indent); } catch { return String(value); }
 }

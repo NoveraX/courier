@@ -13,10 +13,10 @@
  */
 
 import { getSocket } from "@/socket";
-import { safeParse } from "./playground-utils";
 import { subscribeForRunData } from "./run-data";
 
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
+import type { RequestValues } from "./request-values";
 
 export interface SendPayload {
   source: string;
@@ -34,6 +34,7 @@ interface InitiateHttpParams {
   id: string;
   rid: string;
   payload: SendPayload;
+  values: RequestValues;
   sentAt: number;
   updateEntry: UpdateEntry;
   setSending: (sending: boolean) => void;
@@ -48,6 +49,7 @@ export function initiateHttpRequest({
   id,
   rid,
   payload,
+  values,
   sentAt,
   updateEntry,
   setSending,
@@ -58,8 +60,8 @@ export function initiateHttpRequest({
     group: payload.group,
     method: payload.method,
     transport: "http",
-    variables: safeParse(payload.variables, undefined),
-    headers: safeParse<Record<string, string>>(payload.headers, {}),
+    variables: values.variables,
+    headers: values.headers,
   });
 
   // The rid-keyed wire drives response state through store reducers, so

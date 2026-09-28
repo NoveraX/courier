@@ -31,7 +31,7 @@ export function PlaygroundView(): React.ReactElement {
   const isRealtime = pg.endpointInfo?.transport === "sse" || pg.endpointInfo?.transport === "ws";
 
   const handleSend = useCallback(() => {
-    if (!pg.canSend || sending) return;
+    if (!pg.canSend || sending || streaming) return;
     const request = readRequestValues(pg.variables, pg.headers);
     if (!request.ok) {
       toast.error(request.problem);
@@ -47,9 +47,10 @@ export function PlaygroundView(): React.ReactElement {
       transport: pg.endpointInfo?.transport,
     }, request.values);
     pg.setResponseTab(isRealtime ? "stream" : "body");
-  }, [send, sending, pg, isRealtime]);
+  }, [send, sending, streaming, pg, isRealtime]);
 
-  // Cmd+Enter to send
+  // Cmd+Enter sends, as the Send button does; while a stream is live the
+  // button is Unsubscribe, and the shortcut sends nothing.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {

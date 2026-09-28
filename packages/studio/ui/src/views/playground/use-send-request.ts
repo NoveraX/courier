@@ -20,6 +20,10 @@ export type { SendPayload };
  * state — `sending` and `streaming` flags are cosmetic gates for the
  * toolbar spinner / unsubscribe button and are cleared by watching the
  * store's active entry transitions.
+ *
+ * While a stream is live nothing else is sent: its rid is the one
+ * Unsubscribe closes, and a second request would take that place and leave
+ * the stream running with nothing left to close it.
  */
 export function useSendRequest() {
   const addEntry = useStudioStore((s) => s.addPlaygroundEntry);
@@ -57,7 +61,8 @@ export function useSendRequest() {
     });
   }, []);
 
-  const send = useCallback((payload: SendPayload, values: RequestValues): string => {
+  const send = useCallback((payload: SendPayload, values: RequestValues): string | null => {
+    if (activeRidRef.current) return null;
     const id = crypto.randomUUID();
     const rid = id;
     const sentAt = Date.now();

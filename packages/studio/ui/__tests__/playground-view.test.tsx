@@ -5,7 +5,7 @@
  * The Playground as the user drives it: it offers the sources the config
  * declares under the names a runtime hosts them by, from the first render
  * on; it shows where each endpoint is served; and it copies and sends a
- * request only as written.
+ * request only as written, one stream at a time.
  */
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -177,5 +177,18 @@ describe("the Playground", () => {
 
     expect(execCalls()).toEqual([]);
     expect(toastError).toHaveBeenCalledWith("Variables are not valid JSON");
+  });
+
+  it("opens no second stream while one is live", async () => {
+    renderPlayground({ source: "api", group: "live", method: "ticks" });
+
+    await act(async () => screen.getByRole("button", { name: "Subscribe" }).click());
+    await act(async () => {
+      fireEvent.keyDown(document, { key: "Enter", metaKey: true });
+    });
+
+    expect(execCalls()).toEqual([expect.objectContaining({ method: "ticks", transport: "sse" })]);
+    expect(useStudioStore.getState().playgroundHistory).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Unsubscribe" })).toBeTruthy();
   });
 });

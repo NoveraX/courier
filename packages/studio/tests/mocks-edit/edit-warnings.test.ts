@@ -1,6 +1,6 @@
 /**
  * What an edit of the mocks file changes that its diff does not show: a new
- * file, running mocks that restart, a second mock of a source, a port Studio
+ * file, the running mocks it restarts, a second mock of a source, a port Studio
  * assigns, a port another mock moves off, and a port in use — on a loopback
  * or on every address.
  */
@@ -46,6 +46,7 @@ function input(overrides: Partial<WarningInput>): WarningInput {
     loaded,
     summaries: [],
     target: "courier.mocks.ts",
+    restarting: [],
     creates: false,
     mockBasePort: 7001,
     ...overrides,
@@ -59,16 +60,16 @@ describe("editWarnings", () => {
     expect(await editWarnings(input({ creates: true }))).toEqual(["Studio creates courier.mocks.ts."]);
   });
 
-  it("names the running mocks the reload restarts, and only those", async () => {
-    const summaries = [
-      { key: "users", alive: true, port: 7001, portDeclared: false },
-      { key: "idle", alive: false, port: 7002, portDeclared: false },
-      { key: "orders", alive: true, port: 7003, portDeclared: true },
-    ];
-
-    expect(await editWarnings(input({ summaries }))).toEqual([
+  it("names the running mocks the edit restarts", async () => {
+    expect(await editWarnings(input({ restarting: ["users", "orders"] }))).toEqual([
       "Running mocks restart to pick up the edit: users, orders.",
     ]);
+  });
+
+  it("says nothing of restarts when the edit restarts no running mock", async () => {
+    const summaries = [{ key: "users", alive: true, port: 7001, portDeclared: false }];
+
+    expect(await editWarnings(input({ summaries, restarting: [] }))).toEqual([]);
   });
 
   it("says a port Studio assigns can differ after a restart", async () => {

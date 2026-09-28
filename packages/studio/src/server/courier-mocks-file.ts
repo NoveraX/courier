@@ -4,6 +4,7 @@ import { errnoCode } from "./errno-code";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
 import { UNREADABLE } from "./file-content-hash";
 import { hashStillOnDisk } from "./hash-still-on-disk";
+import { fingerprintLoadedMocks } from "./mock-fingerprints";
 import type { ProjectInputs } from "./read-project-inputs";
 import { readWatchedBytes } from "./read-watched-bytes";
 
@@ -17,6 +18,12 @@ export interface LoadedCourierMocks {
   contentHash: string | null;
   /** Why the file did not load, while the config did; `null` when it loaded or is absent. */
   error: unknown | null;
+  /**
+   * A fingerprint of each mock's declaration and what it uses, by key, read
+   * from the file as the load found it; absent when the file did not load or
+   * Studio cannot tell its declarations apart. See `fingerprintMocks`.
+   */
+  fingerprints?: ReadonlyMap<string, string>;
 }
 
 /** Where the mocks file is, found before anything is read. */
@@ -108,12 +115,14 @@ export function readCourierMocks(
   const contentHash = hashStillOnDisk(file, hashBefore);
   if (evaluated.mocksError !== null)
     return { file, entries: {}, contentHash, error: evaluated.mocksError };
+  const fingerprints = fingerprintLoadedMocks(file, contentHash);
   try {
     return {
       file,
       entries: readMocksExport(evaluated.mocksNamespace, file),
       contentHash,
       error: null,
+      ...(fingerprints && { fingerprints }),
     };
   } catch (error) {
     return { file, entries: {}, contentHash, error };

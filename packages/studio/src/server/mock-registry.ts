@@ -18,6 +18,8 @@ export interface MockEntry {
   key: string;
   /** Reference to the value the user declared under `key` */
   definition: unknown;
+  /** The fingerprint of its declaration and what that uses, when Studio could read one */
+  fingerprint?: string;
 }
 
 export interface MockRegistryEvents {
@@ -27,8 +29,13 @@ export interface MockRegistryEvents {
 }
 
 export interface MockRegistry {
-  /** Apply freshly loaded mocks, by key — diffs against the previous snapshot. */
-  syncFromMocks(mocks: Record<string, unknown>): void;
+  /**
+   * Apply freshly loaded mocks, by key — diffs against the previous snapshot.
+   * A mock whose fingerprint is what it was is unchanged, though the load
+   * made its definition anew; without fingerprints on both sides, any other
+   * definition object is a change.
+   */
+  syncFromMocks(mocks: Record<string, unknown>, fingerprints?: ReadonlyMap<string, string>): void;
   /** Read the current snapshot — used by tests and the UI initial state. */
   getEntries(): MockEntry[];
   /**
@@ -62,8 +69,11 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
   };
 
   return {
-    syncFromMocks(mocks: Record<string, unknown>): void {
-      const next = declaredMocks(mocks);
+    syncFromMocks(
+      mocks: Record<string, unknown>,
+      fingerprints?: ReadonlyMap<string, string>,
+    ): void {
+      const next = declaredMocks(mocks, fingerprints);
       const seen = new Set<string>();
 
       for (const entry of next) {
@@ -74,10 +84,8 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
           fire("onAdded", entry);
           continue;
         }
-        if (existing.definition !== entry.definition) {
-          current.set(entry.key, entry);
-          fire("onChanged", entry);
-        }
+        current.set(entry.key, entry);
+        if (changed(existing, entry)) fire("onChanged", entry);
       }
 
       for (const key of [...current.keys()]) {
@@ -102,11 +110,22 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
 }
 
 /* A key left `undefined` or `null` declares no mock, so one can be switched off in place. */
-function declaredMocks(mocks: Record<string, unknown>): MockEntry[] {
+function declaredMocks(
+  mocks: Record<string, unknown>,
+  fingerprints: ReadonlyMap<string, string> | undefined,
+): MockEntry[] {
   const out: MockEntry[] = [];
   for (const [key, definition] of Object.entries(mocks)) {
     if (definition === undefined || definition === null) continue;
-    out.push({ key, definition });
+    const fingerprint = fingerprints?.get(key);
+    out.push(fingerprint === undefined ? { key, definition } : { key, definition, fingerprint });
   }
   return out;
+}
+
+function changed(before: MockEntry, after: MockEntry): boolean {
+  if (before.fingerprint !== undefined && after.fingerprint !== undefined) {
+    return before.fingerprint !== after.fingerprint;
+  }
+  return before.definition !== after.definition;
 }

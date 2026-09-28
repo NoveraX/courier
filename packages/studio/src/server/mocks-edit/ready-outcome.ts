@@ -1,3 +1,4 @@
+import { restartedByEdit } from "../mock-fingerprints";
 import { buildDiffHunks } from "./diff-hunks";
 import { editWarnings } from "./edit-warnings";
 import type { MocksEditContext } from "./mocks-edit-context";
@@ -16,11 +17,17 @@ export async function readyOutcome(
   prepared: PreparedEdit,
 ): Promise<ReadyOutcome> {
   const { target, plan, input } = prepared;
+  const summaries = ctx.mockSummaries();
+  const running = summaries.filter((mock) => mock.alive).map((mock) => mock.key);
   const warnings = await editWarnings({
     requests: input.requests,
     loaded: prepared.loaded,
-    summaries: ctx.mockSummaries(),
+    summaries,
     target: target.relative,
+    restarting:
+      target.kind === "existing"
+        ? restartedByEdit({ file: target.path, before: target.text, after: plan.text, running })
+        : [],
     creates: plan.creates,
     mockBasePort: ctx.mockBasePort,
   });

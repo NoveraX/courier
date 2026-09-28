@@ -30,5 +30,5 @@ export function applyLoadedMocks(mocks: LoadedCourierMocks, consumers: MocksCons
     return;
   }
   consumers.mockManager.setMocksFile({ file: mocks.file, error: null });
-  consumers.mockRegistry.syncFromMocks(mocks.entries);
+  consumers.mockRegistry.syncFromMocks(mocks.entries, mocks.fingerprints);
 }

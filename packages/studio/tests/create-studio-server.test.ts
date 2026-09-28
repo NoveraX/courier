@@ -293,3 +293,43 @@ describe("the mock workers Studio starts", () => {
     expect(users).toHaveLength(3);
   }, 40_000);
 });
+
+describe("a mocks file edited while its mocks run", () => {
+  it("keeps a running mock and its records when only another mock is added", async () => {
+    const root = realpathSync(project());
+    const [mockPort, addedPort] = [await freePort(), await freePort()];
+    const mocksFile = mockedProject(root, mockPort);
+    const api = join(root, "src", "api.ts");
+    writeFileSync(
+      api,
+      readFileSync(api, "utf-8").replace(
+        'getAll: endpoint.get("").response(z.array(User))',
+        'getAll: endpoint.get("").response(z.array(User)), create: endpoint.post("").response(User)',
+      ),
+    );
+    await started(root);
+    const users = `http://127.0.0.1:${mockPort}/users`;
+    await vi.waitFor(async () => expect((await fetch(users)).status).toBe(200), { timeout: 20_000, interval: 200 });
+    const created = await fetch(users, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Kept" }),
+    });
+    expect(created.ok).toBe(true);
+
+    writeFileSync(
+      mocksFile,
+      readFileSync(mocksFile, "utf-8").replace(
+        "autoStart: true }) });",
+        `autoStart: true }), added: defineMockServer({ source: api, port: ${addedPort}, autoStart: true }) });`,
+      ),
+    );
+    await vi.waitFor(
+      async () => expect((await fetch(`http://127.0.0.1:${addedPort}/users`)).status).toBe(200),
+      { timeout: 20_000, interval: 200 },
+    );
+
+    const listed: Array<{ name?: unknown }> = await (await fetch(users)).json();
+    expect(listed.map((user) => user.name)).toContain("Kept");
+  }, 60_000);
+});

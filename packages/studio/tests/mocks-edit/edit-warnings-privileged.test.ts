@@ -21,6 +21,7 @@ describe("editWarnings for a privileged port", () => {
       loaded,
       summaries: [],
       target: "courier.mocks.ts",
+      restarting: [],
       creates: false,
       mockBasePort: 7001,
     });

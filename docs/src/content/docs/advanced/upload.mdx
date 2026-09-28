@@ -117,7 +117,7 @@ Progress events only fire when the browser knows the total size. For FormData up
 
 ### Progress in proxy mode
 
-In proxy mode an upload travels twice: from the browser to the proxy route, then from the proxy to your backend. `onUploadProgress` measures the first hop only. The proxy reads the whole upload before it forwards anything, since the fields that name the endpoint travel inside the multipart body, and then sends it on. So the progress reaches 100% when the proxy has the file, and the call resolves once the backend has received it and answered: behind a slow backend, a 25 MB upload can sit at 100% for several seconds.
+In proxy mode an upload travels twice: from the browser to the proxy route, then from the proxy to your backend. `onUploadProgress` measures the first hop only. The proxy reads the whole upload before it forwards anything, since it parses the form to hand the endpoint its fields, and then sends it on. So the progress reaches 100% when the proxy has the file, and the call resolves once the backend has received it and answered: behind a slow backend, a 25 MB upload can sit at 100% for several seconds.
 
 While it reads, the proxy holds the upload in memory, up to `maxUploadBytes` (10 MB unless the handler sets it), and briefly a second copy as it parses the parts. Size that limit for your server's memory, and upload straight to storage — a pre-signed URL, or a direct call — when files are large.
 
@@ -286,3 +286,7 @@ In development mode, Courier logs a console warning for each ignored option so y
 - [Encoding](/docs/advanced/encoding) — body and query serialization options
 - [Streaming](/docs/advanced/streaming) — streaming responses with ReadableStream
 - [Options Reference](/docs/advanced/options) — timeout, retry, caching, and more
+
+## Uploads in Studio
+
+With Studio attached, a call made with `onUploadProgress` shows its progress in the Timeline while it uploads, and its request detail says how much of the body has been sent. In proxy mode the browser names the call's Studio request id in an `X-Courier-Rid` header, and the proxy shows the call under that id, so the progress and the proxy's own events land on one row. The proxy announces the call as soon as it arrives, so an upload it refuses — a body over `maxUploadBytes`, say — appears as a failed request with its status.

@@ -1,4 +1,5 @@
 import type { StudioHooks } from "../studio/hooks";
+import { studioRequestIdOf } from "../studio/studio-request-id";
 import { discardBody } from "./discard-body";
 import type { ExecuteFn } from "./execute-fn";
 import type { HandlerConfig } from "./handler-config";
@@ -48,7 +49,7 @@ export function createPostHandler(
       return errorResponse(400, "Missing required params: _s, _m");
     }
 
-    const call = announceProxyCall(dt, "POST", routing);
+    const call = announceProxyCall(dt, "POST", routing, studioRequestIdOf(request));
     const read = await readEnvelope(request, config);
     if (!read.ok) {
       call.refused(read.status, read.message);

@@ -17,6 +17,7 @@ import {
 } from "./execute-studio";
 import { type CallTarget, resolveCallTarget } from "./execute-target";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
+import { withStudioUploads } from "./studio-uploads";
 
 /**
  * Run one call against the registered sources: the proxy's handler and a
@@ -104,9 +105,13 @@ function prepareAndRun(
     stream = false,
     ...baseOptions
   } = target.options ?? {};
-  const callOptions = withCallerSignal(
-    withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
-    context?.req,
+  const callOptions = withStudioUploads(
+    withCallerSignal(
+      withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
+      context?.req,
+    ),
+    studio,
+    { source, group, method },
   );
 
   const middlewareCtx = buildMiddlewareContext({

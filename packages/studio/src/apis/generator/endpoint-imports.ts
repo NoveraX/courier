@@ -30,6 +30,9 @@ const VALIDATOR_IMPORT: Readonly<Record<string, string>> = {
 export function endpointImports(context: EndpointContext): string[] {
   const { uses, options } = context;
   const lines: string[] = [];
+  if (uses.headerVariables) {
+    lines.push('import { headerVariablesMiddleware } from "@noverax/courier/middleware";');
+  }
   const validator = VALIDATOR_IMPORT[options.validation];
   if (uses.validator && validator) lines.push(validator);
 

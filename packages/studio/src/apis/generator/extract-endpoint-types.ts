@@ -9,9 +9,11 @@ import type {
   ParsedSchema,
   ParsedSchemaProperty,
 } from "../parser/types";
+import { bodyMedia } from "./body-media";
 import type { ExtractedTypeNames } from "./extracted-type-names";
 import { parameterProperty } from "./parameter-property";
-import { bodyKey, bodyMedia, sharesParameterName } from "./request-body";
+import { bodyKey, sharesParameterName } from "./request-body";
+import { headerParameters } from "./variable-parameters";
 
 export interface ExtractedTypes {
   /** Modified group with response refs instead of inline schemas */
@@ -109,7 +111,11 @@ export function paramsToExtract(ep: ParsedEndpoint, bodyName?: string): ParsedSc
   /* A body that is not an object's fields written inline — a named schema,
      a list, a form, bytes — sits beside the parameters in its own way. */
   if (ep.requestBody && !inlineFields(ep)) return null;
-  const params = ep.parameters.filter((p) => p.in === "path" || p.in === "query");
+  /* Its path and query parameters as declared, then its headers. */
+  const params = [
+    ...ep.parameters.filter((p) => p.in === "path" || p.in === "query"),
+    ...headerParameters(ep),
+  ];
   const nested = bodyToExtract(ep);
   if (params.length < 2 && !params.some((p) => p.description) && !nested) return null;
 

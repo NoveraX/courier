@@ -10,6 +10,7 @@ import { jsdocText } from "./jsdoc-text";
 import { objectKey } from "./literals";
 import { parameterProperty } from "./parameter-property";
 import { bodyKey, requestBodyKind } from "./request-body";
+import { variableParameters } from "./variable-parameters";
 
 /**
  * The type an endpoint answers with.
@@ -42,10 +43,8 @@ export function resolveResponseType(ep: ParsedEndpoint, context: EndpointContext
  */
 export function resolveVariablesType(ep: ParsedEndpoint, context: EndpointContext): string | null {
   const style = endpointTypeStyle(context);
-  const parts = (["path", "query"] as const).flatMap((place) =>
-    ep.parameters
-      .filter((param) => param.in === place)
-      .map((param) => field(param.name, parameterProperty(param), context, style)),
+  const parts = variableParameters(ep).map((param) =>
+    field(param.name, parameterProperty(param), context, style),
   );
 
   const kind = requestBodyKind(ep, context.spec);

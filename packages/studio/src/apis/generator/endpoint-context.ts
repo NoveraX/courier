@@ -28,6 +28,8 @@ export interface EndpointUses {
   formBody: boolean;
   /** Whether a closure writes query values with `formQuery`. */
   formQuery: boolean;
+  /** Whether a definition sends variables as headers with `headerVariablesMiddleware`. */
+  headerVariables: boolean;
   /** The builders the definitions start from: `endpoint`, `stream`. */
   readonly bases: Set<"endpoint" | "stream">;
 }
@@ -74,6 +76,7 @@ export function endpointContext(
       validator: false,
       formBody: false,
       formQuery: false,
+      headerVariables: false,
       bases: new Set(),
     },
   };

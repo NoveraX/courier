@@ -22,6 +22,7 @@ import { isEventStream, type ResponseReading } from "./response-reading";
 import { hasStyledQuery, styledQuery } from "./styled-query";
 import { urlEncodedClosure } from "./url-encoded-closure";
 import { destructure } from "./variable-bindings";
+import { variableParameters } from "./variable-parameters";
 
 /**
  * The closure an endpoint needs, when its verb cannot place its variables
@@ -109,7 +110,8 @@ function wholeBodyClosure(
   media: string | null,
 ): string | null {
   const option = kind === "bytes" ? "body" : "json";
-  if (!ep.parameters.some((param) => param.in === "path" || param.in === "query")) {
+  /* A header parameter, too, puts the body under a key of its own. */
+  if (variableParameters(ep).length === 0) {
     return method === "del" || media !== null
       ? `(http, body) => http.${method}(${at}, undefined, { ${options(`${option}: body`, null, read, media)} })`
       : null;

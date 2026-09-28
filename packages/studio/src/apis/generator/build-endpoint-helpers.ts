@@ -28,6 +28,8 @@ export interface EndpointChain {
    * and the type declared beside a loose schema.
    */
   responseType: string | null;
+  /** The variables sent as headers, by `headerVariablesMiddleware`. */
+  headers?: readonly string[];
 }
 
 /**
@@ -65,6 +67,10 @@ export function buildEndpointChain(chain: EndpointChain): string {
     text += `.response${typeArgument(chain.responseType)}(${chain.responseSchema})`;
   } else if (chain.responseType !== null) {
     text += `.response<${chain.responseType}>()`;
+  }
+  if (chain.headers && chain.headers.length > 0) {
+    const names = chain.headers.map((name) => JSON.stringify(name)).join(", ");
+    text += `.use(headerVariablesMiddleware([${names}]))`;
   }
 
   return text;

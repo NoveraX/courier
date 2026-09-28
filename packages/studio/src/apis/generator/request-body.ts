@@ -5,6 +5,8 @@
 
 import { ownValue } from "../own-value";
 import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
+import { bodyMedia } from "./body-media";
+import { variableParameters } from "./variable-parameters";
 
 /**
  * - `none` — the endpoint sends no body.
@@ -63,33 +65,8 @@ export function requestBodyKind(ep: ParsedEndpoint, spec: ParsedSpec): RequestBo
  * ```
  */
 export function sharesParameterName(ep: ParsedEndpoint, fields: readonly string[]): boolean {
-  const names = new Set(
-    ep.parameters
-      .filter((param) => param.in === "path" || param.in === "query")
-      .map((param) => param.name),
-  );
+  const names = new Set(variableParameters(ep).map((param) => param.name));
   return fields.some((field) => names.has(field));
-}
-
-/**
- * How a body is encoded, from its media type alone: JSON, or form fields
- * the client encodes, are structured; a multipart form is a form; anything
- * else is bytes.
- *
- * @param ep - The endpoint, which has a body
- * @returns The encoding
- * @example
- * ```ts
- * bodyMedia({ ...replaceFile, requestBodyMediaType: "application/octet-stream" }); // "bytes"
- * ```
- */
-export function bodyMedia(ep: ParsedEndpoint): "structured" | "form" | "bytes" {
-  const media = (ep.requestBodyMediaType ?? "application/json").toLowerCase();
-  if (media.startsWith("multipart/form-data")) return "form";
-  if (media.includes("json") || media.startsWith("application/x-www-form-urlencoded")) {
-    return "structured";
-  }
-  return "bytes";
 }
 
 /**

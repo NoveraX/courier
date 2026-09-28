@@ -23,6 +23,7 @@ import {
   schemaToValidation,
 } from "./schema-utils";
 import { hasStyledQuery } from "./styled-query";
+import { headerParameters, variableParameters } from "./variable-parameters";
 import { sendsUrlEncoded, wireClosure } from "./wire-closure";
 
 /** The validators whose generated objects are loose. */
@@ -69,9 +70,12 @@ export function buildEndpointDefinition(
   /* A stream of events is subscribed to, and its answer is each event. */
   const head = isEventStream(ep) && closure === null ? "stream" : "endpoint";
   context.uses.bases.add(head);
+  const headers = headerParameters(ep).map((param) => param.name);
+  if (headers.length > 0) context.uses.headerVariables = true;
   return buildEndpointChain({
     address: `${head}.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
     closure,
+    headers,
     variablesSchema: variables,
     variablesType:
       variables && !declared
@@ -118,9 +122,7 @@ function variablesSchema(
 
   /* The query parameters belong to the variables as much as the path's do:
      left out, zod and valibot stripped them before the call was made. */
-  const params = (["path", "query"] as const).flatMap((place) =>
-    ep.parameters.filter((param) => param.in === place),
-  );
+  const params = variableParameters(ep);
   if (params.length === 0) return body;
   context.uses.validator = true;
   if (kind !== "fields") return objectWithBody(body, params, bodyKey(ep), context.options);

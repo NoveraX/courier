@@ -27,7 +27,7 @@ export interface ConnectionRegistry {
   broadcast(data: unknown, exclude?: string): Promise<void>;
   /** Broadcast to all connections subscribed to a topic. Yields to event loop for large audiences. */
   broadcastToTopic(topic: string, data: unknown, exclude?: string): Promise<void>;
-  /** Broadcast to all qualified topics matching a base topic (e.g. "api.chat.room" matches "api.chat.room#abc"). Yields to event loop for large audiences. */
+  /** Broadcast to all qualified topics matching a base topic (e.g. "api.chat.room" matches 'api.chat.room#{"room":"a"}'). Yields to event loop for large audiences. */
   broadcastToBaseTopic(baseTopic: string, data: unknown, exclude?: string): Promise<void>;
   /** Send a data message to a specific connection with topic context */
   sendToConnection(connectionId: string, topic: string, data: unknown): void;

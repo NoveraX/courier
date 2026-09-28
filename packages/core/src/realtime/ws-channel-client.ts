@@ -4,7 +4,7 @@ import { createConnectionState } from "./connection-state";
 import type { RealtimeError } from "./errors";
 import { forwardConnectionStatus } from "./forward-status";
 import type { ConnectionStatus, WSChannel } from "./types";
-import { qualifyTopic } from "./ws/topic-hash";
+import { qualifyTopic } from "./ws/topic-key";
 import type { WSConnectionConfig } from "./ws/ws-types";
 
 const log = createLogger("WS");

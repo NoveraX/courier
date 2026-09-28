@@ -32,8 +32,8 @@ export interface PubSubChannels {
  *
  * @example
  * const channels = createPubSubChannels(pubsub);
- * await channels.retain("api.chat.room#1a2b3c4d", (message) => deliver(message));
- * await channels.release("api.chat.room#1a2b3c4d");
+ * await channels.retain('api.chat.room#{"room":"a"}', (message) => deliver(message));
+ * await channels.release('api.chat.room#{"room":"a"}');
  */
 export function createPubSubChannels(pubsub: PubSubAdapter): PubSubChannels {
   const channels = new Map<string, TrackedChannel>();

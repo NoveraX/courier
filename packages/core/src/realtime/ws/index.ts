@@ -3,7 +3,7 @@ export { createHeartbeat } from "./heartbeat";
 export type { MessageQueue, MessageQueueConfig } from "./message-queue";
 export { createMessageQueue } from "./message-queue";
 export { shouldReconnect } from "./reconnect-classifier";
-export { hashVariables, qualifyTopic, unqualifyTopic } from "./topic-hash";
+export { qualifyTopic, unqualifyTopic } from "./topic-key";
 export { createWSConnection } from "./ws-connection";
 export type { PendingRegistry } from "./ws-pending";
 export { createPendingRegistry } from "./ws-pending";

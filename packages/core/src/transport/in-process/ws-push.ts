@@ -1,6 +1,6 @@
 import type { Sources } from "../../define/types";
 import type { SSEEvent, SSESubscription, WSContext, WSPushHandler } from "../../realtime/types";
-import { qualifyTopic } from "../../realtime/ws/topic-hash";
+import { qualifyTopic } from "../../realtime/ws/topic-key";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
 import { runTransportMiddleware } from "../../utils/transport-middleware";

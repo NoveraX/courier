@@ -2,7 +2,7 @@ import type { ScopedLogger } from "../../logger";
 import type { ConnectionState } from "../connection-state";
 import type { HeldMessage } from "./held-messages";
 import type { createMessageQueue } from "./message-queue";
-import { unqualifyTopic } from "./topic-hash";
+import { unqualifyTopic } from "./topic-key";
 import type { TopicRegistry } from "./topic-registry-types";
 import type { createPendingRegistry } from "./ws-pending";
 import { encodeMessage } from "./ws-protocol";

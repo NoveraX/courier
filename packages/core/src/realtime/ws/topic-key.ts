@@ -1,12 +1,15 @@
 /**
- * Deterministic hash for WS topic qualification.
- * Produces a short hex suffix from variables for topic uniqueness.
+ * The key that qualifies a WS topic: the variables, as canonical JSON.
  *
- * Both ends hash the variables as the subscribe frame carries them — JSON.
- * The client used to hash the object it was handed, so a key set to
- * `undefined` (which JSON leaves out) or a `Date` (which JSON turns into a
- * string) gave it a topic the server never used, and the subscription
- * received nothing.
+ * Both ends key the variables as the subscribe frame carries them — JSON.
+ * A key set to `undefined` (which JSON leaves out) or a `Date` (which JSON
+ * turns into a string) reads the same on either side.
+ *
+ * The key used to be a 32-bit hash of that JSON, and two sets of variables
+ * that hashed alike shared one topic: a subscriber could pick variables its
+ * own authorization allowed and receive another room's broadcasts. The
+ * canonical JSON itself tells every set of variables apart, and is no longer
+ * than the subscribe frame that carried it.
  */
 
 /** The variables as they travel: what JSON keeps of them, `undefined` when nothing. */
@@ -19,7 +22,7 @@ function wireForm(value: unknown): unknown {
 /**
  * Canonical JSON: object keys sorted so the same variables always read the
  * same, and strings quoted so that no value can pass for a key and another
- * value — `{ a: "x,b:y" }` used to read like `{ a: "x", b: "y" }`.
+ * value — `{ a: "x,b:y" }` never reads like `{ a: "x", b: "y" }`.
  */
 function stableStringify(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
@@ -31,53 +34,38 @@ function stableStringify(value: unknown): string {
   return `{${fields.join(",")}}`;
 }
 
-/** FNV-1a 32-bit hash -> 8-char hex string */
-function fnv1a(str: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = (hash * 0x01000193) >>> 0;
-  }
-  return hash.toString(16).padStart(8, "0");
-}
-
 /**
- * Compute a deterministic hash of variables, as they travel on the wire.
- *
- * @param variables - Subscription variables
- * @returns An 8-character hex hash
- *
- * @example
- * hashVariables({ room: "a", nick: undefined }) === hashVariables({ room: "a" }); // true
- */
-export function hashVariables(variables: unknown): string {
-  return fnv1a(stableStringify(wireForm(variables) ?? null));
-}
-
-/**
- * Qualify a base topic with a variables hash suffix.
+ * Qualify a base topic with the key of its variables.
  * Returns `baseTopic` when the variables carry nothing on the wire — none,
  * `null`, or an empty object once undefined fields are left out — and
- * `baseTopic#hash` otherwise.
+ * `baseTopic#key` otherwise, where the key is the variables' canonical JSON.
  *
  * @param baseTopic - The unqualified topic, e.g. `"api.chat.room"`
  * @param variables - Subscription variables
  * @returns The qualified topic
  *
  * @example
- * qualifyTopic("api.chat.room", { room: "a" }); // "api.chat.room#…"
+ * qualifyTopic("api.chat.room", { room: "a", nick: undefined }); // 'api.chat.room#{"room":"a"}'
  * qualifyTopic("api.chat.room", { nick: undefined }); // "api.chat.room"
  */
 export function qualifyTopic(baseTopic: string, variables?: unknown): string {
   const wire = wireForm(variables);
   if (wire === undefined || wire === null) return baseTopic;
   if (typeof wire === "object" && Object.keys(wire).length === 0) return baseTopic;
-  return `${baseTopic}#${fnv1a(stableStringify(wire))}`;
+  return `${baseTopic}#${stableStringify(wire)}`;
 }
 
-/** Extract base topic and optional hash from a qualified topic */
-export function unqualifyTopic(qualifiedTopic: string): { baseTopic: string; hash?: string } {
+/**
+ * Split a qualified topic into its base topic and the key that qualifies it.
+ *
+ * @param qualifiedTopic - A topic as `qualifyTopic` produced it
+ * @returns The base topic, and the key when there is one
+ *
+ * @example
+ * unqualifyTopic('api.chat.room#{"room":"a"}'); // { baseTopic: "api.chat.room", key: '{"room":"a"}' }
+ */
+export function unqualifyTopic(qualifiedTopic: string): { baseTopic: string; key?: string } {
   const idx = qualifiedTopic.indexOf("#");
   if (idx === -1) return { baseTopic: qualifiedTopic };
-  return { baseTopic: qualifiedTopic.slice(0, idx), hash: qualifiedTopic.slice(idx + 1) };
+  return { baseTopic: qualifiedTopic.slice(0, idx), key: qualifiedTopic.slice(idx + 1) };
 }

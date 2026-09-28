@@ -1,6 +1,6 @@
 import { createLogger } from "../logger";
 import type { PubSubAdapter } from "../realtime/adapters";
-import { unqualifyTopic } from "../realtime/ws/topic-hash";
+import { unqualifyTopic } from "../realtime/ws/topic-key";
 import { createPubSubChannels } from "./pubsub-channels";
 import type { InternalConnectionRegistry } from "./ws-registry-types";
 
@@ -56,8 +56,8 @@ export interface PubSubBridge {
  *
  * @example
  * const bridge = createPubSubBridge(pubsub, registry);
- * await bridge.onTopicSubscribe("api.chat.room#1a2b3c4d");
- * await bridge.publishToTopic("api.chat.room#1a2b3c4d", { text: "hi" });
+ * await bridge.onTopicSubscribe('api.chat.room#{"room":"a"}');
+ * await bridge.publishToTopic('api.chat.room#{"room":"a"}', { text: "hi" });
  */
 export function createPubSubBridge(
   pubsub: PubSubAdapter,

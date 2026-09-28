@@ -8,8 +8,8 @@
  */
 
 import { createAutoMockServer } from "../auto/create-auto-server";
-import type { RouteInfo } from "../auto/route-analyzer";
 import { analyzeRoutes, getSourceGroupNames } from "../auto/route-analyzer";
+import { seedOptionsOf } from "../auto/seed-options";
 import type { MockServer } from "../server/mock-server-types";
 import { handleCommand } from "./command-dispatch";
 import { isMockServerDefinition } from "./define-mock-server";
@@ -17,7 +17,7 @@ import type { DescribedRoute } from "./describe-route";
 import { describeRoute } from "./describe-route";
 import { wireRequestHooks } from "./request-hooks";
 import { buildScenarioMeta } from "./scenario-meta";
-import type { MockServerDefinition, ParentMessage } from "./types";
+import type { MockServerDefinition, ParentMessage, ServedMock } from "./types";
 import { send, sendError, watchParent } from "./worker-ipc";
 
 /**
@@ -62,7 +62,7 @@ type StartMessage = Extract<ParentMessage, { type: "start" }>;
  */
 export function runMockWorker(loadDefinition: MockDefinitionLoader): void {
   watchParent();
-  let served: Served | undefined;
+  let served: ServedMock | undefined;
   let stopping = false;
 
   process.on("message", (msg: ParentMessage) => {
@@ -79,23 +79,16 @@ export function runMockWorker(loadDefinition: MockDefinitionLoader): void {
       void stop(served?.server);
     } else if (msg.type === "command" && served) {
       const current = served;
-      void handleCommand(current.server, current.routes, msg, () => uiRoutes(current));
+      handleCommand(current, msg, () => uiRoutes(current));
     }
   });
-}
-
-/** A running mock server and the routes it serves. */
-interface Served {
-  server: MockServer;
-  routes: RouteInfo[];
-  groupNames: Set<string>;
 }
 
 async function start(
   loadDefinition: MockDefinitionLoader,
   msg: StartMessage,
   stopping: () => boolean,
-): Promise<Served | undefined> {
+): Promise<ServedMock | undefined> {
   const definition = await loadDefinition(msg.mocksFile, msg.mockKey, msg.transformCacheDirectory);
   if (stopping()) return undefined;
   if (!isMockServerDefinition(definition)) {
@@ -112,10 +105,11 @@ async function start(
     );
     return undefined;
   }
-  const served: Served = {
+  const served: ServedMock = {
     server: createServer(definition, msg.port),
     routes: analyzeRoutes(definition.source),
     groupNames: getSourceGroupNames(definition.source),
+    seed: seedOptionsOf(definition.seed),
   };
   wireRequestHooks(served.server);
   const info = await served.server.start();
@@ -152,7 +146,7 @@ function createServer(definition: MockServerDefinition, port: number): MockServe
   });
 }
 
-function uiRoutes({ server, routes, groupNames }: Served): DescribedRoute[] {
+function uiRoutes({ server, routes, groupNames }: ServedMock): DescribedRoute[] {
   return routes.map((route) =>
     describeRoute(route, groupNames, server.getRouteSource(route.group, route.endpoint)),
   );

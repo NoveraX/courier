@@ -1,4 +1,7 @@
 import type { AnySource } from "@noverax/courier/define";
+import type { AutoScenarioOptions } from "../auto/auto-seed";
+import type { RouteInfo } from "../auto/route-analyzer";
+import type { MockServer } from "../server/mock-server-types";
 import type { MockStore } from "../store";
 import type { TypedMockFn } from "../typed-mock-fn";
 import type { MockScenario, NetworkConfig } from "../types";
@@ -76,6 +79,15 @@ export type MockServerConfig<TSource extends AnySource = AnySource> = Omit<
   /** Start automatically when Studio launches (default: false) */
   autoStart?: boolean;
 };
+
+/** A mock a worker serves: the running server, its routes and how it is seeded */
+export interface ServedMock {
+  server: MockServer;
+  routes: RouteInfo[];
+  groupNames: Set<string>;
+  /** The seeding the mock declares, which a reset or a count-less re-seed restores */
+  seed: AutoScenarioOptions;
+}
 
 // ── IPC Protocol ─────────────────────────────────────────────────────────────
 

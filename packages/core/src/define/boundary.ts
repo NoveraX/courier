@@ -35,7 +35,8 @@ export interface BoundaryConfig<TApi> {
 
 /** How each declared shape reaches the wire. */
 const SHAPES: Readonly<Record<string, ExposedEndpoint>> = {
-  request: {},
+  query: { type: "query" },
+  mutation: { type: "mutation" },
   stream: { transport: "sse" },
   channel: { transport: "ws" },
   duplex: { transport: "ws", bidirectional: true },
@@ -55,12 +56,14 @@ const SHAPES: Readonly<Record<string, ExposedEndpoint>> = {
  * export const boundary: ProxyBoundary = defineBoundary<typeof api>({
  *   source: "api",
  *   expose: {
- *     "posts.list": "request",
+ *     "posts.list": "query",
+ *     "posts.create": "mutation",
  *     "posts.feed": "stream",
  *     "chat.room": "duplex",
  *   },
  * });
- * // "posts.lsit" — does not compile. "posts.feed": "request" — does not compile.
+ * // "posts.lsit" — does not compile. "posts.feed": "query" — does not compile,
+ * // and neither does "posts.create": "query", since a POST writes.
  * // "admin.purge" — absent, so refused at runtime and unknown to the browser.
  *
  * // api.ts — the server gates on the boundary its source carries

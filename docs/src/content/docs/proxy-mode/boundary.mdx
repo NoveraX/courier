@@ -16,8 +16,9 @@ export const boundary: ProxyBoundary = defineBoundary<typeof api>({
   source: "api",
   proxyPath: { http: "/api/request", sse: "/api/sse", ws: "wss://realtime.example.com" },
   expose: {
-    "users.getAll": "request",
-    "users.getById": "request",
+    "users.getAll": "query",
+    "users.getById": "query",
+    "users.create": "mutation",
     "notifications.feed": "stream",
     "chat.room": "duplex",
   },
@@ -75,15 +76,17 @@ Each endpoint says how the client reaches it. The compiler checks the answer aga
 
 | shape | the endpoint it describes |
 | --- | --- |
-| `"request"` | an ordinary HTTP endpoint |
+| `"query"` | an HTTP endpoint that reads: declared with `get` or `head`, or marked `.reads()` |
+| `"mutation"` | an HTTP endpoint that writes: every other verb |
 | `"stream"` | a server-sent event stream |
 | `"channel"` | a socket the server pushes on |
 | `"duplex"` | a socket the caller may also send on — a channel with `.send()` |
 
 ```ts
 expose: {
-  "posts.lsit": "request",   // does not compile — no such endpoint
-  "posts.feed": "request",   // does not compile — it is a stream
+  "posts.lsit": "query",      // does not compile — no such endpoint
+  "posts.feed": "query",      // does not compile — it is a stream
+  "posts.create": "query",    // does not compile — a POST writes
 }
 ```
 
@@ -98,7 +101,8 @@ A boundary is plain data, and it is all the client gets:
   "source": "api",
   "proxyPath": { "http": "/api/request", "sse": "/api/sse" },
   "endpoints": {
-    "users.getAll": {},
+    "users.getAll": { "type": "query" },
+    "users.create": { "type": "mutation" },
     "notifications.feed": { "transport": "sse" },
     "chat.room": { "transport": "ws", "bidirectional": true }
   }

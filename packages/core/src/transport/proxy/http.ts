@@ -1,4 +1,5 @@
 import { createUntypedProxyCallerFn } from "../../proxy-caller/create-proxy-caller-fn";
+import { sourceFromBoundary } from "../../proxy-caller/from-boundary";
 import type { ProxyCallerDefaults } from "../../proxy-caller/types";
 import { resolveEndpoint } from "../../utils/execute-resolve";
 import type { HTTPExecutor } from "../types";
@@ -22,10 +23,12 @@ export function createProxyHTTPExecutor(
   const writeFn = defaults.deduplicate
     ? createUntypedProxyCallerFn({ ...defaults, deduplicate: false })
     : fn;
+  /* A boundary says which of its endpoints write, as the source does. */
+  const described = defaults.boundary ? sourceFromBoundary(defaults.boundary) : defaults.source;
 
   return function executeHTTP(group, method, variables, options, raw) {
     const callOptions = { ...options, ...(raw && { rawData: true }) };
-    const chosen = isWrite(defaults.source, group, method) ? writeFn : fn;
+    const chosen = isWrite(described, group, method) ? writeFn : fn;
     const executeFn = chosen(source, callOptions);
     const endpointKey = group ? `${group}:${method}` : method;
 
@@ -33,7 +36,7 @@ export function createProxyHTTPExecutor(
   };
 }
 
-/** Does the source describe this endpoint as a write? Unknown without one. */
+/** Does the source or boundary describe this endpoint as a write? Unknown without one. */
 function isWrite(
   apiSource: Record<string, unknown> | undefined,
   group: string,

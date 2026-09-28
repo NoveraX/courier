@@ -7,5 +7,5 @@ import type { shop } from "./shop-api";
  */
 export const shopBoundary: ProxyBoundary = defineBoundary<typeof shop>({
   source: "shop",
-  expose: { "orders.list": "request" },
+  expose: { "orders.list": "query" },
 });

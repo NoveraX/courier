@@ -20,10 +20,10 @@ afterAll(async () => {
 
 describe("GET /__admin/history", () => {
   it("gives each failed request's error with its message", async () => {
-    await fetch(`${url}/api/request`, {
+    await fetch(`${url}/api/request?_s=api&_g=users&_m=getById`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "users", method: "getById", variables: { id: 12345 } }),
+      body: JSON.stringify({ variables: { id: 12345 } }),
     });
 
     const history = await fetch(`${url}/__admin/history`).then((res) => res.json());

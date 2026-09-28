@@ -31,7 +31,7 @@ describe("request bodies the mock server cannot read", () => {
   it("answers 400 with a JSON error to malformed JSON on /api/request, logging no stack", async () => {
     const consoleError = vi.spyOn(console, "error");
 
-    const response = await post("/api/request", "{not json");
+    const response = await post("/api/request?_s=api&_g=users&_m=getAll", "{not json");
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ error: "The request body is not valid JSON" });
@@ -39,11 +39,11 @@ describe("request bodies the mock server cannot read", () => {
   });
 
   it("answers 400 to a JSON body on /api/request that is not an object", async () => {
-    const response = await post("/api/request", "[1, 2]");
+    const response = await post("/api/request?_s=api&_g=users&_m=getAll", "[1, 2]");
 
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
-      error: "The request body must be a JSON object naming the group and method",
+      error: "The body must be an object: { variables, options }",
     });
   });
 

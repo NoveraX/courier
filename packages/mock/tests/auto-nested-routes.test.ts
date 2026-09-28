@@ -104,10 +104,10 @@ describe("serving mixed paths", () => {
     const url = await serve();
     const second = (await (await fetch(`${url}/users/2`)).json()) as { email: string };
 
-    const res = await fetch(`${url}/api/request`, {
+    const res = await fetch(`${url}/api/request?_s=api&_g=users&_m=byEmail`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "users", method: "byEmail", variables: { email: second.email } }),
+      body: JSON.stringify({ variables: { email: second.email } }),
     });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(second);

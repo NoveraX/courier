@@ -186,10 +186,10 @@ describe("proxy route (POST /api/request)", () => {
   afterAll(async () => { await server.stop(); });
 
   it("resolves via group+method", async () => {
-    const res = await fetch(`${url}/api/request`, {
+    const res = await fetch(`${url}/api/request?_s=api&_g=items&_m=list`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "items", method: "list" }),
+      body: JSON.stringify({}),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -197,10 +197,10 @@ describe("proxy route (POST /api/request)", () => {
   });
 
   it("passes variables to handler", async () => {
-    const res = await fetch(`${url}/api/request`, {
+    const res = await fetch(`${url}/api/request?_s=api&_g=items&_m=get`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "items", method: "get", variables: { id: "id-1" } }),
+      body: JSON.stringify({ variables: { id: "id-1" } }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -208,10 +208,10 @@ describe("proxy route (POST /api/request)", () => {
   });
 
   it("returns 404 for unknown endpoint", async () => {
-    const res = await fetch(`${url}/api/request`, {
+    const res = await fetch(`${url}/api/request?_s=api&_g=unknown&_m=nope`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "unknown", method: "nope" }),
+      body: JSON.stringify({}),
     });
     expect(res.status).toBe(404);
   });

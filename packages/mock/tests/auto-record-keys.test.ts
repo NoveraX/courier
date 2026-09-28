@@ -81,10 +81,10 @@ describe("a collection keyed by its route's parameter", () => {
     const url = await serve();
     const pet = await firstPet(url);
 
-    const res = await fetch(`${url}/api/request`, {
+    const res = await fetch(`${url}/api/request?_s=api&_g=pets&_m=get`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group: "pets", method: "get", variables: { petId: pet.petId } }),
+      body: JSON.stringify({ variables: { petId: pet.petId } }),
     });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(pet);

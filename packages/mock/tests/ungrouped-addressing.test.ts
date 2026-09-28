@@ -42,11 +42,21 @@ function serverFor(source: unknown) {
   });
 }
 
-async function call(url: string, body: unknown): Promise<{ status: number; body: unknown }> {
-  const res = await fetch(`${url}/api/request`, {
+interface ProxyCall {
+  source: string;
+  group?: string;
+  method: string;
+  variables?: unknown;
+}
+
+/* The endpoint is named in the URL, as a proxy client names it. */
+async function call(url: string, named: ProxyCall): Promise<{ status: number; body: unknown }> {
+  const query = new URLSearchParams({ _s: named.source, _m: named.method });
+  if (named.group) query.set("_g", named.group);
+  const res = await fetch(`${url}/api/request?${query}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ variables: named.variables }),
   });
   return { status: res.status, body: await res.json() };
 }

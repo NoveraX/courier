@@ -109,10 +109,10 @@ describe("replaying on the mock server", () => {
     running.push(server);
     const { url } = await server.start();
     const call = (variables: unknown) =>
-      fetch(`${url}/api/request`, {
+      fetch(`${url}/api/request?_s=api&_g=users&_m=getById`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ group: "users", method: "getById", variables }),
+        body: JSON.stringify({ variables }),
       });
 
     const missing = await call({ id: 9 });

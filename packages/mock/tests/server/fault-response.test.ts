@@ -17,13 +17,13 @@ function proxyRouteClient(timeout?: number) {
       users: defineGroup({
         prefix: "api",
         endpoints: {
-          getAll: endpoint.post("request").variables<{ group: string; method: string }>(),
+          getAll: endpoint.post("request?_s=api&_g=users&_m=getAll"),
         },
       }),
     },
   });
   const client = createCaller(api, { timeout });
-  return () => client.users.getAll({ group: "users", method: "getAll" });
+  return () => client.users.getAll();
 }
 
 beforeAll(async () => {
@@ -37,10 +37,10 @@ afterAll(async () => {
 });
 
 function call(signal?: AbortSignal): Promise<Response> {
-  return fetch(`${url}/api/request`, {
+  return fetch(`${url}/api/request?_s=api&_g=users&_m=getAll`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ group: "users", method: "getAll" }),
+    body: JSON.stringify({}),
     signal,
   });
 }

@@ -12,6 +12,9 @@ import { streamKeyOf } from "./stream-key";
 /** A group hook's options, as `useSubscription` takes them untyped. */
 export type UseSubscriptionOptions<TData> = CourierSubscriptionOptions<TData, unknown>;
 
+/** How many of a stream's latest events are kept when nothing else is said. */
+const DEFAULT_MAX_EVENTS = 100;
+
 /** Internal factory type — creates SSESubscription from group+method+variables */
 export type SubscribeFn = (
   group: string,
@@ -33,9 +36,10 @@ interface StreamState<TData> {
  * A change of method or variables opens another stream, and the result starts
  * over with it — no events, the optimistic data, no error, and `connecting` —
  * in the same render that asks for it, so nothing of the previous stream is
- * ever shown as the new one's. A stream that cannot be opened at all, such as
- * one whose proxy path is misconfigured, reports that through `error` and
- * `onError`.
+ * ever shown as the new one's. `events` keeps the latest `maxEvents`, 100 by
+ * default: kept whole, a long-lived stream grew the list, and the copying of
+ * it, without end. A stream that cannot be opened at all, such as one whose
+ * proxy path is misconfigured, reports that through `error` and `onError`.
  *
  * @param subscribe - Factory that creates an SSESubscription (injected by createGroupHooks)
  * @param group - API group name
@@ -57,6 +61,7 @@ export function useSubscription<TData>(
     variables,
     enabled = true,
     optimisticData,
+    maxEvents = DEFAULT_MAX_EVENTS,
     onData,
     onError,
     onStatusChange,
@@ -71,6 +76,9 @@ export function useSubscription<TData>(
   // Stable refs for callbacks — avoids re-subscribing on handler identity change
   const callbacksRef = React.useRef({ onData, onError, onStatusChange });
   callbacksRef.current = { onData, onError, onStatusChange };
+  /* Read as each event comes: a new window applies without reopening the stream. */
+  const maxEventsRef = React.useRef(maxEvents);
+  maxEventsRef.current = maxEvents;
 
   const subRef = React.useRef<SSESubscription<unknown> | null>(null);
 
@@ -96,7 +104,12 @@ export function useSubscription<TData>(
       if (!active) return;
       setStream((prev) =>
         prev.key === key
-          ? { key, data: event.data, events: [...prev.events, event], error: undefined }
+          ? {
+              key,
+              data: event.data,
+              events: latestOf([...prev.events, event], maxEventsRef.current),
+              error: undefined,
+            }
           : prev,
       );
       callbacksRef.current.onData?.(event);
@@ -138,7 +151,14 @@ export function useSubscription<TData>(
     };
   }, [enabled, group, method, key, variablesKey, subscribe, reportStatus]);
 
-  return { data: current.data, events: current.events, status, error: current.error, close };
+  const events = latestOf(current.events, maxEvents);
+  return { data: current.data, events, status, error: current.error, close };
+}
+
+/* The latest `max` of a stream's events: the same list when it holds no more. */
+function latestOf<TData>(events: SSEEvent<TData>[], max: number): SSEEvent<TData>[] {
+  if (events.length <= max) return events;
+  return max > 0 ? events.slice(events.length - max) : [];
 }
 
 function emptyStream<TData>(key: string, optimisticData: TData | undefined): StreamState<TData> {

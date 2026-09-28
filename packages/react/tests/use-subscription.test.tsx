@@ -319,6 +319,71 @@ describe("useSubscription", () => {
   });
 });
 
+describe("useSubscription's events", () => {
+  function ticks(count: number): SubscribeFn {
+    return vi.fn(() =>
+      createMockSSESubscription(async function* () {
+        for (let i = 0; i < count; i++) yield { data: { i }, id: String(i) };
+      }),
+    );
+  }
+
+  it("keeps the latest 100 unless told otherwise", async () => {
+    const subscribeFn = ticks(150);
+
+    const { result } = renderHook(() => useSubscription(subscribeFn, "live", "ticks"), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.data).toEqual({ i: 149 }));
+    expect(result.current.events).toHaveLength(100);
+    expect(result.current.events[0]?.data).toEqual({ i: 50 });
+  });
+
+  it("keeps as many as maxEvents says", async () => {
+    const subscribeFn = ticks(10);
+
+    const { result } = renderHook(
+      () => useSubscription(subscribeFn, "live", "ticks", { maxEvents: 3 }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.data).toEqual({ i: 9 }));
+    expect(result.current.events.map((event) => event.data)).toEqual([
+      { i: 7 },
+      { i: 8 },
+      { i: 9 },
+    ]);
+  });
+
+  it("keeps none with a maxEvents of 0, and still shows the latest data", async () => {
+    const subscribeFn = ticks(5);
+
+    const { result } = renderHook(
+      () => useSubscription(subscribeFn, "live", "ticks", { maxEvents: 0 }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(result.current.data).toEqual({ i: 4 }));
+    expect(result.current.events).toEqual([]);
+  });
+
+  it("takes a smaller maxEvents without opening the stream again", async () => {
+    const subscribeFn = ticks(10);
+
+    const { result, rerender } = renderHook(
+      ({ maxEvents }) => useSubscription(subscribeFn, "live", "ticks", { maxEvents }),
+      { wrapper, initialProps: { maxEvents: 5 } },
+    );
+    await waitFor(() => expect(result.current.data).toEqual({ i: 9 }));
+
+    rerender({ maxEvents: 2 });
+
+    expect(result.current.events.map((event) => event.data)).toEqual([{ i: 8 }, { i: 9 }]);
+    expect(subscribeFn).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("useSubscription's status", () => {
   /* A stream that stays open once it has said one thing. */
   const openStream: SubscribeFn = () =>

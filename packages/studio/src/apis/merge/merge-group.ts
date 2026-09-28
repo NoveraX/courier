@@ -14,10 +14,11 @@ import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { findGroupDeclaration } from "../manage/group-declaration";
 import { ownValue } from "../own-value";
 import { mergeImports } from "./merge-imports";
+import { buildFile, resolveStatus } from "./merged-file";
 import { parseExistingGroup } from "./parse-existing";
 import { type MergedEntry, placeUnderPrefix } from "./place-under-prefix";
 import { renameBase } from "./rename-base";
-import type { FingerprintResult, MergeChange, MergeResult, MergeStatus } from "./types";
+import type { FingerprintResult, MergeChange, MergeResult } from "./types";
 
 export function mergeGroupFile(
   existingContent: string,
@@ -147,47 +148,4 @@ function withPrefix(header: string[], from: string, to: string): string[] {
  */
 function mergePreamble(existing: string[], generated: string[]): string[] {
   return existing.length > 0 ? [...existing] : [...generated];
-}
-
-function buildFile(
-  importLines: string[],
-  preamble: string[],
-  generated: ReturnType<typeof parseExistingGroup>,
-  endpointLines: string[],
-  trailingCode: string[],
-): string {
-  /* The declaration is taken from the freshly generated file — that is where a
-     changed baseURL or prefix arrives — and only the endpoints between are
-     merged. A group and a flat source differ only in what that shell says. */
-  const header =
-    generated.header.length > 0
-      ? generated.header
-      : [
-          `export const ${generated.groupName} = defineGroup({`,
-          `  prefix: "${generated.prefix}",`,
-          "  endpoints: {",
-        ];
-  const footer = generated.footer.length > 0 ? generated.footer : ["  },", "});"];
-
-  const lines = [
-    ...importLines,
-    "",
-    ...(preamble.length > 0 ? [...preamble, ""] : []),
-    ...header,
-    ...endpointLines,
-    ...footer,
-    "",
-  ];
-
-  if (trailingCode.length > 0) {
-    lines.push(...trailingCode, "");
-  }
-
-  return lines.join("\n");
-}
-
-function resolveStatus(changes: MergeChange[]): MergeStatus {
-  if (changes.some((c) => c.type === "preserved")) return "merged";
-  if (changes.length === 0) return "safe";
-  return "safe";
 }

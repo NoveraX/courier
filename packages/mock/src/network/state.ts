@@ -1,4 +1,5 @@
-import type { NetworkConfig, RouteNetworkOverride } from "../types";
+import type { NetworkConfig } from "../types";
+import { findRouteOverride, isActive, mergeOverride } from "./config-shape";
 
 /** Mutable network simulation state — shared across request handlers */
 export interface NetworkState {
@@ -150,38 +151,5 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
     resetMetrics() {
       recentRequests.length = 0;
     },
-  };
-}
-
-function isActive(config: NetworkConfig): boolean {
-  return (config.errorRate ?? 0) > 0 || hasLatency(config);
-}
-
-function hasLatency(config: NetworkConfig): boolean {
-  if (!config.latency) return false;
-  if (typeof config.latency === "number") return config.latency > 0;
-  if (typeof config.latency === "string") return true;
-  return config.latency.max > 0;
-}
-
-function findRouteOverride(
-  overrides: RouteNetworkOverride[],
-  group: string,
-  endpoint: string,
-): RouteNetworkOverride | undefined {
-  return overrides.find((o) => o.enabled && o.routeId === `${group}:${endpoint}`);
-}
-
-/** Merge a route override into the global config — override fields take precedence */
-function mergeOverride(global: NetworkConfig, override: RouteNetworkOverride): NetworkConfig {
-  return {
-    ...global,
-    latency: override.latency ?? global.latency,
-    errorRate: override.errorRate !== undefined ? override.errorRate / 100 : global.errorRate,
-    faultTypes: override.faultTypes?.length
-      ? (override.faultTypes as NetworkConfig["faultTypes"])
-      : global.faultTypes,
-    // Clear route overrides so we don't recurse
-    routeOverrides: undefined,
   };
 }

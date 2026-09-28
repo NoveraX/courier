@@ -3,6 +3,7 @@ import type { Hono } from "hono";
 import type { MockRegistry } from "../registry";
 import type { MockStore } from "../store";
 import type { AnyMockScenario, MockHistoryEntry } from "../types";
+import { historyEntryJson } from "./history-entry-json";
 
 interface AdminConfig {
   registry: MockRegistry;
@@ -71,10 +72,10 @@ export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
     return c.json({ applied: name });
   });
 
-  // Request history
+  // Request history, each failed request's error as its name and message
   app.get("/__admin/history", (c) => {
     const limit = Number(new URL(c.req.url).searchParams.get("limit")) || 100;
-    return c.json(config.history.slice(-limit));
+    return c.json(config.history.slice(-limit).map(historyEntryJson));
   });
 
   // Reset everything — clears registry, history, store, then re-seeds

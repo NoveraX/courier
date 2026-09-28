@@ -10,8 +10,13 @@ interface MatchPayload {
   method: string;
 }
 
-/** Subscribe to store and copy timing + headers when matching proxy request appears */
-export function subscribeForProxyData(
+/**
+ * Subscribe to store and copy timing + headers when the runtime reports the
+ * request the Playground ran. The runtime runs it in-process whichever mode
+ * the Playground is in, so it is reported as a direct request; looking for a
+ * proxy request found none, and the Timing tab stayed empty.
+ */
+export function subscribeForRunData(
   playgroundId: string,
   payload: MatchPayload,
   sentAt: number,
@@ -57,7 +62,6 @@ function findMatchingRequest(
     r.source.toLowerCase() === payload.source.toLowerCase() &&
     r.group === payload.group &&
     r.method === payload.method &&
-    r.mode === "proxy" &&
     r.startedAt >= sentAt - 1000,
   );
 }

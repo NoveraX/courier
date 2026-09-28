@@ -35,13 +35,14 @@ import {
   executeDirectWSChannel,
   type InProcessWSChannel,
 } from "@noverax/courier/internal-streams";
+import { dispatchHttp } from "./dispatch-http";
 import {
   type PlaygroundExecutePayload,
   sanitizeExecute,
   sanitizeRid,
   sanitizeWrite,
 } from "./playground-payloads";
-import { dispatchHttp, dispatchSSE, dispatchWS } from "./responder-dispatch";
+import { dispatchSSE, dispatchWS } from "./responder-dispatch";
 
 /** Minimal Socket.IO socket surface the responder needs. */
 export interface ResponderSocket {

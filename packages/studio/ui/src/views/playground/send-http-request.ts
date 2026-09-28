@@ -14,7 +14,7 @@
 
 import { getSocket } from "@/socket";
 import { safeParse } from "./playground-utils";
-import { subscribeForProxyData } from "./proxy-data";
+import { subscribeForRunData } from "./run-data";
 
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
@@ -68,11 +68,7 @@ export function initiateHttpRequest({
   // responder and finalizes status/duration on the entry.
   setSending(false);
 
-  // Proxy mode still hydrates entry timing from the parallel `event`
-  // stream that the runtime publishes via `wireHooks`. The rid-keyed
-  // wire does not carry proxy:receive/respond telemetry, so this
-  // subscription stays exactly as before.
-  if (payload.mode === "proxy") {
-    subscribeForProxyData(id, payload, sentAt, updateEntry);
-  }
+  // The timing comes from the parallel `event` stream the runtime
+  // publishes via `wireHooks`, which the rid-keyed wire does not carry.
+  subscribeForRunData(id, payload, sentAt, updateEntry);
 }

@@ -106,7 +106,13 @@ export function sanitizeWrite(raw: unknown): PlaygroundWritePayload | null {
 // ---------------------------------------------------------------------------
 
 export type SanitizedChunk =
-  | { kind: "http-result"; status: number; data?: unknown; error?: string }
+  | {
+      kind: "http-result";
+      status: number;
+      data?: unknown;
+      error?: string;
+      headers?: Record<string, string>;
+    }
   | { kind: "sse-event"; event: unknown }
   | { kind: "ws-message"; data: unknown };
 
@@ -129,9 +135,13 @@ function sanitizeChunkInner(raw: unknown): SanitizedChunk | null {
   if (!isPlainObject(raw) || hasDangerousKeys(raw)) return null;
   if (raw.kind === "http-result") {
     if (typeof raw.status !== "number" || !Number.isFinite(raw.status)) return null;
-    const chunk: SanitizedChunk = { kind: "http-result", status: raw.status, data: raw.data };
-    if (typeof raw.error === "string") (chunk as { error?: string }).error = raw.error;
-    return chunk;
+    return {
+      kind: "http-result",
+      status: raw.status,
+      data: raw.data,
+      ...(typeof raw.error === "string" && { error: raw.error }),
+      ...(isStringRecord(raw.headers) && { headers: raw.headers }),
+    };
   }
   if (raw.kind === "sse-event") {
     if (!("event" in raw)) return null;
@@ -142,6 +152,12 @@ function sanitizeChunkInner(raw: unknown): SanitizedChunk | null {
     return { kind: "ws-message", data: raw.data };
   }
   return null;
+}
+
+/* Response headers, as the Playground shows them: names to string values. */
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!isPlainObject(value) || hasDangerousKeys(value)) return false;
+  return Object.values(value).every((entry) => typeof entry === "string");
 }
 
 export function sanitizeChunk(raw: unknown): SanitizedChunkPayload | null {

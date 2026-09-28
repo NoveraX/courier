@@ -145,3 +145,35 @@ describe("a WebSocket channel opened from the Playground", () => {
     expect(framesOf("ws-slow")[0]?.payload.chunk?.data).toEqual({ echo: { text: "early" } });
   });
 });
+
+describe("an HTTP endpoint run from the Playground", () => {
+  it("reports the status the upstream answered with, and its headers", async () => {
+    execute("http-created", "users", "create", "http", { name: "zed" });
+    await until(() => framesOf("http-created").length >= 1, "the result");
+
+    const chunk = framesOf("http-created")[0]?.payload.chunk;
+    expect(chunk?.status).toBe(201);
+    expect(chunk?.data).toEqual({ id: 3, name: "zed" });
+    expect(chunk?.headers).toMatchObject({ "x-upstream": "yes" });
+  });
+
+  it("reports variables the schema refuses as the proxy would, not as a server failure", async () => {
+    execute("http-refused", "users", "create", "http", { name: "z" });
+    await until(() => framesOf("http-refused").length >= 1, "the result");
+
+    const chunk = framesOf("http-refused")[0]?.payload.chunk;
+    expect(chunk?.status).toBe(422);
+    expect(chunk?.error).toMatch(/Validation failed \(variables\)/);
+    expect((chunk?.data as { issues: unknown[] }).issues).toHaveLength(1);
+  });
+
+  it("reports an error answer with the body the upstream sent", async () => {
+    execute("http-missing", "users", "missing", "http");
+    await until(() => framesOf("http-missing").length >= 1, "the result");
+
+    const chunk = framesOf("http-missing")[0]?.payload.chunk;
+    expect(chunk?.status).toBe(404);
+    expect(chunk?.data).toEqual({ message: "nope" });
+    expect(chunk?.error).toBe("HTTP 404");
+  });
+});

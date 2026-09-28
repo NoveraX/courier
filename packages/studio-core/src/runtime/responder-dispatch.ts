@@ -5,7 +5,6 @@
  * which translates them into `playground:error`.
  */
 
-import type { executeRequest } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import type {
   executeDirectSSE,
@@ -14,46 +13,6 @@ import type {
 } from "@noverax/courier/internal-streams";
 import type { PlaygroundExecutePayload } from "./playground-payloads";
 import type { ResponderSocket } from "./playground-responder";
-
-export async function dispatchHttp(
-  socket: ResponderSocket,
-  payload: PlaygroundExecutePayload,
-  sources: Sources,
-  exec: typeof executeRequest,
-): Promise<void> {
-  const startedAt = performance.now();
-  try {
-    const data = await exec(sources, {
-      source: payload.source,
-      group: payload.group,
-      method: payload.method,
-      variables: (payload.variables as Record<string, unknown>) ?? {},
-      options: { headers: payload.headers ?? {} },
-    });
-    socket.emit("playground:chunk", {
-      rid: payload.rid,
-      chunk: { kind: "http-result", data, status: 200 },
-    });
-    socket.emit("playground:end", {
-      rid: payload.rid,
-      summary: { durationMs: performance.now() - startedAt },
-    });
-  } catch (err) {
-    const e = err as { status?: number; message?: string; data?: { message?: string } };
-    socket.emit("playground:chunk", {
-      rid: payload.rid,
-      chunk: {
-        kind: "http-result",
-        status: e.status ?? 500,
-        error: e.data?.message ?? e.message ?? "HTTP request failed",
-      },
-    });
-    socket.emit("playground:end", {
-      rid: payload.rid,
-      summary: { durationMs: performance.now() - startedAt },
-    });
-  }
-}
 
 export async function dispatchSSE(
   socket: ResponderSocket,

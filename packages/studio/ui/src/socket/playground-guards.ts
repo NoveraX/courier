@@ -4,7 +4,8 @@
  * events from runtime responders; the Socket.IO client delivers them as
  * `unknown`, so these guards are the single trust boundary on the UI side.
  *
- * Shape reference: `packages/studio-core/src/runtime/responder-dispatch.ts`
+ * Shape reference: `packages/studio-core/src/runtime/dispatch-http.ts` and
+ * `responder-dispatch.ts`
  * — HTTP emits one `http-result` chunk, SSE emits repeated `sse-event`
  * chunks, WS emits repeated `ws-message` chunks, all keyed by the same rid
  * the UI stamped on `playground:exec`.

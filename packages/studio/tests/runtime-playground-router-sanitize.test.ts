@@ -31,6 +31,27 @@ describe("sanitizeChunk", () => {
     expect(result?.chunk).toEqual({ kind: "http-result", status: 500, error: "Internal" });
   });
 
+  it("keeps the response headers of an http-result", () => {
+    const result = sanitizeChunk({
+      rid: "r-1",
+      chunk: { kind: "http-result", status: 201, data: {}, headers: { location: "/users/3" } },
+    });
+    expect(result?.chunk).toEqual({
+      kind: "http-result",
+      status: 201,
+      data: {},
+      headers: { location: "/users/3" },
+    });
+  });
+
+  it("drops headers of an http-result that are not all strings", () => {
+    const result = sanitizeChunk({
+      rid: "r-1",
+      chunk: { kind: "http-result", status: 200, data: {}, headers: { count: 3 } },
+    });
+    expect(result?.chunk).toEqual({ kind: "http-result", status: 200, data: {} });
+  });
+
   it("accepts a valid sse-event chunk", () => {
     const result = sanitizeChunk({
       rid: "r-1",

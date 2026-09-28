@@ -59,15 +59,12 @@ export const buildResponse = (
      other side of the proxy. A direct caller is not on the other side — it
      made the request — and filtering its `.raw` took away the pagination
      headers, the content type and the cookies it was reading. */
-  const data = response.rawData
+  /* A success may carry `undefined` — a response parser or an
+     after-middleware can produce it — and it used to be thrown as an
+     "Unknown error". */
+  return response.rawData
     ? { status: response.status, headers: response.headers, data: response.data }
     : response.data;
-
-  if (response.data !== undefined) {
-    return data;
-  }
-
-  throw new Error("Unknown error");
 };
 
 export const buildErrorResponse = (

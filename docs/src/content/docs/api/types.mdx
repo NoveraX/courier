@@ -82,12 +82,12 @@ An endpoint is an inert descriptor, not a callable. One of three types names it,
 according to the head it was built from:
 
 ```ts
-type HttpEndpoint<Response, Variables, Kind extends "query" | "mutation">
-type StreamEndpoint<Response, Variables>
-type ChannelEndpoint<Response, Variables, Send>
-
-// Any of the three, when the kind does not matter
-type AnyEndpoint
+import type {
+  AnyEndpoint,      // any of the three, when the kind does not matter
+  ChannelEndpoint,  // ChannelEndpoint<Response, Variables, Send>
+  HttpEndpoint,     // HttpEndpoint<Response, Variables, Kind extends "query" | "mutation">
+  StreamEndpoint,   // StreamEndpoint<Response, Variables>
+} from "@noverax/courier/define"
 ```
 
 ### Inference Helpers
@@ -96,15 +96,14 @@ Read the types back off an endpoint. This is how a caller knows what a method
 takes and returns:
 
 ```ts
-// from "@noverax/courier/define"
-type InferResponse<E extends AnyEndpoint>      // what the endpoint resolves to
-type InferVariables<E extends AnyEndpoint>     // what the caller must pass
-type InferVariablesOut<E extends AnyEndpoint>  // what its closure receives, once a schema has validated the call
-type InferSend<E extends AnyEndpoint>          // what a channel accepts from the client
-type InferKind<E extends AnyEndpoint>          // "query" | "mutation" | "stream" | "channel"
-
-// from "@noverax/courier"
-type InferClient<TApi>                         // the client createCaller(api) returns
+import type { InferClient } from "@noverax/courier" // InferClient<TApi>: the client createCaller(api) returns
+import type {
+  InferKind,          // InferKind<E>: "query" | "mutation" | "stream" | "channel"
+  InferResponse,      // InferResponse<E>: what the endpoint resolves to
+  InferSend,          // InferSend<E>: what a channel accepts from the client
+  InferVariables,     // InferVariables<E>: what the caller must pass
+  InferVariablesOut,  // InferVariablesOut<E>: what its closure receives, once a schema has validated the call
+} from "@noverax/courier/define"
 ```
 
 The clients infer all of this themselves; name a type with these helpers where one is needed elsewhere — a component's props, a test's fixture.

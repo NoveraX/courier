@@ -11,7 +11,13 @@ import { createCaller } from "@noverax/courier"
 `createCaller` takes your API definition and optional defaults, returning a `TypedClient`. Direct mode calls the backend directly without going through a proxy.
 
 ```ts
-const caller = createCaller(api, defaults?)
+import type { CallerDefaults, TypedClient } from "@noverax/courier"
+import type { DefinedApi } from "@noverax/courier/define"
+
+declare function createCaller<TApi extends DefinedApi>(
+  api: TApi,
+  defaults?: CallerDefaults,
+): TypedClient<TApi>
 ```
 
 ## Parameters

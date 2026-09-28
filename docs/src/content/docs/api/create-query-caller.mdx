@@ -29,7 +29,7 @@ Use [`createProxyQueryCaller`](/docs/api/create-proxy-query-caller) instead when
 ## Signature
 
 ```ts
-function createQueryCaller<TApi extends DefinedApi>(
+declare function createQueryCaller<TApi extends DefinedApi>(
   api: TApi,
   defaults?: QueryCallerDefaults,
 ): QueryCallerClient<TApi>
@@ -90,14 +90,14 @@ export function UserList() {
 
 ```ts
 // Query with variables
-const { data } = q.users.useQuery("getById", { variables: { id: "1" } })
+const { data: user } = q.users.useQuery("getById", { variables: { id: "1" } })
 
 // Mutation
 const { mutate } = q.users.useMutation("create")
 mutate({ name: "Alice" })
 
 // Infinite query
-const { data, fetchNextPage } = q.posts.useInfiniteQuery("list", {
+const { data: pages, fetchNextPage } = q.posts.useInfiniteQuery("list", {
   variables: (cursor) => ({ cursor }),
   initialPageParam: 0,
   getNextPageParam: (page) => page.nextCursor,

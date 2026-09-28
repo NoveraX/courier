@@ -9,7 +9,7 @@ import { defineApi } from "@noverax/courier/define"
 ## Signature
 
 ```ts
-function defineApi<G extends OwnGroups>(
+declare function defineApi<G extends OwnGroups>(
   options: BaseOptions & { groups: G }
 ): DefinedApi<G>
 ```
@@ -89,7 +89,7 @@ const api = defineApi({
   // Middleware chain
   middleware: [
     logMiddleware(),
-    authMiddleware(() => getAuthToken()),
+    authMiddleware({ getToken: () => getAuthToken() }),
   ],
 
   // Enable request deduplication
@@ -120,7 +120,7 @@ const api = defineApi({
     const text = await response.text()
     return new DOMParser().parseFromString(text, "text/xml")
   },
-  groups: { ... },
+  groups: { users },
 })
 ```
 
@@ -132,7 +132,7 @@ Object merged into every POST/PUT/PATCH body:
 const api = defineApi({
   baseURL: "...",
   defaultBody: { apiKey: "...", version: "v2" },
-  groups: { ... },
+  groups: { users },
 })
 // POST /users body: { apiKey: "...", version: "v2", name: "Alice" }
 ```
@@ -145,7 +145,7 @@ Object merged into every request's search parameters:
 const api = defineApi({
   baseURL: "...",
   defaultQueryParams: { locale: "en", format: "json" },
-  groups: { ... },
+  groups: { users },
 })
 // GET /users → GET /users?locale=en&format=json
 ```
@@ -163,7 +163,7 @@ const api = defineApi({
   baseURL: "...",
   bodySerializer: (data) =>
     new URLSearchParams(Object.entries(data).map(([k, v]) => [k, String(v)])),
-  groups: { ... },
+  groups: { users },
 })
 ```
 
@@ -172,13 +172,15 @@ const api = defineApi({
 Custom search params encoder:
 
 ```ts
+import qs from "qs"
+
 const api = defineApi({
   baseURL: "...",
   searchParamsSerializer: {
     stringify: (obj) => qs.stringify(obj),
     parse: (str) => qs.parse(str),
   },
-  groups: { ... },
+  groups: { users },
 })
 ```
 

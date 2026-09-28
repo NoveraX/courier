@@ -36,25 +36,22 @@ When you pass variables to a request, Courier first extracts any values that mat
 // Path params are extracted from the variables object.
 // Remaining variables go to query params (GET) or body (POST).
 
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+    getWithDetails: endpoint.get(":id").variables<{ id: number; include?: string }>().response<User>(),
+    updateAvatar: endpoint.post(":id/avatar").variables<{ id: number; name: string }>().response<void>(),
+  },
+})
+
 // GET /users/5 — { id: 5 } consumed by :id
 await caller.users.getById({ id: 5 })
 
 // GET /users/5?include=posts — { id: 5 } consumed by :id, { include: "posts" } -> query param
-const users = defineGroup({
-  prefix: "users",
-  endpoints: {
-    getWithDetails: endpoint.get(":id").variables<{ id: number; include?: string }>().response<User>(),
-  },
-})
 await caller.users.getWithDetails({ id: 5, include: "posts" })
 
 // POST /users/5/avatar — { id: 5 } consumed by :id, { name: "photo.jpg" } -> JSON body
-const users = defineGroup({
-  prefix: "users",
-  endpoints: {
-    updateAvatar: endpoint.post(":id/avatar").variables<{ id: number; name: string }>().response<void>(),
-  },
-})
 await caller.users.updateAvatar({ id: 5, name: "photo.jpg" })
 ```
 

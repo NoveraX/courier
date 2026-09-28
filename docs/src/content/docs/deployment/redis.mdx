@@ -297,6 +297,8 @@ process.on("SIGTERM", async () => {
 Each adapter exposes `isHealthy()`:
 
 ```ts title="health-check.ts"
+import { history, presence, pubsub } from "./lib/adapters"
+
 app.get("/health/redis", (req, res) => {
   const healthy = pubsub.isHealthy() && history.isHealthy() && presence.isHealthy()
   res.status(healthy ? 200 : 503).json({
@@ -314,6 +316,8 @@ Health is tracked automatically via Redis connection events (`ready`, `close`, `
 All adapters expose `onError()` for observability:
 
 ```ts title="error-handling.ts"
+import { history, presence, pubsub } from "./lib/adapters"
+
 const unsubPubSub = pubsub.onError((error) => {
   console.error("[PubSub]", error)
 })

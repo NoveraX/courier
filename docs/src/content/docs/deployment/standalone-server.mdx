@@ -158,7 +158,7 @@ const server = await createCourierServer({
     return { userId }  // stored as connection metadata
   },
   onDisconnect: ({ connectionId, meta, code }) => {
-    console.log(`WS ${connectionId} (${meta.userId}) closed with code ${code}`)
+    console.log(`WS ${connectionId} closed with code ${code}`, meta)
   },
   onError: ({ connectionId, meta, error }) => {
     console.error(`WS error:`, error)

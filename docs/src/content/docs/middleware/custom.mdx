@@ -1,13 +1,13 @@
 export const metadata = { title: "Custom Middleware", description: "Write your own middleware to intercept requests, modify headers, transform responses, and handle errors.", mode: "both" }
 
-## Writing a Middleware Function
+## Writing a Middleware
 
-A middleware function receives a `MiddlewareContext` and a `NextFn`, and must return a `Promise<MiddlewareResponse>`. Use `defineMiddleware` for full type inference:
+`defineMiddleware(name, phase, handler)` builds one. A `before` handler receives the `MiddlewareContext`, an `after` handler the context and the response, and a `wrap` handler the context and `next()`, and returns a `Promise<MiddlewareResponse>`. The name is what Studio shows for it:
 
 ```ts title="lib/middleware/timing.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 
-export const timingMiddleware = defineMiddleware(async (ctx, next) => {
+export const timingMiddleware = defineMiddleware("timing", "wrap", async (ctx, next) => {
   const start = performance.now()
   const response = await next()
   const ms = Math.round(performance.now() - start)
@@ -23,20 +23,24 @@ The `ctx` object gives you full visibility into the current request:
 
 ```ts title="types"
 type MiddlewareContext = {
-  source: string       // Source name (e.g., "api")
-  group?: string       // Group name (e.g., "users")
-  method: string       // Endpoint method (e.g., "getAll")
-  variables?: unknown  // Request body/params — mutable
-  headers: Headers     // Request headers — mutable
+  source: string                       // Source name (e.g., "api")
+  group?: string                       // Group name (e.g., "users")
+  method: string                       // Endpoint method (e.g., "getAll")
+  variables?: unknown                  // Request body/params — mutable
+  headers: Headers                     // Request headers — mutable
+  transport?: "http" | "sse" | "ws"    // What kind of call it is
+  request?: Request                    // The incoming request, when a proxy runs the call
+  kind?: "query" | "mutation"          // Whether the endpoint reads or writes
+  signal?: AbortSignal                 // Fires when the caller stops waiting
 }
 ```
 
-You can read or modify any of these properties before calling `next()`:
+A `before` handler can read or modify any of these; the call goes on with what it left:
 
 ```ts title="lib/middleware/enrich.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 
-export const enrichMiddleware = defineMiddleware(async (ctx, next) => {
+export const enrichMiddleware = defineMiddleware("enrich", "before", (ctx) => {
   // Add a custom header
   ctx.headers.set("X-Request-Source", ctx.source)
 
@@ -44,44 +48,36 @@ export const enrichMiddleware = defineMiddleware(async (ctx, next) => {
   if (ctx.variables && typeof ctx.variables === "object") {
     ctx.variables = { ...ctx.variables, _locale: "en" }
   }
-
-  return next()
 })
 ```
 
 ## Calling next()
 
-`next()` calls the next middleware in the chain, or the endpoint handler if this is the innermost middleware. You **must** either call `next()` and return its result, or return your own `MiddlewareResponse`.
+In a `wrap` handler, `next()` calls the next middleware in the chain, or the endpoint handler if this is the innermost middleware. The handler **must** either call `next()` and return its result, or return its own `MiddlewareResponse`.
 
 ### Pass-through
 
-The simplest middleware just calls `next()` and returns the result:
+The simplest wrap handler just calls `next()` and returns the result:
 
 ```ts
-const passthrough = defineMiddleware(async (_ctx, next) => {
-  return next()
-})
+import { defineMiddleware } from "@noverax/courier/middleware"
+
+const passthrough = defineMiddleware("passthrough", "wrap", (_ctx, next) => next())
 ```
 
 ### Transform the response
 
-Await `next()`, then modify the response before returning:
+An `after` handler receives the response and returns it, changed or not:
 
 ```ts title="lib/middleware/unwrap.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 
 // Unwrap a { data, meta } API envelope
-export const unwrapMiddleware = defineMiddleware(async (_ctx, next) => {
-  const response = await next()
-
-  if (
-    response.data &&
-    typeof response.data === "object" &&
-    "data" in response.data
-  ) {
-    return { ...response, data: (response.data as any).data }
+export const unwrapMiddleware = defineMiddleware("unwrap", "after", (_ctx, response) => {
+  const body = response.data
+  if (body && typeof body === "object" && "data" in body) {
+    return { ...response, data: body.data }
   }
-
   return response
 })
 ```
@@ -93,7 +89,7 @@ Return a `MiddlewareResponse` without calling `next()` to prevent the request fr
 ```ts title="lib/middleware/maintenance.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 
-export const maintenanceMiddleware = defineMiddleware(async (_ctx, _next) => {
+export const maintenanceMiddleware = defineMiddleware("maintenance", "wrap", async (_ctx, next) => {
   if (isMaintenanceMode()) {
     return {
       status: 503,
@@ -102,7 +98,7 @@ export const maintenanceMiddleware = defineMiddleware(async (_ctx, _next) => {
     }
   }
 
-  return _next()
+  return next()
 })
 ```
 
@@ -113,7 +109,7 @@ Call `next()` multiple times to implement retry logic:
 ```ts title="lib/middleware/retry-on-stale.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 
-export const retryOnStale = defineMiddleware(async (ctx, next) => {
+export const retryOnStale = defineMiddleware("retry-on-stale", "wrap", async (ctx, next) => {
   const response = await next()
 
   // Retry once if the response indicates stale data
@@ -134,7 +130,7 @@ Wrap `next()` in a try/catch to intercept errors from downstream middleware or t
 import { defineMiddleware } from "@noverax/courier/middleware"
 import * as Sentry from "@sentry/node"
 
-export const errorReporter = defineMiddleware(async (ctx, next) => {
+export const errorReporter = defineMiddleware("error-reporter", "wrap", async (ctx, next) => {
   try {
     return await next()
   } catch (error) {
@@ -158,29 +154,18 @@ If you catch an error, either re-throw it or return a valid `MiddlewareResponse`
 
 For configurable middleware, write a factory function that returns a `Middleware`:
 
-```ts title="lib/middleware/timeout.ts"
+```ts title="lib/middleware/slow-call-warning.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 import type { Middleware } from "@noverax/courier/middleware"
 
-export function timeoutMiddleware(ms: number): Middleware {
-  return defineMiddleware(async (_ctx, next) => {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), ms)
-
+export function slowCallWarning(thresholdMs: number): Middleware {
+  return defineMiddleware("slow-call-warning", "wrap", async (ctx, next) => {
+    const start = performance.now()
     try {
-      const response = await next()
-      return response
-    } catch (error) {
-      if (controller.signal.aborted) {
-        return {
-          status: 408,
-          data: { message: `Request timed out after ${ms}ms` },
-          headers: new Headers(),
-        }
-      }
-      throw error
+      return await next()
     } finally {
-      clearTimeout(timer)
+      const ms = Math.round(performance.now() - start)
+      if (ms > thresholdMs) console.warn(`${ctx.group}.${ctx.method} took ${ms}ms`)
     }
   })
 }
@@ -189,31 +174,34 @@ export function timeoutMiddleware(ms: number): Middleware {
 Use it like any other middleware:
 
 ```ts title="lib/sources.ts"
+import { defineApi } from "@noverax/courier/define"
+import { slowCallWarning } from "./middleware/slow-call-warning"
+
 const api = defineApi({
   baseURL: "https://api.example.com",
-  middleware: [
-    timeoutMiddleware(5000),
-  ],
-  groups: { /* ... */ },
+  middleware: [slowCallWarning(1000)],
+  groups: {},
 })
 ```
 
+A middleware cannot cancel the request it wraps; to limit how long a call may take, use the `timeout` option.
+
 ## Composing Custom Middleware
 
-Use `composeMiddleware` to bundle multiple middleware into a reusable unit:
+Use `composeMiddleware` to bundle multiple middleware into a reusable unit. It returns a wrap handler, which `defineMiddleware` turns into one middleware:
 
 ```ts title="lib/middleware/production.ts"
-import { composeMiddleware } from "@noverax/courier/middleware"
+import { composeMiddleware, defineMiddleware } from "@noverax/courier/middleware"
 import { errorReporter } from "./error-reporter"
 import { timingMiddleware } from "./timing"
 import { unwrapMiddleware } from "./unwrap"
 
 // Single middleware that applies all three
-export const productionMiddleware = composeMiddleware([
-  errorReporter,
-  timingMiddleware,
-  unwrapMiddleware,
-])
+export const productionMiddleware = defineMiddleware(
+  "production",
+  "wrap",
+  composeMiddleware([errorReporter, timingMiddleware, unwrapMiddleware]),
+)
 ```
 
 Then use the composed middleware in your source definition:
@@ -225,7 +213,7 @@ import { productionMiddleware } from "./middleware/production"
 const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [productionMiddleware],
-  groups: { /* ... */ },
+  groups: {},
 })
 ```
 
@@ -236,7 +224,7 @@ Apply middleware only for specific sources, groups, or methods by checking `ctx`
 ```ts title="lib/middleware/admin-only.ts"
 import { defineMiddleware } from "@noverax/courier/middleware"
 
-export const adminGuard = defineMiddleware(async (ctx, next) => {
+export const adminGuard = defineMiddleware("admin-guard", "wrap", async (ctx, next) => {
   // Only enforce on admin endpoints
   if (ctx.group === "admin") {
     const isAdmin = await checkAdminPermission()
@@ -256,4 +244,4 @@ export const adminGuard = defineMiddleware(async (ctx, next) => {
 ## Next Steps
 
 - [Built-in Middleware](/docs/middleware/built-in) -- reference for all shipped middleware
-- [Middleware Overview](/docs/middleware/overview) -- the onion model and core types
+- [Middleware Overview](/docs/middleware/overview) -- the onion model, the three phases and the core types

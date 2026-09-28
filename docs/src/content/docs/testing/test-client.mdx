@@ -22,11 +22,11 @@ const { client, mock, history, reset } = createTestClient<typeof api>()
 ## API Reference
 
 ```ts title="types"
-type TestClient<T> = {
+type TestClient<TApi extends DefinedApi = DefinedApi> = {
   /** Typed client -- same dot-notation as createCaller / createProxyCaller */
-  client: TypedClient<T>
+  client: TypedClient<TApi>
 
-  /** Mock a specific endpoint's response */
+  /** Mock a specific endpoint's response: the group and method are checked, and the builder is typed by its response */
   mock: (group: string, method: string) => MockBuilder
 
   /** Array of all recorded requests */

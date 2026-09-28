@@ -62,10 +62,10 @@ export const client = createProxyCaller<typeof api>("api", { boundary })
 
 ```ts title="lib/query.ts"
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { Api } from "@/api"
+import type { api } from "@/api"
 import { boundary } from "./boundary"
 
-export const q = createProxyQueryCaller<Api>("api", { boundary })
+export const q = createProxyQueryCaller<typeof api>("api", { boundary })
 ```
 
 The API is imported **as a type**. That is the whole trick, and it is load-bearing rather than stylistic: a value import pulls your `defineApi` call into the module, and from there into the bundle — the upstream host, your middleware bodies and whatever literal sits inside them, and the path of every endpoint including the ones you held back.
@@ -83,11 +83,33 @@ Each endpoint says how the client reaches it. The compiler checks the answer aga
 | `"duplex"` | a socket the caller may also send on — a channel with `.send()` |
 
 ```ts
-expose: {
-  "posts.lsit": "query",      // does not compile — no such endpoint
-  "posts.feed": "query",      // does not compile — it is a stream
-  "posts.create": "query",    // does not compile — a POST writes
-}
+import { courier, defineApi, defineBoundary, defineGroup } from "@noverax/courier/define"
+
+const { endpoint, stream } = courier()
+
+const api = defineApi({
+  name: "api",
+  baseURL: "https://api.example.com",
+  groups: {
+    posts: defineGroup({
+      prefix: "posts",
+      endpoints: {
+        list: endpoint.get("").response<string[]>(),
+        feed: stream.get("feed").response<string>(),
+        create: endpoint.post("").variables<{ title: string }>().response<string>(),
+      },
+    }),
+  },
+})
+
+// @ts-expect-error — no such endpoint
+defineBoundary<typeof api>({ source: "api", expose: { "posts.lsit": "query" } })
+
+// @ts-expect-error — it is a stream
+defineBoundary<typeof api>({ source: "api", expose: { "posts.feed": "query" } })
+
+// @ts-expect-error — a POST writes
+defineBoundary<typeof api>({ source: "api", expose: { "posts.create": "query" } })
 ```
 
 Renaming an endpoint breaks the boundary that still names the old one, so the two cannot drift apart. There is no build step and nothing to generate.
@@ -123,7 +145,7 @@ A source that declares none behaves as it always has: everything it holds is rea
 defineApi({
   expose: false,
   groups: {
-    public: defineGroup({ expose: true, prefix: "public", endpoints: { … } }),
+    public: defineGroup({ expose: true, prefix: "public", endpoints: { /* … */ } }),
   },
 })
 ```

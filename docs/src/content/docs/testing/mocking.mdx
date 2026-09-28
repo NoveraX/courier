@@ -185,7 +185,7 @@ it("retries after server error", async () => {
 Use `findRequests` to filter the history array by group and optionally by method:
 
 ```ts title="types"
-function findRequests(
+declare function findRequests(
   history: HistoryEntry[],
   group: string,
   method?: string,
@@ -234,6 +234,11 @@ type HistoryEntry = {
 ### Asserting on history entries
 
 ```ts title="tests/audit.test.ts"
+import { createTestClient, findRequests } from "@noverax/courier/testing"
+import type { api } from "../lib/api"
+
+const { client, mock, history } = createTestClient<typeof api>()
+
 it("sends correct variables to create endpoint", async () => {
   mock("users", "create").resolves({ id: 1, name: "Alice" })
 

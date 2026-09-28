@@ -8,10 +8,15 @@ import { createProxyCaller } from "@noverax/courier"
 
 ## Signature
 
-`createProxyCaller` accepts an optional defaults object and returns a `TypedClient`. The generic parameter `T` is your `typeof api` type — it enables full type inference for endpoint groups, methods, variables, and response types.
+`createProxyCaller` takes the name the proxy addresses the source by, and defaults — optional for an API of plain requests, required with a `boundary` (or the `source`) for one with streams or channels — and returns a typed client. The type argument is your `typeof api`: it gives the client its groups, methods, variables, and response types.
 
 ```ts
-const caller = createProxyCaller<typeof api>(defaults?)
+import type { InferClient, ProxyCallerArguments } from "@noverax/courier"
+
+declare function createProxyCaller<TApi>(
+  source: string,
+  ...defaults: ProxyCallerArguments<TApi>
+): InferClient<TApi>
 ```
 
 ## Parameters
@@ -29,8 +34,10 @@ type ProxyPath = {
 
 type ProxyCallerDefaults = {
   proxyPath?: ProxyPath
-  source?: object
+  source?: Record<string, unknown>
+  boundary?: ProxyBoundary
   timeout?: number
+  deduplicate?: boolean
   credentials?: RequestCredentials
   headers?: Record<string, string>
   onError?: (error: HTTPError) => void | Promise<void>
@@ -64,20 +71,17 @@ type CallerWSOptions = {
 
 ## Return Type
 
-Returns a `TypedClient<T>` — a typed object with dot-notation access to your API groups and endpoints:
+Returns `InferClient<typeof api>` — a typed object with dot-notation access to your API groups and endpoints:
 
 1. **Group access** — `caller.users` — accesses the endpoint group.
-2. **Endpoint execution** — `caller.users.getAll(variables?, options?)` — executes an endpoint with optional variables and options.
+2. **Endpoint execution** — `caller.users.getById({ id: "123" })` — executes an endpoint with its variables, its only argument; an endpoint without variables takes none.
+3. **Per-call options** — `caller.users.with({ timeout: 5_000 }).getAll()` — headers, a timeout or a signal for the calls made through it; `.raw` resolves to the whole response instead of its body.
 
 ```ts
-type TypedClient<T> = {
-  [Group in keyof T["groups"]]: {
-    [Method in keyof T["groups"][Group]]: (
-      variables?: Variables,
-      options?: CallOptions,
-    ) => Promise<Response>
-  }
-}
+import type { InferClient } from "@noverax/courier"
+import type { api } from "@/api"
+
+type Client = InferClient<typeof api>
 ```
 
 ## Basic Usage
@@ -93,7 +97,7 @@ const caller = createProxyCaller<typeof api>("api", {
   credentials: "include",
 })
 
-// Dot-notation: caller.group.method(variables?, options?)
+// Dot-notation: caller.group.method(variables)
 const users = await caller.users.getAll()
 const user = await caller.users.getById({ id: "123" })
 ```

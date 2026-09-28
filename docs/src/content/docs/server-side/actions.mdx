@@ -27,13 +27,15 @@ export async function createUser(data: { name: string; email: string }) {
 ## API signature
 
 ```ts
-import { createAction } from "@noverax/courier-next"
+import type { InferClient } from "@noverax/courier"
+import type { Sources } from "@noverax/courier/define"
+import type { ActionDefaults } from "@noverax/courier-next"
 
-function createAction<T extends DefinedApi>(
-  sources: Sources,
-  source: string,
-  defaults?: ActionDefaults
-): TypedClient<T>
+declare function createAction<TSources extends Sources, TKey extends string & keyof TSources>(
+  sources: TSources,
+  source: TKey,
+  defaults?: ActionDefaults,
+): InferClient<TSources[TKey]>
 ```
 
 | Parameter | Description |
@@ -86,7 +88,8 @@ export async function updateUser(data: { id: number; name: string; email: string
 
 export async function deleteUser(id: number) {
   await action.users.remove({ id })
-  revalidatePath(["/users", "/dashboard"])
+  revalidatePath("/users")
+  revalidatePath("/dashboard")
 }
 ```
 
@@ -185,10 +188,10 @@ Both `createAction` and `createCaller` return a `TypedClient` with dot-notation 
 ```ts
 // createCaller — manual header forwarding
 import { headers } from "next/headers"
-const user = await caller.users.with({ headers: await headers() }).create(data)
+const created = await caller.users.with({ headers: await headers() }).create(data)
 
 // createAction — automatic header forwarding
-const user = await action.users.create(data)
+const forwarded = await action.users.create(data)
 ```
 
 Use `createAction` in Server Actions where the incoming request's headers should always travel. Use `createCaller` in RSC or API routes where you may or may not need headers.

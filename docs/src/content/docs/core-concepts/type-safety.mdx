@@ -48,10 +48,10 @@ export const api = defineApi({ baseURL: "...", groups: { users } })
 const q = createProxyQueryCaller<typeof api>("api")
 
 // 3. TypeScript infers everything at the call site
-const { data } = q.users.useQuery("getAll")
-//      ^? UserList — inferred from .response<UserList>()
+const { data: list } = q.users.useQuery("getAll")
+//            ^? UserList — inferred from .response<UserList>()
 
-const { data } = q.users.useQuery("getById", {
+const { data: user } = q.users.useQuery("getById", {
   variables: { id: "5" },
   //           ^? { id: string } — inferred from .variables<{ id: string }>()
 })

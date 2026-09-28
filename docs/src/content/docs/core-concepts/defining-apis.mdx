@@ -196,7 +196,7 @@ defineApi({
   groups: { users, posts },
 
   // Shared options for all endpoints in this source:
-  middleware: [retryMiddleware(), authMiddleware(...)],
+  middleware: [retryMiddleware(), authMiddleware({ getToken: () => getToken() })],
   timeout: 10000,
   headers: { "X-API-Version": "2" },
   responseType: "json",         // "json" | "text" | "blob" | "arrayBuffer" | "formData"

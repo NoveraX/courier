@@ -5,10 +5,7 @@ export const metadata = { title: "createCaller", description: "Factory function 
 `createCaller` accepts your API definition and optional defaults. It returns a typed client with dot-notation access to all endpoint groups:
 
 ```ts title="@noverax/courier"
-import { createCaller } from "@noverax/courier"
-
-// Full signature
-function createCaller<T extends DefinedApi>(
+declare function createCaller<T extends DefinedApi>(
   api: T,
   defaults?: CallerDefaults
 ): TypedClient<T>
@@ -24,14 +21,17 @@ type CallerDefaults = {
   timeout?: number
   // Headers sent with every request
   headers?: Record<string, string>
-  // Shared context passed to every endpoint
-  context?: Context
+  // Request context passed to every endpoint: headers to forward, the request
+  context?: RequestContext
   // Called when a request fails with an HTTPError — an answer with an
   // error status, or a network failure. A ValidationError or a
   // cancellation the caller asked for is thrown without it.
   onError?: (error: HTTPError) => void | Promise<void>
   // Called when any request succeeds
   onSuccess?: (data: unknown) => void | Promise<void>
+  // The sockets of this caller's channels and push subscriptions: token,
+  // reconnect backoff, heartbeat, queue limits — see Streams & Channels
+  ws?: CallerWSOptions
 }
 ```
 
@@ -104,12 +104,11 @@ await caller.users.with({ headers: await headers() }).create({ name: "Jane" })
 
 ## Context parameter
 
-The `Context` is what makes direct mode different from proxy mode. In proxy mode, the browser's cookies reach the handler with each call, and the handler forwards them where the source or the endpoint names `cookie`. In direct mode, you pass them yourself: per call through `.with({ headers })`, or for every call of a caller through the `context` default of `createCaller`. A method takes its variables as its only argument; a second argument is not read.
+The request context is what makes direct mode different from proxy mode. In proxy mode, the browser's cookies reach the handler with each call, and the handler forwards them where the source or the endpoint names `cookie`. In direct mode, you pass them yourself: per call through `.with({ headers })`, or for every call of a caller through the `context` default of `createCaller`. A method takes its variables as its only argument; a second argument is not read.
 
 ```ts
-import type { Context } from "@noverax/courier"
-
-type Context = {
+// Exported from "@noverax/courier"
+type RequestContext = {
   req?: Request      // Web Standard request object
   res?: Response     // Web Standard response object
   headers?: Headers  // Headers to forward (cookies, auth)
@@ -173,18 +172,18 @@ console.log(result.data)     // User — still fully typed
 
 ## Difference from createProxyCaller
 
-The key difference is the `Context` parameter. In proxy mode, the browser's cookies arrive with its request and cross to the backend where they are named. In direct mode, you pass them explicitly through `.with()`:
+The key difference is the request context. In proxy mode, the browser's cookies arrive with its request and cross to the backend where they are named. In direct mode, you pass them explicitly through `.with()`:
 
 ```ts
 // Proxy mode (client components) — no context parameter
-const caller = createProxyCaller<typeof api>("api")
-await caller.users.getAll({ page: 1 })
-//                          ^ variables only
+const browserCaller = createProxyCaller<typeof api>("api")
+await browserCaller.users.getAll({ page: 1 })
+//                                ^ variables only
 
 // Direct mode (server components) — context named with .with()
-const caller = createCaller(api)
-await caller.users.with({ headers: await headers() }).getAll({ page: 1 })
-//                  ^ per-call options      ^ variables
+const serverCaller = createCaller(api)
+await serverCaller.users.with({ headers: await headers() }).getAll({ page: 1 })
+//                        ^ per-call options      ^ variables
 ```
 
 Both functions use the same `executeRequest` core under the hood.

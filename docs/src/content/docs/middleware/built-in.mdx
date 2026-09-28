@@ -19,7 +19,7 @@ import {
 Automatic retry with exponential backoff. By default it retries server errors (status >= 500) and requests that got no answer at all — a network failure or a timeout. A 4xx is never retried by default: the same request would be refused again.
 
 ```ts title="signature"
-function retryMiddleware(options?: {
+declare function retryMiddleware(options?: {
   /** Maximum number of retries (default: 3) */
   limit?: number
   /** Base delay in ms between attempts (default: 300) */
@@ -83,7 +83,7 @@ A cancellation is never retried, whatever `retryOn` says: not a call whose signa
 JWT/OAuth token injection with automatic refresh on 401.
 
 ```ts title="signature"
-function authMiddleware(options: {
+declare function authMiddleware(options: {
   /** Function to get the current auth token */
   getToken: () => string | Promise<string>
   /** Optional function to refresh the token on 401 */
@@ -143,7 +143,7 @@ authMiddleware({
 Request/response logging with timing information.
 
 ```ts title="signature"
-function logMiddleware(options?: {
+declare function logMiddleware(options?: {
   /** Receives each line, and the error of a failed request (default: Courier's logger) */
   logger?: (message: string, error?: unknown) => void
 }): MiddlewareFn
@@ -187,7 +187,7 @@ logMiddleware({
 Client-side rate limiting. Delays requests that exceed the configured limit within a time window.
 
 ```ts title="signature"
-function rateLimitMiddleware(options: {
+declare function rateLimitMiddleware(options: {
   /** Maximum number of requests in the window */
   maxRequests: number
   /** Time window in milliseconds */
@@ -218,7 +218,7 @@ The limit holds however many calls arrive at once: at most `maxRequests` request
 In-memory response caching with configurable TTL.
 
 ```ts title="signature"
-function cacheMiddleware(options: {
+declare function cacheMiddleware(options: {
   /** How responses are partitioned between callers: "public", or a function naming the caller */
   scope: "public" | ((ctx: MiddlewareContext) => string)
   /** Time-to-live in milliseconds (default: 60000) */

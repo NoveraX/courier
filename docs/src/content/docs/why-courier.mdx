@@ -62,10 +62,10 @@ const users = defineGroup({
 })
 
 // Direct — server-side
-const user = await caller.users.getById({ id: "5" })
+const onServer = await caller.users.getById({ id: "5" })
 
 // Proxy — client-side
-const user = await proxyCaller.users.getById({ id: "5" })
+const inBrowser = await proxyCaller.users.getById({ id: "5" })
 
 // React Query — same types again
 const { data } = q.users.useQuery("getById", { variables: { id: "5" } })
@@ -99,8 +99,8 @@ const { data } = useQuery({
 })
 
 // Courier — one line, fully typed
-const { data } = q.users.useQuery("getById", { variables: { id } })
-//      ^? User
+const { data: user } = q.users.useQuery("getById", { variables: { id } })
+//            ^? User
 ```
 
 ## Key Benefits

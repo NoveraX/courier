@@ -5,8 +5,9 @@ export const metadata = { title: "useMutation", description: "Create, update, an
 Access `useMutation` through the query caller's dot-notation API. Variables are passed to `mutate()`, not to the hook:
 
 ```ts
-const result = q.{group}.useMutation(method, options?)
+const result = q.users.useMutation("create", options)
 
+// q.<group>.useMutation(method, options?)
 // group   — endpoint group name (e.g. "users")
 // method  — method name within the group (e.g. "create")
 // options — { requestOptions?, ...reactQueryMutationOptions }

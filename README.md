@@ -218,14 +218,29 @@ export default async function UsersPage() {
 ```ts
 // app/users/actions.ts
 "use server"
-import { createAction } from "@noverax/courier-next"
+import { revalidatePath } from "next/cache"
+import { isHTTPError, isValidationError } from "@noverax/courier"
+import { type ActionState, createAction } from "@noverax/courier-next"
 import { sources } from "@/api/sources"
 
-const action = createAction(sources)
+type User = { id: string; name: string }
 
-export const createUser = action("api")("users:create", {
-  revalidatePath: "/users",
-})
+const action = createAction(sources, "api")
+
+export async function createUser(_: ActionState<User>, form: FormData): Promise<ActionState<User>> {
+  try {
+    const user = await action.users.create({
+      name: String(form.get("name")),
+      email: String(form.get("email")),
+    })
+    revalidatePath("/users")
+    return { data: user, error: null }
+  } catch (error) {
+    if (isValidationError(error)) return { data: null, error: { message: error.message, issues: error.issues } }
+    if (isHTTPError(error)) return { data: null, error: { message: error.message, status: error.status } }
+    throw error
+  }
+}
 ```
 
 ```tsx
@@ -325,7 +340,6 @@ import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "./api/sources"
 
 export const q = createProxyQueryCaller<typeof api>("api", {
-  source: api,
   proxyPath: { http: "/api/request" }, // points to your backend proxy route
 })
 ```
@@ -543,10 +557,10 @@ import {
 const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
-    retryMiddleware({ limit: 3, backoff: "exponential" }),
+    retryMiddleware({ limit: 3, backoff: 300 }), // exponential from 300 ms
     authMiddleware({
-      getToken: () => localStorage.getItem("token"),
-      refreshToken: async () => { /* refresh logic */ },
+      getToken: () => localStorage.getItem("token") ?? "",
+      refreshToken: () => refreshAccessToken(), // renews the token; the call is sent again once on a 401
     }),
     logMiddleware(),
   ],

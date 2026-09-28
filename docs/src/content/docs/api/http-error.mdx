@@ -9,12 +9,14 @@ import { HTTPError, isHTTPError } from "@noverax/courier"
 ## HTTPError Class
 
 ```ts
-class HTTPError<R = unknown> extends Error {
-  status: number
-  headers: Headers
-  data: R
+import { CourierError, type HttpResponse } from "@noverax/courier"
 
-  constructor(response: HttpResponse<R>)
+declare class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
+  readonly status: number
+  readonly headers: Headers
+  readonly data: TData
+
+  constructor(response: HttpResponse<TData>, options?: { cause?: unknown; message?: string })
 }
 ```
 
@@ -22,6 +24,7 @@ class HTTPError<R = unknown> extends Error {
 
 ```ts
 error.name       // "HTTPError"
+error.code       // "HTTP_ERROR"
 error.message    // "HTTP {status}" (e.g., "HTTP 404")
 error.status     // HTTP status code (e.g., 404)
 error.headers    // Response headers (Headers object)
@@ -30,16 +33,18 @@ error.data       // Parsed response body (typed as R)
 
 - `status` — the HTTP status code. `0` for network errors (DNS failure, connection refused).
 - `headers` — the response `Headers` object. Empty `Headers` for network errors.
-- `data` — the parsed response body. Typed as `R` (defaults to `unknown`).
-- `name` — always `"HTTPError"`.
-- `message` — `"HTTP {status}"` (e.g., `"HTTP 404"`).
+- `data` — the parsed response body. Typed as `TData` (defaults to `unknown`).
+- `name` — always `"HTTPError"`; `code` — always `"HTTP_ERROR"`.
+- `message` — `"HTTP {status}"` (e.g., `"HTTP 404"`), or, when there was no answer, `"Network request failed"` or `"Request timed out"`.
 
 ## isHTTPError
 
 Type guard function to check if an error is an HTTPError:
 
 ```ts
-function isHTTPError<R = unknown>(error: unknown): error is HTTPError<R>
+import type { HTTPError } from "@noverax/courier"
+
+declare function isHTTPError<TData = unknown>(error: unknown): error is HTTPError<TData>
 ```
 
 <Callout variant="tip" title="Prefer isHTTPError over instanceof">
@@ -65,6 +70,8 @@ try {
 Pass a type parameter to `isHTTPError` to type the error's `data`:
 
 ```ts
+import { isHTTPError } from "@noverax/courier"
+
 type ErrorResponse = {
   success: false
   message: string
@@ -84,6 +91,8 @@ try {
 ## Status Code Handling
 
 ```ts
+import { isHTTPError } from "@noverax/courier"
+
 try {
   await caller.users.getAll()
 } catch (error) {
@@ -109,7 +118,7 @@ Use middleware to handle errors globally across all requests:
 import { defineMiddleware } from "@noverax/courier/middleware"
 import { isHTTPError } from "@noverax/courier"
 
-const errorMiddleware = defineMiddleware(async (ctx, next) => {
+const errorMiddleware = defineMiddleware("errors", "wrap", async (ctx, next) => {
   try {
     return await next()
   } catch (error) {
@@ -126,6 +135,8 @@ const errorMiddleware = defineMiddleware(async (ctx, next) => {
 Network-level errors (DNS failures, connection refused, timeouts) are converted to `HTTPError` with `status: 0`. A timeout says so: its message is `"Request timed out"` and `error.data.code` is `"TIMEOUT"`. Through the proxy, a timeout on the server's side arrives as a `504` with `code: "UPSTREAM_TIMEOUT"`:
 
 ```ts
+import { isHTTPError } from "@noverax/courier"
+
 try {
   await caller.users.getAll()
 } catch (error) {

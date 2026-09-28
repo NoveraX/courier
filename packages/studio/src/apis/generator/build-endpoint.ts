@@ -3,27 +3,17 @@
  */
 
 import { toInternalMethod } from "@noverax/courier/internal";
-import type { ParsedEndpoint, ParsedSchema } from "../parser/types";
+import type { ParsedEndpoint } from "../parser/types";
 import { convertPathParams } from "../parser/utils";
-import { buildEndpointChain, emitsSchemas } from "./build-endpoint-helpers";
-import {
-  type EndpointContext,
-  hasSchemaConstant,
-  schemaConstant,
-  typeName,
-} from "./endpoint-context";
+import { buildEndpointChain } from "./build-endpoint-helpers";
+import { declaredSchema } from "./declared-schema";
+import { type EndpointContext, typeName } from "./endpoint-context";
 import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
-import { bodyKey, requestBodyKind } from "./request-body";
+import { requestBodyKind } from "./request-body";
 import { isEventStream, type ResponseReading, responseReading } from "./response-reading";
-import { collectRefsDeep } from "./schema-refs";
-import {
-  extendSchemaWithParams,
-  getSchemaRefName,
-  objectWithBody,
-  schemaToValidation,
-} from "./schema-utils";
 import { hasStyledQuery } from "./styled-query";
-import { headerParameters, variableParameters } from "./variable-parameters";
+import { headerParameters } from "./variable-parameters";
+import { variablesSchema } from "./variables-schema";
 import { sendsUrlEncoded, wireClosure } from "./wire-closure";
 
 /** The validators whose generated objects are loose. */
@@ -101,103 +91,4 @@ function endpointPath(ep: ParsedEndpoint): string {
 
 function responseSchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
   return declaredSchema(ep.responseSchema, context);
-}
-
-/**
- * The schema validating what the endpoint is called with, when its body has
- * one: a named object's, extended with the parameters, or that of a list, a
- * scalar or fields sharing a parameter's name, beside them under its own
- * key; for fields written inline, the schema extracted with their type. A
- * form and bytes are typed without one.
- */
-function variablesSchema(
-  ep: ParsedEndpoint,
-  context: EndpointContext,
-  paramsType: string | undefined,
-): string | null {
-  const kind = requestBodyKind(ep, context.spec);
-  if (kind !== "fields" && kind !== "value" && kind !== "nested") return null;
-  const body = bodySchema(ep, context);
-  if (!body) return inlineFieldsSchema(ep, kind, paramsType, context);
-
-  /* The query parameters belong to the variables as much as the path's do:
-     left out, zod and valibot stripped them before the call was made. */
-  const params = variableParameters(ep);
-  if (params.length === 0) return body;
-  context.uses.validator = true;
-  if (kind !== "fields") return objectWithBody(body, params, bodyKey(ep), context.options);
-  return extendSchemaWithParams(body, params, context.options, extendable(ep, context));
-}
-
-/* Fields written inline are extracted as a type of their own, with the
-   parameters, and a schema beside it; left unused, a call with them was
-   never validated, though one with a named body was. */
-function inlineFieldsSchema(
-  ep: ParsedEndpoint,
-  kind: ReturnType<typeof requestBodyKind>,
-  paramsType: string | undefined,
-  context: EndpointContext,
-): string | null {
-  if (kind !== "fields" || !paramsType || ep.requestBody?.refName) return null;
-  return schemaConstant(context, paramsType);
-}
-
-/** The body's own schema, when every schema it names is declared. */
-function bodySchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
-  return declaredSchema(ep.requestBody, context);
-}
-
-/* A named schema's constant; or, written inline, a schema that is not an
-   object with fields — a string, a list, a map — so a body or an answer of
-   one is validated, and a mock can make one up. An inline object with
-   fields has a type of its own instead. */
-function declaredSchema(schema: ParsedSchema | null, context: EndpointContext): string | null {
-  const ref = getSchemaRefName(schema);
-  if (ref) {
-    const constant = schemaConstant(context, ref);
-    return constant ? listOf(constant, schema, context) : null;
-  }
-  if (!emitsSchemas(context.options) || !schema || hasFields(schema)) return null;
-  if (!namesDeclared(schema, context)) return null;
-  context.uses.validator = true;
-  return schemaToValidation(schema, context.options);
-}
-
-/* An object with fields; a map, which has none, is written as a record. */
-function hasFields(schema: ParsedSchema): boolean {
-  return schema.type === "object" && Object.keys(schema.properties ?? {}).length > 0;
-}
-
-function namesDeclared(schema: ParsedSchema, context: EndpointContext): boolean {
-  const names = new Set<string>();
-  collectRefsDeep(schema, names);
-  if (![...names].every((name) => hasSchemaConstant(context, name))) return false;
-  for (const name of names) schemaConstant(context, name);
-  return true;
-}
-
-/**
- * Whether a named body's schema is an object that can be extended. One of
- * several shapes, or one written lazily because it is on a reference cycle,
- * is intersected with the parameters instead.
- */
-function extendable(ep: ParsedEndpoint, context: EndpointContext): boolean {
-  const ref = ep.requestBody?.refName;
-  return (
-    ref !== undefined && !context.lazy.has(ref) && context.spec.schemas[ref]?.type === "object"
-  );
-}
-
-/**
- * The validator for a named schema, wrapped when the payload is a list.
- *
- * A request body that is an array was expressed as the schema of one element,
- * so the validator rejected the very payload the endpoint requires.
- */
-function listOf(constant: string, schema: ParsedSchema | null, context: EndpointContext): string {
-  if (schema?.type !== "array") return constant;
-  const { validation } = context.options;
-  if (validation === "arktype") return `${constant}.array()`;
-  context.uses.validator = true;
-  return validation === "zod" ? `z.array(${constant})` : `v.array(${constant})`;
 }

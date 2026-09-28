@@ -38,6 +38,11 @@ export function urlEncodedClosure(
   const encoding = ep.requestBodyEncoding ? `, ${encodingLiteral(ep.requestBodyEncoding)}` : "";
   const body = key ?? "...body";
   const bindings = pattern ? `${pattern}, ${body}` : body;
-  const options = callOptions(`body: formBody(${key ?? "body"}${encoding})`, searchParams, read);
+  const fields = key ?? "body";
+  /* A body under its own key that the operation does not require may be absent. */
+  const form = `formBody(${fields}${encoding})`;
+  const sent =
+    key !== null && ep.requestBodyOptional ? `${key} === undefined ? null : ${form}` : form;
+  const options = callOptions(`body: ${sent}`, searchParams, read);
   return `(http, { ${bindings} }) => http.${method}(${at}, undefined, { ${options} })`;
 }

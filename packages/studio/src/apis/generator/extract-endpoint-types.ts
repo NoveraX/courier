@@ -122,9 +122,10 @@ export function paramsToExtract(ep: ParsedEndpoint, bodyName?: string): ParsedSc
   const properties: Record<string, ParsedSchemaProperty> = {};
   for (const param of params) properties[param.name] = parameterProperty(param);
   if (nested) {
+    const required = ep.requestBodyOptional !== true;
     properties[bodyKey(ep)] = bodyName
-      ? { type: "ref", refName: bodyName, required: true }
-      : { type: "object", required: true, shape: nested };
+      ? { type: "ref", refName: bodyName, required }
+      : { type: "object", required, shape: nested };
   } else {
     const fields = ep.requestBody?.properties ?? {};
     for (const [name, prop] of Object.entries(fields)) if (name) properties[name] = prop;

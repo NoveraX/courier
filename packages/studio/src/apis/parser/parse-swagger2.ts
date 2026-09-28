@@ -77,7 +77,7 @@ function withBody(op: SpecNode, spec: SpecNode): SpecNode {
   const content = { [bodyMediaType(op, spec)]: { schema: fieldOf(body, "schema") } };
   return {
     ...op,
-    requestBody: { content },
+    requestBody: { content, required: fieldOf(body, "required") === true },
     parameters: parameters.filter((p) => fieldOf(p, "in") !== "body"),
   };
 }

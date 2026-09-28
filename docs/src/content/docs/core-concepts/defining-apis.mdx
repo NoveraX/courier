@@ -105,6 +105,21 @@ endpoint
   .via((http, v) => http.put("raw", undefined, { body: v.file, headers: { "content-type": "image/png" } }))
 ```
 
+An API that takes its writes url-encoded, as Stripe and Twilio do, gets a body `formBody` writes from the fields. Each field is written as OpenAPI's `encoding` would name it — by default an array repeats its field and an object's properties are fields of their own; `deepObject` puts an object's properties, and its arrays' items, in brackets:
+
+```ts
+import { courier, formBody } from "@noverax/courier/define"
+
+endpoint
+  .variables<{ email: string; metadata?: Record<string, string> }>()
+  .via((http, fields) =>
+    http.post("customers", undefined, {
+      body: formBody(fields, { metadata: { style: "deepObject", explode: true } }),
+    }),
+  )
+// → POST /customers  Body: email=ada%40example.com&metadata%5Bplan%5D=pro
+```
+
 `responseType` reads one endpoint's answer as `"text"`, `"blob"`, `"arrayBuffer"` or `"formData"` when its source reads the rest as JSON — a CSV export, a PDF. An error answer is still read as the source reads it, since it explains the error in its own form:
 
 ```ts

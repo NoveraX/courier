@@ -11,7 +11,12 @@ import { requestSubscription } from "./topic-operations";
 import type { TopicRegistry } from "./topic-registry-types";
 import { dispatchIncomingMessage } from "./ws-message-handler";
 import { decodeMessage, type WSMessage } from "./ws-protocol";
-import type { WSClientSocket, WSConnectionConfig } from "./ws-types";
+import type {
+  WSClientSocket,
+  WSCloseEventLike,
+  WSConnectionConfig,
+  WSMessageEventLike,
+} from "./ws-types";
 
 /**
  * Mutable per-connection state shared between lifecycle handlers.
@@ -44,7 +49,7 @@ export interface LifecycleContext {
 const MESSAGE_TOO_BIG = 1009;
 
 /** What handling a closed socket reads of its close event. */
-type SocketClosure = Pick<CloseEvent, "code" | "reason">;
+type SocketClosure = WSCloseEventLike;
 
 /** Open the underlying socket and wire lifecycle handlers */
 export function connect(ctx: LifecycleContext): void {
@@ -77,7 +82,7 @@ function handleOpen(ctx: LifecycleContext): void {
   for (const msg of ctx.queue.drain()) ctx.sendRaw(msg);
 }
 
-function handleMessage(ctx: LifecycleContext, ev: MessageEvent): void {
+function handleMessage(ctx: LifecycleContext, ev: WSMessageEventLike): void {
   ctx.silence.reset();
   /* The backoff starts over once the server has answered on the socket, not
      as soon as it opens: a server that accepts the upgrade and closes at

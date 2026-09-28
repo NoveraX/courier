@@ -7,16 +7,39 @@ import type { MessageQueueConfig } from "./message-queue";
 // Client-side WebSocket interface (browser-compatible)
 // ---------------------------------------------------------------------------
 
-/** Minimal client-side WebSocket — compatible with browser, Deno, Bun */
+/** What the client reads of a message a socket received: its data. */
+export interface WSMessageEventLike {
+  readonly data: unknown;
+}
+
+/** What the client reads of a socket's closing: its code and reason. */
+export interface WSCloseEventLike {
+  readonly code: number;
+  readonly reason: string;
+}
+
+/*
+ * A socket's handler property. Written through a method so that a socket
+ * whose events carry more — the browser's, Node's, `ws`'s — is accepted:
+ * TypeScript compares a method's parameters in both directions, and a plain
+ * function property would take only an event type no socket declares.
+ */
+type SocketHandler<TEvent> = { handle(event: TEvent): void }["handle"] | null;
+
+/**
+ * The WebSocket the client drives — the browser's, Node's global one, or a
+ * `ws` socket — as far as it uses one. Named without the DOM library's event
+ * types, so a project typed for Node alone compiles against it.
+ */
 export interface WSClientSocket {
   send(data: string): void;
   close(code?: number, reason?: string): void;
   readonly readyState: number;
   readonly bufferedAmount: number;
-  onopen: ((ev: Event) => void) | null;
-  onmessage: ((ev: MessageEvent) => void) | null;
-  onclose: ((ev: CloseEvent) => void) | null;
-  onerror: ((ev: Event) => void) | null;
+  onopen: SocketHandler<unknown>;
+  onmessage: SocketHandler<WSMessageEventLike>;
+  onclose: SocketHandler<WSCloseEventLike>;
+  onerror: SocketHandler<unknown>;
 }
 
 /** Factory to create a WebSocket instance (allows DI for testing) */

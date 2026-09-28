@@ -90,6 +90,17 @@ describe("courierStudio() for webpack", () => {
     expect(main.import[1]).toBe("./src/main.js");
   });
 
+  it("leaves an entry that names no entries as it is", async () => {
+    const compiler = {
+      options: { entry: "./src/main.js" as unknown, mode: "development", target: "web" },
+    };
+
+    webpackStudio({ enabled: true }).apply(compiler);
+    const entry = await (compiler.options.entry as () => Promise<unknown>)();
+
+    expect(entry).toBe("./src/main.js");
+  });
+
   it("connects a development build", async () => {
     const code = await bundle("development");
 

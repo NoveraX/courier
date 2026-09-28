@@ -86,6 +86,8 @@ export function useComputedQuery<TQueryData, TStreamData>(
   useSubscription<TStreamData>(subscribeFn, groupName, options.subscriptionMethod, {
     variables: options.subscriptionVariables ?? variables,
     enabled,
+    /* Every event goes into the query; none is kept beside it. */
+    maxEvents: 0,
     onData: (event) => {
       const pending = held.current.events;
       if (pending.length > 0 || queryClient.getQueryData(queryKey) === undefined) {

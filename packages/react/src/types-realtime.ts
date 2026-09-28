@@ -15,6 +15,12 @@ export type CourierSubscriptionOptions<TResponse, TVariables> = WithVariables<TV
   enabled?: boolean;
   /** Data to show immediately while the connection is being established */
   optimisticData?: TResponse;
+  /**
+   * How many of the stream's latest events `events` keeps: 100 unless set.
+   * `Infinity` keeps every event, and the list then grows for as long as the
+   * stream runs.
+   */
+  maxEvents?: number;
   /** Called on each incoming SSE event */
   onData?: (event: SSEEvent<TResponse>) => void;
   /**
@@ -37,7 +43,7 @@ export type CourierSubscriptionOptions<TResponse, TVariables> = WithVariables<TV
 export interface SubscriptionResult<TData> {
   /** Latest event payload, or `optimisticData` until the first one arrives */
   data: TData | undefined;
-  /** Every event this stream has delivered, oldest first */
+  /** The stream's latest events, oldest first: at most `maxEvents` of them */
   events: SSEEvent<TData>[];
   /**
    * The stream's connection status: `connecting` until it says otherwise,

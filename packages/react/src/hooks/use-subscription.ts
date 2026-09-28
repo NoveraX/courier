@@ -5,6 +5,7 @@ import type { ConnectionStatus, SSEEvent, SSESubscription } from "@noverax/couri
 import * as React from "react";
 
 import type { SubscriptionResult } from "../types";
+import { consumeStream, toError } from "./consume-stream";
 import { streamKeyOf } from "./stream-key";
 
 export interface UseSubscriptionOptions<TData> {
@@ -153,20 +154,4 @@ export function useSubscription<TData>(
 
 function emptyStream<TData>(key: string, optimisticData: TData | undefined): StreamState<TData> {
   return { key, data: optimisticData, events: [], error: undefined };
-}
-
-async function consumeStream<TData>(
-  sub: SSESubscription<unknown>,
-  receive: (event: SSEEvent<TData>) => void,
-  fail: (error: Error) => void,
-): Promise<void> {
-  try {
-    for await (const event of sub) receive(event as SSEEvent<TData>);
-  } catch (error) {
-    fail(toError(error));
-  }
-}
-
-function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
 }

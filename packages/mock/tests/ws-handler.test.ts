@@ -488,7 +488,8 @@ describe("mock ws-handler — real broadcast", () => {
   });
 
   it("preserves the client-supplied qualified topic in outbound data frames", async () => {
-    // Real Courier clients subscribe with `{source}.{group}.{method}#{varsHash}`
+    // Real Courier clients subscribe with `{source}.{group}.{method}#{variables}`,
+    // the variables as canonical JSON
     // The mock server must echo that exact topic in `subscribed` and outbound
     // `data` frames so the client topic dispatcher resolves them. Without
     // this, browser-side handlers silently drop every server message.

@@ -56,10 +56,12 @@ export async function dispatchMessage<TChannelCtx extends MessageRouterContext>(
   if (msg.type === "subscribe") {
     if (state.subscribed) return;
     state.subscribed = true;
-    // Adopt the client's qualified topic — it includes the source name and
-    // the variables hash, so multiplexed broadcasts agree on a single key
-    // across all peers and the client's topic dispatcher resolves frames
-    // we send back to the matching subscriber.
+    // Adopt the client's qualified topic — the source name, then the
+    // variables as canonical JSON after `#` — so broadcasts agree on one key
+    // across peers with equal variables, and the client's topic dispatcher
+    // resolves the frames sent back to the matching subscriber. A channel
+    // reached at its declared path is a `.connect()` channel, which core
+    // refuses a `.topic()` key, so the variables alone name its topic.
     const clientTopic = msg.topic ?? channelCtx.topic;
     channelCtx.topic = clientTopic;
     registry.register(clientTopic, ws);

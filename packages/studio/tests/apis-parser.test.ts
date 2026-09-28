@@ -392,17 +392,17 @@ const POSTMAN_UNSUPPORTED_SPEC = JSON.stringify({
 })
 
 describe("parseSpec — HTTP methods", () => {
-  it("keeps HEAD, which the builder can express", () => {
+  it("keeps HEAD and OPTIONS, which the builder can express", () => {
     const spec = parseSpec(METHOD_COVERAGE_SPEC)
     const things = spec.groups.find((g) => g.name === "things")!
 
-    expect(things.endpoints.map((e) => e.httpMethod).sort()).toEqual(["get", "head"])
+    expect(things.endpoints.map((e) => e.httpMethod).sort()).toEqual(["get", "head", "options"])
   })
 
-  it("reports OPTIONS and TRACE as skipped instead of dropping them", () => {
+  it("reports TRACE as skipped instead of dropping it", () => {
     const spec = parseSpec(METHOD_COVERAGE_SPEC)
 
-    expect(spec.skipped.map((o) => o.method).sort()).toEqual(["OPTIONS", "TRACE"])
+    expect(spec.skipped.map((o) => o.method)).toEqual(["TRACE"])
     expect(spec.skipped[0]!.path).toBe("/things")
     expect(spec.skipped[0]!.reason).toContain("builder")
   })
@@ -414,14 +414,12 @@ describe("parseSpec — HTTP methods", () => {
     expect(spec.skipped.map((o) => o.method)).not.toContain("SUMMARY")
   })
 
-  it("carries HEAD and the skipped list through the Swagger 2.0 conversion", () => {
+  it("carries HEAD and OPTIONS through the Swagger 2.0 conversion", () => {
     const spec = parseSpec(SWAGGER2_HEAD_SPEC)
     const items = spec.groups.find((g) => g.name === "items")!
 
-    expect(items.endpoints[0]!.httpMethod).toBe("head")
-    expect(spec.skipped).toEqual([
-      { method: "OPTIONS", path: "/items", reason: expect.stringContaining("OPTIONS") },
-    ])
+    expect(items.endpoints.map((e) => e.httpMethod)).toEqual(["head", "options"])
+    expect(spec.skipped).toEqual([])
   })
 
   it("reports a Postman request whose method has no builder verb", () => {

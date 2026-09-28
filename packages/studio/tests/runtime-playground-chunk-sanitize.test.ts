@@ -1,6 +1,6 @@
 /**
  * Tests for the runtime → server → UI sanitizers in
- * `runtime-playground-router-sanitize.ts`: sanitizeChunk, sanitizeEnd,
+ * `runtime-playground-chunk-sanitize.ts`: sanitizeChunk, sanitizeEnd,
  * sanitizeError.
  */
 
@@ -9,7 +9,7 @@ import {
   sanitizeChunk,
   sanitizeEnd,
   sanitizeError,
-} from "../src/server/runtime-playground-router-sanitize";
+} from "../src/server/runtime-playground-chunk-sanitize";
 
 describe("sanitizeChunk", () => {
   it("accepts a valid http-result chunk", () => {
@@ -168,5 +168,19 @@ describe("sanitizeError", () => {
 
   it("rejects empty rid", () => {
     expect(sanitizeError({ rid: "", error: { message: "x" } })).toBeNull();
+  });
+});
+
+describe("an upload's progress from a runtime", () => {
+  it("passes with its byte counts and percentage", () => {
+    const chunk = { kind: "upload-progress", loaded: 5, total: 10, percentage: 50 };
+
+    expect(sanitizeChunk({ rid: "r1", chunk })).toEqual({ rid: "r1", chunk });
+  });
+
+  it("is dropped when a count is not a number", () => {
+    const chunk = { kind: "upload-progress", loaded: "5", total: 10, percentage: 50 };
+
+    expect(sanitizeChunk({ rid: "r1", chunk })).toBeNull();
   });
 });

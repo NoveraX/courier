@@ -126,6 +126,7 @@ export type PlaygroundChunk =
     }
   | { kind: "sse-event"; event: unknown }
   | { kind: "ws-message"; data: unknown }
+  | { kind: "upload-progress"; loaded: number; total: number; percentage: number }
 
 export interface PlaygroundEndSummary {
   /** Runtime-side wall-clock duration from dispatch start to terminal event. */
@@ -159,6 +160,8 @@ export interface PlaygroundHistoryEntry {
   timing?: RequestTiming
   proxyTiming?: ProxyTiming
   requestHeaders?: Record<string, string>
+  /** How much of a form body has been sent, while it uploads */
+  upload?: { loaded: number; total: number; percentage: number }
   /** Transport used — undefined = HTTP */
   transport?: "sse" | "ws"
   /** Streaming lifecycle state */

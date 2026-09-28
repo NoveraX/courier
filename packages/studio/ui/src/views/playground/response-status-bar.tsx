@@ -80,6 +80,9 @@ function streamLabel(entry: PlaygroundHistoryEntry): string {
 }
 
 function httpLabel(entry: PlaygroundHistoryEntry): string {
+  if (entry.status === "pending" && entry.upload && entry.upload.percentage < 100) {
+    return `Uploading ${entry.upload.percentage}%`;
+  }
   if (entry.status === "pending") return "Pending";
   if (entry.status === "error") return entry.statusCode ? String(entry.statusCode) : "Error";
   return entry.statusCode ? String(entry.statusCode) : "OK";

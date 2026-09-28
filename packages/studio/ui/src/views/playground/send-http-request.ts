@@ -13,6 +13,7 @@
  */
 
 import { getSocket } from "@/socket";
+import type { WireFormField } from "./form-body";
 import { subscribeForRunData } from "./run-data";
 
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
@@ -26,6 +27,8 @@ export interface SendPayload {
   headers: string;
   mode: "direct" | "proxy";
   transport?: "sse" | "ws";
+  /** A form sent as the body in place of the variables */
+  form?: WireFormField[];
 }
 
 type UpdateEntry = (id: string, patch: Partial<PlaygroundHistoryEntry>) => void;
@@ -63,6 +66,7 @@ export function initiateHttpRequest({
     transport: "http",
     variables: values.variables,
     headers: values.headers,
+    ...(payload.form && { form: payload.form }),
   });
 
   // The rid-keyed wire drives response state through store reducers, so

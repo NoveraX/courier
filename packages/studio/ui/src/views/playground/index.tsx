@@ -15,6 +15,7 @@ import { RequestPanel } from "./request-panel";
 import { ResponsePanel } from "./response-panel";
 import { HistoryBar } from "./history-bar";
 import { readRequestValues } from "./request-values";
+import { describeForm, wireForm } from "./form-body";
 
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
@@ -32,21 +33,31 @@ export function PlaygroundView(): React.ReactElement {
 
   const handleSend = useCallback(() => {
     if (!pg.canSend || sending || streaming) return;
-    const request = readRequestValues(pg.variables, pg.headers);
+    const asForm = pg.bodyKind === "form" && !isRealtime;
+    /* A form's fields are its body; only the headers are read as JSON then. */
+    const request = readRequestValues(asForm ? "{}" : pg.variables, pg.headers);
     if (!request.ok) {
       toast.error(request.problem);
       return;
     }
-    send({
+    const payload = {
       source: pg.source,
       group: pg.group,
       method: pg.method,
-      variables: pg.variables,
+      variables: asForm ? describeForm(pg.formFields) : pg.variables,
       headers: pg.headers,
       mode: pg.mode,
       transport: pg.endpointInfo?.transport,
-    }, request.values);
+    };
     pg.setResponseTab(isRealtime ? "stream" : "body");
+    if (!asForm) {
+      send(payload, request.values);
+      return;
+    }
+    wireForm(pg.formFields).then(
+      (form) => send({ ...payload, form }, { variables: undefined, headers: request.values.headers }),
+      (error: unknown) => toast.error(`Could not read the form's files: ${String(error)}`),
+    );
   }, [send, sending, streaming, pg, isRealtime]);
 
   // Cmd+Enter sends, as the Send button does; while a stream is live the
@@ -125,6 +136,12 @@ export function PlaygroundView(): React.ReactElement {
             groupPrefix={pg.groupPrefix}
             onVariablesChange={pg.setVariables}
             onHeadersChange={pg.setHeaders}
+            body={{
+              kind: pg.bodyKind,
+              formFields: pg.formFields,
+              onKindChange: pg.setBodyKind,
+              onFormFieldsChange: pg.setFormFields,
+            }}
           />
         </ResizablePanel>
 

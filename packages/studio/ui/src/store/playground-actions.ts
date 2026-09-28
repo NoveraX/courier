@@ -55,6 +55,11 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
     appendPlaygroundChunk: (rid, chunk) =>
       set((s) => {
         const patch = (entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry => {
+          /* Progress replaces the last; it is not kept as part of the answer. */
+          if (chunk.kind === "upload-progress") {
+            const { loaded, total, percentage } = chunk;
+            return { ...entry, upload: { loaded, total, percentage } };
+          }
           const nextChunks = [...(entry.chunks ?? []), chunk];
           const next: PlaygroundHistoryEntry = { ...entry, chunks: nextChunks };
           if (chunk.kind === "http-result") {

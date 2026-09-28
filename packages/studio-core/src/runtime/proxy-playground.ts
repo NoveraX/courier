@@ -3,6 +3,7 @@ import {
   getAppOriginParsed,
   type ProxyPath,
   resolveProxyPath,
+  type UploadProgress,
 } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 
@@ -27,6 +28,7 @@ export interface PlaygroundCall {
  * @param sources - The runtime's registered sources
  * @param call - The endpoint, its variables and headers
  * @param raw - Whether to answer with the status and headers around the data
+ * @param onUploadProgress - Told how much of a form body has been sent
  * @returns What the endpoint's call returns: data, the raw answer, a
  *   subscription or a channel
  * @example
@@ -34,14 +36,20 @@ export interface PlaygroundCall {
  * const answer = await callThroughProxy(sources, { source: "api", group: "users", method: "list", variables: {}, headers: {} }, true);
  * ```
  */
-export function callThroughProxy(sources: Sources, call: PlaygroundCall, raw: boolean): unknown {
+export function callThroughProxy(
+  sources: Sources,
+  call: PlaygroundCall,
+  raw: boolean,
+  onUploadProgress?: (progress: UploadProgress) => void,
+): unknown {
   const definition = Reflect.get(sources, call.source);
   const client: unknown = createProxyCaller<unknown>(call.source, {
     source: isRecord(definition) ? definition : undefined,
     proxyPath: absoluteProxyPath(definition),
     ...(Object.keys(call.headers).length > 0 && { headers: call.headers }),
   });
-  const root = raw ? member(client, "raw") : client;
+  const scoped = onUploadProgress ? withOptions(client, { onUploadProgress }) : client;
+  const root = raw ? member(scoped, "raw") : scoped;
   const owner = call.group ? member(root, call.group) : root;
   const endpoint = member(owner, call.method);
   if (typeof endpoint !== "function") {
@@ -72,6 +80,12 @@ function proxyPathOf(definition: unknown): ProxyPath | undefined {
     return typeof value === "string" ? value : undefined;
   };
   return { http: pick("http"), sse: pick("sse"), ws: pick("ws") };
+}
+
+/* A client's `.with()` gives a client that sends every call with those options. */
+function withOptions(client: unknown, options: Record<string, unknown>): unknown {
+  const scope = member(client, "with");
+  return typeof scope === "function" ? Reflect.apply(scope, client, [options]) : client;
 }
 
 function member(value: unknown, key: string): unknown {

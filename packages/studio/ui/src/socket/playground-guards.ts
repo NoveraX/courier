@@ -54,6 +54,11 @@ function isValidChunk(value: unknown): value is PlaygroundChunk {
   if (kind === "ws-message") {
     return "data" in value
   }
+  if (kind === "upload-progress") {
+    return [value.loaded, value.total, value.percentage].every(
+      (count) => typeof count === "number" && Number.isFinite(count),
+    )
+  }
   return false
 }
 

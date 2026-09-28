@@ -1,6 +1,6 @@
 import type { Namespace } from "socket.io";
 import { type InFlight, type InFlightEntry, settle } from "./playground-in-flight";
-import { sanitizeChunk, sanitizeEnd, sanitizeError } from "./runtime-playground-router-sanitize";
+import { sanitizeChunk, sanitizeEnd, sanitizeError } from "./runtime-playground-chunk-sanitize";
 
 /** What a runtime sends back for a playground request, forwarded to the UI that asked. */
 export interface PlaygroundForwarders {

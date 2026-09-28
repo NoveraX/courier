@@ -3,6 +3,7 @@
  * each one passes at the wire before the responder acts on it.
  */
 
+import { type PlaygroundFormField, readPlaygroundForm } from "./playground-form";
 export interface PlaygroundExecutePayload {
   rid: string;
   source: string;
@@ -13,6 +14,8 @@ export interface PlaygroundExecutePayload {
   mode: "direct" | "proxy";
   variables?: unknown;
   headers?: Record<string, string>;
+  /** A form to send as the body, in place of the variables */
+  form?: PlaygroundFormField[];
 }
 
 export interface PlaygroundCancelPayload {
@@ -43,7 +46,10 @@ export function sanitizeExecute(raw: unknown): PlaygroundExecutePayload | null {
   }
   if (r.transport !== "http" && r.transport !== "sse" && r.transport !== "ws") return null;
   if (hasDangerousKeys(r.variables) || hasDangerousKeys(r.headers)) return null;
+  const form = readPlaygroundForm(r.form);
+  if (form === null) return null;
   return {
+    ...(form && { form }),
     rid: r.rid,
     source: r.source,
     group: r.group,

@@ -61,9 +61,11 @@ beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "courier-config-jiti-")));
   write("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }));
   write("src/value.ts", 'export const origin = "project";\n');
-  write("node_modules/@app/value/package.json", JSON.stringify({ name: "@app/value", main: "index.js" }));
-  write("node_modules/@app/value/index.js", 'exports.origin = "installed";\n');
+  write("src/shared.ts", 'export const origin = "project";\n');
+  write("node_modules/@app/shared/package.json", JSON.stringify({ name: "@app/shared", main: "index.js" }));
+  write("node_modules/@app/shared/index.js", 'exports.origin = "installed";\n');
   write("entry.ts", 'export { origin } from "@app/value";\n');
+  write("packaged.ts", 'export { origin } from "@app/shared";\n');
   vi.mocked(createJiti).mockClear();
 });
 
@@ -80,12 +82,29 @@ describe("createConfigJiti", () => {
     expect(loaded.origin).toBe("project");
   });
 
-  it("resolves the same import to the installed package with aliases off", async () => {
+  it("leaves the project's path aliases unfollowed with aliases off", async () => {
     const jiti = await createConfigJiti(join(root, "entry.ts"), { aliases: false });
+
+    await expect(jiti.import(join(root, "entry.ts"))).rejects.toThrow("Cannot find module '@app/value'");
+  });
+
+  it("takes an installed package of an aliased scope past the alias, as TypeScript does", async () => {
+    /* The alias led every name of the scope to src, so an installed package
+       loaded the project's file of the same name instead of its build. */
+    const aliased = await createConfigJiti(join(root, "packaged.ts"));
+    const plain = await createConfigJiti(join(root, "packaged.ts"), { aliases: false });
+
+    expect((await aliased.import<{ origin: string }>(join(root, "packaged.ts"))).origin).toBe("installed");
+    expect((await plain.import<{ origin: string }>(join(root, "packaged.ts"))).origin).toBe("installed");
+  });
+
+  it("loads a config in a project whose tsconfig maps every specifier with `*`", async () => {
+    write("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "*": ["./types/*"], "@app/*": ["./src/*"] } } }));
+    const jiti = await createConfigJiti(join(root, "entry.ts"));
 
     const loaded = await jiti.import<{ origin: string }>(join(root, "entry.ts"));
 
-    expect(loaded.origin).toBe("installed");
+    expect(loaded.origin).toBe("project");
   });
 
   it("without a cache, leaves jiti its own transform and no file cache, so nothing is memoized", async () => {
@@ -172,9 +191,8 @@ describe("createConfigJiti with a transform cache", () => {
     const plain = await createConfigJiti(join(root, "entry.ts"), { aliases: false, transformCache });
 
     const viaAliases = await aliased.import<{ origin: string }>(join(root, "entry.ts"));
-    const viaPackage = await plain.import<{ origin: string }>(join(root, "entry.ts"));
 
     expect(viaAliases.origin).toBe("project");
-    expect(viaPackage.origin).toBe("installed");
+    await expect(plain.import(join(root, "entry.ts"))).rejects.toThrow("Cannot find module '@app/value'");
   });
 });

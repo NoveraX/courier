@@ -145,6 +145,45 @@ describe("readPathAliases", () => {
     expect(aliases.candidatesFor("@/thing")).toEqual([join(root, "src/thing")]);
   });
 
+  it("takes an installed package of an aliased scope past the alias, and the rest through it", () => {
+    /* The alias for a whole scope was followed for every name in it, so a
+       package installed from the scope loaded the project's file instead. */
+    install("@acme/ui");
+    write("src/ui.ts", "");
+    write("src/utils/index.ts", "");
+    tsconfig({ compilerOptions: { paths: { "@acme/*": ["./src/*"] } } });
+    const aliases = readPathAliases(root);
+
+    expect(aliases.candidatesFor("@acme/ui")).toEqual([]);
+    expect(aliases.candidatesFor("@acme/ui/button")).toEqual([]);
+    expect(aliases.candidatesFor("@acme/utils")).toEqual([join(root, "src/utils")]);
+    expect(aliases.loader).toEqual({ "@acme/utils": join(root, "src/utils") });
+  });
+
+  it("gives the loader every name of an aliased scope when the project installed none of them", () => {
+    write("src/ui.tsx", "");
+    write("src/types.d.ts", "");
+    tsconfig({ compilerOptions: { paths: { "@acme/*": ["./src/*"] } } });
+
+    expect(readPathAliases(root).loader).toEqual({
+      "@acme/types": join(root, "src/types"),
+      "@acme/ui": join(root, "src/ui"),
+    });
+  });
+
+  it("leaves out a catch-all alias, which the loader would put before every path", () => {
+    /* `"*": ["./types/*"]` reached the loader as an alias for the empty
+       prefix, and no config of such a project loaded: every path, the
+       config's own included, was looked up under types/. */
+    install("some-lib");
+    tsconfig({ compilerOptions: { paths: { "*": ["./types/*"], "@/*": ["./src/*"] } } });
+    const aliases = readPathAliases(root);
+
+    expect(aliases.loader).toEqual({ "@/": join(root, "src/") });
+    expect(aliases.candidatesFor("some-lib")).toEqual([]);
+    expect(aliases.candidatesFor("@/thing")).toEqual([join(root, "src/thing")]);
+  });
+
   it("reads paths from the tsconfig it extends", () => {
     tsconfig({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }, "base/tsconfig.json");
     tsconfig({ extends: "./base/tsconfig.json", compilerOptions: { strict: true } });

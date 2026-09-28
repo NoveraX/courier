@@ -41,10 +41,8 @@ Register sources in `instrumentation.ts`, then create a single catch-all route t
 import { registerSources } from "@noverax/courier"
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { sources } = await import("@/api/sources")
-    registerSources(sources)
-  }
+  const { sources } = await import("@/api/sources")
+  registerSources(sources)
 }
 ```
 
@@ -54,6 +52,8 @@ import { apiRoute } from "@noverax/courier-next"
 
 export const { GET, POST } = apiRoute()
 ```
+
+`register()` runs once in each runtime the app uses, and each runtime has its own registry: a route with `export const runtime = "edge"` reads the Edge runtime's, so the sources are registered in both. If your sources module imports Node-only code, register an Edge-safe one when `process.env.NEXT_RUNTIME === "edge"`. `sseRoute()` streams in the Edge Runtime as well as in Node.js.
 
 That's it. `apiRoute()` is zero-arg — sources are read at request time from the core global registry. The proxy caller on the client will POST to this route, and query-type endpoints can also use GET for caching.
 

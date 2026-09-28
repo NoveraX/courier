@@ -1,6 +1,6 @@
 import type { HandlerConfig } from "@noverax/courier";
-import { createHandler, discoverAppOrigin, requireSources } from "@noverax/courier";
-import { announceHosting, deferAnnounce } from "@noverax/courier/announce";
+import { createHandler, discoverAppOrigin } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 import type { NextRequest } from "next/server";
 
 import { publicRequest } from "./public-request";
@@ -43,13 +43,7 @@ export function apiRoute(config?: HandlerConfig): {
   /* Next evaluates this module during `next build`, before any `register()`
      hook has populated the registry, so the announcement waits for a real
      request rather than failing the build. */
-  const announce = deferAnnounce(() =>
-    announceHosting({
-      transports: ["http"],
-      sources: Object.values(requireSources()),
-      framework: "next",
-    }),
-  );
+  const announce = announceWhenRegistered({ transports: ["http"], framework: "next" });
 
   return {
     GET: (request: NextRequest) => {

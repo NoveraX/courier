@@ -86,10 +86,8 @@ Create a Next.js App Router route handler that proxies browser requests to your 
 import { registerSources } from "@noverax/courier"
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { sources } = await import("./lib/sources")
-    registerSources(sources)
-  }
+  const { sources } = await import("./lib/sources")
+  registerSources(sources)
 }
 ```
 
@@ -99,7 +97,7 @@ import { apiRoute } from "@noverax/courier-next"
 export const { POST } = apiRoute()
 ```
 
-Next.js runs `instrumentation.ts` once at server start, populating the core global registry that `apiRoute()` reads at request time. The route handles all Courier proxy requests — parses the incoming POST body, resolves the correct endpoint, calls your backend, and returns the response.
+Next.js runs `instrumentation.ts` once at server start, populating the core global registry that `apiRoute()` reads at request time. `register()` runs once in each runtime the app uses, and each runtime has its own registry: a route with `export const runtime = "edge"` reads the Edge runtime's, so the sources are registered in both. If your sources module imports Node-only code, register an Edge-safe one when `process.env.NEXT_RUNTIME === "edge"`. `sseRoute()` streams in the Edge Runtime as well as in Node.js. The route handles all Courier proxy requests — parses the incoming POST body, resolves the correct endpoint, calls your backend, and returns the response.
 
 ## Step 2: Client-side caller (React Query)
 

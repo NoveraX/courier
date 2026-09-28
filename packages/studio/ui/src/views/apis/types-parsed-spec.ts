@@ -25,7 +25,20 @@ export interface ParsedSchemaProperty {
 
 export interface ParsedSchema {
   name: string;
-  type: "object" | "array" | "string" | "number" | "integer" | "boolean" | "enum" | "ref" | "any";
+  type:
+    | "object"
+    | "array"
+    | "string"
+    | "number"
+    | "integer"
+    | "boolean"
+    | "null"
+    | "enum"
+    | "ref"
+    | "union"
+    | "any";
+  /** Alternatives of a union. */
+  variants?: ParsedSchema[];
   properties?: Record<string, ParsedSchemaProperty>;
   items?: ParsedSchema;
   enum?: (string | number)[];
@@ -45,7 +58,7 @@ export interface ParsedParameter {
 export interface ParsedEndpoint {
   name: string;
   operationId: string | null;
-  httpMethod: "get" | "head" | "post" | "put" | "patch" | "delete";
+  httpMethod: "get" | "head" | "options" | "post" | "put" | "patch" | "delete";
   path: string;
   fullPath: string;
   description: string;

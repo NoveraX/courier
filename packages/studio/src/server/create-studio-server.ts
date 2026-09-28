@@ -81,6 +81,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     playgroundRouter,
     nameSource,
     requestLog,
+    token,
   });
 
   const watcherStatus = createWatcherStatus(uiNamespace);

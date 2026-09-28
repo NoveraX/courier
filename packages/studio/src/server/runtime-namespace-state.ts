@@ -15,6 +15,7 @@
 
 import type { Socket } from "socket.io";
 import type { BindingTransport } from "./catalog/binding-table";
+import { isTrustedRuntime } from "./runtime-trust";
 
 const RUNTIME_REGISTRY_KEY = Symbol.for("courier.studio.runtime-registry");
 const SESSION_VERSION_REGISTRY_KEY = Symbol.for("courier.studio.session-version-registry");
@@ -70,13 +71,16 @@ export function registerRuntime(entry: RuntimeRegistryEntry): "claimed" | "dupli
   runtimeSockets.set(entry.runtimeId, [...sockets.filter((s) => s !== entry.socket), entry.socket]);
   /* A live runtime already serving sources under the id keeps its calls: a
      second process claiming the id — a copy started by mistake, or one
-     posing as it — is held back, and Studio names the clash. */
+     posing as it — is held back, and Studio names the clash. One with the
+     project's token takes the id from one without it, which could otherwise
+     hold it first and keep the application's own runtime out. */
   const current = runtimeRegistry.get(entry.runtimeId);
   if (
     current &&
     current.socket !== entry.socket &&
     current.socket.connected &&
-    current.sourceNames.length > 0
+    current.sourceNames.length > 0 &&
+    !(isTrustedRuntime(entry.socket) && !isTrustedRuntime(current.socket))
   ) {
     return "duplicate";
   }

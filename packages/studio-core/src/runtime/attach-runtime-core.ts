@@ -29,12 +29,20 @@ interface InternalHandle extends RuntimeHandle {
 const handles = new Map<string, InternalHandle>();
 const attaching = new Map<string, Promise<RuntimeHandle>>();
 
+/** What a server runtime learns from its courier.config about reaching Studio. */
+export interface ServerRuntimeSetup {
+  /** Where Studio listens, from the config's `studio` block */
+  studio: ConfiguredStudioAddress;
+  /** This project's Studio token, read afresh for each connection */
+  readToken: () => string | undefined;
+}
+
 /**
- * Loads courier.config for a server runtime and says where Studio listens.
+ * Loads courier.config for a server runtime and says how to reach Studio.
  * The browser build of the runtime has none, so its graph never reaches the
- * disk loader.
+ * disk loader, and a browser runtime presents no token.
  */
-export type ServerConfigLoader = () => Promise<ConfiguredStudioAddress | undefined>;
+export type ServerConfigLoader = () => Promise<ServerRuntimeSetup | undefined>;
 
 /**
  * `attachRuntime` for either build: the server one passes its config loader,
@@ -74,7 +82,7 @@ async function attachFresh(
 ): Promise<RuntimeHandle> {
   // ── Production-relevant: source registry + appOrigin ──
 
-  const studioAddress = await loadServerConfig?.();
+  const setup = await loadServerConfig?.();
 
   // Install the announce-driven runtime source registry BEFORE consuming
   // the announcements, so past announcements replay into both the wire
@@ -129,9 +137,10 @@ async function attachFresh(
     wireHooks(bus, runtimeId, resolveSourceName);
     wireHttpHooks(bus, runtimeId, resolveSourceName);
 
-    const studioUrl = resolveStudioUrl(studioAddress);
-    connectRuntimeSocket({ runtimeId, kind: handle.kind, studioUrl, bus }, pending, handle).catch(
-      (err: unknown) => log.warn("Studio connection failed to start", err),
+    const studioUrl = resolveStudioUrl(setup?.studio);
+    const input = { runtimeId, kind: handle.kind, studioUrl, bus, readToken: setup?.readToken };
+    connectRuntimeSocket(input, pending, handle).catch((err: unknown) =>
+      log.warn("Studio connection failed to start", err),
     );
   }
 

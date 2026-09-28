@@ -5,11 +5,13 @@ import { BindingTable } from "../src/server/catalog/binding-table";
 import { setupRuntimeNamespace } from "../src/server/runtime-namespace";
 import { clearStudioServerState, getRuntimeEntry } from "../src/server/runtime-namespace-state";
 import { TOKEN_PAGES } from "../src/server/live-events";
+import { FIXED_TOKEN, FIXED_TOKEN_VALUE } from "./helpers/fixed-token";
 
 type Handler = (raw: unknown) => void;
 
 interface FakeSocket {
   id: string;
+  handshake: { auth: Record<string, unknown> };
   handlers: Map<string, Handler>;
   on(event: string, fn: Handler): void;
   emit(event: string, raw: unknown): void;
@@ -21,6 +23,7 @@ function makeSocket(): FakeSocket {
   socketIdCounter += 1;
   return {
     id: `fake-socket-${socketIdCounter}`,
+    handshake: { auth: { token: FIXED_TOKEN_VALUE } },
     handlers,
     on(event, fn) {
       handlers.set(event, fn);
@@ -67,6 +70,7 @@ describe("setupRuntimeNamespace", () => {
     const ns = makeNamespace();
     const ui = { emit: vi.fn() } as unknown as Namespace;
     setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN,
       bindingTable,
       uiNamespace: ui,
     });
@@ -92,7 +96,8 @@ describe("setupRuntimeNamespace", () => {
   it("ignores announce before hello", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN, bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -103,7 +108,8 @@ describe("setupRuntimeNamespace", () => {
   it("rejects malformed hello payloads", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN, bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -114,7 +120,8 @@ describe("setupRuntimeNamespace", () => {
   it("detaches the runtime from the binding table on disconnect", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN, bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -131,7 +138,8 @@ describe("setupRuntimeNamespace", () => {
   it("adds to the claim when announce arrives twice", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN, bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -145,7 +153,8 @@ describe("setupRuntimeNamespace", () => {
   it("adopts listenOrigin from runtime:hello when announce never carries one", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN, bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -169,6 +178,7 @@ describe("setupRuntimeNamespace", () => {
     const ns = makeNamespace();
     const ui = { emit: vi.fn() } as unknown as Namespace;
     setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN,
       bindingTable,
       uiNamespace: ui,
     });
@@ -203,6 +213,7 @@ describe("setupRuntimeNamespace", () => {
     /* The pages with the token, which see each event whole. */
     const pages = { ...ui, to: (room: string) => (room === TOKEN_PAGES ? ui : { emit: vi.fn() }) };
     setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN,
       bindingTable,
       uiNamespace: pages as unknown as Namespace,
     });
@@ -227,6 +238,7 @@ describe("setupRuntimeNamespace", () => {
     const ns = makeNamespace();
     const ui = { emit: vi.fn() } as unknown as Namespace;
     setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN,
       bindingTable,
       uiNamespace: ui,
     });
@@ -256,7 +268,8 @@ describe("setupRuntimeNamespace", () => {
   it("stores listenOrigin and framework supplied via runtime:announce", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
-    setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable });
+    setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN, bindingTable });
 
     const socket = makeSocket();
     ns.connect(socket);

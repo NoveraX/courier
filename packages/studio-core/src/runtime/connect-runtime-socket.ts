@@ -50,6 +50,12 @@ interface ConnectInput {
    * binding-table snapshot for the playground "resolved URL" badge.
    */
   listenOrigin?: string;
+  /**
+   * Reads this project's Studio token, which a server runtime presents on
+   * each connection so Studio sends it Playground calls. A browser runtime
+   * has none.
+   */
+  readToken?: () => string | undefined;
 }
 
 /** Hook that lets `attachRuntime` install the real socket disposer once ready. */
@@ -90,6 +96,8 @@ export async function connectRuntimeSocket(
   try {
     socket = mod.io(`${input.studioUrl}/runtime`, {
       transports: ["websocket"],
+      /* Asked on every attempt: Studio may write the token after this starts. */
+      auth: (send) => send(tokenAuth(input.readToken)),
       /* A dev-time side channel must never be what keeps a process alive: a
          seed script, a CLI task or a test run that attached hung forever
          when Studio was not running, retrying to connect. Only where timers
@@ -182,4 +190,9 @@ export async function connectRuntimeSocket(
     socket.removeAllListeners();
     socket.disconnect();
   });
+}
+
+function tokenAuth(readToken: (() => string | undefined) | undefined): { token?: string } {
+  const token = readToken?.();
+  return token === undefined ? {} : { token };
 }

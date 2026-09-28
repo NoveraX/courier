@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { setupRuntimeNamespace } from "../src/server/runtime-namespace";
 import { clearStudioServerState, getRuntimeEntry } from "../src/server/runtime-namespace-state";
+import { FIXED_TOKEN, FIXED_TOKEN_VALUE } from "./helpers/fixed-token";
 
 type Handler = (raw: unknown) => void;
 
@@ -19,6 +20,7 @@ function makeSocket(id: string) {
   const handlers = new Map<string, Handler>();
   return {
     id,
+    handshake: { auth: { token: FIXED_TOKEN_VALUE } },
     on(event: string, fn: Handler) {
       handlers.set(event, fn);
     },
@@ -36,7 +38,7 @@ function serve(): { bindingTable: BindingTable; connect(socket: ReturnType<typeo
     },
   } as unknown as Namespace;
   const bindingTable = new BindingTable();
-  setupRuntimeNamespace(runtime, { bindingTable, uiNamespace: { emit: vi.fn() } as unknown as Namespace });
+  setupRuntimeNamespace(runtime, { bindingTable, token: FIXED_TOKEN, uiNamespace: { emit: vi.fn() } as unknown as Namespace });
   return { bindingTable, connect: (socket) => onConnection?.(socket) };
 }
 

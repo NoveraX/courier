@@ -182,9 +182,10 @@ The universal adapter interface. All server framework adapters use it internally
 | --- | --- | --- | --- |
 | `createCaller(api)` | Direct | Any runtime | `TypedClient<typeof api>` |
 | `createProxyCaller<typeof api>("api")` | Proxy | Browser | `TypedClient<typeof api>` |
-| `createProxyQueryCaller<typeof api>()` | Proxy + hooks | Browser (React) | `{ useQuery, useMutation, caller, ... }` |
+| `createQueryCaller(api)` | Direct + hooks | Browser (React) | `QueryCallerClient<typeof api>` |
+| `createProxyQueryCaller<typeof api>("api", { boundary })` | Proxy + hooks | Browser (React) | `QueryCallerClient<typeof api>` |
 
-All return the same `TypedClient<typeof api>` type (or wrap it), giving you identical type inference regardless of which factory you use.
+The callers return a `TypedClient<typeof api>`, and the query callers the same groups with React Query hooks on each — `q.users.useQuery("getAll")` — so type inference is identical whichever factory you use. Build each once in a module of its own: see [Singleton Pattern](/docs/advanced/singleton).
 
 ## Next Steps
 

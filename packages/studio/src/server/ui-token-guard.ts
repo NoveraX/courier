@@ -6,6 +6,7 @@
 import type { Socket } from "socket.io";
 
 import { isPlainObject } from "./is-plain-object";
+import { READ_ONLY_PAGES, TOKEN_PAGES } from "./live-events";
 import type { StudioToken } from "./studio-token";
 import { TOKEN_REFUSAL } from "./token-guard";
 
@@ -29,7 +30,8 @@ export const WRITING_EVENTS: ReadonlySet<string> = new Set([
  * token, as `auth.token`. Each is answered with the refusal instead of run:
  * through its acknowledgement when it waits for one, as the end of its call
  * when it sends a Playground call — so the call stops waiting — and as
- * `studio:read-only` otherwise. The page still receives everything it shows.
+ * `studio:read-only` otherwise. The page still receives everything it shows,
+ * live traffic without its credentials (see `emitLiveEvent`).
  *
  * @param socket - The page's socket, just connected
  * @param token - The project's token
@@ -42,7 +44,11 @@ export const WRITING_EVENTS: ReadonlySet<string> = new Set([
  */
 export function guardUiWrites(socket: Socket, token: StudioToken): void {
   const auth: unknown = socket.handshake.auth;
-  if (token.matches(isPlainObject(auth) ? auth.token : undefined)) return;
+  if (token.matches(isPlainObject(auth) ? auth.token : undefined)) {
+    void socket.join(TOKEN_PAGES);
+    return;
+  }
+  void socket.join(READ_ONLY_PAGES);
   socket.use((packet, next) => {
     const [event] = packet;
     if (!WRITING_EVENTS.has(event)) {

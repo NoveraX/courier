@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { setupRuntimeNamespace } from "../src/server/runtime-namespace";
 import { clearStudioServerState, getRuntimeEntry } from "../src/server/runtime-namespace-state";
+import { TOKEN_PAGES } from "../src/server/live-events";
 
 type Handler = (raw: unknown) => void;
 
@@ -199,9 +200,11 @@ describe("setupRuntimeNamespace", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
     const ui = { emit: vi.fn() };
+    /* The pages with the token, which see each event whole. */
+    const pages = { ...ui, to: (room: string) => (room === TOKEN_PAGES ? ui : { emit: vi.fn() }) };
     setupRuntimeNamespace(ns as unknown as Namespace, {
       bindingTable,
-      uiNamespace: ui as unknown as Namespace,
+      uiNamespace: pages as unknown as Namespace,
     });
 
     const socket = makeSocket();

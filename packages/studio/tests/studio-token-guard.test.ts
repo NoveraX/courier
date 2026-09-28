@@ -165,6 +165,33 @@ describe("a page without the token", () => {
   });
 });
 
+describe("the live traffic", () => {
+  it("reaches a page without the token without its credentials, and a page with it whole", async () => {
+    const app = await runtime();
+    const reader = await page();
+    const owner = await page(token());
+    const seenByReader = new Promise((resolve) => reader.once("event", resolve));
+    const seenByOwner = new Promise((resolve) => owner.once("event", resolve));
+
+    app.emit("event", {
+      id: "r1",
+      type: "request:start",
+      timestamp: Date.now(),
+      sessionId: "server",
+      source: "api",
+      method: "list",
+      requestHeaders: { authorization: "Bearer secret", accept: "application/json" },
+    });
+
+    expect(await seenByReader).toEqual(
+      expect.objectContaining({ requestHeaders: { authorization: "[redacted]", accept: "application/json" } }),
+    );
+    expect(await seenByOwner).toEqual(
+      expect.objectContaining({ requestHeaders: { authorization: "Bearer secret", accept: "application/json" } }),
+    );
+  });
+});
+
 describe("a page with the token", () => {
   it("has the log cleared", async () => {
     const app = await runtime();

@@ -13,6 +13,7 @@
 import { RUNTIME_EVENT_TYPES } from "@noverax/courier-studio-core/runtime";
 import type { Namespace } from "socket.io";
 import { isPlainObject } from "./is-plain-object";
+import { emitLiveEvent } from "./live-events";
 
 /* Read from the package that emits them, so adding an event type in one
    place cannot silently start dropping it in the other. */
@@ -60,6 +61,6 @@ export function broadcastRuntimeEvent(
     log.warn(`Rejected runtime event: type=${type}`);
     return undefined;
   }
-  uiNamespace.emit("event", event);
+  emitLiveEvent(uiNamespace, event);
   return event;
 }

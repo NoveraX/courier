@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ProcessManagerEvents, ProcessManagerOptions } from "../src/server/mock-manager/process-manager";
 import type { SpawnRequest } from "../src/server/mock-manager/types";
+import { TOKEN_PAGES } from "../src/server/live-events";
 
 const fake = {
   events: undefined as ProcessManagerEvents | undefined,
@@ -84,7 +85,8 @@ function studio() {
   const coordinator = createLifecycleCoordinator({
     mockRegistry: registry,
     basePort: 7001,
-    uiNamespace: { emit } as unknown as Namespace,
+    /* The pages with the token, which see each event whole. */
+    uiNamespace: { emit, to: (room: string) => ({ emit: room === TOKEN_PAGES ? emit : vi.fn() }) } as unknown as Namespace,
     transformCacheDirectory: () => STUDIO_TRANSFORMS,
   });
   coordinator.setMocksFile({ file: MOCKS_FILE, error: null });

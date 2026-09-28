@@ -7,7 +7,8 @@
  * a session is exported to be handed around. A header that carries a
  * credential — `Authorization`, a cookie, an API key — is kept by name with
  * its value replaced, the way a browser's sanitized HAR keeps it. The live
- * view, which nothing writes down, still shows it whole.
+ * view, which nothing writes down, shows it whole to a page that presented
+ * Studio's token alone (see `emitLiveEvent`).
  */
 
 /** What a credential's value is replaced with. */

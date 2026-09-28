@@ -1,4 +1,4 @@
-import { courier, defineGroup } from "@noverax/courier/define";
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { describe, expect, it } from "vitest";
 import { getEndpointSchema, validateEndpoint, validateSource } from "../src/contract/validator";
@@ -89,19 +89,53 @@ describe("validateSource", () => {
       },
     });
 
-    const source = { users };
+    const source = defineApi({ baseURL: "https://api.test", groups: { users } });
 
     const mockData = new Map<string, unknown>();
     mockData.set("users/getAll", { id: "1", name: "Alice", email: "a@t.com" });
 
-    const results = await validateSource(
-      source as Record<string, Record<string, unknown>>,
-      mockData,
-    );
+    const results = await validateSource(source, mockData);
 
     expect(results).toHaveLength(2);
     expect(results[0]?.status).toBe("pass"); // getAll with schema
     expect(results[1]?.status).toBe("skip"); // create without schema
+  });
+
+  it("reports mock data that breaks the schema of a defineApi source", async () => {
+    const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response(userSchema) } });
+    const api = defineApi({ baseURL: "https://api.test", groups: { users } });
+
+    const results = await validateSource(api, new Map([["users/getAll", { id: 1 }]]));
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ group: "users", method: "getAll", status: "fail" });
+  });
+
+  it("validates the endpoints of a flat source, keyed by their name", async () => {
+    const flat = defineApi({
+      baseURL: "https://api.test",
+      endpoints: { listUsers: endpoint.get("users").response(userSchema) },
+    });
+
+    const results = await validateSource(flat, new Map([["listUsers", { id: "1", name: "A", email: "a@t" }]]));
+
+    expect(results).toEqual([{ group: "", method: "listUsers", status: "pass", target: "response" }]);
+  });
+
+  it("validates both the groups and the top-level endpoints of a mixed source", async () => {
+    const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response(userSchema) } });
+    const mixed = defineApi({
+      baseURL: "https://api.test",
+      groups: { users },
+      endpoints: { health: endpoint.get("health").response(userSchema) },
+    });
+
+    const results = await validateSource(mixed, new Map([["health", {}]]));
+
+    expect(results.map((r) => [r.group, r.method, r.status])).toEqual([
+      ["users", "getAll", "skip"],
+      ["", "health", "fail"],
+    ]);
   });
 });
 
@@ -179,7 +213,10 @@ describe("validateSource reports every endpoint", () => {
       },
     });
 
-    const results = await validateSource({ users }, new Map());
+    const results = await validateSource(
+      defineApi({ baseURL: "https://api.test", groups: { users } }),
+      new Map(),
+    );
 
     expect(results).toHaveLength(2);
     expect(results.every((r) => r.status === "skip")).toBe(true);
@@ -187,16 +224,12 @@ describe("validateSource reports every endpoint", () => {
   });
 
   it("ignores a helper sitting in the group beside the endpoints", async () => {
-    const source = {
-      users: {
-        options: {},
-        getAll: endpoint.get("").response(userSchema),
-        helper: () => "not an endpoint",
-      },
-    };
+    const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response(userSchema) } });
+    const source = defineApi({ baseURL: "https://api.test", groups: { users } });
+    Object.assign(source.options.groups.users, { helper: () => "not an endpoint" });
 
     const results = await validateSource(
-      source as unknown as Record<string, Record<string, unknown>>,
+      source,
       new Map([["users/getAll", { id: "1", name: "Alice", email: "a@t.com" }]]),
     );
 

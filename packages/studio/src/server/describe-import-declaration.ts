@@ -11,6 +11,7 @@ import { DEFAULT_OPTIONS } from "../apis/generator/types";
 import { resolveImportLayout } from "../apis/layout";
 import type { LoadedCourierConfig } from "./config-loader";
 import { formatImportSnippet } from "./format-import-snippet";
+import { writesExplicitExtensions } from "./mocks-edit/writes-explicit-extensions";
 import { NameTakenError } from "./name-taken-error";
 import type { ImportDeclaration, WriteBody } from "./write-types";
 
@@ -80,9 +81,17 @@ export function describeImportDeclaration({
   const configFile = posixPath(relative(root, loaded.configFile));
   const declared = sourceDeclared(name, join(root, sourceFile), loaded);
   if (declared === "another") throw new NameTakenError(name, sourceFile);
+  /* The config imports the source as it imports its other files. */
+  const configName = relative(root, loaded.configFile);
+  const extension = writesExplicitExtensions(root, configName, configName) ? ".js" : "";
   const source =
     declared === "no"
-      ? sourceParts(name, binding, join(root, sourceFile.replace(/\.ts$/, "")), loaded.configFile)
+      ? sourceParts(
+          name,
+          binding,
+          join(root, sourceFile.replace(/\.ts$/, extension)),
+          loaded.configFile,
+        )
       : undefined;
   const importEntry = Object.hasOwn(loaded.config.imports ?? {}, name)
     ? undefined

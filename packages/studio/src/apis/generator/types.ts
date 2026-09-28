@@ -17,6 +17,13 @@ import type { ImportLayout } from "../layout";
  */
 export type GenerateOptions = CourierImportBase & {
   selectedEndpoints?: Record<string, string[]> | null;
+  /**
+   * The extension the generated files' relative imports carry: `.js` in a
+   * project whose ES modules TypeScript resolves as Node does, where an
+   * import without one does not compile. Decided by where the files go,
+   * never persisted to config.
+   */
+  importExtension?: ".js";
 };
 
 /**
@@ -53,6 +60,8 @@ export interface ResolvedGenerateOptions {
   includeComments: boolean;
   generateClient: "direct" | "proxy" | "both" | "none";
   selectedEndpoints: Record<string, string[]> | null;
+  /** The extension relative imports carry; empty for none. */
+  importExtension: "" | ".js";
   include?: CourierImportBase["include"];
   exclude?: CourierImportBase["exclude"];
   transform?: CourierImportBase["transform"];
@@ -61,7 +70,13 @@ export interface ResolvedGenerateOptions {
 /** The generation settings an import declaration may leave out, and what they default to. */
 export type GenerationDefaults = Omit<
   ResolvedGenerateOptions,
-  "sourceName" | "layout" | "selectedEndpoints" | "include" | "exclude" | "transform"
+  | "sourceName"
+  | "layout"
+  | "selectedEndpoints"
+  | "importExtension"
+  | "include"
+  | "exclude"
+  | "transform"
 >;
 
 export const DEFAULT_OPTIONS: GenerationDefaults = {
@@ -101,6 +116,7 @@ export function applyImportDefaults(
     includeComments: options.includeComments ?? DEFAULT_OPTIONS.includeComments,
     generateClient: options.generateClient ?? DEFAULT_OPTIONS.generateClient,
     selectedEndpoints: options.selectedEndpoints ?? null,
+    importExtension: options.importExtension ?? "",
     include: options.include,
     exclude: options.exclude,
     transform: options.transform,

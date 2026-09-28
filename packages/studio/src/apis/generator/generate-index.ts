@@ -3,150 +3,86 @@
  */
 
 import type { ParsedGroup, ParsedSpec } from "../parser/types";
-import { emitsSchemas } from "./build-endpoint-helpers";
+import { barrelReexports } from "./barrel-reexports";
 import { jsdocText } from "./jsdoc-text";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
+const DIRECT_HINT =
+  "Calls the API directly from the runtime environment (browser, Node.js, Deno, Bun).";
+const PROXY_HINT =
+  "Routes requests through a server-side proxy endpoint. Hides secrets, bypasses CORS, forwards cookies.";
+
+/**
+ * Write the import's barrel: the callers asked for, and the re-exports of
+ * its schemas and types.
+ *
+ * @param spec - The parsed specification
+ * @param groups - The groups, in order; none for an import generated flat
+ * @param options - The import's resolved options
+ * @param groupSchemaMap - The names each written schemas file declares, by group
+ * @returns The barrel
+ * @example
+ * ```ts
+ * generateIndexFile(spec, spec.groups, options, schemaMap).path; // "src/api/pets/index.ts"
+ * ```
+ */
 export function generateIndexFile(
   spec: ParsedSpec,
   groups: ParsedGroup[],
   options: ResolvedGenerateOptions,
-  groupSchemaMap?: Map<string, Set<string>>,
-  flat = false,
+  groupSchemaMap: ReadonlyMap<string, ReadonlySet<string>>,
 ): GeneratedFile {
-  const lines: string[] = [];
   const name = options.sourceName;
-  const hasDirect =
-    options.generateClient !== "none" &&
-    (options.generateClient === "direct" || options.generateClient === "both");
+  const hasDirect = options.generateClient === "direct" || options.generateClient === "both";
   const hasProxy = options.generateClient === "proxy" || options.generateClient === "both";
+  const lines: string[] = [];
 
-  // Imports
-  const courierImports: string[] = [];
-  if (hasDirect) courierImports.push("createCaller");
-  if (hasProxy) courierImports.push("createProxyCaller");
-
+  const courierImports = [
+    ...(hasDirect ? ["createCaller"] : []),
+    ...(hasProxy ? ["createProxyCaller"] : []),
+  ];
   if (courierImports.length > 0) {
     lines.push(`import { ${courierImports.join(", ")} } from "@noverax/courier";`);
   }
   /* The proxy caller needs the source's type alone. Imported as a value, a
      bundler keeping every import as written — `verbatimModuleSyntax` — put
      the source, its upstream address and its headers in the browser. */
-  lines.push(`import ${hasDirect ? "" : "type "}{ ${name} } from "./source";`);
+  lines.push(
+    `import ${hasDirect ? "" : "type "}{ ${name} } from "./source${options.importExtension}";`,
+  );
   lines.push("");
 
-  // Extract first meaningful paragraph from description (skip markdown headers)
-  const shortDescription = extractFirstParagraph(spec.description) || spec.title;
-
-  // Build JSDoc block
-  const buildJsDoc = (mode: string, modeHint: string) => {
-    const jsDocLines: string[] = [];
-    jsDocLines.push("/**");
-    jsDocLines.push(` * \`${mode}\` — ${jsdocText(spec.title)} v${jsdocText(spec.version)}`);
-    jsDocLines.push(` *`);
-    jsDocLines.push(` * ${modeHint}`);
-    if (shortDescription) {
-      jsDocLines.push(` *`);
-      jsDocLines.push(` * ---`);
-      jsDocLines.push(` *`);
-      jsDocLines.push(` * ${jsdocText(shortDescription)}`);
-    }
-    jsDocLines.push(" */");
-    return jsDocLines;
-  };
-
-  // PascalCase source name for variable: timeweb → timewebApi
-  const varDirect = `${name}Api`;
-  const varProxy = `${name}ProxyApi`;
-
-  // Direct mode
   if (hasDirect) {
-    for (const line of buildJsDoc(
-      "DIRECT",
-      "Calls the API directly from the runtime environment (browser, Node.js, Deno, Bun).",
-    )) {
-      lines.push(line);
-    }
-    lines.push(`export const ${varDirect} = createCaller(${name});`);
-    lines.push("");
+    lines.push(...callerDoc(spec, "DIRECT", DIRECT_HINT));
+    lines.push(`export const ${name}Api = createCaller(${name});`, "");
   }
-
-  // Proxy mode
   if (hasProxy) {
-    for (const line of buildJsDoc(
-      "PROXY",
-      "Routes requests through a server-side proxy endpoint. Hides secrets, bypasses CORS, forwards cookies.",
-    )) {
-      lines.push(line);
-    }
-    lines.push(`export const ${varProxy} = createProxyCaller<typeof ${name}>("${name}");`);
-    lines.push("");
+    lines.push(...callerDoc(spec, "PROXY", PROXY_HINT));
+    lines.push(`export const ${name}ProxyApi = createProxyCaller<typeof ${name}>("${name}");`, "");
   }
 
-  // Re-export schemas/types
-  if (flat) {
-    /* Must match the name the file was written under, which follows
-       `generateSchemas` alone — `validation: "none"` still writes schemas.ts,
-       and the barrel used to re-export a `types` file nobody generated. */
-    const file = options.generateSchemas ? "schemas" : "types";
-    if (groupSchemaMap && groupSchemaMap.size > 0) {
-      lines.push(`export * from "./${file}";`);
-    }
-  } else if (groupSchemaMap && groupSchemaMap.size > 0) {
-    /* Must match the name the file was written under, which follows
-       `generateSchemas` alone — `validation: "none"` still writes schemas.ts,
-       and the barrel used to re-export a `types` file nobody generated. */
-    const file = options.generateSchemas ? "schemas" : "types";
-    const exported = new Set<string>();
+  lines.push(...barrelReexports(groups, options, groupSchemaMap), "");
+  return { path: options.layout.indexFile, content: lines.join("\n") };
+}
 
-    for (const group of groups) {
-      const schemaNames = groupSchemaMap.get(group.name);
-      if (!schemaNames) continue;
-
-      const unique = [...schemaNames].filter((n) => !exported.has(n));
-      if (unique.length === 0) continue;
-
-      if (unique.length === schemaNames.size) {
-        lines.push(`export * from "${options.layout.groupSpecifier(group.name, file)}";`);
-      } else {
-        const imports: string[] = [];
-        for (const n of unique) {
-          /* A `XSchema` binding exists only when a validator wrote one. */
-          if (emitsSchemas(options)) imports.push(`${n}Schema`);
-          if (options.generateTypes) imports.push(`type ${n}`);
-        }
-        if (imports.length > 0) {
-          lines.push(
-            `export { ${imports.join(", ")} } from "${options.layout.groupSpecifier(group.name, file)}";`,
-          );
-        }
-      }
-
-      for (const n of schemaNames) exported.add(n);
-    }
-  }
-  lines.push("");
-
-  return {
-    path: options.layout.indexFile,
-    content: lines.join("\n"),
-  };
+/** The comment above a caller: the API, the mode, and its description. */
+function callerDoc(spec: ParsedSpec, mode: string, hint: string): string[] {
+  const short = extractFirstParagraph(spec.description) || spec.title;
+  const lines = ["/**", ` * \`${mode}\` — ${jsdocText(spec.title)} v${jsdocText(spec.version)}`];
+  lines.push(" *", ` * ${hint}`);
+  if (short) lines.push(" *", " * ---", " *", ` * ${jsdocText(short)}`);
+  lines.push(" */");
+  return lines;
 }
 
 /** Extract first meaningful paragraph from a description, skipping markdown headers. */
 function extractFirstParagraph(description: string): string {
   if (!description) return "";
 
-  const lines = description.split(/\n+/);
-  for (const line of lines) {
+  for (const line of description.split(/\n+/)) {
     const trimmed = line.trim();
-    // Skip empty lines and markdown headers
     if (!trimmed || trimmed.startsWith("#")) continue;
-    // Found first content paragraph — truncate if too long
-    if (trimmed.length > 200) {
-      return `${trimmed.slice(0, 200)}...`;
-    }
-    return trimmed;
+    return trimmed.length > 200 ? `${trimmed.slice(0, 200)}...` : trimmed;
   }
   return "";
 }

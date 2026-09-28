@@ -1,16 +1,17 @@
 import { posix } from "node:path";
 import type { ExportAllDeclaration, ExportNamedDeclaration, Program } from "oxc-parser";
 import { exportName } from "../../server/mocks-edit/plan/export-name";
+import { importsCarryExtensions } from "../../server/mocks-edit/plan/imports-carry-extensions";
 import { lineStart } from "../../server/mocks-edit/plan/line-start";
 import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import type { ImportLayout } from "../layout";
 import { type ExportedKind, exportedNames } from "./exported-names";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
 
-/* A schemas or types module of an import, as its barrel names it: `./pets/schemas`, `./types`. */
-const SCHEMA_MODULE = /^\.\/(?:([^/]+)\/)?(schemas|types)$/;
+/* A schemas or types module of an import, as its barrel names it: `./pets/schemas`, `./types.js`. */
+const SCHEMA_MODULE = /^\.\/(?:([^/]+)\/)?(schemas|types)(?:\.js)?$/;
 /* A group's endpoints module, as source.ts imports it. */
-const GROUP_INDEX = /^\.\/([^/]+)\/index$/;
+const GROUP_INDEX = /^\.\/([^/]+)\/index(?:\.js)?$/;
 
 type Reexport = ExportAllDeclaration | ExportNamedDeclaration;
 
@@ -44,9 +45,11 @@ export function rebuildBarrel(
   if (barrel === undefined) return undefined;
   const parsed = parseSource(layout.indexFile, barrel);
   if (parsed.problem !== null) throw new UnrecognizedFileError(layout.indexFile);
-  const modules = schemaModules(layout, files, flat);
+  /* Written as the barrel writes its imports, with their extension or without. */
+  const extension = importsCarryExtensions(parsed.program) ? ".js" : "";
+  const modules = schemaModules(layout, files, flat).map((specifier) => `${specifier}${extension}`);
   const textOf = (specifier: string): string | undefined =>
-    files[posix.join(layout.dir, `${specifier}.ts`)];
+    files[posix.join(layout.dir, `${specifier.replace(/\.js$/, "")}.ts`)];
   const owned = new Set(modules);
   const generated = parsed.program.body.filter(
     (s): s is Reexport => isReexport(s) && isGenerated(s, owned, textOf),

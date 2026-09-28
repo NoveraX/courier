@@ -81,7 +81,7 @@ function generateFlat(
   const declared = schemasFile ? groupSchemas : {};
   files.push(generateFlatSourceFile(processed.endpoints, spec, opts, declared, params));
   /* The barrel re-exports the schemas file only when one was written. */
-  files.push(generateIndexFile(spec, [], opts, schemaMap, true));
+  files.push(generateIndexFile(spec, [], opts, schemaMap));
 
   return files;
 }

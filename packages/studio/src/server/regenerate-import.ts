@@ -3,6 +3,7 @@ import type { GenerateOptions, ParsedSpec } from "../apis";
 import { createSpecDigest, generateCode } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import type { ImportLayout } from "../apis/layout";
+import { generatedImportExtension } from "./generated-import-extension";
 import type { ApplyReport } from "./import-files/apply-file-plan";
 import type { FilePlan } from "./import-files/file-plan-types";
 import { planFiles } from "./import-files/plan-files";
@@ -41,7 +42,12 @@ export function planRegeneration(regeneration: Regeneration): {
   leftBehind: string[];
 } {
   const { root, name, layout, spec, options, entry } = regeneration;
-  const generated = generate(spec, options, name);
+  const importExtension = generatedImportExtension(root.path, layout);
+  const generated = generate(
+    spec,
+    { ...options, ...(importExtension && { importExtension }) },
+    name,
+  );
   const { request, leftBehind } = regenerationRequest(root, layout, generated, entry);
   return { plan: planFiles(root, request, entry?.files ?? {}), leftBehind };
 }

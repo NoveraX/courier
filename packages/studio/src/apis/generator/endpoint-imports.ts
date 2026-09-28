@@ -3,7 +3,7 @@
  */
 
 import type { EndpointContext } from "./endpoint-context";
-import type { GeneratorSettings } from "./types";
+import type { ResolvedGenerateOptions } from "./types";
 
 /** How each validation library is imported under the name the chains call. */
 const VALIDATOR_IMPORT: Readonly<Record<string, string>> = {
@@ -45,6 +45,6 @@ export function endpointImports(context: EndpointContext): string[] {
  * Its name follows `generateSchemas` alone: `validation: "none"` still
  * writes schemas.ts, holding types.
  */
-function schemasModule(options: GeneratorSettings): string {
-  return options.generateSchemas ? "./schemas" : "./types";
+function schemasModule(options: ResolvedGenerateOptions): string {
+  return `${options.generateSchemas ? "./schemas" : "./types"}${options.importExtension}`;
 }

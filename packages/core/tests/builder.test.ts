@@ -287,6 +287,20 @@ describe("type level guarantees", () => {
     expect(rejected).toBeTypeOf("function");
   });
 
+  it("refuses to make a read of an endpoint that changes what it addresses", () => {
+    /* A DELETE declared a read went to the proxy as a cacheable GET, and ran
+       the upstream DELETE for whoever fetched it. */
+    for (const verb of ["put", "patch", "del"] as const) {
+      expect(() => base.endpoint[verb]("items/:id").reads()).toThrow(
+        expect.objectContaining({ code: "READS_ON_CHANGING_VERB" }),
+      );
+    }
+    expect(() => base.endpoint.via((http) => http.del("items")).reads()).toThrow(
+      expect.objectContaining({ code: "READS_ON_CHANGING_VERB" }),
+    );
+    expect(base.endpoint.post("search").reads().kind).toBe("query");
+  });
+
   it("offers send on a channel only", () => {
     const channel = base.channel.response(UserSchema).send(CommandSchema);
     expect(channel).toBeDefined();

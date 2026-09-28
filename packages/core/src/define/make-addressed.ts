@@ -38,6 +38,9 @@ function addressOf(wire: Wire): string {
  * makeAddressed(state, { method: "get", path: ":id", probe, served: false }, {});
  * ```
  */
+/* The verbs that change what they address; no declaration makes one a read. */
+const CHANGING_VERBS: ReadonlySet<string> = new Set(["put", "patch", "del"]);
+
 export function makeAddressed(
   state: BuilderState,
   wire: Wire,
@@ -58,7 +61,17 @@ export function makeAddressed(
       }
       return next(withValue(state, "cache", config));
     },
-    reads: () => next({ ...state, kind: "query" }),
+    reads: () => {
+      if (CHANGING_VERBS.has(wire.method)) {
+        throw new ConfigurationError(
+          "READS_ON_CHANGING_VERB",
+          `[courier] .reads() was named on an endpoint addressed with .${wire.method}(), which ` +
+            "changes what it addresses — served as a read, it would run on every cacheable GET. " +
+            "A read that sends a body is addressed with .post().",
+        );
+      }
+      return next({ ...state, kind: "query" });
+    },
   };
 
   for (const [name, method] of Object.entries(methods)) {

@@ -184,10 +184,11 @@ const app = express()
 const server = http.createServer(app)
 
 // HTTP proxy
-app.all("/api/request", courierHandler())
+const proxy = courierHandler()
+app.all("/api/request", proxy)
 
 // SSE streaming — do NOT apply compression middleware to this route
-app.get("/api/sse", courierSSEHandler({
+const sse = courierSSEHandler({
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -196,7 +197,8 @@ app.get("/api/sse", courierSSEHandler({
   onSSEDisconnect: ({ meta, reason, eventCount }) => {
     console.log(`SSE closed: ${meta.userId}, ${reason}, ${eventCount} events`)
   },
-}))
+})
+app.get("/api/sse", sse)
 
 // WebSocket — answers upgrades on `path` only; set the client's proxyPath.ws to match
 const cleanupWS = courierWSAttach(server, {
@@ -227,7 +229,9 @@ server.listen(Number(process.env.PORT) || 3001, "0.0.0.0")
 
 process.on("SIGTERM", async () => {
   shuttingDown = true
-  cleanupWS()
+  // server.close() waits for open streams and sockets, so drain them first:
+  // SSE clients get a `shutdown` event, WebSocket clients a 1012 close.
+  await Promise.all([proxy.shutdownSSE(), sse.shutdownSSE(), cleanupWS()])
   server.close()
   await disconnectAdapters()
 })
@@ -258,8 +262,9 @@ await fastify.register(fastifyWebsocket)
 // HTTP proxy
 await fastify.register(courierPlugin, { prefix: "/api/request" })
 
-// SSE streaming
-fastify.get("/api/sse", courierSSEHandler({
+// SSE streaming — the plugin drains its own streams on close; this route
+// drains in preClose, or fastify.close() waits for its streams to end
+const sse = courierSSEHandler({
   maxSSEConnections: 10_000,
   sseMaxLifetimeMs: 300_000,
   onSSEConnect: ({ connectionId, request }) => {
@@ -268,7 +273,9 @@ fastify.get("/api/sse", courierSSEHandler({
   onSSEDisconnect: ({ meta, reason, eventCount }) => {
     console.log(`SSE closed: ${meta.userId}, ${reason}, ${eventCount} events`)
   },
-}))
+})
+fastify.get("/api/sse", sse)
+fastify.addHook("preClose", () => sse.shutdownSSE())
 
 // WebSocket
 fastify.get("/ws", { websocket: true }, courierWSHandler({
@@ -404,7 +411,8 @@ async function bootstrap(): Promise<void> {
   await app.listen(Number(process.env.PORT) || 3001, "0.0.0.0")
 
   process.on("SIGTERM", async () => {
-    cleanupWS()
+    // AppModule drains its SSE streams in beforeApplicationShutdown
+    await cleanupWS()
     await app.close()
     await disconnectAdapters()
   })
@@ -414,26 +422,36 @@ bootstrap()
 ```
 
 ```ts title="app.module.ts"
-import { Module, type NestModule, type MiddlewareConsumer } from "@nestjs/common"
+import {
+  type BeforeApplicationShutdown,
+  Module,
+  type NestModule,
+  type MiddlewareConsumer,
+} from "@nestjs/common"
 import { courierMiddleware, courierSSEMiddleware } from "@noverax/courier-nestjs"
 
-@Module({})
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    // HTTP proxy
-    consumer.apply(courierMiddleware()).forRoutes("/api/request")
+const proxy = courierMiddleware()
+const sse = courierSSEMiddleware({
+  maxSSEConnections: 10_000,
+  sseMaxLifetimeMs: 300_000,
+  onSSEConnect: ({ connectionId, request }) => {
+    return { userId: extractUser(request) }
+  },
+  onSSEDisconnect: ({ meta, reason, eventCount }) => {
+    console.log(`SSE closed: ${meta.userId}, ${reason}, ${eventCount} events`)
+  },
+})
 
-    // SSE streaming
-    consumer.apply(courierSSEMiddleware({
-      maxSSEConnections: 10_000,
-      sseMaxLifetimeMs: 300_000,
-      onSSEConnect: ({ connectionId, request }) => {
-        return { userId: extractUser(request) }
-      },
-      onSSEDisconnect: ({ meta, reason, eventCount }) => {
-        console.log(`SSE closed: ${meta.userId}, ${reason}, ${eventCount} events`)
-      },
-    })).forRoutes("/api/sse")
+@Module({})
+export class AppModule implements NestModule, BeforeApplicationShutdown {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(proxy).forRoutes("/api/request")
+    consumer.apply(sse).forRoutes("/api/sse")
+  }
+
+  // app.close() waits for open streams, so they are drained before it does
+  async beforeApplicationShutdown(): Promise<void> {
+    await Promise.all([proxy.shutdownSSE(), sse.shutdownSSE()])
   }
 }
 ```

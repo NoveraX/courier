@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { HandlerConfig } from "@noverax/courier";
+import type { AdapterHandler, HandlerConfig } from "@noverax/courier";
 import { createHandler, requireSources } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
@@ -7,6 +7,21 @@ import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/c
 import { bodyNestParsed } from "./parsed-body";
 
 export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
+
+/**
+ * A NestJS middleware for Courier that can drain the SSE streams it serves.
+ *
+ * `app.close()` waits for every open connection, and a stream stays open
+ * until its lifetime cap — 30 minutes by default — so the application calls
+ * `shutdownSSE()` from `beforeApplicationShutdown`: each client gets a
+ * `shutdown` event telling it when to reconnect, and the streams end.
+ */
+export type CourierNestMiddleware = ((
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: (err?: unknown) => void,
+) => Promise<void>) &
+  Pick<AdapterHandler, "sseConnections" | "shutdownSSE">;
 
 /**
  * Create a NestJS-compatible middleware function for the courier proxy.
@@ -20,7 +35,7 @@ export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
  * created with `{ rawBody: true }`.
  *
  * @param config - Handler options, such as `allowedOrigins` or body limits
- * @returns A middleware for `consumer.apply(...)`
+ * @returns A middleware for `consumer.apply(...)`, with `shutdownSSE()`
  *
  * @example
  * ```ts
@@ -35,54 +50,67 @@ export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
  * }
  * ```
  */
-export function courierMiddleware(
-  config?: HandlerConfig,
-): (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => Promise<void> {
-  const { handle } = createHandler(config);
+export function courierMiddleware(config?: HandlerConfig): CourierNestMiddleware {
+  const handler = createHandler(config);
   announceHosting({
     transports: ["http"],
     sources: Object.values(requireSources()),
     framework: "nestjs",
   });
-
-  return async (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => {
-    discoverNodeAppOrigin(req);
-    try {
-      const webReq = toWebRequest(req, res, () => bodyNestParsed(req));
-      const webRes = await handle(webReq);
-      await sendWebResponse(webRes, res);
-    } catch (error) {
-      next(error);
-    }
-  };
+  return serve(handler, handler.handle);
 }
 
 /**
  * Create a NestJS-compatible middleware for SSE streaming endpoints.
  *
+ * @param config - Handler options, such as `allowedOrigins` or stream lifetimes
+ * @returns A middleware for `consumer.apply(...)`, with `shutdownSSE()`
+ *
  * @example
  * ```ts
- * consumer.apply(courierSSEMiddleware()).forRoutes("/api/sse");
+ * const sse = courierSSEMiddleware();
+ *
+ * @Module({})
+ * export class AppModule implements NestModule, BeforeApplicationShutdown {
+ *   configure(consumer: MiddlewareConsumer) {
+ *     consumer.apply(sse).forRoutes("/api/sse");
+ *   }
+ *   beforeApplicationShutdown() {
+ *     return sse.shutdownSSE();
+ *   }
+ * }
  * ```
  */
-export function courierSSEMiddleware(
-  config?: HandlerConfig,
-): (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => Promise<void> {
-  const { handleSSE } = createHandler(config);
+export function courierSSEMiddleware(config?: HandlerConfig): CourierNestMiddleware {
+  const handler = createHandler(config);
   announceHosting({
     transports: ["sse"],
     sources: Object.values(requireSources()),
     framework: "nestjs",
   });
+  return serve(handler, handler.handleSSE);
+}
 
-  return async (req: IncomingMessage, res: ServerResponse, next: (err?: unknown) => void) => {
+/** Bridge a Nest request to a Web handler and back, keeping its stream drain. */
+function serve(
+  handler: AdapterHandler,
+  respond: (request: Request) => Promise<Response>,
+): CourierNestMiddleware {
+  const middleware = async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    next: (err?: unknown) => void,
+  ): Promise<void> => {
     discoverNodeAppOrigin(req);
     try {
       const webReq = toWebRequest(req, res, () => bodyNestParsed(req));
-      const webRes = await handleSSE(webReq);
-      await sendWebResponse(webRes, res);
+      await sendWebResponse(await respond(webReq), res);
     } catch (error) {
       next(error);
     }
   };
+  return Object.assign(middleware, {
+    sseConnections: handler.sseConnections,
+    shutdownSSE: handler.shutdownSSE,
+  });
 }

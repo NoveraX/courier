@@ -48,6 +48,24 @@ The plugin is zero-sources — sources are read at request time from the core gl
 | `prefix` | `string` | `"/api/request"` | The path the proxy answers at — the caller's `proxyPath.http` |
 | `config` | `HandlerConfig` | — | Optional handler behavior options (origins, SSE headers, etc.) |
 
+The proxy reads a JSON call up to `config.maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to `config.maxUploadBytes`, 10 MB. Fastify's own `bodyLimit` does not apply: the plugin reads bodies itself.
+
+## Streaming
+
+The plugin's route serves SSE streams as well as calls. A separate stream route:
+
+```ts
+import { courierSSEHandler } from "@noverax/courier-fastify"
+
+const sse = courierSSEHandler()
+app.get("/api/sse", sse)
+app.addHook("preClose", () => sse.shutdownSSE())
+```
+
+## Shutting down
+
+`app.close()` waits for every open connection, and an SSE stream stays open until its lifetime cap, 30 minutes by default. The plugin drains its own streams when the app closes: each client gets a `shutdown` event telling it when to reconnect, and the streams end. A route made with `courierSSEHandler()` drains when you call its `shutdownSSE()`, from a `preClose` hook as above; `sseConnections` lists its open streams.
+
 ## With Frontend
 
 ```ts

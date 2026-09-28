@@ -13,6 +13,7 @@
 
 import { ConfigurationError } from "../errors";
 import type { UploadProgress } from "../http-client/types";
+import type { WebCredentials } from "../http-client/web-types";
 import { isFieldRecord } from "../utils/body-kind";
 import { layerHeaders } from "../utils/layer-headers";
 
@@ -29,7 +30,7 @@ export interface ProxyCallOptions {
   /** Other `RequestInit` fields, applied to the browser's request. */
   init: Record<string, unknown>;
   headers: Record<string, string> | undefined;
-  credentials: RequestCredentials;
+  credentials: WebCredentials;
   timeout: number | undefined;
   proxyMethod: "GET" | "POST" | undefined;
   stream: boolean;
@@ -41,7 +42,7 @@ export interface ProxyCallOptions {
 
 export interface ProxyCallDefaults {
   headers?: Record<string, string>;
-  credentials: RequestCredentials;
+  credentials: WebCredentials;
   timeout?: number;
 }
 
@@ -109,6 +110,6 @@ export function splitProxyOptions(
   };
 }
 
-function isCredentials(value: unknown): value is RequestCredentials {
+function isCredentials(value: unknown): value is WebCredentials {
   return value === "omit" || value === "same-origin" || value === "include";
 }

@@ -3,6 +3,7 @@
  * asks for it — and whose size is known before it is sent.
  */
 
+import type { WebBody } from "../http-client/web-types";
 import { encodeMultipart } from "./multipart-body";
 
 const TEXT = new TextEncoder();
@@ -33,7 +34,7 @@ export interface UploadSource {
  * source.size; // bytes the multipart body will take
  * ```
  */
-export function toUploadSource(body: BodyInit): UploadSource {
+export function toUploadSource(body: WebBody): UploadSource {
   if (body instanceof ReadableStream) {
     return { size: 0, contentType: null, replayable: false, open: () => body };
   }

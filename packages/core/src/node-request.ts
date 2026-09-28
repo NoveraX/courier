@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { rememberPeerAddress } from "./adapter/peer-address";
 import { ConfigurationError } from "./errors/configuration-error";
+import type { WebBody } from "./http-client/web-types";
 import { addressedTo } from "./node-origin";
 import { nodeRequestBody } from "./node-request-body";
 
@@ -39,7 +40,7 @@ import { nodeRequestBody } from "./node-request-body";
 export function toWebRequest(
   nodeReq: IncomingMessage,
   nodeRes?: ServerResponse,
-  keptBody?: () => BodyInit | null | undefined,
+  keptBody?: () => WebBody | null | undefined,
 ): Request {
   const { protocol, host = "localhost" } = addressedTo(nodeReq);
   const url = new URL(nodeReq.url ?? "/", `${protocol}://${host}`);

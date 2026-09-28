@@ -9,6 +9,7 @@
  */
 
 import { getResponseData } from "../http-client/response";
+import type { WebBody } from "../http-client/web-types";
 
 /** Bytes read back as an ArrayBuffer. */
 const BYTES_TYPE = "application/vnd.courier.bytes";
@@ -18,7 +19,7 @@ const MULTIPART_TYPE = "multipart/form-data";
 
 /** A body the proxy sends as it is, rather than as JSON. */
 export interface WireBody {
-  body: BodyInit;
+  body: WebBody;
   /** The answer's content type; a FormData's own multipart type when absent. */
   contentType?: string;
   /** Its length in bytes, when it is known before it is sent. */

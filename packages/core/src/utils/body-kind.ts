@@ -1,3 +1,4 @@
+import type { WebBody } from "../http-client/web-types";
 import { isFormData } from "./helpers";
 
 /**
@@ -72,7 +73,7 @@ export function isFieldRecord(value: unknown): value is Record<string, unknown> 
  * toBodyInit(new Uint8Array([1, 2])); // → the same Uint8Array
  * ```
  */
-export function toBodyInit(body: RawBody): BodyInit {
+export function toBodyInit(body: RawBody): WebBody {
   if (!ArrayBuffer.isView(body)) return body;
   if (isOwnedView(body)) return body;
   return new Uint8Array(body.buffer, body.byteOffset, body.byteLength).slice();

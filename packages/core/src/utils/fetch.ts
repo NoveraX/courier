@@ -1,5 +1,6 @@
 import { fetchFailure } from "../http-client/transport-failure";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
+import type { WebBody } from "../http-client/web-types";
 import { anySignal } from "./any-signal";
 import { fetchWithinOrigin } from "./fetch-within-origin";
 import { normalizeHttpMethod } from "./helpers";
@@ -52,7 +53,7 @@ export async function coreFetch(
   const requestHeaders =
     headers instanceof Headers ? headers : new Headers((headers as HeadersInit) || undefined);
 
-  let requestBody: BodyInit | null | undefined = body;
+  let requestBody: WebBody | null | undefined = body;
   if (json !== undefined) {
     requestBody = JSON.stringify(json);
     if (!requestHeaders.has("content-type")) {

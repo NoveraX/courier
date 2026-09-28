@@ -8,12 +8,13 @@ import type {
   SearchParamsSerializer,
   SimpleOptions,
 } from "./types";
+import type { WebBody } from "./web-types";
 
 type RequestBuilderDeps = {
   defaultQueryParams?: Record<string, unknown>;
   defaultBody: Record<string, unknown>;
   searchParamsSerializer?: SearchParamsSerializer;
-  bodySerializer?: (data: Record<string, unknown>) => BodyInit;
+  bodySerializer?: (data: Record<string, unknown>) => WebBody;
 };
 
 /**

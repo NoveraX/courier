@@ -1,17 +1,18 @@
+import { addressKindHere } from "./address-kind-here";
 import type { LookupPolicy } from "./guarded-lookup";
-import { specAddressKind } from "./spec-address-kind";
+import { readInterfaces } from "./own-addresses";
 import { SpecFetchError } from "./spec-fetch-error";
 
 /**
  * Decide whether a request for a specification may connect to the addresses
  * its host is: all of them must pass, since the connection may use any.
  *
- * A public address passes, and this machine when the policy allows it,
- * without asking the project. An address that means every interface never
- * passes. Any other address — a private network, or this machine when a
- * server elsewhere sent the request there — passes only when the policy
- * admits the host, which it is asked once, whatever the number of such
- * addresses.
+ * A public address passes, and this machine — a loopback address, or one
+ * of its own interfaces' — when the policy allows it, without asking the
+ * project. An address that means every interface never passes. Any other
+ * address — a private network, or this machine when a server elsewhere sent
+ * the request there — passes only when the policy admits the host, which it
+ * is asked once, whatever the number of such addresses.
  *
  * @param addresses - The addresses the host is, without brackets
  * @param policy - What besides the public internet the request may reach
@@ -30,8 +31,9 @@ export async function approveSpecAddresses(
   describe: (address: string) => string,
 ): Promise<void> {
   let withheld: string | undefined;
+  const interfaces = readInterfaces();
   for (const address of addresses) {
-    const kind = specAddressKind(address);
+    const kind = addressKindHere(address, interfaces);
     if (kind === "unspecified") throw SpecFetchError.unspecifiedHost(describe(address));
     if (kind === "private" || (kind === "loopback" && !policy.loopback)) withheld ??= address;
   }

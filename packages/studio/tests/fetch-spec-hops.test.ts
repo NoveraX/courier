@@ -6,6 +6,8 @@
  * its scheme's default. The request itself is replaced, since the hops that
  * matter run through hosts a test cannot serve.
  */
+import type * as Os from "node:os";
+import type { NetworkInterfaceInfo } from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { LookupPolicy } from "../src/server/guarded-lookup";
@@ -17,6 +19,15 @@ const requestSpec = vi.hoisted(() =>
 );
 
 vi.mock("../src/server/spec-request", () => ({ requestSpec }));
+
+/* This machine, with a global IPv6 address beside its loopback one. */
+const OWN_V6 = "2a01:4f8:c0c:1234::1";
+const listed = vi.hoisted(() => vi.fn<() => NodeJS.Dict<NetworkInterfaceInfo[]>>(() => ({})));
+
+vi.mock("node:os", async (importOriginal) => ({
+  ...(await importOriginal<typeof Os>()),
+  networkInterfaces: listed,
+}));
 
 const { fetchSpec } = await import("../src/server/fetch-spec");
 
@@ -46,6 +57,7 @@ function answerOnceAdmitted(): void {
 
 afterEach(() => {
   requestSpec.mockReset();
+  listed.mockReset();
 });
 
 describe("fetchSpec hops", () => {
@@ -73,6 +85,19 @@ describe("fetchSpec hops", () => {
     expect(await fetchSpec("http://localhost:3000/spec.json", NOTHING_LISTED)).toBe("spec");
 
     expect(hops().map(([, loopback]) => loopback)).toEqual([true, true, true]);
+  });
+
+  it("keeps this machine reachable from a hop at one of its own addresses", async () => {
+    listed.mockReturnValue({
+      en0: [{ address: OWN_V6, family: "IPv6", internal: false, netmask: "ffff::", mac: "", cidr: null, scopeid: 0 }],
+    });
+    requestSpec
+      .mockResolvedValueOnce(redirect("http://localhost:3000/spec.json", OWN_V6))
+      .mockResolvedValueOnce({ kind: "body", text: "spec", remoteAddress: "127.0.0.1" });
+
+    await fetchSpec(`http://[${OWN_V6}]:3000/spec.json`, NOTHING_LISTED);
+
+    expect(hops().map(([, loopback]) => loopback)).toEqual([true, true]);
   });
 
   it("does not reach this machine from a redirect by a public host", async () => {

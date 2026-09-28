@@ -3,7 +3,9 @@
  */
 
 import type { ParsedSchema } from "../parser/types";
+import { schemaToTsType } from "./inline-types";
 import { jsdocText } from "./jsdoc-text";
+import { typeStyleFor } from "./schema-types";
 import { schemaToValidation } from "./schema-utils";
 import type { GeneratorSettings } from "./types";
 import { primitiveToArkType } from "./validation-arktype";
@@ -47,8 +49,9 @@ export function generateArraySchema(
     }
     lines.push("");
   } else if (options.generateTypes) {
-    const itemType = schema.items?.refName ?? "unknown";
-    lines.push(`export type ${name} = ${itemType}[];`);
+    /* The element's whole type: naming only a referenced element typed a
+       list of strings `unknown[]`. */
+    lines.push(`export type ${name} = ${schemaToTsType(schema, typeStyleFor(options))};`);
     lines.push("");
   }
 }

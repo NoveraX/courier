@@ -1,6 +1,6 @@
 import { createLogger } from "../logger";
 import { studioHooks } from "../studio";
-import { defineMiddleware } from "./compose";
+import { defineMiddleware } from "./define";
 import type { Middleware, MiddlewareContext, MiddlewareResponse } from "./types";
 
 const log = createLogger("Middleware");

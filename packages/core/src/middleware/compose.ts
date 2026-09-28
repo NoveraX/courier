@@ -3,9 +3,6 @@ import { runAfter, runBefore, runWrap } from "./phase-runners";
 import { emitExit, propagateInner } from "./studio-tracking";
 import type { Middleware, MiddlewareContext, MiddlewareResponse, NextFn } from "./types";
 
-// Re-export defineMiddleware so existing imports from "./middleware/compose" keep working
-export { defineMiddleware } from "./define";
-
 export function composeMiddleware(
   middlewares: Middleware[],
 ): (ctx: MiddlewareContext, next: NextFn) => Promise<MiddlewareResponse> {

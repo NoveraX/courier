@@ -1,5 +1,5 @@
 import { createAdmissionQueue } from "./admission-queue";
-import { defineMiddleware } from "./compose";
+import { defineMiddleware } from "./define";
 import type { Middleware } from "./types";
 
 /**

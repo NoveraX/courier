@@ -1,6 +1,6 @@
 import { HTTPError } from "../errors";
 import { isAbortError } from "../utils/abort";
-import { defineMiddleware } from "./compose";
+import { defineMiddleware } from "./define";
 import { pause } from "./pause";
 import type { Middleware, MiddlewareResponse, NextFn } from "./types";
 

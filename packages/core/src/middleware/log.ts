@@ -1,6 +1,6 @@
 import { HTTPError } from "../errors";
 import { createLogger } from "../logger";
-import { defineMiddleware } from "./compose";
+import { defineMiddleware } from "./define";
 import type { Middleware } from "./types";
 
 const defaultLogger = createLogger("Middleware");

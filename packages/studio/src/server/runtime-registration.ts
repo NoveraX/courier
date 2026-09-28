@@ -18,6 +18,7 @@ export function handleHello(
   raw: unknown,
   socket: Socket,
   ref: { runtimeId: string | undefined },
+  deps: SetupRuntimeNamespaceDeps,
 ): void {
   const hello = sanitizeRuntimeHello(raw);
   if (!hello) {
@@ -37,6 +38,9 @@ export function handleHello(
     // still resolvable for the playground "resolved URL" badge.
     ...(hello.listenOrigin && { listenOrigin: hello.listenOrigin }),
   });
+  /* A runtime counts as attached from its hello, whether or not it ever
+     announces a transport — a browser never does. */
+  emitBindingSnapshot(deps);
 }
 
 export function handleAnnounce(

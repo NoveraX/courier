@@ -10,10 +10,15 @@
  * `runtimeCount` / `sourceCount` are computed server-side so the status bar
  * never has to aggregate `rows[]` itself — that aggregation would be race-
  * prone against partial snapshots arriving out of order.
+ *
+ * They count every runtime attached and every source one of them serves, not
+ * the binding rows: a row exists only for a source whose `defineApi`
+ * declares a `proxyPath`, which no README setup does, and counting rows read
+ * "0 runtimes · 0 sources" while a server and a browser were attached.
  */
 
 import type { BindingStatus, BindingTable } from "./catalog/binding-table";
-import { getRuntimeEntry } from "./runtime-namespace-state";
+import { getRuntimeEntry, runtimeRegistry } from "./runtime-namespace-state";
 
 export interface BindingSnapshotPayload {
   rows: BindingStatus[];
@@ -26,8 +31,8 @@ export function buildBindingSnapshot(bindingTable: BindingTable): BindingSnapsho
   const rows = enrichWithAppOrigin(bindingTable.getStatus());
   return {
     rows,
-    runtimeCount: countDistinctRuntimes(rows),
-    sourceCount: countDistinctSources(rows),
+    runtimeCount: runtimeRegistry.size,
+    sourceCount: countServedSources(),
   };
 }
 
@@ -46,18 +51,11 @@ function enrichWithAppOrigin(rows: BindingStatus[]): BindingStatus[] {
   });
 }
 
-function countDistinctRuntimes(rows: BindingStatus[]): number {
-  const ids = new Set<string>();
-  for (const row of rows) {
-    if (row.status === "bound" && row.runtimeId) ids.add(row.runtimeId);
-  }
-  return ids.size;
-}
-
-function countDistinctSources(rows: BindingStatus[]): number {
+/** Distinct sources the attached runtimes said they serve. */
+function countServedSources(): number {
   const names = new Set<string>();
-  for (const row of rows) {
-    if (row.status === "bound") names.add(row.sourceName);
+  for (const entry of runtimeRegistry.values()) {
+    for (const name of entry.sourceNames) names.add(name);
   }
   return names.size;
 }

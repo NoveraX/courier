@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { HighlighterCore } from "shiki/core";
 
 import { CopyButton } from "@/components/shared/copy-button";
 import { SegmentedControl } from "@/components/shared/segmented-control";
@@ -26,6 +27,32 @@ export function FormatSwitcher({ formats, active, onChange }: {
 const SHIKI_LANGS = new Set(["ts", "tsx", "js", "jsx", "typescript", "javascript", "json"]);
 const SHIKI_THEME = "github-dark-default";
 
+/*
+ * Only the grammars and the theme a block shows are loaded, with Shiki's
+ * JavaScript regex engine. The whole of Shiki, every grammar and theme with
+ * it, was a 10 MB chunk Studio shipped, and the first block waited for all
+ * of it.
+ */
+let highlighter: Promise<HighlighterCore> | undefined;
+
+function loadHighlighter(): Promise<HighlighterCore> {
+  highlighter ??= Promise.all([import("shiki/core"), import("shiki/engine/javascript")]).then(
+    ([{ createHighlighterCore }, { createJavaScriptRegexEngine }]) =>
+      createHighlighterCore({
+        themes: [import("shiki/themes/github-dark-default.mjs")],
+        langs: [
+          import("shiki/langs/typescript.mjs"),
+          import("shiki/langs/tsx.mjs"),
+          import("shiki/langs/javascript.mjs"),
+          import("shiki/langs/jsx.mjs"),
+          import("shiki/langs/json.mjs"),
+        ],
+        engine: createJavaScriptRegexEngine(),
+      }),
+  );
+  return highlighter;
+}
+
 // ── Code block ──────────────────────────────────────────────────────────────
 
 export function CodeBlock({ code, language }: {
@@ -45,16 +72,25 @@ function ShikiCodeBlock({ code, language }: {
   language: string;
 }): React.ReactElement {
   const [html, setHtml] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    import("shiki").then(({ codeToHtml }) =>
-      codeToHtml(code, { lang: language, theme: SHIKI_THEME }),
-    ).then((result: string) => {
-      if (!cancelled) setHtml(result);
-    });
+    loadHighlighter()
+      .then((loaded) => loaded.codeToHtml(code, { lang: language, theme: SHIKI_THEME }))
+      .then(
+        (result: string) => {
+          if (!cancelled) setHtml(result);
+        },
+        (error: unknown) => {
+          console.warn("Studio could not highlight a code block; it is shown plain", error);
+          if (!cancelled) setFailed(true);
+        },
+      );
     return () => { cancelled = true; };
   }, [code, language]);
+
+  if (failed) return <RegexCodeBlock code={code} language={language} />;
 
   return (
     <div className="shiki-block relative overflow-hidden rounded-lg border border-zinc-800 bg-zinc-950">

@@ -66,6 +66,7 @@ courierHandler({
 ```ts
 import { serve, upgradeWebSocket } from "@hono/node-server"
 import { WebSocketServer } from "ws"
+import { wsFrameLimit } from "@noverax/courier/node"
 import { courierSSEHandler, courierWSHandler } from "@noverax/courier-hono"
 
 app.get("/api/sse", courierSSEHandler())
@@ -73,7 +74,7 @@ app.get("/api/sse", courierSSEHandler())
 const ws = courierWSHandler()
 app.get("/api/ws", upgradeWebSocket((c) => ws(c)))
 
-const wss = new WebSocketServer({ noServer: true, maxPayload: 65_536 })
+const wss = new WebSocketServer({ noServer: true, maxPayload: wsFrameLimit() })
 serve({ fetch: app.fetch, port: 3000, websocket: { server: wss } })
 ```
 
@@ -81,7 +82,7 @@ Point the client at the same paths with `proxyPath: { sse: "/api/sse", ws: "/api
 
 Each caller may hold up to `maxConnectionsPerIP` WebSockets (50 by default). The caller is the connection's remote address, which the adapter reads from the runtime — `@hono/node-server`, Bun and Deno report it — and, when that address is a local or private one such as a reverse proxy's, the proxy's `X-Forwarded-For`. On a runtime that reports none, such as Cloudflare Workers, the proxy headers name the caller. If your proxy chain is deeper, name the caller yourself with `clientIp: (request) => …`.
 
-The runtime's WebSocket server reads each frame before Courier sees it, so give it a frame limit no larger than the handler's `maxMessageSize` (64 KB by default), as `maxPayload` does above.
+The runtime's WebSocket server reads each frame before Courier sees it, so bound it with `wsFrameLimit(maxMessageSize)` from `@noverax/courier/node`, as `maxPayload` does above: a message somewhat over the handler's `maxMessageSize` (64 KB by default) is refused with 4413 for that message alone, and a frame larger still with 1009 before it is read.
 
 ## How It Works
 

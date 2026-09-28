@@ -247,6 +247,7 @@ process.on("SIGTERM", async () => {
 ```ts title="server.ts"
 import Fastify from "fastify"
 import fastifyWebsocket from "@fastify/websocket"
+import { wsFrameLimit } from "@noverax/courier/node"
 import { registerSources } from "@noverax/courier"
 import { courierPlugin, courierSSEHandler, courierWSHandler } from "@noverax/courier-fastify"
 import { sources } from "./api/sources"
@@ -259,8 +260,8 @@ const fastify = Fastify({ logger: true })
 
 // WebSocket plugin (must register before WS routes). Its ws server reads
 // frames up to maxPayload before Courier sees them — 100 MiB by default —
-// so cap it at the handler's maxMessageSize (64 KB by default)
-await fastify.register(fastifyWebsocket, { options: { maxPayload: 65_536 } })
+// so bound it as Courier's own servers do (wsFrameLimit from "@noverax/courier/node")
+await fastify.register(fastifyWebsocket, { options: { maxPayload: wsFrameLimit() } })
 
 // HTTP proxy
 await fastify.register(courierPlugin, { prefix: "/api/request" })

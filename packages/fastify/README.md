@@ -72,13 +72,14 @@ npm install @fastify/websocket
 
 ```ts
 import fastifyWebsocket from "@fastify/websocket"
+import { wsFrameLimit } from "@noverax/courier/node"
 import { courierWSHandler } from "@noverax/courier-fastify"
 
-await app.register(fastifyWebsocket, { options: { maxPayload: 65_536 } })
+await app.register(fastifyWebsocket, { options: { maxPayload: wsFrameLimit() } })
 app.get("/api/ws", { websocket: true }, courierWSHandler())
 ```
 
-Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. The plugin's `ws` server reads each frame whole before Courier sees it, up to its `maxPayload` — 100 MiB unless you set it. Set it no larger than the handler's `maxMessageSize` (64 KB by default), and a larger frame is refused with close code 1009 before it is read; left larger, Courier answers such a frame with an error only after reading it, and warns once at the first connection. Without the plugin, the route answers 500 with a `WEBSOCKET_PLUGIN_MISSING` error. The plugin closes its sockets itself when the app closes.
+Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. The plugin's `ws` server reads each frame whole before Courier sees it, up to its `maxPayload` — 100 MiB unless you set it. Set it to `wsFrameLimit(maxMessageSize)` — 1 MiB, or twice the handler's `maxMessageSize` (64 KB by default) when that is larger — as the Express and Nest adapters do: a message somewhat over `maxMessageSize` is then refused with close code 4413 for that message alone, the socket and its other subscriptions kept, and a frame larger still is refused with 1009 before it is read. Left at 100 MiB, the handler warns once at the first connection. Without the plugin, the route answers 500 with a `WEBSOCKET_PLUGIN_MISSING` error. The plugin closes its sockets itself when the app closes.
 
 ## Shutting down
 

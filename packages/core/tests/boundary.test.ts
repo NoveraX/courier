@@ -21,9 +21,7 @@ import { executeRequest } from "../src/utils/execute";
 
 const { channel, endpoint, stream } = courier();
 
-const api = defineApi({
-  baseURL: "https://internal-api.corp.example",
-  groups: {
+const groups = {
     posts: defineGroup({
       prefix: "posts",
       endpoints: {
@@ -40,10 +38,11 @@ const api = defineApi({
         purge: endpoint.del("purge").response<unknown>(),
       },
     }),
-  },
-});
+};
 
-const boundary = defineBoundary<typeof api>({
+const api = defineApi({ baseURL: "https://internal-api.corp.example", groups });
+
+const boundary = defineBoundary({
   source: "api",
   expose: {
     "posts.list": "query",
@@ -123,7 +122,7 @@ describe("defineBoundary — what it describes", () => {
   });
 
   it("records whether an HTTP endpoint reads or writes", () => {
-    const both = defineBoundary<typeof api>({
+    const both = defineBoundary({
       source: "api",
       expose: { "posts.list": "query", "admin.purge": "mutation" },
     });
@@ -132,18 +131,23 @@ describe("defineBoundary — what it describes", () => {
     expect(both.endpoints["admin.purge"]).toEqual({ type: "mutation" });
   });
 
-  it("does not compile when a read is declared a write, a write a read, or either a bare request", () => {
-    defineBoundary<typeof api>({
-      source: "api",
-      expose: {
-        // @ts-expect-error — a GET endpoint reads
-        "posts.list": "mutation",
-        // @ts-expect-error — a DELETE endpoint writes
-        "admin.purge": "query",
-        // @ts-expect-error — the shape says which of the two it is
-        "admin.exportPayouts": "request",
-      },
-    });
+  it("does not compile on the API when a read is declared a write, a write a read, or a path is misspelt", () => {
+    const baseURL = "https://internal-api.corp.example";
+    const readAsWrite = defineBoundary({ source: "api", expose: { "posts.list": "mutation" } });
+    const writeAsRead = defineBoundary({ source: "api", expose: { "admin.purge": "query" } });
+    const misspelt = defineBoundary({ source: "api", expose: { "posts.list": "query", "posts.lsit": "query" } });
+
+    // @ts-expect-error — a GET endpoint reads
+    defineApi({ baseURL, groups, boundary: readAsWrite });
+    // @ts-expect-error — a DELETE endpoint writes
+    defineApi({ baseURL, groups, boundary: writeAsRead });
+    // @ts-expect-error — the API declares no posts.lsit
+    defineApi({ baseURL, groups, boundary: misspelt });
+  });
+
+  it("does not compile a shape that is none of the five", () => {
+    // @ts-expect-error — the shape says how the endpoint is reached
+    defineBoundary({ source: "api", expose: { "admin.exportPayouts": "request" } });
   });
 });
 
@@ -163,7 +167,7 @@ describe("defineBoundary — what it refuses", () => {
   });
 
   it("refuses a sibling in an otherwise open group", async () => {
-    const narrow = defineBoundary<typeof api>({
+    const narrow = defineBoundary({
       source: "api",
       expose: { "posts.list": "query" },
     });
@@ -232,7 +236,7 @@ describe("defineBoundary — in-process calls are untouched", () => {
 describe("defineBoundary — a client says what it cannot call", () => {
   function clientFor(exposed: Record<string, string>) {
     return createProxyCaller("api", {
-      boundary: defineBoundary<typeof api>({
+      boundary: defineBoundary({
         source: "api",
         proxyPath: { http: "/api/request" },
         expose: exposed as never,
@@ -331,12 +335,14 @@ describe("defineBoundary — the server's half, wired as documented", () => {
     expect(upstreamHits).toEqual(["GET /orders"]);
   });
 
-  it("keeps the client typed although the API and its boundary name each other", async () => {
+  it("types the client from the API that holds it, with only the endpoints it names", async () => {
     const { shop } = await import("./fixtures/shop-api");
     const { shopBoundary } = await import("./fixtures/shop-boundary");
     const client = createProxyCaller<typeof shop>("shop", { boundary: shopBoundary });
 
     expectTypeOf(client.orders.list).returns.resolves.toEqualTypeOf<{ id: number }[]>();
+    // @ts-expect-error — the boundary does not name orders.purge, and a call to it is refused
+    expect(() => client.orders.purge()).toThrow(/boundary/);
   });
 });
 
@@ -346,6 +352,7 @@ describe("defineBoundary — registered under another source", () => {
   });
 
   it("is refused when the sources are registered", () => {
+    // @ts-expect-error — billing declares none of the paths this boundary names
     const billing = defineApi({ baseURL: "https://billing.example", boundary, endpoints: {} });
 
     let thrown: unknown;

@@ -9,10 +9,9 @@ Nothing in that mechanism can tell the two apart. An endpoint written for a cron
 `defineBoundary` is where you say which endpoints the browser may reach. The same declaration does both halves of the job: the server refuses anything it does not name, and the browser receives it instead of your API definition.
 
 ```ts title="lib/boundary.ts"
-import { defineBoundary, type ProxyBoundary } from "@noverax/courier/define"
-import type { api } from "@/api"
+import { defineBoundary } from "@noverax/courier/define"
 
-export const boundary: ProxyBoundary = defineBoundary<typeof api>({
+export const boundary = defineBoundary({
   source: "api",
   proxyPath: { http: "/api/request", sse: "/api/sse", ws: "wss://realtime.example.com" },
   expose: {
@@ -30,7 +29,7 @@ Anything absent is refused. `admin.exportPayouts` above is not named, so the ser
 A read goes to the proxy as GET, its variables in the address. A read whose definition declares `sensitiveVariables` goes as POST, and the proxy refuses it over GET; the browser cannot see the definition, so the boundary lists it:
 
 ```ts
-defineBoundary<typeof api>({
+defineBoundary({
   source: "api",
   expose: { "users.search": "query", "users.byEmail": "query" },
   sensitive: ["users.byEmail"],
@@ -54,7 +53,7 @@ export const api = defineApi({
 
 The proxy resolves every call against the source it was registered as, so this one line gates HTTP calls, streams and sockets alike. Without it, the client keeps to the boundary and the server serves everything the API holds to anyone who sends the name.
 
-The boundary is typed against the API, and the API now holds the boundary, so one of the two has to be written out: that is why the boundary above is annotated `ProxyBoundary`. Leave the annotation off and TypeScript infers each from the other, gives up on both (`TS7022`), and the typed client goes with them.
+The API also checks the boundary here: a path it does not declare, or a shape it declares otherwise, does not compile — see [the shapes](#the-shapes). The boundary itself names no API, so the two do not have to be typed from each other, and it needs no annotation; annotating it `ProxyBoundary` would throw away the list of what it exposes, which the client below is typed from.
 
 A source must carry its own boundary: one declared with another `source` is refused when the sources are registered, with `BOUNDARY_SOURCE_MISMATCH`.
 
@@ -80,9 +79,11 @@ export const q = createProxyQueryCaller<typeof api>("api", { boundary })
 
 The API is imported **as a type**. That is the whole trick, and it is load-bearing rather than stylistic: a value import pulls your `defineApi` call into the module, and from there into the bundle — the upstream host, your middleware bodies and whatever literal sits inside them, and the path of every endpoint including the ones you held back.
 
+Since the API holds the boundary, the client typed from it has the endpoints the boundary names and no others: `client.admin.exportPayouts()` does not compile, and the hooks of `q` offer no endpoint the proxy would refuse. An API that holds no boundary gives the full client.
+
 ## The shapes
 
-Each endpoint says how the client reaches it. The compiler checks the answer against your API, so a wrong one does not build.
+Each endpoint says how the client reaches it. The API that holds the boundary checks the answer, so a wrong one does not build.
 
 | shape | the endpoint it describes |
 | --- | --- |
@@ -112,14 +113,18 @@ const api = defineApi({
   },
 })
 
+const misspelt = defineBoundary({ source: "api", expose: { "posts.lsit": "query" } })
+const notARead = defineBoundary({ source: "api", expose: { "posts.feed": "query" } })
+const aWrite = defineBoundary({ source: "api", expose: { "posts.create": "query" } })
+
 // @ts-expect-error — no such endpoint
-defineBoundary<typeof api>({ source: "api", expose: { "posts.lsit": "query" } })
+defineApi({ baseURL: "https://api.example.com", boundary: misspelt, groups: api.options.groups })
 
 // @ts-expect-error — it is a stream
-defineBoundary<typeof api>({ source: "api", expose: { "posts.feed": "query" } })
+defineApi({ baseURL: "https://api.example.com", boundary: notARead, groups: api.options.groups })
 
 // @ts-expect-error — a POST writes
-defineBoundary<typeof api>({ source: "api", expose: { "posts.create": "query" } })
+defineApi({ baseURL: "https://api.example.com", boundary: aWrite, groups: api.options.groups })
 ```
 
 Renaming an endpoint breaks the boundary that still names the old one, so the two cannot drift apart. There is no build step and nothing to generate.

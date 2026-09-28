@@ -14,7 +14,7 @@ const httpOnlyApi = defineApi({
   },
 });
 
-const boundary = defineBoundary<typeof liveApi>({
+const boundary = defineBoundary({
   source: "api",
   expose: { "live.ticks": "stream", "live.room": "duplex" },
   proxyPath: { ws: "wss://realtime.example.com" },
@@ -44,5 +44,40 @@ describe("createProxyQueryCaller arguments", () => {
     }
 
     expect(refused).toBeTypeOf("function");
+  });
+});
+
+/**
+ * A query caller for an API that holds a boundary has the hooks of the
+ * endpoints the boundary names alone: the rest are refused by the proxy, and
+ * their hooks compiled as though they would answer.
+ */
+describe("createProxyQueryCaller for an API that holds a boundary", () => {
+  it("has hooks for the endpoints the boundary names alone", () => {
+    const gated = defineApi({
+      name: "shop",
+      baseURL: "https://example.com",
+      boundary: defineBoundary({ source: "shop", expose: { "users.list": "query" } }),
+      groups: {
+        users: defineGroup({
+          prefix: "/users",
+          endpoints: { list: endpoint.get("").response<string[]>(), purge: endpoint.del("") },
+        }),
+        admin: defineGroup({ prefix: "/admin", endpoints: { stats: endpoint.get("stats") } }),
+      },
+    });
+
+    const q = createProxyQueryCaller<typeof gated>("shop");
+    /* Hooks run inside a component only; the compiler is what is asked here. */
+    function hooks(): void {
+      q.users.useQuery("list");
+      // @ts-expect-error — the boundary does not name users.purge
+      q.users.useMutation("purge");
+      // @ts-expect-error — nor anything of admin
+      q.admin.useQuery("stats");
+    }
+
+    expect(hooks).toBeTypeOf("function");
+    expect(q.users).toBeTypeOf("object");
   });
 });

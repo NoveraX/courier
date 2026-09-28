@@ -13,29 +13,37 @@
  * carries the names that were opened and nothing else — no upstream host, no
  * middleware, no path of an endpoint that was kept back.
  *
- * The API is named in type position only. That is the point rather than a
- * detail: taking the source as a runtime argument would pull the whole
- * definition into whatever module declares the boundary, and from there into
- * the bundle — which is the leak this exists to close. So the shape of each
- * endpoint is written out and checked against the type instead of read off
- * the value, and naming the wrong one does not compile.
+ * The boundary does not name the API at all. Taking the source as a runtime
+ * argument would pull the whole definition into whatever module declares the
+ * boundary, and from there into the bundle — the leak this exists to close.
+ * Naming its type would tie the two types in a knot, since the API holds the
+ * boundary. So the shape of each endpoint is written out, and the API that
+ * takes the boundary checks it: a misspelt path or a wrong shape does not
+ * compile there, and a browser client typed from that API reaches only the
+ * endpoints the boundary names.
  */
 
 import type { ProxyPath } from "../proxy-caller/proxy-path";
-import type { ExposablePath, ExposedEndpoint, ExposureMap, ProxyBoundary } from "./boundary-types";
+import type { ExposedEndpoint, Exposure, ProxyBoundary } from "./boundary-types";
 
-export interface BoundaryConfig<TApi> {
+/** The paths of an exposure that name a read. */
+type ReadPath<TExposure> = {
+  [P in keyof TExposure]: TExposure[P] extends "query" ? P : never;
+}[keyof TExposure] &
+  string;
+
+export interface BoundaryConfig<TExposure extends Exposure> {
   /** The source's name in the registry, as `courier.config.ts` keys it. */
   source: string;
   /** Every endpoint the browser may call, with its shape. Absent means refused. */
-  expose: ExposureMap<TApi>;
+  expose: TExposure;
   /** Where the app serves its proxy routes, so the client needs nothing else. */
   proxyPath?: ProxyPath;
   /**
    * The reads whose variables stay out of the address: sent as POST, as the
    * definition's `sensitiveVariables` asks. The proxy refuses them over GET.
    */
-  sensitive?: readonly ExposablePath<TApi>[];
+  sensitive?: readonly ReadPath<TExposure>[];
 }
 
 /** How each declared shape reaches the wire. */
@@ -55,10 +63,8 @@ const SHAPES: Readonly<Record<string, ExposedEndpoint>> = {
  *
  * @example
  * ```ts
- * // boundary.ts — annotated, because the API below holds it in turn
- * import type { api } from "./api";
- *
- * export const boundary: ProxyBoundary = defineBoundary<typeof api>({
+ * // boundary.ts
+ * export const boundary = defineBoundary({
  *   source: "api",
  *   expose: {
  *     "posts.list": "query",
@@ -67,15 +73,19 @@ const SHAPES: Readonly<Record<string, ExposedEndpoint>> = {
  *     "chat.room": "duplex",
  *   },
  * });
- * // "posts.lsit" — does not compile. "posts.feed": "query" — does not compile,
- * // and neither does "posts.create": "query", since a POST writes.
- * // "admin.purge" — absent, so refused at runtime and unknown to the browser.
  *
- * // api.ts — the server gates on the boundary its source carries
+ * // api.ts — the server gates on the boundary its source carries, and checks it:
+ * // "posts.lsit" does not compile here, nor "posts.feed": "query", nor
+ * // "posts.create": "query", since a POST writes.
  * export const api = defineApi({ baseURL, boundary, groups: { posts, chat, admin } });
+ *
+ * // In the browser: admin.purge is absent, so it does not compile and is refused.
+ * const client = createProxyCaller<typeof api>("api", { boundary });
  * ```
  */
-export function defineBoundary<TApi>(config: BoundaryConfig<TApi>): ProxyBoundary {
+export function defineBoundary<const TExposure extends Exposure>(
+  config: BoundaryConfig<TExposure>,
+): ProxyBoundary<TExposure> {
   const endpoints: Record<string, ExposedEndpoint> = {};
 
   for (const [path, shape] of Object.entries(config.expose)) {

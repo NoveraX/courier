@@ -1,11 +1,10 @@
-import { defineBoundary, type ProxyBoundary } from "../../src/define/index";
-import type { shop } from "./shop-api";
+import { defineBoundary } from "../../src/define/index";
 
 /**
  * A boundary declared the way the proxy-mode docs show it: in its own module,
- * typed against an API that holds it in turn.
+ * naming no API, and held by the API that checks it.
  */
-export const shopBoundary: ProxyBoundary = defineBoundary<typeof shop>({
+export const shopBoundary = defineBoundary({
   source: "shop",
   expose: { "orders.list": "query" },
 });

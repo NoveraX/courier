@@ -304,11 +304,11 @@ createHandler({ allowedOrigins: ["https://admin.example.com", "https://*.example
 
 The handler speaks CORS for those origins: it answers their preflight and gives every answer the permission a browser needs to read it. Route `OPTIONS` to the handler as well as `GET` and `POST`.
 
-Every endpoint of a source is reachable through the proxy unless the source says otherwise. Name the ones a browser may call with `defineBoundary`, and give the boundary to the API as well as to the client, so the server refuses the rest. The boundary is typed against the API that holds it, so annotate it as `ProxyBoundary`:
+Every endpoint of a source is reachable through the proxy unless the source says otherwise. Name the ones a browser may call with `defineBoundary`, and give the boundary to the API as well as to the client, so the server refuses the rest. The API checks the boundary — a path it does not declare, or a wrong shape, does not compile — and a proxy client typed from the API reaches only the endpoints it names:
 
 ```ts
 // boundary.ts
-export const boundary: ProxyBoundary = defineBoundary<typeof api>({
+export const boundary = defineBoundary({
   source: "api",
   expose: { "users.getAll": "query" },
 })

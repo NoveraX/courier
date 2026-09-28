@@ -2,6 +2,7 @@ import type { ProxyPath } from "../../proxy-caller/proxy-path";
 import type { ResolveOrigin } from "../../proxy-caller/resolve-path";
 import { resolveProxyPath } from "../../proxy-caller/resolve-path";
 import { buildProxySSEUrl, executeSSE } from "../../realtime/caller-sse";
+import { layerHeaders } from "../../utils/layer-headers";
 import type { SSEFactory } from "../types";
 
 export interface ProxySSEDefaults {
@@ -42,10 +43,7 @@ export function createProxySSEFactory(source: string, defaults: ProxySSEDefaults
   const { proxyPath, origin, headers: defaultHeaders } = defaults;
 
   return function subscribeSSE(group, method, variables, options) {
-    const headers = {
-      ...defaultHeaders,
-      ...(options.headers as Record<string, string> | undefined),
-    };
+    const headers = layerHeaders(defaultHeaders, options.headers);
     const sseBase = resolveProxyPath("sse", proxyPath, origin);
     const url = buildProxySSEUrl(
       sseBase,

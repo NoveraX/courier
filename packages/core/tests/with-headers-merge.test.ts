@@ -3,36 +3,71 @@
  *
  * Each `.with()` replaced the options of the one before, headers included,
  * so a token set on the client was dropped the moment a group added a
- * request id of its own.
+ * request id of its own. Once they were merged, a stream still lost them
+ * all: its factory spread the merged headers as a plain object, and a
+ * `Headers` has no own properties to spread.
  */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { ServerResponse } from "node:http";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
+import { createProxyCaller } from "../src/proxy-caller";
+import type { SSESubscription } from "../src/realtime/types";
 import { echo, startUpstream, type Upstream } from "./helpers/upstream";
 
-const { endpoint } = courier();
+const { endpoint, stream } = courier();
 let upstream: Upstream;
 
+function openStream(res: ServerResponse): void {
+  res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
+  res.write("data: 1\n\n");
+}
+
 beforeEach(async () => {
-  upstream = await startUpstream(echo);
+  upstream = await startUpstream((request, res) =>
+    request.url.startsWith("/feed") || request.url.startsWith("/sse")
+      ? openStream(res)
+      : echo(request, res),
+  );
 });
 
 afterEach(async () => {
   await upstream.close();
 });
 
+function api() {
+  return defineApi({
+    name: "orders",
+    baseURL: upstream.url,
+    allowedHeaders: ["x-request-id", "x-trace"],
+    groups: {
+      orders: defineGroup({ prefix: "orders", endpoints: { list: endpoint.get("") } }),
+      feed: defineGroup({ prefix: "feed", endpoints: { live: stream.get("live") } }),
+    },
+  });
+}
+
 function client() {
-  return createCaller(
-    defineApi({
-      name: "orders",
-      baseURL: upstream.url,
-      allowedHeaders: ["x-request-id", "x-trace"],
-      groups: {
-        orders: defineGroup({ prefix: "orders", endpoints: { list: endpoint.get("") } }),
-      },
-    }),
-  );
+  return createCaller(api());
+}
+
+function proxyClient() {
+  const source = api();
+  return createProxyCaller<typeof source>("orders", {
+    source,
+    proxyPath: { sse: `${upstream.url}/sse` },
+  });
+}
+
+/** The headers the upstream saw once the stream opened. */
+async function openedWith(subscription: SSESubscription<unknown>) {
+  try {
+    await vi.waitFor(() => expect(upstream.received).toHaveLength(1));
+    return upstream.received[0]?.headers;
+  } finally {
+    subscription.close();
+  }
 }
 
 describe("headers from chained .with() calls", () => {
@@ -65,5 +100,52 @@ describe("headers from chained .with() calls", () => {
       .list();
 
     expect(upstream.received[0]?.headers.authorization).toBe("Bearer second");
+  });
+});
+
+describe("headers from chained .with() calls on a stream", () => {
+  it("are all sent when the stream opens directly", async () => {
+    const headers = await openedWith(
+      client()
+        .with({ headers: { authorization: "Bearer token" } })
+        .feed.with({ headers: { "x-request-id": "r1" } })
+        .live(),
+    );
+
+    expect(headers?.authorization).toBe("Bearer token");
+    expect(headers?.["x-request-id"]).toBe("r1");
+  });
+
+  it("are all sent when the stream opens through the proxy", async () => {
+    const headers = await openedWith(
+      proxyClient()
+        .with({ headers: { authorization: "Bearer token" } })
+        .feed.with({ headers: { "x-request-id": "r1" } })
+        .live(),
+    );
+
+    expect(headers?.authorization).toBe("Bearer token");
+    expect(headers?.["x-request-id"]).toBe("r1");
+  });
+
+  it("let the later value win for the same header", async () => {
+    const headers = await openedWith(
+      client()
+        .with({ headers: { authorization: "Bearer first" } })
+        .feed.with({ headers: { Authorization: "Bearer second" } })
+        .live(),
+    );
+
+    expect(headers?.authorization).toBe("Bearer second");
+  });
+
+  it("are sent when given as a Headers", async () => {
+    const headers = await openedWith(
+      proxyClient()
+        .with({ headers: new Headers({ authorization: "Bearer token" }) })
+        .feed.live(),
+    );
+
+    expect(headers?.authorization).toBe("Bearer token");
   });
 });

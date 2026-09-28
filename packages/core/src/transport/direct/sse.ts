@@ -1,6 +1,7 @@
 import { getSourceName } from "../../define/api";
 import type { AnyDefinedApi } from "../../define/types";
 import { buildDirectSSEUrl, executeSSE } from "../../realtime/caller-sse";
+import { layerHeaders } from "../../utils/layer-headers";
 import { beginStream, instrumentSSE } from "../instrument";
 import type { SSEFactory } from "../types";
 import { addressCall } from "./address";
@@ -49,11 +50,11 @@ export function createDirectSSEFactory(
     // The fetch layer always adds `Accept: text/event-stream`; merging it
     // here means Studio sees the same headers the wire sees, not just the
     // user-supplied subset.
-    const requestHeaders: Record<string, string> = {
-      Accept: "text/event-stream",
-      ...defaultHeaders,
-      ...(options.headers as Record<string, string> | undefined),
-    };
+    const requestHeaders = layerHeaders(
+      { Accept: "text/event-stream" },
+      defaultHeaders,
+      options.headers,
+    );
 
     const address = addressCall(groups?.[group]?.[method], method, variables);
     const url = buildDirectSSEUrl(baseURL, prefix, address.path, address.variables);

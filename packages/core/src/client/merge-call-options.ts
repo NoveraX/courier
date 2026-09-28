@@ -1,3 +1,5 @@
+import { layerHeaders } from "../utils/layer-headers";
+
 /**
  * Combine the options of two `.with()` calls, the later one on top.
  *
@@ -13,7 +15,7 @@
  * @example
  * ```ts
  * mergeCallOptions({ headers: { authorization: "t" } }, { headers: { "x-id": "1" } });
- * // → { headers: Headers { authorization: "t", "x-id": "1" } }
+ * // → { headers: { authorization: "t", "x-id": "1" } }
  * ```
  */
 export function mergeCallOptions(
@@ -22,29 +24,5 @@ export function mergeCallOptions(
 ): Record<string, unknown> {
   const merged = { ...options, ...next };
   if (options.headers === undefined || next.headers === undefined) return merged;
-
-  const headers = headersOf(options.headers);
-  headersOf(next.headers).forEach((value, name) => {
-    headers.set(name, value);
-  });
-  return { ...merged, headers };
-}
-
-/* Headers as `.with()` accepts them: a Headers, a list of pairs, or a
-   record whose unset entries are skipped. */
-function headersOf(value: unknown): Headers {
-  if (value instanceof Headers) return new Headers(value);
-  const headers = new Headers();
-  const entries = Array.isArray(value)
-    ? value
-    : typeof value === "object" && value !== null
-      ? Object.entries(value)
-      : [];
-  for (const entry of entries) {
-    if (!Array.isArray(entry)) continue;
-    const [name, headerValue] = entry;
-    if (typeof name === "string" && typeof headerValue === "string")
-      headers.append(name, headerValue);
-  }
-  return headers;
+  return { ...merged, headers: layerHeaders(options.headers, next.headers) };
 }

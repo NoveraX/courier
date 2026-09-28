@@ -182,7 +182,7 @@ const api = defineApi({
 const report = await caller.reports.with({ timeout: 30_000 }).generate({ type: "annual" })
 ```
 
-`.with()` can be called at several levels — the client, a group, an endpoint. The later call wins for each option it sets, and headers are merged name by name, so a token set on the client stays when a group adds a header of its own:
+`.with()` can be called at several levels — the client, a group, an endpoint. The later call wins for each option it sets, and headers are merged name by name, whatever their case, so a token set on the client stays when a group adds a header of its own. Headers may be given as a record, a `Headers` or a list of pairs, and they reach a stream opened with `.with()` the same way they reach a request:
 
 ```ts
 await caller

@@ -1,7 +1,7 @@
 import type { AnyEndpoint, InferResponse, InferVariables } from "./define/marker";
 import type { CallOptions, HttpResponse } from "./http-client/types";
 
-export type CallerFn<TSources extends Record<string, any>> = <
+export type CallerFn<TSources extends Record<string, unknown>> = <
   TKey extends keyof TSources,
   TRaw extends boolean = false,
 >(
@@ -15,11 +15,11 @@ export type CallerFn<TSources extends Record<string, any>> = <
   ...arguments_: EndpointArguments<TEndpointKey, TEndpoint>
 ) => EndpointResult<TRaw, TResponse>;
 
-type EndpointArguments<TEndpointKey, TEndpoint, TVariables = ExtractVariables<TEndpoint>> = [
-  TVariables,
-] extends [undefined | void]
-  ? [endpoint: TEndpointKey]
-  : [endpoint: TEndpointKey, variables: TVariables];
+type EndpointArguments<TEndpointKey, TEndpoint, TVariables = ExtractVariables<TEndpoint>> =
+  // biome-ignore lint/suspicious/noConfusingVoidType: `void` is what an endpoint without variables declares
+  [TVariables] extends [undefined | void]
+    ? [endpoint: TEndpointKey]
+    : [endpoint: TEndpointKey, variables: TVariables];
 
 type ExtractResponse<TCandidate> = TCandidate extends AnyEndpoint
   ? InferResponse<TCandidate>
@@ -29,32 +29,35 @@ type ExtractVariables<TCandidate> = TCandidate extends AnyEndpoint
   ? InferVariables<TCandidate>
   : unknown;
 
-type SplitEndpointKey<TKey extends string> = TKey extends `${infer TGroup}:${infer TMethod}`
+type SplitEndpointKey<TKey> = TKey extends `${infer TGroup}:${infer TMethod}`
   ? { group: TGroup; method: TMethod }
   : { group: undefined; method: TKey };
 
-export type ResolveEndpoint<
-  TSource extends Record<string, any>,
-  TEndpointKey extends EndpointKey<TSource>,
-  TSplit extends Record<string, any> = SplitEndpointKey<TEndpointKey>,
-  TGroup extends string = TSplit["group"],
-  TMethod extends string = TSplit["method"],
-> = TGroup extends string ? Groups<TSource>[TGroup][TMethod] : TSource[TMethod];
+/** A field of an object type, or `never` when it has none by that name. */
+type FieldOf<TObject, TKey> = TKey extends keyof TObject ? TObject[TKey] : never;
 
-type GroupedEndpoints<TGroups extends Record<string, any>> = {
+/** A source's groups, from `options.groups`; `never` for a source without groups. */
+type Groups<TSource> = TSource extends { readonly options: infer TOptions }
+  ? FieldOf<TOptions, "groups">
+  : never;
+
+export type ResolveEndpoint<
+  TSource,
+  TEndpointKey extends EndpointKey<TSource>,
+  TSplit extends { group: unknown; method: unknown } = SplitEndpointKey<TEndpointKey>,
+> = TSplit["group"] extends string
+  ? FieldOf<FieldOf<Groups<TSource>, TSplit["group"]>, TSplit["method"]>
+  : FieldOf<TSource, TSplit["method"]>;
+
+type GroupedEndpoints<TGroups> = {
   [TKey in keyof TGroups]: TKey extends string ? `${TKey}:${FunctionKeys<TGroups[TKey]>}` : never;
 }[keyof TGroups];
 
-export type EndpointKey<
-  TSource extends Record<string, any>,
-  TGroupMap extends Record<string, any> = Groups<TSource>,
-> =
-  TGroupMap extends Record<string, any>
-    ? FunctionKeys<TSource> | GroupedEndpoints<TGroupMap>
-    : FunctionKeys<TSource>;
+export type EndpointKey<TSource> =
+  | FunctionKeys<TSource>
+  | ([Groups<TSource>] extends [never] ? never : GroupedEndpoints<Groups<TSource>>);
 
-/** Names of the endpoints a source or group holds, ignoring its options. */
-type FunctionKeys<TObj extends Record<string, any>> = NonNullable<
+type FunctionKeys<TObj> = NonNullable<
   {
     [TKey in keyof TObj]: TObj[TKey] extends AnyEndpoint
       ? TKey extends string
@@ -63,8 +66,6 @@ type FunctionKeys<TObj extends Record<string, any>> = NonNullable<
       : never;
   }[keyof TObj]
 >;
-
-type Groups<TSource extends Record<string, any>> = NonNullable<TSource["options"]>["groups"];
 
 type EndpointResult<TRaw extends boolean = false, TResponse = unknown> = Promise<
   TRaw extends true ? Partial<HttpResponse<TResponse>> : TResponse

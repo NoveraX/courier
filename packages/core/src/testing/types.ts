@@ -47,10 +47,10 @@ export type ExtractEndpointResponse<TEndpoint> = TEndpoint extends AnyEndpoint
   ? InferResponse<TEndpoint>
   : unknown;
 
-export type ApiGroups<TApi extends DefinedApi<any>> = TApi["options"]["groups"];
+export type ApiGroups<TApi extends DefinedApi> = TApi["options"]["groups"];
 
 /** In-memory test client with mock support and request history */
-export type TestClient<TApi extends DefinedApi<any> = DefinedApi<any>> = {
+export type TestClient<TApi extends DefinedApi = DefinedApi> = {
   /** Typed client — same dot-notation API as createCaller / createProxyCaller */
   client: TypedClient<TApi>;
   /** Mock a specific endpoint's response */

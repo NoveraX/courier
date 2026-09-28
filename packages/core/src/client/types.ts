@@ -40,7 +40,7 @@ export type GroupClient<
   };
 
 /** Extract groups from a DefinedApi */
-type ApiGroups<TApi extends DefinedApi<any>> = TApi["options"]["groups"];
+type ApiGroups<TApi extends DefinedApi> = TApi["options"]["groups"];
 
 /** Flat endpoint — callable function with .raw and .with() support */
 type FlatEndpointMethod<
@@ -97,7 +97,7 @@ export type FlatClient<
 
 /** Client for grouped API */
 export type TypedClient<
-  TApi extends DefinedApi<any>,
+  TApi extends DefinedApi,
   TRaw extends boolean = false,
   TStream extends boolean = false,
 > = {

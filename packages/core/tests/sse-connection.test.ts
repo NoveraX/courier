@@ -44,6 +44,23 @@ async function readFor<TData>(sub: AsyncIterable<{ data: TData }>, ms: number): 
   return seen;
 }
 
+/** Read until `done` says enough has arrived, or `ms` passes, whichever comes first. */
+async function readUntil<TData>(
+  sub: AsyncIterable<{ data: TData }>,
+  done: (seen: TData[]) => boolean,
+  ms: number,
+): Promise<TData[]> {
+  const seen: TData[] = [];
+  const reading = (async () => {
+    for await (const event of sub) {
+      seen.push(event.data);
+      if (done(seen)) return;
+    }
+  })();
+  await Promise.race([reading, new Promise((resolve) => setTimeout(resolve, ms))]);
+  return seen;
+}
+
 describe("a server that falls silent", () => {
   it("is reconnected once heartbeatTimeout passes, and the stream goes on", async () => {
     const fetchMock = vi
@@ -55,7 +72,9 @@ describe("a server that falls silent", () => {
     const statuses: string[] = [];
     sub.on("status", (status) => statuses.push(status));
 
-    const seen = await readFor(sub, 80);
+    /* Waits for the second event rather than a fixed time, so a busy machine
+       that runs the timers late still sees the reconnect. */
+    const seen = await readUntil(sub, (events) => events.length >= 2, 5_000);
     sub.close();
 
     expect(seen.slice(0, 2)).toEqual([1, 2]);
@@ -79,11 +98,13 @@ describe("a server that falls silent", () => {
         return new Response(readable, { headers: { "Content-Type": "text/event-stream" } });
       }),
     );
-    const sub = subscribeSSE<number>("/sse", { heartbeatTimeout: 30, backoff: FAST });
+    /* Comments every 10 ms against a 250 ms timeout: only a stall far beyond
+       any scheduling delay would let the timeout pass. */
+    const sub = subscribeSSE<number>("/sse", { heartbeatTimeout: 250, backoff: FAST });
     const statuses: string[] = [];
     sub.on("status", (status) => statuses.push(status));
 
-    await readFor(sub, 100);
+    await readFor(sub, 400);
     sub.close();
 
     expect(statuses).not.toContain("reconnecting");

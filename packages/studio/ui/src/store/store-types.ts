@@ -90,6 +90,8 @@ export interface StudioState {
   togglePaused: () => void
   togglePreserveLog: () => void
   clearRequests: () => void
+  /** Show these requests, newest first, in place of the ones captured — a saved session loaded back. */
+  loadRequests: (requests: RequestEntry[]) => void
   togglePin: (id: string) => void
   /** Take in a batch of runtime events, oldest first, in one store update. */
   handleEvents: (events: Array<StudioEvent & Record<string, unknown>>) => void

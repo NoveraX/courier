@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import type { ExportFormat } from "@/store/types";
+import type { ExportFormat, RequestEntry } from "@/store/types";
 import { apiClient, post } from "@/lib/api-client";
+import { isRecord } from "@/store/event-helpers";
+import { useStudioStore } from "@/store";
+import { requestFromSaved, savedRequestOf } from "./saved-request";
 
 // ── Session summary (matches server SessionSummary) ──────────────────────────
 
@@ -24,15 +27,28 @@ interface SessionSummary {
 
 // ── Session history hook ─────────────────────────────────────────────────────
 
+/**
+ * The sessions Studio keeps in `.courier/sessions/`, and what can be done
+ * with them: save the requests on screen as one, load one back into the
+ * Timeline, export, delete. A step that fails says why in a toast.
+ *
+ * @returns The saved sessions, whether they are still loading, and the actions
+ *
+ * @example
+ * ```tsx
+ * const history = useSessionHistory();
+ * await history.saveCurrentSession("Debugging auth");
+ * ```
+ */
 export function useSessionHistory() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSessions = useCallback(async () => {
     try {
-      const data = await post<{ sessions: SessionSummary[] }>("/api/sessions/list");
-      setSessions(data.sessions ?? []);
-    } catch {
+      setSessions(await post<SessionSummary[]>("/api/sessions/list"));
+    } catch (error) {
+      failed("list the saved sessions", error);
       setSessions([]);
     } finally {
       setLoading(false);
@@ -42,35 +58,44 @@ export function useSessionHistory() {
   useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
   async function saveCurrentSession(name: string): Promise<void> {
-    await post("/api/sessions/save", { name });
+    const requests = useStudioStore.getState().requests.map(savedRequestOf);
+    if (!(await attempt("save the session", () => post("/api/sessions/save", { name, requests })))) return;
     toast.success("Session saved");
     await fetchSessions();
   }
 
   async function loadSession(id: string): Promise<void> {
-    await post("/api/sessions/load", { id });
-    toast.success("Session loaded");
+    const session = await attempt("load the session", () => post<unknown>("/api/sessions/load", { id }));
+    if (!isRecord(session) || !Array.isArray(session.requests)) return;
+    const requests = session.requests
+      .map(requestFromSaved)
+      .filter((r): r is RequestEntry => r !== undefined);
+    useStudioStore.getState().loadRequests(requests);
+    toast.success(`Loaded ${requests.length} requests from "${String(session.name)}"`);
   }
 
   async function deleteSession(id: string): Promise<void> {
-    await post("/api/sessions/delete", { id });
+    if (!(await attempt("delete the session", () => post("/api/sessions/delete", { id })))) return;
     toast.success("Session deleted");
     await fetchSessions();
   }
 
   async function exportSession(id: string, format: ExportFormat): Promise<void> {
+    const blob = await attempt("export the session", () =>
+      apiClient.post<Blob>("/api/sessions/export", { json: { id, format }, responseType: "blob" }),
+    );
+    if (!blob) return;
     const { downloadFile } = await import("@/lib/export");
-    const blob = await apiClient.post<Blob>("/api/sessions/export", {
-      json: { id, format },
-      responseType: "blob",
-    });
     downloadFile(blob, `session-${id}.${format === "har" ? "har" : "json"}`);
     toast.success(`Exported as ${format.toUpperCase()}`);
   }
 
   async function deleteAllSessions(): Promise<void> {
     for (const session of sessions) {
-      await post("/api/sessions/delete", { id: session.id });
+      const deleted = await attempt("delete the sessions", () =>
+        post("/api/sessions/delete", { id: session.id }),
+      );
+      if (!deleted) return fetchSessions();
     }
     toast.success("All sessions deleted");
     await fetchSessions();
@@ -86,4 +111,18 @@ export function useSessionHistory() {
     deleteAllSessions,
     refresh: fetchSessions,
   };
+}
+
+/** Run one step against Studio; a failure is told in a toast and yields `undefined`. */
+async function attempt<TResult>(what: string, step: () => Promise<TResult>): Promise<TResult | undefined> {
+  try {
+    return await step();
+  } catch (error) {
+    failed(what, error);
+    return undefined;
+  }
+}
+
+function failed(what: string, error: unknown): void {
+  toast.error(`Could not ${what}: ${error instanceof Error ? error.message : String(error)}`);
 }

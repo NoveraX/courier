@@ -118,10 +118,10 @@ export interface NetworkConfig {
    */
   timeout?: number;
   /**
-   * The faults a failing request is given. A status fails with that status.
-   * `timeout` fails after `timeout` ms. `reset` drops the connection on the
-   * mock server, so the client gets no answer at all; the mock client throws
-   * a 502 for it.
+   * The faults a failing request is given (default: 500 and 503). A status
+   * fails with that status. `timeout` fails after `timeout` ms. `reset` drops
+   * the connection on the mock server, so the client gets no answer at all;
+   * the mock client throws a 502 for it.
    */
   faultTypes?: Array<"500" | "502" | "503" | "timeout" | "reset">;
   /** Weighted fault distribution — overrides faultTypes when present */

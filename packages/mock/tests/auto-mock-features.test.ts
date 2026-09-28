@@ -354,7 +354,7 @@ describe("network errorRate 100%", () => {
 
   it("all requests fail when errorRate is 1.0", async () => {
     const res = await fetch(`${url}/items`);
-    // Fault types include "timeout" (408) and 5xx codes — any error response is valid
+    // The default faults are 500 and 503
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });

@@ -1,6 +1,8 @@
 import type { FaultWeight, NetworkConfig } from "../types";
 
-const DEFAULT_FAULT_TYPES = ["500", "503", "timeout"] as const;
+/* A timeout fault holds its request until it times out, so an error rate
+   alone never picks one: it fails requests, it does not stall them. */
+const DEFAULT_FAULT_TYPES = ["500", "503"] as const;
 
 /** Decide if this request should fail based on error rate */
 export function shouldFail(config: NetworkConfig): boolean {

@@ -2,7 +2,16 @@
  * Studio's database opens where it is kept, `.courier/studio.db`, and when
  * it cannot be kept there Studio still runs, with its data in memory.
  */
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -36,6 +45,19 @@ describe("Studio's database", () => {
     expect(studio.persistent).toBe(true);
     expect(existsSync(join(root, ".courier", DATABASE_FILE))).toBe(true);
     expect(existsSync(join(root, ".courier", ".gitignore"))).toBe(true);
+  });
+
+  it.skipIf(process.platform === "win32")("is readable by its owner alone, as are the files beside it", () => {
+    const root = project();
+    const studio = opened(root);
+    studio.db.exec("CREATE TABLE probe (n INTEGER); INSERT INTO probe VALUES (1);");
+
+    const modes = readdirSync(join(root, ".courier"))
+      .filter((name) => name.startsWith(DATABASE_FILE))
+      .map((name) => [name, statSync(join(root, ".courier", name)).mode & 0o777]);
+
+    expect(modes.length).toBeGreaterThan(0);
+    expect(modes.filter(([, mode]) => mode !== 0o600)).toEqual([]);
   });
 
   it("keeps its data in memory when .courier is a link", () => {

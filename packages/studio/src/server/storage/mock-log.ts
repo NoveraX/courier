@@ -5,6 +5,7 @@
  */
 
 import type { DatabaseSync } from "node:sqlite";
+import { withoutCredentials } from "./without-credentials";
 
 type MockEvent = Record<string, unknown>;
 
@@ -56,7 +57,7 @@ export function createMockLog(db: DatabaseSync): MockLog {
     db.exec("BEGIN");
     try {
       for (const id of drops) drop.run(id);
-      for (const { id, event } of writes) insert.run(id, JSON.stringify(event));
+      for (const { id, event } of writes) insert.run(id, JSON.stringify(withoutCredentials(event)));
       db.exec("COMMIT");
     } catch (error) {
       db.exec("ROLLBACK");

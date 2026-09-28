@@ -4,6 +4,7 @@
 
 import { randomUUID } from "node:crypto";
 import type { SavedRequest, SavedSession, SavedSessionApp, SessionStats } from "./session-types";
+import { headersWithoutCredentials } from "./storage/without-credentials";
 import { isObject } from "./validate-body";
 
 function optionalString(value: unknown): string | undefined {
@@ -57,13 +58,20 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     timing: recordOf(raw.timing, isNumber),
     size: optionalNumber(raw.size),
     data: raw.data,
-    requestHeaders: recordOf(raw.requestHeaders, isString),
-    responseHeaders: recordOf(raw.headers ?? raw.responseHeaders, isString),
+    requestHeaders: credentialFree(recordOf(raw.requestHeaders, isString)),
+    responseHeaders: credentialFree(recordOf(raw.headers ?? raw.responseHeaders, isString)),
     error: errorOf(raw.error),
     startedAt: optionalNumber(raw.startedAt) ?? Date.now(),
     url: optionalString(raw.url),
     sessionId: String(raw.sessionId ?? ""),
   };
+}
+
+/* A session is written down and exported to be handed around: no credentials go with it. */
+function credentialFree(
+  headers: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  return headers && headersWithoutCredentials(headers);
 }
 
 /** Compute session stats from requests */

@@ -4,6 +4,7 @@
  */
 
 import type { DatabaseSync, SQLOutputValue } from "node:sqlite";
+import { withoutCredentials } from "./without-credentials";
 
 type RuntimeEvent = Record<string, unknown>;
 
@@ -84,7 +85,9 @@ export function requestRows(db: DatabaseSync): RequestRows {
           deleteEvents.run(id);
           deleteRequest.run(id);
         }
-        for (const { id, event } of batch.events) insertEvent.run(id, JSON.stringify(event));
+        for (const { id, event } of batch.events) {
+          insertEvent.run(id, JSON.stringify(withoutCredentials(event)));
+        }
         for (const row of batch.requests)
           upsertRequest.run(row.id, row.position, row.open ? 1 : 0, row.events);
         db.exec("COMMIT");

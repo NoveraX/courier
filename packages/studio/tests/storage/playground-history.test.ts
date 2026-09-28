@@ -70,6 +70,18 @@ describe("the Playground history", () => {
     await expect.poll(() => afterRestart.sent).toEqual([[CALL]]);
   });
 
+  it("keeps no credential a call sent", async () => {
+    const studio = await start(project());
+    const sender = await page(studio.url);
+    const call = { ...CALL, headers: '{ "Authorization": "Bearer t" }', requestHeaders: { authorization: "Bearer t" } };
+    sender.socket.emit("playground:history:save", [call]);
+
+    const next = await page(studio.url);
+
+    await expect.poll(() => JSON.stringify(next.sent)).toContain("[redacted]");
+    expect(JSON.stringify(next.sent)).not.toContain("Bearer t");
+  });
+
   it("keeps what it was given, and ignores what is not a history", async () => {
     const studio = await start(project());
     const sender = await page(studio.url);

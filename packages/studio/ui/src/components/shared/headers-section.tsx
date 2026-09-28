@@ -46,17 +46,32 @@ export function HeadersSection({ title, headers, warning }: HeadersSectionProps)
 
 // ── DroppedHeadersSection (headers filtered out by allowedHeaders) ───────────
 
+/**
+ * The headers a proxy dropped: those written for the request that the
+ * proxy did not forward, because `allowedHeaders` does not list them.
+ *
+ * Only a proxy drops headers, and only the headers it reported forwarding
+ * tell which: without that report nothing is claimed dropped.
+ *
+ * @param sent - The Headers editor's text the request was sent with
+ * @param forwarded - The headers the proxy reported forwarding, if it did
+ * @returns The section, or `null` when no header is known to be dropped
+ *
+ * @example
+ * ```tsx
+ * <DroppedHeadersSection sent={entry.headers} forwarded={entry.mode === "proxy" ? entry.requestHeaders : undefined} />
+ * ```
+ */
 export function DroppedHeadersSection({ sent, forwarded }: {
   sent: string;
   forwarded?: Record<string, string>;
 }): React.ReactElement | null {
+  if (!forwarded) return null;
   let parsed: Record<string, string>;
   try { parsed = JSON.parse(sent); } catch { return null; }
   if (!parsed || typeof parsed !== "object") return null;
 
-  const forwardedLower = new Set(
-    Object.keys(forwarded ?? {}).map((k) => k.toLowerCase()),
-  );
+  const forwardedLower = new Set(Object.keys(forwarded).map((k) => k.toLowerCase()));
 
   const dropped: Record<string, string> = {};
   for (const [k, v] of Object.entries(parsed)) {

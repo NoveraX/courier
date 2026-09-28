@@ -134,6 +134,41 @@ describe("the Playground", () => {
     ]);
   });
 
+  it("claims no header dropped by a direct call, which sends every header", async () => {
+    renderPlayground({ source: "api", group: "users", method: "create" });
+
+    await act(async () => screen.getByRole("button", { name: /Headers/ }).click());
+    const [, headersEditor] = screen.getAllByRole("textbox");
+    fireEvent.change(headersEditor, { target: { value: '{ "x-client-tag": "pg", "x-not-allowed": "1" }' } });
+    await act(async () => screen.getByRole("button", { name: "Send" }).click());
+    const tabs = screen.getAllByRole("button", { name: /^Headers$/ });
+    await act(async () => tabs[tabs.length - 1].click());
+
+    expect(execCalls()).toEqual([
+      expect.objectContaining({ headers: { "x-client-tag": "pg", "x-not-allowed": "1" } }),
+    ]);
+    expect(screen.queryByText(/Dropped Headers/)).toBeNull();
+    expect(screen.getByText("Request Headers (2)")).toBeTruthy();
+  });
+
+  it("lists the headers a proxy reported it did not forward", async () => {
+    useStudioStore.setState({
+      playgroundActiveResponse: {
+        id: "e1", rid: "e1", source: "api", group: "users", method: "create",
+        variables: "{}", headers: '{ "x-client-tag": "pg", "x-not-allowed": "1" }',
+        mode: "proxy", timestamp: 1, status: "success", statusCode: 201,
+        requestHeaders: { "x-client-tag": "pg" },
+      },
+    });
+    renderPlayground({ source: "api", group: "users", method: "create" });
+
+    const tabs = screen.getAllByRole("button", { name: /^Headers$/ });
+    await act(async () => tabs[tabs.length - 1].click());
+
+    expect(screen.getByText("Dropped Headers (1)")).toBeTruthy();
+    expect(screen.getByText("x-not-allowed")).toBeTruthy();
+  });
+
   it("says why it sends nothing when the variables are not JSON", async () => {
     renderPlayground({ source: "api", group: "users", method: "byId" });
 

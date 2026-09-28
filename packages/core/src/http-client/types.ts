@@ -181,4 +181,6 @@ export type Context = RequestContext & {
   mode?: "direct" | "proxy";
   /** High-resolution timestamp when the proxy adapter received the request (performance.now()) */
   proxyReceiveAt?: number;
+  /** A direct caller's default timeout, for a call and an endpoint that name none */
+  defaultTimeout?: number;
 };

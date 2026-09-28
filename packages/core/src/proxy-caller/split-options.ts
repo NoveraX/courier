@@ -79,7 +79,6 @@ export function splitProxyOptions(
     if (key === "next") continue;
     (SERVER_KEYS.has(key) ? server : init)[key] = value;
   }
-  server.timeout ??= defaults.timeout;
   if (server.timeout === undefined) delete server.timeout;
 
   return {
@@ -87,7 +86,9 @@ export function splitProxyOptions(
     init,
     headers: mergeHeaders(defaults.headers, headers),
     credentials: credentials ?? defaults.credentials,
-    timeout: server.timeout as number | undefined,
+    /* The default bounds how long the browser waits. Sent to the server as
+       the call's own timeout, it replaced the endpoint's `.timeout()`. */
+    timeout: typeof server.timeout === "number" ? server.timeout : defaults.timeout,
     proxyMethod: method,
     stream: server.stream === true,
     cache,

@@ -140,14 +140,16 @@ describe("createCaller", () => {
   });
 
   describe("defaults", () => {
-    it("applies default timeout when option timeout is undefined", async () => {
+    it("carries the default timeout beside the call's own options", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
       const client = createCaller(mockSource, { timeout: 10000 });
       await (client as any).users.list();
 
       const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
-      expect(payload.options.timeout).toBe(10000);
+      const context = mockExecuteRequest.mock.calls[0]?.[2] as any;
+      expect(payload.options.timeout).toBeUndefined();
+      expect(context.defaultTimeout).toBe(10000);
     });
 
     it("preserves .with() timeout over default", async () => {

@@ -35,8 +35,13 @@ export function createDirectHTTPExecutor(
     onSuccess: globalOnSuccess,
   } = defaults;
 
+  /* The default is the least specific timeout: carried beside the call's
+     options, it gives way to the endpoint's own `.timeout()`. */
+  const context =
+    defaultTimeout === undefined ? defaultContext : { ...defaultContext, defaultTimeout };
+
   return async function executeHTTP(group, method, variables, options, raw) {
-    const mergedOptions = mergeOptions(options, raw, defaultTimeout, defaultHeaders);
+    const mergedOptions = mergeOptions(options, raw, defaultHeaders);
     const requestPayload = {
       source: sourceName,
       group,
@@ -46,7 +51,7 @@ export function createDirectHTTPExecutor(
     };
 
     try {
-      const result = await executeRequest(sources, requestPayload, defaultContext);
+      const result = await executeRequest(sources, requestPayload, context);
       await globalOnSuccess?.(result);
       return result;
     } catch (error) {
@@ -61,14 +66,10 @@ export function createDirectHTTPExecutor(
 function mergeOptions(
   options: Record<string, unknown>,
   raw: boolean,
-  defaultTimeout: number | undefined,
   defaultHeaders: Record<string, string> | undefined,
 ): Record<string, unknown> {
   const merged: Record<string, unknown> = { ...options };
   if (raw) merged.rawData = true;
-  if (merged.timeout === undefined && defaultTimeout !== undefined) {
-    merged.timeout = defaultTimeout;
-  }
   if (defaultHeaders) {
     merged.headers = options.headers
       ? { ...defaultHeaders, ...Object.fromEntries(new Headers(options.headers as HeadersInit)) }

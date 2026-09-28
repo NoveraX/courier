@@ -15,13 +15,13 @@ import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { EDIT_FINISH_BUDGET_MS } from "./mocks-edit/edit-timing";
 import { createProjectState } from "./project-state/create-project-state";
+import { createRequestLog } from "./request-log";
 import { resolvedRoot } from "./resolved-root";
 import { registerRestApi } from "./rest-api";
 import { setupRuntimeNamespace } from "./runtime-namespace";
 import { clearStudioServerState } from "./runtime-namespace-state";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { serveStudioUi } from "./serve-ui";
-import { clearBuffer } from "./session-buffer";
 import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
 import { createStudioOriginPolicy } from "./studio-origin";
@@ -61,11 +61,13 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const playgroundRouter = createRuntimePlaygroundRouter({ bindingTable, uiNamespace });
   /* Read on each event, by which time the project below exists. */
   const nameSource = createConfigSourceNamer(() => project.snapshot().running?.config);
+  const requestLog = createRequestLog();
   setupRuntimeNamespace(runtimeNamespace, {
     bindingTable,
     uiNamespace,
     playgroundRouter,
     nameSource,
+    requestLog,
   });
 
   // ── Watcher Status (unified hot reload indicator) ──────────────────────────
@@ -104,6 +106,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     mockManager,
     watcherStatus,
     playgroundRouter,
+    requestLog,
   });
 
   undoUnfinishedImportWrites(root);
@@ -128,7 +131,6 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     await project.finishEdits(EDIT_FINISH_BUDGET_MS);
     await mockManager.stop();
     project.stop();
-    clearBuffer();
     playgroundRouter.dispose();
     clearStudioServerState();
     io.close();

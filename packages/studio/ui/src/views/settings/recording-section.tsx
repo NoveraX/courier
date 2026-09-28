@@ -58,7 +58,7 @@ export function RecordingSection({
 
       <SettingRow
         label="Preserve log"
-        description="Keep requests when navigating between pages"
+        description="Keep pinned requests when the log is cleared"
         htmlFor="preserveLog"
       >
         <Controller

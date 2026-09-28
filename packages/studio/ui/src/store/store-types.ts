@@ -93,6 +93,11 @@ export interface StudioState {
   togglePin: (id: string) => void
   /** Take in a batch of runtime events, oldest first, in one store update. */
   handleEvents: (events: Array<StudioEvent & Record<string, unknown>>) => void
+  /**
+   * Take in the events Studio replays on connect — every request it
+   * captured, oldest first — merged with the requests already held.
+   */
+  replayEvents: (events: Array<StudioEvent & Record<string, unknown>>) => void
 
   // Actions — Audit
   toggleAuditExpanded: (id: string) => void

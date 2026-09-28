@@ -69,17 +69,32 @@ export function sanitizeRuntimeEvent(raw: unknown): Record<string, unknown> | un
   return result;
 }
 
+/**
+ * Pass a runtime event to every Studio UI, once it is validated.
+ *
+ * @param uiNamespace - The UI namespace, when Studio serves one
+ * @param raw - The event as the runtime sent it
+ * @param log - Where a rejected event is noted
+ * @returns The event as the UI was sent it, or `undefined` when it was not sent
+ *
+ * @example
+ * ```ts
+ * const sent = broadcastRuntimeEvent(uiNamespace, raw, log);
+ * if (sent) requestLog.record(sent, socket.id);
+ * ```
+ */
 export function broadcastRuntimeEvent(
   uiNamespace: Namespace | undefined,
   raw: unknown,
   log: { warn: (msg: string) => void },
-): void {
-  if (!uiNamespace) return;
+): Record<string, unknown> | undefined {
+  if (!uiNamespace) return undefined;
   const event = sanitizeRuntimeEvent(raw);
   if (!event) {
     const type = isPlainObject(raw) ? String(raw.type ?? "undefined") : "non-object";
     log.warn(`Rejected runtime event: type=${type}`);
-    return;
+    return undefined;
   }
   uiNamespace.emit("event", event);
+  return event;
 }

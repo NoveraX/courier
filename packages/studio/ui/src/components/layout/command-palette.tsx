@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Monitor, Moon, Pause, Sun, Trash2 } from "lucide-react";
 
 import { useStudioStore } from "@/store";
+import { useClearRequests } from "@/hooks/use-clear-requests";
 import { NAV_GROUPS } from "@/app-config";
 import {
   CommandDialog,
@@ -33,7 +34,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
   const setTheme = useStudioStore((s) => s.setTheme);
   const paused = useStudioStore((s) => s.paused);
   const togglePaused = useStudioStore((s) => s.togglePaused);
-  const clearRequests = useStudioStore((s) => s.clearRequests);
+  const clearRequests = useClearRequests();
 
   const run = useCallback(
     (fn: () => void) => {

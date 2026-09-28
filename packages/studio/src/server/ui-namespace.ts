@@ -15,6 +15,8 @@ import type { BindingTable } from "./catalog/binding-table";
 import type { LifecycleCoordinator } from "./mock-manager";
 import { sendProject } from "./project-state/send-project";
 import type { ProjectReads } from "./project-state/types";
+import type { RequestLog } from "./request-log";
+import { keptIdsOf } from "./request-log-clear";
 import { mockServers, runtimeRegistry } from "./runtime-namespace-state";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import {
@@ -34,6 +36,8 @@ export interface SetupUiNamespaceDeps {
   mockManager?: LifecycleCoordinator;
   watcherStatus?: WatcherStatus;
   playgroundRouter?: RuntimePlaygroundRouter;
+  /** The requests captured so far, replayed to each UI that connects. */
+  requestLog?: RequestLog;
 }
 
 /**
@@ -48,7 +52,8 @@ export interface SetupUiNamespaceDeps {
  * ```
  */
 export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
-  const { uiNamespace, bindingTable, mockManager, watcherStatus, playgroundRouter } = deps;
+  const { uiNamespace, bindingTable, mockManager, watcherStatus, playgroundRouter, requestLog } =
+    deps;
   const { project, projectRoot } = deps;
 
   uiNamespace.on("connection", (socket) => {
@@ -89,6 +94,17 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
 
     // Send current watcher status (watching N files indicator)
     watcherStatus?.sendSnapshot(socket);
+
+    /* The requests captured before this UI connected, so a page that loads
+       or reloads shows them. Clearing the log in one page forgets them here
+       too, except the ones it keeps. */
+    if (requestLog) {
+      socket.emit("events:replay", requestLog.events());
+      socket.on("requests:clear", (raw: unknown) => {
+        const keep = keptIdsOf(raw);
+        if (keep) requestLog.forget(keep);
+      });
+    }
 
     // Rid-keyed playground wire — `attachRuntime` callers register a
     // `playground-responder` that speaks the `playground:execute` protocol.

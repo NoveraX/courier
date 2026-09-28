@@ -3,6 +3,7 @@ import { Trash2, RotateCcw, Database } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useStudioStore } from "@/store";
+import { useClearRequests } from "@/hooks/use-clear-requests";
 
 import type { useSessionHistory } from "./use-session-history";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -28,7 +29,7 @@ export function DangerZone({
 }: DangerZoneProps): React.ReactElement {
   const [confirm, setConfirm] = useState<string | null>(null);
   const requests = useStudioStore((s) => s.requests);
-  const clearRequests = useStudioStore((s) => s.clearRequests);
+  const clearRequests = useClearRequests();
 
   const actions: DangerAction[] = [
     {

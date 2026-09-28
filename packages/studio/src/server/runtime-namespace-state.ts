@@ -142,8 +142,8 @@ export function getRuntimeEntry(runtimeId: string): RuntimeRegistryEntry | undef
  * Intended for full server shutdown and test isolation. Per-runtime cleanup
  * lives in the `/runtime` namespace disconnect handler; per-socket mock
  * cleanup lives in the per-key delete sites. This function is the symmetric
- * counterpart for the shutdown path, mirroring `clearBuffer()` (session-buffer)
- * and `playgroundRouter.dispose()` (playground router).
+ * counterpart for the shutdown path, mirroring `playgroundRouter.dispose()`
+ * (playground router).
  *
  * MUST NOT be called from per-socket disconnect handlers.
  */

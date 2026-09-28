@@ -22,9 +22,11 @@ import {
   handleMockServerConnect,
   handleMockServerDisconnect,
 } from "./app-namespace-mock-handlers";
+import { attributeEvent } from "./attribute-event";
 import { broadcastRuntimeEvent } from "./broadcast-runtime-event";
 import type { BindingTable } from "./catalog/binding-table";
 import type { ConfigSourceNamer } from "./catalog/config-source-names";
+import type { RequestLog } from "./request-log";
 import { mockServers, socketMockServers } from "./runtime-namespace-state";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import { handleAnnounce, handleDisconnect, handleHello } from "./runtime-registration";
@@ -48,6 +50,12 @@ export interface SetupRuntimeNamespaceDeps {
    * the registry is only derived from the baseURL host.
    */
   nameSource?: ConfigSourceNamer;
+  /**
+   * Optional request log. When supplied, every request event passed to the
+   * UI is kept in it, and the requests a runtime socket leaves open when it
+   * disconnects are ended.
+   */
+  requestLog?: RequestLog;
 }
 
 export function setupRuntimeNamespace(
@@ -73,11 +81,13 @@ export function setupRuntimeNamespace(
     }
 
     socket.on("event", (event: unknown) => {
-      handleRuntimeEvent(event, socket, deps);
+      const sent = handleRuntimeEvent(event, socket, deps);
+      if (sent) deps.requestLog?.record(sent, socket.id);
     });
 
     socket.on("disconnect", () => {
       handleSocketMockCleanup(socket);
+      endOpenRequests(socket, deps);
       handleDisconnect(socket, ref, deps);
     });
   });
@@ -92,8 +102,12 @@ export function setupRuntimeNamespace(
  * every event the UI consumes. Identity and topology information ride on
  * the `runtime:hello` + `runtime:announce` handshake instead.
  */
-function handleRuntimeEvent(raw: unknown, socket: Socket, deps: SetupRuntimeNamespaceDeps): void {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return;
+function handleRuntimeEvent(
+  raw: unknown,
+  socket: Socket,
+  deps: SetupRuntimeNamespaceDeps,
+): Record<string, unknown> | undefined {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return undefined;
   const event = raw as Record<string, unknown>;
   if (event.type === "mock:server:connect") {
     handleMockServerConnect(event, socket);
@@ -102,22 +116,18 @@ function handleRuntimeEvent(raw: unknown, socket: Socket, deps: SetupRuntimeName
   } else if (event.type === "mock:network:config") {
     handleMockNetworkConfig(event);
   }
-  broadcastRuntimeEvent(deps.uiNamespace, attributed(event, deps.nameSource), log);
+  return broadcastRuntimeEvent(deps.uiNamespace, attributeEvent(event, deps.nameSource), log);
 }
 
-/** The event with its `source` named by the config key, when it names a call. */
-function attributed(
-  event: Record<string, unknown>,
-  nameSource: ConfigSourceNamer | undefined,
-): Record<string, unknown> {
-  const { source, group, method } = event;
-  if (!nameSource || typeof source !== "string" || typeof method !== "string") return event;
-  const named = nameSource({
-    source,
-    group: typeof group === "string" ? group : undefined,
-    method,
-  });
-  return named === source ? event : { ...event, source: named };
+/**
+ * End the requests and streams a runtime socket leaves open. The runtime can
+ * no longer say how they ended — what it sends while disconnected is
+ * dropped — so the UI would show them pending for good.
+ */
+function endOpenRequests(socket: Socket, deps: SetupRuntimeNamespaceDeps): void {
+  for (const event of deps.requestLog?.endOpen(socket.id) ?? []) {
+    deps.uiNamespace?.emit("event", event);
+  }
 }
 
 /**

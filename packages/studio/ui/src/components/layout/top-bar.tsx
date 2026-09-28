@@ -3,6 +3,7 @@ import { Command, Pause, Play, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
+import { useClearRequests } from "@/hooks/use-clear-requests";
 import { getPageTitle } from "@/app-config";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const paused = useStudioStore((s) => s.paused);
   const togglePaused = useStudioStore((s) => s.togglePaused);
-  const clearRequests = useStudioStore((s) => s.clearRequests);
+  const clearRequests = useClearRequests();
   const requestCount = useStudioStore((s) => s.requests.length);
 
   const title = getPageTitle(pathname);

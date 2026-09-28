@@ -24,6 +24,10 @@ export interface ScannedEndpointAnalysis {
   httpMethod: "get" | "post" | "put" | "patch" | "delete";
   path: string;
   type: "query" | "mutation" | null;
+  /** How a stream or a channel is carried; absent for plain HTTP. */
+  transport?: "sse" | "ws";
+  /** The source's middleware, in the order it runs. */
+  middleware?: string[];
 }
 
 export interface ScannedEndpoint {
@@ -151,6 +155,8 @@ function describeEndpoint(name: string, endpoint: MapEndpoint): ScannedEndpoint 
       httpMethod: HTTP_METHODS.find((known) => known === method) ?? "get",
       path: endpoint.path ?? "",
       type: endpoint.type ?? null,
+      ...(endpoint.transport && { transport: endpoint.transport }),
+      ...(endpoint.middleware?.length && { middleware: [...endpoint.middleware] }),
     },
   };
 }

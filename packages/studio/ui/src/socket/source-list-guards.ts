@@ -10,6 +10,7 @@ import { isPlainObject } from "./is-plain-object";
 const IMPORT_TYPES: ReadonlySet<unknown> = new Set(["url", "file", "raw"]);
 const HTTP_METHODS: ReadonlySet<unknown> = new Set(["get", "post", "put", "patch", "delete"]);
 const ENDPOINT_TYPES: ReadonlySet<unknown> = new Set(["query", "mutation", null]);
+const TRANSPORTS: ReadonlySet<unknown> = new Set(["sse", "ws"]);
 
 /**
  * Whether an entry of a `registry:updated` list is an import the UI can
@@ -87,6 +88,12 @@ function isScannedEndpoint(item: unknown): item is ScannedEndpoint {
     ENDPOINT_TYPES.has(analysis.type) &&
     typeof analysis.hasResponseType === "boolean" &&
     typeof analysis.hasVariablesType === "boolean" &&
-    typeof analysis.hasValidation === "boolean"
+    typeof analysis.hasValidation === "boolean" &&
+    (analysis.transport === undefined || TRANSPORTS.has(analysis.transport)) &&
+    (analysis.middleware === undefined || isListOf(analysis.middleware, isString))
   );
+}
+
+function isString(item: unknown): item is string {
+  return typeof item === "string";
 }

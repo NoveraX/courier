@@ -94,9 +94,7 @@ function endpointPath(ep: ParsedEndpoint): string {
 }
 
 function responseSchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
-  const ref = getSchemaRefName(ep.responseSchema);
-  const constant = ref ? schemaConstant(context, ref) : null;
-  return constant ? listOf(constant, ep.responseSchema, context) : null;
+  return declaredSchema(ep.responseSchema, context);
 }
 
 /**
@@ -124,21 +122,33 @@ function variablesSchema(ep: ParsedEndpoint, context: EndpointContext): string |
 
 /** The body's own schema, when every schema it names is declared. */
 function bodySchema(ep: ParsedEndpoint, context: EndpointContext): string | null {
-  const ref = getSchemaRefName(ep.requestBody);
-  if (ref) {
-    const constant = schemaConstant(context, ref);
-    return constant ? listOf(constant, ep.requestBody, context) : null;
-  }
-  const inline = ep.requestBody;
-  if (!emitsSchemas(context.options) || !inline || inline.type === "object") return null;
-  if (!bodyNamesDeclared(ep, context)) return null;
-  context.uses.validator = true;
-  return schemaToValidation(inline, context.options);
+  return declaredSchema(ep.requestBody, context);
 }
 
-function bodyNamesDeclared(ep: ParsedEndpoint, context: EndpointContext): boolean {
+/* A named schema's constant; or, written inline, a schema that is not an
+   object with fields — a string, a list, a map — so a body or an answer of
+   one is validated, and a mock can make one up. An inline object with
+   fields has a type of its own instead. */
+function declaredSchema(schema: ParsedSchema | null, context: EndpointContext): string | null {
+  const ref = getSchemaRefName(schema);
+  if (ref) {
+    const constant = schemaConstant(context, ref);
+    return constant ? listOf(constant, schema, context) : null;
+  }
+  if (!emitsSchemas(context.options) || !schema || hasFields(schema)) return null;
+  if (!namesDeclared(schema, context)) return null;
+  context.uses.validator = true;
+  return schemaToValidation(schema, context.options);
+}
+
+/* An object with fields; a map, which has none, is written as a record. */
+function hasFields(schema: ParsedSchema): boolean {
+  return schema.type === "object" && Object.keys(schema.properties ?? {}).length > 0;
+}
+
+function namesDeclared(schema: ParsedSchema, context: EndpointContext): boolean {
   const names = new Set<string>();
-  collectRefsDeep(ep.requestBody, names);
+  collectRefsDeep(schema, names);
   if (![...names].every((name) => hasSchemaConstant(context, name))) return false;
   for (const name of names) schemaConstant(context, name);
   return true;

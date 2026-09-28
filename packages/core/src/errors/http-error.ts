@@ -28,6 +28,7 @@ export class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
       context: { status: response.status },
       cause: options?.cause,
     });
+    this.name = "HTTPError";
     this.status = response.status;
     this.headers = response.headers;
     this.data = response.data;

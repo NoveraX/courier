@@ -32,7 +32,10 @@ export class CourierError<TCode = string> extends Error {
 
   constructor(message: string, options: CourierErrorOptions<TCode>) {
     super(message, options.cause !== undefined ? { cause: options.cause } : undefined);
-    this.name = new.target.name;
+    /* A minifier renames classes, so a name read from the class came out as
+       `R` or `z` in a production bundle. Every error this package throws
+       names itself; a subclass that does not keeps its class's name. */
+    this.name = new.target === CourierError ? "CourierError" : new.target.name;
     this.code = options.code;
     if (options.context !== undefined) this.context = options.context;
   }

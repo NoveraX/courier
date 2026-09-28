@@ -53,6 +53,7 @@ export class ValidationError extends CourierError<"VALIDATION_ERROR"> {
       code: "VALIDATION_ERROR",
       context: { target, issueCount: issues.length },
     });
+    this.name = "ValidationError";
     this.issues = issues;
     this.target = target;
   }

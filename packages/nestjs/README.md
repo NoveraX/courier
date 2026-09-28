@@ -73,7 +73,7 @@ const detach = courierWSAttach(app.getHttpServer()) // answers upgrades on /api/
 await app.listen(3000)
 ```
 
-`courierWSAttach` answers WebSocket upgrades on one path — `/api/ws` unless you pass `path` — and leaves every other path to NestJS gateways and any other WebSocket handler. Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. Frames larger than `maxMessageSize` (64 KB by default) are refused before they are buffered. Requires the `ws` package.
+`courierWSAttach` answers WebSocket upgrades on one path — `/api/ws` unless you pass `path` — and leaves every other path to NestJS gateways and any other WebSocket handler. Point the client at the same path with `proxyPath: { ws: "/api/ws" }`. A message larger than `maxMessageSize` (64 KB by default) is refused with a `4413` error and the connection stays open; a frame larger than 1 MiB, or twice `maxMessageSize` when that is larger, closes the connection with `1009` before it is buffered. Requires the `ws` package.
 
 ## Shutting down
 

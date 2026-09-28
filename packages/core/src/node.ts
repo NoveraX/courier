@@ -13,6 +13,7 @@ export {
   DEFAULT_WS_PATH,
   type UpgradeServer,
   type WebSocketUpgradeOptions,
+  wsFrameLimit,
 } from "./node-websocket";
 
 /**

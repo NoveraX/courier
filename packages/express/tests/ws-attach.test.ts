@@ -11,6 +11,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { defineApi } from "@noverax/courier/define";
 import { registerSources } from "@noverax/courier";
+import { wsFrameLimit } from "@noverax/courier/node";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";
 
@@ -80,8 +81,24 @@ describe("courierWSAttach beside the application's own WebSocket", () => {
   });
 });
 
-describe("courierWSAttach and the frame limit", () => {
-  it("closes a connection whose frame exceeds maxMessageSize, before buffering it", async () => {
+describe("courierWSAttach and the message limit", () => {
+  it("refuses a message over maxMessageSize with 4413 and keeps the connection", async () => {
+    const url = await listen((s) => courierWSAttach(s, { maxMessageSize: 1024 }));
+    const client = new WebSocket(`${url}/api/ws`);
+    clients.push(client);
+    const frames: { type: string; error?: { code: number } }[] = [];
+    client.on("message", (raw) => frames.push(JSON.parse(String(raw)) as { type: string }));
+    await new Promise((resolve) => client.on("open", resolve));
+
+    client.send("x".repeat(64 * 1024));
+    client.send(JSON.stringify({ type: "ping" }));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(frames.map((frame) => frame.error?.code ?? frame.type)).toEqual([4413, "pong"]);
+    expect(client.readyState).toBe(WebSocket.OPEN);
+  });
+
+  it("closes a connection whose frame exceeds the frame limit, before buffering it", async () => {
     const url = await listen((s) => courierWSAttach(s, { maxMessageSize: 1024 }));
     const client = new WebSocket(`${url}/api/ws`);
     clients.push(client);
@@ -89,7 +106,7 @@ describe("courierWSAttach and the frame limit", () => {
 
     const code = await new Promise<number>((resolve) => {
       client.on("close", resolve);
-      client.send("x".repeat(64 * 1024));
+      client.send("x".repeat(wsFrameLimit(1024) + 1));
     });
 
     expect(code).toBe(1009);

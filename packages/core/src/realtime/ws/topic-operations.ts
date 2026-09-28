@@ -1,5 +1,6 @@
 import type { ScopedLogger } from "../../logger";
 import type { ConnectionState } from "../connection-state";
+import { fromErrorCode, type RealtimeError } from "../errors";
 import type { HeldMessage } from "./held-messages";
 import type { createMessageQueue } from "./message-queue";
 import { unqualifyTopic } from "./topic-key";
@@ -23,6 +24,8 @@ export interface TopicOpsContext {
   pending: ReturnType<typeof createPendingRegistry>;
   log: ScopedLogger;
   requestTimeout: number;
+  /** Largest encoded message the server accepts */
+  maxMessageSize: number;
   sendRaw(data: string): void;
 }
 
@@ -77,9 +80,15 @@ export function requestSubscription(
  * "Not subscribed". Otherwise it is queued while (re)connecting.
  */
 export function sendToTopic(ctx: TopicOpsContext, topic: string, payload: unknown): void {
-  if (holdUntilConfirmed(ctx, topic, { payload })) return;
   const serverTopic = ctx.topics.serverTopic(topic) ?? topic;
   const msg = encodeMessage({ type: "message", topic: serverTopic, payload });
+  const refusal = oversized(ctx, msg);
+  if (refusal) {
+    ctx.log.warn(`Message not sent on ${topic}: ${refusal.message}`);
+    ctx.topics.fail(topic, refusal);
+    return;
+  }
+  if (holdUntilConfirmed(ctx, topic, { payload })) return;
   if (ctx.state.current === "connected") {
     ctx.sendRaw(msg);
     return;
@@ -87,6 +96,19 @@ export function sendToTopic(ctx: TopicOpsContext, topic: string, payload: unknow
   if (ctx.state.current === "reconnecting" || ctx.state.current === "connecting") {
     if (!ctx.queue.enqueue(msg)) ctx.log.warn("Message queue full — dropped");
   }
+}
+
+/**
+ * Why a message may not go out: larger than the server accepts. Sent, it
+ * reached a server whose frame limit closed the whole socket over it, or was
+ * refused there after crossing the network.
+ */
+function oversized(ctx: TopicOpsContext, frame: string): RealtimeError | undefined {
+  if (frame.length <= ctx.maxMessageSize) return undefined;
+  return fromErrorCode(
+    4413,
+    `Message too large: ${frame.length} characters, the limit is ${ctx.maxMessageSize}`,
+  );
 }
 
 /** Whether the message was held, or dropped for want of room, instead of going out. */
@@ -123,10 +145,15 @@ export function requestResponse<TResult>(
   payload: unknown,
 ): Promise<TResult> {
   return new Promise<TResult>((resolve, reject) => {
+    const serverTopic = ctx.topics.serverTopic(topic) ?? topic;
+    const refusal = oversized(ctx, encodeMessage({ type: "message", topic: serverTopic, payload }));
+    if (refusal) {
+      reject(refusal);
+      return;
+    }
     const id = ctx.pending.register(resolve as (v: unknown) => void, reject, ctx.requestTimeout);
     const outcome = ctx.topics.hold(topic, { payload, id });
     if (outcome === "held") return;
-    const serverTopic = ctx.topics.serverTopic(topic) ?? topic;
     const msg = encodeMessage({ type: "message", topic: serverTopic, payload, id });
     if (outcome === "open" && ctx.state.current === "connected") {
       ctx.sendRaw(msg);

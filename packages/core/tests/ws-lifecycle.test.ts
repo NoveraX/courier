@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 
-import { LIMITS } from "../src/adapter/limits";
+import { wsFrameLimit } from "../src/node";
 import { wireEvents } from "../src/adapter/ws-lifecycle";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { closeSubscriptionEntry } from "../src/adapter/ws-dispatch-helpers";
@@ -320,7 +320,7 @@ describe("wireEvents", () => {
     const client = new WebSocket(served.url);
     await new Promise((resolve) => client.once("open", resolve));
 
-    client.send("x".repeat(LIMITS.MAX_MESSAGE_SIZE + 1));
+    client.send("x".repeat(wsFrameLimit() + 1));
     await new Promise((resolve) => client.once("close", resolve));
     await settle(20);
 

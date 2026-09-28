@@ -19,7 +19,7 @@ describe("shouldReconnect", () => {
     [1006, true, "abnormal closure"],
     [1007, false, "invalid frame payload"],
     [1008, false, "policy violation"],
-    [1009, false, "message too big"],
+    [1009, true, "message too big: that message is gone, the rest go on"],
     [1011, true, "unexpected condition"],
     [1012, true, "service restart"],
     [1013, true, "try again later"],

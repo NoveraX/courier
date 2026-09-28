@@ -30,9 +30,10 @@ const DEV_SERVER = true;
  * @returns A Vite plugin that applies to the dev server only.
  */
 export function createStudioVitePlugin(framework: string, options?: StudioPluginOptions): Plugin {
+  let projectRoot: string | undefined;
   let pending: Promise<string | null> | null = null;
   const snippet = (): Promise<string | null> =>
-    (pending ??= resolveSnippet({ framework, options, development: DEV_SERVER }));
+    (pending ??= resolveSnippet({ framework, options, development: DEV_SERVER, projectRoot }));
 
   return {
     name: "courier-studio",
@@ -48,6 +49,11 @@ export function createStudioVitePlugin(framework: string, options?: StudioPlugin
          so without this the page failed wherever the runtime was not hoisted
          to the app root. The nested form finds it through this package. */
       return { optimizeDeps: { include: [`${PACKAGE_NAME} > ${RUNTIME_SPECIFIER}`] } };
+    },
+    /* The app's config is found from Vite's root, not from wherever Vite was
+       started. */
+    configResolved(config) {
+      projectRoot = config.root;
     },
     resolveId(source, importer) {
       if (source === VIRTUAL_ID) return RESOLVED_ID;

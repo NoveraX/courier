@@ -1,3 +1,4 @@
+import { describeFormData } from "../studio/describe-form-data";
 import type { StudioHooks } from "../studio/hooks";
 import type { RequestPayloadInput } from "../utils/helpers";
 import { discardBody } from "./discard-body";
@@ -5,6 +6,9 @@ import type { HandlerConfig } from "./handler-config";
 import { isOriginAllowed } from "./origin-policy";
 import { errorResponse } from "./parse";
 import { readEnvelope } from "./read-envelope";
+
+/** The fields a multipart envelope carries for the proxy itself. */
+const ROUTING_FIELDS: ReadonlySet<string> = new Set(["_source", "_group", "_method", "_options"]);
 
 type ExecuteFn = (
   request: Request,
@@ -39,13 +43,13 @@ export function createPostHandler(execute: ExecuteFn, dt: StudioHooks, config?: 
       timestamp: Date.now(),
     });
 
-    const proxyVariables = body instanceof FormData ? undefined : (body?.variables as unknown);
-
     dt.onProxyParse?.({
       source: proxySource,
       group: proxyGroup,
       method: proxyMethod,
-      variables: proxyVariables,
+      /* Studio receives events as JSON, where a FormData would arrive as `{}`. */
+      variables:
+        body instanceof FormData ? describeFormData(body, ROUTING_FIELDS) : body?.variables,
       timestamp: Date.now(),
     });
 

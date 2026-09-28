@@ -407,11 +407,12 @@ describe("createPostHandler", () => {
       );
     });
 
-    it("sets variables to undefined for FormData", async () => {
+    it("describes FormData variables without the proxy's routing fields", async () => {
       const hooks = createHooks();
       const handler = createPostHandler(createMockExecute(), hooks);
 
       const fd = new FormData();
+      fd.append("note", "hello");
       fd.append("_source", "api");
       fd.append("_method", "upload");
 
@@ -424,7 +425,7 @@ describe("createPostHandler", () => {
       await handler(req);
 
       expect(hooks.onProxyParse).toHaveBeenCalledWith(
-        expect.objectContaining({ variables: undefined }),
+        expect.objectContaining({ variables: { note: "hello" } }),
       );
     });
   });

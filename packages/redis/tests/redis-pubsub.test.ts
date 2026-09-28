@@ -255,6 +255,24 @@ describe("createRedisPubSub", () => {
     expect(errors).toHaveLength(1);
   });
 
+  it("reports a message on the channel that is no envelope, and delivers nothing", async () => {
+    const ps = createRedisPubSub(createConfig(pub, sub, { origin: "s1" }));
+    await ps.connect();
+    const errors: Error[] = [];
+    ps.onError((err) => errors.push(err));
+    const received: unknown[] = [];
+    await ps.subscribe("t", (msg) => received.push(msg));
+
+    sub.emit("message", "t", JSON.stringify("hello"));
+    sub.emit("message", "t", JSON.stringify({ origin: "s2" }));
+
+    expect(received).toEqual([]);
+    expect(errors.map((err) => err.message)).toEqual([
+      'Not a Courier message on channel "t"',
+      'Not a Courier message on channel "t"',
+    ]);
+  });
+
   // -- Multiple topics ------------------------------------------------------
 
   it("handles multiple independent topic subscriptions", async () => {

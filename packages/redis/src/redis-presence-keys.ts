@@ -1,4 +1,5 @@
 import type { PresenceEntry } from "@noverax/courier/realtime";
+import { isPackedMeta } from "./wire-guards";
 
 /** Packed metadata stored in Redis HASH — userId + joinedAt + user metadata */
 export interface PackedMeta {
@@ -55,9 +56,22 @@ export function packMeta(entry: PackedMeta): string {
   });
 }
 
-/** Unpack HGET result into partial PresenceEntry fields */
+/**
+ * Unpack HGET result into partial PresenceEntry fields.
+ *
+ * @param raw - The stored record
+ * @returns The user, join time and metadata it keeps
+ * @throws SyntaxError when the record is not JSON, and Error when it is not a
+ *   presence record
+ * @example
+ * ```ts
+ * unpackMeta('{"userId":"u1","joinedAt":1,"metadata":{}}'); // → { userId: "u1", joinedAt: 1, metadata: {} }
+ * ```
+ */
 export function unpackMeta(raw: string): PackedMeta {
-  return JSON.parse(raw) as PackedMeta;
+  const meta: unknown = JSON.parse(raw);
+  if (!isPackedMeta(meta)) throw new Error("A presence record in Redis is not one Courier wrote");
+  return meta;
 }
 
 /** One ZRANGEBYSCORE WITHSCORES reply element, in either protocol's shape */

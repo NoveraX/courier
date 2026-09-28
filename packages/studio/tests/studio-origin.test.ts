@@ -46,6 +46,13 @@ describe("the Studio UI", () => {
 
   it("is a caller that is not a page", () => {
     expect(policy.isUiCaller(undefined, "localhost:6280")).toBe(true);
+    expect(policy.isUiCaller(undefined, "127.0.0.1:6280")).toBe(true);
+    expect(policy.isUiCaller(undefined, undefined)).toBe(true);
+  });
+
+  it("is not a caller without an Origin that sent a Host DNS could rebind", () => {
+    /* What a rebound page's same-origin GET looks like. */
+    expect(policy.isUiCaller(undefined, "evil.example:6280")).toBe(false);
   });
 });
 
@@ -61,7 +68,12 @@ describe("a runtime", () => {
     expect(policy.isRuntimeCaller("http://192.168.0.7:3000", "localhost:6280")).toBe(false);
   });
 
-  it("is a process that is not a page", () => {
+  it("is a process that is not a page, whatever name it reached Studio by", () => {
     expect(policy.isRuntimeCaller(undefined, "localhost:6280")).toBe(true);
+    expect(policy.isRuntimeCaller(undefined, "host.docker.internal:6280")).toBe(true);
+  });
+
+  it("is not a page on a domain rebound to this machine", () => {
+    expect(policy.isRuntimeCaller("http://evil.example:6280", "evil.example:6280")).toBe(false);
   });
 });

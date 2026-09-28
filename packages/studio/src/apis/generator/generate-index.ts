@@ -10,7 +10,7 @@ import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 const DIRECT_HINT =
   "Calls the API directly from the runtime environment (browser, Node.js, Deno, Bun).";
 const PROXY_HINT =
-  "Routes requests through a server-side proxy endpoint. Hides secrets, bypasses CORS, forwards cookies.";
+  "Routes requests through a server-side proxy endpoint. Hides secrets, bypasses CORS, and forwards only the headers a source names.";
 
 /**
  * Write the import's barrel: the callers asked for, and the re-exports of

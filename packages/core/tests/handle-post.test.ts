@@ -273,6 +273,61 @@ describe("createPostHandler", () => {
       expect(execute.mock.calls[0]![1]).toBeInstanceOf(FormData);
     });
 
+    /**
+     * The JSON envelope and the GET `_o` parameter refuse an option a proxy
+     * client may not set; the multipart field dropped it and ran the call.
+     */
+    describe("_options field", () => {
+      function upload(options: string | Blob): Request {
+        const fd = new FormData();
+        fd.append("file", new File(["content"], "test.txt"));
+        fd.append("_source", "api");
+        fd.append("_method", "upload");
+        fd.append("_options", options);
+        return new Request("http://localhost/api/request", {
+          method: "POST",
+          headers: { origin: "http://localhost" },
+          body: fd,
+        });
+      }
+
+      it.each([
+        ["an option only the server may set", '{"prefixUrl":"http://127.0.0.1:7379"}', "prefixUrl"],
+        ["an invalid timeout", '{"timeout":-5}', "timeout"],
+        ["text that is not JSON", "{not json", "not valid JSON"],
+        ["a value that is not an object", "[1]", "must be an object"],
+      ])("refuses %s with 400", async (_, options, reason) => {
+        const execute = createMockExecute();
+        const handler = createPostHandler(execute, createHooks());
+
+        const res = await handler(upload(options));
+
+        expect(res.status).toBe(400);
+        expect((await res.json()).message).toContain(reason);
+        expect(execute).not.toHaveBeenCalled();
+      });
+
+      it("refuses options sent as a file", async () => {
+        const execute = createMockExecute();
+        const handler = createPostHandler(execute, createHooks());
+
+        const res = await handler(upload(new Blob(['{"rawData":true}'])));
+
+        expect(res.status).toBe(400);
+        expect(execute).not.toHaveBeenCalled();
+      });
+
+      it("serves the options a proxy client may set", async () => {
+        const execute = createMockExecute();
+        const handler = createPostHandler(execute, createHooks());
+
+        const res = await handler(upload('{"rawData":true,"timeout":1000}'));
+
+        expect(res.status).toBe(200);
+        expect(execute).toHaveBeenCalledOnce();
+      });
+    });
+
     it("extracts source from _source field in FormData", async () => {
       const hooks = createHooks();
       const handler = createPostHandler(createMockExecute(), hooks);

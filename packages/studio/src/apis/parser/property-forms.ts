@@ -4,7 +4,7 @@
 
 import { acceptsNull, stripNull } from "./nullable-schema";
 import { normalizeTypeArray } from "./schema-conversion";
-import type { SpecNode } from "./types";
+import { asNode, fieldOf, type SpecNode } from "./spec-node";
 
 /**
  * Separate "may be null" from the forms a property takes.
@@ -25,13 +25,14 @@ import type { SpecNode } from "./types";
 export function withoutNull(given: SpecNode): { node: SpecNode; nullable: boolean } {
   const nullable = acceptsNull(given);
   const node = nullable ? stripNull(given) : given;
-  const variants: SpecNode[] | undefined = node.oneOf ?? node.anyOf;
-  if (!Array.isArray(variants) || node.type) return { node, nullable };
+  const declared = fieldOf(node, "oneOf") ?? fieldOf(node, "anyOf");
+  if (!Array.isArray(declared) || node.type) return { node, nullable };
+  const variants: readonly unknown[] = declared;
 
-  const kept = variants.filter((variant) => variant?.type !== "null");
+  const kept = variants.filter((variant) => fieldOf(variant, "type") !== "null");
   if (kept.length === variants.length) return { node, nullable };
   if (kept.length === 1) {
-    const inner = withoutNull(normalizeTypeArray(kept[0] as SpecNode));
+    const inner = withoutNull(normalizeTypeArray(asNode(kept[0])));
     return { node: { ...inner.node, description: node.description }, nullable: true };
   }
   const key = node.oneOf ? "oneOf" : "anyOf";

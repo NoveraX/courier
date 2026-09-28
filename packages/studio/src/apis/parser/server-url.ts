@@ -2,7 +2,7 @@
  * The address an OpenAPI specification says its API lives at.
  */
 
-import type { SpecNode } from "./types";
+import { fieldOf, listAt, nodeAt, textAt } from "./spec-node";
 
 const VARIABLE = /\{([^{}]+)\}/g;
 
@@ -24,17 +24,18 @@ const VARIABLE = /\{([^{}]+)\}/g;
  * ```
  */
 export function serverUrl(servers: unknown): string {
-  const first: SpecNode | undefined = Array.isArray(servers) ? servers[0] : undefined;
-  if (typeof first?.url !== "string") return "/";
-  const variables: SpecNode = first.variables ?? {};
+  const first: unknown = Array.isArray(servers) ? servers[0] : undefined;
+  const url = textAt(first, "url");
+  if (url === undefined) return "/";
+  const variables = nodeAt(first, "variables") ?? {};
 
-  return first.url.replace(VARIABLE, (placeholder: string, name: string) => {
-    const value = filledValue(variables[name]);
+  return url.replace(VARIABLE, (placeholder: string, name: string) => {
+    const value = filledValue(fieldOf(variables, name));
     return value === undefined ? placeholder : value;
   });
 }
 
-function filledValue(variable: SpecNode | undefined): string | undefined {
-  const value = variable?.default ?? (Array.isArray(variable?.enum) ? variable.enum[0] : undefined);
+function filledValue(variable: unknown): string | undefined {
+  const value = fieldOf(variable, "default") ?? listAt(variable, "enum")[0];
   return typeof value === "string" || typeof value === "number" ? String(value) : undefined;
 }

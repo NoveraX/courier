@@ -5,8 +5,9 @@
 import { toSafeIdentifier } from "./naming-utils";
 import { acceptsNull, orNull, stripNull } from "./nullable-schema";
 import { componentSchemaName } from "./ref-utils";
-import { convertSchema, normalizeTypeArray } from "./schema-conversion";
-import type { ParsedSchema, SpecNode } from "./types";
+import { convertSchema, normalizeTypeArray, schemaTypeOf } from "./schema-conversion";
+import { asNode, type SpecNode, textAt } from "./spec-node";
+import type { ParsedSchema } from "./types";
 
 /**
  * Convert the schema of a request or a response body.
@@ -31,16 +32,19 @@ import type { ParsedSchema, SpecNode } from "./types";
 export function convertSchemaInline(raw: SpecNode, spec: SpecNode): ParsedSchema {
   const schema = normalizeTypeArray(raw);
   if (acceptsNull(schema)) return orNull(convertSchemaInline(stripNull(schema), spec));
-  if (typeof schema.$ref === "string") {
-    const component = componentSchemaName(schema.$ref);
+  const ref = textAt(schema, "$ref");
+  if (ref !== undefined) {
+    const component = componentSchemaName(ref);
     if (component === undefined) return convertSchema("Inline", schema, spec);
     const refName = toSafeIdentifier(component);
     return { name: refName, type: "ref", refName };
   }
   if (schema.allOf || schema.oneOf || schema.anyOf) return convertSchema("Inline", schema, spec);
-  if (schema.type === "array" && schema.items) {
-    return { name: "Array", type: "array", items: convertSchemaInline(schema.items, spec) };
+  const type = textAt(schema, "type");
+  if (type === "array" && schema.items) {
+    return { name: "Array", type: "array", items: convertSchemaInline(asNode(schema.items), spec) };
   }
-  if (schema.type === "object" || schema.properties) return convertSchema("Inline", schema, spec);
-  return { name: schema.type ?? "any", type: schema.type ?? "any" };
+  if (type === "object" || schema.properties) return convertSchema("Inline", schema, spec);
+  const known = schemaTypeOf(type);
+  return { name: known, type: known };
 }

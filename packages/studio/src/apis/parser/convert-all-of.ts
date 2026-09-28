@@ -4,8 +4,9 @@
 
 import { resolveRef } from "./ref-utils";
 import { referencedSchema } from "./referenced-schema";
-import { convertSchema, normalizeTypeArray } from "./schema-conversion";
-import type { ParsedSchema, SpecNode } from "./types";
+import { convertSchema, enumValues, normalizeTypeArray } from "./schema-conversion";
+import { isNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
+import type { ParsedSchema } from "./types";
 
 /**
  * Merge every member of an `allOf` into one schema.
@@ -24,25 +25,38 @@ import type { ParsedSchema, SpecNode } from "./types";
  * ```
  */
 export function convertAllOf(name: string, schema: SpecNode, spec?: SpecNode): ParsedSchema {
-  const merged: SpecNode = {
-    type: "object",
-    properties: {},
-    required: [],
-    description: schema.description,
-  };
-  for (const sub of flattenAllOf(schema.allOf, spec)) {
-    if (sub.properties) Object.assign(merged.properties, sub.properties);
-    if (sub.required) merged.required.push(...sub.required);
-    if (sub.enum) merged.enum = sub.enum;
-    if (sub.type) merged.type = sub.type;
+  const description = textAt(schema, "description");
+  const properties: Record<string, unknown> = {};
+  const required: unknown[] = [];
+  let enumeration: unknown;
+  let type: unknown = "object";
+  for (const sub of flattenAllOf(listAt(schema, "allOf"), spec)) {
+    Object.assign(properties, nodeAt(sub, "properties"));
+    required.push(...listAt(sub, "required"));
+    if (sub.enum) enumeration = sub.enum;
+    if (sub.type) type = sub.type;
   }
-  if (merged.enum)
-    return { name, type: "enum", enum: merged.enum, description: schema.description };
-  if (Object.keys(merged.properties).length > 0) return convertSchema(name, merged, spec);
 
-  const firstRef = schema.allOf.find((s: SpecNode) => typeof s?.$ref === "string");
-  if (firstRef) return referencedSchema(name, firstRef.$ref, schema.description, spec);
-  return { name, type: "any", description: schema.description };
+  if (enumeration) {
+    return {
+      name,
+      type: "enum",
+      enum: enumValues(Array.isArray(enumeration) ? enumeration : []),
+      description,
+    };
+  }
+  if (Object.keys(properties).length > 0) {
+    return convertSchema(
+      name,
+      { type, properties, required, description: schema.description },
+      spec,
+    );
+  }
+  const firstRef = listAt(schema, "allOf")
+    .map((member) => textAt(member, "$ref"))
+    .find((ref) => ref !== undefined);
+  if (firstRef !== undefined) return referencedSchema(name, firstRef, description, spec);
+  return { name, type: "any", description };
 }
 
 /**
@@ -51,22 +65,25 @@ export function convertAllOf(name: string, schema: SpecNode, spec?: SpecNode): P
  * A base may itself be composed, so this recurses; `seen` stops a definition
  * that refers to itself from doing so forever.
  */
-function flattenAllOf(members: SpecNode[], spec?: SpecNode, seen = new Set<string>()): SpecNode[] {
+function flattenAllOf(
+  members: readonly unknown[],
+  spec?: SpecNode,
+  seen = new Set<string>(),
+): SpecNode[] {
   const out: SpecNode[] = [];
-  for (const member of members ?? []) {
-    if (!member || typeof member !== "object") continue;
-
-    if (member.$ref) {
-      if (!spec || seen.has(member.$ref)) continue;
-      seen.add(member.$ref);
-      const target = normalizeTypeArray(resolveRef(spec, member.$ref));
-      if (target.allOf) out.push(...flattenAllOf(target.allOf, spec, seen));
+  for (const member of members) {
+    if (!isNode(member)) continue;
+    const ref = textAt(member, "$ref");
+    if (ref) {
+      if (!spec || seen.has(ref)) continue;
+      seen.add(ref);
+      const target = normalizeTypeArray(resolveRef(spec, ref));
+      if (target.allOf) out.push(...flattenAllOf(listAt(target, "allOf"), spec, seen));
       else out.push(target);
       continue;
     }
-
     if (member.allOf) {
-      out.push(...flattenAllOf(member.allOf, spec, seen));
+      out.push(...flattenAllOf(listAt(member, "allOf"), spec, seen));
       continue;
     }
     out.push(normalizeTypeArray(member));

@@ -1,6 +1,7 @@
 import { declaredEncoding } from "./field-encoding";
 import { firstSchemaIn } from "./media-schemas";
-import type { FieldEncoding, ParsedEndpoint, SpecNode } from "./types";
+import { fieldOf, isNode, nodeAt, type SpecNode, textAt } from "./spec-node";
+import type { FieldEncoding, ParsedEndpoint } from "./types";
 import { convertSchemaInline, resolveRef } from "./utils";
 
 type ParsedRequestBody = Pick<
@@ -27,9 +28,11 @@ type ParsedRequestBody = Pick<
  * ```
  */
 export function parseRequestBody(op: SpecNode, spec: SpecNode): ParsedRequestBody {
-  if (!op.requestBody) return { requestBody: null };
-  const body = op.requestBody.$ref ? resolveRef(spec, op.requestBody.$ref) : op.requestBody;
-  const media = firstSchemaIn(body?.content);
+  const declared = fieldOf(op, "requestBody");
+  if (!declared) return { requestBody: null };
+  const ref = textAt(declared, "$ref");
+  const body = ref ? resolveRef(spec, ref) : declared;
+  const media = firstSchemaIn(fieldOf(body, "content"));
   /* Stripe gives 298 operations, every GET among them, a form that admits
      no field at all; taken for a map, it became a `body` each call had to
      pass. */
@@ -43,18 +46,19 @@ export function parseRequestBody(op: SpecNode, spec: SpecNode): ParsedRequestBod
     };
   }
   /* Bytes are often sent with no schema at all; they are still a body. */
-  const bytes = schemalessMediaType(body?.content);
+  const bytes = schemalessMediaType(fieldOf(body, "content"));
   if (bytes === undefined) return { requestBody: null };
   return { requestBody: { name: "Body", type: "any" }, requestBodyMediaType: bytes };
 }
 
 /* An object closed to every field, which only `{}` satisfies. */
-function admitsNothing(schema: SpecNode | undefined, spec: SpecNode): boolean {
-  const node = schema?.$ref ? resolveRef(spec, schema.$ref) : schema;
-  if (node?.additionalProperties !== false) return false;
+function admitsNothing(schema: SpecNode, spec: SpecNode): boolean {
+  const ref = textAt(schema, "$ref");
+  const node = ref ? resolveRef(spec, ref) : schema;
+  if (node.additionalProperties !== false) return false;
   if (node.type !== undefined && node.type !== "object") return false;
   const composed = ["allOf", "oneOf", "anyOf"].some((key) => node[key] !== undefined);
-  return !composed && Object.keys(node.properties ?? {}).length === 0;
+  return !composed && Object.keys(nodeAt(node, "properties") ?? {}).length === 0;
 }
 
 /* Only the parts that say how a field is written: a style OpenAPI defines,
@@ -63,15 +67,15 @@ function fieldEncodings(encoding: SpecNode | undefined): Record<string, FieldEnc
   if (!encoding) return undefined;
   const fields: Record<string, FieldEncoding> = {};
   for (const [name, entry] of Object.entries(encoding)) {
-    const declared = declaredEncoding(entry?.style, entry?.explode);
+    const declared = declaredEncoding(fieldOf(entry, "style"), fieldOf(entry, "explode"));
     if (declared) fields[name] = declared;
   }
   return Object.keys(fields).length > 0 ? fields : undefined;
 }
 
 /** The first media type a body declares with no schema, unless it is JSON. */
-function schemalessMediaType(content: SpecNode | undefined): string | undefined {
-  if (!content || typeof content !== "object") return undefined;
+function schemalessMediaType(content: unknown): string | undefined {
+  if (!isNode(content)) return undefined;
   const [first] = Object.keys(content);
   return first === undefined || /json/i.test(first) ? undefined : first;
 }

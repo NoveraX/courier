@@ -11,47 +11,49 @@ import {
   requestParameters,
   requestPath,
 } from "./postman-request";
+import { asNode, fieldOf, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import type {
   ParsedEndpoint,
   ParsedGroup,
   ParsedSecurityScheme,
   ParsedSpec,
   SkippedOperation,
-  SpecNode,
 } from "./types";
 import { uniqueEndpointNames } from "./unique-endpoint-names";
 import { convertPathParams, findCommonPrefix, toCamelCase, toGroupName } from "./utils";
 
 export function parsePostman(collection: SpecNode): ParsedSpec {
-  const title = collection.info?.name ?? "Postman Collection";
-  const version = collection.info?.version ?? "1.0.0";
+  const info = nodeAt(collection, "info");
+  const title = textAt(info, "name") ?? "Postman Collection";
+  const version = textAt(info, "version") ?? "1.0.0";
 
   const groups: ParsedGroup[] = [];
   const takenGroupNames = new Set<string>();
   const skipped: SkippedOperation[] = [];
   const securitySchemes: ParsedSecurityScheme[] = [];
-  const collectionAuth = authScheme(collection.auth);
+  const collectionAuth = authScheme(nodeAt(collection, "auth"));
   if (collectionAuth) securitySchemes.push(collectionAuth);
   const variables = collectionVariables(collection);
   /* The base most requests share; the first request to name a host used to
      decide it for all of them. */
   const baseURL = commonBase(
-    requestsIn(collection.item).map((request) => requestBase(request.url, variables)),
+    requestsIn(listAt(collection, "item")).map((request) => requestBase(request.url, variables)),
   );
 
-  function processItems(items: SpecNode[], groupName: string) {
+  function processItems(items: readonly unknown[], groupName: string) {
     const endpoints: ParsedEndpoint[] = [];
 
-    for (const item of items) {
+    for (const entry of items) {
+      const item = asNode(entry);
       if (item.item) {
-        processItems(item.item, item.name ?? groupName);
+        processItems(listAt(item, "item"), textAt(item, "name") ?? groupName);
         continue;
       }
 
-      const request = item.request;
+      const request = nodeAt(item, "request");
       if (!request) continue;
 
-      const method = (request.method ?? "GET").toLowerCase();
+      const method = (textAt(request, "method") ?? "GET").toLowerCase();
       const path = requestPath(request.url);
       const base = requestBase(request.url, variables);
 
@@ -64,20 +66,20 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
         continue;
       }
 
-      const ownAuth = authScheme(request.auth);
+      const ownAuth = authScheme(nodeAt(request, "auth"));
       if (ownAuth && !securitySchemes.some((s) => s.name === ownAuth.name)) {
         securitySchemes.push(ownAuth);
       }
-      const body = requestBody(request.body);
-      const mediaType = body ? requestBodyMediaType(request.body) : undefined;
+      const body = requestBody(nodeAt(request, "body"));
+      const mediaType = body ? requestBodyMediaType(nodeAt(request, "body")) : undefined;
 
       endpoints.push({
-        name: toCamelCase(item.name ?? `${method}${path}`),
+        name: toCamelCase(textAt(item, "name") ?? `${method}${path}`),
         operationId: null,
         httpMethod: method,
         path: convertPathParams(path),
         fullPath: path,
-        description: item.name ?? "",
+        description: textAt(item, "name") ?? "",
         secured: Boolean(ownAuth ?? collectionAuth),
         requestBody: body,
         ...(mediaType && { requestBodyMediaType: mediaType }),
@@ -105,7 +107,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
     }
   }
 
-  processItems(collection.item ?? [], "default");
+  processItems(listAt(collection, "item"), "default");
 
   return {
     title,
@@ -123,11 +125,11 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
 }
 
 /** Every request in the collection, however deep its folders nest. */
-function requestsIn(items: unknown): SpecNode[] {
-  if (!Array.isArray(items)) return [];
-  return items.flatMap((item: SpecNode | null | undefined): SpecNode[] => {
-    if (item?.item) return requestsIn(item.item);
-    return item?.request ? [item.request] : [];
+function requestsIn(items: readonly unknown[]): SpecNode[] {
+  return items.flatMap((item): SpecNode[] => {
+    if (fieldOf(item, "item")) return requestsIn(listAt(item, "item"));
+    const request = nodeAt(item, "request");
+    return request ? [request] : [];
   });
 }
 

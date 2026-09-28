@@ -95,7 +95,13 @@ export interface WSHandlerConfig {
   }) => void;
   /** Max consecutive message drops before force-closing a slow connection (default 50, 0 = disabled) */
   maxConsecutiveDrops?: number;
-  /** Called when client sends a token refresh message. Return new meta or throw to disconnect. */
+  /**
+   * Checks a token the client sent on its open connection, as
+   * `sendAuthRequired` asks it to: return the connection's new metadata, or
+   * throw to refuse the token. A refused token — and every token, when this
+   * is not set — leaves the deadline `sendAuthRequired` set, so the
+   * connection is closed at it.
+   */
   onTokenRefresh?: (info: {
     connectionId: string;
     token: string;

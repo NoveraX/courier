@@ -34,14 +34,19 @@ describe("handleTokenRefresh", () => {
     expect(sent[0]!.error?.code).toBe(4400);
   });
 
-  it("accepts token and stores in meta when no handler configured", async () => {
+  it("refuses a token when no onTokenRefresh can check it, and leaves meta alone", async () => {
+    const output = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { ctx, sent } = createMockCtx();
     await handleTokenRefresh(ctx, { type: "auth", id: "1", payload: "new-jwt" });
 
-    expect(ctx.meta.token).toBe("new-jwt");
-    expect(sent).toHaveLength(1);
-    expect(sent[0]!.type).toBe("auth");
-    expect(sent[0]!.id).toBe("1");
+    expect(ctx.meta).toEqual({ userId: "user-1" });
+    expect(sent).toEqual([
+      { type: "error", id: "1", error: { code: 4401, message: "Token rejected" } },
+    ]);
+    expect(output.mock.calls.some((call) => String(call[1]).includes("no onTokenRefresh"))).toBe(
+      true,
+    );
+    output.mockRestore();
   });
 
   it("calls onTokenRefresh and updates meta on success", async () => {
@@ -217,6 +222,19 @@ describe("a token the server asks a connected client for", () => {
 
     expect(served.handler.connections.count).toBe(0);
     expect(client?.status).toBe("disconnected");
+  });
+
+  it("closes the connection at the deadline when no onTokenRefresh can accept the token", async () => {
+    const output = vi.spyOn(console, "warn").mockImplementation(() => {});
+    served = await serveWS({}, {});
+    const connectionId = await connect(() => "any-string");
+
+    sendAuthRequired(served.handler.connections, connectionId, 150);
+    await settle(400);
+
+    expect(served.handler.connections.count).toBe(0);
+    expect(client?.status).toBe("disconnected");
+    output.mockRestore();
   });
 
   it("is asked for through the registry of a handler with a pub/sub adapter", async () => {

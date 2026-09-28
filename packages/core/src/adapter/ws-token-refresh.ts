@@ -5,12 +5,15 @@ import type { ConnectionRegistry, InternalConnectionRegistry } from "./ws-regist
 
 const log = createLogger("WS");
 
+const TOKEN_REJECTED = { code: 4401, message: "Token rejected" } as const;
+
 /**
  * Handle an incoming "auth" message — client is refreshing its token.
  * Calls `config.onTokenRefresh` to validate the new token and update connection metadata.
  * An accepted token lifts the deadline `sendAuthRequired` set, which used to
  * close the connection at the timeout even after the client had answered.
- * A rejected one is answered with a 4401 error, and the deadline stands.
+ * A rejected one is answered with a 4401 error, and the deadline stands — as
+ * is every token on a handler with no `onTokenRefresh` to check it.
  */
 export async function handleTokenRefresh(ctx: WSSocketContext, msg: WSMessage): Promise<void> {
   const token = typeof msg.payload === "string" ? msg.payload : undefined;
@@ -21,10 +24,10 @@ export async function handleTokenRefresh(ctx: WSSocketContext, msg: WSMessage): 
   }
 
   if (!ctx.onTokenRefresh) {
-    // No handler configured — accept silently (token stored in meta)
-    ctx.meta.token = token;
-    liftAuthDeadline(ctx);
-    ctx.sendMessage({ type: "auth", id: msg.id });
+    /* Nothing checks the token, so it proves nothing: taken as it came, any
+       string lifted the deadline `sendAuthRequired` set. */
+    log.warn(`Token refresh refused (conn=${ctx.connectionId}): no onTokenRefresh checks it`);
+    ctx.sendMessage({ type: "error", id: msg.id, error: TOKEN_REJECTED });
     return;
   }
 
@@ -45,11 +48,7 @@ export async function handleTokenRefresh(ctx: WSSocketContext, msg: WSMessage): 
   } catch (err) {
     if (ctx.closed) return;
     log.warn(`Token refresh rejected (conn=${ctx.connectionId})`, err);
-    ctx.sendMessage({
-      type: "error",
-      id: msg.id,
-      error: { code: 4401, message: "Token rejected" },
-    });
+    ctx.sendMessage({ type: "error", id: msg.id, error: TOKEN_REJECTED });
   }
 }
 

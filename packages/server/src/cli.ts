@@ -4,6 +4,7 @@ import { createLogger } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import { defineCommand, runMain } from "citty";
 import { loadCliConfig } from "./load-cli-config";
+import { parseByteLimit } from "./parse-byte-limit";
 import { parsePort } from "./parse-port";
 import { serverVersion } from "./server-version";
 
@@ -71,11 +72,21 @@ const main = defineCommand({
             .map((o) => o.trim())
             .filter(Boolean);
 
+    const maxBodyBytes = parseByteLimit(block.maxBodyBytes, `server.maxBodyBytes in ${configFile}`);
+    if (maxBodyBytes instanceof Error) fail(maxBodyBytes.message);
+    const maxUploadBytes = parseByteLimit(
+      block.maxUploadBytes,
+      `server.maxUploadBytes in ${configFile}`,
+    );
+    if (maxUploadBytes instanceof Error) fail(maxUploadBytes.message);
+
     const { createCourierServer } = await import("./create-server");
     createCourierServer({
       sources: config.sources as Sources,
       port,
       host: args.host ?? block.host ?? DEFAULT_HOST,
+      maxBodyBytes,
+      maxUploadBytes,
       ...(allowedOrigins === undefined ? {} : { allowedOrigins: [...allowedOrigins] }),
       onReady: (url) => {
         log.info(`Courier Server ready at ${url}`);

@@ -155,6 +155,16 @@ export interface CourierServerConfig {
    * `--allowed-origins` overrides it.
    */
   allowedOrigins?: readonly string[];
+  /**
+   * Largest JSON envelope the proxy reads, in bytes — default 1 MB. A larger
+   * one is refused with 413 before it is read.
+   */
+  maxBodyBytes?: number;
+  /**
+   * Largest `multipart/form-data` upload the proxy reads, in bytes — default
+   * 10 MB. A larger one is refused with 413 before it is read.
+   */
+  maxUploadBytes?: number;
 }
 
 /**

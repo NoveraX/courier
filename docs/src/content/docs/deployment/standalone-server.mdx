@@ -279,4 +279,11 @@ resolves modules as Node does (`node16` or `nodenext`), the config import is
 | `--host` | `server.host` from the config, then `127.0.0.1` | Address to listen on |
 | `--allowed-origins` | `server.allowedOrigins` from the config | Comma-separated origins browser apps may call from |
 
-The command serves the default request body limits, 1 MB for a JSON envelope and 10 MB for an upload. To change them, start the server from code with `maxBodyBytes` and `maxUploadBytes`.
+The request body limits come from the config's `server` block, `maxBodyBytes` for a JSON envelope (1 MB by default) and `maxUploadBytes` for an upload (10 MB by default). A value that is not a whole number of bytes above 0 stops the command with a message naming the key.
+
+```ts title="courier.config.ts"
+export default defineConfig({
+  sources: { api },
+  server: { port: 3001, maxBodyBytes: 2_097_152, maxUploadBytes: 67_108_864 },
+})
+```

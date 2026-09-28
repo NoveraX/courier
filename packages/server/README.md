@@ -66,11 +66,15 @@ import { api } from "./src/api"
 
 export default defineConfig({
   sources: { api },
-  server: { port: 3001, allowedOrigins: ["https://app.example.com"] },
+  server: {
+    port: 3001,
+    allowedOrigins: ["https://app.example.com"],
+    maxUploadBytes: 67_108_864, // 64 MB uploads
+  },
 })
 ```
 
-The command serves the default request body limits, 1 MB for a JSON envelope and 10 MB for an upload; to change them, start the server from code with `maxBodyBytes` and `maxUploadBytes`.
+The `server` block also sets the request body limits: `maxBodyBytes` for a JSON envelope (1 MB by default) and `maxUploadBytes` for an upload (10 MB by default). A value that is not a whole number of bytes above 0 stops the command with a message naming the key.
 
 The command exits with status 1 when the server cannot start — the port is taken, the config will not load — so a supervisor or a deploy script sees the failure. `--version` prints the installed version.
 

@@ -110,6 +110,12 @@ describe("a group named like a client accessor or a runtime hook", () => {
     expect(urls()).toEqual(["/then-group"]);
     expect(awaited).toBe(client);
   });
+
+  it("is not a promise in a spread copy of the client either", async () => {
+    const copy = { ...createCaller(namesApi()) };
+
+    expect(await Promise.resolve(copy)).toBe(copy);
+  });
 });
 
 describe("a client without those names in its source", () => {

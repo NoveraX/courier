@@ -7,7 +7,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import type { GenerateOptions } from "../../../src/apis/generator";
 import { generateCode } from "../../../src/apis/generator";
 import { parseSpec } from "../../../src/apis/parser";
-import { generatedProject } from "../../helpers/compile-generated";
+import { generatedProject } from "../../helpers/generated-project";
 
 const project = generatedProject("courier-union-responses");
 

@@ -6,8 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { generateCode } from "../../../src/apis/generator";
 import { parseSpec } from "../../../src/apis/parser";
-import { generatedProject } from "../../helpers/compile-generated";
-import { generatedCall, loadGenerated } from "../../helpers/load-generated";
+import { generatedCall, generatedProject, loadGenerated } from "../../helpers/generated-project";
 import { type RecordingServer, startRecordingServer } from "../../helpers/recording-server";
 
 const VALIDATORS = ["zod", "valibot", "arktype", "none"] as const;

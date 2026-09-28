@@ -47,6 +47,22 @@ export interface ResolvedHandler {
   streamFn?: MockStreamFn;
   /** WS channel handler factory (set by .channel()) */
   channelFn?: MockChannelFn;
+  /**
+   * Set by `.sequence()`: gives each call its answer. The registry takes the
+   * step as it resolves the call, so the step's status, error flag and delay
+   * replace the handler's for that call alone.
+   */
+  nextStep?: () => SequenceStep;
+}
+
+/** The answer one entry of a response sequence gives the call that takes it */
+export interface SequenceStep {
+  data: unknown;
+  isError: boolean;
+  /** The entry's own status; unset, the handler's status applies */
+  status?: number;
+  /** The entry's own delay in ms; unset, the handler's delay applies */
+  delayMs?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -197,7 +213,8 @@ export interface MockScenario<in TSource extends AnySource = AnySource> extends 
 /**
  * A single entry in a mock response sequence.
  *
- * - Plain value or `{ data }` → successful 200 response
+ * - Plain value or `{ data }` → successful response, 200 unless `withStatus` set another
+ * - `{ data, status?, delay? }` → that call alone answers with this status, after this delay (ms)
  * - `{ error: true, status, data? }` → error response with given status
  *
  * @example

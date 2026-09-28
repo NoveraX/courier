@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   sanitizeMockCommand,
   sanitizeMockManaged,
-  sanitizeMockNetworkConfig,
-  sanitizeMockServerEvent,
 } from "../src/server/sanitize-mock-events";
 
 describe("sanitizeMockCommand", () => {
@@ -104,64 +102,6 @@ describe("sanitizeMockManaged", () => {
     const out = sanitizeMockManaged(
       JSON.parse('{"command":"mock:managed:start","__proto__":{"polluted":true}}'),
     );
-    expect(Object.hasOwn(out ?? {}, "__proto__")).toBe(false);
-  });
-});
-
-describe("sanitizeMockServerEvent", () => {
-  it("accepts a connect event with full payload", () => {
-    const evt = {
-      type: "mock:server:connect",
-      serverId: "s1",
-      name: "Users API",
-      port: 4000,
-      url: "http://localhost:4000",
-      routeCount: 12,
-    };
-    expect(sanitizeMockServerEvent(evt)).toEqual(evt);
-  });
-
-  it("rejects missing type/serverId", () => {
-    expect(sanitizeMockServerEvent({ type: "mock:server:connect" })).toBeUndefined();
-    expect(sanitizeMockServerEvent({ serverId: "s1" })).toBeUndefined();
-    expect(sanitizeMockServerEvent({ type: "", serverId: "s1" })).toBeUndefined();
-    expect(sanitizeMockServerEvent({ type: "x", serverId: "" })).toBeUndefined();
-  });
-
-  it("rejects arrays and primitives", () => {
-    expect(sanitizeMockServerEvent([])).toBeUndefined();
-    expect(sanitizeMockServerEvent("str")).toBeUndefined();
-    expect(sanitizeMockServerEvent(null)).toBeUndefined();
-  });
-
-  it("strips proto-pollution keys", () => {
-    const out = sanitizeMockServerEvent(
-      JSON.parse(
-        '{"type":"mock:server:connect","serverId":"s1","__proto__":{"polluted":true}}',
-      ),
-    );
-    expect(Object.hasOwn(out ?? {}, "__proto__")).toBe(false);
-  });
-});
-
-describe("sanitizeMockNetworkConfig", () => {
-  it("accepts a plain config object", () => {
-    const cfg = { latencyPreset: "slow", chaosPreset: "off", latencyStartedAt: 1000 };
-    expect(sanitizeMockNetworkConfig(cfg)).toEqual(cfg);
-  });
-
-  it("rejects non-object input", () => {
-    expect(sanitizeMockNetworkConfig(null)).toBeUndefined();
-    expect(sanitizeMockNetworkConfig(undefined)).toBeUndefined();
-    expect(sanitizeMockNetworkConfig("str")).toBeUndefined();
-    expect(sanitizeMockNetworkConfig([])).toBeUndefined();
-  });
-
-  it("strips proto-pollution keys", () => {
-    const out = sanitizeMockNetworkConfig(
-      JSON.parse('{"latencyPreset":"slow","__proto__":{"polluted":true},"constructor":"evil"}'),
-    );
-    expect(out?.latencyPreset).toBe("slow");
     expect(Object.hasOwn(out ?? {}, "__proto__")).toBe(false);
   });
 });

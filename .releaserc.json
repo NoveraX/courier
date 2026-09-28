@@ -7,8 +7,24 @@
     }
   ],
   "plugins": [
-    "@semantic-release/commit-analyzer",
-    "@semantic-release/release-notes-generator",
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          {
+            "breaking": true,
+            "release": "minor"
+          }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      {
+        "preset": "conventionalcommits"
+      }
+    ],
     [
       "@semantic-release/changelog",
       {
@@ -18,6 +34,7 @@
     [
       "@semantic-release/exec",
       {
+        "verifyConditionsCmd": "npm whoami",
         "prepareCmd": "npx tsx scripts/release.ts prepare ${nextRelease.version}",
         "publishCmd": "npx tsx scripts/release.ts publish ${nextRelease.version} ${nextRelease.channel || 'latest'}"
       }

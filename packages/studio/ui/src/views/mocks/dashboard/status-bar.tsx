@@ -126,7 +126,7 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
                 size="icon"
                 aria-label="Re-seed all collections"
                 className="size-6 text-muted-foreground/60 hover:text-foreground"
-                onClick={() => sendCommand("mock:store:seed", { collection: "*", count: 20 })}
+                onClick={() => sendCommand("mock:store:seed", { collection: "*" })}
               >
                 <RotateCw className="size-3" />
               </Button>

@@ -2,7 +2,7 @@
  * A server-side caller's own headers against the ones it forwards.
  *
  * A caller given the incoming request forwards its allowed headers — the
- * end user's cookie, their token. Headers the caller sets itself, as a
+ * end user's token, and their cookie where the source names it. Headers the caller sets itself, as a
  * default or for one call, are its explicit choice: a service token for a
  * backend the user may not reach directly. The forwarded ones used to be
  * written last and replaced them, so the service token never left.
@@ -25,7 +25,12 @@ afterEach(async () => {
 });
 
 function api() {
-  return defineApi({ name: "svc", baseURL: upstream.url, endpoints: { me: endpoint.get("me") } });
+  return defineApi({
+    name: "svc",
+    baseURL: upstream.url,
+    allowedHeaders: ["cookie"],
+    endpoints: { me: endpoint.get("me") },
+  });
 }
 
 const incoming = new Request("http://app.local/page", {
@@ -63,5 +68,15 @@ describe("a forwarded header the caller does not set", () => {
     await client.me();
 
     expect(upstream.received[0]?.headers.cookie).toBe("session=abc");
+  });
+
+  it("stays behind when it is a cookie the source does not name", async () => {
+    const unnamed = defineApi({ baseURL: upstream.url, endpoints: { me: endpoint.get("me") } });
+    const client = createCaller(unnamed, { context: { req: incoming } });
+
+    await client.me();
+
+    expect(upstream.received[0]?.headers.cookie).toBeUndefined();
+    expect(upstream.received[0]?.headers.authorization).toBe("Bearer end-user");
   });
 });

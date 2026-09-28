@@ -51,9 +51,16 @@ export interface NeutralMethods<TSelf> {
   /**
    * Headers this endpoint carries across the proxy: forwarded from the caller
    * to the upstream, and passed back from the upstream's answer to the
-   * caller — a `Location`, a `Link`, an `X-Total-Count`. The body's own
-   * description (`Content-Type`, `Content-Length`, `Content-Encoding`) and
-   * `Set-Cookie` are never taken from this list.
+   * caller — a `Location`, a `Link`, an `X-Total-Count`. Cookies cross only
+   * where named: `cookie` sends the caller's cookies up, `set-cookie` passes
+   * the upstream's back. The body's own description (`Content-Type`,
+   * `Content-Length`, `Content-Encoding`) is never taken from this list.
+   *
+   * @example
+   * ```ts
+   * login: endpoint.post("login").headers(["set-cookie"]),
+   * me: endpoint.get("me").headers(["cookie"]),
+   * ```
    */
   headers(names: readonly string[]): TSelf;
   timeout(ms: number): TSelf;

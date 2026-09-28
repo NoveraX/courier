@@ -31,7 +31,6 @@ describe("filterHeaders", () => {
   it("passes all whitelisted headers", () => {
     const incoming = new Headers({
       authorization: "Bearer token",
-      cookie: "session=abc",
       referer: "https://example.com",
       origin: "https://example.com",
       "user-agent": "test",
@@ -39,11 +38,17 @@ describe("filterHeaders", () => {
     });
     const result = filterHeaders(incoming);
     expect(result.get("authorization")).toBe("Bearer token");
-    expect(result.get("cookie")).toBe("session=abc");
     expect(result.get("referer")).toBe("https://example.com");
     expect(result.get("origin")).toBe("https://example.com");
     expect(result.get("user-agent")).toBe("test");
     expect(result.get("x-request-id")).toBe("abc-123");
+  });
+
+  it("passes the caller's cookies only where they are named", () => {
+    const incoming = new Headers({ cookie: "session=abc" });
+
+    expect(filterHeaders(incoming).get("cookie")).toBeNull();
+    expect(filterHeaders(incoming, ["Cookie"]).get("cookie")).toBe("session=abc");
   });
 
   it("does not pass a client address the caller wrote itself", () => {

@@ -46,7 +46,7 @@ export const caller = createProxyCaller<typeof api>("api", {
   boundary,
   proxyPath: { http: "/api/request" },  // optional, defaults to /api/request
   timeout: 10000,
-  credentials: "include",               // forward cookies
+  credentials: "include",               // send the browser's cookies to the proxy route
   headers: { "X-Custom": "value" },
   onError: (error) => console.error(error),
   onSuccess: (data) => console.log(data),
@@ -69,7 +69,7 @@ Pass the actual `api` object to `createProxyCaller` (not just `typeof api`). The
 | `proxyPath` | `ProxyPath` | per-transport defaults | Per-transport proxy endpoint paths (`http` / `sse` / `ws`) |
 | `source` | `object` | — | The `defineApi()` result. Required for SSE/WS detection |
 | `timeout` | `number` | — | Request timeout in ms |
-| `credentials` | `RequestCredentials` | `"include"` | Cookie forwarding mode |
+| `credentials` | `RequestCredentials` | `"include"` | Whether the browser sends its cookies to the proxy route; the proxy forwards them where the source or endpoint names `cookie` |
 | `headers` | `Record<string, string>` | — | Default headers |
 | `onError` | `(error: HTTPError) => void` | — | Global error callback |
 | `onSuccess` | `(data: unknown) => void` | — | Global success callback |

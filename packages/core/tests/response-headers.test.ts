@@ -61,7 +61,7 @@ describe("buildResponse — a streamed answer", () => {
     expect(response.headers.get("content-type")).toBe("text/plain");
   });
 
-  it("passes on every cookie the upstream set, as a buffered answer does", () => {
+  it("passes on every cookie the upstream set where it is named, as a buffered answer does", () => {
     const headers = new Headers({ "content-type": "text/plain" });
     headers.append("set-cookie", "a=1; Path=/");
     headers.append("set-cookie", "b=2; Path=/");
@@ -71,6 +71,7 @@ describe("buildResponse — a streamed answer", () => {
       rawData: false,
       stream: true,
       data: new ReadableStream(),
+      namedHeaders: ["set-cookie"],
     }) as Response;
 
     expect(response.headers.getSetCookie()).toEqual(["a=1; Path=/", "b=2; Path=/"]);
@@ -124,15 +125,28 @@ describe("buildResponse — a buffered answer", () => {
     expect(response.headers.get("content-length")).not.toBe("4096");
   });
 
-  it("still forwards Set-Cookie, which an upstream sign-in depends on", () => {
+  it("forwards Set-Cookie, which an upstream sign-in depends on, where it is named", () => {
     const response = buildResponse(PROXY, {
       status: 200,
       headers: upstream({ "set-cookie": "sid=abc; HttpOnly" }),
       rawData: false,
       data: { ok: true },
+      namedHeaders: ["Set-Cookie"],
     }) as Response;
 
     expect(response.headers.getSetCookie()).toContain("sid=abc; HttpOnly");
+  });
+
+  it("keeps Set-Cookie from the browser where it is not named", () => {
+    const response = buildResponse(PROXY, {
+      status: 200,
+      headers: upstream({ "set-cookie": "sid=abc; HttpOnly" }),
+      rawData: false,
+      data: { ok: true },
+      namedHeaders: ["x-total-count"],
+    }) as Response;
+
+    expect(response.headers.getSetCookie()).toEqual([]);
   });
 });
 

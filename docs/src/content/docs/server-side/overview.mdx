@@ -40,7 +40,7 @@ Use direct mode whenever your code runs on the server:
     ["Latency", "Extra HTTP hop", { label: "Single hop", highlight: true }],
     ["Client bundle", "Includes request code", { label: "Zero bytes", highlight: true }],
     ["React Query", { label: "Built-in hooks", highlight: true }, "Not needed (async/await)"],
-    ["Cookie forwarding", { label: "Automatic", highlight: true }, "Via Context parameter"],
+    ["Cookie forwarding", "Where the source or endpoint names it", "Via .with({ headers })"],
     ["Use case", "Client components", "RSC, Server Actions, API routes"],
     ["Requires proxy handler", "Yes", { label: "No", highlight: true }],
   ]}
@@ -116,7 +116,7 @@ export default async function ProfilePage() {
 ```
 
 <Callout variant="tip" title="Header whitelist">
-Headers read from a context — `createCaller(api, { context: { req } })` — are forwarded only when they are safe: `authorization`, `cookie`, `user-agent`, `referer`, `origin` and `x-request-id`, plus the names a source lists in `allowedHeaders`. A client address is not copied from the incoming request; `X-Forwarded-For` is written from the connection where the runtime knows it. Headers passed to `.with({ headers })` and custom headers from `defaults.headers` are always included, except those describing the incoming connection, such as `host`, `connection` and `content-length`.
+Headers read from a context — `createCaller(api, { context: { req } })` — are forwarded only when they are safe: `authorization`, `user-agent`, `referer`, `origin` and `x-request-id`, plus the names a source lists in `allowedHeaders` or an endpoint in `.headers()` — `cookie` among them when the user's session should travel. A client address is not copied from the incoming request; `X-Forwarded-For` is written from the connection where the runtime knows it. Headers passed to `.with({ headers })` and custom headers from `defaults.headers` are always included, except those describing the incoming connection, such as `host`, `connection` and `content-length`.
 </Callout>
 
 ## Security considerations

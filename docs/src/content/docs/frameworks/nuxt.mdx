@@ -78,7 +78,7 @@ export function useCaller() {
 }
 ```
 
-During server rendering the call is a request from the server to itself, so it carries none of the browser's cookies. When the upstream needs the user's session, forward it with `headers: useRequestHeaders(["cookie"])`.
+During server rendering the call is a request from the server to itself, so it carries none of the browser's cookies. When the upstream needs the user's session, forward it with `headers: useRequestHeaders(["cookie"])`; the proxy passes it on to the endpoints that name `cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
 
 Use it in your pages and components:
 

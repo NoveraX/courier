@@ -7,13 +7,17 @@
  * writes `X-Forwarded-For` itself from the connection (see `forwardedFor`); a
  * source that trusts whoever wrote the caller's copy names it in
  * `allowedHeaders`.
+ *
+ * `Cookie` is not among them either. The browser sends every cookie of the
+ * application's origin, its own session included, and forwarded by default
+ * they reached whatever upstream a source points at — a third party's too.
+ * A source, a base or an endpoint that owns the session names `cookie`.
  */
 export const ALLOWED_HEADERS = [
   "referer",
   "origin",
   "authorization",
   "user-agent",
-  "cookie",
   "x-request-id",
 ] as const;
 
@@ -53,12 +57,14 @@ export const RESPONSE_HEADERS = [
 export const STREAMED_RESPONSE_HEADERS = ["content-type"] as const;
 
 /**
- * Never passed back, even by an endpoint or a source that names them.
+ * Never passed back through the header allowlist, even by an endpoint or a
+ * source that names them.
  *
  * The proxy re-serializes a buffered body and decodes a streamed one, so the
  * upstream's description of its body — its type, length and encoding — would
  * describe bytes that are not the ones sent. The connection-level headers
- * belong to one hop. Cookies travel on their own path, every one of them.
+ * belong to one hop. `Set-Cookie` travels on a path of its own, where each
+ * cookie stays a value of its own, and only for an endpoint that names it.
  */
 export const NEVER_PASSED_RESPONSE_HEADERS: ReadonlySet<string> = new Set([
   "connection",

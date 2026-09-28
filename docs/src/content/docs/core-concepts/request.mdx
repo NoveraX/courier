@@ -9,7 +9,7 @@ Every API call in Courier follows a well-defined lifecycle. There are two transp
 | Factory | Mode | Runtime | Use Case |
 |---------|------|---------|----------|
 | `createCaller(api)` | Direct | Any (Node.js, Bun, Deno, browser) | Server Components, Server Actions, scripts, CLI |
-| `createProxyCaller<typeof api>("api")` | Proxy | Browser | Client Components — hides backend URL, handles CORS, forwards cookies |
+| `createProxyCaller<typeof api>("api")` | Proxy | Browser | Client Components — hides backend URL, handles CORS, carries the cookies you name |
 
 ## Request Flow
 

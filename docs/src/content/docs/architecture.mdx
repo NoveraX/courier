@@ -74,7 +74,7 @@ The browser sends requests through your server, which hides API keys and bypasse
 │                                                              │
 │  Server Adapter → createHandler({ sources })                 │
 │       │  ✓ origin validation                                 │
-│       │  ✓ cookie forwarding                                 │
+│       │  ✓ cookies only where named                          │
 │       ▼                                                      │
 │  executeRequest(sources, payload, context)                   │
 │       │  → middleware chain                                  │

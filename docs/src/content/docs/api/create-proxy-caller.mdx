@@ -42,7 +42,7 @@ type ProxyCallerDefaults = {
 - `source` — the result of `defineApi()`, or `boundary` — the result of `defineBoundary()`, which keeps the definition out of the browser bundle. One of them is required when the API has streams or channels: the type argument names each endpoint's transport, but only a runtime value tells the client which endpoints to open as a stream or a socket, so omitting both does not compile. The caller reads `proxyPath` from whichever is given as the source-level defaults.
 - `deduplicate` — cancel a call still in flight when the same endpoint is called again. Defaults to the source's own setting when `source` is given.
 - `timeout` — how long the browser waits for the proxy, in milliseconds. It is not sent to the server, so the endpoint's own `.timeout()` still bounds the upstream call; a timeout given with `.with()` for one call is sent.
-- `credentials` — cookie handling policy. Defaults to `"include"`.
+- `credentials` — whether the browser sends its cookies to the proxy route. Defaults to `"include"`. The proxy forwards them to the backend only where the source or the endpoint names `cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
 - `headers` — default headers merged into every request.
 - `onError` — global error handler invoked on every `HTTPError`.
 - `onSuccess` — global success handler invoked on every successful response.

@@ -104,7 +104,7 @@ await caller.users.with({ headers: await headers() }).create({ name: "Jane" })
 
 ## Context parameter
 
-The `Context` is what makes direct mode different from proxy mode. In proxy mode, cookies are forwarded automatically through the handler. In direct mode, you pass them yourself: per call through `.with({ headers })`, or for every call of a caller through the `context` default of `createCaller`. A method takes its variables as its only argument; a second argument is not read.
+The `Context` is what makes direct mode different from proxy mode. In proxy mode, the browser's cookies reach the handler with each call, and the handler forwards them where the source or the endpoint names `cookie`. In direct mode, you pass them yourself: per call through `.with({ headers })`, or for every call of a caller through the `context` default of `createCaller`. A method takes its variables as its only argument; a second argument is not read.
 
 ```ts
 import type { Context } from "@noverax/courier"
@@ -153,7 +153,7 @@ export async function GET(req: Request) {
 ```
 
 <Callout variant="info" title="Header whitelist">
-Headers carried by a context — `context.req` or `context.headers` — are forwarded only when they are in a safe subset: `authorization`, `cookie`, `user-agent`, `referer`, `origin` and `x-request-id`, plus the names the source lists in `allowedHeaders`. A client address the incoming request claims — `x-forwarded-for`, `x-real-ip` — is not copied; `X-Forwarded-For` is written from the connection where the runtime knows it. Headers you pass to `.with({ headers })` are sent as given, except the ones that describe the incoming connection rather than the request — `host`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `te`, `trailer`, `upgrade`, `expect` and any header `connection` names — which `fetch` sets for its own. Forwarding `await headers()` whole therefore works, but it passes on everything else the browser sent too; pick out the headers the backend should see when that matters.
+Headers carried by a context — `context.req` or `context.headers` — are forwarded only when they are in a safe subset: `authorization`, `user-agent`, `referer`, `origin` and `x-request-id`, plus the names the source lists in `allowedHeaders` or the endpoint in `.headers()`. The user's `cookie` is forwarded from a context only where it is named that way. A client address the incoming request claims — `x-forwarded-for`, `x-real-ip` — is not copied; `X-Forwarded-For` is written from the connection where the runtime knows it. Headers you pass to `.with({ headers })` are sent as given, except the ones that describe the incoming connection rather than the request — `host`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `te`, `trailer`, `upgrade`, `expect` and any header `connection` names — which `fetch` sets for its own. Forwarding `await headers()` whole therefore works, but it passes on everything else the browser sent too; pick out the headers the backend should see when that matters.
 
 A header you set yourself — in the caller's `headers` default or with `.with({ headers })` — wins over the forwarded copy of the same name, so a service token is not replaced by the end user's.
 </Callout>
@@ -173,7 +173,7 @@ console.log(result.data)     // User — still fully typed
 
 ## Difference from createProxyCaller
 
-The key difference is the `Context` parameter. In proxy mode, cookies are forwarded automatically through the browser request. In direct mode, you pass them explicitly through `.with()`:
+The key difference is the `Context` parameter. In proxy mode, the browser's cookies arrive with its request and cross to the backend where they are named. In direct mode, you pass them explicitly through `.with()`:
 
 ```ts
 // Proxy mode (client components) — no context parameter

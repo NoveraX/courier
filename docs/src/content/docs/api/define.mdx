@@ -200,7 +200,9 @@ const users = defineGroup({
 })
 ```
 
-The headers that describe the body — `Content-Type`, `Content-Length`, `Content-Encoding` — are never taken from these lists, because the proxy sends a body of its own; nor is `Set-Cookie`, which travels on its own.
+Cookies are named the same way, one direction at a time: `cookie` forwards the caller's cookies to the upstream, and `set-cookie` passes the upstream's back. Neither crosses where it is not named — see [Cookies](/docs/proxy-mode/api-route#cookies).
+
+The headers that describe the body — `Content-Type`, `Content-Length`, `Content-Encoding` — are never taken from these lists, because the proxy sends a body of its own.
 
 ## Related
 

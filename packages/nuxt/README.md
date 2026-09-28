@@ -84,7 +84,7 @@ const { data: users } = await useAsyncData("users", () => caller.users.getAll())
 </template>
 ```
 
-During server rendering the call is a request from the server to itself, so it carries none of the browser's cookies. When the upstream needs the user's session, forward it: `createProxyCaller("api", { proxyPath, headers: useRequestHeaders(["cookie"]) })`.
+During server rendering the call is a request from the server to itself, so it carries none of the browser's cookies. When the upstream needs the user's session, forward it: `createProxyCaller("api", { proxyPath, headers: useRequestHeaders(["cookie"]) })`. The proxy passes cookies on only to the sources and endpoints that name `cookie`, with `allowedHeaders` or `.headers()`.
 
 The same route serves SSE streams: point `proxyPath.sse` at it too. WebSocket channels need the standalone Courier server.
 

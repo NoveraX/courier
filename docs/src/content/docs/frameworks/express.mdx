@@ -136,7 +136,7 @@ app.listen(Number(process.env.PORT) || 3001)
 ```
 
 <Callout variant="info" title="Credentials">
-Set `credentials: true` in your CORS config if your backend uses cookies for authentication. The Courier proxy route forwards cookies from the browser to your backend automatically.
+Set `credentials: true` in your CORS config if your backend uses cookies for authentication. The Courier proxy route forwards the browser's cookies to your backend, and your backend's `Set-Cookie` back, for the sources and endpoints that name `cookie` and `set-cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
 </Callout>
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>

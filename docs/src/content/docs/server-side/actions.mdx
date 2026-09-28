@@ -2,7 +2,7 @@ export const metadata = { title: "Server Actions", description: "Type-safe serve
 
 ## Overview
 
-`createAction` from `@noverax/courier-next` creates a dot-notation client for use in Next.js Server Actions. It works like `createCaller`, but automatically forwards the incoming request headers (cookies, authorization) via `next/headers`.
+`createAction` from `@noverax/courier-next` creates a dot-notation client for use in Next.js Server Actions. It works like `createCaller`, but automatically forwards the incoming request's headers via `next/headers`: `authorization` and the other safe ones, the headers the source and the endpoint name, and the user's cookies where they name `cookie`.
 
 ```ts title="lib/actions.ts"
 import { createAction } from "@noverax/courier-next"
@@ -52,7 +52,7 @@ type ActionDefaults = {
 ```
 
 <Callout variant="info" title="Automatic headers">
-By default, `createAction` forwards the incoming request headers (including cookies) to your backend via `next/headers()`. Set `headers: false` to disable this behavior.
+By default, `createAction` forwards the incoming request's headers to your backend via `next/headers()`, through the same allowlist a context goes through — so the user's cookies travel only where the source or the endpoint names `cookie`. Set `headers: false` to disable this behavior.
 </Callout>
 
 ## Basic usage
@@ -191,7 +191,7 @@ const user = await caller.users.with({ headers: await headers() }).create(data)
 const user = await action.users.create(data)
 ```
 
-Use `createAction` in Server Actions where you always need cookies forwarded. Use `createCaller` in RSC or API routes where you may or may not need headers.
+Use `createAction` in Server Actions where the incoming request's headers should always travel. Use `createCaller` in RSC or API routes where you may or may not need headers.
 
 ## Server Actions vs useMutation
 

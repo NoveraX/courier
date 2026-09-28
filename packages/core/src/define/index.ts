@@ -26,6 +26,7 @@ export type {
 export type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 export { courier } from "./courier";
 export { type FormFieldEncoding, formBody } from "./form-body";
+export { formQuery } from "./form-query";
 export { defineGroup } from "./group";
 export type {
   AnyEndpoint,

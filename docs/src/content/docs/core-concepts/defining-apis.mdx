@@ -120,6 +120,22 @@ endpoint
 // → POST /customers  Body: email=ada%40example.com&metadata%5Bplan%5D=pro
 ```
 
+A read writes its variables into the query in OpenAPI's default style, `form` exploded: a list repeats its name and an object's properties become names of their own. A parameter declared in another style — Stripe's `deepObject` filters, a comma- or pipe-joined list — is written by `formQuery`, which takes the same encodings as `formBody` and leaves out a field that is `undefined` or `null`:
+
+```ts
+import { courier, formQuery } from "@noverax/courier/define"
+
+endpoint
+  .variables<{ created?: { gte?: number }; expand?: string[] }>()
+  .via((http, query) =>
+    http.get("customers", formQuery(query, {
+      created: { style: "deepObject", explode: true },
+      expand: { style: "deepObject", explode: true },
+    })),
+  )
+// → GET /customers?created%5Bgte%5D=1680000000&expand%5B0%5D=tax
+```
+
 `responseType` reads one endpoint's answer as `"text"`, `"blob"`, `"arrayBuffer"` or `"formData"` when its source reads the rest as JSON — a CSV export, a PDF. An error answer is still read as the source reads it, since it explains the error in its own form:
 
 ```ts

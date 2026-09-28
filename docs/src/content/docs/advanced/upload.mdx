@@ -252,7 +252,7 @@ await caller.files
 // once the whole of it has arrived.
 ```
 
-A `ReadableStream` body is read into memory before it is sent in a browser: `XMLHttpRequest` cannot send a stream, and its progress then covers the bytes that were read.
+A `ReadableStream` body is read into memory before it is sent in a browser: `XMLHttpRequest` cannot send a stream, and its progress then covers the bytes that were read. Without `onUploadProgress` it is streamed as it is, with `duplex: "half"` — which browsers allow only over HTTP/2 or later.
 
 <Callout variant="warning" title="Development warnings">
 In development mode, Courier logs a console warning for each ignored option so you can identify unintended usage early. In production, ignored options are silently skipped.

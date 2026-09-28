@@ -58,7 +58,7 @@ export function setupRuntimeNamespace(
     const ref: { runtimeId: string | undefined } = { runtimeId: undefined };
 
     socket.on("runtime:hello", (raw: unknown) => {
-      handleHello(raw, socket, ref);
+      handleHello(raw, socket, ref, deps);
     });
 
     socket.on("runtime:announce", (raw: unknown) => {

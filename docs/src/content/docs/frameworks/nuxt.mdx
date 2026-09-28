@@ -229,13 +229,15 @@ export function useCaller() {
 Wire your Nuxt server into Studio with a single `attachRuntime()` call from a Nitro plugin. It auto-loads `courier.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
 
 ```ts title="server/plugins/courier-studio.ts"
-import { attachRuntime } from "@noverax/courier-studio-core/runtime"
-
 export default defineNitroPlugin(async () => {
-  if (process.env.NODE_ENV === "production") return
-  await attachRuntime()
+  if (import.meta.dev) {
+    const { attachRuntime } = await import("@noverax/courier-studio-core/runtime")
+    await attachRuntime()
+  }
 })
 ```
+
+The runtime is imported inside the `import.meta.dev` check: a production build drops the whole branch, so `.output` carries no Studio code. Imported at the top of the file instead, the runtime would be copied into `.output`, with its Socket.IO client and its TypeScript loader, for a plugin that never runs there.
 
 Alternatively, set `COURIER_APP_URL` instead of pinning `appOrigin` in the config:
 

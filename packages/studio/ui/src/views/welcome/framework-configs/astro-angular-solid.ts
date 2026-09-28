@@ -41,9 +41,9 @@ export default defineConfig({
       filePath: "src/middleware.ts",
       lang: "ts",
       code: `import { defineMiddleware } from "astro:middleware";
-import { attachRuntime } from "@noverax/courier-studio-core/runtime";
 
 if (import.meta.env.DEV) {
+  const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
   await attachRuntime();
 }
 
@@ -113,9 +113,8 @@ export default defineConfig({
       actionLabel: "Copy snippet",
       filePath: "src/entry-server.tsx",
       lang: "ts",
-      code: `import { attachRuntime } from "@noverax/courier-studio-core/runtime";
-
-if (import.meta.env.DEV) {
+      code: `if (import.meta.env.DEV) {
+  const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
   await attachRuntime();
 }`,
     },

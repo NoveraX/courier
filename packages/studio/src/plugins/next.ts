@@ -4,13 +4,20 @@ import { resolveSnippet } from "./core/resolve-snippet";
 import { runtimeEntryPath } from "./core/runtime-importer";
 import { hintClientInstrumentation } from "./core/turbopack-hint";
 import type { StudioPluginOptions } from "./core/types";
-import { prependToEntry, type WebpackEntryValue } from "./core/webpack-entry";
+import { isEntryRecord, isEntryValue, prependToEntry } from "./core/webpack-entry";
 import { wsExternal } from "./core/ws-external";
 
 const FRAMEWORK = "next";
 
 /** The client entries of the App Router and of the Pages Router. */
 const CLIENT_ENTRIES = ["main-app", "main"] as const;
+
+/* The fields of webpack's config the wrapper reads and replaces; Next.js types
+   the config it hands over as `any`. */
+interface WebpackConfigFields {
+  entry?: unknown;
+  externals?: unknown;
+}
 
 /**
  * Next.js config wrapper for Courier Studio.
@@ -49,12 +56,13 @@ export function withCourierStudio(
     }
     return {
       ...nextConfig,
-      webpack(webpackConfig, context) {
+      webpack(webpackConfig: WebpackConfigFields, context) {
         if (!context.isServer) {
           const originalEntry = webpackConfig.entry;
           webpackConfig.entry = async () => {
-            const entries: Record<string, WebpackEntryValue> =
+            const entries: unknown =
               typeof originalEntry === "function" ? await originalEntry() : originalEntry;
+            if (!isEntryRecord(entries)) return entries;
             const snippet = await resolveSnippet({
               framework: FRAMEWORK,
               options: pluginOptions,
@@ -65,7 +73,7 @@ export function withCourierStudio(
             const dataUri = createDataUri(snippet);
             for (const name of CLIENT_ENTRIES) {
               const entry = entries[name];
-              if (entry !== undefined) entries[name] = prependToEntry(entry, dataUri);
+              if (isEntryValue(entry)) entries[name] = prependToEntry(entry, dataUri);
             }
             return entries;
           };

@@ -4,7 +4,7 @@ import { isInjectionEnabled } from "./core/options";
 import { resolveSnippet } from "./core/resolve-snippet";
 import { runtimeEntryPath } from "./core/runtime-importer";
 import type { StudioPluginOptions } from "./core/types";
-import { prependToEntry, type WebpackEntryValue } from "./core/webpack-entry";
+import { isEntryRecord, isEntryValue, prependToEntry } from "./core/webpack-entry";
 
 const FRAMEWORK = "webpack";
 const log = createLogger("WebpackPlugin");
@@ -40,10 +40,12 @@ export function courierStudio(options?: StudioPluginOptions): WebpackPluginLike 
 
       const originalEntry = compiler.options.entry;
       compiler.options.entry = async () => {
-        const entries =
-          typeof originalEntry === "function"
-            ? await originalEntry()
-            : (originalEntry as Record<string, WebpackEntryValue>);
+        const entries: unknown =
+          typeof originalEntry === "function" ? await originalEntry() : originalEntry;
+        if (!isEntryRecord(entries)) {
+          log.warn("The webpack entry names no entries; Studio does not connect");
+          return entries;
+        }
 
         const snippet = await resolveSnippet({
           framework: FRAMEWORK,
@@ -55,14 +57,15 @@ export function courierStudio(options?: StudioPluginOptions): WebpackPluginLike 
 
         const name = mainEntryName(entries);
         if (name === undefined) return entries;
-        entries[name] = prependToEntry(entries[name] as WebpackEntryValue, createDataUri(snippet));
+        const entry = entries[name];
+        if (isEntryValue(entry)) entries[name] = prependToEntry(entry, createDataUri(snippet));
         return entries;
       };
     },
   };
 }
 
-function mainEntryName(entries: Record<string, WebpackEntryValue>): string | undefined {
+function mainEntryName(entries: Record<string, unknown>): string | undefined {
   if ("main-app" in entries) return "main-app";
   if ("main" in entries) return "main";
   const [first] = Object.keys(entries);

@@ -73,6 +73,9 @@ describe("an API route Studio does not have", () => {
     ["GET", "/api/apis/write"],
     ["POST", "/api/nonexistent"],
     ["PUT", "/api/apis/write"],
+    /* Routes no Studio page calls, gone: merge answered "safe" for a file it could not read, and dropped every endpoint. */
+    ["POST", "/api/apis/merge"],
+    ["POST", "/api/apis/fingerprint"],
   ])("is answered to %s %s with a JSON 404, not a page", async (method, path) => {
     const url = await start();
 

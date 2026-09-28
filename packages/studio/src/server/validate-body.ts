@@ -21,11 +21,6 @@ export function isString(v: unknown): v is string {
   return typeof v === "string";
 }
 
-export function isFileArray(v: unknown): v is { path: string; content: string }[] {
-  if (!Array.isArray(v)) return false;
-  return v.every((f) => isObject(f) && isString(f.path) && isString(f.content));
-}
-
 // ── Parse route ──────────────────────────────────────────────────────────────
 
 const VALID_SOURCES = new Set(["url", "raw", "file"]);
@@ -68,49 +63,4 @@ export function validateDiffBody(body: unknown, res: JsonResponse): DiffBody | n
   if (!isObject(body.oldSpec)) return reject(res, "oldSpec");
   if (!isObject(body.newSpec)) return reject(res, "newSpec");
   return { oldSpec: body.oldSpec, newSpec: body.newSpec } as DiffBody;
-}
-
-// ── Fingerprint route ───────────────────────────────────────────────────────
-
-interface FingerprintBody {
-  files: { path: string; content: string }[];
-}
-
-export function validateFingerprintBody(body: unknown, res: JsonResponse): FingerprintBody | null {
-  if (!isObject(body)) return reject(res, "body");
-  if (!isFileArray(body.files)) return reject(res, "files");
-  return { files: body.files };
-}
-
-// ── Merge route ─────────────────────────────────────────────────────────────
-
-interface MergeBody {
-  existing: string;
-  generated: string;
-  fingerprints: Record<string, string>;
-}
-
-export function validateMergeBody(body: unknown, res: JsonResponse): MergeBody | null {
-  if (!isObject(body)) return reject(res, "body");
-  if (!isString(body.existing)) return reject(res, "existing");
-  if (!isString(body.generated)) return reject(res, "generated");
-  if (!isObject(body.fingerprints)) return reject(res, "fingerprints");
-  return body as unknown as MergeBody;
-}
-
-// ── Write route ─────────────────────────────────────────────────────────────
-
-interface WriteBodyValidated {
-  files: { path: string; content: string }[];
-  sourceName?: string;
-  spec?: Record<string, unknown>;
-  specUrl?: string;
-  importType?: string;
-  options?: Record<string, unknown>;
-}
-
-export function validateWriteBody(body: unknown, res: JsonResponse): WriteBodyValidated | null {
-  if (!isObject(body)) return reject(res, "body");
-  if (!isFileArray(body.files)) return reject(res, "files");
-  return body as unknown as WriteBodyValidated;
 }

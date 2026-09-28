@@ -1,8 +1,20 @@
 import { RUNTIME_SPECIFIER } from "./constants";
 import { loadStudioUrl } from "./load-studio-url";
-import { isInjectionEnabled, resolveOptions } from "./options";
+import { isInjectionEnabled } from "./options";
 import { generateConnectSnippet } from "./snippet";
 import type { StudioPluginOptions } from "./types";
+
+/** What a build plugin asks {@link resolveSnippet} for. */
+export interface SnippetRequest {
+  /** The framework the snippet is for; it names the runtime. */
+  framework: string;
+  /** The plugin's options. */
+  options?: StudioPluginOptions;
+  /** Whether the bundler builds for development; see {@link isInjectionEnabled}. */
+  development: boolean;
+  /** The specifier the snippet imports the runtime from; see {@link generateConnectSnippet}. */
+  runtime?: string;
+}
 
 /**
  * One-shot snippet resolver shared by every build plugin.
@@ -12,26 +24,23 @@ import type { StudioPluginOptions } from "./types";
  * connect snippet. This helper collapses them so each bundler adapter only
  * owns its injection mechanism, not the resolution logic.
  *
- * Returns `null` when injection is disabled (production by default, or when
- * the caller explicitly passed `enabled: false`), and then reads no config at
- * all. `runtime` is what the snippet imports the runtime from — see
- * {@link generateConnectSnippet}.
+ * Returns `null` when injection is disabled — a production build by default,
+ * or the caller passed `enabled: false` — and then reads no config at all.
  *
- * @param framework - The framework the snippet is for
- * @param options - The plugin's options
- * @param runtime - The specifier the snippet imports the runtime from
+ * @param request - The framework, the plugin's options and the build's mode.
  * @returns The snippet, or `null` when nothing is injected
  * @example
  * ```ts
- * const snippet = await resolveSnippet("vite", { enabled: true });
+ * const snippet = await resolveSnippet({ framework: "vite", development: true });
  * ```
  */
-export async function resolveSnippet(
-  framework: string,
-  options?: StudioPluginOptions,
-  runtime: string = RUNTIME_SPECIFIER,
-): Promise<string | null> {
-  if (!isInjectionEnabled(options)) return null;
+export async function resolveSnippet({
+  framework,
+  options,
+  development,
+  runtime = RUNTIME_SPECIFIER,
+}: SnippetRequest): Promise<string | null> {
+  if (!isInjectionEnabled(options, development)) return null;
   const studioUrl = await loadStudioUrl();
-  return generateConnectSnippet(resolveOptions(framework, studioUrl, options), runtime);
+  return generateConnectSnippet({ framework, studioUrl }, runtime);
 }

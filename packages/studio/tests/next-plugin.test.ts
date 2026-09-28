@@ -19,10 +19,17 @@ afterEach(() => {
 type EntryFunction = () => Promise<Record<string, unknown>>;
 
 /** Runs a wrapped config's webpack hook the way Next.js does for the client. */
-async function nextClientEntries(config: NextConfig, entries: Record<string, unknown>) {
+async function nextClientEntries(
+  config: NextConfig,
+  entries: Record<string, unknown>,
+  dev = true,
+) {
   const webpackConfig = { entry: async () => entries };
-  const hook = config.webpack as (c: typeof webpackConfig, ctx: { isServer: boolean }) => unknown;
-  hook(webpackConfig, { isServer: false });
+  const hook = config.webpack as (
+    c: typeof webpackConfig,
+    ctx: { isServer: boolean; dev: boolean },
+  ) => unknown;
+  hook(webpackConfig, { isServer: false, dev });
   return (webpackConfig.entry as EntryFunction)();
 }
 
@@ -47,6 +54,15 @@ describe("withCourierStudio() for Next.js", () => {
     expect((entries["main-app"] as string[])[0]).toMatch(/^data:text\/javascript;base64,/);
     expect((entries.main as string[])[0]).toBe((entries["main-app"] as string[])[0]);
     expect(entries["pages/_app"]).toEqual(["./app.js"]);
+  });
+
+  it("leaves the client entries of a production build alone", async () => {
+    vi.stubEnv("TURBOPACK", "");
+    const config = withCourierStudio()({});
+
+    const entries = await nextClientEntries(config, { main: "./next.js" }, false);
+
+    expect(entries.main).toBe("./next.js");
   });
 
   it("still runs the webpack hook the app brought", async () => {

@@ -1,5 +1,6 @@
 import { createLogger } from "@noverax/courier";
 import { createDataUri } from "./core/data-uri";
+import { isInjectionEnabled } from "./core/options";
 import { resolveSnippet } from "./core/resolve-snippet";
 import { runtimeEntryPath } from "./core/runtime-importer";
 import type { StudioPluginOptions } from "./core/types";
@@ -12,12 +13,12 @@ const log = createLogger("WebpackPlugin");
  * Webpack plugin for Courier Studio.
  *
  * Loads the Studio connection ahead of the app's main entry — `main-app` or
- * `main`, else the first — as the `webpack-browser` runtime. Builds for
- * `target: "node"` are left untouched, as are production builds unless
- * `enabled` says otherwise.
+ * `main`, else the first — as the `webpack-browser` runtime, in a build whose
+ * `mode` is `"development"`. Production builds, which is what webpack makes
+ * when no `mode` is set, and builds for `target: "node"` are left untouched.
  *
  * @param options - `enabled` forces injection on or off; by default it is on
- *   unless `NODE_ENV` is `"production"`.
+ *   in development mode unless `NODE_ENV` is `"production"`.
  * @returns The webpack plugin.
  *
  * @example
@@ -34,6 +35,8 @@ export function courierStudio(options?: StudioPluginOptions): WebpackPluginLike 
   return {
     apply(compiler) {
       if (compiler.options?.target === "node") return;
+      const development = compiler.options.mode === "development";
+      if (!isInjectionEnabled(options, development)) return;
 
       const originalEntry = compiler.options.entry;
       compiler.options.entry = async () => {
@@ -42,7 +45,12 @@ export function courierStudio(options?: StudioPluginOptions): WebpackPluginLike 
             ? await originalEntry()
             : (originalEntry as Record<string, WebpackEntryValue>);
 
-        const snippet = await resolveSnippet(FRAMEWORK, options, runtimeEntryPath());
+        const snippet = await resolveSnippet({
+          framework: FRAMEWORK,
+          options,
+          development,
+          runtime: runtimeEntryPath(),
+        });
         if (!snippet) return entries;
 
         const name = mainEntryName(entries);
@@ -64,5 +72,5 @@ function mainEntryName(entries: Record<string, WebpackEntryValue>): string | und
 }
 
 interface WebpackPluginLike {
-  apply(compiler: { options: { entry: unknown; target?: unknown } }): void;
+  apply(compiler: { options: { entry: unknown; mode?: unknown; target?: unknown } }): void;
 }

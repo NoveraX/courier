@@ -23,7 +23,8 @@ export function hintClientInstrumentation(
   options?: StudioPluginOptions,
   projectRoot: string = process.cwd(),
 ): void {
-  if (!isInjectionEnabled(options) || hasClientInstrumentation(projectRoot)) return;
+  /* `next build` sets NODE_ENV to production, which rules a build out. */
+  if (!isInjectionEnabled(options, true) || hasClientInstrumentation(projectRoot)) return;
   void loadStudioUrl(projectRoot).then((url) => log.warn(hint(url)));
 }
 

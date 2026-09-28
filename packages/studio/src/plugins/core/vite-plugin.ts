@@ -14,6 +14,9 @@ const VITE_CLIENT = /\/vite\/dist\/client\/client\.mjs(?:\?|$)/;
 
 const PACKAGE_NAME = "@noverax/courier-studio";
 
+/** The plugin applies to the dev server only, which serves a development build. */
+const DEV_SERVER = true;
+
 /**
  * The Vite plugin behind every Vite-based Studio integration.
  *
@@ -28,7 +31,8 @@ const PACKAGE_NAME = "@noverax/courier-studio";
  */
 export function createStudioVitePlugin(framework: string, options?: StudioPluginOptions): Plugin {
   let pending: Promise<string | null> | null = null;
-  const snippet = (): Promise<string | null> => (pending ??= resolveSnippet(framework, options));
+  const snippet = (): Promise<string | null> =>
+    (pending ??= resolveSnippet({ framework, options, development: DEV_SERVER }));
 
   return {
     name: "courier-studio",
@@ -37,7 +41,7 @@ export function createStudioVitePlugin(framework: string, options?: StudioPlugin
        root first and so behave differently under npm and pnpm. */
     enforce: "pre",
     config() {
-      if (!isInjectionEnabled(options)) return undefined;
+      if (!isInjectionEnabled(options, DEV_SERVER)) return undefined;
       /* The runtime reaches socket.io-client, whose development build imports
          `debug`, a CommonJS module a browser cannot run until Vite pre-bundles
          it. Vite pre-bundles nothing that a package in node_modules imports,

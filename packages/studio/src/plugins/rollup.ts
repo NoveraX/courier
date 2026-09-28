@@ -8,7 +8,14 @@ const FRAMEWORK = "rollup";
 
 /**
  * Rollup plugin for Courier Studio.
- * Injects `attachRuntime("rollup-browser")` into entry modules in dev/watch mode.
+ *
+ * Injects `attachRuntime("rollup-browser")` into the entry modules of a watch
+ * build, as `rollup -c -w` runs one. Rollup has no mode, so a one-off build —
+ * `rollup -c` — is taken for a production build and left untouched.
+ *
+ * @param options - `enabled` forces injection on or off; by default it is on
+ *   in watch mode unless `NODE_ENV` is `"production"`.
+ * @returns The Rollup plugin.
  *
  * @example
  * ```ts
@@ -22,15 +29,16 @@ const FRAMEWORK = "rollup";
 export function courierStudio(options?: StudioPluginOptions): RollupPluginLike {
   let injected = false;
   let entries = new Set<string>();
-  let pending: Promise<string | null> | null = null;
-  const ensure = (): Promise<string | null> => (pending ??= resolveSnippet(FRAMEWORK, options));
+  let pending: Promise<string | null> = Promise.resolve(null);
 
   return {
     name: "courier-studio",
 
-    buildStart(inputOptions: { input: unknown }) {
+    buildStart(this: RollupBuildContext, inputOptions: { input: unknown }) {
       injected = false;
       entries = entryPathsOf(inputOptions.input);
+      const development = this.meta.watchMode;
+      pending = resolveSnippet({ framework: FRAMEWORK, options, development });
     },
 
     resolveId(this: RollupResolveContext, id: string, importer?: string) {
@@ -43,7 +51,7 @@ export function courierStudio(options?: StudioPluginOptions): RollupPluginLike {
 
     async load(id: string) {
       if (id !== RESOLVED_ID) return undefined;
-      return (await ensure()) ?? "";
+      return (await pending) ?? "";
     },
 
     async transform(this: RollupTransformContext, code: string, id: string) {
@@ -51,13 +59,17 @@ export function courierStudio(options?: StudioPluginOptions): RollupPluginLike {
       if (id.startsWith("\0") || id.includes("node_modules")) return undefined;
       if (!entries.has(id) && !this.getModuleInfo(id)?.isEntry) return undefined;
 
-      const snippet = await ensure();
+      const snippet = await pending;
       if (!snippet) return undefined;
 
       injected = true;
       return { code: `import "${VIRTUAL_ID}"\n${code}`, map: null };
     },
   };
+}
+
+interface RollupBuildContext {
+  meta: { watchMode: boolean };
 }
 
 interface RollupTransformContext {
@@ -74,7 +86,7 @@ interface RollupResolveContext {
 
 interface RollupPluginLike {
   name: string;
-  buildStart(inputOptions: { input: unknown }): void;
+  buildStart(this: RollupBuildContext, inputOptions: { input: unknown }): void;
   resolveId(
     this: RollupResolveContext,
     id: string,

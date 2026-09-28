@@ -64,7 +64,7 @@ The build integrations connect your app to Studio; they do not start it.
 
 ## Connect the browser
 
-Every integration connects only outside production (`NODE_ENV !== "production"`); pass `{ enabled: true }` or `{ enabled: false }` to decide yourself.
+Every integration connects only a development build, as the bundler tells one: the dev server of Vite, Astro or Nuxt, `next dev`, webpack's `mode: "development"`, an esbuild build that neither minifies nor defines `process.env.NODE_ENV` as `"production"`, and Rollup's watch mode (`rollup -c -w`). A production build — `vite build`, `webpack --mode production` or webpack with no `mode`, a minified esbuild build, a one-off `rollup -c` — is left untouched, whether or not `NODE_ENV` is set, and `NODE_ENV=production` rules out any build. Pass `{ enabled: true }` or `{ enabled: false }` to decide yourself.
 
 | Import path | For | Register |
 |---|---|---|

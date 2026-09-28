@@ -122,9 +122,12 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     store,
     history,
     scenarios: scenariosRecord,
-    scenarioState: "Started",
     requestHooks,
     networkState,
+
+    get scenarioState() {
+      return scenarioState;
+    },
 
     applyScenario(scenario) {
       applyScenarioInternal(scenario);

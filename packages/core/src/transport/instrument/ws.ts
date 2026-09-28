@@ -18,15 +18,20 @@ type InstrumentedChannel = Omit<WSChannel<never, unknown>, "send"> & {
  * Lifecycle reasons:
  * - `complete` — `disconnected` status reached after a clean shutdown
  *                (server-initiated close or natural EOF)
+ * - `error` — the channel ended with an error: its join refused, closed by
+ *             the server with a reason, or its connection refused for good
  * - `disconnect` — consumer called `.close()` directly on the wrapper
  *
- * Note: the underlying `WSChannel` contract has no error event. A channel
- * whose `send` settles — the in-process one does — keeps doing so through
- * the wrapper, which hands back whatever the channel returned: dropping it
- * turned a refused message into an unhandled rejection that ended the
- * process. Data-listener exceptions are out of scope here. When the
- * underlying transport fails and transitions straight to `disconnected`,
- * the close is reported as `complete`.
+ * A channel's end error comes in the same turn as its `disconnected` — just
+ * before it, or, when the connection itself is refused, just after — so the
+ * close is recorded once that turn is over. An error the channel goes on
+ * after, such as a refused message, is forgotten at the end of its turn:
+ * every one was recorded as `complete` before.
+ *
+ * A channel whose `send` settles — the in-process one does — keeps doing so
+ * through the wrapper, which hands back whatever the channel returned:
+ * dropping it turned a refused message into an unhandled rejection that
+ * ended the process. Data-listener exceptions are out of scope here.
  *
  * Reconnect cycles (`connecting`/`reconnecting`) do NOT trigger close —
  * the lifecycle spans the entire WSChannel lifetime, not individual sockets.
@@ -43,12 +48,15 @@ export function instrumentWSChannel<TChannel extends InstrumentedChannel>(
      caller's own channel type, whose members it mirrors one for one. */
   const inner = channel as WSChannel<unknown, unknown>;
   let cleaned = false;
+  let ending = false;
+  let endError: RealtimeError | undefined;
 
   const cleanup = () => {
     if (cleaned) return;
     cleaned = true;
     unsubData();
     unsubStatus();
+    unsubError();
   };
 
   // Inbound (server→client) frames are tagged "data"
@@ -56,14 +64,24 @@ export function instrumentWSChannel<TChannel extends InstrumentedChannel>(
     instr.emitMessage(data, "data");
   });
 
+  const unsubError = inner.on("error", (error) => {
+    endError = error;
+    queueMicrotask(() => {
+      if (!ending) endError = undefined;
+    });
+  });
+
   const unsubStatus = inner.on("status", (status: ConnectionStatus) => {
-    if (status === "disconnected") {
-      // The WSChannel contract has no error event — natural disconnects
-      // are always reported as complete. User-initiated close goes through
-      // the wrapper's `close()` method below and emits `disconnect` first.
-      instr.emitClose("complete");
+    if (status !== "disconnected" || ending) return;
+    ending = true;
+    /* User-initiated close goes through the wrapper's `close()` below, which
+       records `disconnect` and stops listening first. */
+    queueMicrotask(() => {
+      if (cleaned) return;
+      if (endError) instr.emitError(endError);
+      else instr.emitClose("complete");
       cleanup();
-    }
+    });
   });
 
   const wrapped = {

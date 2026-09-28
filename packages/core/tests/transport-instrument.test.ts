@@ -4,7 +4,9 @@ import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
 import { createMockSSESubscription } from "../src/testing/mock-sse";
 import { instrumentSSE, instrumentWSChannel, instrumentWSPush } from "../src/transport/instrument";
-import type { ConnectionStatus, WSChannel } from "../src/realtime/types";
+import { ForbiddenError, fromErrorCode, type RealtimeError } from "../src/realtime/errors";
+import type { ConnectionStatus, WSChannel, WSChannelContext } from "../src/realtime/types";
+import { createMockWSChannel } from "../src/testing/mock-ws";
 
 // Snapshot original studio hooks so individual tests can mutate without leaking
 let originalHooks: StudioHooks;
@@ -245,9 +247,11 @@ describe("instrumentWSChannel", () => {
     channel: WSChannel<unknown, unknown>;
     emitData: (data: unknown) => void;
     emitStatus: (status: ConnectionStatus) => void;
+    emitError: (error: RealtimeError) => void;
   } {
     const dataHandlers = new Set<(data: unknown) => void>();
     const statusHandlers = new Set<(s: ConnectionStatus) => void>();
+    const errorHandlers = new Set<(error: RealtimeError) => void>();
     let status: ConnectionStatus = "connecting";
 
     const channel: WSChannel<unknown, unknown> = {
@@ -257,7 +261,10 @@ describe("instrumentWSChannel", () => {
         return status;
       },
       on(event: "data" | "status" | "error", handler: never) {
-        if (event === "error") return () => false;
+        if (event === "error") {
+          errorHandlers.add(handler as never);
+          return () => errorHandlers.delete(handler as never);
+        }
         if (event === "data") {
           dataHandlers.add(handler as never);
           return () => dataHandlers.delete(handler as never);
@@ -275,6 +282,9 @@ describe("instrumentWSChannel", () => {
       emitStatus: (s) => {
         status = s;
         for (const h of statusHandlers) h(s);
+      },
+      emitError: (error) => {
+        for (const h of errorHandlers) h(error);
       },
     };
   }
@@ -315,7 +325,7 @@ describe("instrumentWSChannel", () => {
     expect(onStreamMessage.mock.calls[1]?.[0].seq).toBe(2);
   });
 
-  it("fires onStreamClose with reason 'complete' when status becomes disconnected", () => {
+  it("fires onStreamClose with reason 'complete' when status becomes disconnected", async () => {
     studioHooks.onStreamOpen = vi.fn();
     const onStreamClose = vi.fn();
     studioHooks.onStreamClose = onStreamClose;
@@ -325,6 +335,7 @@ describe("instrumentWSChannel", () => {
 
     emitStatus("connected");
     emitStatus("disconnected");
+    await Promise.resolve();
 
     expect(onStreamClose).toHaveBeenCalledTimes(1);
     expect(onStreamClose.mock.calls[0]?.[0].reason).toBe("complete");
@@ -378,6 +389,23 @@ describe("instrumentWSChannel", () => {
     });
   });
 
+  it("records a channel whose connection is refused as failed, though its error comes after disconnected", async () => {
+    studioHooks.onStreamOpen = vi.fn();
+    const onStreamClose = vi.fn();
+    const onStreamError = vi.fn();
+    studioHooks.onStreamClose = onStreamClose;
+    studioHooks.onStreamError = onStreamError;
+    const { channel, emitStatus, emitError } = createMockChannel();
+    instrumentWSChannel(channel, { ...META, transport: "ws" });
+
+    emitStatus("disconnected");
+    emitError(fromErrorCode(4401, "Token expired"));
+    await Promise.resolve();
+
+    expect(onStreamClose.mock.calls.map((call) => call[0].reason)).toEqual(["error"]);
+    expect(onStreamError.mock.calls.map((call) => call[0].error)).toEqual(["Token expired"]);
+  });
+
   it("inbound data frames are emitted with eventType 'data'", () => {
     studioHooks.onStreamOpen = vi.fn();
     const onStreamMessage = vi.fn();
@@ -393,6 +421,80 @@ describe("instrumentWSChannel", () => {
       eventType: "data",
       seq: 1,
     });
+  });
+});
+
+describe("instrumentWSChannel — a channel that ends with an error", () => {
+  function recordCloses() {
+    studioHooks.onStreamOpen = vi.fn();
+    const onStreamClose = vi.fn();
+    const onStreamError = vi.fn();
+    studioHooks.onStreamClose = onStreamClose;
+    studioHooks.onStreamError = onStreamError;
+    return {
+      reasons: () => onStreamClose.mock.calls.map((call) => call[0].reason),
+      errors: () => onStreamError.mock.calls.map((call) => call[0].error),
+    };
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+
+  it("is recorded as failed, with why, when its join is refused", async () => {
+    const recorded = recordCloses();
+    instrumentWSChannel(
+      createMockWSChannel({
+        onJoin: () => {
+          throw new ForbiddenError("Not a member of this room");
+        },
+        onMessage: () => undefined,
+      }),
+      { ...META, transport: "ws" },
+    );
+
+    await settle();
+
+    expect(recorded.reasons()).toEqual(["error"]);
+    expect(recorded.errors()).toEqual(["Not a member of this room"]);
+  });
+
+  it("is recorded as failed when the server closes it with a reason", async () => {
+    const recorded = recordCloses();
+    instrumentWSChannel(
+      createMockWSChannel({
+        onJoin: (ctx: WSChannelContext) => ctx.close(4001, "kicked"),
+        onMessage: () => undefined,
+      }),
+      { ...META, transport: "ws" },
+    );
+
+    await settle();
+
+    expect(recorded.reasons()).toEqual(["error"]);
+    expect(recorded.errors()).toEqual(["kicked"]);
+  });
+
+  it("is recorded as complete when it ends cleanly after a message was refused", async () => {
+    const recorded = recordCloses();
+    let close: (() => void) | undefined;
+    const channel = createMockWSChannel({
+      onJoin: (ctx: WSChannelContext) => {
+        close = () => ctx.close();
+      },
+      onMessage: () => {
+        throw new Error("not this one");
+      },
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const wrapped = instrumentWSChannel(channel, { ...META, transport: "ws" });
+    await settle();
+
+    wrapped.send("refused");
+    await settle();
+    close?.();
+    await settle();
+
+    expect(recorded.reasons()).toEqual(["complete"]);
+    expect(recorded.errors()).toEqual([]);
   });
 });
 

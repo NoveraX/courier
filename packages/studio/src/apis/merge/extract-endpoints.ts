@@ -1,59 +1,22 @@
-/**
- * Extracts individual endpoint code blocks from generated group files.
- *
- * Uses regex + bracket-depth tracking to find endpoint boundaries.
- */
-
-/** Head a generated endpoint starts with, optionally qualified by its base. */
-const ENDPOINT_START = /^\s{4}(\w+):\s*(?:\w+\.)?(?:endpoint|stream|channel)\b/;
+import { endpointLines } from "./endpoint-lines";
 
 /**
- * Extract endpoint code blocks from a group file.
+ * The code of each endpoint a group's or a flat API's file declares, read
+ * from its syntax, whatever builder it starts from and however many lines
+ * it takes.
  *
- * Looks for patterns like:
- *   endpointName: endpoint.get("").response(Schema)
- *
- * @returns Map of endpointName → full code block (including the name).
+ * @param fileContent - The file's text
+ * @returns Each endpoint's name and its lines, from its name to its end
+ * @example
+ * ```ts
+ * extractEndpoints(file).searchUsers; // '    searchUsers: endpoint\n      .post("search")…'
+ * ```
  */
 export function extractEndpoints(fileContent: string): Record<string, string> {
-  const result: Record<string, string> = {};
   const lines = fileContent.split("\n");
-  let i = 0;
-
-  while (i < lines.length) {
-    const match = lines[i]?.match(ENDPOINT_START);
-    if (!match?.[1]) {
-      i++;
-      continue;
-    }
-
-    const name = match[1];
-    const endLine = findEndpointEnd(lines, i);
-    result[name] = lines.slice(i, endLine + 1).join("\n");
-    i = endLine + 1;
+  const result: Record<string, string> = {};
+  for (const entry of endpointLines(fileContent)) {
+    result[entry.name] = lines.slice(entry.start, entry.end + 1).join("\n");
   }
-
   return result;
-}
-
-/** Track bracket depth to find the end of an endpoint definition */
-function findEndpointEnd(lines: string[], startLine: number): number {
-  let depth = 0;
-  let foundOpen = false;
-
-  for (let j = startLine; j < lines.length; j++) {
-    const line = lines[j] ?? "";
-    for (const ch of line) {
-      if (ch === "(" || ch === "{" || ch === "[") {
-        depth++;
-        foundOpen = true;
-      }
-      if (ch === ")" || ch === "}" || ch === "]") {
-        depth--;
-      }
-    }
-    if (foundOpen && depth <= 0) return j;
-  }
-
-  return lines.length - 1;
 }

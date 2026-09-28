@@ -1,6 +1,6 @@
-import type { Comment } from "oxc-parser";
 import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
+import { docCommentBefore } from "./doc-comment-before";
 import { endpointNames, findGroupDeclaration } from "./group-declaration";
 
 /** One endpoint of a generated file, as its text: the doc comment above it, and its code. */
@@ -21,19 +21,6 @@ function dedented(content: string, start: number, end: number): string {
   return [first, ...rest.map((line) => line.slice(Math.min(column, leadingSpace(line))))].join(
     "\n",
   );
-}
-
-/* The doc comment right above an entry, with only whitespace between. */
-function docCommentBefore(
-  content: string,
-  comments: readonly Comment[],
-  start: number,
-): Comment | null {
-  const before = comments
-    .filter((c) => c.end <= start && c.type === "Block" && c.value.startsWith("*"))
-    .at(-1);
-  if (before === undefined || content.slice(before.end, start).trim() !== "") return null;
-  return before;
 }
 
 /** The endpoints a generated file declares, and the name its declaration is bound to. */

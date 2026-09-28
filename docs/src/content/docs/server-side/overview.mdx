@@ -86,13 +86,13 @@ Server Actions use the same caller. Pass `headers()` as context to forward authe
 
 import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
-import { caller } from "@/lib/caller"
+import { createCaller } from "@noverax/courier"
+import { api } from "@/api"
 
 export async function createUser(data: { name: string; email: string }) {
-  const user = await caller.users.create(
-    data,
-    { headers: await headers() }
-  )
+  // The action's own request: its headers travel with the call
+  const caller = createCaller(api, { context: { headers: await headers() } })
+  const user = await caller.users.create(data)
 
   revalidatePath("/dashboard")
   return user

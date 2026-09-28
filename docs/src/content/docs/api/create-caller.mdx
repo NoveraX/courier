@@ -85,7 +85,7 @@ A direct caller opens a stream or a channel at the API's `baseURL`, as it sends 
 
 ## Passing Context
 
-The optional third argument is a `Context` object. Use it to forward headers from the incoming request to the backend: `authorization`, `user-agent`, `referer`, `origin` and `x-request-id`, the headers the source and the endpoint name, and the user's cookies where they name `cookie`:
+`defaults.context` is a `Context` object. Use it to forward headers from the incoming request to the backend: `authorization`, `user-agent`, `referer`, `origin` and `x-request-id`, the headers the source and the endpoint name, and the user's cookies where they name `cookie`. A context belongs to one incoming request, so build the caller for that request:
 
 ```ts
 type Context = {
@@ -97,18 +97,17 @@ type Context = {
 
 ```ts title="app/users/page.tsx"
 import { headers } from "next/headers"
+import { createCaller } from "@noverax/courier"
+import { api } from "@/api"
 
-// Pass context for cookie/header forwarding
-const result = await caller.users.getProfile(
-  undefined,
-  { headers: await headers() },
-)
+// The incoming request's headers travel with every call of this caller
+const caller = createCaller(api, { context: { headers: await headers() } })
+const profile = await caller.users.getProfile()
 
-// With variables AND context
-const user = await caller.users.getById(
-  { id: "123" },
-  { headers: await headers() },
-)
+// Headers of your own, for one call
+const user = await caller.users
+  .with({ headers: { "x-request-id": crypto.randomUUID() } })
+  .getById({ id: "123" })
 ```
 
 ## Server Components

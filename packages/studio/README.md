@@ -142,6 +142,8 @@ await attachRuntime()
 
 Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin in Nuxt, `hooks.server.ts` in SvelteKit, or before `listen()` in a Node server. See [`@noverax/courier-studio-core`](../studio-core/README.md).
 
+Studio keeps the latest 2000 requests your app makes in memory, so a Studio page that opens or reloads shows the ones made before it; clearing the Timeline clears them there too, except the pinned ones when **Preserve log** is on. A request or stream still open when its app stops, or loses its connection to Studio, is shown as failed: the app can no longer say how it ended.
+
 <br />
 
 ## Import an API

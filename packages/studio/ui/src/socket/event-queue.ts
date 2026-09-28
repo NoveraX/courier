@@ -8,8 +8,8 @@ export const EVENT_FLUSH_MS = 16
 export interface EventQueue<TEvent> {
   /** Queue an event; the batch it joins is applied within `EVENT_FLUSH_MS`. */
   push: (event: TEvent) => void
-  /** Apply what is queued now and schedule nothing more. */
-  close: () => void
+  /** Apply what is queued now, without waiting. */
+  flush: () => void
 }
 
 /**
@@ -32,7 +32,7 @@ export function createEventQueue<TEvent>(
   let pending: TEvent[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
 
-  function flush(): void {
+  function applyPending(): void {
     timer = undefined
     const batch = pending
     pending = []
@@ -42,11 +42,11 @@ export function createEventQueue<TEvent>(
   return {
     push(event) {
       pending.push(event)
-      timer ??= setTimeout(flush, delayMs)
+      timer ??= setTimeout(applyPending, delayMs)
     },
-    close() {
+    flush() {
       if (timer !== undefined) clearTimeout(timer)
-      flush()
+      applyPending()
     },
   }
 }

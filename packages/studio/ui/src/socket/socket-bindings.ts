@@ -1,14 +1,11 @@
 import type { Socket } from "socket.io-client"
 import type { useStudioStore } from "@/store"
-import type { StudioEvent } from "@/store/types-events"
 
-import { handleMockEvent, isMockEvent } from "@/store/handle-mock-events"
 import { notifyFileChange } from "@/store/watcher-notifications"
 import { showBindingErrorToast } from "@/store/binding-error-toast"
 import { bindApis } from "./apis-bindings"
 import { isBindingErrorPayload, isBindingSnapshot } from "./binding-guards"
-import { isStudioEvent } from "./event-guards"
-import { createEventQueue } from "./event-queue"
+import { bindEvents } from "./event-bindings"
 import {
   isPlaygroundChunkPayload,
   isPlaygroundEndPayload,
@@ -21,7 +18,6 @@ export interface Bindings {
   onReconnectAttempt: (attempt: number) => void
   onReconnect: () => void
   onConnectError: () => void
-  onEvent: (event: unknown) => void
   onBindingSnapshot: (data: unknown) => void
   onBindingError: (data: unknown) => void
   onWatcherStatus: (data: unknown) => void
@@ -31,17 +27,14 @@ export interface Bindings {
   onPlaygroundError: (data: unknown) => void
   /** Removes the listeners for the project Studio runs (`bindApis`). */
   unbindApis: () => void
-  /** Applies the runtime events still queued and stops queueing. */
-  closeEvents: () => void
+  /** Removes the listeners for runtime events (`bindEvents`). */
+  unbindEvents: () => void
 }
 
 export function buildBindings(
   s: Socket,
   store: typeof useStudioStore.getState,
 ): Bindings {
-  const events = createEventQueue<StudioEvent & Record<string, unknown>>((batch) =>
-    store().handleEvents(batch),
-  )
   const b: Bindings = {
     onConnect: () => store().setConnectionStatus("connected"),
     onDisconnect: () => store().setConnectionStatus("disconnected"),
@@ -51,11 +44,6 @@ export function buildBindings(
     },
     onReconnect: () => store().setConnectionStatus("connected"),
     onConnectError: () => store().setConnectionStatus("disconnected"),
-    onEvent: (event) => {
-      if (!isStudioEvent(event)) return
-      if (isMockEvent(event.type)) handleMockEvent(event)
-      else events.push(event)
-    },
     onBindingSnapshot: (data) => {
       if (!isBindingSnapshot(data)) return
       store().setBindingSnapshot(data)
@@ -95,7 +83,7 @@ export function buildBindings(
       store().errorPlayground(data.rid, data.error)
     },
     unbindApis: bindApis(s, store),
-    closeEvents: events.close,
+    unbindEvents: bindEvents(s, store),
   }
 
   s.on("connect", b.onConnect)
@@ -103,7 +91,6 @@ export function buildBindings(
   s.io.on("reconnect_attempt", b.onReconnectAttempt)
   s.io.on("reconnect", b.onReconnect)
   s.on("connect_error", b.onConnectError)
-  s.on("event", b.onEvent)
   s.on("binding:snapshot", b.onBindingSnapshot)
   s.on("binding:error", b.onBindingError)
   s.on("watcher:status", b.onWatcherStatus)
@@ -121,7 +108,6 @@ export function unbind(s: Socket, b: Bindings): void {
   s.io.off("reconnect_attempt", b.onReconnectAttempt)
   s.io.off("reconnect", b.onReconnect)
   s.off("connect_error", b.onConnectError)
-  s.off("event", b.onEvent)
   s.off("binding:snapshot", b.onBindingSnapshot)
   s.off("binding:error", b.onBindingError)
   s.off("watcher:status", b.onWatcherStatus)
@@ -130,6 +116,6 @@ export function unbind(s: Socket, b: Bindings): void {
   s.off("playground:end", b.onPlaygroundEnd)
   s.off("playground:error", b.onPlaygroundError)
   b.unbindApis()
-  b.closeEvents()
+  b.unbindEvents()
 }
 

@@ -8,10 +8,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { handleEventReducer } from "../ui/src/store/handle-event";
+import { applyEvents } from "../ui/src/store/apply-events";
 import type { RequestEntry } from "../ui/src/store/types-request";
 
-type Event = Parameters<typeof handleEventReducer>[1];
+type Event = Parameters<typeof applyEvents>[1][number];
+
+const OPTIONS = { maxRequests: 100, ignorePatterns: [] };
 
 function started(): { requests: RequestEntry[] } {
   const start = {
@@ -26,12 +28,12 @@ function started(): { requests: RequestEntry[] } {
     middlewareCount: 0,
     hasValidation: { variables: true, response: false },
   } as Event;
-  return handleEventReducer({ requests: [] }, start) as { requests: RequestEntry[] };
+  return applyEvents([], [start], OPTIONS);
 }
 
 function apply(state: { requests: RequestEntry[] }, event: Record<string, unknown>): RequestEntry {
-  const next = handleEventReducer(state, { sessionId: "app", timestamp: 2, ...event } as Event);
-  const [entry] = (next as { requests: RequestEntry[] }).requests;
+  const next = applyEvents(state.requests, [{ sessionId: "app", timestamp: 2, ...event } as Event], OPTIONS);
+  const [entry] = next.requests;
   if (!entry) throw new Error("no request recorded");
   return entry;
 }

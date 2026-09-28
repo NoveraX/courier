@@ -10,6 +10,7 @@ import { applyTheme } from "./theme"
 import { applyDensity } from "./density"
 import { applyEvents } from "./apply-events"
 import { notifyOnEvents } from "./event-notifications"
+import { mergeReplayed } from "./merge-replayed"
 
 export function createActions(set: StudioSet, get: StudioGet): Omit<StudioState, keyof ReturnType<typeof createInitialState>> {
   return {
@@ -64,6 +65,13 @@ export function createActions(set: StudioSet, get: StudioGet): Omit<StudioState,
         return { requests, droppedRequests: state.droppedRequests + droppedCount }
       })
       notifyOnEvents(events, get)
+    },
+    replayEvents: (events) => {
+      const { maxRequests, ignorePatterns } = get().settings
+      const { requests: replayed } = applyEvents([], events, { maxRequests, ignorePatterns })
+      set((state) => ({
+        requests: mergeReplayed(state.requests, replayed, { maxRequests, paused: state.paused }),
+      }))
     },
 
     // Settings

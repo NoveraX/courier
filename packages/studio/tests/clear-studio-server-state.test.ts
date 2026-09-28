@@ -1,7 +1,7 @@
 /**
  * Tests for `clearStudioServerState` — the symmetric counterpart to
- * `clearBuffer()` (session-buffer) and `CatalogStore.clear()` (catalog-store)
- * for the four globalThis-pinned Maps owned by the `/runtime` namespace.
+ * `CatalogStore.clear()` (catalog-store) for the four globalThis-pinned
+ * Maps owned by the `/runtime` namespace.
  *
  * Per-runtime cleanup happens via the `/runtime` disconnect handler;
  * per-socket mock cleanup lives in per-key delete sites. This function is

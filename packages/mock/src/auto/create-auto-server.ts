@@ -5,9 +5,10 @@ import type { AnyMockScenario, NetworkConfig, UntypedMockFn } from "../types";
 import { buildAutoHandlers, seedAllCollections } from "./auto-scenario";
 import { composeScenarios } from "./compose-scenarios";
 import type { SeedConfig } from "./prefix-mappings";
-import { buildPrefixMappings, parseSeedConfig } from "./prefix-mappings";
+import { buildPrefixMappings } from "./prefix-mappings";
 import { buildPresetScenarios } from "./preset-scenarios";
 import { analyzeRoutes, getSourceGroupNames } from "./route-analyzer";
+import { seedOptionsOf } from "./seed-options";
 import { toRouteInfo, wrapStartWithStudio } from "./studio-bridge-wrap";
 
 // Re-export SeedConfig so external imports keep working unchanged.
@@ -83,8 +84,7 @@ export interface AutoMockServerConfig {
 export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   const routes = analyzeRoutes(config.source);
   const mappings = buildPrefixMappings(config.source, routes);
-  const seedOverrides = parseSeedConfig(config.seed);
-  const seedOpts = { seedCount: config.seed?.count ?? 20, seedOverrides };
+  const seedOpts = seedOptionsOf(config.seed);
 
   // Late-bound store getter — shared by presets and reseed closure
   let storeRef: MockStore | undefined;

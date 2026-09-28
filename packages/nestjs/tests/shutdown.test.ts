@@ -70,7 +70,7 @@ describe("draining a NestJS host's SSE streams", () => {
     ]);
 
     expect(closed).toBe("closed");
-    expect(await received).toContain("event: shutdown");
+    expect(await received).toContain("event: courier:shutdown");
   });
 });
 

@@ -79,7 +79,7 @@ describe("draining an Express host's SSE streams", () => {
 
     expect(opened.first).toContain("data: 0");
     expect(closed).toBe("closed");
-    expect(await opened.rest).toContain("event: shutdown");
+    expect(await opened.rest).toContain("event: courier:shutdown");
   });
 
   it("counts the streams it serves until they are drained", async () => {
@@ -103,7 +103,7 @@ describe("draining an Express host's SSE streams", () => {
 
     await proxy.shutdownSSE({ drainMs: 500 });
 
-    expect(await opened.rest).toContain("event: shutdown");
+    expect(await opened.rest).toContain("event: courier:shutdown");
   });
 });
 

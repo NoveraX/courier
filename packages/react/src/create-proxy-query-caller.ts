@@ -1,4 +1,5 @@
 import {
+  createClientRoot,
   createProxyHTTPExecutor,
   createProxySSEFactory,
   createProxyWSChannelFactory,
@@ -6,13 +7,15 @@ import {
   type ProxyCallerArguments,
   type ProxyCallerDefaults,
   type ProxyPath,
+  shapeOfClient,
 } from "@noverax/courier";
 import type { DefinedApi } from "@noverax/courier/define";
 
+import { cachedGroupHooks } from "./cached-group-hooks";
 import { createGroupHooks } from "./group-hooks";
 import type { ChannelFn } from "./hooks/use-channel";
 import type { SubscribeFn } from "./hooks/use-subscription";
-import type { QueryCallerClient, QueryGroupClient } from "./types";
+import type { QueryCallerClient } from "./types";
 
 /**
  * Create a proxy-mode query client with dot-notation access to react-query hooks per API group.
@@ -92,23 +95,14 @@ export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDef
   const channelFn: ChannelFn = (group, method, variables) =>
     wsChannelFactory(group, method, variables, {});
 
-  // biome-ignore lint/suspicious/noExplicitAny: cache stores untyped group hooks — typed via QueryCallerClient<TApi> proxy cast
-  const groupCache = new Map<string, QueryGroupClient<any>>();
-
-  return new Proxy(Object.create(null), {
-    get(_, prop) {
-      if (typeof prop === "symbol") return undefined;
-      if (prop === "then" || prop === "toJSON" || prop === "valueOf" || prop === "$$typeof") {
-        return undefined;
-      }
-
-      const key = prop as string;
-      if (!groupCache.has(key)) {
-        groupCache.set(key, createGroupHooks(source, key, httpExecutor, subscribeFn, channelFn));
-      }
-      return groupCache.get(key);
-    },
-  });
+  /* A group named like a hook the runtime reads, such as `then`, is reached
+     only when the caller was given what the source declares. */
+  return createClientRoot(
+    shapeOfClient({ source: defaults?.source, boundary: defaults?.boundary }),
+    cachedGroupHooks((group) =>
+      createGroupHooks(source, group, httpExecutor, subscribeFn, channelFn),
+    ),
+  );
 }
 
 /**

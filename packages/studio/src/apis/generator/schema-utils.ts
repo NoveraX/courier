@@ -13,7 +13,7 @@ import { propToZod, schemaToZod } from "./validation-zod";
 /** Generate `satisfies ZodType<T>` / `satisfies GenericSchema<...>` expression for type-safe sync */
 export function satisfiesExpr(typeName: string, options: GeneratorSettings): string {
   if (options.validation === "zod") return ` satisfies z.ZodType<${typeName}>`;
-  if (options.validation === "valibot") return ` satisfies v.GenericSchema<any, ${typeName}>`;
+  if (options.validation === "valibot") return ` satisfies v.GenericSchema<unknown, ${typeName}>`;
   if (options.validation === "arktype") return ` satisfies { infer: ${typeName} }`;
   return "";
 }

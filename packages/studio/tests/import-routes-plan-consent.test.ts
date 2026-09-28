@@ -143,15 +143,14 @@ describe("a digest from another plan", () => {
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
-  it("the same import's digest for other options → 409 PLAN_STALE, nothing changed", async () => {
-    await pendingPetsWrite();
-    const flat = { ...PETS, options: { ...PETS.options, groupBy: "single" } };
-    const flatDigest = digestOf(await post("/api/apis/write", flat));
+  it("the same import with other options than declared, quoting its plan → 409 DECLARATION_MISMATCH, nothing changed", async () => {
+    const digest = await pendingPetsWrite();
     const before = snapshot();
+    const flat = { ...PETS, options: { ...PETS.options, groupBy: "single" } };
 
-    const reply = await post("/api/apis/write", { ...PETS, planDigest: flatDigest, confirm: [PETS_INDEX] });
+    const reply = await post("/api/apis/write", { ...flat, planDigest: digest, confirm: [PETS_INDEX] });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "PLAN_STALE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "DECLARATION_MISMATCH" });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 

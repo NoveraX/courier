@@ -3,6 +3,7 @@
  */
 
 import { toSafeIdentifier } from "./naming-utils";
+import { acceptsNull, stripNull } from "./nullable-schema";
 import { convertSchema, normalizeTypeArray } from "./schema-conversion";
 import type { ParsedSchema, ParsedSchemaProperty, SpecNode } from "./types";
 
@@ -94,10 +95,13 @@ export function mapValueType(
  * Separate "may be null" from the forms a property takes.
  *
  * OpenAPI 3.1 writes it as a `{ type: "null" }` alternative; a property with
- * one other alternative is then simply that alternative, or null.
+ * one other alternative is then simply that alternative, or null. The node
+ * handed on no longer says it is nullable, so a shape converted from it does
+ * not carry the `null` a second time.
  */
-function withoutNull(node: SpecNode): { node: SpecNode; nullable: boolean } {
-  const nullable = node.nullable === true;
+function withoutNull(given: SpecNode): { node: SpecNode; nullable: boolean } {
+  const nullable = acceptsNull(given);
+  const node = nullable ? stripNull(given) : given;
   const variants: SpecNode[] | undefined = node.oneOf ?? node.anyOf;
   if (!Array.isArray(variants) || node.type) return { node, nullable };
 

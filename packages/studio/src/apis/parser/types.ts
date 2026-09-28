@@ -98,6 +98,7 @@ export interface ParsedSchema {
     | "number"
     | "integer"
     | "boolean"
+    | "null"
     | "enum"
     | "ref"
     | "union"

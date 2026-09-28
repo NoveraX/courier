@@ -4,6 +4,7 @@
 
 import { convertObjectSchema } from "./convert-object-schema";
 import { toSafeIdentifier } from "./naming-utils";
+import { acceptsNull, orNull, stripNull } from "./nullable-schema";
 import { resolveRef } from "./ref-utils";
 import type { ParsedSchema, SpecNode } from "./types";
 
@@ -17,6 +18,8 @@ export function normalizeTypeArray(schema: SpecNode): SpecNode {
   if (!Array.isArray(schema?.type)) return schema;
   const types = schema.type as string[];
   const named = types.filter((t) => t !== "null");
+  /* `["null"]` alone is the `null` type, not a nullable nothing. */
+  if (named.length === 0) return { ...schema, type: types.length > 0 ? "null" : undefined };
   return {
     ...schema,
     type: named.length === 1 ? named[0] : undefined,
@@ -25,8 +28,26 @@ export function normalizeTypeArray(schema: SpecNode): SpecNode {
   };
 }
 
+/**
+ * Convert a schema, keeping `null` wherever it allows it.
+ *
+ * A component that says `nullable: true` — GitHub's `nullable-simple-user`,
+ * referenced by every issue's assignee — lost it here, so each reference
+ * rejected the `null` the API sends. It now becomes a union with `null`.
+ *
+ * @param name - Name of the schema, used to name the schemas nested in it
+ * @param raw - The schema as written in the specification
+ * @param spec - The whole specification, for resolving references
+ * @returns The parsed schema
+ * @example
+ * ```ts
+ * convertSchema("MaybeName", { type: "string", nullable: true });
+ * // → { name: "MaybeName", type: "union", variants: [string, null] }
+ * ```
+ */
 export function convertSchema(name: string, raw: SpecNode, spec?: SpecNode): ParsedSchema {
   const schema = normalizeTypeArray(raw);
+  if (acceptsNull(schema)) return orNull(convertSchema(name, stripNull(schema), spec));
   if (schema.$ref) {
     const refName = toSafeIdentifier(schema.$ref.split("/").pop());
     return { name, type: "ref", refName, description: schema.description };
@@ -133,20 +154,6 @@ function convertAllOf(name: string, schema: SpecNode, spec?: SpecNode): ParsedSc
     return { name, type: "ref", refName, description: schema.description };
   }
   return { name, type: "any", description: schema.description };
-}
-
-export function convertSchemaInline(schema: SpecNode, spec: SpecNode): ParsedSchema {
-  if (schema.$ref) {
-    const rawName = schema.$ref.split("/").pop();
-    const refName = toSafeIdentifier(rawName);
-    return { name: refName, type: "ref", refName };
-  }
-  if (schema.allOf || schema.oneOf || schema.anyOf) return convertSchema("Inline", schema);
-  if (schema.type === "array" && schema.items) {
-    return { name: "Array", type: "array", items: convertSchemaInline(schema.items, spec) };
-  }
-  if (schema.type === "object" || schema.properties) return convertSchema("Inline", schema);
-  return { name: schema.type ?? "any", type: schema.type ?? "any" };
 }
 
 /**

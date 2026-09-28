@@ -6,7 +6,6 @@ import { ownValue } from "../own-value";
 import type { ParsedSchema } from "../parser/types";
 import { ARKTYPE_CYCLE_HELPER, lazyTargets, writeArkTypeCycle } from "./arktype-cycles";
 import { findCyclicSchemas } from "./cyclic-schemas";
-import { typeUnion } from "./enum-literals";
 import { generateCyclicSchema } from "./generate-cyclic-schema";
 import {
   generateArraySchema,
@@ -121,18 +120,15 @@ export function generateTypesFile(
 ): GeneratedFile {
   const lines: string[] = [];
 
+  /* Every schema is declared, whatever its kind: the types that name it do
+     so either way, and a union, a list or a primitive left out was a name
+     nothing declared. */
   for (const [name, schema] of Object.entries(schemas)) {
     if (options.includeComments && schema.description) {
       lines.push(`/** ${jsdocText(schema.description)} */`);
     }
-
-    if (schema.type === "object") {
-      lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
-      lines.push("");
-    } else if (schema.type === "enum" && schema.enum) {
-      lines.push(`export type ${name} = ${typeUnion(schema.enum)};`);
-      lines.push("");
-    }
+    lines.push(`export type ${name} = ${schemaToInterface(schema)}`);
+    lines.push("");
   }
 
   return {

@@ -19,8 +19,11 @@ export interface EndpointChain {
   variablesType: string | null;
   /** The schema validating the response, when there is one. */
   responseSchema: string | null;
-  /** The type of the response, for a chain without a schema for it. */
-  responseType: string;
+  /**
+   * The type of the response, for a chain without a schema for it; `null`
+   * for an endpoint that answers with nothing, which resolves to `void`.
+   */
+  responseType: string | null;
 }
 
 /**
@@ -35,7 +38,7 @@ export interface EndpointChain {
  * @returns The chain as source text
  * @example
  * ```ts
- * buildEndpointChain({ address: 'endpoint.get("")', closure: null, variablesSchema: null, variablesType: null, responseSchema: "PetSchema", responseType: "unknown" });
+ * buildEndpointChain({ address: 'endpoint.get("")', closure: null, variablesSchema: null, variablesType: null, responseSchema: "PetSchema", responseType: null });
  * // 'endpoint.get("").response(PetSchema)'
  * ```
  */
@@ -52,9 +55,11 @@ export function buildEndpointChain(chain: EndpointChain): string {
   }
   if (chain.closure) text += `.via(${chain.closure})`;
 
+  /* An answer whose type is not written is still an answer: left out, the
+     call resolved to `void` although it returned what the API sent. */
   if (chain.responseSchema) {
     text += `.response(${chain.responseSchema})`;
-  } else if (chain.responseType !== "unknown") {
+  } else if (chain.responseType !== null) {
     text += `.response<${chain.responseType}>()`;
   }
 

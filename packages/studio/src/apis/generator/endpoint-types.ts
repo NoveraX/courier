@@ -16,14 +16,15 @@ import { bodyKey, requestBodyKind } from "./request-body";
  *
  * @param ep - The endpoint
  * @param context - The file it is written into
- * @returns The type, naming only what the file can import; `unknown` without a schema
+ * @returns The type, naming only what the file can import — `unknown` where
+ *   nothing names it — or `null` for an endpoint that answers with nothing
  * @example
  * ```ts
  * resolveResponseType(listPets, context); // "Pet[]"
  * ```
  */
-export function resolveResponseType(ep: ParsedEndpoint, context: EndpointContext): string {
-  if (!ep.responseSchema) return "unknown";
+export function resolveResponseType(ep: ParsedEndpoint, context: EndpointContext): string | null {
+  if (!ep.responseSchema) return null;
   return schemaToTsType(ep.responseSchema, endpointTypeStyle(context));
 }
 

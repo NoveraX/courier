@@ -98,8 +98,10 @@ export interface ChannelResult<TSend, TReceive> {
    * Send a message to the server. One sent before the channel has opened
    * waits for it; one sent while the channel is disabled or closed is
    * dropped with a warning.
+   *
+   * @returns Whether the message went out or waits for the channel; `false` when it was dropped
    */
-  send: (data: TSend) => void;
+  send: (data: TSend) => boolean;
   /** Manually close the channel */
   close: () => void;
 }

@@ -366,3 +366,59 @@ describe("useChannel's status", () => {
     expect(seen[0]).toBe("disconnected");
   });
 });
+
+describe("useChannel's send", () => {
+  it("answers true for a message that waits for the channel to open", () => {
+    const { channelFn } = createChannelSpy();
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
+
+    expect(result.current.send({ text: "early" })).toBe(true);
+  });
+
+  it("answers true for a message the open channel takes", async () => {
+    const { channelFn } = createChannelSpy();
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe("connected"));
+
+    expect(result.current.send({ text: "hello" })).toBe(true);
+    await waitFor(() => expect(result.current.lastMessage).toEqual({ echo: { text: "hello" } }));
+  });
+
+  it("answers false, with a warning, for a message sent while disabled", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { channelFn } = createChannelSpy();
+    const { result } = renderHook(
+      () => useChannel(channelFn, "chat", "room", { enabled: false }),
+      { wrapper },
+    );
+
+    expect(result.current.send({ text: "lost" })).toBe(false);
+    expect(warn).toHaveBeenCalled();
+    expect(String(warn.mock.calls[0]?.join(" "))).toContain("the message was dropped");
+  });
+
+  it("answers false for a message sent after the channel was closed", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { channelFn } = createChannelSpy();
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
+    await waitFor(() => expect(result.current.status).toBe("connected"));
+
+    act(() => result.current.close());
+
+    expect(result.current.send({ text: "late" })).toBe(false);
+  });
+
+  it("answers false for a message sent on a channel the server ended", async () => {
+    const channelFn: ChannelFn = () =>
+      createMockWSChannel<unknown, unknown>({
+        onJoin() {
+          throw new ForbiddenError("Not a member of this room");
+        },
+        onMessage() {},
+      });
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
+    await waitFor(() => expect(result.current.error).toBeDefined());
+
+    expect(result.current.send({ text: "anyone?" })).toBe(false);
+  });
+});

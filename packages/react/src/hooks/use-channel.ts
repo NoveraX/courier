@@ -35,7 +35,7 @@ interface ChannelState<TReceive> {
  * `error` and the status — `connecting` — start over with it in the same
  * render. Messages sent before the channel exists — from a mount effect, say —
  * wait for it and go out once it does; one sent while no channel is on its
- * way is dropped with a warning.
+ * way is dropped with a warning, and `send` answers `false`.
  *
  * @param channel - Factory that creates a WSChannel (injected by createGroupHooks)
  * @param group - API group name
@@ -68,10 +68,14 @@ export function useChannel<TSend, TReceive>(
   const pendingRef = React.useRef<TSend[] | null>(null);
 
   const send = React.useCallback(
-    (data: TSend) => {
-      if (channelRef.current) channelRef.current.send(data);
-      else if (pendingRef.current) pendingRef.current.push(data);
-      else log.warn(`useChannel("${group}.${method}") is not open; the message was dropped`);
+    (data: TSend): boolean => {
+      if (channelRef.current) return channelRef.current.send(data);
+      if (pendingRef.current) {
+        pendingRef.current.push(data);
+        return true;
+      }
+      log.warn(`useChannel("${group}.${method}") is not open; the message was dropped`);
+      return false;
     },
     [group, method],
   );

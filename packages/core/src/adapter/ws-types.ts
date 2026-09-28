@@ -97,8 +97,15 @@ export type CourierWSOptions = WSHandlerConfig;
 
 /** Server-side WS handler returned by createWSHandler */
 export interface WSHandler {
-  /** Handle an upgraded WebSocket connection */
-  handleSocket(ws: WebSocketLike, request: Request): void;
+  /**
+   * Handle an upgraded WebSocket connection.
+   *
+   * `peerAddress` is the socket's remote address, for a runtime whose
+   * request does not carry one. Without it, and without a proxy's
+   * forwarding headers, every caller is counted against one address, and
+   * `maxConnectionsPerIP` caps the whole server.
+   */
+  handleSocket(ws: WebSocketLike, request: Request, peerAddress?: string): void;
   /** Registry of active connections with send/broadcast/disconnect API */
   readonly connections: ConnectionRegistry;
   /** Clean up pubsub subscriptions and internal state (call on server shutdown) */

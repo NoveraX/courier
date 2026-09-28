@@ -7,6 +7,7 @@ import {
 } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 import type { Context } from "hono";
+import { peerAddressOf } from "./peer-address";
 import type { HonoWSContext } from "./ws-adapter";
 import { createSocketAdapter, frameText } from "./ws-adapter";
 
@@ -104,7 +105,7 @@ export function courierWSHandler(options?: CourierWSOptions): (c: Context) => Ho
     return {
       onOpen(_event, ws) {
         adapter = createSocketAdapter(ws);
-        wsHandler.handleSocket(adapter, c.req.raw);
+        wsHandler.handleSocket(adapter, c.req.raw, peerAddressOf(c));
       },
       onMessage(event) {
         const decoded = frameText(event.data);

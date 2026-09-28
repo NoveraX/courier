@@ -11,7 +11,7 @@ import { collectModuleBindings } from "../../server/mocks-edit/plan/module-bindi
 import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import type { TextEdit } from "../../server/mocks-edit/types";
 import { parseExistingGroup } from "../merge/parse-existing";
-import { renameBase } from "../merge/rename-base";
+import { renameBase, usesBase } from "../merge/rename-base";
 import { aboveStatement } from "./above-statement";
 import { EndpointOutsidePrefixError } from "./endpoint-outside-prefix-error";
 import { fileBase } from "./file-base";
@@ -20,7 +20,11 @@ import { endpointNames, findGroupDeclaration } from "./group-declaration";
 import { planMissingImports } from "./plan-missing-imports";
 import { entryUrl, pathSegments, rebaseEntryPath } from "./rebase-entry-path";
 import { referencedImports } from "./referenced-imports";
+import { streamBase } from "./stream-base";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
+
+/** The name a generated file builds its streams of events from. */
+const STREAM = "stream";
 
 /* An entry as a list takes it: its lines after the first at `indent`. */
 function entryText({ comment, code }: GeneratedEntry, indent: string, eol: string): string {
@@ -71,17 +75,25 @@ export function appendEndpointsToGroup(
   const style = detectStyle(parsed, declaration.endpoints);
   const fileBaseName = fileBase(parsed.program) ?? (bindings.has("endpoint") ? "endpoint" : null);
   const base = fileBaseName ?? generated.baseName;
+  /* A file generated before streams were names no stream builder; the
+     generated declaration, taken whole when the file names no base, does. */
+  const streams = added.some(([, entry]) => usesBase(entry.code, STREAM));
+  const stream =
+    streams && fileBaseName !== null
+      ? streamBase(parsed, bindings)
+      : { base: STREAM, edit: null, line: null };
   /* A path is written relative to the prefix it was generated under; the file's may differ. */
   const fresh = findGroupDeclaration(parseSource("generated.ts", generatedContent).program, name);
   const generatedPrefix = fresh?.prefix ?? "";
+  const bases = [base, stream.base];
   const texts = added.map(([key, entry]) => {
-    const code = renameBase(entry.code, generated.baseName, base);
+    const code = renameBase(renameBase(entry.code, generated.baseName, base), STREAM, stream.base);
     return {
       ...entry,
-      code: underPrefix(path, key, code, base, generatedPrefix, declaration.prefix),
+      code: underPrefix(path, key, code, bases, generatedPrefix, declaration.prefix),
     };
   });
-  const preamble = fileBaseName === null ? generated.preamble.join(style.eol) : "";
+  const preamble = fileBaseName === null ? generated.preamble.join(style.eol) : (stream.line ?? "");
   const referenced = [preamble, ...texts.map((t) => t.code)].join("\n");
   const edits: TextEdit[] = [
     ...planMissingImports(
@@ -91,6 +103,7 @@ export function appendEndpointsToGroup(
       style,
     ),
   ];
+  if (stream.edit !== null) edits.push(stream.edit);
   if (preamble !== "")
     edits.push(
       insertion(
@@ -116,7 +129,7 @@ function underPrefix(
   path: string,
   key: string,
   code: string,
-  base: string,
+  bases: readonly string[],
   generatedPrefix: string,
   filePrefix: string | null,
 ): string {
@@ -125,12 +138,12 @@ function underPrefix(
     pathSegments(filePrefix).join("/") === pathSegments(generatedPrefix).join("/");
   if (same) return code;
   const rebased =
-    filePrefix === null ? null : rebaseEntryPath(code, base, generatedPrefix, filePrefix);
+    filePrefix === null ? null : rebaseEntryPath(code, bases, generatedPrefix, filePrefix);
   if (rebased !== null) return rebased;
   throw new EndpointOutsidePrefixError(
     path,
     key,
-    entryUrl(code, base, generatedPrefix) ?? "",
+    entryUrl(code, bases, generatedPrefix) ?? "",
     filePrefix,
   );
 }

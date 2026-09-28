@@ -33,11 +33,12 @@ export function parseExistingGroup(content: string): ExistingGroupInfo {
 
   const imports = parseImports(lines);
   const { groupName, prefix } = parseGroupMeta(lines);
-  const endpoints = parseEndpointsWithComments(lines, readBaseName(extractPreamble(lines)));
   const preamble = extractPreamble(lines);
+  const baseName = readBaseName(preamble, "endpoint") ?? DEFAULT_BASE;
+  const endpoints = parseEndpointsWithComments(lines, baseName);
   const trailingCode = extractTrailingCode(lines);
   const { header, footer } = extractShell(lines);
-  const baseName = readBaseName(preamble);
+  const streamBaseName = readBaseName(preamble, "stream");
 
   return {
     groupName,
@@ -45,6 +46,7 @@ export function parseExistingGroup(content: string): ExistingGroupInfo {
     header,
     footer,
     baseName,
+    streamBaseName,
     imports,
     endpoints,
     preamble,
@@ -118,25 +120,26 @@ function findEndpointEnd(lines: string[], startLine: number): number {
 }
 
 /**
- * Read how the file names the base its endpoints are built from.
+ * Read how the file names a builder its definitions start from.
  *
  * A destructuring may have been renamed, or the base kept whole and reached
  * through — either way, that name is what the merged endpoints must use.
+ * `null` when the file names no such builder.
  */
-function readBaseName(preamble: string[]): string {
+function readBaseName(preamble: string[], builder: "endpoint" | "stream"): string | null {
   for (const line of preamble) {
     const destructured = line.match(/const\s*\{([^}]*)\}\s*=\s*\w*courier/i);
     if (destructured?.[1]) {
       for (const part of destructured[1].split(",")) {
         const [name, alias] = part.split(":").map((x) => x.trim());
-        if (name === "endpoint") return alias || name;
+        if (name === builder) return alias || name;
       }
       continue;
     }
     const whole = line.match(/const\s+(\w+)\s*=\s*courier\(/);
-    if (whole?.[1]) return `${whole[1]}.endpoint`;
+    if (whole?.[1]) return `${whole[1]}.${builder}`;
   }
-  return DEFAULT_BASE;
+  return null;
 }
 
 /**

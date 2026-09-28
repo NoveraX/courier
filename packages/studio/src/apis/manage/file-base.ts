@@ -1,4 +1,4 @@
-import type { Expression, Program, Statement } from "oxc-parser";
+import type { BindingPattern, Expression, ObjectPattern, Program, Statement } from "oxc-parser";
 import { propertyKeyName } from "../../server/mocks-edit/plan/property-key-name";
 import { unwrapExpression } from "../../server/mocks-edit/plan/unwrap-expression";
 
@@ -35,33 +35,61 @@ function variablesOf(statement: Statement): Statement | null {
   return declaration?.type === "VariableDeclaration" ? declaration : null;
 }
 
+/** A builder `courier()` hands out: `endpoint`, or `stream` for streams of events. */
+export type CourierBuilder = "endpoint" | "stream";
+
 /**
- * Read how a file names the base its endpoints are built from: the name it
- * destructures `endpoint` into from a `courier()` call, or `x.endpoint` for
+ * Read how a file names a builder its definitions start from: the name it
+ * destructures the builder into from a `courier()` call, or `x.endpoint` for
  * a `courier()` call kept whole as `x`, configured or not.
  *
  * @param program - The parsed file
+ * @param builder - The builder to look for; `endpoint` unless said otherwise
  * @returns The base, or `null` when no top-level `courier()` call names one
  * @example
  * ```ts
  * fileBase(parseSource("a.ts", "const api = courier({ headers });").program); // → "api.endpoint"
+ * fileBase(parseSource("a.ts", "const { endpoint } = courier();").program, "stream"); // → null
  * ```
  */
-export function fileBase(program: Program): string | null {
+export function fileBase(program: Program, builder: CourierBuilder = "endpoint"): string | null {
+  for (const id of courierTargets(program)) {
+    if (id.type === "Identifier") return `${id.name}.${builder}`;
+    if (id.type !== "ObjectPattern") continue;
+    for (const property of id.properties) {
+      if (property.type === "RestElement" || propertyKeyName(property.key) !== builder) continue;
+      if (property.value.type === "Identifier") return property.value.name;
+    }
+  }
+  return null;
+}
+
+/**
+ * The `{ … }` a top-level `courier()` call is destructured into, where
+ * another builder can be added beside those taken.
+ *
+ * @param program - The parsed file
+ * @returns The pattern, or `null` when no `courier()` call is destructured
+ * @example
+ * ```ts
+ * courierPattern(parseSource("a.ts", "const { endpoint } = courier();").program)?.properties.length; // → 1
+ * ```
+ */
+export function courierPattern(program: Program): ObjectPattern | null {
+  for (const id of courierTargets(program)) if (id.type === "ObjectPattern") return id;
+  return null;
+}
+
+/* What each top-level `courier()` call is assigned to, in order. */
+function courierTargets(program: Program): BindingPattern[] {
   const locals = courierLocals(program);
+  const targets: BindingPattern[] = [];
   for (const statement of program.body) {
     const declaration = variablesOf(statement);
     if (declaration?.type !== "VariableDeclaration") continue;
     for (const { id, init } of declaration.declarations) {
-      if (!callsCourier(init, locals)) continue;
-      if (id.type === "Identifier") return `${id.name}.endpoint`;
-      if (id.type !== "ObjectPattern") continue;
-      for (const property of id.properties) {
-        if (property.type === "RestElement" || propertyKeyName(property.key) !== "endpoint")
-          continue;
-        if (property.value.type === "Identifier") return property.value.name;
-      }
+      if (callsCourier(init, locals)) targets.push(id);
     }
   }
-  return null;
+  return targets;
 }

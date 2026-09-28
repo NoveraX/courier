@@ -117,6 +117,8 @@ export interface ExistingGroupInfo {
    * and rewritten in whichever name the file already uses.
    */
   baseName: string;
+  /** How the file names its stream builder; `null` when it names none. */
+  streamBaseName: string | null;
   imports: ParsedImport[];
   endpoints: ExistingEndpointInfo[];
   /** Code lines between the imports and the defineGroup block (builder heads) */

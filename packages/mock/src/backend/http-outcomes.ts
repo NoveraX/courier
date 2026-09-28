@@ -1,8 +1,8 @@
 import { HTTPError } from "@noverax/courier";
 
-import { createFaultError, pickFault } from "../network/failure";
+import { createFaultError } from "../network/failure";
 import { isMockHttpError } from "../server/errors";
-import type { MockHistoryEntry, NetworkConfig } from "../types";
+import type { MockHistoryEntry } from "../types";
 import type { ResolvedHandler } from "./types";
 
 /** One mock client call, as its history entry names it */
@@ -43,16 +43,16 @@ export function recordOutcome(
 /**
  * The error an injected network fault fails the call with.
  *
- * @param call    The call
- * @param network The network config that chose to fail it
+ * @param call  The call
+ * @param fault The fault the network config picked for it
  * @returns The `HTTPError`, recorded in the history
  * @example
  * ```ts
- * throw networkFault(call, { errorRate: 1 });
+ * throw networkFault(call, pickFault(network));
  * ```
  */
-export function networkFault(call: HttpCall, network: NetworkConfig): HTTPError {
-  const { status, message } = createFaultError(pickFault(network));
+export function networkFault(call: HttpCall, fault: string): HTTPError {
+  const { status, message } = createFaultError(fault);
   const error = new HTTPError({ status, headers: new Headers(), data: { message } });
   recordOutcome(call, { mocked: true, error });
   return error;

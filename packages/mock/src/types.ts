@@ -110,7 +110,19 @@ export interface StopCondition {
 export interface NetworkConfig {
   latency?: number | LatencyProfile;
   errorRate?: number;
+  /**
+   * How long a `timeout` fault takes to fail, in ms. The mock server holds the
+   * request this long (30 000 unless set), or until the client gives up, and
+   * then answers 408, so a shorter client timeout fires first. The mock
+   * client waits this long before it throws, and throws at once when unset.
+   */
   timeout?: number;
+  /**
+   * The faults a failing request is given. A status fails with that status.
+   * `timeout` fails after `timeout` ms. `reset` drops the connection on the
+   * mock server, so the client gets no answer at all; the mock client throws
+   * a 502 for it.
+   */
   faultTypes?: Array<"500" | "502" | "503" | "timeout" | "reset">;
   /** Weighted fault distribution — overrides faultTypes when present */
   faultWeights?: FaultWeight[];

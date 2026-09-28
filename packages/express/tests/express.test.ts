@@ -29,11 +29,9 @@ const mockCreateHandler = vi.mocked(createHandler);
 const mockCreateWSHandler = vi.mocked(createWSHandler);
 
 /**
- * `courierHandler()`/`courierSSEHandler()`/`courierWSAttach()` now read sources
- * lazily from the core global registry via `requireSources()` at factory
- * time. Tests re-register a stub dict before each call so the factories
- * have something fresh to pass into `announceHosting` regardless of the
- * state left behind by other test files running in the same process.
+ * The handlers read the core global registry when they serve a request, to
+ * announce what they host. A stub dict is registered before each test so
+ * that read finds one, whatever other test files left behind.
  */
 beforeEach(() => {
   registerSources({ api: {} } as Parameters<typeof registerSources>[0]);

@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
 import type { CourierWSOptions } from "@noverax/courier";
-import { createWSHandler, requireSources } from "@noverax/courier";
-import { announceHosting } from "@noverax/courier/announce";
+import { createWSHandler } from "@noverax/courier";
+import { announceWhenRegistered } from "@noverax/courier/announce";
 import {
   attachWebSocketUpgrade,
   DEFAULT_WS_PATH,
@@ -46,17 +46,16 @@ export function courierWSAttach(
 ): () => Promise<void> {
   const { path = DEFAULT_WS_PATH, ...handlerOptions } = options;
   const wsHandler = createWSHandler(handlerOptions);
-  announceHosting({
-    transports: ["ws"],
-    sources: Object.values(requireSources()),
-    framework: "nestjs",
-  });
+  const announce = announceWhenRegistered({ transports: ["ws"], framework: "nestjs" });
 
   const detach = attachWebSocketUpgrade(server, {
     path,
     maxPayload: handlerOptions.maxMessageSize,
     createServer: async (serverOptions) => new (await import("ws")).WebSocketServer(serverOptions),
-    onRequest: discoverNodeAppOrigin,
+    onRequest: (request) => {
+      announce();
+      discoverNodeAppOrigin(request);
+    },
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
   });
 

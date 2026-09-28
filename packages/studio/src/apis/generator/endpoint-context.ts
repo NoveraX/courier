@@ -23,6 +23,8 @@ export interface EndpointUses {
   readonly types: Set<string>;
   /** Whether a definition calls the validation library itself: `z.array(…)`. */
   validator: boolean;
+  /** Whether a closure writes a url-encoded body with `formBody`. */
+  formBody: boolean;
 }
 
 /** One file's endpoints, the module beside them, and what they use of it. */
@@ -61,7 +63,7 @@ export function endpointContext(
     options,
     declared,
     lazy: emitsSchemas(options) ? findCyclicSchemas(declared) : new Set(),
-    uses: { values: new Set(), types: new Set(), validator: false },
+    uses: { values: new Set(), types: new Set(), validator: false, formBody: false },
   };
 }
 

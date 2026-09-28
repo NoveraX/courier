@@ -24,13 +24,23 @@ export interface UpstreamServer {
   close: () => Promise<void>;
 }
 
+/** An answer that is not the JSON every other path gets. */
+export interface RawAnswer {
+  contentType: string;
+  body: string;
+}
+
 /**
  * Start a server on a free port of the loopback interface.
  *
  * @param answer - The JSON every request is answered with
+ * @param byPath - Paths answered otherwise, with their content type and body
  * @returns The running server
  */
-export async function startUpstreamServer(answer: unknown = {}): Promise<UpstreamServer> {
+export async function startUpstreamServer(
+  answer: unknown = {},
+  byPath: Readonly<Record<string, RawAnswer>> = {},
+): Promise<UpstreamServer> {
   const requests: RecordedRequest[] = [];
   const server = createServer(async (req, res) => {
     const chunks: Buffer[] = [];
@@ -44,8 +54,9 @@ export async function startUpstreamServer(answer: unknown = {}): Promise<Upstrea
       headers: req.headers,
       body: Buffer.concat(chunks).toString("utf8"),
     });
-    res.setHeader("content-type", "application/json");
-    res.end(JSON.stringify(answer));
+    const raw = Object.hasOwn(byPath, url.pathname) ? byPath[url.pathname] : undefined;
+    res.setHeader("content-type", raw?.contentType ?? "application/json");
+    res.end(raw ? raw.body : JSON.stringify(answer));
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();

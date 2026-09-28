@@ -14,6 +14,7 @@ import {
 } from "./endpoint-context";
 import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
 import { bodyKey, requestBodyKind } from "./request-body";
+import { type ResponseReading, responseReading } from "./response-reading";
 import { collectRefsDeep } from "./schema-refs";
 import {
   extendSchemaWithParams,
@@ -21,7 +22,14 @@ import {
   objectWithBody,
   schemaToValidation,
 } from "./schema-utils";
-import { wireClosure } from "./wire-closure";
+import { sendsUrlEncoded, wireClosure } from "./wire-closure";
+
+/** The type of an answer read otherwise than as JSON. */
+const READ_TYPES: Readonly<Record<ResponseReading, string | undefined>> = {
+  json: undefined,
+  text: "string",
+  blob: "Blob",
+};
 
 /**
  * The chain describing one endpoint.
@@ -41,17 +49,22 @@ export function buildEndpointDefinition(
   paramsType: string | undefined,
 ): string {
   const variables = variablesSchema(ep, context);
-  const response = responseSchema(ep, context);
+  /* An answer that is not JSON is typed as what it is read as, and not
+     validated: a schema describes JSON. */
+  const reading = responseReading(ep);
+  const response = reading === "json" ? responseSchema(ep, context) : null;
   const path = endpointPath(ep);
+  const kind = requestBodyKind(ep, context.spec);
+  if (sendsUrlEncoded(ep, kind)) context.uses.formBody = true;
   return buildEndpointChain({
     address: `endpoint.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
-    closure: wireClosure(ep, path, requestBodyKind(ep, context.spec)),
+    closure: wireClosure(ep, path, kind, reading),
     variablesSchema: variables,
     variablesType: variables
       ? null
       : ((paramsType ? typeName(context, paramsType) : null) ?? resolveVariablesType(ep, context)),
     responseSchema: response,
-    responseType: response ? null : resolveResponseType(ep, context),
+    responseType: response ? null : (READ_TYPES[reading] ?? resolveResponseType(ep, context)),
   });
 }
 

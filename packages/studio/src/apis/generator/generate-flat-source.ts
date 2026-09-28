@@ -7,7 +7,7 @@ import type { ParsedEndpoint, ParsedSchema, ParsedSpec } from "../parser/types";
 import { sourceAuth } from "./auth-middleware";
 import { endpointContext } from "./endpoint-context";
 import { endpointEntries } from "./endpoint-entries";
-import { endpointImports } from "./endpoint-imports";
+import { defineImport, endpointImports } from "./endpoint-imports";
 import { jsLiteral } from "./literals";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
@@ -40,7 +40,7 @@ export function generateFlatSourceFile(
     : null;
 
   const lines = [
-    `import { courier, defineApi } from "@noverax/courier/define";`,
+    defineImport(context, "defineApi"),
     ...(auth ? [`import { authMiddleware } from "@noverax/courier/middleware";`] : []),
     ...endpointImports(context),
     "",

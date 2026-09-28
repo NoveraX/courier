@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { courier } from "../src/define/courier";
 import type { InferResponse } from "../src/define/marker";
-import { ENDPOINT_SCHEMA } from "../src/define/marker";
+import { ENDPOINT_SCHEMA } from "../src/validation";
 import type { ChannelProbe, HttpProbe, StreamProbe } from "../src/define/probe";
 import type { Middleware } from "../src/middleware/types";
 

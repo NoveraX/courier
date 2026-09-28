@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { courier } from "../src/define/courier";
-import { ENDPOINT_SCHEMA } from "../src/define/marker";
+import { ENDPOINT_SCHEMA } from "../src/validation";
 
 const UserSchema = z.object({ id: z.string() });
 const ById = z.object({ id: z.string() });

@@ -79,8 +79,12 @@ function toCallable(endpoint: unknown): WireFn | undefined {
 
 /** Read the metadata stamped on an endpoint, whichever shape it has. */
 function readSchema(endpoint: unknown): SchemaMetadata | undefined {
-  if (typeof endpoint !== "object" || endpoint === null) return undefined;
-  return (endpoint as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
+  if (typeof endpoint !== "object" || endpoint === null || !(ENDPOINT_SCHEMA in endpoint)) {
+    return undefined;
+  }
+  const schema = endpoint[ENDPOINT_SCHEMA];
+  /* Every field of the metadata is optional: any object stamped there is one. */
+  return typeof schema === "object" && schema !== null ? schema : undefined;
 }
 
 /**

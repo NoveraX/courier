@@ -53,7 +53,9 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
         return;
       }
       log.error(`[${name}] failed: ${message}`);
-      updateAndEmit(serverId, { status: "crashed", lastError: message });
+      /* A worker reports a thrown error with its stack, for the terminal; the UI shows why, not where. */
+      const [reason = message] = message.split("\n", 1);
+      updateAndEmit(serverId, { status: "crashed", lastError: reason });
     },
 
     onStopped(serverId) {

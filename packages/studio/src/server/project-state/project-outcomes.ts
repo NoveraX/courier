@@ -128,10 +128,17 @@ export function createProjectOutcomes(
 }
 
 /* A project without a config is normal at startup; one deleted while Studio
-   runs it is said once, and every other failure each time. */
+   runs it is said once, and every other failure each time — in one line, as
+   the UI says it, with the error whole at debug level. A failure that is not
+   the loader's report of the project is Studio's own, and keeps its stack. */
 function report(failure: ConfigFailure, previous: ProjectSnapshot): void {
-  if (failure.code !== "CONFIG_NOT_FOUND") {
+  if (failure.code === "UNKNOWN") {
     log.warn("Failed to load courier.config", failure.cause);
+    return;
+  }
+  if (failure.code !== "CONFIG_NOT_FOUND") {
+    log.warn(`courier.config did not load: ${failure.message}`);
+    log.debug("courier.config did not load", failure.cause);
     return;
   }
   if (previous.running && previous.failure?.code !== "CONFIG_NOT_FOUND") {

@@ -49,6 +49,17 @@ describe("a managed mock that fails", () => {
     expect(state).toMatchObject({ status: "crashed", lastError: "Cannot find package '@hono/node-server'" });
   });
 
+  it("keeps the reason's first line for the UI, and its stack for the terminal", () => {
+    const { state, handlers } = events();
+    const stack =
+      "Error: listen EADDRINUSE: address already in use 127.0.0.1:7471\n    at addressInUse (file:///app/node_modules/@noverax/courier-mock/lib/create-mock-server.js:833:23)";
+
+    handlers.onError("apiMock", stack, true);
+
+    expect(state.lastError).toBe("Error: listen EADDRINUSE: address already in use 127.0.0.1:7471");
+    expect(output.join("")).toContain("at addressInUse");
+  });
+
   it("keeps the reason the worker gave when it then exits", () => {
     const { state, handlers } = events();
 

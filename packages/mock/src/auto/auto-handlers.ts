@@ -2,6 +2,7 @@ import { MockHttpError } from "../server/errors";
 import type { MockStore } from "../store";
 import type { MockRequestContext } from "../types";
 import { makeListHandler } from "./auto-list-handler";
+import { makeCustomHandler } from "./custom-handler";
 import { generateRecords } from "./data-generator";
 import {
   findRecord,
@@ -29,8 +30,8 @@ type Handler = (ctx: MockRequestContext) => unknown;
 
 /**
  * Build the auto-CRUD handler for a single route, or return `undefined`
- * when the route is not eligible (SSE/WS transport, or `custom` op
- * without an introspectable response schema).
+ * when the route is not eligible: a stream or a channel, which is mocked
+ * with `.stream()` or `.channel()`.
  */
 export function createHandler(
   store: MockStore,
@@ -146,17 +147,5 @@ function makeDeleteAllHandler(store: MockStore, groupName: string): Handler {
     const count = col.count();
     col.clear();
     return { deleted: count };
-  };
-}
-
-function makeCustomHandler(route: RouteInfo): Handler | undefined {
-  // Generate a response from schema for static sub-path endpoints (e.g. "browse", "categories").
-  // Without this, requests hit the route but find no handler → 404.
-  if (!route.responseSchema) return undefined;
-  const schema = route.responseSchema;
-  const isArray = !!unwrapArraySchema(schema);
-  return () => {
-    const records = generateRecords(schema, isArray ? 5 : 1);
-    return isArray ? records : records[0];
   };
 }

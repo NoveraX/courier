@@ -4,6 +4,7 @@ import express from "express";
 import { apiErrors } from "./api-errors";
 import { apiNotFound } from "./api-not-found";
 import { type ApisRouteDeps, registerApisRoutes } from "./apis-routes";
+import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
 import { createOriginGuard } from "./origin-guard";
@@ -41,7 +42,7 @@ export function registerRestApi(
   /* Before anything reads a body: the API is for the Studio UI, not for every
      page the developer happens to have open. */
   app.use("/api", createOriginGuard(policy));
-  app.use(express.json({ limit: "5mb" }));
+  app.use(express.json({ limit: MAX_MESSAGE_BYTES }));
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });

@@ -24,7 +24,7 @@ declare module "express" {
   interface ExpressStatic {
     (): Application;
     static(root: string): unknown;
-    json(options?: { limit?: string }): unknown;
+    json(options?: { limit?: string | number }): unknown;
   }
 
   const express: ExpressStatic;

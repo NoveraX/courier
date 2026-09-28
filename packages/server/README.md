@@ -85,6 +85,8 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |
 | `signals` | `true` | Attach SIGTERM/SIGINT for graceful shutdown |
 
+The server reads a proxied JSON call up to 1 MB and an upload (`multipart/form-data`) up to 10 MB, and answers a larger one with 413.
+
 ### Logs
 
 Info lines go to stdout, warnings and errors to stderr, with the error's stack and cause chain. `COURIER_LOG_LEVEL` sets the lowest level printed — `debug`, `info` (default), `warn`, `error` or `silent`. Colour appears on a terminal only; `NO_COLOR` turns it off and `FORCE_COLOR=1` on. See [Logging](../core/README.md#logging).

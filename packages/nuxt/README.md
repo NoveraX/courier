@@ -47,6 +47,8 @@ The handler takes the Web `Request` from the h3 event it is given — directly f
 
 A body Nitro already holds — a call made in-process with `$fetch`, or any request on an edge preset — is taken from where Nitro keeps it.
 
+The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to its `maxUploadBytes`, 10 MB; pass others to raise them: `courierHandler({ maxUploadBytes: 50 * 1024 * 1024 })`. In `nuxt dev`, a client that declares an oversized upload can see the connection close before it has sent it all, rather than read the 413.
+
 ## Client-Side
 
 Use `createProxyCaller` in a composable:

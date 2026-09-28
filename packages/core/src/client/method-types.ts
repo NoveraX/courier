@@ -47,6 +47,7 @@ export type EndpointResult<
     : TResponse;
 
 /** Call signature that takes the variables only as far as the schema requires them. */
+// biome-ignore lint/suspicious/noConfusingVoidType: `void` is what an endpoint without variables declares
 type Callable<TVariables, TReturn> = [TVariables] extends [undefined | void]
   ? () => TReturn
   : {} extends TVariables

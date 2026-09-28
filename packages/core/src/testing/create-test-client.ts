@@ -24,7 +24,7 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  * expect(history).toHaveLength(1);
  * ```
  */
-export function createTestClient<T extends DefinedApi<any> = DefinedApi<any>>(): TestClient<T> {
+export function createTestClient<T extends DefinedApi = DefinedApi>(): TestClient<T> {
   const mocks = new Map<string, MockHandler[]>();
   const history: HistoryEntry[] = [];
   const mockKey = (group: string, method: string) => `${group}/${method}`;

@@ -43,9 +43,7 @@ export function introspectScenario(
   const recorder = createScenarioRecorder(routes);
   let error: string | undefined;
   try {
-    const returned: unknown = scenario.apply(
-      recorder.mock as unknown as Parameters<AnyMockScenario["apply"]>[0],
-    );
+    const returned: unknown = scenario.apply(recorder.mock);
     if (isThenable(returned)) {
       error = "its setup returned a promise; a scenario sets up its mocks synchronously";
       returned.then(undefined, (reason: unknown) =>

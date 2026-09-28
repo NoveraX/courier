@@ -2,6 +2,7 @@ import type { AnyDefinedApi } from "@noverax/courier/define";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { prop } from "../auto/schema-introspect/prop";
+import { isRecord } from "../is-record";
 
 /** Symbol used by Courier core to attach schema metadata to endpoints */
 const ENDPOINT_SCHEMA = Symbol.for("courier.endpoint.schema");
@@ -88,7 +89,8 @@ export async function validateEndpoint(
  */
 export function getEndpointSchema(endpoint: unknown): SchemaMetadata | undefined {
   if (typeof endpoint !== "object" || endpoint === null) return undefined;
-  return (endpoint as Record<symbol, SchemaMetadata | undefined>)[ENDPOINT_SCHEMA];
+  const stamp: unknown = Reflect.get(endpoint, ENDPOINT_SCHEMA);
+  return isRecord(stamp) ? stamp : undefined;
 }
 
 /**

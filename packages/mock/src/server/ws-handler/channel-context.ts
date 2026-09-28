@@ -28,13 +28,14 @@ export function buildChannelContext(
   // `topic` is mutable: when the client subscribes with a fully qualified
   // topic — `{source}.{group}.{method}`, then `#` and its variables as
   // canonical JSON — the message router rewrites `ctx.topic` so outbound
-  // `data` frames echo the client's exact topic. Without this, clients dispatch frames by topic and would
-  // silently drop everything sent under the server-local short topic.
+  // `data` frames echo the client's exact topic. Without this, clients
+  // dispatch frames by topic and would silently drop everything sent under
+  // the server-local short topic.
   const ctx = {
     topic: initialTopic,
     variables,
     connectionId,
-    meta: {} as Record<string, unknown>,
+    meta: emptyMeta(),
     signal: state.ended.signal,
     send(data: unknown) {
       if (ws.readyState === ws.OPEN) {
@@ -56,4 +57,9 @@ export function buildChannelContext(
     },
   };
   return ctx;
+}
+
+/* What a channel keeps about its connection, filled by the handler. */
+function emptyMeta(): Record<string, unknown> {
+  return {};
 }

@@ -13,9 +13,9 @@ export interface MockStore {
   /** List all collection names */
   list(): string[];
   /** Snapshot current state of all collections */
-  snapshot(): Record<string, unknown[]>;
+  snapshot(): Record<string, Record<string, unknown>[]>;
   /** Make the store exactly the snapshot: its collections, and no others' records */
-  restore(snap: Record<string, unknown[]>): void;
+  restore(snap: Record<string, Record<string, unknown>[]>): void;
   /** Reset all collections (clear records, keep definitions) */
   reset(): void;
 }
@@ -53,7 +53,7 @@ export function createMockStore(): MockStore {
     snapshot() {
       /* Copies: handing out the live records let every later update edit
          the snapshot too, so restore() could not undo it. */
-      const snap: Record<string, unknown[]> = {};
+      const snap: Record<string, Record<string, unknown>[]> = {};
       for (const [name, col] of collections) {
         snap[name] = structuredClone(col.getAll());
       }
@@ -68,7 +68,7 @@ export function createMockStore(): MockStore {
         if (!Object.hasOwn(snap, name)) col.clear();
       }
       for (const [name, data] of Object.entries(snap)) {
-        this.collection(name).seed(data as Record<string, unknown>[]);
+        this.collection(name).seed(data);
       }
     },
 

@@ -1,4 +1,5 @@
 import { normalizeHttpMethod } from "@noverax/courier";
+import { isRecord } from "../is-record";
 import { recordParam } from "../server/path-shape";
 import {
   extractSchema,
@@ -8,7 +9,8 @@ import {
   realtimePath,
 } from "./endpoint-probe";
 import { detectOperation } from "./operation-detect";
-import type { RouteInfo, SourceGroup } from "./route-types";
+import type { RouteInfo } from "./route-types";
+import { prop } from "./schema-introspect/prop";
 
 // Re-export types so external imports keep working unchanged.
 export type { CrudOperation, RouteInfo } from "./route-types";
@@ -21,11 +23,10 @@ export type { CrudOperation, RouteInfo } from "./route-types";
  */
 export function analyzeRoutes(source: Record<string, unknown>): RouteInfo[] {
   const routes: RouteInfo[] = [];
-  const opts = source.options as { groups?: Record<string, SourceGroup> } | undefined;
-  const groups = opts?.groups;
+  const groups = prop(source, "options", "groups");
 
   // Grouped endpoints
-  if (groups) {
+  if (isRecord(groups)) {
     for (const [groupName, group] of Object.entries(groups)) {
       if (groupName === "options") continue;
       analyzeGroup(routes, groupName, group);
@@ -35,7 +36,7 @@ export function analyzeRoutes(source: Record<string, unknown>): RouteInfo[] {
   // Top-level endpoints (functions at source root, not inside groups)
   for (const [name, fn] of Object.entries(source)) {
     if (name === "options" || !isEndpoint(fn)) continue;
-    analyzeTopLevelEndpoint(routes, name, fn as (...args: unknown[]) => unknown);
+    analyzeTopLevelEndpoint(routes, name, fn);
   }
 
   return routes;
@@ -46,18 +47,14 @@ export function analyzeRoutes(source: Record<string, unknown>): RouteInfo[] {
  * Useful for distinguishing grouped vs top-level endpoints in UI display.
  */
 export function getSourceGroupNames(source: Record<string, unknown>): Set<string> {
-  const opts = source.options as { groups?: Record<string, unknown> } | undefined;
-  if (!opts?.groups) return new Set();
-  return new Set(Object.keys(opts.groups).filter((k) => k !== "options"));
+  const groups = prop(source, "options", "groups");
+  if (!isRecord(groups)) return new Set();
+  return new Set(Object.keys(groups).filter((k) => k !== "options"));
 }
 
 const LEADING_SLASHES = /^\/+/;
 
-function analyzeTopLevelEndpoint(
-  routes: RouteInfo[],
-  name: string,
-  fn: (...args: unknown[]) => unknown,
-): void {
+function analyzeTopLevelEndpoint(routes: RouteInfo[], name: string, fn: unknown): void {
   const probed = probeEndpoint(fn);
   // "/orders" and "orders" name the same path; its first segment is the collection
   const rawPath = (probed.path ?? name).replace(LEADING_SLASHES, "");
@@ -76,17 +73,13 @@ function analyzeTopLevelEndpoint(
   });
 }
 
-function analyzeGroup(routes: RouteInfo[], groupName: string, group: SourceGroup): void {
-  const prefix = normalizePrefix(group.options?.prefix ?? `/${groupName}`);
+function analyzeGroup(routes: RouteInfo[], groupName: string, group: unknown): void {
+  if (!isRecord(group)) return;
+  const declared = prop(group, "options", "prefix");
+  const prefix = normalizePrefix(typeof declared === "string" ? declared : `/${groupName}`);
   for (const [endpointName, endpointFn] of Object.entries(group)) {
     if (endpointName === "options" || !isEndpoint(endpointFn)) continue;
-    analyzeEndpoint(
-      routes,
-      groupName,
-      endpointName,
-      endpointFn as (...args: unknown[]) => unknown,
-      prefix,
-    );
+    analyzeEndpoint(routes, groupName, endpointName, endpointFn, prefix);
   }
 }
 
@@ -94,7 +87,7 @@ function analyzeEndpoint(
   routes: RouteInfo[],
   groupName: string,
   endpointName: string,
-  endpointFn: (...args: unknown[]) => unknown,
+  endpointFn: unknown,
   prefix: string,
   preProbed?: { method?: string; path?: string },
 ): void {

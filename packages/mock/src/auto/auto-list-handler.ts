@@ -1,3 +1,4 @@
+import { isRecord } from "../is-record";
 import type { MockRequestContext } from "../types";
 import { generateRecords } from "./data-generator";
 import type { RouteInfo } from "./route-analyzer";
@@ -33,7 +34,7 @@ export function makeListHandler(route: RouteInfo, rows: () => Record<string, unk
   const field = schema && !unwrapArraySchema(schema) ? itemsField(schema) : undefined;
   if (!field) return rows;
 
-  const template = (generateRecords(schema, 1)[0] ?? {}) as Record<string, unknown>;
+  const template: Record<string, unknown> = generateRecords(schema, 1)[0] ?? {};
   return (ctx) => {
     const all = rows();
     const { page, pageSize } = requestedPage(ctx.variables, all.length);
@@ -64,7 +65,7 @@ function itemsField(schema: unknown): string | undefined {
 
 /** The page asked for — `page` and a page size by any of its usual names — or all of it */
 function requestedPage(variables: unknown, total: number): { page: number; pageSize: number } {
-  const vars = (variables ?? {}) as Record<string, unknown>;
+  const vars: Record<string, unknown> = isRecord(variables) ? variables : {};
   const size = [...SIZE].map((key) => vars[key]).find((value) => typeof value === "number");
   const pageSize = typeof size === "number" && size >= 0 ? size : total;
   const asked = [...PAGE].map((key) => vars[key]).find((value) => typeof value === "number");

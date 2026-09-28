@@ -71,6 +71,6 @@ export function isMockServerDefinition(value: unknown): value is MockServerDefin
   return (
     typeof value === "object" &&
     value !== null &&
-    (value as Record<string, unknown>).__type === "courier-mock-server"
+    Reflect.get(value, "__type") === "courier-mock-server"
   );
 }

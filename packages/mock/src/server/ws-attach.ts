@@ -9,6 +9,7 @@
  * wires the resulting handler onto the Node `http.Server.upgrade` event.
  */
 
+import type { Server } from "node:http";
 import type { MockRegistry } from "../registry";
 import type { MockHistoryEntry } from "../types";
 import type { PrefixMapping } from "./prefix-routes";
@@ -41,19 +42,13 @@ export function createWSUpgrade(options: WSUpgradeOptions): MockWSHandler | unde
 }
 
 /**
- * Attach a WS upgrade handler to a Node HTTP server.
+ * Attach a WS upgrade handler to the Node HTTP server the mock listens on.
  *
- * Done via a generic `on("upgrade", ...)` listener — we cast to a minimal
- * interface to avoid pulling in `@types/node` HTTP types from the public API.
+ * @param nodeServer - The server
+ * @param wsUpgrade - The handler every upgrade request goes to
  */
-export function attachWSUpgrade(nodeServer: { close: () => void }, wsUpgrade: MockWSHandler): void {
-  type UpgradeArgs = Parameters<MockWSHandler["handleUpgrade"]>;
-  (
-    nodeServer as unknown as {
-      on(event: string, listener: (...args: unknown[]) => void): void;
-    }
-  ).on("upgrade", (...args: unknown[]) => {
-    const [req, socket, head] = args as UpgradeArgs;
+export function attachWSUpgrade(nodeServer: Server, wsUpgrade: MockWSHandler): void {
+  nodeServer.on("upgrade", (req, socket, head) => {
     void wsUpgrade.handleUpgrade(req, socket, head);
   });
 }

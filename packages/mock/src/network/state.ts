@@ -87,7 +87,7 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
     },
 
     mergeConfig(patch) {
-      config = { ...config, ...patch } as NetworkConfig;
+      config = { ...config, ...patch };
       if (isActive(config)) {
         startedAt ??= Date.now();
       } else {

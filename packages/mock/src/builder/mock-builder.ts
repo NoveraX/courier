@@ -1,4 +1,3 @@
-import type { SSEEvent } from "@noverax/courier/realtime";
 import type {
   EnhancedMockBuilder,
   MockChannelFn,
@@ -109,7 +108,7 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     },
 
     emits(events) {
-      return builder.stream(streamOf(events as SSEEvent[]) as MockStreamFn<TResponse, TVariables>);
+      return builder.stream(streamOf(events));
     },
 
     channel(fn) {

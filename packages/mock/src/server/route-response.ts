@@ -10,6 +10,7 @@
 import { HTTPError } from "@noverax/courier";
 import type { Context as HonoContext } from "hono";
 
+import { isRecord } from "../is-record";
 import { isMockHttpError } from "./errors";
 import type { RouteConfig } from "./route-types";
 
@@ -33,7 +34,7 @@ export function buildResponse(
   const res = c.json(body, status as 200);
 
   if (handler.isError && (status === 429 || status === 503)) {
-    const retryAfter = (data as Record<string, unknown>)?.retryAfter;
+    const retryAfter = isRecord(data) ? data.retryAfter : undefined;
     if (typeof retryAfter === "number") {
       res.headers.set("Retry-After", String(retryAfter));
     }

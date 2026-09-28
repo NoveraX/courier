@@ -71,9 +71,18 @@ export function mergeOverride(
     latency: override.latency ?? global.latency,
     errorRate: override.errorRate !== undefined ? override.errorRate / 100 : global.errorRate,
     faultTypes: override.faultTypes?.length
-      ? (override.faultTypes as NetworkConfig["faultTypes"])
+      ? override.faultTypes.filter(isFaultType)
       : global.faultTypes,
     // Clear route overrides so we don't recurse
     routeOverrides: undefined,
   };
+}
+
+type FaultType = NonNullable<NetworkConfig["faultTypes"]>[number];
+
+const FAULT_TYPES: ReadonlySet<string> = new Set(["500", "502", "503", "timeout", "reset"]);
+
+/* An override comes from Studio as text; only a fault the mock simulates is kept. */
+function isFaultType(value: string): value is FaultType {
+  return FAULT_TYPES.has(value);
 }

@@ -1,7 +1,8 @@
+import { pathShape } from "../server/path-shape";
 import type { MockStore } from "../store";
 import { generateRecords } from "./data-generator";
 import type { RouteInfo } from "./route-analyzer";
-import { extractPaginatedItemSchema, unwrapArraySchema } from "./schema-introspect";
+import { extractPaginatedItemSchema, extractShape, unwrapArraySchema } from "./schema-introspect";
 
 /**
  * Eager seed-time helpers for the auto layer.
@@ -35,7 +36,9 @@ export function seedAllCollections(
 
   for (const [groupName, route] of bestPerGroup) {
     const count = seedOverrides[groupName] ?? seedCount;
-    seedCollection(store, groupName, route.responseSchema, count);
+    const itemSchema = itemSchemaOf(route.responseSchema);
+    const col = collectionFor(store, groupName, itemSchema, routes);
+    col.seed(generateRecords(itemSchema, count));
   }
 
   // Groups without a list endpoint — create empty collection
@@ -43,9 +46,50 @@ export function seedAllCollections(
   for (const route of routes) {
     if (!seeded.has(route.group)) {
       seeded.add(route.group);
-      store.collection(route.group, { idField: "id" });
+      collectionFor(store, route.group, itemSchemaOf(route.responseSchema), routes);
     }
   }
+}
+
+/**
+ * The group's collection, created keyed by the field its records are named
+ * by. A collection that exists keeps its key: one set in `overrides` must
+ * survive a reset or a reseed.
+ */
+function collectionFor(
+  store: MockStore,
+  groupName: string,
+  itemSchema: unknown,
+  routes: RouteInfo[],
+): ReturnType<MockStore["collection"]> {
+  if (store.has(groupName)) return store.collection(groupName);
+  return store.collection(groupName, { idField: idFieldOf(groupName, itemSchema, routes) });
+}
+
+/**
+ * The field records are keyed by: `id` when they have one, otherwise the
+ * parameter of the group's by-id route (`get(":petId")` → `petId`) when
+ * the records carry it.
+ */
+function idFieldOf(groupName: string, itemSchema: unknown, routes: RouteInfo[]): string {
+  const fields = new Set(Object.keys(extractShape(itemSchema) ?? {}));
+  if (fields.has("id")) return "id";
+  const param = routes.find(
+    (route) =>
+      route.group === groupName &&
+      route.idParam !== undefined &&
+      pathShape(route.path) === "record" &&
+      fields.has(route.idParam),
+  )?.idParam;
+  return param ?? "id";
+}
+
+function itemSchemaOf(responseSchema: unknown): unknown {
+  return (
+    unwrapArraySchema(responseSchema) ??
+    extractPaginatedItemSchema(responseSchema) ??
+    responseSchema
+  );
 }
 
 /**
@@ -81,19 +125,4 @@ function isBetterSeedSource(candidate: RouteInfo, current: RouteInfo): boolean {
   const candidateIsArray = !!unwrapArraySchema(candidate.responseSchema);
   const currentIsArray = !!unwrapArraySchema(current.responseSchema);
   return candidateIsArray && !currentIsArray;
-}
-
-function seedCollection(
-  store: MockStore,
-  groupName: string,
-  responseSchema: unknown,
-  count: number,
-): void {
-  const col = store.collection(groupName, { idField: "id" });
-  const itemSchema =
-    unwrapArraySchema(responseSchema) ??
-    extractPaginatedItemSchema(responseSchema) ??
-    responseSchema;
-  const records = generateRecords(itemSchema, count);
-  col.seed(records);
 }

@@ -4,24 +4,12 @@ import type { ConnectionStatus, SSEEvent, SSESubscription } from "@noverax/couri
    a client-only hook such as useState among its imports. */
 import * as React from "react";
 
-import type { SubscriptionResult } from "../types";
+import type { CourierSubscriptionOptions, SubscriptionResult } from "../types";
 import { consumeStream, toError } from "./consume-stream";
 import { streamKeyOf } from "./stream-key";
 
-export interface UseSubscriptionOptions<TData> {
-  /** Variables passed to the SSE endpoint */
-  variables?: unknown;
-  /** Disable the subscription (default: true) */
-  enabled?: boolean;
-  /** Data to show immediately while the connection is being established */
-  optimisticData?: TData;
-  /** Called on each incoming SSE event */
-  onData?: (event: SSEEvent<TData>) => void;
-  /** Called when the stream fails, or cannot be opened at all */
-  onError?: (error: Error) => void;
-  /** Called on connection status changes */
-  onStatusChange?: (status: ConnectionStatus) => void;
-}
+/** A group hook's options, as `useSubscription` takes them untyped. */
+export type UseSubscriptionOptions<TData> = CourierSubscriptionOptions<TData, unknown>;
 
 /** Internal factory type — creates SSESubscription from group+method+variables */
 export type SubscribeFn = (

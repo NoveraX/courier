@@ -1,4 +1,3 @@
-import type { CallOptions } from "@noverax/courier";
 import type { SSEEvent } from "@noverax/courier/realtime";
 import type { QueryKey, UseQueryResult } from "@tanstack/react-query";
 import { hashKey, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,25 +6,16 @@ import { hashKey, useQuery, useQueryClient } from "@tanstack/react-query";
    a client-only hook such as useState among its imports. */
 import * as React from "react";
 
+import type { CourierComputedQueryOptions } from "../types";
 import type { SubscribeFn } from "./use-subscription";
 import { useSubscription } from "./use-subscription";
 
-export interface UseComputedQueryOptions<TQueryData, TStreamData, TVariables> {
-  /** Variables for the HTTP query endpoint */
-  variables?: TVariables;
-  /** SSE endpoint method name (on the same group) that provides live updates */
-  subscriptionMethod: string;
-  /** Variables for the SSE subscription (defaults to query variables) */
-  subscriptionVariables?: unknown;
-  /** Merge each stream event into the cached query data */
-  mapper: (current: TQueryData | undefined, event: SSEEvent<TStreamData>) => TQueryData;
-  /** Disable both query and subscription (default: true) */
-  enabled?: boolean;
-  /** react-query staleTime */
-  staleTime?: number;
-  /** Per-request options for the HTTP query */
-  requestOptions?: CallOptions;
-}
+/** A group hook's options, as `useComputedQuery` takes them untyped. */
+export type UseComputedQueryOptions<TQueryData, TStreamData> = CourierComputedQueryOptions<
+  TQueryData,
+  TStreamData,
+  unknown
+>;
 
 /** Stream events held until the query they merge into has data. */
 interface HeldEvents<TStreamData> {
@@ -60,7 +50,7 @@ export function useComputedQuery<TQueryData, TStreamData>(
   subscribeFn: SubscribeFn,
   queryKey: QueryKey,
   groupName: string,
-  options: UseComputedQueryOptions<TQueryData, TStreamData, unknown>,
+  options: UseComputedQueryOptions<TQueryData, TStreamData>,
 ): UseQueryResult<TQueryData, Error> {
   const { variables, enabled = true, staleTime } = options;
   const queryClient = useQueryClient();

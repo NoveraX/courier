@@ -19,6 +19,8 @@ export interface ContractResult {
   status: "pass" | "fail" | "skip";
   target?: "response" | "variables";
   issues?: ContractIssue[];
+  /** Why the check was skipped: "no response schema", "no mock data", and the like */
+  reason?: string;
 }
 
 /** A single validation issue */
@@ -62,7 +64,7 @@ export async function validateEndpoint(
   target: "response" | "variables",
 ): Promise<ContractResult & { group: string; method: string }> {
   if (!schema) {
-    return { group: "", method: "", status: "skip" };
+    return { group: "", method: "", status: "skip", target, reason: `no ${target} schema` };
   }
 
   const result = await schema["~standard"].validate(data);
@@ -166,14 +168,17 @@ function* endpointsIn(group: string, members: object): Generator<SourceEndpoint>
   }
 }
 
-/** Check one direction of one endpoint, or skip it when there is no schema or no data */
+/** Check one direction of one endpoint, or say why it was skipped: no schema, or no data */
 async function checkTarget(
   schema: StandardSchemaV1 | undefined,
   data: Map<string, unknown>,
   key: string,
   target: "response" | "variables",
 ): Promise<ContractResult> {
-  if (!schema || !data.has(key)) return { group: "", method: "", status: "skip", target };
+  if (schema && !data.has(key)) {
+    const reason = target === "response" ? "no mock data" : "no variables given";
+    return { group: "", method: "", status: "skip", target, reason };
+  }
   return validateEndpoint(schema, data.get(key), target);
 }
 

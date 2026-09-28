@@ -1,15 +1,6 @@
+import { isPlainObject } from "../is-plain-object";
 /** A value read from a request, or why it cannot be read. */
 export type Checked<TValue> = { ok: true; value: TValue } | { ok: false; message: string };
-
-/**
- * Whether a value is an object literal or `JSON.parse` output — not an array,
- * a class instance or anything with a prototype a sender could have chosen.
- */
-function isPlainObject(value: unknown): value is Readonly<Record<string, unknown>> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
-}
 
 /**
  * Reads an object that must carry exactly the given fields.

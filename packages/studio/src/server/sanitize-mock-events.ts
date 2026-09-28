@@ -20,6 +20,8 @@
  * whitelist class as `sanitize-source-map.ts`.
  */
 
+import { isPlainObject } from "./is-plain-object";
+
 export interface SanitizedMockCommand extends Record<string, unknown> {
   action: string;
   serverId: string;
@@ -28,15 +30,6 @@ export interface SanitizedMockCommand extends Record<string, unknown> {
 export interface SanitizedMockManaged extends Record<string, unknown> {
   command: string;
   serverId?: string;
-}
-
-function isPlainObject(raw: unknown): raw is Record<string, unknown> {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return false;
-  // Reject objects with a tampered prototype chain so a hostile sender
-  // cannot smuggle `__proto__` / `constructor` mutations through the
-  // `Object.assign`-style spreads downstream.
-  const proto: unknown = Object.getPrototypeOf(raw);
-  return proto === Object.prototype || proto === null;
 }
 
 /**

@@ -20,6 +20,7 @@
  */
 
 import type { BindingTransport } from "./catalog/binding-table";
+import { isPlainObject } from "./is-plain-object";
 
 const RUNTIME_ID_PATTERN = /^[a-zA-Z0-9_-]{1,256}$/;
 const SOURCES_HASH_PATTERN = /^[a-f0-9]{16}$/;
@@ -80,12 +81,6 @@ export interface SanitizedRuntimeAnnounce {
 }
 
 const VALID_TRANSPORTS: ReadonlyArray<BindingTransport> = ["http", "sse", "ws"];
-
-function isPlainObject(raw: unknown): raw is Record<string, unknown> {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return false;
-  const proto: unknown = Object.getPrototypeOf(raw);
-  return proto === Object.prototype || proto === null;
-}
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;

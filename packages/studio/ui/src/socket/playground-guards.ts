@@ -14,23 +14,8 @@
  * `store/types-ui.ts` AND the corresponding guard here.
  */
 
+import { isPlainObject } from "./is-plain-object"
 import type { PlaygroundChunk, PlaygroundEndSummary } from "@/store/types-ui"
-
-/**
- * Reject objects whose own keys collide with `Object.prototype` slots so a
- * hostile sender cannot smuggle a `__proto__` / `constructor` / `prototype`
- * key through a downstream spread or merge. Mirrors the convention in
- * `binding-guards.ts` and the server-side sanitizers.
- */
-function isPlainObject(raw: unknown): raw is Record<string, unknown> {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return false
-  const proto: unknown = Object.getPrototypeOf(raw)
-  if (proto !== Object.prototype && proto !== null) return false
-  for (const key of Object.keys(raw)) {
-    if (key === "__proto__" || key === "constructor" || key === "prototype") return false
-  }
-  return true
-}
 
 function isRidCarrier(data: unknown): data is Record<string, unknown> {
   if (!isPlainObject(data)) return false

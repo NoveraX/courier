@@ -3,7 +3,8 @@
  * passed on to the UI: its result chunks, its end and its error.
  */
 
-import { hasDangerousKeys, isPlainObject } from "./runtime-playground-router-sanitize";
+import { isPlainObject } from "./is-plain-object";
+import { hasDangerousKeys } from "./runtime-playground-router-sanitize";
 
 export type SanitizedChunk =
   | {

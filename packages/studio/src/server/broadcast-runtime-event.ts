@@ -12,16 +12,11 @@
 
 import { RUNTIME_EVENT_TYPES } from "@noverax/courier-studio-core/runtime";
 import type { Namespace } from "socket.io";
+import { isPlainObject } from "./is-plain-object";
 
 /* Read from the package that emits them, so adding an event type in one
    place cannot silently start dropping it in the other. */
 const RUNTIME_EVENTS = new Set(RUNTIME_EVENT_TYPES);
-
-function isPlainObject(raw: unknown): raw is Record<string, unknown> {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return false;
-  const proto: unknown = Object.getPrototypeOf(raw);
-  return proto === Object.prototype || proto === null;
-}
 
 /**
  * Validate and sanitize a runtime event before broadcast. Returns a clean

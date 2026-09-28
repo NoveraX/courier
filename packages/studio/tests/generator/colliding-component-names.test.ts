@@ -1,0 +1,87 @@
+/**
+ * Component schemas whose names normalise to one identifier — `OrderItem`,
+ * `order-item`, `order_item`. Their declarations were numbered apart, but a
+ * reference normalised the name on its own, so every reference named the
+ * first: `order-item`'s answers were typed and validated as `OrderItem`, and
+ * refused for lacking its fields.
+ */
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { generateCode } from "../../src/apis/generator";
+import { parseSpec } from "../../src/apis/parser";
+import type { ParsedSpec } from "../../src/apis/parser/types";
+import { endpointAt, loadGenerated } from "../helpers/generated-project";
+import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+
+const SCHEMAS = {
+  OrderItem: { type: "object", required: ["sku"], properties: { sku: { type: "string" } } },
+  "order-item": { type: "object", required: ["price"], properties: { price: { type: "number" } } },
+  order_item: { type: "object", required: ["qty"], properties: { qty: { type: "integer" } } },
+};
+
+function operation(id: string, ref: string, swagger: boolean) {
+  const schema = { $ref: ref };
+  return {
+    get: {
+      operationId: id,
+      tags: ["shop"],
+      ...(swagger && { produces: ["application/json"] }),
+      responses: {
+        "200": swagger
+          ? { description: "ok", schema }
+          : { description: "ok", content: { "application/json": { schema } } },
+      },
+    },
+  };
+}
+
+function spec(origin: string, swagger: boolean): ParsedSpec {
+  const at = swagger ? "#/definitions/" : "#/components/schemas/";
+  const paths = {
+    "/x": operation("getX", `${at}OrderItem`, swagger),
+    "/y": operation("getY", `${at}order-item`, swagger),
+    "/z": operation("getZ", `${at}order_item`, swagger),
+  };
+  const document = swagger
+    ? { swagger: "2.0", info: { title: "Shop", version: "1" }, host: new URL(origin).host, schemes: ["http"], definitions: SCHEMAS, paths }
+    : { openapi: "3.0.0", info: { title: "Shop", version: "1" }, servers: [{ url: origin }], components: { schemas: SCHEMAS }, paths };
+  return parseSpec(JSON.stringify(document));
+}
+
+let upstream: UpstreamServer;
+
+beforeAll(async () => {
+  upstream = await startUpstreamServer({}, {
+    "/x": { contentType: "application/json", body: '{"sku":"A-1"}' },
+    "/y": { contentType: "application/json", body: '{"price":9.5}' },
+    "/z": { contentType: "application/json", body: '{"qty":3}' },
+  });
+});
+
+afterAll(async () => {
+  await upstream.close();
+});
+
+describe.each([
+  ["OpenAPI 3", false],
+  ["Swagger 2", true],
+])("in %s, each of three schemas named alike", (_label, swagger) => {
+  it("is referenced by its own identifier", () => {
+    const parsed = spec(upstream.origin, swagger);
+    const refs = parsed.groups.flatMap((group) => group.endpoints.map((ep) => ep.responseSchema?.refName));
+
+    expect(refs).toEqual(["OrderItem", "OrderItem2", "OrderItem3"]);
+    expect(Object.keys(parsed.schemas).sort()).toEqual(["OrderItem", "OrderItem2", "OrderItem3"]);
+  });
+
+  it("validates each answer against its own schema", async () => {
+    const files = generateCode(spec(upstream.origin, swagger), { type: "openapi", outputDir: "src/api" }, "shop");
+    const { shopApi } = loadGenerated(files, "src/api/shop/index.ts");
+
+    const answers = await Promise.all(
+      ["getX", "getY", "getZ"].map((method) => endpointAt(shopApi, "shop", method)()),
+    );
+
+    expect(answers).toEqual([{ sku: "A-1" }, { price: 9.5 }, { qty: 3 }]);
+  });
+});

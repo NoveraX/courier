@@ -2,7 +2,7 @@
  * Converts one property of an OpenAPI object schema.
  */
 
-import { toSafeIdentifier } from "./naming-utils";
+import { componentIdentifier } from "./component-identifier";
 import { expandPointer } from "./pointer-refs";
 import { isComposite, soleMember, withoutNull } from "./property-forms";
 import { componentSchemaName } from "./ref-utils";
@@ -77,7 +77,7 @@ export function convertProperty(
     format: textAt(node, "format"),
     enum:
       node.enum !== undefined ? enumValues(listAt(node, "enum")) : constant && enumValues(constant),
-    refName: component !== undefined ? toSafeIdentifier(component) : undefined,
+    refName: component !== undefined ? componentIdentifier(spec, component) : undefined,
     items: node.items ? convertSchema(`${name}Item`, asNode(node.items), spec) : undefined,
     /* An inline object keeps its own shape rather than flattening. */
     shape: node.properties ? convertSchema(`${name}Object`, node, spec) : undefined,

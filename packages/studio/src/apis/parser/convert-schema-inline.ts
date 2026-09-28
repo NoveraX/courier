@@ -2,7 +2,7 @@
  * The schema of a request or a response body, converted where it stands.
  */
 
-import { toSafeIdentifier } from "./naming-utils";
+import { componentIdentifier } from "./component-identifier";
 import { acceptsNull, orNull, stripNull } from "./nullable-schema";
 import { componentSchemaName } from "./ref-utils";
 import { convertSchema, normalizeTypeArray, schemaTypeOf } from "./schema-conversion";
@@ -36,7 +36,7 @@ export function convertSchemaInline(raw: SpecNode, spec: SpecNode): ParsedSchema
   if (ref !== undefined) {
     const component = componentSchemaName(ref);
     if (component === undefined) return convertSchema("Inline", schema, spec);
-    const refName = toSafeIdentifier(component);
+    const refName = componentIdentifier(spec, component);
     return { name: refName, type: "ref", refName };
   }
   if (schema.allOf || schema.oneOf || schema.anyOf) return convertSchema("Inline", schema, spec);

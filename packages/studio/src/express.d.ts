@@ -6,7 +6,7 @@ declare module "express" {
   }
   interface Response extends ServerResponse {
     json(data: unknown): void;
-    sendFile(path: string): void;
+    sendFile(path: string, options?: { root?: string }): void;
     status(code: number): Response;
   }
 

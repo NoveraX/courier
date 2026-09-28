@@ -64,11 +64,9 @@ export function createActions(set: StudioSet, get: StudioGet): Omit<StudioState,
       // known names; with the empty one passed here, each passes as sent.
       const normalized = normalizeEventSource(event, {})
       set((state) => {
-        const result = handleEventReducer(state, normalized, get().settings.maxRequests)
-        if ("droppedCount" in result && result.droppedCount) {
-          return { ...result, droppedRequests: state.droppedRequests + result.droppedCount }
-        }
-        return result
+        const { requests, droppedCount } = handleEventReducer(state, normalized, get().settings.maxRequests)
+        if (requests === state.requests) return state
+        return { requests, droppedRequests: state.droppedRequests + droppedCount }
       })
       notifyOnEvent(normalized, get)
     },

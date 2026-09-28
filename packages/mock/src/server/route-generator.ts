@@ -1,9 +1,7 @@
 /**
- * Mock request route generator — public entry point.
- *
- * Owns the request lifecycle for both the proxy route
- * (`POST /api/request`) and the REST-style routes (`/api/:group/:method`).
- * Supporting pieces live in siblings:
+ * The mock request lifecycle, shared by every route that answers a mocked
+ * endpoint — the proxy routes and REST-style routes in `api-routes`, and the
+ * prefix routes. Supporting pieces live in siblings:
  *
  * - `route-types`    — `RouteConfig`, `RequestHooks`
  * - `route-network`  — failure/latency/bandwidth resolution
@@ -12,7 +10,7 @@
 
 import { randomUUID } from "node:crypto";
 
-import type { Hono, Context as HonoContext } from "hono";
+import type { Context as HonoContext } from "hono";
 
 import { createFaultError, pickFault, shouldFail } from "../network/failure";
 import type { MockRequestContext } from "../types";
@@ -25,36 +23,12 @@ export type { RequestHooks, RouteConfig } from "./route-types";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/** Register the main courier proxy route: POST /api/request */
-export function registerProxyRoute(app: Hono, config: RouteConfig): void {
-  app.post("/api/request", async (c: HonoContext) => {
-    const body = await c.req.json<{
-      source?: string;
-      group?: string;
-      method?: string;
-      variables?: unknown;
-      options?: { rawData?: unknown };
-    }>();
-    const { group = "", method = "" } = body;
-    // A `.raw` call is answered with the response around the data, as a Courier proxy does
-    const raw = body.options?.rawData === true;
-
-    return handleMockRequest(c, group, method, body.variables, config, raw);
-  });
-}
-
-/** Register REST-style routes: POST /api/:group/:method */
-export function registerRestRoutes(app: Hono, config: RouteConfig): void {
-  app.all("/api/:group/:method", async (c: HonoContext) => {
-    const group = c.req.param("group") ?? "";
-    const method = c.req.param("method") ?? "";
-    const variables =
-      c.req.method === "GET"
-        ? Object.fromEntries(new URL(c.req.url).searchParams)
-        : await c.req.json().catch(() => undefined);
-
-    return handleMockRequest(c, group, method, variables, config);
-  });
+/** How a route wants a request answered */
+export interface AnswerOptions {
+  /** Answer a success with `{ status, headers, data }`, as a proxy answers a `.raw` call */
+  raw?: boolean;
+  /** Serve only an endpoint mocked as a stream; any other is refused with 404 */
+  stream?: boolean;
 }
 
 /** Core handler: resolve mock → apply network simulation → return response */
@@ -64,7 +38,7 @@ export async function handleMockRequest(
   method: string,
   variables: unknown,
   config: RouteConfig,
-  raw = false,
+  { raw = false, stream = false }: AnswerOptions = {},
 ): Promise<Response> {
   const start = performance.now();
   const requestId = `req_${randomUUID()}`;
@@ -93,11 +67,15 @@ export async function handleMockRequest(
   const scenarioState = config.getScenarioState();
   const handler = config.registry.get(group, method, scenarioState);
 
-  if (!handler) {
+  if (!handler || (stream && handler.transport !== "sse")) {
     const duration = performance.now() - start;
     pushHistory(config, { group, method, variables, start, status: 404, error: "No mock" });
     config.hooks?.onError?.(requestId, 404, "No mock", duration);
-    return c.json({ error: `No mock for "${group}.${method}" in state "${scenarioState}"` }, 404);
+    const kind = stream ? "stream mock" : "mock";
+    return c.json(
+      { error: `No ${kind} for "${group}.${method}" in state "${scenarioState}"` },
+      404,
+    );
   }
 
   const delay = resolveDelay(handler, netConfig);

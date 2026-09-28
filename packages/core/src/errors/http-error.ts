@@ -13,10 +13,17 @@ export class HTTPError<TData = unknown> extends CourierError<"HTTP_ERROR"> {
 
   /**
    * @param response - The answer, or status 0 with a description when there was none
-   * @param options - `cause`: the error the request failed with, for a network failure
+   * @param options - `cause`: the error the request failed with, for a network failure;
+   *   `message`: what went wrong, when the status alone does not say — a timeout
+   *
+   * @example
+   * ```ts
+   * new HTTPError({ status: 404, headers, data }); // message "HTTP 404"
+   * ```
    */
-  constructor(response: HttpResponse<TData>, options?: { cause?: unknown }) {
-    super(response.status > 0 ? `HTTP ${response.status}` : "Network request failed", {
+  constructor(response: HttpResponse<TData>, options?: { cause?: unknown; message?: string }) {
+    const fallback = response.status > 0 ? `HTTP ${response.status}` : "Network request failed";
+    super(options?.message ?? fallback, {
       code: "HTTP_ERROR",
       context: { status: response.status },
       cause: options?.cause,

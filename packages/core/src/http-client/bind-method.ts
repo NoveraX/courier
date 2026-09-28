@@ -1,5 +1,4 @@
 import { HTTPError } from "../errors";
-import { isAbortError } from "../utils/abort";
 import {
   cleanupDeduplication,
   deduplicateAndAbortPrevious,
@@ -9,7 +8,6 @@ import { compileUrl, resolveBasePath } from "../utils/helpers";
 import { stripUndefined } from "./body-builder";
 import { buildRequestOptions } from "./request-builder";
 import { getResponse } from "./response";
-import { transportFailure } from "./transport-failure";
 import type {
   BoundMethodOptions,
   Context,
@@ -111,12 +109,11 @@ export function bindMethod(
 
       return result as HttpResponse<TResponse>;
     } catch (error) {
+      /* Fetch's own rejection was classified where it happened; anything
+         else — a path option that threw, a body that would not serialize —
+         is the caller's own failure and stays what it was. */
       forget();
-      /* A cancellation the caller asked for is rethrown as fetch rejected it
-         — an AbortError unless they gave another reason. */
-      if (error instanceof HTTPError || isAbortError(error)) throw error;
-
-      throw error instanceof Error ? transportFailure(error) : error;
+      throw error;
     }
   };
 }

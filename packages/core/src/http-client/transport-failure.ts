@@ -1,4 +1,46 @@
 import { HTTPError } from "../errors";
+import { isAbortError } from "../utils/abort";
+
+const TIMEOUT_ERROR = "TimeoutError";
+
+/**
+ * What a request that fetch rejected is thrown as.
+ *
+ * Only fetch's own rejection is classified here, so a mistake made before
+ * the request — a body that would not serialize — is never taken for a
+ * network failure. A cancellation the caller asked for is rethrown as fetch
+ * rejected it, whatever reason it gave; a timeout says it is one.
+ *
+ * @param error - What fetch rejected with
+ * @param signal - The signal the caller gave, if any
+ * @param timeout - The request's timeout in ms, if it had one
+ * @returns The error to throw
+ *
+ * @example
+ * ```ts
+ * try { return await fetch(url, init); } catch (error) { throw fetchFailure(error, signal, 5000); }
+ * ```
+ */
+export function fetchFailure(
+  error: unknown,
+  signal: AbortSignal | null | undefined,
+  timeout: number | undefined,
+): unknown {
+  if (signal?.aborted && error === signal.reason) return error;
+  if (error instanceof HTTPError || isAbortError(error)) return error;
+  if (error instanceof Error && error.name === TIMEOUT_ERROR) return timeoutFailure(error, timeout);
+  return error instanceof Error ? transportFailure(error) : error;
+}
+
+/**
+ * Did the request fail because its timeout ran out?
+ *
+ * @param error - A failure from {@link fetchFailure}
+ * @returns `true` for a timeout
+ */
+export function isTimeoutFailure(error: HTTPError): boolean {
+  return error.status === 0 && error.cause instanceof Error && error.cause.name === TIMEOUT_ERROR;
+}
 
 /**
  * The error a request that never got an answer is thrown as: status 0, with
@@ -17,6 +59,21 @@ export function transportFailure(error: Error): HTTPError {
       data: { success: false, message: describe(cause, code), ...(code && { code }) },
     },
     { cause: error },
+  );
+}
+
+/* Status 0 like any request that got no answer, but named for what it was;
+   it used to say "Network request failed" and carry the DOMException's
+   legacy code "23". */
+function timeoutFailure(error: Error, timeout: number | undefined): HTTPError {
+  const after = timeout === undefined ? "" : ` after ${timeout} ms`;
+  return new HTTPError(
+    {
+      status: 0,
+      headers: new Headers(),
+      data: { success: false, message: `Request timed out${after}`, code: "TIMEOUT" },
+    },
+    { cause: error, message: "Request timed out" },
   );
 }
 

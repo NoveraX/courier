@@ -4,15 +4,16 @@
  * The `ws` package and `createMockWSHandler` are loaded lazily so users
  * that only mock HTTP/SSE never pay for the WS dependency.
  *
- * `createWSUpgrade` returns `undefined` when no prefix mappings are
- * configured (i.e. there are no routable WS endpoints). `attachWSUpgrade`
- * wires the resulting handler onto the Node `http.Server.upgrade` event.
+ * `createWSUpgrade` builds the handler for every server: the proxy's route,
+ * `/api/ws`, serves whatever channel is mocked, with or without a source.
+ * `attachWSUpgrade` wires it onto the Node `http.Server.upgrade` event.
  */
 
 import type { Server } from "node:http";
 import type { MockRegistry } from "../registry";
 import type { MockHistoryEntry } from "../types";
 import type { PrefixMapping } from "./prefix-routes";
+import type { RequestHooks } from "./route-types";
 import { createMockWSHandler, type MockWSHandler } from "./ws-handler";
 
 /** Options accepted by `createWSUpgrade` — mirror the WS bits of `MockServerConfig` */
@@ -23,21 +24,30 @@ export interface WSUpgradeOptions {
   getScenarioState: () => string;
   allowedOrigins?: readonly string[];
   maxPayload?: number;
+  /** Told of each channel subscription as it opens and ends — Studio's mock logs */
+  hooks?: RequestHooks;
 }
 
 /**
- * Build a WS upgrade handler if there are any prefix mappings — otherwise
- * return `undefined` so the bootstrap can skip importing the `ws` runtime.
+ * Build the server's WS upgrade handler. It loads the `ws` package on its
+ * first upgrade, so a server no channel is asked of never loads it.
+ *
+ * @param options - What the channels are served from
+ * @returns The handler
+ * @example
+ * ```ts
+ * attachWSUpgrade(nodeServer, createWSUpgrade({ registry, mappings, history, getScenarioState }));
+ * ```
  */
-export function createWSUpgrade(options: WSUpgradeOptions): MockWSHandler | undefined {
-  if (!options.mappings || options.mappings.length === 0) return undefined;
+export function createWSUpgrade(options: WSUpgradeOptions): MockWSHandler {
   return createMockWSHandler({
     registry: options.registry,
-    mappings: options.mappings,
+    mappings: options.mappings ?? [],
     history: options.history,
     getScenarioState: options.getScenarioState,
     allowedOrigins: options.allowedOrigins,
     maxPayload: options.maxPayload,
+    hooks: options.hooks,
   });
 }
 

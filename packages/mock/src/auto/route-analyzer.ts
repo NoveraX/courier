@@ -1,6 +1,7 @@
 import { normalizeHttpMethod } from "@noverax/courier";
 import { isRecord } from "../is-record";
 import { recordParam } from "../server/path-shape";
+import { channelShape } from "./channel-shape";
 import {
   extractSchema,
   isEndpoint,
@@ -114,6 +115,7 @@ function analyzeEndpoint(
       type: schema?.type,
       transport,
       isChannel: transport === "ws" && !!schema?.receive,
+      ...(transport === "ws" && { channel: channelShape(endpointFn, schema) }),
     });
     return;
   }

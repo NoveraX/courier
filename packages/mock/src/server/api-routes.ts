@@ -5,6 +5,9 @@
  * - `GET` and `POST /api/request` — the proxy's HTTP route
  * - `GET /api/sse` — the proxy's stream route
  * - `/api/:group/:method` — REST-style addressing by name
+ *
+ * The proxy's WebSocket route, `/api/ws`, is served on the upgrade, in
+ * `proxy-ws`.
  */
 
 import type { Hono, Context as HonoContext } from "hono";

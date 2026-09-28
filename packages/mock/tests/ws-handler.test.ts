@@ -209,6 +209,25 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     expect(leaveCount).toBe(1);
   });
 
+  it("tells the request hooks, which Studio's mock logs hear, of the channel as it opens and ends", async () => {
+    server.mock("chat", "room").channel(() => ({ onMessage: () => {} }));
+    const started = vi.fn();
+    const ended = vi.fn();
+    server.requestHooks.onStart = started;
+    server.requestHooks.onEnd = ended;
+
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
+    await waitForFrame(ws);
+    ws.close();
+    await waitForClose(ws);
+    await new Promise((r) => setTimeout(r, 30));
+
+    expect(started).toHaveBeenCalledWith(expect.any(String), "GET", "/chat/room", "chat", "room", {});
+    expect(ended).toHaveBeenCalledWith(started.mock.calls[0]?.[0], 101, undefined, expect.any(Number), 0, "Started");
+  });
+
   it("records non-zero duration in history after connection closes", async () => {
     server.mock("chat", "room").channel(() => ({ onMessage: () => {} }));
 

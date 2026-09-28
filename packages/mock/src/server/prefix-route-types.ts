@@ -9,6 +9,7 @@
  */
 
 import type { Transport } from "@noverax/courier";
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Context as HonoContext } from "hono";
 
 /** CRUD operation type for an endpoint */
@@ -35,6 +36,20 @@ export interface MappedEndpoint {
   transport?: Transport;
   /** True for WS bidirectional channel endpoints (have a `receive` schema) */
   isChannel?: boolean;
+  /** For a WS endpoint: what the proxy's WebSocket route checks a subscription against */
+  channel?: ChannelShape;
+}
+
+/** What the proxy's WebSocket route checks a subscription to a channel against */
+export interface ChannelShape {
+  /** The subscription's variables */
+  variables?: StandardSchemaV1;
+  /** Each message the caller sends */
+  receive?: StandardSchemaV1;
+  /** Whether the caller may send on it: it declared what it receives */
+  acceptsMessages: boolean;
+  /** Reads the key the channel's subscribers share a topic by, from `.topic()` */
+  topicKey?: (variables: unknown) => unknown;
 }
 
 /** Mapping from URL path prefix to group name + endpoint resolver */

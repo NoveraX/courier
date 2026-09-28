@@ -112,6 +112,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
       getScenarioState: () => scenarioState,
       allowedOrigins: config?.ws?.allowedOrigins,
       maxPayload: config?.ws?.maxPayload,
+      hooks: requestHooks,
     },
     config?.strictPort,
   );

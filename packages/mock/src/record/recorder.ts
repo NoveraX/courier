@@ -1,153 +1,129 @@
-import type { ExecuteBackend, TypedClient } from "@noverax/courier";
-import { buildClientProxy } from "@noverax/courier";
-import type { DefinedApi } from "@noverax/courier/define";
+import type { ExecuteBackend, HttpResponse, InferClient } from "@noverax/courier";
+import { buildClientProxy, HTTPError } from "@noverax/courier";
+import type { AnyDefinedApi } from "@noverax/courier/define";
 
+import { RecorderError } from "./errors";
 import type { Fixture } from "./fixture";
-import { sanitizeFixture } from "./fixture";
-import type { HarLog } from "./har-format";
-import { createHarEntry, createHarLog } from "./har-format";
+import { fixturesToHar, sanitizeFixture } from "./fixture";
+import { findFixture, replayAnswer } from "./match-fixture";
+import type { RecorderClient, RecorderConfig } from "./recorder-types";
+import type { RecordingTransport } from "./recording-transport";
+import { createRecordingTransport } from "./recording-transport";
 
-/** Recording mode (inspired by Polly.js) */
-export type RecordMode = "record" | "replay" | "passthrough" | "record-missing";
-
-/** Configuration for the recorder */
-export interface RecorderConfig {
-  /** Recording mode (default: "record") */
-  mode?: RecordMode;
-  /** Target base URL to proxy requests to */
-  targetUrl: string;
-  /** Filter which endpoints to record */
-  filter?: (group: string, method: string) => boolean;
-  /** Sanitize sensitive data before saving */
-  sanitize?: (data: unknown) => unknown;
-}
-
-/** Recorder client that captures real API responses */
-export interface RecorderClient<TApi extends DefinedApi<any>> {
-  /** Real client that also records responses */
-  client: TypedClient<TApi>;
-  /** Get recorded fixtures */
-  getFixtures(): Fixture[];
-  /** Get recordings in HAR format */
-  toHar(): HarLog;
-  /** Clear recorded fixtures */
-  clear(): void;
-}
+export type { RecorderClient, RecorderConfig, RecordMode } from "./recorder-types";
 
 /**
- * Create a recording client that proxies to a real API and captures responses.
+ * Create a client that calls a real API and records its responses.
  *
+ * The calls go to the source's endpoints at `targetUrl` — or at the
+ * source's own `baseURL` — through the same executor `createCaller` uses,
+ * or through a Courier proxy when `proxy` is set. Each response is recorded
+ * as a fixture, a failed one too, and the call answers as a real client's
+ * does: with the data, or rejecting with the `HTTPError` carrying the
+ * status and body.
+ *
+ * @param config The source, where to call it, and the recording mode
+ * @returns The recording client, and its recordings
  * @example
  * ```ts
- * const recorder = createRecorder<typeof api>({
- *   targetUrl: "https://api.example.com",
+ * const recorder = createRecorder({
+ *   source: api,
+ *   targetUrl: "https://staging.example.com",
  *   sanitize: (data) => redactTokens(data),
  * });
  *
- * await recorder.client.users.getAll(); // hits real API, records response
+ * await recorder.client.users.getAll(); // hits the API, records the response
  * const har = recorder.toHar();         // get HAR for saving
  * ```
  */
-export function createRecorder<TApi extends DefinedApi<any>>(
-  config: RecorderConfig,
-): RecorderClient<TApi> {
+export function createRecorder<TSource extends AnyDefinedApi>(
+  config: RecorderConfig<TSource>,
+): RecorderClient<TSource> {
   const fixtures: Fixture[] = [];
-  const baseUrl = config.targetUrl.replace(/\/$/, "");
+  const transport = createRecordingTransport(config);
+  const mode = config.mode ?? "record";
+  const recorded = config.fixtures ?? [];
 
-  const backend: ExecuteBackend = async (group, method, variables) => {
+  const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
     if (config.filter && !config.filter(group, method)) {
-      throw new Error(`[courier-mock/recorder] Endpoint "${group}.${method}" excluded by filter`);
+      throw new RecorderError("ENDPOINT_EXCLUDED", group, method, variables);
     }
-
-    const start = performance.now();
-    const url = `${baseUrl}/api/request`;
-    const body = JSON.stringify({ group, method, variables });
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-
-    const responseText = await response.text();
-    const duration = Math.round(performance.now() - start);
-    const data = safeJsonParse(responseText);
-
-    const responseHeaders: Record<string, string> = {};
-    response.headers.forEach((value, key) => {
-      responseHeaders[key] = value;
-    });
-
-    let fixture: Fixture = {
-      group,
-      method,
-      variables,
-      response: {
-        status: response.status,
-        data,
-        headers: responseHeaders,
-      },
-      duration,
-      recordedAt: new Date().toISOString(),
-    };
-
-    if (config.sanitize) {
-      fixture = sanitizeFixture(fixture, config.sanitize);
+    if (mode === "replay" || mode === "record-missing") {
+      const fixture = findFixture(recorded, group, method, variables);
+      if (fixture) return replayAnswer(fixture, raw);
+      if (mode === "replay")
+        throw new RecorderError("RECORDING_NOT_FOUND", group, method, variables);
     }
-
-    fixtures.push(fixture);
-
-    if (!response.ok) {
-      throw new Error(`[courier-mock/recorder] ${group}.${method} returned ${response.status}`);
+    const call = { group, method, variables };
+    const response = await callAndCapture(transport, call, options);
+    if (mode !== "passthrough" && response.status > 0) {
+      const fixture = fixtureOf(transport, call, response);
+      fixtures.push(config.sanitize ? sanitizeFixture(fixture, config.sanitize) : fixture);
     }
-
-    return data;
+    if (response.error) throw response.error;
+    return raw ? response : response.data;
   };
 
   return {
-    client: buildClientProxy(backend) as TypedClient<TApi>,
-
-    getFixtures() {
-      return [...fixtures];
-    },
-
-    toHar() {
-      const har = createHarLog();
-      for (const fixture of fixtures) {
-        har.log.entries.push(
-          createHarEntry({
-            group: fixture.group,
-            method: fixture.method,
-            variables: fixture.variables,
-            url: `${baseUrl}/api/request`,
-            httpMethod: "POST",
-            requestHeaders: { "Content-Type": "application/json" },
-            requestBody: JSON.stringify({
-              group: fixture.group,
-              method: fixture.method,
-              variables: fixture.variables,
-            }),
-            status: fixture.response.status,
-            statusText: fixture.response.status === 200 ? "OK" : "Error",
-            responseHeaders: fixture.response.headers,
-            responseBody: JSON.stringify(fixture.response.data),
-            duration: fixture.duration,
-          }),
-        );
-      }
-      return har;
-    },
-
+    client: recordingClient<TSource>(backend),
+    getFixtures: () => [...fixtures],
+    toHar: () => fixturesToHar(fixtures),
     clear() {
       fixtures.length = 0;
     },
   };
 }
 
-function safeJsonParse(text: string): unknown {
+/* The proxy answers any member path, so it is the source's client by
+   construction; the overload gives it that type, as `createCaller`'s do. */
+function recordingClient<TSource extends AnyDefinedApi>(
+  backend: ExecuteBackend,
+): InferClient<TSource>;
+function recordingClient(backend: ExecuteBackend): unknown {
+  return buildClientProxy(backend);
+}
+
+interface Call {
+  group: string;
+  method: string;
+  variables: unknown;
+}
+
+interface Captured extends HttpResponse {
+  /** The error a failed call rejects with, after it is recorded */
+  error?: HTTPError;
+  duration: number;
+  startedAt: string;
+}
+
+async function callAndCapture(
+  transport: RecordingTransport,
+  call: Call,
+  options: Record<string, unknown>,
+): Promise<Captured> {
+  const startedAt = new Date().toISOString();
+  const start = performance.now();
+  const took = () => Math.round(performance.now() - start);
   try {
-    return JSON.parse(text);
-  } catch {
-    return text;
+    const response = await transport.call(call.group, call.method, call.variables, options);
+    return { ...response, duration: took(), startedAt };
+  } catch (error) {
+    if (!(error instanceof HTTPError)) throw error;
+    const { status, headers, data } = error;
+    return { status, headers, data, error, duration: took(), startedAt };
   }
+}
+
+function fixtureOf(transport: RecordingTransport, call: Call, response: Captured): Fixture {
+  return {
+    ...call,
+    request: transport.describe(call.group, call.method, call.variables),
+    response: {
+      status: response.status,
+      data: response.data,
+      headers: Object.fromEntries(response.headers),
+    },
+    duration: response.duration,
+    recordedAt: response.startedAt,
+  };
 }

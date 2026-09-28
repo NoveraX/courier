@@ -22,6 +22,7 @@ export type {
   HarLog,
   RecorderClient,
   RecorderConfig,
+  RecorderErrorCode,
   RecordMode,
 } from "./record";
 export {
@@ -29,6 +30,7 @@ export {
   diffFixtures,
   fixturesToHar,
   harToFixtures,
+  RecorderError,
   replayFixtures,
   replayHar,
   sanitizeFixture,

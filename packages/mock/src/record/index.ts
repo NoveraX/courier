@@ -1,5 +1,7 @@
 export type { FieldChange, FixtureDiff } from "./diff";
 export { diffFixtures } from "./diff";
+export type { RecorderErrorCode } from "./errors";
+export { RecorderError } from "./errors";
 export type { Fixture } from "./fixture";
 export { fixturesToHar, harToFixtures, sanitizeFixture } from "./fixture";
 export type { HarEntry, HarLog } from "./har-format";

@@ -116,6 +116,24 @@ const all = await client.users.getAll() // three users
 history.length // 1
 ```
 
+### Recording a real API
+
+`createRecorder` calls a real backend from the API's definition and records each response as a fixture — a failed one too. Its client answers as the source's own client does: the data, or an `HTTPError` with the status and body.
+
+```ts
+import { createMockClient, createRecorder, replayFixtures } from "@noverax/courier-mock/testing"
+
+const recorder = createRecorder({ source: api, targetUrl: "https://staging.example.com" })
+await recorder.client.users.getAll()
+
+const fixtures = recorder.getFixtures() // or recorder.toHar()
+const { client: replayed } = createMockClient<typeof api>({ scenario: replayFixtures(fixtures) })
+```
+
+- The calls go to each endpoint's own method and path, at `targetUrl` or at the source's `baseURL`. To record through a Courier proxy — `createCourierServer`, or an app with Courier's handler — pass `proxy: { url, source }`: the proxy route's URL and the name the source has there.
+- `mode` is `"record"` by default. `"passthrough"` calls the backend and records nothing; `"replay"` answers from the `fixtures` given, without the network, and rejects a call it has no recording of; `"record-missing"` replays what `fixtures` has and records the rest.
+- `sanitize` rewrites what is recorded, not what the call returns; `filter` names the endpoints the recorder may call.
+
 <br />
 
 ## Exports

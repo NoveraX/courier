@@ -14,6 +14,8 @@ export interface SnippetRequest {
   development: boolean;
   /** The specifier the snippet imports the runtime from; see {@link generateConnectSnippet}. */
   runtime?: string;
+  /** Where the search for the config starts; see {@link loadStudioUrl}. */
+  projectRoot?: string;
 }
 
 /**
@@ -39,8 +41,9 @@ export async function resolveSnippet({
   options,
   development,
   runtime = RUNTIME_SPECIFIER,
+  projectRoot,
 }: SnippetRequest): Promise<string | null> {
   if (!isInjectionEnabled(options, development)) return null;
-  const studioUrl = await loadStudioUrl();
+  const studioUrl = await loadStudioUrl(projectRoot);
   return generateConnectSnippet({ framework, studioUrl }, runtime);
 }

@@ -65,6 +65,14 @@ describe("loadStudioUrl", () => {
     expect(output.join("")).not.toContain("WARN");
   });
 
+  it("reads the nearest config above the directory it starts from", async () => {
+    const root = project(CONFIG_ON_7123);
+    const nested = join(root, "src");
+    mkdirSync(nested);
+
+    await expect(loadStudioUrl(nested)).resolves.toBe("http://localhost:7123");
+  });
+
   it("reads the address without evaluating courier.mocks.ts", async () => {
     const root = project(CONFIG_ON_7123);
     const marker = join(root, "mocks-evaluated");

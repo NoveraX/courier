@@ -37,7 +37,7 @@ Studio is a development tool, so it is a dev dependency. `@noverax/courier-studi
 npx courier-studio
 ```
 
-Studio listens on `http://localhost:6280`, or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, copies of the files it replaced or removed, saved sessions — in `.courier/`, which ignores itself in git.
+Studio listens on `http://localhost:6280`, or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it: a server runtime reads the nearest config at or above its working directory, and a build plugin the nearest at or above Vite's root — or, for webpack, esbuild and Rollup, the working directory. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, copies of the files it replaced or removed, saved sessions — in `.courier/`, which ignores itself in git.
 
 Studio loads `courier.config.ts` from the project root, with the `courier.mocks.ts` beside it, and loads them again whenever either one, or a module either imports, is saved: see [How Studio loads the project](#how-studio-loads-the-project).
 

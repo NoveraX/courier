@@ -8,12 +8,17 @@ import {
 
 const log = createLogger("StudioPlugin");
 
-/** Per-cwd cache so each plugin instance only walks the filesystem once */
+/** Per-directory cache so each plugin instance only walks the filesystem once */
 const cache = new Map<string, Promise<string>>();
 
 /**
- * Resolve the Studio dev-server URL for a given project root by reading
- * `studio.host` and `studio.port` from `courier.config.ts`.
+ * Resolve the Studio dev-server URL for a project by reading `studio.host`
+ * and `studio.port` from the nearest `courier.config.*` at or above `from` —
+ * the same walk a server's `attachRuntime()` makes from its working
+ * directory, so the browser and the server dial the same Studio. A Vite
+ * plugin starts it from Vite's root: `vite apps/web` run from above the app,
+ * or a `root` naming the app's source directory, still finds the app's
+ * config.
  *
  * Falls back to the shared default address when the config cannot say —
  * build plugins must always be able to emit a snippet so the dev experience
@@ -21,7 +26,7 @@ const cache = new Map<string, Promise<string>>();
  * quietly; a config that exists and fails to load is worth a warning, since
  * the fallback may then be the wrong address.
  *
- * The cache is keyed by `projectRoot`, so changing `studio.port` in
+ * The cache is keyed by `from`, so changing `studio.port` in
  * `courier.config.ts` requires restarting the bundler (consistent with how
  * every other build-plugin option behaves).
  *
@@ -33,19 +38,19 @@ const cache = new Map<string, Promise<string>>();
  * `node_modules` and keeps its own there, through a cache it drops once the
  * read ends: the bundler reads each root once.
  *
- * @param projectRoot - The directory holding `courier.config.*` (default:
- *   the working directory)
+ * @param from - The directory the search for `courier.config.*` starts in
+ *   (default: the working directory)
  * @returns The URL the browser reaches Studio at
  * @example
  * ```ts
- * const studioUrl = await loadStudioUrl(process.cwd());
+ * const studioUrl = await loadStudioUrl(viteConfig.root);
  * ```
  */
-export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<string> {
-  const cached = cache.get(projectRoot);
+export function loadStudioUrl(from: string = process.cwd()): Promise<string> {
+  const cached = cache.get(from);
   if (cached) return cached;
 
-  const promise = readStudioUrl(projectRoot).catch((err: unknown) => {
+  const promise = readStudioUrl(from).catch((err: unknown) => {
     log.warn(
       `courier.config could not be loaded, so Studio is expected at ${STUDIO_DEFAULT_URL}`,
       err,
@@ -53,20 +58,18 @@ export function loadStudioUrl(projectRoot: string = process.cwd()): Promise<stri
     return STUDIO_DEFAULT_URL;
   });
 
-  cache.set(projectRoot, promise);
+  cache.set(from, promise);
   return promise;
 }
 
-async function readStudioUrl(projectRoot: string): Promise<string> {
+async function readStudioUrl(from: string): Promise<string> {
   const { createTransformCache, findTransformCacheDirectory, loadCourierConfig } = await import(
     "@noverax/courier-studio-core/config"
   );
-  const transformCache = createTransformCache({
-    directory: findTransformCacheDirectory(projectRoot),
-  });
-  const loaded = await loadCourierConfig({ cwd: projectRoot, requireAtCwd: true, transformCache });
+  const transformCache = createTransformCache({ directory: findTransformCacheDirectory(from) });
+  const loaded = await loadCourierConfig({ cwd: from, transformCache });
   if (loaded === null) {
-    log.debug(`No courier.config in ${projectRoot}; Studio is expected at ${STUDIO_DEFAULT_URL}`);
+    log.debug(`No courier.config at or above ${from}; Studio is expected at ${STUDIO_DEFAULT_URL}`);
     return STUDIO_DEFAULT_URL;
   }
   const studio = loaded.config.studio ?? {};

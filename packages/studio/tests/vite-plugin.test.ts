@@ -6,6 +6,10 @@
  * so the browser was handed the bare `@noverax/courier-studio-core/runtime`
  * and refused to load it; frameworks that render their own HTML — SvelteKit,
  * React Router, SolidStart — never ran the hook at all.
+ *
+ * It read courier.config from the working directory, so `vite apps/web`, run
+ * from above the app, sent the browser to the default Studio address instead
+ * of the one the app's config names.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -23,13 +27,14 @@ afterEach(async () => {
 });
 
 /** A project under the repository's node_modules, so its config resolves the workspace packages. */
-function project(): string {
+function project(config?: string): string {
   const cache = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
   mkdirSync(cache, { recursive: true });
   const dir = mkdtempSync(join(cache, "vite-"));
   cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
   writeFileSync(join(dir, "index.html"), '<script type="module" src="/main.js"></script>\n');
   writeFileSync(join(dir, "main.js"), 'console.log("app");\n');
+  if (config !== undefined) writeFileSync(join(dir, "courier.config.ts"), config);
   return dir;
 }
 
@@ -62,6 +67,28 @@ describe("courierStudio() for Vite", () => {
     expect(snippet?.code).toContain('attachRuntime("vite-browser")');
     expect(snippet?.code).not.toContain('from "@noverax/courier-studio-core/runtime"');
     expect(snippet?.code).toMatch(/from "\/[^"]*courier-studio-core[^"]*"/);
+  });
+
+  it("connects to the Studio the config in Vite's root names, wherever Vite was started", async () => {
+    const root = project("export default { studio: { port: 7125 } };\n");
+    const server = await serve(root);
+
+    const snippet = await server.transformRequest("virtual:courier-studio-init");
+
+    expect(process.cwd()).not.toBe(root);
+    expect(snippet?.code).toContain('"http://localhost:7125"');
+  });
+
+  it("finds the config above Vite's root, as when root names the app's source directory", async () => {
+    const app = project("export default { studio: { port: 7126 } };\n");
+    const root = join(app, "src");
+    mkdirSync(root);
+    writeFileSync(join(root, "index.html"), '<script type="module" src="/main.js"></script>\n');
+    const server = await serve(root);
+
+    const snippet = await server.transformRequest("virtual:courier-studio-init");
+
+    expect(snippet?.code).toContain('"http://localhost:7126"');
   });
 
   it("injects nothing when disabled", async () => {

@@ -5,8 +5,25 @@ import { percentile, extractSparkline } from "./kpi-helpers";
 const TREND_THRESHOLD = 0.1;
 const SPARKLINE_BUCKETS = 12;
 
+/**
+ * The headline figures of the Analytics view, with their trends and
+ * sparklines.
+ *
+ * @param requests - The captured requests, in any order
+ * @returns The figures; trends compare the older half of the completed
+ *   requests with the newer, and sparklines run oldest to newest
+ *
+ * @example
+ * ```ts
+ * const kpis = computeKPIs(useStudioStore.getState().requests);
+ * ```
+ */
 export function computeKPIs(requests: RequestEntry[]): KPIData {
-  const completed = requests.filter((r) => r.status !== "pending");
+  /* The store holds the newest request first; trends and sparklines need
+     time to run forward. */
+  const completed = requests
+    .filter((r) => r.status !== "pending")
+    .sort((a, b) => a.startedAt - b.startedAt);
   const successes = completed.filter((r) => r.status === "success");
   const errors = completed.filter(
     (r) => r.status === "error" || r.status === "validation_error",

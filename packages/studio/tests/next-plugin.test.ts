@@ -7,6 +7,8 @@
  * as plain lists and paths, which the wrapper did not recognise, so it added
  * nothing.
  */
+import { createRequire } from "node:module";
+import { dirname } from "node:path";
 import type { NextConfig } from "next";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -73,5 +75,54 @@ describe("withCourierStudio() for Next.js", () => {
     await nextClientEntries(config, { main: "./next-dev.js" });
 
     expect(own).toHaveBeenCalledOnce();
+  });
+});
+
+type External = (
+  data: { context?: string; request?: string },
+  callback: (error?: Error | null, result?: string) => void,
+) => void;
+
+/** Runs a wrapped config's webpack hook the way Next.js does for a server compile. */
+function nextServerExternals(config: NextConfig, nextRuntime: "nodejs" | "edge"): unknown[] {
+  const webpackConfig: { externals: unknown[] } = { externals: ["next-own"] };
+  const hook = config.webpack as (
+    c: typeof webpackConfig,
+    ctx: { isServer: boolean; nextRuntime: string },
+  ) => unknown;
+  hook(webpackConfig, { isServer: true, nextRuntime });
+  return webpackConfig.externals;
+}
+
+/** What an externals function answers for `request` imported from `context`. */
+function answer(external: External, request: string, context: string): Promise<string | undefined> {
+  return new Promise((resolve, reject) => {
+    external({ request, context }, (error, result) => (error ? reject(error) : resolve(result)));
+  });
+}
+
+describe("withCourierStudio() for a Next.js server compiled by webpack", () => {
+  /* Where engine.io-client, which Studio's socket runs on, imports ws from. */
+  const engineDir = dirname(
+    createRequire(createRequire(import.meta.url).resolve("socket.io-client")).resolve("engine.io-client"),
+  );
+
+  it("loads ws as installed rather than bundling it", async () => {
+    vi.stubEnv("TURBOPACK", "");
+    const externals = nextServerExternals(withCourierStudio()({}), "nodejs");
+    const added = externals.find((item): item is External => typeof item === "function");
+    if (!added) throw new Error("no externals function added");
+
+    expect(externals[0]).toBe("next-own");
+    expect(await answer(added, "ws", engineDir)).toBe(
+      `commonjs ${createRequire(`${engineDir}/`).resolve("ws")}`,
+    );
+    expect(await answer(added, "react", engineDir)).toBeUndefined();
+  });
+
+  it("leaves the edge server's externals alone", () => {
+    vi.stubEnv("TURBOPACK", "");
+
+    expect(nextServerExternals(withCourierStudio()({}), "edge")).toEqual(["next-own"]);
   });
 });

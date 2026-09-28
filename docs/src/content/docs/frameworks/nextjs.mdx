@@ -39,7 +39,7 @@ if (process.env.NODE_ENV === "development") {
 }
 ```
 
-A browser bundle cannot read `courier.config.ts`: if Studio is not at its default address, add `env: { COURIER_STUDIO_URL: "http://localhost:7000" }` to `next.config.ts`. Under webpack, `withCourierStudio()` from `@noverax/courier-studio/next` connects the browser without the file.
+A browser bundle cannot read `courier.config.ts`: if Studio is not at its default address, add `env: { COURIER_STUDIO_URL: "http://localhost:7000" }` to `next.config.ts`. Under webpack, `withCourierStudio()` from `@noverax/courier-studio/next` connects the browser without the file, and keeps `ws`, which the server's Studio connection runs on, out of the server bundle; bundled, `ws` fails on every frame of 48 bytes or more and the server never reaches Studio. Under webpack without the wrapper, add `serverExternalPackages: ["ws"]` to `next.config.ts`.
 
 ## Installation
 

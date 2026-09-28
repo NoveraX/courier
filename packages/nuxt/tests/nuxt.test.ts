@@ -108,12 +108,13 @@ describe("courierHandler", () => {
 });
 
 describe("what the handler tells an attached Studio", () => {
-  it("names on its first request the sources it serves", async () => {
-    resetAnnouncements();
+  it("names the sources it serves once, as soon as they are registered", async () => {
     const { endpoint: ping } = courier();
     registerSources({
       api: defineApi({ baseURL: "https://upstream.example", endpoints: { ping: ping.get("ping") } }),
     });
+    /* Handlers the earlier cases made announced as the sources came; only this one is under test. */
+    resetAnnouncements();
     vi.stubGlobal("fetch", async () => Response.json({ ok: true }));
     const announced: BufferedAnnouncement[] = [];
     const stop = consumeAnnouncements((entry) => announced.push(entry));

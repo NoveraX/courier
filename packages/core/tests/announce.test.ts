@@ -117,6 +117,29 @@ describe("announceWhenRegistered", () => {
     );
   });
 
+  it("announces as soon as sources are registered, before any request", () => {
+    _resetSourcesForTests();
+    const listener = vi.fn();
+    consumeAnnouncements(listener);
+    announceWhenRegistered({ transports: ["http"], framework: "express" });
+
+    registerSources({ api: fakeApi });
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({ transports: ["http"], framework: "express", sources: [fakeApi] }),
+    );
+  });
+
+  it("announces at once when the sources are already registered", () => {
+    registerSources({ api: fakeApi });
+    const listener = vi.fn();
+    consumeAnnouncements(listener);
+
+    announceWhenRegistered({ transports: ["sse"] });
+
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({ transports: ["sse"] }));
+  });
+
   it("announces once", () => {
     registerSources({ api: fakeApi });
     const announce = announceWhenRegistered({ transports: ["http"] });

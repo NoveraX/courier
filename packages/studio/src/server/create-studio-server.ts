@@ -28,9 +28,6 @@ import { createStudioOriginPolicy } from "./studio-origin";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
 
-/** Vite dev-server origin used by the Studio UI during local development */
-const STUDIO_UI_DEV_ORIGIN = "http://localhost:4382";
-
 /** Where mock-server port allocation starts when nothing says otherwise. */
 const DEFAULT_MOCK_BASE_PORT = 7001;
 
@@ -53,7 +50,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const httpServer = createServer(app);
   const policy = createStudioOriginPolicy({
     bindHost: host,
-    extraOrigins: [STUDIO_UI_DEV_ORIGIN, ...extraCorsOrigins],
+    /* The UI's own dev server proxies to Studio under its own host, which Studio takes as its page. */
+    extraOrigins: extraCorsOrigins,
   });
   const { io, uiNamespace, runtimeNamespace } = createStudioSockets(httpServer, policy);
 

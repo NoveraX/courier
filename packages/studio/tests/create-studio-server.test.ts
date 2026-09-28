@@ -10,6 +10,7 @@
  * node_modules.
  */
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { request as httpRequest } from "node:http";
 import { createServer as createNetServer, type Server } from "node:net";
 import { join } from "node:path";
 import { createTransformCache, type TransformCache } from "@noverax/courier-studio-core/config";
@@ -143,6 +144,56 @@ describe("Studio on a port the system picked", () => {
       body: "{}",
     });
     expect(reply.status).not.toBe(403);
+  });
+});
+
+describe("a page served on another local port", () => {
+  /* Port 4382 is where the Studio UI's own dev server runs; any other local app may run there too. */
+  const DEV_ORIGIN = "http://localhost:4382";
+
+  it("is not taken as the Studio UI by its API", async () => {
+    const { url } = await started(project());
+
+    const reply = await fetch(`${url}/api/sessions/list`, {
+      method: "POST",
+      headers: { origin: DEV_ORIGIN, "content-type": "application/json" },
+      body: "{}",
+    });
+
+    expect(reply.status).toBe(403);
+  });
+
+  it("is not taken as the Studio UI by its sockets", async () => {
+    const { url } = await started(project(), await freePort());
+
+    expect(await connects(url, "/ui", DEV_ORIGIN)).toBe(false);
+  });
+
+  it("is, when a dev server proxies it to Studio under its own host", async () => {
+    const { url } = await started(project());
+    const { port } = new URL(url);
+
+    /* What the UI's dev server forwards: the page's Origin, and the Host the page called. */
+    const status = await new Promise<number>((resolve, reject) => {
+      const req = httpRequest(
+        {
+          host: "127.0.0.1",
+          port,
+          method: "POST",
+          path: "/api/sessions/list",
+          setHost: false,
+          headers: { host: "localhost:4382", origin: DEV_ORIGIN, "content-type": "application/json" },
+        },
+        (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        },
+      );
+      req.on("error", reject);
+      req.end("{}");
+    });
+
+    expect(status).toBe(200);
   });
 });
 

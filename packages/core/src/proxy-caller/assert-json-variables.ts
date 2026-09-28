@@ -4,7 +4,7 @@ import { ConfigurationError } from "../errors";
  * Refuse variables that would not reach the proxy intact.
  *
  * A proxy call's variables travel as JSON, which turns a Uint8Array into an
- * object of numbered keys and an ArrayBuffer or a Blob into `{}`. An endpoint
+ * object of numbered keys and an ArrayBuffer, a Blob or a stream into `{}`. An endpoint
  * that sent such a variable as its body sent "[object Object]" upstream,
  * where the same call in direct mode sent the bytes. Binary data belongs in a
  * FormData, which the proxy carries as multipart.
@@ -28,14 +28,22 @@ export function assertJsonVariables(variables: unknown): void {
 }
 
 function findBinary(value: unknown, path: string, seen: Set<object>): string | undefined {
-  if (value instanceof Blob || value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
-    return path;
-  }
+  if (isBinary(value)) return path;
   if (typeof value !== "object" || value === null || seen.has(value)) return undefined;
   seen.add(value);
   for (const [key, child] of Object.entries(value)) {
-    const found = findBinary(child, `${path}.${key}`, seen);
+    const at = Array.isArray(value) ? `${path}[${key}]` : `${path}.${key}`;
+    const found = findBinary(child, at, seen);
     if (found !== undefined) return found;
   }
   return undefined;
+}
+
+function isBinary(value: unknown): boolean {
+  return (
+    value instanceof Blob ||
+    value instanceof ArrayBuffer ||
+    ArrayBuffer.isView(value) ||
+    (typeof ReadableStream !== "undefined" && value instanceof ReadableStream)
+  );
 }

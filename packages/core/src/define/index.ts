@@ -9,11 +9,19 @@ export type {
   WireShapeAt,
 } from "./boundary-types";
 export type {
+  ChannelAddressed,
   ChannelBuilder,
+  ChannelDuplexHandler,
+  ChannelImplementation,
+  ChannelPushHandler,
   Courier,
   CourierBaseConfig,
+  HttpAddressed,
   HttpBuilder,
+  NeutralMethods,
+  StreamAddressed,
   StreamBuilder,
+  StreamHandler,
 } from "./builder-types";
 export type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 export { courier } from "./courier";

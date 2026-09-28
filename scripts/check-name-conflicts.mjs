@@ -3,15 +3,12 @@
 /**
  * Detect file+directory name conflicts inside `packages/* /src` trees.
  *
- * A conflict is `foo.ts` (or `.tsx`) sitting next to a `foo/index.ts`
- * file under the same parent. With `moduleResolution: "bundler"`, both
- * targets resolve from a bare `./foo` import and the winner depends on
- * resolver/tooling order — a silent footgun.
- *
- * Sibling directories WITHOUT an `index.ts` are intentional split points
- * (e.g. `adapter.ts` + `adapter/`, `client.ts` + `client/`) and are not
- * flagged: their contents are imported via explicit subpaths and there
- * is no bare-import ambiguity.
+ * A conflict is `foo.ts` (or `.tsx`) sitting next to a `foo/` directory
+ * under the same parent. With an `index.ts` in the directory, a bare `./foo`
+ * import resolves to either and the winner depends on the resolver; without
+ * one, the module and the directory holding its parts still read as one
+ * thing under two names. The directory form is the only one: its `index.ts`
+ * re-exports what the file did.
  *
  * Exits 1 with a list of conflicts when found.
  */
@@ -54,21 +51,7 @@ export function findConflicts(dir) {
   }
 
   for (const [baseName, fileName] of fileBaseNames) {
-    if (!dirNames.has(baseName)) continue;
-    // Only flag when the sibling directory has an index.ts/tsx — that is
-    // the actual bare-import resolution-clash pattern. Sibling dirs that
-    // expose their files only via explicit subpaths are intentional.
-    const hasIndex = SOURCE_EXTENSIONS.some((ext) => {
-      try {
-        statSync(join(dir, baseName, `index${ext}`));
-        return true;
-      } catch {
-        return false;
-      }
-    });
-    if (hasIndex) {
-      conflicts.push({ dir, file: fileName, conflictingDir: baseName });
-    }
+    if (dirNames.has(baseName)) conflicts.push({ dir, file: fileName, conflictingDir: baseName });
   }
 
   for (const name of dirNames) {
@@ -90,13 +73,15 @@ function main() {
   const allConflicts = [];
   for (const pkg of packages) {
     if (!pkg.isDirectory()) continue;
-    const srcDir = join(PACKAGES_DIR, pkg.name, "src");
-    try {
-      statSync(srcDir);
-    } catch {
-      continue;
+    /* A package's sources, and the Studio UI's, which sits one level down. */
+    for (const srcDir of [join(PACKAGES_DIR, pkg.name, "src"), join(PACKAGES_DIR, pkg.name, "ui", "src")]) {
+      try {
+        statSync(srcDir);
+      } catch {
+        continue;
+      }
+      allConflicts.push(...findConflicts(srcDir));
     }
-    allConflicts.push(...findConflicts(srcDir));
   }
 
   if (allConflicts.length === 0) {

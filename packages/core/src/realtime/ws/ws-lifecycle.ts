@@ -42,6 +42,9 @@ export interface LifecycleContext {
   };
 }
 
+/** The close code of a socket closed over a frame larger than the server reads. */
+const MESSAGE_TOO_BIG = 1009;
+
 /** What handling a closed socket reads of its close event. */
 type SocketClosure = Pick<CloseEvent, "code" | "reason">;
 
@@ -135,11 +138,27 @@ function handleClose(ctx: LifecycleContext, ev: SocketClosure): void {
     if (!ctx.refs.closed) ctx.topics.endAll(closeFailure(ev));
     return;
   }
+  if (ev.code === MESSAGE_TOO_BIG) tellOfOversizedMessage(ctx, ev);
   ctx.state.set("reconnecting");
   clearReconnectTimer(ctx);
   const delay = calculateBackoff(ctx.refs.attempt++, ctx.config.backoff);
   ctx.log.info(`Reconnecting in ${delay}ms (attempt ${ctx.refs.attempt})`);
   ctx.refs.reconnectTimer = setTimeout(() => connect(ctx), delay);
+}
+
+/**
+ * The server closed the socket over one message larger than it reads. That
+ * message is gone and the rest may go on, so the connection reconnects —
+ * it used to end every subscription on it — and each subscription hears
+ * why its socket closed under it.
+ */
+function tellOfOversizedMessage(ctx: LifecycleContext, ev: SocketClosure): void {
+  const error = fromErrorCode(
+    MESSAGE_TOO_BIG,
+    ev.reason || "A message was too large for the server",
+  );
+  ctx.log.warn(`The server closed the connection over a message too large: ${error.message}`);
+  for (const topic of ctx.topics.topics()) ctx.topics.fail(topic, error);
 }
 
 /** Why a socket closed for good, as its subscriptions read it; none for a normal close. */

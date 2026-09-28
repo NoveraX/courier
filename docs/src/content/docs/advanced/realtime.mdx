@@ -50,6 +50,12 @@ On one connection, subscriptions whose key is equal are one subscription: the ne
 
 A stream's events, a push channel's values and what a channel's handlers pass to `ctx.send()` and `ctx.broadcast()` are held to the endpoint's `.response()` schema before they leave the server, and the client receives the schema's output — defaults filled in, transforms applied. A channel's `ctx.send()` or `ctx.broadcast()` of a value that does not match throws a `RealtimeValidationError` where it was called and sends nothing; a channel's response schema must validate synchronously. [Validation](/docs/validation/standard-schema#channels) has the details.
 
+## Message size
+
+A server accepts messages up to its `maxMessageSize`, 64 KB by default, and answers a larger one with a `4413` error on a connection that stays open. The client does not send one: a channel's `send` of a message whose encoded frame is longer than its own `maxMessageSize`, also 64 KB, puts nothing on the wire, and the channel's `error` event reads code `4413`. The channel and everything else on the socket go on.
+
+A server whose WebSocket layer closes the socket over a frame too large to read, with close code `1009`, loses that one message only: the client reconnects, and each channel on the socket hears a `1009` error.
+
 ## Next steps
 
 - [Standalone Server](/docs/deployment/standalone-server) — serve streams and channels from their own process

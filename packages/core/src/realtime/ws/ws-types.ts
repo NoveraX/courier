@@ -43,6 +43,12 @@ export interface WSConnectionConfig {
   onStatusChange?: (status: ConnectionStatus) => void;
   /** Max bufferedAmount before dropping sends (default 1MB) */
   maxBufferedAmount?: number;
+  /**
+   * Largest message sent, as the length of its encoded frame — the server's
+   * `maxMessageSize` (default 64 KB). A larger one is not sent: its topic
+   * hears a 4413 error, and the connection goes on.
+   */
+  maxMessageSize?: number;
   /** Request-response timeout in ms (default 30000) */
   requestTimeout?: number;
   /** WebSocket factory — override for testing */

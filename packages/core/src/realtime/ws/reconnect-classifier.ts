@@ -5,7 +5,6 @@ const FATAL_CODES: ReadonlySet<number> = new Set([
   1003, // unsupported data
   1007, // invalid frame payload
   1008, // policy violation
-  1009, // message too big
 ]);
 
 /**

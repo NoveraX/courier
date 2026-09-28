@@ -6,6 +6,7 @@ import {
   attachWebSocketUpgrade,
   DEFAULT_WS_PATH,
   discoverNodeAppOrigin,
+  wsFrameLimit,
 } from "@noverax/courier/node";
 
 /** Options for `courierWSAttach`: the WebSocket handler's, plus where it listens. */
@@ -54,7 +55,7 @@ export function courierWSAttach(
 
   const detach = attachWebSocketUpgrade(server, {
     path,
-    maxPayload: handlerOptions.maxMessageSize,
+    maxPayload: wsFrameLimit(handlerOptions.maxMessageSize),
     createServer: async (serverOptions) => new (await import("ws")).WebSocketServer(serverOptions),
     onRequest: (request) => {
       announce();

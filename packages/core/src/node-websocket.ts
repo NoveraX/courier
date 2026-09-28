@@ -14,6 +14,32 @@ export const DEFAULT_WS_PATH = "/api/ws";
 /** The largest WebSocket message, in bytes, a handler accepts unless told otherwise. */
 export const DEFAULT_WS_MAX_MESSAGE_SIZE: number = LIMITS.MAX_MESSAGE_SIZE;
 
+/** The frame limit when the message limit is no more than half of it (1 MiB). */
+const DEFAULT_WS_FRAME_LIMIT = 1_048_576;
+
+/**
+ * The largest WebSocket frame to read at all, for a handler that accepts
+ * messages up to `maxMessageSize`; `ws` closes the connection with 1009 on a
+ * bigger one, before buffering it.
+ *
+ * It used to equal the message limit, so a message over it closed the socket
+ * and ended every subscription on it — the handler's refusal of the one
+ * message, a 4413 error on a connection that stays open, was never reached.
+ * It now sits well above: 1 MiB, or twice `maxMessageSize` when that is larger.
+ *
+ * @param maxMessageSize - The handler's message limit, in bytes (default 64 KB)
+ * @returns The frame limit in bytes
+ *
+ * @example
+ * ```ts
+ * wsFrameLimit(); // 1_048_576
+ * wsFrameLimit(4_194_304); // 8_388_608
+ * ```
+ */
+export function wsFrameLimit(maxMessageSize: number = DEFAULT_WS_MAX_MESSAGE_SIZE): number {
+  return Math.max(DEFAULT_WS_FRAME_LIMIT, 2 * maxMessageSize);
+}
+
 /** The part of `ws`'s `WebSocketServer` this uses, so core does not depend on `ws`. */
 export interface UpgradeServer {
   handleUpgrade(
@@ -33,7 +59,10 @@ export interface WebSocketUpgradeOptions {
    * hosts nothing but Courier.
    */
   path: string | undefined;
-  /** Largest frame accepted, in bytes; `ws` refuses a larger one before buffering it. */
+  /**
+   * Largest frame accepted, in bytes; `ws` refuses a larger one before
+   * buffering it, closing the connection with 1009. Default `wsFrameLimit()`.
+   */
   maxPayload?: number;
   /** Builds the `ws` server, the first time an upgrade arrives. */
   createServer: (options: {
@@ -78,7 +107,7 @@ export function attachWebSocketUpgrade(
   server: Server,
   options: WebSocketUpgradeOptions,
 ): () => void {
-  const maxPayload = options.maxPayload ?? LIMITS.MAX_MESSAGE_SIZE;
+  const maxPayload = options.maxPayload ?? wsFrameLimit();
   const accepted = new Set<WebSocketLike>();
   let wss: Promise<UpgradeServer> | undefined;
 

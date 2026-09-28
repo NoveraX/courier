@@ -1,3 +1,4 @@
+import { LIMITS } from "../../adapter/limits";
 import { createLogger } from "../../logger";
 import { createConnectionState } from "../connection-state";
 import { createMessageQueue } from "./message-queue";
@@ -71,6 +72,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     pending,
     log,
     requestTimeout,
+    maxMessageSize: config.maxMessageSize ?? LIMITS.MAX_MESSAGE_SIZE,
     sendRaw,
   };
 

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
+import { ForbiddenError } from "@noverax/courier/realtime";
 import { createMockSSESubscription } from "@noverax/courier/testing";
 
 import { useComputedQuery } from "../src/hooks/use-computed-query";
@@ -131,5 +132,78 @@ describe("useComputedQuery", () => {
     await waitFor(() => {
       expect(subscribeFn).toHaveBeenCalledWith("chat", "live", { roomId: "abc" });
     });
+  });
+});
+
+describe("useComputedQuery's stream", () => {
+  const users = async () => [{ id: 1, name: "Alice" }];
+  const append = (current: unknown[] | undefined, event: { data: unknown }) => [
+    ...(current ?? []),
+    event.data,
+  ];
+
+  it("says through onStreamError why the stream failed, and the query keeps its data", async () => {
+    const onStreamError = vi.fn();
+    const subscribeFn: SubscribeFn = () =>
+      createMockSSESubscription(async function* () {
+        yield { data: { id: 2, name: "Bob" } };
+        throw new ForbiddenError("Not allowed to watch users");
+      });
+
+    const { result } = renderHook(
+      () =>
+        useComputedQuery(users, subscribeFn, ["api", "users", "getAll"], "users", {
+          subscriptionMethod: "stream",
+          mapper: append,
+          onStreamError,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(onStreamError).toHaveBeenCalledTimes(1));
+    expect(onStreamError.mock.calls[0]?.[0]).toBeInstanceOf(ForbiddenError);
+    expect(result.current.error).toBeNull();
+    await waitFor(() => expect(result.current.data).toHaveLength(2));
+  });
+
+  it("says through onStreamError that the stream could not be opened", async () => {
+    const onStreamError = vi.fn();
+    const subscribeFn: SubscribeFn = () => {
+      throw new Error("no stream here");
+    };
+
+    const { result } = renderHook(
+      () =>
+        useComputedQuery(users, subscribeFn, ["api", "users", "getAll"], "users", {
+          subscriptionMethod: "stream",
+          mapper: append,
+          onStreamError,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(onStreamError).toHaveBeenCalledWith(new Error("no stream here")));
+    await waitFor(() => expect(result.current.data).toEqual([{ id: 1, name: "Alice" }]));
+  });
+
+  it("reports the stream's status through onStreamStatusChange", async () => {
+    const onStreamStatusChange = vi.fn();
+    const subscribeFn: SubscribeFn = () =>
+      createMockSSESubscription(async function* () {
+        yield { data: { id: 2, name: "Bob" } };
+      });
+
+    renderHook(
+      () =>
+        useComputedQuery(users, subscribeFn, ["api", "users", "getAll"], "users", {
+          subscriptionMethod: "stream",
+          mapper: append,
+          onStreamStatusChange,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(onStreamStatusChange).toHaveBeenLastCalledWith("disconnected"));
+    expect(onStreamStatusChange).toHaveBeenCalledWith("connected");
   });
 });

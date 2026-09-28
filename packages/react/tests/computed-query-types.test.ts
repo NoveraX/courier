@@ -61,3 +61,26 @@ describe("useComputedQuery options", () => {
     expect(refused).toBeTypeOf("function");
   });
 });
+
+/**
+ * A stream that fails does not fail the query, so the query's result cannot
+ * say it did: the options name what hears of it.
+ */
+describe("useComputedQuery stream callbacks", () => {
+  const q = createQueryCaller(api);
+
+  it("hear the stream's failure as an Error and its status as a ConnectionStatus", () => {
+    function used(): void {
+      q.users.useComputedQuery("list", {
+        subscriptionMethod: "changes",
+        mapper: (current) => current ?? [],
+        onStreamError: (error) => expectTypeOf(error).toEqualTypeOf<Error>(),
+        onStreamStatusChange: (status) =>
+          expectTypeOf(status).toEqualTypeOf<"disconnected" | "connecting" | "connected" | "reconnecting">(),
+      });
+    }
+
+    expect(used).toBeTypeOf("function");
+  });
+});
+

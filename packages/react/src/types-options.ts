@@ -7,7 +7,7 @@
  */
 
 import type { CallOptions } from "@noverax/courier";
-import type { SSEEvent } from "@noverax/courier/realtime";
+import type { ConnectionStatus, SSEEvent } from "@noverax/courier/realtime";
 import type {
   InfiniteData,
   QueryKey,
@@ -112,4 +112,11 @@ export type CourierComputedQueryOptions<
   staleTime?: number;
   /** Per-request options for the HTTP query */
   requestOptions?: CallOptions;
+  /**
+   * Called when the stream fails or is refused, or cannot be opened at all;
+   * the query keeps its last data and goes on without live updates
+   */
+  onStreamError?: (error: Error) => void;
+  /** Called when the stream's connection status changes */
+  onStreamStatusChange?: (status: ConnectionStatus) => void;
 };

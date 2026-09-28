@@ -31,6 +31,8 @@ interface HeldEvents<TStreamData> {
  * before the query's first answer. Those are held and merged, in order, into
  * that answer before it is cached: merged into nothing, they would have made
  * the query succeed with the stream's events alone, and then been overwritten.
+ * A stream that fails, is refused or cannot be opened leaves the query as it
+ * is, and says so through `onStreamError`.
  *
  * @param queryFn - Executes the HTTP endpoint; aborts when the signal does
  * @param subscribeFn - Factory that creates an SSESubscription
@@ -88,6 +90,8 @@ export function useComputedQuery<TQueryData, TStreamData>(
     enabled,
     /* Every event goes into the query; none is kept beside it. */
     maxEvents: 0,
+    onError: options.onStreamError,
+    onStatusChange: options.onStreamStatusChange,
     onData: (event) => {
       const pending = held.current.events;
       if (pending.length > 0 || queryClient.getQueryData(queryKey) === undefined) {

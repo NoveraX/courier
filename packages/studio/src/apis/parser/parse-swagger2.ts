@@ -9,7 +9,8 @@
 
 import { isOperationKey } from "./http-methods";
 import { parseOpenApi3 } from "./parse-openapi3";
-import { fieldOf, isNode, listAt, nodeAt, type SpecNode } from "./spec-node";
+import { resolveRef } from "./ref-utils";
+import { fieldOf, isNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import { withFormBody } from "./swagger2-form-body";
 import { bodyMediaType } from "./swagger2-media-types";
 import type { ParsedSpec } from "./types";
@@ -81,7 +82,14 @@ function withBody(op: SpecNode, spec: SpecNode): SpecNode {
   };
 }
 
-/** Swagger 2.0 puts a response schema directly on the response. */
+/**
+ * Swagger 2.0 puts a response schema directly on the response.
+ *
+ * A response the operation takes from the document's shared ones is read from
+ * there. It has no media type of its own, so it comes in the one the operation
+ * produces. Left as a reference, its schema was never found, and the answer
+ * was typed as unknown.
+ */
 function withResponses(op: SpecNode, spec: SpecNode): SpecNode {
   const responses = nodeAt(op, "responses");
   if (!responses) return op;
@@ -90,11 +98,13 @@ function withResponses(op: SpecNode, spec: SpecNode): SpecNode {
   const mediaType = typeof first === "string" ? first : "application/json";
 
   const converted: Record<string, unknown> = {};
-  for (const [code, response] of Object.entries(responses)) {
+  for (const [code, written] of Object.entries(responses)) {
+    const ref = textAt(written, "$ref");
+    const response = ref ? resolveRef(spec, ref) : written;
     const schema = fieldOf(response, "schema");
     converted[code] = schema
       ? { description: fieldOf(response, "description"), content: { [mediaType]: { schema } } }
-      : response;
+      : written;
   }
   return { ...op, responses: converted };
 }

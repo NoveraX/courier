@@ -48,7 +48,7 @@ function buildErrorScenario(routes: RouteInfo[]): AnyMockScenario {
   return {
     name: "server-error",
     description:
-      "All endpoints cycle through 500 / 503 / 502 errors, simulating a fully degraded backend.",
+      "Every endpoint fails with a server error, 500, 503 or 502 depending on the endpoint, simulating a fully degraded backend.",
     tags: ["error", "critical"],
     apply(mock: UntypedMockFn) {
       // All routes fail — simulates a fully degraded backend

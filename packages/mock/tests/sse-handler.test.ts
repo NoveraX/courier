@@ -38,6 +38,7 @@ describe("handleSSEMock", () => {
         yield { data: "hello" };
       }),
       CTX,
+      () => undefined,
     );
 
     const text = await response.text();
@@ -52,6 +53,7 @@ describe("handleSSEMock", () => {
         throw new ForbiddenError("Not a member of this room");
       }),
       CTX,
+      () => undefined,
     );
 
     const text = await response.text();
@@ -70,6 +72,7 @@ describe("handleSSEMock", () => {
         throw refused;
       }),
       CTX,
+      () => undefined,
     );
 
     await response.text();
@@ -86,6 +89,7 @@ describe("handleSSEMock", () => {
         throw new Error("connect ECONNREFUSED 10.0.0.5:5432");
       }),
       CTX,
+      () => undefined,
     );
 
     const text = await response.text();
@@ -101,10 +105,41 @@ describe("handleSSEMock", () => {
         yield { id: "1\ndata: forged", event: "tick\r\n", data: { n: 1 } };
       }),
       CTX,
+      () => undefined,
     );
 
     const text = await response.text();
 
     expect(text.startsWith('id: 1data: forged\nevent: tick\ndata: {"n":1}\n\n')).toBe(true);
+  });
+
+  it("reports how the stream ended once it has", async () => {
+    const onEnded = vi.fn();
+    const finished = handleSSEMock(
+      honoContext(),
+      handlerFor(async function* () {
+        yield { data: 1 };
+        yield { data: 2 };
+      }),
+      CTX,
+      onEnded,
+    );
+    await finished.text();
+    await vi.waitFor(() => expect(onEnded).toHaveBeenCalledWith({ events: 2 }));
+
+    const failing = vi.fn();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failed = handleSSEMock(
+      honoContext(),
+      handlerFor(async function* () {
+        yield { data: 1 };
+        throw new Error("feed dropped");
+      }),
+      CTX,
+      failing,
+    );
+    await failed.text();
+    await vi.waitFor(() => expect(failing).toHaveBeenCalledWith({ events: 1, error: "feed dropped" }));
+    warn.mockRestore();
   });
 });

@@ -86,6 +86,27 @@ export function toBindingName(name: string): string {
   return /^\d/.test(camel) ? `_${camel}` : camel;
 }
 
+/* A client reaches its raw answers through `raw`, so a group of that name
+   could never be called; `with` is already a reserved word. */
+const CLIENT_KEYS: ReadonlySet<string> = new Set(["raw"]);
+
+/**
+ * The binding name of a group: a valid identifier, and not a name a client
+ * keeps for itself (`raw`, `with`), which becomes `rawGroup`, `withGroup`.
+ *
+ * @param name - The tag, path segment or folder the group is named after
+ * @returns The group's name
+ * @example
+ * ```ts
+ * toGroupName("raw"); // "rawGroup"
+ * toGroupName("pet store"); // "petStore"
+ * ```
+ */
+export function toGroupName(name: string): string {
+  const binding = toBindingName(name);
+  return CLIENT_KEYS.has(binding) ? `${binding}Group` : binding;
+}
+
 /**
  * Normalize a schema/type name into a valid JS identifier (PascalCase).
  *

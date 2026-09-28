@@ -20,7 +20,7 @@ import type {
   SpecNode,
 } from "./types";
 import { uniqueEndpointNames } from "./unique-endpoint-names";
-import { convertPathParams, findCommonPrefix, toBindingName, toCamelCase } from "./utils";
+import { convertPathParams, findCommonPrefix, toCamelCase, toGroupName } from "./utils";
 
 export function parsePostman(collection: SpecNode): ParsedSpec {
   const title = collection.info?.name ?? "Postman Collection";
@@ -94,7 +94,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
       groups.push({
         /* Two folders may carry the same name; one group file would have
            overwritten the other. */
-        name: claimGroupName(toBindingName(groupName), takenGroupNames),
+        name: claimGroupName(toGroupName(groupName), takenGroupNames),
         description: "",
         prefix: convertPathParams(prefix),
         endpoints: uniqueEndpointNames(endpoints, prefix).map((e) => ({

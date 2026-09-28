@@ -63,3 +63,27 @@ describe.each(GROUPINGS)("an OPTIONS operation (%s)", (groupBy) => {
     expect(server.requests.at(-1)).toMatchObject({ method: "OPTIONS", path: "/v1/settings" });
   });
 });
+
+function reservedSpec(): string {
+  return JSON.stringify({
+    openapi: "3.0.3",
+    info: { title: "Reserved", version: "1" },
+    servers: [{ url: `${server.url}/v1` }],
+    paths: {
+      "/raw/items": { get: { tags: ["raw"], operationId: "raw", ...ok } },
+      "/raw/other": { get: { tags: ["raw"], operationId: "with", ...ok } },
+    },
+  });
+}
+
+describe.each(["tag", "path"] as const)("names a client reserves (%s)", (groupBy) => {
+  it("are given to no group or endpoint, and each call still reaches its path", async () => {
+    const files = generateCode(parseSpec(reservedSpec()), { type: "openapi", outputDir: "src", groupBy }, "res");
+    const loaded = loadGenerated(files, "src/res/index.ts");
+
+    await generatedCall(loaded, ["resApi", "rawGroup", "getItems"])();
+    expect(server.requests.at(-1)).toMatchObject({ method: "GET", path: "/v1/raw/items" });
+    await generatedCall(loaded, ["resApi", "rawGroup", "getOther"])();
+    expect(server.requests.at(-1)).toMatchObject({ method: "GET", path: "/v1/raw/other" });
+  });
+});

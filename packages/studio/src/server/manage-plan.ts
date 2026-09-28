@@ -15,6 +15,7 @@ import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-
 import { manageFingerprints } from "./manage-fingerprints";
 import { managePlanRequest } from "./manage-plan-request";
 import type { ProjectRoot } from "./project-fs/project-root";
+import { unknownRemovals } from "./unknown-removals";
 
 /** The endpoints to add and remove of an import, by group. */
 export interface ManageRequest {
@@ -64,6 +65,13 @@ export function planManage(
   const { unknown } = listedSelection(body.spec, declared.groupBy ?? "tag", body.toAdd);
   if (unknown.length > 0) {
     return { error: `The spec generates no endpoint ${unknown.join(", ")} to add`, status: 400 };
+  }
+  const absent = unknownRemovals(body.toRemove, layout, onDisk, flat);
+  if (absent.length > 0) {
+    return {
+      error: `The import's files hold no endpoint ${absent.join(", ")} to remove`,
+      status: 400,
+    };
   }
   const toAdd = Object.fromEntries(
     Object.entries(body.toAdd).filter(([, names]) => names.length > 0),

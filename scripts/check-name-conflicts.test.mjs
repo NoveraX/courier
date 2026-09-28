@@ -67,20 +67,18 @@ describe("findConflicts", () => {
     });
   });
 
-  it("does NOT flag intentional splits where the sibling dir has no index file", () => {
-    // adapter.ts + adapter/foo.ts (no adapter/index.ts) is the deliberate
-    // pattern for explicit subpath imports only.
+  it("flags a file next to a directory of the same name that has no index", () => {
     touch("adapter.ts", "export {};");
     touch("adapter/foo.ts", "export {};");
 
-    expect(findConflicts(root)).toHaveLength(0);
+    expect(findConflicts(root)).toEqual([expect.objectContaining({ file: "adapter.ts", conflictingDir: "adapter" })]);
   });
 
-  it("does NOT flag a `.tsx` file next to a directory without index", () => {
+  it("flags a `.tsx` file next to a directory without index", () => {
     touch("Button.tsx", "export {};");
     touch("Button/icon.tsx", "export {};");
 
-    expect(findConflicts(root)).toHaveLength(0);
+    expect(findConflicts(root)).toEqual([expect.objectContaining({ file: "Button.tsx", conflictingDir: "Button" })]);
   });
 
   it("flags `.tsx` file next to directory with `index.tsx`", () => {

@@ -17,6 +17,7 @@ import type { DescribedRoute } from "./describe-route";
 import { describeRoute } from "./describe-route";
 import { wireRequestHooks } from "./request-hooks";
 import { buildScenarioMeta } from "./scenario-meta";
+import { startFailure } from "./start-failure";
 import type { MockServerDefinition, ParentMessage, ServedMock } from "./types";
 import { send, sendError, watchParent } from "./worker-ipc";
 
@@ -72,7 +73,7 @@ export function runMockWorker(loadDefinition: MockDefinitionLoader): void {
           served = started;
         })
         .catch((err: unknown) => {
-          sendError(err instanceof Error ? (err.stack ?? err.message) : String(err), true);
+          sendError(startFailure(err), true);
         });
     } else if (msg.type === "stop" && !stopping) {
       stopping = true;

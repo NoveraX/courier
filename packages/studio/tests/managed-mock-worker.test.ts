@@ -150,9 +150,10 @@ describe("a managed mock server", () => {
 
     pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
 
-    await vi.waitFor(() => expect(events.onError).toHaveBeenCalledWith("apiMock", expect.stringContaining("EADDRINUSE"), true), {
-      timeout: 15_000,
-    });
+    await vi.waitFor(
+      () => expect(events.onError).toHaveBeenCalledWith("apiMock", `Port ${port} is in use by another process.`, true),
+      { timeout: 15_000 },
+    );
     expect(events.onReady).not.toHaveBeenCalled();
   }, 20_000);
 

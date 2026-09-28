@@ -4,10 +4,14 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { createLogger } from "@noverax/courier";
 import type { ChildMessage, ParentMessage } from "@noverax/courier-mock/managed";
+import type { CommandReplies, CommandReply } from "./command-replies";
+import { createCommandReplies } from "./command-replies";
 import { stopWorker } from "./stop-worker";
 import type { ProcessManager, SpawnRequest } from "./types";
 
 const log = createLogger("Mock");
+
+const GONE = "The mock is not running.";
 
 /**
  * Studio's own mock worker, found through the package itself, so the path is
@@ -69,12 +73,14 @@ export function createProcessManager(
   const children = new Map<string, ChildProcess>();
   /** Workers Studio asked to stop; their exit is expected. */
   const stopping = new WeakSet<ChildProcess>();
+  const commands = new WeakMap<ChildProcess, CommandReplies>();
 
-  function route(serverId: string, msg: ChildMessage): void {
+  function route(serverId: string, child: ChildProcess, msg: ChildMessage): void {
     if (msg.type === "ready") events.onReady(serverId, msg);
     else if (msg.type === "error") events.onError(serverId, msg.message, msg.fatal);
     else if (msg.type === "stopped") events.onStopped(serverId);
     else if (msg.type === "event") events.onEvent(serverId, msg.event);
+    else if (msg.type === "command-result") commands.get(child)?.settle(msg);
   }
 
   function send(serverId: string, child: ChildProcess, msg: ParentMessage): void {
@@ -93,12 +99,14 @@ export function createProcessManager(
       stdio: ["ignore", "inherit", "inherit", "ipc"],
     });
     children.set(serverId, child);
+    commands.set(child, createCommandReplies());
 
-    child.on("message", (msg: ChildMessage) => route(serverId, msg));
+    child.on("message", (msg: ChildMessage) => route(serverId, child, msg));
     child.on("error", (err) => events.onError(serverId, err.message, true));
     /* `close`, not `exit`: it follows the last IPC message, so an error the
        worker reported before dying is handled before its death is. */
     child.on("close", (code, signal) => {
+      commands.get(child)?.failAll("The mock stopped before it answered.");
       const current = children.get(serverId) === child;
       if (current) children.delete(serverId);
       if (!current || stopping.has(child)) return;
@@ -141,14 +149,13 @@ export function createProcessManager(
     return children.has(serverId);
   }
 
-  function sendCommand(serverId: string, command: Record<string, unknown>): void {
+  function sendCommand(serverId: string, command: Record<string, unknown>): Promise<CommandReply> {
     const child = children.get(serverId);
-    if (!child) return;
-    send(serverId, child, {
-      type: "command",
-      command,
-      requestId: `cmd_${Date.now().toString(36)}`,
-    });
+    const replies = child && commands.get(child);
+    if (!child?.connected || !replies) return Promise.resolve({ ok: false, error: GONE });
+    const { requestId, reply } = replies.expect();
+    send(serverId, child, { type: "command", command, requestId });
+    return reply;
   }
 
   return { spawn, kill, dispose, has, sendCommand };

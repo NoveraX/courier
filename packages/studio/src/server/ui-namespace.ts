@@ -13,6 +13,7 @@ import type { Namespace } from "socket.io";
 import { buildBindingSnapshot } from "./binding-snapshot";
 import type { BindingTable } from "./catalog/binding-table";
 import type { LifecycleCoordinator } from "./mock-manager";
+import type { CommandReply } from "./mock-manager/command-replies";
 import { sendProject } from "./project-state/send-project";
 import type { ProjectReads } from "./project-state/types";
 import type { RequestLog } from "./request-log";
@@ -122,14 +123,17 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
 
     // Forward mock commands from UI → every connected runtime + managed
     // mock servers (IPC). The runtime side decides whether the command
-    // applies to a mock it owns; non-owners no-op.
-    socket.on("mock:command", (rawCommand: unknown) => {
+    // applies to a mock it owns; non-owners no-op. A UI that passes an
+    // acknowledgement hears whether the managed mock ran the command.
+    socket.on("mock:command", async (rawCommand: unknown, ack?: unknown) => {
       const command = sanitizeMockCommand(rawCommand);
-      if (!command) return;
+      if (!command) return answer(ack, { ok: false, error: "Studio could not read the command." });
       for (const entry of runtimeRegistry.values()) {
         entry.socket.emit("mock:command", command);
       }
-      mockManager?.forwardStoreCommand(command);
+      const reply = mockManager?.forwardStoreCommand(command);
+      const unknownMock = { ok: false, error: `No mock is named "${command.serverId}".` };
+      answer(ack, reply ? await reply : unknownMock);
     });
 
     // Managed mock server lifecycle commands
@@ -139,4 +143,9 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
       mockManager?.handleCommand(data.command, data);
     });
   });
+}
+
+/* The acknowledgement comes from the UI, which may send none. */
+function answer(ack: unknown, reply: CommandReply): void {
+  if (typeof ack === "function") ack(reply);
 }

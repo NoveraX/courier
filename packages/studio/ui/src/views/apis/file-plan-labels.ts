@@ -1,11 +1,29 @@
-import type { KeptReason, PlanConfirmation, PlannedWriteAction } from "./types-file-plan";
+import type { FileOwnership, KeptReason, PlanConfirmation, PlannedWriteAction } from "./types-file-plan";
 
-/** What a write does to its file, as a badge says it. */
-export const WRITE_LABEL: Readonly<Record<Exclude<PlannedWriteAction, "unchanged">, string>> = {
+const WRITE_LABEL: Readonly<Record<Exclude<PlannedWriteAction, "unchanged">, string>> = {
   create: "new",
   replace: "replaced",
-  merge: "merged, your edits kept",
+  merge: "merged",
 };
+
+const EDITED: ReadonlySet<FileOwnership> = new Set(["recorded-edited", "claimed-edited"]);
+
+/**
+ * Say what a write does to its file. A merge keeps the edits in the file,
+ * and says so only when the file holds edits of the user's.
+ *
+ * @param action - What the write does
+ * @param was - What the file was before it
+ * @returns The note shown beside the file
+ * @example
+ * ```ts
+ * writeLabel("merge", "recorded-edited"); // → "merged, your edits kept"
+ * writeLabel("merge", "recorded"); // → "merged"
+ * ```
+ */
+export function writeLabel(action: Exclude<PlannedWriteAction, "unchanged">, was: FileOwnership): string {
+  return action === "merge" && EDITED.has(was) ? "merged, your edits kept" : WRITE_LABEL[action];
+}
 
 /** Why a file stays as it is. */
 export const KEPT_LABEL: Readonly<Record<KeptReason, string>> = {

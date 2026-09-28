@@ -38,12 +38,19 @@ export function componentIdentifier(spec: SpecNode | undefined, component: strin
 }
 
 function identifierTable(spec: SpecNode): ReadonlyMap<string, string> {
+  const names = Object.keys(nodeAt(nodeAt(spec, "components"), "schemas") ?? {});
+  /* A schema's constant is its identifier and `Schema`. A component named
+     like another's constant — `PetSchema` beside `Pet` — was imported twice
+     under one name where both are used. */
+  const constants = new Set(names.map((name) => `${toSafeIdentifier(name)}Schema`));
   const table = new Map<string, string>();
   const taken = new Set<string>();
-  for (const name of Object.keys(nodeAt(nodeAt(spec, "components"), "schemas") ?? {})) {
+  for (const name of names) {
     const base = toSafeIdentifier(name);
     let identifier = base;
-    for (let n = 2; taken.has(identifier); n += 1) identifier = `${base}${n}`;
+    for (let n = 2; taken.has(identifier) || constants.has(identifier); n += 1) {
+      identifier = `${base}${n}`;
+    }
     taken.add(identifier);
     table.set(name, identifier);
   }

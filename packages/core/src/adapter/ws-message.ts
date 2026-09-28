@@ -49,9 +49,13 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
     return;
   }
 
+  /* The handler gets what the schema produced — its defaults and transforms
+     applied — as it does over an in-process channel and as a subscription's
+     variables are; it used to get the payload as it arrived. */
+  let payload = msg.payload;
   if (schema.receive) {
     try {
-      await validateSchema(schema.receive, msg.payload, "receive");
+      payload = await validateSchema(schema.receive, msg.payload, "receive");
     } catch (error) {
       if (!(error instanceof ValidationError)) throw error;
       const failure = { code: 4422, message: "Invalid message payload", issues: error.issues };
@@ -68,7 +72,7 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
   emitStudioMessageEvent(ctx, topic, msg);
 
   const entry = ctx.topicManager.get(ctx.connectionId, topic);
-  await entry?.onMessage?.(msg.payload);
+  await entry?.onMessage?.(payload);
 }
 
 /** Handle an "unsubscribe" message */

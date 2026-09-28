@@ -22,7 +22,7 @@ function emittedTypes(): string[] {
   for (const file of readdirSync(HOOKS_DIR)) {
     if (!file.endsWith(".ts")) continue;
     const source = readFileSync(join(HOOKS_DIR, file), "utf8");
-    for (const match of source.matchAll(/\btype:\s*"([a-z][a-z:]*)"/g)) {
+    for (const match of source.matchAll(/\btype:\s*"([a-z][a-z:-]*)"/g)) {
       found.add(match[1] as string);
     }
   }

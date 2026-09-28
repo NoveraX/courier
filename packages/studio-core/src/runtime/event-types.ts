@@ -20,6 +20,8 @@ export const RUNTIME_EVENT_TYPES: readonly string[] = [
   "proxy:receive",
   "proxy:parse",
   "proxy:respond",
+  "proxy:origin-reject",
+  "proxy:client-timing",
   "middleware:enter",
   "middleware:exit",
   "middleware:error",

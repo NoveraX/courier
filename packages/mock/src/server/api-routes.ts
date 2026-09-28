@@ -38,12 +38,16 @@ export function registerRequestRoutes(
 ): void {
   registerProxyRoute(app, config);
   registerProxySSERoute(app, config);
+  /* The paths the source declares come before addressing by name: a source
+     at `…/api` is called at `/api/users/5`, which `/api/:group/:method` would
+     otherwise take for an endpoint named "5". */
+  if (mappings?.length) {
+    registerPrefixRoutes(app, mappings, {
+      handleRequest: (c, group, method, variables) =>
+        handleMockRequest(c, group, method, variables, config),
+    });
+  }
   registerRestRoutes(app, config);
-  if (!mappings?.length) return;
-  registerPrefixRoutes(app, mappings, {
-    handleRequest: (c, group, method, variables) =>
-      handleMockRequest(c, group, method, variables, config),
-  });
 }
 
 /**

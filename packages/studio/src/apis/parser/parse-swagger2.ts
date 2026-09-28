@@ -87,14 +87,17 @@ function convertBody(op: SpecNode, spec: SpecNode): void {
      generated client entirely. */
   const properties: SpecNode = {};
   const required: string[] = [];
+  const encoding: SpecNode = {};
   for (const field of formFields) {
     if (typeof field.name !== "string") continue;
     properties[field.name] = {
       type: field.type === "file" ? "string" : (field.type ?? "string"),
       ...(field.type === "file" ? { format: "binary" } : field.format && { format: field.format }),
       ...(field.enum && { enum: field.enum }),
+      ...(field.items && { items: field.items }),
       ...(field.description && { description: field.description }),
     };
+    if (field.type === "array") encoding[field.name] = arrayEncoding(field.collectionFormat);
     if (field.required) required.push(field.name);
   }
 
@@ -102,10 +105,20 @@ function convertBody(op: SpecNode, spec: SpecNode): void {
     content: {
       [formMediaType(op, spec, formFields)]: {
         schema: { type: "object", properties, required },
+        ...(Object.keys(encoding).length > 0 && { encoding }),
       },
     },
   };
   op.parameters = parameters.filter((p) => p?.in !== "formData");
+}
+
+/* How Swagger 2.0 joins an array field's items, in OpenAPI 3's terms; `csv`
+   when it does not say. Tabs have no OpenAPI 3 style, and are sent as commas. */
+function arrayEncoding(collectionFormat: unknown): SpecNode {
+  if (collectionFormat === "multi") return { style: "form", explode: true };
+  if (collectionFormat === "ssv") return { style: "spaceDelimited", explode: false };
+  if (collectionFormat === "pipes") return { style: "pipeDelimited", explode: false };
+  return { style: "form", explode: false };
 }
 
 function consumesOf(op: SpecNode, spec: SpecNode): unknown[] {

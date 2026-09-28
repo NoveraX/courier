@@ -81,7 +81,9 @@ describe("saving the current session", () => {
   });
 
   it("says why Studio refused a save and keeps the dialog to retry from", async () => {
-    useStudioStore.setState({ requests: [trafficRequest({ data: "x".repeat(6 * 1024 * 1024) })] });
+    /* One more request than a session holds. */
+    const requests = Array.from({ length: 10_001 }, (_, i) => trafficRequest({ id: `req-${i}` }));
+    useStudioStore.setState({ requests });
     await startStudio();
     render(<Harness />);
     await screen.findByText("0 saved sessions");
@@ -90,7 +92,7 @@ describe("saving the current session", () => {
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
-        "Could not save the session: The request body is larger than Studio accepts.",
+        "Could not save the session: A session holds at most 10000 requests.",
       ),
     );
     expect(screen.getByLabelText("Session name")).toBeTruthy();

@@ -39,7 +39,7 @@ function upload(group: string | undefined): Request {
   if (group !== undefined) body.append("_group", group);
   body.append("_method", "avatar");
   body.append("_options", "{}");
-  return new Request("http://app.local/api/request", { method: "POST", body });
+  return new Request("http://app.localhost/api/request", { method: "POST", body });
 }
 
 describe("an upload to an ungrouped endpoint behind a boundary", () => {

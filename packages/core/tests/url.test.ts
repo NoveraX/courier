@@ -83,7 +83,7 @@ describe("a path parameter's value", () => {
     registerSources({ api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }) });
 
     const response = await createHandler().handlePost(
-      new Request("http://app.local/api/request", {
+      new Request("http://app.localhost/api/request", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ source: "api", group: "items", method: "one", variables: { id: ".." } }),

@@ -54,7 +54,7 @@ const server = createCourierServer({
 
 ```bash
 npx courier-server
-npx courier-server --config ./deploy/courier.config.ts --port 3001 --allowed-origins https://app.example.com
+npx courier-server --config ./deploy/courier.config.ts --port 3001 --allowed-origins https://app.example.com --allowed-hosts api.example.com
 ```
 
 Without `--config` it serves the `courier.config.*` in the working directory; a `--config` path is relative to it. TypeScript configs load as they are, extensionless imports and tsconfig path aliases included. The config needs `sources`, and its `server` block supplies what the flags leave out:
@@ -88,6 +88,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `port` | `3001` | Server port |
 | `host` | `"127.0.0.1"` | Address to listen on. The IPv4 loopback, which a client given `localhost` reaches too; `"::1"` for the IPv6 loopback, `"0.0.0.0"` or `"::"` to accept other machines, as a container needs |
 | `allowedOrigins` | `undefined` | Origins of the browser apps that may call the server (CORS and the WebSocket origin check). Left out, only the server's own origin — and loopback origins outside production |
+| `allowedHosts` | `undefined` | Host names the server is reached by. A request addressed to any other host gets 421, and a socket is closed with 4421, as a DNS-rebinding page's would be. `localhost`, `*.localhost` and IP addresses are always served; left out, production serves every name and development nothing else |
 | `maxBodyBytes` | 1 MB | Largest JSON envelope a proxied call may send; a larger one is refused with 413 |
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload a proxied call may send; a larger one is refused with 413 |
 | `pubsub` | `undefined` | Pub/Sub adapter for horizontal WS scaling (e.g. Redis) |

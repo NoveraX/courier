@@ -45,7 +45,7 @@ function tenantApi() {
 }
 
 function proxyRequest(variables: Record<string, unknown>, cookie?: string): Request {
-  return new Request("http://app.local/api/request", {
+  return new Request("http://app.localhost/api/request", {
     method: "POST",
     headers: { "content-type": "application/json", ...(cookie && { cookie }) },
     body: JSON.stringify({ source: "tenant", group: "invoices", method: "list", variables }),
@@ -63,7 +63,7 @@ describe("a path parameter pathOptions provides", () => {
   });
 
   it("keeps the server's value when a direct caller names another", async () => {
-    const request = new Request("http://app.local/", { headers: { cookie: "orgId=42" } });
+    const request = new Request("http://app.localhost/", { headers: { cookie: "orgId=42" } });
     const client = createCaller(tenantApi(), { context: { req: request } });
 
     await client.invoices.byId({ id: "5", orgId: "999" } as { id: string });
@@ -91,7 +91,7 @@ describe("a path parameter pathOptions provides", () => {
 
 describe("a path parameter pathOptions does not provide", () => {
   it("is filled from the caller's variables", async () => {
-    const request = new Request("http://app.local/", { headers: { cookie: "orgId=42" } });
+    const request = new Request("http://app.localhost/", { headers: { cookie: "orgId=42" } });
     const client = createCaller(tenantApi(), { context: { req: request } });
 
     await client.invoices.byId({ id: "7" });
@@ -100,7 +100,7 @@ describe("a path parameter pathOptions does not provide", () => {
   });
 
   it("is refused when the caller leaves it out", async () => {
-    const request = new Request("http://app.local/", { headers: { cookie: "orgId=42" } });
+    const request = new Request("http://app.localhost/", { headers: { cookie: "orgId=42" } });
     const client = createCaller(tenantApi(), { context: { req: request } });
 
     const error = await client.invoices.byId({} as { id: string }).catch((e: unknown) => e);

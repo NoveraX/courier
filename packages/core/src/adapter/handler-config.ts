@@ -24,6 +24,15 @@ export interface HandlerConfig extends SSELifecycleConfig {
    */
   allowedOrigins?: string[];
   /**
+   * The host names the application is reached by. A request addressed to any
+   * other host — a page that pointed its own name at this machine, as a
+   * DNS-rebinding attack does — is answered 421 on every transport. Loopback
+   * names (`localhost`, `*.localhost`) and IP literals are always served. An
+   * entry is a name without a port, or `*.example.com` for its sub-domains.
+   * Unset, development serves nothing else, and production every name.
+   */
+  allowedHosts?: string[];
+  /**
    * Largest JSON envelope the proxy will read, in bytes. Defaults to 1 MB —
    * an envelope carries a name and its variables, so this is already
    * generous. Raise it only for an endpoint that takes a large JSON payload.

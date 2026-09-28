@@ -102,7 +102,7 @@ describe("variables that are a JSON value other than an object", () => {
     registerSources({ api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }) });
 
     const response = await createHandler().handlePost(
-      new Request("http://app.local/api/request", {
+      new Request("http://app.localhost/api/request", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -212,7 +212,7 @@ describe("a FormData sent as the body", () => {
     ].join("");
 
     const response = await createHandler().handlePost(
-      new Request("http://app.local/api/request", {
+      new Request("http://app.localhost/api/request", {
         method: "POST",
         headers: { "content-type": "multipart/form-data; boundary=b" },
         body,

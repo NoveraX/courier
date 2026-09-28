@@ -32,7 +32,7 @@ describe("a proxy request's content type", () => {
     "accepts %s",
     async (contentType) => {
       const response = await createHandler().handlePost(
-        new Request("http://app.local/api/request", {
+        new Request("http://app.localhost/api/request", {
           method: "POST",
           headers: { "content-type": contentType },
           body: JSON.stringify({ source: "api", method: "save" }),
@@ -44,7 +44,7 @@ describe("a proxy request's content type", () => {
 
   it("still refuses a type it does not read", async () => {
     const response = await createHandler().handlePost(
-      new Request("http://app.local/api/request", {
+      new Request("http://app.localhost/api/request", {
         method: "POST",
         headers: { "content-type": "text/plain" },
         body: "{}",

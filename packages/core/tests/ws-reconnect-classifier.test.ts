@@ -32,6 +32,7 @@ describe("shouldReconnect", () => {
     [4200, true, "custom retriable"],
     [4401, false, "connection rejected"],
     [4403, false, "origin not allowed"],
+    [4421, false, "host not allowed"],
     [4408, true, "heartbeat timeout"],
     [4429, false, "too many connections"],
     [9999, true, "unknown defaults to retry"],

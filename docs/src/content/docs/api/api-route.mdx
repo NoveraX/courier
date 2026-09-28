@@ -31,6 +31,7 @@ A record of API source definitions created with `defineApi()`. Given, the handle
 | Option | Default | Description |
 |--------|---------|-------------|
 | `allowedOrigins` | own origin; local ports in development | Origins of other pages that may call the proxy — see [Origin Validation](#origin-validation) |
+| `allowedHosts` | loopback names and IP literals; every name in production | Host names the app is reached by; a request for any other gets `421` — see [Host validation](/docs/proxy-mode/overview#host-validation) |
 | `maxBodyBytes` | 1 MB | Largest JSON envelope the handler reads; a larger one is refused with 413 |
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload the handler reads; a larger one is refused with 413 |
 | `sseHeaders` | — | Extra response headers on every SSE stream |

@@ -49,7 +49,7 @@ describe("a dot segment as a path parameter", () => {
 
   it("is refused when it arrives through the proxy", async () => {
     registerSources({ paths: api() });
-    const request = new Request("http://app.local/api/request", {
+    const request = new Request("http://app.localhost/api/request", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ source: "paths", method: "tail", variables: { id: ".." } }),

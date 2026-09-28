@@ -3,6 +3,7 @@
 import { createLogger } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import { defineCommand, runMain } from "citty";
+import { listOption } from "./list-option";
 import { loadCliConfig } from "./load-cli-config";
 import { parseByteLimit } from "./parse-byte-limit";
 import { parsePort } from "./parse-port";
@@ -44,6 +45,11 @@ const main = defineCommand({
       description:
         "Comma-separated origins browser apps may call from (falls back to server.allowedOrigins)",
     },
+    "allowed-hosts": {
+      type: "string",
+      description:
+        "Comma-separated host names the server is reached by (falls back to server.allowedHosts)",
+    },
   },
   async run({ args }) {
     if (args._.length > 0) fail(`Unknown command "${args._[0]}". Run courier-server --help.`);
@@ -63,14 +69,8 @@ const main = defineCommand({
           : DEFAULT_PORT;
     if (port instanceof Error) fail(port.message);
 
-    const origins = args["allowed-origins"];
-    const allowedOrigins =
-      origins === undefined
-        ? block.allowedOrigins
-        : origins
-            .split(",")
-            .map((o) => o.trim())
-            .filter(Boolean);
+    const allowedOrigins = listOption(args["allowed-origins"], block.allowedOrigins);
+    const allowedHosts = listOption(args["allowed-hosts"], block.allowedHosts);
 
     const maxBodyBytes = parseByteLimit(block.maxBodyBytes, `server.maxBodyBytes in ${configFile}`);
     if (maxBodyBytes instanceof Error) fail(maxBodyBytes.message);
@@ -87,7 +87,8 @@ const main = defineCommand({
       host: args.host ?? block.host ?? DEFAULT_HOST,
       maxBodyBytes,
       maxUploadBytes,
-      ...(allowedOrigins === undefined ? {} : { allowedOrigins: [...allowedOrigins] }),
+      allowedOrigins,
+      allowedHosts,
       onReady: (url) => {
         log.info(`Courier Server ready at ${url}`);
       },

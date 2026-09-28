@@ -16,6 +16,7 @@ const FATAL_CODES: ReadonlySet<number> = new Set([
 const REFUSAL_CODES: ReadonlySet<number> = new Set([
   4401, // onConnect rejected it, or a requested token refresh never came
   4403, // origin not allowed
+  4421, // host not allowed
   4429, // too many connections from the address
 ]);
 

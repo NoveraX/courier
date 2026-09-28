@@ -156,6 +156,14 @@ export interface CourierServerConfig {
    */
   allowedOrigins?: readonly string[];
   /**
+   * Host names the server is reached by. A request or a socket addressed to
+   * any other host is refused with 421 — or closed with 4421 — as a
+   * DNS-rebinding page's would be. Loopback names and IP literals are always
+   * served; left out, production serves every name and development nothing
+   * else. `--allowed-hosts` overrides it.
+   */
+  allowedHosts?: readonly string[];
+  /**
    * Largest JSON envelope the proxy reads, in bytes — default 1 MB. A larger
    * one is refused with 413 before it is read.
    */

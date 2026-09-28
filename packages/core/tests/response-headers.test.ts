@@ -177,7 +177,7 @@ describe("a streamed proxy answer opened as a page", () => {
 
     const options = encodeURIComponent(JSON.stringify({ stream: true }));
     return createHandler().handleGet(
-      new Request(`http://app.local/api/request?_s=api&_m=page&_o=${options}`, {
+      new Request(`http://app.localhost/api/request?_s=api&_m=page&_o=${options}`, {
         headers: { "Sec-Fetch-Site": "none", "Sec-Fetch-Dest": "document" },
       }),
     );

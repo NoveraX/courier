@@ -27,8 +27,18 @@ export interface WSHandlerConfig {
   heartbeatTimeoutMs?: number;
   /** Max buffered bytes before dropping messages (default 1MB) */
   maxBufferedAmount?: number;
-  /** Allowed origins for CSWSH prevention (prod: rejects all if unset, dev: allows all) */
+  /**
+   * Origins of other pages that may open a socket, as `HandlerConfig`'s
+   * `allowedOrigins` rules them: unset, the application's own pages, and in
+   * development other local ports. A refused origin is closed with 4403.
+   */
   allowedOrigins?: string[];
+  /**
+   * The host names this server is reached by, as `HandlerConfig`'s
+   * `allowedHosts` rules them. A socket opened on any other host is closed
+   * with 4421.
+   */
+  allowedHosts?: string[];
   /** Max subscriptions per connection (default 100) */
   maxSubscriptionsPerConnection?: number;
   /** Max inbound message size in bytes (default 65536 = 64KB) */

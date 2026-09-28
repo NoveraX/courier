@@ -53,6 +53,7 @@ courierHandler({
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `allowedOrigins` | `string[]` | — | Extra origins whose pages may call the proxy |
+| `allowedHosts` | `string[]` | — | Host names the app is reached by; a request for another gets 421. `localhost`, `*.localhost` and IP addresses are always served; unset, production serves every name and development nothing else |
 | `maxBodyBytes` | `number` | 1 MiB | Largest JSON or form body accepted |
 | `maxUploadBytes` | `number` | 10 MiB | Largest multipart upload accepted |
 | `sseHeaders` | `Record<string, string>` | — | Extra headers on SSE responses (CORS, for instance) |

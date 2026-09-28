@@ -7,18 +7,10 @@ const MULTIPLE_SLASHES = /\/+/g;
 const ABSOLUTE_URL = /^https?:\/\//i;
 const PARAM_RE = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
 
-type CompileFn = (params: Record<string, unknown>) => string;
-const compileCache = new Map<string, CompileFn>();
-
-const cachedCompile = (path: string): CompileFn => {
-  let fn = compileCache.get(path);
-  if (!fn) {
-    fn = (params: Record<string, unknown>) =>
-      path.replace(PARAM_RE, (_, name: string) => encodePathParam(name, params[name]));
-    compileCache.set(path, fn);
-  }
-  return fn;
-};
+/* A path is filled where it is used: a cache of one closure per path kept a
+   closure per distinct path for good, and saved nothing a replace costs. */
+const fillPath = (path: string, params: Record<string, unknown>): string =>
+  path.replace(PARAM_RE, (_, name: string) => encodePathParam(name, params[name]));
 
 /**
  * One path segment, from a parameter's own value.
@@ -158,7 +150,7 @@ export const compileUrl = (
   }
 
   try {
-    const url = cachedCompile(urlPath)(pathKeys);
+    const url = fillPath(urlPath, pathKeys);
 
     return [url, newVariables, objectSearchParameters];
   } catch (error) {

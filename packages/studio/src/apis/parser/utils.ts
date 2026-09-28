@@ -2,9 +2,10 @@
  * Barrel re-export for parser utilities.
  */
 
+export { convertSchemaInline } from "./convert-schema-inline";
 export { inferSchemaFromValue } from "./infer-schema";
 export { generateEndpointName, toBindingName, toCamelCase, toSafeIdentifier } from "./naming-utils";
 export { convertPathParams, extractPostmanPath, findCommonPrefix } from "./path-utils";
 export { parseSecuritySchemes, resolveRef } from "./ref-utils";
-export { convertSchema, convertSchemaInline, normalizeTypeArray } from "./schema-conversion";
+export { convertSchema, normalizeTypeArray } from "./schema-conversion";
 export { specText, stripHtml, stripHtmlPreserveNewlines } from "./string-utils";

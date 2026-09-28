@@ -85,10 +85,11 @@ describe("an OpenAPI 3.1 nullable type", () => {
     expect(spec.schemas.N?.properties?.a).toMatchObject({ type: "string", nullable: true });
   });
 
-  it("keeps a schema declared that way too", () => {
+  it("keeps a schema declared that way too, and its null", () => {
     const spec = parse({ S: { type: ["integer", "null"] } }, "3.1.0");
 
-    expect(spec.schemas.S?.type).toBe("integer");
+    expect(spec.schemas.S?.type).toBe("union");
+    expect(spec.schemas.S?.variants?.map((variant) => variant.type)).toEqual(["integer", "null"]);
   });
 });
 

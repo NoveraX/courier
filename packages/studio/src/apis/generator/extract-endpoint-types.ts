@@ -48,7 +48,10 @@ function shouldExtractResponse(schema: ParsedSchema | null): boolean {
     return Object.keys(schema.properties).length > 0;
   if (schema.type === "array" && schema.items?.type === "object" && schema.items.properties)
     return true;
-  return false;
+  /* A response that is one of several shapes — a list or `null`, say — is
+     only validated through a named schema; written inline it was a type the
+     answer was never checked against. */
+  return schema.type === "union" && (schema.variants?.length ?? 0) > 0;
 }
 
 /** Build a ParsedSchema from path + query params (when no body ref handles them) */

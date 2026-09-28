@@ -9,11 +9,12 @@
  * Supporting pieces live in siblings:
  *
  * - `mock-server-types` — `MockServer`, `MockServerOptions` (re-exported below)
+ * - `app-middleware`    — request logging and CORS
+ * - `api-routes`        — the routes that answer mocked endpoints
  * - `ws-attach`         — lazy WS upgrade handler creation + attachment
  */
 
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 
 import { createHistory } from "../history";
 import { createNetworkState } from "../network/state";
@@ -21,13 +22,10 @@ import { createMockRegistry } from "../registry";
 import { createMockStore } from "../store";
 import type { AnyMockScenario } from "../types";
 import { registerAdminRoutes } from "./admin-api";
-import { registerProxyRoute, registerProxySSERoute, registerRestRoutes } from "./api-routes";
+import { registerRequestRoutes } from "./api-routes";
+import { applyMiddleware } from "./app-middleware";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
-import { registerPrefixRoutes } from "./prefix-routes";
-import type { MockLogMode } from "./request-logger";
-import { createRequestLogger } from "./request-logger";
 import type { RequestHooks } from "./route-generator";
-import { handleMockRequest } from "./route-generator";
 import { createScenarioControls } from "./scenario-controls";
 import { createServerLifecycle } from "./server-lifecycle";
 
@@ -46,13 +44,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
 
   const app = new Hono();
 
-  const logLevel = resolveLogLevel(config?.log);
-  app.use("*", createRequestLogger(logLevel));
-
-  if (config?.cors !== false) {
-    const origin = typeof config?.cors === "object" ? config.cors.origin : "*";
-    app.use("*", cors({ origin }));
-  }
+  applyMiddleware(app, config);
 
   const requestHooks: RequestHooks = {};
 
@@ -77,16 +69,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     hooks: requestHooks,
   };
 
-  registerProxyRoute(app, routeConfig);
-  registerProxySSERoute(app, routeConfig);
-  registerRestRoutes(app, routeConfig);
-
-  if (config?.mappings?.length) {
-    registerPrefixRoutes(app, config.mappings, {
-      handleRequest: (c, group, method, variables) =>
-        handleMockRequest(c, group, method, variables, routeConfig),
-    });
-  }
+  registerRequestRoutes(app, routeConfig, config?.mappings);
 
   if (config?.admin !== false) {
     const scenarioMap = new Map(Object.entries(scenariosRecord));
@@ -162,10 +145,4 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   };
 
   return mockServer;
-}
-
-function resolveLogLevel(log?: MockLogMode | boolean): MockLogMode {
-  if (log === true) return "normal";
-  if (log === false) return "silent";
-  return log ?? "normal";
 }

@@ -1,4 +1,5 @@
 import type { ResolvedHandler } from "../types";
+import { resolveHandler } from "./resolve-handler";
 
 /** Key for storing handlers: "group/method" */
 function handlerKey(group: string, method: string): string {
@@ -149,28 +150,4 @@ export function createMockRegistry(): MockRegistry {
       return result;
     },
   };
-}
-
-/** LIFO resolution with state matching and consumption tracking */
-function resolveHandler(
-  stack: ResolvedHandler[],
-  scenarioState: string,
-): ResolvedHandler | undefined {
-  for (let i = stack.length - 1; i >= 0; i--) {
-    const handler = stack[i];
-    if (!handler) continue;
-
-    if (handler.requiredState && handler.requiredState !== scenarioState) {
-      continue;
-    }
-
-    if (handler.remaining !== undefined) {
-      handler.remaining--;
-      if (handler.remaining <= 0) stack.splice(i, 1);
-    }
-
-    return handler;
-  }
-
-  return undefined;
 }

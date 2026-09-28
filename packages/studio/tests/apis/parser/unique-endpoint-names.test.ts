@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { generateCode } from "../../../src/apis/generator";
 import { parseSpec } from "../../../src/apis/parser";
-import { generatedCall, loadGenerated } from "../../helpers/load-generated";
+import { generatedCall, loadGenerated } from "../../helpers/generated-project";
 import { type RecordingServer, startRecordingServer } from "../../helpers/recording-server";
 
 const GROUPINGS = ["tag", "path", "single"] as const;

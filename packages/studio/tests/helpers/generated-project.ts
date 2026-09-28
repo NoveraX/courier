@@ -168,3 +168,53 @@ export function endpointAt(
 function withoutExtension(path: string): string {
   return path.replace(/\.(ts|js)$/, "");
 }
+
+/** A call made through a loaded caller: the endpoint at a path of keys. */
+export type GeneratedCall = (variables?: unknown) => Promise<unknown>;
+
+/**
+ * An endpoint of a loaded caller, reached by a list of keys; see
+ * {@link endpointAt}, which takes them one by one.
+ *
+ * @param caller - The caller a generated barrel exports
+ * @param path - The keys to the endpoint: the caller's name, the group if any, the endpoint
+ * @returns A function making the call
+ */
+export function generatedCall(caller: unknown, path: readonly string[]): GeneratedCall {
+  return endpointAt(caller, ...path);
+}
+
+/** Generated files written and compiled under one name, removed together. */
+export interface GeneratedProject {
+  /**
+   * Write the files, with a `check.ts` beside them when given, and compile them all.
+   *
+   * @param label - Directory of this compilation, unique within the project
+   * @param files - What `generateCode` returned
+   * @param check - Source of a file that uses the generated code
+   * @returns Every diagnostic, as `file(line): message`
+   */
+  diagnostics(label: string, files: readonly GeneratedFile[], check?: string): string[];
+  /** Remove every file written. */
+  remove(): void;
+}
+
+/**
+ * Compile generated files, strictly, in projects kept under one name.
+ *
+ * @param name - The name the projects are kept under
+ * @returns What writes, compiles and removes them
+ */
+export function generatedProject(name: string): GeneratedProject {
+  return {
+    diagnostics(label, files, check) {
+      const extra: Record<string, string> = check === undefined ? {} : { "check.ts": check };
+      const dir = writeProject(`${name}/${label}`, files, extra);
+      const roots = [...files.map((file) => file.path), ...Object.keys(extra)];
+      return compileProject(dir, roots);
+    },
+    remove() {
+      removeProjects(name);
+    },
+  };
+}

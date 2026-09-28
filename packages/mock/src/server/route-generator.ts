@@ -110,10 +110,24 @@ export async function handleMockRequest(
     scenarioState,
   };
 
-  // SSE stream — bypass normal JSON response path
+  // SSE stream — bypass normal JSON response path; logged as finished once it has ended
   if (handler.transport === "sse") {
     pushHistory(config, { group, method, variables, start, status: 200, stream: true });
-    return handleSSEMock(c, handler, ctx);
+    return handleSSEMock(c, handler, ctx, ({ events, error }) => {
+      const duration = performance.now() - start;
+      config.networkState?.trackRequest(duration, error !== undefined);
+      if (error !== undefined) return config.hooks?.onError?.(requestId, 500, error, duration);
+      const state = config.getScenarioState();
+      config.hooks?.onEnd?.(
+        requestId,
+        200,
+        { events },
+        duration,
+        delay ?? 0,
+        state,
+        handler.headers,
+      );
+    });
   }
 
   try {

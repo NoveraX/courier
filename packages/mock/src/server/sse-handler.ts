@@ -7,6 +7,12 @@ import type { MockRequestContext, ResolvedHandler } from "../types";
 const ENCODER = new TextEncoder();
 const NEWLINES = /[\r\n]/g;
 
+/** How a mock stream ended: how many events it sent, and why it failed if it did */
+export interface StreamOutcome {
+  events: number;
+  error?: string;
+}
+
 /**
  * Handle an SSE mock endpoint — streams events via text/event-stream.
  * Called from handleMockRequest when handler.transport === "sse".
@@ -16,21 +22,34 @@ const NEWLINES = /[\r\n]/g;
  * end with neither, so the client reconnected and replayed it forever; and a
  * generator that threw rejected with nobody listening, which could take the
  * mock server down.
+ *
+ * @param c        The request's Hono context
+ * @param handler  The stream's handler
+ * @param ctx      The request as the stream function sees it
+ * @param onEnded  Called once the stream has ended, however it ended, so the
+ *   request can be logged as finished
+ * @returns The streaming response
+ * @example
+ * ```ts
+ * return handleSSEMock(c, handler, ctx, ({ events }) => log(`${events} events sent`));
+ * ```
  */
 export function handleSSEMock(
   c: HonoContext,
   handler: ResolvedHandler,
   ctx: MockRequestContext,
+  onEnded: (outcome: StreamOutcome) => void,
 ): Response {
   const streamFn = handler.streamFn;
   if (!streamFn) {
+    onEnded({ events: 0, error: "SSE handler missing streamFn" });
     return c.json({ error: "SSE handler missing streamFn" }, 500);
   }
 
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
   const writer = writable.getWriter();
 
-  void pumpEvents(streamFn, ctx, writer, c.req.raw.signal);
+  void pumpEvents(streamFn, ctx, writer, c.req.raw.signal).then(onEnded);
 
   return new Response(readable, {
     status: 200,
@@ -49,16 +68,20 @@ async function pumpEvents(
   ctx: MockRequestContext,
   writer: WritableStreamDefaultWriter<Uint8Array>,
   signal: AbortSignal,
-): Promise<void> {
+): Promise<StreamOutcome> {
   let end = `event: ${SSE_CONTROL_EVENTS.complete}\ndata: null\n\n`;
+  const outcome: StreamOutcome = { events: 0 };
   const gen = streamFn(ctx);
   try {
     for await (const event of gen) {
       if (signal.aborted) break;
       if (!(await write(writer, formatEvent(event)))) break;
+      outcome.events++;
     }
   } catch (error) {
     logger.warn("MockSSE", "Stream handler failed", error);
+    // The client reads the safe description; the mock's own log names the cause
+    outcome.error = error instanceof Error ? error.message : String(error);
     end = `event: ${SSE_CONTROL_EVENTS.error}\ndata: ${JSON.stringify(describeFailure(error, "Stream failed"))}\n\n`;
   }
   if (signal.aborted) {
@@ -69,6 +92,7 @@ async function pumpEvents(
   await writer.close().catch((error: unknown) => {
     logger.debug("MockSSE", "Stream already closed", error);
   });
+  return outcome;
 }
 
 /** Write one frame; false once the client has gone and nothing can be written */

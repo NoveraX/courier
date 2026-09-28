@@ -146,7 +146,7 @@ describe("deduplicate on a proxy client given the source", () => {
   describe("given a boundary instead", () => {
     const boundaryClient = () =>
       createProxyCaller<ReturnType<typeof api>>("orders", {
-        boundary: defineBoundary<ReturnType<typeof api>>({
+        boundary: defineBoundary({
           source: "orders",
           expose: { search: "query", find: "query", create: "mutation", replace: "mutation" },
         }),

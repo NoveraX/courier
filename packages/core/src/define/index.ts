@@ -3,9 +3,11 @@ export { type BoundaryConfig, defineBoundary } from "./boundary";
 export type {
   ExposablePath,
   ExposedEndpoint,
+  Exposure,
   ExposureMap,
   KindAt,
   ProxyBoundary,
+  WireShape,
   WireShapeAt,
 } from "./boundary-types";
 export type {
@@ -25,6 +27,7 @@ export type {
 } from "./builder-types";
 export type { ChannelEndpoint, HttpEndpoint, StreamEndpoint } from "./call-shapes";
 export { courier } from "./courier";
+export type { BrowserApi, ExposedApi } from "./exposed-api";
 export { type FormFieldEncoding, formBody } from "./form-body";
 export { formQuery } from "./form-query";
 export { defineGroup } from "./group";

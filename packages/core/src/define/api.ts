@@ -2,6 +2,8 @@ import type { BaseOptions } from "../http-client/types";
 import { studioHooks } from "../studio";
 import { isDevelopment } from "../utils/development";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
+import type { ProxyBoundary } from "./boundary-types";
+import type { BoundaryOf, WithBoundary } from "./exposed-api";
 import type {
   DefinedApi,
   DefinedFlatApi,
@@ -100,8 +102,12 @@ export function setSourceName(source: unknown, name: string): void {
  *   groups: { chat: chatGroup },
  * })
  */
-export function defineApi<TGroups extends OwnGroups, TEndpoints extends OwnEndpoints>(
-  config: BaseOptions & {
+export function defineApi<
+  TGroups extends OwnGroups,
+  TEndpoints extends OwnEndpoints,
+  TBoundary extends ProxyBoundary<unknown> | undefined = undefined,
+>(
+  config: Omit<BaseOptions, "boundary"> & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
      *
@@ -112,15 +118,24 @@ export function defineApi<TGroups extends OwnGroups, TEndpoints extends OwnEndpo
      * string: a label with spaces in it produces a source nothing can reach.
      */
     name?: string;
+    /**
+     * The endpoints a browser may call, from `defineBoundary`, checked against
+     * this API: a path it does not declare, or a shape it declares otherwise,
+     * does not compile. A proxy client typed from this API reaches those alone.
+     */
+    boundary?: TBoundary & NoInfer<BoundaryOf<DefinedMixedApi<TGroups, TEndpoints>, TBoundary>>;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;
   },
-): DefinedMixedApi<TGroups, TEndpoints>;
+): WithBoundary<DefinedMixedApi<TGroups, TEndpoints>, TBoundary>;
 
-export function defineApi<TGroups extends OwnGroups>(
-  config: BaseOptions & {
+export function defineApi<
+  TGroups extends OwnGroups,
+  TBoundary extends ProxyBoundary<unknown> | undefined = undefined,
+>(
+  config: Omit<BaseOptions, "boundary"> & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
      *
@@ -131,13 +146,22 @@ export function defineApi<TGroups extends OwnGroups>(
      * string: a label with spaces in it produces a source nothing can reach.
      */
     name?: string;
+    /**
+     * The endpoints a browser may call, from `defineBoundary`, checked against
+     * this API: a path it does not declare, or a shape it declares otherwise,
+     * does not compile. A proxy client typed from this API reaches those alone.
+     */
+    boundary?: TBoundary & NoInfer<BoundaryOf<DefinedApi<TGroups>, TBoundary>>;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
   },
-): DefinedApi<TGroups>;
+): WithBoundary<DefinedApi<TGroups>, TBoundary>;
 
-export function defineApi<TEndpoints extends OwnEndpoints>(
-  config: BaseOptions & {
+export function defineApi<
+  TEndpoints extends OwnEndpoints,
+  TBoundary extends ProxyBoundary<unknown> | undefined = undefined,
+>(
+  config: Omit<BaseOptions, "boundary"> & {
     /**
      * The identifier the proxy addresses this source by — `?_s=<name>`.
      *
@@ -148,10 +172,16 @@ export function defineApi<TEndpoints extends OwnEndpoints>(
      * string: a label with spaces in it produces a source nothing can reach.
      */
     name?: string;
+    /**
+     * The endpoints a browser may call, from `defineBoundary`, checked against
+     * this API: a path it does not declare, or a shape it declares otherwise,
+     * does not compile. A proxy client typed from this API reaches those alone.
+     */
+    boundary?: TBoundary & NoInfer<BoundaryOf<DefinedFlatApi<TEndpoints>, TBoundary>>;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;
   },
-): DefinedFlatApi<TEndpoints>;
+): WithBoundary<DefinedFlatApi<TEndpoints>, TBoundary>;
 
 export function defineApi(
   config: BaseOptions & { name?: string; groups?: GroupRecord; endpoints?: EndpointRecord },

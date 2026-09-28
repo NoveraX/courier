@@ -127,7 +127,7 @@ describe("a proxy client given a boundary", () => {
       return new Promise<void>((resolve) => proxy.close(() => resolve()));
     };
     const { port } = proxy.address() as AddressInfo;
-    const boundary = defineBoundary<typeof api>({
+    const boundary = defineBoundary({
       source: "names",
       expose: { "valueOf.list": "query", "then.list": "query" },
     });

@@ -130,9 +130,8 @@ export type BaseOptions = MergeOptions &
      * The endpoints a browser may call, named one by one, from
      * `defineBoundary`. The proxy refuses every other endpoint of this source
      * over HTTP, streams and sockets alike; it takes precedence over `expose`.
-     * The boundary is typed against this API, so annotate it as
-     * `ProxyBoundary` where it is declared, or TypeScript infers each of the
-     * two from the other and gives up on both.
+     * `defineApi` checks it against the API, and a proxy client typed from
+     * the API reaches only the endpoints it names.
      */
     boundary?: ProxyBoundary;
     /** Custom serializer for variables that are an object, replacing JSON.stringify (e.g. for XML) */

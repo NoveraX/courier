@@ -1,6 +1,7 @@
 import type { InferClient } from "../client";
 import { buildClientProxy } from "../client";
 import { shapeOfSource } from "../client/shape";
+import type { BrowserApi } from "../define/exposed-api";
 import { composeBackend, type StreamingFactories } from "../transport/compose-backend";
 import {
   createProxyHTTPExecutor,
@@ -27,7 +28,7 @@ import type { ProxyCallerArguments, ProxyCallerDefaults } from "./types";
  * @example
  * ```ts
  * import type { api } from "./api";
- * import { boundary } from "./boundary"; // defineBoundary<typeof api>({ source: "api", expose: { … } })
+ * import { boundary } from "./boundary"; // defineBoundary({ source: "api", expose: { … } })
  *
  * const client = createProxyCaller<typeof api>("api", {
  *   boundary,
@@ -54,7 +55,7 @@ import type { ProxyCallerArguments, ProxyCallerDefaults } from "./types";
 export function createProxyCaller<TApi>(
   source: string,
   ...defaults: ProxyCallerArguments<TApi>
-): InferClient<TApi>;
+): InferClient<BrowserApi<TApi>>;
 
 export function createProxyCaller(source: string, defaults: ProxyCallerDefaults = {}): unknown {
   /* A boundary is the narrow form of the same thing, and the one that keeps

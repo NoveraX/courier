@@ -1,5 +1,5 @@
 import type { ProxyCallerArguments, ProxyCallerDefaults, ProxyPath } from "@noverax/courier";
-import type { DefinedApi } from "@noverax/courier/define";
+import type { BrowserApi, DefinedApi } from "@noverax/courier/define";
 import {
   createClientRoot,
   createProxyHTTPExecutor,
@@ -56,7 +56,7 @@ import type { QueryCallerClient } from "./types";
 export function createProxyQueryCaller<TApi extends DefinedApi>(
   source: string,
   ...defaults: ProxyCallerArguments<TApi>
-): QueryCallerClient<TApi>;
+): QueryCallerClient<BrowserApi<TApi>>;
 
 export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDefaults): unknown {
   // Per-transport merge: caller-level `proxyPath` wins over the source's

@@ -62,9 +62,8 @@ Give each client a module that builds it and exports it. In the browser, import 
 
 ```ts title="api/boundary.ts"
 import { defineBoundary } from "@noverax/courier/define"
-import type { api } from "./index"
 
-export const boundary = defineBoundary<typeof api>({
+export const boundary = defineBoundary({
   source: "api",
   expose: { "users.getAll": "query", "users.getById": "query", "users.create": "mutation" },
 })

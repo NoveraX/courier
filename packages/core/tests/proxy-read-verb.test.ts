@@ -110,7 +110,7 @@ describe("a proxy client", () => {
 
 describe("a proxy client built from a boundary", () => {
   it("sends the reads it lists as sensitive as POST, and the others as GET", async () => {
-    const boundary = defineBoundary<ReturnType<typeof api>>({
+    const boundary = defineBoundary({
       source: "shop",
       expose: { search: "query", byEmail: "query" },
       sensitive: ["byEmail"],

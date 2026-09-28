@@ -39,7 +39,7 @@ describe("the options argument", () => {
       const withSource = createProxyCaller<typeof live>("live", { source: live });
       expectTypeOf(withSource.ticks.feed).returns.toEqualTypeOf<SSESubscription<number>>();
 
-      const boundary = defineBoundary<typeof live>({
+      const boundary = defineBoundary({
         source: "live",
         expose: { "ticks.feed": "stream" },
       });

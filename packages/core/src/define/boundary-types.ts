@@ -16,10 +16,10 @@ import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { AnyEndpoint, InferKind, InferSend } from "./marker";
 
 /** The groups an API declares, or never for one that declares none. */
-type GroupsOf<TApi> = TApi extends { options: { groups: infer TGroups } } ? TGroups : never;
+export type GroupsOf<TApi> = TApi extends { options: { groups: infer TGroups } } ? TGroups : never;
 
 /** A group's endpoints, with its own options set aside. */
-type EndpointsOf<TGroups> = {
+export type EndpointsOf<TGroups> = {
   [G in keyof TGroups]: TGroups[G] extends { options: unknown }
     ? Omit<TGroups[G], "options">
     : TGroups[G];
@@ -88,8 +88,23 @@ export interface ExposedEndpoint {
   bidirectional?: boolean;
 }
 
-/** The descriptor a boundary produces — the only thing the browser receives. */
-export interface ProxyBoundary {
+/** How the browser reaches an endpoint a boundary exposes. */
+export type WireShape = "query" | "mutation" | "stream" | "channel" | "duplex";
+
+/** What a boundary exposes: endpoint path to the shape it is reached in. */
+export type Exposure = Readonly<Record<string, WireShape>>;
+
+/** Carries a boundary's exposure in its type; never set at runtime. */
+declare const EXPOSED: unique symbol;
+
+/**
+ * The descriptor a boundary produces — the only thing the browser receives.
+ *
+ * Its type keeps the exposure it was declared with, so an API that holds it
+ * gives a browser client only the endpoints it names.
+ */
+export interface ProxyBoundary<TExposure = Exposure> {
+  readonly [EXPOSED]?: TExposure;
   /** Source this boundary belongs to, as the registry names it. */
   source: string;
   /**

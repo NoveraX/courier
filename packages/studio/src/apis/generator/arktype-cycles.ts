@@ -20,10 +20,14 @@ import { type LazyTargets, schemaToArkType } from "./validation-arktype";
 /**
  * Declarations every file with a cycle starts with.
  *
- * ArkType may probe a union branch while it is still building the union, to
- * drop members another branch already covers. Until the file has finished
- * running, the schema a lazy branch names may not exist yet, so the branch
- * claims nothing — which only keeps a member ArkType could have dropped.
+ * ArkType asks a narrowed branch about literal values while it is still
+ * building a type: the branch's own `true`, `false` and `null`, and the
+ * literal members of the union around it, to drop those another branch
+ * covers. Until the file has finished running, the schema a lazy branch
+ * names may not exist yet. Answering no for everything dropped the branch's
+ * own booleans for good, so a list of booleans in a JSON value was refused;
+ * those literals are kept, and anything else is claimed by no lazy branch
+ * until its schema exists.
  */
 export const ARKTYPE_CYCLE_HELPER = `/* Set by the last line of this file. */
 let declared = false;
@@ -31,7 +35,7 @@ let declared = false;
 /** Refer to a schema on the same reference cycle, read only while validating. */
 function lazy(base: ark.Type, resolve: () => (value: unknown) => unknown) {
   return base.narrow((value, ctx) => {
-    if (!declared) return false;
+    if (!declared) return typeof value === "boolean" || value === null;
     const result = resolve()(value);
     if (!(result instanceof type.errors)) return true;
     for (const error of result) {

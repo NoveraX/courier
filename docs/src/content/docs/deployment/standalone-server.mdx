@@ -64,14 +64,14 @@ In dev you can run the standalone server alongside your Next.js dev server with 
 
 ## Studio integration & `appOrigin`
 
-Wire the standalone server into Studio with a single `attachRuntime()` call. It auto-loads `courier.config.ts` from disk, registers your sources, and opens the Studio dev-server connection. The standalone server announces its own listen origin to Studio automatically once `httpServer.listen()` resolves — no manual `appOrigin` plumbing needed for the standalone path.
+Wire the standalone server into Studio with a single `attachRuntime()` call. In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the server takes them from `createCourierServer({ sources })`. The standalone server announces its own listen origin to Studio automatically once `httpServer.listen()` resolves — no manual `appOrigin` plumbing needed for the standalone path.
 
 ```ts title="server.ts"
 import { createCourierServer } from "@noverax/courier-server"
-import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 import { sources } from "./api/sources"
 
 if (process.env.NODE_ENV !== "production") {
+  const { attachRuntime } = await import("@noverax/courier-studio-core/runtime")
   await attachRuntime()
 }
 

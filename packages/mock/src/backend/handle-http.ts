@@ -1,6 +1,13 @@
-import { HTTPError } from "@noverax/courier";
-import { createFaultError, pickFault, shouldFail } from "../network/failure";
+import { shouldFail } from "../network/failure";
 import type { MockHistoryEntry, MockRequestContext, NetworkConfig } from "../types";
+import type { HttpCall } from "./http-outcomes";
+import {
+  handlerError,
+  missingHandler,
+  networkFault,
+  recordOutcome,
+  thrownByHandler,
+} from "./http-outcomes";
 import { resolveHandlerDelay, sleep } from "./resolve-delay";
 import type { ResolvedHandler } from "./types";
 
@@ -19,15 +26,10 @@ interface HandleHTTPParams {
 /** Handle HTTP mock request — resolves handler, applies delay/faults, tracks history */
 export async function handleHTTP(params: HandleHTTPParams): Promise<unknown> {
   const { group, method, variables, handler, history, network } = params;
-  const start = Date.now();
+  const call: HttpCall = { group, method, variables, history, start: Date.now() };
 
-  if (network && shouldFail(network)) {
-    return throwNetworkFault(group, method, variables, network, history, start);
-  }
-
-  if (!handler) {
-    return throwMissingHandler(group, method, variables, params.getScenarioState(), history, start);
-  }
+  if (network && shouldFail(network)) throw networkFault(call, network);
+  if (!handler) throw missingHandler(call, params.getScenarioState());
 
   const delay = resolveHandlerDelay(handler, network);
   if (delay) await sleep(delay);
@@ -41,108 +43,18 @@ export async function handleHTTP(params: HandleHTTPParams): Promise<unknown> {
 
   /* Run the handler before reading its error flag and status: a sequence
      sets both for the entry it answers with, as the call runs. */
-  const data = await handler.fn(ctx);
-  if (handler.isError) {
-    return throwHandlerError(group, method, variables, handler, data, history, start);
+  let data: unknown;
+  try {
+    data = await handler.fn(ctx);
+  } catch (thrown) {
+    throw thrownByHandler(call, thrown);
   }
+  if (handler.isError) throw handlerError(call, handler, data);
 
-  return recordSuccess(group, method, variables, handler, data, params, history, start);
-}
-
-function throwNetworkFault(
-  group: string,
-  method: string,
-  variables: unknown,
-  network: NetworkConfig,
-  history: MockHistoryEntry[],
-  start: number,
-): never {
-  const fault = pickFault(network);
-  const { status, message } = createFaultError(fault);
-  const error = new HTTPError({ status, headers: new Headers(), data: { message } });
-  history.push({
-    group,
-    method,
-    variables,
-    error,
-    mocked: true,
-    duration: Date.now() - start,
-    timestamp: start,
-  });
-  throw error;
-}
-
-function throwMissingHandler(
-  group: string,
-  method: string,
-  variables: unknown,
-  scenarioState: string,
-  history: MockHistoryEntry[],
-  start: number,
-): never {
-  const error = new Error(
-    `[courier-mock] No mock for "${group}.${method}" in state "${scenarioState}". ` +
-      `Call mock("${group}", "${method}").resolves(data) first.`,
-  );
-  history.push({
-    group,
-    method,
-    variables,
-    error,
-    mocked: false,
-    duration: Date.now() - start,
-    timestamp: start,
-  });
-  throw error;
-}
-
-function throwHandlerError(
-  group: string,
-  method: string,
-  variables: unknown,
-  handler: ResolvedHandler,
-  data: unknown,
-  history: MockHistoryEntry[],
-  start: number,
-): never {
-  const error = new HTTPError({
-    status: handler.status,
-    headers: new Headers(handler.headers),
-    data,
-  });
-  history.push({
-    group,
-    method,
-    variables,
-    error,
-    mocked: true,
-    result: { status: handler.status, data, headers: handler.headers },
-    duration: Date.now() - start,
-    timestamp: start,
-  });
-  throw error;
-}
-
-function recordSuccess(
-  group: string,
-  method: string,
-  variables: unknown,
-  handler: ResolvedHandler,
-  data: unknown,
-  params: HandleHTTPParams,
-  history: MockHistoryEntry[],
-  start: number,
-): unknown {
   if (handler.newState) params.setScenarioState(handler.newState);
-
-  history.push({
-    group,
-    method,
-    variables,
+  recordOutcome(call, {
     mocked: true,
     result: { status: handler.status, data, headers: handler.headers },
-    duration: Date.now() - start,
-    timestamp: start,
   });
   return data;
 }

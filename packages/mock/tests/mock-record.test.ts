@@ -132,12 +132,11 @@ describe("Record & Replay", () => {
       const users = await (client as any).users.getAll();
       expect(users).toHaveLength(2);
 
-      const user = await (client as any).users.getById();
+      const user = await (client as any).users.getById({ id: "7" });
       expect(user.id).toBe("7");
     });
 
-    it("replays multiple fixtures as sequence", async () => {
-      // Record same endpoint twice with different results
+    it("replays each call's own recording, whatever order it comes in", async () => {
       const recorder = recorderFor();
       await recorder.client.users.getById({ id: "1" });
       await recorder.client.users.getById({ id: "2" });
@@ -146,8 +145,8 @@ describe("Record & Replay", () => {
       const scenario = replayFixtures(fixtures);
       const { client } = createMockClient({ scenario });
 
-      const first = await (client as any).users.getById();
-      const second = await (client as any).users.getById();
+      const second = await (client as any).users.getById({ id: "2" });
+      const first = await (client as any).users.getById({ id: "1" });
       expect(first.id).toBe("1");
       expect(second.id).toBe("2");
     });

@@ -32,7 +32,9 @@ const INERT = (): never => {
  * ```
  */
 export function sourceFromBoundary(boundary: ProxyBoundary): Record<string, unknown> {
-  const groups: Record<string, Record<string, unknown>> = {};
+  /* A Map, not an object: a group named `valueOf` found Object's own method
+     already there, and its endpoints were written onto that. */
+  const groups = new Map<string, Record<string, unknown>>();
   const flat: Record<string, unknown> = {};
 
   for (const [path, shape] of Object.entries(boundary.endpoints)) {
@@ -49,12 +51,13 @@ export function sourceFromBoundary(boundary: ProxyBoundary): Record<string, unkn
 
     const group = path.slice(0, separator);
     const method = path.slice(separator + 1);
-    groups[group] ??= {};
-    groups[group][method] = endpoint;
+    const members = groups.get(group) ?? {};
+    members[method] = endpoint;
+    groups.set(group, members);
   }
 
   const grouped = Object.fromEntries(
-    Object.entries(groups).map(([name, endpoints]) => [name, { options: {}, ...endpoints }]),
+    [...groups].map(([name, endpoints]) => [name, { options: {}, ...endpoints }]),
   );
 
   return { ...flat, options: { groups: grouped } };

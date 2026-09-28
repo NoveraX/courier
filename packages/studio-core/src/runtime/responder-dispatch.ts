@@ -12,7 +12,8 @@ import type {
   executeDirectWSChannel,
   InProcessWSChannel,
 } from "@noverax/courier/internal-streams";
-import type { PlaygroundExecutePayload, ResponderSocket } from "./playground-responder";
+import type { PlaygroundExecutePayload } from "./playground-payloads";
+import type { ResponderSocket } from "./playground-responder";
 
 export async function dispatchHttp(
   socket: ResponderSocket,

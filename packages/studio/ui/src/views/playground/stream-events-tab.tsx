@@ -10,36 +10,32 @@ import { WSComposePanel } from "./ws-compose-panel";
  * from the entry (accumulated by `appendPlaygroundChunk` via the
  * rid-keyed `playground:chunk` listener) and dispatches bidirectional
  * WS messages via `playground:write { rid, data }`.
+ *
+ * A WS channel can be written to from the moment it is requested until it
+ * ends, whether or not it has sent anything: many answer messages and say
+ * nothing first. The runtime holds a message written while the channel is
+ * still opening and sends it once it has opened.
  */
 export function StreamEventsTab({ entry }: { entry: PlaygroundHistoryEntry }): React.ReactElement {
   const chunks = entry.chunks ?? [];
-  const hasEvents = chunks.length > 0;
-
-  if (!hasEvents) {
-    const isActive = entry.streamStatus === "streaming" || entry.streamStatus === "connecting";
-    return (
-      <div className="flex flex-col items-center justify-center gap-2 py-8">
-        {isActive && <Radio className="size-4 animate-pulse text-emerald-400" />}
-        <p className="text-body-sm text-muted-foreground/60">
-          {isActive ? "Waiting for events..." : "No events received"}
-        </p>
-      </div>
-    );
-  }
-
-  const isWs = entry.transport === "ws";
-  const isActive = entry.streamStatus === "streaming";
+  const isActive = entry.streamStatus === "streaming" || entry.streamStatus === "connecting";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-auto">
-        <PlaygroundStreamList chunks={chunks} />
+        {chunks.length > 0 ? (
+          <PlaygroundStreamList chunks={chunks} />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 py-8">
+            {isActive && <Radio className="size-4 animate-pulse text-emerald-400" />}
+            <p className="text-body-sm text-muted-foreground/60">
+              {isActive ? "Waiting for events..." : "No events received"}
+            </p>
+          </div>
+        )}
       </div>
-      {isWs && (
-        <WSComposePanel
-          disabled={!isActive}
-          onSend={(data) => sendWSMessage(entry.rid, data)}
-        />
+      {entry.transport === "ws" && (
+        <WSComposePanel disabled={!isActive} onSend={(data) => sendWSMessage(entry.rid, data)} />
       )}
     </div>
   );

@@ -1,3 +1,5 @@
+import { importsCarryExtensions } from "../../server/mocks-edit/plan/imports-carry-extensions";
+import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { groupLocalName } from "../generator";
 import type { GenerateOptions } from "../generator/types";
 import type { ImportLayout } from "../layout";
@@ -32,13 +34,16 @@ export function sourceWithNewGroups(
     (group) => !Object.hasOwn(existingFiles, layout.groupFile(group)),
   );
   if (added.length === 0 || !source) return undefined;
+  /* A new group is imported as the source imports the others. */
+  const parsed = parseSource(layout.sourceFile, source);
+  const extension = parsed.problem === null && importsCarryExtensions(parsed.program) ? ".js" : "";
   const content = addGroupsToSourceFile(
     layout.sourceFile,
     source,
     added.map((name) => ({
       name,
       local: groupLocalName(name, layout.sourceBinding),
-      importPath: layout.groupSpecifier(name, "index"),
+      importPath: `${layout.groupSpecifier(name, "index")}${extension}`,
     })),
   );
   return { path: layout.sourceFile, content };

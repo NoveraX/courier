@@ -8,6 +8,7 @@ import { previewRemoveFlatEndpoints } from "../apis/manage/remove-flat-endpoints
 import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { checkDirOverlap } from "./check-dir-overlap";
+import { generatedImportExtension } from "./generated-import-extension";
 import type { FilePlan } from "./import-files/file-plan-types";
 import { importBodies } from "./import-files/import-bodies";
 import { planFiles } from "./import-files/plan-files";
@@ -76,9 +77,11 @@ export function planManage(
   const toAdd = Object.fromEntries(
     Object.entries(body.toAdd).filter(([, names]) => names.length > 0),
   );
+  const importExtension = generatedImportExtension(root.path, layout);
+  const options = { ...declared, ...(importExtension && { importExtension }) };
   const addResult =
     Object.keys(toAdd).length > 0
-      ? previewAddEndpoints(body.spec, toAdd, declared, onDisk, layout)
+      ? previewAddEndpoints(body.spec, toAdd, options, onDisk, layout)
       : undefined;
   const afterAdd = { ...onDisk, ...contentsOf(addResult) };
   const fingerprints = manageFingerprints(entry, onDisk);

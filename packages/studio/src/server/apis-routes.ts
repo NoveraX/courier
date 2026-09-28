@@ -5,6 +5,7 @@
 import { diffSpecs, type GenerateOptions, generateCode, type ParsedSpec, parseSpec } from "../apis";
 import { fetchSpec } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
+import { withImportExtension } from "./generated-import-extension";
 import { registerLayoutRoute } from "./layout-route";
 import { registerManageRoutes } from "./manage-routes";
 import { type ProjectRoot, projectRootAt } from "./project-fs/project-root";
@@ -78,7 +79,7 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
       res.json({
         files: generateCode(
           body.spec as unknown as ParsedSpec,
-          body.options as unknown as GenerateOptions,
+          withImportExtension(body.options as unknown as GenerateOptions, deps.projectRoot),
         ),
       });
     } catch (err) {

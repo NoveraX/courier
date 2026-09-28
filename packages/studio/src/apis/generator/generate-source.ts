@@ -36,9 +36,8 @@ export function generateSourceFile(
   for (const group of groups) {
     const local = groupLocalName(group.name, options.sourceName);
     const imported = local === group.name ? group.name : `${group.name} as ${local}`;
-    lines.push(
-      `import { ${imported} } from "${options.layout.groupSpecifier(group.name, "index")}";`,
-    );
+    const from = `${options.layout.groupSpecifier(group.name, "index")}${options.importExtension}`;
+    lines.push(`import { ${imported} } from "${from}";`);
   }
 
   lines.push("", `export const ${options.sourceName} = defineApi({`);

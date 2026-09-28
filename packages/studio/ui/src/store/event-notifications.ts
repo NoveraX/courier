@@ -1,56 +1,65 @@
 import { toast } from "sonner"
 
 import type { StudioState } from "./store-types"
-import type { RequestEntry, Settings } from "./types"
+import type { RequestEntry } from "./types"
 
 type EventPayload = Record<string, unknown>
 type Getter = () => StudioState
 
 // ── Event-driven Sonner notifications ───────────────────────────────────────
 
-export function notifyOnEvent(event: EventPayload, get: Getter): void {
+/**
+ * Toast the failures and slow requests among a batch of events the store
+ * just took in. A burst that fails many requests at once is told in one
+ * toast, not one per request.
+ *
+ * @param events - The events of the batch, oldest first
+ * @param get - Reads the store after the batch was applied
+ *
+ * @example
+ * ```ts
+ * notifyOnEvents(batch, get)
+ * ```
+ */
+export function notifyOnEvents(events: EventPayload[], get: Getter): void {
   const { settings, requests } = get()
+  const failed = settings.toastOnError ? events.filter((e) => e.type === "request:error") : []
+  const slow = settings.toastOnSlowRequest
+    ? events.filter((e) => e.type === "request:end" && totalOf(e) > settings.slowRequestThreshold)
+    : []
+  if (failed.length === 0 && slow.length === 0) return
 
-  if (event.type === "request:error") {
-    notifyError(event, settings, requests)
-  }
-
-  if (event.type === "request:end") {
-    notifySlowRequest(event, settings, requests)
-  }
+  const labelOf = labeller(requests)
+  if (failed.length > 0) notifyFailed(failed, labelOf)
+  for (const event of slow.slice(-MAX_SLOW_TOASTS)) notifySlowRequest(event, labelOf)
 }
 
-function resolveLabel(event: EventPayload, requests: RequestEntry[]): string {
-  const requestId = String(event.requestId ?? "")
-  const entry = requests.find((r) => r.id === requestId)
-  if (entry) {
-    return [entry.source, entry.group, entry.method].filter(Boolean).join(".")
-  }
-  return String(event.method ?? "unknown")
-}
+/** A burst of slow requests is told by its latest few. */
+const MAX_SLOW_TOASTS = 3
 
-function notifyError(
-  event: EventPayload,
-  settings: Settings,
-  requests: RequestEntry[],
-): void {
-  if (!settings.toastOnError) return
-  const label = resolveLabel(event, requests)
-  toast.error(`Request failed: ${label}`)
-}
-
-function notifySlowRequest(
-  event: EventPayload,
-  settings: Settings,
-  requests: RequestEntry[],
-): void {
-  if (!settings.toastOnSlowRequest) return
+function totalOf(event: EventPayload): number {
   const timing = event.timing as { total?: number } | undefined
-  if (timing?.total == null || timing.total <= settings.slowRequestThreshold) return
+  return typeof timing?.total === "number" ? timing.total : -1
+}
 
-  const label = resolveLabel(event, requests)
-  const ms = Math.round(timing.total)
-  const message = `Slow request: ${label} (${ms}ms)`
+function labeller(requests: RequestEntry[]): (event: EventPayload) => string {
+  const byId = new Map(requests.map((r) => [r.id, r]))
+  return (event) => {
+    const entry = byId.get(String(event.requestId ?? ""))
+    if (entry) return [entry.source, entry.group, entry.method].filter(Boolean).join(".")
+    return String(event.method ?? "unknown")
+  }
+}
+
+function notifyFailed(failed: EventPayload[], labelOf: (event: EventPayload) => string): void {
+  const latest = labelOf(failed[failed.length - 1]!)
+  if (failed.length === 1) toast.error(`Request failed: ${latest}`)
+  else toast.error(`${failed.length} requests failed, the latest ${latest}`)
+}
+
+function notifySlowRequest(event: EventPayload, labelOf: (event: EventPayload) => string): void {
+  const ms = Math.round(totalOf(event))
+  const message = `Slow request: ${labelOf(event)} (${ms}ms)`
 
   // Match request-row color: >1s = red (error), >threshold = yellow (warning)
   if (ms > 1000) {

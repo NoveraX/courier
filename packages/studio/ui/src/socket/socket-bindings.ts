@@ -8,6 +8,7 @@ import { showBindingErrorToast } from "@/store/binding-error-toast"
 import { bindApis } from "./apis-bindings"
 import { isBindingErrorPayload, isBindingSnapshot } from "./binding-guards"
 import { isStudioEvent } from "./event-guards"
+import { createEventQueue } from "./event-queue"
 import {
   isPlaygroundChunkPayload,
   isPlaygroundEndPayload,
@@ -30,12 +31,17 @@ export interface Bindings {
   onPlaygroundError: (data: unknown) => void
   /** Removes the listeners for the project Studio runs (`bindApis`). */
   unbindApis: () => void
+  /** Applies the runtime events still queued and stops queueing. */
+  closeEvents: () => void
 }
 
 export function buildBindings(
   s: Socket,
   store: typeof useStudioStore.getState,
 ): Bindings {
+  const events = createEventQueue<StudioEvent & Record<string, unknown>>((batch) =>
+    store().handleEvents(batch),
+  )
   const b: Bindings = {
     onConnect: () => store().setConnectionStatus("connected"),
     onDisconnect: () => store().setConnectionStatus("disconnected"),
@@ -47,12 +53,8 @@ export function buildBindings(
     onConnectError: () => store().setConnectionStatus("disconnected"),
     onEvent: (event) => {
       if (!isStudioEvent(event)) return
-      const e = event as StudioEvent & Record<string, unknown>
-      if (isMockEvent(e.type)) {
-        handleMockEvent(e)
-      } else {
-        store().handleEvent(e)
-      }
+      if (isMockEvent(event.type)) handleMockEvent(event)
+      else events.push(event)
     },
     onBindingSnapshot: (data) => {
       if (!isBindingSnapshot(data)) return
@@ -93,6 +95,7 @@ export function buildBindings(
       store().errorPlayground(data.rid, data.error)
     },
     unbindApis: bindApis(s, store),
+    closeEvents: events.close,
   }
 
   s.on("connect", b.onConnect)
@@ -127,5 +130,6 @@ export function unbind(s: Socket, b: Bindings): void {
   s.off("playground:end", b.onPlaygroundEnd)
   s.off("playground:error", b.onPlaygroundError)
   b.unbindApis()
+  b.closeEvents()
 }
 

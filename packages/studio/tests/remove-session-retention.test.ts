@@ -74,7 +74,7 @@ function emitStreamOpen(
   get: () => StudioState,
   args: { requestId: string; sessionId: string; mode: "direct" | "proxy" },
 ) {
-  get().handleEvent({
+  get().handleEvents([{
     type: "stream:open",
     timestamp: Date.now(),
     sessionId: args.sessionId,
@@ -85,7 +85,7 @@ function emitStreamOpen(
     method: "feed",
     transport: "sse",
     mode: args.mode,
-  } as never)
+  } as never])
 }
 
 describe("binding snapshot transitions — request retention", () => {

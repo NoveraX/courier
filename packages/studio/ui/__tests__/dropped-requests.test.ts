@@ -31,7 +31,7 @@ describe("the dropped-requests counter", () => {
     const events: Event[] = []
     for (let i = 0; i < 25; i++) events.push(start(i), fetchEnd(i))
 
-    for (const event of events) useStudioStore.getState().handleEvent(event)
+    useStudioStore.getState().handleEvents(events)
 
     expect(useStudioStore.getState().requests).toHaveLength(10)
     expect(useStudioStore.getState().droppedRequests).toBe(15)
@@ -40,9 +40,9 @@ describe("the dropped-requests counter", () => {
   it("stays put while events that change nothing keep arriving", () => {
     const events: Event[] = []
     for (let i = 0; i < 11; i++) events.push(start(i))
-    for (const event of events) useStudioStore.getState().handleEvent(event)
+    for (const event of events) useStudioStore.getState().handleEvents([event])
 
-    for (let i = 0; i < 11; i++) useStudioStore.getState().handleEvent(fetchEnd(i))
+    for (let i = 0; i < 11; i++) useStudioStore.getState().handleEvents([fetchEnd(i)])
 
     expect(useStudioStore.getState().droppedRequests).toBe(1)
   })

@@ -27,7 +27,7 @@ afterEach(() => {
 });
 
 /** A project under the repository's node_modules, so its config resolves the workspace packages. */
-function project(): string {
+function project(serverBlock?: string): string {
   const cache = join(__dirname, "../../../node_modules/.cache/courier-server-tests");
   mkdirSync(cache, { recursive: true });
   const root = mkdtempSync(join(cache, "project-"));
@@ -39,7 +39,11 @@ function project(): string {
       "const { endpoint } = courier();\n" +
       'export const api = defineApi({ baseURL: "http://127.0.0.1:1", endpoints: { ping: endpoint.get("ping") } });\n',
   );
-  writeFileSync(join(root, "courier.config.ts"), 'import { api } from "./src/api";\nexport default { sources: { api } };\n');
+  const server = serverBlock === undefined ? "" : `, server: ${serverBlock}`;
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    `import { api } from "./src/api";\nexport default { sources: { api }${server} };\n`,
+  );
   return root;
 }
 
@@ -127,6 +131,32 @@ describe("courier-server", () => {
     expect((await call("https://app.example")).status).not.toBe(403);
     expect((await call("https://evil.example")).status).toBe(403);
   }, 30_000);
+
+  it("applies the body limits the config's server block sets", async () => {
+    const root = project("{ maxBodyBytes: 64, maxUploadBytes: 512 }");
+    const url = await serve(root, "--host", "127.0.0.1", "--port", String(await freePort()));
+    const form = new FormData();
+    form.append("file", new Blob([new Uint8Array(1024)]), "a.bin");
+
+    const json = await fetch(`${url}/api/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ padding: "x".repeat(200) }),
+    });
+    const upload = await fetch(`${url}/api/request`, { method: "POST", body: form });
+
+    expect(json.status).toBe(413);
+    expect(await json.json()).toMatchObject({ message: "Request body exceeds 64 bytes" });
+    expect(upload.status).toBe(413);
+    expect(await upload.json()).toMatchObject({ message: "Request body exceeds 512 bytes" });
+  }, 30_000);
+
+  it("names a body limit in the config that is not a byte count", () => {
+    const result = run(project('{ maxUploadBytes: "10mb" }'));
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain("server.maxUploadBytes");
+  });
 
   it("prints its version", () => {
     const result = run(project(), "--version");

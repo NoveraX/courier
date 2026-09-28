@@ -3,6 +3,7 @@ import { createMockServer } from "../server/create-mock-server";
 import type { MockStore } from "../store";
 import type { AnyMockScenario, NetworkConfig, UntypedMockFn } from "../types";
 import { buildAutoHandlers, seedAllCollections } from "./auto-scenario";
+import { withBasePath } from "./base-path-mappings";
 import { composeScenarios } from "./compose-scenarios";
 import type { SeedConfig } from "./prefix-mappings";
 import { buildPrefixMappings } from "./prefix-mappings";
@@ -80,7 +81,7 @@ export interface AutoMockServerConfig {
  */
 export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   const routes = analyzeRoutes(config.source);
-  const mappings = buildPrefixMappings(config.source, routes);
+  const mappings = withBasePath(buildPrefixMappings(config.source, routes), config.source);
   const seedOpts = seedOptionsOf(config.seed);
 
   // Late-bound store getter — shared by presets and reseed closure

@@ -1,0 +1,135 @@
+export const metadata = { title: "Mock servers", description: "Declare mock servers in courier.mocks.ts for Studio to generate and run, point a proxy caller at them, and add them from Studio.", mode: "both" }
+
+## Install
+
+```bash
+npm install --save-dev @noverax/courier-mock
+```
+
+It works with the app's own `@noverax/courier`. It also needs `hono`, and a mock server — one Studio runs, or one from `/server` — needs `@hono/node-server`. Add the ones the app does not depend on already, for development only:
+
+```bash
+npm install --save-dev hono @hono/node-server
+```
+
+Leave out any the app already lists under `dependencies`: `--save-dev` would move it out of them, and a production install would then go without it.
+
+## Declaring mocks
+
+Declare mocks in `courier.mocks.ts`, beside `courier.config.ts`: its default export is `defineMocks({ ... })`, with one `defineMockServer(...)` under each key. Studio lists each mock by its key, generates its routes and data from its source, and runs it — at launch when `autoStart` is set, or when you start it from the Mocks view. Studio's mock wizard can write the declarations for you; see [Add mocks from Studio](#add-mocks-from-studio).
+
+The mocks have a file of their own because `courier.config.ts` is also loaded in production — by the standalone server, and by `attachRuntime()` — where this package is not installed. Only Studio reads `courier.mocks.ts`. `courier.config.ts` has no `mocks` key: `defineConfig` does not type-check with one, and Studio reads mocks from nowhere else.
+
+```ts
+// src/api.ts
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+type User = { id: number; name: string }
+
+const { endpoint } = courier()
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+  },
+})
+export const api = defineApi({ baseURL: "https://api.example.com", groups: { users } })
+```
+
+```ts
+// courier.config.ts
+import { defineConfig } from "@noverax/courier/config"
+import { api } from "./src/api"
+
+export default defineConfig({ sources: { api } })
+```
+
+```ts
+// courier.mocks.ts
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+import { api } from "./src/api"
+
+export default defineMocks({
+  api: defineMockServer({
+    source: api,
+    port: 7001,
+    autoStart: true,
+    seed: { users: 5 },
+    overrides: (mock) => {
+      mock("users", "getById").rejects(404, { message: "Not found" })
+    },
+  }),
+})
+```
+
+- `source` is the source object the mock serves. Import it from where the config does, as above, or read it from the config — `import courierConfig from "./courier.config"`, then `source: courierConfig.sources.api` — as Studio's wizard writes it. That form needs a config whose default export is `defineConfig({ sources })`: a config that exports `sources` by name only loads, but a default import of it does not type-check. In a `"type": "module"` package whose tsconfig resolves modules as Node does (`node16` or `nodenext`), import `./courier.config.js` instead; TypeScript asks for the extension there, and the wizard writes it that way. Studio loads `courier.mocks.ts` together with the config, as one module graph, so a module both import runs once, and either way the mock holds the very source object the config declares.
+- The file may also be named `courier.mocks.mts`, `.cts`, `.js`, `.mjs` or `.cjs`. Studio looks for these names in that order, in the directory that holds `courier.config`, and loads the first it finds: a `courier.mocks.ts` there hides a `courier.mocks.js` beside it. A TypeScript file loads as it is, with extensionless imports and tsconfig path aliases; nothing else needs installing.
+- `port` is held exactly: when it is taken, Studio says so rather than moving the mock. Without one, Studio assigns the key a port from `studio.mockBasePort` (7001 by default). The mock listens there, or on the next free port above it when another process holds it as the mock starts, and the key is assigned another when a mock declares that port. After Studio restarts, the mock can get another too. Set `port` to keep one.
+- The mock answers each group at its prefix, and — for a source whose `baseURL` has a path, such as `https://api.example.com/api/v3` — under that path too, so a client pointed at the mock with only the host swapped reaches it at `/api/v3/users` as one pointed at its bare URL does at `/users`.
+- `seed` sets how many records each collection starts with: `count` for every group (20 by default), and a number under a group's name for that group alone. `autoStart` defaults to `false`. A key set to `undefined` declares no mock, so one can be switched off in place.
+- The records are generated from each endpoint's response schema, and pass it: the bounds, integer and `multipleOf` checks, string and array lengths, formats (`email`, `url`, `uuid`, ISO dates and times, and the other common ones), `regex` patterns and prefixes that a Zod (v4 or v3) or Valibot schema declares all hold, so a typed client validating the responses accepts them. Field names pick realistic values where the schema allows one.
+- Each running mock is a process of its own that Studio starts: it loads the mocks file with Studio's loader, reusing the transforms Studio keeps, and serves that one mock on the port Studio chose.
+- A mock that fails — a definition Studio cannot read, a missing package, a taken port, a crash — is reported in Studio's terminal, and its status in the Mocks view gives the reason on hover or keyboard focus. A running mock whose edited definition cannot be read keeps serving the last one that could, and says so the same way. The mock's own request log appears in Studio's terminal too; `log: "silent"` turns it off.
+- A `courier.mocks.ts` that does not load — a syntax error, an import that cannot be resolved, no default export — leaves the config and its sources working, and the mocks keep serving the definitions that loaded last. Studio's terminal logs why, and a banner above the Mocks view says so until the file loads again.
+- `overrides` and `scenarios` are checked against `source`: `mock` takes the source's group and endpoint names and each endpoint's response type. Write a scenario with `defineScenario<typeof api>(...)` to have it checked the same way; one without the type argument fits every mock. An endpoint declared outside any group is mocked under the collection its path starts with, `mock("users", "listUsers")`, which is not checked.
+- Editing `courier.mocks.ts`, or a module it imports, restarts a running mock whose declaration changed, or something that declaration uses — a declaration beside it, an import and every module that import reaches, a statement of the file that declares nothing. The other mocks keep running, with their records: adding a mock does not restart the ones already running. A mocks file whose mocks Studio cannot tell apart — its keys spread in or computed, or a CommonJS file — restarts every running mock on each edit. `autoStart` applies when Studio first reads the definition, or when an edit turns it on — not again after you stop the mock.
+
+### A proxy caller pointed at the mock
+
+A mock stands in for the API itself, where a direct caller goes, and also for a Courier proxy, where a proxy caller goes. It serves the proxy's three routes:
+
+| Route | For | As a Courier proxy serves it |
+| --- | --- | --- |
+| `GET`/`POST /api/request` | an HTTP call | the endpoint named by `_s`, `_g` and `_m` in the query; a read's variables in `_v`, a write's in the JSON or form body |
+| `GET /api/sse` | a stream | the stream's events, the variables in `_v` |
+| `/api/ws` (WebSocket) | a channel | every channel a caller subscribes to, on one socket, each by its topic |
+
+```ts
+import { createProxyCaller } from "@noverax/courier"
+import { api as source } from "./src/api"
+
+const mock = "http://localhost:7001"
+const api = createProxyCaller("api", {
+  source,
+  proxyPath: { http: `${mock}/api/request`, sse: `${mock}/api/sse`, ws: "ws://localhost:7001/api/ws" },
+})
+```
+
+On `/api/ws` a subscription goes as it does on a Courier server. The variables are checked against the channel's schema, and a subscription that fails them ends with code 4422. Its topic is keyed as the channel's `.topic()` says, with a `renamed` frame first when that differs from the topic asked for, so subscribers who share a key share the channel's broadcasts. Each message is checked against what the channel `.send()`s, and one that fails is refused with 4422 while the subscription goes on. A channel that is not mocked ends with 4404, naming it and the scenario state. `ctx.close()` ends that one subscription and leaves the socket's others open. A mock built without a source checks nothing and keys each topic by its variables. Studio's mock logs show each subscription as it opens and ends.
+
+## Add mocks from Studio
+
+**Add mock server** in the Mocks view opens a wizard: pick the sources to mock, set each mock's key, its port — assigned by Studio or fixed — its records per collection and whether it starts with Studio, then review. Studio shows the exact change to `courier.mocks.ts` as a diff, with what the diff does not show — that it creates the file, which running mocks it restarts, that a port is taken or assigned — and writes it on one click. It creates `courier.mocks.ts` when there is none (`courier.mocks.mts` beside a `courier.config.mts`), and changes an existing file only by inserting text: the new entries in the object `defineMocks` takes, and the imports they need. It imports a `courier.config.ts` the way the project resolves modules: as `./courier.config.js` when the tsconfig, or a project it lists under `references`, resolves them as Node does (`node16` or `nodenext`) in a `"type": "module"` package, or when the config's or the mocks file's own relative imports end in `.js` or `.mjs`, and as `./courier.config` otherwise. A key another mock has, in any letter case, a port that is Studio's own or that another mock declares, or a source the config does not declare is marked on its field instead. A port Studio assigned to another mock may be taken: the review warns that the other mock moves to another port. **Add mock server** is turned off, and says why, while Studio's first load of `courier.config` runs, while the config does not load, and while it is missing. During a later reload it stays on: the wizard waits for the reload before it plans the change, and answers `STUDIO_BUSY` when the reload outlasts that wait.
+
+Studio then loads the edited files and runs them only if they are the edit it meant: the mocks file loads, each new mock is a `defineMockServer()` definition serving the config's source, no mock declared before is gone, and the config's sources are unchanged. Otherwise it puts the file back, or removes the file it created, keeps running what it ran, and shows why, with the lines to add by hand once the cause is fixed. If the file was saved in the meantime, Studio keeps that save, and lists the lines it added for you to remove; so it does when it cannot put the file back. A save between the review and the click is caught too: Studio shows the change again, planned against the file as it stands.
+
+When Studio will not edit the file itself, it shows the lines to add by hand — or the whole file to create — with the reason. For the first five reasons below, the wizard plans the change again by itself when the project changes, or on **Check again**.
+
+| Code | Studio says |
+|---|---|
+| `STUDIO_STARTING` | Studio is still loading courier.config; try again in a moment. |
+| `STUDIO_BUSY` | Studio is still loading courier.config; try again in a moment. On the click, once it has waited 5 s longer than one load may take: Studio is still loading courier.config after *25 s*, so it did not change anything. Try again once it has loaded. |
+| `CONFIG_LOAD_FAILING` | courier.config does not load right now (*error*). Fix that first; Studio adds mocks only beside a config it can load. |
+| `MOCKS_LOAD_FAILING` | *courier.mocks.ts* does not load right now (*error*). Fix that first. |
+| `MOCKS_CHANGED_SINCE_LOAD` | *courier.mocks.ts* changed since Studio loaded it. Studio plans the edit once it has reloaded. |
+| `NO_CONFIG` | There is no courier.config in the project. Declare your sources there first. |
+| `CONFIG_SHADOWED` | *courier.config.js* sits beside *courier.config.ts*, so the import of "*./courier.config*" in *courier.mocks.ts* would load *courier.config.js*, not *courier.config.ts*, which Studio loads. Delete or move *courier.config.js* — most likely compiled output — then ask again. |
+| `MOCKS_JAVASCRIPT` | *courier.mocks.js* is JavaScript. Studio writes ES imports named as TypeScript resolves them, which a CommonJS file cannot take and Node does not always resolve, so it edits TypeScript mocks files only. |
+| `MOCKS_IS_LINK` | *courier.mocks.ts* is a symbolic link. Studio saves an edit by replacing the file, which would replace the link with a copy, so Studio edits only a regular file. |
+| `MOCKS_NOT_REGULAR` | *courier.mocks.ts* is a directory, so Studio cannot edit it as a mocks file. |
+| `MOCKS_HARD_LINKED` | *courier.mocks.ts* has *2* hard links. Studio saves an edit by replacing the file, which would part it from its other names, so it leaves the file to you. |
+| `MOCKS_NOT_OWNED` | *courier.mocks.ts* belongs to user *501*, but Studio runs as user *502*. An edited file would belong to user *502*, so Studio leaves it to its owner. |
+| `MOCKS_NOT_WRITABLE` | Studio may not write *courier.mocks.ts* (*EACCES*). Studio does not edit a file that is read-only to it. |
+| `MOCKS_TOO_LARGE` | *courier.mocks.ts* is *n* bytes, more than the 1048576 bytes (1 MiB) Studio edits. |
+| `MOCKS_GENERATED` | Line *n* of *courier.mocks.ts* marks the file as generated, so an edit would be lost when it is generated again. Change what generates it instead. (`@generated` or `DO NOT EDIT` in its first five lines.) |
+| `NOT_UTF8` | *courier.mocks.ts* is not valid UTF-8 text. Studio edits only text it can read in full, so it leaves this file as it is. |
+| `PARSE_ERROR` | *courier.mocks.ts* does not parse: *problem* |
+| `MOCKS_COMMONJS` | *courier.mocks.ts* exports with *module.exports* (line *n*); Studio edits only a mocks file that is an ES module. |
+| `MOCKS_NOT_LITERAL` | *courier.mocks.ts* does not export an object literal Studio can add to. Or it names what the file exports instead: the result of another call than `defineMocks`, more than one default export, a type, a variable not declared with `const`, or a getter, setter or method among the mocks. |
+| `MOCKS_KEYS_HIDDEN` | *courier.mocks.ts* (line *n*) spreads another object into the mocks, so Studio cannot see every key. Or a computed key, `__proto__`, or keys declared outside the object Studio would add to. |
+| `IMPORT_NAME_TAKEN` | *courier.mocks.ts* already declares defineMockServer on line *n*, so Studio cannot import defineMockServer from @noverax/courier-mock under that name. |
+| `MOCK_PACKAGE_UNLOADABLE` | Studio could not load @noverax/courier-mock in this project: *reason*. Install it with *npm install --save-dev @noverax/courier-mock hono @hono/node-server*, then ask again. (The command follows the project's lockfile.) |
+| `WRITE_FAILED` | Studio could not write *courier.mocks.ts* (*error*). |
+| `INTERNAL_PLAN_REJECTED` | Studio could not verify its edit of *courier.mocks.ts* (*problem*), so it changed nothing. |
+| `NOT_LOCAL_PEER` | Studio edits project files only for a browser on this machine. Add the mocks to your mocks file by hand, or open Studio on the machine it runs on. |

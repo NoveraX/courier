@@ -6,6 +6,7 @@ import {
   Code2,
   Globe,
   Layers,
+  Monitor,
   Play,
   Puzzle,
   Rocket,
@@ -148,6 +149,17 @@ export const docsNav: NavSection[] = [
     items: [
       { title: "Test Client", href: "/docs/testing/test-client" },
       { title: "Mocking Responses", href: "/docs/testing/mocking" },
+      { title: "Mock Utilities", href: "/docs/testing/mock-utilities" },
+    ],
+  },
+  {
+    label: "Studio",
+    icon: Monitor,
+    items: [
+      { title: "Studio", href: "/docs/studio/overview" },
+      { title: "Import an API", href: "/docs/studio/import-api" },
+      { title: "Mock Servers", href: "/docs/studio/mock-servers" },
+      { title: "How Studio Loads the Project", href: "/docs/studio/project-loading" },
     ],
   },
   {

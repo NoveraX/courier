@@ -1,0 +1,97 @@
+export const metadata = { title: "Import an API", description: "Turn an OpenAPI 3, Swagger 2 or Postman specification into typed API code, and keep it up to date as the specification changes.", mode: "both" }
+
+## Importing
+
+**Import API** on the APIs page turns an OpenAPI 3, Swagger 2 or Postman specification — from a URL, a file, or pasted text — into typed API code: pick the endpoints, choose the options, preview the files, then **Write to Disk**. Studio generates the files itself and writes them to the output directory, in a folder named after the source in kebab case (`src/api/pets/` for `pets`, `src/api/pet-store/` for `petStore`), where `source.ts` exports the source, and records what it wrote in `.courier/imports-state.json` — see [Which files Studio changes](/docs/studio/import-api#which-files-studio-changes).
+
+Studio lists only the sources `courier.config.ts` declares — it does not look for API files in the project — and an import changes no config. So after the write the wizard shows what the config still lacks, each part ready to copy, and the API appears in Studio — on the APIs page, in the Explorer and in the Playground — once the config declares it:
+
+```ts
+// courier.config.ts
+import { defineConfig } from "@noverax/courier/config"
+import { api } from "./src/api"
+import { pets } from "./src/api/pets/source"
+
+export default defineConfig({
+  sources: { api, pets },
+  imports: {
+    pets: {
+      importType: "url",
+      type: "openapi",
+      from: "https://specs.example.com/pets.json",
+      outputDir: "src/api",
+      sourceName: "pets",
+    },
+  },
+})
+```
+
+- **`sources`** is what Studio lists APIs from, and what your app calls. An API written by hand is declared there the same way. Studio matches an import to the source of its name, so an import needs a name no other source takes: while `sources` declares another API under it, Studio writes nothing and says so. The APIs page lists a source as imported only when the config loads the `source.ts` Studio generated for it.
+- **`imports`** is what Studio checks and manages an import from: the update check fetches `from` again, and when the specification changed, **Manage** lists the endpoints it adds and drops, for you to add to the files or remove from them; the endpoints you add are generated with the options written there. The wizard's entry carries the source name and every option you changed from its default, but not the endpoints you left out in the Select step — the entry has no way to keep that selection — so Manage lists those as endpoints you can add, and the wizard says how many there are. A file or pasted import has no `from`: Manage asks for its specification each time, and the update check marks it not checked, rather than up to date. A check that fails says why on the import's card. The update check sends `auth` with the request to `from`'s own origin, never to a host it redirects to, and refuses a specification whose hash is not the one `pinHash` names — the hash Studio records for the import as `specHash` in `.courier/imports-state.json`. An update, Manage and a new write of a declared import generate from what its `transform` returns for the parsed specification, keeping only the endpoints `include` names, by tag, by path as the specification writes it, or by operationId, and then leaving out those `exclude` names.
+- Importing the same name again keeps the endpoints you edited by hand, while the specification still describes them, and the ones you added, in the files that declare them. Every other generated file — the source of an API grouped by tag or path, its `index.ts`, the schemas — is written as generated; when it holds edits of yours, Studio asks before replacing it. A group left out this time has its files removed, as long as Studio wrote them and nobody changed them; the message after the write says how many files it removed, and their copies are kept.
+- A part the config declares already is left out, and once it declares both, the wizard closes after the write and says only what it wrote.
+- The generated files are application code. A project that emits declarations compiles them, since every type their exports carry is one the packages export, but not one under `isolatedDeclarations`, which asks for a written type on every export: the type of a group or a source is the whole chain of its endpoints.
+
+### Which files Studio changes
+
+Studio changes an import's files — when it writes the import, updates it, adds or removes endpoints, or removes the import — only inside the import's folder, and decides for each file by who it belongs to. It records every file it writes, with a hash of its content, in `.courier/imports-state.json`, and starts each with two lines that say so:
+
+```ts
+// @courier-generated {"import":"pets","sha256":"3f2a…"}
+// Courier Studio wrote this file. It keeps your edits to endpoints when it updates the file.
+```
+
+- **A file Studio wrote and nobody changed** is replaced or removed as the change needs. A file whose first line names the import, but which Studio has no record of — in a fresh clone, say, where `.courier/` is not checked in — is treated the same way when it is replaced; removing one waits for you, offered ticked.
+- **A file you changed** keeps your edits to endpoints when Studio updates it. A file Studio would replace whole, or remove, waits for you instead — and so does a file whose endpoints Studio cannot read as code, one saved mid-edit say, since it cannot keep your edits in it.
+- **A file Studio did not write** — one you added to the folder, or one its first line says Studio wrote for another import — is never removed, and replacing it waits for you.
+- **A symbolic link or a folder where a file should be** is never written through, replaced or removed, and nothing is written through a folder link that leads out of the project. A change that would write one of them is refused until you move it out of the way.
+
+When a change holds steps that wait for you, Studio shows them with the rest of the change, each with its own checkbox, and takes only the steps you tick; a file left unticked stays as it is, and so does every file it imports: Studio never removes a file that a file staying in the import's folder imports, and the message after the change counts it among the files left as they were. An update, a change to endpoints and a removal are applied only as you previewed them: if a file changed in the meantime, Studio shows the change as it now stands instead. A write needs no preview, and asks only when a step waits for you.
+
+Every change is applied all at once. Studio keeps a copy of each file it replaces or removes in `.courier/backups/<change>/`, and keeps the copies of the last 20 changes that made any. A change that Studio is stopped in the middle of is undone the next time it starts, file by file, except for a file changed since, which is left as it is. A change another Studio on the same project is still making is left to that Studio. Studio tries such an undo once: its copy of each file it could not restore is kept, whatever the limit, and Studio names those files at every start until you delete their folder in `.courier/backups/`. Studio undoes only what its own records name: a `.courier` folder that came with the project cannot make it touch other files. Removing an import leaves `courier.config.ts` as it is: the dialog warns when the config imports one of the files that go, since the config stops loading until you remove that import, and reminds you to remove the import's entry under `imports` too, since Studio goes on checking the import for updates while the config declares it.
+
+A request Studio refuses changes nothing. It is answered with `{ error }` — `404` for an import Studio does not know, `400` for a body it cannot read — and, for the refusals below, with a `code` and, where there is one, the plan as it stands. A change that needs `courier.config` to load is refused as [How Studio loads the project](/docs/studio/project-loading) describes.
+
+| Code | Status | Meaning |
+|---|---|---|
+| `NEEDS_CONFIRMATION` | 409 | Some steps wait for you; send the request again with the plan's `planDigest` and the paths you allow in `confirm`. |
+| `PLAN_NOT_SEEN` | 409 | An update, a change to endpoints or a removal quoted no plan; preview it first. |
+| `PLAN_STALE` | 409 | The plan is not the one you saw: a file it rests on changed, or the import's declaration or the change asked for did. |
+| `TARGET_BLOCKED` | 409 | A file the change writes is a symbolic link or not a file. |
+| `CONFIRMATION_NOT_IN_PLAN` | 400 | `confirm` names a path the plan does not ask about. |
+| `DECLARATION_MISMATCH` | 409 | `imports` declares the import in another folder, or with another type, validation, grouping, client or other generation option, than the wizard's options; the message names each one. An update and Manage generate as declared, so an import written otherwise would change layout at the next of them. |
+| `DIR_OVERLAP` | 409 | Another import owns the folder, or one inside or around it. |
+| `NAME_TAKEN` | 409 | `sources` declares another API under the import's name. |
+| `FILE_NOT_RECOGNIZED` | 409 | A file Studio would add endpoints to no longer shows where its endpoints are. |
+| `ENDPOINT_OUTSIDE_PREFIX` | 409 | An endpoint you add would call a URL the prefix its group file declares cannot reach, or Studio cannot read that prefix; add it by hand, or import the API again under the same name. An endpoint the file's prefix can reach is written relative to it, whatever prefix the specification gives the group. |
+| `IMPORTS_STATE_UNSAFE` | 409 | Studio cannot read `.courier/imports-state.json`, or keep a copy of it, so saving it would lose the other imports' records. |
+| `COURIER_DIR_UNSAFE` | 409 | `.courier`, or a folder Studio keeps in it, is a symbolic link or not a folder; Studio keeps nothing there. |
+| `INVALID_IMPORT` | 400 | The output directory, the source name or a group's name is one Studio does not write to: outside the project, in `.git`, `node_modules` or `.courier`, or a name Windows treats differently. |
+| `PATH_OUTSIDE_PROJECT` | 400 | A path leads out of the project. |
+| `SPEC_NOT_GENERATED` | 400 | Studio could not generate code from the specification sent. |
+| `SPEC_TOO_LARGE` | 413 | The specification is larger than 64 MB once parsed: Studio takes the parsed specification back when it generates, writes, updates or manages an import, and a request body may be at most 64 MB. |
+| `SPEC_UNREADABLE` | 502 | The import's `from` answered with something that is not a specification Studio reads, such as a page. |
+| `SPEC_PIN_MISMATCH` | 409 | The specification's hash is not the one the import's `pinHash` names. |
+| `IMPORT_TRANSFORM_FAILED` | 400 | The import's `transform` threw, or returned something that is not a specification. |
+
+## Specifications on a private network
+
+**Import API** and the update checks fetch a specification by URL on your behalf, so Studio does not reach into a network you could not see from your own browser. It connects to public addresses, and to this machine when the URL you gave points there — a specification your own dev server serves — following redirects as long as every hop stays on this machine. It reaches a host on a private network, or this machine once any hop has been elsewhere, only when `studio.allowedSpecHosts` in `courier.config.ts` names that host:
+
+```ts
+// courier.config.ts
+import { defineConfig } from "@noverax/courier/config"
+import { api } from "./src/api"
+
+export default defineConfig({
+  sources: { api },
+  studio: { allowedSpecHosts: ["gitlab.internal", "10.0.0.7:8080"] },
+})
+```
+
+- Studio reads the list only when a fetch would reach such a host, from `courier.config` as it is on disk at that moment: a host a save has just added or removed counts.
+- While `courier.config` does not load, no private host is reached, not even one the last config that loaded named: the request is refused with 409 `CONFIG_NOT_LOADING`, and with 503 while Studio is still loading the config. A project without a config is told to create one and name the host there.
+- List hosts literally. An entry is the host the URL names, in any case — `gitlab.internal` allows it on any port, `10.0.0.7:8080` on that port only — and an IPv6 address may be written with or without brackets. A URL that names no port has its scheme's default, so `gitlab.internal:443` allows `https://gitlab.internal`. A host computed from something Studio does not watch, such as an environment variable or a file the config reads, is taken as of the last load, and one computed in a module Node runs itself as of the last time Node ran it.
+- `0.0.0.0` and `::`, which mean every interface, are never reached, even when listed.
+- Every hop is checked as it connects: a host name is resolved once, every address it resolves to must pass, and the connection goes to one of those; a redirect is followed only once its target passes the same check, up to five redirects.
+- A URL Studio refuses, such as one that is not `http://` or `https://` or that names a private host the list does not, is answered 400. A host Studio could not read is answered 502, with a message that says which and why: it could not be reached, did not answer or finish sending within 60 s, answered with an error status, redirected more than five times or to something that is not an `http://` or `https://` URL, sent a response that is not HTTP Studio can parse, or sent a body that was cut off, does not decompress or passes 64 MB. A check of every import reports the same message as that import's result.

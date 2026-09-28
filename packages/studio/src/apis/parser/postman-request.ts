@@ -10,6 +10,7 @@
 
 import { inferSchemaFromValue } from "./infer-schema";
 import { pathParamName } from "./path-utils";
+import { withoutHost } from "./postman-base";
 import type { ParsedParameter, ParsedSchema, ParsedSecurityScheme, SpecNode } from "./types";
 
 /** Postman writes an environment reference as `{{name}}`. */
@@ -21,11 +22,10 @@ export function requestPath(url: unknown): string {
   if (segments) return segments;
 
   const raw = typeof url === "string" ? url : ((url as SpecNode)?.raw ?? "");
-  const withoutQuery = raw.split("?")[0] ?? raw;
-  /* Strip the scheme and host without letting the URL parser see `{{…}}`. */
-  const afterHost = withoutQuery.replace(/^[a-zA-Z]+:\/\/[^/]+/, "");
-  const path = afterHost.startsWith("/") ? afterHost : `/${afterHost}`;
-  return normalizeSegments(path.split("/").filter(Boolean));
+  /* The host goes without letting the URL parser see `{{…}}`: a leading
+     `{{baseUrl}}` is the host, not a parameter of the path. */
+  const afterHost = withoutHost(raw).split("?")[0] ?? "";
+  return normalizeSegments(afterHost.split("/").filter(Boolean));
 }
 
 function structuredPath(url: unknown): string | undefined {
@@ -43,21 +43,6 @@ function normalizeSegments(segments: string[]): string {
     return segment;
   });
   return out.length > 0 ? `/${out.join("/")}` : "/";
-}
-
-/** Where the collection points, read from the first request that says. */
-export function requestOrigin(url: unknown): string | undefined {
-  const host = (url as SpecNode)?.host;
-  const raw = typeof url === "string" ? url : ((url as SpecNode)?.raw ?? "");
-
-  const fromRaw = /^([a-zA-Z]+:\/\/[^/{]+)/.exec(raw)?.[1];
-  if (fromRaw) return fromRaw;
-
-  if (Array.isArray(host)) {
-    const joined = host.map((part) => String(part)).join(".");
-    if (joined !== "" && !VARIABLE.test(joined)) return `https://${joined}`;
-  }
-  return undefined;
 }
 
 /** Query entries and path variables the request declares. */

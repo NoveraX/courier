@@ -197,7 +197,9 @@ import type { api } from "./api/sources"
 
 const { client, mock, history, reset } = createTestClient<typeof api>()
 
-mock("users", "getAll").resolves([{ id: "1", name: "Alice", email: "alice@test.com" }])
+const alice = { id: "1", name: "Alice", email: "alice@test.com" }
+
+mock("users", "getAll").resolves([alice])
 
 const users = await client.users.getAll()
 expect(users).toHaveLength(1)
@@ -206,9 +208,9 @@ expect(history[0].group).toBe("users")
 expect(history[0].method).toBe("getAll")
 
 // Mock lifecycle
-mock("users", "getAll").resolves("once").once()         // consumed after 1 call
-mock("users", "getAll").resolves("data").times(3)        // consumed after 3 calls
-mock("users", "getAll").resolves("done").delay(100)      // artificial delay
+mock("users", "getAll").resolves([alice]).once()         // consumed after 1 call
+mock("users", "getAll").resolves([alice]).times(3)       // consumed after 3 calls
+mock("users", "getAll").resolves([]).delay(100)          // artificial delay
 mock("users", "getById").rejects(500, { message: "Error" })  // mock errors
 ```
 

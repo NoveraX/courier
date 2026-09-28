@@ -34,10 +34,13 @@ export function registerProxyRoute(app: Hono, config: RouteConfig): void {
       group?: string;
       method?: string;
       variables?: unknown;
+      options?: { rawData?: unknown };
     }>();
     const { group = "", method = "" } = body;
+    // A `.raw` call is answered with the response around the data, as a Courier proxy does
+    const raw = body.options?.rawData === true;
 
-    return handleMockRequest(c, group, method, body.variables, config);
+    return handleMockRequest(c, group, method, body.variables, config, raw);
   });
 }
 
@@ -62,6 +65,7 @@ export async function handleMockRequest(
   method: string,
   variables: unknown,
   config: RouteConfig,
+  raw = false,
 ): Promise<Response> {
   const start = performance.now();
   const requestId = `req_${randomUUID()}`;
@@ -138,7 +142,7 @@ export async function handleMockRequest(
       handler.headers,
     );
 
-    return buildResponse(c, handler, status, data);
+    return buildResponse(c, handler, status, data, raw);
   } catch (err) {
     const duration = performance.now() - start;
     config.networkState?.trackRequest(duration, true);

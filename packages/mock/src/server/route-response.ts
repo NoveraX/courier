@@ -10,14 +10,25 @@
 import type { Context as HonoContext } from "hono";
 import type { RouteConfig } from "./route-types";
 
-/** Build JSON response with error shape, Retry-After, and custom headers */
+/**
+ * Build the JSON response: the data, or the error shape, with Retry-After and
+ * the handler's custom headers. A successful `raw` call — a proxy client's
+ * `.raw` — is answered with `{ status, headers, data }`, as a Courier proxy
+ * answers it.
+ */
 export function buildResponse(
   c: HonoContext,
   handler: { isError: boolean; status: number; headers?: Record<string, string> },
   status: number,
   data: unknown,
+  raw = false,
 ): Response {
-  const body = handler.isError ? { error: data } : data;
+  const envelope = raw && !handler.isError;
+  const body = handler.isError
+    ? { error: data }
+    : envelope
+      ? { status, headers: handler.headers ?? {}, data }
+      : data;
   const res = c.json(body, status as 200);
 
   if (handler.isError && (status === 429 || status === 503)) {

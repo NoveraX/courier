@@ -110,6 +110,24 @@ export function freshId(col: AnyCollection): number | undefined {
   return largest + 1;
 }
 
+/**
+ * A generated id, when no record holds it yet — the key a schema-generated
+ * record came with, such as a UUID for a collection keyed by one.
+ *
+ * @param col       The collection the record goes into
+ * @param candidate The id generated with the record
+ * @returns The id, or `undefined` when it is taken or not an id, and the
+ *   collection generates one itself
+ * @example
+ * ```ts
+ * unusedId(pets, "7f958ceb-7a80-4478-9f50-e10ac1c6c171"); // the UUID, unless a pet holds it
+ * ```
+ */
+export function unusedId(col: AnyCollection, candidate: unknown): string | number | undefined {
+  if (!isKeyValue(candidate)) return undefined;
+  return col.getById(candidate) ? undefined : candidate;
+}
+
 /** An id from a URL, typed like the collection's ids so a later lookup reads it back */
 export function typedLike(col: AnyCollection, id: string | number): string | number {
   if (typeof id === "number") return id;

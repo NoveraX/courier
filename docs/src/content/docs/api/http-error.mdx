@@ -47,8 +47,8 @@ import type { HTTPError } from "@noverax/courier"
 declare function isHTTPError<TData = unknown>(error: unknown): error is HTTPError<TData>
 ```
 
-<Callout variant="tip" title="Prefer isHTTPError over instanceof">
-Use `isHTTPError(error)` instead of `error instanceof HTTPError`. The type guard works reliably across module boundaries and different package versions.
+<Callout variant="tip" title="isHTTPError types the error's data">
+`isHTTPError(error)` checks what `error instanceof HTTPError` checks, and takes a type parameter for the error's `data`: `isHTTPError<ErrorResponse>(error)` — see [Typed Error Data](#typed-error-data).
 </Callout>
 
 ## Basic Usage

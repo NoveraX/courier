@@ -6,9 +6,11 @@ on:
   pull_request:
     branches: [master]
 
+# A newer push supersedes a pull request's run; on master it waits, so a
+# release job already publishing is never cancelled half-way.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   ci:

@@ -158,14 +158,14 @@ beforeAll(() => {
     VARIANTS.map(([label, options]) => {
       const files = generateCode(SPEC, { type: "openapi", outputDir: "src/api", ...options }, "shop");
       const flat = options.groupBy === "single";
-      const dir = writeProject(`extracted-types-${label}`, files, { "consumer.ts": consumer(flat) });
+      const dir = writeProject(`extract-endpoint-types/${label}`, files, { "consumer.ts": consumer(flat) });
       return [label, compileProject(dir, ["consumer.ts"])];
     }),
   );
 }, 180_000);
 
 afterAll(() => {
-  removeProjects();
+  removeProjects("extract-endpoint-types");
 });
 
 describe("an endpoint's variables", () => {

@@ -81,13 +81,8 @@ function variablesSchema(ep: ParsedEndpoint, context: EndpointContext): string |
   /* Only an object can be extended; a list or a set of alternatives has to be
      intersected with the path parameters instead. */
   const isObject = ep.requestBody?.type !== "array" && context.spec.schemas[ref]?.type !== "union";
-  if (context.options.validation !== "arktype") context.uses.validator = true;
-  return extendSchemaWithParams(
-    body,
-    pathParams.map((p) => p.name),
-    context.options,
-    isObject,
-  );
+  context.uses.validator = true;
+  return extendSchemaWithParams(body, pathParams, context.options, isObject);
 }
 
 /**

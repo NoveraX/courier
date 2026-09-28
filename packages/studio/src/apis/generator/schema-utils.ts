@@ -2,11 +2,13 @@
  * Schema utility functions: validation helpers, satisfies expressions, ref helpers.
  */
 
-import type { ParsedSchema } from "../parser/types";
+import type { ParsedParameter, ParsedSchema } from "../parser/types";
+import { jsLiteral, objectKey } from "./literals";
+import { parameterProperty } from "./parameter-property";
 import type { GeneratorSettings } from "./types";
-import { schemaToArkType } from "./validation-arktype";
-import { schemaToValibot } from "./validation-valibot";
-import { schemaToZod } from "./validation-zod";
+import { propToArkType, schemaToArkType } from "./validation-arktype";
+import { propToValibot, schemaToValibot } from "./validation-valibot";
+import { propToZod, schemaToZod } from "./validation-zod";
 
 /** Generate `satisfies ZodType<T>` / `satisfies GenericSchema<...>` expression for type-safe sync */
 export function satisfiesExpr(typeName: string, options: GeneratorSettings): string {
@@ -62,17 +64,34 @@ export function schemaToValidation(schema: ParsedSchema, options: GeneratorSetti
   return "unknown";
 }
 
-/** Extend a schema expression with path param fields */
+/**
+ * Extend a body's schema with the parameters that sit beside its fields.
+ *
+ * Each parameter is validated as the specification types it. Written as a
+ * string whatever it was, an integer path parameter refused the number its
+ * own specification asks for — and the same parameter of the endpoint
+ * beside it, which has no body, took a number.
+ *
+ * @param schemaExpr - The body's schema
+ * @param params - The parameters to add
+ * @param options - Generation options, read for the validation library
+ * @param isObject - Whether the body's schema is an object that can be extended
+ * @returns The schema of the variables
+ * @example
+ * ```ts
+ * extendSchemaWithParams("ItemSchema", [itemId], { validation: "zod" }); // "ItemSchema.extend({ item_id: z.number() })"
+ * ```
+ */
 export function extendSchemaWithParams(
   schemaExpr: string,
-  paramNames: string[],
+  params: readonly ParsedParameter[],
   options: GeneratorSettings,
   isObject = true,
 ): string {
-  if (paramNames.length === 0) return schemaExpr;
+  if (params.length === 0) return schemaExpr;
+  const fields = params.map((param) => parameterField(param, options)).join(", ");
 
   if (options.validation === "zod") {
-    const fields = paramNames.map((n) => `${n}: z.string()`).join(", ");
     /* `.extend` belongs to an object schema; a body that is one of several
        shapes has to be intersected instead. */
     return isObject
@@ -80,15 +99,28 @@ export function extendSchemaWithParams(
       : `z.intersection(${schemaExpr}, z.object({ ${fields} }))`;
   }
   if (options.validation === "valibot") {
-    const fields = paramNames.map((n) => `${n}: v.string()`).join(", ");
     return isObject
       ? `v.object({ ...${schemaExpr}.entries, ${fields} })`
       : `v.intersect([${schemaExpr}, v.object({ ${fields} })])`;
   }
-  if (options.validation === "arktype") {
-    const fields = paramNames.map((n) => `${n}: "string"`).join(", ");
-    return `${schemaExpr}.and({ ${fields} })`;
-  }
-
+  if (options.validation === "arktype") return `${schemaExpr}.and({ ${fields} })`;
   return schemaExpr;
+}
+
+/**
+ * One parameter as a field of an object schema. A format is not checked: a
+ * parameter's format describes what the server expects, and refusing a call
+ * the server would have answered helps nobody.
+ */
+function parameterField(param: ParsedParameter, options: GeneratorSettings): string {
+  const prop = parameterProperty(param);
+  const optional = !prop.required;
+  if (options.validation === "zod") {
+    return `${objectKey(param.name)}: ${propToZod(prop)}${optional ? ".optional()" : ""}`;
+  }
+  if (options.validation === "valibot") {
+    const valibot = propToValibot(prop);
+    return `${objectKey(param.name)}: ${optional ? `v.optional(${valibot})` : valibot}`;
+  }
+  return `${jsLiteral(optional ? `${param.name}?` : param.name)}: ${propToArkType(prop)}`;
 }

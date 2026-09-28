@@ -49,7 +49,8 @@ export const STRICT: ts.CompilerOptions = {
  * Write generated files, and any others the test adds, into a directory of
  * their own.
  *
- * @param label - Names the directory; distinct per project
+ * @param label - Names the directory, `<suite>/<project>`; suites run in
+ *   parallel, so each keeps its projects under a directory of its own
  * @param files - The generated files, by project-relative path
  * @param extra - More files by the same kind of path, a consumer for one
  * @returns The directory the paths are relative to
@@ -94,9 +95,13 @@ export function compileProject(
   });
 }
 
-/** Remove every project the suite wrote. */
-export function removeProjects(): void {
-  rmSync(ROOT, { recursive: true, force: true });
+/**
+ * Remove every project a suite wrote.
+ *
+ * @param suite - The first part of the labels the suite wrote under
+ */
+export function removeProjects(suite: string): void {
+  rmSync(join(ROOT, suite), { recursive: true, force: true });
 }
 
 /**
@@ -135,6 +140,29 @@ export function loadGenerated(
   };
 
   return load(withoutExtension(entry));
+}
+
+/**
+ * An endpoint of a loaded caller, reached by its keys and checked to be one.
+ *
+ * @param caller - The caller a generated barrel exports
+ * @param keys - The group, if any, then the endpoint
+ * @returns A function making the call
+ */
+export function endpointAt(
+  caller: unknown,
+  ...keys: string[]
+): (variables?: unknown) => Promise<unknown> {
+  let value: unknown = caller;
+  for (const key of keys) {
+    if ((typeof value !== "object" && typeof value !== "function") || value === null) {
+      throw new Error(`the caller has nothing at ${keys.join(".")}`);
+    }
+    value = Reflect.get(value, key);
+  }
+  const call = value;
+  if (typeof call !== "function") throw new Error(`${keys.join(".")} is not an endpoint`);
+  return async (variables) => Reflect.apply(call, undefined, [variables]);
 }
 
 function withoutExtension(path: string): string {

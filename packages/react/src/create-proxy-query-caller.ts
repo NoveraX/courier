@@ -3,6 +3,7 @@ import {
   createProxySSEFactory,
   createProxyWSChannelFactory,
   mergeProxyPath,
+  type ProxyCallerArguments,
   type ProxyCallerDefaults,
   type ProxyPath,
 } from "@noverax/courier";
@@ -23,9 +24,13 @@ import type { QueryCallerClient, QueryGroupClient } from "./types";
  * Pass a `boundary` rather than the API object: these hooks each name their
  * own transport, so nothing is read off the source, and handing it over puts
  * the upstream host, the middleware and every endpoint path in the bundle.
+ * An API with streams or channels requires one of the two, as
+ * `createProxyCaller` does: the boundary carries the proxy paths its
+ * subscriptions and channels open.
  *
  * @param source - Source name matching the key in server-side apiRoute({ [source]: ... })
  * @param defaults - Proxy configuration (boundary, proxyPath, timeout, credentials, etc.)
+ * @returns A client with each group's hooks under its name
  *
  * @example
  * ```ts
@@ -49,8 +54,10 @@ import type { QueryCallerClient, QueryGroupClient } from "./types";
  */
 export function createProxyQueryCaller<TApi extends DefinedApi<any>>(
   source: string,
-  defaults?: ProxyCallerDefaults,
-): QueryCallerClient<TApi> {
+  ...defaults: ProxyCallerArguments<TApi>
+): QueryCallerClient<TApi>;
+
+export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDefaults): unknown {
   // Per-transport merge: caller-level `proxyPath` wins over the source's
   // own `options.proxyPath` on a field-by-field basis. Forwarding the merged
   // value into every factory keeps `useQuery` / `useSubscription` /
@@ -101,7 +108,7 @@ export function createProxyQueryCaller<TApi extends DefinedApi<any>>(
       }
       return groupCache.get(key);
     },
-  }) as QueryCallerClient<TApi>;
+  });
 }
 
 /**

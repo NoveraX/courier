@@ -12,7 +12,7 @@ import { createProxyQueryCaller } from "@noverax/courier-react"
 
 ## Signature
 
-Accepts a source name and optional `ProxyCallerDefaults` (same as `createProxyCaller`). Returns a Proxy-based client with dot-notation access to hooks for each group.
+Accepts a source name and `ProxyCallerDefaults` (same as `createProxyCaller`). The defaults are optional for an API of plain requests; an API with streams or channels requires a `boundary` (or the `source`) among them, as `createProxyCaller` does. Returns a Proxy-based client with dot-notation access to hooks for each group.
 
 ```ts
 const q = createProxyQueryCaller<typeof api>(source, defaults?)

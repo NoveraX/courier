@@ -77,6 +77,7 @@ export {
   createProxyCaller,
   createProxyCallerFn,
   mergeProxyPath,
+  type ProxyCallerArguments,
   type ProxyCallerDefaults,
   type ProxyPath,
   type ResolveOrigin,

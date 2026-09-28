@@ -1,6 +1,7 @@
 export {
   authMiddleware,
   cacheMiddleware,
+  headerVariablesMiddleware,
   logMiddleware,
   rateLimitMiddleware,
   retryMiddleware,

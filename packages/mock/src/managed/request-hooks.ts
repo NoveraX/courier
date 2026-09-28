@@ -3,9 +3,9 @@
  */
 
 import type { MockServer } from "../server/create-mock-server";
-import { trackWritesInFlight } from "./writes-in-flight";
 import { checkAutoHalt } from "./network-commands";
 import { send, sendStoreSnapshot } from "./worker-ipc";
+import { trackWritesInFlight } from "./writes-in-flight";
 
 export function wireRequestHooks(server: MockServer): void {
   const writes = trackWritesInFlight();

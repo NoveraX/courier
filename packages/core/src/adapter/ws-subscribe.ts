@@ -5,7 +5,7 @@ import { runTransportMiddleware } from "../utils/transport-middleware";
 import { authorizeSubscription } from "./ws-authorize-subscription";
 import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry, openSubscriptionEntry } from "./ws-dispatch-helpers";
-import { startChannel, startPush } from "./ws-endpoints";
+import { startChannel, startPush, startRelay } from "./ws-endpoints";
 import { VALIDATION_FAILED, validateVariablesSafe } from "./ws-middleware";
 import { resolveSubscribeTopic } from "./ws-resolve";
 import { subscriptionTopic } from "./ws-subscribe-topic";
@@ -122,7 +122,10 @@ async function openSubscription(
   const subRequestId = openSubscriptionEntry(ctx, subscribedTopic, resolved);
 
   try {
-    if (resolved.schema.bidirectional === true || resolved.schema.receive) {
+    if (!resolved.served) {
+      const target = { api: resolved.api, group: resolved.group ?? "", method: resolved.method };
+      startRelay(ctx, subscribedTopic, target, variables);
+    } else if (resolved.schema.bidirectional === true || resolved.schema.receive) {
       await startChannel(
         ctx,
         subscribedTopic,

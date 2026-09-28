@@ -19,7 +19,7 @@ import type { JsonResponse, RouteApp } from "./route-types";
 import { sendResult } from "./send-result";
 import { isObject, isString } from "./validate-body";
 
-type RouteRequest = { body: Record<string, unknown> };
+type RouteRequest = { body: unknown };
 
 /**
  * Mount the routes that list, preview and apply adding and removing endpoints

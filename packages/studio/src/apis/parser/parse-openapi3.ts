@@ -5,6 +5,7 @@
 import { isOperationKey, isSupportedMethod } from "./http-methods";
 import { buildGroups } from "./openapi-groups";
 import { parseOpenApi3Operation } from "./parse-openapi3-operation";
+import { serverUrl } from "./server-url";
 import type { ParsedEndpoint, ParsedSpec, SkippedOperation, SpecNode } from "./types";
 import {
   convertSchema,
@@ -21,11 +22,7 @@ export function parseOpenApi3(spec: SpecNode): ParsedSpec {
   const rawDescription = specText(spec.info?.description);
   const description = rawDescription ? stripHtmlPreserveNewlines(rawDescription) : "";
 
-  let baseURL = "/";
-  if (spec.servers?.length > 0) {
-    baseURL = spec.servers[0].url ?? "/";
-  }
-
+  const baseURL = serverUrl(spec.servers);
   const schemas = parseSchemas(spec);
   const { endpointsByTag, skipped } = groupEndpointsByTag(spec);
   const tagDescriptions = parseTagDescriptions(spec);

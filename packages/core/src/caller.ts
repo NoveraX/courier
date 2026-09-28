@@ -11,6 +11,7 @@ import type {
 } from "./define";
 import type { HTTPError } from "./errors";
 import type { RequestContext } from "./http-client/types";
+import type { CallerWSOptions } from "./realtime/ws/ws-types";
 import { composeBackend } from "./transport/compose-backend";
 import {
   createDirectHTTPExecutor,
@@ -25,6 +26,13 @@ export type CallerDefaults = {
   context?: RequestContext;
   onError?: (error: HTTPError) => void | Promise<void>;
   onSuccess?: (data: unknown) => void | Promise<void>;
+  /**
+   * How the sockets of this caller's channels and push subscriptions behave:
+   * the token sent on connecting and when the server asks for a fresh one,
+   * the reconnect backoff, how long the server may stay silent, the queue
+   * limits, sub-protocols and the largest message sent.
+   */
+  ws?: CallerWSOptions;
 };
 
 /**
@@ -73,8 +81,8 @@ export function createCaller(source: AnyDefinedApi, defaults: CallerDefaults = {
   const http = createDirectHTTPExecutor(source, defaults);
   const backend = composeBackend(source as Record<string, unknown>, http, {
     sse: createDirectSSEFactory(source, { headers: defaults.headers }),
-    wsChannel: createDirectWSChannelFactory(source),
-    wsPush: createDirectWSPushFactory(source),
+    wsChannel: createDirectWSChannelFactory(source, { ws: defaults.ws }),
+    wsPush: createDirectWSPushFactory(source, { ws: defaults.ws }),
   });
 
   return buildClientProxy(backend, {}, false, shapeOfSource(source as Record<string, unknown>));

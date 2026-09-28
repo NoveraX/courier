@@ -46,8 +46,11 @@ type QueryCallerDefaults = {
   context?: RequestContext
   onError?: (error: HTTPError) => void | Promise<void>
   onSuccess?: (data: unknown) => void | Promise<void>
+  ws?: CallerWSOptions  // as createCaller's
 }
 ```
+
+`ws` sets up the sockets `useChannel` opens: the token, the reconnect backoff, the heartbeat and the queue limits — see [Connection options](/docs/advanced/realtime#connection-options).
 
 No `proxyPath` or `credentials` — all transports use the `baseURL` from the API definition directly.
 

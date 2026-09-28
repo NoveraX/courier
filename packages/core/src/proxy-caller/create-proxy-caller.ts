@@ -81,8 +81,9 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
     // ⚠️ defaults.headers is intentionally NOT forwarded to WS factories.
     // Browser WebSocket cannot send custom HTTP headers in the upgrade
     // handshake. See `ProxyWSDefaults` for supported auth alternatives.
-    streaming.wsChannel = createProxyWSChannelFactory(source, { proxyPath: mergedProxyPath });
-    streaming.wsPush = createProxyWSPushFactory(source, { proxyPath: mergedProxyPath });
+    const wsDefaults = { proxyPath: mergedProxyPath, ws: defaults.ws };
+    streaming.wsChannel = createProxyWSChannelFactory(source, wsDefaults);
+    streaming.wsPush = createProxyWSPushFactory(source, wsDefaults);
   }
 
   const backend = composeBackend(apiSource, http, streaming, {

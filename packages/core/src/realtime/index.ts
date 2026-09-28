@@ -50,6 +50,7 @@ export type {
 } from "./types";
 export { tracked } from "./types";
 export type {
+  CallerWSOptions,
   Heartbeat,
   HeartbeatConfig,
   MessageQueue,

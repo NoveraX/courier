@@ -52,7 +52,7 @@ export type StreamEndpointOptions = CommonEndpointOptions;
 /**
  * Options a channel takes. Heartbeat and reconnection are not among them:
  * they belong to the socket a caller shares between its channels, not to
- * one endpoint.
+ * one endpoint, and are set with the caller's `ws` option.
  */
 export type ChannelEndpointOptions = CommonEndpointOptions;
 

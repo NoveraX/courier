@@ -52,9 +52,38 @@ A stream's events, a push channel's values and what a channel's handlers pass to
 
 ## Message size
 
-A server accepts messages up to its `maxMessageSize`, 64 KB by default, and answers a larger one with a `4413` error on a connection that stays open. The client does not send one: a channel's `send` of a message whose encoded frame is longer than its own `maxMessageSize`, also 64 KB, puts nothing on the wire, and the channel's `error` event reads code `4413`. The channel and everything else on the socket go on.
+A server accepts messages up to its `maxMessageSize`, 64 KB by default, and answers a larger one with a `4413` error on a connection that stays open. The client does not send one: a channel's `send` of a message whose encoded frame is longer than its own `maxMessageSize` — 64 KB unless the caller's `ws` says otherwise — puts nothing on the wire, and the channel's `error` event reads code `4413`. The channel and everything else on the socket go on.
 
 A server whose WebSocket layer closes the socket over a frame too large to read, with close code `1009`, loses that one message only: the client reconnects, and each channel on the socket hears a `1009` error.
+
+## Connection options
+
+Every channel and push subscription of one caller on one URL shares a socket. The caller's `ws` option sets that socket up, in `createCaller`, `createProxyCaller`, `createQueryCaller` and `createProxyQueryCaller` alike:
+
+```ts title="lib/client.ts"
+import { createProxyCaller } from "@noverax/courier"
+import type { api } from "@/api"
+import { boundary } from "./boundary"
+
+export const client = createProxyCaller<typeof api>("api", {
+  boundary,
+  ws: {
+    getAuthToken: () => session.accessToken(),
+    backoff: { initialMs: 500, maxMs: 10_000 },
+    heartbeat: { intervalMs: 25_000, timeoutMs: 10_000 },
+    maxMessageSize: 65_536,
+  },
+})
+```
+
+- `getAuthToken` — a token sent as `?token=` on every connect and reconnect, and sent again, on the open socket, when the server asks for a fresh one with `sendAuthRequired`. Without it the server's request goes unanswered, and the server closes the connection at its deadline.
+- `backoff` — the delay before each reconnect: `initialMs` (1 s), `maxMs` (30 s), `factor` (2), `jitter` (on).
+- `heartbeat` — the server's ping interval and pong timeout; a server silent for longer than the two together is taken for gone, and the client reconnects.
+- `messageQueue` — how much is kept to send while reconnecting: `maxCount` (100) and `maxBytes` (1 MB).
+- `protocols` — WebSocket sub-protocols for the handshake.
+- `maxMessageSize` — the largest message sent; see [Message size](#message-size).
+
+A caller with `ws` options opens a socket of its own, beside the one another caller uses on the same URL, so its options are never dropped in favour of the other's.
 
 ## Next steps
 

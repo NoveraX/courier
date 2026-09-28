@@ -37,8 +37,20 @@ type CallerDefaults = {
   context?: Context
   onError?: (error: HTTPError) => void | Promise<void>
   onSuccess?: (data: unknown) => void | Promise<void>
+  ws?: CallerWSOptions
+}
+
+type CallerWSOptions = {
+  getAuthToken?: () => string | Promise<string>
+  backoff?: { initialMs?: number; maxMs?: number; factor?: number; jitter?: boolean }
+  heartbeat?: { intervalMs?: number; timeoutMs?: number }
+  messageQueue?: { maxCount?: number; maxBytes?: number }
+  protocols?: string[]
+  maxMessageSize?: number
 }
 ```
+
+- `ws` — options of the sockets this caller's channels and push subscriptions open; see [Connection options](/docs/advanced/realtime#connection-options).
 
 ## Return Type
 

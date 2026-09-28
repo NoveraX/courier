@@ -50,7 +50,10 @@ export function listing(names: () => readonly string[], read: (name: string) => 
 
 /** Read like `target`, but not callable — so never taken for a promise. */
 export function uncallable(target: () => object): object {
-  return new Proxy<object>(Object.create(null), {
-    get: (_, prop) => (typeof prop === "symbol" ? undefined : Reflect.get(target(), prop)),
-  });
+  return new Proxy<object>(
+    { __proto__: null },
+    {
+      get: (_, prop) => (typeof prop === "symbol" ? undefined : Reflect.get(target(), prop)),
+    },
+  );
 }

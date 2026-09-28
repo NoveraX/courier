@@ -89,7 +89,7 @@ function ChartTooltipContent({
           .map((item, index) => {
             const key = `${nameKey || item.name || item.dataKey || "value"}`
             const itemConfig = getPayloadConfigFromPayload(config, item, key)
-            const indicatorColor = color || item.payload.fill || item.color
+            const indicatorColor = color || fillOf(item.payload) || item.color
 
             return (
               <div
@@ -156,3 +156,10 @@ function ChartTooltipContent({
 }
 
 export { ChartTooltip, ChartTooltipContent }
+
+/* Recharts types a point's data as `any`; its fill is read only when it is a colour. */
+function fillOf(point: unknown): string | undefined {
+  return typeof point === "object" && point !== null && "fill" in point && typeof point.fill === "string"
+    ? point.fill
+    : undefined
+}

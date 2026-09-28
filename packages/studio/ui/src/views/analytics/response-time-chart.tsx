@@ -34,10 +34,7 @@ export function ResponseTimeChart({ data }: ResponseTimeChartProps): React.React
         <ChartTooltip
           content={
             <ChartTooltipContent
-              labelFormatter={(_, payload) => {
-                const item = payload[0]?.payload as HistogramBucket | undefined;
-                return item?.range ?? "";
-              }}
+              labelFormatter={(_, payload) => rangeOf(payload[0]?.payload)}
             />
           }
         />
@@ -61,4 +58,11 @@ export function ResponseTimeChart({ data }: ResponseTimeChartProps): React.React
       </BarChart>
     </ChartContainer>
   );
+}
+
+/* Recharts types a point's data as `any`; a bucket's range is read only when it is text. */
+function rangeOf(bucket: unknown): string {
+  return typeof bucket === "object" && bucket !== null && "range" in bucket && typeof bucket.range === "string"
+    ? bucket.range
+    : "";
 }

@@ -68,7 +68,7 @@ export function countedStream(
         handed = chunk.byteLength;
         controller.enqueue(chunk);
       },
-      cancel: (reason) => reader.cancel(reason),
+      cancel: (reason: unknown) => reader.cancel(reason),
     },
     { highWaterMark: 0 },
   );

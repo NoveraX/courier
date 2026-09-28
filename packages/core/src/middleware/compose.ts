@@ -25,7 +25,7 @@ export function composeMiddleware(
           innerTime[idx - 1] = (innerTime[idx - 1] ?? 0) + (performance.now() - nt0);
           return r;
         },
-        (e) => {
+        (e: unknown) => {
           innerTime[idx - 1] = (innerTime[idx - 1] ?? 0) + (performance.now() - nt0);
           throw e;
         },
@@ -68,7 +68,7 @@ export function composeMiddleware(
           emitExit(rid, mw, i, t0, innerTime, headersAdded, beforeTime, afterTime);
           return response;
         },
-        (error) => {
+        (error: unknown) => {
           if (passedBack?.error === error) {
             emitExit(rid, mw, i, t0, innerTime, [], 0, 0);
             throw error;

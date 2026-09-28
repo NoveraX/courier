@@ -121,7 +121,10 @@ export function bindMethod(
          caller's reason, and the reader reports that as a body it could
          not parse; it is rethrown as the cancellation it is. */
       forget();
-      if (options.signal?.aborted) throw options.signal.reason;
+      if (options.signal?.aborted) {
+        const reason: unknown = options.signal.reason;
+        throw reason;
+      }
       throw error;
     }
   };

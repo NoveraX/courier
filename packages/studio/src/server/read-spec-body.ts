@@ -56,7 +56,8 @@ export async function readSpecBody(response: IncomingMessage, url: URL): Promise
 async function collect(body: Readable, url: URL): Promise<Buffer[]> {
   const chunks: Buffer[] = [];
   let size = 0;
-  for await (const chunk of body) {
+  const read: AsyncIterable<unknown> = body;
+  for await (const chunk of read) {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
     size += bytes.length;
     if (size > MAX_BYTES) {

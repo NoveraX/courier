@@ -48,10 +48,13 @@ export function createClientRoot(
     return accessor ? accessor() : member(prop);
   };
 
-  return new Proxy<object>(Object.create(null), {
-    get: (_, prop) => (typeof prop === "symbol" ? undefined : read(prop)),
-    ...listing(names, read),
-  });
+  return new Proxy<object>(
+    { __proto__: null },
+    {
+      get: (_, prop) => (typeof prop === "symbol" ? undefined : read(prop)),
+      ...listing(names, read),
+    },
+  );
 }
 
 /* A callable `then` would make every awaited client call it. */

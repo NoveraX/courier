@@ -52,7 +52,7 @@ export function createDualProxy(
       if (FUNCTION_MEMBERS.has(prop)) return Reflect.get(target, prop);
       return method(prop);
     },
-    apply(target, _, args) {
+    apply(target, _: unknown, args) {
       return target(args[0]);
     },
     ...listing(() => [...(methods ?? [])], method),

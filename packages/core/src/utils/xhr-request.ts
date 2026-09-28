@@ -101,7 +101,9 @@ function toResponse(xhr: XMLHttpRequest): Response {
     const idx = line.indexOf(":");
     if (idx > 0) headers.append(line.slice(0, idx).trim(), line.slice(idx + 1).trim());
   }
-  const body = isBodilessStatus(xhr.status) ? null : (xhr.response as ArrayBuffer | null);
+  /* Read as `arraybuffer`, the answer is a buffer, or null when there is none. */
+  const response: unknown = xhr.response;
+  const body = isBodilessStatus(xhr.status) || !(response instanceof ArrayBuffer) ? null : response;
   return new Response(body, { status: xhr.status, statusText: xhr.statusText, headers });
 }
 

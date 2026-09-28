@@ -6,6 +6,7 @@
  * variable often holds a whole base URL, path included.
  */
 
+import { nodesAt, textAt } from "./spec-node";
 import type { SpecNode } from "./types";
 
 /** `{{name}}` anywhere in a text. */
@@ -30,11 +31,10 @@ const RAW_HOST = /^(?:([a-zA-Z][a-zA-Z\d+.-]*):\/\/)?([^/?#]*)/;
  */
 export function collectionVariables(collection: SpecNode): ReadonlyMap<string, string> {
   const values = new Map<string, string>();
-  for (const entry of Array.isArray(collection.variable) ? collection.variable : []) {
-    if (entry?.disabled === true) continue;
-    if (typeof entry?.key === "string" && typeof entry.value === "string") {
-      values.set(entry.key, entry.value);
-    }
+  for (const entry of nodesAt(collection, "variable")) {
+    const key = textAt(entry, "key");
+    const value = textAt(entry, "value");
+    if (entry.disabled !== true && key !== undefined && value !== undefined) values.set(key, value);
   }
   return values;
 }

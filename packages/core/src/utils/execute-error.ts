@@ -2,11 +2,12 @@ import { HTTPError } from "../errors";
 import { isTimeoutFailure } from "../http-client/transport-failure";
 import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
-import type { StudioHooks } from "../studio";
 import { ValidationError } from "../validation";
 import { isAbortError } from "./abort";
 import { answerCallerLeft, callerLeft } from "./caller-left";
-import { buildResponse } from "./execute-response";
+import { type FailureReport, reportRequestError } from "./execute-error-report";
+import { buildResponse, type InternalResponse } from "./execute-response";
+import { injectTimingHeaders } from "./execute-studio";
 
 const log = createLogger("Proxy");
 
@@ -69,9 +70,7 @@ function serverFailure(
   return { ...result, data: { success: false, message: "Request failed" } };
 }
 
-export type ErrorHandlerCtx = {
-  requestId: string;
-  dt: Partial<StudioHooks>;
+export type ErrorHandlerCtx = FailureReport & {
   context?: Context;
   rawData: boolean;
   /** Header names the endpoint and its source carry across the proxy. */
@@ -79,25 +78,10 @@ export type ErrorHandlerCtx = {
 };
 
 export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknown {
-  ctx.dt.onRequestError?.({
-    id: ctx.requestId,
-    error: {
-      type:
-        error instanceof ValidationError
-          ? "validation"
-          : error instanceof HTTPError
-            ? error.status > 0
-              ? "http"
-              : "network"
-            : "unknown",
-      status: error instanceof HTTPError && error.status > 0 ? error.status : undefined,
-      message: error instanceof Error ? error.message : String(error),
-    },
-    timestamp: Date.now(),
-  });
-
+  const answersWithResponse = ctx.context?.res instanceof Response;
   if (error instanceof ValidationError) {
-    return buildResponse(ctx.context, {
+    reportRequestError(error, ctx, answersWithResponse ? 422 : undefined);
+    return timed(ctx, {
       status: 422,
       headers: new Headers(),
       data: {
@@ -118,11 +102,18 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
      or what its own middleware threw. They used to arrive as a 502 from a
      gateway that was never there, or as an HTTP 500 with no cause. A caller
      that asked for a Response is answered with one, unless it cancelled. */
-  const answersWithResponse = ctx.context?.res instanceof Response;
   if (!fromWire && (!answersWithResponse || isAbortError(error) || error instanceof HTTPError)) {
+    reportRequestError(
+      error,
+      ctx,
+      error instanceof HTTPError ? error.status || undefined : undefined,
+    );
     throw error;
   }
-  if (callerLeft(ctx.context)) return answerCallerLeft(error, ctx.context, ctx.rawData);
+  if (callerLeft(ctx.context)) {
+    reportRequestError(error, ctx, undefined);
+    return answerCallerLeft(error, ctx.context, ctx.rawData);
+  }
 
   /* A 2xx error is an upstream answer the proxy could not use — a body that
      would not parse. Passed on as it was, a failure reached the browser as a
@@ -139,7 +130,8 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
         )
       : serverFailure(error, ctx.context);
 
-  return buildResponse(ctx.context, {
+  reportRequestError(error, ctx, responseResult.status);
+  return timed(ctx, {
     ...responseResult,
     throw: new HTTPError(responseResult),
     rawData: ctx.rawData,
@@ -147,4 +139,17 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
        clears the session it names. */
     namedHeaders: ctx.namedHeaders,
   });
+}
+
+/**
+ * Build the answer, and when it goes to a browser through the proxy, stamp
+ * it as a success is stamped, so the browser measures its side of the call.
+ */
+function timed(ctx: ErrorHandlerCtx, response: InternalResponse): unknown {
+  const answer = buildResponse(ctx.context, response);
+  const t0 = ctx.timing?.t0 ?? 0;
+  if (ctx.context?.proxyMethod && answer instanceof Response && t0 > 0) {
+    injectTimingHeaders(answer, ctx.requestId, t0);
+  }
+  return answer;
 }

@@ -1,4 +1,17 @@
 /**
+ * How a request failed: an upstream's error answer, a refused schema, a
+ * request that got no answer, one that ran out of time, one its caller
+ * cancelled, or the server's own failure.
+ */
+export type RequestFailureKind =
+  | "http"
+  | "validation"
+  | "network"
+  | "timeout"
+  | "aborted"
+  | "unknown";
+
+/**
  * Studio hook definitions for the request lifecycle.
  *
  * Covers the core request flow + middleware + validation + raw HTTP fetch
@@ -48,9 +61,23 @@ export interface RequestLifecycleHooks {
   onRequestError?: (event: {
     id: string;
     error: {
-      type: "http" | "validation" | "network" | "unknown";
+      type: RequestFailureKind;
+      /** The upstream's status, when it answered. */
       status?: number;
       message: string;
+    };
+    /** The status the caller received, when it received one — a proxy's own 422 or 502. */
+    status?: number;
+    /** The upstream's response headers, when it answered. */
+    headers?: Record<string, string>;
+    /** The upstream's error body, when it answered. */
+    data?: unknown;
+    /** How long the request took before it failed. */
+    timing?: {
+      total: number;
+      middleware: number;
+      fetch: number;
+      validation: number;
     };
     timestamp: number;
   }) => void;

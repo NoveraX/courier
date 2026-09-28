@@ -3,6 +3,7 @@ import type { BoundMethodOptions, GroupOptions } from "../http-client/types";
 import type { MiddlewareResponse } from "../middleware/types";
 import type { StudioHooks } from "../studio";
 import type { SchemaMetadata } from "../validation";
+import type { TimingState } from "./execute-studio";
 import { validateResponse } from "./execute-validation";
 import { isHeaders } from "./helpers";
 
@@ -19,11 +20,12 @@ export type InnerExecuteDeps = {
   hasStudio: boolean;
   requestId: string;
   dt: StudioHooks;
+  /** Where the fetch's duration is kept, whether it answers or fails. */
+  timing: TimingState;
 };
 
 type InnerResult = {
   response: MiddlewareResponse;
-  tFetch: number;
   tRespValidation: number;
 };
 
@@ -49,6 +51,7 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
       vars,
     );
   } catch (fetchError) {
+    if (deps.hasStudio) deps.timing.tFetch = performance.now() - ft0;
     deps.dt.onHttpFetchError?.({
       requestId: deps.requestId,
       message: fetchError instanceof Error ? fetchError.message : String(fetchError),
@@ -58,6 +61,7 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
   }
 
   const tFetch = deps.hasStudio ? performance.now() - ft0 : 0;
+  deps.timing.tFetch = tFetch;
 
   deps.dt.onHttpFetchEnd?.({
     requestId: deps.requestId,
@@ -86,7 +90,6 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
 
   return {
     response: { status, data, headers },
-    tFetch,
     tRespValidation,
   };
 }

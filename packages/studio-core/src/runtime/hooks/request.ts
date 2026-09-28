@@ -65,6 +65,10 @@ export function wireRequestHooks(
         timestamp: e.timestamp,
         requestId: e.id,
         error: e.error,
+        ...(e.status !== undefined && { status: e.status }),
+        ...(e.headers && { headers: e.headers }),
+        ...(e.data !== undefined && { data: e.data }),
+        ...(e.timing && { timing: e.timing }),
       }),
     );
   };

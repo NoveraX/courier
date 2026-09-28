@@ -151,6 +151,7 @@ function prepareAndRun(
     hasStudio: studio.hasStudio,
     requestId: studio.requestId,
     dt: studio.dt,
+    timing,
   };
   return runCall({
     inner,

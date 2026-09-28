@@ -58,7 +58,6 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
         middlewareHeaders: ctx.headers,
         variables: ctx.variables,
       });
-      timing.tFetch = innerResult.tFetch;
       timing.tRespValidation = innerResult.tRespValidation;
       return innerResult.response;
     };
@@ -95,6 +94,8 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
       context,
       rawData: call.answer.rawData,
       namedHeaders: call.answer.namedHeaders,
+      timing,
+      middlewareCount: middlewares.length,
     });
   }
 }

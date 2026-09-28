@@ -18,12 +18,7 @@
 
 import type { PresenceDiff } from "@noverax/courier/realtime";
 import type { Redis } from "ioredis";
-
-interface DiffEnvelope {
-  origin: string;
-  topic: string;
-  diff: PresenceDiff;
-}
+import { type DiffEnvelope, isDiffEnvelope } from "./wire-guards";
 
 /** Channel a topic's diffs travel on. */
 export function diffChannel(prefix: string, topic: string): string {
@@ -55,9 +50,11 @@ export function createDiffBroadcast(input: {
   const { redis, subscriber, prefix, origin, deliver, onError } = input;
   const listening = new Set<string>();
 
-  subscriber?.on("message", (_channel: string, raw: string) => {
+  subscriber?.on("message", (channel: string, raw: string) => {
     try {
-      const envelope = JSON.parse(raw) as DiffEnvelope;
+      const envelope: unknown = JSON.parse(raw);
+      if (!isDiffEnvelope(envelope))
+        throw new Error(`Not a Courier presence change on channel "${channel}"`);
       /* A replica already ran its own handlers before publishing. */
       if (envelope.origin === origin) return;
       deliver(envelope.topic, envelope.diff);

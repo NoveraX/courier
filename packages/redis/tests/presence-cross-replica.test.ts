@@ -16,6 +16,10 @@ function createBus() {
   const channels = new Map<string, Set<(channel: string, message: string) => void>>();
 
   return {
+    /** Publish as a process that is no replica would. */
+    publish(channel: string, message: string) {
+      for (const listener of channels.get(channel) ?? []) listener(channel, message);
+    },
     client() {
       const listeners = new Set<(channel: string, message: string) => void>();
       const subscribed = new Set<string>();
@@ -110,6 +114,24 @@ describe("a diff raised on one replica", () => {
     await a.track("lobby", entry);
 
     expect(seen).toHaveLength(0);
+  });
+
+  /** Another process may publish on the channel, or an entry arrive cut short. */
+  it("is reported, and not delivered, when it is no whole presence change", async () => {
+    const bus = createBus();
+    const b = createRedisPresence({ redis: bus.client(), subscriber: bus.client(), prefix: "p:" });
+    await b.connect();
+    const errors: Error[] = [];
+    b.onError((err) => errors.push(err));
+    const seen: PresenceDiff[] = [];
+    b.onDiff("lobby", (d) => seen.push(d));
+    await new Promise((r) => setTimeout(r, 10));
+
+    const cutShort = { origin: "other", topic: "lobby", diff: { joins: [{ userId: "u1" }], leaves: [] } };
+    bus.publish("p:diff:lobby", JSON.stringify(cutShort));
+
+    expect(seen).toHaveLength(0);
+    expect(errors.map((err) => err.message)).toEqual(['Not a Courier presence change on channel "p:diff:lobby"']);
   });
 
   /** Without a second connection there is nothing to listen on, and the

@@ -2,6 +2,7 @@ import { createLogger } from "@noverax/courier";
 import type { PubSubAdapter, PubSubEnvelope } from "@noverax/courier/realtime";
 import { trackHealth } from "./health";
 import type { RedisPubSubConfig } from "./types";
+import { isPubSubEnvelope } from "./wire-guards";
 
 const log = createLogger("RedisPubSub");
 
@@ -48,7 +49,9 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
 
   function handleMessage(channel: string, raw: string): void {
     try {
-      const envelope = JSON.parse(raw) as PubSubEnvelope;
+      const envelope: unknown = JSON.parse(raw);
+      if (!isPubSubEnvelope(envelope))
+        throw new Error(`Not a Courier message on channel "${channel}"`);
 
       // Echo prevention — skip messages from self
       if (envelope.origin === origin) return;

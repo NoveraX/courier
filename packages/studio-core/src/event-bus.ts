@@ -45,7 +45,8 @@ export class EventBus {
     }
 
     const type = typeOrListener;
-    const listener = maybeListener!;
+    const listener = maybeListener;
+    if (!listener) throw new TypeError(`EventBus.on("${type}") needs a listener`);
     let set = this.typeListeners.get(type);
     if (!set) {
       set = new Set();

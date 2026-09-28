@@ -30,7 +30,7 @@ import type {
   UseSuspenseQueryResult,
 } from "@tanstack/react-query";
 
-import type { MethodsOfKind, MutationVariables } from "./types-helpers";
+import type { MethodsOfKind, MutationVariables, NoArguments } from "./types-helpers";
 import type {
   CourierComputedQueryOptions,
   CourierInfiniteQueryOptions,
@@ -83,7 +83,7 @@ export type QueryGroupClient<TGroup> = {
   useQuery: <TMethod extends MethodsOfKind<TGroup, "query">, TData = Res<TGroup[TMethod]>>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
-      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+      ? [Vars<TGroup[TMethod]>] extends [undefined | NoArguments]
         ? [options?: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>, TData>]
         : {} extends Vars<TGroup[TMethod]>
           ? [options?: CourierQueryOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>, TData>]
@@ -94,7 +94,7 @@ export type QueryGroupClient<TGroup> = {
   useSuspenseQuery: <TMethod extends MethodsOfKind<TGroup, "query">, TData = Res<TGroup[TMethod]>>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
-      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+      ? [Vars<TGroup[TMethod]>] extends [undefined | NoArguments]
         ? [
             options?: CourierSuspenseQueryOptions<
               Res<TGroup[TMethod]>,
@@ -142,7 +142,7 @@ export type QueryGroupClient<TGroup> = {
     queryClient: QueryClient,
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
-      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+      ? [Vars<TGroup[TMethod]>] extends [undefined | NoArguments]
         ? [options?: CourierPrefetchOptions<Vars<TGroup[TMethod]>>]
         : {} extends Vars<TGroup[TMethod]>
           ? [options?: CourierPrefetchOptions<Vars<TGroup[TMethod]>>]
@@ -153,7 +153,7 @@ export type QueryGroupClient<TGroup> = {
   useSubscription: <TMethod extends MethodsOfKind<TGroup, "stream">>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
-      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+      ? [Vars<TGroup[TMethod]>] extends [undefined | NoArguments]
         ? [options?: CourierSubscriptionOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
         : {} extends Vars<TGroup[TMethod]>
           ? [options?: CourierSubscriptionOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>]
@@ -179,7 +179,7 @@ export type QueryGroupClient<TGroup> = {
   useChannel: <TMethod extends MethodsOfKind<TGroup, "channel">>(
     method: TMethod,
     ...args: TGroup[TMethod] extends AnyEndpoint
-      ? [Vars<TGroup[TMethod]>] extends [undefined | void]
+      ? [Vars<TGroup[TMethod]>] extends [undefined | NoArguments]
         ? [
             options?: CourierChannelOptions<
               TGroup[TMethod] extends AnyEndpoint ? Res<TGroup[TMethod]> : unknown,

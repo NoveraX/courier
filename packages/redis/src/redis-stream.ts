@@ -49,8 +49,10 @@ export function createRedisStream(config: RedisStreamConfig): StreamAdapter {
   function parseEntry(entry: [string, string[]]): StoredEvent {
     const [id, fields] = entry;
     const map = new Map<string, string>();
-    for (let i = 0; i < fields.length; i += 2) {
-      map.set(fields[i]!, fields[i + 1]!);
+    for (let i = 0; i + 1 < fields.length; i += 2) {
+      const name = fields[i];
+      const value = fields[i + 1];
+      if (name !== undefined && value !== undefined) map.set(name, value);
     }
 
     let data: unknown = null;

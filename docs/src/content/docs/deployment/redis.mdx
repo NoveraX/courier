@@ -12,6 +12,8 @@ Memory adapters work perfectly for single-process deployments. Switch to Redis w
 - SSE clients reconnect to a **different replica** and need event history
 - Presence tracking must be **consistent** across all replicas
 
+The Pub/Sub adapter is the one the server uses itself, once you pass it as `pubsub`. The Stream and Presence adapters are building blocks: the server does not read or write them on its own, and your stream and channel handlers call them, as the examples below do.
+
 ## Installation
 
 ```bash
@@ -29,8 +31,8 @@ import Redis from "ioredis"
 import { createRedisPubSub } from "@noverax/courier-redis"
 
 const pubsub = createRedisPubSub({
-  publisher: new Redis(process.env.REDIS_URL),    // dedicated connection for PUBLISH
-  subscriber: new Redis(process.env.REDIS_URL),   // dedicated connection for SUBSCRIBE
+  publisher: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),    // dedicated connection for PUBLISH
+  subscriber: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),   // dedicated connection for SUBSCRIBE
   prefix: "courier:",                                // channel key prefix (default: "")
 })
 
@@ -47,22 +49,22 @@ Each adapter instance generates a unique `origin` UUID. Messages are tagged with
 
 ```ts
 const pubsub = createRedisPubSub({
-  publisher: new Redis(process.env.REDIS_URL),
-  subscriber: new Redis(process.env.REDIS_URL),
+  publisher: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
+  subscriber: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
   origin: process.env.HOSTNAME,  // optional: use pod name as origin
 })
 ```
 
 ## Stream Adapter
 
-Persists SSE events in Redis Streams for `Last-Event-ID` resume across replicas.
+Keeps a stream's events in Redis Streams, so a client that reconnects to any replica can be sent what it missed.
 
 ```ts title="adapters.ts"
 import Redis from "ioredis"
 import { createRedisStream } from "@noverax/courier-redis"
 
 const stream = createRedisStream({
-  redis: new Redis(process.env.REDIS_URL),
+  redis: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
   prefix: "courier:stream:",      // stream key prefix (default: "")
   maxLen: 1000,                  // auto-trim MAXLEN per stream (default: 1000, 0 = no trim)
 })
@@ -70,12 +72,60 @@ const stream = createRedisStream({
 await stream.connect()
 ```
 
-### How Resume Works
+### Resuming a Stream
 
-1. Client connects with `Last-Event-ID: 1711234567890-0`
-2. Server calls `stream.getHistory(topic, lastEventId, limit)`
-3. Redis `XRANGE` returns events **after** the given ID (exclusive start)
-4. Server replays missed events, then switches to live streaming
+A stream handler resumes from the adapter itself. The code that produces an event appends it, and Redis gives it an id; the handler reads the stream after the last id its client saw — `ctx.lastEventId`, which the client sends as `Last-Event-ID` when it reconnects — and yields each event with `tracked(id, …)`, so the id it resumes from next time is the Redis one. Every replica reads the same Redis stream, so it does not matter which one the client comes back to.
+
+```ts title="api/activity.ts"
+import { courier, defineGroup } from "@noverax/courier/define"
+import { tracked } from "@noverax/courier/realtime"
+import { z } from "zod"
+import { history } from "../lib/adapters"
+
+const { stream } = courier()
+
+const Activity = z.object({ user: z.string(), action: z.string() })
+
+/** Wait `ms`, or less when the client leaves. */
+function pause(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms)
+    signal.addEventListener("abort", () => {
+      clearTimeout(timer)
+      resolve()
+    }, { once: true })
+  })
+}
+
+export const activity = defineGroup({
+  prefix: "activity",
+  endpoints: {
+    feed: stream
+      .variables(z.object({ team: z.string() }))
+      .response(Activity)
+      .implement(async function* (ctx) {
+        const topic = `activity:${ctx.variables.team}`
+        // After the last event this client saw, or from now for a new one
+        let cursor = ctx.lastEventId ?? `${Date.now()}-0`
+        while (!ctx.signal.aborted) {
+          const events = await history.getHistory(topic, cursor)
+          for (const event of events) {
+            cursor = event.id
+            yield tracked(event.id, Activity.parse(event.data))
+          }
+          if (events.length === 0) await pause(500, ctx.signal)
+        }
+      }),
+  },
+})
+
+/** Called wherever activity happens, on any replica. */
+export async function recordActivity(team: string, user: string, action: string): Promise<void> {
+  await history.append(`activity:${team}`, { data: { user, action }, timestamp: Date.now() })
+}
+```
+
+`getHistory(topic, afterId, limit)` runs Redis `XRANGE` from just after `afterId` — exclusive, Redis 6.2 or later — and returns at most `limit` events, 100 by default; the loop above reads on until it has caught up. A client that was away longer than the stream keeps events for resumes from the oldest one left.
 
 ### Auto-Trim
 
@@ -90,12 +140,60 @@ import Redis from "ioredis"
 import { createRedisPresence } from "@noverax/courier-redis"
 
 const presence = createRedisPresence({
-  redis: new Redis(process.env.REDIS_URL),
+  redis: new Redis(process.env.REDIS_URL ?? "redis://localhost:6379"),
   prefix: "courier:presence:",    // key prefix (default: "presence:")
 })
 
 await presence.connect()
 ```
+
+Presence is used from a channel's handlers: track a connection when it joins, refresh it on each of its heartbeats, untrack it when it leaves, and tell the room. Give the adapter a `subscriber` connection as well, and `onDiff` hears the joins and leaves of every replica, not only its own.
+
+```ts title="api/rooms.ts"
+import { courier, defineGroup } from "@noverax/courier/define"
+import { z } from "zod"
+import { presence } from "../lib/adapters"
+
+const { channel } = courier()
+
+const Online = z.object({ online: z.array(z.string()) })
+
+async function onlineIn(topic: string): Promise<z.infer<typeof Online>> {
+  const entries = await presence.list(topic)
+  return { online: [...new Set(entries.map((entry) => entry.userId))] }
+}
+
+export const rooms = defineGroup({
+  prefix: "rooms",
+  endpoints: {
+    room: channel
+      .variables(z.object({ room: z.string(), user: z.string() }))
+      .topic((v) => ({ room: v.room }))
+      .send(z.object({ type: z.literal("heartbeat") }))
+      .response(Online)
+      .implement((v) => {
+        const topic = `room:${v.room}`
+        return {
+          async onJoin(ctx) {
+            await presence.track(topic, { userId: v.user, connectionId: ctx.connectionId, metadata: {} })
+            const online = await onlineIn(topic)
+            ctx.send(online)
+            ctx.broadcast(ctx.topic, online)
+          },
+          async onMessage(ctx) {
+            await presence.heartbeat(topic, ctx.connectionId)
+          },
+          async onLeave(ctx) {
+            await presence.untrack(topic, ctx.connectionId)
+            ctx.broadcast(ctx.topic, await onlineIn(topic))
+          },
+        }
+      }),
+  },
+})
+```
+
+A replica that crashes never untracks its connections; a sweep, below, removes them once their heartbeats stop.
 
 ### Data Structure
 
@@ -108,14 +206,18 @@ Each topic creates two Redis keys:
 
 ### Heartbeat & Sweep
 
-```ts title="presence-loop.ts"
-// Client sends heartbeat — updates ZSET score
-await presence.heartbeat("room:general", connectionId)
+`heartbeat(topic, connectionId)` refreshes a connection's score, as the room's `onMessage` does above each time the browser sends `{ type: "heartbeat" }` — every 15 seconds, say. A sweep, run on a timer by one process or by each, removes the connections that stopped:
 
-// Periodic sweep removes entries without a heartbeat in the last 30 seconds
-// (atomic Lua script). The second argument is a duration, not a timestamp.
-const stale = await presence.sweep("room:general", 30_000)
-// stale = [{ connectionId, userId, metadata, joinedAt, lastSeenAt }]
+```ts title="presence-sweep.ts"
+import { presence } from "./lib/adapters"
+
+// Remove entries without a heartbeat in the last 30 seconds (atomic Lua
+// script). The second argument is a duration, not a timestamp.
+setInterval(async () => {
+  const stale = await presence.sweep("room:general", 30_000)
+  // stale = [{ connectionId, userId, metadata, joinedAt, lastSeenAt }]
+  if (stale.length > 0) console.log(`swept ${stale.length} from room:general`)
+}, 10_000)
 ```
 
 ### Diff Events
@@ -135,11 +237,11 @@ const unsubscribe = presence.onDiff("room:general", (diff) => {
 
 ## Full Setup Example
 
-Wire all three adapters together:
+Create the adapters once, pass the Pub/Sub adapter to the server, and import the other two where your handlers use them — `history` and `presence` in the examples above:
 
-```ts title="adapters.ts"
+```ts title="lib/adapters.ts"
 import Redis from "ioredis"
-import { createRedisPubSub, createRedisStream, createRedisPresence } from "@noverax/courier-redis"
+import { createRedisPresence, createRedisPubSub, createRedisStream } from "@noverax/courier-redis"
 
 const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379"
 
@@ -149,7 +251,7 @@ export const pubsub = createRedisPubSub({
   prefix: "courier:",
 })
 
-export const stream = createRedisStream({
+export const history = createRedisStream({
   redis: new Redis(redisUrl),
   prefix: "courier:stream:",
   maxLen: 5000,
@@ -157,16 +259,37 @@ export const stream = createRedisStream({
 
 export const presence = createRedisPresence({
   redis: new Redis(redisUrl),
+  subscriber: new Redis(redisUrl),
   prefix: "courier:presence:",
 })
 
 export async function connectAdapters(): Promise<void> {
-  await Promise.all([pubsub.connect(), stream.connect(), presence.connect()])
+  await Promise.all([pubsub.connect(), history.connect(), presence.connect()])
 }
 
 export async function disconnectAdapters(): Promise<void> {
-  await Promise.all([pubsub.disconnect(), stream.disconnect(), presence.disconnect()])
+  await Promise.all([pubsub.disconnect(), history.disconnect(), presence.disconnect()])
 }
+```
+
+```ts title="server.ts"
+import { createCourierServer } from "@noverax/courier-server"
+import { activity } from "./api/activity"
+import { rooms } from "./api/rooms"
+import { connectAdapters, disconnectAdapters, pubsub } from "./lib/adapters"
+import { defineApi } from "@noverax/courier/define"
+
+const api = defineApi({ name: "api", baseURL: "https://api.example.com", groups: { activity, rooms } })
+
+await connectAdapters()
+
+// `pubsub` carries ctx.broadcast and the registry's broadcasts to every replica
+const server = await createCourierServer({ sources: { api }, pubsub, port: 3001 })
+
+process.on("SIGTERM", async () => {
+  await server.stop()
+  await disconnectAdapters()
+})
 ```
 
 ## Health Monitoring
@@ -175,10 +298,10 @@ Each adapter exposes `isHealthy()`:
 
 ```ts title="health-check.ts"
 app.get("/health/redis", (req, res) => {
-  const healthy = pubsub.isHealthy() && stream.isHealthy() && presence.isHealthy()
+  const healthy = pubsub.isHealthy() && history.isHealthy() && presence.isHealthy()
   res.status(healthy ? 200 : 503).json({
     pubsub: pubsub.isHealthy(),
-    stream: stream.isHealthy(),
+    history: history.isHealthy(),
     presence: presence.isHealthy(),
   })
 })
@@ -195,7 +318,7 @@ const unsubPubSub = pubsub.onError((error) => {
   console.error("[PubSub]", error)
 })
 
-const unsubStream = stream.onError((error) => {
+const unsubHistory = history.onError((error) => {
   console.error("[Stream]", error)
 })
 
@@ -210,7 +333,7 @@ Redis adapters degrade gracefully — they never kill active client connections:
 
 | Scenario | Behavior |
 |----------|----------|
-| Redis temporarily down | PubSub messages are lost (ephemeral). Stream append fails silently. Presence heartbeat skipped. |
+| Redis temporarily down | PubSub messages are lost (ephemeral). `append` rejects and `getHistory` returns no events, and `onError` hears both. Presence calls do nothing — `list` returns no entries — and `onError` hears why. |
 | Redis reconnects | Adapters resume automatically (ioredis handles reconnection) |
 | Subscriber connection lost | New subscriptions re-established on reconnect |
 | `isHealthy()` returns false | Your load balancer should stop sending new connections |

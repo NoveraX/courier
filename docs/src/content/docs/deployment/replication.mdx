@@ -11,7 +11,7 @@ This guide shows a complete, production-ready realtime setup with Redis adapters
 
 ## Shared Adapters
 
-Every framework uses the same adapter setup:
+Every framework uses the same adapter setup. The server is handed `pubsub`; `history` and `presence` are used by your stream and channel handlers, as the [Redis Adapters](/docs/deployment/redis) page shows:
 
 ```ts title="lib/adapters.ts"
 import Redis from "ioredis"
@@ -26,7 +26,7 @@ export const pubsub = createRedisPubSub({
   origin: process.env.HOSTNAME,
 })
 
-export const stream = createRedisStream({
+export const history = createRedisStream({
   redis: new Redis(redisUrl),
   prefix: "courier:stream:",
   maxLen: 5000,
@@ -34,15 +34,16 @@ export const stream = createRedisStream({
 
 export const presence = createRedisPresence({
   redis: new Redis(redisUrl),
+  subscriber: new Redis(redisUrl),
   prefix: "courier:presence:",
 })
 
 export async function connectAdapters(): Promise<void> {
-  await Promise.all([pubsub.connect(), stream.connect(), presence.connect()])
+  await Promise.all([pubsub.connect(), history.connect(), presence.connect()])
 }
 
 export async function disconnectAdapters(): Promise<void> {
-  await Promise.all([pubsub.disconnect(), stream.disconnect(), presence.disconnect()])
+  await Promise.all([pubsub.disconnect(), history.disconnect(), presence.disconnect()])
 }
 ```
 

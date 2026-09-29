@@ -28,7 +28,7 @@ describe("extractSamples", () => {
     ].join("\n");
 
     expect(extractSamples(page)).toEqual([
-      { line: 4, jsx: false, listing: false, code: "const a = 1\n" },
+      { line: 4, jsx: false, listing: false, code: "const a = 1\n", file: "a.ts" },
       { line: 12, jsx: false, listing: false, code: "const b = 2\n" },
     ]);
   });
@@ -126,6 +126,57 @@ describe("checkSamples", () => {
         jsx: false,
         code: 'import { caller } from "@/lib/caller"\n\nconst users = await caller.users.getAll({ page })\n',
       },
+      {
+        page: "shown-file.mdx",
+        line: 70,
+        jsx: false,
+        file: "api/sources.ts",
+        code: [
+          'import { courier, defineApi } from "@noverax/courier/define"',
+          "const { endpoint } = courier()",
+          'export const api = defineApi({ baseURL: "https://api.example.com", endpoints: {',
+          '  getUser: endpoint.get("users/:id").variables<{ id: string }>(),',
+          "} })",
+          "",
+        ].join("\n"),
+      },
+      {
+        page: "shown-file.mdx",
+        line: 80,
+        jsx: false,
+        code: [
+          'import { createCaller } from "@noverax/courier"',
+          'import { api } from "@/api/sources"',
+          'await createCaller(api).getUser({ userId: "1" })',
+          "",
+        ].join("\n"),
+      },
+      {
+        page: "variant-file.mdx",
+        line: 90,
+        jsx: false,
+        file: "api/index.ts",
+        code: "export const api = { one: 1 }\n",
+      },
+      {
+        page: "variant-file.mdx",
+        line: 95,
+        jsx: false,
+        code: 'import { mainApi } from "@/api"\n\nmainApi.users.getAll()\n',
+      },
+      {
+        page: "incomplete-file.mdx",
+        line: 100,
+        jsx: false,
+        file: "lib/q.ts",
+        code: 'import { q as shown } from "@/lib/elsewhere"\n\nexport const q = shown\n',
+      },
+      {
+        page: "incomplete-file.mdx",
+        line: 105,
+        jsx: false,
+        code: 'import { q } from "@/lib/q"\n\nq.users.useQuery("anything")\n',
+      },
     ]);
   }, 60_000);
 
@@ -150,5 +201,16 @@ describe("checkSamples", () => {
 
     expect(pages).not.toContain("current-form.mdx");
     expect(pages).not.toContain("left-out.mdx");
+  });
+
+  it("compiles a sample against a file its page shows, reporting a wrong call at its line", () => {
+    expect(problems).toContainEqual(expect.stringMatching(/^shown-file\.mdx:82 TS2353 .*userId/));
+  });
+
+  it("leaves typed as anything a file the page shows another variant of, or builds on what it never shows", () => {
+    const pages = problems.map((problem) => problem.split(":")[0]);
+
+    expect(pages).not.toContain("variant-file.mdx");
+    expect(pages).not.toContain("incomplete-file.mdx");
   });
 });

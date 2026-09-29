@@ -26,6 +26,8 @@ import { join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
 
 import { extractSamples, importHeader, samplePages } from "./doc-samples.mjs";
+import { placeSamples } from "./page-modules.mjs";
+import { isOmission, samplesLeavingOut } from "./sample-omissions.mjs";
 
 const require = createRequire(import.meta.url);
 const ts = require("typescript");
@@ -61,20 +63,6 @@ export const ENTRIES = [
   "@noverax/courier-astro",
 ];
 
-/*
- * What a sample leaves out: undeclared names (2304, 2552, 18004), modules of
- * the reader's app (2307), test globals (2593, 2582), and the implicit any
- * of a callback handed to something the sample never declared (7005, 7006,
- * 7031).
- */
-const OMITTED = new Set([2304, 2307, 2503, 2552, 2580, 2582, 2593, 2749, 7005, 7006, 7031, 18004]);
-
-/* Samples written for a platform whose types this check does not load. */
-const PLATFORM = [
-  { page: "deployment/cloudflare.mdx", text: /'ctx'|'webSocket'/, reason: "Cloudflare Workers' types" },
-  { page: "deployment/replication.mdx", text: /'websocket'/, reason: "@fastify/websocket's route option" },
-];
-
 export const OPTIONS = {
   strict: true,
   noEmit: true,
@@ -102,7 +90,7 @@ export function checkSamples(samples) {
   mkdirSync(OUT, { recursive: true });
   const app = join(OUT, "app-modules.d.ts");
   writeFileSync(app, 'declare module "@/*";\ndeclare module "~/*";\ndeclare module "*.css";\n');
-  const files = new Map(samples.map((sample, n) => [join(OUT, `s${n}.${sample.jsx ? "tsx" : "ts"}`), sample]));
+  const files = placeSamples(samples, OUT);
   for (const [file, sample] of files) {
     const module = /^\s*(import|export)\s/m.test(sample.code) ? "" : "\nexport {};\n";
     writeFileSync(file, sample.code + module);
@@ -110,11 +98,14 @@ export function checkSamples(samples) {
   const roots = [...files.keys(), app];
   const shifts = addMissingImports(roots, exportedNames());
   const problems = [];
-  for (const diagnostic of ts.getPreEmitDiagnostics(ts.createProgram(roots, OPTIONS))) {
+  const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram(roots, OPTIONS));
+  const leavingOut = samplesLeavingOut(diagnostics);
+  for (const diagnostic of diagnostics) {
     const sample = diagnostic.file && files.get(diagnostic.file.fileName);
     if (!sample) continue;
     const text = ts.flattenDiagnosticMessageText(diagnostic.messageText, " ");
-    if (isOmission(diagnostic.code, text, sample)) continue;
+    const standIn = sample.unresolved || leavingOut.has(diagnostic.file.fileName);
+    if (isOmission(diagnostic.code, text, { ...sample, standIn })) continue;
     const { line } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start ?? 0);
     const shift = shifts.get(diagnostic.file.fileName) ?? 0;
     problems.push(`${sample.page}:${sample.line + Math.max(0, line - shift)} TS${diagnostic.code} ${text}`);
@@ -156,24 +147,6 @@ function addMissingImports(roots, exported) {
     shifts.set(file, header.length);
   }
   return shifts;
-}
-
-/* Whether a problem is a sample leaving something out rather than getting the packages wrong. */
-function isOmission(code, text, sample) {
-  if (code === 2307 && /'@noverax\//.test(text)) return false;
-  /* A listing shows the packages' own types: one no entry exports is not the reader's to leave out. */
-  if (sample.listing && (code === 2304 || code === 2552) && /name '[A-Z]/.test(text)) return false;
-  if (OMITTED.has(code)) return true;
-  if (code === 2339 && /type 'ImportMeta'/.test(text)) return true;
-  if (PLATFORM.some((entry) => sample.page.endsWith(entry.page) && entry.text.test(text))) return true;
-  /* An API from the reader's app, or one the sample does not declare, is
-     anything here, and the callers read anything as an API with streams —
-     which a proxy caller must be given a boundary for — and nothing to call. */
-  const standIn = /from "(\.|@\/|~\/)/.test(sample.code) || /typeof api\b/.test(sample.code);
-  if (!standIn) return false;
-  if (/'never'|boundary|ProxyCallerDef|<any\b|Omit<any|unknown\[\]/.test(text)) return true;
-  if (code === 2554 && /createProxy/.test(sample.code)) return true;
-  return code === 2698 || code === 2709;
 }
 
 function main() {

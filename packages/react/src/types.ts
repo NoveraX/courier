@@ -129,13 +129,18 @@ export type QueryGroupClient<TGroup> = {
     ? UseInfiniteQueryResult<InfiniteData<Res<TGroup[TMethod]>, TPageParam>, Error>
     : never;
 
-  useMutation: <TMethod extends MethodsOfKind<TGroup, "mutation">>(
+  /* The options are not wrapped in a conditional type: behind one, the
+     result of an `onMutate` that reads its variables was not inferred. */
+  useMutation: <TMethod extends MethodsOfKind<TGroup, "mutation">, TOnMutateResult = unknown>(
     method: TMethod,
-    options?: TGroup[TMethod] extends AnyEndpoint
-      ? CourierMutationOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>>
-      : never,
+    options?: CourierMutationOptions<Res<TGroup[TMethod]>, Vars<TGroup[TMethod]>, TOnMutateResult>,
   ) => TGroup[TMethod] extends AnyEndpoint
-    ? UseMutationResult<Res<TGroup[TMethod]>, Error, MutationVariables<Vars<TGroup[TMethod]>>>
+    ? UseMutationResult<
+        Res<TGroup[TMethod]>,
+        Error,
+        MutationVariables<Vars<TGroup[TMethod]>>,
+        TOnMutateResult
+      >
     : never;
 
   prefetchQuery: <TMethod extends MethodsOfKind<TGroup, "query">>(

@@ -3,7 +3,7 @@
  */
 
 import { createElement, type ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from "vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -182,5 +182,39 @@ describe("optimisticOptions", () => {
       { id: "1", name: "Alice" },
       { id: "2", name: "Eve" },
     ]);
+  });
+});
+
+describe("useMutation's onMutate result", () => {
+  it("reaches onError typed as onMutate returned it, so a failure rolls back", async () => {
+    const api = makeApi();
+    const q = createQueryCaller(api);
+    const keys = createQueryKeys(api);
+    const key = keys("users", "list");
+    const list = renderHook(() => q.users.useQuery("list"), { wrapper });
+    await waitFor(() => expect(list.result.current.data).toHaveLength(1));
+    const { result } = renderHook(
+      () =>
+        q.users.useMutation("create", {
+          onMutate: async (variables) => {
+            await queryClient.cancelQueries({ queryKey: key });
+            const previous = queryClient.getQueryData<User[]>(key);
+            queryClient.setQueryData<User[]>(key, (old) => [
+              ...(old ?? []),
+              { id: "temp", name: variables.name },
+            ]);
+            return { previous };
+          },
+          onError: (_error, _variables, snapshot) => {
+            expectTypeOf(snapshot).toEqualTypeOf<{ previous: User[] | undefined } | undefined>();
+            if (snapshot?.previous) queryClient.setQueryData(key, snapshot.previous);
+          },
+        }),
+      { wrapper },
+    );
+
+    await act(() => result.current.mutateAsync({ name: "Zed", fail: true }).catch(() => undefined));
+
+    expect(queryClient.getQueryData(key)).toEqual([{ id: "1", name: "Alice" }]);
   });
 });

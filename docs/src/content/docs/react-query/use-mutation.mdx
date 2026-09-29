@@ -215,6 +215,8 @@ export function UserManager() {
 }
 ```
 
+What `onMutate` returns reaches `onError` and `onSettled` typed as it was returned, so `context.previous` above is a `User[] | undefined`. TypeScript reads the object from top to bottom: write `onMutate` before the callbacks that use its result.
+
 ## Next steps
 
 - [useQuery](/docs/react-query/use-query) — fetch data with type-safe queries

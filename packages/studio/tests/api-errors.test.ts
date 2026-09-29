@@ -4,10 +4,12 @@
  * of the machine Studio runs on.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import type { IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { apiErrors } from "../src/server/api-errors";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { MAX_MESSAGE_BYTES } from "../src/server/max-message-bytes";
 import type { StudioServer } from "../src/server/types";
@@ -80,6 +82,41 @@ describe("API errors", () => {
     expect(JSON.parse(reply.text)).toEqual({
       error: "The request body is larger than Studio accepts.",
     });
+  });
+});
+
+describe("a request outside the API", () => {
+  it("has its body left unread, so a body that is not JSON gets no parser error page", async () => {
+    const url = await start();
+
+    const response = await fetch(`${url}/anything`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
+      body: "{",
+    });
+    const text = await response.text();
+
+    expect(response.status).toBe(404);
+    expect(text).not.toContain("SyntaxError");
+    expect(text).not.toContain("node_modules");
+  });
+});
+
+describe("a failure inside an API route", () => {
+  it("is answered with a JSON 500 that names nothing of the machine, and logged whole", () => {
+    const failure = new Error(`ENOENT: ${join(root, "secret")}`);
+    const res = { headersSent: false, status: vi.fn(), json: vi.fn() };
+    res.status.mockReturnValue(res);
+
+    apiErrors(failure, {} as IncomingMessage, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({ error: "Studio could not handle the request." });
+    expect(console.error).toHaveBeenCalledWith(
+      "%s",
+      expect.stringContaining("A Studio API request failed"),
+      failure,
+    );
   });
 });
 

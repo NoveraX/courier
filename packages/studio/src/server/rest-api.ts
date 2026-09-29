@@ -50,7 +50,7 @@ export function registerRestApi(
      page the developer happens to have open. */
   app.use("/api", createOriginGuard(policy));
   app.use(tokenGuard(token));
-  app.use(express.json({ limit: MAX_MESSAGE_BYTES }));
+  app.use("/api", express.json({ limit: MAX_MESSAGE_BYTES }));
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });

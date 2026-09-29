@@ -5,6 +5,7 @@ import type { ConnectResult } from "@noverax/courier";
 import { ConfigurationError, createHandler, createLogger, createWSHandler } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
 import { attachWebSocketUpgrade } from "@noverax/courier/node";
+import type * as Ws from "ws";
 import type { WebSocketServer } from "ws";
 
 import { httpHandlerOptions, wsFrameLimit, wsHandlerOptions } from "./handler-options";
@@ -89,7 +90,7 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     maxPayload: wsFrameLimit(config),
     isAccepting: () => !shuttingDown,
     createServer: async (serverOptions) => {
-      wss = new (await import("ws")).WebSocketServer(serverOptions);
+      wss = new (await loadWs()).WebSocketServer(serverOptions);
       return wss;
     },
     onSocket: (socket, request) => wsHandler.handleSocket(socket, request),
@@ -140,4 +141,13 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
   const detachSignals = signals ? setupSignalHandlers(wrappedStop) : undefined;
 
   return result;
+}
+
+/* `ws` is an optional peer: a server that serves no channel runs without it. */
+async function loadWs(): Promise<typeof Ws> {
+  try {
+    return await import("ws");
+  } catch (cause) {
+    throw new Error("Serving WebSocket channels needs the ws package: npm install ws", { cause });
+  }
 }

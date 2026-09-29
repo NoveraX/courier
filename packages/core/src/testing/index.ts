@@ -6,6 +6,7 @@ export type {
   ApiGroups,
   ChannelFactory,
   ExtractEndpointResponse,
+  ExtractEndpointVariables,
   HistoryEntry,
   MockBuilder,
   StreamGenerator,

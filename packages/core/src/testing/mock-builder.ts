@@ -2,7 +2,7 @@ import type { ChannelHandlers, SSEEvent } from "../realtime/types";
 import type { MockBuilder, StreamGenerator } from "./types";
 
 export type MockHandler = {
-  resolver?: (variables?: unknown) => unknown | Promise<unknown>;
+  resolver?: (variables: unknown) => unknown | Promise<unknown>;
   streamFn?: StreamGenerator<unknown>;
   channelHandlers?: ChannelHandlers<unknown, unknown>;
   data?: unknown;
@@ -22,7 +22,7 @@ export function createMockBuilder(handler: MockHandler): MockBuilder<unknown> {
       handler.streamFn = undefined;
       return builder;
     },
-    returns(fn: (variables?: unknown) => unknown | Promise<unknown>) {
+    returns(fn: (variables: unknown) => unknown | Promise<unknown>) {
       handler.resolver = fn;
       handler.isError = false;
       handler.data = undefined;

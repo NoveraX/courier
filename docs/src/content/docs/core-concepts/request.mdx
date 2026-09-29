@@ -16,7 +16,7 @@ Every API call in Courier follows a well-defined lifecycle. There are two transp
 ```
 Direct:  createCaller(api) → caller.users.getAll() → executeRequest → middleware → HttpClient → fetch → backend
 
-Proxy:   createProxyCaller("api") → caller.users.getAll() → POST /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
+Proxy:   createProxyCaller("api") → caller.users.getAll() → GET /api/request → handler → executeRequest → middleware → HttpClient → fetch → backend
 ```
 
 In direct mode, the caller invokes `executeRequest` directly with the `api` object. In proxy mode, the browser sends the request payload to your server's proxy route (e.g., `/api/request`), which then calls `executeRequest` on the server side.
@@ -55,7 +55,7 @@ export const caller = createProxyCaller<typeof api>("api")
 ```
 
 ```ts
-// Browser sends POST /api/request → your server → backend
+// Browser sends GET /api/request → your server → backend
 const users = await caller.users.getAll()
 ```
 

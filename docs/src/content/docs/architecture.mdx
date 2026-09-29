@@ -11,7 +11,7 @@ export { api }
 
 // Layer 2 — Transport (mode-specific)
 // Direct: createCaller(api) → executeRequest → fetch → backend
-// Proxy:  createProxyCaller<typeof api>("api") → POST /api/request → adapter → executeRequest → fetch → backend
+// Proxy:  createProxyCaller<typeof api>("api") → GET or POST /api/request → adapter → executeRequest → fetch → backend
 
 // Layer 3 — Execution (shared core engine)
 // executeRequest → middleware chain → schema validation → HttpClient → fetch
@@ -62,12 +62,12 @@ The browser sends requests through your server, which hides API keys and bypasse
 │  createProxyCaller<typeof api>("api")                        │
 │       │                                                      │
 │       ▼                                                      │
-│  fetch("/api/request?_s=api&_g=users&_m=getAll", {           │
+│  fetch("/api/request?_s=api&_g=users&_m=create", {           │
 │    method: "POST",                                           │
 │    body: { variables, options }                              │
 │  })                                                          │
 └──────────────────┬───────────────────────────────────────────┘
-                   │  POST /api/request
+                   │  POST /api/request (a read goes as GET, its variables in _v)
                    ▼
 ┌──────────────────────────────────────────────────────────────┐
 │  Your Server (Next.js, Nuxt, Hono, Express, Fastify...)      │

@@ -56,3 +56,22 @@ describe("the options argument", () => {
     expect(typeOnly).toBeTypeOf("function");
   });
 });
+
+/**
+ * Handed the API itself as `source`, the client takes its type from it; it
+ * used to come out untyped unless the type was also named.
+ */
+describe("a client given the API as its source", () => {
+  it("is typed from it without a type argument", () => {
+    const typeOnly = () => {
+      const client = createProxyCaller("live", { source: live });
+      expectTypeOf(client.ticks.feed).returns.toEqualTypeOf<SSESubscription<number>>();
+
+      const flat = createProxyCaller("plain", { source: plain });
+      expectTypeOf(flat.list).returns.resolves.toEqualTypeOf<string[]>();
+      // @ts-expect-error — the API has no such endpoint
+      flat.missing();
+    };
+    expect(typeOnly).toBeTypeOf("function");
+  });
+});

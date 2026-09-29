@@ -10,6 +10,25 @@ import { mergeProxyPath, type ProxyPath } from "./proxy-path";
 import type { ProxyCallerArguments, ProxyCallerDefaults } from "./types";
 
 /**
+ * Create a proxy client typed from the API it is given as `source`, for code
+ * that runs on the server, where the definition already is. A browser bundle
+ * names the API as a type and passes a `boundary` instead (next overload).
+ *
+ * @param source - Source name matching the key in server-side apiRoute({ [source]: ... })
+ * @param defaults - Proxy configuration, with the API itself as `source`
+ * @returns A client whose groups and endpoints are the API's
+ * @example
+ * ```ts
+ * const client = createProxyCaller("api", { source: api, proxyPath: { http: "https://app.example/api/request" } });
+ * await client.users.getAll();
+ * ```
+ */
+export function createProxyCaller<TApi extends Record<string, unknown>>(
+  source: string,
+  defaults: ProxyCallerDefaults & { source: TApi },
+): InferClient<BrowserApi<TApi>>;
+
+/**
  * Create a typed proxy client for browser → server mode.
  * Sends requests to a proxy endpoint that forwards them to the backend.
  *

@@ -176,4 +176,36 @@ describe("validateCourierConfig on imports", () => {
       message: "courier.config.imports is an array, not an object of named imports",
     });
   });
+
+  it.each([
+    [
+      { allowedSpecHosts: "gitlab.internal" },
+      "courier.config.studio.allowedSpecHosts is a string, not a list of hosts",
+    ],
+    [{ allowedSpecHosts: [7] }, "courier.config.studio.allowedSpecHosts[0] is number, not a host"],
+    [{ allowedSpecHosts: [" "] }, "courier.config.studio.allowedSpecHosts[0] is empty"],
+    [
+      { allowedSpecHosts: ["https://gitlab.internal/api"] },
+      'courier.config.studio.allowedSpecHosts[0] is "https://gitlab.internal/api": name the host alone, as "gitlab.internal"',
+    ],
+    [
+      { allowedSpecHosts: ["ok.internal", "gitlab.internal/specs"] },
+      'courier.config.studio.allowedSpecHosts[1] is "gitlab.internal/specs": an entry holds a host, or a host and a port, alone',
+    ],
+    [
+      { allowedSpecHosts: ["gitlab.internal."] },
+      'courier.config.studio.allowedSpecHosts[0] is "gitlab.internal.": leave out the trailing dot',
+    ],
+    ["studio", "courier.config.studio is a string, not an object"],
+  ])("refuses a studio block with %j", (studio, message) => {
+    expect(rejectionOf({ sources: {}, studio })).toMatchObject({ message });
+  });
+
+  it("accepts hosts, hosts with a port and IPv6 addresses in allowedSpecHosts", () => {
+    const studio = {
+      allowedSpecHosts: ["gitlab.internal", "10.0.0.7:8080", "fd00::1", "[fd00::2]:81"],
+    };
+
+    expect(rejectionOf({ sources: {}, studio })).toBeNull();
+  });
 });

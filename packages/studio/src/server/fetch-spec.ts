@@ -3,15 +3,13 @@ import type { LookupPolicy } from "./guarded-lookup";
 import { readInterfaces } from "./own-addresses";
 import { SpecFetchError } from "./spec-fetch-error";
 import type { SpecHostAllowlist, SpecHosts } from "./spec-host-allowlist";
+import { specHostMatches } from "./spec-host-matches";
 import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 import { requestSpec, type SpecAnswer } from "./spec-request";
 
 const MAX_REDIRECTS = 5;
 const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
-const DEFAULT_PORTS: ReadonlyMap<string, string> = new Map([
-  ["http:", "80"],
-  ["https:", "443"],
-]);
+
 /* The whole fetch, redirects and the wait for the project's list of private
    hosts included: a server that trickles bytes cannot hold it open. */
 const DEADLINE_MS = 60_000;
@@ -135,7 +133,7 @@ function hopPolicy(url: URL, loopback: boolean, allowlist: SpecHostAllowlist): L
 function admit(hosts: SpecHosts, url: URL, what: string): void {
   switch (hosts.state) {
     case "listed":
-      if (hosts.hosts.some((entry) => sameHost(entry, url))) return;
+      if (hosts.hosts.some((entry) => specHostMatches(entry, url))) return;
       throw SpecFetchError.privateHost(what);
     case "missing":
       throw SpecFetchError.privateHost(what, hosts.root);
@@ -146,17 +144,4 @@ function admit(hosts: SpecHosts, url: URL, what: string): void {
     case "reloading":
       throw SpecHostsUnavailableError.reloading(what);
   }
-}
-
-/* An entry names the host with or without its port, in any case, an IPv6
-   address with or without brackets. A URL that names no port has its
-   scheme's default, which URL leaves out of `host`. */
-function sameHost(entry: string, url: URL): boolean {
-  const wanted = entry.trim().toLowerCase();
-  const unbracketed = url.hostname.replace(/^\[|\]$/g, "");
-  const port = url.port || DEFAULT_PORTS.get(url.protocol);
-  return (
-    [`${url.hostname}:${port}`, url.hostname, unbracketed].includes(wanted) ||
-    wanted.replace(/^\[|\]$/g, "") === unbracketed
-  );
 }

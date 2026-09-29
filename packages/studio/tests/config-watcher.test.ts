@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -285,7 +286,8 @@ describe("startConfigWatcher — reload", () => {
     const status = fakeStatus();
     const { deep, initial } = await watchProject(status);
     expect(initial).toBeDefined();
-    expect(status.setApiPathCount).toHaveBeenCalledWith(initial?.deps.length);
+    /* The files the load read; the names only watched for their creation are not counted. */
+    expect(status.setApiPathCount).toHaveBeenCalledWith(initial?.deps.filter(existsSync).length);
 
     writeFileSync(deep, 'export const host = "counted.example.com"\n');
     /* Waiting for the first call alone would be hostage to a late notification

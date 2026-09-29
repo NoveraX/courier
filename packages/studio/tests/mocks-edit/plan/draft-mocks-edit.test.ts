@@ -56,6 +56,7 @@ describe("draftMocksEdit", () => {
       serverCallee: "defineMockServer",
       configLocal: "courierConfig",
       configSpecifiers: ["./courier.config", "./courier.config.ts", "./courier.config.js"],
+      configForm: "default",
       addedStatements: [`import courierConfig from "./courier.config";`],
       extendedImport: { start: 0, names: ["defineMockServer"] },
     });

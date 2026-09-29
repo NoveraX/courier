@@ -1,4 +1,5 @@
 import type { ImportDeclaration, Program } from "oxc-parser";
+import type { ConfigImportForm } from "./config-import-form";
 import { exportName } from "./export-name";
 import { isValueImport, isValueSpecifier } from "./is-value-import";
 
@@ -23,16 +24,25 @@ export interface ConfigLocal {
  * findConfigLocals(program, ["./courier.config"]); // → [{ name: "cfg", specifier: "./courier.config" }]
  * ```
  */
-export function findConfigLocals(program: Program, accepted: readonly string[]): ConfigLocal[] {
+export function findConfigLocals(
+  program: Program,
+  accepted: readonly string[],
+  form: ConfigImportForm = "default",
+): ConfigLocal[] {
   const locals: ConfigLocal[] = [];
   for (const statement of program.body) {
     if (statement.type !== "ImportDeclaration" || !isValueImport(statement)) continue;
     const specifier = statement.source.value;
     if (!accepted.includes(specifier)) continue;
-    const name = defaultLocal(statement);
+    const name = form === "namespace" ? namespaceLocal(statement) : defaultLocal(statement);
     if (name !== null) locals.push({ name, specifier });
   }
   return locals;
+}
+
+function namespaceLocal(declaration: ImportDeclaration): string | null {
+  const [specifier] = declaration.specifiers;
+  return specifier?.type === "ImportNamespaceSpecifier" ? specifier.local.name : null;
 }
 
 function defaultLocal(declaration: ImportDeclaration): string | null {

@@ -8,7 +8,10 @@ export interface ImportedName {
 }
 
 /** What an import declaration binds: named exports, or the default export. */
-export type ImportClause = { names: readonly ImportedName[] } | { defaultLocal: string };
+export type ImportClause =
+  | { names: readonly ImportedName[] }
+  | { defaultLocal: string }
+  | { namespaceLocal: string };
 
 /**
  * Write an import declaration in a file's style: `import { a, b as c } from
@@ -32,7 +35,11 @@ export function importDeclaration(
   style: FileStyle,
 ): string {
   const bound =
-    "names" in clause ? `{ ${clause.names.map(nameText).join(", ")} }` : clause.defaultLocal;
+    "names" in clause
+      ? `{ ${clause.names.map(nameText).join(", ")} }`
+      : "namespaceLocal" in clause
+        ? `* as ${clause.namespaceLocal}`
+        : clause.defaultLocal;
   const declaration = `import ${bound} from ${quoteString(specifier, style.quote)}`;
   return style.semicolons ? `${declaration};` : declaration;
 }

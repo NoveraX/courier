@@ -28,8 +28,8 @@ export function auditBindings(scope: AuditScope, split: SplitStatements): string
   ];
   const clash = imported.find((name, index) => bound.has(name) || imported.indexOf(name) !== index);
   if (clash !== undefined) return `the edit imports ${clash}, which the file already declares`;
-  const { configLocal, configSpecifiers } = scope.plan;
-  const locals = findConfigLocals(scope.next.program, configSpecifiers);
+  const { configLocal, configSpecifiers, configForm } = scope.plan;
+  const locals = findConfigLocals(scope.next.program, configSpecifiers, configForm);
   if (locals.some((local) => local.name === configLocal)) return null;
-  return `${configLocal} is not the config's default export in the edited file`;
+  return `${configLocal} is not bound to the config in the edited file`;
 }

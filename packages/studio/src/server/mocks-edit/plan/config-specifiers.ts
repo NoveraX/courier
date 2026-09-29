@@ -1,9 +1,13 @@
+import type { ConfigImportForm } from "./config-import-form";
+
 /** How a mocks file in the project root imports the config beside it. */
 export interface ConfigSpecifiers {
   /** The specifier a new import uses. */
   preferred: string;
   /** Every specifier an existing import may use to be reused. */
   accepted: readonly string[];
+  /** Whether the config is imported by its default export or as a namespace. */
+  form: ConfigImportForm;
 }
 
 /* By the config's extension, what follows `./courier.config` in each
@@ -48,11 +52,12 @@ const RUNS_AS = /\.[cm]?js$/;
 export function configSpecifiers(
   configName: string,
   explicitExtensions: boolean,
+  form: ConfigImportForm = "default",
 ): ConfigSpecifiers {
   const dot = configName.lastIndexOf(".");
   const suffixes = dot === -1 ? undefined : SUFFIXES.get(configName.slice(dot));
   const base = `./${configName.slice(0, dot)}`;
   const accepted = suffixes?.map((suffix) => base + suffix) ?? [`./${configName}`];
   const runsAs = explicitExtensions ? accepted.find((name) => RUNS_AS.test(name)) : undefined;
-  return { preferred: runsAs ?? accepted[0] ?? `./${configName}`, accepted };
+  return { preferred: runsAs ?? accepted[0] ?? `./${configName}`, accepted, form };
 }

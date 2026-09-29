@@ -18,6 +18,7 @@ function audit(
     serverCallee: "defineMockServer",
     configLocal: "c",
     configSpecifiers: ["./courier.config"],
+    configForm: "default",
     addedStatements: [],
     extendedImport: null,
     ...overrides,
@@ -70,7 +71,7 @@ describe("auditBindings", () => {
 
   it("rejects a config name bound to something else", () => {
     expect(audit("const c = 1;\n", "const c = 1;\n")).toBe(
-      "c is not the config's default export in the edited file",
+      "c is not bound to the config in the edited file",
     );
   });
 });

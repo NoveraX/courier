@@ -1047,3 +1047,39 @@ describe("planMocksEdit refusing", () => {
     });
   });
 });
+
+/**
+ * Studio reads a config without a default export as the module whole; the
+ * mocks file it wrote still imported the config's default, which the
+ * project's own type check refused (TS1192).
+ */
+describe("planMocksEdit for a config of named exports", () => {
+  const NAMED = `import { api } from "./api";\nexport const sources = { api };\n`;
+
+  it("imports the config as a namespace", () => {
+    const plan = planMocksEdit({ ...editOf(""), configText: NAMED });
+
+    expect(plan.text).toContain(`import * as courierConfig from "./courier.config";`);
+    expect(plan.text).toContain("source: courierConfig.sources.api");
+    expect(parseErrors(plan.text)).toEqual([]);
+  });
+
+  it("reuses the file's own namespace import of the config", () => {
+    const before = `import * as cfg from "./courier.config";\n`;
+
+    const plan = planMocksEdit({ ...editOf(before), configText: NAMED });
+
+    expect(plan.text).toContain("source: cfg.sources.api");
+    expect(plan.text).not.toContain("courierConfig");
+  });
+
+  it("keeps the default import for a config with a default export, or a CommonJS one", () => {
+    const withDefault = "export default { sources: {} };\n";
+    const commonJs = "module.exports = { sources: {} };\n";
+
+    for (const configText of [withDefault, commonJs]) {
+      const plan = planMocksEdit({ ...editOf(""), configText });
+      expect(plan.text).toContain(`import courierConfig from "./courier.config";`);
+    }
+  });
+});

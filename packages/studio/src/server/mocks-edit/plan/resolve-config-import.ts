@@ -39,7 +39,7 @@ export function resolveConfigImport(
   bindings: ModuleBindings,
   specifiers: ConfigSpecifiers,
 ): ConfigImport {
-  const [existing] = findConfigLocals(program, specifiers.accepted);
+  const [existing] = findConfigLocals(program, specifiers.accepted, specifiers.form);
   if (existing !== undefined) {
     return { local: existing.name, specifier: existing.specifier, add: false };
   }

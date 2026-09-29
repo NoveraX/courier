@@ -4,6 +4,7 @@
  */
 
 import type { MockDeclaration, TextEdit } from "../types";
+import type { ConfigImportForm } from "./config-import-form";
 
 /** How a file is written, so text added to it reads like the rest. */
 export interface FileStyle {
@@ -124,6 +125,8 @@ export interface PlannedInsertion {
   configLocal: string;
   /** Every specifier that imports the config. */
   configSpecifiers: readonly string[];
+  /** How the config is imported: by its default export or as a namespace */
+  configForm: ConfigImportForm;
   /** The exact text of each top-level statement the plan adds, in order. */
   addedStatements: readonly string[];
   /** The import declaration that gains names, if one does. */

@@ -7,6 +7,7 @@ describe("configSpecifiers", () => {
     expect(configSpecifiers("courier.config.ts", false)).toEqual({
       preferred: "./courier.config",
       accepted: ["./courier.config", "./courier.config.ts", "./courier.config.js"],
+      form: "default",
     });
   });
 
@@ -14,6 +15,7 @@ describe("configSpecifiers", () => {
     expect(configSpecifiers("courier.config.mts", false)).toEqual({
       preferred: "./courier.config.mjs",
       accepted: ["./courier.config.mjs", "./courier.config.mts"],
+      form: "default",
     });
   });
 
@@ -21,6 +23,7 @@ describe("configSpecifiers", () => {
     expect(configSpecifiers("courier.config.mjs", false)).toEqual({
       preferred: "./courier.config.mjs",
       accepted: ["./courier.config.mjs"],
+      form: "default",
     });
   });
 
@@ -28,6 +31,7 @@ describe("configSpecifiers", () => {
     expect(configSpecifiers("courier.config.js", false)).toEqual({
       preferred: "./courier.config.js",
       accepted: ["./courier.config.js", "./courier.config"],
+      form: "default",
     });
   });
 
@@ -35,6 +39,7 @@ describe("configSpecifiers", () => {
     expect(configSpecifiers("courier.config.cts", false)).toEqual({
       preferred: "./courier.config.cjs",
       accepted: ["./courier.config.cjs", "./courier.config.cts", "./courier.config"],
+      form: "default",
     });
   });
 
@@ -42,6 +47,7 @@ describe("configSpecifiers", () => {
     expect(configSpecifiers("courier.config.cjs", false)).toEqual({
       preferred: "./courier.config.cjs",
       accepted: ["./courier.config.cjs", "./courier.config"],
+      form: "default",
     });
   });
 
@@ -49,6 +55,7 @@ describe("configSpecifiers", () => {
     expect(configSpecifiers("courier.config", false)).toEqual({
       preferred: "./courier.config",
       accepted: ["./courier.config"],
+      form: "default",
     });
   });
 });
@@ -58,6 +65,7 @@ describe("configSpecifiers where the project names extensions", () => {
     expect(configSpecifiers("courier.config.ts", true)).toEqual({
       preferred: "./courier.config.js",
       accepted: ["./courier.config", "./courier.config.ts", "./courier.config.js"],
+      form: "default",
     });
   });
 
@@ -71,5 +79,9 @@ describe("configSpecifiers where the project names extensions", () => {
   ])("imports %s as %s, as it does anyway", (configName, preferred) => {
     expect(configSpecifiers(configName, true)).toEqual(configSpecifiers(configName, false));
     expect(configSpecifiers(configName, true).preferred).toBe(preferred);
+  });
+
+  it("carries the form the config is imported in", () => {
+    expect(configSpecifiers("courier.config.ts", false, "namespace").form).toBe("namespace");
   });
 });

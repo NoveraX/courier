@@ -17,6 +17,7 @@ function planFor(oldText: string, overrides: Partial<PlannedInsertion> = {}): Pl
     serverCallee: "defineMockServer",
     configLocal: "courierConfig",
     configSpecifiers: ["./courier.config"],
+    configForm: "default",
     addedStatements: [],
     extendedImport: null,
     ...overrides,

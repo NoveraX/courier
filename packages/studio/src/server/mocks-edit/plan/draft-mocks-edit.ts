@@ -1,5 +1,6 @@
 import type { TextEdit } from "../types";
 import { applyEdits } from "./apply-edits";
+import { configImportForm } from "./config-import-form";
 import type { ConfigSpecifiers } from "./config-specifiers";
 import { configSpecifiers } from "./config-specifiers";
 import { DEFAULT_STYLE, detectStyle } from "./detect-style";
@@ -66,7 +67,8 @@ function planInsertions(
   const { parsed, located } = file;
   const style = styleOf(file, input);
   const explicit = input.explicitExtensions || importsCarryExtensions(parsed.program);
-  const specifiers = configSpecifiers(input.configName, explicit);
+  const form = configImportForm(input.configName, input.configText);
+  const specifiers = configSpecifiers(input.configName, explicit, form);
   const imports = planImports(parsed, file.imports, specifiers, style, located.kind === "absent");
   const { serverCallee, configLocal } = imports;
   const ctx = { serverCallee, configLocal, style, guardMocksColon };
@@ -87,6 +89,7 @@ function claimsOf(file: EditableFile, input: PlanInput, insertions: Insertions):
     serverCallee: ctx.serverCallee,
     configLocal: ctx.configLocal,
     configSpecifiers: specifiers.accepted,
+    configForm: specifiers.form,
     addedStatements: [...imports.addedStatements, ...entries.statements],
     extendedImport: imports.extendedImport,
   };

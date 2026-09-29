@@ -6,8 +6,10 @@ export const metadata = {
 ## Installation
 
 ```bash
-npm install @noverax/courier-server
+npm install @noverax/courier-server @noverax/courier
 ```
+
+To serve WebSocket channels, add `ws` too: `npm install ws`. A server without it serves HTTP and SSE, and answers a WebSocket upgrade with a 500 whose log line says to install it.
 
 ## Quick Start
 

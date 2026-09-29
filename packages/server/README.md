@@ -23,8 +23,10 @@ A zero-config standalone server that handles HTTP (GET/POST), SSE streams, and W
 ## Install
 
 ```bash
-npm install @noverax/courier-server @noverax/courier ws
+npm install @noverax/courier-server @noverax/courier
 ```
+
+To serve WebSocket channels, add `ws` too: `npm install ws`. A server without it serves HTTP and SSE, and answers a WebSocket upgrade with a 500 whose log line says to install it.
 
 <br />
 

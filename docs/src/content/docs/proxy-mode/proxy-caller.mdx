@@ -2,7 +2,7 @@ export const metadata = { title: "createProxyCaller", description: "The browser-
 
 ## Overview
 
-`createProxyCaller` creates a typed client with dot-notation access that POSTs to your server proxy endpoint. It is the primary way to make requests from client components in proxy mode.
+`createProxyCaller` creates a typed client with dot-notation access that calls your server's proxy endpoint: a read as GET, a write as POST. It is the primary way to make requests from client components in proxy mode.
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"

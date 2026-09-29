@@ -54,7 +54,7 @@ export const caller = createProxyCaller<typeof api>("api", {
 ```
 
 ```ts
-// Browser sends POST /api/request → your server → backend
+// Browser sends GET /api/request → your server → backend
 const users = await caller.users.getAll()
 ```
 

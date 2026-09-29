@@ -57,7 +57,7 @@ import { courierHandler } from "@noverax/courier-nuxt"
 export default courierHandler()
 ```
 
-The `server/plugins/courier.ts` Nitro plugin runs once at server start, populating the in-process registry that `courierHandler()` reads at request time. The route answers every method at `/api/request`, the proxy target Courier clients use: calls arrive as `POST` (or `GET` when a call asks for it), and SSE streams as `GET`.
+The `server/plugins/courier.ts` Nitro plugin runs once at server start, populating the in-process registry that `courierHandler()` reads at request time. The route answers every method at `/api/request`, the proxy target Courier clients use: a read arrives as `GET`, a write as `POST`, and an SSE stream as `GET`.
 
 ## Step 2: Client-side composable
 

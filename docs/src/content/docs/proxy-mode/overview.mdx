@@ -16,10 +16,10 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 │  createProxyCaller<typeof api>("api")                        │
 │       │                                                      │
 │       ▼                                                      │
-│  fetch POST "/api/request?_s=…&_g=…&_m=…"                    │
-│  { variables, options }                                      │
+│  fetch GET  "/api/request?_s=…&_g=…&_m=…&_v=…"  (a read)     │
+│  fetch POST — body { variables, options }       (a write)    │
 └──────────────────┬───────────────────────────────────────────┘
-                   │  POST /api/request
+                   │  GET or POST /api/request
                    ▼
 ┌──────────────────────────────────────────────────────────────┐
 │  Server Handler (any framework)                              │
@@ -60,11 +60,11 @@ Here is the complete flow from a browser call to the backend response:
 const caller = createProxyCaller<typeof api>("api")
 const user = await caller.users.getById({ id: 5 })
 
-// 2. Under the hood, Courier sends:
-//    POST /api/request?_s=api&_g=users&_m=getById
-//    { "variables": { "id": 5 }, "options": {} }
+// 2. Under the hood, Courier sends a read as GET, its variables as JSON in _v:
+//    GET /api/request?_s=api&_g=users&_m=getById&_v={"id":5}
+//    (a write goes as POST, with { "variables", "options" } in the body)
 
-// 3. Server handler reads the endpoint from the URL, then the body,
+// 3. Server handler reads the endpoint and its variables from the URL,
 //    creates an HttpClient, and calls: GET {baseURL}/users/5
 
 // 4. Response flows back: backend → handler → browser
@@ -158,7 +158,7 @@ Use **proxy mode** for client components where the browser initiates the request
 
 ```ts title="Comparison"
 // Proxy mode — browser cannot see API_URL or secrets
-// Browser → POST /api/request → Server → GET https://internal-api.company.com/users
+// Browser → GET /api/request → Server → GET https://internal-api.company.com/users
 const caller = createProxyCaller<typeof api>("api")
 const users = await caller.users.getAll()
 

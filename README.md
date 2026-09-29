@@ -50,11 +50,11 @@ Courier takes a different approach. You **define your API once** as plain TypeSc
 
 - 🔒 **End-to-end type safety** — response types, variables, endpoint names — all inferred. Zero codegen.
 - 🌍 **Framework agnostic** — core runs on any runtime with `fetch`. Adapters for Next.js, Nuxt, Hono, Express, Fastify, NestJS.
-- 🔀 **Two transport modes** — **Universal** — call backends from anywhere. **Proxy** — hide secrets, bypass CORS, carry the cookies you name.
+- 🔀 **Two transport modes** — **Direct** — call backends from anywhere. **Proxy** — hide secrets, bypass CORS, carry the cookies you name.
 - 🧩 **Middleware chain** — retry, auth, logging, rate-limiting, caching — composable, type-safe, or write your own.
 - 🛡️ **Runtime validation** — plug in Zod, Valibot, ArkType, or any Standard Schema library. Validate on both sides.
 - ⚡ **React Query built-in** — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery` — fully typed, zero config.
-- 🚀 **Server Actions** — Next.js `useActionState` with automatic FormData parsing, revalidation, and error handling.
+- 🚀 **Server Actions** — call your API from a Next.js Server Action with `createAction`, typed end to end and ready for `useActionState`.
 - 📤 **Upload progress** — real network-level tracking via XHR. Works on HTTP/1.1 and HTTP/2.
 - 📡 **Streaming & SSE** — first-class stream response support with typed error handling.
 - 🧪 **Testing utilities** — in-memory test client with mock builder, request history, and delay simulation.
@@ -103,12 +103,23 @@ npm install @noverax/courier-nuxt       # Nuxt / Nitro / h3
 This is shared across all frameworks. Define once — use everywhere.
 
 ```ts
+// api/boundary.ts — the endpoints the browser may call through your server
+import { defineBoundary } from "@noverax/courier/define"
+
+export const boundary = defineBoundary({
+  source: "api",
+  expose: { "users.getAll": "query", "users.getById": "query", "users.create": "mutation" },
+})
+```
+
+```ts
 // api/sources.ts
 import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+import { boundary } from "./boundary"
 
 const { endpoint } = courier()
 
-type User = { id: string; name: string; email: string }
+export type User = { id: string; name: string; email: string }
 
 const users = defineGroup({
   prefix: "users",
@@ -123,9 +134,15 @@ const users = defineGroup({
 
 export const api = defineApi({
   baseURL: process.env.API_URL!,
+  boundary,
   groups: { users },
 })
+
+// The sources your server's proxy runs, under the names browser callers use
+export const sources = { api }
 ```
+
+Server code imports `api` and calls every endpoint. Browser code imports the API only as a type and passes `boundary` instead, so your backend's address, its paths and your middleware never ship with the page — and the proxy refuses every endpoint the boundary does not name.
 
 <br />
 
@@ -145,11 +162,11 @@ Full-stack setup with proxy route, React Query hooks, Server Components, and Ser
 
 ```ts
 // instrumentation.ts — registers your sources once, at startup
+import { registerSources } from "@noverax/courier"
+
 export async function register() {
-  if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { attachRuntime } = await import("@noverax/courier-studio-core/runtime")
-    await attachRuntime()
-  }
+  const { sources } = await import("./api/sources")
+  registerSources(sources)
 }
 
 // app/api/request/route.ts
@@ -158,14 +175,17 @@ import { apiRoute } from "@noverax/courier-next"
 export const { GET, POST } = apiRoute()
 ```
 
+With [Courier Studio](https://courier.noverax.cloud/docs/frameworks/nextjs#studio-app-origin), the same `register()` also attaches the Studio runtime in development.
+
 **2. Client caller** — React Query hooks with full type inference:
 
 ```ts
 // lib/query.ts
 import { createProxyQueryCaller } from "@noverax/courier-react"
 import type { api } from "@/api/sources"
+import { boundary } from "@/api/boundary"
 
-export const q = createProxyQueryCaller<typeof api>("api")
+export const q = createProxyQueryCaller<typeof api>("api", { boundary })
 ```
 
 **3. Client Components:**
@@ -273,8 +293,9 @@ export function CreateUserForm() {
 ```ts
 // server/api/request.ts
 import { courierHandler } from "@noverax/courier-nuxt"
+import { sources } from "~/api/sources"
 
-export default courierHandler()
+export default courierHandler({ sources })
 ```
 
 **2. Composable** — use with any state management:
@@ -282,9 +303,14 @@ export default courierHandler()
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "~/api/sources"
+import type { api } from "~/api/sources"
+import { boundary } from "~/api/boundary"
 
-export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
+export function useCaller() {
+  // useAsyncData runs on the server first, where a relative path has no page to resolve against
+  const { origin } = useRequestURL()
+  return createProxyCaller<typeof api>("api", { boundary, proxyPath: { http: `${origin}/api/request` } })
+}
 ```
 
 **3. Components:**
@@ -292,9 +318,9 @@ export const caller = createProxyCaller<typeof api>("api", { source: api, proxyP
 ```vue
 <!-- pages/users.vue -->
 <script setup lang="ts">
-import { caller } from "~/composables/useCaller"
+const caller = useCaller()
 
-const { data: users, status } = useAsyncData("users", () =>
+const { data: users, status } = await useAsyncData("users", () =>
   caller.users.getAll()
 )
 </script>
@@ -335,13 +361,12 @@ Works with any React setup. Pair with Express, Hono, or Fastify on the server si
 **1. Caller with React Query:**
 
 ```ts
-// lib/query.ts
+// lib/query.ts — calls /api/request on your server (see Server Adapters)
 import { createProxyQueryCaller } from "@noverax/courier-react"
-import type { api } from "./api/sources"
+import type { api } from "../api/sources"
+import { boundary } from "../api/boundary"
 
-export const q = createProxyQueryCaller<typeof api>("api", {
-  proxyPath: { http: "/api/request" }, // points to your backend proxy route
-})
+export const q = createProxyQueryCaller<typeof api>("api", { boundary })
 ```
 
 **2. Components:**
@@ -384,14 +409,16 @@ The core caller is framework-agnostic — use it with `ref`, `reactive`, or any 
 ```ts
 // composables/useCaller.ts
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "@/api/sources"
+import type { api } from "@/api/sources"
+import { boundary } from "@/api/boundary"
 
-export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
+export const caller = createProxyCaller<typeof api>("api", { boundary })
 ```
 
 ```vue
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
+import type { User } from "@/api/sources"
 import { caller } from "@/composables/useCaller"
 
 const users = ref<User[]>([])
@@ -427,18 +454,20 @@ async function createUser(name: string, email: string) {
 ```ts
 // lib/caller.ts
 import { createProxyCaller } from "@noverax/courier"
-import { api } from "./api/sources"
+import type { api } from "./api/sources"
+import { boundary } from "./api/boundary"
 
-export const caller = createProxyCaller<typeof api>("api", { source: api, proxyPath: { http: "/api/request" } })
+export const caller = createProxyCaller<typeof api>("api", { boundary })
 ```
 
 ```svelte
 <!-- routes/users/+page.svelte -->
 <script lang="ts">
+  import type { User } from "$lib/api/sources"
   import { caller } from "$lib/caller"
   import { onMount } from "svelte"
 
-  let users = $state([])
+  let users = $state<User[]>([])
 
   onMount(async () => {
     users = await caller.users.getAll()
@@ -573,7 +602,7 @@ const api = defineApi({
 Works with any [Standard Schema](https://github.com/standard-schema/standard-schema) library — Zod, Valibot, ArkType.
 
 ```ts
-import { courier } from "@noverax/courier/define"
+import { courier, defineGroup } from "@noverax/courier/define"
 import { z } from "zod"
 
 const { endpoint } = courier()
@@ -599,9 +628,10 @@ import { createTestClient } from "@noverax/courier/testing"
 import type { api } from "./api/sources"
 
 const { client, mock, history } = createTestClient<typeof api>()
+const alice = { id: "1", name: "Alice", email: "alice@example.com" }
 
 // Mock responses
-mock("users", "getAll").resolves([{ id: "1", name: "Alice" }])
+mock("users", "getAll").resolves([alice])
 mock("users", "create").returns((vars) => ({ id: "2", ...vars }))
 mock("users", "remove").rejects(404, { message: "Not found" })
 
@@ -613,9 +643,9 @@ expect(history).toHaveLength(1)
 expect(history[0].group).toBe("users")
 expect(history[0].method).toBe("getAll")
 
-// Lifecycle control
-mock("users", "getAll").resolves("first").once()
-mock("users", "getAll").resolves("done").delay(100)
+// Lifecycle control — the mock registered last answers first
+mock("users", "getAll").resolves([alice]).delay(100) // every call, after 100 ms
+mock("users", "getAll").resolves([]).once()          // the next call only
 ```
 
 <br />
@@ -627,41 +657,31 @@ mock("users", "getAll").resolves("done").delay(100)
 ## Architecture
 
 ```
-                         ┌─────────────────────────────────────────┐
-                         │              Your Backend               │
-                         │     (Express, FastAPI, Rails, Go…)      │
-                         └───────────────────┬─────────────────────┘
-                                             │
-                    ┌───────────────────────┐│┌────────────────────────┐
-                    │                       │││                        │
-              ┌─────▼──────┐          ┌─────▼▼─────┐                   │
-              │ Universal  │          │   Proxy    │                   │
-              │  (server)  │          │  (browser) │                   │
-              └─────┬──────┘          └─────┬──────┘                   │
-                    │                       │                          │
-           createCaller(api)      createProxyCaller()                  │
-                    │                       │                          │
-                    │                  POST /api/request               │
-                    │                       │                          │
-                    │               ┌───────▼────────┐                 │
-                    │               │ Server Adapter  │                │
-                    │               │ (Next, Hono,    │                │
-                    │               │  Express, etc.) │                │
-                    │               └───────┬────────┘                 │
-                    │                       │                          │
-                    └───────────┬───────────┘                          │
-                                │                                      │
-                       ┌────────▼──────────┐                           │
-                       │  executeRequest   │────── middleware chain ───┘
-                       │  (core engine)    │────── schema validation
-                       └────────┬──────────┘
-                                │
-                         native fetch()
+  Server code                  Browser
+  createCaller(api)            createProxyCaller("api", { boundary })
+          │                                       │
+          │                           GET or POST /api/request
+          │                                       │
+          │                             ┌─────────▼────────┐
+          │                             │  Server adapter  │  Next.js, Nuxt, Hono,
+          │                             │  (proxy route)   │  Express, Fastify…
+          │                             └─────────┬────────┘
+          │                                       │
+          └───────────────────┬───────────────────┘
+                              │
+                    ┌─────────▼────────┐
+                    │  executeRequest  │  middleware chain,
+                    │  (core engine)   │  schema validation
+                    └─────────┬────────┘
+                              │ fetch()
+                    ┌─────────▼────────┐
+                    │   Your backend   │  Express, FastAPI, Rails, Go…
+                    └──────────────────┘
 ```
 
-**Universal mode** — server-side code calls your backend directly. Zero overhead, full type safety.
+**Direct mode** — code that holds the API definition, usually on your server, calls your backend itself: no extra hop, full type safety.
 
-**Proxy mode** — browser sends requests through your server, which hides API keys, bypasses CORS, and carries the session cookies a source or an endpoint names: `allowedHeaders: ["cookie", "set-cookie"]` on a backend of your own, or `.headers(["set-cookie"])` on just its sign-in.
+**Proxy mode** — the browser sends requests through your server, which hides API keys, bypasses CORS, and carries the session cookies a source or an endpoint names: `allowedHeaders: ["cookie", "set-cookie"]` on a backend of your own, or `.headers(["set-cookie"])` on just its sign-in.
 
 Both modes share the same API definition, the same middleware chain, and the same type inference.
 
@@ -677,17 +697,16 @@ Both modes share the same API definition, the same middleware chain, and the sam
 | --- | :---: | :---: | :---: | :---: |
 | End-to-end type safety | - | - | Yes | **Yes** |
 | No custom backend required | Yes | Yes | - | **Yes** |
-| Framework agnostic | Yes | Yes | - | **Yes** |
+| Framework agnostic | Yes | Yes | Yes | **Yes** |
 | React Query integration | - | - | Yes | **Yes** |
-| Server Components | Manual | - | Limited | **First-class** |
-| Server Actions | - | - | - | **Built-in** |
+| Server Components | Manual | Manual | Yes | **First-class** |
+| Server Actions | - | - | Experimental | **Built-in** |
 | Middleware chain | - | Interceptors | Middleware | **Composable** |
-| Runtime validation | - | - | Zod only | **Any Standard Schema** |
-| Upload progress | - | Yes | Plugin | **Built-in** |
+| Runtime validation | - | - | Any validator | **Any Standard Schema** |
+| Upload progress | - | Yes | - | **Built-in** |
 | Path parameters | Manual | Manual | - | **Built-in** |
-| Request deduplication | - | - | - | **Built-in** |
-| Streaming & SSE | Manual | - | Experimental | **First-class** |
-| Test utilities | - | - | - | **Built-in** |
+| Streaming & SSE | Manual | Manual | Yes | **First-class** |
+| In-memory mock client | - | - | - | **Built-in** |
 
 <br />
 

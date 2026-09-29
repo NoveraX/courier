@@ -10,7 +10,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -90,7 +90,10 @@ describe("saving the current session", () => {
     await screen.findByText("1 saved session");
     expect(toast.success).toHaveBeenCalledWith("Session saved");
     expect(screen.getByText("Debugging auth")).toBeTruthy();
-    const db = new DatabaseSync(join(root, ".courier", "studio.db"), { readOnly: true });
+    /* Loaded at run time, as Studio loads it: Node 22 leaves node:sqlite out of
+       the built-ins Vite knows, and a static import had it bundled. */
+    const Sqlite: typeof DatabaseSync = process.getBuiltinModule("node:sqlite").DatabaseSync;
+    const db = new Sqlite(join(root, ".courier", "studio.db"), { readOnly: true });
     const rows = db.prepare("SELECT body FROM sessions").all();
     db.close();
     expect(rows.map((row) => JSON.parse(String(row.body)))).toEqual([

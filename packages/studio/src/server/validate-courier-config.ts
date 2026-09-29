@@ -4,6 +4,7 @@ import { importEntryProblem } from "./import-entry-problem";
 import { isPlainObject } from "./is-plain-object";
 import { isRecord } from "./mocks-edit/is-record";
 import type { ProjectInputs } from "./read-project-inputs";
+import { specHostEntryProblem } from "./spec-host-entry-problem";
 
 /* "U" is left out: the names that start with it, Uint8Array and URL among
    them, take "a". */
@@ -57,8 +58,25 @@ export function validateCourierConfig(
       `courier.config.sources.${key} is ${describe(source)}, not a source; check that it is imported by the name its module exports`,
     );
   }
-  const problem = importsProblem(config.imports);
+  const problem = importsProblem(config.imports) ?? studioProblem(config.studio);
   if (problem !== null) throw invalid(problem);
+}
+
+/* What is wrong with the `studio` block Studio reads here, if anything. */
+function studioProblem(studio: unknown): string | null {
+  if (studio === undefined) return null;
+  if (!isPlainObject(studio)) return `courier.config.studio is ${describe(studio)}, not an object`;
+  const hosts = studio.allowedSpecHosts;
+  if (hosts === undefined) return null;
+  if (!Array.isArray(hosts)) {
+    return `courier.config.studio.allowedSpecHosts is ${describe(hosts)}, not a list of hosts`;
+  }
+  const entries: unknown[] = hosts;
+  for (const [index, entry] of entries.entries()) {
+    const problem = specHostEntryProblem(entry);
+    if (problem !== null) return `courier.config.studio.allowedSpecHosts[${index}] ${problem}`;
+  }
+  return null;
 }
 
 /* What is wrong with `imports`, if anything: it is optional, and each entry is checked as `CourierImportEntry` declares it. */

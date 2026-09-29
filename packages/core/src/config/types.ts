@@ -140,7 +140,9 @@ export interface CourierStudioConfig {
    * the host on any port, and one with a port on that port only, where a URL
    * that names no port has its scheme's default (`gitlab.internal:443`
    * matches `https://gitlab.internal`). Entries match in any case, an IPv6
-   * address with or without brackets. An address that means every interface
+   * address with or without brackets. An entry written as a URL, with a
+   * path, or ending in a dot never names a host, and the config is refused
+   * with the entry named. An address that means every interface
    * (`0.0.0.0`, `::`) is never reached, even when listed.
    *
    * Studio reads this list only when a request would reach a private host,

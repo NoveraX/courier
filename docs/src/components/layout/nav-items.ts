@@ -190,6 +190,7 @@ export const docsNav: NavSection[] = [
       { title: "HttpClient", href: "/docs/api/instance" },
       { title: "HTTPError", href: "/docs/api/http-error" },
       { title: "Types", href: "/docs/api/types" },
+      { title: "courier.config.ts", href: "/docs/api/config" },
     ],
   },
   {

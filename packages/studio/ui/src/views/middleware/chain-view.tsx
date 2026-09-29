@@ -1,13 +1,12 @@
 import { ArrowLeft, Unlink } from "lucide-react";
-
-import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/shared/empty-state";
+import { cn } from "@/lib/utils";
 
 import type { RequestEntry } from "@/store/types";
-import type { AggregateMiddleware, ChainEntry } from "./types";
-import { RequestPicker } from "./request-picker";
-import { Pipeline } from "./pipeline";
 import { ChainContext } from "./chain-context";
+import { Pipeline } from "./pipeline";
+import { RequestPicker } from "./request-picker";
+import type { AggregateMiddleware, ChainEntry } from "./types";
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +51,11 @@ export function ChainView({
         </div>
       ) : (
         <div className="flex items-center justify-center py-16">
-          <EmptyState icon={Unlink} heading="No request selected" description="Pick a request above to see its middleware pipeline." />
+          <EmptyState
+            icon={Unlink}
+            heading="No request selected"
+            description="Pick a request above to see its middleware pipeline."
+          />
         </div>
       )}
     </div>
@@ -64,6 +67,7 @@ export function ChainView({
 function BackButton({ onClick }: { onClick: () => void }): React.ReactElement {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={cn(
         "group flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 transition-all",

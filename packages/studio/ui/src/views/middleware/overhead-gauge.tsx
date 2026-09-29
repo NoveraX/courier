@@ -1,10 +1,9 @@
-import { useEffect } from "react";
 import { motion, useSpring, useTransform } from "motion/react";
+import { useEffect } from "react";
 
 import { cn } from "@/lib/utils";
-
-import type { OverheadLevel } from "./types";
 import { getOverheadLevel } from "./compute-insights";
+import type { OverheadLevel } from "./types";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
@@ -47,15 +46,30 @@ export function OverheadGauge({ percent }: OverheadGaugeProps): React.ReactEleme
   return (
     <div className="flex flex-col items-center gap-3">
       <div className="relative" style={{ width: VIEW_SIZE, height: VIEW_SIZE }}>
-        <svg width={VIEW_SIZE} height={VIEW_SIZE} viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE}`} className="-rotate-90">
+        <svg
+          aria-hidden="true"
+          width={VIEW_SIZE}
+          height={VIEW_SIZE}
+          viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE}`}
+          className="-rotate-90"
+        >
           <circle
-            cx={VIEW_SIZE / 2} cy={VIEW_SIZE / 2} r={RADIUS}
-            fill="none" stroke="var(--border-subtle)" strokeWidth={STROKE_WIDTH}
+            cx={VIEW_SIZE / 2}
+            cy={VIEW_SIZE / 2}
+            r={RADIUS}
+            fill="none"
+            stroke="var(--border-subtle)"
+            strokeWidth={STROKE_WIDTH}
           />
           <motion.circle
-            cx={VIEW_SIZE / 2} cy={VIEW_SIZE / 2} r={RADIUS}
-            fill="none" className={cfg.stroke} strokeWidth={STROKE_WIDTH}
-            strokeLinecap="round" strokeDasharray={CIRCUMFERENCE}
+            cx={VIEW_SIZE / 2}
+            cy={VIEW_SIZE / 2}
+            r={RADIUS}
+            fill="none"
+            className={cfg.stroke}
+            strokeWidth={STROKE_WIDTH}
+            strokeLinecap="round"
+            strokeDasharray={CIRCUMFERENCE}
             style={{ strokeDashoffset: offset }}
           />
         </svg>
@@ -66,9 +80,7 @@ export function OverheadGauge({ percent }: OverheadGaugeProps): React.ReactEleme
           <span className="text-caption text-muted-foreground">{cfg.label}</span>
         </div>
       </div>
-      <span className="text-caption text-muted-foreground/60">
-        Middleware Overhead
-      </span>
+      <span className="text-caption text-muted-foreground/60">Middleware Overhead</span>
     </div>
   );
 }

@@ -8,9 +8,7 @@ interface SectionNavProps {
   activeSection: string;
 }
 
-export function SectionNav({
-  activeSection,
-}: SectionNavProps): React.ReactElement {
+export function SectionNav({ activeSection }: SectionNavProps): React.ReactElement {
   function scrollTo(id: string): void {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
@@ -20,9 +18,7 @@ export function SectionNav({
       <div className="px-3 pt-4 pb-2">
         {SECTION_NAV_GROUPS.map((group) => (
           <div key={group.label} className="mb-3">
-            <p className="mb-1 px-2 text-caption text-muted-foreground/60">
-              {group.label}
-            </p>
+            <p className="mb-1 px-2 text-caption text-muted-foreground/60">{group.label}</p>
             <ul className="space-y-px">
               {group.items.map((s) => {
                 const isActive = activeSection === s.id;
@@ -30,6 +26,7 @@ export function SectionNav({
                 return (
                   <li key={s.id}>
                     <button
+                      type="button"
                       onClick={() => scrollTo(s.id)}
                       className={cn(
                         "relative flex w-full items-center gap-2 rounded-md px-2.5 h-7 text-xs transition-colors",

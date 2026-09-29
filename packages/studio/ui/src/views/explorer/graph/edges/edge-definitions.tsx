@@ -6,7 +6,7 @@
  */
 export function EdgeDefinitions(): React.ReactElement {
   return (
-    <svg className="absolute" width={0} height={0}>
+    <svg aria-hidden="true" className="absolute" width={0} height={0}>
       <defs>
         {/* ── Gradient: source → group (indigo → violet) ──────────────── */}
         <linearGradient id="edge-grad-source" x1="0%" y1="0%" x2="100%" y2="0%">

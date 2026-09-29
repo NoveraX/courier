@@ -6,10 +6,8 @@
  */
 
 import { Checkbox } from "@/components/ui/checkbox";
-
-import type { FieldType, SortDir } from "./data-table-utils";
-
 import { ColumnHeader, FrozenCells } from "./data-table-columns";
+import type { FieldType, SortDir } from "./data-table-utils";
 import { EditableCell } from "./editable-cell";
 
 interface DataTableHeaderProps {
@@ -114,10 +112,7 @@ export function DataTableRow({
     >
       <FrozenCells hasCheckbox={hasCheckbox} frozenW={frozenW}>
         {hasCheckbox && (
-          <div
-            className="flex w-10 shrink-0 items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex w-10 shrink-0 items-center justify-center">
             <Checkbox
               checked={isChecked}
               onCheckedChange={() => onToggleCheck(rowKey)}

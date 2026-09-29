@@ -23,9 +23,7 @@ export function ScoreGauge({ result }: ScoreGaugeProps): React.ReactNode {
   const hasIssues = result.breakdown.error + result.breakdown.warning + result.breakdown.hint > 0;
 
   // Show at least a sliver when score is 0 but there are issues
-  const visualScore = result.score === 0 && hasIssues
-    ? MIN_VISIBLE_PERCENT
-    : result.score;
+  const visualScore = result.score === 0 && hasIssues ? MIN_VISIBLE_PERCENT : result.score;
 
   const springValue = useSpring(0, { stiffness: 80, damping: 20 });
   const offset = useTransform(
@@ -41,6 +39,7 @@ export function ScoreGauge({ result }: ScoreGaugeProps): React.ReactNode {
     <div className="flex flex-col items-center gap-2">
       <div className="relative" style={{ width: VIEW_SIZE, height: VIEW_SIZE }}>
         <svg
+          aria-hidden="true"
           width={VIEW_SIZE}
           height={VIEW_SIZE}
           viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE}`}
@@ -67,12 +66,8 @@ export function ScoreGauge({ result }: ScoreGaugeProps): React.ReactNode {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-display font-bold ${threshold.color}`}>
-            {result.score}
-          </span>
-          <span className="text-caption text-muted-foreground">
-            {threshold.label}
-          </span>
+          <span className={`text-display font-bold ${threshold.color}`}>{result.score}</span>
+          <span className="text-caption text-muted-foreground">{threshold.label}</span>
         </div>
       </div>
     </div>

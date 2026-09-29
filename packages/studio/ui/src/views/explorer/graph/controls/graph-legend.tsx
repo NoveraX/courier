@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 // ── Legend items ──────────────────────────────────────────────────────────────
@@ -37,6 +37,7 @@ export function GraphLegend(): React.ReactElement {
     >
       {/* Toggle header */}
       <button
+        type="button"
         onClick={() => setCollapsed(!collapsed)}
         className="flex w-full items-center gap-1.5 px-3 py-1.5 text-muted-foreground hover:text-foreground"
       >
@@ -93,10 +94,7 @@ function LegendSection({
 function NodeLegendItem({ label, color }: { label: string; color: string }): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5">
-      <span
-        className="size-2 rounded-full"
-        style={{ backgroundColor: color }}
-      />
+      <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
       <span className="text-muted-foreground">{label}</span>
     </div>
   );
@@ -113,9 +111,12 @@ function EdgeLegendItem({
 }): React.ReactElement {
   return (
     <div className="flex items-center gap-1.5">
-      <svg width="16" height="6" className="shrink-0">
+      <svg aria-hidden="true" width="16" height="6" className="shrink-0">
         <line
-          x1="0" y1="3" x2="16" y2="3"
+          x1="0"
+          y1="3"
+          x2="16"
+          y2="3"
           stroke={color}
           strokeWidth={2}
           strokeDasharray={dashed ? "4 2" : "none"}

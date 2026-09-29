@@ -1,11 +1,10 @@
-import { useState } from "react";
 import { BookmarkPlus, ChevronDown, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useMockStore } from "@/store/mock-slice";
 import { getSocket } from "@/socket";
-
 import type { MockServerInfo, SavedScenario } from "@/store/mock-slice";
+import { useMockStore } from "@/store/mock-slice";
 
 interface ScenarioManagerProps {
   server: MockServerInfo;
@@ -77,7 +76,12 @@ export function ScenarioManager({ server, currentMode }: ScenarioManagerProps): 
             {scenarios.length}
           </span>
         )}
-        <ChevronDown className={cn("size-3.5 text-muted-foreground/40 transition-transform", open && "rotate-180")} />
+        <ChevronDown
+          className={cn(
+            "size-3.5 text-muted-foreground/40 transition-transform",
+            open && "rotate-180",
+          )}
+        />
       </button>
 
       {open && (
@@ -86,15 +90,33 @@ export function ScenarioManager({ server, currentMode }: ScenarioManagerProps): 
           {saving ? (
             <div className="flex gap-2">
               <input
+                // biome-ignore lint/a11y/noAutofocus: the field appears because Save was just pressed, to take the name at once
                 autoFocus
                 value={saveName}
                 onChange={(e) => setSaveName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSave(); if (e.key === "Escape") setSaving(false); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSave();
+                  if (e.key === "Escape") setSaving(false);
+                }}
                 placeholder="Scenario name…"
                 className="h-7 flex-1 rounded-md border border-border-subtle bg-muted/20 px-2 text-xs text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-accent-brand/50"
               />
-              <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={!saveName.trim()}>Save</Button>
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setSaving(false)}>Cancel</Button>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleSave}
+                disabled={!saveName.trim()}
+              >
+                Save
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setSaving(false)}
+              >
+                Cancel
+              </Button>
             </div>
           ) : (
             <Button
@@ -114,13 +136,29 @@ export function ScenarioManager({ server, currentMode }: ScenarioManagerProps): 
           ) : (
             <div className="space-y-1.5">
               {scenarios.map((s) => (
-                <div key={s.id} className="flex items-center gap-2 rounded-lg border border-border-subtle bg-muted/20 px-3 py-2">
+                <div
+                  key={s.id}
+                  className="flex items-center gap-2 rounded-lg border border-border-subtle bg-muted/20 px-3 py-2"
+                >
                   <div className="flex-1 min-w-0">
                     <p className="truncate text-body-xs font-medium text-foreground/80">{s.name}</p>
-                    <p className="text-caption text-muted-foreground/40">{s.chaosMode} · {new Date(s.createdAt).toLocaleDateString()}</p>
+                    <p className="text-caption text-muted-foreground/40">
+                      {s.chaosMode} · {new Date(s.createdAt).toLocaleDateString()}
+                    </p>
                   </div>
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-accent-brand hover:text-accent-brand" onClick={() => handleLoad(s)}>Load</Button>
-                  <button type="button" onClick={() => handleDelete(s.id)} className="text-muted-foreground/30 hover:text-rose-400 transition-colors">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-accent-brand hover:text-accent-brand"
+                    onClick={() => handleLoad(s)}
+                  >
+                    Load
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(s.id)}
+                    className="text-muted-foreground/30 hover:text-rose-400 transition-colors"
+                  >
                     <Trash2 className="size-3" />
                   </button>
                 </div>

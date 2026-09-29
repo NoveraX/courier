@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, ChevronRight } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { highlightLine } from "@/components/shared/detail-panel/tabs/syntax-highlight";
+import { buttonProps } from "@/lib/button-props";
 import { cn } from "@/lib/utils";
 import type { PlaygroundChunk } from "@/store/types-ui";
 
@@ -23,6 +24,7 @@ export function PlaygroundStreamList({
         <span className="tabular-nums">{chunks.length} events</span>
       </div>
       {chunks.map((chunk, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: chunks are only ever appended, so a chunk's place is its sequence number
         <ChunkRow key={index} chunk={chunk} seq={index + 1} />
       ))}
     </div>
@@ -42,7 +44,7 @@ function ChunkRow({ chunk, seq }: { chunk: PlaygroundChunk; seq: number }): Reac
         "group rounded-md px-2 py-1.5 transition-colors",
         hasPreview && "cursor-pointer hover:bg-muted/50",
       )}
-      onClick={hasPreview ? toggle : undefined}
+      {...(hasPreview ? buttonProps(toggle) : {})}
     >
       <div className="flex min-w-0 items-center gap-2">
         {hasPreview ? (
@@ -55,7 +57,9 @@ function ChunkRow({ chunk, seq }: { chunk: PlaygroundChunk; seq: number }): Reac
         ) : (
           <span className="size-3 shrink-0" />
         )}
-        <span className="mono-xs w-7 shrink-0 text-right tabular-nums text-muted-foreground/60">{seq}</span>
+        <span className="mono-xs w-7 shrink-0 text-right tabular-nums text-muted-foreground/60">
+          {seq}
+        </span>
         {direction === "inbound" ? (
           <ArrowDown className="size-3 shrink-0 text-emerald-400/70" />
         ) : direction === "outbound" ? (

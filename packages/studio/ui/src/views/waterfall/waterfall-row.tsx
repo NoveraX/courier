@@ -3,8 +3,8 @@ import { memo } from "react";
 import { formatDuration } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { Badge } from "@/components/ui/badge";
+import { buttonProps } from "@/lib/button-props";
 import { cn } from "@/lib/utils";
-
 import { MIN_BAR_HEIGHT } from "./constants";
 import { SegmentBar } from "./segment-bar";
 import type { WaterfallRow, WaterfallSegment } from "./types";
@@ -15,11 +15,21 @@ interface WaterfallRowProps {
   isSelected: boolean;
   index: number;
   onSelect: (id: string | null) => void;
-  onSegmentHover: (segment: WaterfallSegment | null, row: WaterfallRow, x: number, y: number) => void;
+  onSegmentHover: (
+    segment: WaterfallSegment | null,
+    row: WaterfallRow,
+    x: number,
+    y: number,
+  ) => void;
 }
 
 export const WaterfallRowItem = memo(function WaterfallRowItem({
-  row, pxPerMs, isSelected, index, onSelect, onSegmentHover,
+  row,
+  pxPerMs,
+  isSelected,
+  index,
+  onSelect,
+  onSegmentHover,
 }: WaterfallRowProps): React.ReactElement {
   const offsetPx = row.offsetMs * pxPerMs;
 
@@ -32,7 +42,7 @@ export const WaterfallRowItem = memo(function WaterfallRowItem({
         isSelected && "bg-accent-brand/5 ring-1 ring-inset ring-accent-brand/20",
       )}
       style={{ height: MIN_BAR_HEIGHT }}
-      onClick={() => onSelect(row.request.id)}
+      {...buttonProps(() => onSelect(row.request.id))}
     >
       <SegmentBar
         segments={row.segments}
@@ -55,9 +65,14 @@ interface RowLabelProps {
 }
 
 export const RowLabel = memo(function RowLabel({
-  row, index, onSelect, isSelected,
+  row,
+  index,
+  onSelect,
+  isSelected,
 }: RowLabelProps): React.ReactElement {
-  const fullPath = [row.request.source, row.request.group, row.request.method].filter(Boolean).join(".");
+  const fullPath = [row.request.source, row.request.group, row.request.method]
+    .filter(Boolean)
+    .join(".");
 
   return (
     <div
@@ -68,21 +83,26 @@ export const RowLabel = memo(function RowLabel({
         row.isProxy && "border-l-2 border-indigo-500/60",
         isSelected && "bg-accent-brand/5",
       )}
-      onClick={() => onSelect(row.request.id)}
+      {...buttonProps(() => onSelect(row.request.id))}
     >
       {/* Status dot */}
-      <div className={cn(
-        "size-1.5 shrink-0 rounded-full",
-        row.request.status === "success" && "bg-emerald-500",
-        row.request.status === "error" && "bg-rose-500",
-        row.request.status === "validation_error" && "bg-amber-500",
-        row.request.status === "pending" && "bg-sky-500 animate-pulse",
-        row.request.status === "aborted" && "bg-muted-foreground",
-      )} />
+      <div
+        className={cn(
+          "size-1.5 shrink-0 rounded-full",
+          row.request.status === "success" && "bg-emerald-500",
+          row.request.status === "error" && "bg-rose-500",
+          row.request.status === "validation_error" && "bg-amber-500",
+          row.request.status === "pending" && "bg-sky-500 animate-pulse",
+          row.request.status === "aborted" && "bg-muted-foreground",
+        )}
+      />
 
       <MethodBadge method={row.request.httpMethod ?? "GET"} className="shrink-0" />
 
-      <span className="min-w-0 flex items-baseline gap-0.5 mono-md overflow-hidden" title={fullPath}>
+      <span
+        className="min-w-0 flex items-baseline gap-0.5 mono-md overflow-hidden"
+        title={fullPath}
+      >
         {row.request.group && (
           <span className="shrink text-muted-foreground/60 truncate">{row.request.group}.</span>
         )}

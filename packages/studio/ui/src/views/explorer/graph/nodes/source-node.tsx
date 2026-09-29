@@ -1,11 +1,11 @@
-import { memo } from "react";
-import { Handle, Position } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
-import type { SourceNodeData } from "../../types";
+import { Handle, Position } from "@xyflow/react";
+import { Database } from "lucide-react";
+import { memo } from "react";
+import { cn } from "@/lib/utils";
 import { getHealthLevel } from "../../compute-metrics";
 import { HealthIndicator } from "../../shared/health-indicator";
-import { cn } from "@/lib/utils";
-import { Database } from "lucide-react";
+import type { SourceNodeData } from "../../types";
 
 function SourceNodeComponent({ data, selected }: NodeProps): React.ReactElement {
   const d = data as unknown as SourceNodeData;
@@ -14,7 +14,6 @@ function SourceNodeComponent({ data, selected }: NodeProps): React.ReactElement 
 
   return (
     <div
-      aria-label={`Source: ${d.name}, ${d.groupCount} groups, ${d.endpointCount} endpoints, ${Math.round(d.metrics.successRate)}% health`}
       style={{
         background: "var(--graph-node-source-bg)",
         borderColor: "var(--graph-node-source-border)",
@@ -28,21 +27,18 @@ function SourceNodeComponent({ data, selected }: NodeProps): React.ReactElement 
         isError && "border-l-rose-400 shadow-[0_0_16px_var(--destructive)]",
       )}
     >
+      <span className="sr-only">{`Source: ${d.name}, ${d.groupCount} groups, ${d.endpointCount} endpoints, ${Math.round(d.metrics.successRate)}% health`}</span>
       {/* Header */}
       <div className="flex items-center gap-2">
         <div className="flex size-6 items-center justify-center rounded-md bg-accent-brand/15">
           <Database className="size-3.5 text-accent-brand" />
         </div>
-        <span className="text-body-sm font-semibold text-foreground truncate">
-          {d.name}
-        </span>
+        <span className="text-body-sm font-semibold text-foreground truncate">{d.name}</span>
         <HealthIndicator level={health} pulse={d.metrics.isActive} className="ml-auto" />
       </div>
 
       {/* Base URL */}
-      <p className="mt-1.5 text-mono-sm text-muted-foreground truncate">
-        {d.baseURL}
-      </p>
+      <p className="mt-1.5 text-mono-sm text-muted-foreground truncate">{d.baseURL}</p>
 
       {/* Stats row */}
       <div className="mt-2.5 flex gap-2.5">
@@ -51,7 +47,11 @@ function SourceNodeComponent({ data, selected }: NodeProps): React.ReactElement 
         <Stat label="health" value={`${Math.round(d.metrics.successRate)}%`} />
       </div>
 
-      <Handle type="source" position={Position.Right} className="bg-accent-brand! size-2! border-0!" />
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="bg-accent-brand! size-2! border-0!"
+      />
     </div>
   );
 }

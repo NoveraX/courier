@@ -45,7 +45,18 @@ import { api } from "@/api/sources"
 export const caller = createCaller(api)
 ```
 
-**Proxy mode** — browser requests go through your server (hides API keys, bypasses CORS):
+**Proxy mode** — browser requests go through your server (hides API keys, bypasses CORS). A boundary names the endpoints the browser may call:
+
+```ts title="api/boundary.ts"
+import { defineBoundary } from "@noverax/courier/define"
+
+export const boundary = defineBoundary({
+  source: "api",
+  expose: { "users.getAll": "query", "users.getById": "query", "users.create": "mutation" },
+})
+```
+
+The API holds it, so the server refuses every other endpoint — add `boundary` to the `defineApi` call in `api/sources.ts`, imported from `./boundary`. Then the browser's caller takes it in place of the API:
 
 ```ts title="lib/caller.ts"
 import { createProxyCaller } from "@noverax/courier"
@@ -55,7 +66,7 @@ import { boundary } from "@/api/boundary"
 export const caller = createProxyCaller<typeof api>("api", { boundary })
 ```
 
-The boundary names the endpoints the browser may call. Pass it to `defineApi` as well, so the server refuses the rest — see [defineBoundary](/docs/proxy-mode/boundary#wiring-the-server).
+The caller sends each call to `/api/request` on your server, which runs it with the sources registered there — your [framework guide](/docs/frameworks/nextjs) sets up that route and the registration. See [defineBoundary](/docs/proxy-mode/boundary) for what the browser learns and what it never does.
 
 **React Query** — hooks with full type inference:
 

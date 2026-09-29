@@ -21,10 +21,11 @@ type TypedClient<T extends DefinedApi<any>, Raw extends boolean = false> = {
 
 ### GroupClient
 
-A group with typed endpoint methods, `.raw` accessor, and `.with()`.
+A group with typed endpoint methods, `.raw` accessor, and `.with()`: one method per endpoint of the group, typed from its variables and response, beside these two.
 
 ```ts
-type GroupClient<G, Raw extends boolean = false> = GroupMethods<G, Raw> & {
+type GroupClient<G, Raw extends boolean = false> = {
+  // …one method per endpoint of G…
   raw: GroupClient<G, true>
   with(options: WithOptions): GroupClient<G, Raw>
 }
@@ -163,14 +164,19 @@ type HttpResponse<T = unknown> = {
 Per-request options passed when calling an endpoint.
 
 ```ts
-type CallOptions<R extends boolean = false> = SimpleOptions & {
+type CallOptions<R extends boolean = false> = Omit<RequestInit, "method" | "body"> & {
+  timeout?: number
+  responseType?: "json" | "text" | "blob" | "arrayBuffer" | "formData"
+  onDownloadProgress?: (progress: { percent: number; transferredBytes: number; totalBytes: number }) => void
+  onUploadProgress?: (progress: UploadProgress) => void
   rawData?: R
   forwardVariables?: boolean
   stream?: boolean
   method?: "GET" | "POST"
-  onUploadProgress?: (progress: UploadProgress) => void
 }
 ```
+
+`headers`, `signal`, `credentials` and the rest of `RequestInit` are passed to `fetch`; `method` is the verb a call goes to the proxy with, not the endpoint's own.
 
 ### UploadProgress
 

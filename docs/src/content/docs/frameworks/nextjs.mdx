@@ -8,10 +8,14 @@ Next.js App Router cannot host WebSocket upgrades in-process — neither RSC nor
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
-Wire your Next.js app into Studio with a single `attachRuntime()` call from `instrumentation.ts`. In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the app's own `registerSources()` call registers them. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
+Wire your Next.js app into Studio with an `attachRuntime()` call in the `register()` of `instrumentation.ts` — the same function that registers your sources ([Step 1](#step-1-api-route)). In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the `registerSources()` call before it registers them. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).
 
 ```ts title="instrumentation.ts"
+import { registerSources } from "@noverax/courier"
+
 export async function register() {
+  const { sources } = await import("./lib/sources")
+  registerSources(sources)
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NODE_ENV !== "development") return;
   const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
@@ -80,7 +84,7 @@ export const sources = { myApi: api }
 
 ## Step 1: API Route
 
-Create a Next.js App Router route handler that proxies browser requests to your backend:
+Create a Next.js App Router route handler that proxies browser requests to your backend, and register your sources at server start. Without Studio, this is the whole of `instrumentation.ts`; with it, use the `register()` under [Studio integration](#studio-app-origin), which does the same and attaches the runtime in development:
 
 ```ts title="instrumentation.ts"
 import { registerSources } from "@noverax/courier"

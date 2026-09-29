@@ -73,6 +73,7 @@
     "check:exports": "node scripts/check-exports.mjs",
     "check:any": "node scripts/check-implicit-any.mjs",
     "check:docs": "node scripts/check-doc-samples.mjs",
+    "check:packages": "node scripts/check-packages.mjs",
     "check:names:test": "vitest run scripts/check-name-conflicts.test.mjs",
     "release": "HUSKY=0 semantic-release",
     "prepare": "husky"

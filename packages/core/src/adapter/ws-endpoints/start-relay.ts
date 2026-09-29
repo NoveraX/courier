@@ -7,8 +7,8 @@
 
 import { describeFailure } from "../../realtime/describe-failure";
 import type { RealtimeError } from "../../realtime/errors";
-import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { channelAddress } from "../../transport/direct/channel-address";
+import { lazyChannel } from "../../transport/lazy-streams";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
@@ -50,7 +50,12 @@ export function startRelay(
   variables: unknown,
 ): void {
   const address = channelAddress(target.api, target.group, target.method, variables);
-  const upstream = executeWSChannel<unknown, unknown>(address.url, address.topic, variables);
+  /* The channel client loads with the first relayed channel. */
+  const upstream = lazyChannel(
+    import("../../realtime/ws-channel-client").then(({ executeWSChannel }) =>
+      executeWSChannel<unknown, unknown>(address.url, address.topic, variables),
+    ),
+  );
   let ended = false;
   const end = (error?: RealtimeError): void => {
     if (ended) return;

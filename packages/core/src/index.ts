@@ -86,7 +86,6 @@ export {
   type ProxyCallerDefaults,
   type ProxyPath,
 } from "./proxy-caller";
-export type { CallerWSOptions } from "./realtime";
 export {
   AuthError,
   ConnectionError,
@@ -96,7 +95,8 @@ export {
   RateLimitError,
   RealtimeError,
   TimeoutError,
-} from "./realtime";
+} from "./realtime/errors";
+export type { CallerWSOptions } from "./realtime/ws/ws-types";
 export { getSources, registerSources } from "./sources";
 export type {
   CacheConfig,

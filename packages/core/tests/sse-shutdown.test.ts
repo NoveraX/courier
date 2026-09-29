@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { type AdapterHandler, createHandler } from "../src/adapter";
 import { courier } from "../src/define/courier";
-import { buildProxySSEUrl } from "../src/realtime/caller-sse";
 import { subscribeSSE } from "../src/realtime/sse/sse-client";
+import { buildProxySSEUrl } from "../src/realtime/sse-address";
 import { type SSEContext, tracked } from "../src/realtime/types";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 

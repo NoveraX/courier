@@ -13,12 +13,11 @@ import type { HTTPError } from "./errors";
 import type { RequestContext } from "./http-client/types";
 import type { CallerWSOptions } from "./realtime/ws/ws-types";
 import { composeBackend } from "./transport/compose-backend";
-import {
-  createDirectHTTPExecutor,
-  createDirectSSEFactory,
-  createDirectWSChannelFactory,
-  createDirectWSPushFactory,
-} from "./transport/direct";
+import { assertDirectlyReachable } from "./transport/direct/assert-reachable";
+import { channelAddress } from "./transport/direct/channel-address";
+import { createDirectHTTPExecutor } from "./transport/direct/http";
+import { streamRequest } from "./transport/direct/stream-request";
+import { lazySSEFactory, lazyWSChannelFactory } from "./transport/lazy-streams";
 
 export type CallerDefaults = {
   timeout?: number;
@@ -79,10 +78,39 @@ export function createCaller(
 
 export function createCaller(source: AnyDefinedApi, defaults: CallerDefaults = {}): unknown {
   const http = createDirectHTTPExecutor(source, defaults);
+  /* Loaded on the first stream or channel, so an application that makes
+     none does not carry their clients; what refuses a call still does so
+     where it is made. */
+  const streamRefused = (group: string, method: string, variables: unknown): void => {
+    assertDirectlyReachable(source, group, method);
+    streamRequest(source, group, method, variables);
+  };
+  const channelRefused = (group: string, method: string, variables: unknown): void => {
+    assertDirectlyReachable(source, group, method);
+    channelAddress(source, group, method, variables);
+  };
   const backend = composeBackend(source as Record<string, unknown>, http, {
-    sse: createDirectSSEFactory(source, { headers: defaults.headers }),
-    wsChannel: createDirectWSChannelFactory(source, { ws: defaults.ws }),
-    wsPush: createDirectWSPushFactory(source, { ws: defaults.ws }),
+    sse: lazySSEFactory(
+      async () =>
+        (await import("./transport/direct/sse")).createDirectSSEFactory(source, {
+          headers: defaults.headers,
+        }),
+      streamRefused,
+    ),
+    wsChannel: lazyWSChannelFactory(
+      async () =>
+        (await import("./transport/direct/ws")).createDirectWSChannelFactory(source, {
+          ws: defaults.ws,
+        }),
+      channelRefused,
+    ),
+    wsPush: lazySSEFactory(
+      async () =>
+        (await import("./transport/direct/ws")).createDirectWSPushFactory(source, {
+          ws: defaults.ws,
+        }),
+      channelRefused,
+    ),
   });
 
   return buildClientProxy(backend, {}, false, shapeOfSource(source as Record<string, unknown>));

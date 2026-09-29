@@ -18,11 +18,12 @@ export {
   shapeOfClient,
 } from "../client";
 export { mergeProxyPath, type ResolveOrigin, resolveProxyPath } from "../proxy-caller";
-export { buildDirectWSUrl, clearWSConnectionPool } from "../realtime/caller-ws";
+export { clearWSConnectionPool } from "../realtime/caller-ws";
 export { type ConnectionState, createConnectionState } from "../realtime/connection-state";
 export { describeFailure, type StreamFailure } from "../realtime/describe-failure";
 export { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 export { decodeMessage, encodeMessage, type WSMessage } from "../realtime/ws/ws-protocol";
+export { buildDirectWSUrl } from "../realtime/ws-address";
 export { getSourcesGeneration, onSourcesChange } from "../sources";
 export { type StudioHooks, studioHooks } from "../studio";
 export {

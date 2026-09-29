@@ -3,12 +3,8 @@ import { buildClientProxy } from "../client";
 import { shapeOfSource } from "../client/shape";
 import type { BrowserApi } from "../define/exposed-api";
 import { composeBackend, type StreamingFactories } from "../transport/compose-backend";
-import {
-  createProxyHTTPExecutor,
-  createProxySSEFactory,
-  createProxyWSChannelFactory,
-  createProxyWSPushFactory,
-} from "../transport/proxy";
+import { lazySSEFactory, lazyWSChannelFactory } from "../transport/lazy-streams";
+import { createProxyHTTPExecutor } from "../transport/proxy/http";
 import { sourceFromBoundary } from "./from-boundary";
 import { mergeProxyPath, type ProxyPath } from "./proxy-path";
 import type { ProxyCallerArguments, ProxyCallerDefaults } from "./types";
@@ -83,16 +79,22 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
   // misconfiguration surfaces there as `WS_PATH_NOT_CONFIGURED`.
   const streaming: StreamingFactories = {};
   if (apiSource) {
-    streaming.sse = createProxySSEFactory(source, {
-      proxyPath: mergedProxyPath,
-      headers: defaults.headers,
-    });
+    /* Loaded on the first stream or channel, so an application that makes
+       none does not carry their clients. */
+    const sseDefaults = { proxyPath: mergedProxyPath, headers: defaults.headers };
+    streaming.sse = lazySSEFactory(async () =>
+      (await import("../transport/proxy/sse")).createProxySSEFactory(source, sseDefaults),
+    );
     // ⚠️ defaults.headers is intentionally NOT forwarded to WS factories.
     // Browser WebSocket cannot send custom HTTP headers in the upgrade
     // handshake. See `ProxyWSDefaults` for supported auth alternatives.
     const wsDefaults = { proxyPath: mergedProxyPath, ws: defaults.ws };
-    streaming.wsChannel = createProxyWSChannelFactory(source, wsDefaults);
-    streaming.wsPush = createProxyWSPushFactory(source, wsDefaults);
+    streaming.wsChannel = lazyWSChannelFactory(async () =>
+      (await import("../transport/proxy/ws")).createProxyWSChannelFactory(source, wsDefaults),
+    );
+    streaming.wsPush = lazySSEFactory(async () =>
+      (await import("../transport/proxy/ws")).createProxyWSPushFactory(source, wsDefaults),
+    );
   }
 
   const backend = composeBackend(apiSource, http, streaming, {

@@ -5,8 +5,6 @@
  * server, with no CORS to configure and no credentials of its own to hold.
  */
 
-import { subscribeSSE } from "../realtime/sse";
-import { readStreamData } from "../realtime/sse/stream-data";
 import type { SSEHandler } from "../realtime/types";
 import { streamRequest } from "../transport/direct/stream-request";
 import { layerHeaders } from "../utils/layer-headers";
@@ -39,6 +37,12 @@ export function relayStream(
   method: string,
 ): SSEHandler<unknown, unknown> {
   return async function* relay(ctx) {
+    /* The stream client loads with the first relayed stream, not with every
+       server that serves the proxy. */
+    const [{ subscribeSSE }, { readStreamData }] = await Promise.all([
+      import("../realtime/sse"),
+      import("../realtime/sse/stream-data"),
+    ]);
     const request = streamRequest(api, group, method, ctx.variables);
     yield* subscribeSSE(request.url, {
       headers: layerHeaders({ Accept: "text/event-stream" }, request.sourceHeaders, ctx.headers),

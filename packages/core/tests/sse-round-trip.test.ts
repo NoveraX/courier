@@ -13,8 +13,9 @@ import { z } from "zod";
 
 import { createHandler } from "../src/adapter";
 import { courier } from "../src/define/courier";
-import { buildProxySSEUrl, executeSSE } from "../src/realtime/caller-sse";
+import { executeSSE } from "../src/realtime/caller-sse";
 import { ForbiddenError, RealtimeError, RealtimeValidationError } from "../src/realtime/errors";
+import { buildProxySSEUrl } from "../src/realtime/sse-address";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 

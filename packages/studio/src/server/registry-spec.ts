@@ -9,6 +9,7 @@ import type { ImportStateEntry } from "../apis/imports-state";
 import { authHeaders } from "./auth-headers";
 import { fetchSpec } from "./fetch-spec";
 import { isUrl } from "./fs-helpers";
+import { messageOf } from "./message-of";
 import { parseFetchedSpec } from "./parse-fetched-spec";
 import type { ProjectRoot } from "./project-fs/project-root";
 import { readProjectText } from "./project-fs/read-project-text";
@@ -72,7 +73,7 @@ export async function fetchSpecRaw(
         return null;
       }
       const refused = err instanceof SpecFetchError && err.refused;
-      const reason = err instanceof Error ? err.message : String(err);
+      const reason = messageOf(err);
       res
         .status(refused ? 400 : 502)
         .json({ error: `Failed to fetch spec from ${specUrl}: ${reason}` });

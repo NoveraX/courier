@@ -8,6 +8,7 @@
  * leaving it running. Once Studio closes, nothing starts again.
  */
 
+import { messageOf } from "../message-of";
 import { allocatePort } from "./port-allocator";
 import type { ProcessManager, ServerState } from "./types";
 
@@ -71,7 +72,7 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
     } catch (err) {
       updateAndEmit(serverId, {
         status: "crashed",
-        lastError: err instanceof Error ? err.message : String(err),
+        lastError: messageOf(err),
       });
     }
   }

@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { messageOf } from "../../server/message-of";
 
 /** What webpack hands a function in `externals`. */
 export interface ExternalRequest {
@@ -44,7 +45,7 @@ export function wsExternal(
   try {
     resolved = createRequire(`${context}/`).resolve("ws");
   } catch (error) {
-    callback(error instanceof Error ? error : new Error(String(error)));
+    callback(error instanceof Error ? error : new Error(messageOf(error)));
     return;
   }
   callback(null, `commonjs ${resolved}`);

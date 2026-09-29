@@ -4,11 +4,12 @@ import type { MockStore } from "../store";
 import type { AnyMockScenario, NetworkConfig, UntypedMockFn } from "../types";
 import { buildAutoHandlers, seedAllCollections } from "./auto-scenario";
 import { withBasePath } from "./base-path-mappings";
+import { checkedMock, withCheckedMock } from "./checked-mock-targets";
 import { composeScenarios } from "./compose-scenarios";
 import type { SeedConfig } from "./prefix-mappings";
 import { buildPrefixMappings } from "./prefix-mappings";
 import { buildPresetScenarios } from "./preset-scenarios";
-import { analyzeRoutes } from "./route-analyzer";
+import { analyzeRoutes, getSourceGroupNames } from "./route-analyzer";
 import { seedOptionsOf } from "./seed-options";
 
 // Re-export SeedConfig so external imports keep working unchanged.
@@ -89,7 +90,9 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   const getStore = () => storeRef;
 
   const presets = buildPresetScenarios(routes, getStore);
-  const allScenarios = composeScenarios(presets, config.scenarios);
+  const groupNames = getSourceGroupNames(config.source);
+  const guard = (mock: UntypedMockFn) => checkedMock(routes, groupNames, mock);
+  const allScenarios = withCheckedMock(composeScenarios(presets, config.scenarios), guard);
 
   // reseed closure — storeRef is shared with the getStore getter above
   const reseed = () => {
@@ -123,7 +126,7 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   // override (.withLatency, .withHeaders) builds on a copy of the auto-CRUD handler;
   // one that answers anew (.resolves, .returns, ...) replaces it.
   if (config.overrides) {
-    config.overrides(server.mock, server.store);
+    config.overrides(guard(server.mock), server.store);
   }
 
   return server;

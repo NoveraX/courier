@@ -100,7 +100,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
     }
 
     // Send managed mock server states
-    mockManager?.sendSnapshot();
+    mockManager?.sendSnapshot(socket);
     /* After the mocks, the requests they answered: a page that reloads shows each mock's log again. */
     if (mockLog) socket.emit("mock:events:replay", mockLog.events());
 

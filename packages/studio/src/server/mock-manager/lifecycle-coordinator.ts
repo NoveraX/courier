@@ -9,6 +9,7 @@
  */
 
 import { createLogger } from "@noverax/courier";
+import type { Socket } from "socket.io";
 import type { MockEntry } from "../mock-registry";
 import type { SanitizedMockCommand } from "../sanitize-mock-events";
 import { createDescriptionApplier } from "./apply-description";
@@ -35,7 +36,7 @@ function runVoid(label: string, promise: Promise<unknown>): void {
 
 export function createLifecycleCoordinator(config: CoordinatorConfig) {
   const servers = new Map<string, ServerState>();
-  const { emit, emitServerState } = createUiEmitter(config.uiNamespace);
+  const { emit, emitServerState, sendServerState } = createUiEmitter(config.uiNamespace);
   let closed = false;
 
   const updateAndEmit = (serverId: string, patch: Partial<ServerState>) => {
@@ -122,9 +123,9 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     return processManager.sendCommand(command.serverId, command);
   }
 
-  function sendSnapshot(): void {
-    for (const state of servers.values()) emitServerState(state);
-    config.uiNamespace.emit("mocks:status", mocksFile.status());
+  function sendSnapshot(socket: Socket): void {
+    for (const state of servers.values()) sendServerState(socket, state);
+    socket.emit("mocks:status", mocksFile.status());
   }
 
   /**

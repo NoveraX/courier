@@ -1,9 +1,11 @@
-import type { RequestEntry, StudioEvent } from "./types"
-import type { RequestDraft } from "./request-draft"
-import { str } from "./event-helpers"
-import { withCacheHit, withCacheMiss } from "./handle-cache-events"
-import { validationIssuesOf } from "./validation-issues"
-import { withMiddlewareEnter, withMiddlewareExit, withMiddlewareError } from "./handle-middleware-events"
+import { str } from "./event-helpers";
+import { withCacheHit, withCacheMiss } from "./handle-cache-events";
+import {
+  withMiddlewareEnter,
+  withMiddlewareError,
+  withMiddlewareExit,
+} from "./handle-middleware-events";
+import { withProxyParse, withRepeatedStart } from "./handle-proxy-events";
 import {
   requestFromStart,
   withFetchStart,
@@ -11,18 +13,20 @@ import {
   withRequestEnd,
   withRequestError,
   withValidationFail,
-} from "./handle-request-events"
-import { withProxyParse, withRepeatedStart } from "./handle-proxy-events"
-import { requestFromUpload, withUploadComplete, withUploadProgress } from "./handle-upload-events"
+} from "./handle-request-events";
 import {
   streamFromOpen,
   withStreamClose,
   withStreamError,
   withStreamMessage,
   withStreamOpen,
-} from "./handle-stream-events"
+} from "./handle-stream-events";
+import { requestFromUpload, withUploadComplete, withUploadProgress } from "./handle-upload-events";
+import type { RequestDraft } from "./request-draft";
+import type { RequestEntry, StudioEvent } from "./types";
+import { validationIssuesOf } from "./validation-issues";
 
-type EventPayload = StudioEvent & Record<string, unknown>
+type EventPayload = StudioEvent & Record<string, unknown>;
 
 /**
  * Fold one runtime event into the request list being drafted. Events for a
@@ -39,38 +43,38 @@ type EventPayload = StudioEvent & Record<string, unknown>
  * ```
  */
 export function applyEvent(draft: RequestDraft, event: EventPayload): void {
-  const requestId = str(event.requestId)
+  const requestId = str(event.requestId);
   switch (event.type) {
     case "request:start": {
-      const id = str(event.id)
-      if (draft.has(id)) draft.update(id, (r) => withRepeatedStart(r, event))
-      else draft.add(requestFromStart(event))
-      return
+      const id = str(event.id);
+      if (draft.has(id)) draft.update(id, (r) => withRepeatedStart(r, event));
+      else draft.add(requestFromStart(event));
+      return;
     }
     case "upload:progress": {
       if (draft.has(requestId)) {
-        draft.update(requestId, (r) => withUploadProgress(r, event))
-        return
+        draft.update(requestId, (r) => withUploadProgress(r, event));
+        return;
       }
-      const entry = requestFromUpload(event)
-      if (entry) draft.add(entry)
-      return
+      const entry = requestFromUpload(event);
+      if (entry) draft.add(entry);
+      return;
     }
     case "stream:open":
-      if (draft.has(requestId)) draft.update(requestId, (r) => withStreamOpen(r, event))
-      else draft.add(streamFromOpen(event))
-      return
+      if (draft.has(requestId)) draft.update(requestId, (r) => withStreamOpen(r, event));
+      else draft.add(streamFromOpen(event));
+      return;
     case "validation:fail": {
-      const issues = validationIssuesOf(event.issues)
-      if (issues) draft.update(requestId, (r) => withValidationFail(r, issues))
-      return
+      const issues = validationIssuesOf(event.issues);
+      if (issues) draft.update(requestId, (r) => withValidationFail(r, issues));
+      return;
     }
   }
-  const change = ENTRY_CHANGES.get(event.type)
-  if (change) draft.update(requestId, (r) => change(r, event))
+  const change = ENTRY_CHANGES.get(event.type);
+  if (change) draft.update(requestId, (r) => change(r, event));
 }
 
-type EntryChange = (r: RequestEntry, event: EventPayload) => RequestEntry
+type EntryChange = (r: RequestEntry, event: EventPayload) => RequestEntry;
 
 /** What each event that updates a known request does to it. */
 const ENTRY_CHANGES: ReadonlyMap<string, EntryChange> = new Map<string, EntryChange>([
@@ -88,4 +92,4 @@ const ENTRY_CHANGES: ReadonlyMap<string, EntryChange> = new Map<string, EntryCha
   ["cache:miss", withCacheMiss],
   ["upload:complete", withUploadComplete],
   ["proxy:parse", withProxyParse],
-])
+]);

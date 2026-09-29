@@ -14,7 +14,11 @@ function endpoint(group: string, name: string): MockScenarioEndpoint {
 
 describe("groupByField", () => {
   it("buckets endpoints by group, in the order each group first appears", () => {
-    const groups = groupByField([endpoint("users", "list"), endpoint("posts", "list"), endpoint("users", "get")]);
+    const groups = groupByField([
+      endpoint("users", "list"),
+      endpoint("posts", "list"),
+      endpoint("users", "get"),
+    ]);
 
     expect([...groups.keys()]).toEqual(["users", "posts"]);
     expect(groups.get("users")?.map((ep) => ep.endpoint)).toEqual(["list", "get"]);

@@ -16,7 +16,11 @@ function createMockReq(overrides: Partial<IncomingMessage> = {}): IncomingMessag
   } as IncomingMessage;
 }
 
-function createMockRes(): ServerResponse & { _status: number; _headers: Record<string, string>; _body: string } {
+function createMockRes(): ServerResponse & {
+  _status: number;
+  _headers: Record<string, string>;
+  _body: string;
+} {
   const res = {
     _status: 0,
     _headers: {} as Record<string, string>,

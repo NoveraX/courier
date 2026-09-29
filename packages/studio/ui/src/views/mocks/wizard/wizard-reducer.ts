@@ -1,9 +1,8 @@
-import type { MockDraft, MockWizardState, WizardMode } from "./types";
-import type { DeclareApplyResult, DeclarePreview, MockDeclaration } from "./wire-types";
-
 import { DRAFT_LIMITS } from "./draft-limits";
 import { suggestMockKey } from "./suggest-mock-key";
+import type { MockDraft, MockWizardState, WizardMode } from "./types";
 import { UNPLANNED } from "./unplanned";
+import type { DeclareApplyResult, DeclarePreview, MockDeclaration } from "./wire-types";
 import { withApplyResult } from "./with-apply-result";
 import { withPreview } from "./with-preview";
 
@@ -36,10 +35,15 @@ function draftFor(source: string, taken: readonly string[]): MockDraft {
   return { source, key, portMode: "auto", portText: "", seedCountText, autoStart: true };
 }
 
-function toggled(state: MockWizardState, source: string, declared: readonly string[]): MockWizardState {
+function toggled(
+  state: MockWizardState,
+  source: string,
+  declared: readonly string[],
+): MockWizardState {
   const without = state.drafts.filter((draft) => draft.source !== source);
   const taken = [...declared, ...state.drafts.map((draft) => draft.key)];
-  const drafts = without.length < state.drafts.length ? without : [...without, draftFor(source, taken)];
+  const drafts =
+    without.length < state.drafts.length ? without : [...without, draftFor(source, taken)];
   return { ...state, ...UNPLANNED, drafts, serverErrors: new Map(), requestProblems: [] };
 }
 
@@ -73,7 +77,11 @@ function shownDigest({ plan }: MockWizardState): string | null {
   return plan.status === "loading" ? plan.previousDigest : null;
 }
 
-function requested(state: MockWizardState, requestId: number, mocks: MockDeclaration[]): MockWizardState {
+function requested(
+  state: MockWizardState,
+  requestId: number,
+  mocks: MockDeclaration[],
+): MockWizardState {
   if (state.mode !== "sources" || state.step === "source" || mocks.length === 0) return state;
   const previousDigest = shownDigest(state);
   const plan = { status: "loading", requestId, mocks, previousDigest } as const;
@@ -86,7 +94,8 @@ function isAnswerTo(state: MockWizardState, requestId: number): boolean {
 
 function whileApplying(state: MockWizardState, action: MockWizardAction): MockWizardState {
   if (action.type === "applyFinished") return withApplyResult(state, action.result, action.at);
-  if (action.type === "applyFailed") return { ...state, apply: { status: "failed", message: action.message } };
+  if (action.type === "applyFailed")
+    return { ...state, apply: { status: "failed", message: action.message } };
   return state;
 }
 
@@ -96,7 +105,13 @@ function onPlan(state: MockWizardState, action: MockWizardAction): MockWizardSta
       return requested(state, action.requestId, action.mocks);
     case "previewReceived": {
       if (state.plan.status !== "loading" || !isAnswerTo(state, action.requestId)) return state;
-      return withPreview(state, action.outcome, state.plan.mocks, state.plan.previousDigest, action.at);
+      return withPreview(
+        state,
+        action.outcome,
+        state.plan.mocks,
+        state.plan.previousDigest,
+        action.at,
+      );
     }
     case "previewFailed":
       if (!isAnswerTo(state, action.requestId)) return state;
@@ -146,7 +161,10 @@ function onDrafts(state: MockWizardState, action: MockWizardAction): MockWizardS
  * next.drafts; // → [{ source: "api", key: "api", portMode: "auto", portText: "", seedCountText: "20", autoStart: true }]
  * ```
  */
-export function mockWizardReducer(state: MockWizardState, action: MockWizardAction): MockWizardState {
+export function mockWizardReducer(
+  state: MockWizardState,
+  action: MockWizardAction,
+): MockWizardState {
   if (state.apply.status === "applying") return whileApplying(state, action);
   if (action.type === "open") return INITIAL_WIZARD_STATE;
   if (state.step === "done") return state;

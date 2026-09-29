@@ -1,8 +1,7 @@
+import { PLAYGROUND_MAX_HISTORY } from "./constants";
 import type { StudioSet } from "./store-access";
 import type { StudioState } from "./store-types";
 import type { PlaygroundHistoryEntry } from "./types-ui";
-
-import { PLAYGROUND_MAX_HISTORY } from "./constants";
 
 type PlaygroundActions = Pick<
   StudioState,
@@ -74,7 +73,9 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
         };
         const updated = s.playgroundHistory.map((h) => (h.rid === rid ? patch(h) : h));
         const active =
-          s.playgroundActiveResponse?.rid === rid ? patch(s.playgroundActiveResponse) : s.playgroundActiveResponse;
+          s.playgroundActiveResponse?.rid === rid
+            ? patch(s.playgroundActiveResponse)
+            : s.playgroundActiveResponse;
         return { playgroundHistory: updated, playgroundActiveResponse: active };
       }),
     endPlayground: (rid, summary) =>
@@ -94,7 +95,9 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
         };
         const updated = s.playgroundHistory.map((h) => (h.rid === rid ? patch(h) : h));
         const active =
-          s.playgroundActiveResponse?.rid === rid ? patch(s.playgroundActiveResponse) : s.playgroundActiveResponse;
+          s.playgroundActiveResponse?.rid === rid
+            ? patch(s.playgroundActiveResponse)
+            : s.playgroundActiveResponse;
         return { playgroundHistory: updated, playgroundActiveResponse: active };
       }),
     errorPlayground: (rid, error) =>
@@ -107,7 +110,9 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
         });
         const updated = s.playgroundHistory.map((h) => (h.rid === rid ? patch(h) : h));
         const active =
-          s.playgroundActiveResponse?.rid === rid ? patch(s.playgroundActiveResponse) : s.playgroundActiveResponse;
+          s.playgroundActiveResponse?.rid === rid
+            ? patch(s.playgroundActiveResponse)
+            : s.playgroundActiveResponse;
         return { playgroundHistory: updated, playgroundActiveResponse: active };
       }),
   };

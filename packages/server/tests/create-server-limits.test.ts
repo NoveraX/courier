@@ -47,7 +47,13 @@ async function serve(limits: Partial<CourierServerOptions>): Promise<string> {
     baseURL: upstreamURL,
     endpoints: { upload: endpoint.post("upload"), save: endpoint.post("save") },
   });
-  server = createCourierServer({ sources: { api }, port: 0, host: "127.0.0.1", signals: false, ...limits });
+  server = createCourierServer({
+    sources: { api },
+    port: 0,
+    host: "127.0.0.1",
+    signals: false,
+    ...limits,
+  });
   return server.ready;
 }
 
@@ -96,20 +102,24 @@ describe("a body refused before it is read", () => {
     ["a chunked JSON envelope", "application/json", true],
     ["a declared upload", "multipart/form-data; boundary=x", false],
     ["a chunked upload", "multipart/form-data; boundary=x", true],
-  ])("reaches a browser promptly for %s", async (_name, contentType, chunked) => {
-    const url = await serve({ maxBodyBytes: 1024, maxUploadBytes: 1024 });
+  ])(
+    "reaches a browser promptly for %s",
+    async (_name, contentType, chunked) => {
+      const url = await serve({ maxBodyBytes: 1024, maxUploadBytes: 1024 });
 
-    const answer = await sendLikeABrowser(port(url), {
-      method: "POST",
-      headers: { "content-type": contentType },
-      bytes: 16 * MB,
-      chunked,
-    });
+      const answer = await sendLikeABrowser(port(url), {
+        method: "POST",
+        headers: { "content-type": contentType },
+        bytes: 16 * MB,
+        chunked,
+      });
 
-    expect(answer.error).toBeUndefined();
-    expect(answer.status).toBe(413);
-    expect(answer.elapsedMs).toBeLessThan(500);
-  }, 10_000);
+      expect(answer.error).toBeUndefined();
+      expect(answer.status).toBe(413);
+      expect(answer.elapsedMs).toBeLessThan(500);
+    },
+    10_000,
+  );
 });
 
 describe("maxBodyBytes", () => {

@@ -156,7 +156,9 @@ function main(argv: readonly string[]): void {
   const [command, version, tag = "latest"] = argv.filter((arg) => arg !== "--dry-run");
 
   if (command !== "prepare" && command !== "publish") {
-    console.error("Usage: tsx scripts/release.ts <prepare|publish> <version> [dist-tag] [--dry-run]");
+    console.error(
+      "Usage: tsx scripts/release.ts <prepare|publish> <version> [dist-tag] [--dry-run]",
+    );
     process.exit(1);
   }
   if (!version) {

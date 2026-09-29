@@ -1,5 +1,5 @@
-import type { StudioState } from "./store-types"
-import { loadSettings, loadSessionStartedAt } from "./constants"
+import { loadSessionStartedAt, loadSettings } from "./constants";
+import type { StudioState } from "./store-types";
 
 // ── Initial State Factory ───────────────────────────────────────────────────
 
@@ -8,7 +8,12 @@ export function createInitialState(savedTheme: StudioState["theme"]) {
     theme: savedTheme,
     connectionStatus: "disconnected" as const,
     reconnectAttempt: 0,
-    bindingSnapshot: { rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] } as StudioState["bindingSnapshot"],
+    bindingSnapshot: {
+      rows: [],
+      runtimeCount: 0,
+      sourceCount: 0,
+      runtimes: [],
+    } as StudioState["bindingSnapshot"],
     lastBindingError: null as StudioState["lastBindingError"],
     requests: [] as StudioState["requests"],
     paused: false,
@@ -28,5 +33,5 @@ export function createInitialState(savedTheme: StudioState["theme"]) {
     watcherApiPaths: 0,
     watcherMockFiles: 0,
     watcherLastChange: null,
-  }
+  };
 }

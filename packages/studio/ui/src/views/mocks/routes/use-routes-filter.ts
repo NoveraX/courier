@@ -63,8 +63,7 @@ export function useRoutesFilter(routes: MockRouteEntry[]): RoutesFilter {
 
   const setSearch = (search: string) => setState((s) => ({ ...s, search }));
 
-  const setFilter = (key: string, values: string[]) =>
-    setState((s) => ({ ...s, [key]: values }));
+  const setFilter = (key: string, values: string[]) => setState((s) => ({ ...s, [key]: values }));
 
   const resetFilters = () => setState(INITIAL);
 

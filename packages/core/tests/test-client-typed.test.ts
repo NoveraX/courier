@@ -38,7 +38,11 @@ describe("a mock's returns", () => {
 
   it("reads a path variable without a cast", async () => {
     const { client, mock } = createTestClient<typeof api>();
-    mock("users", "getById").returns(({ id }) => ({ id, name: `User ${id}`, email: `${id}@example.com` }));
+    mock("users", "getById").returns(({ id }) => ({
+      id,
+      name: `User ${id}`,
+      email: `${id}@example.com`,
+    }));
 
     const user = await client.users.getById({ id: "7" });
 

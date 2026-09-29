@@ -33,11 +33,15 @@ function transportFailure(message: string, code?: string): Error {
 
 /** Drive the proxy path and return what the browser would receive. */
 async function throughProxy(): Promise<{ status: number; body: string }> {
-  const response = (await executeRequest(sources, { source: "api", method: "items" } as never, {
-    res: new Response(),
-    proxyMethod: "GET",
-    req: new Request("https://app.example.com/api/request"),
-  } as Context & { res: Response })) as Response;
+  const response = (await executeRequest(
+    sources,
+    { source: "api", method: "items" } as never,
+    {
+      res: new Response(),
+      proxyMethod: "GET",
+      req: new Request("https://app.example.com/api/request"),
+    } as Context & { res: Response },
+  )) as Response;
 
   return { status: response.status, body: await response.text() };
 }
@@ -57,9 +61,15 @@ afterEach(() => {
 describe("a transport failure does not name the upstream", () => {
   const failures: ReadonlyArray<readonly [string, Error]> = [
     ["DNS", transportFailure(`getaddrinfo ENOTFOUND ${UPSTREAM_HOST}`, "ENOTFOUND")],
-    ["connection refused", transportFailure(`connect ECONNREFUSED ${UPSTREAM_HOST}:443`, "ECONNREFUSED")],
+    [
+      "connection refused",
+      transportFailure(`connect ECONNREFUSED ${UPSTREAM_HOST}:443`, "ECONNREFUSED"),
+    ],
     ["TLS", transportFailure(`unable to verify the first certificate for ${UPSTREAM_HOST}`)],
-    ["timeout", transportFailure(`Connect Timeout Error (${UPSTREAM_HOST})`, "UND_ERR_CONNECT_TIMEOUT")],
+    [
+      "timeout",
+      transportFailure(`Connect Timeout Error (${UPSTREAM_HOST})`, "UND_ERR_CONNECT_TIMEOUT"),
+    ],
   ];
 
   for (const [label, failure] of failures) {
@@ -74,7 +84,9 @@ describe("a transport failure does not name the upstream", () => {
   }
 
   it("still tells the caller the request failed, and how to recognise it", async () => {
-    fetchSpy.mockRejectedValue(transportFailure(`getaddrinfo ENOTFOUND ${UPSTREAM_HOST}`, "ENOTFOUND"));
+    fetchSpy.mockRejectedValue(
+      transportFailure(`getaddrinfo ENOTFOUND ${UPSTREAM_HOST}`, "ENOTFOUND"),
+    );
 
     const { body } = await throughProxy();
 
@@ -124,7 +136,9 @@ describe("what the proxy still forwards", () => {
  */
 describe("a direct caller still gets the reason", () => {
   it("keeps the transport failure intact for an in-process call", async () => {
-    fetchSpy.mockRejectedValue(transportFailure(`getaddrinfo ENOTFOUND ${UPSTREAM_HOST}`, "ENOTFOUND"));
+    fetchSpy.mockRejectedValue(
+      transportFailure(`getaddrinfo ENOTFOUND ${UPSTREAM_HOST}`, "ENOTFOUND"),
+    );
 
     await executeRequest(sources, { source: "api", method: "items" } as never).then(
       () => expect.fail("the call should have failed"),
@@ -145,16 +159,24 @@ describe("a direct caller still gets the reason", () => {
 describe("what the server's log keeps", () => {
   it("logs the upstream failure with the error itself, the addresses tried included", async () => {
     const systemError = (address: string) =>
-      Object.assign(new Error(`connect ECONNREFUSED ${address}:4000`), { code: "ECONNREFUSED", address, port: 4000 });
+      Object.assign(new Error(`connect ECONNREFUSED ${address}:4000`), {
+        code: "ECONNREFUSED",
+        address,
+        port: 4000,
+      });
     const refused = new AggregateError([systemError("::1"), systemError("127.0.0.1")], "");
     const failure = Object.assign(new TypeError("fetch failed"), { cause: refused });
     fetchSpy.mockRejectedValue(failure);
 
     await throughProxy();
 
-    const warn = vi.mocked(console.warn).mock.calls.find((call) => String(call[1]).includes("Upstream request failed"));
+    const warn = vi
+      .mocked(console.warn)
+      .mock.calls.find((call) => String(call[1]).includes("Upstream request failed"));
     expect(warn?.[2]).toBe(failure);
-    expect(String(warn?.[1])).toContain("connect ECONNREFUSED ::1:4000; connect ECONNREFUSED 127.0.0.1:4000");
+    expect(String(warn?.[1])).toContain(
+      "connect ECONNREFUSED ::1:4000; connect ECONNREFUSED 127.0.0.1:4000",
+    );
   });
 
   it("gives a direct caller the addresses that refused, not an empty message", async () => {

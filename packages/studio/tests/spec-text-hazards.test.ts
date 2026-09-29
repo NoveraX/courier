@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { generateCode } from "../src/apis/generator";
 import { jsdocText } from "../src/apis/generator/jsdoc-text";
+import { parseSpec } from "../src/apis/parser";
 import { specText } from "../src/apis/parser/string-utils";
 
 const COMMENT_CLOSE = `*${"/"}`;
 
 function generate(spec: object): { path: string; content: string }[] {
-  return generateCode(
-    parseSpec(JSON.stringify(spec)),
-    { type: "openapi", sourceName: "api", outputDir: "src/api" },
-  );
+  return generateCode(parseSpec(JSON.stringify(spec)), {
+    type: "openapi",
+    sourceName: "api",
+    outputDir: "src/api",
+  });
 }
 
 function parses(source: string): boolean {
@@ -78,7 +78,11 @@ describe("a tag description that is not a string", () => {
       tags: [{ name: "Intro", description: { $ref: "description.yml#/introduction" } }],
       paths: {
         "/things": {
-          get: { operationId: "list", tags: ["Intro"], responses: { "200": { description: "ok" } } },
+          get: {
+            operationId: "list",
+            tags: ["Intro"],
+            responses: { "200": { description: "ok" } },
+          },
         },
       },
     };

@@ -7,8 +7,8 @@ import {
   isRealtimeError,
   RateLimitError,
   RealtimeError,
-  TimeoutError,
   RealtimeValidationError,
+  TimeoutError,
 } from "../src/realtime/errors";
 
 describe("RealtimeError hierarchy", () => {

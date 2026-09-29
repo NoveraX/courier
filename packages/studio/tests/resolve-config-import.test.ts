@@ -12,7 +12,10 @@ let dir: string;
 
 beforeEach(() => {
   dir = realpathSync(mkdtempSync(join(tmpdir(), "courier-resolve-import-")));
-  writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }));
+  writeFileSync(
+    join(dir, "tsconfig.json"),
+    JSON.stringify({ compilerOptions: { paths: { "@/*": ["./src/*"] } } }),
+  );
 });
 
 afterEach(() => {
@@ -23,7 +26,11 @@ function files(...paths: string[]): void {
   for (const path of paths) {
     const abs = join(dir, path);
     mkdirSync(dirname(abs), { recursive: true });
-    const body = path.endsWith("package.json") ? '{ "main": "lib.js" }' : path.endsWith(".json") ? "{}" : "export const x = 1;\n";
+    const body = path.endsWith("package.json")
+      ? '{ "main": "lib.js" }'
+      : path.endsWith(".json")
+        ? "{}"
+        : "export const x = 1;\n";
     writeFileSync(abs, body);
   }
 }
@@ -65,7 +72,12 @@ describe("resolveConfigImport — the file the module loader takes", () => {
     ["a .tsx beside the .mts", ["x.tsx", "x.mts"], "./x", "x.tsx"],
     ["an extensionless file beside the .js", ["x", "x.js"], "./x", "x"],
     ["a file before a directory's index", ["x/index.js", "x.ts"], "./x", "x.ts"],
-    ["a directory's index.js beside its index.ts", ["x/index.ts", "x/index.js"], "./x", join("x", "index.js")],
+    [
+      "a directory's index.js beside its index.ts",
+      ["x/index.ts", "x/index.js"],
+      "./x",
+      join("x", "index.js"),
+    ],
     ["the .ts a NodeNext .js import stands for", ["x.ts"], "./x.js", "x.ts"],
     ["the .mts an .mjs import stands for", ["x.mts"], "./x.mjs", "x.mts"],
     ["the .cts a .cjs import stands for", ["x.cts"], "./x.cjs", "x.cts"],
@@ -73,9 +85,24 @@ describe("resolveConfigImport — the file the module loader takes", () => {
     ["a .js.ts before the .ts a .js import stands for", ["x.js.ts", "x.ts"], "./x.js", "x.js.ts"],
     ["a .json Node finds", ["x.json"], "./x", "x.json"],
     ["a directory's package.json main", ["x/package.json", "x/lib.js"], "./x", join("x", "lib.js")],
-    ["a .json Node finds before the .ts a .js import stands for", ["x.js.json", "x.ts"], "./x.js", "x.js.json"],
-    ["a compiled .js beside the .ts behind an alias", ["src/x.js", "src/x.ts"], "@/x", join("src", "x.js")],
-    ["the .ts a NodeNext .js import stands for behind an alias", ["src/x.ts"], "@/x.js", join("src", "x.ts")],
+    [
+      "a .json Node finds before the .ts a .js import stands for",
+      ["x.js.json", "x.ts"],
+      "./x.js",
+      "x.js.json",
+    ],
+    [
+      "a compiled .js beside the .ts behind an alias",
+      ["src/x.js", "src/x.ts"],
+      "@/x",
+      join("src", "x.js"),
+    ],
+    [
+      "the .ts a NodeNext .js import stands for behind an alias",
+      ["src/x.ts"],
+      "@/x.js",
+      join("src", "x.ts"),
+    ],
     ["nothing for a .jsx the import leaves unnamed", ["x.jsx"], "./x", null],
     ["nothing for a .tsx a .js import does not stand for", ["x.tsx"], "./x.js", null],
   ];
@@ -110,9 +137,21 @@ describe("resolveConfigImport — the file the module loader takes", () => {
 
   const fifoLayouts: ReadonlyArray<[string, string, string[], string, string]> = [
     ["a FIFO where no regular file is named", "x.ts", [], "./x", "x.ts"],
-    ["a FIFO index file where no regular file is named", join("x", "index.ts"), [], "./x", join("x", "index.ts")],
+    [
+      "a FIFO index file where no regular file is named",
+      join("x", "index.ts"),
+      [],
+      "./x",
+      join("x", "index.ts"),
+    ],
     ["a FIFO at the TypeScript file a .js import stands for", "x.ts", [], "./x.js", "x.ts"],
-    ["a FIFO asked of Node before the TypeScript file a .js import stands for", "x.js.mjs", ["x.ts"], "./x.js", "x.js.mjs"],
+    [
+      "a FIFO asked of Node before the TypeScript file a .js import stands for",
+      "x.js.mjs",
+      ["x.ts"],
+      "./x.js",
+      "x.js.mjs",
+    ],
     ["a regular file named after a FIFO", "x.ts", ["x.mts"], "./x", "x.mts"],
   ];
 
@@ -137,7 +176,9 @@ describe("resolveConfigImport — the absent paths the loader tries first", () =
   it("names the absent paths tried before the file it takes", () => {
     files("x.ts");
 
-    expect(absentBefore("./x")).toEqual(["", ".js", ".mjs", ".cjs"].map((extension) => join(dir, `x${extension}`)));
+    expect(absentBefore("./x")).toEqual(
+      ["", ".js", ".mjs", ".cjs"].map((extension) => join(dir, `x${extension}`)),
+    );
   });
 
   it("names none when the first path tried is the file it takes", () => {
@@ -157,7 +198,9 @@ describe("resolveConfigImport — the absent paths the loader tries first", () =
   it("names the paths a relative import spells with each extension the resolution tries", () => {
     mkdirSync(join(dir, "src"));
 
-    expect(absentBefore("./src/late")).toEqual(EXTENSIONS.map((extension) => join(dir, "src", `late${extension}`)));
+    expect(absentBefore("./src/late")).toEqual(
+      EXTENSIONS.map((extension) => join(dir, "src", `late${extension}`)),
+    );
   });
 
   it("names the first missing directory of an import into a directory that does not exist", () => {
@@ -179,7 +222,9 @@ describe("resolveConfigImport — the absent paths the loader tries first", () =
   it("names the paths an aliased import could be created at", () => {
     mkdirSync(join(dir, "src"));
 
-    expect(absentBefore("@/late")).toEqual(EXTENSIONS.map((extension) => join(dir, "src", `late${extension}`)));
+    expect(absentBefore("@/late")).toEqual(
+      EXTENSIONS.map((extension) => join(dir, "src", `late${extension}`)),
+    );
   });
 
   it("names the TypeScript file a JavaScript extension stands for, last", () => {

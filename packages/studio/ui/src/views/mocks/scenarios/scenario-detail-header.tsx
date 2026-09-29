@@ -44,17 +44,35 @@ export function ScenarioDetailHeader({
   const tags = scenario.tags ?? [];
 
   const handleActivate = (): void => {
-    getSocket().emit("mock:command", { action: "mock:scenario:apply", serverId, scenario: scenario.name });
+    getSocket().emit("mock:command", {
+      action: "mock:scenario:apply",
+      serverId,
+      scenario: scenario.name,
+    });
   };
 
   const handleDeactivate = (): void => {
-    getSocket().emit("mock:command", { action: "mock:scenario:apply", serverId, scenario: "happy-path" });
+    getSocket().emit("mock:command", {
+      action: "mock:scenario:apply",
+      serverId,
+      scenario: "happy-path",
+    });
   };
 
   return (
     <>
-      <div className={cn("relative overflow-hidden border-b border-border-subtle bg-linear-to-b px-5 pb-5 pt-4", SCENARIO_TYPE_GRADIENT[type])}>
-        <div className={cn("pointer-events-none absolute -right-8 -top-8 size-44 rounded-full opacity-20 blur-3xl", SCENARIO_TYPE_ICON_BG[type])} />
+      <div
+        className={cn(
+          "relative overflow-hidden border-b border-border-subtle bg-linear-to-b px-5 pb-5 pt-4",
+          SCENARIO_TYPE_GRADIENT[type],
+        )}
+      >
+        <div
+          className={cn(
+            "pointer-events-none absolute -right-8 -top-8 size-44 rounded-full opacity-20 blur-3xl",
+            SCENARIO_TYPE_ICON_BG[type],
+          )}
+        />
         <Button
           variant="ghost"
           size="icon-xs"
@@ -66,22 +84,39 @@ export function ScenarioDetailHeader({
         </Button>
 
         <div className="relative flex items-center gap-3.5 pr-8">
-          <div className={cn("flex size-11 shrink-0 items-center justify-center rounded-2xl ring-1", SCENARIO_TYPE_ICON_BG[type], SCENARIO_TYPE_RING[type])}>
+          <div
+            className={cn(
+              "flex size-11 shrink-0 items-center justify-center rounded-2xl ring-1",
+              SCENARIO_TYPE_ICON_BG[type],
+              SCENARIO_TYPE_RING[type],
+            )}
+          >
             <TypeIcon className="size-5" />
           </div>
-          <h2 className="min-w-0 flex-1 text-xl font-bold leading-tight tracking-tight text-foreground">{scenario.name}</h2>
+          <h2 className="min-w-0 flex-1 text-xl font-bold leading-tight tracking-tight text-foreground">
+            {scenario.name}
+          </h2>
         </div>
 
         <div className="relative mt-3 flex flex-wrap items-center gap-1.5">
-          {tags.length > 0
-            ? tags.map((tag) => {
-                const tagMeta = SCENARIO_TYPE_META[tag as ScenarioType];
-                return tagMeta
-                  ? <Badge key={tag} variant={tagMeta.color} className="px-2 py-0.5 text-[10px]">{tagMeta.label}</Badge>
-                  : <Badge key={tag} variant="secondary" className="px-2 py-0.5 text-[10px]">{tag}</Badge>;
-              })
-            : <Badge variant={meta.color} className="px-2 py-0.5 text-[10px]">{meta.label}</Badge>
-          }
+          {tags.length > 0 ? (
+            tags.map((tag) => {
+              const tagMeta = SCENARIO_TYPE_META[tag as ScenarioType];
+              return tagMeta ? (
+                <Badge key={tag} variant={tagMeta.color} className="px-2 py-0.5 text-[10px]">
+                  {tagMeta.label}
+                </Badge>
+              ) : (
+                <Badge key={tag} variant="secondary" className="px-2 py-0.5 text-[10px]">
+                  {tag}
+                </Badge>
+              );
+            })
+          ) : (
+            <Badge variant={meta.color} className="px-2 py-0.5 text-[10px]">
+              {meta.label}
+            </Badge>
+          )}
           {isActive && <ActivePill />}
         </div>
       </div>
@@ -103,7 +138,10 @@ export function ScenarioDetailHeader({
           >
             <Zap className="size-3.5" />
             Activate Scenario
-            <KbdHint keys="mod+enter" className="h-4 min-w-4 text-[9px] bg-white/15 text-white ring-1 ring-inset ring-white/30" />
+            <KbdHint
+              keys="mod+enter"
+              className="h-4 min-w-4 text-[9px] bg-white/15 text-white ring-1 ring-inset ring-white/30"
+            />
           </Button>
         )}
       </div>

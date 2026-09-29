@@ -80,10 +80,19 @@ let problems = new Map<string, string[]>();
 beforeAll(() => {
   problems = new Map(
     VARIANTS.map(([label, options]) => {
-      const files = generateCode(SPEC, { type: "openapi", outputDir: "src/api", ...options }, "pets");
+      const files = generateCode(
+        SPEC,
+        { type: "openapi", outputDir: "src/api", ...options },
+        "pets",
+      );
       const flat = options.groupBy === "single";
-      const dir = writeProject(`generate-schemas/${label}`, files, { "consumer.ts": consumer(flat) });
-      return [label, compileProject(dir, ["consumer.ts"], { ...STRICT, noUncheckedIndexedAccess: true })];
+      const dir = writeProject(`generate-schemas/${label}`, files, {
+        "consumer.ts": consumer(flat),
+      });
+      return [
+        label,
+        compileProject(dir, ["consumer.ts"], { ...STRICT, noUncheckedIndexedAccess: true }),
+      ];
     }),
   );
 }, 120_000);
@@ -93,7 +102,10 @@ afterAll(() => {
 });
 
 describe("a file of types", () => {
-  it.each(VARIANTS.map(([label]) => label))("declares every schema the endpoints name, %s", (label) => {
-    expect(problems.get(label)).toEqual([]);
-  });
+  it.each(VARIANTS.map(([label]) => label))(
+    "declares every schema the endpoints name, %s",
+    (label) => {
+      expect(problems.get(label)).toEqual([]);
+    },
+  );
 });

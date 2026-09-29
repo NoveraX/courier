@@ -105,7 +105,8 @@ describe("compileUrl", () => {
 
   it("uses custom searchParamsSerializer.parse", () => {
     const serializer = {
-      stringify: (obj: Record<string, unknown>) => new URLSearchParams(Object.entries(obj).map(([k, v]) => [k, String(v)])).toString(),
+      stringify: (obj: Record<string, unknown>) =>
+        new URLSearchParams(Object.entries(obj).map(([k, v]) => [k, String(v)])).toString(),
       parse: (s: string) => ({ custom: s }),
     };
     const [, , search] = compileUrl("users?raw", undefined, undefined, serializer);

@@ -12,7 +12,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { generateCode } from "../src/apis/generator";
 import { parseSpec } from "../src/apis/parser";
-import { createProcessManager, type ProcessManagerEvents } from "../src/server/mock-manager/process-manager";
+import {
+  createProcessManager,
+  type ProcessManagerEvents,
+} from "../src/server/mock-manager/process-manager";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 
@@ -21,7 +24,11 @@ afterEach(async () => {
 });
 
 const json = (schema: unknown) => ({ content: { "application/json": { schema } } });
-const Pet = { type: "object", required: ["name"], properties: { id: { type: "integer" }, name: { type: "string" } } };
+const Pet = {
+  type: "object",
+  required: ["name"],
+  properties: { id: { type: "integer" }, name: { type: "string" } },
+};
 
 const SPEC = parseSpec(
   JSON.stringify({
@@ -29,7 +36,14 @@ const SPEC = parseSpec(
     info: { title: "Petstore", version: "1" },
     servers: [{ url: "https://petstore.example/api/v3" }],
     paths: {
-      "/pet": { post: { operationId: "addPet", tags: ["pet"], requestBody: json(Pet), responses: { "200": { description: "ok", ...json(Pet) } } } },
+      "/pet": {
+        post: {
+          operationId: "addPet",
+          tags: ["pet"],
+          requestBody: json(Pet),
+          responses: { "200": { description: "ok", ...json(Pet) } },
+        },
+      },
       "/pet/{petId}": {
         get: {
           operationId: "getPetById",
@@ -42,7 +56,12 @@ const SPEC = parseSpec(
         get: {
           operationId: "getInventory",
           tags: ["store"],
-          responses: { "200": { description: "ok", ...json({ type: "object", additionalProperties: { type: "integer" } }) } },
+          responses: {
+            "200": {
+              description: "ok",
+              ...json({ type: "object", additionalProperties: { type: "integer" } }),
+            },
+          },
         },
       },
       "/user/login": {
@@ -53,7 +72,13 @@ const SPEC = parseSpec(
           responses: { "200": { description: "ok", ...json({ type: "string" }) } },
         },
       },
-      "/user/logout": { get: { operationId: "logoutUser", tags: ["user"], responses: { default: { description: "done" } } } },
+      "/user/logout": {
+        get: {
+          operationId: "logoutUser",
+          tags: ["user"],
+          responses: { default: { description: "done" } },
+        },
+      },
     },
   }),
 );
@@ -111,7 +136,9 @@ describe("a mock of a generated Petstore source", () => {
     const login = await fetch(`${url}/user/login?username=ada`);
     const logout = await fetch(`${url}/user/logout`);
 
-    expect([pet.status, inventory.status, login.status, logout.status]).toEqual([200, 200, 200, 200]);
+    expect([pet.status, inventory.status, login.status, logout.status]).toEqual([
+      200, 200, 200, 200,
+    ]);
     expect(await pet.json()).toMatchObject({ id: 1 });
     const counts: Record<string, unknown> = await inventory.json();
     expect(Object.keys(counts).length).toBeGreaterThan(0);

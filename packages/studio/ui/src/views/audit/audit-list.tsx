@@ -1,9 +1,9 @@
+import { StaggerItem, StaggerList } from "../../components/shared/stagger-list";
 import { Badge } from "../../components/ui/badge";
-import { StaggerList, StaggerItem } from "../../components/shared/stagger-list";
 import { useStudioStore } from "../../store";
+import { AuditItemCard } from "./audit-item";
 import { CATEGORY_CONFIG, CATEGORY_ORDER } from "./constants";
 import type { AuditCategory, AuditItem } from "./types";
-import { AuditItemCard } from "./audit-item";
 
 interface AuditListProps {
   items: AuditItem[];
@@ -74,9 +74,7 @@ function CategorySection({
   );
 }
 
-function groupByCategory(
-  items: AuditItem[],
-): Map<AuditCategory, AuditItem[]> {
+function groupByCategory(items: AuditItem[]): Map<AuditCategory, AuditItem[]> {
   const map = new Map<AuditCategory, AuditItem[]>();
   for (const item of items) {
     const list = map.get(item.category) ?? [];

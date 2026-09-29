@@ -12,14 +12,19 @@ import type { ParsedEndpoint, ParsedSpec } from "../../../src/apis/parser/types"
 const PET = { type: "object", required: ["name"], properties: { name: { type: "string" } } };
 
 function swagger(document: Record<string, unknown>): ParsedSpec {
-  return parseSpec(JSON.stringify({ swagger: "2.0", info: { title: "Pets", version: "1" }, ...document }));
+  return parseSpec(
+    JSON.stringify({ swagger: "2.0", info: { title: "Pets", version: "1" }, ...document }),
+  );
 }
 
 function endpoint(spec: ParsedSpec, name: string): ParsedEndpoint | undefined {
   return spec.groups.flatMap((group) => group.endpoints).find((ep) => ep.name === name);
 }
 
-function getPet(responses: Record<string, unknown>, shared: Record<string, unknown> = {}): ParsedEndpoint | undefined {
+function getPet(
+  responses: Record<string, unknown>,
+  shared: Record<string, unknown> = {},
+): ParsedEndpoint | undefined {
   const spec = swagger({
     definitions: { Pet: PET },
     responses: shared,
@@ -46,7 +51,11 @@ describe("a Swagger 2.0 answer taken from the shared responses", () => {
       responses: { Name: { description: "A name", schema: { type: "string" } } },
       paths: {
         "/name": {
-          get: { tags: ["names"], operationId: "readName", responses: { "200": { $ref: "#/responses/Name" } } },
+          get: {
+            tags: ["names"],
+            operationId: "readName",
+            responses: { "200": { $ref: "#/responses/Name" } },
+          },
         },
         "/name.txt": {
           get: {
@@ -61,11 +70,16 @@ describe("a Swagger 2.0 answer taken from the shared responses", () => {
 
     expect(endpoint(spec, "readName")?.responseMediaType).toBe("application/json");
     expect(endpoint(spec, "readNameText")?.responseMediaType).toBe("text/plain");
-    expect(endpoint(spec, "readNameText")?.responseSchema).toEqual(endpoint(spec, "readName")?.responseSchema);
+    expect(endpoint(spec, "readNameText")?.responseSchema).toEqual(
+      endpoint(spec, "readName")?.responseSchema,
+    );
   });
 
   it("stays without a body when the shared response declares none", () => {
-    const answer = getPet({ "200": { $ref: "#/responses/Empty" } }, { Empty: { description: "Nothing" } });
+    const answer = getPet(
+      { "200": { $ref: "#/responses/Empty" } },
+      { Empty: { description: "Nothing" } },
+    );
 
     expect(answer?.responseSchema).toBeNull();
     expect(answer?.responseMediaType).toBeUndefined();

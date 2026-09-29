@@ -18,8 +18,8 @@ import {
 import { useCatalog } from "@/hooks/use-catalog";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
-import { useAuditContext } from "@/views/audit/use-audit-context";
 import { runAudit } from "@/views/audit/run-audit";
+import { useAuditContext } from "@/views/audit/use-audit-context";
 import { SidebarFooterSection } from "./sidebar-footer";
 
 function NavBadge({ item }: { item: NavItem }): React.ReactNode {

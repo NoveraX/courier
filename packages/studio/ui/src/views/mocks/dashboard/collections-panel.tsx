@@ -10,7 +10,10 @@ interface CollectionsPanelProps {
 
 const NOT_RUNNING: Set<ProcessStatus> = new Set(["declared", "stopped", "crashed"]);
 
-export function CollectionsPanel({ collections, processStatus }: CollectionsPanelProps): React.ReactElement {
+export function CollectionsPanel({
+  collections,
+  processStatus,
+}: CollectionsPanelProps): React.ReactElement {
   const idle = NOT_RUNNING.has(processStatus);
   const total = collections.reduce((sum, c) => sum + c.count, 0);
   const maxCount = Math.max(...collections.map((c) => c.count), 1);

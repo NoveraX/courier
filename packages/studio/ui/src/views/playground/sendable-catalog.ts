@@ -1,5 +1,5 @@
-import type { ScannedSource } from "@/views/apis/types";
 import type { BindingStatusRow, Catalog, CatalogEntry } from "@/store/types-ui";
+import type { ScannedSource } from "@/views/apis/types";
 
 /**
  * The sources the Playground offers: those a runtime can be asked to run.

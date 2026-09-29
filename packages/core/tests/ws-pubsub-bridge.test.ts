@@ -109,7 +109,9 @@ describe("cross-replica WS broadcast", () => {
       publish: vi.fn().mockResolvedValue(undefined),
       subscribe: vi.fn(async (topic: string, handler: (message: unknown) => void) => {
         handlers.set(topic, handler);
-        return () => { handlers.delete(topic); };
+        return () => {
+          handlers.delete(topic);
+        };
       }),
     };
 
@@ -136,7 +138,11 @@ describe("cross-replica WS broadcast", () => {
     // broadcastToTopic uses sendEncoded (pre-serialized JSON)
     expect(entry.sendEncoded).toHaveBeenCalledOnce();
     const parsed = JSON.parse(entry.sendEncoded.mock.calls[0]![0] as string);
-    expect(parsed).toMatchObject({ type: "data", topic: "chat.room1", payload: { text: "hello from A" } });
+    expect(parsed).toMatchObject({
+      type: "data",
+      topic: "chat.room1",
+      payload: { text: "hello from A" },
+    });
   });
 
   it("echo prevention: self-published messages skip pubsub handler", async () => {

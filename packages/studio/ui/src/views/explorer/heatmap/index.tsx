@@ -1,19 +1,18 @@
-import { useMemo, useState } from "react";
 import { Flame } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageShell } from "@/components/shared/page-shell";
 import { useStudioStore } from "@/store";
+import { EndpointPanel } from "../detail/endpoint-panel";
 import { useExplorerData } from "../use-explorer-data";
 import { useExplorerNavigation } from "../use-explorer-navigation";
-import { EndpointPanel } from "../detail/endpoint-panel";
 import { computeTimingBreakdown } from "./compute-heatmap";
-import { HeatmapToolbar } from "./heatmap-toolbar";
+import type { HeatmapFilters } from "./heatmap-filters";
+import { applyHeatmapFilters, EMPTY_HEATMAP_FILTERS } from "./heatmap-filters";
 import { HeatmapGrid } from "./heatmap-grid";
 import { HeatmapLegend } from "./heatmap-legend";
-import { applyHeatmapFilters, EMPTY_HEATMAP_FILTERS } from "./heatmap-filters";
-
-import type { HeatmapFilters } from "./heatmap-filters";
+import { HeatmapToolbar } from "./heatmap-toolbar";
 import type { TimingSort } from "./timing-types";
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -26,10 +25,7 @@ export function HeatmapPage(): React.ReactElement {
   const [sort, setSort] = useState<TimingSort>("total");
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const filtered = useMemo(
-    () => applyHeatmapFilters(endpoints, filters),
-    [endpoints, filters],
-  );
+  const filtered = useMemo(() => applyHeatmapFilters(endpoints, filters), [endpoints, filters]);
 
   const groups = useMemo(
     () => computeTimingBreakdown(filtered, requests, sort),
@@ -82,7 +78,12 @@ export function HeatmapPage(): React.ReactElement {
             description="Make API requests to see where time is spent per endpoint."
           />
         </PageShell>
-        <EndpointPanel selectedKey={selectedKey} onClose={() => setSelectedKey(null)} onNavigateToTimeline={navigateToTimeline} onOpenPlayground={openPlayground} />
+        <EndpointPanel
+          selectedKey={selectedKey}
+          onClose={() => setSelectedKey(null)}
+          onNavigateToTimeline={navigateToTimeline}
+          onOpenPlayground={openPlayground}
+        />
       </>
     );
   }
@@ -97,7 +98,12 @@ export function HeatmapPage(): React.ReactElement {
           onSelect={setSelectedKey}
         />
       </PageShell>
-      <EndpointPanel selectedKey={selectedKey} onClose={() => setSelectedKey(null)} onNavigateToTimeline={navigateToTimeline} onOpenPlayground={openPlayground} />
+      <EndpointPanel
+        selectedKey={selectedKey}
+        onClose={() => setSelectedKey(null)}
+        onNavigateToTimeline={navigateToTimeline}
+        onOpenPlayground={openPlayground}
+      />
     </>
   );
 }

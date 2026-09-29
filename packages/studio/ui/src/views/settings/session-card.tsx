@@ -59,17 +59,11 @@ export function SessionCard({
 
 // ── Info block ────────────────────────────────────────────────────────────────
 
-function SessionInfo({
-  session,
-}: {
-  session: SessionCardProps["session"];
-}): React.ReactElement {
+function SessionInfo({ session }: { session: SessionCardProps["session"] }): React.ReactElement {
   const now = useNow();
   return (
     <div className="min-w-0 flex-1">
-      <p className="text-body-sm font-medium text-foreground truncate">
-        {session.name}
-      </p>
+      <p className="text-body-sm font-medium text-foreground truncate">{session.name}</p>
       <div className="mt-0.5 flex items-center gap-2 text-body-xs text-muted-foreground">
         <span>{formatRelativeTime(session.savedAt, now)}</span>
         <span>·</span>

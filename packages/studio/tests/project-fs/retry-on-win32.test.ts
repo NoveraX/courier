@@ -5,7 +5,11 @@ import { retryOnWin32 } from "../../src/server/project-fs/retry-on-win32";
 const REAL_PLATFORM = process.platform;
 
 function setPlatform(platform: NodeJS.Platform): void {
-  Object.defineProperty(process, "platform", { value: platform, configurable: true, enumerable: true });
+  Object.defineProperty(process, "platform", {
+    value: platform,
+    configurable: true,
+    enumerable: true,
+  });
 }
 
 /** An operation that fails with `code` on its first `failures` calls, then returns "done". */
@@ -43,15 +47,18 @@ describe("retryOnWin32", () => {
     expect(operation).toHaveBeenCalledTimes(1);
   });
 
-  it.each([["EPERM"], ["EACCES"], ["EBUSY"]])("retries %s on Windows until the operation succeeds", (code) => {
-    setPlatform("win32");
-    const { operation } = failingOperation(code, 2);
+  it.each([["EPERM"], ["EACCES"], ["EBUSY"]])(
+    "retries %s on Windows until the operation succeeds",
+    (code) => {
+      setPlatform("win32");
+      const { operation } = failingOperation(code, 2);
 
-    const result = retryOnWin32(operation, "Renaming a file");
+      const result = retryOnWin32(operation, "Renaming a file");
 
-    expect(result).toBe("done");
-    expect(operation).toHaveBeenCalledTimes(3);
-  });
+      expect(result).toBe("done");
+      expect(operation).toHaveBeenCalledTimes(3);
+    },
+  );
 
   it("waits 50 ms and then 100 ms before the first two retries", () => {
     setPlatform("win32");
@@ -87,14 +94,17 @@ describe("retryOnWin32", () => {
     expect(operation).toHaveBeenCalledTimes(1);
   });
 
-  it.each([["linux"], ["darwin"]] as const)("throws a busy file's error at once on %s", (platform) => {
-    setPlatform(platform);
-    const { operation, errors } = failingOperation("EBUSY", 1);
+  it.each([["linux"], ["darwin"]] as const)(
+    "throws a busy file's error at once on %s",
+    (platform) => {
+      setPlatform(platform);
+      const { operation, errors } = failingOperation("EBUSY", 1);
 
-    const thrown = thrownBy(() => retryOnWin32(operation, "Renaming a file"));
+      const thrown = thrownBy(() => retryOnWin32(operation, "Renaming a file"));
 
-    expect(errors).toHaveLength(1);
-    expect(thrown).toBe(errors[0]);
-    expect(operation).toHaveBeenCalledTimes(1);
-  });
+      expect(errors).toHaveLength(1);
+      expect(thrown).toBe(errors[0]);
+      expect(operation).toHaveBeenCalledTimes(1);
+    },
+  );
 });

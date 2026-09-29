@@ -1,8 +1,7 @@
-import type { ImportState } from "./types";
-
 import { isPlainObject } from "@/socket/is-plain-object";
 import { appliedMessage } from "./applied-notes";
 import { readImportDeclaration } from "./read-import-declaration";
+import type { ImportState } from "./types";
 
 /** What the import wizard does once Studio wrote an import's files. */
 export interface WriteSettlement {
@@ -33,8 +32,11 @@ function writeMessage(name: string, reply: unknown): string {
     leftBehind: countOf(reply, "leftBehind"),
     unremoved: unremovedOf(reply),
   };
-  const unchanged = [counts.written, counts.removed, counts.kept, counts.leftBehind].every((n) => n === 0);
-  if (unchanged && counts.unremoved.length === 0) return `${name} is already as Studio generates it`;
+  const unchanged = [counts.written, counts.removed, counts.kept, counts.leftBehind].every(
+    (n) => n === 0,
+  );
+  if (unchanged && counts.unremoved.length === 0)
+    return `${name} is already as Studio generates it`;
   return appliedMessage(name, counts);
 }
 

@@ -51,14 +51,21 @@ describe("upload progress without XMLHttpRequest", () => {
 
     expect(contentType).toMatch(/^multipart\/form-data; boundary=/);
     expect(progress.length).toBeGreaterThan(1);
-    expect(progress.at(-1)).toEqual({ percent: 1, transferredBytes: received, totalBytes: received });
+    expect(progress.at(-1)).toEqual({
+      percent: 1,
+      transferredBytes: received,
+      totalBytes: received,
+    });
   });
 });
 
 describe("download progress", () => {
   it("reports the answer's body as it is read", async () => {
     const body = JSON.stringify({ rows: "y".repeat(10_000) });
-    vi.stubGlobal("fetch", async () => new Response(body, { headers: { "content-length": String(body.length) } }));
+    vi.stubGlobal(
+      "fetch",
+      async () => new Response(body, { headers: { "content-length": String(body.length) } }),
+    );
     const seen: number[] = [];
 
     await (createCaller(api) as unknown as Client).report.with({
@@ -80,13 +87,23 @@ class FakeXhr {
   responseType = "";
   withCredentials = false;
   private listeners = new Map<string, () => void>();
-  upload = { addEventListener: (_type: string, fn: (e: unknown) => void) => { this.progress = fn; } };
+  upload = {
+    addEventListener: (_type: string, fn: (e: unknown) => void) => {
+      this.progress = fn;
+    },
+  };
   private progress: (e: unknown) => void = () => {};
   open() {}
   setRequestHeader() {}
-  getAllResponseHeaders() { return "content-type: application/json\r\n"; }
-  addEventListener(type: string, fn: () => void) { this.listeners.set(type, fn); }
-  abort() { this.listeners.get("abort")?.(); }
+  getAllResponseHeaders() {
+    return "content-type: application/json\r\n";
+  }
+  addEventListener(type: string, fn: () => void) {
+    this.listeners.set(type, fn);
+  }
+  abort() {
+    this.listeners.get("abort")?.();
+  }
   send(body: unknown) {
     FakeXhr.sent = body;
     this.progress({ lengthComputable: true, loaded: 5, total: 10 });

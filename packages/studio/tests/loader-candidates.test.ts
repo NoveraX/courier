@@ -40,7 +40,10 @@ describe("loaderCandidates", () => {
     const { fallbacks } = loaderCandidates(base);
 
     expect(fallbacks).toEqual(
-      LOADER_EXTENSIONS.slice(1).flatMap((extension) => [`${base}${extension}`, join(base, `index${extension}`)]),
+      LOADER_EXTENSIONS.slice(1).flatMap((extension) => [
+        `${base}${extension}`,
+        join(base, `index${extension}`),
+      ]),
     );
   });
 
@@ -49,7 +52,11 @@ describe("loaderCandidates", () => {
 
     const { fallbacks } = loaderCandidates(base);
 
-    expect(fallbacks.slice(0, 3)).toEqual([`${base}.mjs`, join(base, "index.mjs"), join(dir, "api.ts")]);
+    expect(fallbacks.slice(0, 3)).toEqual([
+      `${base}.mjs`,
+      join(base, "index.mjs"),
+      join(dir, "api.ts"),
+    ]);
     expect(fallbacks.filter((path) => !path.startsWith(base))).toEqual([join(dir, "api.ts")]);
   });
 
@@ -58,6 +65,10 @@ describe("loaderCandidates", () => {
       (extension) => loaderCandidates(join(dir, `api${extension}`)).fallbacks[2],
     );
 
-    expect(twins).toEqual([".ts", ".tsx", ".mts", ".cts", ".mtsx", ".ctsx"].map((extension) => join(dir, `api${extension}`)));
+    expect(twins).toEqual(
+      [".ts", ".tsx", ".mts", ".cts", ".mtsx", ".ctsx"].map((extension) =>
+        join(dir, `api${extension}`),
+      ),
+    );
   });
 });

@@ -11,12 +11,16 @@
 import type { AddressInfo } from "node:net";
 import { createServer, type Server } from "node:net";
 import { networkInterfaces } from "node:os";
+import { encodeMessage } from "@noverax/courier/internal";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
-import { encodeMessage } from "@noverax/courier/internal";
 
 import { createHistory } from "../src/history";
-import { createMockServer, type MockServer, type MockServerOptions } from "../src/server/create-mock-server";
+import {
+  createMockServer,
+  type MockServer,
+  type MockServerOptions,
+} from "../src/server/create-mock-server";
 import type { PrefixMapping } from "../src/server/prefix-routes";
 
 const running: MockServer[] = [];
@@ -25,7 +29,9 @@ afterEach(async () => {
   for (const server of running.splice(0)) await server.stop();
 });
 
-async function boot(options: Partial<MockServerOptions> = {}): Promise<{ server: MockServer; url: string }> {
+async function boot(
+  options: Partial<MockServerOptions> = {},
+): Promise<{ server: MockServer; url: string }> {
   const server = createMockServer({ port: 0, log: false, ...options });
   running.push(server);
   return { server, url: (await server.start()).url };
@@ -76,7 +82,9 @@ describe("where the mock server listens", () => {
 
   it.skipIf(!ipv6Loopback)("counts a port another process holds on [::1] as taken", async () => {
     const other = createServer();
-    await new Promise<void>((resolve) => other.listen({ port: 0, host: "::1", ipv6Only: true }, resolve));
+    await new Promise<void>((resolve) =>
+      other.listen({ port: 0, host: "::1", ipv6Only: true }, resolve),
+    );
     const taken = (other.address() as AddressInfo).port;
     const strict = createMockServer({ port: taken, strictPort: true, log: false });
 
@@ -120,7 +128,12 @@ describe("where the mock server listens", () => {
   it("refuses a port another process holds on the loopback when it listens on every address", async () => {
     const other = await holdOn("127.0.0.1");
     const taken = (other.address() as AddressInfo).port;
-    const strict = createMockServer({ port: taken, hostname: "0.0.0.0", strictPort: true, log: false });
+    const strict = createMockServer({
+      port: taken,
+      hostname: "0.0.0.0",
+      strictPort: true,
+      log: false,
+    });
 
     try {
       await expect(strict.start()).rejects.toMatchObject({ code: "EADDRINUSE" });
@@ -214,7 +227,9 @@ describe("stopping", () => {
       prefix: "/chat",
       group: "chat",
       methods: ["room"],
-      endpoints: [{ name: "room", operation: "custom", path: "", transport: "ws", isChannel: true }],
+      endpoints: [
+        { name: "room", operation: "custom", path: "", transport: "ws", isChannel: true },
+      ],
     },
   ];
 

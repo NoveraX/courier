@@ -12,23 +12,23 @@
  * the unit test in `__tests__/binding-guards.test.ts`.
  */
 
-import { isPlainObject } from "./is-plain-object"
-import type { BindingErrorPayload, BindingSnapshot, BindingTransport } from "@/store/types-ui"
+import type { BindingErrorPayload, BindingSnapshot, BindingTransport } from "@/store/types-ui";
+import { isPlainObject } from "./is-plain-object";
 
-const VALID_TRANSPORTS: ReadonlyArray<BindingTransport> = ["http", "sse", "ws"]
-const VALID_STATUSES = ["bound", "orphan", "conflict"] as const
+const VALID_TRANSPORTS: ReadonlyArray<BindingTransport> = ["http", "sse", "ws"];
+const VALID_STATUSES = ["bound", "orphan", "conflict"] as const;
 
 export function isBindingSnapshot(data: unknown): data is BindingSnapshot {
-  if (!isPlainObject(data)) return false
-  const d = data
-  if (!Array.isArray(d.rows)) return false
-  if (typeof d.runtimeCount !== "number" || !Number.isFinite(d.runtimeCount)) return false
-  if (typeof d.sourceCount !== "number" || !Number.isFinite(d.sourceCount)) return false
-  if (!Array.isArray(d.runtimes) || !d.runtimes.every(isRuntimeKindRow)) return false
+  if (!isPlainObject(data)) return false;
+  const d = data;
+  if (!Array.isArray(d.rows)) return false;
+  if (typeof d.runtimeCount !== "number" || !Number.isFinite(d.runtimeCount)) return false;
+  if (typeof d.sourceCount !== "number" || !Number.isFinite(d.sourceCount)) return false;
+  if (!Array.isArray(d.runtimes) || !d.runtimes.every(isRuntimeKindRow)) return false;
   for (const row of d.rows) {
-    if (!isBindingStatusRow(row)) return false
+    if (!isBindingStatusRow(row)) return false;
   }
-  return true
+  return true;
 }
 
 function isRuntimeKindRow(row: unknown): boolean {
@@ -36,40 +36,40 @@ function isRuntimeKindRow(row: unknown): boolean {
     isPlainObject(row) &&
     typeof row.runtimeId === "string" &&
     (row.kind === "browser" || row.kind === "server")
-  )
+  );
 }
 
 function isBindingStatusRow(row: unknown): boolean {
-  if (!isPlainObject(row)) return false
-  const r = row
-  if (typeof r.sourceName !== "string" || r.sourceName.length === 0) return false
-  if (typeof r.transport !== "string") return false
-  if (!(VALID_TRANSPORTS as ReadonlyArray<string>).includes(r.transport)) return false
-  if (typeof r.status !== "string") return false
-  if (!(VALID_STATUSES as ReadonlyArray<string>).includes(r.status)) return false
-  if (r.runtimeId !== undefined && typeof r.runtimeId !== "string") return false
-  if (r.appOrigin !== undefined && typeof r.appOrigin !== "string") return false
+  if (!isPlainObject(row)) return false;
+  const r = row;
+  if (typeof r.sourceName !== "string" || r.sourceName.length === 0) return false;
+  if (typeof r.transport !== "string") return false;
+  if (!(VALID_TRANSPORTS as ReadonlyArray<string>).includes(r.transport)) return false;
+  if (typeof r.status !== "string") return false;
+  if (!(VALID_STATUSES as ReadonlyArray<string>).includes(r.status)) return false;
+  if (r.runtimeId !== undefined && typeof r.runtimeId !== "string") return false;
+  if (r.appOrigin !== undefined && typeof r.appOrigin !== "string") return false;
   if (r.conflicting !== undefined) {
-    if (!Array.isArray(r.conflicting)) return false
+    if (!Array.isArray(r.conflicting)) return false;
     for (const id of r.conflicting) {
-      if (typeof id !== "string") return false
+      if (typeof id !== "string") return false;
     }
   }
-  return true
+  return true;
 }
 
 export function isBindingErrorPayload(data: unknown): data is BindingErrorPayload {
-  if (!isPlainObject(data)) return false
-  const d = data
-  if (d.kind !== "conflict") return false
-  if (!isPlainObject(d.details)) return false
-  const details = d.details
-  if (typeof details.sourceName !== "string" || details.sourceName.length === 0) return false
-  if (typeof details.transport !== "string") return false
-  if (!(VALID_TRANSPORTS as ReadonlyArray<string>).includes(details.transport)) return false
-  if (!Array.isArray(details.runtimeIds)) return false
+  if (!isPlainObject(data)) return false;
+  const d = data;
+  if (d.kind !== "conflict") return false;
+  if (!isPlainObject(d.details)) return false;
+  const details = d.details;
+  if (typeof details.sourceName !== "string" || details.sourceName.length === 0) return false;
+  if (typeof details.transport !== "string") return false;
+  if (!(VALID_TRANSPORTS as ReadonlyArray<string>).includes(details.transport)) return false;
+  if (!Array.isArray(details.runtimeIds)) return false;
   for (const id of details.runtimeIds) {
-    if (typeof id !== "string") return false
+    if (typeof id !== "string") return false;
   }
-  return true
+  return true;
 }

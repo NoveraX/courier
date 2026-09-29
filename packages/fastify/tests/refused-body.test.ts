@@ -8,11 +8,10 @@
  */
 import { once } from "node:events";
 import { type AddressInfo, connect } from "node:net";
-import Fastify, { type FastifyInstance } from "fastify";
-import { afterEach, describe, expect, it } from "vitest";
-
 import { registerSources } from "@noverax/courier";
 import { courier, defineApi } from "@noverax/courier/define";
+import Fastify, { type FastifyInstance } from "fastify";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { courierPlugin } from "../src/index";
 
@@ -28,7 +27,11 @@ afterEach(async () => {
 
 async function listening(): Promise<number> {
   registerSources({
-    api: defineApi({ name: "api", baseURL: "http://127.0.0.1:1", endpoints: { list: endpoint.get("items") } }),
+    api: defineApi({
+      name: "api",
+      baseURL: "http://127.0.0.1:1",
+      endpoints: { list: endpoint.get("items") },
+    }),
   });
   app = Fastify();
   await app.register(courierPlugin, { prefix: "/api/request" });
@@ -58,13 +61,17 @@ describe("a refusal reaches a browser still uploading", () => {
   it.each([
     ["an envelope over the limit", "application/json", "413"],
     ["an unsupported content type", "text/plain", "415"],
-  ])("for %s", async (_, contentType, status) => {
-    const port = await listening();
-    const started = performance.now();
+  ])(
+    "for %s",
+    async (_, contentType, status) => {
+      const port = await listening();
+      const started = performance.now();
 
-    const statusLine = await sendLikeABrowser(port, contentType);
+      const statusLine = await sendLikeABrowser(port, contentType);
 
-    expect(statusLine).toContain(status);
-    expect(performance.now() - started).toBeLessThan(3000);
-  }, 10_000);
+      expect(statusLine).toContain(status);
+      expect(performance.now() - started).toBeLessThan(3000);
+    },
+    10_000,
+  );
 });

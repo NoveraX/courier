@@ -103,9 +103,7 @@ function EndpointRow({
       </div>
 
       {row.bottleneck && (
-        <span className="w-16 shrink-0 text-[10px] text-muted-foreground/40">
-          {row.bottleneck}
-        </span>
+        <span className="w-16 shrink-0 text-[10px] text-muted-foreground/40">{row.bottleneck}</span>
       )}
 
       <TimingBar phases={row.phases} total={row.avgTotal} maxTotal={maxTotal} />

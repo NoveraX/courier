@@ -1,12 +1,10 @@
-import { useState } from "react";
-import { motion } from "motion/react";
 import { ChevronDown } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
+import { useState } from "react";
 import { formatDuration } from "@/components/shared/formatters";
-
-import type { AggregateMiddleware } from "./types";
+import { cn } from "@/lib/utils";
 import { durationColor } from "./constants";
+import type { AggregateMiddleware } from "./types";
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -17,8 +15,13 @@ interface MiddlewareBarsProps {
 const TOP_N = 5;
 
 const BAR_COLORS = [
-  "bg-sky-500", "bg-violet-500", "bg-amber-500", "bg-emerald-500",
-  "bg-rose-500", "bg-cyan-500", "bg-indigo-500",
+  "bg-sky-500",
+  "bg-violet-500",
+  "bg-amber-500",
+  "bg-emerald-500",
+  "bg-rose-500",
+  "bg-cyan-500",
+  "bg-indigo-500",
 ];
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -35,7 +38,13 @@ export function MiddlewareBars({ stats }: MiddlewareBarsProps): React.ReactEleme
     <div className="space-y-2.5">
       <h4 className="text-caption text-muted-foreground/70">Time Distribution</h4>
       {visible.map((mw, i) => (
-        <Bar key={mw.name} mw={mw} index={i} maxDuration={maxDuration} totalDuration={totalDuration} />
+        <Bar
+          key={mw.name}
+          mw={mw}
+          index={i}
+          maxDuration={maxDuration}
+          totalDuration={totalDuration}
+        />
       ))}
       {needsCollapse && (
         <button
@@ -53,8 +62,16 @@ export function MiddlewareBars({ stats }: MiddlewareBarsProps): React.ReactEleme
 
 // ── Bar ────────────────────────────────────────────────────────────────────
 
-function Bar({ mw, index, maxDuration, totalDuration }: {
-  mw: AggregateMiddleware; index: number; maxDuration: number; totalDuration: number;
+function Bar({
+  mw,
+  index,
+  maxDuration,
+  totalDuration,
+}: {
+  mw: AggregateMiddleware;
+  index: number;
+  maxDuration: number;
+  totalDuration: number;
 }): React.ReactElement {
   const pct = maxDuration > 0 ? (mw.avgDuration / maxDuration) * 100 : 0;
   const share = totalDuration > 0 ? (mw.avgDuration / totalDuration) * 100 : 0;

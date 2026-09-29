@@ -9,7 +9,7 @@ import { displayedCount } from "../src/lib/displayed-count";
 describe("displayedCount", () => {
   it("shows a value just below zero as 0, not -0", () => {
     expect(Object.is(displayedCount(-0.3), 0)).toBe(true);
-    expect((displayedCount(-0.3)).toLocaleString()).toBe("0");
+    expect(displayedCount(-0.3).toLocaleString()).toBe("0");
   });
 
   it("rounds a value on its way to a count", () => {

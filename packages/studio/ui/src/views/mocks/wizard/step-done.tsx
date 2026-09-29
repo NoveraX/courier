@@ -1,9 +1,7 @@
 import { CheckCircle2, Loader2 } from "lucide-react";
-
-import type { MockWizardState } from "./types";
-
 import { MockFailureNote } from "../shared/mock-failure-note";
 import { ProcessStatusBadge, ServerControls } from "../shared/server-controls";
+import type { MockWizardState } from "./types";
 import { useMockArrival } from "./use-mock-arrival";
 import { WarningList } from "./warning-list";
 
@@ -38,7 +36,10 @@ export function DoneStep({ applied, connected }: DoneStepProps): React.ReactElem
         Added to {applied.target}
       </h3>
       <WarningList warnings={applied.warnings} />
-      <ul aria-live="polite" className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
+      <ul
+        aria-live="polite"
+        className="divide-y divide-border-subtle rounded-lg border border-border-subtle"
+      >
         {listed.map((server) => (
           <li key={server.serverId} className="flex h-10 items-center gap-2 px-3">
             <span className="mono-sm">mocks.{server.serverId}</span>
@@ -47,7 +48,11 @@ export function DoneStep({ applied, connected }: DoneStepProps): React.ReactElem
               <span className="truncate mono-xs text-muted-foreground">{server.url}</span>
             )}
             <div className="ml-auto">
-              <ServerControls serverId={server.serverId} processStatus={server.processStatus} managed={server.managed} />
+              <ServerControls
+                serverId={server.serverId}
+                processStatus={server.processStatus}
+                managed={server.managed}
+              />
             </div>
           </li>
         ))}
@@ -68,12 +73,14 @@ export function DoneStep({ applied, connected }: DoneStepProps): React.ReactElem
         />
       ))}
       {!connected && (
-        <p className="text-body-xs text-amber-400">Studio is disconnected; the mocks appear once it reconnects.</p>
+        <p className="text-body-xs text-amber-400">
+          Studio is disconnected; the mocks appear once it reconnects.
+        </p>
       )}
       {connected && overdue && (
         <p className="text-body-xs text-amber-400">
-          {applied.target} was saved and loads, but Studio has not listed {pending.map((key) => `mocks.${key}`).join(", ")} yet.
-          Studio's terminal says why.
+          {applied.target} was saved and loads, but Studio has not listed{" "}
+          {pending.map((key) => `mocks.${key}`).join(", ")} yet. Studio's terminal says why.
         </p>
       )}
     </div>

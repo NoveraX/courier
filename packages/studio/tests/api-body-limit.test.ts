@@ -32,7 +32,13 @@ afterEach(async () => {
 
 function start(): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
@@ -41,7 +47,14 @@ function largeSpec(megabytes: number): string {
   const paths: Record<string, unknown> = {};
   const description = "d".repeat(10_000);
   for (let i = 0; i < megabytes * 100; i++) {
-    paths[`/items${i}`] = { get: { operationId: `getItem${i}`, tags: ["items"], description, responses: { "200": { description: "ok" } } } };
+    paths[`/items${i}`] = {
+      get: {
+        operationId: `getItem${i}`,
+        tags: ["items"],
+        description,
+        responses: { "200": { description: "ok" } },
+      },
+    };
   }
   return JSON.stringify({ openapi: "3.1.0", info: { title: "Large", version: "1" }, paths });
 }
@@ -63,7 +76,11 @@ describe("a specification of several megabytes once parsed", () => {
     const written = await fetch(`${url}/api/apis/write`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ sourceName: "large", spec, options: { type: "openapi", outputDir: "src/api", sourceName: "large" } }),
+      body: JSON.stringify({
+        sourceName: "large",
+        spec,
+        options: { type: "openapi", outputDir: "src/api", sourceName: "large" },
+      }),
     });
 
     expect(written.status).toBe(200);

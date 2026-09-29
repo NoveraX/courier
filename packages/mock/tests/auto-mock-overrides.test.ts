@@ -1,5 +1,5 @@
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
@@ -16,7 +16,10 @@ const api = defineApi({
       endpoints: {
         list: endpoint.get("").response(z.array(ItemSchema)),
         get: endpoint.get(":itemId").response(ItemSchema),
-        create: endpoint.post("").variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema),
+        create: endpoint
+          .post("")
+          .variables(z.object({ name: z.string(), price: z.number() }))
+          .response(ItemSchema),
         update: endpoint.patch(":itemId").response(ItemSchema),
         replace: endpoint.put(":itemId").response(ItemSchema),
         delete: endpoint.del(":itemId"),
@@ -121,7 +124,9 @@ describe("builder advanced features", () => {
     seed: { count: 3 },
     overrides: (mock) => {
       // .once() — first call returns special, then falls back to auto-CRUD
-      mock("items", "list").resolves([{ id: "special", name: "Once", price: 0 }]).once();
+      mock("items", "list")
+        .resolves([{ id: "special", name: "Once", price: 0 }])
+        .once();
 
       // .rejects() with custom status
       mock("items", "create").rejects(422, { message: "Validation failed" });
@@ -193,9 +198,7 @@ describe("state machine (inState/transitionTo)", () => {
     seed: { count: 0 },
     overrides: (mock) => {
       // Default state "Started" → unauthorized
-      mock("items", "list")
-        .inState("Started")
-        .rejects(401, { message: "Unauthorized" });
+      mock("items", "list").inState("Started").rejects(401, { message: "Unauthorized" });
 
       // After login → success
       mock("items", "list")
@@ -258,8 +261,12 @@ describe("named latency profiles", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("3g profile adds significant latency", async () => {
     const start = performance.now();
@@ -290,8 +297,12 @@ describe(".rejects() without data arg", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("returns custom status with default error body", async () => {
     const res = await fetch(`${url}/items`);
@@ -331,8 +342,12 @@ describe("query params routing", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("routes GET with query params to getBy* endpoint", async () => {
     const body = await fetch(`${url}/products?category=food`).then((r) => r.json());

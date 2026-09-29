@@ -16,7 +16,8 @@ import type { MockServerInfo } from "@/store/mock-slice";
  * ```
  */
 export function ServerAddress({ server }: { server: MockServerInfo }): React.ReactElement {
-  const url = server.processStatus === "running" ? server.url || `http://localhost:${server.port}` : null;
+  const url =
+    server.processStatus === "running" ? server.url || `http://localhost:${server.port}` : null;
   return (
     <div className="flex items-center gap-1 rounded bg-muted/40 px-1.5 py-0.5">
       {url ? (

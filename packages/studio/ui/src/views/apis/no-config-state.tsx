@@ -24,7 +24,10 @@ export function NoConfigState(): React.ReactElement {
       icon={FileCode}
       heading="No courier.config.ts"
       description="Create courier.config.ts at the project root. A project with no API sources yet starts from this config; Studio loads it as soon as it is saved, and Import API turns on."
-      action={{ label: "Copy config", onClick: () => void copyToClipboard(MINIMAL_CONFIG, "config") }}
+      action={{
+        label: "Copy config",
+        onClick: () => void copyToClipboard(MINIMAL_CONFIG, "config"),
+      }}
     >
       <div className="w-[480px] max-w-full text-left">
         <CodeBlock code={MINIMAL_CONFIG} language="ts" />

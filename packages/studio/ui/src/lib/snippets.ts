@@ -63,7 +63,11 @@ function mergeContentType(
 }
 
 export function safeStringify(value: unknown, indent = 0): string {
-  try { return JSON.stringify(value, null, indent); } catch { return String(value); }
+  try {
+    return JSON.stringify(value, null, indent);
+  } catch {
+    return String(value);
+  }
 }
 
 function shellEscape(s: string): string {

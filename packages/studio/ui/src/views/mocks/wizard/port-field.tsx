@@ -1,8 +1,7 @@
-import type { MockDraft, PortMode } from "./types";
-
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { Input } from "@/components/ui/input";
 import { fieldDescriptionIds } from "./field-description-ids";
+import type { MockDraft, PortMode } from "./types";
 
 const PORT_MODES: { value: PortMode; label: string }[] = [
   { value: "auto", label: "Automatic" },
@@ -30,7 +29,13 @@ interface PortFieldProps {
  * <PortField id="draft-0-port" draft={draft} hint={hint} error={errors.port} onChange={onEdit} />
  * ```
  */
-export function PortField({ id, draft, hint, error, onChange }: PortFieldProps): React.ReactElement {
+export function PortField({
+  id,
+  draft,
+  hint,
+  error,
+  onChange,
+}: PortFieldProps): React.ReactElement {
   return (
     <div className="flex items-center gap-2">
       <SegmentedControl

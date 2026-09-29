@@ -9,22 +9,22 @@
  * which have no secrets to keep from a browser, and suggested handing the
  * whole API definition to the browser.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-import * as ts from "typescript"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import * as ts from "typescript";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import type { RequestEntry } from "@/store"
-import { runAudit } from "@/views/audit/run-audit"
+import type { RequestEntry } from "@/store";
+import { runAudit } from "@/views/audit/run-audit";
 
-let dir = ""
+let dir = "";
 
 beforeAll(() => {
-  const cache = join(import.meta.dirname, "../../../../node_modules/.cache/courier-studio-tests")
-  mkdirSync(cache, { recursive: true })
-  dir = mkdtempSync(join(cache, "suggestions-"))
-  mkdirSync(join(dir, "api"))
+  const cache = join(import.meta.dirname, "../../../../node_modules/.cache/courier-studio-tests");
+  mkdirSync(cache, { recursive: true });
+  dir = mkdtempSync(join(cache, "suggestions-"));
+  mkdirSync(join(dir, "api"));
   writeFileSync(
     join(dir, "api/sources.ts"),
     [
@@ -32,15 +32,15 @@ beforeAll(() => {
       `const { endpoint } = courier();`,
       `export const api = defineApi({ name: "api", baseURL: "https://api.example.com", endpoints: { health: endpoint.get("health").response<unknown>() } });`,
     ].join("\n"),
-  )
-})
+  );
+});
 
-afterAll(() => rmSync(dir, { recursive: true, force: true }))
+afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 /** Type-check a snippet as the module a user pastes it into. */
 function diagnosticsOf(name: string, code: string): string[] {
-  const file = join(dir, `${name}.ts`)
-  writeFileSync(file, code)
+  const file = join(dir, `${name}.ts`);
+  writeFileSync(file, code);
   const program = ts.createProgram([file], {
     strict: true,
     noEmit: true,
@@ -49,10 +49,10 @@ function diagnosticsOf(name: string, code: string): string[] {
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
     lib: ["lib.es2022.d.ts", "lib.dom.d.ts"],
-  })
+  });
   return ts
     .getPreEmitDiagnostics(program)
-    .map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"))
+    .map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
 }
 
 function request(i: number, fields: Partial<RequestEntry>): RequestEntry {
@@ -75,7 +75,7 @@ function request(i: number, fields: Partial<RequestEntry>): RequestEntry {
     url: "https://api.example.com/orders",
     sessionId: "browser",
     ...fields,
-  }
+  };
 }
 
 /** Traffic that sets off every rule with a code suggestion. */
@@ -83,54 +83,73 @@ function troubledTraffic(): RequestEntry[] {
   return [
     ...[0, 1, 2].map((i) => request(i, {})),
     ...[3, 4, 5].map((i) => request(i, { method: "flaky", status: "error", statusCode: 502 })),
-    request(6, { method: "report", timing: { total: 6_000, middleware: 0, fetch: 6_000, validation: 0 } }),
+    request(6, {
+      method: "report",
+      timing: { total: 6_000, middleware: 0, fetch: 6_000, validation: 0 },
+    }),
     request(7, { method: "create", httpMethod: "POST", type: "mutation" }),
     request(8, { method: "export", url: "https://api.example.com/export?token=secret" }),
-  ]
+  ];
 }
 
 describe("the code Studio suggests for a fix", () => {
   it("compiles as it is copied", () => {
-    const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items
-    const suggested = items.filter((item) => item.codeSuggestion !== undefined)
+    const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items;
+    const suggested = items.filter((item) => item.codeSuggestion !== undefined);
 
     expect(suggested.map((item) => item.id)).toEqual(
-      expect.arrayContaining(["err-high-error-rate", "err-timeout", "err-sensitive-url", "sec-mutation-no-auth", "hint-no-caching", "hint-no-res-val", "hint-no-var-val", "warn-unused-proxy"]),
-    )
+      expect.arrayContaining([
+        "err-high-error-rate",
+        "err-timeout",
+        "err-sensitive-url",
+        "sec-mutation-no-auth",
+        "hint-no-caching",
+        "hint-no-res-val",
+        "hint-no-var-val",
+        "warn-unused-proxy",
+      ]),
+    );
     for (const item of suggested) {
-      expect({ id: item.id, errors: diagnosticsOf(item.id, item.codeSuggestion ?? "") }).toEqual({ id: item.id, errors: [] })
+      expect({ id: item.id, errors: diagnosticsOf(item.id, item.codeSuggestion ?? "") }).toEqual({
+        id: item.id,
+        errors: [],
+      });
     }
-  }, 60_000)
-})
+  }, 60_000);
+});
 
 describe("the caching hint", () => {
   it("names the reads called often that the cache never saw", () => {
-    const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set() }).items
+    const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set() }).items;
 
-    expect(items.find((item) => item.id === "hint-no-caching")?.endpoints?.map((e) => e.label)).toEqual(["api.orders.list"])
-  })
+    expect(
+      items.find((item) => item.id === "hint-no-caching")?.endpoints?.map((e) => e.label),
+    ).toEqual(["api.orders.list"]);
+  });
 
   it("is not raised when the reads go through the cache", () => {
-    const cached = [0, 1, 2].map((i) => request(i, { cache: { hit: i > 0 } }))
+    const cached = [0, 1, 2].map((i) => request(i, { cache: { hit: i > 0 } }));
 
-    const items = runAudit(cached, {}, { browserSessions: new Set() }).items
+    const items = runAudit(cached, {}, { browserSessions: new Set() }).items;
 
-    expect(items.find((item) => item.id === "hint-no-caching")).toBeUndefined()
-  })
-})
+    expect(items.find((item) => item.id === "hint-no-caching")).toBeUndefined();
+  });
+});
 
 describe("the direct-mode warning", () => {
   it("is not raised for a server calling directly", () => {
-    const fromServer = [0, 1, 2].map((i) => request(i, { sessionId: "server" }))
+    const fromServer = [0, 1, 2].map((i) => request(i, { sessionId: "server" }));
 
-    const items = runAudit(fromServer, {}, { browserSessions: new Set(["browser"]) }).items
+    const items = runAudit(fromServer, {}, { browserSessions: new Set(["browser"]) }).items;
 
-    expect(items.find((item) => item.id === "warn-unused-proxy")).toBeUndefined()
-  })
+    expect(items.find((item) => item.id === "warn-unused-proxy")).toBeUndefined();
+  });
 
   it("suggests a proxy caller that imports the API as a type", () => {
-    const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items
+    const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items;
 
-    expect(items.find((item) => item.id === "warn-unused-proxy")?.codeSuggestion).toContain(`import type { api }`)
-  })
-})
+    expect(items.find((item) => item.id === "warn-unused-proxy")?.codeSuggestion).toContain(
+      `import type { api }`,
+    );
+  });
+});

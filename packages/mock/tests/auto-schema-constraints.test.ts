@@ -6,9 +6,10 @@
  * each call to the auto mock reject — the data has to satisfy the schema, not
  * merely resemble its field names.
  */
-import type { StandardSchemaV1 } from "@standard-schema/spec";
+
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 import * as v from "valibot";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";

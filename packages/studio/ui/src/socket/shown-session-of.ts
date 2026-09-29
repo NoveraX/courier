@@ -1,13 +1,13 @@
-import type { RequestEntry } from "@/store/types"
-import type { ShownSession } from "@/store/store-types"
-import { requestFromSaved } from "@/views/settings/saved-request"
+import type { ShownSession } from "@/store/store-types";
+import type { RequestEntry } from "@/store/types";
+import { requestFromSaved } from "@/views/settings/saved-request";
 
-import { isPlainObject } from "./is-plain-object"
+import { isPlainObject } from "./is-plain-object";
 
 /** A saved session Studio says the pages show, as the store takes it */
 export interface ShownSessionPayload {
-  session: ShownSession
-  requests: RequestEntry[]
+  session: ShownSession;
+  requests: RequestEntry[];
 }
 
 /**
@@ -23,10 +23,10 @@ export interface ShownSessionPayload {
  * ```
  */
 export function shownSessionOf(data: unknown): ShownSessionPayload | undefined {
-  if (!isPlainObject(data) || !Array.isArray(data.requests)) return undefined
-  if (typeof data.id !== "string" || typeof data.name !== "string") return undefined
+  if (!isPlainObject(data) || !Array.isArray(data.requests)) return undefined;
+  if (typeof data.id !== "string" || typeof data.name !== "string") return undefined;
   const requests = data.requests
     .map(requestFromSaved)
-    .filter((request): request is RequestEntry => request !== undefined)
-  return { session: { id: data.id, name: data.name }, requests }
+    .filter((request): request is RequestEntry => request !== undefined);
+  return { session: { id: data.id, name: data.name }, requests };
 }

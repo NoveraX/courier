@@ -47,8 +47,12 @@ export function FormBodyEditor({ fields, onChange }: FormBodyEditorProps): React
             size="sm"
             className="h-7 shrink-0"
           >
-            <ToggleGroupItem value="text" className="h-7 px-2 text-xs">Text</ToggleGroupItem>
-            <ToggleGroupItem value="file" className="h-7 px-2 text-xs">File</ToggleGroupItem>
+            <ToggleGroupItem value="text" className="h-7 px-2 text-xs">
+              Text
+            </ToggleGroupItem>
+            <ToggleGroupItem value="file" className="h-7 px-2 text-xs">
+              File
+            </ToggleGroupItem>
           </ToggleGroup>
           {field.kind === "text" ? (
             <Input

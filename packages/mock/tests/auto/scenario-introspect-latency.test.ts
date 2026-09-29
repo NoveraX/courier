@@ -23,14 +23,17 @@ const routes: RouteInfo[] = [
 ];
 
 describe("a scenario slowed by a named profile", () => {
-  it.each(["3g", "4g"] as const)("summarises %s as the middle of the mock's own range", (profile) => {
-    const scenario = defineScenario("slow", (mock) => {
-      mock("users", "list").withLatency(profile).resolves([]);
-    });
+  it.each(["3g", "4g"] as const)(
+    "summarises %s as the middle of the mock's own range",
+    (profile) => {
+      const scenario = defineScenario("slow", (mock) => {
+        mock("users", "list").withLatency(profile).resolves([]);
+      });
 
-    const [entry] = introspectScenario(scenario, routes).endpoints;
-    const { min, max } = LATENCY_PROFILES[profile] ?? { min: 0, max: 0 };
+      const [entry] = introspectScenario(scenario, routes).endpoints;
+      const { min, max } = LATENCY_PROFILES[profile] ?? { min: 0, max: 0 };
 
-    expect(entry?.latency).toBe(Math.round((min + max) / 2));
-  });
+      expect(entry?.latency).toBe(Math.round((min + max) / 2));
+    },
+  );
 });

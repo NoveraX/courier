@@ -2,14 +2,13 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
 } from "@/components/ui/chart";
-
-import type { TimeSeriesBucket } from "./types";
 import { TIME_SERIES_CHART_CONFIG } from "./constants";
+import type { TimeSeriesBucket } from "./types";
 
 interface RequestsOverTimeProps {
   data: TimeSeriesBucket[];
@@ -24,11 +23,7 @@ export function RequestsOverTimeChart({ data }: RequestsOverTimeProps): React.Re
           <GradientDef id="fillError" color="var(--color-error)" />
           <GradientDef id="fillPending" color="var(--color-pending)" />
         </defs>
-        <CartesianGrid
-          vertical={false}
-          strokeDasharray="3 3"
-          strokeOpacity={0.1}
-        />
+        <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.1} />
         <XAxis
           dataKey="label"
           tickLine={false}

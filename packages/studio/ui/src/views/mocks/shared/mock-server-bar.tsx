@@ -28,7 +28,10 @@ export function MockServerBar(): React.ReactElement {
         <>
           {servers.length > 1 ? (
             <Select value={activeServerId ?? ""} onValueChange={selectServer}>
-              <SelectTrigger size="sm" className="h-7 w-44 gap-1.5 border-none bg-muted/40 text-xs font-medium">
+              <SelectTrigger
+                size="sm"
+                className="h-7 w-44 gap-1.5 border-none bg-muted/40 text-xs font-medium"
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -51,7 +54,10 @@ export function MockServerBar(): React.ReactElement {
 
           {activeServer && (
             <>
-              <ProcessStatusBadge status={activeServer.processStatus} lastError={activeServer.lastError} />
+              <ProcessStatusBadge
+                status={activeServer.processStatus}
+                lastError={activeServer.lastError}
+              />
               <ServerControls
                 serverId={activeServer.serverId}
                 processStatus={activeServer.processStatus}
@@ -87,10 +93,14 @@ export function MockServerBar(): React.ReactElement {
 }
 
 function StatusDot({ status }: { status: string }): React.ReactElement {
-  const color = status === "running" ? "bg-emerald-400 shadow-[0_0_4px_--theme(--color-emerald-400/0.6)]"
-    : status === "starting" || status === "restarting" ? "bg-sky-400 animate-pulse"
-    : status === "crashed" ? "bg-rose-400"
-    : "bg-zinc-500";
+  const color =
+    status === "running"
+      ? "bg-emerald-400 shadow-[0_0_4px_--theme(--color-emerald-400/0.6)]"
+      : status === "starting" || status === "restarting"
+        ? "bg-sky-400 animate-pulse"
+        : status === "crashed"
+          ? "bg-rose-400"
+          : "bg-zinc-500";
 
   return <span className={cn("size-1.5 shrink-0 rounded-full", color)} />;
 }

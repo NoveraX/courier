@@ -81,7 +81,11 @@ function fromLink(): string | null {
   keep(token);
   fragment.delete("token");
   const rest = fragment.toString();
-  history.replaceState(history.state, "", `${location.pathname}${location.search}${rest ? `#${rest}` : ""}`);
+  history.replaceState(
+    history.state,
+    "",
+    `${location.pathname}${location.search}${rest ? `#${rest}` : ""}`,
+  );
   return token;
 }
 

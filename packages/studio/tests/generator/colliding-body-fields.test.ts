@@ -23,12 +23,17 @@ import {
   STRICT,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const path = (name: string) => ({ name, in: "path", required: true, schema: { type: "string" } });
 const query = (name: string) => ({ name, in: "query", schema: { type: "string" } });
-const ok = { "200": { description: "ok", content: { "application/json": { schema: { type: "object" } } } } };
-const jsonBody = (schema: unknown) => ({ required: true, content: { "application/json": { schema } } });
+const ok = {
+  "200": { description: "ok", content: { "application/json": { schema: { type: "object" } } } },
+};
+const jsonBody = (schema: unknown) => ({
+  required: true,
+  content: { "application/json": { schema } },
+});
 const IssueMeta = {
   type: "object",
   properties: { owner: { type: "string" }, repo: { type: "string" }, index: { type: "integer" } },
@@ -59,26 +64,39 @@ function spec(origin: string): ParsedSpec {
           post: op(
             "createOrgForUser",
             [path("username")],
-            jsonBody({ type: "object", properties: { username: { type: "string" }, full_name: { type: "string" } } }),
+            jsonBody({
+              type: "object",
+              properties: { username: { type: "string" }, full_name: { type: "string" } },
+            }),
           ),
         },
         "/notes/{name}": {
           post: op("writeNote", [path("name")], {
             content: {
               "application/x-www-form-urlencoded": {
-                schema: { type: "object", properties: { name: { type: "string" }, text: { type: "string" } } },
+                schema: {
+                  type: "object",
+                  properties: { name: { type: "string" }, text: { type: "string" } },
+                },
               },
             },
           }),
         },
         "/tags": {
-          post: op("addTag", [query("label")], jsonBody({ type: "object", properties: { label: { type: "string" } } })),
+          post: op(
+            "addTag",
+            [query("label")],
+            jsonBody({ type: "object", properties: { label: { type: "string" } } }),
+          ),
         },
         "/repos/{owner}/{repo}/labels": {
           post: op(
             "createLabel",
             [path("owner"), path("repo")],
-            jsonBody({ type: "object", properties: { name: { type: "string" }, color: { type: "string" } } }),
+            jsonBody({
+              type: "object",
+              properties: { name: { type: "string" }, color: { type: "string" } },
+            }),
           ),
         },
       },
@@ -105,7 +123,11 @@ afterAll(async () => {
 });
 
 function generated(options: Partial<GenerateOptions>) {
-  return generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "hub");
+  return generateCode(
+    spec(upstream.origin),
+    { type: "openapi", outputDir: "src/api", ...options },
+    "hub",
+  );
 }
 
 describe.each(VARIANTS)("a generated client validated with %s", (label, options) => {
@@ -114,13 +136,33 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
     const call = (method: string) => endpointAt(hubApi, "hub", method);
     upstream.requests.length = 0;
 
-    await call("blockIssue")({ owner: "go", repo: "tea", index: "3", body: { owner: "go", repo: "sdk", index: 7 } });
-    await call("unblockIssue")({ owner: "go", repo: "tea", index: "3", body: { owner: "go", repo: "sdk", index: 7 } });
-    await call("createOrgForUser")({ username: "alice", body: { username: "acme", full_name: "Acme" } });
+    await call("blockIssue")({
+      owner: "go",
+      repo: "tea",
+      index: "3",
+      body: { owner: "go", repo: "sdk", index: 7 },
+    });
+    await call("unblockIssue")({
+      owner: "go",
+      repo: "tea",
+      index: "3",
+      body: { owner: "go", repo: "sdk", index: 7 },
+    });
+    await call("createOrgForUser")({
+      username: "alice",
+      body: { username: "acme", full_name: "Acme" },
+    });
     await call("writeNote")({ name: "todo", body: { name: "first", text: "hi" } });
     await call("addTag")({ label: "q", body: { label: "b" } });
 
-    expect(upstream.requests.map((request) => [request.method, request.path, request.query, request.body])).toEqual([
+    expect(
+      upstream.requests.map((request) => [
+        request.method,
+        request.path,
+        request.query,
+        request.body,
+      ]),
+    ).toEqual([
       ["POST", "/repos/go/tea/issues/3/blocks", [], '{"owner":"go","repo":"sdk","index":7}'],
       ["DELETE", "/repos/go/tea/issues/3/blocks", [], '{"owner":"go","repo":"sdk","index":7}'],
       ["POST", "/admin/users/alice/orgs", [], '{"username":"acme","full_name":"Acme"}'],
@@ -133,7 +175,11 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
     const { hubApi } = loadGenerated(generated(options), "src/api/hub/index.ts");
     upstream.requests.length = 0;
 
-    await endpointAt(hubApi, "hub", "createLabel")({ owner: "go", repo: "tea", name: "bug", color: "red" });
+    await endpointAt(
+      hubApi,
+      "hub",
+      "createLabel",
+    )({ owner: "go", repo: "tea", name: "bug", color: "red" });
 
     expect(upstream.requests.map((request) => [request.path, request.body])).toEqual([
       ["/repos/go/tea/labels", '{"name":"bug","color":"red"}'],
@@ -141,7 +187,8 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
   });
 
   it("describes fields written inline by a type of their own, field by field", () => {
-    const schemas = generated(options).find((file) => file.path.endsWith("hub/schemas.ts"))?.content ?? "";
+    const schemas =
+      generated(options).find((file) => file.path.endsWith("hub/schemas.ts"))?.content ?? "";
 
     expect(schemas).toContain("export type CreateOrgForUserBody = {");
     expect(schemas).toContain("body: CreateOrgForUserBody;");

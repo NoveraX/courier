@@ -83,7 +83,8 @@ function ProgressHeader({
           <span className="font-medium text-success-foreground">All done!</span>
         ) : (
           <span className="text-muted-foreground">
-            <span className="font-medium text-foreground">{completedCount}</span> of {total} completed
+            <span className="font-medium text-foreground">{completedCount}</span> of {total}{" "}
+            completed
           </span>
         )}
       </div>

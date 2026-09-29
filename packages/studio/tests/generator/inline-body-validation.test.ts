@@ -4,16 +4,16 @@
  * never used: a call with such a body went out unchecked while one with a
  * named body was validated, and the schema was dead code in every client.
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { isValidationError } from "@noverax/courier";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { GenerateOptions } from "../../src/apis/generator";
 import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
 import type { ParsedSpec } from "../../src/apis/parser/types";
 import { endpointAt, loadGenerated } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 function spec(origin: string): ParsedSpec {
   return parseSpec(
@@ -42,7 +42,12 @@ function spec(origin: string): ParsedSpec {
                 },
               },
             },
-            responses: { "200": { description: "ok", content: { "application/json": { schema: { type: "object" } } } } },
+            responses: {
+              "200": {
+                description: "ok",
+                content: { "application/json": { schema: { type: "object" } } },
+              },
+            },
           },
         },
       },
@@ -68,7 +73,11 @@ afterAll(async () => {
 
 describe.each(VARIANTS)("a generated client validated with %s", (_label, options) => {
   function updatePet() {
-    const files = generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "pets");
+    const files = generateCode(
+      spec(upstream.origin),
+      { type: "openapi", outputDir: "src/api", ...options },
+      "pets",
+    );
     const { petsApi } = loadGenerated(files, "src/api/pets/index.ts");
     return endpointAt(petsApi, "pets", "updatePet");
   }

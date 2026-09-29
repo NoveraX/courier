@@ -29,18 +29,37 @@ const SPEC = parseSpec(
     info: { title: "Shop", version: "1" },
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
-        post: { operationId: "createPet", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
+        post: {
+          operationId: "createPet",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
       "/orders": {
-        get: { operationId: "listOrders", tags: ["store"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listOrders",
+          tags: ["store"],
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
   }),
 );
 
-function filesOf(selected: Record<string, string[]> | null, outputDir = "src/api"): Record<string, string> {
-  const files = generateCode(SPEC, { type: "openapi", outputDir, selectedEndpoints: selected }, "shop");
+function filesOf(
+  selected: Record<string, string[]> | null,
+  outputDir = "src/api",
+): Record<string, string> {
+  const files = generateCode(
+    SPEC,
+    { type: "openapi", outputDir, selectedEndpoints: selected },
+    "shop",
+  );
   return Object.fromEntries(files.map((file) => [file.path, file.content]));
 }
 
@@ -78,7 +97,9 @@ describe("previewAddEndpoints", () => {
 describe("previewAddEndpoints with schemas two groups share", () => {
   const PET = { $ref: "#/components/schemas/Pet" };
   const ORDER = { $ref: "#/components/schemas/Order" };
-  const ok = (schema: object) => ({ "200": { description: "ok", content: { "application/json": { schema } } } });
+  const ok = (schema: object) => ({
+    "200": { description: "ok", content: { "application/json": { schema } } },
+  });
   const SHARED = parseSpec(
     JSON.stringify({
       openapi: "3.1.0",
@@ -100,13 +121,18 @@ describe("previewAddEndpoints with schemas two groups share", () => {
     const options = { type: "openapi" as const, outputDir: "src/api" };
     const layout = resolveImportLayout(options, "shop");
     const existing = Object.fromEntries(
-      generateCode(SHARED, { ...options, selectedEndpoints: { pets: ["listPets"] } }, "shop").map((file) => [
-        file.path,
-        file.content,
-      ]),
+      generateCode(SHARED, { ...options, selectedEndpoints: { pets: ["listPets"] } }, "shop").map(
+        (file) => [file.path, file.content],
+      ),
     );
 
-    const result = previewAddEndpoints(SHARED, { store: ["listOrders"] }, options, existing, layout);
+    const result = previewAddEndpoints(
+      SHARED,
+      { store: ["listOrders"] },
+      options,
+      existing,
+      layout,
+    );
 
     const barrel = result.files.find((file) => file.path === layout.indexFile)?.content ?? "";
     expect(barrel).toContain('export * from "./pets/schemas";');
@@ -132,7 +158,9 @@ describe("previewAddEndpoints with schemas two groups share", () => {
 
 describe("previewAddEndpoints to a group whose schemas gain one another group exports", () => {
   const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
-  const ok = (schema: object) => ({ "200": { description: "ok", content: { "application/json": { schema } } } });
+  const ok = (schema: object) => ({
+    "200": { description: "ok", content: { "application/json": { schema } } },
+  });
   const SPEC_TOYS = parseSpec(
     JSON.stringify({
       openapi: "3.1.0",
@@ -156,13 +184,24 @@ describe("previewAddEndpoints to a group whose schemas gain one another group ex
     const layout = resolveImportLayout(options, "shop");
     const selected = { animals: ["listPets"], misc: ["getToy"] };
     const existing = Object.fromEntries(
-      generateCode(SPEC_TOYS, { ...options, selectedEndpoints: selected }, "shop").map((file) => [file.path, file.content]),
+      generateCode(SPEC_TOYS, { ...options, selectedEndpoints: selected }, "shop").map((file) => [
+        file.path,
+        file.content,
+      ]),
     );
     expect(existing[layout.indexFile]).toContain('export * from "./misc/schemas";');
 
-    const result = previewAddEndpoints(SPEC_TOYS, { animals: ["listToys"] }, options, existing, layout);
+    const result = previewAddEndpoints(
+      SPEC_TOYS,
+      { animals: ["listToys"] },
+      options,
+      existing,
+      layout,
+    );
 
-    const schemas = result.files.find((file) => file.path === layout.groupSchemaFile("animals", "schemas"));
+    const schemas = result.files.find(
+      (file) => file.path === layout.groupSchemaFile("animals", "schemas"),
+    );
     const barrel = result.files.find((file) => file.path === layout.indexFile)?.content ?? "";
     expect(schemas?.content).toContain("export const ToySchema");
     expect(barrel).toContain('export * from "./animals/schemas";');
@@ -172,7 +211,9 @@ describe("previewAddEndpoints to a group whose schemas gain one another group ex
 
 describe("removing a group whose re-export carried names other groups share", () => {
   const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
-  const ok = (schema: object) => ({ "200": { description: "ok", content: { "application/json": { schema } } } });
+  const ok = (schema: object) => ({
+    "200": { description: "ok", content: { "application/json": { schema } } },
+  });
   const SPEC_SHARED = parseSpec(
     JSON.stringify({
       openapi: "3.1.0",
@@ -180,8 +221,12 @@ describe("removing a group whose re-export carried names other groups share", ()
       paths: {
         "/pets": { get: { operationId: "listPets", tags: ["animals"], responses: ok(ref("Pet")) } },
         "/toys": { get: { operationId: "listToys", tags: ["animals"], responses: ok(ref("Toy")) } },
-        "/orders": { get: { operationId: "listOrders", tags: ["shop"], responses: ok(ref("Order")) } },
-        "/shop/pet": { get: { operationId: "getShopPet", tags: ["shop"], responses: ok(ref("Pet")) } },
+        "/orders": {
+          get: { operationId: "listOrders", tags: ["shop"], responses: ok(ref("Order")) },
+        },
+        "/shop/pet": {
+          get: { operationId: "getShopPet", tags: ["shop"], responses: ok(ref("Pet")) },
+        },
         "/misc/toy": { get: { operationId: "getToy", tags: ["misc"], responses: ok(ref("Toy")) } },
       },
       components: {
@@ -196,7 +241,9 @@ describe("removing a group whose re-export carried names other groups share", ()
   const options = { type: "openapi" as const, outputDir: "src/api" };
   const layout = resolveImportLayout(options, "shop");
   const existing = () =>
-    Object.fromEntries(generateCode(SPEC_SHARED, options, "shop").map((file) => [file.path, file.content]));
+    Object.fromEntries(
+      generateCode(SPEC_SHARED, options, "shop").map((file) => [file.path, file.content]),
+    );
   /* Re-exported whole, or listed by name. */
   const listing = (module: string, name: string) =>
     new RegExp(`export (\\*|\\{[^}]*\\b${name}\\b[^}]*\\}) from "\\./${module}/schemas";`);
@@ -205,7 +252,9 @@ describe("removing a group whose re-export carried names other groups share", ()
     const files = existing();
     expect(files[layout.indexFile]).not.toContain("./misc/schemas");
 
-    const barrel = previewRemoveEndpoints({ animals: ["listPets", "listToys"] }, files, {}, layout).indexFileUpdate?.content ?? "";
+    const barrel =
+      previewRemoveEndpoints({ animals: ["listPets", "listToys"] }, files, {}, layout)
+        .indexFileUpdate?.content ?? "";
 
     expect(barrel).not.toContain("./animals/schemas");
     expect(barrel).toMatch(listing("misc", "ToySchema"));
@@ -214,7 +263,12 @@ describe("removing a group whose re-export carried names other groups share", ()
   });
 
   it("gives back names whose list the removal emptied", () => {
-    const result = previewRemoveEndpoints({ animals: ["listPets", "listToys"], shop: ["listOrders"] }, existing(), {}, layout);
+    const result = previewRemoveEndpoints(
+      { animals: ["listPets", "listToys"], shop: ["listOrders"] },
+      existing(),
+      {},
+      layout,
+    );
 
     const barrel = result.indexFileUpdate?.content ?? "";
     expect(result.orphanedSchemas).toContain("Order");
@@ -226,7 +280,9 @@ describe("removing a group whose re-export carried names other groups share", ()
 
 describe("previewAddEndpoints of a schema on a cycle, with ArkType", () => {
   const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
-  const ok = (schema: object) => ({ "200": { description: "ok", content: { "application/json": { schema } } } });
+  const ok = (schema: object) => ({
+    "200": { description: "ok", content: { "application/json": { schema } } },
+  });
   const SPEC_CYCLE = parseSpec(
     JSON.stringify({
       openapi: "3.1.0",
@@ -245,19 +301,24 @@ describe("previewAddEndpoints of a schema on a cycle, with ArkType", () => {
   );
 
   it("brings the cycle helper and arms it after the schemas, as a full write does", () => {
-    const options = { type: "openapi" as const, outputDir: "src/api", validation: "arktype" as const };
+    const options = {
+      type: "openapi" as const,
+      outputDir: "src/api",
+      validation: "arktype" as const,
+    };
     const layout = resolveImportLayout(options, "shop");
     const existing = Object.fromEntries(
-      generateCode(SPEC_CYCLE, { ...options, selectedEndpoints: { kappa: ["getK"] } }, "shop").map((file) => [
-        file.path,
-        file.content,
-      ]),
+      generateCode(SPEC_CYCLE, { ...options, selectedEndpoints: { kappa: ["getK"] } }, "shop").map(
+        (file) => [file.path, file.content],
+      ),
     );
     expect(existing[layout.groupSchemaFile("kappa", "schemas")]).not.toContain("lazy");
 
     const result = previewAddEndpoints(SPEC_CYCLE, { kappa: ["getN"] }, options, existing, layout);
 
-    const schemas = result.files.find((file) => file.path === layout.groupSchemaFile("kappa", "schemas"))?.content ?? "";
+    const schemas =
+      result.files.find((file) => file.path === layout.groupSchemaFile("kappa", "schemas"))
+        ?.content ?? "";
     expect(parseSync("schemas.ts", schemas).errors).toEqual([]);
     expect(schemas).toContain('import type * as ark from "arktype";');
     expect(schemas).toContain("function lazy(");
@@ -299,9 +360,11 @@ describe("removing the endpoints that used every schema of a group that stays", 
   const layout = resolveImportLayout({ outputDir: "src/api" }, "shop");
   const written = (groupBy?: "single") =>
     Object.fromEntries(
-      generateCode(PETS, { type: "openapi", outputDir: "src/api", ...(groupBy && { groupBy }) }, "shop").map(
-        (file) => [file.path, file.content],
-      ),
+      generateCode(
+        PETS,
+        { type: "openapi", outputDir: "src/api", ...(groupBy && { groupBy }) },
+        "shop",
+      ).map((file) => [file.path, file.content]),
     );
 
   it("drops the barrel's re-export of the schemas file it deletes", () => {
@@ -392,7 +455,9 @@ describe("handleInventory", () => {
       mkdirSync(dirname(join(root, path)), { recursive: true });
       writeFileSync(join(root, path), content);
     }
-    const declarations = { shop: { importType: "file" as const, type: "openapi" as const, outputDir: "src/api" } };
+    const declarations = {
+      shop: { importType: "file" as const, type: "openapi" as const, outputDir: "src/api" },
+    };
 
     const inventory = handleInventory(
       { name: "shop", newSpec: SPEC },
@@ -408,10 +473,15 @@ describe("handleInventory", () => {
       mkdirSync(dirname(join(root, path)), { recursive: true });
       writeFileSync(
         join(root, path),
-        content.replace("export const pets = defineGroup(", "export const pets: object = defineGroup("),
+        content.replace(
+          "export const pets = defineGroup(",
+          "export const pets: object = defineGroup(",
+        ),
       );
     }
-    const declarations = { shop: { importType: "file" as const, type: "openapi" as const, outputDir: "src/api" } };
+    const declarations = {
+      shop: { importType: "file" as const, type: "openapi" as const, outputDir: "src/api" },
+    };
 
     const inventory = handleInventory(
       { name: "shop", newSpec: SPEC },

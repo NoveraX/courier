@@ -1,11 +1,9 @@
 import { getEventListeners } from "node:events";
 import { describe, expect, it, vi } from "vitest";
-
+import type { InternalSSERegistry } from "../src/adapter/sse-registry";
 import { createSSESender } from "../src/adapter/sse-sender";
 import { cleanupSSEStream, waitForRoom } from "../src/adapter/sse-stream-lifecycle";
-import type { SSEStreamOptions } from "../src/adapter/sse-types";
-import type { InternalSSERegistry } from "../src/adapter/sse-registry";
-import type { SSEConnectionInfo } from "../src/adapter/sse-types";
+import type { SSEConnectionInfo, SSEStreamOptions } from "../src/adapter/sse-types";
 import type { StudioHooks } from "../src/studio/hooks";
 
 function makeInfo(overrides?: Partial<SSEConnectionInfo>): SSEConnectionInfo {

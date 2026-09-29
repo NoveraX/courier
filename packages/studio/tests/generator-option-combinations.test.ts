@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest"
-import { generateCode } from "../src/apis/generator"
-import type { GeneratedFile } from "../src/apis/generator/types"
-import { DEFAULT_OPTIONS } from "../src/apis/generator/types"
-import type { ParsedSpec } from "../src/apis/parser/types"
+import { describe, expect, it } from "vitest";
+import { generateCode } from "../src/apis/generator";
+import type { GeneratedFile } from "../src/apis/generator/types";
+import { DEFAULT_OPTIONS } from "../src/apis/generator/types";
+import type { ParsedSpec } from "../src/apis/parser/types";
 
 const SPEC: ParsedSpec = {
   title: "Pet Store",
@@ -28,7 +28,13 @@ const SPEC: ParsedSpec = {
           secured: false,
           requestBody: null,
           parameters: [
-            { name: "limit", in: "query", required: false, type: "integer", description: "How many" },
+            {
+              name: "limit",
+              in: "query",
+              required: false,
+              type: "integer",
+              description: "How many",
+            },
           ],
           responseSchema: {
             name: "response",
@@ -59,7 +65,9 @@ const SPEC: ParsedSpec = {
           description: "",
           secured: false,
           requestBody: null,
-          parameters: [{ name: "petId", in: "path", required: true, type: "string", description: "" }],
+          parameters: [
+            { name: "petId", in: "path", required: true, type: "string", description: "" },
+          ],
           responseSchema: { name: "response", type: "ref", refName: "Pet" },
           tags: ["pets"],
         },
@@ -83,7 +91,7 @@ const SPEC: ParsedSpec = {
       },
     },
   },
-}
+};
 
 const COMBINATIONS = [
   { name: "default", options: {} },
@@ -95,11 +103,17 @@ const COMBINATIONS = [
   { name: "no comments", options: { includeComments: false } },
   { name: "flat source", options: { groupBy: "single" as const } },
   { name: "no auth middleware", options: { addAuthMiddleware: false } },
-  { name: "schemas asked for, validation off", options: { validation: "none" as const, generateSchemas: true } },
+  {
+    name: "schemas asked for, validation off",
+    options: { validation: "none" as const, generateSchemas: true },
+  },
   { name: "schemas without types", options: { generateSchemas: true, generateTypes: false } },
-  { name: "neither schemas nor types", options: { validation: "none" as const, generateSchemas: false, generateTypes: false } },
+  {
+    name: "neither schemas nor types",
+    options: { validation: "none" as const, generateSchemas: false, generateTypes: false },
+  },
   { name: "proxy client", options: { generateClient: "proxy" as const } },
-]
+];
 
 /** Every name a file imports from a sibling module of the generated source. */
 function imported(content: string): { from: string; names: string[] }[] {
@@ -109,20 +123,20 @@ function imported(content: string): { from: string; names: string[] }[] {
       .split(",")
       .map((n) => n.trim().replace(/^type\s+/, ""))
       .filter(Boolean),
-  }))
+  }));
 }
 
 /** Every name a file exports, by declaration or by re-export. */
 function exported(content: string): Set<string> {
-  const names = new Set<string>()
+  const names = new Set<string>();
   for (const m of content.matchAll(/export\s+(?:const|type|interface|function)\s+(\w+)/g)) {
-    names.add(m[1]!)
+    names.add(m[1]!);
   }
-  return names
+  return names;
 }
 
 function find(files: GeneratedFile[], suffix: string): GeneratedFile | undefined {
-  return files.find((f) => f.path.endsWith(suffix))
+  return files.find((f) => f.path.endsWith(suffix));
 }
 
 /**
@@ -131,54 +145,59 @@ function find(files: GeneratedFile[], suffix: string): GeneratedFile | undefined
  * declares it, and a type named in a chain that nothing ever writes down.
  */
 describe.each(COMBINATIONS)("generated with $name", ({ options }) => {
-  const files = generateCode(SPEC, { ...DEFAULT_OPTIONS, ...options, outputDir: "src/api", sourceName: "api" })
+  const files = generateCode(SPEC, {
+    ...DEFAULT_OPTIONS,
+    ...options,
+    outputDir: "src/api",
+    sourceName: "api",
+  });
 
   it("imports only names its siblings export", () => {
-    const byPath = new Map(files.map((f) => [f.path, f.content]))
+    const byPath = new Map(files.map((f) => [f.path, f.content]));
 
     for (const file of files) {
       for (const { from, names } of imported(file.content)) {
-        const dir = file.path.slice(0, file.path.lastIndexOf("/"))
-        const target = `${dir}/${from.slice(2)}.ts`
-        const content = byPath.get(target)
-        if (content === undefined) continue
-        const available = exported(content)
+        const dir = file.path.slice(0, file.path.lastIndexOf("/"));
+        const target = `${dir}/${from.slice(2)}.ts`;
+        const content = byPath.get(target);
+        if (content === undefined) continue;
+        const available = exported(content);
         for (const name of names) {
-          expect(available, `${file.path} imports ${name} from ${from}`).toContain(name)
+          expect(available, `${file.path} imports ${name} from ${from}`).toContain(name);
         }
       }
     }
-  })
+  });
 
   it("names no type that is never written down", () => {
-    const group = find(files, "pets/index.ts") ?? find(files, "source.ts")
-    expect(group).toBeDefined()
+    const group = find(files, "pets/index.ts") ?? find(files, "source.ts");
+    expect(group).toBeDefined();
 
-    const declared = new Set<string>()
+    const declared = new Set<string>();
     for (const file of files) {
-      for (const name of exported(file.content)) declared.add(name)
+      for (const name of exported(file.content)) declared.add(name);
     }
     for (const { names } of imported(group?.content ?? "")) {
-      for (const name of names) declared.add(name)
+      for (const name of names) declared.add(name);
     }
 
     for (const m of (group?.content ?? "").matchAll(/\.variables<([A-Za-z_$][\w$]*)>/g)) {
-      expect(declared, `variables<${m[1]}> is not declared anywhere`).toContain(m[1]!)
+      expect(declared, `variables<${m[1]}> is not declared anywhere`).toContain(m[1]!);
     }
     for (const m of (group?.content ?? "").matchAll(/\.response<([A-Za-z_$][\w$]*)(?:\[\])?>/g)) {
-      if (["unknown", "void", "null", "string", "number", "boolean"].includes(m[1]!)) continue
-      expect(declared, `response<${m[1]}> is not declared anywhere`).toContain(m[1]!)
+      if (["unknown", "void", "null", "string", "number", "boolean"].includes(m[1]!)) continue;
+      expect(declared, `response<${m[1]}> is not declared anywhere`).toContain(m[1]!);
     }
-  })
+  });
 
   it("leaves nothing it imported unused", () => {
     for (const file of files) {
-      const body = file.content.replace(/^import[^\n]*\n/gm, "")
+      const body = file.content.replace(/^import[^\n]*\n/gm, "");
       for (const { names } of imported(file.content)) {
         for (const name of names) {
-          expect(body, `${file.path} imports ${name} and never uses it`).toContain(name)
+          expect(body, `${file.path} imports ${name} and never uses it`).toContain(name);
         }
       }
     }
-  })
-})
+  });
+});

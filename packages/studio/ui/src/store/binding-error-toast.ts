@@ -8,16 +8,16 @@
  * the first viewport.
  */
 
-import { toast } from "sonner"
+import { toast } from "sonner";
 
-import type { BindingErrorPayload } from "./types-ui"
+import type { BindingErrorPayload } from "./types-ui";
 
 export function showBindingErrorToast(error: BindingErrorPayload): void {
-  const { sourceName, transport, runtimeIds } = error.details
-  const claimants = runtimeIds.length > 0 ? runtimeIds.join(", ") : "(unknown)"
+  const { sourceName, transport, runtimeIds } = error.details;
+  const claimants = runtimeIds.length > 0 ? runtimeIds.join(", ") : "(unknown)";
   toast.error(`Binding conflict on ${sourceName} (${transport})`, {
     description: `Multiple runtimes claimed this source: ${claimants}. Stop all but one to resolve.`,
-  })
+  });
 }
 
 /**
@@ -34,5 +34,5 @@ export function showDuplicateRuntimeToast(runtimeId: string): void {
   toast.warning(`Two runtimes claim the id "${runtimeId}"`, {
     description:
       "Playground calls stay with the one that connected first. Give each process its own runtimeId, or stop the copy.",
-  })
+  });
 }

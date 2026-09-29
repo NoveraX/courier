@@ -13,9 +13,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHandler } from "../src/adapter";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
 
 const { endpoint } = courier();
 
@@ -52,7 +52,10 @@ function errorKind(): string | undefined {
 
 beforeEach(async () => {
   upstream = createServer((req, res) => {
-    const timer = setTimeout(() => res.end(JSON.stringify({ count: "x" })), req.url === "/slow" ? 2_000 : 0);
+    const timer = setTimeout(
+      () => res.end(JSON.stringify({ count: "x" })),
+      req.url === "/slow" ? 2_000 : 0,
+    );
     res.on("close", () => clearTimeout(timer));
   });
   await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
@@ -110,7 +113,10 @@ describe("the failure a request is reported with", () => {
   it("is a timeout when the call runs out of time", async () => {
     const client = createCaller(api()) as unknown as Client;
 
-    await client.with({ timeout: 20 }).slow().catch(() => {});
+    await client
+      .with({ timeout: 20 })
+      .slow()
+      .catch(() => {});
 
     expect(errorKind()).toBe("timeout");
   });

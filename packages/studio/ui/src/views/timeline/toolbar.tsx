@@ -1,12 +1,10 @@
 import { Pin } from "lucide-react";
-
+import { CountDisplay } from "@/components/shared/count-display";
 import { Badge } from "@/components/ui/badge";
 import { useStudioStore } from "@/store";
 import type { TimelineFilters } from "@/store/types";
-
-import { CountDisplay } from "@/components/shared/count-display";
 import { countActiveFilters } from "./filters";
-import { SearchInput, FilterToggle, ToolbarButton } from "./toolbar-controls";
+import { FilterToggle, SearchInput, ToolbarButton } from "./toolbar-controls";
 
 interface ToolbarProps {
   filters: TimelineFilters;
@@ -34,13 +32,13 @@ export function Toolbar({
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle px-3">
-      <SearchInput value={filters.search} onChange={onSearchChange} placeholder="Filter requests…" />
-
-      <FilterToggle
-        active={showFilters}
-        count={activeFilterCount}
-        onClick={onToggleFilters}
+      <SearchInput
+        value={filters.search}
+        onChange={onSearchChange}
+        placeholder="Filter requests…"
       />
+
+      <FilterToggle active={showFilters} count={activeFilterCount} onClick={onToggleFilters} />
 
       <ToolbarButton
         icon={Pin}

@@ -23,9 +23,18 @@ const loaded: LoadedCourierConfig = {
   mocks: { file: null, entries: {}, contentHash: null, error: null },
 };
 
-const STARTING: ProjectSnapshot = { revision: 0, starting: true, running: null, loadedAt: null, failure: null };
+const STARTING: ProjectSnapshot = {
+  revision: 0,
+  starting: true,
+  running: null,
+  loadedAt: null,
+  failure: null,
+};
 const broken = failureOf(
-  new ConfigLoaderError("CONFIG_INVALID", `Failed to load courier.config:\n  Cannot find module ${ROOT}/src/gone`),
+  new ConfigLoaderError(
+    "CONFIG_INVALID",
+    `Failed to load courier.config:\n  Cannot find module ${ROOT}/src/gone`,
+  ),
   ROOT,
   2_000,
 );
@@ -37,7 +46,13 @@ describe("configStatusOf", () => {
   });
 
   it("reads a load that succeeded as loaded, with its file relative to the project", () => {
-    const snapshot = { ...STARTING, revision: 1, starting: false, running: loaded, loadedAt: 1_000 };
+    const snapshot = {
+      ...STARTING,
+      revision: 1,
+      starting: false,
+      running: loaded,
+      loadedAt: 1_000,
+    };
 
     expect(configStatusOf(snapshot, ROOT)).toEqual({
       state: "loaded",
@@ -54,14 +69,23 @@ describe("configStatusOf", () => {
       state: "failed",
       revision: 1,
       configFile: null,
-      error: { code: "CONFIG_INVALID", message: "Failed to load courier.config: Cannot find module src/gone" },
+      error: {
+        code: "CONFIG_INVALID",
+        message: "Failed to load courier.config: Cannot find module src/gone",
+      },
       failedAt: 2_000,
       lastGoodAt: null,
     });
   });
 
   it("reads a config that stopped loading as failed, with when Studio last loaded it", () => {
-    const snapshot = { revision: 2, starting: false, running: loaded, loadedAt: 1_000, failure: broken };
+    const snapshot = {
+      revision: 2,
+      starting: false,
+      running: loaded,
+      loadedAt: 1_000,
+      failure: broken,
+    };
 
     expect(configStatusOf(snapshot, ROOT)).toMatchObject({
       state: "failed",
@@ -71,7 +95,13 @@ describe("configStatusOf", () => {
   });
 
   it("reads a deleted config as missing, naming the file Studio still runs and when it loaded it", () => {
-    const snapshot = { revision: 3, starting: false, running: loaded, loadedAt: 1_000, failure: missing };
+    const snapshot = {
+      revision: 3,
+      starting: false,
+      running: loaded,
+      loadedAt: 1_000,
+      failure: missing,
+    };
 
     expect(configStatusOf(snapshot, ROOT)).toEqual({
       state: "missing",

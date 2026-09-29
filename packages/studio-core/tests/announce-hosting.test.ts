@@ -1,9 +1,9 @@
-import { bufferedAnnouncementCount, resetAnnouncements } from "../../core/src/announce/test-support";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  announceHosting,
-  consumeAnnouncements,
-} from "../src/runtime/announce-hosting";
+  bufferedAnnouncementCount,
+  resetAnnouncements,
+} from "../../core/src/announce/test-support";
+import { announceHosting, consumeAnnouncements } from "../src/runtime/announce-hosting";
 
 beforeEach(() => {
   resetAnnouncements();

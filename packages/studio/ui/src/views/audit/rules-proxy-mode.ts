@@ -22,16 +22,20 @@ export function browserDirectCalls(requests: RequestEntry[], context: AuditConte
   if (requests.some((r) => r.mode === "proxy")) return [];
   const fromBrowser = requests.filter((r) => context.browserSessions.has(r.sessionId));
   if (fromBrowser.length === 0) return [];
-  return [{
-    id: "warn-unused-proxy",
-    severity: "warning",
-    category: "best-practices",
-    title: "All requests use direct mode",
-    description: "The browser calls the upstream directly and nothing goes through the proxy, so whatever those calls need — a key, a token — is exposed to the page.",
-    suggestion: "Call the endpoints that need server-side secrets through a proxy caller, importing the API as a type so its definition stays on the server.",
-    codeSuggestion: PROXY_SUGGESTION,
-    endpoints: endpointsOf(fromBrowser),
-  }];
+  return [
+    {
+      id: "warn-unused-proxy",
+      severity: "warning",
+      category: "best-practices",
+      title: "All requests use direct mode",
+      description:
+        "The browser calls the upstream directly and nothing goes through the proxy, so whatever those calls need — a key, a token — is exposed to the page.",
+      suggestion:
+        "Call the endpoints that need server-side secrets through a proxy caller, importing the API as a type so its definition stays on the server.",
+      codeSuggestion: PROXY_SUGGESTION,
+      endpoints: endpointsOf(fromBrowser),
+    },
+  ];
 }
 
 function endpointsOf(requests: RequestEntry[]): AuditEndpoint[] {

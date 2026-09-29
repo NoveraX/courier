@@ -21,7 +21,15 @@ const SPEC = parseSpec(
   JSON.stringify({
     openapi: "3.1.0",
     info: { title: "Pets", version: "1" },
-    paths: { "/pets": { get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } } } },
+    paths: {
+      "/pets": {
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
+      },
+    },
   }),
 );
 
@@ -38,31 +46,49 @@ afterEach(() => {
 
 /* The import as Studio writes it: its files, and the record of them. */
 function generate(generateClient: "direct" | "none"): void {
-  const files = generateCode(SPEC, { type: "openapi", outputDir: "src/api", sourceName: "pets", generateClient });
+  const files = generateCode(SPEC, {
+    type: "openapi",
+    outputDir: "src/api",
+    sourceName: "pets",
+    generateClient,
+  });
   for (const file of files) {
     mkdirSync(dirname(join(root, file.path)), { recursive: true });
     writeFileSync(join(root, file.path), file.content);
   }
-  const recorded = Object.fromEntries(files.map((file) => [file.path, { sha256: bodyHash(file.content) }]));
+  const recorded = Object.fromEntries(
+    files.map((file) => [file.path, { sha256: bodyHash(file.content) }]),
+  );
   const at = "2026-01-01T00:00:00.000Z";
-  const pets = { specHash: "h", fetchedAt: at, lastSyncedAt: at, dir: "src/api/pets", files: recorded };
+  const pets = {
+    specHash: "h",
+    fetchedAt: at,
+    lastSyncedAt: at,
+    dir: "src/api/pets",
+    files: recorded,
+  };
   saveImportsState(root, { version: IMPORTS_STATE_VERSION, imports: { pets }, applied: [] });
 }
 
-async function scan(config: string): Promise<Array<{ name: string; isImported: boolean; hasClient: boolean }>> {
+async function scan(
+  config: string,
+): Promise<Array<{ name: string; isImported: boolean; hasClient: boolean }>> {
   writeFileSync(join(root, "courier.config.ts"), config);
   const loaded = await loadCourierConfig(root);
   const { sources } = buildSourceScan(loaded, importsSnapshotOf(loaded.config.imports, root), root);
   return sources.map(({ name, isImported, hasClient }) => ({ name, isImported, hasClient }));
 }
 
-const ENTRY = (extra = "") => `imports: { pets: { importType: "file", type: "openapi", outputDir: "src/api"${extra} } }`;
+const ENTRY = (extra = "") =>
+  `imports: { pets: { importType: "file", type: "openapi", outputDir: "src/api"${extra} } }`;
 
 describe("the source catalogue", () => {
   it("does not take a hand-written source for the import of its name", async () => {
     generate("direct");
 
-    const sources = await scan(`export default { sources: { pets: { baseURL: "https://pets.example" } }, ${ENTRY()} };\n`);
+    const sources = await scan(
+      `export default { sources: { pets: { baseURL: "https://pets.example" } }, ${ENTRY()} };\n`,
+    );
 
     expect(sources).toEqual([{ name: "pets", isImported: false, hasClient: false }]);
   }, 30_000);
@@ -70,7 +96,9 @@ describe("the source catalogue", () => {
   it("marks the source the config imports from the generated file as imported, with its client", async () => {
     generate("direct");
 
-    const sources = await scan(`import { pets } from "./src/api/pets/source";\nexport default { sources: { pets }, ${ENTRY()} };\n`);
+    const sources = await scan(
+      `import { pets } from "./src/api/pets/source";\nexport default { sources: { pets }, ${ENTRY()} };\n`,
+    );
 
     expect(sources).toEqual([{ name: "pets", isImported: true, hasClient: true }]);
   }, 30_000);
@@ -79,7 +107,7 @@ describe("the source catalogue", () => {
     const api = [
       'import { courier, defineApi, defineGroup } from "@noverax/courier/define";',
       "const { endpoint, stream } = courier();",
-      "const users = defineGroup({ prefix: \"v2/users\", endpoints: {",
+      'const users = defineGroup({ prefix: "v2/users", endpoints: {',
       '  byId: endpoint.get(":id").variables<{ id: number }>(),',
       '  create: endpoint.post("").variables<{ name: string }>(),',
       "  ticks: stream.response<{ n: number }>().implement(async function* () {}),",
@@ -92,7 +120,10 @@ describe("the source catalogue", () => {
     ].join("\n");
     mkdirSync(join(root, "src"));
     writeFileSync(join(root, "src/api.ts"), api);
-    writeFileSync(join(root, "courier.config.ts"), 'import { api } from "./src/api";\nexport default { sources: { api } };\n');
+    writeFileSync(
+      join(root, "courier.config.ts"),
+      'import { api } from "./src/api";\nexport default { sources: { api } };\n',
+    );
 
     const loaded = await loadCourierConfig(root);
     const [source] = buildSourceScan(loaded, importsSnapshotOf(undefined, root), root).sources;
@@ -137,7 +168,11 @@ describe("an endpoint in the source catalogue", () => {
     writeFileSync(join(root, "courier.config.ts"), config);
     const loaded = await loadCourierConfig(root);
 
-    const { sources } = buildSourceScan(loaded, importsSnapshotOf(loaded.config.imports, root), root);
+    const { sources } = buildSourceScan(
+      loaded,
+      importsSnapshotOf(loaded.config.imports, root),
+      root,
+    );
 
     const endpoints = sources[0]?.groups[0]?.endpoints ?? [];
     expect(endpoints.find((e) => e.name === "ticks")?.analysis).toMatchObject({

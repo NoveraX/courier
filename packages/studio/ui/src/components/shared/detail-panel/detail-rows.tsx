@@ -1,10 +1,18 @@
 import { CopyButton } from "@/components/shared/copy-button";
 
 /** Section with uppercase title and bordered container */
-export function DetailSection({ title, children }: { title: string; children: React.ReactNode }): React.ReactElement {
+export function DetailSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}): React.ReactElement {
   return (
     <div>
-      <h4 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">{title}</h4>
+      <h4 className="mb-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+        {title}
+      </h4>
       <div className="rounded-lg border border-border-subtle divide-y divide-border-subtle">
         {children}
       </div>
@@ -13,7 +21,13 @@ export function DetailSection({ title, children }: { title: string; children: Re
 }
 
 /** Label → value row inside a DetailSection */
-export function DetailRow({ label, children }: { label: string; children: React.ReactNode }): React.ReactElement {
+export function DetailRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}): React.ReactElement {
   return (
     <div className="flex items-center justify-between gap-4 px-3 py-2">
       <span className="shrink-0 text-body-sm text-muted-foreground">{label}</span>
@@ -23,7 +37,13 @@ export function DetailRow({ label, children }: { label: string; children: React.
 }
 
 /** Copyable row with label + monospace value + copy button */
-export function QuickCopyRow({ label, value }: { label: string; value: string }): React.ReactElement {
+export function QuickCopyRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}): React.ReactElement {
   return (
     <div className="flex items-center gap-3 border-b border-border-subtle px-3 py-2 last:border-b-0">
       <span className="w-20 shrink-0 text-body-sm text-muted-foreground">{label}</span>

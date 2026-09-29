@@ -1,4 +1,9 @@
-import type { FileOwnership, KeptReason, PlanConfirmation, PlannedWriteAction } from "./types-file-plan";
+import type {
+  FileOwnership,
+  KeptReason,
+  PlanConfirmation,
+  PlannedWriteAction,
+} from "./types-file-plan";
 
 const WRITE_LABEL: Readonly<Record<Exclude<PlannedWriteAction, "unchanged">, string>> = {
   create: "new",
@@ -21,7 +26,10 @@ const EDITED: ReadonlySet<FileOwnership> = new Set(["recorded-edited", "claimed-
  * writeLabel("merge", "recorded"); // → "merged"
  * ```
  */
-export function writeLabel(action: Exclude<PlannedWriteAction, "unchanged">, was: FileOwnership): string {
+export function writeLabel(
+  action: Exclude<PlannedWriteAction, "unchanged">,
+  was: FileOwnership,
+): string {
   return action === "merge" && EDITED.has(was) ? "merged, your edits kept" : WRITE_LABEL[action];
 }
 
@@ -48,6 +56,7 @@ export const KEPT_LABEL: Readonly<Record<KeptReason, string>> = {
 export function pendingLabel({ kind, reason }: PlanConfirmation): string {
   const verb = kind === "replace" ? "Replace it" : "Remove it";
   if (reason === "foreign") return `${verb}: Studio did not write it for this import.`;
-  if (reason === "edited") return `${verb}: it holds edits of yours${kind === "replace" ? ", which replacing it loses" : ""}.`;
+  if (reason === "edited")
+    return `${verb}: it holds edits of yours${kind === "replace" ? ", which replacing it loses" : ""}.`;
   return `${verb}: its header says Studio wrote it, but Studio has no record of that.`;
 }

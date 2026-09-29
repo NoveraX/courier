@@ -12,8 +12,8 @@ interface SegmentConfig {
 
 export const SEGMENT_CONFIG: Record<SegmentKey, SegmentConfig> = {
   "middleware-req": { label: "Middleware (req)", bg: "bg-violet-500", text: "text-violet-400" },
-  "fetch": { label: "Fetch", bg: "bg-sky-500", text: "text-sky-400" },
-  "validation": { label: "Validation", bg: "bg-amber-500", text: "text-amber-400" },
+  fetch: { label: "Fetch", bg: "bg-sky-500", text: "text-sky-400" },
+  validation: { label: "Validation", bg: "bg-amber-500", text: "text-amber-400" },
   "middleware-res": { label: "Middleware (res)", bg: "bg-purple-500", text: "text-purple-400" },
   "client-to-proxy": { label: "Client → Proxy", bg: "bg-indigo-500", text: "text-indigo-400" },
   "proxy-to-client": { label: "Proxy → Client", bg: "bg-rose-400", text: "text-rose-400" },
@@ -47,8 +47,7 @@ export const ZOOM_STEP = 1.5;
 
 /** Tick intervals from finest to coarsest (ms) */
 export const TICK_INTERVALS = [
-  10, 25, 50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000,
-  30_000, 60_000, 300_000, 600_000,
+  10, 25, 50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000, 30_000, 60_000, 300_000, 600_000,
 ] as const;
 
 /** Min pixel gap between ticks */

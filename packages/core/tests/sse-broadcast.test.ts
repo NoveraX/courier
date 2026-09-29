@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createSSEConnectionRegistry } from "../src/adapter/sse-registry";
 import type { SSERegistryEntry } from "../src/adapter/sse-registry";
+import { createSSEConnectionRegistry } from "../src/adapter/sse-registry";
 
 function createEntry(overrides?: Partial<SSERegistryEntry>): SSERegistryEntry {
   return {
@@ -118,10 +118,7 @@ describe("SSE Broadcast", () => {
       registry.add(admin);
       registry.add(user);
 
-      const result = registry.broadcastToMeta(
-        (m) => m.role === "admin",
-        { data: "admin-only" },
-      );
+      const result = registry.broadcastToMeta((m) => m.role === "admin", { data: "admin-only" });
       expect(result.size).toBe(1);
       expect(result.get(admin.connectionId)).toBe(true);
       expect(user.send).not.toHaveBeenCalled();

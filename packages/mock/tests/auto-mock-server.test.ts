@@ -1,5 +1,5 @@
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
@@ -60,7 +60,10 @@ const api = defineApi({
       endpoints: {
         listOwners: endpoint.get("").response(z.array(OwnerSchema)),
         getOwner: endpoint.get(":ownerId").variables<{ ownerId: string }>().response(OwnerSchema),
-        createOwner: endpoint.post("").variables(z.object({ name: z.string(), email: z.string() })).response(OwnerSchema),
+        createOwner: endpoint
+          .post("")
+          .variables(z.object({ name: z.string(), email: z.string() }))
+          .response(OwnerSchema),
         deleteOwner: endpoint.del(":ownerId"),
       },
     }),
@@ -75,7 +78,9 @@ const api = defineApi({
       prefix: "/catalog",
       endpoints: {
         browse: endpoint.get("browse").response(PaginatedSchema),
-        listItems: endpoint.get("").response(z.array(z.object({ id: z.string(), title: z.string(), price: z.number() }))),
+        listItems: endpoint
+          .get("")
+          .response(z.array(z.object({ id: z.string(), title: z.string(), price: z.number() }))),
       },
     }),
   },

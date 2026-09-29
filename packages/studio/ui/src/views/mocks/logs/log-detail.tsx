@@ -2,8 +2,8 @@ import { useState } from "react";
 
 import { DetailPanel } from "@/components/shared/detail-panel";
 import type { DetailTabKey } from "@/components/shared/detail-panel/constants";
-import type { RequestEntry } from "@/store/types";
 import type { MockRequestLog } from "@/store/mock-slice";
+import type { RequestEntry } from "@/store/types";
 
 interface LogDetailProps {
   log: MockRequestLog;
@@ -55,7 +55,10 @@ function toRequestEntry(log: MockRequestLog, serverUrl: string): RequestEntry {
     status,
     statusCode: log.status,
     url: fullUrl,
-    timing: log.duration != null ? { total: log.duration, middleware: 0, fetch: log.duration, validation: 0 } : undefined,
+    timing:
+      log.duration != null
+        ? { total: log.duration, middleware: 0, fetch: log.duration, validation: 0 }
+        : undefined,
     data: log.data,
     requestHeaders: log.requestHeaders,
     headers: log.responseHeaders,

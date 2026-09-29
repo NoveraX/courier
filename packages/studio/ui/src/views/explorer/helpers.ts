@@ -23,17 +23,11 @@ export function inferHttpMethod(
 
 // ── Endpoint key ────────────────────────────────────────────────────────────
 
-export function formatEndpointKey(
-  source: string,
-  group: string,
-  method: string,
-): string {
+export function formatEndpointKey(source: string, group: string, method: string): string {
   return `${source}.${group}.${method}`;
 }
 
-export function parseEndpointKey(
-  key: string,
-): { source: string; group: string; method: string } {
+export function parseEndpointKey(key: string): { source: string; group: string; method: string } {
   const [source = "", group = "", method = ""] = key.split(".");
   return { source, group, method };
 }

@@ -17,14 +17,40 @@ const json = (schema: unknown) => ({ content: { "application/json": { schema } }
 const pointer = (...segments: string[]) =>
   `#/${segments.map((s) => s.replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`;
 const REGION = pointer(
-  "paths", "/v2/regions", "get", "responses", "200", "content", "application/json", "schema",
-  "properties", "regions", "items",
+  "paths",
+  "/v2/regions",
+  "get",
+  "responses",
+  "200",
+  "content",
+  "application/json",
+  "schema",
+  "properties",
+  "regions",
+  "items",
 );
 const DROPLET = pointer(
-  "paths", "/v2/droplets/{droplet_id}", "get", "responses", "200", "content", "application/json",
-  "schema", "properties", "droplet",
+  "paths",
+  "/v2/droplets/{droplet_id}",
+  "get",
+  "responses",
+  "200",
+  "content",
+  "application/json",
+  "schema",
+  "properties",
+  "droplet",
 );
-const NODE = pointer("paths", "/v2/tree", "get", "responses", "200", "content", "application/json", "schema");
+const NODE = pointer(
+  "paths",
+  "/v2/tree",
+  "get",
+  "responses",
+  "200",
+  "content",
+  "application/json",
+  "schema",
+);
 
 const SPEC = parseSpec(
   JSON.stringify({
@@ -60,7 +86,9 @@ const SPEC = parseSpec(
         get: {
           operationId: "getDroplet",
           tags: ["Droplets"],
-          parameters: [{ name: "droplet_id", in: "path", required: true, schema: { type: "integer" } }],
+          parameters: [
+            { name: "droplet_id", in: "path", required: true, schema: { type: "integer" } },
+          ],
           responses: {
             "200": {
               description: "ok",
@@ -74,7 +102,12 @@ const SPEC = parseSpec(
                       id: { type: "integer" },
                       name: { type: "string" },
                       region: { $ref: REGION },
-                      size: { allOf: [{ $ref: REGION }, { type: "object", properties: { vcpus: { type: "integer" } } }] },
+                      size: {
+                        allOf: [
+                          { $ref: REGION },
+                          { type: "object", properties: { vcpus: { type: "integer" } } },
+                        ],
+                      },
                     },
                   },
                 },
@@ -90,14 +123,19 @@ const SPEC = parseSpec(
           responses: {
             "200": {
               description: "ok",
-              ...json({ type: "object", properties: { droplets: { type: "array", items: { $ref: DROPLET } } } }),
+              ...json({
+                type: "object",
+                properties: { droplets: { type: "array", items: { $ref: DROPLET } } },
+              }),
             },
           },
         },
         post: {
           operationId: "createDroplet",
           tags: ["Droplets"],
-          requestBody: json({ allOf: [{ $ref: REGION }, { type: "object", properties: { name: { type: "string" } } }] }),
+          requestBody: json({
+            allOf: [{ $ref: REGION }, { type: "object", properties: { name: { type: "string" } } }],
+          }),
           responses: { "202": { description: "ok", ...json({ $ref: DROPLET }) } },
         },
       },
@@ -110,7 +148,10 @@ const SPEC = parseSpec(
               description: "ok",
               ...json({
                 type: "object",
-                properties: { label: { type: "string" }, children: { type: "array", items: { $ref: NODE } } },
+                properties: {
+                  label: { type: "string" },
+                  children: { type: "array", items: { $ref: NODE } },
+                },
               }),
             },
           },
@@ -157,7 +198,11 @@ let problems = new Map<string, string[]>();
 beforeAll(() => {
   problems = new Map(
     VARIANTS.map(([label, options]) => {
-      const files = generateCode(SPEC, { type: "openapi", outputDir: "src/api", ...options }, "ocean");
+      const files = generateCode(
+        SPEC,
+        { type: "openapi", outputDir: "src/api", ...options },
+        "ocean",
+      );
       const flat = options.groupBy === "single";
       const dir = writeProject(`pointer-refs/${label}`, files, { "consumer.ts": consumer(flat) });
       return [label, compileProject(dir, ["consumer.ts"])];

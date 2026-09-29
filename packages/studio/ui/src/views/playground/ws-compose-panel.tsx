@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from "react";
 import { Send, SendHorizontal } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { JsonEditor, stripComments } from "./json-editor";
@@ -33,7 +33,9 @@ export function WSComposePanel({
     try {
       onSend(JSON.parse(stripped));
       setValue("{}");
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }, [value, canSend, onSend]);
 
   return (
@@ -68,9 +70,7 @@ export function WSComposePanel({
             )}
           >
             <SendHorizontal className="size-3" strokeWidth={2} />
-            <span className="text-[10px] font-medium opacity-70">
-              {isMac ? "⌘↵" : "⌃↵"}
-            </span>
+            <span className="text-[10px] font-medium opacity-70">{isMac ? "⌘↵" : "⌃↵"}</span>
           </button>
         </div>
       </div>
@@ -81,5 +81,10 @@ export function WSComposePanel({
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isValidJsonc(str: string): boolean {
-  try { JSON.parse(stripComments(str)); return true; } catch { return false; }
+  try {
+    JSON.parse(stripComments(str));
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -14,74 +14,74 @@
  * `store/types-ui.ts` AND the corresponding guard here.
  */
 
-import { isPlainObject } from "./is-plain-object"
-import type { PlaygroundChunk, PlaygroundEndSummary } from "@/store/types-ui"
+import type { PlaygroundChunk, PlaygroundEndSummary } from "@/store/types-ui";
+import { isPlainObject } from "./is-plain-object";
 
 function isRidCarrier(data: unknown): data is Record<string, unknown> {
-  if (!isPlainObject(data)) return false
-  if (typeof data.rid !== "string" || data.rid.length === 0) return false
-  return true
+  if (!isPlainObject(data)) return false;
+  if (typeof data.rid !== "string" || data.rid.length === 0) return false;
+  return true;
 }
 
 function isValidChunk(value: unknown): value is PlaygroundChunk {
-  if (!isPlainObject(value)) return false
-  const kind = value.kind
+  if (!isPlainObject(value)) return false;
+  const kind = value.kind;
   if (kind === "http-result") {
-    if (typeof value.status !== "number" || !Number.isFinite(value.status)) return false
-    if (value.error !== undefined && typeof value.error !== "string") return false
+    if (typeof value.status !== "number" || !Number.isFinite(value.status)) return false;
+    if (value.error !== undefined && typeof value.error !== "string") return false;
     // `data` is free-form unknown — accept as-is
-    return true
+    return true;
   }
   if (kind === "sse-event") {
     // `event` is free-form unknown (responder forwards the yielded value)
-    return "event" in value
+    return "event" in value;
   }
   if (kind === "ws-message") {
-    return "data" in value
+    return "data" in value;
   }
   if (kind === "upload-progress") {
     return [value.loaded, value.total, value.percentage].every(
       (count) => typeof count === "number" && Number.isFinite(count),
-    )
+    );
   }
-  return false
+  return false;
 }
 
 export interface PlaygroundChunkPayload {
-  rid: string
-  chunk: PlaygroundChunk
+  rid: string;
+  chunk: PlaygroundChunk;
 }
 
 export function isPlaygroundChunkPayload(data: unknown): data is PlaygroundChunkPayload {
-  if (!isRidCarrier(data)) return false
-  return isValidChunk(data.chunk)
+  if (!isRidCarrier(data)) return false;
+  return isValidChunk(data.chunk);
 }
 
 export interface PlaygroundEndPayload {
-  rid: string
-  summary: PlaygroundEndSummary
+  rid: string;
+  summary: PlaygroundEndSummary;
 }
 
 export function isPlaygroundEndPayload(data: unknown): data is PlaygroundEndPayload {
-  if (!isRidCarrier(data)) return false
-  const summary = data.summary
-  if (!isPlainObject(summary)) return false
-  if (typeof summary.durationMs !== "number" || !Number.isFinite(summary.durationMs)) return false
+  if (!isRidCarrier(data)) return false;
+  const summary = data.summary;
+  if (!isPlainObject(summary)) return false;
+  if (typeof summary.durationMs !== "number" || !Number.isFinite(summary.durationMs)) return false;
   if (summary.count !== undefined) {
-    if (typeof summary.count !== "number" || !Number.isFinite(summary.count)) return false
+    if (typeof summary.count !== "number" || !Number.isFinite(summary.count)) return false;
   }
-  return true
+  return true;
 }
 
 export interface PlaygroundErrorPayload {
-  rid: string
-  error: { message: string }
+  rid: string;
+  error: { message: string };
 }
 
 export function isPlaygroundErrorPayload(data: unknown): data is PlaygroundErrorPayload {
-  if (!isRidCarrier(data)) return false
-  const error = data.error
-  if (!isPlainObject(error)) return false
-  if (typeof error.message !== "string") return false
-  return true
+  if (!isRidCarrier(data)) return false;
+  const error = data.error;
+  if (!isPlainObject(error)) return false;
+  if (typeof error.message !== "string") return false;
+  return true;
 }

@@ -1,14 +1,13 @@
 import { useRouterState } from "@tanstack/react-router";
 import { Command, Pause, Play, Trash2 } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { useStudioStore } from "@/store";
+import { getPageTitle } from "@/app-config";
+import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useBackToLive } from "@/hooks/use-back-to-live";
 import { useClearRequests } from "@/hooks/use-clear-requests";
-import { getPageTitle } from "@/app-config";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
 import { MockServerBar } from "@/views/mocks/shared/mock-server-bar";
 
 interface TopBarProps {
@@ -66,7 +65,13 @@ export function TopBar({ onOpenSearch }: TopBarProps): React.ReactNode {
             <Button
               variant="ghost"
               size="icon"
-              aria-label={shownSession ? "Back to live requests" : paused ? "Resume recording" : "Pause recording"}
+              aria-label={
+                shownSession
+                  ? "Back to live requests"
+                  : paused
+                    ? "Resume recording"
+                    : "Pause recording"
+              }
               data-tour="pause"
               className={cn("size-7", paused && "text-warning-foreground")}
               onClick={shownSession ? backToLive : togglePaused}

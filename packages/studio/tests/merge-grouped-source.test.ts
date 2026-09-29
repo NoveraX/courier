@@ -5,10 +5,8 @@
  * changes shape between a flat source and groups gets the generated source.
  */
 import { describe, expect, it } from "vitest";
-
-import type { GeneratedFile, GenerateOptions } from "../src/apis/generator/types";
-
 import { generateCode } from "../src/apis/generator/generate-code";
+import type { GeneratedFile, GenerateOptions } from "../src/apis/generator/types";
 import { mergeGroupFile } from "../src/apis/merge/merge-group";
 import { previewUpdate } from "../src/apis/merge/update-flow";
 import { parseSpec } from "../src/apis/parser/parse-spec";
@@ -20,10 +18,18 @@ const SPEC = parseSpec(
     servers: [{ url: "https://petstore.example" }],
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
       "/store/orders": {
-        get: { operationId: "listOrders", tags: ["store"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listOrders",
+          tags: ["store"],
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
   }),
@@ -120,7 +126,10 @@ export const users = defineGroup({
   },
 });
 `;
-    const { content } = mergeGroupFile(onDisk, fresh, { endpoints: { list: "safe" }, existingCode: {} });
+    const { content } = mergeGroupFile(onDisk, fresh, {
+      endpoints: { list: "safe" },
+      existingCode: {},
+    });
 
     expect(content).toContain('headers: { "x-team": "core" },');
     expect(content).toContain('prefix: "/users",');

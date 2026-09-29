@@ -39,18 +39,24 @@ function apiWith(options: { source?: boolean; publicGroup?: boolean; adminGroup?
 
 /** A request shaped exactly as the browser's proxy client sends it. */
 async function fromBrowser(api: unknown, group: string, method: string) {
-  const response = (await executeRequest({ api } as never, { source: "api", group, method } as never, {
-    res: new Response(),
-    proxyMethod: "GET",
-    req: new Request("https://app.example.com/api/request"),
-  } as Context & { res: Response })) as Response;
+  const response = (await executeRequest(
+    { api } as never,
+    { source: "api", group, method } as never,
+    {
+      res: new Response(),
+      proxyMethod: "GET",
+      req: new Request("https://app.example.com/api/request"),
+    } as Context & { res: Response },
+  )) as Response;
 
   return { status: response.status, body: await response.text() };
 }
 
 beforeEach(() => {
   fetchSpy.mockReset();
-  fetchSpy.mockResolvedValue(new Response(JSON.stringify({ secret: "payout data" }), { status: 200 }));
+  fetchSpy.mockResolvedValue(
+    new Response(JSON.stringify({ secret: "payout data" }), { status: 200 }),
+  );
   vi.stubGlobal("fetch", fetchSpy);
 });
 
@@ -81,7 +87,11 @@ describe("isExposedToWire", () => {
 
 describe("the proxy refuses what was not exposed", () => {
   it("serves a group the config opened", async () => {
-    const { status } = await fromBrowser(apiWith({ source: false, publicGroup: true }), "posts", "list");
+    const { status } = await fromBrowser(
+      apiWith({ source: false, publicGroup: true }),
+      "posts",
+      "list",
+    );
 
     expect(status).toBe(200);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -141,11 +151,14 @@ describe("a server-side caller is not gated", () => {
   it("reaches a closed group from in-process code", async () => {
     const api = apiWith({ source: false });
 
-    await executeRequest({ api } as never, {
-      source: "api",
-      group: "admin",
-      method: "exportPayouts",
-    } as never);
+    await executeRequest(
+      { api } as never,
+      {
+        source: "api",
+        group: "admin",
+        method: "exportPayouts",
+      } as never,
+    );
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });

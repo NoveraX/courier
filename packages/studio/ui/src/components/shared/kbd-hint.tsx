@@ -1,7 +1,6 @@
 import { Kbd } from "@/components/ui/kbd";
 
-const IS_MAC =
-  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
+const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
 const SYMBOL_MAP: Record<string, string> = {
   mod: IS_MAC ? "\u2318" : "Ctrl+",
@@ -24,16 +23,17 @@ interface KbdHintProps {
   className?: string;
 }
 
-export function KbdHint({
-  keys,
-  className,
-}: KbdHintProps): React.ReactElement {
-  const label = keys.length === 1
-    ? (SYMBOL_MAP[keys] ?? keys)
-    : keys.split("+").map((k) => {
-        const lower = k.trim().toLowerCase();
-        return SYMBOL_MAP[lower] ?? k.trim().toUpperCase();
-      }).join("");
+export function KbdHint({ keys, className }: KbdHintProps): React.ReactElement {
+  const label =
+    keys.length === 1
+      ? (SYMBOL_MAP[keys] ?? keys)
+      : keys
+          .split("+")
+          .map((k) => {
+            const lower = k.trim().toLowerCase();
+            return SYMBOL_MAP[lower] ?? k.trim().toUpperCase();
+          })
+          .join("");
 
   return <Kbd className={className}>{label}</Kbd>;
 }

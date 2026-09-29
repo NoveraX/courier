@@ -1,12 +1,11 @@
-import { LatencyControls } from "./latency-controls";
-import { ChaosControls } from "./chaos-controls";
-import { NetworkStats } from "./network-stats";
-import { ScenarioManager } from "./scenario-manager";
-import { ExperimentHistory } from "./experiment-history";
-import { PerRouteOverrides } from "./per-route-overrides";
-
 import type { MockServerInfo } from "@/store/mock-slice";
+import { ChaosControls } from "./chaos-controls";
+import { ExperimentHistory } from "./experiment-history";
+import { LatencyControls } from "./latency-controls";
+import { NetworkStats } from "./network-stats";
 import type { PanelMode } from "./network-toolbar";
+import { PerRouteOverrides } from "./per-route-overrides";
+import { ScenarioManager } from "./scenario-manager";
 
 interface NetworkPanelProps {
   server: MockServerInfo;

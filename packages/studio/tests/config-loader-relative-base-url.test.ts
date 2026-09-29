@@ -1,8 +1,8 @@
 import { existsSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getSourceName } from "@noverax/courier/define";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ConfigLoaderError, loadCourierConfig } from "../src/server/config-loader";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");

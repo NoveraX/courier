@@ -80,13 +80,20 @@ describe("a path parameter's value", () => {
   });
 
   it("is refused through the proxy when it would climb out of the path", async () => {
-    registerSources({ api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }) });
+    registerSources({
+      api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }),
+    });
 
     const response = await createHandler().handlePost(
       new Request("http://app.localhost/api/request", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ source: "api", group: "items", method: "one", variables: { id: ".." } }),
+        body: JSON.stringify({
+          source: "api",
+          group: "items",
+          method: "one",
+          variables: { id: ".." },
+        }),
       }),
     );
 

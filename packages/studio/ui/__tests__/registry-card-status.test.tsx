@@ -10,9 +10,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RegistryCard } from "../src/views/apis/registry-card";
 import type { SourceStatusInfo } from "../src/views/apis/types";
 import type { EnrichedSource } from "../src/views/apis/use-registry";
-import { RegistryCard } from "../src/views/apis/registry-card";
 
 const SOURCE: EnrichedSource = {
   name: "pets",
@@ -43,7 +43,13 @@ const SOURCE: EnrichedSource = {
 function card(status: SourceStatusInfo): void {
   render(
     <TooltipProvider>
-      <RegistryCard source={SOURCE} status={status} onCheckUpdates={() => {}} onManage={() => {}} onRemove={() => {}} />
+      <RegistryCard
+        source={SOURCE}
+        status={status}
+        onCheckUpdates={() => {}}
+        onManage={() => {}}
+        onRemove={() => {}}
+      />
     </TooltipProvider>,
   );
 }
@@ -54,7 +60,10 @@ afterEach(() => {
 
 describe("the update check on an import's card", () => {
   it("says why it failed", () => {
-    card({ status: "error", error: "https://pets.example/spec did not answer with a specification Studio can read" });
+    card({
+      status: "error",
+      error: "https://pets.example/spec did not answer with a specification Studio can read",
+    });
 
     const badge = screen.getByText("Check failed");
 

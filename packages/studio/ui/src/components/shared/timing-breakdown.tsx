@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
+import { cn } from "@/lib/utils";
 import type { ProxyTiming, RequestTiming } from "@/store/types-events";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -15,16 +15,22 @@ export interface Segment {
 export function buildRequestSegments(timing: RequestTiming): Segment[] {
   const overhead = Math.max(0, timing.total - timing.middleware - timing.fetch - timing.validation);
   const segments: Segment[] = [];
-  if (timing.middleware > 0) segments.push({ label: "Middleware", value: timing.middleware, color: "bg-violet-500" });
+  if (timing.middleware > 0)
+    segments.push({ label: "Middleware", value: timing.middleware, color: "bg-violet-500" });
   segments.push({ label: "Fetch", value: timing.fetch, color: "bg-sky-500" });
-  if (timing.validation > 0) segments.push({ label: "Validation", value: timing.validation, color: "bg-amber-500" });
+  if (timing.validation > 0)
+    segments.push({ label: "Validation", value: timing.validation, color: "bg-amber-500" });
   if (overhead > 0.5) segments.push({ label: "Overhead", value: overhead, color: "bg-slate-400" });
   return segments;
 }
 
 // ── Breakdown card ──────────────────────────────────────────────────────────
 
-export function BreakdownCard({ title, segments, total }: {
+export function BreakdownCard({
+  title,
+  segments,
+  total,
+}: {
   title: string;
   segments: Segment[];
   total: number;
@@ -38,7 +44,10 @@ export function BreakdownCard({ title, segments, total }: {
         {segments.map((s) => (
           <div
             key={s.label}
-            className={cn(s.color, "first:rounded-l-full last:rounded-r-full transition-all duration-500")}
+            className={cn(
+              s.color,
+              "first:rounded-l-full last:rounded-r-full transition-all duration-500",
+            )}
             style={{ width: `${Math.max(1, (s.value / total) * 100)}%` }}
             title={`${s.label}: ${formatDuration(s.value)}`}
           />
@@ -50,7 +59,9 @@ export function BreakdownCard({ title, segments, total }: {
         ))}
         <div className="flex items-center justify-between border-t border-border-subtle bg-muted/20 px-3 py-2">
           <span className="text-body-sm font-medium text-foreground">Total</span>
-          <span className="mono-sm tabular-nums font-medium text-foreground">{formatDuration(total)}</span>
+          <span className="mono-sm tabular-nums font-medium text-foreground">
+            {formatDuration(total)}
+          </span>
         </div>
       </div>
     </div>
@@ -66,7 +77,10 @@ function PhaseRow({ segment, total }: { segment: Segment; total: number }): Reac
       <span className="w-28 shrink-0 text-body-sm text-muted-foreground">{segment.label}</span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/20">
         <div
-          className={cn("h-full rounded-full opacity-80 transition-all duration-500", segment.color)}
+          className={cn(
+            "h-full rounded-full opacity-80 transition-all duration-500",
+            segment.color,
+          )}
           style={{ width: `${Math.max(pct, 1)}%` }}
         />
       </div>
@@ -90,11 +104,13 @@ const PROXY_PHASES: { key: keyof ProxyTiming; label: string; color: string }[] =
 ];
 
 export function buildProxySegments(timing: ProxyTiming): Segment[] {
-  return PROXY_PHASES
-    .map((p) => ({ label: p.label, value: timing[p.key], color: p.color }))
-    .filter((s) => s.value > 0);
+  return PROXY_PHASES.map((p) => ({ label: p.label, value: timing[p.key], color: p.color })).filter(
+    (s) => s.value > 0,
+  );
 }
 
 export function computeProxyTotal(timing: ProxyTiming): number {
-  return timing.clientToProxy + timing.proxyToBackend + timing.backendToProxy + timing.proxyToClient;
+  return (
+    timing.clientToProxy + timing.proxyToBackend + timing.backendToProxy + timing.proxyToClient
+  );
 }

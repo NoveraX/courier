@@ -10,14 +10,17 @@ import { describe, expect, it } from "vitest";
 
 import { resolveImportLayout } from "../src/apis/layout";
 import { buildEndpointInventory } from "../src/apis/manage/build-inventory";
-import { parseSpec } from "../src/apis/parser/parse-spec";
-import { previewRemoveEndpoints } from "../src/apis/manage/remove-endpoints";
 import { detectOrphanSchemas } from "../src/apis/manage/detect-orphan-schemas";
-import { removeOrphanSchemas } from "../src/apis/manage/remove-schemas";
 import { rebuildBarrel } from "../src/apis/manage/rebuild-barrel";
+import { previewRemoveEndpoints } from "../src/apis/manage/remove-endpoints";
 import { removeEndpointsFromFile } from "../src/apis/manage/remove-endpoints-from-file";
-import { addGroupsToSourceFile, removeGroupsFromSourceFile } from "../src/apis/manage/update-source-file";
+import { removeOrphanSchemas } from "../src/apis/manage/remove-schemas";
+import {
+  addGroupsToSourceFile,
+  removeGroupsFromSourceFile,
+} from "../src/apis/manage/update-source-file";
 import { generateFingerprints } from "../src/apis/merge/fingerprint";
+import { parseSpec } from "../src/apis/parser/parse-spec";
 
 const GROUP = [
   'import { courier, defineGroup } from "@noverax/courier/define";',
@@ -48,7 +51,9 @@ function parses(code: string): boolean {
 
 describe("removing some endpoints of a group", () => {
   it("keeps the base, the user's code and the other endpoints, and drops only imports nothing uses now", () => {
-    const { content, removedCode } = removeEndpointsFromFile("src/api/pets/pets/index.ts", GROUP, ["createPet"]);
+    const { content, removedCode } = removeEndpointsFromFile("src/api/pets/pets/index.ts", GROUP, [
+      "createPet",
+    ]);
 
     expect(content).not.toBeNull();
     expect(parses(content ?? "")).toBe(true);
@@ -56,13 +61,19 @@ describe("removing some endpoints of a group", () => {
     expect(content).toContain("function withCache<T>(value: T): T {");
     expect(content).toContain('import { courier, defineGroup } from "@noverax/courier/define";');
     expect(content).toContain('import { PetSchema } from "./schemas";');
-    expect(content).toContain('    /** List the pets. */\n    listPets: endpoint.get("").response(PetSchema),\n    deletePet');
+    expect(content).toContain(
+      '    /** List the pets. */\n    listPets: endpoint.get("").response(PetSchema),\n    deletePet',
+    );
     expect(content).not.toContain("Create a pet");
     expect(removedCode).toEqual(['createPet: endpoint.post("").variables(NewPetSchema)']);
   });
 
   it("gives the file up only when no entry is left in its endpoints", () => {
-    const all = removeEndpointsFromFile("src/api/pets/pets/index.ts", GROUP, ["listPets", "createPet", "deletePet"]);
+    const all = removeEndpointsFromFile("src/api/pets/pets/index.ts", GROUP, [
+      "listPets",
+      "createPet",
+      "deletePet",
+    ]);
 
     expect(all.content).toBeNull();
   });
@@ -117,17 +128,30 @@ describe("rebuildBarrel", () => {
     'export const shop = defineApi({ baseURL: "/", groups: { alpha, gamma, misc } });',
     "",
   ].join("\n");
-  const HEAD = 'import { createCaller } from "@noverax/courier";\nimport { shop } from "./source";\n\nexport const shopApi = createCaller(shop);\n\n';
+  const HEAD =
+    'import { createCaller } from "@noverax/courier";\nimport { shop } from "./source";\n\nexport const shopApi = createCaller(shop);\n\n';
   const schema = (...names: string[]) =>
-    names.map((n) => `export type ${n} = { id?: string };\nexport const ${n}Schema = z.object({});\n`).join("");
+    names
+      .map((n) => `export type ${n} = { id?: string };\nexport const ${n}Schema = z.object({});\n`)
+      .join("");
   const files = (barrel: string, modules: Record<string, string>) => ({
     [layout.sourceFile]: SOURCE,
     [layout.indexFile]: barrel,
-    ...Object.fromEntries(Object.entries(modules).map(([dir, text]) => [`src/api/shop/${dir}.ts`, text])),
+    ...Object.fromEntries(
+      Object.entries(modules).map(([dir, text]) => [`src/api/shop/${dir}.ts`, text]),
+    ),
   });
 
   it("re-exports each module whole, or by the names no earlier one exports, in the order of the groups", () => {
-    const barrel = rebuildBarrel(layout, files(HEAD, { "alpha/schemas": schema("A", "Pet"), "gamma/schemas": schema("Pet", "Order"), "misc/schemas": schema("Order") }), false);
+    const barrel = rebuildBarrel(
+      layout,
+      files(HEAD, {
+        "alpha/schemas": schema("A", "Pet"),
+        "gamma/schemas": schema("Pet", "Order"),
+        "misc/schemas": schema("Order"),
+      }),
+      false,
+    );
 
     expect(barrel).toBe(
       `${HEAD}export * from "./alpha/schemas";\nexport { type Order, OrderSchema } from "./gamma/schemas";\n`,
@@ -139,27 +163,46 @@ describe("rebuildBarrel", () => {
 
     const barrel = rebuildBarrel(layout, files(old, { "alpha/schemas": schema("A") }), false);
 
-    expect(barrel).toBe(`${HEAD}export * from "./alpha/schemas";\n// mine\nexport const extra = 1;\n`);
+    expect(barrel).toBe(
+      `${HEAD}export * from "./alpha/schemas";\n// mine\nexport const extra = 1;\n`,
+    );
   });
 
   it("gives a module's list the names it gained, and a module another loses a name to its line back", () => {
     const old = `${HEAD}export * from "./alpha/schemas";\nexport { OrderSchema, type Order } from "./gamma/schemas";\n`;
 
-    const grown = rebuildBarrel(layout, files(old, { "alpha/schemas": schema("Pet"), "gamma/schemas": schema("Pet", "Order", "Fresh") }), false);
-    const shrunk = rebuildBarrel(layout, files(old, { "alpha/schemas": schema("A"), "gamma/schemas": schema("Pet", "Order") }), false);
+    const grown = rebuildBarrel(
+      layout,
+      files(old, {
+        "alpha/schemas": schema("Pet"),
+        "gamma/schemas": schema("Pet", "Order", "Fresh"),
+      }),
+      false,
+    );
+    const shrunk = rebuildBarrel(
+      layout,
+      files(old, { "alpha/schemas": schema("A"), "gamma/schemas": schema("Pet", "Order") }),
+      false,
+    );
 
-    expect(grown).toContain('export { type Order, OrderSchema, type Fresh, FreshSchema } from "./gamma/schemas";');
+    expect(grown).toContain(
+      'export { type Order, OrderSchema, type Fresh, FreshSchema } from "./gamma/schemas";',
+    );
     expect(shrunk).toContain('export * from "./gamma/schemas";');
   });
 
   it("keeps a line the user wrote, and counts its names", () => {
     const old = `${HEAD}export * from "./alpha/schemas";\nexport type { Order } from "./gamma/schemas";\nexport { PetSchema as MyPet } from "./gamma/schemas";\nexport * from "./extras/types";\n`;
-    const modules = { "alpha/schemas": schema("A"), "gamma/schemas": schema("Order", "Pet"), "extras/types": "export type A = { custom: true };\n" };
+    const modules = {
+      "alpha/schemas": schema("A"),
+      "gamma/schemas": schema("Order", "Pet"),
+      "extras/types": "export type A = { custom: true };\n",
+    };
 
     const barrel = rebuildBarrel(layout, files(old, modules), false) ?? "";
 
-    expect(barrel).toContain("export type { Order } from \"./gamma/schemas\";");
-    expect(barrel).toContain("export { PetSchema as MyPet } from \"./gamma/schemas\";");
+    expect(barrel).toContain('export type { Order } from "./gamma/schemas";');
+    expect(barrel).toContain('export { PetSchema as MyPet } from "./gamma/schemas";');
     expect(barrel).toContain('export * from "./extras/types";');
     expect(barrel).toContain('export { OrderSchema, type Pet, PetSchema } from "./gamma/schemas";');
     expect(barrel).not.toContain('export * from "./alpha/schemas";');
@@ -186,16 +229,17 @@ describe("detectOrphanSchemas", () => {
       "FindParams",
       "FindParamsSchema",
     ]);
-    expect(detectOrphanSchemas(PARAMS, "", ["find: endpoint.get('/find').query(FindParamsSchema)"])).toEqual([
-      "FindParams",
-      "FindParamsSchema",
-    ]);
+    expect(
+      detectOrphanSchemas(PARAMS, "", ["find: endpoint.get('/find').query(FindParamsSchema)"]),
+    ).toEqual(["FindParams", "FindParamsSchema"]);
   });
 
   it("keeps a type a schema of the user's that stays is written with", () => {
     const schemas = `${PARAMS}export const MineSchema = z.object({}) satisfies z.ZodType<FindParams>;\n`;
 
-    expect(detectOrphanSchemas(schemas, "", ["find: endpoint.get<FindParams>('/find')"])).toEqual([]);
+    expect(detectOrphanSchemas(schemas, "", ["find: endpoint.get<FindParams>('/find')"])).toEqual(
+      [],
+    );
   });
 
   it("keeps an enum's type while an endpoint left uses its schema", () => {
@@ -206,16 +250,17 @@ describe("detectOrphanSchemas", () => {
       "export const OrderSchema = z.object({ status: StatusSchema.optional() }) satisfies z.ZodType<Order>;",
       "",
     ].join("\n");
-    const remaining = "export const g = defineGroup({ endpoints: { s: endpoint.get('s').response(StatusSchema) } });";
+    const remaining =
+      "export const g = defineGroup({ endpoints: { s: endpoint.get('s').response(StatusSchema) } });";
 
-    expect(detectOrphanSchemas(schemas, remaining, ["o: endpoint.get('o').response(OrderSchema)"])).toEqual([
-      "Order",
-      "OrderSchema",
-    ]);
+    expect(
+      detectOrphanSchemas(schemas, remaining, ["o: endpoint.get('o').response(OrderSchema)"]),
+    ).toEqual(["Order", "OrderSchema"]);
   });
 
   it("counts an endpoint whose name starts with import as code that uses schemas", () => {
-    const schemas = "export type Pet = { name?: string };\nexport const PetSchema = z.object({}) satisfies z.ZodType<Pet>;\n";
+    const schemas =
+      "export type Pet = { name?: string };\nexport const PetSchema = z.object({}) satisfies z.ZodType<Pet>;\n";
     const remaining = [
       'import { PetSchema } from "./schemas";',
       "export const pets = defineGroup({",
@@ -225,7 +270,9 @@ describe("detectOrphanSchemas", () => {
       "});",
     ].join("\n");
 
-    expect(detectOrphanSchemas(schemas, remaining, ['getPet: endpoint.get(":id").response(PetSchema)'])).toEqual([]);
+    expect(
+      detectOrphanSchemas(schemas, remaining, ['getPet: endpoint.get(":id").response(PetSchema)']),
+    ).toEqual([]);
   });
 
   it("is not thrown off by a bracket in a description", () => {
@@ -241,9 +288,12 @@ describe("detectOrphanSchemas", () => {
       "export const AuthSchema = z.object({ id: z.string().optional() }) satisfies z.ZodType<Auth>;",
       "",
     ].join("\n");
-    const remaining = "export const g = defineGroup({ endpoints: { t: endpoint.get('t').response(TxnSchema) } });";
+    const remaining =
+      "export const g = defineGroup({ endpoints: { t: endpoint.get('t').response(TxnSchema) } });";
 
-    const orphans = detectOrphanSchemas(schemas, remaining, ["a: endpoint.get('a').response(AuthSchema)"]);
+    const orphans = detectOrphanSchemas(schemas, remaining, [
+      "a: endpoint.get('a').response(AuthSchema)",
+    ]);
     const cleaned = removeOrphanSchemas(schemas, orphans);
 
     expect(orphans).toEqual(["Auth", "AuthSchema"]);
@@ -253,7 +303,9 @@ describe("detectOrphanSchemas", () => {
   });
 
   it("removes nothing when the endpoints left do not parse", () => {
-    expect(detectOrphanSchemas(PARAMS, "export const = ;", ["find: endpoint.get<FindParams>('/find')"])).toEqual([]);
+    expect(
+      detectOrphanSchemas(PARAMS, "export const = ;", ["find: endpoint.get<FindParams>('/find')"]),
+    ).toEqual([]);
   });
 });
 
@@ -270,9 +322,9 @@ describe("removeOrphanSchemas", () => {
     "  return base.narrow(() => declared && resolve() !== undefined);",
     "}",
     "",
-    "export const PetSchema = type({ name: \"string\" });",
+    'export const PetSchema = type({ name: "string" });',
     "",
-    "export const NodeSchema: ark.Type<unknown> = type({ next: lazy(type(\"object\"), () => NodeSchema) });",
+    'export const NodeSchema: ark.Type<unknown> = type({ next: lazy(type("object"), () => NodeSchema) });',
     "",
     "declared = true;",
     "",
@@ -311,22 +363,41 @@ describe("removing endpoints, as manage previews it", () => {
   ].join("\n");
 
   it("removes the schemas only the removed endpoints used, and keeps one the user added", () => {
-    const files = { [layout.groupFile("pets")]: GROUP, [layout.groupSchemaFile("pets", "schemas")]: schemas };
+    const files = {
+      [layout.groupFile("pets")]: GROUP,
+      [layout.groupSchemaFile("pets", "schemas")]: schemas,
+    };
 
     const result = previewRemoveEndpoints({ pets: ["createPet"] }, files, {}, layout);
 
     expect(result.orphanedSchemas).toEqual(["NewPetSchema"]);
-    expect(result.modifiedFiles.find((f) => f.path.endsWith("schemas.ts"))?.content).toContain("MyOwnSchema");
+    expect(result.modifiedFiles.find((f) => f.path.endsWith("schemas.ts"))?.content).toContain(
+      "MyOwnSchema",
+    );
   });
 
   it("warns about an edited endpoint by its own group, never one of the same name elsewhere", () => {
-    const store = GROUP.replace("export const pets", "export const store").replace('"/pets"', '"/store"');
-    const edited = store.replace('endpoint.delete("/{id}")', 'endpoint.delete("/{id}").meta({ mine: true })');
+    const store = GROUP.replace("export const pets", "export const store").replace(
+      '"/pets"',
+      '"/store"',
+    );
+    const edited = store.replace(
+      'endpoint.delete("/{id}")',
+      'endpoint.delete("/{id}").meta({ mine: true })',
+    );
     const files = { [layout.groupFile("pets")]: GROUP, [layout.groupFile("store")]: edited };
-    const fingerprints = { [layout.groupFile("pets")]: generateFingerprints(GROUP), [layout.groupFile("store")]: generateFingerprints(store) };
+    const fingerprints = {
+      [layout.groupFile("pets")]: generateFingerprints(GROUP),
+      [layout.groupFile("store")]: generateFingerprints(store),
+    };
 
     const pets = previewRemoveEndpoints({ pets: ["deletePet"] }, files, fingerprints, layout);
-    const storeRemoval = previewRemoveEndpoints({ store: ["deletePet"] }, files, fingerprints, layout);
+    const storeRemoval = previewRemoveEndpoints(
+      { store: ["deletePet"] },
+      files,
+      fingerprints,
+      layout,
+    );
 
     expect(pets.modifiedEndpointsWarning).toEqual([]);
     expect(storeRemoval.modifiedEndpointsWarning).toEqual(["store.deletePet"]);
@@ -336,29 +407,50 @@ describe("removing endpoints, as manage previews it", () => {
 describe("the endpoint inventory", () => {
   it("marks as edited only the endpoint whose own group's file changed, among endpoints of one name", () => {
     const layout = resolveImportLayout({ outputDir: "src/api" }, "pets");
-    const store = GROUP.replace("export const pets", "export const store").replace('"/pets"', '"/store"');
-    const edited = store.replace('endpoint.delete("/{id}")', 'endpoint.delete("/{id}").meta({ mine: true })');
+    const store = GROUP.replace("export const pets", "export const store").replace(
+      '"/pets"',
+      '"/store"',
+    );
+    const edited = store.replace(
+      'endpoint.delete("/{id}")',
+      'endpoint.delete("/{id}").meta({ mine: true })',
+    );
     const petsFile = layout.groupFile("pets");
     const storeFile = layout.groupFile("store");
-    const operation = (id: string, tag: string) => ({ operationId: id, tags: [tag], responses: { "200": { description: "ok" } } });
+    const operation = (id: string, tag: string) => ({
+      operationId: id,
+      tags: [tag],
+      responses: { "200": { description: "ok" } },
+    });
     const spec = parseSpec(
       JSON.stringify({
         openapi: "3.1.0",
         info: { title: "Pets", version: "1" },
-        paths: { "/pets/{id}": { delete: operation("deletePet", "pets") }, "/store/{id}": { delete: operation("deletePet", "store") } },
+        paths: {
+          "/pets/{id}": { delete: operation("deletePet", "pets") },
+          "/store/{id}": { delete: operation("deletePet", "store") },
+        },
       }),
     );
-    const disk = (file: string) => ({ prefix: "", endpoints: ["listPets", "createPet", "deletePet"], file });
+    const disk = (file: string) => ({
+      prefix: "",
+      endpoints: ["listPets", "createPet", "deletePet"],
+      file,
+    });
 
     const inventory = buildEndpointInventory(
       spec,
-      [{ name: "pets", ...disk(petsFile) }, { name: "store", ...disk(storeFile) }],
+      [
+        { name: "pets", ...disk(petsFile) },
+        { name: "store", ...disk(storeFile) },
+      ],
       { [petsFile]: generateFingerprints(GROUP), [storeFile]: generateFingerprints(store) },
       { [petsFile]: GROUP, [storeFile]: edited },
     );
 
     const status = (group: string) =>
-      inventory.groups.find((g) => g.name === group)?.endpoints.find((e) => e.name === "deletePet")?.modificationStatus;
+      inventory.groups.find((g) => g.name === group)?.endpoints.find((e) => e.name === "deletePet")
+        ?.modificationStatus;
     expect(status("pets")).toBe("safe");
     expect(status("store")).toBe("modified");
   });

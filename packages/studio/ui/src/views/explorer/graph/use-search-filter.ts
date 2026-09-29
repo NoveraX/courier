@@ -1,5 +1,5 @@
+import type { Edge, Node } from "@xyflow/react";
 import { useMemo } from "react";
-import type { Node, Edge } from "@xyflow/react";
 import type { EndpointNodeData } from "../types";
 
 interface SearchFilterResult {
@@ -13,16 +13,16 @@ interface SearchFilterResult {
  * Matches against endpoint method name, full path, group name, and source name.
  * Non-matching nodes get reduced opacity via className.
  */
-export function useSearchFilter(
-  nodes: Node[],
-  edges: Edge[],
-  search: string,
-): SearchFilterResult {
+export function useSearchFilter(nodes: Node[], edges: Edge[], search: string): SearchFilterResult {
   const query = search.trim().toLowerCase();
 
   return useMemo(() => {
     if (!query) {
-      return { filteredNodes: nodes, filteredEdges: edges, matchCount: nodes.filter((n) => n.type === "endpoint").length };
+      return {
+        filteredNodes: nodes,
+        filteredEdges: edges,
+        matchCount: nodes.filter((n) => n.type === "endpoint").length,
+      };
     }
 
     // Find matching endpoint node IDs
@@ -32,7 +32,8 @@ export function useSearchFilter(
     for (const node of nodes) {
       if (node.type === "endpoint") {
         const d = node.data as unknown as EndpointNodeData;
-        const searchable = `${d.method} ${d.fullPath} ${d.httpMethod} ${d.group} ${d.source} ${d.endpointType}`.toLowerCase();
+        const searchable =
+          `${d.method} ${d.fullPath} ${d.httpMethod} ${d.group} ${d.source} ${d.endpointType}`.toLowerCase();
         if (searchable.includes(query)) {
           matchingIds.add(node.id);
           matchCount++;

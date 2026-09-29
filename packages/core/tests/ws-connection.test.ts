@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
+import { encodeMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSClientSocket, WSConnectionConfig } from "../src/realtime/ws/ws-types";
 
 // ---------------------------------------------------------------------------
@@ -27,7 +27,9 @@ class MockWebSocket implements WSClientSocket {
     MockWebSocket.instances.push(this);
   }
 
-  send(data: string): void { this.sent.push(data); }
+  send(data: string): void {
+    this.sent.push(data);
+  }
 
   close(_code?: number, _reason?: string): void {
     this.closed = true;
@@ -77,13 +79,17 @@ describe("createWSConnection", () => {
     MockWebSocket.instances = [];
   });
 
-  afterEach(() => { vi.useRealTimers(); });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it("connects and transitions to connected on open", () => {
     const statuses: string[] = [];
-    const conn = createWSConnection(createConfig({
-      onStatusChange: (s) => statuses.push(s),
-    }));
+    const conn = createWSConnection(
+      createConfig({
+        onStatusChange: (s) => statuses.push(s),
+      }),
+    );
 
     expect(conn.status).toBe("connecting");
     lastWs().simulateOpen();
@@ -112,11 +118,13 @@ describe("createWSConnection", () => {
     const handler = vi.fn<(payload: unknown) => void>();
     conn.subscribe("chat:room", handler);
 
-    lastWs().simulateMessage(encodeMessage({
-      type: "data",
-      topic: "chat:room",
-      payload: { text: "hello" },
-    }));
+    lastWs().simulateMessage(
+      encodeMessage({
+        type: "data",
+        topic: "chat:room",
+        payload: { text: "hello" },
+      }),
+    );
 
     expect(handler).toHaveBeenCalledWith({ text: "hello" });
     conn.close();
@@ -252,9 +260,11 @@ describe("createWSConnection", () => {
   });
 
   it("appends auth token to URL when getAuthToken provided", async () => {
-    createWSConnection(createConfig({
-      getAuthToken: () => Promise.resolve("secret123"),
-    }));
+    createWSConnection(
+      createConfig({
+        getAuthToken: () => Promise.resolve("secret123"),
+      }),
+    );
 
     // Allow async buildUrl to resolve
     await vi.advanceTimersByTimeAsync(0);

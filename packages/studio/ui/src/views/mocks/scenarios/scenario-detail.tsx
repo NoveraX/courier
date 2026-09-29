@@ -1,10 +1,9 @@
-import { coveragePercent, deriveScenarioType } from "./scenario-utils";
+import type { MockScenarioEntry } from "@/store/mock-slice";
 import { EndpointSection, groupByField } from "./scenario-detail-endpoints";
 import { ScenarioDetailHeader } from "./scenario-detail-header";
 import { ScenarioDetailMetrics } from "./scenario-detail-metrics";
+import { coveragePercent, deriveScenarioType } from "./scenario-utils";
 import { StateMachineDiagram } from "./state-machine-diagram";
-
-import type { MockScenarioEntry } from "@/store/mock-slice";
 
 interface ScenarioDetailProps {
   scenario: MockScenarioEntry;

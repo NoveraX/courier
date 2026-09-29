@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { handleTokenRefresh } from "../src/adapter/ws-token-refresh";
-import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
+import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 

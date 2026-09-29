@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import {
-  VALIDATION_FAILED,
-  validateVariablesSafe,
-} from "../src/adapter/ws-middleware";
 import type { WSSocketContext } from "../src/adapter/ws-context";
+import { VALIDATION_FAILED, validateVariablesSafe } from "../src/adapter/ws-middleware";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 
 // ---------------------------------------------------------------------------

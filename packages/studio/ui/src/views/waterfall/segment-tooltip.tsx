@@ -1,9 +1,8 @@
-import { Badge } from "@/components/ui/badge";
-import { MethodBadge } from "@/components/shared/method-badge";
 import { formatDuration, formatPercent } from "@/components/shared/formatters";
-
-import type { WaterfallSegment, WaterfallRow } from "./types";
+import { MethodBadge } from "@/components/shared/method-badge";
+import { Badge } from "@/components/ui/badge";
 import { SEGMENT_CONFIG } from "./constants";
+import type { WaterfallRow, WaterfallSegment } from "./types";
 
 interface SegmentTooltipProps {
   segment: WaterfallSegment;
@@ -46,7 +45,13 @@ export function SegmentTooltip({ segment, row, x, y }: SegmentTooltipProps): Rea
           {row.request.source}.{row.request.group}.{row.request.method}
         </span>
         <Badge
-          variant={row.request.status === "success" ? "emerald" : row.request.status === "error" ? "rose" : "secondary"}
+          variant={
+            row.request.status === "success"
+              ? "emerald"
+              : row.request.status === "error"
+                ? "rose"
+                : "secondary"
+          }
           className="ml-auto shrink-0 text-[9px]"
         >
           {row.request.status}
@@ -61,17 +66,13 @@ export function SegmentTooltip({ segment, row, x, y }: SegmentTooltipProps): Rea
 const HOP_MAP: Record<string, string> = {
   "client-to-proxy": "Client → Proxy",
   "middleware-req": "Proxy (server)",
-  "fetch": "Proxy → Backend → Proxy",
-  "validation": "Proxy (server)",
+  fetch: "Proxy → Backend → Proxy",
+  validation: "Proxy (server)",
   "middleware-res": "Proxy (server)",
   "proxy-to-client": "Proxy → Client",
 };
 
 function ProxyHopContext({ segmentKey }: { segmentKey: string }): React.ReactElement {
   const hop = HOP_MAP[segmentKey] ?? "";
-  return (
-    <div className="mt-1 text-caption text-muted-foreground/60">
-      {hop}
-    </div>
-  );
+  return <div className="mt-1 text-caption text-muted-foreground/60">{hop}</div>;
 }

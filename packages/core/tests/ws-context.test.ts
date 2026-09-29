@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { buildContext } from "../src/adapter/ws-context";
 import { LIMITS } from "../src/adapter/limits";
+import { buildContext } from "../src/adapter/ws-context";
+import { createConnectionRegistry } from "../src/adapter/ws-registry";
+import { createServerTopicManager } from "../src/adapter/ws-topics";
+import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
-import type { WSHandlerConfig } from "../src/adapter/ws-types";
-import { createServerTopicManager } from "../src/adapter/ws-topics";
-import { createConnectionRegistry } from "../src/adapter/ws-registry";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 
 beforeEach(() => {
@@ -132,9 +131,7 @@ describe("buildContext", () => {
     const topicManager = createServerTopicManager();
     const registry = createConnectionRegistry();
     registry.setTopicManager(topicManager);
-    const request = new Request(
-      "http://localhost/ws?token=abc&_playground_rid=rid-mixed&other=1",
-    );
+    const request = new Request("http://localhost/ws?token=abc&_playground_rid=rid-mixed&other=1");
 
     const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
     expect(ctx.playgroundRequestId).toBe("rid-mixed");

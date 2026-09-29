@@ -152,7 +152,8 @@ describe("bodyNoLabelLines", () => {
       "Signed-off-by: A <a@example.com>",
       "Change-Id: I1234",
     ].join("\n");
-    const footer = "---------\n\nCo-authored-by: B <b@example.com>\nCo-developed-by: C <c@example.com>";
+    const footer =
+      "---------\n\nCo-authored-by: B <b@example.com>\nCo-developed-by: C <c@example.com>";
 
     expect(bodyNoLabelLines({ body, footer })[0]).toBe(true);
   });
@@ -213,7 +214,9 @@ describe("isGitWritten", () => {
 
 describe("commitlint config", { timeout: CLI_TIMEOUT_MS }, () => {
   it("accepts a breaking change written with ! and a footer", () => {
-    const result = lint("feat(core)!: ✨ drop the legacy entry\n\nBREAKING CHANGE: use the new one.");
+    const result = lint(
+      "feat(core)!: ✨ drop the legacy entry\n\nBREAKING CHANGE: use the new one.",
+    );
 
     expect(result.output).toContain("found 0 problems, 0 warnings");
     expect(result.status).toBe(0);
@@ -310,7 +313,9 @@ describe("commitlint config", { timeout: CLI_TIMEOUT_MS }, () => {
   });
 
   it("reads a message file whose template comments come before the header", () => {
-    const result = lintMessageFile("# Describe the change\n# above it\nfix: 🐛 keep the body\n\nSome body.\n");
+    const result = lintMessageFile(
+      "# Describe the change\n# above it\nfix: 🐛 keep the body\n\nSome body.\n",
+    );
 
     expect(result.output).not.toContain("[body-no-label-lines]");
     expect(result.status).toBe(0);

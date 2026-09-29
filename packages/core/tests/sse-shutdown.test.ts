@@ -56,9 +56,7 @@ describe("a stream open while its server shuts down", () => {
     await reading;
 
     expect(seen.every((event) => event.event === undefined)).toBe(true);
-    expect(seen.map((event) => event.id)).toEqual(
-      seen.map((_event, index) => `evt-${index + 1}`),
-    );
+    expect(seen.map((event) => event.id)).toEqual(seen.map((_event, index) => `evt-${index + 1}`));
     expect(resumedFrom[1]).toMatch(/^evt-\d+$/);
   });
 });

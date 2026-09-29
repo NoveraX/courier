@@ -21,7 +21,9 @@ const api = defineApi({
 });
 
 interface Client {
-  list: (() => Promise<unknown>) & { with: (options: { signal?: AbortSignal }) => () => Promise<unknown> };
+  list: (() => Promise<unknown>) & {
+    with: (options: { signal?: AbortSignal }) => () => Promise<unknown>;
+  };
 }
 
 /** A fetch that never answers until its request is cancelled. */
@@ -48,7 +50,9 @@ describe.each([
       throw cause;
     });
 
-    const error = await makeClient().list().catch((e: unknown) => e);
+    const error = await makeClient()
+      .list()
+      .catch((e: unknown) => e);
 
     expect(isHTTPError(error)).toBe(true);
     expect((error as HTTPError).status).toBe(0);
@@ -75,7 +79,9 @@ describe("the proxy client's onError", () => {
     });
     const onError = vi.fn();
 
-    await (createProxyCaller("api", { onError }) as unknown as Client).list().catch(() => undefined);
+    await (createProxyCaller("api", { onError }) as unknown as Client)
+      .list()
+      .catch(() => undefined);
 
     expect(onError).toHaveBeenCalledWith(expect.any(HTTPError));
   });

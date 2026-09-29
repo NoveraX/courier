@@ -59,7 +59,7 @@ export function highlightLine(code: string, language: string): React.ReactNode[]
   }
 
   // First match at each position wins; longer match wins on ties
-  matches.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+  matches.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));
 
   const nodes: React.ReactNode[] = [];
   let pos = 0;

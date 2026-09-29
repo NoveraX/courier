@@ -1,8 +1,7 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-
 import type { VariantProps } from "class-variance-authority";
 import type { badgeVariants } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
 
@@ -21,10 +20,7 @@ export function TypeBadge({ type, className }: TypeBadgeProps): React.ReactEleme
   const config = TYPE_CONFIG[type];
 
   return (
-    <Badge
-      variant={config.variant}
-      className={cn("text-[10px] font-medium", className)}
-    >
+    <Badge variant={config.variant} className={cn("text-[10px] font-medium", className)}>
       {config.label}
     </Badge>
   );

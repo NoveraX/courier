@@ -1,5 +1,5 @@
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
@@ -16,7 +16,10 @@ const api = defineApi({
       endpoints: {
         list: endpoint.get("").response(z.array(ItemSchema)),
         get: endpoint.get(":id").response(ItemSchema),
-        create: endpoint.post("").variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema),
+        create: endpoint
+          .post("")
+          .variables(z.object({ name: z.string(), price: z.number() }))
+          .response(ItemSchema),
         update: endpoint.patch(":id").response(ItemSchema),
         delete: endpoint.del(":id"),
       },
@@ -33,13 +36,19 @@ describe(".times(n)", () => {
     log: false,
     seed: { count: 3 },
     overrides: (mock) => {
-      mock("items", "list").resolves([{ id: "t", name: "Limited", price: 0 }]).times(2);
+      mock("items", "list")
+        .resolves([{ id: "t", name: "Limited", price: 0 }])
+        .times(2);
     },
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("returns override for first N calls, then falls back", async () => {
     const r1 = await fetch(`${url}/items`).then((r) => r.json());
@@ -69,8 +78,12 @@ describe(".delay(ms)", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("delays response by specified ms", async () => {
     const start = performance.now();
@@ -91,15 +104,23 @@ describe("multiple .once() stacking", () => {
     seed: { count: 3 },
     overrides: (mock) => {
       // Bottom of stack
-      mock("items", "list").resolves([{ id: "a", name: "First", price: 1 }]).once();
+      mock("items", "list")
+        .resolves([{ id: "a", name: "First", price: 1 }])
+        .once();
       // Top of stack (LIFO → returned first)
-      mock("items", "list").resolves([{ id: "b", name: "Second", price: 2 }]).once();
+      mock("items", "list")
+        .resolves([{ id: "b", name: "Second", price: 2 }])
+        .once();
     },
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("pops handlers in LIFO order, then falls back to auto-CRUD", async () => {
     const r1 = await fetch(`${url}/items`).then((r) => r.json());
@@ -129,8 +150,12 @@ describe("callIndex tracking", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("increments callIndex per endpoint", async () => {
     const r0 = await fetch(`${url}/items`).then((r) => r.json());
@@ -160,8 +185,12 @@ describe("error handling in returns()", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("returns 500 with error message", async () => {
     const res = await fetch(`${url}/items/id-1`);
@@ -182,8 +211,12 @@ describe("proxy route (POST /api/request)", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("resolves via group+method", async () => {
     const res = await fetch(`${url}/api/request?_s=api&_g=items&_m=list`, {
@@ -228,8 +261,12 @@ describe("request history", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("records requests in server.history", async () => {
     const before = server.history.length;
@@ -258,8 +295,12 @@ describe("store direct access", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("store.collection lists seeded records", () => {
     const col = server.store.collection("items");
@@ -308,8 +349,12 @@ describe("scenario switching", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("starts with happy-path (auto-CRUD)", async () => {
     const body = await fetch(`${url}/items`).then((r) => r.json());
@@ -317,9 +362,12 @@ describe("scenario switching", () => {
   });
 
   it("switches to empty scenario", () => {
-    server.applyScenario({ name: "empty", apply: (mock) => {
-      (mock as any)("items", "list").resolves([]);
-    }});
+    server.applyScenario({
+      name: "empty",
+      apply: (mock) => {
+        (mock as any)("items", "list").resolves([]);
+      },
+    });
   });
 
   it("returns empty after scenario switch", async () => {
@@ -328,9 +376,12 @@ describe("scenario switching", () => {
   });
 
   it("switches to error scenario", () => {
-    server.applyScenario({ name: "error", apply: (mock) => {
-      (mock as any)("items", "list").rejects(503, { message: "Down" });
-    }});
+    server.applyScenario({
+      name: "error",
+      apply: (mock) => {
+        (mock as any)("items", "list").rejects(503, { message: "Down" });
+      },
+    });
   });
 
   it("returns error after scenario switch", async () => {
@@ -348,15 +399,17 @@ describe("withHeaders merge", () => {
     log: false,
     seed: { count: 1 },
     overrides: (mock) => {
-      mock("items", "list")
-        .withHeaders({ "X-A": "1" })
-        .withHeaders({ "X-B": "2" });
+      mock("items", "list").withHeaders({ "X-A": "1" }).withHeaders({ "X-B": "2" });
     },
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("merges multiple withHeaders calls", async () => {
     const res = await fetch(`${url}/items`);

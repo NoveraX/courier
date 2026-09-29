@@ -1,7 +1,7 @@
+import type { Edge, Node } from "@xyflow/react";
 import dagre from "dagre";
-import type { Node, Edge } from "@xyflow/react";
-import type { ExplorerLayout } from "../types";
 import { LAYOUT_CONFIG, NODE_DIMENSIONS } from "../constants";
+import type { ExplorerLayout } from "../types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -14,11 +14,7 @@ type NodeType = "source" | "group" | "endpoint";
 // ── Layout computation ─────────────────────────────────────────────────────
 
 /** Applies dagre hierarchical layout to React Flow nodes */
-export function computeLayout(
-  nodes: Node[],
-  edges: Edge[],
-  { direction }: LayoutOptions,
-): Node[] {
+export function computeLayout(nodes: Node[], edges: Edge[], { direction }: LayoutOptions): Node[] {
   const g = new dagre.graphlib.Graph();
 
   g.setDefaultEdgeLabel(() => ({}));

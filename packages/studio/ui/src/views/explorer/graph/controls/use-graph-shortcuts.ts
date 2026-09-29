@@ -1,6 +1,6 @@
-import { useEffect } from "react";
-import type { RefObject } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
+import type { RefObject } from "react";
+import { useEffect } from "react";
 
 /**
  * Registers keyboard shortcuts for the graph view.

@@ -65,7 +65,12 @@ describe("a url-encoded body's encoding", () => {
             post: {
               tags: ["c"],
               operationId: "createCall",
-              parameters: [array("events", "multi"), array("ids"), array("words", "ssv"), array("pipes", "pipes")],
+              parameters: [
+                array("events", "multi"),
+                array("ids"),
+                array("words", "ssv"),
+                array("pipes", "pipes"),
+              ],
               responses: { "200": { description: "ok" } },
             },
           },
@@ -80,7 +85,10 @@ describe("a url-encoded body's encoding", () => {
       words: { style: "spaceDelimited", explode: false },
       pipes: { style: "pipeDelimited", explode: false },
     });
-    expect(call?.requestBody?.properties?.events).toMatchObject({ type: "array", items: { type: "string" } });
+    expect(call?.requestBody?.properties?.events).toMatchObject({
+      type: "array",
+      items: { type: "string" },
+    });
   });
 });
 
@@ -92,12 +100,22 @@ describe("a success answer's media type", () => {
   it("is the one its schema is written under, JSON first, or the first declared without one", () => {
     const spec = openApi({
       "/csv": get("exportCsv", { "text/csv": {} }),
-      "/pdf": get("renderPdf", { "application/pdf": { schema: { type: "string", format: "binary" } } }),
-      "/both": get("either", { "text/plain": { schema: { type: "string" } }, "application/json": { schema: { type: "object" } } }),
-      "/none": { get: { tags: ["r"], operationId: "noBody", responses: { "204": { description: "gone" } } } },
+      "/pdf": get("renderPdf", {
+        "application/pdf": { schema: { type: "string", format: "binary" } },
+      }),
+      "/both": get("either", {
+        "text/plain": { schema: { type: "string" } },
+        "application/json": { schema: { type: "object" } },
+      }),
+      "/none": {
+        get: { tags: ["r"], operationId: "noBody", responses: { "204": { description: "gone" } } },
+      },
     });
 
-    expect(endpoint(spec, "exportCsv")).toMatchObject({ responseSchema: null, responseMediaType: "text/csv" });
+    expect(endpoint(spec, "exportCsv")).toMatchObject({
+      responseSchema: null,
+      responseMediaType: "text/csv",
+    });
     expect(endpoint(spec, "renderPdf")?.responseMediaType).toBe("application/pdf");
     expect(endpoint(spec, "either")?.responseMediaType).toBe("application/json");
     expect(endpoint(spec, "noBody")?.responseMediaType).toBeUndefined();

@@ -1,8 +1,7 @@
+import { saveSessionStartedAt } from "./constants";
 import type { StudioSet } from "./store-access";
 import type { StudioState } from "./store-types";
 import type { BindingSnapshot } from "./types-ui";
-
-import { saveSessionStartedAt } from "./constants";
 
 type ConnectionActions = Pick<
   StudioState,

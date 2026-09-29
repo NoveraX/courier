@@ -7,9 +7,9 @@
  * visits, and sends it with every request and on its socket; a page opened
  * without it is told why Studio refused a change.
  */
-import { io } from "socket.io-client";
 
 import type { ManagerOptions, SocketOptions } from "socket.io-client";
+import { io } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
@@ -25,7 +25,9 @@ async function freshPage() {
 }
 
 /* What a socket created with these options sends in its handshake. */
-function handshakeOf(options: Partial<ManagerOptions & SocketOptions> | undefined): Promise<unknown> {
+function handshakeOf(
+  options: Partial<ManagerOptions & SocketOptions> | undefined,
+): Promise<unknown> {
   const auth = options?.auth;
   if (typeof auth !== "function") return Promise.resolve(auth);
   return new Promise((resolve) => auth(resolve));
@@ -109,7 +111,10 @@ describe("the page's token", () => {
 
     expect(studioToken()).toBe(TOKEN);
     expect(studioToken()).toBe(TOKEN);
-    expect(warn).toHaveBeenCalledWith("Studio could not keep its token for the next visit", expect.any(DOMException));
+    expect(warn).toHaveBeenCalledWith(
+      "Studio could not keep its token for the next visit",
+      expect.any(DOMException),
+    );
   });
 });
 

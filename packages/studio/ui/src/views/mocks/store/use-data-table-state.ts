@@ -6,8 +6,8 @@
  * callbacks the host wires into the toolbar and rows.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { MockCollectionEntry } from "@/store/mock-slice";
 
@@ -131,11 +131,7 @@ export function useDataTableState({
     setCheckedIds(new Set());
   };
 
-  const handleCellCommit = (
-    record: Record<string, unknown>,
-    col: string,
-    value: unknown,
-  ) => {
+  const handleCellCommit = (record: Record<string, unknown>, col: string, value: unknown) => {
     const id = record.id ?? record._id;
     if (id !== undefined && onUpdateField) {
       onUpdateField(String(id), col, value);

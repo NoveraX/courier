@@ -1,22 +1,16 @@
-import {
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { StreamTab } from "@/components/shared/detail-panel/tabs/stream-tab";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { copyToClipboard } from "@/lib/clipboard";
-
+import type { EndpointNodeData } from "../types";
+import { useEndpointMetrics } from "../use-endpoint-metrics";
+import { useExplorerData } from "../use-explorer-data";
 import { PanelHeader } from "./panel-header";
+import { ConfigTab } from "./tabs/config-tab";
 import { OverviewTab } from "./tabs/overview-tab";
 import { RequestsTab } from "./tabs/requests-tab";
 import { SchemaTab } from "./tabs/schema-tab";
-import { ConfigTab } from "./tabs/config-tab";
-import { StreamTab } from "@/components/shared/detail-panel/tabs/stream-tab";
-
-import { useEndpointMetrics } from "../use-endpoint-metrics";
-import { useExplorerData } from "../use-explorer-data";
-import type { EndpointNodeData } from "../types";
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -105,12 +99,13 @@ export function PanelContent({
             </TabsContent>
             {isRealtime && (
               <TabsContent value="stream">
-                {latestStream
-                  ? <StreamTab request={latestStream} />
-                  : <p className="py-8 text-center text-body-sm text-muted-foreground/50">
-                      No stream data yet — subscribe in Playground to capture events
-                    </p>
-                }
+                {latestStream ? (
+                  <StreamTab request={latestStream} />
+                ) : (
+                  <p className="py-8 text-center text-body-sm text-muted-foreground/50">
+                    No stream data yet — subscribe in Playground to capture events
+                  </p>
+                )}
               </TabsContent>
             )}
             <TabsContent value="schema">
@@ -134,7 +129,5 @@ function findEndpoint(
   group: string,
   method: string,
 ): EndpointNodeData | undefined {
-  return endpoints.find(
-    (e) => e.source === source && e.group === group && e.method === method,
-  );
+  return endpoints.find((e) => e.source === source && e.group === group && e.method === method);
 }

@@ -37,7 +37,11 @@ afterEach(async () => {
 });
 
 async function client() {
-  const server = createAutoMockServer({ source: storeApi("http://placeholder.invalid"), port: 0, log: false });
+  const server = createAutoMockServer({
+    source: storeApi("http://placeholder.invalid"),
+    port: 0,
+    log: false,
+  });
   running.push(server);
   const { url } = await server.start();
   return createCaller(storeApi(url));

@@ -1,7 +1,6 @@
-import type { InsertedLine } from "./wire-types";
-
 import { isPlainObject } from "@/socket/is-plain-object";
 import { isLineNumber } from "./is-line-number";
+import type { InsertedLine } from "./wire-types";
 
 /**
  * Whether a value from Studio names a line it wrote into: its number in the

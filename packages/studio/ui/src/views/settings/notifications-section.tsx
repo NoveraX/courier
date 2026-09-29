@@ -1,9 +1,5 @@
-import { Controller } from "react-hook-form";
-
 import type { UseFormReturn } from "react-hook-form";
-import type { Settings } from "@/store/types";
-
-import { Switch } from "@/components/ui/switch";
+import { Controller } from "react-hook-form";
 import {
   Select,
   SelectContent,
@@ -11,6 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+import { Switch } from "@/components/ui/switch";
+import type { Settings } from "@/store/types";
 import { SLOW_THRESHOLD_OPTIONS } from "./constants";
 import { SettingRow } from "./setting-row";
 
@@ -20,9 +19,7 @@ interface NotificationsSectionProps {
   form: UseFormReturn<Settings>;
 }
 
-export function NotificationsSection({
-  form,
-}: NotificationsSectionProps): React.ReactElement {
+export function NotificationsSection({ form }: NotificationsSectionProps): React.ReactElement {
   return (
     <>
       <SettingRow
@@ -34,11 +31,7 @@ export function NotificationsSection({
           control={form.control}
           name="toastOnError"
           render={({ field }) => (
-            <Switch
-              id="toastOnError"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
+            <Switch id="toastOnError" checked={field.value} onCheckedChange={field.onChange} />
           )}
         />
       </SettingRow>
@@ -66,10 +59,7 @@ export function NotificationsSection({
           control={form.control}
           name="slowRequestThreshold"
           render={({ field }) => (
-            <Select
-              value={String(field.value)}
-              onValueChange={(v) => field.onChange(Number(v))}
-            >
+            <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
               <SelectTrigger className="w-28" size="sm">
                 <SelectValue />
               </SelectTrigger>
@@ -94,11 +84,7 @@ export function NotificationsSection({
           control={form.control}
           name="toastOnFileChange"
           render={({ field }) => (
-            <Switch
-              id="toastOnFileChange"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
+            <Switch id="toastOnFileChange" checked={field.value} onCheckedChange={field.onChange} />
           )}
         />
       </SettingRow>

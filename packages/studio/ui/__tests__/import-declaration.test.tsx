@@ -13,11 +13,10 @@ vi.mock("@/components/shared/code-block", async () => {
   return { CodeBlock: ({ code }: { code: string }) => createElement("pre", null, code) };
 });
 
-import type { ImportDeclaration, ImportState } from "../src/views/apis/types";
-
 import { ApisEmptyState } from "../src/views/apis/apis-empty-state";
 import { DeclareStepView } from "../src/views/apis/declare-step";
 import { settleWrite } from "../src/views/apis/settle-write";
+import type { ImportDeclaration, ImportState } from "../src/views/apis/types";
 
 const IMPORT_ENTRY = [
   '  "pets": {',
@@ -93,10 +92,15 @@ describe("the wizard once Studio wrote an import's files", () => {
   });
 
   it("says only what was written, never that the API was imported", () => {
-    const { message } = settleWrite(PREVIEWED, answer({ configFile: "courier.config.ts", source: SOURCE }));
+    const { message } = settleWrite(
+      PREVIEWED,
+      answer({ configFile: "courier.config.ts", source: SOURCE }),
+    );
 
     expect(message).not.toMatch(/import/i);
-    expect(settleWrite(PREVIEWED, { written: ["src/api/pets/source.ts"] }).message).toBe("pets: wrote 1 file");
+    expect(settleWrite(PREVIEWED, { written: ["src/api/pets/source.ts"] }).message).toBe(
+      "pets: wrote 1 file",
+    );
   });
 
   it("says what it removed, kept and left behind besides what it wrote", () => {
@@ -128,7 +132,11 @@ describe("the wizard once Studio wrote an import's files", () => {
   it("keeps the parts Studio named, and drops the malformed ones", () => {
     const onlyEntry = settleWrite(
       PREVIEWED,
-      answer({ configFile: "courier.config.ts", source: { importLine: 1 }, importEntry: IMPORT_ENTRY }),
+      answer({
+        configFile: "courier.config.ts",
+        source: { importLine: 1 },
+        importEntry: IMPORT_ENTRY,
+      }),
     );
     const nothing = settleWrite(
       PREVIEWED,
@@ -163,7 +171,16 @@ describe("the wizard once Studio wrote an import's files", () => {
     const refused: ImportState = {
       ...PREVIEWED,
       consent: {
-        plan: { digest: "d", dir: "src/api/pets", writes: [], removals: [], kept: [], pending: [], blocked: [], forgotten: [] },
+        plan: {
+          digest: "d",
+          dir: "src/api/pets",
+          writes: [],
+          removals: [],
+          kept: [],
+          pending: [],
+          blocked: [],
+          forgotten: [],
+        },
         confirmed: [],
       },
     };
@@ -181,7 +198,9 @@ describe("the declare step", () => {
       leftOut: 0,
     };
 
-    const html = text(renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />));
+    const html = text(
+      renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />),
+    );
 
     expect(html).toContain(`<pre>${SOURCE.importLine}</pre>`);
     expect(html).toContain("<pre>pets,</pre>");
@@ -201,7 +220,9 @@ describe("the declare step", () => {
       leftOut: 2,
     };
 
-    const html = text(renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />));
+    const html = text(
+      renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />),
+    );
 
     expect(html).toContain(`<pre>${IMPORT_ENTRY}</pre>`);
     expect(html).toContain(
@@ -217,7 +238,9 @@ describe("the declare step", () => {
       leftOut: 0,
     };
 
-    const html = text(renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />));
+    const html = text(
+      renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />),
+    );
 
     expect(html).toContain(`<pre>${IMPORT_ENTRY}</pre>`);
     expect(html).toContain("courier.config.ts lists pets under sources already");

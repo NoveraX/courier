@@ -5,8 +5,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createPostHandler } from "../src/adapter/handle-post";
-import { LIMITS } from "../src/adapter/limits";
 import type { HandlerConfig } from "../src/adapter/handler-config";
+import { LIMITS } from "../src/adapter/limits";
 import type { StudioHooks } from "../src/studio/hooks";
 
 const hooks = () =>
@@ -40,7 +40,10 @@ function jsonRequest(body: string): Request {
  * the bytes as they arrive can stop it — this is the shape a hostile caller
  * actually sends.
  */
-function chunkedRequest(chunkSize: number, chunks: number): { request: Request; sent: () => number } {
+function chunkedRequest(
+  chunkSize: number,
+  chunks: number,
+): { request: Request; sent: () => number } {
   let sent = 0;
   const stream = new ReadableStream<Uint8Array>({
     pull(controller) {
@@ -148,7 +151,10 @@ describe("an upload is measured against its own limit", () => {
 
     return new Request(CALL_URL, {
       method: "POST",
-      headers: { origin: "http://localhost", "content-type": encoded.headers.get("content-type") ?? "" },
+      headers: {
+        origin: "http://localhost",
+        "content-type": encoded.headers.get("content-type") ?? "",
+      },
       body: new Blob([payload]).stream(),
       // @ts-expect-error -- required by the platform for a streaming body
       duplex: "half",

@@ -1,82 +1,82 @@
-import type { ProxyPath } from "@noverax/courier"
+import type { ProxyPath } from "@noverax/courier";
 
-import type { ProxyTiming, RequestStatus, RequestTiming } from "./types"
+import type { ProxyTiming, RequestStatus, RequestTiming } from "./types";
 
 // ── Theme ───────────────────────────────────────────────────────────────────
 
-export type Theme = "dark" | "light" | "system"
+export type Theme = "dark" | "light" | "system";
 
 // ── Connection state ────────────────────────────────────────────────────────
 
-export type ConnectionStatus = "connected" | "disconnected" | "reconnecting"
+export type ConnectionStatus = "connected" | "disconnected" | "reconnecting";
 
 // ── Catalog (server-authoritative merged source map) ────────────────────────
 
 export interface CatalogEndpoint {
-  type: "query" | "mutation" | undefined
-  hasVariablesSchema: boolean
-  hasResponseSchema: boolean
-  path?: string
-  httpMethod?: string
-  middleware?: string[]
+  type: "query" | "mutation" | undefined;
+  hasVariablesSchema: boolean;
+  hasResponseSchema: boolean;
+  path?: string;
+  httpMethod?: string;
+  middleware?: string[];
   /** Default variables stub from schema introspection */
-  variablesStub?: Record<string, unknown>
-  origin: "scan" | "runtime" | "both"
+  variablesStub?: Record<string, unknown>;
+  origin: "scan" | "runtime" | "both";
   /** Transport mode — only present for SSE/WS endpoints */
-  transport?: "sse" | "ws"
+  transport?: "sse" | "ws";
   /** True when WS channel has a receive schema (bidirectional) */
-  hasReceiveSchema?: boolean
+  hasReceiveSchema?: boolean;
 }
 
 export interface CatalogGroup {
-  prefix: string
-  endpoints: Record<string, CatalogEndpoint>
+  prefix: string;
+  endpoints: Record<string, CatalogEndpoint>;
 }
 
 export interface CatalogEntry {
-  baseURL: string
+  baseURL: string;
   /**
    * The user-app's own HTTP origin (e.g. `http://localhost:3000`): the one
    * its runtime listens on, or `runtime.appOrigin` in courier.config. Used
    * by the Playground to resolve relative `proxyPath` values into full
    * clickable URLs. Omitted when Studio knows none.
    */
-  appOrigin?: string
+  appOrigin?: string;
   /**
    * Per-transport proxy endpoint configuration carried from the source's
    * `defineApi({ proxyPath })`. Used by the Playground to display the
    * configured proxy URL as read-only metadata. Omitted when the source
    * has no `proxyPath` configured.
    */
-  proxyPath?: ProxyPath
-  groups: Record<string, CatalogGroup>
+  proxyPath?: ProxyPath;
+  groups: Record<string, CatalogGroup>;
 }
 
-export type Catalog = Record<string, CatalogEntry>
+export type Catalog = Record<string, CatalogEntry>;
 
 // ── Aliases (used by explorer, playground, audit views) ─────────────────────
 
-export type EndpointInfo = CatalogEndpoint
-export type GroupInfo = CatalogGroup
-export type SourceInfo = CatalogEntry
-export type SourceMap = Catalog
+export type EndpointInfo = CatalogEndpoint;
+export type GroupInfo = CatalogGroup;
+export type SourceInfo = CatalogEntry;
+export type SourceMap = Catalog;
 
 // ── Binding snapshot (server-authoritative runtime/source ownership) ───────
 
-export type BindingTransport = "http" | "sse" | "ws"
+export type BindingTransport = "http" | "sse" | "ws";
 
-export type BindingStatusKind = "bound" | "orphan" | "conflict"
+export type BindingStatusKind = "bound" | "orphan" | "conflict";
 
 export interface BindingStatusRow {
-  sourceName: string
-  transport: BindingTransport
-  status: BindingStatusKind
+  sourceName: string;
+  transport: BindingTransport;
+  status: BindingStatusKind;
   /** Owner runtime — present when status === "bound" */
-  runtimeId?: string
+  runtimeId?: string;
   /** All runtimes that claimed this pair — present when status === "conflict" */
-  conflicting?: string[]
+  conflicting?: string[];
   /** Canonical HTTP(S) origin of the owning runtime, stamped from listenOrigin */
-  appOrigin?: string
+  appOrigin?: string;
 }
 
 /**
@@ -87,20 +87,20 @@ export interface BindingStatusRow {
  * the runtimes connected to Studio, and the sources they host.
  */
 export interface BindingSnapshot {
-  rows: BindingStatusRow[]
-  runtimeCount: number
-  sourceCount: number
+  rows: BindingStatusRow[];
+  runtimeCount: number;
+  sourceCount: number;
   /** Each runtime connected, and whether it runs in a browser or on a server. */
-  runtimes: Array<{ runtimeId: string; kind: "browser" | "server" }>
+  runtimes: Array<{ runtimeId: string; kind: "browser" | "server" }>;
 }
 
 export interface BindingErrorPayload {
-  kind: "conflict"
+  kind: "conflict";
   details: {
-    sourceName: string
-    transport: BindingTransport
-    runtimeIds: string[]
-  }
+    sourceName: string;
+    transport: BindingTransport;
+    runtimeIds: string[];
+  };
 }
 
 // ── Playground model ─────────────────────────────────────────────────────────
@@ -115,27 +115,27 @@ export interface BindingErrorPayload {
  */
 export type PlaygroundChunk =
   | {
-      kind: "http-result"
-      data?: unknown
-      status: number
+      kind: "http-result";
+      data?: unknown;
+      status: number;
       /** What went wrong, when the call failed; the answer's body stays in `data`. */
-      error?: string
+      error?: string;
       /** The answer's response headers. */
-      headers?: Record<string, string>
+      headers?: Record<string, string>;
     }
   | { kind: "sse-event"; event: unknown }
   | { kind: "ws-message"; data: unknown }
-  | { kind: "upload-progress"; loaded: number; total: number; percentage: number }
+  | { kind: "upload-progress"; loaded: number; total: number; percentage: number };
 
 export interface PlaygroundEndSummary {
   /** Runtime-side wall-clock duration from dispatch start to terminal event. */
-  durationMs: number
+  durationMs: number;
   /** SSE event count (responder-dispatch.ts). Undefined for HTTP/WS. */
-  count?: number
+  count?: number;
 }
 
 export interface PlaygroundHistoryEntry {
-  id: string
+  id: string;
   /**
    * Correlation id for the rid-keyed playground wire. Generated by the UI
    * at entry creation and emitted on `playground:exec`; every
@@ -143,98 +143,98 @@ export interface PlaygroundHistoryEntry {
    * sends back carries this rid so the listener routes the response to the
    * originating entry.
    */
-  rid: string
-  source: string
-  group: string
-  method: string
-  variables: string
-  headers: string
-  mode: "direct" | "proxy"
-  timestamp: number
-  status: "pending" | "success" | "error"
-  statusCode?: number
-  duration?: number
-  response?: unknown
-  responseHeaders?: Record<string, string>
-  timing?: RequestTiming
-  proxyTiming?: ProxyTiming
-  requestHeaders?: Record<string, string>
+  rid: string;
+  source: string;
+  group: string;
+  method: string;
+  variables: string;
+  headers: string;
+  mode: "direct" | "proxy";
+  timestamp: number;
+  status: "pending" | "success" | "error";
+  statusCode?: number;
+  duration?: number;
+  response?: unknown;
+  responseHeaders?: Record<string, string>;
+  timing?: RequestTiming;
+  proxyTiming?: ProxyTiming;
+  requestHeaders?: Record<string, string>;
   /** How much of a form body has been sent, while it uploads */
-  upload?: { loaded: number; total: number; percentage: number }
+  upload?: { loaded: number; total: number; percentage: number };
   /** Transport used — undefined = HTTP */
-  transport?: "sse" | "ws"
+  transport?: "sse" | "ws";
   /** Streaming lifecycle state */
-  streamStatus?: "connecting" | "streaming" | "complete" | "error"
+  streamStatus?: "connecting" | "streaming" | "complete" | "error";
   /**
    * Realtime chunks accumulated from `playground:chunk` events. SSE streams
    * append one per yielded event, WS channels append one per incoming
    * message, HTTP one-shot stores its single `http-result` chunk here so
    * the render layer can unwrap it uniformly.
    */
-  chunks?: PlaygroundChunk[]
+  chunks?: PlaygroundChunk[];
 }
 
 // ── Timeline filters ────────────────────────────────────────────────────────
 
 export interface TimelineFilters {
-  search: string
-  status: RequestStatus[]
-  mode: ("direct" | "proxy")[]
-  type: ("query" | "mutation")[]
-  httpMethod: string[]
-  source: string[]
-  group: string[]
-  minDuration: number | null
+  search: string;
+  status: RequestStatus[];
+  mode: ("direct" | "proxy")[];
+  type: ("query" | "mutation")[];
+  httpMethod: string[];
+  source: string[];
+  group: string[];
+  minDuration: number | null;
 }
 
 // ── Waterfall state ─────────────────────────────────────────────────────────
 
-export type WaterfallSortField = "startTime" | "duration" | "size"
-export type WaterfallGroupBy = "none" | "source" | "group"
+export type WaterfallSortField = "startTime" | "duration" | "size";
+export type WaterfallGroupBy = "none" | "source" | "group";
 
 // ── Settings ────────────────────────────────────────────────────────────────
 
-export type TimestampFormat = "relative" | "absolute"
-export type JsonIndent = 2 | 4
-export type ValidationLib = "zod" | "valibot" | "arktype" | "none"
-export type ApisGroupBy = "tag" | "path" | "single"
-export type ApisClient = "direct" | "proxy" | "both" | "none"
-export type ExportFormat = "har" | "json" | "postman"
-export type DensityMode = "comfortable" | "compact"
+export type TimestampFormat = "relative" | "absolute";
+export type JsonIndent = 2 | 4;
+export type ValidationLib = "zod" | "valibot" | "arktype" | "none";
+export type ApisGroupBy = "tag" | "path" | "single";
+export type ApisClient = "direct" | "proxy" | "both" | "none";
+export type ExportFormat = "har" | "json" | "postman";
+export type DensityMode = "comfortable" | "compact";
 
 export interface Settings {
   // Appearance
-  theme: Theme
-  density: DensityMode
+  theme: Theme;
+  density: DensityMode;
 
   // Recording
-  maxRequests: number
-  preserveLog: boolean
-  ignorePatterns: string[]
+  maxRequests: number;
+  preserveLog: boolean;
+  ignorePatterns: string[];
 
   // Display
-  timestampFormat: TimestampFormat
-  jsonIndent: JsonIndent
-  showRequestPreview: boolean
+  timestampFormat: TimestampFormat;
+  jsonIndent: JsonIndent;
+  showRequestPreview: boolean;
 
   // Notifications
-  toastOnError: boolean
-  toastOnSlowRequest: boolean
-  slowRequestThreshold: number
-  toastOnFileChange: boolean
+  toastOnError: boolean;
+  toastOnSlowRequest: boolean;
+  slowRequestThreshold: number;
+  toastOnFileChange: boolean;
 
   // Connection
-  autoReconnect: boolean
-  reconnectDelay: number
+  autoReconnect: boolean;
+  reconnectDelay: number;
 
   // Export
-  defaultExportFormat: ExportFormat
+  defaultExportFormat: ExportFormat;
 
   // Apis defaults
-  apisValidation: ValidationLib
-  apisGroupBy: ApisGroupBy
-  apisGenerateTypes: boolean
-  apisGenerateSchemas: boolean
-  apisIncludeComments: boolean
-  apisClient: ApisClient
+  apisValidation: ValidationLib;
+  apisGroupBy: ApisGroupBy;
+  apisGenerateTypes: boolean;
+  apisGenerateSchemas: boolean;
+  apisIncludeComments: boolean;
+  apisClient: ApisClient;
 }

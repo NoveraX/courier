@@ -1,5 +1,5 @@
-import type { FlatItem } from "./types";
 import { GroupHeader } from "./group-header";
+import type { FlatItem } from "./types";
 import { RowLabel } from "./waterfall-row";
 
 interface LabelRowProps {
@@ -13,7 +13,12 @@ interface LabelRowProps {
 
 /** Single virtual row in the sticky label column */
 export function LabelRow({
-  item, top, height, selectedId, onSelect, onToggleGroup,
+  item,
+  top,
+  height,
+  selectedId,
+  onSelect,
+  onToggleGroup,
 }: LabelRowProps): React.ReactElement {
   return (
     <div className="absolute inset-x-0" style={{ top, height }}>

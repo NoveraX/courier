@@ -37,7 +37,12 @@ async function startStudio(): Promise<string> {
   const { port } = probe.address() as { port: number };
   await new Promise<void>((resolve) => probe.close(() => resolve()));
   return new Promise<string>((resolve) => {
-    const server = createStudioServer({ port, host: "127.0.0.1", projectRoot: root, onReady: resolve });
+    const server = createStudioServer({
+      port,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+    });
     cleanups.push(() => server.close());
   });
 }
@@ -72,7 +77,9 @@ describe("the runtimes and sources Studio counts", () => {
     app.emit("runtime:hello", { runtimeId: "server", kind: "server" });
     app.emit("runtime:announce", { transports: ["http", "sse", "ws"], sources: ["api"] });
 
-    await expect.poll(page.latest).toEqual(expect.objectContaining({ runtimeCount: 1, sourceCount: 1 }));
+    await expect
+      .poll(page.latest)
+      .toEqual(expect.objectContaining({ runtimeCount: 1, sourceCount: 1 }));
   });
 
   it("counts an app as soon as it connects, before it hosts anything", async () => {
@@ -82,7 +89,9 @@ describe("the runtimes and sources Studio counts", () => {
 
     app.emit("runtime:hello", { runtimeId: "server", kind: "server" });
 
-    await expect.poll(page.latest).toEqual(expect.objectContaining({ runtimeCount: 1, sourceCount: 0 }));
+    await expect
+      .poll(page.latest)
+      .toEqual(expect.objectContaining({ runtimeCount: 1, sourceCount: 0 }));
   });
 
   it("names each connected runtime and whether it runs in a browser", async () => {
@@ -94,12 +103,14 @@ describe("the runtimes and sources Studio counts", () => {
     server.emit("runtime:hello", { runtimeId: "server", kind: "server" });
     browser.emit("runtime:hello", { runtimeId: "vite-browser", kind: "browser" });
 
-    await expect.poll(() => page.latest()?.runtimes).toEqual(
-      expect.arrayContaining([
-        { runtimeId: "server", kind: "server" },
-        { runtimeId: "vite-browser", kind: "browser" },
-      ]),
-    );
+    await expect
+      .poll(() => page.latest()?.runtimes)
+      .toEqual(
+        expect.arrayContaining([
+          { runtimeId: "server", kind: "server" },
+          { runtimeId: "vite-browser", kind: "browser" },
+        ]),
+      );
   });
 
   it("stops counting an app once it disconnects", async () => {
@@ -112,6 +123,8 @@ describe("the runtimes and sources Studio counts", () => {
 
     app.disconnect();
 
-    await expect.poll(page.latest).toEqual(expect.objectContaining({ runtimeCount: 0, sourceCount: 0 }));
+    await expect
+      .poll(page.latest)
+      .toEqual(expect.objectContaining({ runtimeCount: 0, sourceCount: 0 }));
   });
 });

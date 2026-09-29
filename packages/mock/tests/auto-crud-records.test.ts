@@ -85,9 +85,10 @@ describe("auto-CRUD records", () => {
   it("replaces the record on PUT, dropping the fields the body leaves out", async () => {
     const url = await serve(todosApi());
 
-    const replaced = await fetch(`${url}/todos/1`, { ...json({ title: "Only" }), method: "PUT" }).then(
-      (r) => r.json(),
-    );
+    const replaced = await fetch(`${url}/todos/1`, {
+      ...json({ title: "Only" }),
+      method: "PUT",
+    }).then((r) => r.json());
 
     expect(replaced).toEqual({ id: 1, title: "Only" });
   });

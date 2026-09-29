@@ -1,5 +1,5 @@
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { describe, expect, it } from "vitest";
-import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { createMockClient } from "../src/create-mock-client";
 import { defineFactory } from "../src/factory";
 import { defineScenario } from "../src/scenario";
@@ -27,7 +27,10 @@ const users = defineGroup({
   endpoints: {
     getAll: endpoint.get("").response<User[]>(),
     getById: endpoint.get(":id").variables<{ id: string }>().response<User>(),
-    create: endpoint.post("").variables<{ name: string; role: "user" | "admin" }>().response<User>(),
+    create: endpoint
+      .post("")
+      .variables<{ name: string; role: "user" | "admin" }>()
+      .response<User>(),
   },
 });
 
@@ -161,9 +164,7 @@ describe("integration: createMockClient with real defineApi", () => {
       .transitionTo("authenticated");
 
     // Authenticated state — users endpoint returns data
-    mock("users", "getAll")
-      .inState("authenticated")
-      .resolves(userFactory.buildList(2));
+    mock("users", "getAll").inState("authenticated").resolves(userFactory.buildList(2));
 
     // Step 1: should fail (401)
     await expect(client.users.getAll()).rejects.toThrow();
@@ -180,11 +181,7 @@ describe("integration: createMockClient with real defineApi", () => {
   it("sequence mock simulates progressive loading", async () => {
     const { client, mock } = createMockClient<typeof api>();
 
-    mock("posts", "getAll").sequence([
-      [],
-      postFactory.buildList(1),
-      postFactory.buildList(3),
-    ]);
+    mock("posts", "getAll").sequence([[], postFactory.buildList(1), postFactory.buildList(3)]);
 
     expect(await client.posts.getAll()).toHaveLength(0);
     expect(await client.posts.getAll()).toHaveLength(1);

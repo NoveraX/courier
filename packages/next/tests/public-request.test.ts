@@ -6,11 +6,10 @@
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { registerSources } from "@noverax/courier";
 import { apiRoute } from "../src/api-route";
 import { publicRequest } from "../src/public-request";
 
@@ -118,7 +117,10 @@ describe("apiRoute in production", () => {
 describe("publicRequest", () => {
   it("names the host the client addressed, with the scheme it used", () => {
     const request = new Request("http://localhost:3000/api/request?_s=api", {
-      headers: { "x-forwarded-host": "app.example.com, proxy.internal", "x-forwarded-proto": "https" },
+      headers: {
+        "x-forwarded-host": "app.example.com, proxy.internal",
+        "x-forwarded-proto": "https",
+      },
     });
 
     expect(publicRequest(request).url).toBe("https://app.example.com/api/request?_s=api");

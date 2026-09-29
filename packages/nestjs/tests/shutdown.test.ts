@@ -31,7 +31,9 @@ const forever = stream.response<number>().implement(async function* (ctx) {
 });
 
 beforeEach(() => {
-  registerSources({ api: defineApi({ baseURL: "https://upstream.example", endpoints: { forever } }) });
+  registerSources({
+    api: defineApi({ baseURL: "https://upstream.example", endpoints: { forever } }),
+  });
 });
 
 afterEach(async () => {
@@ -47,7 +49,8 @@ async function listen(configure: (s: Server) => void): Promise<string> {
   return `127.0.0.1:${(server.address() as AddressInfo).port}`;
 }
 
-const timeout = (ms: number) => new Promise((resolve) => setTimeout(() => resolve("still open"), ms));
+const timeout = (ms: number) =>
+  new Promise((resolve) => setTimeout(() => resolve("still open"), ms));
 
 describe("draining a NestJS host's SSE streams", () => {
   it("tells each stream's client to come back later and lets the server close", async () => {

@@ -75,12 +75,19 @@ describe("a read whose closure writes its query with formQuery", () => {
         charges: endpoint
           .variables<{ customer: string; created?: { gte?: number }; expand?: string[] }>()
           .via((http, variables) =>
-            http.get("customers/:customer/charges", formQuery(variables, { created: DEEP, expand: DEEP })),
+            http.get(
+              "customers/:customer/charges",
+              formQuery(variables, { created: DEEP, expand: DEEP }),
+            ),
           ),
       },
     });
 
-    await createCaller(api).charges({ customer: "cus_1", created: { gte: 1680000000 }, expand: ["tax"] });
+    await createCaller(api).charges({
+      customer: "cus_1",
+      created: { gte: 1680000000 },
+      expand: ["tax"],
+    });
 
     const url = new URL(upstream.received[0]?.url ?? "", upstream.url);
     expect(url.pathname).toBe("/customers/cus_1/charges");

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import type { WSSocketContext } from "../src/adapter/ws-context";
+import { handleMessage } from "../src/adapter/ws-dispatch";
 import { createConnectionRegistry } from "../src/adapter/ws-registry";
 import type { RegistryEntry } from "../src/adapter/ws-registry-types";
-import { handleMessage } from "../src/adapter/ws-dispatch";
-import type { WSSocketContext } from "../src/adapter/ws-context";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { ENDPOINT_SCHEMA } from "../src/validation";
 
@@ -96,7 +96,10 @@ function createMsgCtx(overrides: Partial<WSSocketContext> = {}): {
   sent: WSMessage[];
 } {
   const sent: WSMessage[] = [];
-  const topicSubs = new Map<string, Map<string, { topic: string; onMessage?: (p: unknown) => void }>>();
+  const topicSubs = new Map<
+    string,
+    Map<string, { topic: string; onMessage?: (p: unknown) => void }>
+  >();
 
   const wsEndpoint = (() => {
     const fn = () => ({ onMessage: vi.fn() });
@@ -118,7 +121,12 @@ function createMsgCtx(overrides: Partial<WSSocketContext> = {}): {
   const ctx = {
     connectionId: "conn-1",
     requestId: "req-1",
-    sources: { api: { options: { groups: { chat: { send: wsEndpoint, options: {} } } }, chat: { send: wsEndpoint } } },
+    sources: {
+      api: {
+        options: { groups: { chat: { send: wsEndpoint, options: {} } } },
+        chat: { send: wsEndpoint },
+      },
+    },
     pubsub: undefined,
     registry: { broadcastToTopic: vi.fn() },
     bridge: undefined,
@@ -142,10 +150,18 @@ function createMsgCtx(overrides: Partial<WSSocketContext> = {}): {
   } as unknown as WSSocketContext;
 
   // Pre-subscribe to topic
-  topicSubs.set("conn-1", new Map([["api.chat.send#abc", {
-    topic: "api.chat.send#abc",
-    onMessage: vi.fn(),
-  }]]));
+  topicSubs.set(
+    "conn-1",
+    new Map([
+      [
+        "api.chat.send#abc",
+        {
+          topic: "api.chat.send#abc",
+          onMessage: vi.fn(),
+        },
+      ],
+    ]),
+  );
 
   return { ctx, sent };
 }
@@ -170,7 +186,12 @@ describe("per-message authorization", () => {
     const authorizeMessage = vi.fn().mockResolvedValue(false);
     const { ctx, sent } = createMsgCtx({ authorizeMessage });
 
-    await handleMessage(ctx, { type: "message", id: "m1", topic: "api.chat.send#abc", payload: "hi" });
+    await handleMessage(ctx, {
+      type: "message",
+      id: "m1",
+      topic: "api.chat.send#abc",
+      payload: "hi",
+    });
 
     expect(sent).toHaveLength(1);
     expect(sent[0]!.error?.code).toBe(4403);
@@ -181,7 +202,12 @@ describe("per-message authorization", () => {
     const authorizeMessage = vi.fn().mockRejectedValue(new Error("forbidden"));
     const { ctx, sent } = createMsgCtx({ authorizeMessage });
 
-    await handleMessage(ctx, { type: "message", id: "m2", topic: "api.chat.send#abc", payload: "hi" });
+    await handleMessage(ctx, {
+      type: "message",
+      id: "m2",
+      topic: "api.chat.send#abc",
+      payload: "hi",
+    });
 
     expect(sent).toHaveLength(1);
     expect(sent[0]!.error?.code).toBe(4403);

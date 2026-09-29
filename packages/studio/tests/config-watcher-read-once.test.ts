@@ -59,8 +59,14 @@ describe("startConfigWatcher — the mocks file", () => {
     mkdirSync(join(root, "src"));
     const config = join(root, "courier.config.ts");
     const mocksFile = join(root, "courier.mocks.ts");
-    writeFileSync(join(root, "src", "api.ts"), 'export const api = { baseURL: "v1.example.com" }\n');
-    writeFileSync(config, 'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n');
+    writeFileSync(
+      join(root, "src", "api.ts"),
+      'export const api = { baseURL: "v1.example.com" }\n',
+    );
+    writeFileSync(
+      config,
+      'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n',
+    );
     writeFileSync(mocksFile, "export default { before: {} };\n");
     const saved = "export default { saved: {} };\n";
     parsing.hook = (file) => {
@@ -110,7 +116,10 @@ describe("startConfigWatcher — a file that takes precedence, created during th
     parsing.hook = (file) => {
       if (file !== api) return;
       parsing.hook = null;
-      writeFileSync(config, 'export default { sources: { demo: { baseURL: "ts.example.com" } } }\n');
+      writeFileSync(
+        config,
+        'export default { sources: { demo: { baseURL: "ts.example.com" } } }\n',
+      );
     };
 
     const { applied } = start();

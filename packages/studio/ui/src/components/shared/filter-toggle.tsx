@@ -1,8 +1,7 @@
 import { SlidersHorizontal } from "lucide-react";
-
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface FilterToggleProps {
   active: boolean;
@@ -10,11 +9,7 @@ interface FilterToggleProps {
   onClick: () => void;
 }
 
-export function FilterToggle({
-  active,
-  count,
-  onClick,
-}: FilterToggleProps): React.ReactElement {
+export function FilterToggle({ active, count, onClick }: FilterToggleProps): React.ReactElement {
   return (
     <Button
       variant={active ? "secondary" : "ghost"}

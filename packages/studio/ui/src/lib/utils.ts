@@ -1,5 +1,5 @@
-import { clsx } from "clsx";
 import type { ClassValue } from "clsx";
+import { clsx } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
 /* The type scale's own `text-*` utilities (index.css) set the font size.
@@ -9,7 +9,20 @@ const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {
       "font-size": [
-        { text: ["display", "h1", "h2", "h3", "h4", "body-lg", "body", "body-sm", "body-xs", "caption"] },
+        {
+          text: [
+            "display",
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "body-lg",
+            "body",
+            "body-sm",
+            "body-xs",
+            "caption",
+          ],
+        },
       ],
     },
   },

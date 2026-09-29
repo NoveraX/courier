@@ -63,9 +63,12 @@ describe("a Postman parameter named with a hyphen", () => {
 
 describe("a request whose URL is a plain string", () => {
   const spec = () =>
-    collection([{ name: "Delete user", request: { method: "DELETE", url: "{{baseUrl}}/users/:id" } }], {
-      variable: [{ key: "baseUrl", value: server.url }],
-    });
+    collection(
+      [{ name: "Delete user", request: { method: "DELETE", url: "{{baseUrl}}/users/:id" } }],
+      {
+        variable: [{ key: "baseUrl", value: server.url }],
+      },
+    );
 
   it("reads a leading {{variable}} as the host, not as a path parameter", () => {
     const endpoint = parseSpec(spec()).groups[0]?.endpoints[0];

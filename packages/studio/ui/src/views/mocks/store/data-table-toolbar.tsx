@@ -6,10 +6,9 @@
  */
 
 import { Plus, Trash2 } from "lucide-react";
-
+import { SearchInput } from "@/components/shared/search-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { SearchInput } from "@/components/shared/search-input";
 
 interface DataTableToolbarProps {
   name: string;

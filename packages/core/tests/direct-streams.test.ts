@@ -22,7 +22,10 @@ afterEach(async () => {
   server = undefined;
 });
 
-async function thirdParty(): Promise<{ origin: string; seen: { url: string; headers: IncomingHttpHeaders }[] }> {
+async function thirdParty(): Promise<{
+  origin: string;
+  seen: { url: string; headers: IncomingHttpHeaders }[];
+}> {
   const seen: { url: string; headers: IncomingHttpHeaders }[] = [];
   server = createServer((req, res) => {
     seen.push({ url: req.url ?? "", headers: req.headers });
@@ -41,7 +44,9 @@ function api(origin: string) {
     groups: {
       chat: defineGroup({
         prefix: "chat",
-        endpoints: { stream: stream.variables<{ id: string }>().response<unknown>().get(":id/stream") },
+        endpoints: {
+          stream: stream.variables<{ id: string }>().response<unknown>().get(":id/stream"),
+        },
       }),
     },
   });
@@ -57,7 +62,10 @@ describe("a direct caller's stream of another server", () => {
 
     expect(data).toEqual([{ n: 1 }, "[DONE]"]);
     expect(upstream.seen[0]?.url).toBe("/chat/c1/stream");
-    expect(upstream.seen[0]?.headers).toMatchObject({ authorization: "Bearer k1", "x-api-key": "key" });
+    expect(upstream.seen[0]?.headers).toMatchObject({
+      authorization: "Bearer k1",
+      "x-api-key": "key",
+    });
   });
 
   it("refuses a path parameter that would reach another route, and sends nothing", async () => {

@@ -23,7 +23,9 @@ vi.mock("node:net", () => ({
     server.listen = ({ host }) => {
       const code = outcome.codes.get(host) ?? null;
       queueMicrotask(() =>
-        code ? server.emit("error", Object.assign(new Error(code), { code })) : server.emit("listening"),
+        code
+          ? server.emit("error", Object.assign(new Error(code), { code }))
+          : server.emit("listening"),
       );
     };
     server.close = (done) => done();
@@ -51,7 +53,8 @@ vi.mock("node:net", () => ({
       else if (answer === "connect after timeout") {
         socket.emit("timeout");
         setTimeout(accept, 10);
-      } else socket.emit("error", Object.assign(new Error("ECONNREFUSED"), { code: "ECONNREFUSED" }));
+      } else
+        socket.emit("error", Object.assign(new Error("ECONNREFUSED"), { code: "ECONNREFUSED" }));
     });
     return socket;
   },

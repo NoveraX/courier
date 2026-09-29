@@ -14,7 +14,10 @@ const { editWarnings } = await import("../../src/server/mocks-edit/edit-warnings
 
 describe("editWarnings for a privileged port", () => {
   it("says the port needs privileges Studio does not have", async () => {
-    const loaded = { config: { sources: { api: {} } }, mocks: { entries: {} } } as unknown as LoadedCourierConfig;
+    const loaded = {
+      config: { sources: { api: {} } },
+      mocks: { entries: {} },
+    } as unknown as LoadedCourierConfig;
 
     const warnings = await editWarnings({
       requests: [{ key: "apiMock", source: "api", port: 80, seedCount: 20, autoStart: true }],
@@ -26,6 +29,8 @@ describe("editWarnings for a privileged port", () => {
       mockBasePort: 7001,
     });
 
-    expect(warnings).toEqual(["Port 80 needs privileges Studio does not have, so apiMock cannot listen on it."]);
+    expect(warnings).toEqual([
+      "Port 80 needs privileges Studio does not have, so apiMock cannot listen on it.",
+    ]);
   });
 });

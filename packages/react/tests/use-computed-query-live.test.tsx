@@ -3,13 +3,11 @@
  */
 
 import type { ServerResponse } from "node:http";
-import { createElement, type ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-
-import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { createElement, type ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createQueryCaller } from "../src/create-query-caller";
 import { sendJson, startTestServer, type TestServer } from "./helpers/test-server";
 
@@ -29,7 +27,11 @@ function sendChanges(res: ServerResponse) {
   res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
   res.write(": open\n\n");
   const timers = [1, 2].map((n) =>
-    setTimeout(() => res.write(`id: ${n}\ndata: ${JSON.stringify({ id: `c${n}`, name: `Changed ${n}` })}\n\n`), n * 50),
+    setTimeout(
+      () =>
+        res.write(`id: ${n}\ndata: ${JSON.stringify({ id: `c${n}`, name: `Changed ${n}` })}\n\n`),
+      n * 50,
+    ),
   );
   res.on("close", () => {
     for (const timer of timers) clearTimeout(timer);

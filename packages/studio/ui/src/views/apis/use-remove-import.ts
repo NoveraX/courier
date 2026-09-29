@@ -1,11 +1,15 @@
 import { useCallback, useRef, useState } from "react";
-
-import type { PlanConsent } from "./types-file-plan";
-import { type AppliedFiles, type RemovalConfigNotes, previewRemoval, removeImport } from "./client-file-changes";
 import { fileCount, unremovedNote } from "./applied-notes";
+import {
+  type AppliedFiles,
+  previewRemoval,
+  type RemovalConfigNotes,
+  removeImport,
+} from "./client-file-changes";
 import { consentBody, consentFor, toggleConfirmed } from "./plan-consent";
 import { readPlanRefusal } from "./plan-refusal";
 import { readFilePlan } from "./read-file-plan";
+import type { PlanConsent } from "./types-file-plan";
 
 /** The remove dialog: the import it is for, and what removing it does. */
 export interface UseRemoveImportReturn {
@@ -30,13 +34,20 @@ function messageOf(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-function removedMessage(name: string, { removed, kept, backupDir, pruneFailures }: AppliedFiles): string {
+function removedMessage(
+  name: string,
+  { removed, kept, backupDir, pruneFailures }: AppliedFiles,
+): string {
   const notes = [
     removed.length > 0 ? `moved ${fileCount(removed.length)} into ${backupDir ?? "a backup"}` : "",
-    kept.length > 0 ? `left ${fileCount(kept.length)} as ${kept.length === 1 ? "it was" : "they were"}` : "",
+    kept.length > 0
+      ? `left ${fileCount(kept.length)} as ${kept.length === 1 ? "it was" : "they were"}`
+      : "",
     unremovedNote(pruneFailures.map((failure) => failure.path)),
   ].filter((note) => note !== "");
-  return notes.length > 0 ? `Removed ${name}: ${notes.join("; ")}` : `Removed ${name}; none of its files were left to remove`;
+  return notes.length > 0
+    ? `Removed ${name}: ${notes.join("; ")}`
+    : `Removed ${name}; none of its files were left to remove`;
 }
 
 /**
@@ -53,7 +64,9 @@ function removedMessage(name: string, { removed, kept, backupDir, pruneFailures 
  * removal.start("pets");
  * ```
  */
-export function useRemoveImport(onRemoved: (name: string, message: string) => void): UseRemoveImportReturn {
+export function useRemoveImport(
+  onRemoved: (name: string, message: string) => void,
+): UseRemoveImportReturn {
   const [name, setName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -74,21 +87,26 @@ export function useRemoveImport(onRemoved: (name: string, message: string) => vo
       const { plan, ...configNotes } = await previewRemoval(importName);
       if (opening.current !== mine) return;
       const read = readFilePlan(plan);
-      if (read === null) throw new Error("Studio sent a plan this page cannot read; open the dialog again.");
+      if (read === null)
+        throw new Error("Studio sent a plan this page cannot read; open the dialog again.");
       setConsent(consentFor(read));
       setNotes(configNotes);
     } catch (err) {
-      if (opening.current === mine) setError(messageOf(err, "Could not preview removing the import"));
+      if (opening.current === mine)
+        setError(messageOf(err, "Could not preview removing the import"));
     } finally {
       if (opening.current === mine) setLoading(false);
     }
   }, []);
 
-  const start = useCallback((importName: string) => {
-    opening.current += 1;
-    setName(importName);
-    return load(importName, null);
-  }, [load]);
+  const start = useCallback(
+    (importName: string) => {
+      opening.current += 1;
+      setName(importName);
+      return load(importName, null);
+    },
+    [load],
+  );
 
   /* A plan that changed meanwhile is previewed again in full, notes included, with nothing allowed. */
   const confirm = useCallback(async () => {
@@ -103,7 +121,8 @@ export function useRemoveImport(onRemoved: (name: string, message: string) => vo
       onRemoved(name, removedMessage(name, applied));
     } catch (err) {
       if (opening.current !== mine) return;
-      if (readPlanRefusal(err) !== null) await load(name, messageOf(err, "Could not remove the import"));
+      if (readPlanRefusal(err) !== null)
+        await load(name, messageOf(err, "Could not remove the import"));
       else setError(messageOf(err, "Could not remove the import"));
     } finally {
       setRemoving(false);
@@ -111,8 +130,18 @@ export function useRemoveImport(onRemoved: (name: string, message: string) => vo
   }, [name, consent, onRemoved, load]);
 
   return {
-    name, loading, removing, consent, notes, error, start, confirm,
-    toggleConfirmed: useCallback((path: string) => setConsent((c) => c && toggleConfirmed(c, path)), []),
+    name,
+    loading,
+    removing,
+    consent,
+    notes,
+    error,
+    start,
+    confirm,
+    toggleConfirmed: useCallback(
+      (path: string) => setConsent((c) => c && toggleConfirmed(c, path)),
+      [],
+    ),
     close: useCallback(() => {
       opening.current += 1;
       setName(null);

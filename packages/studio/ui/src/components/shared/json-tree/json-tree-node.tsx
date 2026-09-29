@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
 import { ChevronRight } from "lucide-react";
+import { useCallback, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { JsonTreePrimitive } from "./json-tree-primitive";
@@ -59,22 +59,13 @@ export function JsonTreeNode({
         <span className="mono-sm text-violet-400">{name}</span>
         <span className="mono-sm text-muted-foreground/50">:</span>
 
-        {!isExpandable && (
-          <JsonTreePrimitive value={value} />
-        )}
+        {!isExpandable && <JsonTreePrimitive value={value} />}
 
-        {isExpandable && !expanded && (
-          <CollapsedPreview value={value} />
-        )}
+        {isExpandable && !expanded && <CollapsedPreview value={value} />}
       </button>
 
       {isExpandable && expanded && (
-        <ExpandedChildren
-          value={value}
-          depth={depth}
-          onSelect={onSelect}
-          path={path}
-        />
+        <ExpandedChildren value={value} depth={depth} onSelect={onSelect} path={path} />
       )}
     </div>
   );
@@ -82,18 +73,10 @@ export function JsonTreeNode({
 
 function CollapsedPreview({ value }: { value: unknown }): React.ReactElement {
   if (isArray(value)) {
-    return (
-      <span className="mono-xs text-muted-foreground">
-        [{(value as unknown[]).length}]
-      </span>
-    );
+    return <span className="mono-xs text-muted-foreground">[{(value as unknown[]).length}]</span>;
   }
   const keys = Object.keys(value as object);
-  return (
-    <span className="mono-xs text-muted-foreground">
-      {`{${keys.length}}`}
-    </span>
-  );
+  return <span className="mono-xs text-muted-foreground">{`{${keys.length}}`}</span>;
 }
 
 function ExpandedChildren({

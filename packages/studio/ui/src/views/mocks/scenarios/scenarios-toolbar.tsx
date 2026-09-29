@@ -1,22 +1,21 @@
 import { Search, X } from "lucide-react";
+import { CountDisplay } from "@/components/shared/count-display";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CountDisplay } from "@/components/shared/count-display";
 import { cn } from "@/lib/utils";
-import { SCENARIO_TYPE_META, SCENARIO_TYPE_ICON_BG } from "./scenario-utils";
-
 import type { ScenarioType } from "./scenario-utils";
+import { SCENARIO_TYPE_ICON_BG, SCENARIO_TYPE_META } from "./scenario-utils";
 
 const TYPE_FILTERS: ScenarioType[] = ["error", "latency", "empty", "auth", "sequence", "mixed"];
 
 const TYPE_CHIP_ACTIVE: Record<ScenarioType, string> = {
-  error:    "bg-rose-500/10   text-rose-500   border-rose-500/25",
-  latency:  "bg-amber-500/10  text-amber-500  border-amber-500/25",
-  empty:    "bg-sky-500/10    text-sky-500    border-sky-500/25",
-  auth:     "bg-violet-500/10 text-violet-500 border-violet-500/25",
+  error: "bg-rose-500/10   text-rose-500   border-rose-500/25",
+  latency: "bg-amber-500/10  text-amber-500  border-amber-500/25",
+  empty: "bg-sky-500/10    text-sky-500    border-sky-500/25",
+  auth: "bg-violet-500/10 text-violet-500 border-violet-500/25",
   sequence: "bg-indigo-500/10 text-indigo-500 border-indigo-500/25",
-  mixed:    "bg-amber-400/10  text-amber-400  border-amber-400/25",
-  unknown:  "",
+  mixed: "bg-amber-400/10  text-amber-400  border-amber-400/25",
+  unknown: "",
 };
 
 interface ScenariosToolbarProps {
@@ -82,7 +81,12 @@ export function ScenariosToolbar({
                   : "border-transparent text-muted-foreground/50 hover:text-foreground/80 hover:bg-muted/40",
               )}
             >
-              <Icon className={cn("size-2.5", isActive ? "" : SCENARIO_TYPE_ICON_BG[type].split(" ")[1])} />
+              <Icon
+                className={cn(
+                  "size-2.5",
+                  isActive ? "" : SCENARIO_TYPE_ICON_BG[type].split(" ")[1],
+                )}
+              />
               {meta.label}
             </button>
           );

@@ -19,7 +19,10 @@ function createMockHttpServer() {
 }
 
 function createMockWss(clientCount = 0) {
-  const clients = new Set<{ close: ReturnType<typeof vi.fn>; terminate: ReturnType<typeof vi.fn> }>();
+  const clients = new Set<{
+    close: ReturnType<typeof vi.fn>;
+    terminate: ReturnType<typeof vi.fn>;
+  }>();
   for (let i = 0; i < clientCount; i++) {
     clients.add({ close: vi.fn(), terminate: vi.fn() });
   }

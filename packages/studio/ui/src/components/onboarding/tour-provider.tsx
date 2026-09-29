@@ -1,19 +1,26 @@
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "motion/react";
-
+import { TourOverlay } from "./tour-overlay";
 import type { TourStep } from "./tour-steps";
 import { TOUR_STEPS, TOUR_STORAGE_KEY } from "./tour-steps";
-import { TourOverlay } from "./tour-overlay";
 import { TourTooltip } from "./tour-tooltip";
 
 function markTourCompleted(): void {
-  try { localStorage.setItem(TOUR_STORAGE_KEY, "true"); } catch { /* noop */ }
+  try {
+    localStorage.setItem(TOUR_STORAGE_KEY, "true");
+  } catch {
+    /* noop */
+  }
 }
 
 /** Dispatch this event to start/restart the tour from anywhere. */
 export function restartTour(): void {
-  try { localStorage.removeItem(TOUR_STORAGE_KEY); } catch { /* noop */ }
+  try {
+    localStorage.removeItem(TOUR_STORAGE_KEY);
+  } catch {
+    /* noop */
+  }
   window.dispatchEvent(new CustomEvent("courier:restart-tour"));
 }
 
@@ -26,7 +33,10 @@ export function TourProvider(): React.ReactNode {
 
   // Listen for start/restart event
   useEffect(() => {
-    const handler = (): void => { setStep(0); setActive(true); };
+    const handler = (): void => {
+      setStep(0);
+      setActive(true);
+    };
     window.addEventListener("courier:restart-tour", handler);
     return () => window.removeEventListener("courier:restart-tour", handler);
   }, []);
@@ -48,13 +58,16 @@ export function TourProvider(): React.ReactNode {
     }
 
     // Measure after scroll, then reveal
-    const reveal = setTimeout(() => {
-      const target = document.querySelector(currentStep.target);
-      if (target) {
-        setRect(target.getBoundingClientRect());
-        setVisible(true);
-      }
-    }, isStepChange ? 300 : 0);
+    const reveal = setTimeout(
+      () => {
+        const target = document.querySelector(currentStep.target);
+        if (target) {
+          setRect(target.getBoundingClientRect());
+          setVisible(true);
+        }
+      },
+      isStepChange ? 300 : 0,
+    );
 
     // Keep tracking position (resize, layout shifts)
     const id = setInterval(() => {
@@ -62,7 +75,10 @@ export function TourProvider(): React.ReactNode {
       if (target) setRect(target.getBoundingClientRect());
     }, 400);
 
-    return () => { clearTimeout(reveal); clearInterval(id); };
+    return () => {
+      clearTimeout(reveal);
+      clearInterval(id);
+    };
   }, [active, step, currentStep]);
 
   const finish = useCallback(() => {
@@ -72,7 +88,10 @@ export function TourProvider(): React.ReactNode {
   }, []);
 
   const next = useCallback(() => {
-    if (step >= TOUR_STEPS.length - 1) { finish(); return; }
+    if (step >= TOUR_STEPS.length - 1) {
+      finish();
+      return;
+    }
     setStep((s) => s + 1);
   }, [step, finish]);
 

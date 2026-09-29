@@ -1,10 +1,6 @@
 export type AuditSeverity = "error" | "warning" | "hint" | "pass";
 
-export type AuditCategory =
-  | "performance"
-  | "reliability"
-  | "security"
-  | "best-practices";
+export type AuditCategory = "performance" | "reliability" | "security" | "best-practices";
 
 export interface AuditEndpoint {
   key: string;

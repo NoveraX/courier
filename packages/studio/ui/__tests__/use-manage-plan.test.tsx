@@ -11,10 +11,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
-import type { ParsedSpec, SourceSummary } from "../src/views/apis/types";
-
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
+import type { ParsedSpec, SourceSummary } from "../src/views/apis/types";
 import { useManage } from "../src/views/apis/use-manage";
 
 const SPEC: ParsedSpec = {
@@ -48,9 +47,16 @@ const SOURCE: SourceSummary = {
 };
 
 const INVENTORY = {
-  groups: [{ name: "pets", prefix: "/pets", isCustomGroup: false, endpoints: [
-    { group: "pets", name: "listPets", httpMethod: "get", path: "", status: "active" },
-  ] }],
+  groups: [
+    {
+      name: "pets",
+      prefix: "/pets",
+      isCustomGroup: false,
+      endpoints: [
+        { group: "pets", name: "listPets", httpMethod: "get", path: "", status: "active" },
+      ],
+    },
+  ],
   specChanged: false,
   totalActive: 1,
   totalAvailable: 0,
@@ -63,7 +69,9 @@ const PLAN = {
   writes: [{ path: "src/api/pets/source.ts", action: "replace", was: "recorded" }],
   removals: [],
   kept: [],
-  pending: [{ path: "src/api/pets/pets/index.ts", kind: "remove", reason: "edited", preselected: false }],
+  pending: [
+    { path: "src/api/pets/pets/index.ts", kind: "remove", reason: "edited", preselected: false },
+  ],
   blocked: [],
   forgotten: [],
 };
@@ -73,10 +81,15 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-async function previewed(onSuccess?: (message: string) => void): Promise<{ current: ReturnType<typeof useManage> }> {
+async function previewed(
+  onSuccess?: (message: string) => void,
+): Promise<{ current: ReturnType<typeof useManage> }> {
   vi.mocked(post)
     .mockResolvedValueOnce(INVENTORY)
-    .mockResolvedValueOnce({ removeResult: { modifiedEndpointsWarning: [], orphanedSchemas: [] }, plan: PLAN });
+    .mockResolvedValueOnce({
+      removeResult: { modifiedEndpointsWarning: [], orphanedSchemas: [] },
+      plan: PLAN,
+    });
   const { result } = renderHook(() => useManage(onSuccess));
   await act(async () => result.current.start(SOURCE, SPEC));
   act(() => result.current.toggleEndpoint("pets", "listPets", true));
@@ -108,7 +121,9 @@ describe("applying managed endpoints", () => {
       confirm: ["src/api/pets/pets/index.ts"],
     });
     expect(result.current.open).toBe(false);
-    expect(onSuccess).toHaveBeenCalledWith("Updated pets: wrote 1 file; removed 1 file, keeping a copy");
+    expect(onSuccess).toHaveBeenCalledWith(
+      "Updated pets: wrote 1 file; removed 1 file, keeping a copy",
+    );
   });
 
   it("applies nothing while the preview of a new selection is on its way", async () => {
@@ -129,9 +144,16 @@ describe("applying managed endpoints", () => {
     const changed = { ...PLAN, digest: "plan-2" };
     vi.mocked(post)
       .mockRejectedValueOnce(
-        new StudioRequestError("The files changed.", { error: "The files changed.", code: "PLAN_STALE", plan: changed }, undefined),
+        new StudioRequestError(
+          "The files changed.",
+          { error: "The files changed.", code: "PLAN_STALE", plan: changed },
+          undefined,
+        ),
       )
-      .mockResolvedValueOnce({ removeResult: { modifiedEndpointsWarning: ["listPets"], orphanedSchemas: [] }, plan: changed });
+      .mockResolvedValueOnce({
+        removeResult: { modifiedEndpointsWarning: ["listPets"], orphanedSchemas: [] },
+        plan: changed,
+      });
 
     act(() => result.current.toggleConfirmed("src/api/pets/pets/index.ts"));
     await act(() => result.current.apply());

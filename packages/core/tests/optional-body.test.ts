@@ -54,7 +54,9 @@ describe("a body the operation does not require", () => {
     registerSources({ tags: api() });
     const proxy: ProxyServer = await startProxyServer();
     try {
-      await createProxyCaller<ReturnType<typeof api>>("tags", { proxyPath: { http: proxy.url } }).setTags();
+      await createProxyCaller<ReturnType<typeof api>>("tags", {
+        proxyPath: { http: proxy.url },
+      }).setTags();
 
       expect(upstream.last().body.length).toBe(0);
     } finally {

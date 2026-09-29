@@ -1,8 +1,7 @@
-import type { MockWizardState, PlanState } from "./types";
-import type { DeclarePreview, FieldError, MockDeclaration } from "./wire-types";
-
 import { fieldErrorsOf } from "./field-errors-of";
+import type { MockWizardState, PlanState } from "./types";
 import { UNPLANNED } from "./unplanned";
+import type { DeclarePreview, FieldError, MockDeclaration } from "./wire-types";
 
 /* Long enough to outlast a double click's second click, short enough not to be waited for. */
 const APPLY_ARM_DELAY_MS = 500;

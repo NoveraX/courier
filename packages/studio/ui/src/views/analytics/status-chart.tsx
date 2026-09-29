@@ -54,7 +54,10 @@ export function StatusChart({ data, total }: StatusChartProps): React.ReactEleme
 
 // ── Center label ─────────────────────────────────────────────────────────────
 
-function CenterLabel({ total, viewBox }: {
+function CenterLabel({
+  total,
+  viewBox,
+}: {
   total: number;
   viewBox?: { cx?: number; cy?: number };
 }): React.ReactElement {
@@ -63,18 +66,10 @@ function CenterLabel({ total, viewBox }: {
 
   return (
     <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
-      <tspan
-        x={cx}
-        dy="-0.4em"
-        className="fill-foreground text-xl font-semibold tabular-nums"
-      >
+      <tspan x={cx} dy="-0.4em" className="fill-foreground text-xl font-semibold tabular-nums">
         {total.toLocaleString()}
       </tspan>
-      <tspan
-        x={cx}
-        dy="2em"
-        className="fill-muted-foreground text-[10px] uppercase tracking-wider"
-      >
+      <tspan x={cx} dy="2em" className="fill-muted-foreground text-[10px] uppercase tracking-wider">
         Requests
       </tspan>
     </text>

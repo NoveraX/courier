@@ -38,7 +38,8 @@ const GENERATED = groupFile("courier, defineGroup, formBody, formQuery", [GET, L
 const ON_DISK = groupFile("courier, defineGroup", [GET]);
 
 function imports(code: string): string[] {
-  const line = code.split("\n").find((text) => text.includes('from "@noverax/courier/define"')) ?? "";
+  const line =
+    code.split("\n").find((text) => text.includes('from "@noverax/courier/define"')) ?? "";
   return (line.match(/\{([^}]*)\}/)?.[1] ?? "").split(",").map((name) => name.trim());
 }
 
@@ -50,7 +51,9 @@ describe("adding endpoints that write with the define helpers", () => {
   it("imports formQuery for one that writes its query with it", () => {
     const merged = appendEndpointsToGroup(PATH, ON_DISK, GENERATED, ["list"]);
 
-    expect(imports(merged)).toEqual(expect.arrayContaining(["courier", "defineGroup", "formQuery"]));
+    expect(imports(merged)).toEqual(
+      expect.arrayContaining(["courier", "defineGroup", "formQuery"]),
+    );
     expect(imports(merged)).not.toContain("formBody");
     expect(parses(merged)).toBe(true);
   });
@@ -71,7 +74,9 @@ describe("merging an update that brings them", () => {
   it("imports each helper the new endpoints use", () => {
     const { content } = mergeGroupFile(ON_DISK, GENERATED, fingerprints);
 
-    expect(imports(content)).toEqual(expect.arrayContaining(["courier", "defineGroup", "formBody", "formQuery"]));
+    expect(imports(content)).toEqual(
+      expect.arrayContaining(["courier", "defineGroup", "formBody", "formQuery"]),
+    );
     expect(content).toContain("formQuery(vars");
     expect(parses(content)).toBe(true);
   });

@@ -14,7 +14,7 @@ describe("extractSamples", () => {
     const page = [
       "# Page",
       "",
-      "```ts title=\"a.ts\"",
+      '```ts title="a.ts"',
       "const a = 1",
       "```",
       "",
@@ -70,7 +70,10 @@ describe("importHeader", () => {
       ["createCaller", "@noverax/courier"],
     ]);
 
-    const header = importHeader(["defineApi", "users", "createCaller", "defineApi", "courier"], exported);
+    const header = importHeader(
+      ["defineApi", "users", "createCaller", "defineApi", "courier"],
+      exported,
+    );
 
     expect(header).toEqual([
       'import { defineApi, courier } from "@noverax/courier/define";',
@@ -189,11 +192,15 @@ describe("checkSamples", () => {
   });
 
   it("reports a type the entry does not export", () => {
-    expect(problems).toContainEqual(expect.stringMatching(/^not-exported\.mdx:40 TS(2305|2724) .*MiddlewareFn/));
+    expect(problems).toContainEqual(
+      expect.stringMatching(/^not-exported\.mdx:40 TS(2305|2724) .*MiddlewareFn/),
+    );
   });
 
   it("reports a type a listing names that no entry exports", () => {
-    expect(problems).toContainEqual(expect.stringMatching(/^listing\.mdx:60 TS2304 .*MiddlewareFn/));
+    expect(problems).toContainEqual(
+      expect.stringMatching(/^listing\.mdx:60 TS2304 .*MiddlewareFn/),
+    );
   });
 
   it("passes a sample that uses the package as it is, and one that leaves the reader's code out", () => {

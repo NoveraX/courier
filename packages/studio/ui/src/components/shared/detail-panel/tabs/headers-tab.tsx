@@ -1,5 +1,5 @@
-import type { RequestEntry } from "@/store/types";
 import { HeadersSection } from "@/components/shared/headers-section";
+import type { RequestEntry } from "@/store/types";
 
 interface HeadersTabProps {
   request: RequestEntry;
@@ -45,8 +45,8 @@ export function HeadersTab({ request }: HeadersTabProps): React.ReactElement {
 function DirectModeNotice(): React.ReactElement {
   return (
     <div className="rounded-md border border-border-subtle bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-      <span className="font-medium text-foreground/80">Direct mode</span> — only headers
-      explicitly set by your code are listed here. Browser-injected headers (
+      <span className="font-medium text-foreground/80">Direct mode</span> — only headers explicitly
+      set by your code are listed here. Browser-injected headers (
       <code className="rounded bg-card/60 px-1 py-px font-mono text-[10px] text-muted-foreground/80">
         Cookie
       </code>
@@ -62,13 +62,15 @@ function DirectModeNotice(): React.ReactElement {
       <code className="rounded bg-card/60 px-1 py-px font-mono text-[10px] text-muted-foreground/80">
         Sec-Fetch-*
       </code>
-      , …) are not exposed to JavaScript by the Fetch API. Use the browser DevTools Network
-      panel to inspect the full wire request.
+      , …) are not exposed to JavaScript by the Fetch API. Use the browser DevTools Network panel to
+      inspect the full wire request.
     </div>
   );
 }
 
-function MiddlewareHeadersSection({ headers }: {
+function MiddlewareHeadersSection({
+  headers,
+}: {
   headers?: Record<string, string[]>;
 }): React.ReactElement | null {
   if (!headers || Object.keys(headers).length === 0) return null;

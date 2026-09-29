@@ -1,5 +1,5 @@
+import { Activity, AlertTriangle, Clock, Layers } from "lucide-react";
 import { Line, LineChart } from "recharts";
-import { Layers, Activity, Clock, AlertTriangle } from "lucide-react";
 
 import { AnimatedCounter } from "@/components/shared/animated-counter";
 import { formatDuration } from "@/components/shared/formatters";
@@ -30,25 +30,33 @@ export function AggregateCards({
   const totalCalls = stats.reduce((s, m) => s + m.calls, 0);
   const totalErrors = stats.reduce((s, m) => s + m.errors, 0);
   const avgDuration =
-    stats.length > 0
-      ? stats.reduce((s, m) => s + m.avgDuration, 0) / stats.length
-      : 0;
+    stats.length > 0 ? stats.reduce((s, m) => s + m.avgDuration, 0) / stats.length : 0;
 
   return (
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       <Card icon={Layers} label="Active Middleware" value={uniqueCount} format={fmtInt} />
       <Card
-        icon={Activity} label="Total Executions" value={totalCalls}
-        format={fmtInt} sparkline={execSparkline} sparkColor="var(--chart-4)"
+        icon={Activity}
+        label="Total Executions"
+        value={totalCalls}
+        format={fmtInt}
+        sparkline={execSparkline}
+        sparkColor="var(--chart-4)"
       />
       <Card
-        icon={Clock} label="Avg Self-Time" display={formatDuration(avgDuration)}
-        sparkline={p95Sparkline} sparkColor="var(--chart-1)"
+        icon={Clock}
+        label="Avg Self-Time"
+        display={formatDuration(avgDuration)}
+        sparkline={p95Sparkline}
+        sparkColor="var(--chart-1)"
       />
       <Card
-        icon={AlertTriangle} label="Avg Overhead" display={fmtPercent(overheadPercent)}
+        icon={AlertTriangle}
+        label="Avg Overhead"
+        display={fmtPercent(overheadPercent)}
         color={totalErrors > 0 ? "text-rose-400" : undefined}
-        sparkline={overheadSparkline} sparkColor="var(--chart-3)"
+        sparkline={overheadSparkline}
+        sparkColor="var(--chart-3)"
       />
     </div>
   );
@@ -57,8 +65,14 @@ export function AggregateCards({
 // ── Card ───────────────────────────────────────────────────────────────────
 
 function Card({
-  icon: Icon, label, value, display, format, color,
-  sparkline, sparkColor,
+  icon: Icon,
+  label,
+  value,
+  display,
+  format,
+  color,
+  sparkline,
+  sparkColor,
 }: {
   icon: React.ElementType;
   label: string;
@@ -93,13 +107,17 @@ function Card({
 
 // ── Sparkline ──────────────────────────────────────────────────────────────
 
-function Sparkline({ data, color }: {
-  data: SparklinePoint[];
-  color: string;
-}): React.ReactElement {
+function Sparkline({ data, color }: { data: SparklinePoint[]; color: string }): React.ReactElement {
   return (
     <LineChart width={48} height={20} data={data} accessibilityLayer={false}>
-      <Line type="monotone" dataKey="value" stroke={color} strokeWidth={1.5} dot={false} isAnimationActive={false} />
+      <Line
+        type="monotone"
+        dataKey="value"
+        stroke={color}
+        strokeWidth={1.5}
+        dot={false}
+        isAnimationActive={false}
+      />
     </LineChart>
   );
 }

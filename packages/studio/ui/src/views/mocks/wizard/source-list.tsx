@@ -1,8 +1,7 @@
-import type { ScannedSource } from "@/views/apis/types";
-import type { MockDraft } from "./types";
-
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { ScannedSource } from "@/views/apis/types";
+import type { MockDraft } from "./types";
 
 function endpointCountOf(source: ScannedSource): number {
   /* A source may declare its endpoints without a group at all. */
@@ -55,14 +54,18 @@ export function SourceList({ sources, drafts, onToggle }: SourceListProps): Reac
             <div
               className={cn(
                 "flex size-4 items-center justify-center rounded border transition-colors",
-                selected ? "border-accent-brand bg-accent-brand text-white" : "border-border-strong bg-background",
+                selected
+                  ? "border-accent-brand bg-accent-brand text-white"
+                  : "border-border-strong bg-background",
               )}
             >
               {selected && <span className="text-[9px] font-bold">✓</span>}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-body-sm font-medium">{source.name}</p>
-              <p className="truncate text-body-xs text-muted-foreground">{source.baseURL || "No base URL"}</p>
+              <p className="truncate text-body-xs text-muted-foreground">
+                {source.baseURL || "No base URL"}
+              </p>
             </div>
             <div className="flex items-center gap-1.5">
               <Badge variant="secondary" className="text-[10px]">

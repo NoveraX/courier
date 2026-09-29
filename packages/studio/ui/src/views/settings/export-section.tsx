@@ -1,8 +1,5 @@
-import { Controller } from "react-hook-form";
-
 import type { UseFormReturn } from "react-hook-form";
-import type { Settings } from "@/store/types";
-
+import { Controller } from "react-hook-form";
 import {
   Select,
   SelectContent,
@@ -10,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Settings } from "@/store/types";
 import { SettingRow } from "./setting-row";
 
 // ── Export format options ────────────────────────────────────────────────────
@@ -26,9 +24,7 @@ interface ExportSectionProps {
   form: UseFormReturn<Settings>;
 }
 
-export function ExportSection({
-  form,
-}: ExportSectionProps): React.ReactElement {
+export function ExportSection({ form }: ExportSectionProps): React.ReactElement {
   return (
     <SettingRow
       label="Default export format"

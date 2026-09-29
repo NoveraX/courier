@@ -22,10 +22,16 @@ import {
   writeProject,
 } from "../helpers/generated-project";
 import { type ProxyServer, startProxyServer } from "../helpers/proxy-server";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
-const events = (schema: unknown) => ({ "200": { description: "events", content: { "text/event-stream": { schema } } } });
-const OrderEvent = { type: "object", required: ["status"], properties: { status: { type: "string" } } };
+const events = (schema: unknown) => ({
+  "200": { description: "events", content: { "text/event-stream": { schema } } },
+});
+const OrderEvent = {
+  type: "object",
+  required: ["status"],
+  properties: { status: { type: "string" } },
+};
 const orderId = { name: "id", in: "path", required: true, schema: { type: "string" } };
 
 function spec(origin: string, streamsOnly = false): ParsedSpec {
@@ -40,7 +46,12 @@ function spec(origin: string, streamsOnly = false): ParsedSpec {
             get: {
               operationId: "listOrders",
               tags: ["orders"],
-              responses: { "200": { description: "ok", content: { "application/json": { schema: { type: "array", items: OrderEvent } } } } },
+              responses: {
+                "200": {
+                  description: "ok",
+                  content: { "application/json": { schema: { type: "array", items: OrderEvent } } },
+                },
+              },
             },
           },
         }),
@@ -56,13 +67,27 @@ function spec(origin: string, streamsOnly = false): ParsedSpec {
           get: {
             operationId: "watchFields",
             tags: ["orders"],
-            parameters: [orderId, { name: "fields", in: "query", style: "form", explode: false, schema: { type: "array", items: { type: "string" } } }],
+            parameters: [
+              orderId,
+              {
+                name: "fields",
+                in: "query",
+                style: "form",
+                explode: false,
+                schema: { type: "array", items: { type: "string" } },
+              },
+            ],
             responses: events({ $ref: "#/components/schemas/OrderEvent" }),
           },
         },
         ...(!streamsOnly && {
           "/orders/{id}/replay": {
-            post: { operationId: "replayOrder", tags: ["orders"], parameters: [orderId], responses: events(OrderEvent) },
+            post: {
+              operationId: "replayOrder",
+              tags: ["orders"],
+              parameters: [orderId],
+              responses: events(OrderEvent),
+            },
           },
         }),
       },
@@ -82,7 +107,8 @@ const VARIANTS: [string, Partial<GenerateOptions>][] = [
 let upstream: UpstreamServer;
 
 beforeAll(async () => {
-  const stream = 'data: {"status":"paid"}\n\ndata: {"status":"shipped"}\n\nevent: courier:complete\ndata: \n\n';
+  const stream =
+    'data: {"status":"paid"}\n\ndata: {"status":"shipped"}\n\nevent: courier:complete\ndata: \n\n';
   upstream = await startUpstreamServer([], {
     "/v1/orders/o1/events": { contentType: "text/event-stream", body: stream },
     "/v1/orders/o1/fields": { contentType: "text/event-stream", body: stream },
@@ -95,16 +121,24 @@ afterAll(async () => {
 });
 
 function generate(options: Partial<GenerateOptions>, streamsOnly = false) {
-  return generateCode(spec(upstream.origin, streamsOnly), { type: "openapi", outputDir: "src/api", ...options }, "shop");
+  return generateCode(
+    spec(upstream.origin, streamsOnly),
+    { type: "openapi", outputDir: "src/api", ...options },
+    "shop",
+  );
 }
 
 function groupFile(options: Partial<GenerateOptions>, streamsOnly = false): string {
-  return generate(options, streamsOnly).find((file) => file.path.endsWith("orders/index.ts"))?.content ?? "";
+  return (
+    generate(options, streamsOnly).find((file) => file.path.endsWith("orders/index.ts"))?.content ??
+    ""
+  );
 }
 
 async function received(subscription: unknown): Promise<unknown[]> {
   const got: unknown[] = [];
-  for await (const event of (await subscription) as AsyncIterable<{ data: unknown }>) got.push(event.data);
+  for await (const event of (await subscription) as AsyncIterable<{ data: unknown }>)
+    got.push(event.data);
   return got;
 }
 
@@ -115,7 +149,9 @@ describe("the generated file", () => {
     expect(file).toContain("const { endpoint, stream } = courier();");
     expect(file).toMatch(/watchOrder: stream\.get\(":id\/events"\)/);
     expect(file).toMatch(/replayOrder: endpoint\.post\(/);
-    expect(file).toMatch(/watchFields: stream\.variables<.*>\(\)\.via\(\(sse, vars\) => sse\.get\(":id\/fields", formQuery\(/);
+    expect(file).toMatch(
+      /watchFields: stream\.variables<.*>\(\)\.via\(\(sse, vars\) => sse\.get\(":id\/fields", formQuery\(/,
+    );
   });
 
   it("takes only stream from courier() when every definition is a stream", () => {
@@ -138,7 +174,9 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
     const { shopApi } = loadGenerated(generate(options), "src/api/shop/index.ts");
     upstream.requests.length = 0;
 
-    const got = await received(endpointAt(shopApi, "orders", "watchOrder")({ id: "o1", since: "2026" }));
+    const got = await received(
+      endpointAt(shopApi, "orders", "watchOrder")({ id: "o1", since: "2026" }),
+    );
 
     expect(got).toEqual([{ status: "paid" }, { status: "shipped" }]);
     expect(upstream.requests[0]?.path).toBe("/v1/orders/o1/events");
@@ -181,10 +219,15 @@ describe("through the proxy", () => {
   /* The proxy opens a stream the API serves and relays it, as it forwards
      the API's other endpoints. */
   it("reaches the API's stream, relayed event by event", async () => {
-    const caller = createProxyCaller("shop", { source, proxyPath: { http: proxy.url, sse: proxy.url } });
+    const caller = createProxyCaller("shop", {
+      source,
+      proxyPath: { http: proxy.url, sse: proxy.url },
+    });
     upstream.requests.length = 0;
 
-    const got = await received(endpointAt(caller, "orders", "watchOrder")({ id: "o1", since: "2026" }));
+    const got = await received(
+      endpointAt(caller, "orders", "watchOrder")({ id: "o1", since: "2026" }),
+    );
 
     expect(got).toEqual([{ status: "paid" }, { status: "shipped" }]);
     expect(upstream.requests[0]?.path).toBe("/v1/orders/o1/events");
@@ -192,7 +235,10 @@ describe("through the proxy", () => {
   });
 
   it("writes the query in the style its parameters declare, relayed", async () => {
-    const caller = createProxyCaller("shop", { source, proxyPath: { http: proxy.url, sse: proxy.url } });
+    const caller = createProxyCaller("shop", {
+      source,
+      proxyPath: { http: proxy.url, sse: proxy.url },
+    });
     upstream.requests.length = 0;
 
     await received(endpointAt(caller, "orders", "watchFields")({ id: "o1", fields: ["a", "b"] }));
@@ -201,7 +247,9 @@ describe("through the proxy", () => {
   });
 
   it("says so in the generated comment", () => {
-    expect(groupFile({})).toContain("A stream the API serves: a direct caller opens it, and the proxy relays it");
+    expect(groupFile({})).toContain(
+      "A stream the API serves: a direct caller opens it, and the proxy relays it",
+    );
   });
 });
 

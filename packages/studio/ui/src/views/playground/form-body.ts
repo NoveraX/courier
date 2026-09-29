@@ -53,7 +53,9 @@ export async function wireForm(fields: readonly FormBodyField[]): Promise<WireFo
       const { file } = field;
       if (!file) return [];
       return [
-        file.arrayBuffer().then((data) => ({ name, file: { name: file.name, type: file.type, data } })),
+        file
+          .arrayBuffer()
+          .then((data) => ({ name, file: { name: file.name, type: file.type, data } })),
       ];
     }),
   );

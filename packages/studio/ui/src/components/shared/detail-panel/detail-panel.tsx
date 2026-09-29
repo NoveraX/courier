@@ -1,20 +1,19 @@
-import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
 import type { DetailTabKey } from "./constants";
-
-import { GeneralTab } from "./tabs/general-tab";
-import { SnippetsTab } from "./tabs/snippets-tab";
-import { HeadersTab } from "./tabs/headers-tab";
-import { PayloadTab } from "./tabs/payload-tab";
-import { ResponseTab } from "./tabs/response-tab";
-import { TimingTab } from "./tabs/timing-tab";
-import { ErrorTab } from "./tabs/error-tab";
-import { ProxyTab } from "./tabs/proxy-tab";
-import { StreamTab } from "./tabs/stream-tab";
+import { getVisibleTabs } from "./get-visible-tabs";
 import { PanelHeader } from "./panel-header";
 import { ScrollableTabs } from "./scrollable-tabs";
-import { getVisibleTabs } from "./get-visible-tabs";
+import { ErrorTab } from "./tabs/error-tab";
+import { GeneralTab } from "./tabs/general-tab";
+import { HeadersTab } from "./tabs/headers-tab";
+import { PayloadTab } from "./tabs/payload-tab";
+import { ProxyTab } from "./tabs/proxy-tab";
+import { ResponseTab } from "./tabs/response-tab";
+import { SnippetsTab } from "./tabs/snippets-tab";
+import { StreamTab } from "./tabs/stream-tab";
+import { TimingTab } from "./tabs/timing-tab";
 
 interface DetailPanelProps {
   request: RequestEntry;
@@ -51,8 +50,7 @@ export function DetailPanel({
                 value={tab.key}
                 className={cn(
                   "text-body-sm",
-                  tab.key === "error" &&
-                    "text-rose-400/70 data-[state=active]:text-rose-400",
+                  tab.key === "error" && "text-rose-400/70 data-[state=active]:text-rose-400",
                 )}
               >
                 {tab.label}

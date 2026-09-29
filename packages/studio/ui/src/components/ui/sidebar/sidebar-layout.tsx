@@ -1,8 +1,7 @@
-import * as React from "react"
-
-import { cn } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
+import type * as React from "react";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   return (
@@ -11,17 +10,14 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
       className={cn(
         "relative flex w-full flex-1 flex-col bg-background",
         "md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-function SidebarInput({
-  className,
-  ...props
-}: React.ComponentProps<typeof Input>) {
+function SidebarInput({ className, ...props }: React.ComponentProps<typeof Input>) {
   return (
     <Input
       data-slot="sidebar-input"
@@ -29,7 +25,7 @@ function SidebarInput({
       className={cn("h-8 w-full bg-background shadow-none", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
@@ -40,7 +36,7 @@ function SidebarHeader({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("flex flex-col gap-2 p-2", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
@@ -51,13 +47,10 @@ function SidebarFooter({ className, ...props }: React.ComponentProps<"div">) {
       className={cn("flex flex-col gap-2 p-2", className)}
       {...props}
     />
-  )
+  );
 }
 
-function SidebarSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof Separator>) {
+function SidebarSeparator({ className, ...props }: React.ComponentProps<typeof Separator>) {
   return (
     <Separator
       data-slot="sidebar-separator"
@@ -65,7 +58,7 @@ function SidebarSeparator({
       className={cn("mx-2 w-auto bg-sidebar-border", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
@@ -75,18 +68,18 @@ function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
       data-sidebar="content"
       className={cn(
         "flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 export {
-  SidebarInset,
-  SidebarInput,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarSeparator,
   SidebarContent,
-}
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInput,
+  SidebarInset,
+  SidebarSeparator,
+};

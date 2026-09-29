@@ -4,8 +4,9 @@
  * the last list that loaded, and never an address that means every
  * interface. A host that is not private reads no config at all.
  */
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+
 import type * as Dns from "node:dns";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -27,7 +28,9 @@ vi.mock("node:dns", async (importOriginal) => {
 });
 
 function call(origin: string | undefined) {
-  const guard = createOriginGuard(createStudioOriginPolicy({ bindHost: "localhost", extraOrigins: [] }));
+  const guard = createOriginGuard(
+    createStudioOriginPolicy({ bindHost: "localhost", extraOrigins: [] }),
+  );
   const next = vi.fn();
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
   const headers = { host: "localhost:6280", ...(origin === undefined ? {} : { origin }) };
@@ -140,7 +143,13 @@ function project(config: string | null): void {
 
 function start(): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
@@ -161,7 +170,10 @@ async function started(): Promise<string> {
 }
 
 function parse(url: string, host: string) {
-  return post(url, "/api/apis/parse", { source: "url", content: `http://${host}:${specPort}/openapi.json` });
+  return post(url, "/api/apis/parse", {
+    source: "url",
+    content: `http://${host}:${specPort}/openapi.json`,
+  });
 }
 
 describe("POST /api/apis/parse for a private host", () => {
@@ -182,8 +194,12 @@ describe("POST /api/apis/parse for a private host", () => {
     const reply = await parse(url, PRIVATE_NAME);
 
     expect(reply.status).toBe(400);
-    expect(String(reply.body.error)).toContain(`Blocked request to private address: ${PRIVATE_NAME} (10.20.30.40).`);
-    expect(String(reply.body.error)).toContain("Name the host in `studio.allowedSpecHosts` to allow it.");
+    expect(String(reply.body.error)).toContain(
+      `Blocked request to private address: ${PRIVATE_NAME} (10.20.30.40).`,
+    );
+    expect(String(reply.body.error)).toContain(
+      "Name the host in `studio.allowedSpecHosts` to allow it.",
+    );
   }, 15_000);
 
   it("refused while courier.config does not load names the broken config, not studio.allowedSpecHosts", async () => {
@@ -215,18 +231,22 @@ describe("POST /api/apis/parse for a private host", () => {
   it.each([
     ["in a project that never had one", false],
     ["once it is deleted, whatever the last one named", true],
-  ])("with no courier.config is refused with the advice to create one, %s", async (_case, hadOne) => {
-    project(hadOne ? allowing([PRIVATE_NAME]) : null);
-    const url = await started();
-    if (hadOne) unlinkSync(join(root, "courier.config.ts"));
+  ])(
+    "with no courier.config is refused with the advice to create one, %s",
+    async (_case, hadOne) => {
+      project(hadOne ? allowing([PRIVATE_NAME]) : null);
+      const url = await started();
+      if (hadOne) unlinkSync(join(root, "courier.config.ts"));
 
-    const reply = await parse(url, PRIVATE_NAME);
+      const reply = await parse(url, PRIVATE_NAME);
 
-    expect(reply.status).toBe(400);
-    expect(String(reply.body.error)).toContain(
-      `There is no courier.config in ${root}; create it and name the host in \`studio.allowedSpecHosts\` to allow it.`,
-    );
-  }, 15_000);
+      expect(reply.status).toBe(400);
+      expect(String(reply.body.error)).toContain(
+        `There is no courier.config in ${root}; create it and name the host in \`studio.allowedSpecHosts\` to allow it.`,
+      );
+    },
+    15_000,
+  );
 
   it("removed from studio.allowedSpecHosts by a save just before the request is refused; one added that way is allowed", async () => {
     project(allowing([PRIVATE_NAME]));
@@ -265,14 +285,18 @@ describe("POST /api/apis/parse for a host that is not private", () => {
     ["this machine", "127.0.0.1", "while courier.config does not load", BROKEN],
     ["the public internet", PUBLIC_NAME, "while courier.config loads", allowing([])],
     ["the public internet", PUBLIC_NAME, "while courier.config does not load", BROKEN],
-  ])("reads no config for %s (%s) %s", async (_what, host, _state, config) => {
-    project(config);
-    const url = await started();
-    const before = evaluations();
+  ])(
+    "reads no config for %s (%s) %s",
+    async (_what, host, _state, config) => {
+      project(config);
+      const url = await started();
+      const before = evaluations();
 
-    const reply = await parse(url, host);
+      const reply = await parse(url, host);
 
-    expect(reply.status).toBe(200);
-    expect(evaluations() - before).toBe(0);
-  }, 15_000);
+      expect(reply.status).toBe(200);
+      expect(evaluations() - before).toBe(0);
+    },
+    15_000,
+  );
 });

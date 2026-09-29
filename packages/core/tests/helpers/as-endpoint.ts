@@ -1,5 +1,5 @@
-import { ENDPOINT_SCHEMA } from "../../src/validation";
 import type { SchemaMetadata } from "../../src/validation";
+import { ENDPOINT_SCHEMA } from "../../src/validation";
 
 /**
  * Wrap a bare closure in the descriptor shape the runtime resolves.

@@ -35,18 +35,42 @@ describe("restartedByEdit", () => {
   it("names no running mock for an edit that only adds one", () => {
     const after = BEFORE.replace("});", "  pets: defineMockServer({ source: api }),\n});");
 
-    expect(restartedByEdit({ file: join(root, "courier.mocks.ts"), before: BEFORE, after, running: ["users", "orders"] })).toEqual([]);
+    expect(
+      restartedByEdit({
+        file: join(root, "courier.mocks.ts"),
+        before: BEFORE,
+        after,
+        running: ["users", "orders"],
+      }),
+    ).toEqual([]);
   });
 
   it("names the running mocks whose declaration the edit changes", () => {
     const after = BEFORE.replace("port: 7002", "port: 7003");
 
-    expect(restartedByEdit({ file: join(root, "courier.mocks.ts"), before: BEFORE, after, running: ["users", "orders"] })).toEqual(["orders"]);
+    expect(
+      restartedByEdit({
+        file: join(root, "courier.mocks.ts"),
+        before: BEFORE,
+        after,
+        running: ["users", "orders"],
+      }),
+    ).toEqual(["orders"]);
   });
 
   it("names every running mock when it cannot tell the declarations apart", () => {
-    const after = BEFORE.replace("export default defineMocks({", "const more = {};\nexport default defineMocks({ ...more,");
+    const after = BEFORE.replace(
+      "export default defineMocks({",
+      "const more = {};\nexport default defineMocks({ ...more,",
+    );
 
-    expect(restartedByEdit({ file: join(root, "courier.mocks.ts"), before: BEFORE, after, running: ["users", "orders"] })).toEqual(["users", "orders"]);
+    expect(
+      restartedByEdit({
+        file: join(root, "courier.mocks.ts"),
+        before: BEFORE,
+        after,
+        running: ["users", "orders"],
+      }),
+    ).toEqual(["users", "orders"]);
   });
 });

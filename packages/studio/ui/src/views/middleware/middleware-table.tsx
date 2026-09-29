@@ -1,16 +1,15 @@
-import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
 import {
   Table,
-  TableHeader,
-  TableRow,
-  TableHead,
   TableBody,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-
+import { cn } from "@/lib/utils";
+import { durationBg, durationColor } from "./constants";
 import type { AggregateMiddleware } from "./types";
-import { durationColor, durationBg } from "./constants";
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -21,10 +20,7 @@ interface MiddlewareTableProps {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-export function MiddlewareTable({
-  stats,
-  onRowClick,
-}: MiddlewareTableProps): React.ReactElement {
+export function MiddlewareTable({ stats, onRowClick }: MiddlewareTableProps): React.ReactElement {
   const maxAvg = Math.max(...stats.map((s) => s.avgDuration), 0.001);
 
   return (
@@ -49,14 +45,20 @@ export function MiddlewareTable({
               onClick={() => onRowClick(mw.name)}
             >
               <TableCell className="mono-sm font-medium text-foreground">{mw.name}</TableCell>
-              <TableCell className="text-right tabular-nums text-muted-foreground">{mw.calls}</TableCell>
+              <TableCell className="text-right tabular-nums text-muted-foreground">
+                {mw.calls}
+              </TableCell>
               <TableCell className="text-right">
                 <DurationCell value={mw.avgDuration} max={maxAvg} />
               </TableCell>
-              <TableCell className={cn("text-right tabular-nums mono-sm", durationColor(mw.p95Duration))}>
+              <TableCell
+                className={cn("text-right tabular-nums mono-sm", durationColor(mw.p95Duration))}
+              >
                 {formatDuration(mw.p95Duration)}
               </TableCell>
-              <TableCell className={cn("text-right tabular-nums mono-sm", durationColor(mw.maxDuration))}>
+              <TableCell
+                className={cn("text-right tabular-nums mono-sm", durationColor(mw.maxDuration))}
+              >
                 {formatDuration(mw.maxDuration)}
               </TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">

@@ -32,7 +32,8 @@ interface EntryCase {
 
 const esm = (value: string): string => `export default ${value};\n`;
 const commonjs = (value: string): string => `module.exports = ${value};\n`;
-const configOf = (baseURL: string): string => `{ sources: { api: { baseURL: ${JSON.stringify(baseURL)} } } }`;
+const configOf = (baseURL: string): string =>
+  `{ sources: { api: { baseURL: ${JSON.stringify(baseURL)} } } }`;
 
 const CONFIG_CASES: EntryCase[] = [
   { label: "a courier.config.mjs", file: "courier.config.mjs", source: esm },
@@ -293,7 +294,10 @@ describe("loadCourierConfig on a CommonJS entry Node cannot run, as the runtime 
   it("loads a courier.mocks.cjs Node cannot run, its module.exports its mocks, as the mock worker does", async () => {
     writeFileSync(join(dir, "courier.config.ts"), esm(configOf("https://api.example.com")));
     const file = join(dir, "courier.mocks.cjs");
-    writeFileSync(file, "const port = await Promise.resolve(1);\nmodule.exports = { apiMock: { port } };\n");
+    writeFileSync(
+      file,
+      "const port = await Promise.resolve(1);\nmodule.exports = { apiMock: { port } };\n",
+    );
 
     const loaded = await loadCourierConfig(dir);
     const worker = await loadCourierMocksFile(file);
@@ -347,13 +351,17 @@ describe("loadCourierConfig beside a process that required the config itself", (
 
 describe("loadCourierConfig on the modules Node's require cache holds", () => {
   it("keeps a TypeScript module a courier.config.cjs requires as Node first ran it, apart from the one a courier.mocks.ts imports", async () => {
-    const base = (baseURL: string): string => `export const base = { baseURL: ${JSON.stringify(baseURL)} };\n`;
+    const base = (baseURL: string): string =>
+      `export const base = { baseURL: ${JSON.stringify(baseURL)} };\n`;
     writeFileSync(join(dir, "base.ts"), base("https://v1.example.com"));
     writeFileSync(
       join(dir, "courier.config.cjs"),
       'const { base } = require("./base.ts");\nmodule.exports = { sources: { api: { baseURL: base.baseURL } }, base };\n',
     );
-    writeFileSync(join(dir, "courier.mocks.ts"), 'import { base } from "./base";\nexport default { apiMock: { base } };\n');
+    writeFileSync(
+      join(dir, "courier.mocks.ts"),
+      'import { base } from "./base";\nexport default { apiMock: { base } };\n',
+    );
     const first = await loadCourierConfig(dir);
 
     writeFileSync(join(dir, "base.ts"), base("https://v2.example.com"));

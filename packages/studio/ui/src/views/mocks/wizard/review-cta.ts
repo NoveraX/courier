@@ -51,7 +51,11 @@ export function reviewCta(state: MockWizardState): ReviewCta {
   const { plan } = state;
   switch (plan.status) {
     case "ready":
-      return { kind: "apply", label: applyLabel(plan.outcome.target, plan.outcome.creates), armedAt: plan.armedAt };
+      return {
+        kind: "apply",
+        label: applyLabel(plan.outcome.target, plan.outcome.creates),
+        armedAt: plan.armedAt,
+      };
     case "manual":
       return plan.outcome.retryable
         ? { kind: "checkAgain", label: "Check again" }

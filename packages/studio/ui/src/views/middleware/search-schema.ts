@@ -6,9 +6,7 @@ export interface MiddlewareSearchParams {
   sortDir?: string;
 }
 
-export function validateMiddlewareSearch(
-  raw: Record<string, unknown>,
-): MiddlewareSearchParams {
+export function validateMiddlewareSearch(raw: Record<string, unknown>): MiddlewareSearchParams {
   return {
     mode: parseString(raw.mode),
     selectedRequestId: parseString(raw.selectedRequestId),

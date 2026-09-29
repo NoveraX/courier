@@ -7,8 +7,8 @@
  */
 import { createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
-import { type RealtimeError } from "@noverax/courier/realtime";
 import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/internal";
+import type { RealtimeError } from "@noverax/courier/realtime";
 import { afterEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { z } from "zod";
@@ -128,7 +128,8 @@ describe("a proxy caller pointed at the mock", () => {
   it("carries several subscriptions on one socket, and ends one without the other", async () => {
     const { server, ws, left } = await serve();
     const opened: string[] = [];
-    server.requestHooks.onStart = (id, _verb, path, group, method) => opened.push(`${id} ${path} ${group}.${method}`);
+    server.requestHooks.onStart = (id, _verb, path, group, method) =>
+      opened.push(`${id} ${path} ${group}.${method}`);
     const caller = createProxyCaller<ChatApi>("shop", { source: chatApi(), proxyPath: { ws } });
     const r1 = caller.chat.room({ room: "r1", nick: "alice" });
     const r2 = caller.chat.room({ room: "r2", nick: "alice" });
@@ -173,7 +174,14 @@ describe("the proxy's WebSocket protocol, frame by frame", () => {
     const { ws } = await serve();
     const { socket, frames } = await open(ws);
 
-    socket.send(encodeMessage({ type: "subscribe", id: "1", topic: ROOM, payload: { room: "r1", nick: "ada" } }));
+    socket.send(
+      encodeMessage({
+        type: "subscribe",
+        id: "1",
+        topic: ROOM,
+        payload: { room: "r1", nick: "ada" },
+      }),
+    );
     await settle();
 
     expect(frames.slice(0, 3)).toEqual([
@@ -188,7 +196,9 @@ describe("the proxy's WebSocket protocol, frame by frame", () => {
     const { socket, frames } = await open(ws);
 
     socket.send(encodeMessage({ type: "subscribe", id: "1", topic: ROOM, payload: { room: 1 } }));
-    socket.send(encodeMessage({ type: "subscribe", id: "2", topic: "shop.chat.lobby", payload: {} }));
+    socket.send(
+      encodeMessage({ type: "subscribe", id: "2", topic: "shop.chat.lobby", payload: {} }),
+    );
     socket.send(encodeMessage({ type: "subscribe", id: "3", topic: "lonely", payload: {} }));
     socket.send(encodeMessage({ type: "ping" }));
     await settle();
@@ -207,8 +217,17 @@ describe("the proxy's WebSocket protocol, frame by frame", () => {
   it("refuses a message on a topic it does not hold, or one its schema refuses", async () => {
     const { ws } = await serve();
     const { socket, frames } = await open(ws);
-    socket.send(encodeMessage({ type: "message", id: "m0", topic: SERVED, payload: { text: "hi" } }));
-    socket.send(encodeMessage({ type: "subscribe", id: "1", topic: ROOM, payload: { room: "r1", nick: "ada" } }));
+    socket.send(
+      encodeMessage({ type: "message", id: "m0", topic: SERVED, payload: { text: "hi" } }),
+    );
+    socket.send(
+      encodeMessage({
+        type: "subscribe",
+        id: "1",
+        topic: ROOM,
+        payload: { room: "r1", nick: "ada" },
+      }),
+    );
     await settle();
 
     socket.send(encodeMessage({ type: "message", id: "m1", topic: SERVED, payload: { text: 7 } }));
@@ -224,7 +243,14 @@ describe("the proxy's WebSocket protocol, frame by frame", () => {
   it("confirms an unsubscribe once the channel has left", async () => {
     const { ws, left } = await serve();
     const { socket, frames } = await open(ws);
-    socket.send(encodeMessage({ type: "subscribe", id: "1", topic: ROOM, payload: { room: "r1", nick: "ada" } }));
+    socket.send(
+      encodeMessage({
+        type: "subscribe",
+        id: "1",
+        topic: ROOM,
+        payload: { room: "r1", nick: "ada" },
+      }),
+    );
     await settle();
 
     socket.send(encodeMessage({ type: "unsubscribe", id: "2", topic: SERVED }));
@@ -248,9 +274,13 @@ describe("a mock server built without a source", () => {
     const { url } = await server.start();
     const { socket, frames } = await open(`${url.replace(/^http/, "ws")}/api/ws`);
 
-    socket.send(encodeMessage({ type: "subscribe", id: "1", topic: "shop.chat.room", payload: {} }));
+    socket.send(
+      encodeMessage({ type: "subscribe", id: "1", topic: "shop.chat.room", payload: {} }),
+    );
     await settle();
-    socket.send(encodeMessage({ type: "message", topic: "shop.chat.room", payload: { any: "thing" } }));
+    socket.send(
+      encodeMessage({ type: "message", topic: "shop.chat.room", payload: { any: "thing" } }),
+    );
     await settle();
 
     expect(frames).toEqual([

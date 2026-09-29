@@ -1,32 +1,28 @@
 import { useRef, useState } from "react";
-
-import { PageShell } from "@/components/shared/page-shell";
-
 import type { UseFormReturn } from "react-hook-form";
+import { PageShell } from "@/components/shared/page-shell";
 import type { Settings } from "@/store/types";
-
-import { SECTION_CONFIG } from "./constants";
-import { useSettingsForm } from "./use-settings-form";
-import { useSessionHistory } from "./use-session-history";
-import { useScrollSpy } from "./use-scroll-spy";
-import { SectionWrapper } from "./section-wrapper";
-import { SectionNav } from "./section-nav";
-import { UnsavedBanner } from "./unsaved-banner";
+import { ApisSection } from "./apis-section";
 import { AppearanceSection } from "./appearance-section";
 import { ConnectionSection } from "./connection-section";
-import { RecordingSection } from "./recording-section";
-import { DisplaySection } from "./display-section";
-import { NotificationsSection } from "./notifications-section";
-import { ExportSection } from "./export-section";
-import { ApisSection } from "./apis-section";
-import { SessionHistorySection } from "./session-history-section";
+import { SECTION_CONFIG } from "./constants";
 import { DangerZone } from "./danger-zone";
+import { DisplaySection } from "./display-section";
+import { ExportSection } from "./export-section";
+import { NotificationsSection } from "./notifications-section";
+import { RecordingSection } from "./recording-section";
+import { SectionNav } from "./section-nav";
+import { SectionWrapper } from "./section-wrapper";
+import { SessionHistorySection } from "./session-history-section";
+import { UnsavedBanner } from "./unsaved-banner";
+import { useScrollSpy } from "./use-scroll-spy";
+import { useSessionHistory } from "./use-session-history";
+import { useSettingsForm } from "./use-settings-form";
 
 // ── Settings view ────────────────────────────────────────────────────────────
 
 export function SettingsView(): React.ReactNode {
-  const { form, isDirty, onSave, onDiscard, onResetDefaults } =
-    useSettingsForm();
+  const { form, isDirty, onSave, onDiscard, onResetDefaults } = useSettingsForm();
   const history = useSessionHistory();
   const [activeSection, setActiveSection] = useState(SECTION_CONFIG[0].id);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -36,21 +32,13 @@ export function SettingsView(): React.ReactNode {
   return (
     <PageShell
       toolbar={
-        isDirty ? (
-          <UnsavedBanner
-            onSave={form.handleSubmit(onSave)}
-            onDiscard={onDiscard}
-          />
-        ) : null
+        isDirty ? <UnsavedBanner onSave={form.handleSubmit(onSave)} onDiscard={onDiscard} /> : null
       }
       noScroll
     >
       <div className="flex min-h-0 flex-1">
         <SectionNav activeSection={activeSection} />
-        <div
-          ref={contentRef}
-          className="min-h-0 flex-1 overflow-y-auto px-6 py-4"
-        >
+        <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
           <div className="mx-auto max-w-2xl space-y-1">
             {SECTION_CONFIG.map((s) => (
               <SectionWrapper

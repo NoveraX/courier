@@ -46,7 +46,10 @@ describe("checkConfigNotShadowed", () => {
   });
 
   it("refuses an extensionless import that a compiled .js beside the config wins", async () => {
-    files({ "courier.config.ts": "export default {};\n", "courier.config.js": "module.exports = {};\n" });
+    files({
+      "courier.config.ts": "export default {};\n",
+      "courier.config.js": "module.exports = {};\n",
+    });
 
     expect(await outcome("courier.config.ts", "./courier.config")).toMatchObject({
       code: "CONFIG_SHADOWED",
@@ -56,21 +59,34 @@ describe("checkConfigNotShadowed", () => {
   });
 
   it("passes an import that names the config's own extension, a compiled copy beside it or not", async () => {
-    files({ "courier.config.ts": "export default {};\n", "courier.config.js": "module.exports = {};\n" });
+    files({
+      "courier.config.ts": "export default {};\n",
+      "courier.config.js": "module.exports = {};\n",
+    });
 
     expect(await outcome("courier.config.ts", "./courier.config.ts")).toBe("passes");
   });
 
   it("refuses an import a .tsx beside a .cts config wins", async () => {
-    files({ "courier.config.cts": "export default {};\n", "courier.config.tsx": "export default {};\n" });
+    files({
+      "courier.config.cts": "export default {};\n",
+      "courier.config.tsx": "export default {};\n",
+    });
 
-    expect(await outcome("courier.config.cts", "./courier.config")).toMatchObject({ code: "CONFIG_SHADOWED" });
+    expect(await outcome("courier.config.cts", "./courier.config")).toMatchObject({
+      code: "CONFIG_SHADOWED",
+    });
   });
 
   it("refuses an import a directory with an index at the compiled name wins", async () => {
-    files({ "courier.config.mts": "export default {};\n", "courier.config.mjs/index.js": "module.exports = {};\n" });
+    files({
+      "courier.config.mts": "export default {};\n",
+      "courier.config.mjs/index.js": "module.exports = {};\n",
+    });
 
-    expect(await outcome("courier.config.mts", "./courier.config.mjs", "courier.mocks.mts")).toMatchObject({
+    expect(
+      await outcome("courier.config.mts", "./courier.config.mjs", "courier.mocks.mts"),
+    ).toMatchObject({
       code: "CONFIG_SHADOWED",
       message: expect.stringContaining("would load courier.config.mjs/index.js"),
     });

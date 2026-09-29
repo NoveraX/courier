@@ -1,9 +1,7 @@
 import { useMemo } from "react";
-
+import type { FilterConfig, FilterOption } from "@/components/shared/filter-bar";
 import { FilterBar } from "@/components/shared/filter-bar";
 import { extractUniqueValues } from "@/lib/filter-utils";
-
-import type { FilterConfig, FilterOption } from "@/components/shared/filter-bar";
 import type { MockRequestLog } from "@/store/mock-slice";
 import type { LogFilterState } from "./use-log-filter";
 
@@ -50,7 +48,17 @@ const STATUS_RANGE_OPTIONS: FilterOption[] = [
 function buildFilterConfigs(logs: readonly MockRequestLog[]): FilterConfig[] {
   return [
     { key: "statusRange", label: "Status", options: STATUS_RANGE_OPTIONS },
-    { key: "method", label: "Method", options: extractUniqueValues(logs, (l) => l.httpMethod), searchable: true },
-    { key: "group", label: "Group", options: extractUniqueValues(logs, (l) => l.group), searchable: true },
+    {
+      key: "method",
+      label: "Method",
+      options: extractUniqueValues(logs, (l) => l.httpMethod),
+      searchable: true,
+    },
+    {
+      key: "group",
+      label: "Group",
+      options: extractUniqueValues(logs, (l) => l.group),
+      searchable: true,
+    },
   ];
 }

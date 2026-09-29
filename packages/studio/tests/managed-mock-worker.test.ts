@@ -8,7 +8,15 @@
  * declaration, a mocks file without a default export or a taken port, and
  * stops at once when asked while its mocks file is still loading.
  */
-import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -16,7 +24,10 @@ import { createTransformCache, type TransformCache } from "@noverax/courier-stud
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { loadCourierConfig } from "../src/server/config-loader";
-import { createProcessManager, type ProcessManagerEvents } from "../src/server/mock-manager/process-manager";
+import {
+  createProcessManager,
+  type ProcessManagerEvents,
+} from "../src/server/mock-manager/process-manager";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 
@@ -25,7 +36,10 @@ afterEach(async () => {
 });
 
 /** A project under the repository's node_modules, so its files resolve the workspace packages. */
-function project(mocks: string, { loadDelayMs = 0, exportLine = `export default defineMocks(${mocks});` } = {}): string {
+function project(
+  mocks: string,
+  { loadDelayMs = 0, exportLine = `export default defineMocks(${mocks});` } = {},
+): string {
   const cache = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
   mkdirSync(cache, { recursive: true });
   const root = mkdtempSync(join(cache, "my app "));
@@ -70,7 +84,9 @@ function manager(transformCacheDirectory: string | null = null) {
     onExited: vi.fn(),
     onEvent: vi.fn(),
   } satisfies ProcessManagerEvents;
-  const pm = createProcessManager(events, { transformCacheDirectory: () => transformCacheDirectory });
+  const pm = createProcessManager(events, {
+    transformCacheDirectory: () => transformCacheDirectory,
+  });
   cleanups.push(() => pm.dispose());
   return { events, pm };
 }
@@ -110,7 +126,9 @@ describe("a managed mock server", () => {
 
   it("stops at once when asked while its mocks file is still loading", async () => {
     const port = await freePort();
-    const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`, { loadDelayMs: 2500 });
+    const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`, {
+      loadDelayMs: 2500,
+    });
     const { events, pm } = manager();
 
     pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
@@ -151,7 +169,12 @@ describe("a managed mock server", () => {
     pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
 
     await vi.waitFor(
-      () => expect(events.onError).toHaveBeenCalledWith("apiMock", `Port ${port} is in use by another process.`, true),
+      () =>
+        expect(events.onError).toHaveBeenCalledWith(
+          "apiMock",
+          `Port ${port} is in use by another process.`,
+          true,
+        ),
       { timeout: 15_000 },
     );
     expect(events.onReady).not.toHaveBeenCalled();
@@ -175,7 +198,9 @@ describe("a managed mock server", () => {
   }, 20_000);
 
   it("reports a mocks file with no default export", async () => {
-    const mocksFile = project("", { exportLine: "export const apiMock = defineMockServer({ source: api });" });
+    const mocksFile = project("", {
+      exportLine: "export const apiMock = defineMockServer({ source: api });",
+    });
     const { events, pm } = manager();
 
     pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port: await freePort() });
@@ -205,7 +230,9 @@ describe("a managed mock server started with Studio's transforms", () => {
 
   it("serves the mocks file as Studio transformed it, and writes nothing into Studio's directory", async () => {
     const port = await freePort();
-    const mocksFile = realpathSync(project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`));
+    const mocksFile = realpathSync(
+      project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`),
+    );
     const apiFile = join(dirname(mocksFile), "src", "api.ts");
     const directory = realpathSync(mkdtempSync(join(tmpdir(), "courier-worker-transforms-")));
     cleanups.push(() => rmSync(directory, { recursive: true, force: true }));
@@ -221,7 +248,9 @@ describe("a managed mock server started with Studio's transforms", () => {
           const result = compute(miss);
           if (miss.filename !== mocksFile) return result;
           marked.push(miss.filename);
-          return { code: result.code.replace(`port: ${port}`, `port: ${port}, seed: { count: 3 }`) };
+          return {
+            code: result.code.replace(`port: ${port}`, `port: ${port}, seed: { count: 3 }`),
+          };
         });
       },
     };

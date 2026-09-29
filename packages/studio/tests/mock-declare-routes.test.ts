@@ -24,7 +24,12 @@ function mount(ctx: MocksEditContext): Map<string, Handler> {
   return routes;
 }
 
-async function call(handler: Handler | undefined, body: unknown, headers: Record<string, string>, remoteAddress: string) {
+async function call(
+  handler: Handler | undefined,
+  body: unknown,
+  headers: Record<string, string>,
+  remoteAddress: string,
+) {
   let status = 200;
   let payload: unknown;
   const done = new Promise<void>((resolve) => {
@@ -38,7 +43,9 @@ async function call(handler: Handler | undefined, body: unknown, headers: Record
         resolve();
       },
     };
-    const req = { headers, body, socket: { remoteAddress } } as unknown as IncomingMessage & { body: unknown };
+    const req = { headers, body, socket: { remoteAddress } } as unknown as IncomingMessage & {
+      body: unknown;
+    };
     handler?.(req, res);
   });
   await done;
@@ -50,8 +57,21 @@ const ORIGIN = { origin: "http://localhost:6280" };
 
 function project(overrides: Partial<ProjectState> = {}): ProjectState {
   return {
-    snapshot: vi.fn(() => ({ revision: 0, starting: true, running: null, loadedAt: null, failure: null })),
-    fresh: vi.fn(async () => ({ revision: 0, starting: true, running: null, loadedAt: null, failure: null, settling: true })),
+    snapshot: vi.fn(() => ({
+      revision: 0,
+      starting: true,
+      running: null,
+      loadedAt: null,
+      failure: null,
+    })),
+    fresh: vi.fn(async () => ({
+      revision: 0,
+      starting: true,
+      running: null,
+      loadedAt: null,
+      failure: null,
+      settling: true,
+    })),
     importsChanged: vi.fn(),
     runExclusive: vi.fn(async () => {
       throw new Error("no edit expected");
@@ -107,8 +127,15 @@ describe("the mock wizard's routes", () => {
 
     const reply = await call(preview, { mocks: [declaration] }, ORIGIN, "10.9.9.9");
 
-    expect(reply.body).toMatchObject({ status: "manual", target: null, creates: false, reasons: [{ code: "NOT_LOCAL_PEER" }] });
-    expect(String(reply.body.snippet)).toContain("apiMock: defineMockServer({ source: courierConfig.sources.api })");
+    expect(reply.body).toMatchObject({
+      status: "manual",
+      target: null,
+      creates: false,
+      reasons: [{ code: "NOT_LOCAL_PEER" }],
+    });
+    expect(String(reply.body.snippet)).toContain(
+      "apiMock: defineMockServer({ source: courierConfig.sources.api })",
+    );
     expect(String(reply.body.snippet)).not.toContain("export default");
     expect(ctx.project.snapshot).not.toHaveBeenCalled();
     expect(ctx.project.fresh).not.toHaveBeenCalled();
@@ -127,9 +154,17 @@ describe("the mock wizard's routes", () => {
       }),
     ).get("/api/mocks/declare/apply");
 
-    const reply = await call(apply, { mocks: [declaration], baseHash: null, planDigest: "a".repeat(64) }, ORIGIN, "::1");
+    const reply = await call(
+      apply,
+      { mocks: [declaration], baseHash: null, planDigest: "a".repeat(64) },
+      ORIGIN,
+      "::1",
+    );
 
-    expect(reply).toEqual({ status: 500, body: { error: "Studio could not apply adding the mocks: reload chain gone" } });
+    expect(reply).toEqual({
+      status: 500,
+      body: { error: "Studio could not apply adding the mocks: reload chain gone" },
+    });
     vi.restoreAllMocks();
   });
 });

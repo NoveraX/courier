@@ -1,25 +1,24 @@
-import type { Catalog } from "./types-ui"
-import type { EventPayload } from "./actions-event-utils"
-import type { RequestEntry } from "./types"
-import type { RequestDraft } from "./request-draft"
-
-import { normalizeEventSource, shouldIgnoreRequest } from "./actions-event-utils"
-import { str } from "./event-helpers"
-import { applyEvent } from "./handle-event"
-import { createRequestDraft } from "./request-draft"
+import type { EventPayload } from "./actions-event-utils";
+import { normalizeEventSource, shouldIgnoreRequest } from "./actions-event-utils";
+import { str } from "./event-helpers";
+import { applyEvent } from "./handle-event";
+import type { RequestDraft } from "./request-draft";
+import { createRequestDraft } from "./request-draft";
+import type { RequestEntry } from "./types";
+import type { Catalog } from "./types-ui";
 
 export interface ApplyEventsOptions {
   /** How many requests the list keeps; the oldest beyond it are dropped. */
-  maxRequests: number
+  maxRequests: number;
   /** Patterns of requests the user chose not to record. */
-  ignorePatterns: string[]
+  ignorePatterns: string[];
   /** Whether recording is paused: no new request is recorded, the ones shown still end. */
-  paused: boolean
+  paused: boolean;
 }
 
 /* Source names are matched case-insensitively against a catalogue of known
    names; with this empty one, each passes as sent. */
-const NO_CATALOG: Catalog = {}
+const NO_CATALOG: Catalog = {};
 
 /**
  * Fold a batch of runtime events into the request list at once.
@@ -44,22 +43,30 @@ export function applyEvents(
   events: EventPayload[],
   options: ApplyEventsOptions,
 ): { requests: RequestEntry[]; droppedCount: number } {
-  const draft = createRequestDraft(requests)
+  const draft = createRequestDraft(requests);
   for (const event of events) {
-    if (isRecorded(event, draft, options)) applyEvent(draft, normalizeEventSource(event, NO_CATALOG))
+    if (isRecorded(event, draft, options))
+      applyEvent(draft, normalizeEventSource(event, NO_CATALOG));
   }
-  return draft.finish(options.maxRequests)
+  return draft.finish(options.maxRequests);
 }
 
 /** Whether an event is taken in: a new request is not while paused, nor one the user ignores. */
-function isRecorded(event: EventPayload, draft: RequestDraft, options: ApplyEventsOptions): boolean {
+function isRecorded(
+  event: EventPayload,
+  draft: RequestDraft,
+  options: ApplyEventsOptions,
+): boolean {
   if (event.type === "request:start") {
-    if (draft.has(str(event.id))) return true
-    return !options.paused && !shouldIgnoreRequest(event, options.ignorePatterns)
+    if (draft.has(str(event.id))) return true;
+    return !options.paused && !shouldIgnoreRequest(event, options.ignorePatterns);
   }
   if (event.type === "upload:progress") {
-    return draft.has(str(event.requestId)) || (!options.paused && !shouldIgnoreRequest(event, options.ignorePatterns))
+    return (
+      draft.has(str(event.requestId)) ||
+      (!options.paused && !shouldIgnoreRequest(event, options.ignorePatterns))
+    );
   }
-  if (event.type === "stream:open") return !options.paused || draft.has(str(event.requestId))
-  return true
+  if (event.type === "stream:open") return !options.paused || draft.has(str(event.requestId));
+  return true;
 }

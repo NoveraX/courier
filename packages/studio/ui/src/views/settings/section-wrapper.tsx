@@ -1,15 +1,9 @@
-import { useState } from "react";
-import { ChevronDown } from "lucide-react";
-
 import type { LucideIcon } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+import { useState } from "react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 // ── Section wrapper ──────────────────────────────────────────────────────────
 
@@ -48,12 +42,7 @@ export function SectionWrapper({
             <Icon className="size-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3
-              className={cn(
-                "text-h3",
-                destructive ? "text-destructive" : "text-foreground",
-              )}
-            >
+            <h3 className={cn("text-h3", destructive ? "text-destructive" : "text-foreground")}>
               {title}
             </h3>
             <p className="text-body-xs text-muted-foreground">{description}</p>

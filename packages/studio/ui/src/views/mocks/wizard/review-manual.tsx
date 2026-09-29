@@ -1,10 +1,8 @@
 import { Copy } from "lucide-react";
-
-import type { ManualOutcome } from "./wire-types";
-
 import { CodeBlock } from "@/components/shared/code-block";
 import { Button } from "@/components/ui/button";
 import { copyToClipboard } from "@/lib/clipboard";
+import type { ManualOutcome } from "./wire-types";
 
 /** The mocks file a manual outcome names, or the one its snippet would create. */
 const DEFAULT_TARGET = "courier.mocks.ts";
@@ -29,11 +27,17 @@ export function ReviewManual({ outcome }: { outcome: ManualOutcome }): React.Rea
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <h3 className="text-h3">{outcome.creates ? `Create ${target} yourself` : `Add this to ${target} yourself`}</h3>
+        <h3 className="text-h3">
+          {outcome.creates ? `Create ${target} yourself` : `Add this to ${target} yourself`}
+        </h3>
         <ul className="space-y-1">
           {outcome.reasons.map((reason) => (
-            <li key={`${reason.code}:${reason.message}`} className="text-body-sm text-muted-foreground">
-              {reason.message} <span className="mono-xs text-muted-foreground/60">{reason.code}</span>
+            <li
+              key={`${reason.code}:${reason.message}`}
+              className="text-body-sm text-muted-foreground"
+            >
+              {reason.message}{" "}
+              <span className="mono-xs text-muted-foreground/60">{reason.code}</span>
             </li>
           ))}
         </ul>

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCaller } from "../../src/caller";
-import { courier } from "../../src/define/courier";
 import { defineApi } from "../../src/define/api";
+import { courier } from "../../src/define/courier";
 import { HTTPError } from "../../src/errors";
 import { authMiddleware } from "../../src/middleware/index";
 import type { WrapHandler } from "../../src/middleware/types";
@@ -32,7 +32,10 @@ function clientFor(url: string, middleware: ReturnType<typeof authMiddleware>) {
       name: "api",
       baseURL: url,
       middleware: [middleware],
-      endpoints: { me: endpoint.get("me"), rename: endpoint.post("me").variables<{ name: string }>() },
+      endpoints: {
+        me: endpoint.get("me"),
+        rename: endpoint.post("me").variables<{ name: string }>(),
+      },
     }),
   );
 }
@@ -75,7 +78,10 @@ describe("authMiddleware against a real upstream", () => {
   it("rejects with the second 401 and refreshes only once when the fresh token is refused too", async () => {
     upstream = await startUpstream((_req, res) => sendJson(res, 401, { message: "revoked" }));
     const refreshToken = vi.fn(() => "fresh");
-    const client = clientFor(upstream.url, authMiddleware({ getToken: () => "stale", refreshToken }));
+    const client = clientFor(
+      upstream.url,
+      authMiddleware({ getToken: () => "stale", refreshToken }),
+    );
 
     const call = client.me();
 
@@ -88,7 +94,10 @@ describe("authMiddleware against a real upstream", () => {
   it("does not refresh on a failure other than 401", async () => {
     upstream = await startUpstream((_req, res) => sendJson(res, 403, { message: "forbidden" }));
     const refreshToken = vi.fn(() => "fresh");
-    const client = clientFor(upstream.url, authMiddleware({ getToken: () => "stale", refreshToken }));
+    const client = clientFor(
+      upstream.url,
+      authMiddleware({ getToken: () => "stale", refreshToken }),
+    );
 
     await expect(client.me()).rejects.toMatchObject({ status: 403 });
 
@@ -134,7 +143,10 @@ describe("authMiddleware against a real upstream", () => {
     });
     let issued = 0;
     const refreshToken = vi.fn(() => `fresh-${++issued}`);
-    const client = clientFor(upstream.url, authMiddleware({ getToken: () => "stale", refreshToken }));
+    const client = clientFor(
+      upstream.url,
+      authMiddleware({ getToken: () => "stale", refreshToken }),
+    );
 
     await client.me();
     accepted = "fresh-2";

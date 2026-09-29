@@ -17,7 +17,7 @@ import {
   removeProjects,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const owner = { $ref: "#/components/schemas/Owner" };
 const json = (schema: unknown) => ({ content: { "application/json": { schema } } });
@@ -33,13 +33,17 @@ function spec(origin: string): ParsedSpec {
           get: {
             operationId: "getOwner",
             tags: ["owners"],
-            parameters: [{ name: "ownerId", in: "path", required: true, schema: { type: "integer" } }],
+            parameters: [
+              { name: "ownerId", in: "path", required: true, schema: { type: "integer" } },
+            ],
             responses: { "200": { description: "ok", ...json(owner) } },
           },
           patch: {
             operationId: "patchOwner",
             tags: ["owners"],
-            parameters: [{ name: "ownerId", in: "path", required: true, schema: { type: "integer" } }],
+            parameters: [
+              { name: "ownerId", in: "path", required: true, schema: { type: "integer" } },
+            ],
             requestBody: json(owner),
             responses: { "200": { description: "ok", ...json(owner) } },
           },
@@ -98,7 +102,11 @@ afterAll(async () => {
 });
 
 function generate(options: Partial<GenerateOptions>) {
-  return generateCode(spec(server.origin), { type: "openapi", outputDir: "src/api", ...options }, "shop");
+  return generateCode(
+    spec(server.origin),
+    { type: "openapi", outputDir: "src/api", ...options },
+    "shop",
+  );
 }
 
 describe.each(VALIDATIONS)("a path parameter beside a body, validated with %s", (validation) => {

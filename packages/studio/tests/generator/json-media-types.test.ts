@@ -11,7 +11,7 @@ import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
 import type { ParsedSpec } from "../../src/apis/parser/types";
 import { endpointAt, loadGenerated } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const Fields = {
   type: "object",
@@ -27,7 +27,9 @@ const Patch = {
   },
 };
 
-const ok = { "200": { description: "ok", content: { "application/json": { schema: { type: "object" } } } } };
+const ok = {
+  "200": { description: "ok", content: { "application/json": { schema: { type: "object" } } } },
+};
 const id = { name: "id", in: "path", required: true, schema: { type: "string" } };
 
 function spec(origin: string): ParsedSpec {
@@ -41,7 +43,10 @@ function spec(origin: string): ParsedSpec {
           post: {
             operationId: "createPet",
             tags: ["pets"],
-            requestBody: { required: true, content: { "application/vnd.api+json": { schema: Fields } } },
+            requestBody: {
+              required: true,
+              content: { "application/vnd.api+json": { schema: Fields } },
+            },
             responses: ok,
           },
         },
@@ -50,7 +55,10 @@ function spec(origin: string): ParsedSpec {
             operationId: "mergePet",
             tags: ["pets"],
             parameters: [id],
-            requestBody: { required: true, content: { "application/merge-patch+json": { schema: Fields } } },
+            requestBody: {
+              required: true,
+              content: { "application/merge-patch+json": { schema: Fields } },
+            },
             responses: ok,
           },
           put: {
@@ -66,7 +74,10 @@ function spec(origin: string): ParsedSpec {
             operationId: "patchPet",
             tags: ["pets"],
             parameters: [id],
-            requestBody: { required: true, content: { "application/json-patch+json": { schema: Patch } } },
+            requestBody: {
+              required: true,
+              content: { "application/json-patch+json": { schema: Patch } },
+            },
             responses: ok,
           },
         },
@@ -92,7 +103,11 @@ afterAll(async () => {
 
 describe.each(VARIANTS)("a generated client, %s", (_label, options) => {
   function client() {
-    const files = generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "pets");
+    const files = generateCode(
+      spec(upstream.origin),
+      { type: "openapi", outputDir: "src/api", ...options },
+      "pets",
+    );
     const { petsApi } = loadGenerated(files, "src/api/pets/index.ts");
     return (method: string) => endpointAt(petsApi, "pets", method);
   }
@@ -101,14 +116,22 @@ describe.each(VARIANTS)("a generated client, %s", (_label, options) => {
     upstream.requests.length = 0;
     await call();
     const [request] = upstream.requests;
-    return { contentType: request?.contentType, path: request?.path, body: JSON.parse(request?.body ?? "null") };
+    return {
+      contentType: request?.contentType,
+      path: request?.path,
+      body: JSON.parse(request?.body ?? "null"),
+    };
   }
 
   it("sends a merge patch as one", async () => {
     const call = client();
     const request = await sent(() => call("mergePet")({ id: "7", name: "Rex" }));
 
-    expect(request).toEqual({ contentType: "application/merge-patch+json", path: "/pets/7", body: { name: "Rex" } });
+    expect(request).toEqual({
+      contentType: "application/merge-patch+json",
+      path: "/pets/7",
+      body: { name: "Rex" },
+    });
   });
 
   it("sends a JSON Patch as one", async () => {
@@ -116,20 +139,32 @@ describe.each(VARIANTS)("a generated client, %s", (_label, options) => {
     const ops = [{ op: "replace", path: "/name", value: "Rex" }];
     const request = await sent(() => call("patchPet")({ id: "7", body: ops }));
 
-    expect(request).toEqual({ contentType: "application/json-patch+json", path: "/pets/7/ops", body: ops });
+    expect(request).toEqual({
+      contentType: "application/json-patch+json",
+      path: "/pets/7/ops",
+      body: ops,
+    });
   });
 
   it("sends a JSON:API document with its media type, without parameters to place", async () => {
     const call = client();
     const request = await sent(() => call("createPet")({ name: "Rex" }));
 
-    expect(request).toEqual({ contentType: "application/vnd.api+json", path: "/pets", body: { name: "Rex" } });
+    expect(request).toEqual({
+      contentType: "application/vnd.api+json",
+      path: "/pets",
+      body: { name: "Rex" },
+    });
   });
 
   it("still sends plain JSON as application/json", async () => {
     const call = client();
     const request = await sent(() => call("replacePet")({ id: "7", name: "Rex" }));
 
-    expect(request).toEqual({ contentType: "application/json", path: "/pets/7", body: { name: "Rex" } });
+    expect(request).toEqual({
+      contentType: "application/json",
+      path: "/pets/7",
+      body: { name: "Rex" },
+    });
   });
 });

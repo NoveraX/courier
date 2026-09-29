@@ -22,7 +22,10 @@ describe("the Astro handler", () => {
   it("tells Studio on its first request which sources it serves", async () => {
     const { endpoint } = courier();
     registerSources({
-      api: defineApi({ baseURL: "https://upstream.example", endpoints: { ping: endpoint.get("ping") } }),
+      api: defineApi({
+        baseURL: "https://upstream.example",
+        endpoints: { ping: endpoint.get("ping") },
+      }),
     });
     vi.stubGlobal("fetch", async () => Response.json({ ok: true }));
     const announced: BufferedAnnouncement[] = [];
@@ -34,8 +37,8 @@ describe("the Astro handler", () => {
     }
     stop();
 
-    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual([
-      [["http", "sse"], "astro", ["api"]],
-    ]);
+    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual(
+      [[["http", "sse"], "astro", ["api"]]],
+    );
   });
 });

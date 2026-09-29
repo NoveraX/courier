@@ -1,12 +1,10 @@
-import { motion } from "motion/react";
 import { AlertCircle } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { motion } from "motion/react";
 import { formatDuration } from "@/components/shared/formatters";
-import { StaggerList, STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
-
+import { STAGGER_ITEM_VARIANTS, StaggerList } from "@/components/shared/stagger-list";
+import { cn } from "@/lib/utils";
+import { durationBg, durationColor } from "./constants";
 import type { AggregateMiddleware } from "./types";
-import { durationColor, durationBg } from "./constants";
 
 // ── Props ──────────────────────────────────────────────────────────────────
 

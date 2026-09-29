@@ -43,28 +43,40 @@ describe("extractConfigDeps", () => {
 
   it("follows one-level relative imports", () => {
     const dep = file("src/api.ts", `export const api = {};`);
-    const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "./src/api";\nexport default { sources: { api } };`,
+    );
     expect(walked(entry)).toEqual([entry, dep]);
   });
 
   it("follows two-level transitive imports", () => {
     const inner = file("src/types.ts", `export type T = number;`);
     const dep = file("src/api.ts", `import type { T } from "./types";\nexport const api: T = 1;`);
-    const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "./src/api";\nexport default { sources: { api } };`,
+    );
     expect(walked(entry)).toEqual([entry, dep, inner]);
   });
 
   it("walks the compiled .js beside a .ts, which is the module the loader runs", () => {
     file("src/api.ts", `import "./typescript-only";\nexport const api = {};`);
     const compiled = file("src/api.js", `export const api = {};`);
-    const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "./src/api";\nexport default { sources: { api } };`,
+    );
 
     expect(walked(entry)).toEqual([entry, compiled]);
   });
 
   it("walks the .ts an import written for NodeNext as .js names", () => {
     const dep = file("src/api.ts", `export const api = {};`);
-    const entry = file("courier.config.ts", `import { api } from "./src/api.js";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "./src/api.js";\nexport default { sources: { api } };`,
+    );
 
     expect(walked(entry)).toEqual([entry, dep]);
   });
@@ -76,13 +88,19 @@ describe("extractConfigDeps", () => {
   });
 
   it("skips bare specifiers", () => {
-    const entry = file("courier.config.ts", `import { defineConfig } from "@noverax/courier/config";\nexport default defineConfig({ sources: {} });`);
+    const entry = file(
+      "courier.config.ts",
+      `import { defineConfig } from "@noverax/courier/config";\nexport default defineConfig({ sources: {} });`,
+    );
     expect(walked(entry)).toEqual([entry]);
   });
 
   it("resolves directory imports via index.ts", () => {
     const inner = file("src/api/index.ts", `export const api = {};`);
-    const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "./src/api";\nexport default { sources: { api } };`,
+    );
     expect(walked(entry)).toEqual([entry, inner]);
   });
 
@@ -107,7 +125,10 @@ describe("extractConfigDeps", () => {
   it("walks the config and the mocks file in one pass, reaching a module both import once", () => {
     const shared = file("src/api.ts", `export const api = {};`);
     const fixtures = file("src/fixtures.ts", `export const users = [];`);
-    const config = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+    const config = file(
+      "courier.config.ts",
+      `import { api } from "./src/api";\nexport default { sources: { api } };`,
+    );
     const mocks = file(
       "courier.mocks.ts",
       `import { api } from "./src/api";\nimport { users } from "./src/fixtures";\nexport default { api, users };`,
@@ -118,7 +139,10 @@ describe("extractConfigDeps", () => {
 
   it("records each path an import that names no module could name one at, as absent", () => {
     mkdirSync(join(dir, "src"));
-    const entry = file("courier.config.ts", `import { host } from "./src/late";\nimport { api } from "./generated/api";\nexport default {};`);
+    const entry = file(
+      "courier.config.ts",
+      `import { host } from "./src/late";\nimport { api } from "./generated/api";\nexport default {};`,
+    );
 
     const deps = extractConfigDeps([entry]);
 
@@ -133,7 +157,10 @@ describe("extractConfigDeps", () => {
 
   it("records no absent path for an import that names the first path the loader tries", () => {
     const dep = file("src/api.ts", `export const api = {};`);
-    const entry = file("courier.config.ts", `import { api } from "./src/api.ts";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "./src/api.ts";\nexport default { sources: { api } };`,
+    );
 
     expect([...extractConfigDeps([entry])]).toEqual([
       [entry, sha256(entry)],
@@ -143,27 +170,36 @@ describe("extractConfigDeps", () => {
 
   it("records as absent each path the loader tries before the module an import names", () => {
     const dep = file("src/api.ts", `export const api = {};`);
-    const entry = file("courier.config.ts", `import { api } from "./src/api";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "./src/api";\nexport default { sources: { api } };`,
+    );
 
     expect([...extractConfigDeps([entry])]).toEqual([
       [entry, sha256(entry)],
       [dep, sha256(dep)],
-      ...["", ".js", ".mjs", ".cjs"].map((extension) => [join(dir, "src", `api${extension}`), null]),
+      ...["", ".js", ".mjs", ".cjs"].map((extension) => [
+        join(dir, "src", `api${extension}`),
+        null,
+      ]),
     ]);
   });
 
-  it.skipIf(process.platform === "win32")("a FIFO placed at a dependency path does not block the walk", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    const leak = file("src/leak.ts", `export const leak = 1;`);
-    const pipe = join(dir, "src", "pipe.ts");
-    makeFedFifo(pipe, `import "./leak";\n`);
-    const entry = file("courier.config.ts", `import "./src/pipe";\nexport default {};`);
+  it.skipIf(process.platform === "win32")(
+    "a FIFO placed at a dependency path does not block the walk",
+    () => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      const leak = file("src/leak.ts", `export const leak = 1;`);
+      const pipe = join(dir, "src", "pipe.ts");
+      makeFedFifo(pipe, `import "./leak";\n`);
+      const entry = file("courier.config.ts", `import "./src/pipe";\nexport default {};`);
 
-    const hashes = extractConfigDeps([entry]);
+      const hashes = extractConfigDeps([entry]);
 
-    expect(hashes.get(pipe)).toBe("unreadable");
-    expect(hashes.has(leak)).toBe(false);
-  });
+      expect(hashes.get(pipe)).toBe("unreadable");
+      expect(hashes.has(leak)).toBe(false);
+    },
+  );
 });
 
 /**
@@ -179,7 +215,10 @@ describe("extractConfigDeps — tsconfig paths", () => {
   it("follows an aliased import inside the project", () => {
     tsconfig({ "@/*": ["./src/*"] });
     const dep = file("src/api.ts", `export const api = {};`);
-    const entry = file("courier.config.ts", `import { api } from "@/api";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "@/api";\nexport default { sources: { api } };`,
+    );
 
     expect(walked(entry)).toEqual([entry, dep]);
   });
@@ -187,7 +226,10 @@ describe("extractConfigDeps — tsconfig paths", () => {
   it("follows an aliased import that resolves outside the project", () => {
     tsconfig({ "@shared/*": ["./packages/shared/*"] });
     const dep = file("packages/shared/api.ts", `export const api = {};`);
-    const entry = file("courier.config.ts", `import { api } from "@shared/api";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "@shared/api";\nexport default { sources: { api } };`,
+    );
 
     expect(walked(entry)).toEqual([entry, dep]);
   });
@@ -195,8 +237,14 @@ describe("extractConfigDeps — tsconfig paths", () => {
   it("follows an alias transitively and through a directory index", () => {
     tsconfig({ "@/*": ["./src/*"] });
     const inner = file("src/lib/types.ts", `export type T = number;`);
-    const dep = file("src/lib/index.ts", `import type { T } from "./types";\nexport const api: T = 1;`);
-    const entry = file("courier.config.ts", `import { api } from "@/lib";\nexport default { sources: { api } };`);
+    const dep = file(
+      "src/lib/index.ts",
+      `import type { T } from "./types";\nexport const api: T = 1;`,
+    );
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "@/lib";\nexport default { sources: { api } };`,
+    );
 
     expect(walked(entry)).toEqual([entry, dep, inner]);
   });
@@ -206,7 +254,10 @@ describe("extractConfigDeps — tsconfig paths", () => {
     file("node_modules/dep/index.js", `module.exports = {};`);
     tsconfig({ dep: ["./vendor/dep.ts"] });
     file("vendor/dep.ts", `export const api = {};`);
-    const entry = file("courier.config.ts", `import { api } from "dep";\nexport default { sources: { api } };`);
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "dep";\nexport default { sources: { api } };`,
+    );
 
     expect(walked(entry)).toEqual([entry]);
   });
@@ -216,7 +267,10 @@ describe("extractConfigDeps — tsconfig paths", () => {
     file("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@/*": "./src/*" } } }));
     file("src/api.ts", `export const api = {};`);
     const local = file("src/local.ts", `export const local = {};`);
-    const entry = file("courier.config.ts", `import "./src/local";\nimport { api } from "@/api";\nexport default {};`);
+    const entry = file(
+      "courier.config.ts",
+      `import "./src/local";\nimport { api } from "@/api";\nexport default {};`,
+    );
     const mocks = file("courier.mocks.ts", `import { api } from "@/api";\nexport default {};`);
 
     expect(walked(entry, mocks)).toEqual([entry, local, mocks]);
@@ -226,7 +280,10 @@ describe("extractConfigDeps — tsconfig paths", () => {
 
   it("still skips a bare specifier the tsconfig does not map", () => {
     tsconfig({ "@/*": ["./src/*"] });
-    const entry = file("courier.config.ts", `import { defineConfig } from "@noverax/courier/config";\nexport default defineConfig({ sources: {} });`);
+    const entry = file(
+      "courier.config.ts",
+      `import { defineConfig } from "@noverax/courier/config";\nexport default defineConfig({ sources: {} });`,
+    );
 
     expect(walked(entry)).toEqual([entry]);
   });

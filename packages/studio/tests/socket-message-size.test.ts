@@ -25,9 +25,18 @@ const sockets: Socket[] = [];
 beforeEach(async () => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   root = realpathSync(mkdtempSync(join(tmpdir(), "courier-socket-size-")));
-  writeFileSync(join(root, "courier.config.ts"), 'export default { sources: { api: { baseURL: "https://api.example" } } };\n');
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'export default { sources: { api: { baseURL: "https://api.example" } } };\n',
+  );
   url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }, 30_000);
 
@@ -39,8 +48,15 @@ afterEach(async () => {
   rmSync(root, { recursive: true, force: true });
 });
 
-async function open(namespace: "/ui" | "/runtime", transport: "websocket" | "polling"): Promise<Socket> {
-  const socket = connect(`${url}${namespace}`, { transports: [transport], forceNew: true, reconnection: false });
+async function open(
+  namespace: "/ui" | "/runtime",
+  transport: "websocket" | "polling",
+): Promise<Socket> {
+  const socket = connect(`${url}${namespace}`, {
+    transports: [transport],
+    forceNew: true,
+    reconnection: false,
+  });
   sockets.push(socket);
   await new Promise<void>((resolve, reject) => {
     socket.once("connect", () => resolve());
@@ -54,49 +70,55 @@ function disconnection(socket: Socket): Promise<string> {
 }
 
 function within<T>(promise: Promise<T>, ms: number): Promise<T | "timeout"> {
-  return Promise.race([promise, new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), ms))]);
+  return Promise.race([
+    promise,
+    new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), ms)),
+  ]);
 }
 
-describe.each(["websocket", "polling"] as const)("a message of a few megabytes over %s", (transport) => {
-  it("reaches the UI from a runtime, which stays connected", async () => {
-    const ui = await open("/ui", transport);
-    const runtime = await open("/runtime", transport);
-    runtime.emit("runtime:hello", { runtimeId: "big-app", kind: "server" });
-    const body = "x".repeat(3 * MB);
-    const received = new Promise<unknown>((resolve) => {
-      ui.on("event", (event: { type?: unknown; id?: unknown; body?: unknown }) => {
-        if (event.type === "request:end" && event.id === "r1") {
-          resolve(typeof event.body === "string" ? event.body.length : event.body);
-        }
+describe.each(["websocket", "polling"] as const)(
+  "a message of a few megabytes over %s",
+  (transport) => {
+    it("reaches the UI from a runtime, which stays connected", async () => {
+      const ui = await open("/ui", transport);
+      const runtime = await open("/runtime", transport);
+      runtime.emit("runtime:hello", { runtimeId: "big-app", kind: "server" });
+      const body = "x".repeat(3 * MB);
+      const received = new Promise<unknown>((resolve) => {
+        ui.on("event", (event: { type?: unknown; id?: unknown; body?: unknown }) => {
+          if (event.type === "request:end" && event.id === "r1") {
+            resolve(typeof event.body === "string" ? event.body.length : event.body);
+          }
+        });
       });
-    });
-    const dropped = disconnection(runtime);
+      const dropped = disconnection(runtime);
 
-    runtime.emit("event", { type: "request:end", id: "r1", body });
+      runtime.emit("event", { type: "request:end", id: "r1", body });
 
-    expect(await within(received, 5_000)).toBe(body.length);
-    expect(await within(dropped, 300)).toBe("timeout");
-    expect(runtime.connected).toBe(true);
-  }, 15_000);
+      expect(await within(received, 5_000)).toBe(body.length);
+      expect(await within(dropped, 300)).toBe("timeout");
+      expect(runtime.connected).toBe(true);
+    }, 15_000);
 
-  it("keeps the UI connected when it sends one", async () => {
-    const ui = await open("/ui", transport);
-    const dropped = disconnection(ui);
-    const answered = new Promise<unknown>((resolve) => ui.on("playground:error", resolve));
+    it("keeps the UI connected when it sends one", async () => {
+      const ui = await open("/ui", transport);
+      const dropped = disconnection(ui);
+      const answered = new Promise<unknown>((resolve) => ui.on("playground:error", resolve));
 
-    ui.emit("playground:exec", {
-      rid: "big-vars",
-      source: "api",
-      group: "users",
-      method: "create",
-      transport: "http",
-      variables: { note: "y".repeat(2 * MB) },
-    });
+      ui.emit("playground:exec", {
+        rid: "big-vars",
+        source: "api",
+        group: "users",
+        method: "create",
+        transport: "http",
+        variables: { note: "y".repeat(2 * MB) },
+      });
 
-    expect(await within(answered, 5_000)).toMatchObject({ rid: "big-vars" });
-    expect(await within(dropped, 300)).toBe("timeout");
-  }, 15_000);
-});
+      expect(await within(answered, 5_000)).toMatchObject({ rid: "big-vars" });
+      expect(await within(dropped, 300)).toBe("timeout");
+    }, 15_000);
+  },
+);
 
 describe("a message over the limit", () => {
   it("is logged with the reason the connection broke", async () => {

@@ -17,7 +17,8 @@ import { SpecFetchError } from "../src/server/spec-fetch-error";
 
 /* Names this test resolves itself, each after its delay; every other name resolves as usual. */
 const RESOLVED = vi.hoisted(
-  () => new Map<string, { addresses: Array<{ address: string; family: number }>; delayMs: number }>(),
+  () =>
+    new Map<string, { addresses: Array<{ address: string; family: number }>; delayMs: number }>(),
 );
 
 vi.mock("node:dns", async (importOriginal) => {
@@ -39,7 +40,9 @@ const servers: Server[] = [];
 
 afterEach(async () => {
   RESOLVED.clear();
-  await Promise.all(servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
+  await Promise.all(
+    servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 
 /* A spec server on this machine that counts the connections it is sent. */
@@ -52,7 +55,8 @@ async function serveCounting(): Promise<{ port: number; connections: () => numbe
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   servers.push(server);
   const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("the spec server has no port");
+  if (address === null || typeof address === "string")
+    throw new Error("the spec server has no port");
   return { port: address.port, connections: () => connections };
 }
 
@@ -64,13 +68,16 @@ async function serveRaw(answer: string): Promise<string> {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   servers.push(server);
   const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("the spec server has no port");
+  if (address === null || typeof address === "string")
+    throw new Error("the spec server has no port");
   return `http://127.0.0.1:${address.port}/spec.json`;
 }
 
 /* The parser's code for the same bytes differs between Node versions. */
 function unparsable(url: string): RegExp {
-  return new RegExp(`^${url.replaceAll(".", "\\.")} sent a response Studio cannot parse \\(HPE_[A-Z_]+\\)\\.$`);
+  return new RegExp(
+    `^${url.replaceAll(".", "\\.")} sent a response Studio cannot parse \\(HPE_[A-Z_]+\\)\\.$`,
+  );
 }
 
 /* A project that takes `delayMs` to decide, then admits the host or refuses it as a loaded config would. */
@@ -89,7 +96,9 @@ function deciding(delayMs: number, admits: boolean, loopback = true) {
   return { policy, decided };
 }
 
-async function elapsed<TResult>(run: () => Promise<TResult>): Promise<{ result: PromiseSettledResult<TResult>; ms: number }> {
+async function elapsed<TResult>(
+  run: () => Promise<TResult>,
+): Promise<{ result: PromiseSettledResult<TResult>; ms: number }> {
   const started = Date.now();
   const [result] = await Promise.allSettled([run()]);
   return { result, ms: Date.now() - started };
@@ -102,7 +111,10 @@ describe("requestSpec", () => {
   ])(
     "reports time that runs out while the project decides on %s as Studio not able to tell yet",
     async (_written, url, what) => {
-      RESOLVED.set("lan.spec.test", { addresses: [{ address: "10.0.0.7", family: 4 }], delayMs: 0 });
+      RESOLVED.set("lan.spec.test", {
+        addresses: [{ address: "10.0.0.7", family: 4 }],
+        delayMs: 0,
+      });
       const { policy } = deciding(1_000, false);
 
       const { result, ms } = await elapsed(() => requestSpec(new URL(url), policy, 200));
@@ -123,7 +135,10 @@ describe("requestSpec", () => {
     ["a name", "loop.spec.test"],
     ["a written-out address", "127.0.0.1"],
   ])("never connects to %s the project admits after the time ran out", async (_written, host) => {
-    RESOLVED.set("loop.spec.test", { addresses: [{ address: "127.0.0.1", family: 4 }], delayMs: 0 });
+    RESOLVED.set("loop.spec.test", {
+      addresses: [{ address: "127.0.0.1", family: 4 }],
+      delayMs: 0,
+    });
     const server = await serveCounting();
     /* This machine, reached by a request a server elsewhere sent here, needs the project's word. */
     const { policy, decided } = deciding(300, true, false);
@@ -143,20 +158,32 @@ describe("requestSpec", () => {
     ["a name", "loop.spec.test"],
     ["a written-out address", "127.0.0.1"],
   ])("fetches %s the project admits in time", async (_written, host) => {
-    RESOLVED.set("loop.spec.test", { addresses: [{ address: "127.0.0.1", family: 4 }], delayMs: 0 });
+    RESOLVED.set("loop.spec.test", {
+      addresses: [{ address: "127.0.0.1", family: 4 }],
+      delayMs: 0,
+    });
     const server = await serveCounting();
     const { policy } = deciding(50, true, false);
 
-    const answer = await requestSpec(new URL(`http://${host}:${server.port}/spec.json`), policy, 2_000);
+    const answer = await requestSpec(
+      new URL(`http://${host}:${server.port}/spec.json`),
+      policy,
+      2_000,
+    );
 
     expect(answer).toMatchObject({ kind: "body", text: "spec" });
   });
 
   it("reports a name that does not resolve in time as a host that did not answer", async () => {
-    RESOLVED.set("slow.spec.test", { addresses: [{ address: "10.0.0.7", family: 4 }], delayMs: 1_000 });
+    RESOLVED.set("slow.spec.test", {
+      addresses: [{ address: "10.0.0.7", family: 4 }],
+      delayMs: 1_000,
+    });
     const { policy } = deciding(0, true);
 
-    const { result, ms } = await elapsed(() => requestSpec(new URL("http://slow.spec.test/spec.json"), policy, 150));
+    const { result, ms } = await elapsed(() =>
+      requestSpec(new URL("http://slow.spec.test/spec.json"), policy, 150),
+    );
 
     expect(result).toMatchObject({ status: "rejected", reason: { code: "SPEC_TIMEOUT" } });
     expect(ms).toBeLessThan(1_000);
@@ -174,28 +201,43 @@ describe("requestSpec", () => {
   });
 
   it("reports a body still arriving when the time runs out as one the host did not finish sending", async () => {
-    const url = await serveRaw('HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: 1000\r\n\r\n{"openapi":"3.1.0",');
+    const url = await serveRaw(
+      'HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: 1000\r\n\r\n{"openapi":"3.1.0",',
+    );
 
     const { result } = await elapsed(() => requestSpec(new URL(url), ON_THIS_MACHINE, 300));
 
     expect(result).toMatchObject({
       status: "rejected",
-      reason: { code: "SPEC_TIMEOUT", message: `${url} did not send the whole specification within 300 ms.` },
+      reason: {
+        code: "SPEC_TIMEOUT",
+        message: `${url} did not send the whole specification within 300 ms.`,
+      },
     });
   });
 
   it.each([
-    ["a body that breaks off into a malformed chunk", 'HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n10\r\n{"openapi":"3.0\r\nZZZ\r\n'],
+    [
+      "a body that breaks off into a malformed chunk",
+      'HTTP/1.1 200 OK\r\ntransfer-encoding: chunked\r\n\r\n10\r\n{"openapi":"3.0\r\nZZZ\r\n',
+    ],
     ["an answer that is not HTTP at all", "SSH-2.0-OpenSSH_9.6\r\n"],
-  ])("reports %s, on a connection the host keeps open, as a response Studio cannot parse", async (_sent, answer) => {
-    const url = await serveRaw(answer);
+  ])(
+    "reports %s, on a connection the host keeps open, as a response Studio cannot parse",
+    async (_sent, answer) => {
+      const url = await serveRaw(answer);
 
-    const { result, ms } = await elapsed(() => requestSpec(new URL(url), ON_THIS_MACHINE, 3_000));
+      const { result, ms } = await elapsed(() => requestSpec(new URL(url), ON_THIS_MACHINE, 3_000));
 
-    expect(result).toMatchObject({
-      status: "rejected",
-      reason: { code: "SPEC_UNREACHABLE", refused: false, message: expect.stringMatching(unparsable(url)) },
-    });
-    expect(ms).toBeLessThan(1_000);
-  });
+      expect(result).toMatchObject({
+        status: "rejected",
+        reason: {
+          code: "SPEC_UNREACHABLE",
+          refused: false,
+          message: expect.stringMatching(unparsable(url)),
+        },
+      });
+      expect(ms).toBeLessThan(1_000);
+    },
+  );
 });

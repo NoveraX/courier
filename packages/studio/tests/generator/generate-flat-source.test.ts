@@ -6,7 +6,12 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
-import { compileProject, loadGenerated, removeProjects, writeProject } from "../helpers/generated-project";
+import {
+  compileProject,
+  loadGenerated,
+  removeProjects,
+  writeProject,
+} from "../helpers/generated-project";
 
 const URL_WITH_QUOTES = 'https://api.example.com/"evil"/v\\3';
 
@@ -26,7 +31,11 @@ afterAll(() => {
 });
 
 describe("a flat source", () => {
-  const files = generateCode(SPEC, { type: "openapi", outputDir: "src", groupBy: "single" }, "shop");
+  const files = generateCode(
+    SPEC,
+    { type: "openapi", outputDir: "src", groupBy: "single" },
+    "shop",
+  );
 
   it("compiles with quotes and a backslash in its base URL", () => {
     const dir = writeProject("generate-flat-source/hostile-url", files);
@@ -37,6 +46,8 @@ describe("a flat source", () => {
   it("keeps the base URL exactly as the specification gives it", () => {
     const { shop } = loadGenerated(files, "src/shop/source.ts");
 
-    expect(Reflect.get(Reflect.get(Object(shop), "options") ?? {}, "baseURL")).toBe(URL_WITH_QUOTES);
+    expect(Reflect.get(Reflect.get(Object(shop), "options") ?? {}, "baseURL")).toBe(
+      URL_WITH_QUOTES,
+    );
   });
 });

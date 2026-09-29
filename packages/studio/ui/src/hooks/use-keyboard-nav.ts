@@ -13,9 +13,8 @@ export function useKeyboardNav<T extends { id: string }>(
 
       e.preventDefault();
       const idx = selectedId ? items.findIndex((item) => item.id === selectedId) : -1;
-      const next = e.key === "ArrowDown"
-        ? Math.min(idx + 1, items.length - 1)
-        : Math.max(idx - 1, 0);
+      const next =
+        e.key === "ArrowDown" ? Math.min(idx + 1, items.length - 1) : Math.max(idx - 1, 0);
 
       onSelect(items[next]!);
     },

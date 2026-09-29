@@ -31,7 +31,12 @@ beforeEach(async () => {
   upstream = createServer((_req, res) => res.end(JSON.stringify({ version: 1 })));
   await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
   saved = { ...studioHooks };
-  Object.assign(studioHooks, { onRequestStart: started, onCacheHit: hit, onCacheMiss: miss, onCacheStore: stored });
+  Object.assign(studioHooks, {
+    onRequestStart: started,
+    onCacheHit: hit,
+    onCacheMiss: miss,
+    onCacheStore: stored,
+  });
 });
 
 afterEach(async () => {
@@ -46,7 +51,10 @@ describe("the cache middleware's Studio events", () => {
     const api = defineApi({
       baseURL: `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`,
       endpoints: {
-        config: endpoint.get("config").use(cacheMiddleware({ scope: "public" })).response<unknown>(),
+        config: endpoint
+          .get("config")
+          .use(cacheMiddleware({ scope: "public" }))
+          .response<unknown>(),
       },
     });
     const client = createCaller(api) as unknown as Client;

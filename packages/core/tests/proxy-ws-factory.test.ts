@@ -35,10 +35,7 @@ vi.mock("../src/realtime/ws-subscription", () => ({
 import { isConfigurationError } from "../src/errors";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
-import {
-  createProxyWSChannelFactory,
-  createProxyWSPushFactory,
-} from "../src/transport/proxy/ws";
+import { createProxyWSChannelFactory, createProxyWSPushFactory } from "../src/transport/proxy/ws";
 
 const mockedChannel = vi.mocked(executeWSChannel);
 const mockedPush = vi.mocked(executeWSPush);
@@ -138,7 +135,12 @@ describe("createProxyWSChannelFactory — dispatch", () => {
     });
     factory("chat", "room", undefined, {});
 
-    expect(mockedChannel).toHaveBeenCalledWith("ws://localhost/ws", expect.any(String), undefined, undefined);
+    expect(mockedChannel).toHaveBeenCalledWith(
+      "ws://localhost/ws",
+      expect.any(String),
+      undefined,
+      undefined,
+    );
   });
 
   it("builds topic as `source.group.method`", () => {
@@ -152,7 +154,12 @@ describe("createProxyWSChannelFactory — dispatch", () => {
     const factory = createProxyWSChannelFactory("api", { proxyPath: { ws: "ws://x" } });
     factory("chat", "room", { roomId: "42" }, {});
 
-    expect(mockedChannel).toHaveBeenCalledWith("ws://x", "api.chat.room", { roomId: "42" }, undefined);
+    expect(mockedChannel).toHaveBeenCalledWith(
+      "ws://x",
+      "api.chat.room",
+      { roomId: "42" },
+      undefined,
+    );
   });
 
   it("returns the WSChannel produced by executeWSChannel", () => {
@@ -252,7 +259,7 @@ describe("createProxyWSChannelFactory — dispatch", () => {
     });
     factory("chat", "room", undefined, {});
 
-    const callArg = (mockedChannel.mock.calls[0]![0] as string);
+    const callArg = mockedChannel.mock.calls[0]![0] as string;
     expect(callArg).toContain("token=abc");
     expect(callArg).toContain("_playground_rid=rid-coexist");
   });
@@ -297,7 +304,12 @@ describe("createProxyWSPushFactory — dispatch", () => {
     const factory = createProxyWSPushFactory("api", { proxyPath: { ws: "ws://x" } });
     factory("notifications", "feed", { since: "2020" }, {});
 
-    expect(mockedPush).toHaveBeenCalledWith("ws://x", "api.notifications.feed", { since: "2020" }, undefined);
+    expect(mockedPush).toHaveBeenCalledWith(
+      "ws://x",
+      "api.notifications.feed",
+      { since: "2020" },
+      undefined,
+    );
   });
 
   it("returns the WSPushSubscription produced by executeWSPush", () => {

@@ -78,12 +78,17 @@ describe("a client that stops reading", () => {
       await new Promise((resolve) => ctx.signal.addEventListener("abort", resolve));
     });
     registerSources({ api: { options: {}, feed } } as never);
-    const handler = createHandler({ onSSEDisconnect: ({ reason }) => { reasons.push(reason); } });
+    const handler = createHandler({
+      onSSEDisconnect: ({ reason }) => {
+        reasons.push(reason);
+      },
+    });
     await handler.handleSSE(sseRequest());
 
     const big = "x".repeat(LIMITS.SSE_MAX_BUFFERED_BYTES);
-    const results = Array.from({ length: LIMITS.MAX_CONSECUTIVE_DROPS + 2 }, () =>
-      [...handler.sseConnections.broadcastAll({ data: big }).values()][0],
+    const results = Array.from(
+      { length: LIMITS.MAX_CONSECUTIVE_DROPS + 2 },
+      () => [...handler.sseConnections.broadcastAll({ data: big }).values()][0],
     );
 
     expect(results.filter((ok) => ok === false).length).toBeGreaterThan(0);

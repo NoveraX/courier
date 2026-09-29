@@ -1,15 +1,18 @@
 import { FileJson, KeyRound } from "lucide-react";
-
+import { FlowDiagram } from "@/components/shared/detail-panel/tabs/proxy-tab";
+import { DroppedHeadersSection, HeadersSection } from "@/components/shared/headers-section";
 import { JsonTree } from "@/components/shared/json-tree";
 import { KbdHint } from "@/components/shared/kbd-hint";
 import { SegmentedControl } from "@/components/shared/segmented-control";
+import { StreamTimingSummary } from "@/components/shared/stream-timing-summary";
+import {
+  BreakdownCard,
+  buildProxySegments,
+  buildRequestSegments,
+  computeProxyTotal,
+} from "@/components/shared/timing-breakdown";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-
-import { FlowDiagram } from "@/components/shared/detail-panel/tabs/proxy-tab";
-import { DroppedHeadersSection, HeadersSection } from "@/components/shared/headers-section";
-import { StreamTimingSummary } from "@/components/shared/stream-timing-summary";
-import { BreakdownCard, buildProxySegments, buildRequestSegments, computeProxyTotal } from "@/components/shared/timing-breakdown";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 import { BodyMeta } from "./response-body-meta";
 import { StatusBar } from "./response-status-bar";
@@ -38,7 +41,9 @@ const STREAM_TABS = [
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function ResponsePanel({
-  entry, activeTab, onTabChange,
+  entry,
+  activeTab,
+  onTabChange,
 }: ResponsePanelProps): React.ReactElement {
   if (!entry) {
     return (
@@ -80,10 +85,11 @@ export function ResponsePanel({
         </div>
 
         <TabsContent value="body" className="mt-0 flex min-h-0 flex-1 flex-col p-3">
-          {entry.response !== undefined
-            ? <JsonTree data={entry.response} headerExtra={<BodyMeta data={entry.response} />} fill />
-            : <EmptyTab message="No response body" />
-          }
+          {entry.response !== undefined ? (
+            <JsonTree data={entry.response} headerExtra={<BodyMeta data={entry.response} />} fill />
+          ) : (
+            <EmptyTab message="No response body" />
+          )}
         </TabsContent>
 
         <TabsContent value="stream" className="mt-0 flex min-h-0 flex-1 flex-col">
@@ -101,7 +107,9 @@ export function ResponsePanel({
               <HeadersSection title="Request Headers" headers={requestHeaders} />
               <HeadersSection title="Response Headers" headers={responseHeaders} />
               {!requestHeaders && !responseHeaders && (
-                <EmptyTab message={isStream ? "No headers captured for realtime streams" : "No headers"} />
+                <EmptyTab
+                  message={isStream ? "No headers captured for realtime streams" : "No headers"}
+                />
               )}
             </div>
           </ScrollArea>
@@ -112,23 +120,35 @@ export function ResponsePanel({
             <div className="space-y-3 p-3">
               {timing ? (
                 <>
-                  <BreakdownCard title="Request Timing" segments={buildRequestSegments(timing)} total={timing.total} />
+                  <BreakdownCard
+                    title="Request Timing"
+                    segments={buildRequestSegments(timing)}
+                    total={timing.total}
+                  />
                   {proxyTiming && (
                     <>
                       <FlowDiagram timing={proxyTiming} />
-                      <BreakdownCard title="Proxy Timing" segments={buildProxySegments(proxyTiming)} total={computeProxyTotal(proxyTiming)} />
+                      <BreakdownCard
+                        title="Proxy Timing"
+                        segments={buildProxySegments(proxyTiming)}
+                        total={computeProxyTotal(proxyTiming)}
+                      />
                     </>
                   )}
                 </>
               ) : isStream && entry.streamStatus === "complete" ? (
-                <StreamTimingSummary data={{
-                  duration,
-                  eventCount: streamEventCount,
-                  totalBytes: undefined,
-                  transport: entry.transport,
-                }} />
+                <StreamTimingSummary
+                  data={{
+                    duration,
+                    eventCount: streamEventCount,
+                    totalBytes: undefined,
+                    transport: entry.transport,
+                  }}
+                />
               ) : (
-                <EmptyTab message={isStream ? "Timing available after stream closes" : "No timing data"} />
+                <EmptyTab
+                  message={isStream ? "Timing available after stream closes" : "No timing data"}
+                />
               )}
             </div>
           </ScrollArea>

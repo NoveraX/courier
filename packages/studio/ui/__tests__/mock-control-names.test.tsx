@@ -8,10 +8,8 @@
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { MockServerInfo } from "../src/store/mock-slice";
-
 import { TooltipProvider } from "../src/components/ui/tooltip";
+import type { MockServerInfo } from "../src/store/mock-slice";
 import { StatusBar } from "../src/views/mocks/dashboard/status-bar";
 import { ServerControls } from "../src/views/mocks/shared/server-controls";
 import { CollectionItem } from "../src/views/mocks/store/collection-item";

@@ -96,7 +96,11 @@ describe("mock:store:seed", () => {
   });
 
   it("refuses a count that is not a whole number, and leaves the store alone", async () => {
-    const result = await worker.command({ action: "mock:store:seed", collection: "*", count: "abc" });
+    const result = await worker.command({
+      action: "mock:store:seed",
+      collection: "*",
+      count: "abc",
+    });
 
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/count/i);
@@ -104,7 +108,11 @@ describe("mock:store:seed", () => {
   });
 
   it("refuses a collection the mock does not serve", async () => {
-    const result = await worker.command({ action: "mock:store:seed", collection: "nope", count: 2 });
+    const result = await worker.command({
+      action: "mock:store:seed",
+      collection: "nope",
+      count: 2,
+    });
 
     expect(result).toMatchObject({ ok: false, error: expect.stringContaining("nope") });
   });
@@ -156,7 +164,11 @@ describe("mock:store:update and mock:store:delete", () => {
       id: 999,
       data: { name: "Grace" },
     });
-    const deleted = await worker.command({ action: "mock:store:delete", collection: "users", id: 999 });
+    const deleted = await worker.command({
+      action: "mock:store:delete",
+      collection: "users",
+      id: 999,
+    });
 
     expect(updated).toMatchObject({ ok: false, error: "users has no record with id 999" });
     expect(deleted).toMatchObject({ ok: false, error: "users has no record with id 999" });
@@ -172,7 +184,11 @@ describe("mock:store:update and mock:store:delete", () => {
       id: String(first.id),
       data: { name: "Grace" },
     });
-    const deleted = await worker.command({ action: "mock:store:delete", collection: "users", id: first.id });
+    const deleted = await worker.command({
+      action: "mock:store:delete",
+      collection: "users",
+      id: first.id,
+    });
 
     expect(updated).toMatchObject({ ok: true });
     expect(deleted).toMatchObject({ ok: true });

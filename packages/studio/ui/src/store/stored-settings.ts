@@ -1,17 +1,17 @@
-import type { Settings } from "./types"
+import type { Settings } from "./types";
 
-type Check<TValue> = (value: unknown) => value is TValue
+type Check<TValue> = (value: unknown) => value is TValue;
 
-const isBoolean: Check<boolean> = (value): value is boolean => typeof value === "boolean"
+const isBoolean: Check<boolean> = (value): value is boolean => typeof value === "boolean";
 
 const isCount: Check<number> = (value): value is number =>
-  typeof value === "number" && Number.isFinite(value) && value >= 0
+  typeof value === "number" && Number.isFinite(value) && value >= 0;
 
 const isTextList: Check<string[]> = (value): value is string[] =>
-  Array.isArray(value) && value.every((item) => typeof item === "string")
+  Array.isArray(value) && value.every((item) => typeof item === "string");
 
 function oneOf<const TValue extends string | number>(...allowed: TValue[]): Check<TValue> {
-  return (value): value is TValue => allowed.some((option) => option === value)
+  return (value): value is TValue => allowed.some((option) => option === value);
 }
 
 /* A check for every field, so a field added to the settings needs one here. */
@@ -37,7 +37,7 @@ const CHECKS: { [TKey in keyof Settings]: Check<Settings[TKey]> } = {
   apisGenerateSchemas: isBoolean,
   apisIncludeComments: isBoolean,
   apisClient: oneOf("direct", "proxy", "both", "none"),
-}
+};
 
 /**
  * The settings a page kept, read back field by field.
@@ -57,9 +57,9 @@ const CHECKS: { [TKey in keyof Settings]: Check<Settings[TKey]> } = {
  * ```
  */
 export function storedSettings(stored: unknown, defaults: Settings): Settings {
-  const settings = { ...defaults }
-  if (typeof stored === "object" && stored !== null) keepChecked(settings, CHECKS, stored)
-  return settings
+  const settings = { ...defaults };
+  if (typeof stored === "object" && stored !== null) keepChecked(settings, CHECKS, stored);
+  return settings;
 }
 
 function keepChecked<TFields extends object>(
@@ -68,8 +68,8 @@ function keepChecked<TFields extends object>(
   stored: object,
 ): void {
   for (const key in checks) {
-    const value: unknown = Reflect.get(stored, key)
-    const check = checks[key]
-    if (check(value)) fields[key] = value
+    const value: unknown = Reflect.get(stored, key);
+    const check = checks[key];
+    if (check(value)) fields[key] = value;
   }
 }

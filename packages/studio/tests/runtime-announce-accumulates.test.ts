@@ -4,8 +4,9 @@
  * everything the runtime had claimed before re-attaching, so only the last one
  * survived and Studio showed every other transport as orphaned.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+
 import type { Namespace } from "socket.io";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { setupRuntimeNamespace } from "../src/server/runtime-namespace";
@@ -45,7 +46,11 @@ function connected() {
   const bindingTable = new BindingTable();
   const ns = makeNamespace();
   const ui = { emit: vi.fn() } as unknown as Namespace;
-  setupRuntimeNamespace(ns as unknown as Namespace, { bindingTable, token: FIXED_TOKEN, uiNamespace: ui });
+  setupRuntimeNamespace(ns as unknown as Namespace, {
+    bindingTable,
+    token: FIXED_TOKEN,
+    uiNamespace: ui,
+  });
 
   const socket = makeSocket();
   ns.connect(socket);

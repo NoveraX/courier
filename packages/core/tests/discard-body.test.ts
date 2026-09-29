@@ -52,7 +52,11 @@ const refusals: Array<[string, number, BrowserUpload, HandlerConfig?]> = [
   [
     "a declared body over the limit",
     413,
-    { method: "POST", headers: { ...SAME_ORIGIN, "content-type": "application/json" }, bytes: SIXTEEN_MB },
+    {
+      method: "POST",
+      headers: { ...SAME_ORIGIN, "content-type": "application/json" },
+      bytes: SIXTEEN_MB,
+    },
   ],
   [
     "a chunked body that crosses the limit",
@@ -76,7 +80,11 @@ const refusals: Array<[string, number, BrowserUpload, HandlerConfig?]> = [
   [
     "an unsupported content type",
     415,
-    { method: "POST", headers: { ...SAME_ORIGIN, "content-type": "text/plain" }, bytes: SIXTEEN_MB },
+    {
+      method: "POST",
+      headers: { ...SAME_ORIGIN, "content-type": "text/plain" },
+      bytes: SIXTEEN_MB,
+    },
   ],
   [
     "a disallowed origin",
@@ -91,7 +99,11 @@ const refusals: Array<[string, number, BrowserUpload, HandlerConfig?]> = [
   [
     "an unsupported method",
     405,
-    { method: "PUT", headers: { ...SAME_ORIGIN, "content-type": "application/json" }, bytes: SIXTEEN_MB },
+    {
+      method: "PUT",
+      headers: { ...SAME_ORIGIN, "content-type": "application/json" },
+      bytes: SIXTEEN_MB,
+    },
   ],
   [
     "a POST whose URL names no endpoint",
@@ -106,13 +118,17 @@ const refusals: Array<[string, number, BrowserUpload, HandlerConfig?]> = [
 ];
 
 describe("a refusal reaches a browser that is still uploading", () => {
-  it.each(refusals)("for %s", async (_, status, upload, config) => {
-    const port = await serveLikeAFramework(config);
+  it.each(refusals)(
+    "for %s",
+    async (_, status, upload, config) => {
+      const port = await serveLikeAFramework(config);
 
-    const answer = await sendLikeABrowser(port, upload);
+      const answer = await sendLikeABrowser(port, upload);
 
-    expect(answer.error).toBeUndefined();
-    expect(answer.status).toBe(status);
-    expect(answer.elapsedMs).toBeLessThan(3000);
-  }, 10_000);
+      expect(answer.error).toBeUndefined();
+      expect(answer.status).toBe(status);
+      expect(answer.elapsedMs).toBeLessThan(3000);
+    },
+    10_000,
+  );
 });

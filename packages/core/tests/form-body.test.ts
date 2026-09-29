@@ -78,6 +78,9 @@ describe("formBody", () => {
   });
 
   it("reads no encoding off the prototype", () => {
-    expect(decoded(formBody({ constructor: ["a", "b"] }))).toEqual(["constructor=a", "constructor=b"]);
+    expect(decoded(formBody({ constructor: ["a", "b"] }))).toEqual([
+      "constructor=a",
+      "constructor=b",
+    ]);
   });
 });

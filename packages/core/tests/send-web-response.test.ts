@@ -47,15 +47,19 @@ describe("a streamed answer the client cancels", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const upstream = await listen(endless());
     const { endpoint } = courier();
-    registerSources({ api: defineApi({ baseURL: upstream, endpoints: { ticks: endpoint.post("ticks") } }) });
+    registerSources({
+      api: defineApi({ baseURL: upstream, endpoints: { ticks: endpoint.post("ticks") } }),
+    });
     const { handle } = createHandler();
     const failures: unknown[] = [];
     let sent: Promise<void> | undefined;
     const proxy = await listen(
       createServer(async (req, res) => {
-        sent = sendWebResponse(await handle(toWebRequest(req, res)), res).catch((failure: unknown) => {
-          failures.push(failure);
-        });
+        sent = sendWebResponse(await handle(toWebRequest(req, res)), res).catch(
+          (failure: unknown) => {
+            failures.push(failure);
+          },
+        );
       }),
     );
 

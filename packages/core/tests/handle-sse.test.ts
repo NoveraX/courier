@@ -19,9 +19,7 @@ function setupHandler(sources: unknown, config?: Parameters<typeof createHandler
 }
 
 /** Helper: create a source with an SSE endpoint */
-function createSSESource(
-  handler: (ctx: SSEContext) => AsyncGenerator<SSEEvent, void, unknown>,
-) {
+function createSSESource(handler: (ctx: SSEContext) => AsyncGenerator<SSEEvent, void, unknown>) {
   const feed = stream.variables<unknown>().response<unknown>().implement(handler);
   return {
     testSource: {
@@ -254,7 +252,9 @@ describe("handleSSE — studio hooks", () => {
     const feed = stream.response<unknown>().implement(async function* () {
       yield { data: "x" };
     });
-    const { handleSSE } = setupHandler({ api: { options: { middleware: [stamp], groups: {} }, feed } });
+    const { handleSSE } = setupHandler({
+      api: { options: { middleware: [stamp], groups: {} }, feed },
+    });
 
     const res = await handleSSE(
       sseRequest("_s=api&_m=feed", { referer: "http://app.test/page", "user-agent": "test-agent" }),
@@ -265,7 +265,9 @@ describe("handleSSE — studio hooks", () => {
       Object.fromEntries([...headers].map(([name, value]) => [name.toLowerCase(), value]));
     const reported = onStreamOpen.mock.calls[0]?.[0].responseHeaders as Record<string, string>;
     expect(lower(Object.entries(reported))).toEqual(lower(res.headers));
-    expect(onStreamOpen.mock.calls[0]?.[0].requestHeaders).toMatchObject({ referer: "http://app.test/page" });
+    expect(onStreamOpen.mock.calls[0]?.[0].requestHeaders).toMatchObject({
+      referer: "http://app.test/page",
+    });
 
     cleanup();
   });
@@ -504,7 +506,9 @@ describe("handleSSE — connection registry", () => {
 
   it("tracks active connections during streaming", async () => {
     let resolve: () => void;
-    const blocker = new Promise<void>((r) => { resolve = r; });
+    const blocker = new Promise<void>((r) => {
+      resolve = r;
+    });
 
     const sources = createSSESource(async function* () {
       yield { data: "hello" };
@@ -526,7 +530,9 @@ describe("handleSSE — connection registry", () => {
 
     resolve!();
     // Drain remaining
-    while (!(await reader.read()).done) { /* drain */ }
+    while (!(await reader.read()).done) {
+      /* drain */
+    }
 
     // After stream completes, connection is removed
     expect(handler.sseConnections.count).toBe(0);
@@ -534,7 +540,9 @@ describe("handleSSE — connection registry", () => {
 
   it("returns 503 when maxSSEConnections exceeded", async () => {
     let resolve: () => void;
-    const blocker = new Promise<void>((r) => { resolve = r; });
+    const blocker = new Promise<void>((r) => {
+      resolve = r;
+    });
 
     const sources = createSSESource(async function* () {
       yield { data: "hold" };
@@ -557,7 +565,9 @@ describe("handleSSE — connection registry", () => {
     expect(res2.headers.get("Retry-After")).toBe("5");
 
     resolve!();
-    while (!(await reader.read()).done) { /* drain */ }
+    while (!(await reader.read()).done) {
+      /* drain */
+    }
   });
 
   it("returns 503 during shutdown", async () => {
@@ -645,7 +655,9 @@ describe("handleSSE — lifecycle hooks", () => {
 describe("handleSSE — getByEndpoint", () => {
   it("filters connections by endpoint", async () => {
     let resolve: () => void;
-    const blocker = new Promise<void>((r) => { resolve = r; });
+    const blocker = new Promise<void>((r) => {
+      resolve = r;
+    });
 
     const sources = createSSESource(async function* () {
       yield { data: "hello" };
@@ -664,7 +676,9 @@ describe("handleSSE — getByEndpoint", () => {
     expect(noMatch).toHaveLength(0);
 
     resolve!();
-    while (!(await reader.read()).done) { /* drain */ }
+    while (!(await reader.read()).done) {
+      /* drain */
+    }
   });
 });
 
@@ -689,9 +703,7 @@ describe("handle (auto-routing)", () => {
     });
 
     const { handle } = setupHandler(sources);
-    const req = new Request(
-      "http://localhost/api/sse?_s=testSource&_m=feed&_transport=sse",
-    );
+    const req = new Request("http://localhost/api/sse?_s=testSource&_m=feed&_transport=sse");
     const res = await handle(req);
 
     expect(res.headers.get("Content-Type")).toBe("text/event-stream");

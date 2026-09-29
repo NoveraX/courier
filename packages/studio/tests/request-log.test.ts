@@ -43,7 +43,9 @@ async function startStudio(projectRoot = project()): Promise<string> {
   return (await runStudio(projectRoot)).url;
 }
 
-async function runStudio(projectRoot: string): Promise<{ url: string; token: string; close: () => Promise<void> }> {
+async function runStudio(
+  projectRoot: string,
+): Promise<{ url: string; token: string; close: () => Promise<void> }> {
   const port = await freePort();
   return new Promise((resolve) => {
     const server = createStudioServer({
@@ -79,7 +81,11 @@ interface WatchingUi {
 
 /** A UI that connects, with every event and replay it is sent; with the token it may change the log. */
 async function ui(studio: string, token?: string): Promise<WatchingUi> {
-  const socket = connect(`${studio}/ui`, { transports: ["websocket"], reconnection: false, auth: { token } });
+  const socket = connect(`${studio}/ui`, {
+    transports: ["websocket"],
+    reconnection: false,
+    auth: { token },
+  });
   cleanups.push(() => {
     socket.disconnect();
   });
@@ -91,7 +97,13 @@ async function ui(studio: string, token?: string): Promise<WatchingUi> {
 }
 
 function event(type: string, fields: Event): Event {
-  return { id: String(fields.requestId ?? fields.id), type, timestamp: Date.now(), sessionId: "server", ...fields };
+  return {
+    id: String(fields.requestId ?? fields.id),
+    type,
+    timestamp: Date.now(),
+    sessionId: "server",
+    ...fields,
+  };
 }
 
 describe("a Studio page that connects after traffic", () => {
@@ -158,7 +170,10 @@ describe("a runtime that goes away", () => {
     const studio = await startStudio();
     const app = await runtime(studio);
     const watching = await ui(studio);
-    app.emit("event", event("stream:open", { requestId: "s1", source: "api", method: "ticks", transport: "sse" }));
+    app.emit(
+      "event",
+      event("stream:open", { requestId: "s1", source: "api", method: "ticks", transport: "sse" }),
+    );
     app.emit("event", event("request:start", { id: "r1", source: "api", method: "slow" }));
     app.emit("event", event("request:start", { id: "r2", source: "api", method: "list" }));
     app.emit("event", event("request:end", { requestId: "r2", status: 200 }));

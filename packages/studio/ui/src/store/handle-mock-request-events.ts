@@ -6,12 +6,11 @@
  * adjust the chaos engine state.
  */
 
-import type { MockServerInfo } from "./mock-slice-types";
-import type { NetworkConfig } from "./mock-slice-network-types";
 import type { MockEvent } from "./mock-event-types";
-
-import { useMockStore } from "./mock-slice";
 import { mockServerOf } from "./mock-server-of";
+import { useMockStore } from "./mock-slice";
+import type { NetworkConfig } from "./mock-slice-network-types";
+import type { MockServerInfo } from "./mock-slice-types";
 import { updateRouteStats } from "./route-stats";
 
 export function handleRequestStart(serverId: string, event: MockEvent): void {

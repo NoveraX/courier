@@ -23,7 +23,12 @@ interface ApplyButtonProps {
  * <ApplyButton label="Add to courier.mocks.ts" armedAt={plan.armedAt} className={PRIMARY} onApply={() => session.apply()} />
  * ```
  */
-export function ApplyButton({ label, armedAt, className, onApply }: ApplyButtonProps): React.ReactElement {
+export function ApplyButton({
+  label,
+  armedAt,
+  className,
+  onApply,
+}: ApplyButtonProps): React.ReactElement {
   const armed = useTimeReached(armedAt);
   return (
     <Button type="button" size="sm" className={className} disabled={!armed} onClick={onApply}>

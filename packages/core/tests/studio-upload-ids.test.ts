@@ -27,8 +27,13 @@ let server: Server;
 let proxyUrl = "";
 
 const starts: string[] = [];
-const progress: Array<{ requestId: string; source?: string; group?: string; method?: string; percentage: number }> =
-  [];
+const progress: Array<{
+  requestId: string;
+  source?: string;
+  group?: string;
+  method?: string;
+  percentage: number;
+}> = [];
 const completed: string[] = [];
 
 function api() {
@@ -75,7 +80,9 @@ afterEach(async () => {
 
 describe("an upload through the proxy", () => {
   it("is reported under the id the proxy shows the call by", async () => {
-    const client = createProxyCaller<ReturnType<typeof api>>("api", { proxyPath: { http: proxyUrl } });
+    const client = createProxyCaller<ReturnType<typeof api>>("api", {
+      proxyPath: { http: proxyUrl },
+    });
 
     await client.with({ onUploadProgress: () => {} }).upload(form());
 
@@ -87,7 +94,9 @@ describe("an upload through the proxy", () => {
   });
 
   it("leaves the proxy to name the call when the caller does not watch its upload", async () => {
-    const client = createProxyCaller<ReturnType<typeof api>>("api", { proxyPath: { http: proxyUrl } });
+    const client = createProxyCaller<ReturnType<typeof api>>("api", {
+      proxyPath: { http: proxyUrl },
+    });
 
     await client.upload(form());
 

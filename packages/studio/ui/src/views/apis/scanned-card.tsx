@@ -1,13 +1,8 @@
-import { FileCode, Eye, ShieldCheck, ShieldAlert, Zap } from "lucide-react";
+import { Eye, FileCode, ShieldAlert, ShieldCheck, Zap } from "lucide-react";
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-
-import type { ScannedSource } from "./types";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { computeAnalysisStats, countScannedEndpoints } from "./helpers";
+import type { ScannedSource } from "./types";
 
 interface ScannedCardProps {
   source: ScannedSource;
@@ -34,9 +29,13 @@ export function ScannedCard({ source }: ScannedCardProps): React.ReactElement {
 
       {/* Stats row */}
       <div className="flex items-center gap-3 text-[11px] text-muted-foreground truncate">
-        <span className="shrink-0">{endpointCount} {endpointCount === 1 ? "endpoint" : "endpoints"}</span>
+        <span className="shrink-0">
+          {endpointCount} {endpointCount === 1 ? "endpoint" : "endpoints"}
+        </span>
         <span className="shrink-0">·</span>
-        <span className="shrink-0">{source.groups.length} {source.groups.length === 1 ? "group" : "groups"}</span>
+        <span className="shrink-0">
+          {source.groups.length} {source.groups.length === 1 ? "group" : "groups"}
+        </span>
         {source.baseURL && (
           <>
             <span className="shrink-0">·</span>
@@ -62,7 +61,11 @@ export function ScannedCard({ source }: ScannedCardProps): React.ReactElement {
           tooltip="Variables types"
         />
         <QualityPill
-          icon={analysisStats.validation.count === analysisStats.validation.total ? ShieldCheck : ShieldAlert}
+          icon={
+            analysisStats.validation.count === analysisStats.validation.total
+              ? ShieldCheck
+              : ShieldAlert
+          }
           label="S"
           count={analysisStats.validation.count}
           total={analysisStats.validation.total}
@@ -75,7 +78,13 @@ export function ScannedCard({ source }: ScannedCardProps): React.ReactElement {
 
 // ── Quality pill ────────────────────────────────────────────────────────────
 
-function QualityPill({ icon: Icon, label, count, total, tooltip }: {
+function QualityPill({
+  icon: Icon,
+  label,
+  count,
+  total,
+  tooltip,
+}: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   count: number;
@@ -93,13 +102,17 @@ function QualityPill({ icon: Icon, label, count, total, tooltip }: {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${color}`}>
+        <span
+          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${color}`}
+        >
           <Icon className="size-2.5" />
-          {label}{showFraction ? ` ${count}/${total}` : ""}
+          {label}
+          {showFraction ? ` ${count}/${total}` : ""}
         </span>
       </TooltipTrigger>
-      <TooltipContent>{tooltip}: {count} of {total}</TooltipContent>
+      <TooltipContent>
+        {tooltip}: {count} of {total}
+      </TooltipContent>
     </Tooltip>
   );
 }
-

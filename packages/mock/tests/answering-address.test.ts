@@ -17,7 +17,9 @@ const STALL_MS = 700;
 const held: Server[] = [];
 
 afterEach(async () => {
-  await Promise.all(held.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
+  await Promise.all(
+    held.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 
 /* Keeps the event loop busy, as a long synchronous task in the process does. */

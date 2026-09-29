@@ -7,6 +7,9 @@
  * `handle-mock-request-events.ts`.
  */
 
+import type { MockEvent } from "./mock-event-types";
+import { mockServerOf } from "./mock-server-of";
+import { useMockStore } from "./mock-slice";
 import type { ChaosPreset, LatencyPreset, NetworkConfig } from "./mock-slice-network-types";
 import type {
   MockCollectionEntry,
@@ -16,10 +19,6 @@ import type {
   MockSliceState,
   ProcessStatus,
 } from "./mock-slice-types";
-import type { MockEvent } from "./mock-event-types";
-
-import { useMockStore } from "./mock-slice";
-import { mockServerOf } from "./mock-server-of";
 import { mergeRouteStats } from "./route-stats";
 
 type Store = MockSliceState;
@@ -62,8 +61,7 @@ function reconnectServer(
     collectionCount: (event.collectionCount as number) ?? 0,
     recordCount: (event.recordCount as number) ?? 0,
     requestsServed: (event.requestsServed as number | undefined) ?? existing.requestsServed,
-    scenarioRequestCount:
-      (event.scenarioRequestCount as number) ?? existing.scenarioRequestCount,
+    scenarioRequestCount: (event.scenarioRequestCount as number) ?? existing.scenarioRequestCount,
     errorCount: (event.errorCount as number | undefined) ?? existing.errorCount,
     activeScenario: (event.activeScenario as string) ?? null,
     availableScenarios: (event.availableScenarios as string[]) ?? [],

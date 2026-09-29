@@ -1,20 +1,9 @@
-import { useState } from "react";
-import { Check, ChevronsUpDown } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-
 import type { LucideIcon } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Command, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -63,13 +52,14 @@ export function SingleSelect({
                 <CommandItem
                   key={opt.value || opt.label}
                   value={opt.value || opt.label}
-                  onSelect={() => { onChange(opt.value); setOpen(false); }}
+                  onSelect={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
                 >
                   {opt.icon && <opt.icon className="size-3.5 text-muted-foreground" />}
                   <span className="flex-1">{opt.label}</span>
-                  {value === opt.value && (
-                    <Check className="size-3.5 text-accent-brand" />
-                  )}
+                  {value === opt.value && <Check className="size-3.5 text-accent-brand" />}
                 </CommandItem>
               ))}
             </CommandGroup>

@@ -94,7 +94,13 @@ describe("startup recovery with journals Studio did not write", () => {
 
   it("moves nothing from a folder a journal calls its backup unless it is that apply's own", () => {
     put("lib/src/app.ts", "the user's lib\n");
-    journal(`${ID}.json`, planted({ backupDir: "lib", entries: [{ path: "src/app.ts", step: "remove", existed: true }] }));
+    journal(
+      `${ID}.json`,
+      planted({
+        backupDir: "lib",
+        entries: [{ path: "src/app.ts", step: "remove", existed: true }],
+      }),
+    );
 
     recoverInterruptedApplies(root, { applied: [], imports: {} });
 
@@ -104,7 +110,9 @@ describe("startup recovery with journals Studio did not write", () => {
 
   it("touches no file outside the import's folder", () => {
     put("src/app.ts", "written\n");
-    const entries = [{ path: "src/app.ts", step: "write", existed: false, sha256: bodyHash("written\n") }];
+    const entries = [
+      { path: "src/app.ts", step: "write", existed: false, sha256: bodyHash("written\n") },
+    ];
     journal(`${ID}.json`, planted({ entries }));
 
     recoverInterruptedApplies(root, { applied: [], imports: {} });
@@ -119,7 +127,9 @@ describe("startup recovery with journals Studio did not write", () => {
     recoverInterruptedApplies(root, { applied: [], imports: {} });
 
     expect(existsSync(join(root.path, ".courier/keep.json"))).toBe(true);
-    expect(readdirSync(join(root.path, ".courier/journal"))).toEqual(["1700000000000-ffffffff.json"]);
+    expect(readdirSync(join(root.path, ".courier/journal"))).toEqual([
+      "1700000000000-ffffffff.json",
+    ]);
   });
 });
 
@@ -128,20 +138,33 @@ describe.skipIf(IS_WINDOWS)("a .courier folder that is a symbolic link", () => {
     put(`${DIR}/index.ts`, "old\n");
     return planFiles(
       root,
-      { importName: "pets", dir: DIR, targets: [{ path: `${DIR}/index.ts`, body: "new\n", kind: "generated", endpoints: {} }], removals: [] },
+      {
+        importName: "pets",
+        dir: DIR,
+        targets: [{ path: `${DIR}/index.ts`, body: "new\n", kind: "generated", endpoints: {} }],
+        removals: [],
+      },
       { [`${DIR}/index.ts`]: { sha256: bodyHash("old\n") } },
     );
   }
 
   it("prunes nothing through a backups folder that links outside the project", async () => {
     const outside = join(scratch, "outside");
-    for (let n = 0; n < 25; n += 1) mkdirSync(join(outside, `1600000000${String(n).padStart(3, "0")}-00000000`), { recursive: true });
+    for (let n = 0; n < 25; n += 1)
+      mkdirSync(join(outside, `1600000000${String(n).padStart(3, "0")}-00000000`), {
+        recursive: true,
+      });
     mkdirSync(join(root.path, ".courier"), { recursive: true });
     symlinkSync(outside, join(root.path, ".courier/backups"), "dir");
     /* Only a new file: nothing is backed up, so the apply reaches the pruning. */
     const plan = planFiles(
       root,
-      { importName: "pets", dir: DIR, targets: [{ path: `${DIR}/new.ts`, body: "new\n", kind: "generated", endpoints: {} }], removals: [] },
+      {
+        importName: "pets",
+        dir: DIR,
+        targets: [{ path: `${DIR}/new.ts`, body: "new\n", kind: "generated", endpoints: {} }],
+        removals: [],
+      },
       {},
     );
 

@@ -37,7 +37,11 @@ function spec(): string {
 }
 
 function call(groupBy: (typeof GROUPINGS)[number], name: string) {
-  const files = generateCode(parseSpec(spec()), { type: "openapi", outputDir: "src", groupBy }, "prefs");
+  const files = generateCode(
+    parseSpec(spec()),
+    { type: "openapi", outputDir: "src", groupBy },
+    "prefs",
+  );
   const group = groupBy === "single" ? [] : ["settings"];
   return generatedCall(loadGenerated(files, "src/prefs/index.ts"), ["prefsApi", ...group, name]);
 }
@@ -78,7 +82,11 @@ function reservedSpec(): string {
 
 describe.each(["tag", "path"] as const)("names a client reserves (%s)", (groupBy) => {
   it("are given to no group or endpoint, and each call still reaches its path", async () => {
-    const files = generateCode(parseSpec(reservedSpec()), { type: "openapi", outputDir: "src", groupBy }, "res");
+    const files = generateCode(
+      parseSpec(reservedSpec()),
+      { type: "openapi", outputDir: "src", groupBy },
+      "res",
+    );
     const loaded = loadGenerated(files, "src/res/index.ts");
 
     await generatedCall(loaded, ["resApi", "rawGroup", "getItems"])();

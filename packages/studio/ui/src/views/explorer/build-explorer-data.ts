@@ -1,22 +1,19 @@
-import type { RequestEntry, SourceMap, SourceInfo, GroupInfo, EndpointInfo } from "@/store/types";
-import type {
-  SourceNodeData,
-  GroupNodeData,
-  EndpointNodeData,
-  NodeMetrics,
-  EdgeTier,
-} from "./types";
-import type { ExplorerData, ExplorerEdge } from "./use-explorer-data";
+import type { EndpointInfo, GroupInfo, RequestEntry, SourceInfo, SourceMap } from "@/store/types";
 import { computeNodeMetrics } from "./compute-metrics";
 import { filterRequests, inferHttpMethod } from "./helpers";
 import { resolveFullPath } from "./resolve-full-path";
+import type {
+  EdgeTier,
+  EndpointNodeData,
+  GroupNodeData,
+  NodeMetrics,
+  SourceNodeData,
+} from "./types";
+import type { ExplorerData, ExplorerEdge } from "./use-explorer-data";
 
 // ── Builder ─────────────────────────────────────────────────────────────────
 
-export function buildExplorerData(
-  sourceMap: SourceMap,
-  requests: RequestEntry[],
-): ExplorerData {
+export function buildExplorerData(sourceMap: SourceMap, requests: RequestEntry[]): ExplorerData {
   const sources: SourceNodeData[] = [];
   const groups: GroupNodeData[] = [];
   const endpoints: EndpointNodeData[] = [];
@@ -88,12 +85,16 @@ function buildGroup(
     metrics: grpMetrics,
   });
 
-  edges.push(makeEdge(`source:${srcName}`, `group:${srcName}.${grpName}`, grpMetrics, "source-to-group"));
+  edges.push(
+    makeEdge(`source:${srcName}`, `group:${srcName}.${grpName}`, grpMetrics, "source-to-group"),
+  );
 
   for (const [epName, epInfo] of Object.entries(grpInfo.endpoints)) {
     const ep = buildEndpoint(srcName, grpName, epName, epInfo, sourceMap, requests);
     endpoints.push(ep.data);
-    edges.push(makeEdge(`group:${srcName}.${grpName}`, ep.nodeId, ep.data.metrics, "group-to-endpoint"));
+    edges.push(
+      makeEdge(`group:${srcName}.${grpName}`, ep.nodeId, ep.data.metrics, "group-to-endpoint"),
+    );
   }
 }
 
@@ -118,7 +119,8 @@ function buildEndpoint(
       group: grpName,
       method: epName,
       fullPath: resolveFullPath(srcName, grpName, epName, sourceMap, requests),
-      httpMethod: epInfo.httpMethod ?? realMethod ?? inferHttpMethod(epInfo.type ?? "untyped", epName),
+      httpMethod:
+        epInfo.httpMethod ?? realMethod ?? inferHttpMethod(epInfo.type ?? "untyped", epName),
       endpointType: epInfo.type ?? "untyped",
       transport: epInfo.transport,
       hasVariablesSchema: epInfo.hasVariablesSchema,
@@ -131,7 +133,12 @@ function buildEndpoint(
 
 // ── Utilities ───────────────────────────────────────────────────────────────
 
-function makeEdge(source: string, target: string, metrics: NodeMetrics, tier: EdgeTier): ExplorerEdge {
+function makeEdge(
+  source: string,
+  target: string,
+  metrics: NodeMetrics,
+  tier: EdgeTier,
+): ExplorerEdge {
   return {
     id: `${source}->${target}`,
     source,

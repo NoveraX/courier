@@ -5,7 +5,10 @@ import { parseSpec } from "../src/apis/parser";
 function collection(items: unknown[], extra: Record<string, unknown> = {}) {
   return parseSpec(
     JSON.stringify({
-      info: { name: "C", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+      info: {
+        name: "C",
+        schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      },
       item: items,
       ...extra,
     }),
@@ -28,13 +31,17 @@ describe("a Postman URL", () => {
   it("gives its host to the base URL", () => {
     /* Hardcoding "/" pointed the generated client at the caller's own
        origin — every one of 183 endpoints across three real collections. */
-    const spec = collection([{ name: "List tweets", request: { method: "GET", url: structuredUrl } }]);
+    const spec = collection([
+      { name: "List tweets", request: { method: "GET", url: structuredUrl } },
+    ]);
 
     expect(spec.baseURL).toBe("https://api.example.com");
   });
 
   it("turns a Postman variable into a path parameter", () => {
-    const spec = collection([{ name: "List tweets", request: { method: "GET", url: structuredUrl } }]);
+    const spec = collection([
+      { name: "List tweets", request: { method: "GET", url: structuredUrl } },
+    ]);
     const endpoint = endpoints(spec)[0];
 
     expect(endpoint?.fullPath).toBe("/2/users/:userId/tweets");
@@ -42,7 +49,9 @@ describe("a Postman URL", () => {
   });
 
   it("keeps its query and path parameters", () => {
-    const spec = collection([{ name: "List tweets", request: { method: "GET", url: structuredUrl } }]);
+    const spec = collection([
+      { name: "List tweets", request: { method: "GET", url: structuredUrl } },
+    ]);
     const names = endpoints(spec)[0]?.parameters.map((p) => `${p.in}:${p.name}`) ?? [];
 
     expect(names).toContain("query:max_results");

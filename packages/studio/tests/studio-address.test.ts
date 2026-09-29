@@ -7,7 +7,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT, STUDIO_DEFAULT_URL } from "@noverax/courier/config";
+import {
+  STUDIO_DEFAULT_HOST,
+  STUDIO_DEFAULT_PORT,
+  STUDIO_DEFAULT_URL,
+} from "@noverax/courier/config";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { loadCourierConfig } from "../src/server/config-loader";
@@ -74,13 +78,17 @@ describe("reading the address a project asks for", () => {
 
   /** A broken config is reported by the real load, not by the address read. */
   it("does not throw on a config that will not load", async () => {
-    const root = project(`import { nope } from "./missing"\nexport default { sources: { nope } }\n`);
+    const root = project(
+      `import { nope } from "./missing"\nexport default { sources: { nope } }\n`,
+    );
 
     await expect(readStudioAddress(root)).resolves.toEqual({});
   });
 
   it("logs why a config that will not load gave no address, at debug level", async () => {
-    const root = project(`import { nope } from "./missing"\nexport default { sources: { nope } }\n`);
+    const root = project(
+      `import { nope } from "./missing"\nexport default { sources: { nope } }\n`,
+    );
     vi.stubEnv("COURIER_LOG_LEVEL", "debug");
     const debug = vi.spyOn(console, "debug").mockImplementation(() => undefined);
 
@@ -88,14 +96,17 @@ describe("reading the address a project asks for", () => {
 
     expect(debug).toHaveBeenCalledWith(
       "%s",
-      expect.stringContaining(`[Studio] courier.config in ${root} could not be read for Studio's address`),
+      expect.stringContaining(
+        `[Studio] courier.config in ${root} could not be read for Studio's address`,
+      ),
       expect.objectContaining({ message: expect.stringContaining("missing") }),
     );
   });
 });
 
 describe("reading the address of a config that never finishes loading", () => {
-  const HANGS = "await new Promise(() => {})\nexport default { sources: {}, studio: { port: 7777 } }\n";
+  const HANGS =
+    "await new Promise(() => {})\nexport default { sources: {}, studio: { port: 7777 } }\n";
 
   it("gives it up after the timeout, and the flags and the defaults decide", async () => {
     const root = project(HANGS);
@@ -124,7 +135,9 @@ describe("reading the address of a config that never finishes loading", () => {
 
 describe("a JSON module the address read reads", () => {
   it("is read from disk by the next load of the project, so an edit to it is seen", async () => {
-    const root = project('import data from "./src/data.json"\nexport default { sources: { demo: { baseURL: data.host } } }\n');
+    const root = project(
+      'import data from "./src/data.json"\nexport default { sources: { demo: { baseURL: data.host } } }\n',
+    );
     mkdirSync(join(root, "src"));
     const data = join(root, "src", "data.json");
     writeFileSync(data, '{ "host": "json-v1.example.com" }\n');

@@ -1,11 +1,10 @@
-import type { DraftErrors, MockDraft } from "./types";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { fieldDescriptionIds } from "./field-description-ids";
 import { FieldRow } from "./field-row";
 import { PortField } from "./port-field";
+import type { DraftErrors, MockDraft } from "./types";
 
 const PORT_HINTS = {
   auto: "Studio assigns one from studio.mockBasePort; it can change after Studio restarts. Choose Fixed to keep one.",
@@ -35,11 +34,20 @@ interface DraftCardProps {
  * <DraftCard index={0} draft={draft} errors={errors.get(0)} onEdit={edit} onRemove={remove} />
  * ```
  */
-export function DraftCard({ index, draft, errors, onEdit, onRemove }: DraftCardProps): React.ReactElement {
+export function DraftCard({
+  index,
+  draft,
+  errors,
+  onEdit,
+  onRemove,
+}: DraftCardProps): React.ReactElement {
   const id = `mock-draft-${index}`;
   const portHint = PORT_HINTS[draft.portMode];
   return (
-    <section aria-label={`Mock of ${draft.source}`} className="rounded-lg border border-border-subtle">
+    <section
+      aria-label={`Mock of ${draft.source}`}
+      className="rounded-lg border border-border-subtle"
+    >
       <header className="flex h-8 items-center gap-2 rounded-t-lg bg-muted/30 px-3">
         <span className="truncate text-xs font-medium">{draft.source}</span>
         <span className="truncate mono-xs text-muted-foreground">→ mocks.{draft.key || "…"}</span>
@@ -66,7 +74,13 @@ export function DraftCard({ index, draft, errors, onEdit, onRemove }: DraftCardP
           />
         </FieldRow>
         <FieldRow id={`${id}-port`} label="Port" hint={portHint} error={errors?.port}>
-          <PortField id={`${id}-port`} draft={draft} hint={portHint} error={errors?.port} onChange={onEdit} />
+          <PortField
+            id={`${id}-port`}
+            draft={draft}
+            hint={portHint}
+            error={errors?.port}
+            onChange={onEdit}
+          />
         </FieldRow>
         <FieldRow id={`${id}-seed`} label="Records per collection" error={errors?.seedCount}>
           <Input
@@ -81,7 +95,11 @@ export function DraftCard({ index, draft, errors, onEdit, onRemove }: DraftCardP
             className="h-7 w-20 mono-sm"
           />
         </FieldRow>
-        <FieldRow id={`${id}-start`} label="Start with Studio" hint="Also starts it as soon as it is added.">
+        <FieldRow
+          id={`${id}-start`}
+          label="Start with Studio"
+          hint="Also starts it as soon as it is added."
+        >
           <Switch
             id={`${id}-start`}
             size="sm"

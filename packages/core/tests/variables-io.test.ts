@@ -18,10 +18,13 @@ const api = defineApi({
     search: defineGroup({
       prefix: "/search",
       endpoints: {
-        run: endpoint.variables(SearchQuery).via((http, vars) => {
-          seen = vars;
-          return http.get("", vars);
-        }).reads(),
+        run: endpoint
+          .variables(SearchQuery)
+          .via((http, vars) => {
+            seen = vars;
+            return http.get("", vars);
+          })
+          .reads(),
       },
     }),
   },
@@ -42,9 +45,7 @@ describe("a variables schema whose input and output differ", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>
-        Promise.resolve(
-          new Response("{}", { headers: { "content-type": "application/json" } }),
-        ),
+        Promise.resolve(new Response("{}", { headers: { "content-type": "application/json" } })),
       ),
     );
 

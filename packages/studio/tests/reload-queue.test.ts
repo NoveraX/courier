@@ -70,7 +70,14 @@ describe("createReloadQueue", () => {
 
     await expect(edit).resolves.toBe("done");
     await queue.settled();
-    expect(log).toEqual(["start before", "end before", "edit start", "edit end", "start during", "end during"]);
+    expect(log).toEqual([
+      "start before",
+      "end before",
+      "edit start",
+      "edit end",
+      "start during",
+      "end during",
+    ]);
   });
 
   it("does not let a request made during an edit join the reload queued before it", async () => {
@@ -343,7 +350,10 @@ describe("createReloadQueue", () => {
     queue.refuseEdits(() => new Error("Studio is stopping"));
 
     await expect(queued).rejects.toThrow("Studio is stopping");
-    const waited = await Promise.race([queue.exclusiveSettled().then(() => "settled"), sleep(50).then(() => "waiting")]);
+    const waited = await Promise.race([
+      queue.exclusiveSettled().then(() => "settled"),
+      sleep(50).then(() => "waiting"),
+    ]);
     expect(waited).toBe("waiting");
     release();
     await expect(running).resolves.toBe("running done");

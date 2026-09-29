@@ -34,7 +34,12 @@ function spec(): string {
       "/things": {
         get: {
           operationId: "listThings",
-          responses: { "200": { description: "ok", content: { "application/json": { schema: { $ref: "#/components/schemas/Thing39" } } } } },
+          responses: {
+            "200": {
+              description: "ok",
+              content: { "application/json": { schema: { $ref: "#/components/schemas/Thing39" } } },
+            },
+          },
         },
       },
     },
@@ -43,7 +48,11 @@ function spec(): string {
 }
 
 function schemasFile(): string {
-  const files = generateCode(parseSpec(spec()), { type: "openapi", outputDir: "src/api" }, "things");
+  const files = generateCode(
+    parseSpec(spec()),
+    { type: "openapi", outputDir: "src/api" },
+    "things",
+  );
   return files.find((file) => file.path.endsWith("schemas.ts"))?.content ?? "";
 }
 
@@ -69,15 +78,23 @@ describe("a generated zod schema", () => {
   });
 
   it("is still refused where it outputs something other than its type", () => {
-    const drifted = schemasFile().replace("count: z.number().optional(),", "count: z.string().optional(),");
+    const drifted = schemasFile().replace(
+      "count: z.number().optional(),",
+      "count: z.string().optional(),",
+    );
     const dir = writeProject(`${SUITE}/drifted`, [{ path: "schemas.ts", content: drifted }]);
 
-    expect(compileProject(dir, ["schemas.ts"]).join("\n")).toMatch(/Type 'string' is not assignable to type 'number'/);
+    expect(compileProject(dir, ["schemas.ts"]).join("\n")).toMatch(
+      /Type 'string' is not assignable to type 'number'/,
+    );
   });
 
   it("costs the compiler a fraction of what comparing the whole ZodType did", () => {
     const schemas = schemasFile();
-    const whole = schemas.replace(/satisfies \{ _zod: \{ output: (\w+) \} \}/g, "satisfies z.ZodType<$1>");
+    const whole = schemas.replace(
+      /satisfies \{ _zod: \{ output: (\w+) \} \}/g,
+      "satisfies z.ZodType<$1>",
+    );
 
     expect(instantiations("output", schemas) * 2).toBeLessThan(instantiations("whole", whole));
   });

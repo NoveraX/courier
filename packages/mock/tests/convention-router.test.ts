@@ -129,25 +129,26 @@ describe("inferRoutes", () => {
   });
 
   describe("prefix pattern — get/find/search/query*", () => {
-    it.each(["getRecent", "findActive", "searchByTerm", "queryFiltered", "listArchived", "fetchAll"])(
-      "%s → GET / (list)",
-      (name) => {
-        const r = infer("items", name);
-        expect(r.httpMethod).toBe("GET");
-        expect(r.operation).toBe("list");
-      },
-    );
+    it.each([
+      "getRecent",
+      "findActive",
+      "searchByTerm",
+      "queryFiltered",
+      "listArchived",
+      "fetchAll",
+    ])("%s → GET / (list)", (name) => {
+      const r = infer("items", name);
+      expect(r.httpMethod).toBe("GET");
+      expect(r.operation).toBe("list");
+    });
   });
 
   describe("fallback — unknown names", () => {
-    it.each(["doSomething", "process", "sync", "validate"])(
-      "%s → GET / (custom)",
-      (name) => {
-        const r = infer("misc", name);
-        expect(r.httpMethod).toBe("GET");
-        expect(r.operation).toBe("custom");
-      },
-    );
+    it.each(["doSomething", "process", "sync", "validate"])("%s → GET / (custom)", (name) => {
+      const r = infer("misc", name);
+      expect(r.httpMethod).toBe("GET");
+      expect(r.operation).toBe("custom");
+    });
   });
 
   describe("fullPath construction", () => {

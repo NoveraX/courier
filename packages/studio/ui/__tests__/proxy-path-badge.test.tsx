@@ -18,7 +18,11 @@ afterEach(() => {
   cleanup();
 });
 
-const SOURCE: CatalogEntry = { baseURL: "https://api.example", appOrigin: "http://localhost:3000", groups: {} };
+const SOURCE: CatalogEntry = {
+  baseURL: "https://api.example",
+  appOrigin: "http://localhost:3000",
+  groups: {},
+};
 
 function badge(transport: "http" | "sse" | "ws", source: CatalogEntry = SOURCE) {
   render(

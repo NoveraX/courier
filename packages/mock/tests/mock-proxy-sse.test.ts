@@ -19,7 +19,10 @@ const api = defineApi({
     live: defineGroup({
       prefix: "live",
       endpoints: {
-        ticker: stream.variables<{ from: number }>().response(z.object({ n: z.number() })).get("stream"),
+        ticker: stream
+          .variables<{ from: number }>()
+          .response(z.object({ n: z.number() }))
+          .get("stream"),
         status: endpoint.get("status").response<{ ok: boolean }>(),
       },
     }),

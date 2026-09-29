@@ -28,7 +28,10 @@ describe("the dashboard's store counts", () => {
   it("count a record the store gained after the server connected", () => {
     handleMockEvent({ type: "mock:store:snapshot", serverId: "apiMock", collections: [users(21)] });
 
-    expect(useMockStore.getState().servers.apiMock).toMatchObject({ recordCount: 21, collectionCount: 1 });
+    expect(useMockStore.getState().servers.apiMock).toMatchObject({
+      recordCount: 21,
+      collectionCount: 1,
+    });
   });
 
   it("follow a change to one collection", () => {
@@ -37,8 +40,16 @@ describe("the dashboard's store counts", () => {
       serverId: "apiMock",
       collections: [users(21), { name: "posts", count: 4, records: [] }],
     });
-    handleMockEvent({ type: "mock:store:change", serverId: "apiMock", collection: "users", count: 22 });
+    handleMockEvent({
+      type: "mock:store:change",
+      serverId: "apiMock",
+      collection: "users",
+      count: 22,
+    });
 
-    expect(useMockStore.getState().servers.apiMock).toMatchObject({ recordCount: 26, collectionCount: 2 });
+    expect(useMockStore.getState().servers.apiMock).toMatchObject({
+      recordCount: 26,
+      collectionCount: 2,
+    });
   });
 });

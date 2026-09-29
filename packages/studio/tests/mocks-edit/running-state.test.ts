@@ -25,7 +25,10 @@ const loaded: LoadedCourierConfig = {
 
 const missing = failureOf(new ConfigNotFoundError(ROOT), ROOT);
 const broken = failureOf(
-  new ConfigLoaderError("CONFIG_INVALID", `Failed to load courier.config: Cannot find module ${ROOT}/src/gone`),
+  new ConfigLoaderError(
+    "CONFIG_INVALID",
+    `Failed to load courier.config: Cannot find module ${ROOT}/src/gone`,
+  ),
   ROOT,
 );
 

@@ -34,7 +34,9 @@ async function outcome(call: Promise<unknown>): Promise<unknown> {
   return call.then(
     (data) => ({ ok: data }),
     (error: unknown) =>
-      error instanceof HTTPError ? { status: error.status, data: error.data } : { thrown: String(error) },
+      error instanceof HTTPError
+        ? { status: error.status, data: error.data }
+        : { thrown: String(error) },
   );
 }
 
@@ -81,11 +83,13 @@ describe("a sequence on the mock server", () => {
   it("answers with the status and after the delay each entry declares", async () => {
     const server = createMockServer({ port: 0, log: false });
     running.push(server);
-    server.mock("users", "getAll").sequence([
-      { data: [alice], status: 201, delay: 80 },
-      { error: true, status: 429, data: { message: "slow down" } },
-      [bob],
-    ]);
+    server
+      .mock("users", "getAll")
+      .sequence([
+        { data: [alice], status: 201, delay: 80 },
+        { error: true, status: 429, data: { message: "slow down" } },
+        [bob],
+      ]);
     const { url } = await server.start();
     const call = () => fetch(`${url}/api/users/getAll`);
 

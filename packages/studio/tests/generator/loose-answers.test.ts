@@ -19,7 +19,7 @@ import {
   STRICT,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const Pet = {
   type: "object",
@@ -44,14 +44,18 @@ function spec(origin: string): ParsedSpec {
             operationId: "getPet",
             tags: ["pets"],
             parameters: [petId],
-            responses: { "200": { description: "ok", ...json({ $ref: "#/components/schemas/Pet" }) } },
+            responses: {
+              "200": { description: "ok", ...json({ $ref: "#/components/schemas/Pet" }) },
+            },
           },
           put: {
             operationId: "updatePet",
             tags: ["pets"],
             parameters: [petId],
             requestBody: json({ $ref: "#/components/schemas/Pet" }),
-            responses: { "200": { description: "ok", ...json({ $ref: "#/components/schemas/Pet" }) } },
+            responses: {
+              "200": { description: "ok", ...json({ $ref: "#/components/schemas/Pet" }) },
+            },
           },
         },
       },
@@ -82,7 +86,11 @@ afterAll(async () => {
 });
 
 function generate(options: Partial<GenerateOptions>) {
-  return generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "pets");
+  return generateCode(
+    spec(upstream.origin),
+    { type: "openapi", outputDir: "src/api", ...options },
+    "pets",
+  );
 }
 
 describe.each(VARIANTS)("a generated client validated with %s", (label, options) => {
@@ -115,7 +123,9 @@ describe.each(VARIANTS.filter(([label]) => label !== "zod-no-types"))(
         "}",
         "",
       ].join("\n");
-      const dir = writeProject(`loose-answers/${label}-use`, generate(options), { "src/use.ts": use });
+      const dir = writeProject(`loose-answers/${label}-use`, generate(options), {
+        "src/use.ts": use,
+      });
 
       expect(compileProject(dir, ["src/use.ts"], STRICT)).toEqual([]);
     }, 60_000);

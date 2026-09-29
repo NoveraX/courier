@@ -1,13 +1,11 @@
 import { Download, Pause, Pin, Play, Trash2 } from "lucide-react";
-
-import { exportAsJson } from "@/lib/export";
 import { CountDisplay } from "@/components/shared/count-display";
 import { FilterToggle } from "@/components/shared/filter-toggle";
 import { SearchInput } from "@/components/shared/search-input";
 import { ToolbarButton } from "@/components/shared/toolbar-button";
-import { useMockStore } from "@/store/mock-slice";
-
+import { exportAsJson } from "@/lib/export";
 import type { MockRequestLog } from "@/store/mock-slice";
+import { useMockStore } from "@/store/mock-slice";
 import type { LogFilterState } from "./use-log-filter";
 
 interface LogsToolbarProps {
@@ -39,13 +37,13 @@ export function LogsToolbar({
 
   return (
     <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle px-3">
-      <SearchInput value={filters.search} onChange={onSearchChange} placeholder="Filter requests…" />
-
-      <FilterToggle
-        active={showFilters}
-        count={activeFilterCount}
-        onClick={onToggleFilters}
+      <SearchInput
+        value={filters.search}
+        onChange={onSearchChange}
+        placeholder="Filter requests…"
       />
+
+      <FilterToggle active={showFilters} count={activeFilterCount} onClick={onToggleFilters} />
 
       <ToolbarButton
         icon={paused ? Play : Pause}
@@ -63,9 +61,7 @@ export function LogsToolbar({
       />
 
       <div className="ml-auto flex items-center gap-2 text-body-sm text-muted-foreground">
-        {paused && (
-          <Pin className="size-3 text-amber-400" />
-        )}
+        {paused && <Pin className="size-3 text-amber-400" />}
         <CountDisplay filtered={filteredCount} total={totalCount} label="requests" />
       </div>
     </div>

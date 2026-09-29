@@ -38,8 +38,12 @@ export function BodySection(props: BodySectionProps): React.ReactElement {
     <div className="flex min-h-0 flex-1 flex-col gap-1.5">
       <div className="flex items-center gap-1.5">
         <FileJson className="size-3 text-muted-foreground" />
-        <span className="text-caption text-muted-foreground">{kind === "form" ? "Form" : "Variables"}</span>
-        {props.schemaHint && <span className="text-[10px] text-emerald-400/70">{props.schemaHint}</span>}
+        <span className="text-caption text-muted-foreground">
+          {kind === "form" ? "Form" : "Variables"}
+        </span>
+        {props.schemaHint && (
+          <span className="text-[10px] text-emerald-400/70">{props.schemaHint}</span>
+        )}
         {props.formAllowed && (
           <ToggleGroup
             type="single"
@@ -52,8 +56,12 @@ export function BodySection(props: BodySectionProps): React.ReactElement {
             className="ml-auto h-6"
             aria-label="Body"
           >
-            <ToggleGroupItem value="json" className="h-6 px-2 text-xs">JSON</ToggleGroupItem>
-            <ToggleGroupItem value="form" className="h-6 px-2 text-xs">Form</ToggleGroupItem>
+            <ToggleGroupItem value="json" className="h-6 px-2 text-xs">
+              JSON
+            </ToggleGroupItem>
+            <ToggleGroupItem value="form" className="h-6 px-2 text-xs">
+              Form
+            </ToggleGroupItem>
           </ToggleGroup>
         )}
       </div>

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { generateCode } from "../src/apis/generator";
+import { parseSpec } from "../src/apis/parser";
 
 type Validation = "zod" | "valibot" | "arktype" | "none";
 
@@ -26,16 +25,20 @@ const UNION_SPEC = {
     schemas: {
       Cat: { type: "object", properties: { meow: { type: "string" } }, required: ["meow"] },
       Dog: { type: "object", properties: { bark: { type: "string" } }, required: ["bark"] },
-      Result: { oneOf: [{ $ref: "#/components/schemas/Cat" }, { $ref: "#/components/schemas/Dog" }] },
+      Result: {
+        oneOf: [{ $ref: "#/components/schemas/Cat" }, { $ref: "#/components/schemas/Dog" }],
+      },
     },
   },
 };
 
 function generate(validation: Validation = "zod"): string {
-  return generateCode(
-    parseSpec(JSON.stringify(UNION_SPEC)),
-    { type: "openapi", sourceName: "api", outputDir: "src", validation },
-  )
+  return generateCode(parseSpec(JSON.stringify(UNION_SPEC)), {
+    type: "openapi",
+    sourceName: "api",
+    outputDir: "src",
+    validation,
+  })
     .map((f) => f.content)
     .join("\n");
 }
@@ -91,10 +94,11 @@ describe("a response that is one of several shapes", () => {
   it("brings every named type into the group file", () => {
     /* The import collector compared the response type to each name whole, so
        `Cat | Dog` matched neither and nothing was imported. */
-    const files = generateCode(
-      parseSpec(JSON.stringify(UNION_SPEC)),
-      { type: "openapi", sourceName: "api", outputDir: "src" },
-    );
+    const files = generateCode(parseSpec(JSON.stringify(UNION_SPEC)), {
+      type: "openapi",
+      sourceName: "api",
+      outputDir: "src",
+    });
     const group = files.find((f) => f.path.endsWith("/things/index.ts"))?.content ?? "";
 
     if (group.includes("Cat")) expect(group).toMatch(/import .*Cat/);
@@ -113,7 +117,9 @@ describe("a request body that is one of several shapes", () => {
               post: {
                 operationId: "create",
                 tags: ["things"],
-                parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+                parameters: [
+                  { name: "id", in: "path", required: true, schema: { type: "string" } },
+                ],
                 requestBody: {
                   content: {
                     "application/json": { schema: { $ref: "#/components/schemas/Result" } },

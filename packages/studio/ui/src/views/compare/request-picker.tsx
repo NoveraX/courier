@@ -1,13 +1,9 @@
-import { useState } from "react";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { STATUS_CONFIG } from "@/components/shared/detail-panel/constants";
+import { formatDuration, formatRelativeTime } from "@/components/shared/formatters";
+import { MethodBadge } from "@/components/shared/method-badge";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -16,11 +12,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { MethodBadge } from "@/components/shared/method-badge";
-import { formatDuration, formatRelativeTime } from "@/components/shared/formatters";
-import { STATUS_CONFIG } from "@/components/shared/detail-panel/constants";
-import type { RequestEntry } from "@/store/types-request";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNow } from "@/hooks/use-tick";
+import { cn } from "@/lib/utils";
+import type { RequestEntry } from "@/store/types-request";
 
 interface RequestPickerProps {
   requests: RequestEntry[];
@@ -91,7 +86,9 @@ export function RequestPicker({
                   }}
                   className="flex items-center gap-2 px-2 py-1.5 text-xs"
                 >
-                  <span className={cn("size-1.5 shrink-0 rounded-full", STATUS_CONFIG[r.status].dot)} />
+                  <span
+                    className={cn("size-1.5 shrink-0 rounded-full", STATUS_CONFIG[r.status].dot)}
+                  />
                   <MethodBadge method={r.httpMethod ?? "GET"} className="shrink-0" />
                   <span className="min-w-0 flex-1 truncate font-mono text-[11px]">
                     {buildLabel(r)}
@@ -104,9 +101,7 @@ export function RequestPicker({
                   <span className="shrink-0 text-[10px] text-muted-foreground/60">
                     {formatRelativeTime(r.startedAt, now)}
                   </span>
-                  {r.id === selectedId && (
-                    <Check className="size-3 shrink-0 text-accent-brand" />
-                  )}
+                  {r.id === selectedId && <Check className="size-3 shrink-0 text-accent-brand" />}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -122,9 +117,7 @@ function PickerLabel({ request }: { request: RequestEntry }): React.ReactElement
     <span className="flex min-w-0 items-center gap-1.5">
       <span className={cn("size-1.5 shrink-0 rounded-full", STATUS_CONFIG[request.status].dot)} />
       <MethodBadge method={request.httpMethod ?? "GET"} className="shrink-0" />
-      <span className="min-w-0 truncate font-mono text-[11px]">
-        {buildLabel(request)}
-      </span>
+      <span className="min-w-0 truncate font-mono text-[11px]">{buildLabel(request)}</span>
     </span>
   );
 }

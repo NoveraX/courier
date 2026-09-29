@@ -33,7 +33,10 @@ beforeEach(() => {
     join(root, "src", "api.ts"),
     'import { defineApi } from "@noverax/courier/define";\nexport const api = defineApi({ baseURL: "https://api.example", endpoints: {} });\n',
   );
-  writeFileSync(join(root, "courier.config.ts"), 'import { api } from "./src/api";\nexport default { sources: { api } };\n');
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'import { api } from "./src/api";\nexport default { sources: { api } };\n',
+  );
 });
 
 afterEach(() => {
@@ -78,11 +81,24 @@ describe("prepareEdit, when Studio stops before planning", () => {
   it("names the existing mocks file and gives only the lines to add while the config does not load", async () => {
     writeFileSync(join(root, "courier.mocks.ts"), EXISTING);
 
-    const outcome = manual(await prepareEdit(ctx(), { running: null, failure: failureOf(new Error("Cannot find module ./src/gone"), root) }, [request]));
+    const outcome = manual(
+      await prepareEdit(
+        ctx(),
+        { running: null, failure: failureOf(new Error("Cannot find module ./src/gone"), root) },
+        [request],
+      ),
+    );
 
-    expect(outcome).toMatchObject({ target: "courier.mocks.ts", creates: false, retryable: true, reasons: [{ code: "CONFIG_LOAD_FAILING" }] });
+    expect(outcome).toMatchObject({
+      target: "courier.mocks.ts",
+      creates: false,
+      retryable: true,
+      reasons: [{ code: "CONFIG_LOAD_FAILING" }],
+    });
     expect(outcome.snippet).not.toContain("export default");
-    expect(outcome.snippet).toContain("second: defineMockServer({ source: courierConfig.sources.api })");
+    expect(outcome.snippet).toContain(
+      "second: defineMockServer({ source: courierConfig.sources.api })",
+    );
   });
 
   it("names the existing mocks file while it does not load, relative to the project", async () => {
@@ -90,12 +106,19 @@ describe("prepareEdit, when Studio stops before planning", () => {
     const loaded = await loadCourierConfig(root);
     const broken: LoadedCourierConfig = {
       ...loaded,
-      mocks: { ...loaded.mocks, error: new Error(`ParseError: Unexpected token \n ${root}/courier.mocks.ts:3:2`) },
+      mocks: {
+        ...loaded.mocks,
+        error: new Error(`ParseError: Unexpected token \n ${root}/courier.mocks.ts:3:2`),
+      },
     };
 
     const outcome = manual(await prepareEdit(ctx(), { running: broken, failure: null }, [request]));
 
-    expect(outcome).toMatchObject({ target: "courier.mocks.ts", creates: false, reasons: [{ code: "MOCKS_LOAD_FAILING" }] });
+    expect(outcome).toMatchObject({
+      target: "courier.mocks.ts",
+      creates: false,
+      reasons: [{ code: "MOCKS_LOAD_FAILING" }],
+    });
     expect(outcome.reasons[0]?.message).toBe(
       "courier.mocks.ts does not load right now (ParseError: Unexpected token courier.mocks.ts:3:2). Fix that first.",
     );
@@ -108,14 +131,22 @@ describe("prepareEdit, when Studio stops before planning", () => {
 
     const outcome = manual(await prepareEdit(ctx(), { running: loaded, failure: null }, [request]));
 
-    expect(outcome).toMatchObject({ target: "courier.mocks.js", creates: false, reasons: [{ code: "MOCKS_JAVASCRIPT" }] });
+    expect(outcome).toMatchObject({
+      target: "courier.mocks.js",
+      creates: false,
+      reasons: [{ code: "MOCKS_JAVASCRIPT" }],
+    });
     expect(outcome.snippet).not.toContain("export default");
   });
 
   it("gives a whole new file only when the project has none", async () => {
     const outcome = manual(await prepareEdit(ctx(), { running: null, failure: null }, [request]));
 
-    expect(outcome).toMatchObject({ target: null, creates: true, reasons: [{ code: "NO_CONFIG" }] });
+    expect(outcome).toMatchObject({
+      target: null,
+      creates: true,
+      reasons: [{ code: "NO_CONFIG" }],
+    });
     expect(outcome.snippet).toContain("export default defineMocks({");
   });
 });
@@ -128,13 +159,19 @@ describe("prepareEdit, against what Studio runs", () => {
 
     const outcome = manual(await prepareEdit(ctx(), { running: loaded, failure: null }, [request]));
 
-    expect(outcome).toMatchObject({ retryable: true, reasons: [{ code: "MOCKS_CHANGED_SINCE_LOAD" }] });
+    expect(outcome).toMatchObject({
+      retryable: true,
+      reasons: [{ code: "MOCKS_CHANGED_SINCE_LOAD" }],
+    });
   });
 
   it("refuses a file whose mocks are not all written in the object it would add to", async () => {
     writeFileSync(join(root, "courier.mocks.ts"), EXISTING);
     const loaded = await loadCourierConfig(root);
-    const hidden: LoadedCourierConfig = { ...loaded, mocks: { ...loaded.mocks, entries: { ...loaded.mocks.entries, added: {} } } };
+    const hidden: LoadedCourierConfig = {
+      ...loaded,
+      mocks: { ...loaded.mocks, entries: { ...loaded.mocks.entries, added: {} } },
+    };
 
     const outcome = manual(await prepareEdit(ctx(), { running: hidden, failure: null }, [request]));
 
@@ -146,9 +183,14 @@ describe("prepareEdit, against what Studio runs", () => {
     writeFileSync(join(root, "courier.mocks.ts"), EXISTING);
     const loaded = await loadCourierConfig(root);
 
-    const outcome = await prepareEdit(ctx(), { running: loaded, failure: null }, [{ ...request, source: "billing" }]);
+    const outcome = await prepareEdit(ctx(), { running: loaded, failure: null }, [
+      { ...request, source: "billing" },
+    ]);
 
-    expect(outcome).toMatchObject({ status: "invalid", errors: [{ index: 0, source: "billing", field: "source" }] });
+    expect(outcome).toMatchObject({
+      status: "invalid",
+      errors: [{ index: 0, source: "billing", field: "source" }],
+    });
   });
 
   it("plans the edit when Studio runs the file as it is", async () => {

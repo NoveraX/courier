@@ -1,5 +1,5 @@
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { defineApi, defineGroup, courier } from "@noverax/courier/define";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../src/auto/create-auto-server";
@@ -16,7 +16,10 @@ const api = defineApi({
       endpoints: {
         list: endpoint.get("").response(z.array(ItemSchema)),
         get: endpoint.get(":id").response(ItemSchema),
-        create: endpoint.post("").variables(z.object({ name: z.string(), price: z.number() })).response(ItemSchema),
+        create: endpoint
+          .post("")
+          .variables(z.object({ name: z.string(), price: z.number() }))
+          .response(ItemSchema),
         delete: endpoint.del(":id"),
         deleteAll: endpoint.del(""),
       },
@@ -38,8 +41,12 @@ describe("withLatency profiles", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("applies custom latency profile with min/max/jitter", async () => {
     const start = performance.now();
@@ -68,8 +75,12 @@ describe("sequence with status objects", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("returns data from sequence objects", async () => {
     const r1 = await fetch(`${url}/items/x`).then((r) => r.json());
@@ -94,8 +105,12 @@ describe("built-in preset scenarios", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("happy-path returns seeded data", async () => {
     const body = await fetch(`${url}/items`).then((r) => r.json());
@@ -142,8 +157,12 @@ describe("REST route /api/:group/:method", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("GET /api/items/list returns data", async () => {
     const res = await fetch(`${url}/api/items/list`);
@@ -175,8 +194,12 @@ describe("dynamic mock registration after start", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("auto-CRUD works initially", async () => {
     const body = await fetch(`${url}/items`).then((r) => r.json());
@@ -201,13 +224,22 @@ describe("admin API (/__admin/)", () => {
     admin: true,
     seed: { count: 3 },
     scenarios: {
-      empty: { name: "empty", apply: (mock) => { (mock as any)("items", "list").resolves([]); } },
+      empty: {
+        name: "empty",
+        apply: (mock) => {
+          (mock as any)("items", "list").resolves([]);
+        },
+      },
     },
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("GET /__admin/health returns status + counts", async () => {
     const body = await fetch(`${url}/__admin/health`).then((r) => r.json());
@@ -290,8 +322,12 @@ describe("CORS headers", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("includes access-control-allow-origin header", async () => {
     const res = await fetch(`${url}/items`);
@@ -319,8 +355,12 @@ describe("network global latency", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("applies global latency to all requests", async () => {
     const start = performance.now();
@@ -340,8 +380,12 @@ describe("network errorRate 100%", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("all requests fail when errorRate is 1.0", async () => {
     const res = await fetch(`${url}/items`);
@@ -361,8 +405,12 @@ describe("DELETE /prefix (deleteAll)", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("has seeded data initially", async () => {
     const body = await fetch(`${url}/items`).then((r) => r.json());
@@ -404,8 +452,12 @@ describe("top-level endpoints (no group)", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("GET /users returns seeded list", async () => {
     const body = await fetch(`${url}/users`).then((r) => r.json());
@@ -440,7 +492,9 @@ describe("mixed groups + top-level endpoints", () => {
     },
     endpoints: {
       healthCheck: endpoint.get("health").response(z.object({ status: z.string() })),
-      listTags: endpoint.get("tags").response(z.array(z.object({ id: z.string(), label: z.string() }))),
+      listTags: endpoint
+        .get("tags")
+        .response(z.array(z.object({ id: z.string(), label: z.string() }))),
     },
   });
 
@@ -452,8 +506,12 @@ describe("mixed groups + top-level endpoints", () => {
   });
 
   let url: string;
-  beforeAll(async () => { url = (await server.start()).url; });
-  afterAll(async () => { await server.stop(); });
+  beforeAll(async () => {
+    url = (await server.start()).url;
+  });
+  afterAll(async () => {
+    await server.stop();
+  });
 
   it("grouped endpoint works", async () => {
     const body = await fetch(`${url}/products`).then((r) => r.json());

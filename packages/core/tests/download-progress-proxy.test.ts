@@ -68,8 +68,7 @@ describe("download progress through the proxy", () => {
   it("knows the answer's total and ends at 100%", async () => {
     const events: DownloadProgress[] = [];
 
-    await client()
-      .rows.with({ onDownloadProgress: (p: DownloadProgress) => events.push(p) })();
+    await client().rows.with({ onDownloadProgress: (p: DownloadProgress) => events.push(p) })();
 
     const last = events.at(-1);
     expect(events[0]?.totalBytes).toBeGreaterThanOrEqual(ROWS.length);
@@ -80,8 +79,10 @@ describe("download progress through the proxy", () => {
   it("knows the upstream's total for a streamed answer", async () => {
     const events: DownloadProgress[] = [];
 
-    const body = await client()
-      .bytes.with({ stream: true, onDownloadProgress: (p: DownloadProgress) => events.push(p) })();
+    const body = await client().bytes.with({
+      stream: true,
+      onDownloadProgress: (p: DownloadProgress) => events.push(p),
+    })();
     const received = new Uint8Array(await new Response(body as ReadableStream).arrayBuffer());
 
     expect(received).toEqual(BYTES);

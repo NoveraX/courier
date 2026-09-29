@@ -1,11 +1,13 @@
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { describe, expect, it } from "vitest";
-import { getEndpointSchema, validateEndpoint, validateSource } from "../src/contract/validator";
 import { createContractReport } from "../src/contract/report";
+import { getEndpointSchema, validateEndpoint, validateSource } from "../src/contract/validator";
 
 // Minimal Standard Schema implementation for testing
-type SchemaResult<T> = { value: T } | { issues: Array<{ message: string; path?: Array<{ key: string }> }> };
+type SchemaResult<T> =
+  | { value: T }
+  | { issues: Array<{ message: string; path?: Array<{ key: string }> }> };
 
 function createSchema<T>(
   validate: (value: unknown) => SchemaResult<T>,
@@ -23,11 +25,16 @@ const userSchema = createSchema<{ id: string; name: string; email: string }>((va
   const obj = value as Record<string, unknown>;
   const issues: Array<{ message: string; path: Array<{ key: string }> }> = [];
 
-  if (typeof obj?.id !== "string") issues.push({ message: "Expected string", path: [{ key: "id" }] });
-  if (typeof obj?.name !== "string") issues.push({ message: "Expected string", path: [{ key: "name" }] });
-  if (typeof obj?.email !== "string") issues.push({ message: "Expected string", path: [{ key: "email" }] });
+  if (typeof obj?.id !== "string")
+    issues.push({ message: "Expected string", path: [{ key: "id" }] });
+  if (typeof obj?.name !== "string")
+    issues.push({ message: "Expected string", path: [{ key: "name" }] });
+  if (typeof obj?.email !== "string")
+    issues.push({ message: "Expected string", path: [{ key: "email" }] });
 
-  return issues.length ? { issues } : { value: value as { id: string; name: string; email: string } };
+  return issues.length
+    ? { issues }
+    : { value: value as { id: string; name: string; email: string } };
 });
 
 const { endpoint } = courier();
@@ -102,7 +109,10 @@ describe("validateSource", () => {
   });
 
   it("reports mock data that breaks the schema of a defineApi source", async () => {
-    const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response(userSchema) } });
+    const users = defineGroup({
+      prefix: "users",
+      endpoints: { getAll: endpoint.get("").response(userSchema) },
+    });
     const api = defineApi({ baseURL: "https://api.test", groups: { users } });
 
     const results = await validateSource(api, new Map([["users/getAll", { id: 1 }]]));
@@ -117,13 +127,21 @@ describe("validateSource", () => {
       endpoints: { listUsers: endpoint.get("users").response(userSchema) },
     });
 
-    const results = await validateSource(flat, new Map([["listUsers", { id: "1", name: "A", email: "a@t" }]]));
+    const results = await validateSource(
+      flat,
+      new Map([["listUsers", { id: "1", name: "A", email: "a@t" }]]),
+    );
 
-    expect(results).toEqual([{ group: "", method: "listUsers", status: "pass", target: "response" }]);
+    expect(results).toEqual([
+      { group: "", method: "listUsers", status: "pass", target: "response" },
+    ]);
   });
 
   it("validates both the groups and the top-level endpoints of a mixed source", async () => {
-    const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response(userSchema) } });
+    const users = defineGroup({
+      prefix: "users",
+      endpoints: { getAll: endpoint.get("").response(userSchema) },
+    });
     const mixed = defineApi({
       baseURL: "https://api.test",
       groups: { users },
@@ -224,7 +242,10 @@ describe("validateSource reports every endpoint", () => {
   });
 
   it("ignores a helper sitting in the group beside the endpoints", async () => {
-    const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response(userSchema) } });
+    const users = defineGroup({
+      prefix: "users",
+      endpoints: { getAll: endpoint.get("").response(userSchema) },
+    });
     const source = defineApi({ baseURL: "https://api.test", groups: { users } });
     Object.assign(source.options.groups.users, { helper: () => "not an endpoint" });
 

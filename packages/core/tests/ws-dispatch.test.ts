@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-
-import { handleSubscribe, handleMessage, handleUnsubscribe } from "../src/adapter/ws-dispatch";
-import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import type { WSSocketContext } from "../src/adapter/ws-context";
+import { handleMessage, handleSubscribe, handleUnsubscribe } from "../src/adapter/ws-dispatch";
+import { qualifyTopic } from "../src/realtime/ws/topic-key";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { ENDPOINT_SCHEMA } from "../src/validation";
 
@@ -23,7 +22,11 @@ function createEndpoint(transport: string, receive?: unknown, variables?: unknow
   const fn = async function* () {
     yield "data";
   };
-  const schema = { transport, ...(receive ? { receive } : {}), ...(variables ? { variables } : {}) };
+  const schema = {
+    transport,
+    ...(receive ? { receive } : {}),
+    ...(variables ? { variables } : {}),
+  };
   return {
     [ENDPOINT_SCHEMA]: schema,
     kind: "channel",
@@ -198,7 +201,12 @@ describe("handleSubscribe", () => {
     const asked = qualifyTopic("api.chat.feed", { room: "a" });
     const served = qualifyTopic("api.chat.feed", { limit: 50, room: "a" });
 
-    await handleSubscribe(ctx, { type: "subscribe", id: "7", topic: asked, payload: { room: "a" } });
+    await handleSubscribe(ctx, {
+      type: "subscribe",
+      id: "7",
+      topic: asked,
+      payload: { room: "a" },
+    });
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(sent[0]).toEqual({ type: "renamed", id: "7", topic: asked, payload: served });
@@ -348,7 +356,9 @@ describe("handleSubscribe", () => {
   it("clears subscriptionIds and ends the subscription once when channel onJoin throws", async () => {
     const receiveSchema = { "~standard": { validate: (v: unknown) => ({ value: v }) } };
     const factory = () => ({
-      onJoin: () => { throw new Error("Auth failed"); },
+      onJoin: () => {
+        throw new Error("Auth failed");
+      },
       onMessage: vi.fn(),
     });
     const schema = {
@@ -466,14 +476,21 @@ describe("handleMessage", () => {
   });
 
   it("hands the handler what the receive schema produced, not the payload as it arrived", async () => {
-    const trimming = { "~standard": { validate: (v: unknown) => ({ value: { text: String(v).trim() } }) } };
+    const trimming = {
+      "~standard": { validate: (v: unknown) => ({ value: { text: String(v).trim() } }) },
+    };
     const endpoint = createEndpoint("ws", trimming);
     const source = createSource("chat", "feed", endpoint);
     const onMessage = vi.fn();
     const { ctx } = createMockCtx({ sources: { api: source } as never });
     ctx.topicManager.subscribe("conn-1", { topic: "api.chat.feed", cleanup: vi.fn(), onMessage });
 
-    await handleMessage(ctx, { type: "message", id: "m1", topic: "api.chat.feed", payload: "  hi  " });
+    await handleMessage(ctx, {
+      type: "message",
+      id: "m1",
+      topic: "api.chat.feed",
+      payload: "  hi  ",
+    });
 
     expect(onMessage).toHaveBeenCalledWith({ text: "hi" });
   });
@@ -572,7 +589,12 @@ describe("handleMessage — a channel with no payload schema", () => {
     return { ...made, delivered };
   }
 
-  const message = { type: "message" as const, id: "1", topic: "api.chat.feed", payload: { text: "hi" } };
+  const message = {
+    type: "message" as const,
+    id: "1",
+    topic: "api.chat.feed",
+    payload: { text: "hi" },
+  };
 
   it("delivers to a channel that declared its shape in types only", async () => {
     const { ctx, delivered } = channelCtx({ transport: "ws", bidirectional: true });

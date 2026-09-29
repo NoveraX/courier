@@ -39,7 +39,10 @@ function setTty(stream: NodeJS.WriteStream, isTTY: boolean, depth = 24): () => v
   Object.defineProperty(stream, "getColorDepth", { value: () => depth, configurable: true });
   return () => {
     Object.defineProperty(stream, "isTTY", { value: had.isTTY, configurable: true });
-    Object.defineProperty(stream, "getColorDepth", { value: had.getColorDepth, configurable: true });
+    Object.defineProperty(stream, "getColorDepth", {
+      value: had.getColorDepth,
+      configurable: true,
+    });
   };
 }
 
@@ -94,7 +97,9 @@ describe("where a line goes", () => {
 
 describe("the cause", () => {
   it("is handed to the console as it is, so its stack and cause chain print", () => {
-    const cause = new Error("redis subscribe failed", { cause: new Error("ECONNREFUSED 127.0.0.1:6379") });
+    const cause = new Error("redis subscribe failed", {
+      cause: new Error("ECONNREFUSED 127.0.0.1:6379"),
+    });
 
     createLogger("WS").warn("onJoin handler failed", cause);
 
@@ -110,7 +115,9 @@ describe("the cause", () => {
   });
 
   it("brings up the root of a chain too deep for the console to show", () => {
-    const root = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:59999"), { code: "ECONNREFUSED" });
+    const root = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:59999"), {
+      code: "ECONNREFUSED",
+    });
     const top = new Error("request failed", {
       cause: new Error("upstream", { cause: new TypeError("fetch failed", { cause: root }) }),
     });
@@ -122,7 +129,10 @@ describe("the cause", () => {
   });
 
   it("brings up an AggregateError whose errors the console would hide", () => {
-    const refused = new AggregateError([Object.assign(new Error("connect ECONNREFUSED ::1:59999"), { port: 59999 })], "");
+    const refused = new AggregateError(
+      [Object.assign(new Error("connect ECONNREFUSED ::1:59999"), { port: 59999 })],
+      "",
+    );
     const fetchFailed = new TypeError("fetch failed", { cause: refused });
 
     createLogger("Proxy").warn("Upstream request failed", fetchFailed);
@@ -131,7 +141,9 @@ describe("the cause", () => {
   });
 
   it("adds nothing when the console shows the whole chain", () => {
-    const top = new Error("upstream", { cause: new TypeError("fetch failed", { cause: new Error("refused") }) });
+    const top = new Error("upstream", {
+      cause: new TypeError("fetch failed", { cause: new Error("refused") }),
+    });
 
     createLogger("Proxy").warn("Upstream request failed", top);
 
@@ -139,10 +151,12 @@ describe("the cause", () => {
   });
 
   it("brings up the root exactly when the console hides it", () => {
-    const keyed = (message: string) => Object.assign(new Error(message), { code: "ECONNREFUSED", port: 4000 });
+    const keyed = (message: string) =>
+      Object.assign(new Error(message), { code: "ECONNREFUSED", port: 4000 });
     const chain = (depth: number, root: Error): Error => {
       let error = root;
-      for (let level = depth; level > 0; level--) error = new Error(`level ${level}`, { cause: error });
+      for (let level = depth; level > 0; level--)
+        error = new Error(`level ${level}`, { cause: error });
       return error;
     };
     const cases = [
@@ -166,8 +180,12 @@ describe("the cause", () => {
   });
 
   it("adds no root for a null or primitive cause, or a chain that loops", () => {
-    const withNull = new Error("a", { cause: new Error("b", { cause: new Error("c", { cause: null }) }) });
-    const withString = new Error("a", { cause: new Error("b", { cause: new Error("c", { cause: "ECONNRESET" }) }) });
+    const withNull = new Error("a", {
+      cause: new Error("b", { cause: new Error("c", { cause: null }) }),
+    });
+    const withString = new Error("a", {
+      cause: new Error("b", { cause: new Error("c", { cause: "ECONNRESET" }) }),
+    });
     const first = new Error("first");
     const second = new Error("second", { cause: new Error("third", { cause: first }) });
     Object.defineProperty(first, "cause", { value: second });

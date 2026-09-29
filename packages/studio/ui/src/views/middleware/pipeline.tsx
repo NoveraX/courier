@@ -1,6 +1,6 @@
-import type { ChainEntry, MiddlewareStep } from "./types";
+import { Connector, FetchNode, OverheadSummary, PhaseLabel } from "./pipeline-parts";
 import { StepCard } from "./step-card";
-import { Connector, FetchNode, PhaseLabel, OverheadSummary } from "./pipeline-parts";
+import type { ChainEntry, MiddlewareStep } from "./types";
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -26,7 +26,13 @@ export function Pipeline({ chain }: PipelineProps): React.ReactElement {
           <PhaseLabel label="Before Fetch" delay={0} />
           <Connector delay={0.05} />
           {beforeSteps.map((step) => (
-            <StepSection key={`before-${step.index}`} step={step} subPhase="before" maxDuration={maxDuration} index={stepIdx++} />
+            <StepSection
+              key={`before-${step.index}`}
+              step={step}
+              subPhase="before"
+              maxDuration={maxDuration}
+              index={stepIdx++}
+            />
           ))}
         </>
       )}
@@ -40,21 +46,35 @@ export function Pipeline({ chain }: PipelineProps): React.ReactElement {
           <Connector delay={stepIdx * 0.05 + 0.3} />
           {afterSteps.map((step, i) => (
             <StepSection
-              key={`after-${step.index}`} step={step} subPhase="after" maxDuration={maxDuration} index={stepIdx++}
+              key={`after-${step.index}`}
+              step={step}
+              subPhase="after"
+              maxDuration={maxDuration}
+              index={stepIdx++}
               isLast={i === afterSteps.length - 1}
             />
           ))}
         </>
       )}
 
-      <OverheadSummary overhead={chain.totalOverhead} percent={chain.overheadPercent} delay={stepIdx * 0.05 + 0.2} />
+      <OverheadSummary
+        overhead={chain.totalOverhead}
+        percent={chain.overheadPercent}
+        delay={stepIdx * 0.05 + 0.2}
+      />
     </div>
   );
 }
 
 // ── Step with connector ────────────────────────────────────────────────────
 
-function StepSection({ step, subPhase, maxDuration, index, isLast = false }: {
+function StepSection({
+  step,
+  subPhase,
+  maxDuration,
+  index,
+  isLast = false,
+}: {
   step: MiddlewareStep;
   subPhase: "before" | "after";
   maxDuration: number;

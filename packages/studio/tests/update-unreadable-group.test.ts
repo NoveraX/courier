@@ -20,7 +20,11 @@ function petsSpec(version: string, operations: Record<string, Record<string, str
   for (const [path, methods] of Object.entries(operations)) {
     paths[path] = {};
     for (const [method, operationId] of Object.entries(methods)) {
-      paths[path][method] = { operationId, tags: ["pets"], responses: { "200": { description: "ok" } } };
+      paths[path][method] = {
+        operationId,
+        tags: ["pets"],
+        responses: { "200": { description: "ok" } },
+      };
     }
   }
   return parseSpec(JSON.stringify({ openapi: "3.1.0", info: { title: "Pets", version }, paths }));
@@ -48,7 +52,13 @@ beforeEach(async () => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "courier-update-unreadable-")));
   put("courier.config.ts", CONFIG);
   url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }, 30_000);
 
@@ -68,14 +78,20 @@ function read(path: string): string {
   return readFileSync(join(root, path), "utf8");
 }
 
-async function post(path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+async function post(
+  path: string,
+  body: unknown,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   const payload: unknown = await response.json();
-  return { status: response.status, body: typeof payload === "object" && payload !== null ? { ...payload } : {} };
+  return {
+    status: response.status,
+    body: typeof payload === "object" && payload !== null ? { ...payload } : {},
+  };
 }
 
 interface Plan {
@@ -86,8 +102,14 @@ interface Plan {
 
 function planOf(reply: { body: Record<string, unknown> }): Plan {
   const plan = reply.body.plan;
-  if (typeof plan !== "object" || plan === null) throw new Error(`no plan in ${JSON.stringify(reply.body)}`);
-  const { digest, writes, pending } = { digest: undefined, writes: undefined, pending: undefined, ...plan };
+  if (typeof plan !== "object" || plan === null)
+    throw new Error(`no plan in ${JSON.stringify(reply.body)}`);
+  const { digest, writes, pending } = {
+    digest: undefined,
+    writes: undefined,
+    pending: undefined,
+    ...plan,
+  };
   if (typeof digest !== "string" || !Array.isArray(writes) || !Array.isArray(pending)) {
     throw new Error(`not a plan: ${JSON.stringify(plan)}`);
   }

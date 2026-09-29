@@ -1,13 +1,13 @@
-import { useState } from "react";
 import { List } from "lucide-react";
+import { useState } from "react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageShell } from "@/components/shared/page-shell";
 import { EndpointPanel } from "../detail/endpoint-panel";
 import { useExplorerNavigation } from "../use-explorer-navigation";
-import { useEndpointsTable } from "./use-endpoints-table";
-import { EndpointsToolbar } from "./endpoints-toolbar";
 import { EndpointsTable } from "./endpoints-table";
+import { EndpointsToolbar } from "./endpoints-toolbar";
+import { useEndpointsTable } from "./use-endpoints-table";
 
 // ── Component ──────────────────────────────────────────────────────────────
 

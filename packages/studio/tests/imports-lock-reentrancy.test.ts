@@ -39,9 +39,7 @@ describe("withImportsLock", () => {
 
   it("propagates return values and errors from top-level tasks", async () => {
     await expect(withImportsLock(() => "ok")).resolves.toBe("ok");
-    await expect(withImportsLock(() => Promise.reject(new Error("boom")))).rejects.toThrow(
-      "boom",
-    );
+    await expect(withImportsLock(() => Promise.reject(new Error("boom")))).rejects.toThrow("boom");
 
     /* Queue must survive a rejection. */
     await expect(withImportsLock(() => "after")).resolves.toBe("after");

@@ -72,8 +72,13 @@
 /* ── Active edge pulse ───────────────────────────────────────────────────── */
 
 @keyframes edgePulse {
-  0%, 100% { opacity: 0.65; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .edge-active > path:nth-child(2) {
@@ -83,8 +88,12 @@
 /* ── Particle fade-in on mount ───────────────────────────────────────────── */
 
 @keyframes particleFadeIn {
-  from { opacity: 0; }
-  to { opacity: 0.9; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.9;
+  }
 }
 
 .edge-active circle {

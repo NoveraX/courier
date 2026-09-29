@@ -15,7 +15,15 @@ const manifest = {
   },
   bin: { example: "./lib/cli.js" },
 };
-const complete = ["package.json", "README.md", "lib/index.d.ts", "lib/index.js", "lib/server.d.ts", "lib/server.js", "lib/cli.js"];
+const complete = [
+  "package.json",
+  "README.md",
+  "lib/index.d.ts",
+  "lib/index.js",
+  "lib/server.d.ts",
+  "lib/server.js",
+  "lib/cli.js",
+];
 
 describe("packageProblems", () => {
   it("passes a tarball carrying every file its manifest points at", () => {
@@ -23,7 +31,9 @@ describe("packageProblems", () => {
   });
 
   it("names an entry's file, a declaration and a command the tarball lacks", () => {
-    const files = complete.filter((file) => !["lib/server.js", "lib/index.d.ts", "lib/cli.js"].includes(file));
+    const files = complete.filter(
+      (file) => !["lib/server.js", "lib/index.d.ts", "lib/cli.js"].includes(file),
+    );
 
     expect(packageProblems(manifest, files)).toEqual([
       "@noverax/example: ./lib/index.d.ts, which its manifest points at, is not in the tarball",

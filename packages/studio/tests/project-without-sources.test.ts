@@ -6,7 +6,14 @@
  * and writes the first import, which the config declares nowhere. Once the
  * config lists the source the import wrote, Studio shows it as imported.
  */
-import { mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
@@ -14,8 +21,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { loadImportsState } from "../src/apis/imports-state";
 import { createStudioServer } from "../src/server/create-studio-server";
-import type { StudioServer } from "../src/server/types";
 import { readGeneratedFile } from "../src/server/import-files/generated-header";
+import type { StudioServer } from "../src/server/types";
 import { tokenHeader } from "./helpers/token-header";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
@@ -109,7 +116,11 @@ function latest(events: Array<[string, unknown]>, name: string): unknown {
   return events.filter(([event]) => event === name).at(-1)?.[1];
 }
 
-async function post(url: string, path: string, body: unknown): Promise<{ status: number; body: unknown }> {
+async function post(
+  url: string,
+  path: string,
+  body: unknown,
+): Promise<{ status: number; body: unknown }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
@@ -125,7 +136,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isFileList(value: unknown): value is Array<{ path: string; content: string }> {
   return (
     Array.isArray(value) &&
-    value.every((file) => isRecord(file) && typeof file.path === "string" && typeof file.content === "string")
+    value.every(
+      (file) => isRecord(file) && typeof file.path === "string" && typeof file.content === "string",
+    )
   );
 }
 
@@ -139,7 +152,10 @@ describe("a project whose config declares no sources yet", () => {
     });
 
     expect(loaded).toBe(true);
-    expect(latest(events, "config:status")).toMatchObject({ state: "loaded", configFile: "courier.config.ts" });
+    expect(latest(events, "config:status")).toMatchObject({
+      state: "loaded",
+      configFile: "courier.config.ts",
+    });
     expect(latest(events, "scan:sources")).toEqual({ sources: [], scannedFiles: 0 });
     expect(latest(events, "registry:updated")).toEqual({ sources: [] });
   }, 20_000);
@@ -149,7 +165,10 @@ describe("a project whose config declares no sources yet", () => {
 
     const checks = await post(url, "/api/apis/imports/check-all", {});
     const parsed = await post(url, "/api/apis/parse", { source: "raw", content: SPEC_TEXT });
-    const generated = await post(url, "/api/apis/generate", { spec: parsed.body, options: OPTIONS });
+    const generated = await post(url, "/api/apis/generate", {
+      spec: parsed.body,
+      options: OPTIONS,
+    });
     const files = isRecord(generated.body) ? generated.body.files : undefined;
     if (!isFileList(files)) throw new Error(`generate answered ${JSON.stringify(generated.body)}`);
     const written = await post(url, "/api/apis/write", {
@@ -164,9 +183,15 @@ describe("a project whose config declares no sources yet", () => {
     expect(checks).toEqual({ status: 200, body: { results: {} } });
     expect(parsed.status).toBe(200);
     expect(written.status).toBe(200);
-    expect(isRecord(written.body) && Array.isArray(written.body.written) ? [...written.body.written].sort() : []).toEqual(paths);
+    expect(
+      isRecord(written.body) && Array.isArray(written.body.written)
+        ? [...written.body.written].sort()
+        : [],
+    ).toEqual(paths);
     for (const file of files) {
-      expect(readGeneratedFile(readFileSync(join(root, file.path), "utf-8")).body).toBe(file.content);
+      expect(readGeneratedFile(readFileSync(join(root, file.path), "utf-8")).body).toBe(
+        file.content,
+      );
     }
     expect(Object.keys(loadImportsState(root).imports.petstore?.files ?? {}).sort()).toEqual(paths);
   }, 20_000);
@@ -174,10 +199,17 @@ describe("a project whose config declares no sources yet", () => {
   it("shows the imported source once the config lists it", async () => {
     const url = await start();
     const parsed = await post(url, "/api/apis/parse", { source: "raw", content: SPEC_TEXT });
-    const generated = await post(url, "/api/apis/generate", { spec: parsed.body, options: OPTIONS });
+    const generated = await post(url, "/api/apis/generate", {
+      spec: parsed.body,
+      options: OPTIONS,
+    });
     const files = isRecord(generated.body) ? generated.body.files : undefined;
     if (!isFileList(files)) throw new Error(`generate answered ${JSON.stringify(generated.body)}`);
-    await post(url, "/api/apis/write", { sourceName: "petstore", spec: parsed.body, options: OPTIONS });
+    await post(url, "/api/apis/write", {
+      sourceName: "petstore",
+      spec: parsed.body,
+      options: OPTIONS,
+    });
     const events = listen(url);
 
     writeFileSync(

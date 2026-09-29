@@ -8,10 +8,10 @@ import { WebSocket } from "ws";
 import { z } from "zod";
 
 import { courier } from "../src/define/courier";
-import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { qualifyTopic } from "../src/realtime/ws/topic-key";
-import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
+import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { createSharedBus } from "./helpers/shared-pubsub";
+import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 const { channel } = courier();
 const endpoints = {
@@ -52,7 +52,10 @@ describe("a broadcast through one replica's connection registry", () => {
     const onB = join(b.url, "r1");
     await settle(100);
 
-    await a.handler.connections.broadcastToTopic(qualifyTopic("api.live.room", { room: "r1" }), "hi");
+    await a.handler.connections.broadcastToTopic(
+      qualifyTopic("api.live.room", { room: "r1" }),
+      "hi",
+    );
     await settle(50);
 
     expect(onA).toEqual(["hi"]);

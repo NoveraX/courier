@@ -37,11 +37,17 @@ const SPEC = parseSpec(
             { name: "limit", in: "query", schema: { type: "integer" } },
             { name: "kind", in: "query", schema: { type: "string" } },
           ],
-          responses: { "200": { description: "ok", content: { "application/json": { schema: ref("Pet") } } } },
+          responses: {
+            "200": { description: "ok", content: { "application/json": { schema: ref("Pet") } } },
+          },
         },
       },
       "/store": {
-        get: { operationId: "inventory", tags: ["store"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "inventory",
+          tags: ["store"],
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
     components: { schemas: { Pet: { type: "object", properties: { name: { type: "string" } } } } },
@@ -74,25 +80,37 @@ describe("the extension generated imports carry", () => {
 
     expect(generatedImportExtension(project("esm", "module", "NodeNext"), layout)).toBe(".js");
     expect(generatedImportExtension(project("cjs", null, "NodeNext"), layout)).toBeUndefined();
-    expect(generatedImportExtension(project("bundler", "module", "ESNext"), layout)).toBeUndefined();
+    expect(
+      generatedImportExtension(project("bundler", "module", "ESNext"), layout),
+    ).toBeUndefined();
   });
 
-  it.each(["tag", "single"] as const)("lets the files compile there, grouped by %s", (groupBy) => {
-    const root = project(`compile-${groupBy}`, "module", "NodeNext");
-    const options = withImportExtension(
-      { type: "openapi", outputDir: "src/api", sourceName: "pets", groupBy, generateClient: "both" },
-      root,
-    );
-    const consumer = `import { petsApi } from "./src/api/pets/index.js";\nexport const pets = petsApi;\n`;
-    writeProject(`import-extension/compile-${groupBy}`, generateCode(SPEC, options), {
-      "consumer.ts": consumer,
-      "tsconfig.json": JSON.stringify({ compilerOptions: { module: "NodeNext" } }),
-      "package.json": JSON.stringify({ type: "module" }),
-    });
+  it.each(["tag", "single"] as const)(
+    "lets the files compile there, grouped by %s",
+    (groupBy) => {
+      const root = project(`compile-${groupBy}`, "module", "NodeNext");
+      const options = withImportExtension(
+        {
+          type: "openapi",
+          outputDir: "src/api",
+          sourceName: "pets",
+          groupBy,
+          generateClient: "both",
+        },
+        root,
+      );
+      const consumer = `import { petsApi } from "./src/api/pets/index.js";\nexport const pets = petsApi;\n`;
+      writeProject(`import-extension/compile-${groupBy}`, generateCode(SPEC, options), {
+        "consumer.ts": consumer,
+        "tsconfig.json": JSON.stringify({ compilerOptions: { module: "NodeNext" } }),
+        "package.json": JSON.stringify({ type: "module" }),
+      });
 
-    expect(options.importExtension).toBe(".js");
-    expect(compileProject(root, ["consumer.ts"], NODE_NEXT)).toEqual([]);
-  }, 60_000);
+      expect(options.importExtension).toBe(".js");
+      expect(compileProject(root, ["consumer.ts"], NODE_NEXT)).toEqual([]);
+    },
+    60_000,
+  );
 });
 
 describe("the config import Studio asks for", () => {
@@ -112,20 +130,29 @@ describe("the config import Studio asks for", () => {
       root: realpathSync(root),
     });
 
-    expect(declaration?.source?.importLine).toBe('import { pets } from "./src/api/pets/source.js";');
+    expect(declaration?.source?.importLine).toBe(
+      'import { pets } from "./src/api/pets/source.js";',
+    );
   });
 });
 
 describe("adding endpoints to an import whose files carry the extension", () => {
   const layout = resolveImportLayout({ outputDir: "src/api" }, "pets");
   const files = Object.fromEntries(
-    generateCode(SPEC, { type: "openapi", outputDir: "src/api", importExtension: ".js" }, "pets").map(
-      (file) => [file.path, file.content],
-    ),
+    generateCode(
+      SPEC,
+      { type: "openapi", outputDir: "src/api", importExtension: ".js" },
+      "pets",
+    ).map((file) => [file.path, file.content]),
   );
 
   it("imports a new group's file with it", () => {
-    const update = sourceWithNewGroups({ orders: ["listOrders"] }, { groupBy: "tag" }, files, layout);
+    const update = sourceWithNewGroups(
+      { orders: ["listOrders"] },
+      { groupBy: "tag" },
+      files,
+      layout,
+    );
 
     expect(update?.content).toContain('from "./orders/index.js"');
   });

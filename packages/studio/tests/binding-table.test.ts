@@ -1,11 +1,9 @@
-import { defineApi, defineGroup, courier } from "@noverax/courier/define";
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { describe, expect, it } from "vitest";
 
 const { endpoint } = courier();
-import {
-  BindingConflictError,
-  BindingTable,
-} from "../src/server/catalog/binding-table";
+
+import { BindingConflictError, BindingTable } from "../src/server/catalog/binding-table";
 
 function makeConfig() {
   const usersGroup = defineGroup({

@@ -1,11 +1,11 @@
 import type { RequestEntry } from "@/store/types";
-import type { NodeMetrics, HealthLevel } from "./types";
 import {
+  ACTIVE_THRESHOLD_MS,
+  RESPONSE_TIME_WARN_MS,
   SUCCESS_RATE_GOOD,
   SUCCESS_RATE_WARN,
-  RESPONSE_TIME_WARN_MS,
-  ACTIVE_THRESHOLD_MS,
 } from "./constants";
+import type { HealthLevel, NodeMetrics } from "./types";
 
 // ── Metrics computation ─────────────────────────────────────────────────────
 
@@ -21,9 +21,7 @@ export function computeNodeMetrics(requests: RequestEntry[]): NodeMetrics {
     (r) => r.status === "error" || r.status === "validation_error",
   ).length;
 
-  const durations = completed
-    .filter((r) => r.timing)
-    .map((r) => r.timing!.total);
+  const durations = completed.filter((r) => r.timing).map((r) => r.timing!.total);
 
   const sizes = completed.map((r) => r.size ?? 0);
   const lastRequest = completed[completed.length - 1];
@@ -44,10 +42,7 @@ export function computeNodeMetrics(requests: RequestEntry[]): NodeMetrics {
 
 export function getHealthLevel(metrics: NodeMetrics): HealthLevel {
   if (metrics.totalRequests === 0) return "inactive";
-  if (
-    metrics.successRate >= SUCCESS_RATE_GOOD &&
-    metrics.p95ResponseTime < RESPONSE_TIME_WARN_MS
-  ) {
+  if (metrics.successRate >= SUCCESS_RATE_GOOD && metrics.p95ResponseTime < RESPONSE_TIME_WARN_MS) {
     return "healthy";
   }
   if (metrics.successRate >= SUCCESS_RATE_WARN) return "degraded";

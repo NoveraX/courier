@@ -7,11 +7,7 @@
 
 import type { ComponentType } from "react";
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface QualityPillProps {
   icon: ComponentType<{ className?: string }>;
@@ -39,12 +35,17 @@ export function QualityPill({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${color}`}>
+        <span
+          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium ${color}`}
+        >
           <PillIcon className="size-2.5" />
-          {label}{showFraction ? ` ${count}/${total}` : ""}
+          {label}
+          {showFraction ? ` ${count}/${total}` : ""}
         </span>
       </TooltipTrigger>
-      <TooltipContent>{tooltip}: {count} of {total}</TooltipContent>
+      <TooltipContent>
+        {tooltip}: {count} of {total}
+      </TooltipContent>
     </Tooltip>
   );
 }

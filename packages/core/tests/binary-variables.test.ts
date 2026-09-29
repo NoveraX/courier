@@ -45,7 +45,10 @@ beforeEach(() => {
   registerSources({ api });
   const handler = createHandler();
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = new Request(new URL(input instanceof Request ? input.url : String(input), "http://app.local"), init);
+    const request = new Request(
+      new URL(input instanceof Request ? input.url : String(input), "http://app.local"),
+      init,
+    );
     if (request.url.startsWith(UPSTREAM)) {
       upstreamBodies.push(new Uint8Array(await request.arrayBuffer()));
       return Response.json({ ok: true });

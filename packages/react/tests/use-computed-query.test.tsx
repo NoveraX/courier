@@ -2,13 +2,13 @@
  * @vitest-environment jsdom
  */
 
-import { type ReactNode, createElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ForbiddenError } from "@noverax/courier/realtime";
+import { createMockSSESubscription } from "@noverax/courier/testing";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { ForbiddenError } from "@noverax/courier/realtime";
-import { createMockSSESubscription } from "@noverax/courier/testing";
+import { createElement, type ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useComputedQuery } from "../src/hooks/use-computed-query";
 import type { SubscribeFn } from "../src/hooks/use-subscription";
@@ -52,19 +52,13 @@ describe("useComputedQuery", () => {
 
     const { result } = renderHook(
       () =>
-        useComputedQuery(
-          queryFn,
-          subscribeFn,
-          ["api", "users", "getAll"],
-          "users",
-          {
-            subscriptionMethod: "stream",
-            mapper: (current: Array<{ id: number; name: string }> | undefined, event) => [
-              ...(current ?? []),
-              event.data as { id: number; name: string },
-            ],
-          },
-        ),
+        useComputedQuery(queryFn, subscribeFn, ["api", "users", "getAll"], "users", {
+          subscriptionMethod: "stream",
+          mapper: (current: Array<{ id: number; name: string }> | undefined, event) => [
+            ...(current ?? []),
+            event.data as { id: number; name: string },
+          ],
+        }),
       { wrapper },
     );
 

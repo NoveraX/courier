@@ -46,7 +46,10 @@ describe("a managed mock that fails", () => {
     handlers.onError("apiMock", "Cannot find package '@hono/node-server'", true);
 
     expect(output.join("")).toContain("Cannot find package '@hono/node-server'");
-    expect(state).toMatchObject({ status: "crashed", lastError: "Cannot find package '@hono/node-server'" });
+    expect(state).toMatchObject({
+      status: "crashed",
+      lastError: "Cannot find package '@hono/node-server'",
+    });
   });
 
   it("keeps the reason's first line for the UI, and its stack for the terminal", () => {
@@ -82,7 +85,13 @@ describe("a managed mock that fails", () => {
     const { state, handlers } = events();
     handlers.onError("apiMock", "port 7401 is in use", true);
 
-    handlers.onReady("apiMock", { port: 7401, url: "http://localhost:7401", routes: [], collections: [], scenarios: [] });
+    handlers.onReady("apiMock", {
+      port: 7401,
+      url: "http://localhost:7401",
+      routes: [],
+      collections: [],
+      scenarios: [],
+    });
 
     expect(state).toMatchObject({ status: "running", lastError: undefined });
   });

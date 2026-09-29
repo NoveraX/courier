@@ -25,10 +25,12 @@ export function StepDot({
   return (
     <>
       {index > 0 && (
-        <div className={cn(
-          "h-px flex-1 transition-colors",
-          completed ? "bg-accent-brand" : "bg-border-subtle",
-        )} />
+        <div
+          className={cn(
+            "h-px flex-1 transition-colors",
+            completed ? "bg-accent-brand" : "bg-border-subtle",
+          )}
+        />
       )}
       <button
         type="button"
@@ -41,12 +43,14 @@ export function StepDot({
           !active && !completed && "text-muted-foreground",
         )}
       >
-        <span className={cn(
-          "flex size-4 items-center justify-center rounded-full text-[9px] font-bold",
-          active && "bg-accent-brand text-white",
-          completed && "bg-accent-brand/20 text-accent-brand",
-          !active && !completed && "bg-muted/60 text-muted-foreground",
-        )}>
+        <span
+          className={cn(
+            "flex size-4 items-center justify-center rounded-full text-[9px] font-bold",
+            active && "bg-accent-brand text-white",
+            completed && "bg-accent-brand/20 text-accent-brand",
+            !active && !completed && "bg-muted/60 text-muted-foreground",
+          )}
+        >
           {completed ? "✓" : index + 1}
         </span>
         {label}

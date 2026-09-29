@@ -47,9 +47,7 @@ export function StreamWaterfall({
 
       {/* Stats row */}
       <div className="flex items-center gap-3 text-caption text-muted-foreground">
-        <span className="tabular-nums">
-          {request.streamEventCount ?? 0} events
-        </span>
+        <span className="tabular-nums">{request.streamEventCount ?? 0} events</span>
         <Divider />
         <span className="tabular-nums">{rate} evt/s</span>
         <Divider />

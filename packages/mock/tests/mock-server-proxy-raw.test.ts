@@ -28,7 +28,10 @@ const server = createMockServer({ port: 0, log: false });
 let proxyUrl: string;
 
 beforeAll(async () => {
-  server.mock("users", "getAll").withHeaders({ "x-total-count": "1" }).resolves([{ id: 1, name: "Ada" }]);
+  server
+    .mock("users", "getAll")
+    .withHeaders({ "x-total-count": "1" })
+    .resolves([{ id: 1, name: "Ada" }]);
   proxyUrl = `${(await server.start()).url}/api/request`;
 });
 

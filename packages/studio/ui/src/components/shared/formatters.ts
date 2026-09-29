@@ -50,9 +50,7 @@ export function formatTimestamp(
   format: "relative" | "absolute",
   now = Date.now(),
 ): string {
-  return format === "relative"
-    ? formatRelativeTime(timestamp, now)
-    : formatAbsoluteTime(timestamp);
+  return format === "relative" ? formatRelativeTime(timestamp, now) : formatAbsoluteTime(timestamp);
 }
 
 export function formatDuration(ms: number): string {

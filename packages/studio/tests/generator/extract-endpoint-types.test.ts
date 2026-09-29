@@ -56,7 +56,9 @@ const SPEC = parseSpec(
         patch: {
           operationId: "setLabels",
           tags: ["items"],
-          parameters: [{ name: "item_id", in: "path", required: true, schema: { type: "integer" } }],
+          parameters: [
+            { name: "item_id", in: "path", required: true, schema: { type: "integer" } },
+          ],
           requestBody: {
             content: {
               "application/json": {
@@ -92,7 +94,10 @@ const SPEC = parseSpec(
               in: "query",
               schema: {
                 anyOf: [
-                  { type: "object", properties: { gte: { type: "integer" }, lt: { type: "integer" } } },
+                  {
+                    type: "object",
+                    properties: { gte: { type: "integer" }, lt: { type: "integer" } },
+                  },
                   { type: "integer" },
                 ],
               },
@@ -156,9 +161,15 @@ let problems = new Map<string, string[]>();
 beforeAll(() => {
   problems = new Map(
     VARIANTS.map(([label, options]) => {
-      const files = generateCode(SPEC, { type: "openapi", outputDir: "src/api", ...options }, "shop");
+      const files = generateCode(
+        SPEC,
+        { type: "openapi", outputDir: "src/api", ...options },
+        "shop",
+      );
       const flat = options.groupBy === "single";
-      const dir = writeProject(`extract-endpoint-types/${label}`, files, { "consumer.ts": consumer(flat) });
+      const dir = writeProject(`extract-endpoint-types/${label}`, files, {
+        "consumer.ts": consumer(flat),
+      });
       return [label, compileProject(dir, ["consumer.ts"])];
     }),
   );
@@ -169,13 +180,19 @@ afterAll(() => {
 });
 
 describe("an endpoint's variables", () => {
-  it.each(VARIANTS.map(([label]) => label))("take what the specification allows, for %s", (label) => {
-    expect(problems.get(label)).toEqual([]);
-  });
+  it.each(VARIANTS.map(([label]) => label))(
+    "take what the specification allows, for %s",
+    (label) => {
+      expect(problems.get(label)).toEqual([]);
+    },
+  );
 
   it("keep an inline body beside parameters extracted under a name", () => {
-    const schemas = generateCode(SPEC, { type: "openapi", outputDir: "src", validation: "none" }, "shop")
-      .find((f) => f.path.endsWith("issues/schemas.ts"))?.content;
+    const schemas = generateCode(
+      SPEC,
+      { type: "openapi", outputDir: "src", validation: "none" },
+      "shop",
+    ).find((f) => f.path.endsWith("issues/schemas.ts"))?.content;
 
     expect(schemas).toMatch(/export type IssuesCreateParams = \{[^}]*title: string;/s);
   });

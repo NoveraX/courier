@@ -13,7 +13,10 @@ describe("parseJsonEnvelope", () => {
   it("reads the variables and the options", () => {
     const parsed = parseJsonEnvelope(encode('{"variables":{"id":1},"options":{"rawData":true}}'));
 
-    expect(parsed).toEqual({ ok: true, envelope: { variables: { id: 1 }, options: { rawData: true } } });
+    expect(parsed).toEqual({
+      ok: true,
+      envelope: { variables: { id: 1 }, options: { rawData: true } },
+    });
   });
 
   it("reads an empty object as a call without variables or options", () => {
@@ -46,7 +49,9 @@ describe("parseFormEnvelope", () => {
     const parsed = parseFormEnvelope(form);
 
     expect(parsed.ok && parsed.envelope.options).toEqual({ timeout: 5000 });
-    expect(parsed.ok && [...(parsed.envelope.variables as FormData).entries()]).toEqual([["name", "test"]]);
+    expect(parsed.ok && [...(parsed.envelope.variables as FormData).entries()]).toEqual([
+      ["name", "test"],
+    ]);
   });
 
   it("keeps a later _options field as the caller's", () => {
@@ -56,7 +61,9 @@ describe("parseFormEnvelope", () => {
 
     const parsed = parseFormEnvelope(form);
 
-    expect(parsed.ok && (parsed.envelope.variables as FormData).getAll("_options")).toEqual(["the caller's"]);
+    expect(parsed.ok && (parsed.envelope.variables as FormData).getAll("_options")).toEqual([
+      "the caller's",
+    ]);
   });
 
   it("reads a form without an options field as a call without options", () => {

@@ -8,12 +8,15 @@
 import { describe, expect, it } from "vitest";
 
 import type * as Server from "../../src/server/mocks-edit/types";
-import type * as Wizard from "../src/views/mocks/wizard/wire-types";
-
 import { isDeclareApplyResult } from "../src/views/mocks/wizard/is-declare-apply-result";
 import { isDeclarePreview } from "../src/views/mocks/wizard/is-declare-preview";
+import type * as Wizard from "../src/views/mocks/wizard/wire-types";
 
-type Same<TLeft, TRight> = [TLeft] extends [TRight] ? ([TRight] extends [TLeft] ? true : false) : false;
+type Same<TLeft, TRight> = [TLeft] extends [TRight]
+  ? [TRight] extends [TLeft]
+    ? true
+    : false
+  : false;
 
 const WIRE_MATCHES_SERVER: [
   Same<Server.MockDeclaration, Wizard.MockDeclaration>,
@@ -31,7 +34,9 @@ const CREATE = {
   creates: true,
   baseHash: null,
   planDigest: DIGEST,
-  hunks: [{ lines: [{ kind: "add", text: "export default defineMocks({", oldLine: null, newLine: 1 }] }],
+  hunks: [
+    { lines: [{ kind: "add", text: "export default defineMocks({", oldLine: null, newLine: 1 }] },
+  ],
   warnings: ["Studio creates courier.mocks.ts."],
 };
 const EDIT = {
@@ -42,7 +47,12 @@ const EDIT = {
     {
       lines: [
         { kind: "context", text: "export default defineMocks({", oldLine: 4, newLine: 4 },
-        { kind: "remove", text: "  first: defineMockServer({ source })", oldLine: 5, newLine: null },
+        {
+          kind: "remove",
+          text: "  first: defineMockServer({ source })",
+          oldLine: 5,
+          newLine: null,
+        },
         { kind: "add", text: "  first: defineMockServer({ source }),", oldLine: null, newLine: 5 },
         { kind: "add", text: "  second: defineMockServer({ source }),", oldLine: null, newLine: 6 },
       ],
@@ -54,13 +64,21 @@ const MANUAL = {
   status: "manual",
   target: null,
   creates: true,
-  reasons: [{ code: "NOT_LOCAL_PEER", source: null, message: "Studio edits project files only for a browser on this machine." }],
+  reasons: [
+    {
+      code: "NOT_LOCAL_PEER",
+      source: null,
+      message: "Studio edits project files only for a browser on this machine.",
+    },
+  ],
   snippet: 'import { defineMocks } from "@noverax/courier-mock";\n',
   retryable: false,
 };
 const INVALID = {
   status: "invalid",
-  errors: [{ index: 0, source: "api", field: "key", message: "courier.mocks.ts already declares api" }],
+  errors: [
+    { index: 0, source: "api", field: "key", message: "courier.mocks.ts already declares api" },
+  ],
 };
 const INSERTED = [{ line: 5, text: "  first: defineMockServer({ source }),", added: "," }];
 
@@ -70,7 +88,8 @@ describe("the preview guard", () => {
   });
 
   it("accepts every outcome of a preview as Studio sends it", () => {
-    for (const outcome of [CREATE, EDIT, MANUAL, INVALID]) expect(isDeclarePreview(outcome)).toBe(true);
+    for (const outcome of [CREATE, EDIT, MANUAL, INVALID])
+      expect(isDeclarePreview(outcome)).toBe(true);
     expect(isDeclarePreview({ ...MANUAL, target: "courier.mocks.ts", retryable: true })).toBe(true);
   });
 
@@ -94,16 +113,24 @@ describe("the preview guard", () => {
 
   it("refuses field errors that do not name a position and a field", () => {
     expect(isDeclarePreview({ status: "invalid", errors: [] })).toBe(false);
-    expect(isDeclarePreview({ status: "invalid", errors: [{ ...INVALID.errors[0], index: -1 }] })).toBe(false);
-    expect(isDeclarePreview({ status: "invalid", errors: [{ ...INVALID.errors[0], field: "mocks" }] })).toBe(false);
-    expect(isDeclarePreview({ status: "invalid", errors: [{ ...INVALID.errors[0], source: null }] })).toBe(false);
+    expect(
+      isDeclarePreview({ status: "invalid", errors: [{ ...INVALID.errors[0], index: -1 }] }),
+    ).toBe(false);
+    expect(
+      isDeclarePreview({ status: "invalid", errors: [{ ...INVALID.errors[0], field: "mocks" }] }),
+    ).toBe(false);
+    expect(
+      isDeclarePreview({ status: "invalid", errors: [{ ...INVALID.errors[0], source: null }] }),
+    ).toBe(false);
   });
 
   it("refuses an unknown status and a body that is not a plain object", () => {
     expect(isDeclarePreview({ ...CREATE, status: "applied" })).toBe(false);
     expect(isDeclarePreview([CREATE])).toBe(false);
     expect(isDeclarePreview(null)).toBe(false);
-    expect(isDeclarePreview(JSON.parse(`{"__proto__": {"x": 1}, ${JSON.stringify(CREATE).slice(1)}`))).toBe(false);
+    expect(
+      isDeclarePreview(JSON.parse(`{"__proto__": {"x": 1}, ${JSON.stringify(CREATE).slice(1)}`)),
+    ).toBe(false);
   });
 });
 
@@ -115,21 +142,70 @@ describe("the apply guard", () => {
       { status: "stale", plan: MANUAL },
       { status: "stale", plan: INVALID },
       INVALID,
-      { ...MANUAL, target: "courier.mocks.ts", reasons: [{ code: "STUDIO_BUSY", source: null, message: "busy" }] },
-      { status: "rolledBack", target: "courier.mocks.ts", creates: false, reason: "did not load", snippet: "x" },
-      { status: "notVerified", target: "courier.mocks.ts", reason: "did not load", insertedLines: INSERTED },
-      { status: "rollbackFailed", target: "courier.mocks.ts", reason: "EACCES", insertedLines: INSERTED },
+      {
+        ...MANUAL,
+        target: "courier.mocks.ts",
+        reasons: [{ code: "STUDIO_BUSY", source: null, message: "busy" }],
+      },
+      {
+        status: "rolledBack",
+        target: "courier.mocks.ts",
+        creates: false,
+        reason: "did not load",
+        snippet: "x",
+      },
+      {
+        status: "notVerified",
+        target: "courier.mocks.ts",
+        reason: "did not load",
+        insertedLines: INSERTED,
+      },
+      {
+        status: "rollbackFailed",
+        target: "courier.mocks.ts",
+        reason: "EACCES",
+        insertedLines: INSERTED,
+      },
     ];
     for (const outcome of outcomes) expect(isDeclareApplyResult(outcome)).toBe(true);
   });
 
   it("refuses an outcome missing what the wizard shows of it", () => {
-    expect(isDeclareApplyResult({ status: "applied", target: "courier.mocks.ts", keys: [], warnings: [] })).toBe(false);
+    expect(
+      isDeclareApplyResult({
+        status: "applied",
+        target: "courier.mocks.ts",
+        keys: [],
+        warnings: [],
+      }),
+    ).toBe(false);
     expect(isDeclareApplyResult({ status: "stale", plan: { status: "applied" } })).toBe(false);
-    expect(isDeclareApplyResult({ status: "rolledBack", target: "courier.mocks.ts", creates: false, reason: "x", snippet: "" })).toBe(false);
-    expect(isDeclareApplyResult({ status: "notVerified", target: "courier.mocks.ts", reason: "x", insertedLines: [] })).toBe(false);
+    expect(
+      isDeclareApplyResult({
+        status: "rolledBack",
+        target: "courier.mocks.ts",
+        creates: false,
+        reason: "x",
+        snippet: "",
+      }),
+    ).toBe(false);
+    expect(
+      isDeclareApplyResult({
+        status: "notVerified",
+        target: "courier.mocks.ts",
+        reason: "x",
+        insertedLines: [],
+      }),
+    ).toBe(false);
     const unnumbered = [{ line: 0, text: "x", added: "x" }];
-    expect(isDeclareApplyResult({ status: "rollbackFailed", target: "courier.mocks.ts", reason: "x", insertedLines: unnumbered })).toBe(false);
+    expect(
+      isDeclareApplyResult({
+        status: "rollbackFailed",
+        target: "courier.mocks.ts",
+        reason: "x",
+        insertedLines: unnumbered,
+      }),
+    ).toBe(false);
     expect(isDeclareApplyResult(CREATE)).toBe(false);
   });
 });

@@ -1,8 +1,7 @@
 import { useMemo } from "react";
-
-import type { ZoomState } from "./types";
-import { computeTickInterval, msToPixels } from "./helpers";
 import { MAX_GRID_LINES } from "./constants";
+import { computeTickInterval, msToPixels } from "./helpers";
+import type { ZoomState } from "./types";
 
 interface GridLinesProps {
   timeSpan: number;
@@ -26,11 +25,7 @@ export function GridLines({ timeSpan, zoom }: GridLinesProps): React.ReactElemen
   return (
     <div className="pointer-events-none absolute inset-0">
       {lines.map((px) => (
-        <div
-          key={px}
-          className="absolute inset-y-0 w-px bg-border/60"
-          style={{ left: px }}
-        />
+        <div key={px} className="absolute inset-y-0 w-px bg-border/60" style={{ left: px }} />
       ))}
     </div>
   );

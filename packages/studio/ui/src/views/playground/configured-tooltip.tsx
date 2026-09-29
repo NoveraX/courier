@@ -45,11 +45,16 @@ export function ConfiguredTooltip({
         <div>
           <span className="opacity-55">Mounted on your app — set </span>
           <code className={CODE_PILL}>runtime.appOrigin</code>
-          <span className="opacity-55"> in courier.config, or COURIER_APP_URL, to resolve the full URL</span>
+          <span className="opacity-55">
+            {" "}
+            in courier.config, or COURIER_APP_URL, to resolve the full URL
+          </span>
         </div>
       )}
       <div>
-        <span className="opacity-55">{isDefault ? "The default path — change it in " : "Configured in "}</span>
+        <span className="opacity-55">
+          {isDefault ? "The default path — change it in " : "Configured in "}
+        </span>
         <code className={CODE_PILL}>defineApi(&#123; proxyPath.{transport} &#125;)</code>
       </div>
     </div>

@@ -10,17 +10,15 @@
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { createElement, type ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
-import { WebSocket, WebSocketServer } from "ws";
-
 import { createWSHandler, registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
-import { attachWebSocketUpgrade, type UpgradeServer } from "@noverax/courier/node";
 import { clearWSConnectionPool } from "@noverax/courier/internal";
+import { attachWebSocketUpgrade, type UpgradeServer } from "@noverax/courier/node";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WebSocket, WebSocketServer } from "ws";
 import { createProxyQueryCaller } from "../src/create-proxy-query-caller";
 import { createQueryCaller } from "../src/create-query-caller";
 import { liveApi } from "./helpers/live-api";

@@ -8,7 +8,9 @@ export function StreamBadge(): React.ReactElement | null {
   return (
     <span className="inline-flex items-center gap-1 text-emerald-400">
       <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
-      <span className="tabular-nums">{count} stream{count > 1 ? "s" : ""}</span>
+      <span className="tabular-nums">
+        {count} stream{count > 1 ? "s" : ""}
+      </span>
     </span>
   );
 }

@@ -36,7 +36,12 @@ beforeAll(async () => {
   root = mkdtempSync(join(cache, "project-"));
   const port = await freePort();
   await new Promise<void>((resolve) => {
-    server = createStudioServer({ port, host: "127.0.0.1", projectRoot: root, onReady: () => resolve() });
+    server = createStudioServer({
+      port,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: () => resolve(),
+    });
   });
   origin = `http://127.0.0.1:${port}`;
 

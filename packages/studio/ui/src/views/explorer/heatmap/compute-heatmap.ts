@@ -1,9 +1,8 @@
 import type { RequestEntry } from "@/store/types";
-import type { EndpointNodeData } from "../types";
 import { filterRequests } from "../helpers";
+import type { EndpointNodeData } from "../types";
+import type { PhaseValue, TimingGroup, TimingRow, TimingSort } from "./timing-types";
 import { TIMING_PHASES } from "./timing-types";
-
-import type { TimingRow, TimingGroup, PhaseValue, TimingSort } from "./timing-types";
 
 // ── Computation ────────────────────────────────────────────────────────────
 
@@ -15,8 +14,9 @@ export function computeTimingBreakdown(
   const rows: TimingRow[] = [];
 
   for (const ep of endpoints) {
-    const reqs = filterRequests(requests, ep.source, ep.group, ep.method)
-      .filter((r) => r.timing && r.timing.total > 0);
+    const reqs = filterRequests(requests, ep.source, ep.group, ep.method).filter(
+      (r) => r.timing && r.timing.total > 0,
+    );
 
     rows.push(reqs.length === 0 ? emptyRow(ep) : buildRow(ep, reqs));
   }
@@ -49,9 +49,7 @@ function buildRow(ep: EndpointNodeData, reqs: RequestEntry[]): TimingRow {
   const avgSetup = Math.max(0, avgTotal - avgFetch - avgMiddleware - avgValidation);
 
   const phases = buildPhases(avgSetup, avgValidation, avgMiddleware, avgFetch, avgTotal);
-  const bottleneck = phases.length > 0
-    ? phases.reduce((a, b) => (b.avg > a.avg ? b : a)).key
-    : "";
+  const bottleneck = phases.length > 0 ? phases.reduce((a, b) => (b.avg > a.avg ? b : a)).key : "";
 
   return {
     source: ep.source,
@@ -79,13 +77,11 @@ function buildPhases(
      duration: a millisecond threshold erased every phase of an endpoint that
      answers in microseconds, and a row with no phases left renders as though
      it had never been called. */
-  return TIMING_PHASES
-    .map((phase) => ({
-      ...phase,
-      avg: values[phase.key] ?? 0,
-      pct: total > 0 ? ((values[phase.key] ?? 0) / total) * 100 : 0,
-    }))
-    .filter((p) => p.pct >= 1);
+  return TIMING_PHASES.map((phase) => ({
+    ...phase,
+    avg: values[phase.key] ?? 0,
+    pct: total > 0 ? ((values[phase.key] ?? 0) / total) * 100 : 0,
+  })).filter((p) => p.pct >= 1);
 }
 
 function emptyRow(ep: EndpointNodeData): TimingRow {

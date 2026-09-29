@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ReactFlowProvider } from "@xyflow/react";
-import { validateExplorerSearch } from "@/views/explorer/use-explorer-search";
 import { ExplorerGraph } from "@/views/explorer/graph";
+import { validateExplorerSearch } from "@/views/explorer/use-explorer-search";
 
 function GraphPage(): React.ReactNode {
   return (

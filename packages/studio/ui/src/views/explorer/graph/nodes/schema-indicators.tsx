@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { Braces, FileOutput } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SchemaIndicatorsProps {
   hasVariables: boolean;

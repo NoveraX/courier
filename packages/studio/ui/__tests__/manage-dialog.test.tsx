@@ -12,16 +12,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
-import type { ParsedSpec, SourceSummary } from "../src/views/apis/types";
-
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
 import { ManageDialog } from "../src/views/apis/manage-dialog";
+import type { ParsedSpec, SourceSummary } from "../src/views/apis/types";
 import { type UseManageReturn, useManage } from "../src/views/apis/use-manage";
 
 const SPEC: ParsedSpec = {
-  title: "Pets", version: "1", description: "", baseURL: "https://pets.example", format: "openapi3",
-  groups: [], schemas: {}, securitySchemes: [], skipped: [],
+  title: "Pets",
+  version: "1",
+  description: "",
+  baseURL: "https://pets.example",
+  format: "openapi3",
+  groups: [],
+  schemas: {},
+  securitySchemes: [],
+  skipped: [],
 };
 
 const SOURCE: SourceSummary = {
@@ -30,16 +36,33 @@ const SOURCE: SourceSummary = {
   importType: "file",
   outputDir: "src/api",
   options: {
-    sourceName: "pets", outputDir: "src/api", validation: "zod", groupBy: "tag", generateTypes: true,
-    generateSchemas: true, addAuthMiddleware: false, includeComments: true, generateClient: "direct",
+    sourceName: "pets",
+    outputDir: "src/api",
+    validation: "zod",
+    groupBy: "tag",
+    generateTypes: true,
+    generateSchemas: true,
+    addAuthMiddleware: false,
+    includeComments: true,
+    generateClient: "direct",
   },
 };
 
 const INVENTORY = {
-  groups: [{ name: "pets", prefix: "/pets", isCustomGroup: false, endpoints: [
-    { group: "pets", name: "listPets", httpMethod: "get", path: "", status: "active" },
-  ] }],
-  specChanged: false, totalActive: 1, totalAvailable: 0, totalCustom: 0,
+  groups: [
+    {
+      name: "pets",
+      prefix: "/pets",
+      isCustomGroup: false,
+      endpoints: [
+        { group: "pets", name: "listPets", httpMethod: "get", path: "", status: "active" },
+      ],
+    },
+  ],
+  specChanged: false,
+  totalActive: 1,
+  totalAvailable: 0,
+  totalCustom: 0,
 };
 
 const PLAN = {
@@ -48,7 +71,9 @@ const PLAN = {
   writes: [],
   removals: [],
   kept: [],
-  pending: [{ path: "src/api/pets/pets/index.ts", kind: "remove", reason: "edited", preselected: false }],
+  pending: [
+    { path: "src/api/pets/pets/index.ts", kind: "remove", reason: "edited", preselected: false },
+  ],
   blocked: [],
   forgotten: [],
 };
@@ -79,14 +104,18 @@ afterEach(() => {
 
 describe("the manage dialog", () => {
   it("says why Studio refused the preview, on the endpoint list it returns to", async () => {
-    await toPreview(() => Promise.reject(refusal("DIR_OVERLAP", "Another import owns src/api/pets.")));
+    await toPreview(() =>
+      Promise.reject(refusal("DIR_OVERLAP", "Another import owns src/api/pets.")),
+    );
 
     expect(manage.step).toBe("inventory");
     expect(screen.getByRole("alert").textContent).toBe("Another import owns src/api/pets.");
   });
 
   it("says why the endpoints could not be listed, instead of loading forever", async () => {
-    vi.mocked(post).mockRejectedValueOnce(refusal("SPEC_NOT_GENERATED", "The spec could not be read."));
+    vi.mocked(post).mockRejectedValueOnce(
+      refusal("SPEC_NOT_GENERATED", "The spec could not be read."),
+    );
     render(<Harness />);
 
     await act(async () => manage.start(SOURCE, SPEC));

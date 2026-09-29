@@ -18,7 +18,9 @@ function blog() {
 describe("resolving relations", () => {
   it("finds the related records whose key holds the same id as a string", () => {
     const { users, posts } = blog();
-    const relations = defineRelations(users, ({ many }) => ({ posts: many(posts, { foreignKey: "userId" }) }));
+    const relations = defineRelations(users, ({ many }) => ({
+      posts: many(posts, { foreignKey: "userId" }),
+    }));
     const ada = users.getById(1);
     if (!ada || !relations.posts) throw new Error("fixture is incomplete");
 
@@ -29,7 +31,9 @@ describe("resolving relations", () => {
 
   it("finds the one related record a string key names", () => {
     const { users, posts } = blog();
-    const relations = defineRelations(posts, ({ one }) => ({ author: one(users, { key: "userId" }) }));
+    const relations = defineRelations(posts, ({ one }) => ({
+      author: one(users, { key: "userId" }),
+    }));
     const post = posts.getById(11);
     if (!post || !relations.author) throw new Error("fixture is incomplete");
 
@@ -38,7 +42,9 @@ describe("resolving relations", () => {
 
   it("finds no related record when the key holds no id", () => {
     const { users } = blog();
-    const relations = defineRelations(users, ({ one }) => ({ author: one(users, { key: "authorId" }) }));
+    const relations = defineRelations(users, ({ one }) => ({
+      author: one(users, { key: "authorId" }),
+    }));
     if (!relations.author) throw new Error("fixture is incomplete");
 
     expect(resolveOne({ id: 5 }, relations.author)).toBeUndefined();

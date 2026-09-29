@@ -1,13 +1,10 @@
 import type { RequestEntry } from "@/store/types";
-
-import type { AggregateMiddleware, ChainEntry, MiddlewareStep } from "./types";
 import { SLOW_STEP_MS } from "./constants";
+import type { AggregateMiddleware, ChainEntry, MiddlewareStep } from "./types";
 
 // ── Aggregate stats ────────────────────────────────────────────────────────
 
-export function computeAggregateStats(
-  requests: RequestEntry[],
-): AggregateMiddleware[] {
+export function computeAggregateStats(requests: RequestEntry[]): AggregateMiddleware[] {
   const map = new Map<string, { durations: number[]; errors: number }>();
 
   for (const req of requests) {
@@ -40,9 +37,7 @@ export function computeAggregateStats(
 // ── Chain builder ──────────────────────────────────────────────────────────
 
 export function buildChain(request: RequestEntry): ChainEntry {
-  const sorted = [...request.middlewareEntries].sort(
-    (a, b) => a.index - b.index,
-  );
+  const sorted = [...request.middlewareEntries].sort((a, b) => a.index - b.index);
 
   const steps: MiddlewareStep[] = sorted.map((mw) => ({
     name: mw.name,
@@ -58,8 +53,7 @@ export function buildChain(request: RequestEntry): ChainEntry {
 
   const totalOverhead = request.timing?.middleware ?? 0;
   const totalTime = request.timing?.total ?? 1;
-  const overheadPercent =
-    totalTime > 0 ? (totalOverhead / totalTime) * 100 : 0;
+  const overheadPercent = totalTime > 0 ? (totalOverhead / totalTime) * 100 : 0;
 
   return {
     requestId: request.id,
@@ -135,8 +129,6 @@ function percentile(sorted: number[], pct: number): number {
 }
 
 /** Requests that have at least one middleware entry */
-export function filterWithMiddleware(
-  requests: RequestEntry[],
-): RequestEntry[] {
+export function filterWithMiddleware(requests: RequestEntry[]): RequestEntry[] {
   return requests.filter((r) => r.middlewareEntries.length > 0);
 }

@@ -1,13 +1,13 @@
 import {
-  MoreHorizontal,
   Download,
-  Upload,
-  Trash2,
+  FileCode,
   FileJson,
   FileText,
-  FileCode,
+  MoreHorizontal,
+  Trash2,
+  Upload,
 } from "lucide-react";
-
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,7 +19,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 import { useStudioStore } from "@/store";
 
 import type { ExportFormat } from "@/store/types";
@@ -92,10 +91,7 @@ export function SessionActions({
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={onRequestDelete}
-          >
+          <DropdownMenuItem className="text-destructive" onClick={onRequestDelete}>
             <Trash2 className="mr-2 size-3.5" />
             Delete
           </DropdownMenuItem>

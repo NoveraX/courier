@@ -82,7 +82,12 @@ describe("a Studio that restarts", () => {
 
     const second = run(root);
 
-    expect(second.log.events().filter((event) => event.type === "request:start").map((event) => event.id)).toEqual(["r2"]);
+    expect(
+      second.log
+        .events()
+        .filter((event) => event.type === "request:start")
+        .map((event) => event.id),
+    ).toEqual(["r2"]);
   });
 });
 
@@ -101,10 +106,15 @@ describe("what the log writes down, and replays to a page that connects", () => 
     );
     first.stop();
 
-    const kept = run(root).log.events().find((event) => event.type === "request:end");
+    const kept = run(root)
+      .log.events()
+      .find((event) => event.type === "request:end");
 
     expect(kept?.requestHeaders).toEqual({ authorization: "[redacted]", accept: "json" });
-    expect(kept?.headers).toEqual({ "set-cookie": "[redacted]", "content-type": "application/json" });
+    expect(kept?.headers).toEqual({
+      "set-cookie": "[redacted]",
+      "content-type": "application/json",
+    });
   });
 });
 

@@ -11,10 +11,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { createMockClient } from "../src/create-mock-client";
 import { RecorderError } from "../src/record/errors";
-import { MockHttpError } from "../src/server/errors";
 import type { Fixture } from "../src/record/fixture";
 import { replayFixtures } from "../src/record/replay";
 import { createMockServer } from "../src/server/create-mock-server";
+import { MockHttpError } from "../src/server/errors";
 
 const { endpoint } = courier();
 type User = { id: number; name: string };

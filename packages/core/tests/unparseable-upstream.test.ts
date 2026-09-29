@@ -26,7 +26,6 @@ const api = defineApi({
   },
 });
 
-
 beforeEach(() => {
   registerSources({ api });
   const handler = createHandler();
@@ -44,7 +43,8 @@ afterEach(() => {
 
 describe("an upstream body that will not parse", () => {
   it("reaches the browser as a failure, not as a 200 carrying { success: false }", async () => {
-    upstreamAnswer = () => new Response("<html>hi</html>", { headers: { "content-type": "text/html" } });
+    upstreamAnswer = () =>
+      new Response("<html>hi</html>", { headers: { "content-type": "text/html" } });
 
     const response = await createHandler().handleGet(
       new Request("http://app.localhost/api/request?_s=api&_g=items&_m=list"),

@@ -1,12 +1,11 @@
 import { Loader2 } from "lucide-react";
-
-import type { MockWizardHandle } from "./use-mock-wizard";
-
 import { Button } from "@/components/ui/button";
 import { ApplyButton } from "./apply-button";
 import { reviewCta } from "./review-cta";
+import type { MockWizardHandle } from "./use-mock-wizard";
 
-const PRIMARY = "h-7 gap-1.5 bg-accent-brand px-3 text-xs font-medium text-white hover:bg-accent-brand/90";
+const PRIMARY =
+  "h-7 gap-1.5 bg-accent-brand px-3 text-xs font-medium text-white hover:bg-accent-brand/90";
 const OUTLINE = "h-7 gap-1.5 text-xs";
 
 function ReviewActions({ wizard }: { wizard: MockWizardHandle }): React.ReactElement {
@@ -21,7 +20,14 @@ function ReviewActions({ wizard }: { wizard: MockWizardHandle }): React.ReactEle
         </Button>
       );
     case "apply":
-      return <ApplyButton label={cta.label} armedAt={cta.armedAt} className={PRIMARY} onApply={() => session.apply()} />;
+      return (
+        <ApplyButton
+          label={cta.label}
+          armedAt={cta.armedAt}
+          className={PRIMARY}
+          onApply={() => session.apply()}
+        />
+      );
     case "checkAgain":
       return (
         <Button type="button" size="sm" className={PRIMARY} onClick={() => session.review()}>
@@ -30,7 +36,13 @@ function ReviewActions({ wizard }: { wizard: MockWizardHandle }): React.ReactEle
       );
     case "close":
       return (
-        <Button type="button" variant="outline" size="sm" className={OUTLINE} onClick={wizard.close}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={OUTLINE}
+          onClick={wizard.close}
+        >
           {cta.label}
         </Button>
       );
@@ -41,7 +53,8 @@ function StepActions({ wizard }: { wizard: MockWizardHandle }): React.ReactEleme
   const { state, session, availability, errors } = wizard;
   switch (state.step) {
     case "source": {
-      const ready = state.mode === "sources" && availability.kind === "sources" && state.drafts.length > 0;
+      const ready =
+        state.mode === "sources" && availability.kind === "sources" && state.drafts.length > 0;
       return (
         <Button
           type="button"
@@ -70,7 +83,13 @@ function StepActions({ wizard }: { wizard: MockWizardHandle }): React.ReactEleme
       return <ReviewActions wizard={wizard} />;
     case "done":
       return (
-        <Button type="button" variant="outline" size="sm" className={OUTLINE} onClick={wizard.close}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={OUTLINE}
+          onClick={wizard.close}
+        >
           Close
         </Button>
       );

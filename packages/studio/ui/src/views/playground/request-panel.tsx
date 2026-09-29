@@ -1,22 +1,20 @@
-import { useState, useCallback } from "react";
-import { KeyRound, ChevronDown, Terminal, Code2, Copy, Link } from "lucide-react";
+import { ChevronDown, Code2, Copy, KeyRound, Link, Terminal } from "lucide-react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
-
-import { copyToClipboard } from "@/lib/clipboard";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { PathDisplay } from "@/views/explorer/shared/path-display";
+import { copyToClipboard } from "@/lib/clipboard";
 import { buildCurlSnippet, buildFetchSnippet, type SnippetInput } from "@/lib/snippets";
-
+import { cn } from "@/lib/utils";
 import type { EndpointInfo, SourceInfo } from "@/store/types-ui";
+import { PathDisplay } from "@/views/explorer/shared/path-display";
+import { type BodyKind, BodySection } from "./body-section";
+import type { FormBodyField } from "./form-body";
 import { JsonEditor } from "./json-editor";
 import { endpointUrl, snippetInput } from "./request-snippet";
 import { readRequestValues } from "./request-values";
-import { BodySection, type BodyKind } from "./body-section";
-import type { FormBodyField } from "./form-body";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -40,8 +38,14 @@ interface RequestPanelProps {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function RequestPanel({
-  variables, headers, endpointInfo, sourceInfo, groupPrefix,
-  onVariablesChange, onHeadersChange, body,
+  variables,
+  headers,
+  endpointInfo,
+  sourceInfo,
+  groupPrefix,
+  onVariablesChange,
+  onHeadersChange,
+  body,
 }: RequestPanelProps): React.ReactElement {
   const [headersOpen, setHeadersOpen] = useState(false);
   const fullPath = endpointUrl(sourceInfo, groupPrefix, endpointInfo);
@@ -80,12 +84,25 @@ export function RequestPanel({
       {/* Headers — collapsible */}
       <Collapsible open={headersOpen} onOpenChange={setHeadersOpen} className="mt-2">
         <CollapsibleTrigger className="flex w-full items-center gap-1.5 py-1">
-          <ChevronDown className={cn("size-3 text-muted-foreground transition-transform", headersOpen && "rotate-0", !headersOpen && "-rotate-90")} />
+          <ChevronDown
+            className={cn(
+              "size-3 text-muted-foreground transition-transform",
+              headersOpen && "rotate-0",
+              !headersOpen && "-rotate-90",
+            )}
+          />
           <EditorLabel icon={KeyRound} label="Headers" />
-          {headers.trim() !== "{}" && <span className="text-[10px] text-accent-brand/60">modified</span>}
+          {headers.trim() !== "{}" && (
+            <span className="text-[10px] text-accent-brand/60">modified</span>
+          )}
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <JsonEditor value={headers} onChange={onHeadersChange} placeholder='{ "Authorization": "Bearer ..." }' className="mt-1.5 h-28" />
+          <JsonEditor
+            value={headers}
+            onChange={onHeadersChange}
+            placeholder='{ "Authorization": "Bearer ..." }'
+            className="mt-1.5 h-28"
+          />
         </CollapsibleContent>
       </Collapsible>
     </div>
@@ -94,9 +111,7 @@ export function RequestPanel({
 
 // ── Copy menu ──────────────────────────────────────────────────────────────
 
-function CopyMenu({ buildInput }: {
-  buildInput: () => SnippetInput | null;
-}): React.ReactElement {
+function CopyMenu({ buildInput }: { buildInput: () => SnippetInput | null }): React.ReactElement {
   const [open, setOpen] = useState(false);
 
   const copy = (format: (input: SnippetInput) => string, label: string) => () => {
@@ -110,7 +125,12 @@ function CopyMenu({ buildInput }: {
       <Tooltip>
         <TooltipTrigger asChild>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Copy as" className="size-5 shrink-0 text-muted-foreground/40 hover:text-foreground">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Copy as"
+              className="size-5 shrink-0 text-muted-foreground/40 hover:text-foreground"
+            >
               <Copy className="size-3" />
             </Button>
           </PopoverTrigger>
@@ -128,13 +148,21 @@ function CopyMenu({ buildInput }: {
   );
 }
 
-function CopyRow({ icon: Icon, label, onClick }: {
+function CopyRow({
+  icon: Icon,
+  label,
+  onClick,
+}: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   onClick: () => void;
 }): React.ReactElement {
   return (
-    <button type="button" onClick={onClick} className="flex items-center gap-2 rounded px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground">
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-2 rounded px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+    >
       <Icon className="size-3" />
       {label}
     </button>
@@ -143,7 +171,11 @@ function CopyRow({ icon: Icon, label, onClick }: {
 
 // ── Subcomponents ──────────────────────────────────────────────────────────
 
-function EditorLabel({ icon: Icon, label, hint }: {
+function EditorLabel({
+  icon: Icon,
+  label,
+  hint,
+}: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   hint?: string;

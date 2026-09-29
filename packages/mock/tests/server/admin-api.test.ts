@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { MockHttpError } from "../../src/server/errors";
 import type { MockServer } from "../../src/server/create-mock-server";
 import { createMockServer } from "../../src/server/create-mock-server";
+import { MockHttpError } from "../../src/server/errors";
 
 let server: MockServer;
 let url: string;

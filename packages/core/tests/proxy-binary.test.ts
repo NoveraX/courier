@@ -141,9 +141,7 @@ describe("a bodiless answer read with .raw through the proxy", () => {
   });
 
   it("does the same over GET", async () => {
-    const response = await proxyClient("arrayBuffer")
-      .raw.with({ method: "GET" })
-      .image();
+    const response = await proxyClient("arrayBuffer").raw.with({ method: "GET" }).image();
 
     expect(response.headers).toBeInstanceOf(Headers);
   });

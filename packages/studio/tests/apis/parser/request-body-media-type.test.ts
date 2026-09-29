@@ -9,7 +9,9 @@ import type { ParsedSpec } from "../../../src/apis/parser/types";
 
 function mediaTypes(spec: ParsedSpec): Record<string, string | undefined> {
   const endpoints = spec.groups.flatMap((group) => group.endpoints);
-  return Object.fromEntries(endpoints.map((endpoint) => [endpoint.name, endpoint.requestBodyMediaType]));
+  return Object.fromEntries(
+    endpoints.map((endpoint) => [endpoint.name, endpoint.requestBodyMediaType]),
+  );
 }
 
 const FIELDS = { type: "object", properties: { email: { type: "string" } } };
@@ -17,7 +19,12 @@ const FIELDS = { type: "object", properties: { email: { type: "string" } } };
 describe("an OpenAPI 3 request body", () => {
   it("keeps the media type its schema is written under", () => {
     const post = (operationId: string, content: Record<string, unknown>) => ({
-      post: { tags: ["c"], operationId, requestBody: { content }, responses: { "200": { description: "ok" } } },
+      post: {
+        tags: ["c"],
+        operationId,
+        requestBody: { content },
+        responses: { "200": { description: "ok" } },
+      },
     });
     const spec = parseSpec(
       JSON.stringify({
@@ -32,7 +39,9 @@ describe("an OpenAPI 3 request body", () => {
             "text/plain": { schema: FIELDS },
             "application/json": { schema: FIELDS },
           }),
-          "/pings": { get: { tags: ["c"], operationId: "ping", responses: { "200": { description: "ok" } } } },
+          "/pings": {
+            get: { tags: ["c"], operationId: "ping", responses: { "200": { description: "ok" } } },
+          },
         },
       }),
     );
@@ -92,14 +101,23 @@ describe("a Swagger 2.0 form", () => {
 describe("a Postman body", () => {
   it.each([
     [{ mode: "raw", raw: '{"name":"Ann"}' }, "application/json"],
-    [{ mode: "urlencoded", urlencoded: [{ key: "name", value: "Ann" }] }, "application/x-www-form-urlencoded"],
+    [
+      { mode: "urlencoded", urlencoded: [{ key: "name", value: "Ann" }] },
+      "application/x-www-form-urlencoded",
+    ],
     [{ mode: "formdata", formdata: [{ key: "name", value: "Ann" }] }, "multipart/form-data"],
   ])("keeps the media type its mode sends: %o", (body, mediaType) => {
     const spec = parseSpec(
       JSON.stringify({
-        info: { name: "C", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+        info: {
+          name: "C",
+          schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        },
         item: [
-          { name: "Create user", request: { method: "POST", url: "https://api.example.com/users", body } },
+          {
+            name: "Create user",
+            request: { method: "POST", url: "https://api.example.com/users", body },
+          },
         ],
       }),
     );

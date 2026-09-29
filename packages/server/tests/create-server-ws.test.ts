@@ -112,7 +112,9 @@ describe("WebSocket options", () => {
     const outcome = await closedWithin(client, 500);
 
     expect(outcome).toBe("open");
-    expect(errors).toEqual([expect.objectContaining({ error: expect.objectContaining({ code: 4413 }) })]);
+    expect(errors).toEqual([
+      expect.objectContaining({ error: expect.objectContaining({ code: 4413 }) }),
+    ]);
     const pong = nextMessage(client);
     client.send(JSON.stringify({ type: "ping" }));
     expect(await pong).toMatchObject({ type: "pong" });

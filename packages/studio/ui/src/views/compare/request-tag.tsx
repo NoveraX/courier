@@ -1,9 +1,8 @@
 import { X } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { MethodBadge } from "@/components/shared/method-badge";
-import { formatDuration } from "@/components/shared/formatters";
 import { STATUS_CONFIG } from "@/components/shared/detail-panel/constants";
+import { formatDuration } from "@/components/shared/formatters";
+import { MethodBadge } from "@/components/shared/method-badge";
+import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types-request";
 
 interface RequestTagProps {
@@ -19,11 +18,7 @@ function buildPath(r: RequestEntry): string {
   return parts.join(".");
 }
 
-export function RequestTag({
-  request,
-  onClear,
-  className,
-}: RequestTagProps): React.ReactElement {
+export function RequestTag({ request, onClear, className }: RequestTagProps): React.ReactElement {
   return (
     <span
       className={cn(

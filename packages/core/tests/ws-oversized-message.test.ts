@@ -120,7 +120,9 @@ describe("a message larger than the limit", () => {
     socket.on("message", (raw) => frames.push(JSON.parse(String(raw)) as { type: string }));
     await new Promise((resolve) => socket.once("open", resolve));
 
-    socket.send(JSON.stringify({ type: "message", topic: "api.live.room", payload: "x".repeat(70_000) }));
+    socket.send(
+      JSON.stringify({ type: "message", topic: "api.live.room", payload: "x".repeat(70_000) }),
+    );
     socket.send(JSON.stringify({ type: "ping" }));
     await settle(100);
 

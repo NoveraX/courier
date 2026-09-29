@@ -1,19 +1,15 @@
-import { memo } from "react";
 import { motion } from "motion/react";
-import { cn } from "@/lib/utils";
+import { memo } from "react";
+import { formatDuration, formatNumber, formatSize } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
-import {
-  formatDuration,
-  formatNumber,
-  formatSize,
-} from "@/components/shared/formatters";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
-import { HealthIndicator } from "../shared/health-indicator";
 import { TypeBadge } from "@/components/shared/type-badge";
+import { cn } from "@/lib/utils";
 import { TransportBadge } from "@/views/playground/transport-badge";
-import { PathDisplay } from "../shared/path-display";
 import { getHealthLevel } from "../compute-metrics";
 import { formatEndpointKey } from "../helpers";
+import { HealthIndicator } from "../shared/health-indicator";
+import { PathDisplay } from "../shared/path-display";
 
 import type { EndpointNodeData } from "../types";
 
@@ -42,9 +38,7 @@ export const EndpointRow = memo(function EndpointRow({
       onClick={() => onSelect(key)}
       className={cn(
         "group cursor-pointer border-b border-border-subtle/50 transition-colors",
-        isSelected
-          ? "bg-accent-brand/5"
-          : "hover:bg-muted/30",
+        isSelected ? "bg-accent-brand/5" : "hover:bg-muted/30",
       )}
     >
       {/* Health */}
@@ -55,18 +49,12 @@ export const EndpointRow = memo(function EndpointRow({
       {/* Endpoint name: source.group.method */}
       <td className="px-2 py-2.5">
         <div className="flex items-baseline gap-0">
-          <span className="text-body-xs text-muted-foreground/40">
-            {endpoint.source}
-          </span>
+          <span className="text-body-xs text-muted-foreground/40">{endpoint.source}</span>
           {endpoint.group && (
-            <span className="text-body-xs text-muted-foreground/40">
-              .{endpoint.group}
-            </span>
+            <span className="text-body-xs text-muted-foreground/40">.{endpoint.group}</span>
           )}
           <span className="text-body-xs text-muted-foreground/40">.</span>
-          <span className="text-body-sm font-medium text-foreground/90">
-            {endpoint.method}
-          </span>
+          <span className="text-body-sm font-medium text-foreground/90">{endpoint.method}</span>
         </div>
       </td>
 
@@ -77,10 +65,11 @@ export const EndpointRow = memo(function EndpointRow({
 
       {/* Type */}
       <td className="px-2 py-2.5 text-center">
-        {endpoint.transport
-          ? <TransportBadge transport={endpoint.transport} />
-          : <TypeBadge type={endpoint.endpointType} className="text-[9px]" />
-        }
+        {endpoint.transport ? (
+          <TransportBadge transport={endpoint.transport} />
+        ) : (
+          <TypeBadge type={endpoint.endpointType} className="text-[9px]" />
+        )}
       </td>
 
       {/* HTTP Method */}
@@ -99,25 +88,31 @@ export const EndpointRow = memo(function EndpointRow({
       </td>
 
       {/* P95 */}
-      <td className={cn(
-        "px-2 py-2.5 text-right tabular-nums text-body-xs",
-        metrics.p95ResponseTime >= 500 ? "text-rose-400" :
-        metrics.p95ResponseTime >= 200 ? "text-amber-400" :
-        "text-muted-foreground",
-      )}>
+      <td
+        className={cn(
+          "px-2 py-2.5 text-right tabular-nums text-body-xs",
+          metrics.p95ResponseTime >= 500
+            ? "text-rose-400"
+            : metrics.p95ResponseTime >= 200
+              ? "text-amber-400"
+              : "text-muted-foreground",
+        )}
+      >
         {metrics.totalRequests > 0 ? formatDuration(metrics.p95ResponseTime) : "—"}
       </td>
 
       {/* Error rate */}
-      <td className={cn(
-        "px-2 py-2.5 text-right tabular-nums text-body-xs",
-        metrics.successRate < 80 ? "text-rose-400" :
-        metrics.successRate < 95 ? "text-amber-400" :
-        "text-muted-foreground",
-      )}>
-        {metrics.totalRequests > 0
-          ? `${metrics.successRate.toFixed(1)}%`
-          : "—"}
+      <td
+        className={cn(
+          "px-2 py-2.5 text-right tabular-nums text-body-xs",
+          metrics.successRate < 80
+            ? "text-rose-400"
+            : metrics.successRate < 95
+              ? "text-amber-400"
+              : "text-muted-foreground",
+        )}
+      >
+        {metrics.totalRequests > 0 ? `${metrics.successRate.toFixed(1)}%` : "—"}
       </td>
 
       {/* Avg size */}

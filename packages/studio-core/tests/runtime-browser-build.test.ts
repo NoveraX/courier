@@ -15,7 +15,8 @@ describe("@noverax/courier-studio-core/runtime in a browser build", () => {
   it("bundles without reaching the disk config loader or any Node built-in", async () => {
     const result = await build({
       stdin: {
-        contents: 'import { attachRuntime } from "@noverax/courier-studio-core/runtime"; attachRuntime();',
+        contents:
+          'import { attachRuntime } from "@noverax/courier-studio-core/runtime"; attachRuntime();',
         resolveDir: __dirname,
       },
       bundle: true,

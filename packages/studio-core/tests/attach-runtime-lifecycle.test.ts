@@ -8,8 +8,8 @@
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -35,7 +35,9 @@ vi.mock("socket.io-client", () => ({
   },
 }));
 
-const { attachRuntime, _resetRuntimeHandlesForTests } = await import("../src/runtime/attach-runtime");
+const { attachRuntime, _resetRuntimeHandlesForTests } = await import(
+  "../src/runtime/attach-runtime"
+);
 
 const settle = () => new Promise((r) => setTimeout(r, 50));
 

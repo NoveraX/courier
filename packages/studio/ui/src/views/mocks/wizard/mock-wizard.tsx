@@ -1,5 +1,3 @@
-import type { MockWizardHandle } from "./use-mock-wizard";
-
 import {
   Dialog,
   DialogContent,
@@ -7,10 +5,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DoneStep } from "./step-done";
 import { ConfigureStep } from "./step-configure";
+import { DoneStep } from "./step-done";
 import { ReviewStep } from "./step-review";
 import { SourceStep } from "./step-source";
+import type { MockWizardHandle } from "./use-mock-wizard";
 import { WizardFooter } from "./wizard-footer";
 import { WizardStepDot } from "./wizard-step-dot";
 
@@ -73,7 +72,8 @@ export function MockWizard({ wizard }: { wizard: MockWizardHandle }): React.Reac
   const { state, session } = wizard;
   const applying = state.apply.status === "applying";
   const holdsDrafts = state.step !== "done" && state.drafts.length > 0;
-  const current = state.step === "done" ? STEPS.length : STEPS.findIndex((step) => step.key === state.step);
+  const current =
+    state.step === "done" ? STEPS.length : STEPS.findIndex((step) => step.key === state.step);
 
   return (
     <Dialog open={wizard.open} onOpenChange={(open) => (open ? undefined : wizard.close())}>
@@ -87,11 +87,15 @@ export function MockWizard({ wizard }: { wizard: MockWizardHandle }): React.Reac
         <DialogHeader className="px-6 pt-5">
           <DialogTitle className="text-h2">Add mock server</DialogTitle>
           <DialogDescription className="text-body-sm">
-            Declare mocks of your API sources in courier.mocks.ts. Studio shows the exact change before it writes it.
+            Declare mocks of your API sources in courier.mocks.ts. Studio shows the exact change
+            before it writes it.
           </DialogDescription>
           <div className="flex items-center gap-0 pt-3">
             {STEPS.map(({ key, label }, index) => {
-              const back = key === "review" || index >= current || state.step === "done" || applying ? null : key;
+              const back =
+                key === "review" || index >= current || state.step === "done" || applying
+                  ? null
+                  : key;
               return (
                 <WizardStepDot
                   key={key}

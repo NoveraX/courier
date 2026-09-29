@@ -18,7 +18,11 @@ const SPEC = JSON.stringify({
   servers: [{ url: "https://api.example.com" }],
   components: {
     schemas: {
-      Pet: { type: "object", required: ["name"], properties: { name: { type: "string" }, tag: { type: "string" } } },
+      Pet: {
+        type: "object",
+        required: ["name"],
+        properties: { name: { type: "string" }, tag: { type: "string" } },
+      },
     },
   },
   paths: {
@@ -30,8 +34,16 @@ const SPEC = JSON.stringify({
           { name: "id", in: "path", required: true, schema: { type: "string" } },
           { name: "notify", in: "query", schema: { type: "boolean" } },
         ],
-        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } } },
-        responses: { "200": { description: "ok", content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } } } },
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } },
+        },
+        responses: {
+          "200": {
+            description: "ok",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } },
+          },
+        },
       },
     },
   },
@@ -46,10 +58,17 @@ afterAll(() => removeProjects("exact-optional-types"));
 
 describe.each(VARIANTS)("a client validated with %s", (label, options) => {
   it("compiles under exactOptionalPropertyTypes", () => {
-    const files = generateCode(parseSpec(SPEC), { type: "openapi", outputDir: "src/api", ...options }, "pets");
+    const files = generateCode(
+      parseSpec(SPEC),
+      { type: "openapi", outputDir: "src/api", ...options },
+      "pets",
+    );
     const dir = writeProject(`exact-optional-types/${label}`, files);
 
-    const errors = compileProject(dir, ["src/api/pets/index.ts"], { ...STRICT, exactOptionalPropertyTypes: true });
+    const errors = compileProject(dir, ["src/api/pets/index.ts"], {
+      ...STRICT,
+      exactOptionalPropertyTypes: true,
+    });
 
     expect(errors).toEqual([]);
   });

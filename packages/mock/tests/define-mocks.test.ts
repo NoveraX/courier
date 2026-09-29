@@ -6,13 +6,19 @@
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { describe, expect, it } from "vitest";
 
-import { defineMocks, defineMockServer, defineScenario } from "../src";
+import { defineMockServer, defineMocks, defineScenario } from "../src";
 
 const { endpoint } = courier();
 type User = { id: number };
-const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response<User[]>() } });
+const users = defineGroup({
+  prefix: "users",
+  endpoints: { getAll: endpoint.get("").response<User[]>() },
+});
 const api = defineApi({ baseURL: "https://api.example", groups: { users } });
-const billing = defineApi({ baseURL: "https://billing.example", endpoints: { invoices: endpoint.get("invoices") } });
+const billing = defineApi({
+  baseURL: "https://billing.example",
+  endpoints: { invoices: endpoint.get("invoices") },
+});
 const outage = defineScenario<typeof api>("outage", (mock) => {
   mock("users", "getAll").rejects(503);
 });

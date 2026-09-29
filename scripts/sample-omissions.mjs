@@ -19,8 +19,16 @@ const UNDECLARED = new Set([2304, 2552, 18004]);
 
 /* Samples written for a platform whose types this check does not load. */
 const PLATFORM = [
-  { page: "deployment/cloudflare.mdx", text: /'ctx'|'webSocket'/, reason: "Cloudflare Workers' types" },
-  { page: "deployment/replication.mdx", text: /'websocket'/, reason: "@fastify/websocket's route option" },
+  {
+    page: "deployment/cloudflare.mdx",
+    text: /'ctx'|'webSocket'/,
+    reason: "Cloudflare Workers' types",
+  },
+  {
+    page: "deployment/replication.mdx",
+    text: /'websocket'/,
+    reason: "@fastify/websocket's route option",
+  },
 ];
 
 /**
@@ -40,7 +48,8 @@ export function isOmission(code, text, sample) {
   if (sample.listing && (code === 2304 || code === 2552) && /name '[A-Z]/.test(text)) return false;
   if (OMITTED.has(code)) return true;
   if (code === 2339 && /type 'ImportMeta'/.test(text)) return true;
-  if (PLATFORM.some((entry) => sample.page.endsWith(entry.page) && entry.text.test(text))) return true;
+  if (PLATFORM.some((entry) => sample.page.endsWith(entry.page) && entry.text.test(text)))
+    return true;
   /* An API from the reader's app, or one built on a name the sample does
      not declare, is anything here, and the callers read anything as an API
      with streams — which a proxy caller must be given a boundary for — and

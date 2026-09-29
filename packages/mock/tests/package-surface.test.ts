@@ -32,7 +32,10 @@ function reachable(): { files: Set<string>; packages: Set<string> } {
     if (files.has(file)) continue;
     files.add(file);
     const text = readFileSync(file, "utf8");
-    for (const [, specifier = ""] of [...text.matchAll(VALUE_IMPORT), ...text.matchAll(DYNAMIC_IMPORT)]) {
+    for (const [, specifier = ""] of [
+      ...text.matchAll(VALUE_IMPORT),
+      ...text.matchAll(DYNAMIC_IMPORT),
+    ]) {
       if (!specifier.startsWith(".")) packages.add(specifier);
       const target = specifier.startsWith(".") ? resolveModule(file, specifier) : undefined;
       if (target) queue.push(target);
@@ -45,7 +48,9 @@ describe("the package surface", () => {
   it("ships no Studio socket bridge: managed mocks talk to Studio over IPC", () => {
     const { files, packages } = reachable();
 
-    expect([...files].map((file) => relative(ROOT, file)).filter((f) => f.startsWith("src/studio/"))).toEqual([]);
+    expect(
+      [...files].map((file) => relative(ROOT, file)).filter((f) => f.startsWith("src/studio/")),
+    ).toEqual([]);
     expect(packages.has("socket.io-client")).toBe(false);
   });
 

@@ -21,7 +21,10 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   root = mkdtempSync(join(tmpdir(), "courier-api-errors-"));
   mkdirSync(root, { recursive: true });
-  writeFileSync(join(root, "courier.config.ts"), 'export default { sources: { api: { baseURL: "https://api.example" } } };\n');
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'export default { sources: { api: { baseURL: "https://api.example" } } };\n',
+  );
 });
 
 afterEach(async () => {
@@ -33,7 +36,13 @@ afterEach(async () => {
 
 function start(): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
@@ -43,7 +52,11 @@ async function post(url: string, body: string) {
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body,
   });
-  return { status: response.status, type: response.headers.get("content-type") ?? "", text: await response.text() };
+  return {
+    status: response.status,
+    type: response.headers.get("content-type") ?? "",
+    text: await response.text(),
+  };
 }
 
 describe("API errors", () => {
@@ -64,7 +77,9 @@ describe("API errors", () => {
     const reply = await post(url, JSON.stringify({ content: "x".repeat(MAX_MESSAGE_BYTES) }));
 
     expect(reply.status).toBe(413);
-    expect(JSON.parse(reply.text)).toEqual({ error: "The request body is larger than Studio accepts." });
+    expect(JSON.parse(reply.text)).toEqual({
+      error: "The request body is larger than Studio accepts.",
+    });
   });
 });
 

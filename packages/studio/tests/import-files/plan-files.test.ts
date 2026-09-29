@@ -29,20 +29,21 @@ import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/pro
 const IS_WINDOWS = process.platform === "win32";
 const DIR = "src/api/pets";
 
-const GROUP = (listBody: string) => [
-  'import { courier, defineGroup } from "@noverax/courier/define";',
-  "",
-  "const { endpoint } = courier();",
-  "",
-  "export const pets = defineGroup({",
-  '  prefix: "/pets",',
-  "  endpoints: {",
-  `    listPets: endpoint.get("/")${listBody},`,
-  '    createPet: endpoint.post("/"),',
-  "  },",
-  "});",
-  "",
-].join("\n");
+const GROUP = (listBody: string) =>
+  [
+    'import { courier, defineGroup } from "@noverax/courier/define";',
+    "",
+    "const { endpoint } = courier();",
+    "",
+    "export const pets = defineGroup({",
+    '  prefix: "/pets",',
+    "  endpoints: {",
+    `    listPets: endpoint.get("/")${listBody},`,
+    '    createPet: endpoint.post("/"),',
+    "  },",
+    "});",
+    "",
+  ].join("\n");
 
 let scratch: string;
 let root: ProjectRoot;
@@ -76,7 +77,11 @@ function recordOf(body: string, extra: Partial<RecordedFile> = {}): RecordedFile
   return { sha256: bodyHash(body), ...extra };
 }
 
-function plan(targets: PlanTarget[], removals: string[], recorded: Record<string, RecordedFile> = {}) {
+function plan(
+  targets: PlanTarget[],
+  removals: string[],
+  recorded: Record<string, RecordedFile> = {},
+) {
   return planFiles(root, { importName: "pets", dir: DIR, targets, removals }, recorded);
 }
 
@@ -84,13 +89,18 @@ describe("planFiles, for the files an operation wants", () => {
   it("creates a file that is not there", () => {
     const result = plan([generated(`${DIR}/index.ts`, "export {};\n")], []);
 
-    expect(result.writes).toMatchObject([{ path: `${DIR}/index.ts`, action: "create", was: "absent" }]);
+    expect(result.writes).toMatchObject([
+      { path: `${DIR}/index.ts`, action: "create", was: "absent" },
+    ]);
   });
 
   it("replaces Studio's own untouched file, and leaves one already right unchanged", () => {
     written(`${DIR}/index.ts`, "old\n");
     written(`${DIR}/source.ts`, "same\n");
-    const recorded = { [`${DIR}/index.ts`]: recordOf("old\n"), [`${DIR}/source.ts`]: recordOf("same\n") };
+    const recorded = {
+      [`${DIR}/index.ts`]: recordOf("old\n"),
+      [`${DIR}/source.ts`]: recordOf("same\n"),
+    };
 
     const result = plan(
       [generated(`${DIR}/index.ts`, "new\n"), generated(`${DIR}/source.ts`, "same\n")],
@@ -139,31 +149,56 @@ describe("planFiles, for the files an operation wants", () => {
     );
     written(`${DIR}/pets/index.ts`, GROUP(".query<{ page: number }>()"), asGenerated);
     const recorded = {
-      [`${DIR}/pets/index.ts`]: recordOf(asGenerated, { endpoints: generateFingerprints(asGenerated) }),
+      [`${DIR}/pets/index.ts`]: recordOf(asGenerated, {
+        endpoints: generateFingerprints(asGenerated),
+      }),
     };
 
     const result = plan(
-      [{ path: `${DIR}/pets/index.ts`, body: regenerated, kind: "merge", endpoints: generateFingerprints(regenerated) }],
+      [
+        {
+          path: `${DIR}/pets/index.ts`,
+          body: regenerated,
+          kind: "merge",
+          endpoints: generateFingerprints(regenerated),
+        },
+      ],
       [],
       recorded,
     );
 
-    expect(result.writes[0]).toMatchObject({ action: "merge", was: "recorded-edited", carriesEdits: true });
+    expect(result.writes[0]).toMatchObject({
+      action: "merge",
+      was: "recorded-edited",
+      carriesEdits: true,
+    });
     expect(result.writes[0]?.body).toContain(".query<{ page: number }>()");
     expect(result.writes[0]?.body).toContain("deletePet");
   });
 
   it("holds a merge that leaves out an endpoint the user edited, though it keeps another edit", () => {
     const asGenerated = GROUP("");
-    const edited = GROUP(".query<{ page: number }>()").replace('endpoint.post("/")', 'endpoint.post("/").meta({ mine: true })');
+    const edited = GROUP(".query<{ page: number }>()").replace(
+      'endpoint.post("/")',
+      'endpoint.post("/").meta({ mine: true })',
+    );
     written(`${DIR}/pets/index.ts`, edited, asGenerated);
     const withoutCreate = asGenerated.replace('    createPet: endpoint.post("/"),\n', "");
     const recorded = {
-      [`${DIR}/pets/index.ts`]: recordOf(asGenerated, { endpoints: generateFingerprints(asGenerated) }),
+      [`${DIR}/pets/index.ts`]: recordOf(asGenerated, {
+        endpoints: generateFingerprints(asGenerated),
+      }),
     };
 
     const result = plan(
-      [{ path: `${DIR}/pets/index.ts`, body: withoutCreate, kind: "merge", endpoints: generateFingerprints(withoutCreate) }],
+      [
+        {
+          path: `${DIR}/pets/index.ts`,
+          body: withoutCreate,
+          kind: "merge",
+          endpoints: generateFingerprints(withoutCreate),
+        },
+      ],
       [],
       recorded,
     );
@@ -180,16 +215,29 @@ describe("planFiles, for the files an operation wants", () => {
     const edited = GROUP(".query<{ page: number }>()");
     written(`${DIR}/pets/index.ts`, edited, asGenerated);
     const recorded = {
-      [`${DIR}/pets/index.ts`]: recordOf(asGenerated, { endpoints: generateFingerprints(asGenerated) }),
+      [`${DIR}/pets/index.ts`]: recordOf(asGenerated, {
+        endpoints: generateFingerprints(asGenerated),
+      }),
     };
 
     const result = plan(
-      [{ path: `${DIR}/pets/index.ts`, body: asGenerated, kind: "merge", endpoints: generateFingerprints(asGenerated) }],
+      [
+        {
+          path: `${DIR}/pets/index.ts`,
+          body: asGenerated,
+          kind: "merge",
+          endpoints: generateFingerprints(asGenerated),
+        },
+      ],
       [],
       recorded,
     );
 
-    expect(result.writes[0]).toMatchObject({ action: "unchanged", carriesEdits: true, body: edited });
+    expect(result.writes[0]).toMatchObject({
+      action: "unchanged",
+      carriesEdits: true,
+      body: edited,
+    });
   });
 
   it("uses a header's claim when there is no record, a fresh clone's files", () => {
@@ -209,7 +257,9 @@ describe("planFiles, for the files an operation wants", () => {
       [],
     );
 
-    expect(result.pending.map((step) => [step.confirmation.path, step.confirmation.reason])).toEqual([
+    expect(
+      result.pending.map((step) => [step.confirmation.path, step.confirmation.reason]),
+    ).toEqual([
       [`${DIR}/index.ts`, "foreign"],
       [`${DIR}/source.ts`, "foreign"],
     ]);
@@ -218,33 +268,42 @@ describe("planFiles, for the files an operation wants", () => {
   it("writes Studio's header back into a file of the same text that lost it, once the user allows it", () => {
     put(`${DIR}/index.ts`, "same\n");
 
-    const result = plan([generated(`${DIR}/index.ts`, "same\n")], [], { [`${DIR}/index.ts`]: recordOf("same\n") });
+    const result = plan([generated(`${DIR}/index.ts`, "same\n")], [], {
+      [`${DIR}/index.ts`]: recordOf("same\n"),
+    });
     const allowed = withConfirmations(result, [`${DIR}/index.ts`]);
 
     expect(result.pending.map((step) => step.confirmation.reason)).toEqual(["foreign"]);
-    expect(allowed.writes).toMatchObject([{ path: `${DIR}/index.ts`, action: "replace", was: "foreign" }]);
-  });
-
-  it.skipIf(IS_WINDOWS)("blocks a target that is a link, or that a directory link leads outside", () => {
-    put(`${DIR}/real.ts`, "x\n");
-    symlinkSync(join(root.path, `${DIR}/real.ts`), join(root.path, `${DIR}/index.ts`));
-    mkdirSync(join(scratch, "outside"));
-    symlinkSync(join(scratch, "outside"), join(root.path, `${DIR}/pets`));
-
-    const result = plan(
-      [generated(`${DIR}/index.ts`, "new\n"), generated(`${DIR}/pets/index.ts`, "new\n")],
-      [],
-    );
-
-    expect(result.blocked).toEqual([
-      { path: `${DIR}/index.ts`, reason: "link" },
-      { path: `${DIR}/pets/index.ts`, reason: "link" },
+    expect(allowed.writes).toMatchObject([
+      { path: `${DIR}/index.ts`, action: "replace", was: "foreign" },
     ]);
-    expect(result.writes).toEqual([]);
   });
+
+  it.skipIf(IS_WINDOWS)(
+    "blocks a target that is a link, or that a directory link leads outside",
+    () => {
+      put(`${DIR}/real.ts`, "x\n");
+      symlinkSync(join(root.path, `${DIR}/real.ts`), join(root.path, `${DIR}/index.ts`));
+      mkdirSync(join(scratch, "outside"));
+      symlinkSync(join(scratch, "outside"), join(root.path, `${DIR}/pets`));
+
+      const result = plan(
+        [generated(`${DIR}/index.ts`, "new\n"), generated(`${DIR}/pets/index.ts`, "new\n")],
+        [],
+      );
+
+      expect(result.blocked).toEqual([
+        { path: `${DIR}/index.ts`, reason: "link" },
+        { path: `${DIR}/pets/index.ts`, reason: "link" },
+      ]);
+      expect(result.writes).toEqual([]);
+    },
+  );
 
   it("refuses a path outside the import's directory", () => {
-    expect(() => plan([generated("src/api/other/index.ts", "x\n")], [])).toThrow(/outside the import's directory/);
+    expect(() => plan([generated("src/api/other/index.ts", "x\n")], [])).toThrow(
+      /outside the import's directory/,
+    );
   });
 });
 
@@ -257,7 +316,9 @@ describe("planFiles, for the files an operation no longer wants", () => {
       [`${DIR}/gone.ts`]: recordOf("x\n"),
     });
 
-    expect(result.removals).toEqual([{ path: `${DIR}/old/index.ts`, was: "recorded", priorSha256: bodyHash("gen\n") }]);
+    expect(result.removals).toEqual([
+      { path: `${DIR}/old/index.ts`, was: "recorded", priorSha256: bodyHash("gen\n") },
+    ]);
     expect(result.forgotten).toEqual([`${DIR}/gone.ts`]);
   });
 
@@ -283,7 +344,9 @@ describe("planFiles, for the files an operation no longer wants", () => {
     put(`${DIR}/main.ts`, "the user's main\n");
     written(`${DIR}/theirs.ts`, "gen\n");
 
-    const result = plan([], [`${DIR}/main.ts`], { [`${DIR}/main.ts`]: recordOf("the user's main\n") });
+    const result = plan([], [`${DIR}/main.ts`], {
+      [`${DIR}/main.ts`]: recordOf("the user's main\n"),
+    });
     const other = planFiles(
       root,
       { importName: "store", dir: DIR, targets: [], removals: [`${DIR}/theirs.ts`] },
@@ -304,21 +367,27 @@ describe("planFiles, for the files an operation no longer wants", () => {
     expect(result.removals).toEqual([]);
   });
 
-  it.skipIf(IS_WINDOWS)("never removes a link, or a folder where a file was recorded, even one Studio recorded", () => {
-    put("elsewhere.ts", "the link's target\n");
-    mkdirSync(join(root.path, DIR), { recursive: true });
-    symlinkSync(join(root.path, "elsewhere.ts"), join(root.path, `${DIR}/linked.ts`));
-    mkdirSync(join(root.path, `${DIR}/folder.ts`));
-    const recorded = { [`${DIR}/linked.ts`]: recordOf("x\n"), [`${DIR}/folder.ts`]: recordOf("x\n") };
+  it.skipIf(IS_WINDOWS)(
+    "never removes a link, or a folder where a file was recorded, even one Studio recorded",
+    () => {
+      put("elsewhere.ts", "the link's target\n");
+      mkdirSync(join(root.path, DIR), { recursive: true });
+      symlinkSync(join(root.path, "elsewhere.ts"), join(root.path, `${DIR}/linked.ts`));
+      mkdirSync(join(root.path, `${DIR}/folder.ts`));
+      const recorded = {
+        [`${DIR}/linked.ts`]: recordOf("x\n"),
+        [`${DIR}/folder.ts`]: recordOf("x\n"),
+      };
 
-    const result = plan([], [`${DIR}/linked.ts`, `${DIR}/folder.ts`], recorded);
+      const result = plan([], [`${DIR}/linked.ts`, `${DIR}/folder.ts`], recorded);
 
-    expect(result.kept).toEqual([
-      { path: `${DIR}/linked.ts`, reason: "link" },
-      { path: `${DIR}/folder.ts`, reason: "not-a-file" },
-    ]);
-    expect(result.removals).toEqual([]);
-  });
+      expect(result.kept).toEqual([
+        { path: `${DIR}/linked.ts`, reason: "link" },
+        { path: `${DIR}/folder.ts`, reason: "not-a-file" },
+      ]);
+      expect(result.removals).toEqual([]);
+    },
+  );
 
   it("forgets rather than removes a file that is, on disk, one of the files it writes", () => {
     written(`${DIR}/index.ts`, "gen\n");

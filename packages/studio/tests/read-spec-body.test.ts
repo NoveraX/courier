@@ -20,7 +20,10 @@ const SPEC = JSON.stringify({
   openapi: "3.1.0",
   info: { title: "Pets", version: "1" },
   paths: Object.fromEntries(
-    Array.from({ length: 500 }, (_, i) => [`/pets/${i}`, { get: { operationId: `getPet${i}`, responses: { "200": { description: `pet ${i}` } } } }]),
+    Array.from({ length: 500 }, (_, i) => [
+      `/pets/${i}`,
+      { get: { operationId: `getPet${i}`, responses: { "200": { description: `pet ${i}` } } } },
+    ]),
   ),
 });
 const ENCODED = new Map<string, Buffer>([
@@ -43,7 +46,9 @@ function firstHalf(body: Buffer): Buffer {
 const servers: Server[] = [];
 
 afterEach(async () => {
-  await Promise.all(servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
+  await Promise.all(
+    servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 
 /* A server that writes each answer by hand, once the request has arrived. */
@@ -54,7 +59,8 @@ async function serveRaw(answer: (socket: Socket) => void): Promise<string> {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   servers.push(server);
   const address = server.address();
-  if (address === null || typeof address === "string") throw new Error("the spec server has no port");
+  if (address === null || typeof address === "string")
+    throw new Error("the spec server has no port");
   return `http://127.0.0.1:${address.port}/spec.json`;
 }
 
@@ -114,34 +120,62 @@ describe("readSpecBody", () => {
     },
   );
 
-  it.each(["identity", "gzip"])("reports a connection reset partway through a %s body as a body cut off", async (encoding) => {
-    const url = await serveRaw(halfThen(encoding, (socket) => socket.resetAndDestroy()));
+  it.each(["identity", "gzip"])(
+    "reports a connection reset partway through a %s body as a body cut off",
+    async (encoding) => {
+      const url = await serveRaw(halfThen(encoding, (socket) => socket.resetAndDestroy()));
 
-    const { error } = await failure(() => fetchSpec(url, NOTHING_LISTED));
+      const { error } = await failure(() => fetchSpec(url, NOTHING_LISTED));
 
-    expect(error).toMatchObject({
-      code: "SPEC_UNREACHABLE",
-      refused: false,
-      message: `${url} closed the connection before the whole specification arrived (ECONNRESET).`,
-    });
-  });
+      expect(error).toMatchObject({
+        code: "SPEC_UNREACHABLE",
+        refused: false,
+        message: `${url} closed the connection before the whole specification arrived (ECONNRESET).`,
+      });
+    },
+  );
 
   it.each([
-    { label: "a truncated gzip body", encoding: "gzip", sent: firstHalf(encoded("gzip")), reason: "unexpected end of file" },
-    { label: "a truncated deflate body", encoding: "deflate", sent: firstHalf(encoded("deflate")), reason: "unexpected end of file" },
-    { label: "a plain body labelled gzip", encoding: "gzip", sent: encoded("identity"), reason: "incorrect header check" },
-    { label: "a plain body labelled br", encoding: "br", sent: encoded("identity"), reason: "Decompression failed" },
-  ])("reports $label, sent whole, as a body that does not decompress", async ({ encoding, sent, reason }) => {
-    const url = await serveRaw((socket) => socket.end(Buffer.concat([Buffer.from(head(encoding, sent.length)), sent])));
+    {
+      label: "a truncated gzip body",
+      encoding: "gzip",
+      sent: firstHalf(encoded("gzip")),
+      reason: "unexpected end of file",
+    },
+    {
+      label: "a truncated deflate body",
+      encoding: "deflate",
+      sent: firstHalf(encoded("deflate")),
+      reason: "unexpected end of file",
+    },
+    {
+      label: "a plain body labelled gzip",
+      encoding: "gzip",
+      sent: encoded("identity"),
+      reason: "incorrect header check",
+    },
+    {
+      label: "a plain body labelled br",
+      encoding: "br",
+      sent: encoded("identity"),
+      reason: "Decompression failed",
+    },
+  ])(
+    "reports $label, sent whole, as a body that does not decompress",
+    async ({ encoding, sent, reason }) => {
+      const url = await serveRaw((socket) =>
+        socket.end(Buffer.concat([Buffer.from(head(encoding, sent.length)), sent])),
+      );
 
-    const { error } = await failure(() => fetchSpec(url, NOTHING_LISTED));
+      const { error } = await failure(() => fetchSpec(url, NOTHING_LISTED));
 
-    expect(error).toMatchObject({
-      code: "SPEC_UNREACHABLE",
-      refused: false,
-      message: `${url} sent a ${encoding} body that does not decompress (${reason}).`,
-    });
-  });
+      expect(error).toMatchObject({
+        code: "SPEC_UNREACHABLE",
+        refused: false,
+        message: `${url} sent a ${encoding} body that does not decompress (${reason}).`,
+      });
+    },
+  );
 
   it("closes the connection as soon as a body does not decompress, without waiting for the rest", async () => {
     const connections: Socket[] = [];
@@ -154,16 +188,24 @@ describe("readSpecBody", () => {
     const { error } = await failure(() => fetchSpec(url, NOTHING_LISTED));
     const closed = await closesWithin(connections[0], 1_000);
 
-    expect(error).toMatchObject({ code: "SPEC_UNREACHABLE", message: `${url} sent a gzip body that does not decompress (incorrect header check).` });
+    expect(error).toMatchObject({
+      code: "SPEC_UNREACHABLE",
+      message: `${url} sent a gzip body that does not decompress (incorrect header check).`,
+    });
     expect(closed).toBe(true);
   });
 
   it("stops reading a compressed body that unfolds past 64 MB", async () => {
     const bomb = gzipSync(Buffer.alloc(65 * 1024 * 1024));
-    const url = await serveRaw((socket) => socket.end(Buffer.concat([Buffer.from(head("gzip", bomb.length)), bomb])));
+    const url = await serveRaw((socket) =>
+      socket.end(Buffer.concat([Buffer.from(head("gzip", bomb.length)), bomb])),
+    );
 
     const { error } = await failure(() => fetchSpec(url, NOTHING_LISTED));
 
-    expect(error).toMatchObject({ code: "SPEC_TOO_LARGE", message: `${url} is larger than 64 MB.` });
+    expect(error).toMatchObject({
+      code: "SPEC_TOO_LARGE",
+      message: `${url} is larger than 64 MB.`,
+    });
   });
 });

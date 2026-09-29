@@ -4,13 +4,8 @@
  */
 
 import { useCallback } from "react";
-
-import type {
-  EndpointInventory,
-  ManageStep,
-  ParsedSpec,
-} from "./types";
 import { fetchInventory, parseSpecFromUrl } from "./client";
+import type { EndpointInventory, ManageStep, ParsedSpec } from "./types";
 
 interface LoaderDeps {
   setStep: (step: ManageStep) => void;
@@ -27,34 +22,40 @@ interface InventoryLoaders {
 export function useInventoryLoaders(deps: LoaderDeps): InventoryLoaders {
   const { setStep, setError, setInventory, setSpec } = deps;
 
-  const loadInventory = useCallback(async (name: string, parsedSpec: ParsedSpec) => {
-    setStep("loading");
-    setError(null);
-    try {
-      const inv = await fetchInventory(name, parsedSpec);
-      setInventory(inv);
-      setStep("inventory");
-    } catch (err) {
-      /* Back to the spec, where another one can be given: the error is said above it. */
-      setError(err instanceof Error ? err.message : "Failed to load inventory");
-      setStep("reupload");
-    }
-  }, [setStep, setError, setInventory]);
+  const loadInventory = useCallback(
+    async (name: string, parsedSpec: ParsedSpec) => {
+      setStep("loading");
+      setError(null);
+      try {
+        const inv = await fetchInventory(name, parsedSpec);
+        setInventory(inv);
+        setStep("inventory");
+      } catch (err) {
+        /* Back to the spec, where another one can be given: the error is said above it. */
+        setError(err instanceof Error ? err.message : "Failed to load inventory");
+        setStep("reupload");
+      }
+    },
+    [setStep, setError, setInventory],
+  );
 
-  const fetchSpecAndLoadInventory = useCallback(async (name: string, specUrl: string) => {
-    setStep("loading");
-    setError(null);
-    try {
-      const parsedSpec = await parseSpecFromUrl(specUrl);
-      setSpec(parsedSpec);
-      const inv = await fetchInventory(name, parsedSpec);
-      setInventory(inv);
-      setStep("inventory");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch spec");
-      setStep("reupload");
-    }
-  }, [setStep, setError, setInventory, setSpec]);
+  const fetchSpecAndLoadInventory = useCallback(
+    async (name: string, specUrl: string) => {
+      setStep("loading");
+      setError(null);
+      try {
+        const parsedSpec = await parseSpecFromUrl(specUrl);
+        setSpec(parsedSpec);
+        const inv = await fetchInventory(name, parsedSpec);
+        setInventory(inv);
+        setStep("inventory");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch spec");
+        setStep("reupload");
+      }
+    },
+    [setStep, setError, setInventory, setSpec],
+  );
 
   return { loadInventory, fetchSpecAndLoadInventory };
 }

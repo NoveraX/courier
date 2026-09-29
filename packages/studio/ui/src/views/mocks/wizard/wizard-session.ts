@@ -1,9 +1,8 @@
 import type { DeclareClient } from "./declare-client";
+import { toDeclarations } from "./to-declarations";
 import type { MockWizardState } from "./types";
 import type { MockDeclaration } from "./wire-types";
 import type { MockWizardAction } from "./wizard-reducer";
-
-import { toDeclarations } from "./to-declarations";
 import { INITIAL_WIZARD_STATE, mockWizardReducer } from "./wizard-reducer";
 
 /** The wizard's state, and what the user and the project do to it. */

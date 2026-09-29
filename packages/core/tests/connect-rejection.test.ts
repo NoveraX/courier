@@ -47,7 +47,12 @@ describe("an onConnect that throws", () => {
       throw new Error(`could not reach ${SECRET}`);
     });
     served = await serveWS(
-      { room: channel.send<string>().response<string>().implement(() => ({ onMessage() {} })) },
+      {
+        room: channel
+          .send<string>()
+          .response<string>()
+          .implement(() => ({ onMessage() {} })),
+      },
       { onConnect },
     );
     const ch = executeWSChannel<string, string>(served.url, "api.live.room");
@@ -68,7 +73,12 @@ describe("a channel whose connection is refused", () => {
   it("hears why before it reports itself disconnected, as a channel's end comes", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     served = await serveWS(
-      { room: channel.send<string>().response<string>().implement(() => ({ onMessage() {} })) },
+      {
+        room: channel
+          .send<string>()
+          .response<string>()
+          .implement(() => ({ onMessage() {} })),
+      },
       {
         onConnect: () => {
           throw new Error("not today");

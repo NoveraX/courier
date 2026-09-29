@@ -116,7 +116,11 @@ describe.skipIf(!available)("createRedisPresence", () => {
     const pipeline = redis.pipeline();
     for (let i = 0; i < count; i += 1) {
       pipeline.zadd(`${prefix}score:big`, "1", `c${i}`);
-      pipeline.hset(`${prefix}meta:big`, `c${i}`, JSON.stringify({ userId: `u${i}`, joinedAt: 1, metadata: {} }));
+      pipeline.hset(
+        `${prefix}meta:big`,
+        `c${i}`,
+        JSON.stringify({ userId: `u${i}`, joinedAt: 1, metadata: {} }),
+      );
     }
     await pipeline.exec();
 

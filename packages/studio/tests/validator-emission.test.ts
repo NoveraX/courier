@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { generateCode } from "../src/apis/generator";
-import { schemaToArkType, propToArkType } from "../src/apis/generator/validation-arktype";
-import { propToValibot, valibotEnum } from "../src/apis/generator/validation-valibot";
 import { jsLiteral, objectKey } from "../src/apis/generator/literals";
+import { propToArkType, schemaToArkType } from "../src/apis/generator/validation-arktype";
+import { propToValibot, valibotEnum } from "../src/apis/generator/validation-valibot";
+import { parseSpec } from "../src/apis/parser";
 import type { ParsedSchema, ParsedSchemaProperty } from "../src/apis/parser/types";
 
 type Validation = "zod" | "valibot" | "arktype" | "none";
@@ -99,10 +98,7 @@ describe("arktype emission", () => {
   });
 
   it("emits a named enum schema that is one expression", () => {
-    const out = generate(
-      { Root: { type: "string", enum: ["open", "fixed"] } },
-      "arktype",
-    );
+    const out = generate({ Root: { type: "string", enum: ["open", "fixed"] } }, "arktype");
 
     expect(out).not.toMatch(/type\("[^"]*" \| "/);
   });
@@ -112,9 +108,7 @@ describe("valibot emission", () => {
   it("keeps the members of a property enum", () => {
     /* Dropping them left a plain string, which then failed the `satisfies`
        assertion written beside it. */
-    expect(propToValibot(prop({ enum: ["read", "write"] }))).toBe(
-      'v.picklist(["read", "write"])',
-    );
+    expect(propToValibot(prop({ enum: ["read", "write"] }))).toBe('v.picklist(["read", "write"])');
   });
 
   it("escapes a member that carries a quote", () => {

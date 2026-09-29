@@ -56,7 +56,9 @@ describe("a proxy call's options", () => {
   it("carry a per-call header to the proxy, which forwards what it allows", async () => {
     const client = createProxyCaller("api") as unknown as Client;
 
-    await expect(client.list.with({ headers: { "x-trace": "abc" } })()).resolves.toEqual({ ok: true });
+    await expect(client.list.with({ headers: { "x-trace": "abc" } })()).resolves.toEqual({
+      ok: true,
+    });
     expect(upstreamHeaders[0]?.get("x-trace")).toBe("abc");
   });
 
@@ -79,7 +81,9 @@ describe("a proxy call's options", () => {
   it("refuse prefixUrl before sending anything", async () => {
     const client = createProxyCaller("api") as unknown as Client;
 
-    const error = await client.list.with({ prefixUrl: "https://elsewhere.example" })().catch((e) => e);
+    const error = await client.list
+      .with({ prefixUrl: "https://elsewhere.example" })()
+      .catch((e) => e);
 
     expect(error).toBeInstanceOf(ConfigurationError);
     expect((error as ConfigurationError).code).toBe("PROXY_OPTION_NOT_ALLOWED");

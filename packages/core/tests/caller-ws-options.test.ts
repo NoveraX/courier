@@ -13,8 +13,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { WebSocketServer } from "ws";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
-import type { WSHandler } from "../src/adapter/ws-types";
 import { sendAuthRequired } from "../src/adapter/ws-token-refresh";
+import type { WSHandler } from "../src/adapter/ws-types";
 import { createCaller } from "../src/caller";
 import { defineApi } from "../src/define/api";
 import { courier } from "../src/define/courier";

@@ -56,7 +56,12 @@ describe("a success whose data is undefined", () => {
       defineApi({
         name: "cleared",
         baseURL: upstream.url,
-        middleware: [defineMiddleware("clear", "after", (_ctx, response) => ({ ...response, data: undefined }))],
+        middleware: [
+          defineMiddleware("clear", "after", (_ctx, response) => ({
+            ...response,
+            data: undefined,
+          })),
+        ],
         endpoints: { ping: endpoint.get("ping") },
       }),
     );
@@ -74,6 +79,8 @@ describe("a success whose data is undefined", () => {
       return handler.handle(new Request(new URL(url, "http://app.local"), init));
     });
 
-    await expect(createProxyCaller<typeof source>("nothing", { source }).ping()).resolves.toBeNull();
+    await expect(
+      createProxyCaller<typeof source>("nothing", { source }).ping(),
+    ).resolves.toBeNull();
   });
 });

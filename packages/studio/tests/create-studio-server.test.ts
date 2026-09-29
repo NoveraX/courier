@@ -182,7 +182,11 @@ describe("a page served on another local port", () => {
           method: "POST",
           path: "/api/sessions/list",
           setHost: false,
-          headers: { host: "localhost:4382", origin: DEV_ORIGIN, "content-type": "application/json" },
+          headers: {
+            host: "localhost:4382",
+            origin: DEV_ORIGIN,
+            "content-type": "application/json",
+          },
         },
         (res) => {
           res.resume();
@@ -243,7 +247,10 @@ function mockedProject(root: string, mockPort: number): string {
       'const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response(z.array(User)) } });\n' +
       'export const api = defineApi({ baseURL: "https://api.example", groups: { users } });\n',
   );
-  writeFileSync(join(root, "courier.config.ts"), 'import { api } from "./src/api";\nexport default { sources: { api } };\n');
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'import { api } from "./src/api";\nexport default { sources: { api } };\n',
+  );
   const mocksFile = join(root, "courier.mocks.ts");
   writeFileSync(
     mocksFile,
@@ -266,7 +273,9 @@ describe("the mock workers Studio starts", () => {
     const mocksFile = mockedProject(root, mockPort);
     /* Where Studio keeps transforms, a transform of courier.mocks.ts that
        seeds 3 users: a worker serves 3 only if it reads that directory. */
-    const kept = createTransformCache({ directory: join(root, "node_modules", ".cache", "courier", "transform") });
+    const kept = createTransformCache({
+      directory: join(root, "node_modules", ".cache", "courier", "transform"),
+    });
     const marked: string[] = [];
     const seeding: TransformCache = {
       transform: (options, compute) =>
@@ -274,7 +283,9 @@ describe("the mock workers Studio starts", () => {
           const result = compute(miss);
           if (miss.filename !== mocksFile) return result;
           marked.push(miss.filename);
-          return { code: result.code.replace(`port: ${mockPort}`, `port: ${mockPort}, seed: { count: 3 }`) };
+          return {
+            code: result.code.replace(`port: ${mockPort}`, `port: ${mockPort}, seed: { count: 3 }`),
+          };
         }),
     };
     await loadCourierConfig(root, { transformCache: seeding });
@@ -309,7 +320,10 @@ describe("a mocks file edited while its mocks run", () => {
     );
     await started(root);
     const users = `http://127.0.0.1:${mockPort}/users`;
-    await vi.waitFor(async () => expect((await fetch(users)).status).toBe(200), { timeout: 20_000, interval: 200 });
+    await vi.waitFor(async () => expect((await fetch(users)).status).toBe(200), {
+      timeout: 20_000,
+      interval: 200,
+    });
     const created = await fetch(users, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

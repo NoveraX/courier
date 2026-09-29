@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { generateCode } from "../src/apis/generator";
+import { parseSpec } from "../src/apis/parser";
 
 function spec(parameters: unknown[]): string {
   return JSON.stringify({
@@ -25,10 +24,11 @@ function parameters(parsed: ReturnType<typeof parseSpec>) {
 }
 
 function generated(parameters: unknown[]): string {
-  return generateCode(
-    parseSpec(spec(parameters)),
-    { type: "openapi", sourceName: "api", outputDir: "src" },
-  )
+  return generateCode(parseSpec(spec(parameters)), {
+    type: "openapi",
+    sourceName: "api",
+    outputDir: "src",
+  })
     .map((f) => f.content)
     .join("\n");
 }
@@ -42,9 +42,11 @@ describe("a query parameter", () => {
     );
 
     expect(parameters(parsed)[0]?.enum).toEqual(["open", "closed"]);
-    expect(generated([
-      { name: "state", in: "query", schema: { type: "string", enum: ["open", "closed"] } },
-    ])).toMatch(/state\?: "open" \| "closed"/);
+    expect(
+      generated([
+        { name: "state", in: "query", schema: { type: "string", enum: ["open", "closed"] } },
+      ]),
+    ).toMatch(/state\?: "open" \| "closed"/);
   });
 
   it("keeps the element type of an array", () => {

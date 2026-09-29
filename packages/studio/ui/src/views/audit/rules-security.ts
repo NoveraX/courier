@@ -1,7 +1,7 @@
 import type { RequestEntry } from "../../store/types-request";
 import type { Catalog } from "../../store/types-ui";
-import type { AuditItem } from "./types";
 import { AUTH_SUGGESTION } from "./code-suggestions";
+import type { AuditItem } from "./types";
 
 const AUTH_HEADER_PATTERNS = [
   "authorization",
@@ -31,29 +31,30 @@ function mutationWithoutAuth(requests: RequestEntry[]): AuditItem[] {
 
   const endpoints = new Map<string, string[]>();
   for (const r of mutations) {
-    const label = r.group
-      ? `${r.source}.${r.group}.${r.method}`
-      : `${r.source}.${r.method}`;
+    const label = r.group ? `${r.source}.${r.group}.${r.method}` : `${r.source}.${r.method}`;
     const ids = endpoints.get(label) ?? [];
     ids.push(r.id);
     endpoints.set(label, ids);
   }
 
-  return [{
-    id: "sec-mutation-no-auth",
-    severity: "error",
-    category: "security",
-    title: "Mutations without authentication",
-    description: "Mutation endpoints called without any auth header (Authorization, X-API-Key, etc.).",
-    suggestion: "Add auth middleware or include authentication headers.",
-    codeSuggestion: AUTH_SUGGESTION,
-    endpoints: [...endpoints].map(([label, ids]) => ({
-      key: label,
-      label,
-      detail: `${ids.length} calls`,
-      requestIds: ids,
-    })),
-  }];
+  return [
+    {
+      id: "sec-mutation-no-auth",
+      severity: "error",
+      category: "security",
+      title: "Mutations without authentication",
+      description:
+        "Mutation endpoints called without any auth header (Authorization, X-API-Key, etc.).",
+      suggestion: "Add auth middleware or include authentication headers.",
+      codeSuggestion: AUTH_SUGGESTION,
+      endpoints: [...endpoints].map(([label, ids]) => ({
+        key: label,
+        label,
+        detail: `${ids.length} calls`,
+        requestIds: ids,
+      })),
+    },
+  ];
 }
 
 const LEAK_HEADERS = ["server", "x-powered-by", "x-aspnet-version", "x-debug"];
@@ -76,15 +77,17 @@ function serverVersionLeak(requests: RequestEntry[]): AuditItem[] {
   if (leaks.length === 0) return [];
 
   const unique = [...new Set(leaks.map((l) => `${l.header}: ${l.value}`))];
-  return [{
-    id: "sec-server-leak",
-    severity: "warning",
-    category: "security",
-    title: "Server version disclosure",
-    description: `Response headers reveal server software: ${unique.join(", ")}.`,
-    suggestion: "Remove or hide Server, X-Powered-By headers in production.",
-    requestIds: leaks.map((l) => l.id),
-  }];
+  return [
+    {
+      id: "sec-server-leak",
+      severity: "warning",
+      category: "security",
+      title: "Server version disclosure",
+      description: `Response headers reveal server software: ${unique.join(", ")}.`,
+      suggestion: "Remove or hide Server, X-Powered-By headers in production.",
+      requestIds: leaks.map((l) => l.id),
+    },
+  ];
 }
 
 const REQUIRED_SECURITY_HEADERS = [
@@ -98,46 +101,43 @@ function missingSecurityHeaders(requests: RequestEntry[]): AuditItem[] {
   const checked = requests.filter((r) => r.headers && r.status === "success");
   if (checked.length === 0) return [];
 
-  const missing = REQUIRED_SECURITY_HEADERS.filter((h) =>
-    checked.every((r) => !r.headers?.[h]),
-  );
+  const missing = REQUIRED_SECURITY_HEADERS.filter((h) => checked.every((r) => !r.headers?.[h]));
   if (missing.length === 0) return [];
 
-  return [{
-    id: "sec-missing-headers",
-    severity: "hint",
-    category: "security",
-    title: "Missing security headers",
-    description: `No responses include: ${missing.join(", ")}.`,
-    suggestion: "Configure the backend to set these headers for defense-in-depth.",
-  }];
+  return [
+    {
+      id: "sec-missing-headers",
+      severity: "hint",
+      category: "security",
+      title: "Missing security headers",
+      description: `No responses include: ${missing.join(", ")}.`,
+      suggestion: "Configure the backend to set these headers for defense-in-depth.",
+    },
+  ];
 }
 
 /** Cookie forwarding to a different domain via proxy. */
 function cookieForwarding(requests: RequestEntry[]): AuditItem[] {
-  const proxyReqs = requests.filter(
-    (r) => r.mode === "proxy" && r.requestHeaders?.cookie,
-  );
+  const proxyReqs = requests.filter((r) => r.mode === "proxy" && r.requestHeaders?.cookie);
   if (proxyReqs.length === 0) return [];
 
-  return [{
-    id: "sec-cookie-forwarding",
-    severity: "warning",
-    category: "security",
-    title: "Cookies forwarded via proxy",
-    description:
-      "These calls carry the browser's cookies to the backend, because their source or endpoint names \"cookie\" among its forwarded headers. Every cookie of the app's origin goes with them, its own session included.",
-    suggestion:
-      "Name \"cookie\" only on the endpoints that need the session, and only for a backend you trust with it.",
-    requestIds: proxyReqs.slice(0, 5).map((r) => r.id),
-  }];
+  return [
+    {
+      id: "sec-cookie-forwarding",
+      severity: "warning",
+      category: "security",
+      title: "Cookies forwarded via proxy",
+      description:
+        "These calls carry the browser's cookies to the backend, because their source or endpoint names \"cookie\" among its forwarded headers. Every cookie of the app's origin goes with them, its own session included.",
+      suggestion:
+        'Name "cookie" only on the endpoints that need the session, and only for a backend you trust with it.',
+      requestIds: proxyReqs.slice(0, 5).map((r) => r.id),
+    },
+  ];
 }
 
 /** Collect all security audit items from raw requests. */
-export function collectSecurityRules(
-  requests: RequestEntry[],
-  _catalog: Catalog,
-): AuditItem[] {
+export function collectSecurityRules(requests: RequestEntry[], _catalog: Catalog): AuditItem[] {
   return [
     ...mutationWithoutAuth(requests),
     ...serverVersionLeak(requests),

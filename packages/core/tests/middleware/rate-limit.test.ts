@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createCaller } from "../../src/caller";
-import { courier } from "../../src/define/courier";
 import { defineApi } from "../../src/define/api";
+import { courier } from "../../src/define/courier";
 import { defineMiddleware, rateLimitMiddleware } from "../../src/middleware/index";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 

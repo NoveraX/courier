@@ -33,7 +33,10 @@ afterEach(async () => {
 async function listen(maxConnectionsPerIP: number): Promise<number> {
   const app = new Hono();
   const ws = courierWSHandler({ maxConnectionsPerIP });
-  app.get("/api/ws", upgradeWebSocket((c) => ws(c)));
+  app.get(
+    "/api/ws",
+    upgradeWebSocket((c) => ws(c)),
+  );
   const wss = new WebSocketServer({ noServer: true });
   const server = serve({ fetch: app.fetch, port: 0, hostname: "::", websocket: { server: wss } });
   await new Promise<void>((resolve) => server.once("listening", () => resolve()));

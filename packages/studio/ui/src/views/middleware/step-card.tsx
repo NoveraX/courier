@@ -1,12 +1,10 @@
 import { motion } from "motion/react";
-
-import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
 import { Badge } from "@/components/ui/badge";
-
-import type { MiddlewareStep } from "./types";
-import { STATUS_ICONS, PHASE_COLORS, durationColor, durationBg } from "./constants";
+import { cn } from "@/lib/utils";
+import { durationBg, durationColor, PHASE_COLORS, STATUS_ICONS } from "./constants";
 import { isSlowStep } from "./helpers";
+import type { MiddlewareStep } from "./types";
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -27,9 +25,12 @@ export function StepCard({
   subPhase,
 }: StepCardProps): React.ReactElement {
   // For wrap middleware, show the sub-phase color when displayed on a specific side
-  const phaseKey = step.phase === "wrap" && subPhase
-    ? (subPhase === "before" ? "request" : "response")
-    : step.phase;
+  const phaseKey =
+    step.phase === "wrap" && subPhase
+      ? subPhase === "before"
+        ? "request"
+        : "response"
+      : step.phase;
   const phase = PHASE_COLORS[phaseKey];
   const StatusIcon = STATUS_ICONS[step.status];
   const duration = displayDuration(step, subPhase);
@@ -52,10 +53,13 @@ export function StepCard({
     >
       <div className="flex items-center gap-2.5">
         {/* Index badge */}
-        <span className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded text-[10px] font-semibold",
-          phase.bg, phase.text,
-        )}>
+        <span
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded text-[10px] font-semibold",
+            phase.bg,
+            phase.text,
+          )}
+        >
           {step.index + 1}
         </span>
 
@@ -82,7 +86,12 @@ export function StepCard({
         )}
 
         {/* Duration — show sub-phase time for wrap middleware */}
-        <span className={cn("mono-sm shrink-0 tabular-nums", durationColor(displayDuration(step, subPhase)))}>
+        <span
+          className={cn(
+            "mono-sm shrink-0 tabular-nums",
+            durationColor(displayDuration(step, subPhase)),
+          )}
+        >
           {formatDuration(displayDuration(step, subPhase))}
         </span>
       </div>
@@ -99,9 +108,7 @@ export function StepCard({
 
       {/* Error message */}
       {step.error && (
-        <p className="mt-1.5 text-body-xs leading-tight text-rose-400/90">
-          {step.error}
-        </p>
+        <p className="mt-1.5 text-body-xs leading-tight text-rose-400/90">{step.error}</p>
       )}
 
       {/* Headers added */}

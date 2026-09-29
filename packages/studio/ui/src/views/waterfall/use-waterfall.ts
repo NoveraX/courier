@@ -1,11 +1,10 @@
-import { useMemo, useCallback } from "react";
-import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useCallback, useMemo } from "react";
 
-import type { RequestEntry, WaterfallSortField, WaterfallGroupBy } from "@/store";
-
-import type { ModeFilter } from "./types";
-import { buildRows, sortRows, groupRows, computeTimeSpan, compressTimeline } from "./helpers";
+import type { RequestEntry, WaterfallGroupBy, WaterfallSortField } from "@/store";
+import { buildRows, compressTimeline, computeTimeSpan, groupRows, sortRows } from "./helpers";
 import type { WaterfallSearchParams } from "./search-schema";
+import type { ModeFilter } from "./types";
 import { useZoom } from "./use-zoom";
 
 export function useWaterfall(requests: RequestEntry[]) {
@@ -64,8 +63,19 @@ export function useWaterfall(requests: RequestEntry[]) {
   const setSearch = useCallback((s: string) => updateUrl({ search: s || undefined }), [updateUrl]);
 
   return {
-    rows, groups, gaps, timeSpan, actualTimeSpan, sortBy, groupBy, modeFilter, search,
-    setSortBy, setGroupBy, setModeFilter, setSearch,
+    rows,
+    groups,
+    gaps,
+    timeSpan,
+    actualTimeSpan,
+    sortBy,
+    groupBy,
+    modeFilter,
+    search,
+    setSortBy,
+    setGroupBy,
+    setModeFilter,
+    setSearch,
     ...zoomState,
   };
 }

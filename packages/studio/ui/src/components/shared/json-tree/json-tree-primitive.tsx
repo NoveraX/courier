@@ -12,16 +12,10 @@ const VALUE_STYLES: Record<string, string> = {
   undefined: "text-orange-400/70",
 };
 
-export function JsonTreePrimitive({
-  value,
-}: JsonTreePrimitiveProps): React.ReactElement {
+export function JsonTreePrimitive({ value }: JsonTreePrimitiveProps): React.ReactElement {
   const { display, type } = formatValue(value);
 
-  return (
-    <span className={cn("mono-sm", VALUE_STYLES[type])}>
-      {display}
-    </span>
-  );
+  return <span className={cn("mono-sm", VALUE_STYLES[type])}>{display}</span>;
 }
 
 function formatValue(value: unknown): { display: string; type: string } {

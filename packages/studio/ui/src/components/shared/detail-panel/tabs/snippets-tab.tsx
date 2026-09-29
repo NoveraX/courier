@@ -1,15 +1,10 @@
 import { Braces, Code2, Terminal } from "lucide-react";
 import { useMemo, useState } from "react";
-
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { CodeBlock, FormatSwitcher } from "@/components/shared/code-block";
-import { QuickCopyRow } from "../detail-rows";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { RequestEntry } from "@/store/types";
-import {
-  buildCurl,
-  buildFetchSnippet,
-  buildRequestJson,
-} from "../request-helpers";
+import { QuickCopyRow } from "../detail-rows";
+import { buildCurl, buildFetchSnippet, buildRequestJson } from "../request-helpers";
 
 const FORMATS = [
   { key: "curl", label: "cURL", icon: Terminal },
@@ -28,9 +23,12 @@ export function SnippetsTab({ request }: SnippetsTabProps): React.ReactElement {
 
   const snippet = useMemo(() => {
     switch (format) {
-      case "curl": return buildCurl(request);
-      case "fetch": return buildFetchSnippet(request);
-      case "json": return buildRequestJson(request);
+      case "curl":
+        return buildCurl(request);
+      case "fetch":
+        return buildFetchSnippet(request);
+      case "json":
+        return buildRequestJson(request);
     }
   }, [format, request]);
 
@@ -43,7 +41,13 @@ export function SnippetsTab({ request }: SnippetsTabProps): React.ReactElement {
               Snippet
             </h4>
             <FormatSwitcher
-              formats={FORMATS as unknown as { key: string; label: string; icon: React.ComponentType<{ className?: string }> }[]}
+              formats={
+                FORMATS as unknown as {
+                  key: string;
+                  label: string;
+                  icon: React.ComponentType<{ className?: string }>;
+                }[]
+              }
               active={format}
               onChange={(k) => setFormat(k as Format)}
             />
@@ -59,9 +63,7 @@ export function SnippetsTab({ request }: SnippetsTabProps): React.ReactElement {
 // ── Quick copy section ────────────────────────────────────────────────────
 
 function QuickCopySection({ request }: { request: RequestEntry }): React.ReactElement {
-  const endpoint = [request.source, request.group, request.method]
-    .filter(Boolean)
-    .join(".");
+  const endpoint = [request.source, request.group, request.method].filter(Boolean).join(".");
 
   return (
     <div>
@@ -76,4 +78,3 @@ function QuickCopySection({ request }: { request: RequestEntry }): React.ReactEl
     </div>
   );
 }
-

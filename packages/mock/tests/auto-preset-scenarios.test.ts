@@ -31,7 +31,10 @@ function petsApi(baseURL: string) {
       pets: defineGroup({
         prefix: "pets",
         endpoints: {
-          list: endpoint.get("").variables<{ page?: number; pageSize?: number }>().response(PetPage),
+          list: endpoint
+            .get("")
+            .variables<{ page?: number; pageSize?: number }>()
+            .response(PetPage),
           get: endpoint.get(":id").variables<{ id: number }>().response(Pet),
         },
       }),

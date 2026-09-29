@@ -11,7 +11,7 @@ import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
 import type { ParsedSpec } from "../../src/apis/parser/types";
 import { endpointAt, loadGenerated } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const User = {
   type: "object",
@@ -31,9 +31,14 @@ function spec(origin: string): ParsedSpec {
           get: {
             operationId: "getUser",
             tags: ["users"],
-            parameters: [{ name: "username", in: "path", required: true, schema: { type: "string" } }],
+            parameters: [
+              { name: "username", in: "path", required: true, schema: { type: "string" } },
+            ],
             responses: {
-              "200": { description: "ok", content: { "application/json": { schema: { $ref: "#/components/schemas/User" } } } },
+              "200": {
+                description: "ok",
+                content: { "application/json": { schema: { $ref: "#/components/schemas/User" } } },
+              },
             },
           },
         },
@@ -60,7 +65,11 @@ afterAll(async () => {
 
 describe.each(VARIANTS)("a generated client validated with %s", (_label, options) => {
   it("reads an answer whose address the API left empty", async () => {
-    const files = generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "hub");
+    const files = generateCode(
+      spec(upstream.origin),
+      { type: "openapi", outputDir: "src/api", ...options },
+      "hub",
+    );
     const { hubApi } = loadGenerated(files, "src/api/hub/index.ts");
 
     const user = await endpointAt(hubApi, "users", "getUser")({ username: "gitea" });

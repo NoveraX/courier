@@ -1,12 +1,10 @@
 /**
  * @vitest-environment jsdom
  */
-import { resetAnnouncements } from "../../core/src/announce/test-support";
+
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  _resetRuntimeHandlesForTests,
-  attachRuntime,
-} from "../src/runtime/attach-runtime";
+import { resetAnnouncements } from "../../core/src/announce/test-support";
+import { _resetRuntimeHandlesForTests, attachRuntime } from "../src/runtime/attach-runtime";
 
 const STUDIO_URL_KEY = Symbol.for("courier.studio.url");
 

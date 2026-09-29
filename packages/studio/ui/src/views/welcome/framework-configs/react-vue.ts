@@ -7,7 +7,7 @@
 import { Cable } from "lucide-react";
 
 import type { FrameworkConfig } from "../frameworks-types";
-import { EXPLORE_STEP, VERIFY_STEP, installStep } from "./shared";
+import { EXPLORE_STEP, installStep, VERIFY_STEP } from "./shared";
 
 export const REACT: FrameworkConfig = {
   id: "react",

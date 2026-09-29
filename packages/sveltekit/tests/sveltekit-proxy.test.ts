@@ -24,7 +24,9 @@ afterEach(async () => {
 async function sourcesFor(): Promise<Sources> {
   upstream = await startUpstream((request, res) => {
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ method: request.method, url: request.url, body: request.body.toString() }));
+    res.end(
+      JSON.stringify({ method: request.method, url: request.url, body: request.body.toString() }),
+    );
   });
   const users = defineGroup({
     prefix: "users",
@@ -78,7 +80,11 @@ describe("the SvelteKit handler", () => {
 
     const response = await handler({ request });
 
-    expect(await response.json()).toEqual({ method: "POST", url: "/users", body: '{"name":"Ada"}' });
+    expect(await response.json()).toEqual({
+      method: "POST",
+      url: "/users",
+      body: '{"name":"Ada"}',
+    });
   });
 
   it("streams the events of a stream this process serves", async () => {

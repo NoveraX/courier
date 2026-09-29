@@ -58,18 +58,15 @@ describe("hashFile", () => {
     expect(hashFile(path)).toBeNull();
   });
 
-  it.skipIf(IS_WINDOWS)(
-    "refuses a symbolic link rather than hashing its target",
-    () => {
-      writeFileSync(join(dir, "elsewhere.ts"), "abc");
-      symlinkSync(join(dir, "elsewhere.ts"), path);
+  it.skipIf(IS_WINDOWS)("refuses a symbolic link rather than hashing its target", () => {
+    writeFileSync(join(dir, "elsewhere.ts"), "abc");
+    symlinkSync(join(dir, "elsewhere.ts"), path);
 
-      const error = thrownBy(() => hashFile(path));
+    const error = thrownBy(() => hashFile(path));
 
-      expect(error).toBeInstanceOf(NotRegularFileError);
-      expect(error).toMatchObject({ code: "NOT_REGULAR_FILE", context: { path } });
-    },
-  );
+    expect(error).toBeInstanceOf(NotRegularFileError);
+    expect(error).toMatchObject({ code: "NOT_REGULAR_FILE", context: { path } });
+  });
 
   it("refuses a directory", () => {
     mkdirSync(path);

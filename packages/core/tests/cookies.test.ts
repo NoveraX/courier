@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextResponse } from "next/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { HttpMethods } from "../src/http-client/types";
 import { executeRequest } from "../src/utils/execute";
 import { asEndpoint } from "./helpers/as-endpoint";
@@ -44,9 +44,13 @@ describe("cookie forwarding", () => {
       login: (methods: HttpMethods) => methods.get("login"),
     });
 
-    const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
-      res: new NextResponse(),
-    })) as Response;
+    const result = (await executeRequest(
+      { api: source },
+      { source: "api", method: "login" },
+      {
+        res: new NextResponse(),
+      },
+    )) as Response;
 
     expect(result.headers.getSetCookie()).toEqual([]);
   });
@@ -64,9 +68,13 @@ describe("cookie forwarding", () => {
     );
 
     const res = new NextResponse();
-    const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
-      res,
-    })) as Response;
+    const result = (await executeRequest(
+      { api: source },
+      { source: "api", method: "login" },
+      {
+        res,
+      },
+    )) as Response;
 
     const setCookies = result.headers.getSetCookie();
     expect(setCookies.some((c) => c.includes("session=abc123"))).toBe(true);
@@ -88,9 +96,13 @@ describe("cookie forwarding", () => {
     );
 
     const res = new NextResponse();
-    const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
-      res,
-    })) as Response;
+    const result = (await executeRequest(
+      { api: source },
+      { source: "api", method: "login" },
+      {
+        res,
+      },
+    )) as Response;
 
     const setCookies = result.headers.getSetCookie();
     expect(setCookies.some((c) => c.includes("session=abc123"))).toBe(true);
@@ -112,9 +124,13 @@ describe("cookie forwarding", () => {
     );
 
     const res = new NextResponse();
-    const result = (await executeRequest({ api: source }, { source: "api", method: "login" }, {
-      res,
-    })) as Response;
+    const result = (await executeRequest(
+      { api: source },
+      { source: "api", method: "login" },
+      {
+        res,
+      },
+    )) as Response;
 
     const setCookies = result.headers.getSetCookie();
     const fullCookie = setCookies.find((c) => c.includes("session=abc"));
@@ -123,18 +139,20 @@ describe("cookie forwarding", () => {
   });
 
   it("returns Response (not data) when context has NextResponse", async () => {
-    fetchSpy.mockResolvedValue(
-      makeResponseWithCookies({ ok: true }, []),
-    );
+    fetchSpy.mockResolvedValue(makeResponseWithCookies({ ok: true }, []));
 
     const source = createTestSource({
       list: (methods: HttpMethods) => methods.get("users"),
     });
 
     const res = new NextResponse();
-    const result = await executeRequest({ api: source }, { source: "api", method: "list" }, {
-      res,
-    });
+    const result = await executeRequest(
+      { api: source },
+      { source: "api", method: "list" },
+      {
+        res,
+      },
+    );
 
     expect(result).toBeInstanceOf(Response);
   });

@@ -1,8 +1,13 @@
 import { useMemo } from "react";
-
-import type { TimeGap, ZoomState } from "./types";
-import { computeTickInterval, decompressMs, msToPixels, pixelsToMs, formatRulerTick } from "./helpers";
 import { MAX_GRID_LINES } from "./constants";
+import {
+  computeTickInterval,
+  decompressMs,
+  formatRulerTick,
+  msToPixels,
+  pixelsToMs,
+} from "./helpers";
+import type { TimeGap, ZoomState } from "./types";
 
 interface TimeRulerProps {
   timeSpan: number;
@@ -12,7 +17,13 @@ interface TimeRulerProps {
   gaps: TimeGap[];
 }
 
-export function TimeRuler({ timeSpan, zoom, cursorX, totalWidth, gaps }: TimeRulerProps): React.ReactElement {
+export function TimeRuler({
+  timeSpan,
+  zoom,
+  cursorX,
+  totalWidth,
+  gaps,
+}: TimeRulerProps): React.ReactElement {
   const interval = useMemo(() => computeTickInterval(zoom), [zoom]);
 
   const ticks = useMemo(() => {
@@ -26,9 +37,8 @@ export function TimeRuler({ timeSpan, zoom, cursorX, totalWidth, gaps }: TimeRul
     return result;
   }, [timeSpan, zoom.scale, interval, gaps]);
 
-  const cursorMs = cursorX !== null
-    ? decompressMs(Math.max(0, pixelsToMs(cursorX, zoom.scale)), gaps)
-    : null;
+  const cursorMs =
+    cursorX !== null ? decompressMs(Math.max(0, pixelsToMs(cursorX, zoom.scale)), gaps) : null;
 
   return (
     <div

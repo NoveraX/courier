@@ -22,7 +22,9 @@ describe("resolveProjectPath", () => {
 
   it("resolves inside a Windows project, where a string prefix check refused every path", () => {
     expect(resolveProjectPath("C:\\proj", "src/api/x.ts", win32)).toBe("C:\\proj\\src\\api\\x.ts");
-    expect(resolveProjectPath("C:\\proj", "src\\api\\x.ts", win32)).toBe("C:\\proj\\src\\api\\x.ts");
+    expect(resolveProjectPath("C:\\proj", "src\\api\\x.ts", win32)).toBe(
+      "C:\\proj\\src\\api\\x.ts",
+    );
   });
 
   it("refuses a path that climbs out", () => {
@@ -33,7 +35,13 @@ describe("resolveProjectPath", () => {
   });
 
   it("refuses absolute paths in either platform's form", () => {
-    for (const path of ["/etc/passwd", "\\Windows\\a", "C:\\a.ts", "C:/a.ts", "\\\\server\\share\\a"]) {
+    for (const path of [
+      "/etc/passwd",
+      "\\Windows\\a",
+      "C:\\a.ts",
+      "C:/a.ts",
+      "\\\\server\\share\\a",
+    ]) {
       expect(refusal(path)).toBeInstanceOf(PathOutsideProjectError);
       expect(refusal(path, win32, "C:\\proj")).toBeInstanceOf(PathOutsideProjectError);
     }

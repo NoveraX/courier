@@ -1,3 +1,4 @@
+import type { Header, SortingState } from "@tanstack/react-table";
 import {
   columnSizingFeature,
   createColumnHelper,
@@ -14,10 +15,8 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { EndpointRow } from "./endpoint-row";
-
-import type { Header, SortingState } from "@tanstack/react-table";
 import type { EndpointNodeData } from "../types";
+import { EndpointRow } from "./endpoint-row";
 
 // ── Props ──────────────────────────────────────────────────────────────────
 

@@ -1,12 +1,11 @@
 import { useCallback, useState } from "react";
-
-import type { ManagePreviewResult, ManageStep, ParsedSpec } from "./types";
-import type { PlanConsent } from "./types-file-plan";
 import { appliedMessage, countsOf } from "./applied-notes";
 import { applyManage, previewManage } from "./client-file-changes";
 import { consentBody, consentFor, toggleConfirmed } from "./plan-consent";
 import { readPlanRefusal } from "./plan-refusal";
 import { readFilePlan } from "./read-file-plan";
+import type { ManagePreviewResult, ManageStep, ParsedSpec } from "./types";
+import type { PlanConsent } from "./types-file-plan";
 import { serializeSets } from "./use-manage-helpers";
 
 /** What the manage dialog applies, and how it reports. */
@@ -55,23 +54,32 @@ export function useManagePlan(input: ManagePlanInput): ManagePlan {
   const [preview, setPreview] = useState<ManagePreviewResult | null>(null);
   const [consent, setConsent] = useState<PlanConsent | null>(null);
 
-  const load = useCallback(async (keptError: string | null) => {
-    if (!spec) return;
-    setStep("preview");
-    setPreview(null);
-    setConsent(null);
-    setError(keptError);
-    try {
-      const result = await previewManage(sourceName, spec, serializeSets(toAdd), serializeSets(toRemove));
-      const plan = readFilePlan(result.plan);
-      if (plan === null) throw new Error("Studio sent a plan this page cannot read; preview the changes again.");
-      setPreview({ ...result, plan });
-      setConsent(consentFor(plan));
-    } catch (err) {
-      setError(messageOf(err, "Preview failed"));
-      setStep("inventory");
-    }
-  }, [spec, sourceName, toAdd, toRemove, setStep, setError]);
+  const load = useCallback(
+    async (keptError: string | null) => {
+      if (!spec) return;
+      setStep("preview");
+      setPreview(null);
+      setConsent(null);
+      setError(keptError);
+      try {
+        const result = await previewManage(
+          sourceName,
+          spec,
+          serializeSets(toAdd),
+          serializeSets(toRemove),
+        );
+        const plan = readFilePlan(result.plan);
+        if (plan === null)
+          throw new Error("Studio sent a plan this page cannot read; preview the changes again.");
+        setPreview({ ...result, plan });
+        setConsent(consentFor(plan));
+      } catch (err) {
+        setError(messageOf(err, "Preview failed"));
+        setStep("inventory");
+      }
+    },
+    [spec, sourceName, toAdd, toRemove, setStep, setError],
+  );
 
   const apply = useCallback(async () => {
     if (!spec || consent === null) return;
@@ -79,7 +87,13 @@ export function useManagePlan(input: ManagePlanInput): ManagePlan {
     setError(null);
     try {
       const body = consentBody(consent);
-      const applied = await applyManage(sourceName, spec, serializeSets(toAdd), serializeSets(toRemove), body);
+      const applied = await applyManage(
+        sourceName,
+        spec,
+        serializeSets(toAdd),
+        serializeSets(toRemove),
+        body,
+      );
       setStep("done");
       onApplied(appliedMessage(`Updated ${sourceName}`, countsOf(applied)));
     } catch (err) {
@@ -97,7 +111,10 @@ export function useManagePlan(input: ManagePlanInput): ManagePlan {
     consent,
     requestPreview: useCallback(() => load(null), [load]),
     apply,
-    toggleConfirmed: useCallback((path: string) => setConsent((c) => c && toggleConfirmed(c, path)), []),
+    toggleConfirmed: useCallback(
+      (path: string) => setConsent((c) => c && toggleConfirmed(c, path)),
+      [],
+    ),
     clear: useCallback(() => {
       setPreview(null);
       setConsent(null);

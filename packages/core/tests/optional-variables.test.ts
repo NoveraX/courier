@@ -9,10 +9,9 @@
 import * as v from "valibot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-
+import { validateVariablesSafe } from "../src/adapter/ws-middleware";
 import { createCaller } from "../src/caller";
 import { courier, defineApi, defineGroup } from "../src/define/index";
-import { validateVariablesSafe } from "../src/adapter/ws-middleware";
 
 const { endpoint } = courier();
 const UPSTREAM = "https://upstream.example";

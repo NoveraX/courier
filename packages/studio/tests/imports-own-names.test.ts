@@ -85,7 +85,10 @@ const SPEC = parseSpec(
 
 describe("imports looked up by an Object.prototype member's name", () => {
   it("finds no declaration and no state", () => {
-    const snapshot = { declarations: {}, state: { version: IMPORTS_STATE_VERSION, imports: {}, applied: [] } };
+    const snapshot = {
+      declarations: {},
+      state: { version: IMPORTS_STATE_VERSION, imports: {}, applied: [] },
+    };
 
     for (const name of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
       expect(getImportEntry(snapshot, name)).toBeUndefined();
@@ -103,8 +106,12 @@ describe("imports looked up by an Object.prototype member's name", () => {
     });
 
     expect(reply.status).toBe(200);
-    expect(reply.body).toMatchObject({ written: expect.arrayContaining(["out/constructor/source.ts"]) });
-    expect(readFileSync(join(root, "out/constructor/source.ts"), "utf8")).toContain("export const constructor");
+    expect(reply.body).toMatchObject({
+      written: expect.arrayContaining(["out/constructor/source.ts"]),
+    });
+    expect(readFileSync(join(root, "out/constructor/source.ts"), "utf8")).toContain(
+      "export const constructor",
+    );
     expect(Object.keys(loadImportsState(root).imports)).toEqual(["constructor"]);
   });
 
@@ -124,7 +131,11 @@ describe("imports looked up by an Object.prototype member's name", () => {
     );
 
     const loaded = await loadCourierConfig(root);
-    const { sources } = buildSourceScan(loaded, importsSnapshotOf(loaded.config.imports, root), root);
+    const { sources } = buildSourceScan(
+      loaded,
+      importsSnapshotOf(loaded.config.imports, root),
+      root,
+    );
 
     expect(sources.map((source) => [source.name, source.isImported])).toEqual([
       ["constructor", false],

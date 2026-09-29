@@ -29,7 +29,9 @@ describe("courierStudioModule for Nuxt", () => {
 
     await courierStudioModule({ enabled: true }, nuxt);
 
-    expect(nuxt.options.vite.plugins).toEqual([expect.objectContaining({ name: "courier-studio" })]);
+    expect(nuxt.options.vite.plugins).toEqual([
+      expect.objectContaining({ name: "courier-studio" }),
+    ]);
     expect(nuxt.options.plugins).toEqual([]);
   });
 

@@ -20,11 +20,10 @@ import { join, resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { GenerateOptions } from "../src/apis/generator/types";
-import type { StudioServer } from "../src/server/types";
-
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { loadCourierConfig } from "../src/server/config-loader";
 import { createStudioServer } from "../src/server/create-studio-server";
+import type { StudioServer } from "../src/server/types";
 import { tokenHeader } from "./helpers/token-header";
 
 const REPO_NODE_MODULES = resolve(import.meta.dirname, "../../../node_modules");
@@ -38,10 +37,18 @@ const SPEC = parseSpec(
     servers: [{ url: "https://petstore.example" }],
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
       "/store/orders": {
-        get: { operationId: "listOrders", tags: ["store"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listOrders",
+          tags: ["store"],
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
   }),
@@ -101,7 +108,11 @@ function start(): Promise<string> {
   });
 }
 
-async function post(url: string, path: string, body: unknown): Promise<{ status: number; body: unknown }> {
+async function post(
+  url: string,
+  path: string,
+  body: unknown,
+): Promise<{ status: number; body: unknown }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
@@ -123,11 +134,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function declarationOf(reply: unknown): Declaration {
   const declaration = isRecord(reply) ? reply.declaration : undefined;
   const source = isRecord(declaration) ? declaration.source : undefined;
-  if (!isRecord(declaration) || !isRecord(source)) throw new Error(`no declaration in ${JSON.stringify(reply)}`);
+  if (!isRecord(declaration) || !isRecord(source))
+    throw new Error(`no declaration in ${JSON.stringify(reply)}`);
   const { importEntry, leftOut } = declaration;
   const { importLine, entry } = source;
-  if (typeof importEntry !== "string" || typeof leftOut !== "number") throw new Error("no imports entry");
-  if (typeof importLine !== "string" || typeof entry !== "string") throw new Error("no source part");
+  if (typeof importEntry !== "string" || typeof leftOut !== "number")
+    throw new Error("no imports entry");
+  if (typeof importLine !== "string" || typeof entry !== "string")
+    throw new Error("no source part");
   return { source: { importLine, entry }, importEntry, leftOut };
 }
 
@@ -178,9 +192,13 @@ describe("a grouped import declared as the wizard says", () => {
       planDigest: digestOf(update.body),
     });
     expect(applied.status).toBe(200);
-    expect(readFileSync(join(root, SOURCE_FILE), "utf-8")).toContain("export const petstore = defineApi({");
+    expect(readFileSync(join(root, SOURCE_FILE), "utf-8")).toContain(
+      "export const petstore = defineApi({",
+    );
     /* The update generates the endpoint the Select step left out, as the declaration said. */
-    expect(readFileSync(join(root, "src/api/petstore/store/index.ts"), "utf-8")).toContain("listOrders");
+    expect(readFileSync(join(root, "src/api/petstore/store/index.ts"), "utf-8")).toContain(
+      "listOrders",
+    );
     const loaded = await loadCourierConfig(root);
     expect(Object.keys(loaded.config.sources ?? {})).toEqual(["api", "petstore"]);
     expect(Object.keys(loaded.config.imports ?? {})).toEqual(["petstore"]);

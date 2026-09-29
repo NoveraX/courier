@@ -3,13 +3,13 @@
  * a burst costs the page one store update per frame however many events it
  * carries, and a lone event still shows at once.
  */
-export const EVENT_FLUSH_MS = 16
+export const EVENT_FLUSH_MS = 16;
 
 export interface EventQueue<TEvent> {
   /** Queue an event; the batch it joins is applied within `EVENT_FLUSH_MS`. */
-  push: (event: TEvent) => void
+  push: (event: TEvent) => void;
   /** Apply what is queued now, without waiting. */
-  flush: () => void
+  flush: () => void;
 }
 
 /**
@@ -29,24 +29,24 @@ export function createEventQueue<TEvent>(
   apply: (events: TEvent[]) => void,
   delayMs: number = EVENT_FLUSH_MS,
 ): EventQueue<TEvent> {
-  let pending: TEvent[] = []
-  let timer: ReturnType<typeof setTimeout> | undefined
+  let pending: TEvent[] = [];
+  let timer: ReturnType<typeof setTimeout> | undefined;
 
   function applyPending(): void {
-    timer = undefined
-    const batch = pending
-    pending = []
-    if (batch.length > 0) apply(batch)
+    timer = undefined;
+    const batch = pending;
+    pending = [];
+    if (batch.length > 0) apply(batch);
   }
 
   return {
     push(event) {
-      pending.push(event)
-      timer ??= setTimeout(applyPending, delayMs)
+      pending.push(event);
+      timer ??= setTimeout(applyPending, delayMs);
     },
     flush() {
-      if (timer !== undefined) clearTimeout(timer)
-      applyPending()
+      if (timer !== undefined) clearTimeout(timer);
+      applyPending();
     },
-  }
+  };
 }

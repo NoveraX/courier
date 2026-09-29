@@ -11,7 +11,7 @@ import type * as SocketIoClient from "socket.io-client";
 import type { ManagerOptions, SocketOptions } from "socket.io-client";
 import { expect, it, vi } from "vitest";
 
-const handshakes = vi.hoisted(() => new Array<Partial<ManagerOptions & SocketOptions>>());
+const handshakes = vi.hoisted(() => [] as Partial<ManagerOptions & SocketOptions>[]);
 
 vi.mock("socket.io-client", async (importOriginal) => {
   const actual = await importOriginal<typeof SocketIoClient>();
@@ -30,7 +30,9 @@ const { getSocket } = await import("@/socket/socket-instance");
 
 const TOKEN = "n".repeat(43);
 
-function handshakeOf(options: Partial<ManagerOptions & SocketOptions> | undefined): Promise<unknown> {
+function handshakeOf(
+  options: Partial<ManagerOptions & SocketOptions> | undefined,
+): Promise<unknown> {
   const auth = options?.auth;
   if (typeof auth !== "function") return Promise.resolve(auth);
   return new Promise((resolve) => auth(resolve));

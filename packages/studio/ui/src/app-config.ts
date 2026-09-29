@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   BarChart3,
@@ -11,8 +12,6 @@ import {
   Timer,
   Workflow,
 } from "lucide-react";
-
-import type { LucideIcon } from "lucide-react";
 import type { Theme } from "./store";
 
 // ── Navigation ─────────────────────────────────────────────────────────────
@@ -57,9 +56,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "System",
-    items: [
-      { label: "Settings", path: "/settings", icon: Settings },
-    ],
+    items: [{ label: "Settings", path: "/settings", icon: Settings }],
   },
 ];
 

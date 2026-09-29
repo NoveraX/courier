@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
+import { cn } from "@/lib/utils";
 
 /** Status dot background class based on HTTP status code */
 export function statusDotClass(status?: number, error?: string): string {
@@ -28,11 +28,7 @@ export function durationColor(ms: number): string {
 
 /** Inline status code badge (colored number) */
 export function StatusCode({ code }: { code: number }): React.ReactElement {
-  return (
-    <span className={cn("mono-sm tabular-nums", statusCodeColor(code))}>
-      {code}
-    </span>
-  );
+  return <span className={cn("mono-sm tabular-nums", statusCodeColor(code))}>{code}</span>;
 }
 
 /** Inline duration display (colored, formatted) */

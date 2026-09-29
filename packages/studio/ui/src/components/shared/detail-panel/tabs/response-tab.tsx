@@ -1,6 +1,6 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { JsonTree } from "@/components/shared/json-tree";
 import { CopyButton } from "@/components/shared/copy-button";
+import { JsonTree } from "@/components/shared/json-tree";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { RequestEntry } from "@/store/types";
 
 interface ResponseTabProps {

@@ -30,7 +30,10 @@ function makeSocket(id: string) {
   };
 }
 
-function serve(): { bindingTable: BindingTable; connect(socket: ReturnType<typeof makeSocket>): void } {
+function serve(): {
+  bindingTable: BindingTable;
+  connect(socket: ReturnType<typeof makeSocket>): void;
+} {
   let onConnection: ((socket: unknown) => void) | undefined;
   const runtime = {
     on(event: string, fn: (socket: unknown) => void) {
@@ -38,7 +41,11 @@ function serve(): { bindingTable: BindingTable; connect(socket: ReturnType<typeo
     },
   } as unknown as Namespace;
   const bindingTable = new BindingTable();
-  setupRuntimeNamespace(runtime, { bindingTable, token: FIXED_TOKEN, uiNamespace: { emit: vi.fn() } as unknown as Namespace });
+  setupRuntimeNamespace(runtime, {
+    bindingTable,
+    token: FIXED_TOKEN,
+    uiNamespace: { emit: vi.fn() } as unknown as Namespace,
+  });
   return { bindingTable, connect: (socket) => onConnection?.(socket) };
 }
 

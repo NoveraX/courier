@@ -1,11 +1,10 @@
-import { motion } from "motion/react";
-import { Activity, AlertTriangle, Clock, Database, GitBranch, Route } from "lucide-react";
-import { AnimatedCounter } from "@/components/shared/animated-counter";
-import { StaggerList, STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
-import { cn } from "@/lib/utils";
-import { useElapsed } from "@/hooks/use-tick";
-
 import type { LucideIcon } from "lucide-react";
+import { Activity, AlertTriangle, Clock, Database, GitBranch, Route } from "lucide-react";
+import { motion } from "motion/react";
+import { AnimatedCounter } from "@/components/shared/animated-counter";
+import { STAGGER_ITEM_VARIANTS, StaggerList } from "@/components/shared/stagger-list";
+import { useElapsed } from "@/hooks/use-tick";
+import { cn } from "@/lib/utils";
 import type { MockServerInfo } from "@/store/mock-slice";
 
 interface KPIStripProps {
@@ -18,7 +17,12 @@ export function KPIStrip({ server }: KPIStripProps): React.ReactElement {
       <KPICard icon={Route} label="Routes" value={server.routeCount} variant="brand" />
       <KPICard icon={Database} label="Records" value={server.recordCount} variant="violet" />
       <KPICard icon={Activity} label="Requests" value={server.requestsServed} variant="emerald" />
-      <KPICard icon={GitBranch} label="Scenarios" value={server.availableScenarios.length} variant="amber" />
+      <KPICard
+        icon={GitBranch}
+        label="Scenarios"
+        value={server.availableScenarios.length}
+        variant="amber"
+      />
       <KPICard
         icon={AlertTriangle}
         label="Errors"
@@ -32,12 +36,15 @@ export function KPIStrip({ server }: KPIStripProps): React.ReactElement {
 
 type CardVariant = "default" | "brand" | "violet" | "emerald" | "amber" | "danger";
 
-const VARIANT_STYLES: Record<CardVariant, {
-  card: string;
-  icon: string;
-  iconBg: string;
-  value: string;
-}> = {
+const VARIANT_STYLES: Record<
+  CardVariant,
+  {
+    card: string;
+    icon: string;
+    iconBg: string;
+    value: string;
+  }
+> = {
   default: {
     card: "border-border-subtle bg-card",
     icon: "text-muted-foreground",
@@ -109,7 +116,13 @@ function KPICard({
   );
 }
 
-function UptimeCard({ startedAt, active }: { startedAt: number; active: boolean }): React.ReactElement {
+function UptimeCard({
+  startedAt,
+  active,
+}: {
+  startedAt: number;
+  active: boolean;
+}): React.ReactElement {
   const elapsed = useElapsed(startedAt || null, active);
   const styles = VARIANT_STYLES.default;
 

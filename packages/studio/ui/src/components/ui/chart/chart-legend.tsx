@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as RechartsPrimitive from "recharts"
+import type * as React from "react";
+import * as RechartsPrimitive from "recharts";
 
-import { cn } from "@/lib/utils"
-import { useChart } from "./chart-context"
-import { getPayloadConfigFromPayload } from "./chart-utils"
+import { cn } from "@/lib/utils";
+import { useChart } from "./chart-context";
+import { getPayloadConfigFromPayload } from "./chart-utils";
 
-const ChartLegend = RechartsPrimitive.Legend
+const ChartLegend = RechartsPrimitive.Legend;
 
 function ChartLegendContent({
   className,
@@ -17,14 +17,14 @@ function ChartLegendContent({
   nameKey,
 }: React.ComponentProps<"div"> &
   Pick<RechartsPrimitive.LegendProps, "verticalAlign"> & {
-    payload?: ReadonlyArray<RechartsPrimitive.LegendPayload>
-    hideIcon?: boolean
-    nameKey?: string
+    payload?: ReadonlyArray<RechartsPrimitive.LegendPayload>;
+    hideIcon?: boolean;
+    nameKey?: string;
   }) {
-  const { config } = useChart()
+  const { config } = useChart();
 
   if (!payload?.length) {
-    return null
+    return null;
   }
 
   return (
@@ -32,20 +32,20 @@ function ChartLegendContent({
       className={cn(
         "flex items-center justify-center gap-4",
         verticalAlign === "top" ? "pb-3" : "pt-3",
-        className
+        className,
       )}
     >
       {payload
         .filter((item) => item.type !== "none")
         .map((item) => {
-          const key = `${nameKey || item.dataKey || "value"}`
-          const itemConfig = getPayloadConfigFromPayload(config, item, key)
+          const key = `${nameKey || item.dataKey || "value"}`;
+          const itemConfig = getPayloadConfigFromPayload(config, item, key);
 
           return (
             <div
               key={item.value}
               className={cn(
-                "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground"
+                "flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground",
               )}
             >
               {itemConfig?.icon && !hideIcon ? (
@@ -60,10 +60,10 @@ function ChartLegendContent({
               )}
               {itemConfig?.label}
             </div>
-          )
+          );
         })}
     </div>
-  )
+  );
 }
 
-export { ChartLegend, ChartLegendContent }
+export { ChartLegend, ChartLegendContent };

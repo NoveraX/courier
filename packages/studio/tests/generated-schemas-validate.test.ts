@@ -4,8 +4,9 @@
  * The emission tests compare text; these load what the generator writes and
  * validate values with it.
  */
-import ts from "typescript";
+
 import * as arktype from "arktype";
+import ts from "typescript";
 import * as valibot from "valibot";
 import { describe, expect, it } from "vitest";
 import * as zod from "zod";
@@ -21,7 +22,6 @@ interface StandardSchema {
   "~standard": { validate: (value: unknown) => { issues?: unknown[] } | Promise<unknown> };
 }
 
-
 /** Transpile a generated file and evaluate it with the real library. */
 function load(source: string): Record<string, StandardSchema> {
   const { outputText } = ts.transpileModule(source, {
@@ -33,10 +33,12 @@ function load(source: string): Record<string, StandardSchema> {
 }
 
 function schemasFor(validation: (typeof VALIDATORS)[number]): Record<string, StandardSchema> {
-  const files = generateCode(
-    parseSpec(JSON.stringify(SHAPES_SPEC)),
-    { type: "openapi", sourceName: "api", outputDir: "src", validation },
-  );
+  const files = generateCode(parseSpec(JSON.stringify(SHAPES_SPEC)), {
+    type: "openapi",
+    sourceName: "api",
+    outputDir: "src",
+    validation,
+  });
   const file = files.find((f) => f.path.endsWith("schemas.ts"));
   return load(file?.content ?? "");
 }

@@ -1,19 +1,14 @@
 import { ArrowLeftRight, GitCompare } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageShell } from "@/components/shared/page-shell";
-import {
-  SegmentedControl,
-  type SegmentOption,
-} from "@/components/shared/segmented-control";
-
-import type { CompareTab } from "./types";
-import { useCompare } from "./use-compare";
-import { RequestPicker } from "./request-picker";
+import { SegmentedControl, type SegmentOption } from "@/components/shared/segmented-control";
+import { Button } from "@/components/ui/button";
 import { DiffViewer } from "./diff-viewer";
 import { HeadersDiffView } from "./headers-diff";
+import { RequestPicker } from "./request-picker";
 import { TimingDiffView } from "./timing-diff";
+import type { CompareTab } from "./types";
+import { useCompare } from "./use-compare";
 
 // ── Tab config ──────────────────────────────────────────────────────────────
 
@@ -89,11 +84,7 @@ function CompareToolbar({
       </div>
 
       <div className="ml-2 shrink-0">
-        <SegmentedControl
-          options={TAB_OPTIONS}
-          value={compare.tab}
-          onChange={compare.setTab}
-        />
+        <SegmentedControl options={TAB_OPTIONS} value={compare.tab} onChange={compare.setTab} />
       </div>
     </div>
   );

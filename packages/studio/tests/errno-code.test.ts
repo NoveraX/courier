@@ -34,7 +34,10 @@ describe("errnoCode", () => {
     expect(errnoCode(error)).toBeUndefined();
   });
 
-  it.each([["ENOENT"], [null], [undefined], [42]])("returns undefined for the thrown value %j", (value) => {
-    expect(errnoCode(value)).toBeUndefined();
-  });
+  it.each([["ENOENT"], [null], [undefined], [42]])(
+    "returns undefined for the thrown value %j",
+    (value) => {
+      expect(errnoCode(value)).toBeUndefined();
+    },
+  );
 });

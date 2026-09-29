@@ -48,9 +48,7 @@ export function AuditFilterBar({
         />
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-caption text-muted-foreground">
-          {totalFiltered} items
-        </span>
+        <span className="text-caption text-muted-foreground">{totalFiltered} items</span>
         <CategorySelect active={categoryFilter} onChange={onCategoryChange} />
         {children}
       </div>
@@ -89,9 +87,7 @@ function SeverityButtons({
           >
             {Icon && <Icon className={cn("size-3", isActive && cfg.color)} />}
             <span>{sev === "all" ? "All" : cfg!.label}</span>
-            {count != null && count > 0 && (
-              <span className="tabular-nums opacity-60">{count}</span>
-            )}
+            {count != null && count > 0 && <span className="tabular-nums opacity-60">{count}</span>}
           </button>
         );
       })}
@@ -108,7 +104,10 @@ function CategorySelect({
 }): React.ReactNode {
   return (
     <Select value={active} onValueChange={(v) => onChange(v as AuditCategory | "all")}>
-      <SelectTrigger size="sm" className="h-7! w-auto gap-1.5 border-border-subtle bg-muted/60 px-2.5 py-0 text-[11px] [&>svg]:size-3">
+      <SelectTrigger
+        size="sm"
+        className="h-7! w-auto gap-1.5 border-border-subtle bg-muted/60 px-2.5 py-0 text-[11px] [&>svg]:size-3"
+      >
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

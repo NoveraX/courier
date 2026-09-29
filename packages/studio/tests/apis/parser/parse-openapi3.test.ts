@@ -26,7 +26,11 @@ function specServedAt(servers: unknown[]): string {
     servers,
     paths: {
       "/nodes": {
-        get: { tags: ["nodes"], operationId: "listNodes", responses: { "200": { description: "ok" } } },
+        get: {
+          tags: ["nodes"],
+          operationId: "listNodes",
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
   });

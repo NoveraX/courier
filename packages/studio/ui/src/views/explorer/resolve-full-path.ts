@@ -44,11 +44,7 @@ export function resolveFullPath(
 
   // 2. Try to extract path from the first request with a URL
   const req = requests.find(
-    (r) =>
-      r.source === source &&
-      (r.group ?? "") === group &&
-      r.method === method &&
-      r.url,
+    (r) => r.source === source && (r.group ?? "") === group && r.method === method && r.url,
   );
 
   if (req?.url) {

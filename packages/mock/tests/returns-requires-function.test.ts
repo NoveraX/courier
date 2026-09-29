@@ -14,7 +14,9 @@ describe("returns()", () => {
   it("names what arrived", () => {
     const server = createMockServer({ port: 0, log: false });
 
-    expect(() => server.mock("orders", "one").returns({ id: 1 } as never)).toThrow(/received object/);
+    expect(() => server.mock("orders", "one").returns({ id: 1 } as never)).toThrow(
+      /received object/,
+    );
     expect(() => server.mock("orders", "two").returns(null as never)).toThrow(/received null/);
   });
 
@@ -23,4 +25,4 @@ describe("returns()", () => {
 
     expect(() => server.mock("orders", "list").returns(() => [{ id: 1 }])).not.toThrow();
   });
-})
+});

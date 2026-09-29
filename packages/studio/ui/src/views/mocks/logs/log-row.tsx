@@ -1,9 +1,9 @@
-import { cn } from "@/lib/utils";
-import { MethodBadge } from "@/components/shared/method-badge";
 import { formatTimestamp } from "@/components/shared/formatters";
+import { MethodBadge } from "@/components/shared/method-badge";
 import { MetricsPill, statusDotClass } from "@/components/shared/metrics-cells";
-import { useStudioStore } from "@/store";
 import { useNow } from "@/hooks/use-tick";
+import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
 
 import type { MockRequestLog } from "@/store/mock-slice";
 
@@ -36,9 +36,7 @@ export function LogRow({ log, selected, onSelect }: LogRowProps): React.ReactEle
         <MethodBadge method={log.httpMethod} />
       </span>
 
-      <span className="min-w-0 flex-1 truncate mono-sm text-foreground">
-        {path}
-      </span>
+      <span className="min-w-0 flex-1 truncate mono-sm text-foreground">{path}</span>
 
       <MetricsPill statusCode={log.status} duration={log.duration} />
 

@@ -34,7 +34,8 @@ export function extractSamples(text) {
       .join("\n");
     /* A ts fence that holds JSX is read as tsx: the fence's name is a nit, not a failure. */
     const jsx = match[2] === "tsx" || /<\/[A-Za-z]|\/>/.test(code);
-    const listing = /title="(types|signature)"/.test(match[3] ?? "") || /^declare (function|class) /m.test(code);
+    const listing =
+      /title="(types|signature)"/.test(match[3] ?? "") || /^declare (function|class) /m.test(code);
     const file = sampleFile(match[3] ?? "", code);
     return { line: text.slice(0, match.index).split("\n").length + 1, jsx, listing, code, file };
   });

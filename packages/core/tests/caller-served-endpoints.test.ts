@@ -84,18 +84,21 @@ describe("a direct caller on an endpoint this process serves", () => {
     ["a stream", "ticks"],
     ["a channel", "room"],
     ["a push channel", "feed"],
-  ] as const)("refuses %s with a ConfigurationError naming it, and dials nothing", async (_, name) => {
-    const client = createCaller(apiAt(await listen()));
+  ] as const)(
+    "refuses %s with a ConfigurationError naming it, and dials nothing",
+    async (_, name) => {
+      const client = createCaller(apiAt(await listen()));
 
-    const error = await refusal(() => client.live[name]());
-    await new Promise((resolve) => setTimeout(resolve, 100));
+      const error = await refusal(() => client.live[name]());
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-    expect(error).toBeInstanceOf(ConfigurationError);
-    expect(error).toMatchObject({ code: "DIRECT_CALL_TO_SERVED_ENDPOINT" });
-    expect((error as Error).message).toContain(`api.live.${name}`);
-    expect((error as Error).message).toContain("createProxyCaller");
-    expect(requests).toEqual([]);
-  });
+      expect(error).toBeInstanceOf(ConfigurationError);
+      expect(error).toMatchObject({ code: "DIRECT_CALL_TO_SERVED_ENDPOINT" });
+      expect((error as Error).message).toContain(`api.live.${name}`);
+      expect((error as Error).message).toContain("createProxyCaller");
+      expect(requests).toEqual([]);
+    },
+  );
 
   it("still reaches the rest of the API", async () => {
     const client = createCaller(apiAt(await listen()));

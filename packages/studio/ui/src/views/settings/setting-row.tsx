@@ -21,11 +21,7 @@ export function SettingRow({
         <Label htmlFor={htmlFor} className="text-body-sm text-foreground">
           {label}
         </Label>
-        {description && (
-          <p className="text-body-xs text-muted-foreground mt-0.5">
-            {description}
-          </p>
-        )}
+        {description && <p className="text-body-xs text-muted-foreground mt-0.5">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>

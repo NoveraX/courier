@@ -9,7 +9,10 @@ import { defineConfig } from "../src/config";
 import { courier, defineApi } from "../src/define";
 
 const { endpoint } = courier();
-const api = defineApi({ baseURL: "https://api.example", endpoints: { health: endpoint.get("health") } });
+const api = defineApi({
+  baseURL: "https://api.example",
+  endpoints: { health: endpoint.get("health") },
+});
 
 describe("defineConfig", () => {
   it("takes the sources", () => {

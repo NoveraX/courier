@@ -12,9 +12,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { importsSnapshotOf, summarizeImports } from "../../src/server/imports-bridge";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { importsSnapshotOf, summarizeImports } from "../../src/server/imports-bridge";
 import { isSourceSummary } from "../src/socket/source-list-guards";
 import { RegistryCard } from "../src/views/apis/registry-card";
 import { API } from "./playground-fixtures";
@@ -23,14 +22,23 @@ let root: string;
 
 function renderCard(declaration: Record<string, unknown>): void {
   const [summary] = summarizeImports(
-    importsSnapshotOf({ api: { importType: "file", type: "openapi", outputDir: "src/api", ...declaration } }, root),
+    importsSnapshotOf(
+      { api: { importType: "file", type: "openapi", outputDir: "src/api", ...declaration } },
+      root,
+    ),
   );
   /* The list reaches the page over the socket as JSON, and passes the page's guard. */
   const registry: unknown = JSON.parse(JSON.stringify(summary));
-  if (!isSourceSummary(registry)) throw new Error("Studio's import summary does not pass the UI's guard");
+  if (!isSourceSummary(registry))
+    throw new Error("Studio's import summary does not pass the UI's guard");
   render(
     <TooltipProvider>
-      <RegistryCard source={{ ...API, registry }} onCheckUpdates={() => {}} onManage={() => {}} onRemove={() => {}} />
+      <RegistryCard
+        source={{ ...API, registry }}
+        onCheckUpdates={() => {}}
+        onManage={() => {}}
+        onRemove={() => {}}
+      />
     </TooltipProvider>,
   );
 }

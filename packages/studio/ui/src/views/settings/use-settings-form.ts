@@ -1,14 +1,8 @@
+import type { ResolverOptions, ResolverResult, UseFormReturn } from "react-hook-form";
 import { useForm, useFormState } from "react-hook-form";
-
-import type {
-  UseFormReturn,
-  ResolverResult,
-  ResolverOptions,
-} from "react-hook-form";
-import type { Settings } from "@/store/types";
-
 import { useStudioStore } from "@/store";
 import { DEFAULT_SETTINGS } from "@/store/constants";
+import type { Settings } from "@/store/types";
 import { settingsSchema } from "./types";
 
 // ── Zod 4 manual resolver (standard-schema resolver has generics issues) ────

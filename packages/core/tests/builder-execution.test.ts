@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createCaller } from "../src/caller";
-import { courier } from "../src/define/courier";
 import { defineApi } from "../src/define/api";
+import { courier } from "../src/define/courier";
 import { defineGroup } from "../src/define/group";
 import { defineMiddleware } from "../src/middleware/index";
 import { executeRequest } from "../src/utils/execute";
@@ -37,8 +37,15 @@ const api = (() => {
     endpoints: {
       getAll: endpoint.get("").response(z.array(UserSchema)),
       getById: endpoint.get(":id").variables(ById).response(UserSchema),
-      create: endpoint.post("").variables(z.object({ email: z.string() })).response(UserSchema),
-      search: endpoint.post("search").variables(z.object({ q: z.string() })).response(z.array(UserSchema)).reads(),
+      create: endpoint
+        .post("")
+        .variables(z.object({ email: z.string() }))
+        .response(UserSchema),
+      search: endpoint
+        .post("search")
+        .variables(z.object({ q: z.string() }))
+        .response(z.array(UserSchema))
+        .reads(),
     },
   });
 
@@ -93,7 +100,6 @@ describe("endpoints defined with the builder", () => {
   });
 
   it("rejects variables the declared schema does not accept", async () => {
-
     // @ts-expect-error the declared variables schema rejects a number here
     await expect(client.users.create({ email: 42 })).rejects.toThrow(/Validation failed/);
   });

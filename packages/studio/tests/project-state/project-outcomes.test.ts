@@ -35,11 +35,21 @@ describe("a courier.config with a syntax error", () => {
   it("is reported in one line naming the file as the project names it", async () => {
     writeFileSync(join(root, "courier.config.ts"), "export default { sources: { a: 1 b: 2 } };\n");
     const url = await new Promise<string>((resolve, reject) => {
-      studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+      studio = createStudioServer({
+        port: 0,
+        host: "127.0.0.1",
+        projectRoot: root,
+        onReady: resolve,
+        onError: reject,
+      });
     });
 
     /* A display route answers once the first load has an outcome. */
-    await fetch(`${url}/api/apis/imports/check-all`, { method: "POST", headers: { origin: url, "content-type": "application/json" }, body: "{}" });
+    await fetch(`${url}/api/apis/imports/check-all`, {
+      method: "POST",
+      headers: { origin: url, "content-type": "application/json" },
+      body: "{}",
+    });
 
     const report = warned.find((line) => line.includes("courier.config did not load"));
     expect(report).toBeDefined();

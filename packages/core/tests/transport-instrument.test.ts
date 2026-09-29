@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import { ForbiddenError, fromErrorCode, type RealtimeError } from "../src/realtime/errors";
+import type { ConnectionStatus, WSChannel, WSChannelContext } from "../src/realtime/types";
 import { studioHooks } from "../src/studio";
 import type { StudioHooks } from "../src/studio/hooks";
 import { createMockSSESubscription } from "../src/testing/mock-sse";
-import { instrumentSSE, instrumentWSChannel, instrumentWSPush } from "../src/transport/instrument";
-import { ForbiddenError, fromErrorCode, type RealtimeError } from "../src/realtime/errors";
-import type { ConnectionStatus, WSChannel, WSChannelContext } from "../src/realtime/types";
 import { createMockWSChannel } from "../src/testing/mock-ws";
+import { instrumentSSE, instrumentWSChannel, instrumentWSPush } from "../src/transport/instrument";
 
 // Snapshot original studio hooks so individual tests can mutate without leaking
 let originalHooks: StudioHooks;

@@ -136,19 +136,14 @@ describe("createRedisPubSub", () => {
   });
 
   it("applies prefix to Redis channel names", async () => {
-    const ps = createRedisPubSub(
-      createConfig(pub, sub, { origin: "s1", prefix: "courier:" }),
-    );
+    const ps = createRedisPubSub(createConfig(pub, sub, { origin: "s1", prefix: "courier:" }));
     await ps.connect();
 
     await ps.subscribe("chat", () => {});
     expect(sub.subscribe).toHaveBeenCalledWith("courier:chat");
 
     await ps.publish("chat", { data: 1 });
-    expect(pub.publish).toHaveBeenCalledWith(
-      "courier:chat",
-      expect.any(String),
-    );
+    expect(pub.publish).toHaveBeenCalledWith("courier:chat", expect.any(String));
   });
 
   it("skips messages from self (echo prevention)", async () => {

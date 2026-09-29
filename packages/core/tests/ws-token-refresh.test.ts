@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { handleTokenRefresh, sendAuthRequired } from "../src/adapter/ws-token-refresh";
 import type { WSSocketContext } from "../src/adapter/ws-context";
-import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { InternalConnectionRegistry, RegistryEntry } from "../src/adapter/ws-registry-types";
+import { handleTokenRefresh, sendAuthRequired } from "../src/adapter/ws-token-refresh";
 import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
+import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
@@ -54,7 +54,10 @@ describe("handleTokenRefresh", () => {
     const updateMeta = vi.fn();
     const { ctx, sent } = createMockCtx({
       onTokenRefresh,
-      registry: { updateMeta, getEntry: vi.fn(() => undefined) } as unknown as InternalConnectionRegistry,
+      registry: {
+        updateMeta,
+        getEntry: vi.fn(() => undefined),
+      } as unknown as InternalConnectionRegistry,
     });
 
     await handleTokenRefresh(ctx, { type: "auth", id: "2", payload: "fresh-jwt" });
@@ -127,7 +130,14 @@ describe("sendAuthRequired", () => {
   it("sends auth_required to connection", () => {
     const sendRaw = vi.fn();
     const close = vi.fn();
-    const entry: RegistryEntry = { connectionId: "c1", meta: {}, connectedAt: 0, sendRaw, sendEncoded: vi.fn(), close };
+    const entry: RegistryEntry = {
+      connectionId: "c1",
+      meta: {},
+      connectedAt: 0,
+      sendRaw,
+      sendEncoded: vi.fn(),
+      close,
+    };
     const registry = { getEntry: vi.fn(() => entry) } as unknown as InternalConnectionRegistry;
 
     sendAuthRequired(registry, "c1", 0);
@@ -145,7 +155,14 @@ describe("sendAuthRequired", () => {
 
   it("disconnects after timeout if no refresh", async () => {
     const close = vi.fn();
-    const entry: RegistryEntry = { connectionId: "c1", meta: {}, connectedAt: 0, sendRaw: vi.fn(), sendEncoded: vi.fn(), close };
+    const entry: RegistryEntry = {
+      connectionId: "c1",
+      meta: {},
+      connectedAt: 0,
+      sendRaw: vi.fn(),
+      sendEncoded: vi.fn(),
+      close,
+    };
     const registry = { getEntry: vi.fn(() => entry) } as unknown as InternalConnectionRegistry;
 
     const cancel = sendAuthRequired(registry, "c1", 50);
@@ -157,7 +174,14 @@ describe("sendAuthRequired", () => {
 
   it("cancel function prevents timeout disconnect", async () => {
     const close = vi.fn();
-    const entry: RegistryEntry = { connectionId: "c1", meta: {}, connectedAt: 0, sendRaw: vi.fn(), sendEncoded: vi.fn(), close };
+    const entry: RegistryEntry = {
+      connectionId: "c1",
+      meta: {},
+      connectedAt: 0,
+      sendRaw: vi.fn(),
+      sendEncoded: vi.fn(),
+      close,
+    };
     const registry = { getEntry: vi.fn(() => entry) } as unknown as InternalConnectionRegistry;
 
     const cancel = sendAuthRequired(registry, "c1", 50);

@@ -1,11 +1,11 @@
+import { ownValue } from "@/lib/own-value";
 import type {
-  ParsedSpec,
+  GenerateOptions,
   ParsedGroup,
+  ParsedSpec,
   ScannedSource,
   SourceSummary,
-  GenerateOptions,
 } from "./types";
-import { ownValue } from "@/lib/own-value";
 
 // ── Endpoint counting ───────────────────────────────────────────────────────
 
@@ -29,7 +29,9 @@ export interface AnalysisStats {
 const BODY_METHODS = new Set(["post", "put", "patch"]);
 
 /** Check if an endpoint needs variables (has path params or body method) */
-function needsVariables(a: ScannedSource["groups"][number]["endpoints"][number]["analysis"]): boolean {
+function needsVariables(
+  a: ScannedSource["groups"][number]["endpoints"][number]["analysis"],
+): boolean {
   return BODY_METHODS.has(a.httpMethod) || a.path.includes(":");
 }
 
@@ -62,9 +64,7 @@ export function computeAnalysisStats(source: ScannedSource): AnalysisStats {
 // ── Selection helpers ───────────────────────────────────────────────────────
 
 /** Build a "select all" map from parsed spec */
-export function selectAllEndpoints(
-  spec: ParsedSpec,
-): Record<string, string[]> {
+export function selectAllEndpoints(spec: ParsedSpec): Record<string, string[]> {
   const result: Record<string, string[]> = {};
   for (const group of spec.groups) {
     result[group.name] = group.endpoints.map((e) => e.name);
@@ -73,9 +73,7 @@ export function selectAllEndpoints(
 }
 
 /** Count total selected endpoints across all groups */
-export function countSelectedEndpoints(
-  selected: Record<string, string[]>,
-): number {
+export function countSelectedEndpoints(selected: Record<string, string[]>): number {
   return Object.values(selected).reduce((sum, arr) => sum + arr.length, 0);
 }
 
@@ -89,9 +87,7 @@ export function toggleEndpointSelection(
   const has = groupEndpoints.includes(endpoint);
   return {
     ...selected,
-    [group]: has
-      ? groupEndpoints.filter((e) => e !== endpoint)
-      : [...groupEndpoints, endpoint],
+    [group]: has ? groupEndpoints.filter((e) => e !== endpoint) : [...groupEndpoints, endpoint],
   };
 }
 

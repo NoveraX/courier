@@ -5,10 +5,9 @@
 import { AlertTriangle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-
+import { FilePlanView } from "./file-plan-view";
 import type { ManagePreviewResult } from "./types";
 import type { PlanConsent } from "./types-file-plan";
-import { FilePlanView } from "./file-plan-view";
 
 interface ManagePreviewProps {
   preview: ManagePreviewResult;
@@ -27,7 +26,11 @@ interface ManagePreviewProps {
  * @param props.onToggleConfirmed - Allows a pending step, or withdraws allowing it
  * @returns The preview
  */
-export function ManagePreviewView({ preview, consent, onToggleConfirmed }: ManagePreviewProps): React.ReactElement {
+export function ManagePreviewView({
+  preview,
+  consent,
+  onToggleConfirmed,
+}: ManagePreviewProps): React.ReactElement {
   const warnings = preview.removeResult?.modifiedEndpointsWarning ?? [];
   const orphaned = preview.removeResult?.orphanedSchemas ?? [];
 
@@ -36,15 +39,23 @@ export function ManagePreviewView({ preview, consent, onToggleConfirmed }: Manag
       {warnings.length > 0 && <WarningSection warnings={warnings} />}
 
       {consent && (
-        <FilePlanView plan={consent.plan} confirmed={consent.confirmed} onToggle={onToggleConfirmed} />
+        <FilePlanView
+          plan={consent.plan}
+          confirmed={consent.confirmed}
+          onToggle={onToggleConfirmed}
+        />
       )}
 
       {orphaned.length > 0 && (
         <div className="space-y-1">
-          <h4 className="text-xs font-medium text-muted-foreground">Schemas no endpoint uses any more, removed</h4>
+          <h4 className="text-xs font-medium text-muted-foreground">
+            Schemas no endpoint uses any more, removed
+          </h4>
           <div className="flex flex-wrap gap-1">
             {orphaned.map((name) => (
-              <Badge key={name} variant="secondary" className="text-caption">{name}</Badge>
+              <Badge key={name} variant="secondary" className="text-caption">
+                {name}
+              </Badge>
             ))}
           </div>
         </div>
@@ -62,10 +73,14 @@ function WarningSection({ warnings }: { warnings: string[] }): React.ReactElemen
           You edited these endpoints; removing them removes your edits too
         </span>
       </div>
-      <p className="pl-5.5 text-body-sm text-muted-foreground">Studio keeps a copy of each file it changes.</p>
+      <p className="pl-5.5 text-body-sm text-muted-foreground">
+        Studio keeps a copy of each file it changes.
+      </p>
       <ul className="space-y-0.5 pl-5.5">
         {warnings.map((name) => (
-          <li key={name} className="mono-sm text-amber-300/80">{name}</li>
+          <li key={name} className="mono-sm text-amber-300/80">
+            {name}
+          </li>
         ))}
       </ul>
     </div>

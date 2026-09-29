@@ -43,9 +43,12 @@ async function collectSSEText(response: Response): Promise<string> {
 describe("SSE variable validation", () => {
   it("validates variables against endpoint schema", async () => {
     const vars = z.object({ userId: z.string() });
-    const feed = stream.variables(vars).response<unknown>().implement(async function* (ctx) {
-      yield { data: ctx.variables };
-    });
+    const feed = stream
+      .variables(vars)
+      .response<unknown>()
+      .implement(async function* (ctx) {
+        yield { data: ctx.variables };
+      });
 
     const sources = { api: { options: {}, feed } };
     const handler = setupHandler(sources);
@@ -62,9 +65,12 @@ describe("SSE variable validation", () => {
 
   it("receives a number as a number, with no coercion", async () => {
     const schema = z.object({ limit: z.number() });
-    const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
-      yield { data: ctx.variables };
-    });
+    const feed = stream
+      .variables(schema)
+      .response<unknown>()
+      .implement(async function* (ctx) {
+        yield { data: ctx.variables };
+      });
 
     const sources = { api: { options: {}, feed } };
     const handler = setupHandler(sources);
@@ -78,9 +84,12 @@ describe("SSE variable validation", () => {
 
   it("receives a boolean as a boolean, with no coercion", async () => {
     const schema = z.object({ active: z.boolean() });
-    const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
-      yield { data: ctx.variables };
-    });
+    const feed = stream
+      .variables(schema)
+      .response<unknown>()
+      .implement(async function* (ctx) {
+        yield { data: ctx.variables };
+      });
 
     const sources = { api: { options: {}, feed } };
     const handler = setupHandler(sources);
@@ -108,9 +117,12 @@ describe("SSE variable validation", () => {
 
   it("returns 422 for a value the schema rejects, as an HTTP call does", async () => {
     const schema = z.object({ count: z.number().min(1) });
-    const feed = stream.variables(schema).response<unknown>().implement(async function* (ctx) {
-      yield { data: ctx.variables };
-    });
+    const feed = stream
+      .variables(schema)
+      .response<unknown>()
+      .implement(async function* (ctx) {
+        yield { data: ctx.variables };
+      });
 
     const sources = { api: { options: {}, feed } };
     const handler = setupHandler(sources);

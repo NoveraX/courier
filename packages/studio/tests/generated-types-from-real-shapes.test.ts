@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { generateCode } from "../src/apis/generator";
-import { zodEnum, typeUnion } from "../src/apis/generator/enum-literals";
+import { typeUnion, zodEnum } from "../src/apis/generator/enum-literals";
+import { parseSpec } from "../src/apis/parser";
 
 function generate(spec: object): string {
-  return generateCode(
-    parseSpec(JSON.stringify(spec)),
-    { type: "openapi", sourceName: "api", outputDir: "src/api" },
-  )
+  return generateCode(parseSpec(JSON.stringify(spec)), {
+    type: "openapi",
+    sourceName: "api",
+    outputDir: "src/api",
+  })
     .map((f) => f.content)
     .join("\n");
 }

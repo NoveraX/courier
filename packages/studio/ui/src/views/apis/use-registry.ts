@@ -1,20 +1,16 @@
-import { useState, useCallback, useRef, useMemo } from "react";
-
+import { useCallback, useMemo, useRef, useState } from "react";
+import { ownValue } from "@/lib/own-value";
+import { useStudioStore } from "@/store";
+import type { ApisPageState } from "./apis-page-state";
+import { apisPageState } from "./apis-page-state";
+import { checkAllUpdates, checkSourceUpdates } from "./client";
 import type {
-  SourceSummary,
+  ParsedSpec,
   ScannedSource,
   SourceStatus,
   SourceStatusInfo,
-  ParsedSpec,
+  SourceSummary,
 } from "./types";
-import type { ApisPageState } from "./apis-page-state";
-import { apisPageState } from "./apis-page-state";
-import {
-  checkSourceUpdates,
-  checkAllUpdates,
-} from "./client";
-import { useStudioStore } from "@/store";
-import { ownValue } from "@/lib/own-value";
 
 /** Scanned source enriched with registry metadata (if imported) */
 export interface EnrichedSource extends ScannedSource {

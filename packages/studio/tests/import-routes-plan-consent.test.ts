@@ -21,8 +21,8 @@ import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseSpec } from "../src/apis/parser/parse-spec";
-import { readGeneratedFile } from "../src/server/import-files/generated-header";
 import { createStudioServer } from "../src/server/create-studio-server";
+import { readGeneratedFile } from "../src/server/import-files/generated-header";
 import type { StudioServer } from "../src/server/types";
 import { tokenHeader } from "./helpers/token-header";
 
@@ -32,16 +32,32 @@ const SPEC = parseSpec(
     info: { title: "Pets", version: "1" },
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
-        post: { operationId: "createPet", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
+        post: {
+          operationId: "createPet",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
   }),
 );
 const CONFIG =
   'export default { sources: { api: { baseURL: "https://api.example" } }, imports: { pets: { importType: "file", type: "openapi", outputDir: "src/api" }, cats: { importType: "file", type: "openapi", outputDir: "src/api", sourceName: "cats" } } };\n';
-const PETS = { sourceName: "pets", spec: SPEC, options: { type: "openapi", outputDir: "src/api", sourceName: "pets" } };
-const CATS = { sourceName: "cats", spec: SPEC, options: { type: "openapi", outputDir: "src/api", sourceName: "cats" } };
+const PETS = {
+  sourceName: "pets",
+  spec: SPEC,
+  options: { type: "openapi", outputDir: "src/api", sourceName: "pets" },
+};
+const CATS = {
+  sourceName: "cats",
+  spec: SPEC,
+  options: { type: "openapi", outputDir: "src/api", sourceName: "cats" },
+};
 const PETS_INDEX = "src/api/pets/index.ts";
 const PETS_SOURCE = "src/api/pets/source.ts";
 const HAND = "hand-written\n";
@@ -80,18 +96,30 @@ function read(path: string): string {
 
 function start(): Promise<string> {
   return new Promise((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
-async function post(path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+async function post(
+  path: string,
+  body: unknown,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
   const payload: unknown = await response.json();
-  return { status: response.status, body: typeof payload === "object" && payload !== null ? { ...payload } : {} };
+  return {
+    status: response.status,
+    body: typeof payload === "object" && payload !== null ? { ...payload } : {},
+  };
 }
 
 function snapshot(): Record<string, string> {
@@ -116,7 +144,12 @@ function snapshot(): Record<string, string> {
 
 function digestOf(reply: { body: Record<string, unknown> }): string {
   const plan = reply.body.plan;
-  if (typeof plan !== "object" || plan === null || !("digest" in plan) || typeof plan.digest !== "string") {
+  if (
+    typeof plan !== "object" ||
+    plan === null ||
+    !("digest" in plan) ||
+    typeof plan.digest !== "string"
+  ) {
     throw new Error(`no plan in ${JSON.stringify(reply.body)}`);
   }
   return plan.digest;
@@ -138,9 +171,16 @@ describe("a digest from another plan", () => {
     expect(catsDigest).not.toBe(digest);
     const before = snapshot();
 
-    const reply = await post("/api/apis/write", { ...PETS, planDigest: catsDigest, confirm: [PETS_INDEX] });
+    const reply = await post("/api/apis/write", {
+      ...PETS,
+      planDigest: catsDigest,
+      confirm: [PETS_INDEX],
+    });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "PLAN_STALE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "PLAN_STALE",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
@@ -149,18 +189,31 @@ describe("a digest from another plan", () => {
     const before = snapshot();
     const flat = { ...PETS, options: { ...PETS.options, groupBy: "single" } };
 
-    const reply = await post("/api/apis/write", { ...flat, planDigest: digest, confirm: [PETS_INDEX] });
+    const reply = await post("/api/apis/write", {
+      ...flat,
+      planDigest: digest,
+      confirm: [PETS_INDEX],
+    });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "DECLARATION_MISMATCH" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "DECLARATION_MISMATCH",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
   it("a removal preview's digest quoted by a write → 409 PLAN_STALE", async () => {
     await pendingPetsWrite();
-    const removalDigest = digestOf(await post("/api/apis/imports/remove/preview", { name: "pets" }));
+    const removalDigest = digestOf(
+      await post("/api/apis/imports/remove/preview", { name: "pets" }),
+    );
     const before = snapshot();
 
-    const reply = await post("/api/apis/write", { ...PETS, planDigest: removalDigest, confirm: [PETS_INDEX] });
+    const reply = await post("/api/apis/write", {
+      ...PETS,
+      planDigest: removalDigest,
+      confirm: [PETS_INDEX],
+    });
 
     expect(reply.status).toBe(409);
     expect(snapshot()).toEqual(before);
@@ -169,10 +222,15 @@ describe("a digest from another plan", () => {
   it("an update preview's digest quoted by a removal, and a write's by an update → 409 PLAN_STALE", async () => {
     expect((await post("/api/apis/write", PETS)).status).toBe(200);
     put(PETS_SOURCE, `${read(PETS_SOURCE)}// mine\n`);
-    const updateDigest = digestOf(await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }));
+    const updateDigest = digestOf(
+      await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }),
+    );
     const before = snapshot();
 
-    const removal = await post("/api/apis/imports/remove", { name: "pets", planDigest: updateDigest });
+    const removal = await post("/api/apis/imports/remove", {
+      name: "pets",
+      planDigest: updateDigest,
+    });
     const update = await post("/api/apis/update/apply", {
       name: "pets",
       newSpec: SPEC,
@@ -185,15 +243,22 @@ describe("a digest from another plan", () => {
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
-  it.each([[""], ["0".repeat(64)], ["not a digest"]])("planDigest %j → 409 PLAN_STALE", async (planDigest) => {
-    await pendingPetsWrite();
-    const before = snapshot();
+  it.each([[""], ["0".repeat(64)], ["not a digest"]])(
+    "planDigest %j → 409 PLAN_STALE",
+    async (planDigest) => {
+      await pendingPetsWrite();
+      const before = snapshot();
 
-    const reply = await post("/api/apis/write", { ...PETS, planDigest, confirm: [PETS_INDEX] });
+      const reply = await post("/api/apis/write", { ...PETS, planDigest, confirm: [PETS_INDEX] });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "PLAN_STALE" });
-    expect(snapshot()).toEqual(before);
-  }, 20_000);
+      expect({ status: reply.status, code: reply.body.code }).toEqual({
+        status: 409,
+        code: "PLAN_STALE",
+      });
+      expect(snapshot()).toEqual(before);
+    },
+    20_000,
+  );
 });
 
 describe("a confirmation the plan does not ask for", () => {
@@ -209,20 +274,31 @@ describe("a confirmation the plan does not ask for", () => {
     ["an empty path", [""]],
     ["__proto__", ["__proto__"]],
     ["the pending path and one outside", [PETS_INDEX, "package.json"]],
-  ])("%s → 400 CONFIRMATION_NOT_IN_PLAN, nothing changed", async (_label, confirm) => {
-    const digest = await pendingPetsWrite();
-    const before = snapshot();
+  ])(
+    "%s → 400 CONFIRMATION_NOT_IN_PLAN, nothing changed",
+    async (_label, confirm) => {
+      const digest = await pendingPetsWrite();
+      const before = snapshot();
 
-    const reply = await post("/api/apis/write", { ...PETS, planDigest: digest, confirm });
+      const reply = await post("/api/apis/write", { ...PETS, planDigest: digest, confirm });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 400, code: "CONFIRMATION_NOT_IN_PLAN" });
-    expect(snapshot()).toEqual(before);
-  }, 20_000);
+      expect({ status: reply.status, code: reply.body.code }).toEqual({
+        status: 400,
+        code: "CONFIRMATION_NOT_IN_PLAN",
+      });
+      expect(snapshot()).toEqual(before);
+    },
+    20_000,
+  );
 
   it("the pending path twice is taken once: the file is replaced and backed up once", async () => {
     const digest = await pendingPetsWrite();
 
-    const reply = await post("/api/apis/write", { ...PETS, planDigest: digest, confirm: [PETS_INDEX, PETS_INDEX] });
+    const reply = await post("/api/apis/write", {
+      ...PETS,
+      planDigest: digest,
+      confirm: [PETS_INDEX, PETS_INDEX],
+    });
 
     expect(reply.status).toBe(200);
     expect((reply.body.written as string[]).filter((path) => path === PETS_INDEX)).toHaveLength(1);
@@ -245,34 +321,64 @@ describe("malformed consent", () => {
     ["planDigest as an array", { planDigest: ["x"] }],
   ];
 
-  it.each(MALFORMED)("write with %s → 400, nothing changed", async (_label, consent) => {
-    const digest = await pendingPetsWrite();
-    const before = snapshot();
+  it.each(MALFORMED)(
+    "write with %s → 400, nothing changed",
+    async (_label, consent) => {
+      const digest = await pendingPetsWrite();
+      const before = snapshot();
 
-    const reply = await post("/api/apis/write", { ...PETS, planDigest: digest, confirm: [PETS_INDEX], ...consent });
+      const reply = await post("/api/apis/write", {
+        ...PETS,
+        planDigest: digest,
+        confirm: [PETS_INDEX],
+        ...consent,
+      });
 
-    expect(reply.status).toBe(400);
-    expect(snapshot()).toEqual(before);
-  }, 20_000);
+      expect(reply.status).toBe(400);
+      expect(snapshot()).toEqual(before);
+    },
+    20_000,
+  );
 
-  it.each(MALFORMED)("update, manage and remove with %s → 400, nothing changed", async (_label, consent) => {
-    expect((await post("/api/apis/write", PETS)).status).toBe(200);
-    put(PETS_SOURCE, `${read(PETS_SOURCE)}// mine\n`);
-    const updateDigest = digestOf(await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }));
-    const manageBody = { name: "pets", spec: SPEC, toRemove: { pets: ["createPet"] } };
-    const manageDigest = digestOf(await post("/api/apis/manage/preview", manageBody));
-    const removeDigest = digestOf(await post("/api/apis/imports/remove/preview", { name: "pets" }));
-    const before = snapshot();
+  it.each(MALFORMED)(
+    "update, manage and remove with %s → 400, nothing changed",
+    async (_label, consent) => {
+      expect((await post("/api/apis/write", PETS)).status).toBe(200);
+      put(PETS_SOURCE, `${read(PETS_SOURCE)}// mine\n`);
+      const updateDigest = digestOf(
+        await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }),
+      );
+      const manageBody = { name: "pets", spec: SPEC, toRemove: { pets: ["createPet"] } };
+      const manageDigest = digestOf(await post("/api/apis/manage/preview", manageBody));
+      const removeDigest = digestOf(
+        await post("/api/apis/imports/remove/preview", { name: "pets" }),
+      );
+      const before = snapshot();
 
-    const replies = [
-      await post("/api/apis/update/apply", { name: "pets", newSpec: SPEC, planDigest: updateDigest, ...consent }),
-      await post("/api/apis/manage/apply", { ...manageBody, planDigest: manageDigest, ...consent }),
-      await post("/api/apis/imports/remove", { name: "pets", planDigest: removeDigest, ...consent }),
-    ];
+      const replies = [
+        await post("/api/apis/update/apply", {
+          name: "pets",
+          newSpec: SPEC,
+          planDigest: updateDigest,
+          ...consent,
+        }),
+        await post("/api/apis/manage/apply", {
+          ...manageBody,
+          planDigest: manageDigest,
+          ...consent,
+        }),
+        await post("/api/apis/imports/remove", {
+          name: "pets",
+          planDigest: removeDigest,
+          ...consent,
+        }),
+      ];
 
-    expect(replies.map((reply) => reply.status)).toEqual([400, 400, 400]);
-    expect(snapshot()).toEqual(before);
-  }, 30_000);
+      expect(replies.map((reply) => reply.status)).toEqual([400, 400, 400]);
+      expect(snapshot()).toEqual(before);
+    },
+    30_000,
+  );
 });
 
 describe("__proto__ keys in the body", () => {
@@ -283,7 +389,10 @@ describe("__proto__ keys in the body", () => {
 
     const reply = await post("/api/apis/write", body);
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "NEEDS_CONFIRMATION" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "NEEDS_CONFIRMATION",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
@@ -305,9 +414,16 @@ describe("__proto__ keys in the body", () => {
     const reply = await post("/api/apis/write", body);
 
     expect(reply.status).toBe(200);
-    expect((reply.body.written as string[]).every((path) => path.startsWith("src/api/pets/"))).toBe(true);
+    expect((reply.body.written as string[]).every((path) => path.startsWith("src/api/pets/"))).toBe(
+      true,
+    );
     expect(readFileSync(join(scratch, "outside/keep.ts"), "utf8")).toBe("keep\n");
-    expect(Object.keys(snapshot()).filter((path) => !(path in before) && !path.startsWith("proj/src") && !path.startsWith("proj/.courier"))).toEqual([]);
+    expect(
+      Object.keys(snapshot()).filter(
+        (path) =>
+          !(path in before) && !path.startsWith("proj/src") && !path.startsWith("proj/.courier"),
+      ),
+    ).toEqual([]);
   }, 20_000);
 
   it("a removal's digest under __proto__ is not quoted: 409 PLAN_NOT_SEEN, nothing changed", async () => {
@@ -315,9 +431,15 @@ describe("__proto__ keys in the body", () => {
     const digest = digestOf(await post("/api/apis/imports/remove/preview", { name: "pets" }));
     const before = snapshot();
 
-    const reply = await post("/api/apis/imports/remove", `{"name":"pets","__proto__":{"planDigest":"${digest}"}}`);
+    const reply = await post(
+      "/api/apis/imports/remove",
+      `{"name":"pets","__proto__":{"planDigest":"${digest}"}}`,
+    );
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "PLAN_NOT_SEEN" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "PLAN_NOT_SEEN",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
@@ -326,23 +448,33 @@ describe("__proto__ keys in the body", () => {
     ["toRemove", `{"__proto__":["listPets"]}`],
     ["toAdd", `{"constructor":["listPets"]}`],
     ["toRemove", `{"../../x":["listPets"]}`],
-  ])("manage %s %s → no file outside src/api/pets changes", async (field, groups) => {
-    expect((await post("/api/apis/write", PETS)).status).toBe(200);
-    const body = `{"name":"pets","spec":${JSON.stringify(SPEC)},"${field}":${groups}}`;
-    const before = snapshot();
+  ])(
+    "manage %s %s → no file outside src/api/pets changes",
+    async (field, groups) => {
+      expect((await post("/api/apis/write", PETS)).status).toBe(200);
+      const body = `{"name":"pets","spec":${JSON.stringify(SPEC)},"${field}":${groups}}`;
+      const before = snapshot();
 
-    const preview = await post("/api/apis/manage/preview", body);
-    const planDigest = preview.status === 200 ? digestOf(preview) : "0".repeat(64);
-    const apply = await post("/api/apis/manage/apply", `${body.slice(0, -1)},"planDigest":"${planDigest}"}`);
+      const preview = await post("/api/apis/manage/preview", body);
+      const planDigest = preview.status === 200 ? digestOf(preview) : "0".repeat(64);
+      const apply = await post(
+        "/api/apis/manage/apply",
+        `${body.slice(0, -1)},"planDigest":"${planDigest}"}`,
+      );
 
-    expect([200, 400, 404, 409]).toContain(preview.status);
-    expect([200, 400, 404, 409]).toContain(apply.status);
-    const after = snapshot();
-    const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
-      (path) => before[path] !== after[path] && !path.startsWith("proj/src/api/pets/") && !path.startsWith("proj/.courier"),
-    );
-    expect(changed).toEqual([]);
-  }, 20_000);
+      expect([200, 400, 404, 409]).toContain(preview.status);
+      expect([200, 400, 404, 409]).toContain(apply.status);
+      const after = snapshot();
+      const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
+        (path) =>
+          before[path] !== after[path] &&
+          !path.startsWith("proj/src/api/pets/") &&
+          !path.startsWith("proj/.courier"),
+      );
+      expect(changed).toEqual([]);
+    },
+    20_000,
+  );
 
   it("selectedEndpoints with a __proto__ group writes only in src/api/pets", async () => {
     const body = `{"sourceName":"pets","spec":${JSON.stringify(SPEC)},"options":{"type":"openapi","outputDir":"src/api","sourceName":"pets","selectedEndpoints":{"__proto__":["listPets"],"pets":["listPets"]}}}`;
@@ -350,6 +482,8 @@ describe("__proto__ keys in the body", () => {
     const reply = await post("/api/apis/write", body);
 
     expect(reply.status).toBe(200);
-    expect((reply.body.written as string[]).every((path) => path.startsWith("src/api/pets/"))).toBe(true);
+    expect((reply.body.written as string[]).every((path) => path.startsWith("src/api/pets/"))).toBe(
+      true,
+    );
   }, 20_000);
 });

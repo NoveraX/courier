@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
-import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { parseTopic } from "../src/adapter/ws-resolve";
+import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import type { Sources } from "../src/define/types";
 import type { WebSocketLike } from "../src/realtime/adapters";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
@@ -42,10 +42,18 @@ function createMockSocket(): MockSocket {
   let closed: { code?: number; reason?: string } | null = null;
 
   return {
-    get readyState() { return readyState; },
-    get bufferedAmount() { return 0; },
-    get _sent() { return sent; },
-    get _closed() { return closed; },
+    get readyState() {
+      return readyState;
+    },
+    get bufferedAmount() {
+      return 0;
+    },
+    get _sent() {
+      return sent;
+    },
+    get _closed() {
+      return closed;
+    },
     send(data: string) {
       sent.push(JSON.parse(data) as WSMessage);
     },
@@ -241,8 +249,9 @@ describe("createWSHandler", () => {
   });
 
   it("does NOT register in playground abort registry when upgrade URL has no _playground_rid", async () => {
-    const { playgroundAbortRegistrySize, clearPlaygroundAbortRegistry } =
-      await import("../src/studio");
+    const { playgroundAbortRegistrySize, clearPlaygroundAbortRegistry } = await import(
+      "../src/studio"
+    );
     clearPlaygroundAbortRegistry();
 
     const sources = createWSSource(vi.fn());
@@ -524,9 +533,12 @@ describe("createWSHandler — connections registry", () => {
     });
 
     const ws = createMockSocket();
-    handler.handleSocket(ws, new Request("http://localhost/ws", {
-      headers: { Origin: "http://evil.com" },
-    }));
+    handler.handleSocket(
+      ws,
+      new Request("http://localhost/ws", {
+        headers: { Origin: "http://evil.com" },
+      }),
+    );
 
     expect(handler.connections.count).toBe(0);
   });
@@ -534,7 +546,9 @@ describe("createWSHandler — connections registry", () => {
   it("does not register connections rejected by onConnect", async () => {
     const sources = createWSSource(vi.fn());
     const handler = setupWSHandler(sources, {
-      onConnect: () => { throw new Error("rejected"); },
+      onConnect: () => {
+        throw new Error("rejected");
+      },
     });
 
     const ws = createMockSocket();
@@ -621,19 +635,25 @@ describe("createWSHandler — connections registry", () => {
 describe("parseTopic", () => {
   it("parses source.group.method", () => {
     expect(parseTopic("api.users.getAll")).toEqual({
-      source: "api", group: "users", method: "getAll",
+      source: "api",
+      group: "users",
+      method: "getAll",
     });
   });
 
   it("parses source.method", () => {
     expect(parseTopic("api.getAll")).toEqual({
-      source: "api", group: undefined, method: "getAll",
+      source: "api",
+      group: undefined,
+      method: "getAll",
     });
   });
 
   it("parses bare method", () => {
     expect(parseTopic("getAll")).toEqual({
-      source: undefined, group: undefined, method: "getAll",
+      source: undefined,
+      group: undefined,
+      method: "getAll",
     });
   });
 });

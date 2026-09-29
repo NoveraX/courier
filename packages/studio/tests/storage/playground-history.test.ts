@@ -41,7 +41,11 @@ async function start(root: string): Promise<StudioServer> {
 
 /** A page that connects, with the histories it is sent. */
 async function page(studio: StudioServer): Promise<{ socket: Socket; sent: unknown[] }> {
-  const socket = connect(`${studio.url}/ui`, { transports: ["websocket"], reconnection: false, auth: { token: studio.token } });
+  const socket = connect(`${studio.url}/ui`, {
+    transports: ["websocket"],
+    reconnection: false,
+    auth: { token: studio.token },
+  });
   const seen = { socket, sent: [] as unknown[] };
   socket.on("playground:history", (history: unknown) => seen.sent.push(history));
   cleanups.push(() => {
@@ -51,7 +55,14 @@ async function page(studio: StudioServer): Promise<{ socket: Socket; sent: unkno
   return seen;
 }
 
-const CALL = { id: "e1", rid: "r1", source: "api", method: "list", status: "success", response: [1] };
+const CALL = {
+  id: "e1",
+  rid: "r1",
+  source: "api",
+  method: "list",
+  status: "success",
+  response: [1],
+};
 
 describe("the Playground history", () => {
   it("is shown to the next page, and after Studio restarts, as a page sent it", async () => {
@@ -73,7 +84,11 @@ describe("the Playground history", () => {
   it("keeps no credential a call sent", async () => {
     const studio = await start(project());
     const sender = await page(studio);
-    const call = { ...CALL, headers: '{ "Authorization": "Bearer t" }', requestHeaders: { authorization: "Bearer t" } };
+    const call = {
+      ...CALL,
+      headers: '{ "Authorization": "Bearer t" }',
+      requestHeaders: { authorization: "Bearer t" },
+    };
     sender.socket.emit("playground:history:save", [call]);
 
     const next = await page(studio);

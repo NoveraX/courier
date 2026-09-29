@@ -104,7 +104,11 @@ describe("createPostHandler", () => {
 
       await handler(postRequest("{}", {}, "http://localhost/api/request?_s=api&_m=ping"));
 
-      expect(execute.mock.calls[0]![1]).toMatchObject({ source: "api", group: undefined, method: "ping" });
+      expect(execute.mock.calls[0]![1]).toMatchObject({
+        source: "api",
+        group: undefined,
+        method: "ping",
+      });
     });
 
     it("is required: a POST that does not name it is refused before its body is read", async () => {
@@ -162,18 +166,15 @@ describe("createPostHandler", () => {
       expect(res.status).toBe(415);
     });
 
-    it.each(["application/json", "application/json; charset=utf-8"])(
-      "accepts %s",
-      async (type) => {
-        const execute = createMockExecute();
-        const handler = createPostHandler(execute, createHooks());
+    it.each(["application/json", "application/json; charset=utf-8"])("accepts %s", async (type) => {
+      const execute = createMockExecute();
+      const handler = createPostHandler(execute, createHooks());
 
-        const res = await handler(postRequest("{}", { "content-type": type }));
+      const res = await handler(postRequest("{}", { "content-type": type }));
 
-        expect(res.status).toBe(200);
-        expect(execute).toHaveBeenCalledOnce();
-      },
-    );
+      expect(res.status).toBe(200);
+      expect(execute).toHaveBeenCalledOnce();
+    });
 
     it("accepts multipart/form-data", async () => {
       const execute = createMockExecute();
@@ -204,15 +205,18 @@ describe("createPostHandler", () => {
       expect(res.status).toBe(400);
     });
 
-    it.each([["[1, 2]"], ['"text"'], ["null"]])("refuses %s, which is not an envelope", async (body) => {
-      const execute = createMockExecute();
-      const handler = createPostHandler(execute, createHooks());
+    it.each([["[1, 2]"], ['"text"'], ["null"]])(
+      "refuses %s, which is not an envelope",
+      async (body) => {
+        const execute = createMockExecute();
+        const handler = createPostHandler(execute, createHooks());
 
-      const res = await handler(postRequest(body));
+        const res = await handler(postRequest(body));
 
-      expect(res.status).toBe(400);
-      expect(execute).not.toHaveBeenCalled();
-    });
+        expect(res.status).toBe(400);
+        expect(execute).not.toHaveBeenCalled();
+      },
+    );
 
     it("refuses a field beside variables and options, naming where the endpoint goes", async () => {
       const execute = createMockExecute();
@@ -229,7 +233,9 @@ describe("createPostHandler", () => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());
 
-      const res = await handler(postRequest(JSON.stringify({ options: { prefixUrl: "http://x" } })));
+      const res = await handler(
+        postRequest(JSON.stringify({ options: { prefixUrl: "http://x" } })),
+      );
 
       expect(res.status).toBe(400);
       expect((await res.json()).message).toContain("prefixUrl");
@@ -242,7 +248,10 @@ describe("createPostHandler", () => {
 
       await handler(postRequest(JSON.stringify({ variables: [1, 2], options: { rawData: true } })));
 
-      expect(execute.mock.calls[0]![1]).toMatchObject({ variables: [1, 2], options: { rawData: true } });
+      expect(execute.mock.calls[0]![1]).toMatchObject({
+        variables: [1, 2],
+        options: { rawData: true },
+      });
     });
 
     /**
@@ -259,7 +268,8 @@ describe("createPostHandler", () => {
       let sent = false;
       const leaving = new ReadableStream<Uint8Array>({
         pull(controller) {
-          if (sent) return controller.error(Object.assign(new Error("aborted"), { code: "ECONNRESET" }));
+          if (sent)
+            return controller.error(Object.assign(new Error("aborted"), { code: "ECONNRESET" }));
           sent = true;
           controller.enqueue(new TextEncoder().encode('{"variables":'));
         },
@@ -335,7 +345,10 @@ describe("createPostHandler", () => {
         ]),
       );
 
-      const { variables, options } = execute.mock.calls[0]![1] as { variables: FormData; options: unknown };
+      const { variables, options } = execute.mock.calls[0]![1] as {
+        variables: FormData;
+        options: unknown;
+      };
       expect(variables).toBeInstanceOf(FormData);
       expect([...variables.keys()]).toEqual(["file"]);
       expect(options).toEqual({ timeout: 1000 });
@@ -381,7 +394,12 @@ describe("createPostHandler", () => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());
 
-      const res = await handler(upload([["_options", options], ["file", new File(["x"], "a.txt")]]));
+      const res = await handler(
+        upload([
+          ["_options", options],
+          ["file", new File(["x"], "a.txt")],
+        ]),
+      );
 
       expect(res.status).toBe(400);
       expect((await res.json()).message).toContain(reason);
@@ -432,7 +450,12 @@ describe("createPostHandler", () => {
       await handler(postRequest(JSON.stringify({ variables: { page: 1 } })));
 
       const started = hooks.onRequestStart.mock.calls[0]![0];
-      expect(started).toMatchObject({ source: "api", group: "users", method: "list", mode: "proxy" });
+      expect(started).toMatchObject({
+        source: "api",
+        group: "users",
+        method: "list",
+        mode: "proxy",
+      });
       expect(execute.mock.calls[0]![4]).toBe(started.id);
       expect(hooks.onProxyReceive).toHaveBeenCalledWith(
         expect.objectContaining({ proxyMethod: "POST", requestId: started.id }),
@@ -446,7 +469,9 @@ describe("createPostHandler", () => {
       const hooks = createHooks();
       const handler = createPostHandler(createMockExecute(), hooks, { maxBodyBytes: 8 });
 
-      const res = await handler(postRequest(JSON.stringify({ variables: { big: "x".repeat(64) } })));
+      const res = await handler(
+        postRequest(JSON.stringify({ variables: { big: "x".repeat(64) } })),
+      );
 
       const { id } = hooks.onRequestStart.mock.calls[0]![0];
       expect(res.status).toBe(413);
@@ -465,7 +490,12 @@ describe("createPostHandler", () => {
       const hooks = createHooks();
       const handler = createPostHandler(createMockExecute(), hooks);
 
-      await handler(upload([["_options", "{}"], ["note", "hello"]]));
+      await handler(
+        upload([
+          ["_options", "{}"],
+          ["note", "hello"],
+        ]),
+      );
 
       expect(hooks.onProxyParse).toHaveBeenCalledWith(
         expect.objectContaining({ variables: { note: "hello" } }),
@@ -481,7 +511,12 @@ describe("createPostHandler", () => {
 
       expect(hooks.onProxyRespond).toHaveBeenCalledOnce();
       expect(hooks.onProxyRespond).toHaveBeenCalledWith(
-        expect.objectContaining({ proxyMethod: "POST", source: "api", method: "list", status: 500 }),
+        expect.objectContaining({
+          proxyMethod: "POST",
+          source: "api",
+          method: "list",
+          status: 500,
+        }),
       );
     });
 

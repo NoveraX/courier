@@ -56,8 +56,14 @@ function appSources(base: string) {
       baseURL: base,
       groups: { users: defineGroup({ prefix: "users", endpoints: { list: endpoint.get("") } }) },
     }),
-    dead: defineApi({ baseURL: base, groups: { down: defineGroup({ prefix: "down", endpoints: ping }) } }),
-    left: defineApi({ baseURL: base, groups: { same: defineGroup({ prefix: "same", endpoints: ping }) } }),
+    dead: defineApi({
+      baseURL: base,
+      groups: { down: defineGroup({ prefix: "down", endpoints: ping }) },
+    }),
+    left: defineApi({
+      baseURL: base,
+      groups: { same: defineGroup({ prefix: "same", endpoints: ping }) },
+    }),
   };
 }
 
@@ -107,7 +113,12 @@ beforeAll(async () => {
   root = writeProject();
   const port = await freePort();
   const url = await new Promise<string>((resolve) => {
-    const studio = createStudioServer({ port, host: "127.0.0.1", projectRoot: root, onReady: resolve });
+    const studio = createStudioServer({
+      port,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+    });
     cleanups.push(() => studio.close());
   });
   const ui: Socket = connect(`${url}/ui`, { transports: ["websocket"] });
@@ -140,10 +151,9 @@ describe("a direct call made with a copy of the definition no registry saw", () 
     await until(() => events.filter((e) => e.type === "request:start").length >= 2, "two calls");
 
     const started = events.filter((e) => e.type === "request:start");
-    expect(started.map((e) => `${String(e.source)}.${String(e.group)}.${String(e.method)}`)).toEqual([
-      "api.users.list",
-      "dead.down.ping",
-    ]);
+    expect(
+      started.map((e) => `${String(e.source)}.${String(e.group)}.${String(e.method)}`),
+    ).toEqual(["api.users.list", "dead.down.ping"]);
   });
 
   it("keeps the name it reported when two config sources declare the endpoint", async () => {

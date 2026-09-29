@@ -9,10 +9,10 @@ vi.mock("../src/utils/execute", async (importOriginal) => {
   };
 });
 
-import { executeRequest } from "../src/utils/execute";
 import { createHandler, requireSources } from "../src/adapter";
-import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { isConfigurationError } from "../src/errors";
+import { _resetSourcesForTests, registerSources } from "../src/sources";
+import { executeRequest } from "../src/utils/execute";
 
 const mockExecuteRequest = vi.mocked(executeRequest);
 
@@ -130,9 +130,7 @@ describe("createHandler", () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
       const { handleGet } = setupHandler({ api: {} });
-      const req = new Request(
-        "http://localhost/api/request?_s=api&_g=users&_m=getAll",
-      );
+      const req = new Request("http://localhost/api/request?_s=api&_g=users&_m=getAll");
 
       await handleGet(req);
 
@@ -177,8 +175,12 @@ describe("createHandler", () => {
     it("refuses _v that is not a JSON object", async () => {
       const { handleGet } = setupHandler({ api: {} });
 
-      const notJson = await handleGet(new Request("http://localhost/api/request?_s=api&_m=list&_v=%7Bx"));
-      const list = await handleGet(new Request("http://localhost/api/request?_s=api&_m=list&_v=%5B1%5D"));
+      const notJson = await handleGet(
+        new Request("http://localhost/api/request?_s=api&_m=list&_v=%7Bx"),
+      );
+      const list = await handleGet(
+        new Request("http://localhost/api/request?_s=api&_m=list&_v=%5B1%5D"),
+      );
 
       expect(notJson.status).toBe(400);
       expect(list.status).toBe(400);
@@ -204,9 +206,7 @@ describe("createHandler", () => {
       mockExecuteRequest.mockResolvedValue(new Response("{}"));
 
       const { handleGet } = setupHandler({ api: {} });
-      const req = new Request(
-        "http://localhost/api/request?_s=api&_m=list&_o=invalid",
-      );
+      const req = new Request("http://localhost/api/request?_s=api&_m=list&_o=invalid");
 
       const response = await handleGet(req);
 
@@ -338,7 +338,13 @@ describe("createHandler", () => {
 
       expect(mockExecuteRequest).toHaveBeenCalledWith(
         expect.objectContaining({ api: expect.any(Object) }),
-        { source: "api", group: undefined, method: "list", variables: { page: 1 }, options: undefined },
+        {
+          source: "api",
+          group: undefined,
+          method: "list",
+          variables: { page: 1 },
+          options: undefined,
+        },
         expect.objectContaining({ proxyMethod: "POST" }),
       );
     });

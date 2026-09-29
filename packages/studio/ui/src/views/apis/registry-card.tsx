@@ -19,19 +19,14 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-
-import type { SourceStatusInfo } from "./types";
-import type { EnrichedSource } from "./use-registry";
 import { computeAnalysisStats, countScannedEndpoints } from "./helpers";
 import { IMPORT_ICON, STATUS_CONFIG } from "./registry-card-constants";
 import { CardMenu } from "./registry-card-menu";
 import { QualityPill } from "./registry-card-quality";
+import type { SourceStatusInfo } from "./types";
+import type { EnrichedSource } from "./use-registry";
 
 interface RegistryCardProps {
   source: EnrichedSource;
@@ -91,9 +86,13 @@ export function RegistryCard({
       </div>
 
       <div className="flex items-center gap-3 text-[11px] text-muted-foreground truncate">
-        <span className="shrink-0">{endpointCount} {endpointCount === 1 ? "endpoint" : "endpoints"}</span>
+        <span className="shrink-0">
+          {endpointCount} {endpointCount === 1 ? "endpoint" : "endpoints"}
+        </span>
         <span className="shrink-0">·</span>
-        <span className="shrink-0">{groupCount} {groupCount === 1 ? "group" : "groups"}</span>
+        <span className="shrink-0">
+          {groupCount} {groupCount === 1 ? "group" : "groups"}
+        </span>
         {validation && (
           <>
             <span className="shrink-0">·</span>
@@ -110,8 +109,20 @@ export function RegistryCard({
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <QualityPill icon={Eye} label="R" count={stats.responseType.count} total={stats.responseType.total} tooltip="Response types" />
-          <QualityPill icon={Zap} label="V" count={stats.variablesType.count} total={stats.variablesType.total} tooltip="Variables types" />
+          <QualityPill
+            icon={Eye}
+            label="R"
+            count={stats.responseType.count}
+            total={stats.responseType.total}
+            tooltip="Response types"
+          />
+          <QualityPill
+            icon={Zap}
+            label="V"
+            count={stats.variablesType.count}
+            total={stats.variablesType.total}
+            tooltip="Variables types"
+          />
           <QualityPill
             icon={stats.validation.count === stats.validation.total ? ShieldCheck : ShieldAlert}
             label="S"
@@ -121,7 +132,11 @@ export function RegistryCard({
           />
 
           {statusCfg && (
-            <Badge variant={statusCfg.variant} className="border-0 text-[10px] ml-1" title={status?.error}>
+            <Badge
+              variant={statusCfg.variant}
+              className="border-0 text-[10px] ml-1"
+              title={status?.error}
+            >
               {isChecking && <Loader2 className="mr-1 size-2.5 animate-spin" />}
               {statusCfg.label}
             </Badge>

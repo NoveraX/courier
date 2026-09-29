@@ -22,7 +22,9 @@ function listing(...hosts: string[]) {
 }
 
 afterEach(async () => {
-  await Promise.all(servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
+  await Promise.all(
+    servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 
 interface Reply {
@@ -37,7 +39,10 @@ async function serve(handler: (path: string) => Reply): Promise<string> {
   const server = createServer((req, res) => {
     const reply = handler(req.url ?? "/");
     if (reply.hang) return;
-    res.writeHead(reply.status, { ...(reply.location ? { location: reply.location } : {}), ...reply.headers });
+    res.writeHead(reply.status, {
+      ...(reply.location ? { location: reply.location } : {}),
+      ...reply.headers,
+    });
     res.end(reply.body ?? "");
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -53,7 +58,9 @@ describe("fetchSpec", () => {
   });
 
   it("follows a redirect on this machine", async () => {
-    const base = await serve((path) => (path === "/old" ? { status: 301, location: "/new" } : { status: 200, body: "moved" }));
+    const base = await serve((path) =>
+      path === "/old" ? { status: 301, location: "/new" } : { status: 200, body: "moved" },
+    );
 
     expect(await fetchSpec(`${base}/old`, NOTHING_LISTED)).toBe("moved");
   });
@@ -70,19 +77,28 @@ describe("fetchSpec", () => {
     "http://[64:ff9b::a00:1]/spec.json",
     "http://[fd00::1]/spec.json",
   ])("refuses the private address %s", async (url) => {
-    await expect(fetchSpec(url, NOTHING_LISTED)).rejects.toMatchObject({ code: "SPEC_HOST_PRIVATE" });
+    await expect(fetchSpec(url, NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_HOST_PRIVATE",
+    });
   });
 
   it("refuses a redirect into a private network without following it", async () => {
-    const base = await serve(() => ({ status: 302, location: "http://[::ffff:169.254.169.254]/latest/meta-data" }));
+    const base = await serve(() => ({
+      status: 302,
+      location: "http://[::ffff:169.254.169.254]/latest/meta-data",
+    }));
 
-    await expect(fetchSpec(`${base}/spec.json`, NOTHING_LISTED)).rejects.toMatchObject({ code: "SPEC_HOST_PRIVATE" });
+    await expect(fetchSpec(`${base}/spec.json`, NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_HOST_PRIVATE",
+    });
   });
 
   it("stops after five redirects", async () => {
     const base = await serve((path) => ({ status: 302, location: `${path}x` }));
 
-    await expect(fetchSpec(`${base}/`, NOTHING_LISTED)).rejects.toMatchObject({ code: "SPEC_REDIRECTS" });
+    await expect(fetchSpec(`${base}/`, NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_REDIRECTS",
+    });
   });
 
   it("reports an error answer with its status", async () => {
@@ -95,8 +111,12 @@ describe("fetchSpec", () => {
   });
 
   it("refuses an address that means every interface, and anything but http or https", async () => {
-    await expect(fetchSpec("http://0.0.0.0/spec.json", NOTHING_LISTED)).rejects.toMatchObject({ code: "SPEC_URL_INVALID" });
-    await expect(fetchSpec("file:///etc/passwd", NOTHING_LISTED)).rejects.toMatchObject({ code: "SPEC_URL_INVALID" });
+    await expect(fetchSpec("http://0.0.0.0/spec.json", NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_URL_INVALID",
+    });
+    await expect(fetchSpec("file:///etc/passwd", NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_URL_INVALID",
+    });
   });
 
   it.each(["0.0.0.0", "[::]", "[::ffff:0:0]", "0.1.2.3"])(
@@ -133,18 +153,25 @@ describe("fetchSpec", () => {
   });
 
   it.each([
-    [{ state: "failing", failure: { code: "UNKNOWN", message: "boom", at: 0, cause: null } }, "CONFIG_NOT_LOADING", 409],
+    [
+      { state: "failing", failure: { code: "UNKNOWN", message: "boom", at: 0, cause: null } },
+      "CONFIG_NOT_LOADING",
+      409,
+    ],
     [{ state: "starting" }, "STUDIO_STARTING", 503],
     [{ state: "reloading" }, "CONFIG_RELOADING", 503],
-  ] as const)("refuses a private address while the project cannot say which hosts it names (%o)", async (hosts, code, httpStatus) => {
-    const allowlist: SpecHostAllowlist = async () => hosts;
+  ] as const)(
+    "refuses a private address while the project cannot say which hosts it names (%o)",
+    async (hosts, code, httpStatus) => {
+      const allowlist: SpecHostAllowlist = async () => hosts;
 
-    await expect(fetchSpec("http://[fd00::1]/spec.json", allowlist)).rejects.toMatchObject({
-      code,
-      httpStatus,
-      message: expect.stringContaining("Blocked request to private address: [fd00::1]."),
-    });
-  });
+      await expect(fetchSpec("http://[fd00::1]/spec.json", allowlist)).rejects.toMatchObject({
+        code,
+        httpStatus,
+        message: expect.stringContaining("Blocked request to private address: [fd00::1]."),
+      });
+    },
+  );
 
   it("advises creating courier.config for a private address in a project that has none", async () => {
     const allowlist: SpecHostAllowlist = async () => ({ state: "missing", root: "/work/app" });
@@ -174,16 +201,27 @@ describe("fetchSpec", () => {
   });
 
   it("follows a redirect from this machine to this machine by name", async () => {
-    const base = await serve((path) => (path === "/" ? { status: 302, location: `${base.replace("127.0.0.1", "localhost")}/spec` } : { status: 200, body: "spec" }));
+    const base = await serve((path) =>
+      path === "/"
+        ? { status: 302, location: `${base.replace("127.0.0.1", "localhost")}/spec` }
+        : { status: 200, body: "spec" },
+    );
 
     expect(await fetchSpec(`${base}/`, NOTHING_LISTED)).toBe("spec");
   });
 
   it("does not take a 300 or 304 for a redirect", async () => {
-    const base = await serve((path) => ({ status: path === "/choices" ? 300 : 304, location: "/elsewhere" }));
+    const base = await serve((path) => ({
+      status: path === "/choices" ? 300 : 304,
+      location: "/elsewhere",
+    }));
 
-    await expect(fetchSpec(`${base}/choices`, NOTHING_LISTED)).rejects.toMatchObject({ code: "SPEC_HTTP_STATUS" });
-    await expect(fetchSpec(`${base}/unchanged`, NOTHING_LISTED)).rejects.toMatchObject({ code: "SPEC_HTTP_STATUS" });
+    await expect(fetchSpec(`${base}/choices`, NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_HTTP_STATUS",
+    });
+    await expect(fetchSpec(`${base}/unchanged`, NOTHING_LISTED)).rejects.toMatchObject({
+      code: "SPEC_HTTP_STATUS",
+    });
   });
 
   it("reports a redirect to something that is not a URL as the server's failure, naming the redirect", async () => {
@@ -210,7 +248,9 @@ describe("fetchSpec", () => {
   );
 
   it("names the hop that redirected, after an earlier redirect", async () => {
-    const base = await serve((path) => (path === "/old" ? { status: 301, location: "/new" } : { status: 302, location: "http://[" }));
+    const base = await serve((path) =>
+      path === "/old" ? { status: 301, location: "/new" } : { status: 302, location: "http://[" },
+    );
 
     await expect(fetchSpec(`${base}/old`, NOTHING_LISTED)).rejects.toMatchObject({
       code: "SPEC_REDIRECT_INVALID",
@@ -233,7 +273,13 @@ describe("fetchSpec", () => {
   it("gives up on a server that does not answer in time", async () => {
     const base = await serve(() => ({ status: 200, hang: true }));
 
-    await expect(requestSpec(new URL(`${base}/spec.json`), { loopback: true, admitPrivate: async () => undefined }, 100)).rejects.toMatchObject({
+    await expect(
+      requestSpec(
+        new URL(`${base}/spec.json`),
+        { loopback: true, admitPrivate: async () => undefined },
+        100,
+      ),
+    ).rejects.toMatchObject({
       code: "SPEC_TIMEOUT",
     });
   });

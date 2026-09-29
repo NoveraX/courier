@@ -13,11 +13,10 @@ import { useSyncExternalStore } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DeclareClient } from "../src/views/mocks/wizard/declare-client";
+import { MockWizard } from "../src/views/mocks/wizard/mock-wizard";
 import type { MockWizardHandle } from "../src/views/mocks/wizard/use-mock-wizard";
 import type { ReadyOutcome } from "../src/views/mocks/wizard/wire-types";
 import type { WizardSession } from "../src/views/mocks/wizard/wizard-session";
-
-import { MockWizard } from "../src/views/mocks/wizard/mock-wizard";
 import { createWizardSession } from "../src/views/mocks/wizard/wizard-session";
 
 const READY: ReadyOutcome = {
@@ -26,11 +25,19 @@ const READY: ReadyOutcome = {
   creates: true,
   baseHash: null,
   planDigest: "b".repeat(64),
-  hunks: [{ lines: [{ kind: "add", text: "export default defineMocks({", oldLine: null, newLine: 1 }] }],
+  hunks: [
+    { lines: [{ kind: "add", text: "export default defineMocks({", oldLine: null, newLine: 1 }] },
+  ],
   warnings: [],
 };
 
-function Wizard({ session, close }: { session: WizardSession; close: () => void }): React.ReactElement {
+function Wizard({
+  session,
+  close,
+}: {
+  session: WizardSession;
+  close: () => void;
+}): React.ReactElement {
   const state = useSyncExternalStore(session.subscribe, session.getState);
   const wizard: MockWizardHandle = {
     open: true,

@@ -1,17 +1,12 @@
-import { Controller } from "react-hook-form";
-import { Moon, Sun, Monitor } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { Monitor, Moon, Sun } from "lucide-react";
 
 import type { UseFormReturn } from "react-hook-form";
-import type { Settings, Theme, DensityMode } from "@/store/types";
-
-import { useNavigate } from "@tanstack/react-router";
-
-import { Button } from "@/components/ui/button";
-import {
-  SegmentedControl,
-  type SegmentOption,
-} from "@/components/shared/segmented-control";
+import { Controller } from "react-hook-form";
 import { restartTour } from "@/components/onboarding/tour-provider";
+import { SegmentedControl, type SegmentOption } from "@/components/shared/segmented-control";
+import { Button } from "@/components/ui/button";
+import type { DensityMode, Settings, Theme } from "@/store/types";
 import { WELCOME_STORAGE_KEY } from "@/views/welcome/frameworks";
 import { SettingRow } from "./setting-row";
 
@@ -34,9 +29,7 @@ interface AppearanceSectionProps {
   form: UseFormReturn<Settings>;
 }
 
-export function AppearanceSection({
-  form,
-}: AppearanceSectionProps): React.ReactElement {
+export function AppearanceSection({ form }: AppearanceSectionProps): React.ReactElement {
   const navigate = useNavigate();
   return (
     <>
@@ -71,10 +64,7 @@ export function AppearanceSection({
         />
       </SettingRow>
 
-      <SettingRow
-        label="Onboarding tour"
-        description="Walk through all features step by step"
-      >
+      <SettingRow label="Onboarding tour" description="Walk through all features step by step">
         <Button variant="outline" size="sm" onClick={restartTour}>
           Restart tour
         </Button>
@@ -84,10 +74,18 @@ export function AppearanceSection({
         label="Setup wizard"
         description="Re-run the framework setup if you switched your stack"
       >
-        <Button variant="outline" size="sm" onClick={() => {
-          try { localStorage.removeItem(WELCOME_STORAGE_KEY); } catch { /* noop */ }
-          navigate({ to: "/" });
-        }}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            try {
+              localStorage.removeItem(WELCOME_STORAGE_KEY);
+            } catch {
+              /* noop */
+            }
+            navigate({ to: "/" });
+          }}
+        >
           Restart setup
         </Button>
       </SettingRow>

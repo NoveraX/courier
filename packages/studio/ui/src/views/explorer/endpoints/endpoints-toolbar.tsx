@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 
 import { CountDisplay } from "@/components/shared/count-display";
-import { SearchInput } from "@/components/shared/search-input";
 import { FilterBar as SharedFilterBar } from "@/components/shared/filter-bar";
+import { SearchInput } from "@/components/shared/search-input";
 
 import type { EndpointNodeData } from "../types";
 import type { EndpointFilters } from "./endpoints-filters";
@@ -29,10 +29,7 @@ export function EndpointsToolbar({
   onFilterChange,
   onReset,
 }: EndpointsToolbarProps): React.ReactElement {
-  const filterConfigs = useMemo(
-    () => buildFilterConfigs(endpoints),
-    [endpoints],
-  );
+  const filterConfigs = useMemo(() => buildFilterConfigs(endpoints), [endpoints]);
 
   const values: Record<string, string[]> = {
     source: filters.source,

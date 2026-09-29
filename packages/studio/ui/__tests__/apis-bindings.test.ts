@@ -7,8 +7,8 @@
  * file's status when it changed, the lists, then the config's status.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { io } from "socket.io-client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const toast = vi.hoisted(() => ({
   error: vi.fn(),
@@ -21,11 +21,10 @@ vi.mock("sonner", () => ({ toast }));
 
 import type { Socket } from "socket.io-client";
 import type { ApisStore } from "../src/socket/apis-bindings";
-import type { ConfigStatusPayload } from "../src/store/config-status";
-import type { MocksFileStatus } from "../src/store/mocks-file-status";
-
 import { bindApis } from "../src/socket/apis-bindings";
+import type { ConfigStatusPayload } from "../src/store/config-status";
 import { DEFAULT_SETTINGS } from "../src/store/constants";
+import type { MocksFileStatus } from "../src/store/mocks-file-status";
 
 const LOADED: ConfigStatusPayload = {
   state: "loaded",

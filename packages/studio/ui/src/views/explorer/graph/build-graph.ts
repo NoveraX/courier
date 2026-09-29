@@ -1,6 +1,6 @@
-import type { Node, Edge } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
+import type { EndpointNodeData, ExplorerEdgeData, GroupNodeData, SourceNodeData } from "../types";
 import type { ExplorerData } from "../use-explorer-data";
-import type { SourceNodeData, GroupNodeData, EndpointNodeData, ExplorerEdgeData } from "../types";
 
 // ── Builder ────────────────────────────────────────────────────────────────
 

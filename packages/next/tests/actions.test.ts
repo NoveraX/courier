@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { HTTPError } from "@noverax/courier";
 import type * as CourierInternal from "@noverax/courier/internal";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@noverax/courier/internal", async (importOriginal) => {
   const actual = await importOriginal<typeof CourierInternal>();

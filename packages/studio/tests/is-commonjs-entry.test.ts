@@ -32,12 +32,14 @@ describe("isCommonJsEntry", () => {
     expect(isCommonJsEntry(join(dir, "courier.config.cjs"), COMMONJS)).toBe(true);
   });
 
-  it.each([["courier.config.mjs"], ["courier.config.ts"], ["courier.config.mts"], ["courier.config.cts"]])(
-    "takes %s for an ES module",
-    (name) => {
-      expect(isCommonJsEntry(join(dir, name), COMMONJS)).toBe(false);
-    },
-  );
+  it.each([
+    ["courier.config.mjs"],
+    ["courier.config.ts"],
+    ["courier.config.mts"],
+    ["courier.config.cts"],
+  ])("takes %s for an ES module", (name) => {
+    expect(isCommonJsEntry(join(dir, name), COMMONJS)).toBe(false);
+  });
 
   it("takes a .js file for CommonJS outside a type: module package", () => {
     writePackage(JSON.stringify({ type: "commonjs" }));
@@ -62,9 +64,12 @@ describe("isCommonJsEntry", () => {
     ['import { api } from "./api";\nmodule.exports = { api };\n'],
     ['import "./setup";\n'],
     ["const here = import.meta.url;\n"],
-  ])("takes a .js file with ES module syntax for an ES module outside a type: module package: %j", (source) => {
-    expect(isCommonJsEntry(join(dir, "courier.config.js"), source)).toBe(false);
-  });
+  ])(
+    "takes a .js file with ES module syntax for an ES module outside a type: module package: %j",
+    (source) => {
+      expect(isCommonJsEntry(join(dir, "courier.config.js"), source)).toBe(false);
+    },
+  );
 
   it("takes a package.json that does not parse for one that declares no type", () => {
     writePackage("{ not json");

@@ -45,7 +45,10 @@ function spec(): string {
           tags: ["holders"],
           operationId: "getHolder",
           responses: {
-            "200": { description: "ok", content: { "application/json": { schema: ref("Holder") } } },
+            "200": {
+              description: "ok",
+              content: { "application/json": { schema: ref("Holder") } },
+            },
           },
         },
       },
@@ -81,7 +84,11 @@ function spec(): string {
 }
 
 function generate(options: Partial<GenerateOptions>) {
-  return generateCode(parseSpec(spec()), { type: "openapi", outputDir: "src", ...options }, "nullables");
+  return generateCode(
+    parseSpec(spec()),
+    { type: "openapi", outputDir: "src", ...options },
+    "nullables",
+  );
 }
 
 describe.each(VALIDATORS)("a nullable component (%s)", (validation) => {

@@ -1,23 +1,20 @@
-import { useEffect, useCallback } from "react";
-import { Play } from "lucide-react";
 import { useSearch } from "@tanstack/react-router";
+import { Play } from "lucide-react";
+import { useCallback, useEffect } from "react";
 import { toast } from "sonner";
-
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageShell } from "@/components/shared/page-shell";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useStudioStore } from "@/store";
-
+import type { PlaygroundHistoryEntry } from "@/store/types-ui";
+import { describeForm, wireForm } from "./form-body";
+import { HistoryBar } from "./history-bar";
+import { RequestPanel } from "./request-panel";
+import { readRequestValues } from "./request-values";
+import { ResponsePanel } from "./response-panel";
+import { PlaygroundToolbar } from "./toolbar";
 import { usePlayground } from "./use-playground";
 import { useSendRequest } from "./use-send-request";
-import { PlaygroundToolbar } from "./toolbar";
-import { RequestPanel } from "./request-panel";
-import { ResponsePanel } from "./response-panel";
-import { HistoryBar } from "./history-bar";
-import { readRequestValues } from "./request-values";
-import { describeForm, wireForm } from "./form-body";
-
-import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
 export function PlaygroundView(): React.ReactElement {
   const connected = useStudioStore((s) => s.connected);
@@ -55,7 +52,8 @@ export function PlaygroundView(): React.ReactElement {
       return;
     }
     wireForm(pg.formFields).then(
-      (form) => send({ ...payload, form }, { variables: undefined, headers: request.values.headers }),
+      (form) =>
+        send({ ...payload, form }, { variables: undefined, headers: request.values.headers }),
       (error: unknown) => toast.error(`Could not read the form's files: ${String(error)}`),
     );
   }, [send, sending, streaming, pg, isRealtime]);
@@ -118,10 +116,7 @@ export function PlaygroundView(): React.ReactElement {
           onSend={handleSend}
           onUnsubscribe={unsubscribe}
           historySlot={
-            <HistoryBar
-              activeId={activeResponse?.id ?? null}
-              onSelect={handleHistorySelect}
-            />
+            <HistoryBar activeId={activeResponse?.id ?? null} onSelect={handleHistorySelect} />
           }
         />
       }

@@ -1,16 +1,15 @@
+import type { LucideIcon } from "lucide-react";
 import {
-  Palette,
+  AlertTriangle,
+  Bell,
   Cable,
   Circle,
-  Eye,
-  Bell,
   Code2,
+  Eye,
   FileOutput,
   History,
-  AlertTriangle,
+  Palette,
 } from "lucide-react";
-
-import type { LucideIcon } from "lucide-react";
 
 // ── Section navigation config ────────────────────────────────────────────────
 
@@ -22,15 +21,60 @@ export interface SectionConfig {
 }
 
 export const SECTION_CONFIG: [SectionConfig, ...SectionConfig[]] = [
-  { id: "appearance", label: "Appearance", icon: Palette, description: "Theme, color scheme, and UI density" },
-  { id: "connection", label: "Connection", icon: Cable, description: "Server connection and reconnection behavior" },
-  { id: "recording", label: "Recording", icon: Circle, description: "Request capture limits, log persistence, and ignore patterns" },
-  { id: "display", label: "Display", icon: Eye, description: "Timestamp format, JSON indentation, and preview" },
-  { id: "notifications", label: "Notifications", icon: Bell, description: "Toast alerts for errors and slow requests" },
-  { id: "export", label: "Export", icon: FileOutput, description: "Default format for session exports" },
-  { id: "apis", label: "APIs Defaults", icon: Code2, description: "Default options for API import and code generation" },
-  { id: "sessions", label: "Session History", icon: History, description: "Saved sessions and export options" },
-  { id: "danger", label: "Danger Zone", icon: AlertTriangle, description: "Destructive actions — clear data, reset settings" },
+  {
+    id: "appearance",
+    label: "Appearance",
+    icon: Palette,
+    description: "Theme, color scheme, and UI density",
+  },
+  {
+    id: "connection",
+    label: "Connection",
+    icon: Cable,
+    description: "Server connection and reconnection behavior",
+  },
+  {
+    id: "recording",
+    label: "Recording",
+    icon: Circle,
+    description: "Request capture limits, log persistence, and ignore patterns",
+  },
+  {
+    id: "display",
+    label: "Display",
+    icon: Eye,
+    description: "Timestamp format, JSON indentation, and preview",
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    icon: Bell,
+    description: "Toast alerts for errors and slow requests",
+  },
+  {
+    id: "export",
+    label: "Export",
+    icon: FileOutput,
+    description: "Default format for session exports",
+  },
+  {
+    id: "apis",
+    label: "APIs Defaults",
+    icon: Code2,
+    description: "Default options for API import and code generation",
+  },
+  {
+    id: "sessions",
+    label: "Session History",
+    icon: History,
+    description: "Saved sessions and export options",
+  },
+  {
+    id: "danger",
+    label: "Danger Zone",
+    icon: AlertTriangle,
+    description: "Destructive actions — clear data, reset settings",
+  },
 ];
 
 // ── Grouped nav for sidebar ─────────────────────────────────────────────────
@@ -43,21 +87,15 @@ interface SectionNavGroup {
 export const SECTION_NAV_GROUPS: SectionNavGroup[] = [
   {
     label: "General",
-    items: SECTION_CONFIG.filter((s) =>
-      ["appearance", "connection"].includes(s.id),
-    ),
+    items: SECTION_CONFIG.filter((s) => ["appearance", "connection"].includes(s.id)),
   },
   {
     label: "Capture",
-    items: SECTION_CONFIG.filter((s) =>
-      ["recording", "display", "notifications"].includes(s.id),
-    ),
+    items: SECTION_CONFIG.filter((s) => ["recording", "display", "notifications"].includes(s.id)),
   },
   {
     label: "Advanced",
-    items: SECTION_CONFIG.filter((s) =>
-      ["export", "apis", "sessions"].includes(s.id),
-    ),
+    items: SECTION_CONFIG.filter((s) => ["export", "apis", "sessions"].includes(s.id)),
   },
   {
     label: "System",

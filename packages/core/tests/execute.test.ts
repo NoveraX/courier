@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/errors";
-import { defineMiddleware } from "../src/middleware/define";
 import type { HttpMethods } from "../src/http-client/types";
+import { defineMiddleware } from "../src/middleware/define";
 import { executeRequest } from "../src/utils/execute";
 import { asEndpoint } from "./helpers/as-endpoint";
 
@@ -114,9 +114,7 @@ describe("executeRequest", () => {
       const responseData = { id: 1, name: "Alice" };
       fetchSpy.mockResolvedValue(mockFetchResponse(responseData));
 
-      const methodFn = vi.fn((methods: HttpMethods, _vars: unknown) =>
-        methods.get("users/1"),
-      );
+      const methodFn = vi.fn((methods: HttpMethods, _vars: unknown) => methods.get("users/1"));
       const source = createTestSource({ getUser: methodFn });
       const sources = { users: source };
 
@@ -184,9 +182,7 @@ describe("executeRequest", () => {
       });
       const sources = { api: source };
 
-      await expect(executeRequest(sources, { source: "api", method: "fail" })).rejects.toBe(
-        thrown,
-      );
+      await expect(executeRequest(sources, { source: "api", method: "fail" })).rejects.toBe(thrown);
     });
 
     it("rethrows a non-Error the endpoint threw, as it was", async () => {
@@ -266,7 +262,11 @@ describe("executeRequest", () => {
       const fd = new FormData();
       fd.append("name", "a");
 
-      const result = await executeRequest(sources, { source: "items", method: "list", variables: fd });
+      const result = await executeRequest(sources, {
+        source: "items",
+        method: "list",
+        variables: fd,
+      });
       expect(listFn).toHaveBeenCalled();
       expect(result).toEqual(responseData);
     });
@@ -279,7 +279,14 @@ describe("executeRequest", () => {
       const spy = vi.fn();
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { middleware: [defineMiddleware("spy", "wrap", async (ctx, next) => { spy(ctx); return next(); })] },
+        {
+          middleware: [
+            defineMiddleware("spy", "wrap", async (ctx, next) => {
+              spy(ctx);
+              return next();
+            }),
+          ],
+        },
       );
       const sources = { users: source };
 
@@ -298,10 +305,14 @@ describe("executeRequest", () => {
 
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { middleware: [defineMiddleware("modify", "wrap", async (ctx, next) => {
-          ctx.variables = { modified: true };
-          return next();
-        })] },
+        {
+          middleware: [
+            defineMiddleware("modify", "wrap", async (ctx, next) => {
+              ctx.variables = { modified: true };
+              return next();
+            }),
+          ],
+        },
       );
       const sources = { users: source };
 
@@ -315,10 +326,14 @@ describe("executeRequest", () => {
 
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { middleware: [defineMiddleware("transform", "wrap", async (_ctx, next) => {
-          const res = await next();
-          return { ...res, data: { transformed: true } };
-        })] },
+        {
+          middleware: [
+            defineMiddleware("transform", "wrap", async (_ctx, next) => {
+              const res = await next();
+              return { ...res, data: { transformed: true } };
+            }),
+          ],
+        },
       );
       const sources = { users: source };
 
@@ -339,9 +354,18 @@ describe("executeRequest", () => {
             });
           },
         },
-        { middleware: [defineMiddleware("errorCatch", "wrap", async (_ctx, next) => {
-          try { return await next(); } catch (e: unknown) { errorSpy(e); throw e; }
-        })] },
+        {
+          middleware: [
+            defineMiddleware("errorCatch", "wrap", async (_ctx, next) => {
+              try {
+                return await next();
+              } catch (e: unknown) {
+                errorSpy(e);
+                throw e;
+              }
+            }),
+          ],
+        },
       );
       const sources = { api: source };
 
@@ -357,13 +381,17 @@ describe("executeRequest", () => {
     it("middleware rejection throws HTTPError", async () => {
       const source = createTestSource(
         { list: (methods: HttpMethods) => methods.get("users") },
-        { middleware: [defineMiddleware("reject", "wrap", async () => {
-          throw new HTTPError({
-            status: 403,
-            headers: new Headers(),
-            data: { message: "Forbidden" },
-          });
-        })] },
+        {
+          middleware: [
+            defineMiddleware("reject", "wrap", async () => {
+              throw new HTTPError({
+                status: 403,
+                headers: new Headers(),
+                data: { message: "Forbidden" },
+              });
+            }),
+          ],
+        },
       );
       const sources = { users: source };
 
@@ -403,29 +431,38 @@ describe("executeRequest", () => {
         events: (methods: HttpMethods) => methods.get("events"),
       });
 
-      const result = await executeRequest({ api: source }, {
-        source: "api",
-        method: "events",
-        options: { stream: true },
-      });
+      const result = await executeRequest(
+        { api: source },
+        {
+          source: "api",
+          method: "events",
+          options: { stream: true },
+        },
+      );
 
       expect(result).toBeInstanceOf(ReadableStream);
     });
 
     it("resolves a raw streamed call to the response around the body", async () => {
       fetchSpy.mockResolvedValue(
-        new Response(new ReadableStream(), { status: 206, headers: { "content-type": "text/plain" } }),
+        new Response(new ReadableStream(), {
+          status: 206,
+          headers: { "content-type": "text/plain" },
+        }),
       );
 
       const source = createTestSource({
         events: (methods: HttpMethods) => methods.get("events"),
       });
 
-      const result = (await executeRequest({ api: source }, {
-        source: "api",
-        method: "events",
-        options: { stream: true, rawData: true },
-      })) as { status: number; headers: Headers; data: unknown };
+      const result = (await executeRequest(
+        { api: source },
+        {
+          source: "api",
+          method: "events",
+          options: { stream: true, rawData: true },
+        },
+      )) as { status: number; headers: Headers; data: unknown };
 
       expect(result.status).toBe(206);
       expect(result.headers.get("content-type")).toBe("text/plain");

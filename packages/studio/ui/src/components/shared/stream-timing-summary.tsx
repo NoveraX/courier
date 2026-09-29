@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
+import { DetailRow as Row, DetailSection as Section } from "./detail-panel/detail-rows";
 import { formatDuration, formatSize } from "./formatters";
-import { DetailSection as Section, DetailRow as Row } from "./detail-panel/detail-rows";
 
 interface StreamTimingData {
   duration?: number;
@@ -18,13 +18,17 @@ export function StreamTimingSummary({ data }: { data: StreamTimingData }): React
           <span className={cn("mono-sm font-medium tabular-nums", durationColor(data.duration))}>
             {formatDuration(data.duration)}
           </span>
-        ) : "—"}
+        ) : (
+          "—"
+        )}
       </Row>
       <Row label="Events">
         <span className="mono-sm tabular-nums">{data.eventCount || "—"}</span>
       </Row>
       <Row label="Total Size">
-        <span className="mono-sm tabular-nums">{data.totalBytes ? formatSize(data.totalBytes) : "—"}</span>
+        <span className="mono-sm tabular-nums">
+          {data.totalBytes ? formatSize(data.totalBytes) : "—"}
+        </span>
       </Row>
       <Row label="Transport">
         <span className="mono-sm font-medium uppercase tracking-wider">

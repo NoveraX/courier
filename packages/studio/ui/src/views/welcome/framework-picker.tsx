@@ -1,11 +1,17 @@
 import { cn } from "@/lib/utils";
 import {
-  NextjsLogo, NuxtLogo, SvelteLogo, AstroLogo,
-  RemixLogo, ReactLogo, VueLogo, AngularLogo, SolidLogo,
+  AngularLogo,
+  AstroLogo,
+  NextjsLogo,
+  NuxtLogo,
+  ReactLogo,
+  RemixLogo,
+  SolidLogo,
+  SvelteLogo,
+  VueLogo,
 } from "./framework-logos";
-import { FRAMEWORKS } from "./frameworks";
-
 import type { FrameworkConfig } from "./frameworks";
+import { FRAMEWORKS } from "./frameworks";
 
 const LOGO_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   nextjs: NextjsLogo,
@@ -27,17 +33,16 @@ export function FrameworkPicker({ onSelect }: FrameworkPickerProps): React.React
   return (
     <div className="grid grid-cols-3 gap-3">
       {FRAMEWORKS.map((fw) => (
-        <FrameworkCard
-          key={fw.id}
-          framework={fw}
-          onSelect={() => onSelect(fw.id)}
-        />
+        <FrameworkCard key={fw.id} framework={fw} onSelect={() => onSelect(fw.id)} />
       ))}
     </div>
   );
 }
 
-function FrameworkCard({ framework, onSelect }: {
+function FrameworkCard({
+  framework,
+  onSelect,
+}: {
   framework: FrameworkConfig;
   onSelect: () => void;
 }): React.ReactElement {
@@ -55,7 +60,9 @@ function FrameworkCard({ framework, onSelect }: {
       {Logo && <Logo className="size-8" />}
       <div>
         <p className="text-body-sm font-medium text-foreground">{framework.name}</p>
-        <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{framework.description}</p>
+        <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+          {framework.description}
+        </p>
       </div>
     </button>
   );

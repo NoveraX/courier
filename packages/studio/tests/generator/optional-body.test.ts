@@ -18,7 +18,7 @@ import {
   STRICT,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const tags = { type: "array", items: { type: "string" } };
 
@@ -89,7 +89,11 @@ afterAll(async () => {
 
 describe.each(VARIANTS)("a generated client validated with %s", (label, options) => {
   const files = (): ReturnType<typeof generateCode> =>
-    generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "tags");
+    generateCode(
+      spec(upstream.origin),
+      { type: "openapi", outputDir: "src/api", ...options },
+      "tags",
+    );
 
   it("leaves out a body the operation does not require, sending none", async () => {
     const { tagsApi } = loadGenerated(files(), "src/api/tags/index.ts");
@@ -105,7 +109,9 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
   });
 
   it("types the body as optional where it is, and demanded where it is not", () => {
-    const dir = writeProject(`optional-body/${label.replace(/ /g, "-")}`, files(), { "consumer.ts": CONSUMER });
+    const dir = writeProject(`optional-body/${label.replace(/ /g, "-")}`, files(), {
+      "consumer.ts": CONSUMER,
+    });
 
     expect(compileProject(dir, ["consumer.ts"], STRICT)).toEqual([]);
   }, 60_000);

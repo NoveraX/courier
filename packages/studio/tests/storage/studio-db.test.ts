@@ -47,18 +47,21 @@ describe("Studio's database", () => {
     expect(existsSync(join(root, ".courier", ".gitignore"))).toBe(true);
   });
 
-  it.skipIf(process.platform === "win32")("is readable by its owner alone, as are the files beside it", () => {
-    const root = project();
-    const studio = opened(root);
-    studio.db.exec("CREATE TABLE probe (n INTEGER); INSERT INTO probe VALUES (1);");
+  it.skipIf(process.platform === "win32")(
+    "is readable by its owner alone, as are the files beside it",
+    () => {
+      const root = project();
+      const studio = opened(root);
+      studio.db.exec("CREATE TABLE probe (n INTEGER); INSERT INTO probe VALUES (1);");
 
-    const modes = readdirSync(join(root, ".courier"))
-      .filter((name) => name.startsWith(DATABASE_FILE))
-      .map((name) => [name, statSync(join(root, ".courier", name)).mode & 0o777]);
+      const modes = readdirSync(join(root, ".courier"))
+        .filter((name) => name.startsWith(DATABASE_FILE))
+        .map((name) => [name, statSync(join(root, ".courier", name)).mode & 0o777]);
 
-    expect(modes.length).toBeGreaterThan(0);
-    expect(modes.filter(([, mode]) => mode !== 0o600)).toEqual([]);
-  });
+      expect(modes.length).toBeGreaterThan(0);
+      expect(modes.filter(([, mode]) => mode !== 0o600)).toEqual([]);
+    },
+  );
 
   it("keeps its data in memory when .courier is a link", () => {
     const root = project();
@@ -74,12 +77,19 @@ describe("Studio's database", () => {
   it("moves a file that is not a database aside, and starts a new one", () => {
     const root = project();
     mkdirSync(join(root, ".courier"));
-    writeFileSync(join(root, ".courier", DATABASE_FILE), "not a database at all, just text ".repeat(20));
+    writeFileSync(
+      join(root, ".courier", DATABASE_FILE),
+      "not a database at all, just text ".repeat(20),
+    );
 
     const studio = opened(root);
 
     expect(studio.persistent).toBe(true);
-    expect(readdirSync(join(root, ".courier")).some((name) => name.startsWith(`${DATABASE_FILE}.broken-`))).toBe(true);
+    expect(
+      readdirSync(join(root, ".courier")).some((name) =>
+        name.startsWith(`${DATABASE_FILE}.broken-`),
+      ),
+    ).toBe(true);
   });
 
   it("keeps its data in memory for a database a newer Studio made", () => {

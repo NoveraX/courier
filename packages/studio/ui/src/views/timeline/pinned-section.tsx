@@ -25,11 +25,7 @@ export function PinnedSection({
       </div>
       {requests.map((r) => (
         <RequestContextMenu key={r.id} request={r}>
-          <RequestRow
-            request={r}
-            selected={selectedId === r.id}
-            onSelect={onSelect}
-          />
+          <RequestRow request={r} selected={selectedId === r.id} onSelect={onSelect} />
         </RequestContextMenu>
       ))}
     </div>

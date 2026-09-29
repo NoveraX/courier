@@ -72,11 +72,14 @@ function upload(field: string, value: string): Promise<{ parts: string[] }> {
 }
 
 describe("a caller's field named like a routing field", () => {
-  it.each(["_method", "_source", "_group"])("reaches the upstream as %s, routing untouched", async (field) => {
-    const result = await upload(field, "PUT");
+  it.each(["_method", "_source", "_group"])(
+    "reaches the upstream as %s, routing untouched",
+    async (field) => {
+      const result = await upload(field, "PUT");
 
-    expect(result.parts).toEqual([`${field}=PUT`, "file"]);
-  });
+      expect(result.parts).toEqual([`${field}=PUT`, "file"]);
+    },
+  );
 
   it("reaches the upstream as _options and is not read as the call's options", async () => {
     const result = await upload("_options", JSON.stringify({ stream: true }));

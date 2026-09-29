@@ -44,7 +44,11 @@ async function serveBehindProxy(): Promise<string> {
 function postFromPage(url: string, forwarded: Record<string, string>): Promise<Response> {
   return fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Origin: "https://app.example.com", ...forwarded },
+    headers: {
+      "Content-Type": "application/json",
+      Origin: "https://app.example.com",
+      ...forwarded,
+    },
     body: JSON.stringify({ _s: "api", _m: "missing" }),
   });
 }

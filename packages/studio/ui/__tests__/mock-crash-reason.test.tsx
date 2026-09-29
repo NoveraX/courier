@@ -57,7 +57,13 @@ describe("a mock that could not start", () => {
     render(
       <TooltipProvider>
         <DoneStep
-          applied={{ status: "applied", target: "courier.mocks.ts", keys: ["third"], warnings: [], at: Date.now() }}
+          applied={{
+            status: "applied",
+            target: "courier.mocks.ts",
+            keys: ["third"],
+            warnings: [],
+            at: Date.now(),
+          }}
           connected
         />
       </TooltipProvider>,
@@ -78,15 +84,19 @@ describe("a mock that could not start", () => {
     expect(screen.getByText("Not listening")).toBeTruthy();
     expect(document.body.textContent).not.toContain("http://localhost:7501");
     expect(screen.queryByRole("button", { name: "Copy URL" })).toBeNull();
-    expect(screen.getByRole("alert").textContent).toContain("Port 7501 is in use by another process");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Port 7501 is in use by another process",
+    );
   });
 });
 
 describe("the reason a mock failed", () => {
   it("is the first line of what it reported, without the error's name", () => {
-    expect(mockFailureReason("TypeError: defineMockServer is not a function\n    at file:///app/courier.mocks.ts:3:1")).toBe(
-      "defineMockServer is not a function",
-    );
+    expect(
+      mockFailureReason(
+        "TypeError: defineMockServer is not a function\n    at file:///app/courier.mocks.ts:3:1",
+      ),
+    ).toBe("defineMockServer is not a function");
     expect(mockFailureReason('Mock "gone" in courier.mocks.ts is not declared.')).toBe(
       'Mock "gone" in courier.mocks.ts is not declared.',
     );

@@ -128,9 +128,7 @@ describe("createMockClient", () => {
         .inState("authenticated")
         .resolves([{ id: "1" }]);
 
-      mock("users", "getAll")
-        .inState("Started")
-        .rejects(401);
+      mock("users", "getAll").inState("Started").rejects(401);
 
       // Before login — should 401
       await expect((client as any).users.getAll()).rejects.toThrow();

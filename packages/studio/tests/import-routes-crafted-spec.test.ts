@@ -35,18 +35,30 @@ let url: string;
 
 function start(): Promise<string> {
   return new Promise((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
-async function post(path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+async function post(
+  path: string,
+  body: unknown,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   const payload: unknown = await response.json();
-  return { status: response.status, body: typeof payload === "object" && payload !== null ? { ...payload } : {} };
+  return {
+    status: response.status,
+    body: typeof payload === "object" && payload !== null ? { ...payload } : {},
+  };
 }
 
 function snapshot(): Record<string, string> {
@@ -120,7 +132,11 @@ function spec(groups: ParsedGroup[], schemas: ParsedSpec["schemas"] = {}): Parse
 
 function withSchema(schemaName: string): ParsedSpec {
   const ref = { name: schemaName, type: "ref" as const, refName: schemaName };
-  const schema = { name: schemaName, type: "object" as const, properties: { id: { type: "string", required: true } } };
+  const schema = {
+    name: schemaName,
+    type: "object" as const,
+    properties: { id: { type: "string", required: true } },
+  };
   return spec([group("pets", [endpoint({ responseSchema: ref })])], { [schemaName]: schema });
 }
 
@@ -144,8 +160,16 @@ const CRAFTED: Array<[string, ParsedSpec, "tag" | "path" | "single"]> = [
   ["group .git", spec([group(".git")]), "tag"],
   ["group con", spec([group("con")]), "tag"],
   ["group huge", spec([group(HUGE)]), "tag"],
-  ["groups Pets and pets", spec([group("Pets"), group("pets", [endpoint({ name: "createPet", httpMethod: "post" })])]), "tag"],
-  ["group pets twice", spec([group("pets"), group("pets", [endpoint({ name: "createPet", httpMethod: "post" })])]), "tag"],
+  [
+    "groups Pets and pets",
+    spec([group("Pets"), group("pets", [endpoint({ name: "createPet", httpMethod: "post" })])]),
+    "tag",
+  ],
+  [
+    "group pets twice",
+    spec([group("pets"), group("pets", [endpoint({ name: "createPet", httpMethod: "post" })])]),
+    "tag",
+  ],
   ["endpoint ../x", spec([group("pets", [endpoint({ name: "../x" })])]), "tag"],
   ["endpoint __proto__", spec([group("pets", [endpoint({ name: "__proto__" })])]), "tag"],
   ["endpoint constructor", spec([group("pets", [endpoint({ name: "constructor" })])]), "tag"],
@@ -158,9 +182,21 @@ const CRAFTED: Array<[string, ParsedSpec, "tag" | "path" | "single"]> = [
   ["schema constructor", withSchema("constructor"), "tag"],
   ["schema empty", withSchema(""), "tag"],
   ["schema huge", withSchema(HUGE), "tag"],
-  ["path grouping, climbing path", spec([group("pets", [endpoint({ fullPath: "/../../outside/{id}" })])]), "path"],
-  ["path grouping, __proto__ segment", spec([group("pets", [endpoint({ fullPath: "/__proto__/x" })])]), "path"],
-  ["path grouping, huge segment", spec([group("pets", [endpoint({ fullPath: `/${HUGE}` })])]), "path"],
+  [
+    "path grouping, climbing path",
+    spec([group("pets", [endpoint({ fullPath: "/../../outside/{id}" })])]),
+    "path",
+  ],
+  [
+    "path grouping, __proto__ segment",
+    spec([group("pets", [endpoint({ fullPath: "/__proto__/x" })])]),
+    "path",
+  ],
+  [
+    "path grouping, huge segment",
+    spec([group("pets", [endpoint({ fullPath: `/${HUGE}` })])]),
+    "path",
+  ],
   ["flat, climbing group", spec([group("../../outside")]), "single"],
 ];
 
@@ -187,24 +223,34 @@ describe("POST /api/apis/write with a crafted parsed spec", () => {
     rmSync(join(root, ".courier"), { recursive: true, force: true });
   });
 
-  it.each(CRAFTED)("%s → 400, or files only in src/api/pets/", async (_label, crafted, groupBy) => {
-    const before = snapshot();
+  it.each(CRAFTED)(
+    "%s → 400, or files only in src/api/pets/",
+    async (_label, crafted, groupBy) => {
+      const before = snapshot();
 
-    const reply = await post("/api/apis/write", {
-      sourceName: "pets",
-      spec: crafted,
-      options: { type: "openapi", outputDir: "src/api", sourceName: "pets", groupBy },
-    });
+      const reply = await post("/api/apis/write", {
+        sourceName: "pets",
+        spec: crafted,
+        options: { type: "openapi", outputDir: "src/api", sourceName: "pets", groupBy },
+      });
 
-    expect.soft([200, 400], JSON.stringify(reply.body).slice(0, 300)).toContain(reply.status);
-    expect.soft(changedOutsideTheImport(before)).toEqual([]);
-    if (reply.status !== 200) return;
-    const written = Array.isArray(reply.body.written) ? reply.body.written.map(String) : [];
-    expect.soft(written.filter((path) => !path.startsWith(`${IMPORT_DIR}/`))).toEqual([]);
-    const state = JSON.parse(readFileSync(join(root, ".courier/imports-state.json"), "utf8")) as {
-      imports: Record<string, { dir: string; files: Record<string, unknown> }>;
-    };
-    expect.soft(state.imports.pets?.dir).toBe(IMPORT_DIR);
-    expect.soft(Object.keys(state.imports.pets?.files ?? {}).filter((path) => !path.startsWith(`${IMPORT_DIR}/`))).toEqual([]);
-  }, 20_000);
+      expect.soft([200, 400], JSON.stringify(reply.body).slice(0, 300)).toContain(reply.status);
+      expect.soft(changedOutsideTheImport(before)).toEqual([]);
+      if (reply.status !== 200) return;
+      const written = Array.isArray(reply.body.written) ? reply.body.written.map(String) : [];
+      expect.soft(written.filter((path) => !path.startsWith(`${IMPORT_DIR}/`))).toEqual([]);
+      const state = JSON.parse(readFileSync(join(root, ".courier/imports-state.json"), "utf8")) as {
+        imports: Record<string, { dir: string; files: Record<string, unknown> }>;
+      };
+      expect.soft(state.imports.pets?.dir).toBe(IMPORT_DIR);
+      expect
+        .soft(
+          Object.keys(state.imports.pets?.files ?? {}).filter(
+            (path) => !path.startsWith(`${IMPORT_DIR}/`),
+          ),
+        )
+        .toEqual([]);
+    },
+    20_000,
+  );
 });

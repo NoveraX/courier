@@ -19,7 +19,9 @@ export function useAuditContext(): AuditContext {
   const runtimes = useStudioStore((s) => s.bindingSnapshot.runtimes);
   return useMemo(
     () => ({
-      browserSessions: new Set(runtimes.filter((r) => r.kind === "browser").map((r) => r.runtimeId)),
+      browserSessions: new Set(
+        runtimes.filter((r) => r.kind === "browser").map((r) => r.runtimeId),
+      ),
     }),
     [runtimes],
   );

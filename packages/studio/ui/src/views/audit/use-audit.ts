@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
-import { useStudioStore } from "../../store";
 import { useCatalog } from "@/hooks/use-catalog";
+import { useStudioStore } from "../../store";
 import { runAudit } from "./run-audit";
-import { useAuditContext } from "./use-audit-context";
 import type { AuditCategory, AuditResult } from "./types";
+import { useAuditContext } from "./use-audit-context";
 
 export type SeverityFilter = "error" | "warning" | "hint" | "pass" | "all";
 
@@ -23,10 +23,7 @@ export function useAudit(): AuditState {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<AuditCategory | "all">("all");
 
-  const result = useMemo(
-    () => runAudit(requests, catalog, context),
-    [requests, catalog, context],
-  );
+  const result = useMemo(() => runAudit(requests, catalog, context), [requests, catalog, context]);
 
   const filteredItems = useMemo(
     () =>

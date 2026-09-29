@@ -1,12 +1,11 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import type { LucideIcon } from "lucide-react";
 import { Activity, Database, Globe, LayoutDashboard, Network, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { useServerCount } from "@/store/mock-slice";
 import { MockWizard, useMockWizard } from "../wizard";
 import { MocksFileBanner } from "./mocks-file-banner";
-
-import type { LucideIcon } from "lucide-react";
 
 const TABS: Array<{ label: string; path: string; icon: LucideIcon }> = [
   { label: "Dashboard", path: "/mocks/dashboard", icon: LayoutDashboard },
@@ -43,12 +42,13 @@ export function MockLayout(): React.ReactElement {
                   )}
                 >
                   <tab.icon className={cn("size-3 shrink-0", active && "text-primary")} />
-                  <span className="after:invisible after:block after:h-0 after:overflow-hidden after:font-medium after:content-[attr(data-label)]" data-label={tab.label}>
+                  <span
+                    className="after:invisible after:block after:h-0 after:overflow-hidden after:font-medium after:content-[attr(data-label)]"
+                    data-label={tab.label}
+                  >
                     {tab.label}
                   </span>
-                  {active && (
-                    <span className="absolute inset-x-1 -bottom-1.25 h-px bg-primary" />
-                  )}
+                  {active && <span className="absolute inset-x-1 -bottom-1.25 h-px bg-primary" />}
                 </Link>
               );
             })}

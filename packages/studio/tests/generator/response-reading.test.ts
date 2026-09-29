@@ -26,19 +26,38 @@ function reading(responseMediaType?: string) {
 
 describe("responseReading", () => {
   it("reads JSON, a JSON variant, a wildcard and no media type at all as JSON", () => {
-    for (const media of [undefined, "application/json", "application/problem+json", "*/*", "application/*"]) {
+    for (const media of [
+      undefined,
+      "application/json",
+      "application/problem+json",
+      "*/*",
+      "application/*",
+    ]) {
       expect(reading(media)).toBe("json");
     }
   });
 
   it("reads text, XML, YAML, CSV, a form and JSON lines as text", () => {
-    for (const media of ["text/plain", "text/csv; charset=utf-8", "application/xml", "application/x-yaml", "application/csv", "application/x-www-form-urlencoded", "application/x-ndjson"]) {
+    for (const media of [
+      "text/plain",
+      "text/csv; charset=utf-8",
+      "application/xml",
+      "application/x-yaml",
+      "application/csv",
+      "application/x-www-form-urlencoded",
+      "application/x-ndjson",
+    ]) {
       expect(reading(media)).toBe("text");
     }
   });
 
   it("reads anything else as a blob", () => {
-    for (const media of ["application/pdf", "image/png", "application/octet-stream", "application/zip"]) {
+    for (const media of [
+      "application/pdf",
+      "image/png",
+      "application/octet-stream",
+      "application/zip",
+    ]) {
       expect(reading(media)).toBe("blob");
     }
   });

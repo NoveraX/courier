@@ -2,9 +2,9 @@ import { MethodBadge } from "@/components/shared/method-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ownValue } from "@/lib/own-value";
 import { countSelectedEndpoints } from "./helpers";
 import type { ParsedSpec, SkippedOperation } from "./types";
-import { ownValue } from "@/lib/own-value";
 
 interface SelectStepProps {
   spec: ParsedSpec;

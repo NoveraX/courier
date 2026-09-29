@@ -15,7 +15,7 @@ import {
   removeProjects,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 function spec(origin: string): ParsedSpec {
   return parseSpec(
@@ -28,7 +28,9 @@ function spec(origin: string): ParsedSpec {
           put: {
             operationId: "replaceTree",
             tags: ["trees"],
-            parameters: [{ name: "treeId", in: "path", required: true, schema: { type: "integer" } }],
+            parameters: [
+              { name: "treeId", in: "path", required: true, schema: { type: "integer" } },
+            ],
             requestBody: {
               content: { "application/json": { schema: { $ref: "#/components/schemas/Node" } } },
             },
@@ -72,24 +74,33 @@ afterAll(async () => {
   removeProjects("cyclic-body");
 });
 
-describe.each(["zod", "valibot", "arktype"] as const)("a body on a cycle, with %s", (validation) => {
-  const generate = () =>
-    generateCode(spec(server.origin), { type: "openapi", outputDir: "src/api", validation }, "tree");
+describe.each(["zod", "valibot", "arktype"] as const)(
+  "a body on a cycle, with %s",
+  (validation) => {
+    const generate = () =>
+      generateCode(
+        spec(server.origin),
+        { type: "openapi", outputDir: "src/api", validation },
+        "tree",
+      );
 
-  it("compiles beside a path parameter", () => {
-    const dir = writeProject(`cyclic-body/${validation}`, generate(), { "consumer.ts": CONSUMER });
+    it("compiles beside a path parameter", () => {
+      const dir = writeProject(`cyclic-body/${validation}`, generate(), {
+        "consumer.ts": CONSUMER,
+      });
 
-    expect(compileProject(dir, ["consumer.ts"])).toEqual([]);
-  }, 60_000);
+      expect(compileProject(dir, ["consumer.ts"])).toEqual([]);
+    }, 60_000);
 
-  it("sends the body, the parameter in the path", async () => {
-    const { treeApi } = loadGenerated(generate(), "src/api/tree/index.ts");
-    server.requests.length = 0;
+    it("sends the body, the parameter in the path", async () => {
+      const { treeApi } = loadGenerated(generate(), "src/api/tree/index.ts");
+      server.requests.length = 0;
 
-    await endpointAt(treeApi, "trees", "replaceTree")({ treeId: 1, label: "root", children: [] });
+      await endpointAt(treeApi, "trees", "replaceTree")({ treeId: 1, label: "root", children: [] });
 
-    expect(server.requests.map((r) => `${r.method} ${r.path} ${r.body}`)).toEqual([
-      'PUT /trees/1 {"label":"root","children":[]}',
-    ]);
-  });
-});
+      expect(server.requests.map((r) => `${r.method} ${r.path} ${r.body}`)).toEqual([
+        'PUT /trees/1 {"label":"root","children":[]}',
+      ]);
+    });
+  },
+);

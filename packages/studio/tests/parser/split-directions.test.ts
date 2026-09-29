@@ -41,10 +41,29 @@ function endpoint(parsed: ParsedSpec, name: string): ParsedEndpoint | undefined 
 
 describe("a schema with fields that travel one way", () => {
   const parsed = spec(
-    { User: USER, Order: { type: "object", required: ["id", "buyer"], properties: { id: { type: "integer", readOnly: true }, buyer: ref("User") } } },
     {
-      "/users": { post: { operationId: "createUser", requestBody: json(ref("User")), responses: { "201": { description: "ok", ...json(ref("User")) } } } },
-      "/orders": { post: { operationId: "createOrder", requestBody: json(ref("Order")), responses: { "201": { description: "ok", ...json(ref("Order")) } } } },
+      User: USER,
+      Order: {
+        type: "object",
+        required: ["id", "buyer"],
+        properties: { id: { type: "integer", readOnly: true }, buyer: ref("User") },
+      },
+    },
+    {
+      "/users": {
+        post: {
+          operationId: "createUser",
+          requestBody: json(ref("User")),
+          responses: { "201": { description: "ok", ...json(ref("User")) } },
+        },
+      },
+      "/orders": {
+        post: {
+          operationId: "createOrder",
+          requestBody: json(ref("Order")),
+          responses: { "201": { description: "ok", ...json(ref("Order")) } },
+        },
+      },
     },
   );
 
@@ -55,7 +74,9 @@ describe("a schema with fields that travel one way", () => {
 
   it("is sent as its input, with the fields the client sends as required as declared", () => {
     expect(Object.keys(parsed.schemas.UserInput?.properties ?? {})).toEqual(["email", "password"]);
-    expect(parsed.schemas.UserInput?.required).toEqual(expect.arrayContaining(["email", "password"]));
+    expect(parsed.schemas.UserInput?.required).toEqual(
+      expect.arrayContaining(["email", "password"]),
+    );
     expect(endpoint(parsed, "createUser")?.requestBody?.refName).toBe("UserInput");
     expect(endpoint(parsed, "createUser")?.responseSchema?.refName).toBe("User");
   });
@@ -74,8 +95,26 @@ describe("a schema with fields that travel one way", () => {
 describe("the input twin of a schema", () => {
   it("is left out for one only ever answered", () => {
     const parsed = spec(
-      { Audit: { type: "object", required: ["at", "secret"], properties: { at: { type: "string", readOnly: true }, secret: { type: "string", writeOnly: true } } } },
-      { "/audits": { get: { operationId: "listAudits", responses: { "200": { description: "ok", ...json({ type: "array", items: ref("Audit") }) } } } } },
+      {
+        Audit: {
+          type: "object",
+          required: ["at", "secret"],
+          properties: {
+            at: { type: "string", readOnly: true },
+            secret: { type: "string", writeOnly: true },
+          },
+        },
+      },
+      {
+        "/audits": {
+          get: {
+            operationId: "listAudits",
+            responses: {
+              "200": { description: "ok", ...json({ type: "array", items: ref("Audit") }) },
+            },
+          },
+        },
+      },
     );
 
     expect(Object.keys(parsed.schemas)).toEqual(["Audit"]);
@@ -85,7 +124,15 @@ describe("the input twin of a schema", () => {
   it("takes another name when the specification has a schema by its name", () => {
     const parsed = spec(
       { User: USER, UserInput: { type: "object", properties: { legacy: { type: "boolean" } } } },
-      { "/users": { post: { operationId: "createUser", requestBody: json(ref("User")), responses: { "204": { description: "done" } } } } },
+      {
+        "/users": {
+          post: {
+            operationId: "createUser",
+            requestBody: json(ref("User")),
+            responses: { "204": { description: "done" } },
+          },
+        },
+      },
     );
 
     expect(endpoint(parsed, "createUser")?.requestBody?.refName).toBe("UserInput2");
@@ -94,8 +141,25 @@ describe("the input twin of a schema", () => {
 
   it("refers to itself where the schema does, without end", () => {
     const parsed = spec(
-      { Node: { type: "object", required: ["id", "children"], properties: { id: { type: "string", readOnly: true }, children: { type: "array", items: ref("Node") } } } },
-      { "/trees": { put: { operationId: "putTree", requestBody: json(ref("Node")), responses: { "200": { description: "ok", ...json(ref("Node")) } } } } },
+      {
+        Node: {
+          type: "object",
+          required: ["id", "children"],
+          properties: {
+            id: { type: "string", readOnly: true },
+            children: { type: "array", items: ref("Node") },
+          },
+        },
+      },
+      {
+        "/trees": {
+          put: {
+            operationId: "putTree",
+            requestBody: json(ref("Node")),
+            responses: { "200": { description: "ok", ...json(ref("Node")) } },
+          },
+        },
+      },
     );
 
     expect(parsed.schemas.NodeInput?.properties?.children?.items?.refName).toBe("NodeInput");
@@ -111,14 +175,32 @@ describe("a body or answer written inline", () => {
         "/login": {
           post: {
             operationId: "login",
-            requestBody: json({ type: "object", required: ["session", "user"], properties: { session: { type: "string", readOnly: true }, user: { type: "string" } } }),
-            responses: { "200": { description: "ok", ...json({ type: "object", required: ["token", "echo"], properties: { token: { type: "string", writeOnly: true }, echo: { type: "string" } } }) } },
+            requestBody: json({
+              type: "object",
+              required: ["session", "user"],
+              properties: { session: { type: "string", readOnly: true }, user: { type: "string" } },
+            }),
+            responses: {
+              "200": {
+                description: "ok",
+                ...json({
+                  type: "object",
+                  required: ["token", "echo"],
+                  properties: {
+                    token: { type: "string", writeOnly: true },
+                    echo: { type: "string" },
+                  },
+                }),
+              },
+            },
           },
         },
       },
     );
 
     expect(Object.keys(endpoint(parsed, "login")?.requestBody?.properties ?? {})).toEqual(["user"]);
-    expect(Object.keys(endpoint(parsed, "login")?.responseSchema?.properties ?? {})).toEqual(["echo"]);
+    expect(Object.keys(endpoint(parsed, "login")?.responseSchema?.properties ?? {})).toEqual([
+      "echo",
+    ]);
   });
 });

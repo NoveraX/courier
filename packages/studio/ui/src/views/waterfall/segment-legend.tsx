@@ -24,7 +24,9 @@ export function SegmentLegend({ rows }: SegmentLegendProps): React.ReactElement 
         return (
           <div key={key} className="flex items-center gap-1">
             <div className={`size-2 shrink-0 rounded-sm ${config.bg}`} />
-            <span className="text-caption text-muted-foreground whitespace-nowrap">{config.label}</span>
+            <span className="text-caption text-muted-foreground whitespace-nowrap">
+              {config.label}
+            </span>
           </div>
         );
       })}

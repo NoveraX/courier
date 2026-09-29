@@ -18,7 +18,18 @@ const READY = {
   creates: false,
   baseHash: "a".repeat(64),
   planDigest: "b".repeat(64),
-  hunks: [{ lines: [{ kind: "add", text: "  apiMock: defineMockServer({ source }),", oldLine: null, newLine: 5 }] }],
+  hunks: [
+    {
+      lines: [
+        {
+          kind: "add",
+          text: "  apiMock: defineMockServer({ source }),",
+          oldLine: null,
+          newLine: 5,
+        },
+      ],
+    },
+  ],
   warnings: [],
 };
 
@@ -37,7 +48,12 @@ describe("the declare client", () => {
   });
 
   it("applies the declarations with the preview's hashes and nothing else", async () => {
-    const applied = { status: "applied", target: "courier.mocks.ts", keys: ["apiMock"], warnings: [] };
+    const applied = {
+      status: "applied",
+      target: "courier.mocks.ts",
+      keys: ["apiMock"],
+      warnings: [],
+    };
     post.mockResolvedValueOnce(applied);
     const body = { mocks: MOCKS, baseHash: READY.baseHash, planDigest: READY.planDigest };
 
@@ -45,7 +61,11 @@ describe("the declare client", () => {
 
     expect(post).toHaveBeenCalledTimes(1);
     expect(post.mock.calls[0]?.[0]).toBe("/api/mocks/declare/apply");
-    expect(Object.keys(post.mock.calls[0]?.[1] ?? {}).sort()).toEqual(["baseHash", "mocks", "planDigest"]);
+    expect(Object.keys(post.mock.calls[0]?.[1] ?? {}).sort()).toEqual([
+      "baseHash",
+      "mocks",
+      "planDigest",
+    ]);
   });
 
   it("refuses an answer it cannot read rather than show part of it", async () => {
@@ -59,7 +79,9 @@ describe("the declare client", () => {
   });
 
   it("passes on the reason Studio gives for refusing a request", async () => {
-    post.mockRejectedValueOnce(new Error("Only the Studio page in a browser can add mocks through Studio."));
+    post.mockRejectedValueOnce(
+      new Error("Only the Studio page in a browser can add mocks through Studio."),
+    );
 
     await expect(declareClient.preview(MOCKS)).rejects.toThrow("Only the Studio page in a browser");
   });

@@ -1,5 +1,5 @@
-import type { ValidationIssue } from "./types"
-import { isRecord } from "./event-helpers"
+import { isRecord } from "./event-helpers";
+import type { ValidationIssue } from "./types";
 
 /**
  * Read the issues a runtime reports for a failed validation.
@@ -18,17 +18,17 @@ import { isRecord } from "./event-helpers"
  * ```
  */
 export function validationIssuesOf(raw: unknown): ValidationIssue[] | undefined {
-  if (!Array.isArray(raw)) return undefined
-  const issues: ValidationIssue[] = []
+  if (!Array.isArray(raw)) return undefined;
+  const issues: ValidationIssue[] = [];
   for (const item of raw) {
-    if (!isRecord(item) || typeof item.message !== "string") continue
-    issues.push({ path: pathOf(item.path), message: item.message })
+    if (!isRecord(item) || typeof item.message !== "string") continue;
+    issues.push({ path: pathOf(item.path), message: item.message });
   }
-  return issues
+  return issues;
 }
 
 function pathOf(raw: unknown): string {
-  if (typeof raw === "string") return raw
-  if (!Array.isArray(raw)) return ""
-  return raw.map((segment) => String(isRecord(segment) ? segment.key : segment)).join(".")
+  if (typeof raw === "string") return raw;
+  if (!Array.isArray(raw)) return "";
+  return raw.map((segment) => String(isRecord(segment) ? segment.key : segment)).join(".");
 }

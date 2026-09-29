@@ -14,8 +14,8 @@
  * reference) so they only do real work when the inputs actually change.
  */
 
-import type { Catalog } from "./types-ui";
 import type { StudioEvent } from "./types-events";
+import type { Catalog } from "./types-ui";
 
 export type EventPayload = StudioEvent & Record<string, unknown>;
 

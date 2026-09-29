@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { filterRequests } from "@/views/explorer/helpers";
 import type { RequestEntry } from "@/store/types";
+import { filterRequests } from "@/views/explorer/helpers";
 
 /**
  * A source that declares no groups keys its endpoints under `""`, while the

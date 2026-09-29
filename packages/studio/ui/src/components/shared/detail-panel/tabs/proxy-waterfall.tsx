@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
+import { cn } from "@/lib/utils";
 import type { ProxyTiming } from "@/store/types-events";
 
 const PHASES: { key: keyof ProxyTiming; label: string; color: string }[] = [
@@ -34,9 +34,7 @@ export function ProxyWaterfall({ timing, total }: ProxyWaterfallProps): React.Re
             key={row.key}
             className="flex items-center gap-3 border-b border-border-subtle px-3 py-2 last:border-b-0"
           >
-            <span className="w-20 shrink-0 text-body-sm text-muted-foreground">
-              {row.label}
-            </span>
+            <span className="w-20 shrink-0 text-body-sm text-muted-foreground">{row.label}</span>
             <div className="relative h-5 flex-1 rounded bg-muted/10">
               <div
                 className={cn(

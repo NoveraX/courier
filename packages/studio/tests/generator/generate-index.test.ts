@@ -54,7 +54,9 @@ describe("a barrel for proxy mode only", () => {
   const dir = writeProject("generate-index/proxy", files, { "entry.ts": ENTRY });
 
   it("compiles where every import is kept as written", () => {
-    expect(compileProject(dir, ["entry.ts"], { ...STRICT, verbatimModuleSyntax: true })).toEqual([]);
+    expect(compileProject(dir, ["entry.ts"], { ...STRICT, verbatimModuleSyntax: true })).toEqual(
+      [],
+    );
   }, 60_000);
 
   it("leaves the source out of a browser bundle", async () => {
@@ -90,6 +92,8 @@ describe("a barrel generated with no caller", () => {
     const index = files.find((file) => file.path === "src/api/shop/index.ts")?.content ?? "";
 
     expect(index).not.toContain("./source");
-    expect(compileProject(dir, ["src/api/shop/index.ts"], { ...STRICT, noUnusedLocals: true })).toEqual([]);
+    expect(
+      compileProject(dir, ["src/api/shop/index.ts"], { ...STRICT, noUnusedLocals: true }),
+    ).toEqual([]);
   }, 60_000);
 });

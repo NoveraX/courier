@@ -1,8 +1,7 @@
-import type { DeclarePreview, FieldError, ManualReason } from "./wire-types";
-
 import { isPlainObject } from "@/socket/is-plain-object";
 import { isDiffHunk } from "./is-diff-hunk";
 import { isStringList } from "./is-string-list";
+import type { DeclarePreview, FieldError, ManualReason } from "./wire-types";
 import { REFUSAL_CODES } from "./wire-types";
 
 const CODES: ReadonlySet<unknown> = new Set(REFUSAL_CODES);

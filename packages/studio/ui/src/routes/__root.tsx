@@ -1,20 +1,19 @@
-import { useMemo, useState } from "react";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { Toaster } from "sonner";
-
-import { useSocketConnection } from "@/socket";
-import { useTickProvider } from "@/hooks/use-tick";
-import { useHotkeys } from "@/hooks/use-hotkeys";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { TopBar } from "@/components/layout/top-bar";
-import { StatusBar } from "@/components/layout/status-bar";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { DisconnectedBanner } from "@/components/layout/disconnected-banner";
 import { GlobalDetailPanel } from "@/components/layout/global-detail-panel";
-import { SkipNav, MAIN_CONTENT_ID } from "@/components/layout/skip-nav";
-import { TourProvider } from "@/components/onboarding/tour-provider";
 import { NotFound } from "@/components/layout/not-found";
+import { MAIN_CONTENT_ID, SkipNav } from "@/components/layout/skip-nav";
+import { StatusBar } from "@/components/layout/status-bar";
+import { TopBar } from "@/components/layout/top-bar";
+import { TourProvider } from "@/components/onboarding/tour-provider";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useHotkeys } from "@/hooks/use-hotkeys";
+import { useTickProvider } from "@/hooks/use-tick";
+import { useSocketConnection } from "@/socket";
 
 function RootComponent(): React.ReactNode {
   useSocketConnection();
@@ -22,10 +21,13 @@ function RootComponent(): React.ReactNode {
 
   const [commandOpen, setCommandOpen] = useState(false);
 
-  const hotkeyMap = useMemo<Record<string, (e: KeyboardEvent) => void>>(() => ({
-    "mod+k": () => setCommandOpen(true),
-    "Escape": () => setCommandOpen(false),
-  }), []);
+  const hotkeyMap = useMemo<Record<string, (e: KeyboardEvent) => void>>(
+    () => ({
+      "mod+k": () => setCommandOpen(true),
+      Escape: () => setCommandOpen(false),
+    }),
+    [],
+  );
 
   useHotkeys(hotkeyMap);
 

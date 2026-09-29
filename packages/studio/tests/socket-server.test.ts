@@ -7,8 +7,9 @@
  * that followed named the page's origin, and nobody read it. From there it
  * watched every captured request and drove the playground.
  */
-import { request } from "node:http";
+
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,9 +24,18 @@ let port: number;
 beforeEach(async () => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   root = realpathSync(mkdtempSync(join(tmpdir(), "courier-socket-server-")));
-  writeFileSync(join(root, "courier.config.ts"), 'export default { sources: { api: { baseURL: "https://api.example" } } };\n');
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'export default { sources: { api: { baseURL: "https://api.example" } } };\n',
+  );
   const url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
   port = Number(new URL(url).port);
 }, 30_000);
@@ -43,7 +53,12 @@ interface Reply {
 }
 
 /* One Engine.IO request as a browser page at `host` sends it: a GET without an Origin, a POST with one. */
-function engine(host: string, method: "GET" | "POST", query: string, body?: string): Promise<Reply> {
+function engine(
+  host: string,
+  method: "GET" | "POST",
+  query: string,
+  body?: string,
+): Promise<Reply> {
   const headers: Record<string, string> = { host };
   if (method === "POST") {
     headers.origin = `http://${host}`;
@@ -51,7 +66,14 @@ function engine(host: string, method: "GET" | "POST", query: string, body?: stri
   }
   return new Promise((resolve, reject) => {
     const req = request(
-      { host: "127.0.0.1", port, method, path: `/socket.io/?EIO=4&transport=polling&${query}`, headers, setHost: false },
+      {
+        host: "127.0.0.1",
+        port,
+        method,
+        path: `/socket.io/?EIO=4&transport=polling&${query}`,
+        headers,
+        setHost: false,
+      },
       (res) => {
         let text = "";
         res.on("data", (chunk: Buffer) => {

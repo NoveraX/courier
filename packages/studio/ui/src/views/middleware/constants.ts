@@ -1,6 +1,5 @@
-import { Check, CircleAlert, Loader2 } from "lucide-react";
-
 import type { LucideIcon } from "lucide-react";
+import { Check, CircleAlert, Loader2 } from "lucide-react";
 
 // ── Thresholds ─────────────────────────────────────────────────────────────
 

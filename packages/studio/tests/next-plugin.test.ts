@@ -21,11 +21,7 @@ afterEach(() => {
 type EntryFunction = () => Promise<Record<string, unknown>>;
 
 /** Runs a wrapped config's webpack hook the way Next.js does for the client. */
-async function nextClientEntries(
-  config: NextConfig,
-  entries: Record<string, unknown>,
-  dev = true,
-) {
+async function nextClientEntries(config: NextConfig, entries: Record<string, unknown>, dev = true) {
   const webpackConfig = { entry: async () => entries };
   const hook = config.webpack as (
     c: typeof webpackConfig,
@@ -104,7 +100,9 @@ function answer(external: External, request: string, context: string): Promise<s
 describe("withCourierStudio() for a Next.js server compiled by webpack", () => {
   /* Where engine.io-client, which Studio's socket runs on, imports ws from. */
   const engineDir = dirname(
-    createRequire(createRequire(import.meta.url).resolve("socket.io-client")).resolve("engine.io-client"),
+    createRequire(createRequire(import.meta.url).resolve("socket.io-client")).resolve(
+      "engine.io-client",
+    ),
   );
 
   it("loads ws as installed rather than bundling it", async () => {

@@ -1,7 +1,7 @@
-import type { MockRouteEntry } from "./mock-slice-types";
+import { mockServerOf } from "./mock-server-of";
 
 import { useMockStore } from "./mock-slice";
-import { mockServerOf } from "./mock-server-of";
+import type { MockRouteEntry } from "./mock-slice-types";
 
 /** Update route hits + running average latency after a request completes */
 export function updateRouteStats(
@@ -51,4 +51,3 @@ export function mergeRouteStats(
     return { ...r, hits: stats.hits, avgLatency: stats.avgLatency };
   });
 }
-

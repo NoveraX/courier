@@ -1,11 +1,10 @@
 import { History, Trash2 } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { formatDuration } from "@/components/shared/formatters";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { formatDuration } from "@/components/shared/formatters";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 import { useStudioStore } from "@/store";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
@@ -57,15 +56,9 @@ export function HistoryBar({ activeId, onSelect }: HistoryBarProps): React.React
         <TooltipContent side="bottom">Request history</TooltipContent>
       </Tooltip>
 
-      <PopoverContent
-        align="end"
-        side="bottom"
-        className="w-72 p-0"
-      >
+      <PopoverContent align="end" side="bottom" className="w-72 p-0">
         <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
-          <span className="text-caption text-muted-foreground">
-            History ({history.length})
-          </span>
+          <span className="text-caption text-muted-foreground">History ({history.length})</span>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -101,7 +94,11 @@ export function HistoryBar({ activeId, onSelect }: HistoryBarProps): React.React
 
 // ── History row ────────────────────────────────────────────────────────────
 
-function HistoryRow({ entry, active, onSelect }: {
+function HistoryRow({
+  entry,
+  active,
+  onSelect,
+}: {
   entry: PlaygroundHistoryEntry;
   active: boolean;
   onSelect: (entry: PlaygroundHistoryEntry) => void;
@@ -113,9 +110,7 @@ function HistoryRow({ entry, active, onSelect }: {
       className={cn(
         "flex items-center gap-2 px-3 py-1.5 text-left transition-colors",
         "text-xs font-mono",
-        active
-          ? "bg-accent-brand/10 text-foreground"
-          : "text-muted-foreground hover:bg-card",
+        active ? "bg-accent-brand/10 text-foreground" : "text-muted-foreground hover:bg-card",
       )}
     >
       <div className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT[entry.status])} />
@@ -126,12 +121,14 @@ function HistoryRow({ entry, active, onSelect }: {
         </span>
       )}
 
-      <span className={cn(
-        "shrink-0 rounded px-1 py-px text-[9px] uppercase leading-none tracking-wide",
-        entry.mode === "proxy"
-          ? "bg-blue-500/15 text-blue-400"
-          : "bg-amber-500/15 text-amber-400",
-      )}>
+      <span
+        className={cn(
+          "shrink-0 rounded px-1 py-px text-[9px] uppercase leading-none tracking-wide",
+          entry.mode === "proxy"
+            ? "bg-blue-500/15 text-blue-400"
+            : "bg-amber-500/15 text-amber-400",
+        )}
+      >
         {entry.mode === "proxy" ? "prx" : "dir"}
       </span>
 

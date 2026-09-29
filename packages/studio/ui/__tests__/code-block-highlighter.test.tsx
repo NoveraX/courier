@@ -7,72 +7,72 @@
  * in one 10 MB chunk the first block waited for; and a block that could not
  * be highlighted stayed a placeholder.
  */
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TooltipProvider } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-const shiki = vi.hoisted(() => ({ loaded: [] as string[], fails: false }))
+const shiki = vi.hoisted(() => ({ loaded: [] as string[], fails: false }));
 
 vi.mock("shiki", () => {
-  shiki.loaded.push("shiki")
+  shiki.loaded.push("shiki");
   return {
     codeToHtml: async (code: string) => {
-      if (shiki.fails) throw new Error("no grammar")
-      return `<pre class="whole-shiki">${code}</pre>`
+      if (shiki.fails) throw new Error("no grammar");
+      return `<pre class="whole-shiki">${code}</pre>`;
     },
-  }
-})
+  };
+});
 vi.mock("shiki/core", () => {
-  shiki.loaded.push("shiki/core")
+  shiki.loaded.push("shiki/core");
   return {
     createHighlighterCore: async () => {
-      if (shiki.fails) throw new Error("no grammar")
-      return { codeToHtml: (code: string) => `<pre class="shiki-core">${code}</pre>` }
+      if (shiki.fails) throw new Error("no grammar");
+      return { codeToHtml: (code: string) => `<pre class="shiki-core">${code}</pre>` };
     },
-  }
-})
-vi.mock("shiki/engine/javascript", () => ({ createJavaScriptRegexEngine: () => ({}) }))
-vi.mock("shiki/themes/github-dark-default.mjs", () => ({ default: {} }))
-vi.mock("shiki/langs/typescript.mjs", () => ({ default: [] }))
-vi.mock("shiki/langs/tsx.mjs", () => ({ default: [] }))
-vi.mock("shiki/langs/javascript.mjs", () => ({ default: [] }))
-vi.mock("shiki/langs/jsx.mjs", () => ({ default: [] }))
-vi.mock("shiki/langs/json.mjs", () => ({ default: [] }))
+  };
+});
+vi.mock("shiki/engine/javascript", () => ({ createJavaScriptRegexEngine: () => ({}) }));
+vi.mock("shiki/themes/github-dark-default.mjs", () => ({ default: {} }));
+vi.mock("shiki/langs/typescript.mjs", () => ({ default: [] }));
+vi.mock("shiki/langs/tsx.mjs", () => ({ default: [] }));
+vi.mock("shiki/langs/javascript.mjs", () => ({ default: [] }));
+vi.mock("shiki/langs/jsx.mjs", () => ({ default: [] }));
+vi.mock("shiki/langs/json.mjs", () => ({ default: [] }));
 
 beforeEach(() => {
-  vi.resetModules()
-  shiki.loaded.length = 0
-  shiki.fails = false
-})
+  vi.resetModules();
+  shiki.loaded.length = 0;
+  shiki.fails = false;
+});
 
-afterEach(cleanup)
+afterEach(cleanup);
 
 async function show(code: string): Promise<void> {
-  const { CodeBlock } = await import("@/components/shared/code-block")
+  const { CodeBlock } = await import("@/components/shared/code-block");
   render(
     <TooltipProvider>
       <CodeBlock code={code} language="ts" />
     </TooltipProvider>,
-  )
+  );
 }
 
 describe("a code block", () => {
   it("is highlighted by Shiki's core, never the whole of Shiki", async () => {
-    await show("const answer = 42")
+    await show("const answer = 42");
 
-    await waitFor(() => expect(document.querySelector(".shiki-core")).not.toBeNull())
-    expect(shiki.loaded).toContain("shiki/core")
-    expect(shiki.loaded).not.toContain("shiki")
-  })
+    await waitFor(() => expect(document.querySelector(".shiki-core")).not.toBeNull());
+    expect(shiki.loaded).toContain("shiki/core");
+    expect(shiki.loaded).not.toContain("shiki");
+  });
 
   it("is shown plain when it cannot be highlighted", async () => {
-    shiki.fails = true
-    vi.spyOn(console, "warn").mockImplementation(() => undefined)
+    shiki.fails = true;
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    await show("const answer = 42")
+    await show("const answer = 42");
 
-    await waitFor(() => expect(screen.getByText(/answer/)).toBeTruthy())
-    expect(document.querySelector(".animate-pulse")).toBeNull()
-  })
-})
+    await waitFor(() => expect(screen.getByText(/answer/)).toBeTruthy());
+    expect(document.querySelector(".animate-pulse")).toBeNull();
+  });
+});

@@ -63,13 +63,29 @@ describe("createMockRegistry", () => {
   it("keeps a mock whose fingerprint is unchanged, though the load made its definition anew", () => {
     const events = { onAdded: vi.fn(), onChanged: vi.fn(), onRemoved: vi.fn() };
     const registry = createMockRegistry(events);
-    registry.syncFromMocks({ users: { v: 1 }, pets: { v: 1 } }, new Map([["users", "u1"], ["pets", "p1"]]));
+    registry.syncFromMocks(
+      { users: { v: 1 }, pets: { v: 1 } },
+      new Map([
+        ["users", "u1"],
+        ["pets", "p1"],
+      ]),
+    );
 
     const reloaded = { v: 1 };
-    registry.syncFromMocks({ users: reloaded, pets: { v: 2 } }, new Map([["users", "u1"], ["pets", "p2"]]));
+    registry.syncFromMocks(
+      { users: reloaded, pets: { v: 2 } },
+      new Map([
+        ["users", "u1"],
+        ["pets", "p2"],
+      ]),
+    );
 
     expect(events.onChanged).toHaveBeenCalledTimes(1);
-    expect(events.onChanged).toHaveBeenCalledWith({ key: "pets", definition: { v: 2 }, fingerprint: "p2" });
+    expect(events.onChanged).toHaveBeenCalledWith({
+      key: "pets",
+      definition: { v: 2 },
+      fingerprint: "p2",
+    });
     expect(registry.getEntries().find((entry) => entry.key === "users")?.definition).toBe(reloaded);
   });
 

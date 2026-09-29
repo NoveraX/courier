@@ -1,11 +1,10 @@
 import { AlertTriangle, Eye } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { useStudioStore } from "@/store";
-import { useElapsed } from "@/hooks/use-tick";
-import { useMockStore } from "@/store/mock-slice";
 import { StreamBadge } from "@/components/stream-badge";
 import { WsBadge } from "@/components/ws-badge";
+import { useElapsed } from "@/hooks/use-tick";
+import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
+import { useMockStore } from "@/store/mock-slice";
 import { ConfigChip } from "./config-chip";
 
 export function StatusBar(): React.ReactNode {
@@ -62,15 +61,18 @@ export function StatusBar(): React.ReactNode {
               ? "reconnecting..."
               : "disconnected"}
         </span>
-        {connected && elapsed && (
-          <span className="opacity-60">{elapsed}</span>
-        )}
+        {connected && elapsed && <span className="opacity-60">{elapsed}</span>}
       </div>
 
       {/* Watcher indicator */}
       {totalWatched > 0 && (
         <div className="flex h-full items-center gap-1.5 border-l border-border-subtle px-2.5 text-muted-foreground">
-          <Eye className={cn("size-2.5", isRestarting ? "animate-pulse-dot text-amber-400" : "text-emerald-400")} />
+          <Eye
+            className={cn(
+              "size-2.5",
+              isRestarting ? "animate-pulse-dot text-amber-400" : "text-emerald-400",
+            )}
+          />
           <span>{isRestarting ? "Reloading\u2026" : `Watching ${totalWatched}`}</span>
         </div>
       )}
@@ -81,7 +83,10 @@ export function StatusBar(): React.ReactNode {
         {errors > 0 && <span className="text-destructive-foreground">{errors} err</span>}
         {pending > 0 && <span className="text-warning-foreground">{pending} pending</span>}
         {droppedRequests > 0 && (
-          <span className="text-amber-400" title={`${droppedRequests} older requests dropped — increase limit in Settings`}>
+          <span
+            className="text-amber-400"
+            title={`${droppedRequests} older requests dropped — increase limit in Settings`}
+          >
             {droppedRequests} dropped
           </span>
         )}
@@ -104,9 +109,7 @@ export function StatusBar(): React.ReactNode {
       </div>
 
       {/* Right: branding */}
-      <div className="flex h-full items-center px-2.5 text-muted-foreground/40">
-        courier
-      </div>
+      <div className="flex h-full items-center px-2.5 text-muted-foreground/40">courier</div>
     </footer>
   );
 }

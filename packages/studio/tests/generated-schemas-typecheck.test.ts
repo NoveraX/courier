@@ -42,10 +42,12 @@ const STRICTEST: ts.CompilerOptions = {
 
 /** Write the schemas file for one option set and return its path. */
 function writeSchemas(label: string, options: Partial<GenerateOptions>): string {
-  const files = generateCode(
-    parseSpec(JSON.stringify(SHAPES_SPEC)),
-    { type: "openapi", sourceName: "api", outputDir: "src", ...options },
-  );
+  const files = generateCode(parseSpec(JSON.stringify(SHAPES_SPEC)), {
+    type: "openapi",
+    sourceName: "api",
+    outputDir: "src",
+    ...options,
+  });
   const schemas = files.find((f) => f.path.endsWith("schemas.ts"));
   const path = join(ROOT, label, "schemas.ts");
   mkdirSync(dirname(path), { recursive: true });

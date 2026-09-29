@@ -1,11 +1,10 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
-import { useSearch, useNavigate } from "@tanstack/react-router";
-
-import type { TimelineFilters } from "@/store/types";
 import { EMPTY_FILTERS } from "@/store/constants";
+import type { TimelineFilters } from "@/store/types";
 
 import type { TimelineSearchParams } from "./search-schema";
-import { searchToFilters, filtersToSearch } from "./search-schema";
+import { filtersToSearch, searchToFilters } from "./search-schema";
 
 interface TimelineSearchState {
   filters: TimelineFilters;

@@ -9,8 +9,8 @@
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { defineApi } from "@noverax/courier/define";
 import { registerSources } from "@noverax/courier";
+import { defineApi } from "@noverax/courier/define";
 import { wsFrameLimit } from "@noverax/courier/node";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { WebSocket, WebSocketServer } from "ws";

@@ -1,11 +1,8 @@
-import { useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Monitor, Moon, Pause, Sun, Trash2 } from "lucide-react";
-
-import { useStudioStore } from "@/store";
-import { useBackToLive } from "@/hooks/use-back-to-live";
-import { useClearRequests } from "@/hooks/use-clear-requests";
+import { useCallback } from "react";
 import { NAV_GROUPS } from "@/app-config";
+import { KbdHint } from "@/components/shared/kbd-hint";
 import {
   CommandDialog,
   CommandEmpty,
@@ -14,9 +11,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { KbdHint } from "@/components/shared/kbd-hint";
-
+import { useBackToLive } from "@/hooks/use-back-to-live";
+import { useClearRequests } from "@/hooks/use-clear-requests";
 import type { Theme } from "@/store";
+import { useStudioStore } from "@/store";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -73,7 +71,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
 
         <CommandGroup heading="Recording">
           <CommandItem
-            value={shownSession ? "back to live requests" : paused ? "resume recording" : "pause recording"}
+            value={
+              shownSession
+                ? "back to live requests"
+                : paused
+                  ? "resume recording"
+                  : "pause recording"
+            }
             onSelect={() => run(shownSession ? backToLive : togglePaused)}
           >
             {paused ? (
@@ -97,28 +101,23 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
               </>
             )}
           </CommandItem>
-          <CommandItem
-            value="clear requests"
-            onSelect={() => run(clearRequests)}
-          >
+          <CommandItem value="clear requests" onSelect={() => run(clearRequests)}>
             <Trash2 aria-hidden />
             Clear all requests
           </CommandItem>
         </CommandGroup>
 
         <CommandGroup heading="Appearance">
-          {THEME_META
-            .filter((t) => t.value !== theme)
-            .map((t) => (
-              <CommandItem
-                key={t.value}
-                value={`theme ${t.label}`}
-                onSelect={() => run(() => setTheme(t.value))}
-              >
-                {t.icon}
-                {t.label}
-              </CommandItem>
-            ))}
+          {THEME_META.filter((t) => t.value !== theme).map((t) => (
+            <CommandItem
+              key={t.value}
+              value={`theme ${t.label}`}
+              onSelect={() => run(() => setTheme(t.value))}
+            >
+              {t.icon}
+              {t.label}
+            </CommandItem>
+          ))}
         </CommandGroup>
       </CommandList>
 

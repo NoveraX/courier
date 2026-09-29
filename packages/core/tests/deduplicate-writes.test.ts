@@ -79,10 +79,7 @@ describe("deduplicate on a direct call", () => {
   it("lets two concurrent creates to one path both complete", async () => {
     const client = createCaller(api());
 
-    const results = await Promise.all([
-      client.create({ item: "A" }),
-      client.create({ item: "B" }),
-    ]);
+    const results = await Promise.all([client.create({ item: "A" }), client.create({ item: "B" })]);
 
     expect(results).toEqual([
       { method: "POST", body: '{"item":"A"}' },
@@ -118,10 +115,7 @@ describe("deduplicate on a proxy client given the source", () => {
   it("lets two concurrent creates both complete", async () => {
     const client = createProxyCaller<ReturnType<typeof api>>("orders", { source: api() });
 
-    const results = await Promise.all([
-      client.create({ item: "A" }),
-      client.create({ item: "B" }),
-    ]);
+    const results = await Promise.all([client.create({ item: "A" }), client.create({ item: "B" })]);
 
     expect(results).toEqual([
       { method: "POST", body: '{"item":"A"}' },

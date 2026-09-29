@@ -50,7 +50,10 @@ afterEach(() => {
 
 describe.each([
   ["createCaller", () => createCaller(api) as unknown as Anything],
-  ["createProxyCaller with its source", () => createProxyCaller("api", { source: api }) as unknown as Anything],
+  [
+    "createProxyCaller with its source",
+    () => createProxyCaller("api", { source: api }) as unknown as Anything,
+  ],
 ])("%s", (_name, make) => {
   it("lists its groups and endpoints", () => {
     const client = make();

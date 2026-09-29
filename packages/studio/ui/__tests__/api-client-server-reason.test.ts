@@ -21,7 +21,9 @@ function httpError(data: unknown, status = 400): unknown {
 
 describe("Studio API client", () => {
   it("raises the reason the server gave instead of the bare status", async () => {
-    post.mockRejectedValueOnce(httpError({ error: "Blocked request to loopback address: localhost" }));
+    post.mockRejectedValueOnce(
+      httpError({ error: "Blocked request to loopback address: localhost" }),
+    );
 
     await expect(studioPost("/api/apis/parse")).rejects.toThrow(
       "Blocked request to loopback address: localhost",
@@ -30,12 +32,18 @@ describe("Studio API client", () => {
 
   it("carries Studio's code and the rest of its answer, such as a refused plan", async () => {
     const plan = { digest: "d" };
-    post.mockRejectedValueOnce(httpError({ error: "Allow the steps first.", code: "NEEDS_CONFIRMATION", plan }, 409));
+    post.mockRejectedValueOnce(
+      httpError({ error: "Allow the steps first.", code: "NEEDS_CONFIRMATION", plan }, 409),
+    );
 
     const error: unknown = await studioPost("/api/apis/write").catch((reason: unknown) => reason);
 
     expect(error).toBeInstanceOf(StudioRequestError);
-    expect(error).toMatchObject({ message: "Allow the steps first.", code: "NEEDS_CONFIRMATION", data: { plan } });
+    expect(error).toMatchObject({
+      message: "Allow the steps first.",
+      code: "NEEDS_CONFIRMATION",
+      data: { plan },
+    });
   });
 
   it("leaves the code unset when Studio gave none", async () => {

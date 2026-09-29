@@ -8,9 +8,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
-
-import { probeMockPackage } from "../../src/server/mocks-edit/probe-mock-package";
 import { MocksEditRefusal } from "../../src/server/mocks-edit/mocks-edit-refusal";
+import { probeMockPackage } from "../../src/server/mocks-edit/probe-mock-package";
 
 const REPO_CACHE = join(__dirname, "../../../../node_modules/.cache/courier-studio-tests");
 const NOTHING_THROWN = Symbol("nothing thrown");

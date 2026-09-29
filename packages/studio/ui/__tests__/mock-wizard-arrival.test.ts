@@ -34,7 +34,9 @@ describe("the arrival of the mocks added", () => {
     connect("billingMock", "starting");
     const arrival = mockArrival(useMockStore.getState().servers, keys, 1_000);
 
-    expect(arrival.listed.map((server) => [server.serverId, server.processStatus])).toEqual([["billingMock", "starting"]]);
+    expect(arrival.listed.map((server) => [server.serverId, server.processStatus])).toEqual([
+      ["billingMock", "starting"],
+    ]);
     expect(arrival.pending).toEqual(["apiMock"]);
     expect(arrival.overdue).toBe(false);
   });
@@ -45,7 +47,9 @@ describe("the arrival of the mocks added", () => {
     expect(mockArrival(servers, ["apiMock"], ARRIVAL_PATIENCE_MS - 1).overdue).toBe(false);
     expect(mockArrival(servers, ["apiMock"], ARRIVAL_PATIENCE_MS).overdue).toBe(true);
     connect("apiMock");
-    expect(mockArrival(useMockStore.getState().servers, ["apiMock"], ARRIVAL_PATIENCE_MS).overdue).toBe(false);
+    expect(
+      mockArrival(useMockStore.getState().servers, ["apiMock"], ARRIVAL_PATIENCE_MS).overdue,
+    ).toBe(false);
   });
 
   it("does not take an inherited name for a mock Studio lists", () => {

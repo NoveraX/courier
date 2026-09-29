@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { MiniSparkline } from "./mini-sparkline";
 import type { SparklinePoint } from "../use-endpoint-metrics";
+import { MiniSparkline } from "./mini-sparkline";
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -39,15 +39,9 @@ export function MetricCard({
         {sparkline && <MiniSparkline data={sparkline} color={sparklineColor} />}
       </div>
 
-      <p className={cn("mt-1.5 text-lg font-semibold tabular-nums", valueColor)}>
-        {value}
-      </p>
+      <p className={cn("mt-1.5 text-lg font-semibold tabular-nums", valueColor)}>{value}</p>
 
-      {subtitle && (
-        <p className="mt-0.5 text-body-xs text-muted-foreground/60">
-          {subtitle}
-        </p>
-      )}
+      {subtitle && <p className="mt-0.5 text-body-xs text-muted-foreground/60">{subtitle}</p>}
     </div>
   );
 }

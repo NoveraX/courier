@@ -14,7 +14,9 @@ const api = { name: "api" };
 const held: Server[] = [];
 
 afterEach(async () => {
-  await Promise.all(held.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
+  await Promise.all(
+    held.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 
 const ipv6 = await new Promise<boolean>((resolve) => {
@@ -53,11 +55,19 @@ function input(overrides: Partial<WarningInput>): WarningInput {
   };
 }
 
-const request = (port: number | null) => ({ key: "apiMock", source: "api", port, seedCount: 20, autoStart: true });
+const request = (port: number | null) => ({
+  key: "apiMock",
+  source: "api",
+  port,
+  seedCount: 20,
+  autoStart: true,
+});
 
 describe("editWarnings", () => {
   it("says a new file is created", async () => {
-    expect(await editWarnings(input({ creates: true }))).toEqual(["Studio creates courier.mocks.ts."]);
+    expect(await editWarnings(input({ creates: true }))).toEqual([
+      "Studio creates courier.mocks.ts.",
+    ]);
   });
 
   it("names the running mocks the edit restarts", async () => {

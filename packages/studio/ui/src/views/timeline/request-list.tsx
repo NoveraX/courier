@@ -1,15 +1,14 @@
-import { useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-
-import { useStudioStore } from "@/store";
+import { useCallback, useRef } from "react";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
+import { useStudioStore } from "@/store";
 
 import type { RequestEntry } from "@/store/types";
 
 import { OVERSCAN, ROW_HEIGHTS } from "./constants";
-import { RequestRow } from "./request-row";
 import { RequestContextMenu } from "./context-menu";
 import { PinnedSection } from "./pinned-section";
+import { RequestRow } from "./request-row";
 
 interface RequestListProps {
   requests: RequestEntry[];
@@ -48,16 +47,10 @@ export function RequestList({
       role="listbox"
       aria-label="Request list"
     >
-      <PinnedSection
-        requests={pinnedRequests}
-        selectedId={selectedId}
-        onSelect={onSelect}
-      />
+      <PinnedSection requests={pinnedRequests} selectedId={selectedId} onSelect={onSelect} />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div
-          style={{ height: virtualizer.getTotalSize(), position: "relative" }}
-        >
+        <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
           {virtualizer.getVirtualItems().map((vi) => {
             const request = requests[vi.index]!;
             return (
@@ -101,9 +94,8 @@ function useKeyboardNavById(
 
       e.preventDefault();
       const idx = selectedId ? requests.findIndex((r) => r.id === selectedId) : -1;
-      const next = e.key === "ArrowDown"
-        ? Math.min(idx + 1, requests.length - 1)
-        : Math.max(idx - 1, 0);
+      const next =
+        e.key === "ArrowDown" ? Math.min(idx + 1, requests.length - 1) : Math.max(idx - 1, 0);
 
       onSelect(requests[next]!.id);
     },

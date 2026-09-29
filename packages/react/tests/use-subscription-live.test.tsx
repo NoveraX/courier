@@ -2,13 +2,11 @@
  * @vitest-environment jsdom
  */
 
-import { createElement, type ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import { isConfigurationError } from "@noverax/courier";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-
-import { isConfigurationError } from "@noverax/courier";
+import { createElement, type ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createProxyQueryCaller } from "../src/create-proxy-query-caller";
 import { type CourierServer, startCourierServer } from "./helpers/courier-server";
 import { liveApi } from "./helpers/live-api";
@@ -41,10 +39,9 @@ describe("useSubscription over a real SSE stream", () => {
   it("starts from a clean state when its variables change", async () => {
     const q = makeCaller();
     let variables: { n: number; from?: number } = { n: 3 };
-    const { result, rerender } = renderHook(
-      () => q.live.useSubscription("ticks", { variables }),
-      { wrapper },
-    );
+    const { result, rerender } = renderHook(() => q.live.useSubscription("ticks", { variables }), {
+      wrapper,
+    });
     await waitFor(() => expect(result.current.events.map((e) => e.data.i)).toEqual([1, 2, 3]));
 
     variables = { n: 2, from: 10 };

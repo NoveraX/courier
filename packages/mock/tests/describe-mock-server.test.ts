@@ -29,7 +29,9 @@ describe("describeMockServer", () => {
   });
 
   it("names the port and launch the definition asks for", () => {
-    expect(describeMockServer(defineMockServer({ source: api, port: 7401, autoStart: true }))).toMatchObject({
+    expect(
+      describeMockServer(defineMockServer({ source: api, port: 7401, autoStart: true })),
+    ).toMatchObject({
       port: 7401,
       autoStart: true,
     });
@@ -38,7 +40,10 @@ describe("describeMockServer", () => {
   it("lists the routes and collections the source generates", () => {
     const description = describeMockServer(defineMockServer({ source: api }));
 
-    expect(description.routes.map((r) => `${r.httpMethod} ${r.fullPath}`)).toEqual(["GET /users", "GET /users/:id"]);
+    expect(description.routes.map((r) => `${r.httpMethod} ${r.fullPath}`)).toEqual([
+      "GET /users",
+      "GET /users/:id",
+    ]);
     expect(description.collections).toEqual(["users"]);
   });
 
@@ -47,7 +52,9 @@ describe("describeMockServer", () => {
       mock("users", "getAll").resolves([]);
     });
 
-    const { scenarios } = describeMockServer(defineMockServer({ source: api, scenarios: { quiet } }));
+    const { scenarios } = describeMockServer(
+      defineMockServer({ source: api, scenarios: { quiet } }),
+    );
 
     expect(scenarios[0]?.name).toBe("happy-path");
     expect(scenarios.map((s) => s.name)).toContain("quiet");
@@ -62,9 +69,9 @@ describe("describeMockServer reading scenarios", () => {
       mock("users", "getById").rejects(404).delay(10);
     });
 
-    const scenario = describeMockServer(defineMockServer({ source: api, scenarios: { busy } })).scenarios.find(
-      (s) => s.name === "busy",
-    );
+    const scenario = describeMockServer(
+      defineMockServer({ source: api, scenarios: { busy } }),
+    ).scenarios.find((s) => s.name === "busy");
 
     expect(scenario?.introspectionError).toBeUndefined();
     expect(scenario?.endpoints.map((e) => `${e.endpoint}:${e.behavior}`)).toEqual([
@@ -79,9 +86,9 @@ describe("describeMockServer reading scenarios", () => {
       mock("users", "getById").channel(() => ({ onMessage: () => undefined }));
     });
 
-    const scenario = describeMockServer(defineMockServer({ source: api, scenarios: { live } })).scenarios.find(
-      (s) => s.name === "live",
-    );
+    const scenario = describeMockServer(
+      defineMockServer({ source: api, scenarios: { live } }),
+    ).scenarios.find((s) => s.name === "live");
 
     expect(scenario?.introspectionError).toBeUndefined();
     expect(scenario?.endpoints.map((e) => e.behavior)).toEqual(["custom", "custom"]);
@@ -138,9 +145,10 @@ describe("describeMockServer routes", () => {
   });
 
   it("says a definition has no source, rather than failing inside it", () => {
-    const definition = { ...defineMockServer({ source: api }), source: undefined } as unknown as Parameters<
-      typeof describeMockServer
-    >[0];
+    const definition = {
+      ...defineMockServer({ source: api }),
+      source: undefined,
+    } as unknown as Parameters<typeof describeMockServer>[0];
 
     expect(() => describeMockServer(definition)).toThrow("has no source");
   });

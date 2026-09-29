@@ -36,9 +36,7 @@ export function ApisView(): React.ReactElement {
     toast.success(message);
   });
 
-  const checking = Object.values(registry.statuses).some(
-    (s) => s.status === "checking",
-  );
+  const checking = Object.values(registry.statuses).some((s) => s.status === "checking");
   const importAction =
     page.importBlocked === null
       ? { label: "Import API", onClick: () => importWizard.openWizard() }

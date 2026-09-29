@@ -1,6 +1,6 @@
-import type { Catalog, CatalogEndpoint } from "./types-ui";
-import type { RequestEntry } from "./types-request";
 import { ownValue } from "@/lib/own-value";
+import type { RequestEntry } from "./types-request";
+import type { Catalog, CatalogEndpoint } from "./types-ui";
 
 /**
  * Build a `Catalog` from request history — the endpoints traffic showed,
@@ -21,7 +21,10 @@ export function buildCatalogFromRequests(requests: readonly RequestEntry[]): Cat
   for (const req of requests) {
     if (!req.source) continue;
     const grpName = req.group ?? "";
-    const source = ownValue(catalog, req.source) ?? { baseURL: extractBaseURL(req.url), groups: {} };
+    const source = ownValue(catalog, req.source) ?? {
+      baseURL: extractBaseURL(req.url),
+      groups: {},
+    };
     catalog[req.source] = source;
     /* Where an endpoint seen only in traffic is served is unknown, so its
        group has no prefix and the endpoint no path. */

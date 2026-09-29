@@ -1,10 +1,6 @@
-import { bufferedAnnouncementCount, resetAnnouncements } from "../src/announce/test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  announceHosting,
-  announceWhenRegistered,
-  consumeAnnouncements,
-} from "../src/announce";
+import { announceHosting, announceWhenRegistered, consumeAnnouncements } from "../src/announce";
+import { bufferedAnnouncementCount, resetAnnouncements } from "../src/announce/test-support";
 import { defineApi } from "../src/define";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 

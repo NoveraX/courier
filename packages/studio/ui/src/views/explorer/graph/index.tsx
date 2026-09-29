@@ -1,34 +1,34 @@
-import { useMemo, useCallback, useEffect } from "react";
+import type { Node, NodeMouseHandler } from "@xyflow/react";
 import {
-  ReactFlow,
   Background,
   BackgroundVariant,
-  useNodesState,
+  ReactFlow,
   useEdgesState,
+  useNodesState,
   useReactFlow,
 } from "@xyflow/react";
-import type { Node, NodeMouseHandler } from "@xyflow/react";
+import { useCallback, useEffect, useMemo } from "react";
 import "@xyflow/react/dist/base.css";
 
+import { Network } from "lucide-react";
+import { EmptyState } from "@/components/shared/empty-state";
+import { EndpointPanel } from "../detail/endpoint-panel";
+import { formatEndpointKey } from "../helpers";
 import { useExplorerData } from "../use-explorer-data";
 import { useExplorerNavigation } from "../use-explorer-navigation";
 import { useExplorerSearch } from "../use-explorer-search";
 import { buildFlowGraph } from "./build-graph";
-import { computeLayout } from "./layout-engine";
-import { useGraphDimming } from "./use-graph-dimming";
-import { useSearchFilter } from "./use-search-filter";
-import { SourceNode } from "./nodes/source-node";
-import { GroupNode } from "./nodes/group-node";
-import { EndpointNode } from "./nodes/endpoint-node";
-import { AnimatedEdge } from "./edges/animated-edge";
-import { EdgeDefinitions } from "./edges/edge-definitions";
-import { GraphToolbar } from "./controls/graph-toolbar";
 import { GraphLegend } from "./controls/graph-legend";
 import { GraphMinimap } from "./controls/graph-minimap";
-import { EndpointPanel } from "../detail/endpoint-panel";
-import { formatEndpointKey } from "../helpers";
-import { EmptyState } from "@/components/shared/empty-state";
-import { Network } from "lucide-react";
+import { GraphToolbar } from "./controls/graph-toolbar";
+import { AnimatedEdge } from "./edges/animated-edge";
+import { EdgeDefinitions } from "./edges/edge-definitions";
+import { computeLayout } from "./layout-engine";
+import { EndpointNode } from "./nodes/endpoint-node";
+import { GroupNode } from "./nodes/group-node";
+import { SourceNode } from "./nodes/source-node";
+import { useGraphDimming } from "./use-graph-dimming";
+import { useSearchFilter } from "./use-search-filter";
 
 import "./graph-styles.css";
 
@@ -46,8 +46,15 @@ export function ExplorerGraph(): React.ReactElement {
   const { fitView } = useReactFlow();
 
   const {
-    layout, search, showMinimap, metricMode,
-    setLayout, setSearch, selectEndpoint, setMetricMode, toggleMinimap,
+    layout,
+    search,
+    showMinimap,
+    metricMode,
+    setLayout,
+    setSearch,
+    selectEndpoint,
+    setMetricMode,
+    toggleMinimap,
   } = explorerSearch;
 
   // Build & layout nodes
@@ -135,7 +142,12 @@ export function ExplorerGraph(): React.ReactElement {
         proOptions={{ hideAttribution: true }}
       >
         <EdgeDefinitions />
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--graph-dot-color)" />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={1}
+          color="var(--graph-dot-color)"
+        />
         {showMinimap && <GraphMinimap />}
       </ReactFlow>
 

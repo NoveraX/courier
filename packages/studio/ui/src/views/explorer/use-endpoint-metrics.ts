@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
-import type { NodeMetrics } from "./types";
 import { computeNodeMetrics } from "./compute-metrics";
 import { filterRequests } from "./helpers";
+import type { NodeMetrics } from "./types";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -25,11 +25,7 @@ export interface EndpointDetail {
 const SPARKLINE_BUCKETS = 12;
 const RECENT_LIMIT = 50;
 
-export function useEndpointMetrics(
-  source: string,
-  group: string,
-  method: string,
-): EndpointDetail {
+export function useEndpointMetrics(source: string, group: string, method: string): EndpointDetail {
   const requests = useStudioStore((s) => s.requests);
 
   return useMemo(() => {

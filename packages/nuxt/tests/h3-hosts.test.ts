@@ -140,7 +140,9 @@ describe("the proxy route on h3 1.x, as Nuxt 3 and 4 run it", () => {
         finished = true;
       }
     });
-    registerSources({ live: defineApi({ baseURL: "https://upstream.test", endpoints: { ticks } }) });
+    registerSources({
+      live: defineApi({ baseURL: "https://upstream.test", endpoints: { ticks } }),
+    });
     const origin = await listen(nodeEventHost(courierHandler()));
 
     const client = new AbortController();
@@ -191,7 +193,10 @@ async function cancelWhileHeld(origin: string, upstream: { arrived: () => boolea
     proxyPath: { http: `${origin}/api/request` },
   }) as unknown as { with(options: { signal: AbortSignal }): { wait(): Promise<unknown> } };
   const client = new AbortController();
-  const call = caller.with({ signal: client.signal }).wait().catch((error: unknown) => error);
+  const call = caller
+    .with({ signal: client.signal })
+    .wait()
+    .catch((error: unknown) => error);
   await expect.poll(upstream.arrived, { timeout: 2000 }).toBe(true);
   client.abort();
   await call;

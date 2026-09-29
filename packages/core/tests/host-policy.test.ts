@@ -5,7 +5,7 @@
  * Its requests then look same-origin to the browser and to the origin rule,
  * and only the app knowing its own names can refuse them.
  */
-import { request as httpRequest, createServer, type Server } from "node:http";
+import { createServer, request as httpRequest, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -68,10 +68,19 @@ describe("isHostAccepted", () => {
 });
 
 /** Send one request with the Host header a rebound browser would write. */
-function send(port: number, init: { method: string; host: string; headers?: Record<string, string>; body?: string }) {
+function send(
+  port: number,
+  init: { method: string; host: string; headers?: Record<string, string>; body?: string },
+) {
   return new Promise<{ status: number; body: string }>((resolve, reject) => {
     const req = httpRequest(
-      { host: "127.0.0.1", port, path: "/api/request?_s=api&_m=me", method: init.method, headers: { host: init.host, ...init.headers } },
+      {
+        host: "127.0.0.1",
+        port,
+        path: "/api/request?_s=api&_m=me",
+        method: init.method,
+        headers: { host: init.host, ...init.headers },
+      },
       (res) => {
         let body = "";
         res.setEncoding("utf8");
@@ -94,7 +103,9 @@ describe("every HTTP entry point", () => {
     vi.stubEnv("NODE_ENV", "development");
     upstream = await startUpstream(echo);
     const { endpoint } = courier();
-    registerSources({ api: defineApi({ baseURL: upstream.url, endpoints: { me: endpoint.get("me") } }) });
+    registerSources({
+      api: defineApi({ baseURL: upstream.url, endpoints: { me: endpoint.get("me") } }),
+    });
   });
 
   afterEach(async () => {

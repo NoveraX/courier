@@ -3,9 +3,9 @@ import { z } from "zod";
 import { courier } from "../src/define/courier";
 import type { ChannelHandlers, WSChannelContext } from "../src/realtime/types";
 import type { StudioHooks } from "../src/studio/hooks";
-import { ValidationError } from "../src/validation";
 import { executeDirectWSChannel } from "../src/transport/in-process/ws-channel";
 import { createPlaygroundWSRegistry } from "../src/transport/in-process/ws-registry";
+import { ValidationError } from "../src/validation";
 
 const { endpoint, channel } = courier();
 
@@ -25,7 +25,11 @@ function makeChannelSources(
   factory: (variables: any) => ChannelHandlers,
   opts: { variablesSchema?: z.ZodTypeAny; receiveSchema?: z.ZodTypeAny } = {},
 ) {
-  const room = channel.variables(opts.variablesSchema).send(opts.receiveSchema).response<unknown>().implement(factory as never);
+  const room = channel
+    .variables(opts.variablesSchema)
+    .send(opts.receiveSchema)
+    .response<unknown>()
+    .implement(factory as never);
   return {
     api: {
       options: { groups: { chat: { options: {}, room } } },
@@ -216,7 +220,9 @@ describe("executeDirectWSChannel — bidirectional flow", () => {
     serverCtx?.send({ from: "server" });
 
     expect(received).toEqual([{ from: "server" }]);
-    const failure = output.mock.calls.find((call) => String(call[1]).includes("A channel data listener failed"));
+    const failure = output.mock.calls.find((call) =>
+      String(call[1]).includes("A channel data listener failed"),
+    );
     expect(failure?.[2]).toEqual(new Error("listener bug"));
     output.mockRestore();
   });
@@ -391,7 +397,10 @@ describe("executeDirectWSChannel — studio instrumentation", () => {
 
     await channel.send({ text: "hi" });
 
-    expect(onStreamMessage.mock.calls.map((call) => call[0].eventType)).toEqual(["message", "data"]);
+    expect(onStreamMessage.mock.calls.map((call) => call[0].eventType)).toEqual([
+      "message",
+      "data",
+    ]);
   });
 
   it("records no message sent once the channel was closed, which the handler never gets", async () => {

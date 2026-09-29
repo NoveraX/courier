@@ -19,12 +19,16 @@ function importedHeaderModules(): string[] {
     .filter((file) => file.endsWith(".js"))
     .map((file) => readFileSync(`${LIB}${file}`, "utf8"))
     .join("\n");
-  return [...built.matchAll(/import\(\s*["'](next\/headers[^"']*)["']\s*\)/g)].map((m) => m[1] ?? "");
+  return [...built.matchAll(/import\(\s*["'](next\/headers[^"']*)["']\s*\)/g)].map(
+    (m) => m[1] ?? "",
+  );
 }
 
 function nodeResolves(specifier: string): boolean {
   const code = `await import(${JSON.stringify(specifier)});`;
-  return spawnSync(process.execPath, ["--input-type=module", "-e", code], { cwd: PACKAGE }).status === 0;
+  return (
+    spawnSync(process.execPath, ["--input-type=module", "-e", code], { cwd: PACKAGE }).status === 0
+  );
 }
 
 describe("the module a server action reads request headers from", () => {

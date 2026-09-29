@@ -32,7 +32,11 @@ function started(): { requests: RequestEntry[] } {
 }
 
 function apply(state: { requests: RequestEntry[] }, event: Record<string, unknown>): RequestEntry {
-  const next = applyEvents(state.requests, [{ sessionId: "app", timestamp: 2, ...event } as Event], OPTIONS);
+  const next = applyEvents(
+    state.requests,
+    [{ sessionId: "app", timestamp: 2, ...event } as Event],
+    OPTIONS,
+  );
   const [entry] = next.requests;
   if (!entry) throw new Error("no request recorded");
   return entry;
@@ -80,12 +84,15 @@ describe("a failed request in the UI", () => {
       issues,
       duration: 1,
     });
-    const entry = apply({ requests: [failed] }, {
-      type: "request:error",
-      id: "req-1",
-      requestId: "req-1",
-      error: { type: "validation", message: "Validation failed (variables): Too short" },
-    });
+    const entry = apply(
+      { requests: [failed] },
+      {
+        type: "request:error",
+        id: "req-1",
+        requestId: "req-1",
+        error: { type: "validation", message: "Validation failed (variables): Too short" },
+      },
+    );
 
     expect(entry.status).toBe("validation_error");
     expect(entry.error?.validationIssues).toEqual([{ message: "Too short", path: "name" }]);

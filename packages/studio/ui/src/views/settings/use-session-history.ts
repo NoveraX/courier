@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-
-import type { ExportFormat, RequestEntry } from "@/store/types";
 import { apiClient, post } from "@/lib/api-client";
-import { isRecord } from "@/store/event-helpers";
 import { useStudioStore } from "@/store";
+import { isRecord } from "@/store/event-helpers";
+import type { ExportFormat, RequestEntry } from "@/store/types";
 import { requestFromSaved, savedRequestOf } from "./saved-request";
 import { type SessionSummary, sessionSummariesOf } from "./session-summary";
 
@@ -38,12 +37,16 @@ export function useSessionHistory() {
     }
   }, []);
 
-  useEffect(() => { fetchSessions(); }, [fetchSessions]);
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
 
   /* Studio keeps no requests of its own: the session saved is the one this page recorded. */
   async function saveCurrentSession(name: string): Promise<boolean> {
     const requests = useStudioStore.getState().requests.map(savedRequestOf);
-    if (!(await attempt("save the session", () => post("/api/sessions/save", { name, requests })))) {
+    if (
+      !(await attempt("save the session", () => post("/api/sessions/save", { name, requests })))
+    ) {
       return false;
     }
     toast.success("Session saved");
@@ -52,7 +55,9 @@ export function useSessionHistory() {
   }
 
   async function loadSession(id: string): Promise<void> {
-    const session = await attempt("load the session", () => post<unknown>("/api/sessions/load", { id }));
+    const session = await attempt("load the session", () =>
+      post<unknown>("/api/sessions/load", { id }),
+    );
     if (!isRecord(session) || !Array.isArray(session.requests)) return;
     const requests = session.requests
       .map(requestFromSaved)
@@ -60,7 +65,9 @@ export function useSessionHistory() {
     /* Recording pauses, so live traffic does not mix into the session shown;
        Studio keeps it shown, across a reload, until the page goes back to live. */
     useStudioStore.getState().showSession({ id, name: String(session.name) }, requests);
-    toast.success(`Loaded ${requests.length} requests from "${String(session.name)}"; recording paused`);
+    toast.success(
+      `Loaded ${requests.length} requests from "${String(session.name)}"; recording paused`,
+    );
   }
 
   async function deleteSession(id: string): Promise<void> {
@@ -103,7 +110,10 @@ export function useSessionHistory() {
 }
 
 /** Run one step against Studio; a failure is told in a toast and yields `undefined`. */
-async function attempt<TResult>(what: string, step: () => Promise<TResult>): Promise<TResult | undefined> {
+async function attempt<TResult>(
+  what: string,
+  step: () => Promise<TResult>,
+): Promise<TResult | undefined> {
   try {
     return await step();
   } catch (error) {

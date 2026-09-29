@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
 import type * as CourierModule from "@noverax/courier";
+import { NextRequest } from "next/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockHandleSSE = vi.fn();
 
@@ -13,7 +13,21 @@ vi.mock("@noverax/courier", async (importOriginal) => {
       handleGet: vi.fn(),
       handlePost: vi.fn(),
       handleSSE: mockHandleSSE,
-      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      sseConnections: {
+        count: 0,
+        isShuttingDown: false,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        getByEndpoint: vi.fn(() => []),
+        disconnect: vi.fn(),
+        disconnectAll: vi.fn(),
+        send: vi.fn(() => true),
+        broadcastToEndpoint: vi.fn(() => new Map()),
+        broadcastToMeta: vi.fn(() => new Map()),
+        broadcastAll: vi.fn(() => new Map()),
+      },
       shutdownSSE: vi.fn(),
     })),
   };
@@ -62,9 +76,7 @@ describe("sseRoute", () => {
     mockHandleSSE.mockResolvedValue(sseResponse);
 
     const { GET } = sseRoute();
-    const req = new NextRequest(
-      "http://localhost:3000/api/sse?_s=api&_g=notifications&_m=feed",
-    );
+    const req = new NextRequest("http://localhost:3000/api/sse?_s=api&_g=notifications&_m=feed");
 
     const result = await GET(req);
 
@@ -79,7 +91,7 @@ describe("sseRoute", () => {
         headers: {
           "content-type": "text/event-stream",
           "cache-control": "no-cache, no-transform",
-          "connection": "keep-alive",
+          connection: "keep-alive",
           "x-accel-buffering": "no",
         },
       }),

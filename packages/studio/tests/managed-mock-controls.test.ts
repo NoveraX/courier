@@ -12,7 +12,10 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createProcessManager, type ProcessManagerEvents } from "../src/server/mock-manager/process-manager";
+import {
+  createProcessManager,
+  type ProcessManagerEvents,
+} from "../src/server/mock-manager/process-manager";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 
@@ -32,11 +35,11 @@ function project(): string {
       'import { z } from "zod";\n' +
       "const { endpoint, stream } = courier();\n" +
       "const User = z.object({ id: z.number(), name: z.string() });\n" +
-      "const users = defineGroup({ prefix: \"users\", endpoints: {\n" +
+      'const users = defineGroup({ prefix: "users", endpoints: {\n' +
       '  list: endpoint.get("").response(z.array(User)),\n' +
       '  get: endpoint.get(":id").response(User),\n' +
       "} });\n" +
-      "const live = defineGroup({ prefix: \"live\", endpoints: {\n" +
+      'const live = defineGroup({ prefix: "live", endpoints: {\n' +
       '  ticker: stream.response(z.object({ n: z.number() })).get("stream"),\n' +
       "} });\n" +
       'export const api = defineApi({ baseURL: "https://api.example", groups: { users, live } });\n',
@@ -45,7 +48,7 @@ function project(): string {
     join(root, "courier.mocks.ts"),
     'import { defineMocks, defineMockServer } from "@noverax/courier-mock";\n' +
       'import { api } from "./api";\n' +
-      "export default defineMocks({ apiMock: defineMockServer({ source: api, log: \"silent\", seed: { count: 3 },\n" +
+      'export default defineMocks({ apiMock: defineMockServer({ source: api, log: "silent", seed: { count: 3 },\n' +
       '  overrides: (mock) => { mock("live", "ticker").emits([{ data: { n: 1 } }, { data: { n: 2 } }]); },\n' +
       "}) });\n",
   );
@@ -80,7 +83,9 @@ async function startMock() {
   async function command(action: string, payload: Record<string, unknown>): Promise<SentEvent> {
     const before = networkEvents().length;
     pm.sendCommand("apiMock", { action, ...payload });
-    await vi.waitFor(() => expect(networkEvents().length).toBeGreaterThan(before), { timeout: 5_000 });
+    await vi.waitFor(() => expect(networkEvents().length).toBeGreaterThan(before), {
+      timeout: 5_000,
+    });
     return networkEvents().at(-1) ?? {};
   }
   function networkEvents(): SentEvent[] {
@@ -95,8 +100,12 @@ async function startMock() {
     return replies.map((reply) => reply.status);
   }
   /** Send a store command and wait for the store snapshot it answers with. */
-  async function storeCommand(action: string, payload: Record<string, unknown> = {}): Promise<SentEvent> {
-    const snapshots = () => events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:store:snapshot");
+  async function storeCommand(
+    action: string,
+    payload: Record<string, unknown> = {},
+  ): Promise<SentEvent> {
+    const snapshots = () =>
+      events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:store:snapshot");
     const before = snapshots().length;
     pm.sendCommand("apiMock", { action, ...payload });
     await vi.waitFor(() => expect(snapshots().length).toBeGreaterThan(before), { timeout: 5_000 });
@@ -125,10 +134,20 @@ describe("the network controls of a managed mock", () => {
   it("keeps the global chaos and latency when a per-route override is set", async () => {
     const mock = await startMock();
     await mock.command("mock:chaos:set", { config: DOWN, preset: "down" });
-    await mock.command("mock:network:set", { config: { latency: { min: 20, max: 30 } }, preset: "3g" });
+    await mock.command("mock:network:set", {
+      config: { latency: { min: 20, max: 30 } },
+      preset: "3g",
+    });
 
-    const override = { routeId: "users:get", enabled: true, latency: { min: 0, max: 0 }, errorRate: 0 };
-    const event = await mock.command("mock:network:set", { config: { routeOverrides: [override] } });
+    const override = {
+      routeId: "users:get",
+      enabled: true,
+      latency: { min: 0, max: 0 },
+      errorRate: 0,
+    };
+    const event = await mock.command("mock:network:set", {
+      config: { routeOverrides: [override] },
+    });
 
     expect(await mock.statuses("/users", 5)).toEqual([503, 503, 503, 503, 503]);
     expect(await mock.statuses("/users/1", 3)).toEqual([200, 200, 200]);
@@ -143,7 +162,10 @@ describe("the network controls of a managed mock", () => {
   it("turns latency off without touching the chaos", async () => {
     const mock = await startMock();
     await mock.command("mock:chaos:set", { config: DOWN, preset: "down" });
-    await mock.command("mock:network:set", { config: { latency: { min: 20, max: 30 } }, preset: "3g" });
+    await mock.command("mock:network:set", {
+      config: { latency: { min: 20, max: 30 } },
+      preset: "3g",
+    });
 
     const event = await mock.command("mock:network:set", {
       config: { latency: 0, bandwidth: 0 },
@@ -158,10 +180,14 @@ describe("the network controls of a managed mock", () => {
 describe("the Reset store control of a managed mock", () => {
   it("reseeds the store and leaves the network settings as they are", async () => {
     const mock = await startMock();
-    await mock.storeCommand("mock:store:create", { collection: "users", record: { name: "Extra" } });
+    await mock.storeCommand("mock:store:create", {
+      collection: "users",
+      record: { name: "Extra" },
+    });
     await mock.command("mock:chaos:set", { config: DOWN, preset: "down" });
     const networkEvents = () =>
-      mock.events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:network:config").length;
+      mock.events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:network:config")
+        .length;
     const before = networkEvents();
 
     const snapshot = await mock.storeCommand("mock:server:reset");

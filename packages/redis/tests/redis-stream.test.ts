@@ -98,10 +98,7 @@ function createMockRedis() {
 
 type MockRedis = ReturnType<typeof createMockRedis>;
 
-function createConfig(
-  redis: MockRedis,
-  overrides?: Partial<RedisStreamConfig>,
-): RedisStreamConfig {
+function createConfig(redis: MockRedis, overrides?: Partial<RedisStreamConfig>): RedisStreamConfig {
   return {
     redis: redis as unknown as RedisStreamConfig["redis"],
     ...overrides,

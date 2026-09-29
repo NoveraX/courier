@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-
-import { startPush, startChannel } from "../src/adapter/ws-endpoints";
 import type { WSSocketContext } from "../src/adapter/ws-context";
+import { startChannel, startPush } from "../src/adapter/ws-endpoints";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 
 // ---------------------------------------------------------------------------
@@ -199,7 +198,9 @@ describe("startPush", () => {
   });
 
   it("throws on when handler init throws, for the subscribe flow to refuse once", () => {
-    const handler = () => { throw new Error("Init boom"); };
+    const handler = () => {
+      throw new Error("Init boom");
+    };
     const { ctx, sent } = createMockCtx();
 
     expect(() => startPush(ctx, "topic", handler, {})).toThrow("Init boom");
@@ -331,7 +332,9 @@ describe("startChannel", () => {
 
   it("rolls back subscription and rethrows when onJoin throws", async () => {
     const factory = () => ({
-      onJoin: () => { throw new Error("Auth failed"); },
+      onJoin: () => {
+        throw new Error("Auth failed");
+      },
     });
     const { ctx, sent } = createMockCtx();
 
@@ -345,7 +348,9 @@ describe("startChannel", () => {
   });
 
   it("throws on when the factory throws, for the subscribe flow to refuse once", async () => {
-    const factory = () => { throw new Error("Bad factory"); };
+    const factory = () => {
+      throw new Error("Bad factory");
+    };
     const { ctx, sent } = createMockCtx();
 
     await expect(startChannel(ctx, "topic", factory, {})).rejects.toThrow("Bad factory");
@@ -355,7 +360,9 @@ describe("startChannel", () => {
   it("catches onLeave errors during cleanup without throwing", async () => {
     const factory = () => ({
       onJoin: vi.fn(),
-      onLeave: () => { throw new Error("Cleanup boom"); },
+      onLeave: () => {
+        throw new Error("Cleanup boom");
+      },
     });
     const { ctx, subscriptions } = createMockCtx();
 
@@ -368,7 +375,9 @@ describe("startChannel", () => {
   it("catches onMessage errors and sends error to client", async () => {
     const factory = () => ({
       onJoin: vi.fn(),
-      onMessage: () => { throw new Error("Bad payload"); },
+      onMessage: () => {
+        throw new Error("Bad payload");
+      },
     });
     const { ctx, sent, subscriptions } = createMockCtx();
 

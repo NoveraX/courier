@@ -13,7 +13,11 @@ import { registerSources } from "../src/sources";
 
 describe("registerSources", () => {
   it("refuses a key that contradicts the name given to defineApi", () => {
-    const billing = defineApi({ name: "payments", baseURL: "https://billing.example", endpoints: {} });
+    const billing = defineApi({
+      name: "payments",
+      baseURL: "https://billing.example",
+      endpoints: {},
+    });
 
     expect(() => registerSources({ api: billing })).toThrow(
       expect.objectContaining({ code: "SOURCE_KEY_MISMATCH" }),
@@ -29,7 +33,11 @@ describe("registerSources", () => {
   });
 
   it("accepts a chosen name registered under that same key", () => {
-    const payments = defineApi({ name: "payments", baseURL: "https://billing.example", endpoints: {} });
+    const payments = defineApi({
+      name: "payments",
+      baseURL: "https://billing.example",
+      endpoints: {},
+    });
 
     expect(() => registerSources({ payments })).not.toThrow();
   });

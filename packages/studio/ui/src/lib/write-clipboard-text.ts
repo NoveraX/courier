@@ -31,7 +31,9 @@ export async function writeClipboardText(text: string): Promise<void> {
     refusal === null
       ? "Copying needs a secure page (https or localhost)"
       : `The browser refused to copy (${refusal instanceof Error ? refusal.message : String(refusal)})`;
-  throw new Error(`${reason}. Select the text and copy it with the keyboard instead.`, { cause: refusal });
+  throw new Error(`${reason}. Select the text and copy it with the keyboard instead.`, {
+    cause: refusal,
+  });
 }
 
 /* Inside a modal dialog focus may not leave it, and a selection that loses

@@ -15,6 +15,7 @@
  */
 
 import type { BindingTransport } from "./catalog/binding-table";
+import { hasDangerousKeys } from "./has-dangerous-keys";
 import { isPlainObject } from "./is-plain-object";
 import { type PlaygroundFormField, sanitizeForm } from "./playground-form";
 
@@ -43,9 +44,10 @@ export function sanitizeExec(raw: unknown): PlaygroundExecPayload | null {
     return null;
   }
   if (raw.transport !== "http" && raw.transport !== "sse" && raw.transport !== "ws") return null;
-  if (hasDangerousKeys(raw.variables) || hasDangerousKeys(raw.headers)) return null;
+  if (hasDangerousKeys(raw.variables)) return null;
+  const headers = readHeaders(raw.headers);
   const form = sanitizeForm(raw.form);
-  if (form === null) return null;
+  if (headers === null || form === null) return null;
   return {
     ...(form && { form }),
     rid: raw.rid,
@@ -55,25 +57,8 @@ export function sanitizeExec(raw: unknown): PlaygroundExecPayload | null {
     transport: raw.transport,
     mode: raw.mode === "proxy" ? "proxy" : "direct",
     variables: raw.variables,
-    headers:
-      raw.headers && typeof raw.headers === "object"
-        ? (raw.headers as Record<string, string>)
-        : undefined,
+    ...(headers && { headers }),
   };
-}
-
-/**
- * Reject objects whose own keys collide with `Object.prototype` slots so a
- * malicious wire payload cannot smuggle a `__proto__` / `constructor` /
- * `prototype` key into a downstream `Object.assign` / spread operation.
- */
-export function hasDangerousKeys(value: unknown): boolean {
-  if (!value || typeof value !== "object") return false;
-  return (
-    Object.hasOwn(value, "__proto__") ||
-    Object.hasOwn(value, "constructor") ||
-    Object.hasOwn(value, "prototype")
-  );
 }
 
 export function sanitizeRidOnly(raw: unknown): { rid: string } | null {
@@ -103,4 +88,17 @@ export function sanitizeWrite(raw: unknown): PlaygroundWritePayload | null {
   if (!("data" in raw)) return null;
   if (hasDangerousKeys(raw.data)) return null;
   return { rid: raw.rid, data: raw.data };
+}
+
+/* Header values reach the runtime's request as they are, so each is a
+   string; anything else makes the payload malformed. */
+function readHeaders(raw: unknown): Record<string, string> | undefined | null {
+  if (raw === undefined || raw === null) return undefined;
+  if (!isPlainObject(raw) || hasDangerousKeys(raw)) return null;
+  const headers: Record<string, string> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (typeof value !== "string") return null;
+    headers[name] = value;
+  }
+  return headers;
 }

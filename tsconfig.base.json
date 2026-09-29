@@ -11,6 +11,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "verbatimModuleSyntax": true,
     "moduleResolution": "bundler",
     /* Build and test config files are loaded by Vite and tsdown through
        Node, which resolves a relative TypeScript import only with its

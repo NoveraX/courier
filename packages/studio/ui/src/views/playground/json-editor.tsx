@@ -1,5 +1,5 @@
-import { useCallback, useRef } from "react";
 import { WandSparkles } from "lucide-react";
+import { useCallback, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,47 +32,56 @@ export function JsonEditor({
   /* An empty editor holds nothing to send, which is not an error. */
   const isValid = value.trim() === "" || isValidJsonc(value);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const ta = e.currentTarget;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const ta = e.currentTarget;
 
-    // Cmd+Enter or Ctrl+Enter → submit
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && onSubmit) {
+      // Cmd+Enter or Ctrl+Enter → submit
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && onSubmit) {
+        e.preventDefault();
+        e.stopPropagation();
+        onSubmit();
+        return;
+      }
+
+      // Cmd+/ or Ctrl+/ → toggle line comment
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+        const { text, start, end } = toggleComment(value, ta.selectionStart, ta.selectionEnd);
+        onChange(text);
+        requestAnimationFrame(() => {
+          ta.selectionStart = start;
+          ta.selectionEnd = end;
+        });
+        return;
+      }
+
+      if (e.key !== "Tab") return;
       e.preventDefault();
-      e.stopPropagation();
-      onSubmit();
-      return;
-    }
+      const { selectionStart: start, selectionEnd: end } = ta;
 
-    // Cmd+/ or Ctrl+/ → toggle line comment
-    if ((e.metaKey || e.ctrlKey) && e.key === "/") {
-      e.preventDefault();
-      const { text, start, end } = toggleComment(value, ta.selectionStart, ta.selectionEnd);
-      onChange(text);
-      requestAnimationFrame(() => { ta.selectionStart = start; ta.selectionEnd = end; });
-      return;
-    }
-
-    if (e.key !== "Tab") return;
-    e.preventDefault();
-    const { selectionStart: start, selectionEnd: end } = ta;
-
-    if (e.shiftKey) {
-      const before = value.slice(0, start);
-      const lineStart = before.lastIndexOf("\n") + 1;
-      if (value.slice(lineStart, lineStart + 2) === "  ") {
-        const next = value.slice(0, lineStart) + value.slice(lineStart + 2);
+      if (e.shiftKey) {
+        const before = value.slice(0, start);
+        const lineStart = before.lastIndexOf("\n") + 1;
+        if (value.slice(lineStart, lineStart + 2) === "  ") {
+          const next = value.slice(0, lineStart) + value.slice(lineStart + 2);
+          onChange(next);
+          requestAnimationFrame(() => {
+            ta.selectionStart = Math.max(start - 2, lineStart);
+            ta.selectionEnd = Math.max(end - 2, lineStart);
+          });
+        }
+      } else {
+        const next = `${value.slice(0, start)}  ${value.slice(end)}`;
         onChange(next);
         requestAnimationFrame(() => {
-          ta.selectionStart = Math.max(start - 2, lineStart);
-          ta.selectionEnd = Math.max(end - 2, lineStart);
+          ta.selectionStart = start + 2;
+          ta.selectionEnd = start + 2;
         });
       }
-    } else {
-      const next = value.slice(0, start) + "  " + value.slice(end);
-      onChange(next);
-      requestAnimationFrame(() => { ta.selectionStart = start + 2; ta.selectionEnd = start + 2; });
-    }
-  }, [value, onChange, onSubmit]);
+    },
+    [value, onChange, onSubmit],
+  );
 
   const handlePrettify = useCallback(() => {
     try {
@@ -93,7 +102,9 @@ export function JsonEditor({
           isValid ? "border-border-subtle" : "border-rose-500/30",
         )}
       >
-        {value ? highlightJsonc(value) : (
+        {value ? (
+          highlightJsonc(value)
+        ) : (
           <span className="text-muted-foreground/30">{placeholder}</span>
         )}
       </div>

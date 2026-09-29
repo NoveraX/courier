@@ -1,5 +1,5 @@
+import type { ProxyTiming, RequestTiming } from "@/store/types-events";
 import type { RequestEntry } from "@/store/types-request";
-import type { RequestTiming, ProxyTiming } from "@/store/types-events";
 
 import type { HeaderDiff, TimingComparison } from "./types";
 
@@ -49,10 +49,10 @@ function buildTimingPhases(
   const phases: Record<string, number> = {};
 
   if (timing) {
-    phases["Total"] = timing.total;
-    phases["Middleware"] = timing.middleware;
-    phases["Fetch"] = timing.fetch;
-    phases["Validation"] = timing.validation;
+    phases.Total = timing.total;
+    phases.Middleware = timing.middleware;
+    phases.Fetch = timing.fetch;
+    phases.Validation = timing.validation;
   }
 
   if (proxy) {
@@ -65,10 +65,7 @@ function buildTimingPhases(
   return phases;
 }
 
-export function computeTimingDiff(
-  left: RequestEntry,
-  right: RequestEntry,
-): TimingComparison[] {
+export function computeTimingDiff(left: RequestEntry, right: RequestEntry): TimingComparison[] {
   const leftPhases = buildTimingPhases(left.timing, left.proxyTiming);
   const rightPhases = buildTimingPhases(right.timing, right.proxyTiming);
   const allPhases = [...new Set([...Object.keys(leftPhases), ...Object.keys(rightPhases)])];

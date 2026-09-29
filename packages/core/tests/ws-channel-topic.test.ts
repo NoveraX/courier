@@ -177,8 +177,9 @@ describe("defining a topic key", () => {
       channel.variables(members).topic(() => () => "r1");
       // @ts-expect-error — only a channel has subscribers to share a topic
       stream.variables(members).topic((v) => v.room);
+      const served = channel.variables(members).connect("room");
       // @ts-expect-error — a channel another process serves has its topics decided there
-      channel.variables(members).connect("room").topic((v) => v.room);
+      served.topic((v) => v.room);
     };
 
     expect(typeChecks).toBeTypeOf("function");

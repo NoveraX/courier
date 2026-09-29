@@ -1,11 +1,10 @@
-import { useRef, useCallback } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { ZoomIn, ZoomOut, Maximize, Map } from "lucide-react";
-
+import { Map as MapIcon, Maximize, ZoomIn, ZoomOut } from "lucide-react";
+import { useCallback, useRef } from "react";
+import { ToolbarButton } from "@/components/shared/toolbar-button";
 import type { ExplorerLayout, ExplorerMetricMode } from "../../types";
 import { LayoutToggle } from "./layout-toggle";
 import { MetricModeSelect } from "./metric-mode-select";
-import { ToolbarButton } from "@/components/shared/toolbar-button";
 import { SearchInput } from "./search-input";
 import { useGraphShortcuts } from "./use-graph-shortcuts";
 
@@ -43,10 +42,7 @@ export function GraphToolbar({
 
   useGraphShortcuts(inputRef, fitView);
 
-  const handleFitView = useCallback(
-    () => fitView({ padding: 0.15, duration: 300 }),
-    [fitView],
-  );
+  const handleFitView = useCallback(() => fitView({ padding: 0.15, duration: 300 }), [fitView]);
 
   return (
     <div className="absolute top-3 left-3 right-3 z-10 flex items-center gap-2">
@@ -69,14 +65,18 @@ export function GraphToolbar({
 
       {/* Zoom controls */}
       <div className="flex items-center gap-0.5">
-        <ToolbarButton icon={ZoomOut} tooltip="Zoom out" onClick={() => zoomOut({ duration: 200 })} />
+        <ToolbarButton
+          icon={ZoomOut}
+          tooltip="Zoom out"
+          onClick={() => zoomOut({ duration: 200 })}
+        />
         <ToolbarButton icon={ZoomIn} tooltip="Zoom in" onClick={() => zoomIn({ duration: 200 })} />
         <ToolbarButton icon={Maximize} tooltip="Fit to view" kbd="mod+0" onClick={handleFitView} />
       </div>
 
       {/* Minimap toggle */}
       <ToolbarButton
-        icon={Map}
+        icon={MapIcon}
         tooltip={showMinimap ? "Hide minimap" : "Show minimap"}
         onClick={onToggleMinimap}
         active={showMinimap}

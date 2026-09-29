@@ -5,10 +5,7 @@
  * two described the same options twice and drifted.
  */
 import { describe, expect, it } from "vitest";
-
 import * as react from "../src/index";
-// @ts-expect-error the untyped hooks' option type is internal
-import type { UseComputedQueryOptions } from "../src/index";
 
 describe("the package entry", () => {
   it("keeps the untyped realtime hooks to itself", () => {

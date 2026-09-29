@@ -42,11 +42,13 @@ function namesApi() {
         endpoints: {
           valueOf: endpoint.get("value-of"),
           toJSON: endpoint.get("to-json"),
+          // biome-ignore lint/suspicious/noThenProperty: an endpoint named "then" must not make the client read as a promise
           then: endpoint.get("then"),
           list: endpoint.get(""),
         },
       }),
       valueOf: defineGroup({ prefix: "value-group", endpoints: { list: endpoint.get("") } }),
+      // biome-ignore lint/suspicious/noThenProperty: a group named "then" must not make the client read as a promise
       then: defineGroup({ prefix: "then-group", endpoints: { list: endpoint.get("") } }),
     },
   });
@@ -158,7 +160,11 @@ describe("a proxy client given a boundary", () => {
 describe("a client without those names in its source", () => {
   it("is not taken for a promise", async () => {
     const client = createCaller(
-      defineApi({ name: "plain", baseURL: upstream.url, endpoints: { ping: endpoint.get("ping") } }),
+      defineApi({
+        name: "plain",
+        baseURL: upstream.url,
+        endpoints: { ping: endpoint.get("ping") },
+      }),
     );
 
     expect(await Promise.resolve(client)).toBe(client);

@@ -1,13 +1,9 @@
-import { Controller } from "react-hook-form";
 import { Plus, X } from "lucide-react";
-
 import type { UseFormReturn } from "react-hook-form";
-import type { Settings } from "@/store/types";
-
+import { Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -15,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import type { Settings } from "@/store/types";
 import { MAX_REQUESTS_OPTIONS } from "./constants";
 import { SettingRow } from "./setting-row";
 
@@ -24,23 +22,15 @@ interface RecordingSectionProps {
   form: UseFormReturn<Settings>;
 }
 
-export function RecordingSection({
-  form,
-}: RecordingSectionProps): React.ReactElement {
+export function RecordingSection({ form }: RecordingSectionProps): React.ReactElement {
   return (
     <>
-      <SettingRow
-        label="Max requests"
-        description="Maximum number of requests kept in memory"
-      >
+      <SettingRow label="Max requests" description="Maximum number of requests kept in memory">
         <Controller
           control={form.control}
           name="maxRequests"
           render={({ field }) => (
-            <Select
-              value={String(field.value)}
-              onValueChange={(v) => field.onChange(Number(v))}
-            >
+            <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
               <SelectTrigger className="w-28" size="sm">
                 <SelectValue />
               </SelectTrigger>
@@ -65,11 +55,7 @@ export function RecordingSection({
           control={form.control}
           name="preserveLog"
           render={({ field }) => (
-            <Switch
-              id="preserveLog"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
+            <Switch id="preserveLog" checked={field.value} onCheckedChange={field.onChange} />
           )}
         />
       </SettingRow>
@@ -81,11 +67,7 @@ export function RecordingSection({
 
 // ── Ignore patterns ──────────────────────────────────────────────────────────
 
-function IgnorePatternsField({
-  form,
-}: {
-  form: UseFormReturn<Settings>;
-}): React.ReactElement {
+function IgnorePatternsField({ form }: { form: UseFormReturn<Settings> }): React.ReactElement {
   const patterns = form.watch("ignorePatterns");
 
   function addPattern(): void {
@@ -121,6 +103,7 @@ function IgnorePatternsField({
         </Button>
       </div>
       {patterns.map((pattern, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: controlled inputs over a plain list of strings; an entry's place is its identity
         <div key={i} className="flex items-center gap-2">
           <Input
             value={pattern}

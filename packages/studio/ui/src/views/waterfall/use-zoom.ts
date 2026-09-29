@@ -1,7 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
-
+import { useCallback, useEffect, useState } from "react";
+import { MS_PER_PX_BASE, ZOOM_LIMITS, ZOOM_STEP } from "./constants";
 import type { ZoomState } from "./types";
-import { ZOOM_LIMITS, ZOOM_STEP, MS_PER_PX_BASE } from "./constants";
 
 interface ZoomActions {
   zoom: ZoomState;
@@ -12,11 +11,12 @@ interface ZoomActions {
   handleWheelZoom: (deltaY: number, clientX: number, canvasLeft: number) => void;
 }
 
+function clamp(scale: number): number {
+  return Math.min(ZOOM_LIMITS.max, Math.max(ZOOM_LIMITS.min, scale));
+}
+
 export function useZoom(): ZoomActions {
   const [zoom, setZoom] = useState<ZoomState>({ scale: 1, panX: 0 });
-
-  const clamp = (scale: number): number =>
-    Math.min(ZOOM_LIMITS.max, Math.max(ZOOM_LIMITS.min, scale));
 
   const zoomIn = useCallback(() => {
     setZoom((z) => ({ ...z, scale: clamp(z.scale * ZOOM_STEP) }));
@@ -35,27 +35,33 @@ export function useZoom(): ZoomActions {
     setZoom({ scale: fitScale, panX: 0 });
   }, []);
 
-  const handleWheelZoom = useCallback(
-    (deltaY: number, clientX: number, canvasLeft: number) => {
-      setZoom((z) => {
-        const factor = deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
-        const newScale = clamp(z.scale * factor);
-        const cursorOffset = clientX - canvasLeft + z.panX;
-        const newPanX = cursorOffset * (newScale / z.scale) - (clientX - canvasLeft);
-        return { scale: newScale, panX: Math.max(0, newPanX) };
-      });
-    },
-    [],
-  );
+  const handleWheelZoom = useCallback((deltaY: number, clientX: number, canvasLeft: number) => {
+    setZoom((z) => {
+      const factor = deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
+      const newScale = clamp(z.scale * factor);
+      const cursorOffset = clientX - canvasLeft + z.panX;
+      const newPanX = cursorOffset * (newScale / z.scale) - (clientX - canvasLeft);
+      return { scale: newScale, panX: Math.max(0, newPanX) };
+    });
+  }, []);
 
   // Keyboard shortcuts: +/= zoom in, - zoom out, 0 reset
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      if (e.key === "=" || e.key === "+") { e.preventDefault(); zoomIn(); }
-      if (e.key === "-") { e.preventDefault(); zoomOut(); }
-      if (e.key === "0") { e.preventDefault(); resetZoom(); }
+      if (e.key === "=" || e.key === "+") {
+        e.preventDefault();
+        zoomIn();
+      }
+      if (e.key === "-") {
+        e.preventDefault();
+        zoomOut();
+      }
+      if (e.key === "0") {
+        e.preventDefault();
+        resetZoom();
+      }
     }
 
     document.addEventListener("keydown", onKeyDown);

@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import type * as CourierModule from "@noverax/courier";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@noverax/courier", async (importOriginal) => {
   const actual = await importOriginal<typeof CourierModule>();
@@ -11,12 +11,39 @@ vi.mock("@noverax/courier", async (importOriginal) => {
       handleGet: vi.fn(),
       handlePost: vi.fn(),
       handleSSE: vi.fn(),
-      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      sseConnections: {
+        count: 0,
+        isShuttingDown: false,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        getByEndpoint: vi.fn(() => []),
+        disconnect: vi.fn(),
+        disconnectAll: vi.fn(),
+        send: vi.fn(() => true),
+        broadcastToEndpoint: vi.fn(() => new Map()),
+        broadcastToMeta: vi.fn(() => new Map()),
+        broadcastAll: vi.fn(() => new Map()),
+      },
       shutdownSSE: vi.fn(),
     })),
     createWSHandler: vi.fn(() => ({
       handleSocket: vi.fn(),
-      connections: { count: 0, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), send: vi.fn(), broadcast: vi.fn(), broadcastToTopic: vi.fn(), broadcastToBaseTopic: vi.fn(), sendToConnection: vi.fn(), disconnect: vi.fn(), disconnectByMeta: vi.fn() },
+      connections: {
+        count: 0,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        send: vi.fn(),
+        broadcast: vi.fn(),
+        broadcastToTopic: vi.fn(),
+        broadcastToBaseTopic: vi.fn(),
+        sendToConnection: vi.fn(),
+        disconnect: vi.fn(),
+        disconnectByMeta: vi.fn(),
+      },
       destroy: vi.fn(),
     })),
   };
@@ -42,13 +69,25 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
     handleGet: vi.fn(),
     handlePost: vi.fn(),
     handleSSE: vi.fn(),
-    sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+    sseConnections: {
+      count: 0,
+      isShuttingDown: false,
+      get: vi.fn(),
+      has: vi.fn(),
+      list: vi.fn(() => []),
+      getByMeta: vi.fn(() => []),
+      getByEndpoint: vi.fn(() => []),
+      disconnect: vi.fn(),
+      disconnectAll: vi.fn(),
+      send: vi.fn(() => true),
+      broadcastToEndpoint: vi.fn(() => new Map()),
+      broadcastToMeta: vi.fn(() => new Map()),
+      broadcastAll: vi.fn(() => new Map()),
+    },
     shutdownSSE: vi.fn(),
     ...overrides,
   };
 }
-
-
 
 describe("courierMiddleware", () => {
   it("returns a function", () => {
@@ -99,7 +138,11 @@ describe("courierMiddleware", () => {
     const next = vi.fn();
 
     const { Readable } = require("node:stream");
-    const raw = new Readable({ read() { this.push(null); } });
+    const raw = new Readable({
+      read() {
+        this.push(null);
+      },
+    });
     raw.method = "GET";
     raw.url = "/api/request?_s=api&_m=list";
     raw.headers = { host: "localhost" };
@@ -165,7 +208,7 @@ describe("courierSSEMiddleware", () => {
         headers: {
           "content-type": "text/event-stream",
           "cache-control": "no-cache, no-transform",
-          "connection": "keep-alive",
+          connection: "keep-alive",
           "x-accel-buffering": "no",
         },
       }),
@@ -193,7 +236,11 @@ describe("courierSSEMiddleware", () => {
     const next = vi.fn();
 
     const { Readable } = require("node:stream");
-    const raw = new Readable({ read() { this.push(null); } });
+    const raw = new Readable({
+      read() {
+        this.push(null);
+      },
+    });
     raw.method = "GET";
     raw.url = "/api/sse?_s=api&_m=feed";
     raw.headers = { host: "localhost" };
@@ -235,7 +282,7 @@ function makeNodeRequest(
       };
       try {
         await handler(req, res, next);
-      } catch (err) {
+      } catch {
         res.writeHead(500);
         res.end();
       }

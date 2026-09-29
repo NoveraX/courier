@@ -1,8 +1,8 @@
-import { MetricCard } from "../metric-card";
-import type { EndpointDetail } from "../../use-endpoint-metrics";
-import type { NodeMetrics } from "../../types";
-import { HEALTH_COLORS } from "../../constants";
 import { getHealthLevel } from "../../compute-metrics";
+import { HEALTH_COLORS } from "../../constants";
+import type { NodeMetrics } from "../../types";
+import type { EndpointDetail } from "../../use-endpoint-metrics";
+import { MetricCard } from "../metric-card";
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +44,7 @@ export function OverviewTab({ detail }: OverviewTabProps): React.ReactElement {
           label="Errors"
           value={hasData ? String(metrics.errorCount) : "—"}
           valueColor={metrics.errorCount > 0 ? "text-rose-400" : undefined}
-          subtitle={hasData ? formatBytes(metrics.avgSize) + " avg size" : undefined}
+          subtitle={hasData ? `${formatBytes(metrics.avgSize)} avg size` : undefined}
         />
       </div>
 
@@ -97,9 +97,16 @@ function PercentileBar({
       </div>
 
       <div className="mt-2 flex justify-between text-body-xs text-muted-foreground/60">
-        <span>P50: <span className="text-emerald-400 tabular-nums">{hasData ? formatMs(p50) : "—"}</span></span>
-        <span>P95: <span className="text-amber-400 tabular-nums">{hasData ? formatMs(p95) : "—"}</span></span>
-        <span>P99: <span className="text-rose-400 tabular-nums">{hasData ? formatMs(p99) : "—"}</span></span>
+        <span>
+          P50:{" "}
+          <span className="text-emerald-400 tabular-nums">{hasData ? formatMs(p50) : "—"}</span>
+        </span>
+        <span>
+          P95: <span className="text-amber-400 tabular-nums">{hasData ? formatMs(p95) : "—"}</span>
+        </span>
+        <span>
+          P99: <span className="text-rose-400 tabular-nums">{hasData ? formatMs(p99) : "—"}</span>
+        </span>
       </div>
     </div>
   );

@@ -53,7 +53,13 @@ describe("the options step's target directory", () => {
   it("shows Studio's reason when it refuses the directory", async () => {
     vi.mocked(post).mockRejectedValue(new Error('The import\'s outputDir "../lib" is refused'));
 
-    render(<OptionsStepView options={{ ...OPTIONS, outputDir: "../lib" }} error={null} onChange={() => {}} />);
+    render(
+      <OptionsStepView
+        options={{ ...OPTIONS, outputDir: "../lib" }}
+        error={null}
+        onChange={() => {}}
+      />,
+    );
 
     await waitFor(() => expect(screen.getByText(/outputDir "\.\.\/lib" is refused/)).toBeTruthy());
   });
@@ -63,12 +69,27 @@ describe("the options step's target directory, as the options change", () => {
   it("drops the previous directory until Studio answers for the new options", async () => {
     let answer: (value: unknown) => void = () => {};
     vi.mocked(post)
-      .mockResolvedValueOnce({ dir: "src/api/pet-store", sourceFile: "", sourceBinding: "petStore" })
-      .mockImplementationOnce(() => new Promise((resolve) => void (answer = resolve)));
+      .mockResolvedValueOnce({
+        dir: "src/api/pet-store",
+        sourceFile: "",
+        sourceBinding: "petStore",
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            answer = resolve;
+          }),
+      );
     const view = render(<OptionsStepView options={OPTIONS} error={null} onChange={() => {}} />);
     await screen.findByText("src/api/pet-store");
 
-    view.rerender(<OptionsStepView options={{ ...OPTIONS, outputDir: "lib" }} error={null} onChange={() => {}} />);
+    view.rerender(
+      <OptionsStepView
+        options={{ ...OPTIONS, outputDir: "lib" }}
+        error={null}
+        onChange={() => {}}
+      />,
+    );
 
     expect(screen.queryByText("src/api/pet-store")).toBeNull();
     await waitFor(() => expect(vi.mocked(post)).toHaveBeenCalledTimes(2));

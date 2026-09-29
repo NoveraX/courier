@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-
 import type { PresenceDiff } from "@noverax/courier/realtime";
+import { describe, expect, it, vi } from "vitest";
 import { createRedisPresence } from "../src/redis-presence";
 
 /**
@@ -32,7 +31,6 @@ function createFailingRedis(failure: Error) {
   };
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: the mock stands in for an ioredis client
 function presenceOver(redis: unknown) {
   return createRedisPresence({ redis: redis as any });
 }

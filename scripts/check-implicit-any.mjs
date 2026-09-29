@@ -54,12 +54,16 @@ const COMPARISONS = new Set([
  * // → [{ file: "/repo/src/read.ts", line: 3, column: 9, name: "body" }]
  */
 export function findImplicitAny(tsconfig, sources) {
-  const config = ts.getParsedCommandLineOfConfigFile(resolve(tsconfig), {}, {
-    ...ts.sys,
-    onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
-      throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+  const config = ts.getParsedCommandLineOfConfigFile(
+    resolve(tsconfig),
+    {},
+    {
+      ...ts.sys,
+      onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
+        throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
+      },
     },
-  });
+  );
   const program = ts.createProgram(config.fileNames, config.options);
   const checker = program.getTypeChecker();
   const found = [];
@@ -74,7 +78,9 @@ function visit(node, file, checker, found) {
   if (isTypeLevel(node)) return;
   if (isRead(node) && isAny(checker.getTypeAtLocation(node)) && !isHarmless(node, checker)) {
     const { line, character } = file.getLineAndCharacterOfPosition(node.getStart(file));
-    const name = ts.isIdentifier(node) ? node.text : node.getText(file).replace(/\s+/g, " ").slice(0, 60);
+    const name = ts.isIdentifier(node)
+      ? node.text
+      : node.getText(file).replace(/\s+/g, " ").slice(0, 60);
     found.push({ file: file.fileName, line: line + 1, column: character + 1, name });
   }
   ts.forEachChild(node, (child) => visit(child, file, checker, found));
@@ -110,7 +116,9 @@ function isValueName(node) {
 }
 
 function isJsxTag(node) {
-  return ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxClosingElement(node);
+  return (
+    ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxClosingElement(node)
+  );
 }
 
 function isAny(type) {
@@ -123,7 +131,8 @@ function isAny(type) {
 function isHarmless(node, checker) {
   if (isDeclaredName(node)) return false;
   let read = node;
-  while (read.parent && ts.isPropertyAccessExpression(read.parent) && read.parent.name === read) read = read.parent;
+  while (read.parent && ts.isPropertyAccessExpression(read.parent) && read.parent.name === read)
+    read = read.parent;
   while (read.parent && isPassThrough(read.parent)) read = read.parent;
   if (read.parent && isInspection(read.parent, read)) return true;
   const place = checker.getContextualType(read);
@@ -140,18 +149,27 @@ function isDeclaredName(node) {
 }
 
 function isPassThrough(node) {
-  return ts.isParenthesizedExpression(node) || ts.isNonNullExpression(node) || ts.isAwaitExpression(node);
+  return (
+    ts.isParenthesizedExpression(node) || ts.isNonNullExpression(node) || ts.isAwaitExpression(node)
+  );
 }
 
 /* Thrown away, compared, or tested for its type or its truth. */
 function isInspection(parent, read) {
-  if (ts.isExpressionStatement(parent) || ts.isVoidExpression(parent) || ts.isTypeOfExpression(parent)) {
+  if (
+    ts.isExpressionStatement(parent) ||
+    ts.isVoidExpression(parent) ||
+    ts.isTypeOfExpression(parent)
+  ) {
     return true;
   }
   if (ts.isPrefixUnaryExpression(parent)) return parent.operator === ts.SyntaxKind.ExclamationToken;
   if (!ts.isBinaryExpression(parent)) return false;
   const operator = parent.operatorToken.kind;
-  return COMPARISONS.has(operator) || (operator === ts.SyntaxKind.InstanceOfKeyword && parent.left === read);
+  return (
+    COMPARISONS.has(operator) ||
+    (operator === ts.SyntaxKind.InstanceOfKeyword && parent.left === read)
+  );
 }
 
 function main() {
@@ -166,10 +184,12 @@ function main() {
     console.log("check-implicit-any: no value typed any is used unchecked");
     return;
   }
-  console.error(`\ncheck-implicit-any: ${count} value(s) typed any. Read each into unknown and check it.`);
+  console.error(
+    `\ncheck-implicit-any: ${count} value(s) typed any. Read each into unknown and check it.`,
+  );
   exit(1);
 }
 
 // Only run as CLI when invoked directly (not when imported by the self-test).
-const invokedAsScript = argv[1] && argv[1].endsWith("check-implicit-any.mjs");
+const invokedAsScript = argv[1]?.endsWith("check-implicit-any.mjs");
 if (invokedAsScript) main();

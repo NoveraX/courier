@@ -1,5 +1,4 @@
 import { Clock, RotateCw, Square, Trash2 } from "lucide-react";
-import { useElapsed } from "@/hooks/use-tick";
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,15 +9,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useElapsed } from "@/hooks/use-tick";
+import { ownValue } from "@/lib/own-value";
 import { cn } from "@/lib/utils";
 import { getSocket } from "@/socket";
+import type { LatencyPreset, MockServerInfo } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
 import { stopAllFaults } from "@/views/mocks/network/stop-all-faults";
-import { ServerAddress } from "./server-address";
-
-import type { LatencyPreset, MockServerInfo } from "@/store/mock-slice";
-import { ownValue } from "@/lib/own-value";
 import { PRESET_VALUES } from "../network/latency-presets";
+import { ServerAddress } from "./server-address";
 
 interface StatusBarProps {
   server: MockServerInfo;
@@ -41,17 +40,23 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
   };
 
   // Latency preset value for segmented control — show "none" for custom (managed via Network page)
-  const latencyValue: LatencyPreset = server.latencyPreset === "custom" ? "none" : server.latencyPreset;
+  const latencyValue: LatencyPreset =
+    server.latencyPreset === "custom" ? "none" : server.latencyPreset;
 
   const handleLatencyChange = (preset: string) => {
     if (preset === "none") {
-      useMockStore.getState().updateServer(server.serverId, { latencyPreset: "none", latencyStartedAt: null });
+      useMockStore
+        .getState()
+        .updateServer(server.serverId, { latencyPreset: "none", latencyStartedAt: null });
       sendCommand("mock:network:set", { config: { latency: 0, bandwidth: 0 }, preset: "none" });
       return;
     }
     const cfg = ownValue(PRESET_VALUES, preset);
     if (!cfg) return;
-    useMockStore.getState().updateServer(server.serverId, { latencyPreset: preset as LatencyPreset, latencyStartedAt: Date.now() });
+    useMockStore.getState().updateServer(server.serverId, {
+      latencyPreset: preset as LatencyPreset,
+      latencyStartedAt: Date.now(),
+    });
     sendCommand("mock:network:set", { config: { latency: cfg }, preset });
   };
 
@@ -70,7 +75,11 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
       {/* Controls — disabled when server is not running */}
       <div className={cn("flex items-center gap-2.5", !active && "pointer-events-none opacity-40")}>
         {/* Latency preset — same values as /mocks/network (minus Custom) */}
-        <SegmentedControl options={LATENCY_OPTIONS} value={latencyValue} onChange={handleLatencyChange} />
+        <SegmentedControl
+          options={LATENCY_OPTIONS}
+          value={latencyValue}
+          onChange={handleLatencyChange}
+        />
 
         {/* Stop button — only when any fault is active */}
         {anyFaultActive && (
@@ -103,7 +112,9 @@ export function StatusBar({ server }: StatusBarProps): React.ReactElement {
           </SelectTrigger>
           <SelectContent>
             {server.availableScenarios.map((name) => (
-              <SelectItem key={name} value={name} className="text-xs">{name}</SelectItem>
+              <SelectItem key={name} value={name} className="text-xs">
+                {name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>

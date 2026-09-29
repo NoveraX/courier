@@ -31,7 +31,7 @@ describe("useComputedQuery options", () => {
   const q = createQueryCaller(api);
 
   it("types each event as the named stream sends it", () => {
-    function used(): void {
+    function useTyped(): void {
       q.users.useComputedQuery("list", {
         subscriptionMethod: "changes",
         mapper: (current, event) => {
@@ -41,11 +41,11 @@ describe("useComputedQuery options", () => {
       });
     }
 
-    expect(used).toBeTypeOf("function");
+    expect(useTyped).toBeTypeOf("function");
   });
 
   it("refuses a name that is not one of the group's streams", () => {
-    function refused(): void {
+    function useRefused(): void {
       q.users.useComputedQuery("list", {
         // @ts-expect-error — no such stream
         subscriptionMethod: "definitely-not-a-stream",
@@ -58,7 +58,7 @@ describe("useComputedQuery options", () => {
       });
     }
 
-    expect(refused).toBeTypeOf("function");
+    expect(useRefused).toBeTypeOf("function");
   });
 });
 
@@ -70,17 +70,18 @@ describe("useComputedQuery stream callbacks", () => {
   const q = createQueryCaller(api);
 
   it("hear the stream's failure as an Error and its status as a ConnectionStatus", () => {
-    function used(): void {
+    function useTyped(): void {
       q.users.useComputedQuery("list", {
         subscriptionMethod: "changes",
         mapper: (current) => current ?? [],
         onStreamError: (error) => expectTypeOf(error).toEqualTypeOf<Error>(),
         onStreamStatusChange: (status) =>
-          expectTypeOf(status).toEqualTypeOf<"disconnected" | "connecting" | "connected" | "reconnecting">(),
+          expectTypeOf(status).toEqualTypeOf<
+            "disconnected" | "connecting" | "connected" | "reconnecting"
+          >(),
       });
     }
 
-    expect(used).toBeTypeOf("function");
+    expect(useTyped).toBeTypeOf("function");
   });
 });
-

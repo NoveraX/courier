@@ -36,7 +36,7 @@ describe("a hook offers only the endpoints it can serve", () => {
   const queryClient = new QueryClient();
 
   it("accepts the endpoint each hook was written for", () => {
-    function used(): void {
+    function useTyped(): void {
       q.users.useQuery("getAll");
       q.users.useSuspenseQuery("getAll");
       q.users.useInfiniteQuery("getAll", {
@@ -49,11 +49,11 @@ describe("a hook offers only the endpoints it can serve", () => {
       q.users.useChannel("room");
     }
 
-    expect(used).toBeTypeOf("function");
+    expect(useTyped).toBeTypeOf("function");
   });
 
   it("refuses an endpoint built from another head", () => {
-    function refused(): void {
+    function useRefused(): void {
       // @ts-expect-error — create is a mutation
       q.users.useQuery("create");
       // @ts-expect-error — getAll is a query
@@ -70,6 +70,6 @@ describe("a hook offers only the endpoints it can serve", () => {
       void q.users.prefetchQuery(queryClient, "create");
     }
 
-    expect(refused).toBeTypeOf("function");
+    expect(useRefused).toBeTypeOf("function");
   });
 });

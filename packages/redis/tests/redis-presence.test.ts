@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PresenceAdapter, PresenceDiff } from "@noverax/courier/realtime";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRedisPresence } from "../src/redis-presence";
 
 // ---------------------------------------------------------------------------
@@ -19,13 +19,19 @@ function createRedisMock() {
 
   function getZset(key: string): Map<string, number> {
     let z = zsets.get(key);
-    if (!z) { z = new Map(); zsets.set(key, z); }
+    if (!z) {
+      z = new Map();
+      zsets.set(key, z);
+    }
     return z;
   }
 
   function getHash(key: string): Map<string, string> {
     let h = store.get(key);
-    if (!h) { h = new Map(); store.set(key, h); }
+    if (!h) {
+      h = new Map();
+      store.set(key, h);
+    }
     return h;
   }
 
@@ -37,7 +43,10 @@ function createRedisMock() {
 
     on(event: string, handler: (...args: unknown[]) => void) {
       let set = listeners.get(event);
-      if (!set) { set = new Set(); listeners.set(event, set); }
+      if (!set) {
+        set = new Set();
+        listeners.set(event, set);
+      }
       set.add(handler);
       return redis;
     },
@@ -68,7 +77,12 @@ function createRedisMock() {
       return score !== undefined ? String(score) : null;
     },
 
-    async zrangebyscore(key: string, min: string, max: string, ...rest: string[]): Promise<string[]> {
+    async zrangebyscore(
+      key: string,
+      min: string,
+      max: string,
+      ...rest: string[]
+    ): Promise<string[]> {
       const z = zsets.get(key);
       if (!z) return [];
       const minVal = min === "-inf" ? -Infinity : Number(min);
@@ -131,7 +145,7 @@ function createRedisMock() {
         store.get(metaKeyStr)?.delete(member);
       }
 
-      return stale.flatMap(([m, meta]) => [m, meta]);
+      return stale.flat();
     },
 
     pipeline() {

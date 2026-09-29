@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildSSECorsHeaders, formatSSEEvent, SSE_HEADERS, SSE_HEARTBEAT } from "../src/adapter/format-sse";
+import {
+  buildSSECorsHeaders,
+  formatSSEEvent,
+  SSE_HEADERS,
+  SSE_HEARTBEAT,
+} from "../src/adapter/format-sse";
 
 describe("formatSSEEvent", () => {
   it("formats simple data event", () => {
@@ -78,14 +83,14 @@ describe("buildSSECorsHeaders", () => {
   it("returns CORS headers with Vary: Origin", () => {
     const headers = buildSSECorsHeaders("https://app.example.com");
     expect(headers["Access-Control-Allow-Origin"]).toBe("https://app.example.com");
-    expect(headers["Vary"]).toBe("Origin");
+    expect(headers.Vary).toBe("Origin");
     expect(headers["Access-Control-Allow-Credentials"]).toBe("true");
   });
 
   it("omits credentials header when disabled", () => {
     const headers = buildSSECorsHeaders("https://app.example.com", false);
     expect(headers["Access-Control-Allow-Origin"]).toBe("https://app.example.com");
-    expect(headers["Vary"]).toBe("Origin");
+    expect(headers.Vary).toBe("Origin");
     expect(headers["Access-Control-Allow-Credentials"]).toBeUndefined();
   });
 

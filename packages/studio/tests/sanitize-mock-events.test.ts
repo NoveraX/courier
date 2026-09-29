@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  sanitizeMockCommand,
-  sanitizeMockManaged,
-} from "../src/server/sanitize-mock-events";
+import { sanitizeMockCommand, sanitizeMockManaged } from "../src/server/sanitize-mock-events";
 
 describe("sanitizeMockCommand", () => {
   it("accepts a fully-valid store create command", () => {
@@ -52,7 +49,6 @@ describe("sanitizeMockCommand", () => {
     expect(Object.hasOwn(out ?? {}, "__proto__")).toBe(false);
     expect(Object.hasOwn(out ?? {}, "constructor")).toBe(false);
     expect(Object.hasOwn(out ?? {}, "prototype")).toBe(false);
-    // biome-ignore lint/suspicious/noExplicitAny: prototype-pollution check
     expect(({} as any).polluted).toBeUndefined();
   });
 

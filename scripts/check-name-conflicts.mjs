@@ -74,7 +74,10 @@ function main() {
   for (const pkg of packages) {
     if (!pkg.isDirectory()) continue;
     /* A package's sources, and the Studio UI's, which sits one level down. */
-    for (const srcDir of [join(PACKAGES_DIR, pkg.name, "src"), join(PACKAGES_DIR, pkg.name, "ui", "src")]) {
+    for (const srcDir of [
+      join(PACKAGES_DIR, pkg.name, "src"),
+      join(PACKAGES_DIR, pkg.name, "ui", "src"),
+    ]) {
       try {
         statSync(srcDir);
       } catch {
@@ -101,5 +104,5 @@ function main() {
 }
 
 // Only run as CLI when invoked directly (not when imported by the self-test).
-const invokedAsScript = argv[1] && argv[1].endsWith("check-name-conflicts.mjs");
+const invokedAsScript = argv[1]?.endsWith("check-name-conflicts.mjs");
 if (invokedAsScript) main();

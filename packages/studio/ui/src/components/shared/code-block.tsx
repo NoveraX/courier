@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import type { HighlighterCore } from "shiki/core";
 
 import { CopyButton } from "@/components/shared/copy-button";
-import { SegmentedControl } from "@/components/shared/segmented-control";
 import { highlightLine } from "@/components/shared/detail-panel/tabs/syntax-highlight";
+import { SegmentedControl } from "@/components/shared/segmented-control";
 
 // ── Format switcher ─────────────────────────────────────────────────────────
 
@@ -13,13 +13,19 @@ export interface FormatOption {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export function FormatSwitcher({ formats, active, onChange }: {
+export function FormatSwitcher({
+  formats,
+  active,
+  onChange,
+}: {
   formats: FormatOption[];
   active: string;
   onChange: (key: string) => void;
 }): React.ReactElement {
   const options = formats.map((f) => ({ value: f.key, label: f.label, icon: f.icon }));
-  return <SegmentedControl options={options} value={active} onChange={onChange} iconSize="size-2.5" />;
+  return (
+    <SegmentedControl options={options} value={active} onChange={onChange} iconSize="size-2.5" />
+  );
 }
 
 // ── Shiki languages ──────────────────────────────────────────────────────────
@@ -55,7 +61,10 @@ function loadHighlighter(): Promise<HighlighterCore> {
 
 // ── Code block ──────────────────────────────────────────────────────────────
 
-export function CodeBlock({ code, language }: {
+export function CodeBlock({
+  code,
+  language,
+}: {
   code: string;
   language: string;
 }): React.ReactElement {
@@ -67,7 +76,10 @@ export function CodeBlock({ code, language }: {
 
 // ── Shiki-powered block ─────────────────────────────────────────────────────
 
-function ShikiCodeBlock({ code, language }: {
+function ShikiCodeBlock({
+  code,
+  language,
+}: {
   code: string;
   language: string;
 }): React.ReactElement {
@@ -87,7 +99,9 @@ function ShikiCodeBlock({ code, language }: {
           if (!cancelled) setFailed(true);
         },
       );
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [code, language]);
 
   if (failed) return <RegexCodeBlock code={code} language={language} />;
@@ -100,6 +114,7 @@ function ShikiCodeBlock({ code, language }: {
       {html ? (
         <div
           className="max-h-72 overflow-auto [&_pre]:bg-transparent! [&_pre]:py-3 [&_pre]:px-3 [&_code]:mono-sm [&_code]:leading-relaxed"
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: Shiki's own markup, every token of the code escaped, for a language from a fixed list
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
@@ -117,7 +132,10 @@ function ShikiCodeBlock({ code, language }: {
 
 // ── Regex fallback (curl, fetch) ────────────────────────────────────────────
 
-function RegexCodeBlock({ code, language }: {
+function RegexCodeBlock({
+  code,
+  language,
+}: {
   code: string;
   language: string;
 }): React.ReactElement {
@@ -131,6 +149,7 @@ function RegexCodeBlock({ code, language }: {
       </div>
       <div className="max-h-72 overflow-auto py-3">
         {lines.map((line, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: the lines of one block of code, in order; a line's place is its identity
           <div key={i} className="flex px-3">
             <span
               className="mr-3 shrink-0 select-none text-right text-[10px] tabular-nums leading-relaxed text-zinc-600"

@@ -6,8 +6,8 @@ const STATUS_COLORS: Record<string, string> = {
   "3xx": "var(--chart-5)",
   "4xx": "var(--chart-3)",
   "5xx": "var(--chart-7)",
-  "Error": "var(--destructive-foreground)",
-  "Other": "var(--muted-foreground)",
+  Error: "var(--destructive-foreground)",
+  Other: "var(--muted-foreground)",
 };
 
 export function computeStatusBreakdown(requests: RequestEntry[]): StatusSlice[] {
@@ -26,6 +26,6 @@ export function computeStatusBreakdown(requests: RequestEntry[]): StatusSlice[] 
   return Array.from(map, ([name, value]) => ({
     name,
     value,
-    fill: STATUS_COLORS[name] ?? STATUS_COLORS["Other"]!,
+    fill: STATUS_COLORS[name] ?? STATUS_COLORS.Other!,
   })).sort((a, b) => b.value - a.value);
 }

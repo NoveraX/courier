@@ -1,7 +1,7 @@
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { QueryClient } from "@tanstack/react-query";
 import { createQueryCaller } from "../src/create-query-caller";
 
 const UserSchema = z.object({ id: z.string() });
@@ -37,7 +37,7 @@ describe("options for an endpoint that takes no variables", () => {
   const queryClient = new QueryClient();
 
   it("accepts an option object with no variables field", () => {
-    function used(): void {
+    function useTyped(): void {
       q.users.useQuery("getAll", { staleTime: 1000 });
       q.users.useSuspenseQuery("getAll", { staleTime: 1000 });
       q.users.useInfiniteQuery("getAll", {
@@ -50,11 +50,11 @@ describe("options for an endpoint that takes no variables", () => {
       q.users.useMutation("purge", { invalidate: [] });
     }
 
-    expect(used).toBeTypeOf("function");
+    expect(useTyped).toBeTypeOf("function");
   });
 
   it("still requires variables where the endpoint declares them", () => {
-    function used(): void {
+    function useTyped(): void {
       q.users.useQuery("getById", { variables: { id: "1" } });
       // @ts-expect-error — getById declares variables
       q.users.useQuery("getById", { staleTime: 1000 });
@@ -62,6 +62,6 @@ describe("options for an endpoint that takes no variables", () => {
       void q.users.prefetchQuery(queryClient, "getById", { staleTime: 1000 });
     }
 
-    expect(used).toBeTypeOf("function");
+    expect(useTyped).toBeTypeOf("function");
   });
 });

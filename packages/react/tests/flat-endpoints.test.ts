@@ -15,12 +15,12 @@ const ping = endpoint.get("ping").response<{ ok: boolean }>();
 describe("endpoints outside a group", () => {
   it("are refused for an API that has no groups", () => {
     const flat = defineApi({ baseURL: "https://example.com", endpoints: { ping } });
-    function refused(): void {
+    function useRefused(): void {
       // @ts-expect-error — hooks are offered per group
       createQueryCaller(flat);
     }
 
-    expect(refused).toBeTypeOf("function");
+    expect(useRefused).toBeTypeOf("function");
   });
 
   it("are left out of a caller for an API that mixes them with groups", () => {
@@ -30,12 +30,12 @@ describe("endpoints outside a group", () => {
       groups: { health: defineGroup({ prefix: "/health", endpoints: { ping } }) },
     });
     const q = createQueryCaller(mixed);
-    function used(): void {
+    function useTyped(): void {
       q.health.useQuery("ping");
       // @ts-expect-error — ping is declared at the top level, outside any group
       q.ping.useQuery("ping");
     }
 
-    expect(used).toBeTypeOf("function");
+    expect(useTyped).toBeTypeOf("function");
   });
 });

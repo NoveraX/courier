@@ -120,7 +120,8 @@ describe("options an endpoint carries", () => {
 
 describe("policies an endpoint declares", () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", (fetchSpy = vi.fn()));
+    fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
   });
 
   afterEach(() => {
@@ -141,7 +142,10 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            flaky: endpoint.get("flaky").retry({ limit: 3, backoff: "fixed", retryOn: [503] }).response(UserSchema),
+            flaky: endpoint
+              .get("flaky")
+              .retry({ limit: 3, backoff: "fixed", retryOn: [503] })
+              .response(UserSchema),
           },
         }),
       },
@@ -162,7 +166,10 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            flaky: endpoint.get("flaky").retry({ limit: 3, backoff: "fixed", retryOn: [503] }).response(UserSchema),
+            flaky: endpoint
+              .get("flaky")
+              .retry({ limit: 3, backoff: "fixed", retryOn: [503] })
+              .response(UserSchema),
           },
         }),
       },

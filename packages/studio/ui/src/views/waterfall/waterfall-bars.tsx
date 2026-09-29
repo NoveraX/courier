@@ -5,12 +5,11 @@
  * segment bars based on the virtualizer items the parent computes.
  */
 
+import type { VirtualItem } from "@tanstack/react-virtual";
 import { GapIndicator } from "./gap-indicator";
 import { GridLines } from "./grid-lines";
-import { WaterfallRowItem } from "./waterfall-row";
-
-import type { VirtualItem } from "@tanstack/react-virtual";
 import type { FlatItem, TimeGap, WaterfallRow, WaterfallSegment, ZoomState } from "./types";
+import { WaterfallRowItem } from "./waterfall-row";
 
 interface WaterfallBarsProps {
   flatItems: FlatItem[];
@@ -23,12 +22,7 @@ interface WaterfallBarsProps {
   cursorX: number | null;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
-  onSegmentHover: (
-    seg: WaterfallSegment | null,
-    row: WaterfallRow,
-    x: number,
-    y: number,
-  ) => void;
+  onSegmentHover: (seg: WaterfallSegment | null, row: WaterfallRow, x: number, y: number) => void;
 }
 
 export function WaterfallBars({
@@ -48,6 +42,7 @@ export function WaterfallBars({
     <div className="relative" style={{ width: totalWidth }}>
       <GridLines timeSpan={timeSpan} zoom={zoom} />
       {gaps.map((gap, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: the gaps between requests, in time order; a gap's place is its identity
         <GapIndicator key={i} gap={gap} zoom={zoom} />
       ))}
 

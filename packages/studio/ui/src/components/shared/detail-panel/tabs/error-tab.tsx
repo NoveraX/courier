@@ -1,7 +1,6 @@
 import { AlertTriangle, ShieldAlert, XCircle } from "lucide-react";
-
-import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/shared/copy-button";
+import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
 
 interface ErrorTabProps {
@@ -10,11 +9,7 @@ interface ErrorTabProps {
 
 export function ErrorTab({ request }: ErrorTabProps): React.ReactElement {
   if (!request.error) {
-    return (
-      <p className="py-8 text-center text-body-sm text-muted-foreground">
-        No errors
-      </p>
-    );
+    return <p className="py-8 text-center text-body-sm text-muted-foreground">No errors</p>;
   }
 
   const { type, message, status, validationIssues } = request.error;
@@ -32,7 +27,12 @@ export function ErrorTab({ request }: ErrorTabProps): React.ReactElement {
 
 // ── Error card ────────────────────────────────────────────────────────────
 
-function ErrorCard({ type, message, status, critical }: {
+function ErrorCard({
+  type,
+  message,
+  status,
+  critical,
+}: {
   type: string;
   message: string;
   status?: number;
@@ -41,35 +41,41 @@ function ErrorCard({ type, message, status, critical }: {
   const Icon = critical ? ShieldAlert : XCircle;
 
   return (
-    <div className={cn(
-      "rounded-lg border p-4",
-      critical
-        ? "border-fuchsia-500/20 bg-fuchsia-500/5"
-        : "border-rose-500/20 bg-rose-500/5",
-    )}>
+    <div
+      className={cn(
+        "rounded-lg border p-4",
+        critical ? "border-fuchsia-500/20 bg-fuchsia-500/5" : "border-rose-500/20 bg-rose-500/5",
+      )}
+    >
       <div className="flex items-start gap-3">
-        <div className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-lg",
-          critical ? "bg-fuchsia-500/10" : "bg-rose-500/10",
-        )}>
+        <div
+          className={cn(
+            "flex size-8 shrink-0 items-center justify-center rounded-lg",
+            critical ? "bg-fuchsia-500/10" : "bg-rose-500/10",
+          )}
+        >
           <Icon className={cn("size-4", critical ? "text-fuchsia-400" : "text-rose-400")} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <span className={cn(
-              "text-body-sm font-semibold",
-              critical ? "text-fuchsia-400" : "text-rose-400",
-            )}>
+            <span
+              className={cn(
+                "text-body-sm font-semibold",
+                critical ? "text-fuchsia-400" : "text-rose-400",
+              )}
+            >
               {type}
             </span>
             <div className="flex items-center gap-1.5">
               {status != null && status > 0 && (
-                <span className={cn(
-                  "mono-sm rounded-md px-1.5 py-0.5 font-medium tabular-nums",
-                  critical
-                    ? "bg-fuchsia-500/10 text-fuchsia-400"
-                    : "bg-rose-500/10 text-rose-400",
-                )}>
+                <span
+                  className={cn(
+                    "mono-sm rounded-md px-1.5 py-0.5 font-medium tabular-nums",
+                    critical
+                      ? "bg-fuchsia-500/10 text-fuchsia-400"
+                      : "bg-rose-500/10 text-rose-400",
+                  )}
+                >
                   {status}
                 </span>
               )}
@@ -102,6 +108,7 @@ function ValidationIssues({
       </h4>
       <div className="overflow-hidden rounded-lg border border-border-subtle">
         {issues.map((issue, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a failure's issues in the order the schema reported them; the list is never reordered
           <div key={i} className="border-b border-border-subtle px-3 py-2.5 last:border-b-0">
             <div className="flex items-center gap-2">
               <AlertTriangle className="size-3 shrink-0 text-amber-400" />

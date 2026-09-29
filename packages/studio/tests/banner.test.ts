@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { printBanner, wantsColour } from "../src/server/banner";
 import { clearStartupIssues } from "../src/server/startup-issues";
 
+// biome-ignore lint/suspicious/noControlCharactersInRegex: it matches the ESC that starts a terminal colour
 const ESCAPE = /\x1b\[[\d;]*m/g;
 
 let logged: string[];
@@ -51,7 +52,10 @@ describe("printBanner", () => {
   });
 
   it("prints the version and each address", () => {
-    printBanner("1.2.3", { local: "http://localhost:6280", network: ["http://[2001:db8::5]:6280"] });
+    printBanner("1.2.3", {
+      local: "http://localhost:6280",
+      network: ["http://[2001:db8::5]:6280"],
+    });
 
     const text = boxRows().join("\n");
     expect(text).toContain("v1.2.3");
@@ -62,7 +66,9 @@ describe("printBanner", () => {
   it("says a page opened without the links' token can only look", () => {
     printBanner("1.2.3", { local: "http://localhost:6280/#token=k3y", network: [] });
 
-    expect(boxRows().join("\n")).toContain("Open a link above: without its token a page can only look.");
+    expect(boxRows().join("\n")).toContain(
+      "Open a link above: without its token a page can only look.",
+    );
   });
 
   it("prints no network row when Studio is not on the network", () => {

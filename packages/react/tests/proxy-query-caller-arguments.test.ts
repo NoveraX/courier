@@ -10,7 +10,10 @@ const httpOnlyApi = defineApi({
   name: "api",
   baseURL: "https://example.com",
   groups: {
-    users: defineGroup({ prefix: "/users", endpoints: { list: endpoint.get("").response<string[]>() } }),
+    users: defineGroup({
+      prefix: "/users",
+      endpoints: { list: endpoint.get("").response<string[]>() },
+    }),
   },
 });
 
@@ -36,14 +39,14 @@ describe("createProxyQueryCaller arguments", () => {
   });
 
   it("refuses an API with streams and channels without either", () => {
-    function refused(): void {
+    function useRefused(): void {
       // @ts-expect-error — the hooks of liveApi need a boundary or the source
       createProxyQueryCaller<typeof liveApi>("api", { proxyPath: { http: "/api/request" } });
       // @ts-expect-error — the hooks of liveApi need a boundary or the source
       createProxyQueryCaller<typeof liveApi>("api");
     }
 
-    expect(refused).toBeTypeOf("function");
+    expect(useRefused).toBeTypeOf("function");
   });
 });
 
@@ -69,7 +72,7 @@ describe("createProxyQueryCaller for an API that holds a boundary", () => {
 
     const q = createProxyQueryCaller<typeof gated>("shop");
     /* Hooks run inside a component only; the compiler is what is asked here. */
-    function hooks(): void {
+    function useHooks(): void {
       q.users.useQuery("list");
       // @ts-expect-error — the boundary does not name users.purge
       q.users.useMutation("purge");
@@ -77,7 +80,7 @@ describe("createProxyQueryCaller for an API that holds a boundary", () => {
       q.admin.useQuery("stats");
     }
 
-    expect(hooks).toBeTypeOf("function");
+    expect(useHooks).toBeTypeOf("function");
     expect(q.users).toBeTypeOf("object");
   });
 });

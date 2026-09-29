@@ -1,5 +1,5 @@
+import { ArrowRight, Globe, Layers, Route } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Layers, Globe, Route, ArrowRight } from "lucide-react";
 import type { EndpointNodeData } from "../../types";
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -28,8 +28,8 @@ export function ConfigTab({ endpoint }: ConfigTabProps): React.ReactElement {
       {/* HTTP method inference */}
       <ConfigSection icon={ArrowRight} title="HTTP Method">
         <p className="text-body-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{endpoint.httpMethod}</span>
-          {" "}&mdash; inferred from endpoint name{" "}
+          <span className="font-medium text-foreground">{endpoint.httpMethod}</span> &mdash;
+          inferred from endpoint name{" "}
           <code className="text-mono-sm text-accent-brand">{endpoint.method}</code>
         </p>
       </ConfigSection>
@@ -37,12 +37,9 @@ export function ConfigTab({ endpoint }: ConfigTabProps): React.ReactElement {
       {/* Source info */}
       <ConfigSection icon={Globe} title="Source">
         <p className="text-body-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{endpoint.source}</span>
-          {" "}/ {endpoint.group}
+          <span className="font-medium text-foreground">{endpoint.source}</span> / {endpoint.group}
         </p>
-        <p className="mt-1 text-mono-sm text-muted-foreground/60">
-          {endpoint.fullPath}
-        </p>
+        <p className="mt-1 text-mono-sm text-muted-foreground/60">{endpoint.fullPath}</p>
       </ConfigSection>
 
       {/* Middleware chain */}
@@ -50,15 +47,14 @@ export function ConfigTab({ endpoint }: ConfigTabProps): React.ReactElement {
         {(endpoint.middleware?.length ?? 0) > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {endpoint.middleware?.map((mw, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: the middleware chain in its order of execution; a name may repeat
               <Badge key={i} variant="secondary" className="text-[10px]">
                 {mw}
               </Badge>
             ))}
           </div>
         ) : (
-          <p className="text-body-xs text-muted-foreground/50 italic">
-            No middleware configured
-          </p>
+          <p className="text-body-xs text-muted-foreground/50 italic">No middleware configured</p>
         )}
       </ConfigSection>
     </div>

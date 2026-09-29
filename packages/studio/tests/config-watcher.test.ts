@@ -58,7 +58,6 @@ function fakeStatus() {
   return {
     setApiPathCount: vi.fn<WatcherStatus["setApiPathCount"]>(),
     emitChange: vi.fn<WatcherStatus["emitChange"]>(),
-    setMockFileCount: vi.fn<WatcherStatus["setMockFileCount"]>(),
     sendSnapshot: vi.fn<WatcherStatus["sendSnapshot"]>(),
   };
 }

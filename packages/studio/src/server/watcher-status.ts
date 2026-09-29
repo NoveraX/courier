@@ -1,22 +1,21 @@
 /**
- * Unified watcher status coordinator — aggregates file watcher
- * and mock scanner state, emits events to the UI namespace.
+ * What Studio watches, as the pages show it: the number of files of the
+ * project it reloads on — the config, the mocks file and the modules they
+ * import — and each change it saw.
  */
 
 import type { Namespace, Socket } from "socket.io";
 
 export interface WatcherSnapshot {
   apiPaths: number;
-  mockFiles: number;
   timestamp: number;
 }
 
 export function createWatcherStatus(uiNamespace: Namespace) {
   let apiPaths = 0;
-  let mockFiles = 0;
 
   function buildSnapshot(): WatcherSnapshot {
-    return { apiPaths, mockFiles, timestamp: Date.now() };
+    return { apiPaths, timestamp: Date.now() };
   }
 
   function emitStatus(): void {
@@ -26,12 +25,6 @@ export function createWatcherStatus(uiNamespace: Namespace) {
   function setApiPathCount(count: number): void {
     if (count === apiPaths) return;
     apiPaths = count;
-    emitStatus();
-  }
-
-  function setMockFileCount(count: number): void {
-    if (count === mockFiles) return;
-    mockFiles = count;
     emitStatus();
   }
 
@@ -48,7 +41,7 @@ export function createWatcherStatus(uiNamespace: Namespace) {
     socket.emit("watcher:status", buildSnapshot());
   }
 
-  return { setApiPathCount, setMockFileCount, emitChange, sendSnapshot };
+  return { setApiPathCount, emitChange, sendSnapshot };
 }
 
 export type WatcherStatus = ReturnType<typeof createWatcherStatus>;

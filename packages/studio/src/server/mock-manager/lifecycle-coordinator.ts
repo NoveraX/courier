@@ -80,11 +80,9 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     isClosed,
   });
 
-  const countMocks = () => config.watcherStatus?.setMockFileCount(servers.size);
-
   const detach = config.mockRegistry.attach({
     onAdded(entry) {
-      runVoid(`register(${entry.key})`, apply(entry).then(countMocks));
+      runVoid(`register(${entry.key})`, apply(entry));
     },
     onChanged(entry) {
       config.watcherStatus?.emitChange("mock", [entry.key]);
@@ -95,10 +93,9 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     onRemoved(key) {
       const gone = () => {
         emit("mock:server:disconnect", { serverId: key });
-        countMocks();
         const declaredAgain = config.mockRegistry.getEntries().find((e) => e.key === key);
         if (declaredAgain && !closed) {
-          runVoid(`register(${key})`, apply(declaredAgain).then(countMocks));
+          runVoid(`register(${key})`, apply(declaredAgain));
         }
       };
       runVoid(`remove(${key})`, ops.removeServer(key, gone));

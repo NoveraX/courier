@@ -22,7 +22,7 @@ let pendingFiles: string[] = [];
  * @example
  * ```ts
  * notifyFileChange("mock", ["petstore"], useStudioStore.getState);
- * // after 500 ms without another change → "Mock server reloaded — petstore"
+ * // after 500 ms without another change → "Mock petstore reloaded"
  * ```
  */
 export function notifyFileChange(source: "api" | "mock", files: string[], get: Getter): void {
@@ -35,9 +35,13 @@ export function notifyFileChange(source: "api" | "mock", files: string[], get: G
 
   clearTimeout(changeTimer);
   changeTimer = setTimeout(() => {
-    const count = pendingFiles.length;
-    const detail = count === 1 ? pendingFiles[0] : `${count} files`;
-    toast.info(`Mock server reloaded — ${detail}`);
+    /* A mock's change names the mock, by its key: it is not a file. */
+    const [only] = pendingFiles;
+    toast.info(
+      pendingFiles.length === 1 && only
+        ? `Mock ${only} reloaded`
+        : `${pendingFiles.length} mocks reloaded`,
+    );
     pendingFiles = [];
   }, DEBOUNCE_MS);
 }

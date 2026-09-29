@@ -43,7 +43,7 @@ describe("notifyFileChange", () => {
     vi.advanceTimersByTime(1_000);
 
     expect(toastInfo).toHaveBeenCalledTimes(1);
-    expect(toastInfo.mock.calls[0]).toEqual(["Mock server reloaded — petstore"]);
+    expect(toastInfo.mock.calls[0]).toEqual(["Mock petstore reloaded"]);
   });
 
   it("announces rapid mock changes in one toast", () => {
@@ -52,7 +52,8 @@ describe("notifyFileChange", () => {
     vi.advanceTimersByTime(1_000);
 
     expect(toastInfo).toHaveBeenCalledTimes(1);
-    expect(toastInfo.mock.calls[0]).toEqual(["Mock server reloaded — 2 files"]);
+    /* The names are mocks' keys; they were counted as files. */
+    expect(toastInfo.mock.calls[0]).toEqual(["2 mocks reloaded"]);
   });
 
   it("announces nothing while file-change toasts are off", () => {

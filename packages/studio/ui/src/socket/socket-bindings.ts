@@ -12,6 +12,7 @@ import {
   isPlaygroundErrorPayload,
 } from "./playground-guards";
 import { bindReadOnly } from "./read-only-bindings";
+import { readWatcherChange } from "./read-watcher-change";
 
 export interface Bindings {
   onConnect: () => void;
@@ -59,21 +60,15 @@ export function buildBindings(s: Socket, store: typeof useStudioStore.getState):
         showDuplicateRuntimeToast(data.runtimeId);
     },
     onWatcherStatus: (data) => {
-      if (data && typeof data === "object" && "apiPaths" in data) {
-        const d = data as { apiPaths: number; mockFiles: number };
-        store().setWatcherStatus(d.apiPaths, d.mockFiles);
+      if (isPlainObject(data) && typeof data.apiPaths === "number") {
+        store().setWatcherStatus(data.apiPaths);
       }
     },
     onWatcherChange: (data) => {
-      if (data && typeof data === "object" && "source" in data) {
-        const d = data as {
-          source: "api" | "mock";
-          files: string[];
-          timestamp: number;
-        };
-        store().setWatcherChange(d);
-        notifyFileChange(d.source, d.files, store);
-      }
+      const change = readWatcherChange(data);
+      if (!change) return;
+      store().setWatcherChange(change);
+      notifyFileChange(change.source, change.files, store);
     },
     onPlaygroundChunk: (data) => {
       if (!isPlaygroundChunkPayload(data)) return;

@@ -89,6 +89,7 @@ export interface RouteNetworkOverride {
   routeId: string;
   enabled: boolean;
   latency?: { min: number; max: number; jitter?: number };
+  /** The share of this route's requests that fail, from 0 (none) to 1 (every one) */
   errorRate?: number;
   faultTypes?: string[];
 }
@@ -109,6 +110,7 @@ export interface StopCondition {
 /** Network simulation configuration */
 export interface NetworkConfig {
   latency?: number | LatencyProfile;
+  /** The share of requests that fail, from 0 (none) to 1 (every one); a failure takes one of `faultTypes` */
   errorRate?: number;
   /**
    * How long a `timeout` fault takes to fail, in ms. The mock server holds the
@@ -130,7 +132,10 @@ export interface NetworkConfig {
   routeOverrides?: RouteNetworkOverride[];
   /** Latency distribution model (default: "uniform") */
   distribution?: LatencyDistribution;
-  /** Bandwidth cap in Kbps (0 = unlimited) — reserved for future use */
+  /**
+   * Bandwidth in kilobits per second: an answer waits as long as its JSON body
+   * takes to send at this rate, on top of the latency. 0 or unset is unlimited.
+   */
   bandwidth?: number;
   /** Stop conditions for auto-halting */
   stopConditions?: StopCondition;

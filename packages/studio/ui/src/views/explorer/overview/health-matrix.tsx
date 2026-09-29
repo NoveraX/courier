@@ -1,9 +1,5 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { formatDuration, formatNumber } from "@/components/shared/formatters";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HealthIndicator } from "../shared/health-indicator";
 
 import type { HealthMatrixCell } from "./compute-overview";
@@ -29,9 +25,7 @@ export function HealthMatrix({ cells }: HealthMatrixProps): React.ReactElement {
     <div className="space-y-3">
       {bySource.map(({ source, groups }) => (
         <div key={source}>
-          <div className="mb-1.5 text-body-xs font-medium text-foreground/80">
-            {source}
-          </div>
+          <div className="mb-1.5 text-body-xs font-medium text-foreground/80">{source}</div>
           <div className="flex flex-wrap gap-1.5">
             {groups.map((cell) => (
               <GroupChip key={`${cell.source}.${cell.group}`} cell={cell} />
@@ -51,7 +45,10 @@ function GroupChip({ cell }: { cell: HealthMatrixCell }): React.ReactElement {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button className="flex items-center gap-1.5 rounded-md border border-border-subtle/50 bg-muted/20 px-2 py-1 text-body-xs transition-colors hover:bg-muted/40">
+        <button
+          type="button"
+          className="flex items-center gap-1.5 rounded-md border border-border-subtle/50 bg-muted/20 px-2 py-1 text-body-xs transition-colors hover:bg-muted/40"
+        >
           <HealthIndicator level={level} pulse={metrics.isActive} size="sm" />
           <span className="text-muted-foreground">{cell.group}</span>
         </button>
@@ -62,9 +59,8 @@ function GroupChip({ cell }: { cell: HealthMatrixCell }): React.ReactElement {
             {cell.source}.{cell.group}
           </div>
           <div className="text-background/60">
-            {formatNumber(metrics.totalRequests)} calls ·{" "}
-            {metrics.successRate.toFixed(1)}% success ·{" "}
-            {formatDuration(metrics.avgResponseTime)} avg
+            {formatNumber(metrics.totalRequests)} calls · {metrics.successRate.toFixed(1)}% success
+            · {formatDuration(metrics.avgResponseTime)} avg
           </div>
         </div>
       </TooltipContent>

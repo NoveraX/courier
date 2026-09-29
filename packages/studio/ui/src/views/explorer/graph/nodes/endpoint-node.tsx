@@ -1,15 +1,15 @@
-import { memo } from "react";
-import { Handle, Position } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
-import type { EndpointNodeData } from "../../types";
-import { getHealthLevel } from "../../compute-metrics";
-import { HealthIndicator } from "../../shared/health-indicator";
+import { Handle, Position } from "@xyflow/react";
+import { memo } from "react";
 import { TypeBadge } from "@/components/shared/type-badge";
-import { TransportBadge } from "@/views/playground/transport-badge";
-import { PathDisplay } from "../../shared/path-display";
-import { SchemaIndicators } from "./schema-indicators";
 import { cn } from "@/lib/utils";
+import { TransportBadge } from "@/views/playground/transport-badge";
+import { getHealthLevel } from "../../compute-metrics";
 import { HTTP_METHOD_COLORS } from "../../constants";
+import { HealthIndicator } from "../../shared/health-indicator";
+import { PathDisplay } from "../../shared/path-display";
+import type { EndpointNodeData } from "../../types";
+import { SchemaIndicators } from "./schema-indicators";
 
 function EndpointNodeComponent({ data, selected }: NodeProps): React.ReactElement {
   const d = data as unknown as EndpointNodeData;
@@ -19,7 +19,6 @@ function EndpointNodeComponent({ data, selected }: NodeProps): React.ReactElemen
 
   return (
     <div
-      aria-label={`${d.httpMethod} ${d.method} — ${d.fullPath}, ${d.metrics.totalRequests} calls, ${Math.round(d.metrics.avgResponseTime)}ms avg`}
       style={{
         background: "var(--graph-node-ep-bg)",
         borderColor: "var(--graph-node-ep-border)",
@@ -32,6 +31,7 @@ function EndpointNodeComponent({ data, selected }: NodeProps): React.ReactElemen
         isError && "border-destructive shadow-[0_0_14px_var(--destructive)]",
       )}
     >
+      <span className="sr-only">{`${d.httpMethod} ${d.method} — ${d.fullPath}, ${d.metrics.totalRequests} calls, ${Math.round(d.metrics.avgResponseTime)}ms avg`}</span>
       {/* Header: method badge + name + type + health */}
       <div className="flex items-center gap-1.5">
         <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold", methodColor)}>
@@ -40,7 +40,11 @@ function EndpointNodeComponent({ data, selected }: NodeProps): React.ReactElemen
         <span className="text-body-sm font-semibold text-foreground truncate flex-1">
           {d.method}
         </span>
-        {d.transport ? <TransportBadge transport={d.transport} /> : <TypeBadge type={d.endpointType} />}
+        {d.transport ? (
+          <TransportBadge transport={d.transport} />
+        ) : (
+          <TypeBadge type={d.endpointType} />
+        )}
         <HealthIndicator level={health} pulse={d.metrics.isActive} />
       </div>
 
@@ -66,7 +70,11 @@ function EndpointNodeComponent({ data, selected }: NodeProps): React.ReactElemen
         </span>
       </div>
 
-      <Handle type="target" position={Position.Left} className="bg-muted-foreground! size-2! border-0!" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="bg-muted-foreground! size-2! border-0!"
+      />
     </div>
   );
 }

@@ -1,8 +1,7 @@
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
-import { ChevronsUpDown, Check } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatDuration } from "@/components/shared/formatters";
+import { MethodBadge } from "@/components/shared/method-badge";
 import {
   Command,
   CommandEmpty,
@@ -11,8 +10,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { MethodBadge } from "@/components/shared/method-badge";
-import { formatDuration } from "@/components/shared/formatters";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 import type { RequestEntry } from "@/store/types";
 
@@ -38,6 +37,7 @@ export function RequestPicker({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
+          type="button"
           className={cn(
             "group flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all",
             "border-border-subtle/60 bg-card/30 hover:bg-card/60",
@@ -50,10 +50,12 @@ export function RequestPicker({
           ) : (
             <span className="text-body-sm text-muted-foreground/60">Select a request…</span>
           )}
-          <ChevronsUpDown className={cn(
-            "ml-auto size-3.5 shrink-0 text-muted-foreground/40 transition-colors",
-            "group-hover:text-muted-foreground/70",
-          )} />
+          <ChevronsUpDown
+            className={cn(
+              "ml-auto size-3.5 shrink-0 text-muted-foreground/40 transition-colors",
+              "group-hover:text-muted-foreground/70",
+            )}
+          />
         </button>
       </PopoverTrigger>
 
@@ -67,7 +69,10 @@ export function RequestPicker({
                 <CommandItem
                   key={r.id}
                   value={`${r.source}.${r.group ?? ""}.${r.method}`}
-                  onSelect={() => { onSelect(r.id); setOpen(false); }}
+                  onSelect={() => {
+                    onSelect(r.id);
+                    setOpen(false);
+                  }}
                   className="gap-2 py-2"
                 >
                   <DropdownLabel request={r} isSelected={r.id === selectedId} />
@@ -102,7 +107,10 @@ function SelectedRequest({ request }: { request: RequestEntry }): React.ReactEle
 
 // ── Dropdown item ───────────────────────────────────────────────────────────
 
-function DropdownLabel({ request, isSelected }: {
+function DropdownLabel({
+  request,
+  isSelected,
+}: {
   request: RequestEntry;
   isSelected: boolean;
 }): React.ReactElement {
@@ -118,9 +126,7 @@ function DropdownLabel({ request, isSelected }: {
           {formatDuration(request.timing.total)}
         </span>
       )}
-      {isSelected && (
-        <Check className="ml-auto size-3.5 shrink-0 text-accent-brand" />
-      )}
+      {isSelected && <Check className="ml-auto size-3.5 shrink-0 text-accent-brand" />}
     </div>
   );
 }

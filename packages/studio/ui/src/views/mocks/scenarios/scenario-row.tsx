@@ -1,16 +1,16 @@
+import { ChevronRight, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { buttonProps } from "@/lib/button-props";
 import { cn } from "@/lib/utils";
-import { ChevronRight, Play } from "lucide-react";
+import type { MockScenarioEntry } from "@/store/mock-slice";
+import type { ScenarioType } from "./scenario-utils";
 import {
   deriveScenarioType,
   SCENARIO_TYPE_ICON_BG,
   SCENARIO_TYPE_META,
   SCENARIO_TYPE_RING,
 } from "./scenario-utils";
-
-import type { MockScenarioEntry } from "@/store/mock-slice";
-import type { ScenarioType } from "./scenario-utils";
 
 interface ScenarioRowProps {
   scenario: MockScenarioEntry;
@@ -33,21 +33,37 @@ function ActivePill(): React.ReactElement {
   );
 }
 
-function TagBadges({ scenario, fallbackType }: { scenario: MockScenarioEntry; fallbackType: ScenarioType }): React.ReactElement {
+function TagBadges({
+  scenario,
+  fallbackType,
+}: {
+  scenario: MockScenarioEntry;
+  fallbackType: ScenarioType;
+}): React.ReactElement {
   const tags = scenario.tags ?? [];
 
   if (tags.length === 0) {
     const meta = SCENARIO_TYPE_META[fallbackType];
-    return <Badge variant={meta.color} className="px-1.5 py-0 text-[9px]">{meta.label}</Badge>;
+    return (
+      <Badge variant={meta.color} className="px-1.5 py-0 text-[9px]">
+        {meta.label}
+      </Badge>
+    );
   }
 
   return (
     <>
       {tags.map((tag) => {
         const meta = SCENARIO_TYPE_META[tag as ScenarioType];
-        return meta
-          ? <Badge key={tag} variant={meta.color} className="px-1.5 py-0 text-[9px]">{meta.label}</Badge>
-          : <Badge key={tag} variant="secondary" className="px-1.5 py-0 text-[9px]">{tag}</Badge>;
+        return meta ? (
+          <Badge key={tag} variant={meta.color} className="px-1.5 py-0 text-[9px]">
+            {meta.label}
+          </Badge>
+        ) : (
+          <Badge key={tag} variant="secondary" className="px-1.5 py-0 text-[9px]">
+            {tag}
+          </Badge>
+        );
       })}
     </>
   );
@@ -71,10 +87,7 @@ export function ScenarioRow({
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelect(scenario)}
-      onKeyDown={(e) => e.key === "Enter" && onSelect(scenario)}
+      {...buttonProps(() => onSelect(scenario))}
       className={cn(
         "group flex items-center gap-4 py-3.5 pr-4 transition-colors cursor-pointer select-none",
         "border-b border-border-subtle/50 last:border-0 border-l-2",
@@ -107,9 +120,7 @@ export function ScenarioRow({
         <p
           className={cn(
             "text-xs mt-1 leading-snug line-clamp-1",
-            scenario.description
-              ? "text-muted-foreground/55"
-              : "italic text-muted-foreground/25",
+            scenario.description ? "text-muted-foreground/55" : "italic text-muted-foreground/25",
           )}
         >
           {scenario.description ?? "No description"}

@@ -1,5 +1,5 @@
+import { File, Upload, X } from "lucide-react";
 import { useRef, useState } from "react";
-import { Upload, File, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -52,7 +52,12 @@ export function FileDropzone({
 
   if (fileName) {
     return (
-      <div className={cn("flex items-center gap-3 rounded-md border border-dashed border-input px-4 py-3", className)}>
+      <div
+        className={cn(
+          "flex items-center gap-3 rounded-md border border-dashed border-input px-4 py-3",
+          className,
+        )}
+      >
         <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-muted ring-1 ring-inset ring-border">
           <File className="size-4 text-foreground" />
         </span>
@@ -65,30 +70,37 @@ export function FileDropzone({
   }
 
   return (
-    <div
-      className={cn(
-        "flex cursor-pointer flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 transition-colors",
-        dragging ? "border-primary bg-primary/5" : "border-input",
-        className,
-      )}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={handleDrop}
-      onClick={() => inputRef.current?.click()}
-    >
-      <Upload className="size-8 text-muted-foreground" />
-      <div className="mt-2 flex text-sm text-muted-foreground">
-        <span>Drag and drop or</span>
-        <span className="pl-1 font-medium text-primary">choose file</span>
-      </div>
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+    <>
+      <button
+        type="button"
+        className={cn(
+          "flex w-full cursor-pointer flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 transition-colors",
+          dragging ? "border-primary bg-primary/5" : "border-input",
+          className,
+        )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload className="size-8 text-muted-foreground" />
+        <span className="mt-2 flex text-sm text-muted-foreground">
+          <span>Drag and drop or</span>
+          <span className="pl-1 font-medium text-primary">choose file</span>
+        </span>
+        {hint && <span className="mt-1 block text-xs text-muted-foreground">{hint}</span>}
+      </button>
       <input
         ref={inputRef}
         type="file"
         className="sr-only"
+        tabIndex={-1}
         accept={accept}
         onChange={handleChange}
       />
-    </div>
+    </>
   );
 }

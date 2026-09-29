@@ -6,9 +6,8 @@
  */
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-
+import { buttonProps } from "@/lib/button-props";
 import { cn } from "@/lib/utils";
-
 import type { FieldType, SortDir } from "./data-table-utils";
 
 const TYPE_COLOR: Record<FieldType, string> = {
@@ -63,9 +62,11 @@ export function ColumnHeader({
   return (
     <div
       className="flex w-35 shrink-0 cursor-pointer select-none items-center truncate px-2"
-      onClick={() => onSort(col)}
+      {...buttonProps(() => onSort(col))}
     >
-      <span className={cn("inline-flex items-center gap-1 text-[11px]", active && "text-foreground")}>
+      <span
+        className={cn("inline-flex items-center gap-1 text-[11px]", active && "text-foreground")}
+      >
         {col}
         <span className={cn("text-[9px] font-medium", TYPE_COLOR[type])}>{type}</span>
         <Icon className="size-3 shrink-0" />

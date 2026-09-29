@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { buttonProps } from "@/lib/button-props";
 import { cn } from "@/lib/utils";
-
 import type { FieldType } from "./data-table-utils";
 import { formatValue, parseValue } from "./data-table-utils";
 
@@ -13,7 +13,14 @@ interface EditableCellProps {
   onCancel: () => void;
 }
 
-export function EditableCell({ value, type, isEditing, onStartEdit, onCommit, onCancel }: EditableCellProps): React.ReactElement {
+export function EditableCell({
+  value,
+  type,
+  isEditing,
+  onStartEdit,
+  onCommit,
+  onCancel,
+}: EditableCellProps): React.ReactElement {
   if (isEditing) {
     return <CellInput value={value} type={type} onCommit={onCommit} onCancel={onCancel} />;
   }
@@ -21,7 +28,7 @@ export function EditableCell({ value, type, isEditing, onStartEdit, onCommit, on
   return (
     <div
       className="w-35 shrink-0 truncate px-2 text-body-sm cursor-text hover:bg-muted/30 rounded-sm transition-colors"
-      onDoubleClick={onStartEdit}
+      {...buttonProps(onStartEdit, { doubleClick: true })}
     >
       <CellDisplay value={value} type={type} />
     </div>
@@ -46,7 +53,12 @@ function CellDisplay({ value, type }: { value: unknown; type: FieldType }): Reac
 
 // ── Input ────────────────────────────────────────────────────────────────────
 
-function CellInput({ value, type, onCommit, onCancel }: {
+function CellInput({
+  value,
+  type,
+  onCommit,
+  onCancel,
+}: {
   value: unknown;
   type: FieldType;
   onCommit: (value: unknown) => void;
@@ -62,14 +74,26 @@ function CellInput({ value, type, onCommit, onCancel }: {
   }, []);
 
   const commit = () => {
-    if (draft === "") { onCommit(null); return; }
+    if (draft === "") {
+      onCommit(null);
+      return;
+    }
     onCommit(parseValue(draft, type));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") { e.preventDefault(); commit(); }
-    if (e.key === "Escape") { e.preventDefault(); onCancel(); }
-    if (e.key === "Tab") { e.preventDefault(); commit(); }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit();
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onCancel();
+    }
+    if (e.key === "Tab") {
+      e.preventDefault();
+      commit();
+    }
   };
 
   if (type === "bool") {
@@ -81,11 +105,21 @@ function CellInput({ value, type, onCommit, onCancel }: {
             "relative flex h-5 w-8 items-center rounded-full transition-colors",
             draft === "true" ? "bg-emerald-500/30" : "bg-muted/50",
           )}
-          onClick={() => { onCommit(draft !== "true"); }}
-          onKeyDown={(e) => { if (e.key === "Escape") onCancel(); }}
+          onClick={() => {
+            onCommit(draft !== "true");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") onCancel();
+          }}
+          // biome-ignore lint/a11y/noAutofocus: the cell becomes this control because it was just opened for editing
           autoFocus
         >
-          <div className={cn("ml-0.5 size-3.5 rounded-full bg-foreground/80 transition-transform", draft === "true" && "translate-x-3")} />
+          <div
+            className={cn(
+              "ml-0.5 size-3.5 rounded-full bg-foreground/80 transition-transform",
+              draft === "true" && "translate-x-3",
+            )}
+          />
         </button>
       </div>
     );

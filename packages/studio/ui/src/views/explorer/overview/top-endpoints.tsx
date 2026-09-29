@@ -1,7 +1,7 @@
 import { formatDuration, formatNumber, formatSize } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
+import { buttonProps } from "@/lib/button-props";
 import { cn } from "@/lib/utils";
-
 import type { TopEndpointEntry, TopMetric } from "./compute-overview";
 
 // ── Metric toggle config ────────────────────────────────────────────────────
@@ -42,6 +42,7 @@ export function TopEndpoints({
       <div className="flex gap-4 border-b border-border-subtle/50 pb-1.5">
         {METRIC_OPTIONS.map((opt) => (
           <button
+            type="button"
             key={opt.key}
             onClick={() => onMetricChange(opt.key)}
             className={cn(
@@ -73,7 +74,11 @@ export function TopEndpoints({
               entry={ep}
               format={activeOption.format}
               maxValue={endpoints[0]?.value ?? ep.value}
-              onSelect={onSelectEndpoint ? () => onSelectEndpoint(ep.source, ep.group, ep.method) : undefined}
+              onSelect={
+                onSelectEndpoint
+                  ? () => onSelectEndpoint(ep.source, ep.group, ep.method)
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -101,8 +106,7 @@ function EndpointRow({
 
   return (
     <div
-      role={onSelect ? "button" : undefined}
-      onClick={onSelect}
+      {...(onSelect ? buttonProps(onSelect) : {})}
       className="group relative flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/30 cursor-pointer"
     >
       {/* Bar background */}
@@ -118,9 +122,7 @@ function EndpointRow({
       <span className={cn("size-2 shrink-0 rounded-full", successRateColor(entry.successRate))} />
       <MethodBadge method={entry.httpMethod} className="text-[9px]" />
       <span className="relative z-10 flex-1 truncate text-body-xs font-medium text-foreground/90">
-        {entry.group ? (
-          <span className="text-muted-foreground/50">{entry.group}.</span>
-        ) : null}
+        {entry.group ? <span className="text-muted-foreground/50">{entry.group}.</span> : null}
         {entry.method}
       </span>
       <span className="relative z-10 text-body-xs tabular-nums text-muted-foreground">

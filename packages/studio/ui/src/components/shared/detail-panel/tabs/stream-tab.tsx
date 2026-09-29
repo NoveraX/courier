@@ -1,10 +1,11 @@
 import { ArrowDown, ArrowUp, ChevronRight, Radio } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { formatDuration, formatSize } from "@/components/shared/formatters";
-import { highlightLine } from "./syntax-highlight";
+import { buttonProps } from "@/lib/button-props";
 import { cn } from "@/lib/utils";
 import type { RequestEntry, StreamEventRecord } from "@/store/types";
+import { highlightLine } from "./syntax-highlight";
 
 /** Stream events tab — shared between Timeline detail panel and Explorer */
 export function StreamTab({ request }: { request: RequestEntry }): React.ReactElement {
@@ -35,10 +36,12 @@ export function StreamTab({ request }: { request: RequestEntry }): React.ReactEl
         )}
         <span className="flex-1" />
         {request.transport && request.transport !== "http" && (
-          <span className={cn(
-            "text-[10px] font-medium uppercase tracking-wider",
-            request.transport === "ws" ? "text-sky-400" : "text-emerald-400",
-          )}>
+          <span
+            className={cn(
+              "text-[10px] font-medium uppercase tracking-wider",
+              request.transport === "ws" ? "text-sky-400" : "text-emerald-400",
+            )}
+          >
             {request.transport}
           </span>
         )}
@@ -49,10 +52,14 @@ export function StreamTab({ request }: { request: RequestEntry }): React.ReactEl
           </span>
         )}
         {request.streamStatus === "complete" && (
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">complete</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
+            complete
+          </span>
         )}
         {request.streamStatus === "error" && (
-          <span className="text-[10px] font-medium uppercase tracking-wider text-rose-400">error</span>
+          <span className="text-[10px] font-medium uppercase tracking-wider text-rose-400">
+            error
+          </span>
         )}
       </div>
       {dropped > 0 && (
@@ -78,14 +85,16 @@ function EventRow({ event }: { event: StreamEventRecord }): React.ReactElement {
         "group rounded-md px-2 py-1.5 transition-colors",
         hasPreview && "cursor-pointer hover:bg-muted/50",
       )}
-      onClick={hasPreview ? toggle : undefined}
+      {...(hasPreview ? buttonProps(toggle) : {})}
     >
       <div className="flex min-w-0 items-center gap-2">
         {hasPreview ? (
-          <ChevronRight className={cn(
-            "size-3 shrink-0 text-muted-foreground/50 transition-transform duration-150",
-            expanded && "rotate-90 text-muted-foreground",
-          )} />
+          <ChevronRight
+            className={cn(
+              "size-3 shrink-0 text-muted-foreground/50 transition-transform duration-150",
+              expanded && "rotate-90 text-muted-foreground",
+            )}
+          />
         ) : (
           <span className="size-3 shrink-0" />
         )}
@@ -117,7 +126,12 @@ function EventRow({ event }: { event: StreamEventRecord }): React.ReactElement {
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
-  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+  return d.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 }
 
 function highlightJson(raw: string): React.ReactNode[] {

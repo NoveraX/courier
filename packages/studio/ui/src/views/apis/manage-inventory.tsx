@@ -11,10 +11,9 @@ import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-
-import type { EndpointInventory, InventoryGroup } from "./types";
-import { ActiveRow, AvailableRow, CustomRow, RemovedRow } from "./manage-endpoint-rows";
 import { ownValue } from "@/lib/own-value";
+import { ActiveRow, AvailableRow, CustomRow, RemovedRow } from "./manage-endpoint-rows";
+import type { EndpointInventory, InventoryGroup } from "./types";
 
 interface ManageInventoryProps {
   inventory: EndpointInventory;
@@ -26,7 +25,12 @@ interface ManageInventoryProps {
 }
 
 export function ManageInventoryView({
-  inventory, toAdd, toRemove, onToggle, onToggleGroup, onToggleAll,
+  inventory,
+  toAdd,
+  toRemove,
+  onToggle,
+  onToggleGroup,
+  onToggleAll,
 }: ManageInventoryProps): React.ReactElement {
   const { selectedCount, totalToggleable } = countSelection(inventory, toAdd, toRemove);
   const allSelected = selectedCount === totalToggleable && totalToggleable > 0;
@@ -122,7 +126,13 @@ function getGroupCheckState(
 
 // ── Group section ────────────────────────────────────────────────────────────
 
-function GroupSection({ group, toAdd, toRemove, onToggle, onToggleGroup }: {
+function GroupSection({
+  group,
+  toAdd,
+  toRemove,
+  onToggle,
+  onToggleGroup,
+}: {
   group: InventoryGroup;
   toAdd: Set<string>;
   toRemove: Set<string>;
@@ -136,11 +146,14 @@ function GroupSection({ group, toAdd, toRemove, onToggle, onToggleGroup }: {
   const checkState = getGroupCheckState(group, toAdd, toRemove);
   const toggleableCount = group.endpoints.filter((e) => e.status !== "custom").length;
 
+  const toggleable = !group.isCustomGroup && toggleableCount > 0;
+  /* A header with a checkbox is its label; one without has nothing to label. */
+  const Header = toggleable ? "label" : "div";
+
   return (
     <div className="rounded-lg border border-border-subtle overflow-hidden">
-      {/* Group header with checkbox */}
-      <label className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors">
-        {!group.isCustomGroup && toggleableCount > 0 && (
+      <Header className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors">
+        {toggleable && (
           <Checkbox
             checked={checkState}
             onCheckedChange={() => onToggleGroup(group.name)}
@@ -154,20 +167,35 @@ function GroupSection({ group, toAdd, toRemove, onToggle, onToggleGroup }: {
         <Badge variant="secondary" className="text-[10px] ml-auto">
           {group.isCustomGroup ? "custom group" : `${group.endpoints.length}`}
         </Badge>
-      </label>
+      </Header>
 
       <div className="divide-y divide-border-subtle">
         {active.map((ep) => (
-          <ActiveRow key={ep.name} ep={ep} markedForRemoval={toRemove.has(ep.name)} onToggle={onToggle} />
+          <ActiveRow
+            key={ep.name}
+            ep={ep}
+            markedForRemoval={toRemove.has(ep.name)}
+            onToggle={onToggle}
+          />
         ))}
         {available.map((ep) => (
-          <AvailableRow key={ep.name} ep={ep} markedForAdd={toAdd.has(ep.name)} onToggle={onToggle} />
+          <AvailableRow
+            key={ep.name}
+            ep={ep}
+            markedForAdd={toAdd.has(ep.name)}
+            onToggle={onToggle}
+          />
         ))}
         {custom.map((ep) => (
           <CustomRow key={ep.name} ep={ep} />
         ))}
         {removed.map((ep) => (
-          <RemovedRow key={ep.name} ep={ep} markedForRemoval={toRemove.has(ep.name)} onToggle={onToggle} />
+          <RemovedRow
+            key={ep.name}
+            ep={ep}
+            markedForRemoval={toRemove.has(ep.name)}
+            onToggle={onToggle}
+          />
         ))}
       </div>
     </div>

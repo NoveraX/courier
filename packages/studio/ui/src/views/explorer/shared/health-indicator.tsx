@@ -41,17 +41,12 @@ export function HealthIndicator({
     <span className={cn("relative inline-flex shrink-0", className)}>
       {/* Pulse ring behind the dot */}
       {shouldPulse && (
-        <span
-          className={cn(
-            "absolute inset-0 rounded-full animate-ping",
-            dot,
-            "opacity-40",
-          )}
-        />
+        <span className={cn("absolute inset-0 rounded-full animate-ping", dot, "opacity-40")} />
       )}
       <span
         className={cn("inline-block rounded-full", sizeClass, dot, glow)}
         title={level}
+        role="img"
         aria-label={`Health: ${level}`}
       />
     </span>

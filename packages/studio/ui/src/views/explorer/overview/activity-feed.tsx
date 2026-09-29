@@ -1,9 +1,9 @@
-import { cn } from "@/lib/utils";
-import { MethodBadge } from "@/components/shared/method-badge";
 import { formatDuration, formatTimestamp } from "@/components/shared/formatters";
-import { useStudioStore } from "@/store";
+import { MethodBadge } from "@/components/shared/method-badge";
 import { useNow } from "@/hooks/use-tick";
-
+import { buttonProps } from "@/lib/button-props";
+import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
 import type { ActivityEntry } from "./compute-activity";
 
 // ── Status dot config ───────────────────────────────────────────────────────
@@ -22,10 +22,7 @@ interface ActivityFeedProps {
   onSelectEntry?: (requestId: string) => void;
 }
 
-export function ActivityFeed({
-  entries,
-  onSelectEntry,
-}: ActivityFeedProps): React.ReactElement {
+export function ActivityFeed({ entries, onSelectEntry }: ActivityFeedProps): React.ReactElement {
   if (entries.length === 0) {
     return (
       <div className="flex h-24 items-center justify-center text-body-xs text-muted-foreground/60">
@@ -37,7 +34,11 @@ export function ActivityFeed({
   return (
     <div className="space-y-0.5 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
       {entries.map((entry) => (
-        <FeedRow key={entry.id} entry={entry} onSelect={onSelectEntry ? () => onSelectEntry(entry.id) : undefined} />
+        <FeedRow
+          key={entry.id}
+          entry={entry}
+          onSelect={onSelectEntry ? () => onSelectEntry(entry.id) : undefined}
+        />
       ))}
     </div>
   );
@@ -45,15 +46,20 @@ export function ActivityFeed({
 
 // ── Feed row ────────────────────────────────────────────────────────────────
 
-function FeedRow({ entry, onSelect }: { entry: ActivityEntry; onSelect?: () => void }): React.ReactElement {
+function FeedRow({
+  entry,
+  onSelect,
+}: {
+  entry: ActivityEntry;
+  onSelect?: () => void;
+}): React.ReactElement {
   const timestampFormat = useStudioStore((s) => s.settings.timestampFormat);
   const now = useNow();
   const dotClass = STATUS_DOT[entry.status] ?? STATUS_DOT.error;
 
   return (
     <div
-      role={onSelect ? "button" : undefined}
-      onClick={onSelect}
+      {...(onSelect ? buttonProps(onSelect) : {})}
       className="flex items-center gap-2 rounded-md px-2 py-1 text-body-xs transition-colors hover:bg-muted/20 cursor-pointer"
     >
       {/* Status dot */}
@@ -74,10 +80,7 @@ function FeedRow({ entry, onSelect }: { entry: ActivityEntry; onSelect?: () => v
       </span>
 
       {/* Duration */}
-      <span className={cn(
-        "shrink-0 tabular-nums text-mono-xs",
-        durationColor(entry.duration),
-      )}>
+      <span className={cn("shrink-0 tabular-nums text-mono-xs", durationColor(entry.duration))}>
         {formatDuration(entry.duration)}
       </span>
     </div>

@@ -1,11 +1,11 @@
-import { memo } from "react";
-import { Handle, Position } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
-import type { GroupNodeData } from "../../types";
+import { Handle, Position } from "@xyflow/react";
+import { Folder } from "lucide-react";
+import { memo } from "react";
+import { cn } from "@/lib/utils";
 import { getHealthLevel } from "../../compute-metrics";
 import { HealthIndicator } from "../../shared/health-indicator";
-import { cn } from "@/lib/utils";
-import { Folder } from "lucide-react";
+import type { GroupNodeData } from "../../types";
 
 function GroupNodeComponent({ data, selected }: NodeProps): React.ReactElement {
   const d = data as unknown as GroupNodeData;
@@ -14,7 +14,6 @@ function GroupNodeComponent({ data, selected }: NodeProps): React.ReactElement {
 
   return (
     <div
-      aria-label={`Group: ${d.name}, ${d.endpointCount} endpoints, ${Math.round(d.metrics.successRate)}% health`}
       style={{
         background: "var(--graph-node-group-bg)",
         borderColor: "var(--graph-node-group-border)",
@@ -27,14 +26,18 @@ function GroupNodeComponent({ data, selected }: NodeProps): React.ReactElement {
         isError && "border-l-rose-400 shadow-[0_0_14px_var(--destructive)]",
       )}
     >
+      <span className="sr-only">{`Group: ${d.name}, ${d.endpointCount} endpoints, ${Math.round(d.metrics.successRate)}% health`}</span>
       {/* Header */}
       <div className="flex items-center gap-2">
-        <div className="flex size-5 items-center justify-center rounded" style={{ background: "color-mix(in oklch, var(--graph-node-group-border) 15%, transparent)" }}>
+        <div
+          className="flex size-5 items-center justify-center rounded"
+          style={{
+            background: "color-mix(in oklch, var(--graph-node-group-border) 15%, transparent)",
+          }}
+        >
           <Folder className="size-3" style={{ color: "var(--graph-node-group-border)" }} />
         </div>
-        <span className="text-body-sm font-semibold text-foreground truncate">
-          {d.name}
-        </span>
+        <span className="text-body-sm font-semibold text-foreground truncate">{d.name}</span>
       </div>
 
       {/* Prefix path */}
@@ -49,8 +52,18 @@ function GroupNodeComponent({ data, selected }: NodeProps): React.ReactElement {
         <span>{Math.round(d.metrics.successRate)}%</span>
       </div>
 
-      <Handle type="target" position={Position.Left} style={{ background: "var(--graph-node-group-border)" }} className="size-2! border-0!" />
-      <Handle type="source" position={Position.Right} style={{ background: "var(--graph-node-group-border)" }} className="size-2! border-0!" />
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: "var(--graph-node-group-border)" }}
+        className="size-2! border-0!"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: "var(--graph-node-group-border)" }}
+        className="size-2! border-0!"
+      />
     </div>
   );
 }

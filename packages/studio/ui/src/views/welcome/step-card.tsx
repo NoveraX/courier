@@ -9,17 +9,11 @@ import { useState } from "react";
 
 import { CodeBlock } from "@/components/shared/code-block";
 import { Button } from "@/components/ui/button";
+import { buttonProps } from "@/lib/button-props";
 import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
-
 import type { SetupStep } from "./frameworks";
-
-import {
-  FilePathHint,
-  StepHeader,
-  StepIndicator,
-  VariantTabs,
-} from "./step-card-parts";
+import { FilePathHint, StepHeader, StepIndicator, VariantTabs } from "./step-card-parts";
 
 interface StepCardProps {
   step: SetupStep;
@@ -49,16 +43,14 @@ export function StepCard({
 
   return (
     <div
-      role={isCompleted && onUndo ? "button" : undefined}
-      tabIndex={isCompleted && onUndo ? 0 : undefined}
-      onClick={isCompleted && onUndo ? onUndo : undefined}
-      onKeyDown={isCompleted && onUndo ? (e) => { if (e.key === "Enter") onUndo(); } : undefined}
+      {...(isCompleted && onUndo ? buttonProps(onUndo) : {})}
       className={cn(
         "rounded-lg border p-4 transition-colors",
         isActive && "border-accent-brand/30 bg-accent-brand/5",
         isCompleted && onUndo && "cursor-pointer hover:border-border-strong",
         !isActive && "border-border bg-background",
-      )}>
+      )}
+    >
       <div className="flex gap-3">
         <div className="mt-0.5 shrink-0">
           <StepIndicator index={index} isCompleted={isCompleted} isActive={isActive} />
@@ -84,10 +76,14 @@ export function StepCard({
               )}
 
               {isActive && !step.autoComplete && (
-                <Button className="mt-3" size="sm" onClick={() => {
-                  if (code) void copyToClipboard(code, "snippet");
-                  onAction();
-                }}>
+                <Button
+                  className="mt-3"
+                  size="sm"
+                  onClick={() => {
+                    if (code) void copyToClipboard(code, "snippet");
+                    onAction();
+                  }}
+                >
                   <Icon className="-ml-0.5 size-3.5 shrink-0" aria-hidden />
                   {step.actionLabel}
                 </Button>
@@ -100,12 +96,15 @@ export function StepCard({
                 </div>
               )}
             </div>
-            <Icon className={cn(
-              "mt-0.5 size-4.5 shrink-0",
-              isCompleted && "text-muted-foreground/30",
-              isActive && "text-accent-brand",
-              !isCompleted && !isActive && "text-muted-foreground/40",
-            )} aria-hidden />
+            <Icon
+              className={cn(
+                "mt-0.5 size-4.5 shrink-0",
+                isCompleted && "text-muted-foreground/30",
+                isActive && "text-accent-brand",
+                !isCompleted && !isActive && "text-muted-foreground/40",
+              )}
+              aria-hidden
+            />
           </div>
         </div>
       </div>

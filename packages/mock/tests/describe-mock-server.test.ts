@@ -145,11 +145,21 @@ describe("describeMockServer routes", () => {
   });
 
   it("says a definition has no source, rather than failing inside it", () => {
+    const { source: _source, ...definition } = defineMockServer({ source: api });
+
+    expect(() =>
+      describeMockServer(definition as unknown as Parameters<typeof describeMockServer>[0]),
+    ).toThrow("has no source");
+  });
+
+  it("says a source given as a value that was not defined yet is undefined", () => {
     const definition = {
       ...defineMockServer({ source: api }),
       source: undefined,
     } as unknown as Parameters<typeof describeMockServer>[0];
 
-    expect(() => describeMockServer(definition)).toThrow("has no source");
+    expect(() => describeMockServer(definition)).toThrow(
+      "The mock server's source is undefined: the value given to defineMockServer() as source was not defined",
+    );
   });
 });

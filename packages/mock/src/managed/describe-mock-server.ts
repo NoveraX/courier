@@ -41,7 +41,7 @@ export function describeMockServer<TSource extends AnySource>(
   definition: MockServerDefinition<TSource>,
 ): MockServerDescription {
   const source: Record<string, unknown> | undefined = definition.source;
-  if (!source) throw new Error("The mock server has no source. Pass one to defineMockServer().");
+  if (!source) throw new Error(noSource(definition));
   const routes = analyzeRoutes(source);
   const groupNames = getSourceGroupNames(source);
   /* Composed the way the running server composes them, so the list Studio
@@ -58,4 +58,13 @@ export function describeMockServer<TSource extends AnySource>(
     collections: [...new Set(routes.map((r) => r.group).filter(Boolean))],
     scenarios: buildScenarioMeta(scenarios, routes),
   };
+}
+
+/* A source given as a value that is not there yet — a module still loading
+   in an import cycle, a name the module does not export — arrives as
+   `undefined`; one never given is left out. */
+function noSource(definition: object): string {
+  return "source" in definition
+    ? "The mock server's source is undefined: the value given to defineMockServer() as source was not defined when courier.mocks ran. Check that it is exported under that name, and that no import cycle reaches courier.mocks first."
+    : "The mock server has no source. Pass one to defineMockServer().";
 }

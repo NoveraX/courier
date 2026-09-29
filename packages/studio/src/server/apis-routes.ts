@@ -2,7 +2,7 @@
  * Express routes for apis: parse, generate, write, diff.
  */
 
-import { diffSpecs, type GenerateOptions, generateCode, type ParsedSpec, parseSpec } from "../apis";
+import { diffSpecs, generateCode, parseSpec } from "../apis";
 import { fetchSpec } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
 import { withImportExtension } from "./generated-import-extension";
@@ -77,10 +77,7 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
       const body = validateGenerateBody(req.body, res);
       if (!body) return;
       res.json({
-        files: generateCode(
-          body.spec as unknown as ParsedSpec,
-          withImportExtension(body.options as unknown as GenerateOptions, deps.projectRoot),
-        ),
+        files: generateCode(body.spec, withImportExtension(body.options, deps.projectRoot)),
       });
     } catch (err) {
       res.status(400).json({ error: errMsg(err, "Code generation failed") });
@@ -94,9 +91,7 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
     try {
       const body = validateDiffBody(req.body, res);
       if (!body) return;
-      res.json(
-        diffSpecs(body.oldSpec as unknown as ParsedSpec, body.newSpec as unknown as ParsedSpec),
-      );
+      res.json(diffSpecs(body.oldSpec, body.newSpec));
     } catch (err) {
       res.status(400).json({ error: errMsg(err, "Failed to diff specs") });
     }

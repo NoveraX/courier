@@ -28,6 +28,31 @@ const users = defineGroup({
 })
 ```
 
+## Typed parameters
+
+An endpoint's variables follow its path. With none declared, the variables are the path's parameters, each one required. Variables declared before or after the path must name each of its parameters: one left out is a type error where the endpoint is written, not a failed request later.
+
+```ts title="api/articles.ts"
+import { courier, defineGroup } from "@noverax/courier/define"
+
+const { endpoint } = courier()
+
+type Article = { id: number; title: string }
+
+export const articles = defineGroup({
+  prefix: "articles",
+  endpoints: {
+    // variables: { id: string | number }
+    getById: endpoint.get(":id").response<Article>(),
+    update: endpoint.put(":id").variables<{ id: number; title: string }>().response<Article>(),
+    // @ts-expect-error — the variables do not name :id
+    getBySlug: endpoint.get(":id").variables<{ slug: string }>().response<Article>(),
+  },
+})
+```
+
+Variables that fill no parameter by name — a form, a raw body, a list — are not checked, and neither are the parameters of a group's prefix, which `pathOptions` may supply (see below).
+
 ## Variables as path params
 
 When you pass variables to a request, Courier first extracts any values that match path parameter names. The remaining variables are sent as query parameters (for GET/DELETE) or as the request body (for POST/PUT/PATCH):

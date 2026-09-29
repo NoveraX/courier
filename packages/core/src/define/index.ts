@@ -19,6 +19,7 @@ export type {
   Courier,
   CourierBaseConfig,
   HttpAddressed,
+  HttpAddressedAt,
   HttpBuilder,
   NeutralMethods,
   StreamAddressed,
@@ -40,6 +41,7 @@ export type {
   InferVariables,
   InferVariablesOut,
 } from "./marker";
+export type { PathParamNames, PathParamsMissing } from "./path-params";
 export type {
   ChannelProbe,
   ChannelWire,

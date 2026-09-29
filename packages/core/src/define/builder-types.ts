@@ -15,6 +15,7 @@ import type {
   RetryOptions,
   StreamEndpointOptions,
 } from "./options";
+import type { CheckedPath, PathParamNames, VariablesForPath, WithPathParams } from "./path-params";
 import type { ChannelProbe, HttpProbe, StreamProbe } from "./probe";
 
 /** Generator serving a stream from the defining process. */
@@ -85,6 +86,18 @@ export interface NeutralMethods<TSelf> {
  *
  * `.variables()` is the one exception, and only for `.via()`: a closure has to
  * know what it will be handed.
+ *
+ * A path's `:name` parameters are taken from the variables. Declared before
+ * the path, the variables must name each of them; left undeclared, the
+ * variables are the parameters, each one required.
+ *
+ * @example
+ * ```ts
+ * endpoint.get("users/:id"); // variables: { id: string | number }
+ * endpoint.variables<{ id: string }>().get("users/:id");
+ * // @ts-expect-error — the variables do not name :id
+ * endpoint.variables<{ slug: string }>().get("users/:id");
+ * ```
  */
 export interface HttpBuilder<TVariables, TVariablesOut>
   extends NeutralMethods<HttpBuilder<TVariables, TVariablesOut>> {
@@ -98,40 +111,40 @@ export interface HttpBuilder<TVariables, TVariablesOut>
   variables<TIn, TOut = TIn>(schema?: StandardSchemaV1<TIn, TOut>): HttpBuilder<TIn, TOut>;
 
   /** Read it. */
-  get(
-    path?: string,
+  get<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<void, TVariables, TVariablesOut, "query">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query">;
   /** Read its headers alone. */
-  head(
-    path?: string,
+  head<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<void, TVariables, TVariablesOut, "query">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query">;
   /** Ask what it allows. */
-  options(
-    path?: string,
+  options<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<void, TVariables, TVariablesOut, "query">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query">;
   /** Create it. */
-  post(
-    path?: string,
+  post<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation">;
   /** Replace it. */
-  put(
-    path?: string,
+  put<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation">;
   /** Change part of it. */
-  patch(
-    path?: string,
+  patch<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation">;
   /** Remove it. */
-  del(
-    path?: string,
+  del<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
-  ): HttpAddressed<void, TVariables, TVariablesOut, "mutation">;
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "mutation">;
 
   /**
    * Address it with a closure, for a path or a body the variables have to be
@@ -158,21 +171,28 @@ export interface HttpAddressed<
   TVariables,
   TVariablesOut,
   TKind extends "query" | "mutation",
+  TParams extends string = never,
 > extends HttpEndpoint<TResponse, TVariables, TKind, TVariablesOut>,
-    NeutralMethods<HttpAddressed<TResponse, TVariables, TVariablesOut, TKind>> {
+    NeutralMethods<HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>> {
   response<T>(
     schema?: StandardSchemaV1<unknown, T>,
-  ): HttpAddressed<T, TVariables, TVariablesOut, TKind>;
+  ): HttpAddressed<T, TVariables, TVariablesOut, TKind, TParams>;
+  /**
+   * What the caller passes. Each of the path's `:name` parameters is taken
+   * from it, so variables that leave one out are refused here.
+   */
   variables<TIn, TOut = TIn>(
-    schema?: StandardSchemaV1<TIn, TOut>,
-  ): HttpAddressed<TResponse, TIn, TOut, TKind>;
+    ...schema: WithPathParams<TParams, TIn, [schema?: StandardSchemaV1<TIn, TOut>]>
+  ): HttpAddressed<TResponse, TIn, TOut, TKind, TParams>;
   /**
    * How long the answer keeps.
    *
    * Offered on a read alone: its argument is `never` once the verb writes, so
    * caching a write fails where it was written.
    */
-  cache(config: CacheArg<TKind>): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind>;
+  cache(
+    config: CacheArg<TKind>,
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>;
   /**
    * Declare a write-shaped call to be a read.
    *
@@ -182,8 +202,22 @@ export interface HttpAddressed<
    * `.patch()` or `.del()` changes what it addresses and is refused with
    * `READS_ON_CHANGING_VERB`.
    */
-  reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query">;
+  reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query", TParams>;
 }
+
+/** What naming a verb and a path gives: the endpoint, with its path's parameters. */
+export type HttpAddressedAt<
+  TVariables,
+  TVariablesOut,
+  TPath extends string,
+  TKind extends "query" | "mutation",
+> = HttpAddressed<
+  void,
+  VariablesForPath<TVariables, TPath>,
+  VariablesForPath<TVariablesOut, TPath>,
+  TKind,
+  PathParamNames<TPath>
+>;
 
 /** Builder for an endpoint delivering server-sent events. */
 export interface StreamBuilder<TResponse, TVariables, TVariablesOut>
@@ -192,11 +226,16 @@ export interface StreamBuilder<TResponse, TVariables, TVariablesOut>
   variables<TIn, TOut = TIn>(
     schema?: StandardSchemaV1<TIn, TOut>,
   ): StreamBuilder<TResponse, TIn, TOut>;
-  /** Where the stream is, when another process serves it. */
-  get(
-    path?: string,
+  /** Where the stream is, when another process serves it; see `HttpBuilder` for its path's parameters. */
+  get<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
     options?: StreamEndpointOptions,
-  ): StreamAddressed<TResponse, TVariables, TVariablesOut>;
+  ): StreamAddressed<
+    TResponse,
+    VariablesForPath<TVariables, TPath>,
+    VariablesForPath<TVariablesOut, TPath>,
+    PathParamNames<TPath>
+  >;
   /** Address it with a closure, for a path the variables have to be worked into. */
   via(
     probe: StreamProbe<TVariablesOut>,
@@ -279,11 +318,17 @@ export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
   topic(
     key: (variables: TVariablesOut) => TopicKey,
   ): ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>;
-  /** Where the channel is, when another process serves it. */
-  connect(
-    path?: string,
+  /** Where the channel is, when another process serves it; see `HttpBuilder` for its path's parameters. */
+  connect<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
     options?: ChannelEndpointOptions,
-  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend>;
+  ): ChannelAddressed<
+    TResponse,
+    VariablesForPath<TVariables, TPath>,
+    VariablesForPath<TVariablesOut, TPath>,
+    TSend,
+    PathParamNames<TPath>
+  >;
   /** Address it with a closure, for a path the variables have to be worked into. */
   via(
     probe: ChannelProbe<TVariablesOut>,
@@ -308,28 +353,41 @@ export interface ChannelBuilder<TResponse, TVariables, TVariablesOut, TSend>
 }
 
 /** A stream that has said where it is, and may still be refined. */
-export interface StreamAddressed<TResponse, TVariables, TVariablesOut>
-  extends StreamEndpoint<TResponse, TVariables, TVariablesOut>,
-    NeutralMethods<StreamAddressed<TResponse, TVariables, TVariablesOut>> {
-  response<T>(schema?: StandardSchemaV1<unknown, T>): StreamAddressed<T, TVariables, TVariablesOut>;
+export interface StreamAddressed<
+  TResponse,
+  TVariables,
+  TVariablesOut,
+  TParams extends string = never,
+> extends StreamEndpoint<TResponse, TVariables, TVariablesOut>,
+    NeutralMethods<StreamAddressed<TResponse, TVariables, TVariablesOut, TParams>> {
+  response<T>(
+    schema?: StandardSchemaV1<unknown, T>,
+  ): StreamAddressed<T, TVariables, TVariablesOut, TParams>;
+  /** What the caller passes; it names each of the path's `:name` parameters. */
   variables<TIn, TOut = TIn>(
-    schema?: StandardSchemaV1<TIn, TOut>,
-  ): StreamAddressed<TResponse, TIn, TOut>;
+    ...schema: WithPathParams<TParams, TIn, [schema?: StandardSchemaV1<TIn, TOut>]>
+  ): StreamAddressed<TResponse, TIn, TOut, TParams>;
 }
 
 /** A channel that has said where it is, and may still be refined. */
-export interface ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend>
-  extends ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut>,
-    NeutralMethods<ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend>> {
+export interface ChannelAddressed<
+  TResponse,
+  TVariables,
+  TVariablesOut,
+  TSend,
+  TParams extends string = never,
+> extends ChannelEndpoint<TResponse, TVariables, TSend, TVariablesOut>,
+    NeutralMethods<ChannelAddressed<TResponse, TVariables, TVariablesOut, TSend, TParams>> {
   response<T>(
     schema?: StandardSchemaV1<unknown, T>,
-  ): ChannelAddressed<T, TVariables, TVariablesOut, TSend>;
+  ): ChannelAddressed<T, TVariables, TVariablesOut, TSend, TParams>;
+  /** What the caller passes; it names each of the path's `:name` parameters. */
   variables<TIn, TOut = TIn>(
-    schema?: StandardSchemaV1<TIn, TOut>,
-  ): ChannelAddressed<TResponse, TIn, TOut, TSend>;
+    ...schema: WithPathParams<TParams, TIn, [schema?: StandardSchemaV1<TIn, TOut>]>
+  ): ChannelAddressed<TResponse, TIn, TOut, TSend, TParams>;
   send<T>(
     schema?: StandardSchemaV1<unknown, T>,
-  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, T>;
+  ): ChannelAddressed<TResponse, TVariables, TVariablesOut, T, TParams>;
 }
 
 /** Configuration shared by every endpoint built from a base. */

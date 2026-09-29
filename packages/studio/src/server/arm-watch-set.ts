@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { CONFIG_BASENAMES, MOCKS_BASENAMES } from "@noverax/courier-studio-core/config";
 import type { LoadedCourierConfig } from "./config-loader";
@@ -66,7 +67,8 @@ export function armWatchSet(
   function arm(paths: readonly string[], expected: ProjectInputs): void {
     watched = paths;
     watchSet.update(paths, expected);
-    watcherStatus?.setApiPathCount(paths.length);
+    /* A name watched so that creating it is noticed is not a file watched. */
+    watcherStatus?.setApiPathCount(paths.filter((path) => existsSync(path)).length);
   }
 
   return {

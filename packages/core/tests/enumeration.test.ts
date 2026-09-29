@@ -124,3 +124,14 @@ describe("SSE applies the same rule", () => {
     expect(await resolve("adminApi", "feed")).toBe("400 [adminApi][][feed]: method not found");
   });
 });
+
+describe("a call that leaves a name out", () => {
+  it("is told which name is missing, rather than read as a guess at one", async () => {
+    expect(await inProcess(undefined as never, "list")).toBe(
+      "400 [source] is required: the call names no source",
+    );
+    expect(await inProcess("publicApi", "")).toBe(
+      "400 [method] is required: the call names no endpoint",
+    );
+  });
+});

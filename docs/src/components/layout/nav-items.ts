@@ -78,6 +78,10 @@ export const docsNav: NavSection[] = [
       { title: "Express", href: "/docs/frameworks/express" },
       { title: "Fastify", href: "/docs/frameworks/fastify" },
       { title: "NestJS", href: "/docs/frameworks/nestjs" },
+      { title: "Astro", href: "/docs/frameworks/astro" },
+      { title: "Remix & React Router", href: "/docs/frameworks/remix" },
+      { title: "SolidStart", href: "/docs/frameworks/solid-start" },
+      { title: "SvelteKit", href: "/docs/frameworks/sveltekit" },
     ],
   },
   {

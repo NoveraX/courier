@@ -10,6 +10,8 @@ export interface DeclarationState {
    * that did not load is found when the edit is planned, not here.
    */
   declaredKeys: readonly string[];
+  /** The declared keys set to `undefined`, which switches their mock off. */
+  switchedOffKeys: readonly string[];
   /** Each port a mock holds exactly, and the key of that mock. */
   declaredPorts: ReadonlyMap<number, string>;
   /** The port Studio itself listens on, or `null` when it is not known. */
@@ -24,6 +26,8 @@ interface Project {
   sources: ReadonlySet<string>;
   /** Declared keys by their lower-case form. */
   declared: ReadonlyMap<string, string>;
+  /** The switched-off keys, in lower case. */
+  switchedOff: ReadonlySet<string>;
 }
 
 /** The declarations earlier in the request: keys by lower-case form, and keys by fixed port. */
@@ -52,7 +56,11 @@ function keyProblem(
   }
   const existing = project?.declared.get(key.toLowerCase());
   if (project === null || existing === undefined) return null;
-  return `${project.state.mocksFileName} already declares ${existing}`;
+  const file = project.state.mocksFileName;
+  if (project.switchedOff.has(key.toLowerCase())) {
+    return `${file} already declares ${existing}, switched off with undefined; turn it on there, or pick another key`;
+  }
+  return `${file} already declares ${existing}`;
 }
 
 function portProblem(
@@ -97,7 +105,8 @@ function remember({ key, port }: MockDeclaration, earlier: Earlier): void {
 
 function indexed(state: DeclarationState): Project {
   const declared = new Map(state.declaredKeys.map((key) => [key.toLowerCase(), key]));
-  return { state, sources: new Set(state.sourceKeys), declared };
+  const switchedOff = new Set(state.switchedOffKeys.map((key) => key.toLowerCase()));
+  return { state, sources: new Set(state.sourceKeys), declared, switchedOff };
 }
 
 /**
@@ -121,6 +130,7 @@ function indexed(state: DeclarationState): Project {
  *   {
  *     sourceKeys: ["users"],
  *     declaredKeys: ["users"],
+ *     switchedOffKeys: [],
  *     declaredPorts: new Map(),
  *     studioPort: 6280,
  *     mocksFileName: "courier.mocks.ts",

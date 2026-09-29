@@ -1,3 +1,4 @@
+import { isPlainObject } from "./is-plain-object";
 /** One field of a form the Playground sends: text, or a file's bytes. */
 export type PlaygroundFormField =
   | { name: string; text: string }
@@ -34,19 +35,15 @@ export function sanitizeForm(raw: unknown): PlaygroundFormField[] | null | undef
 }
 
 function fieldOf(item: unknown): PlaygroundFormField | undefined {
-  if (!isRecord(item)) return undefined;
+  if (!isPlainObject(item)) return undefined;
   const { name } = item;
   if (typeof name !== "string" || name.length === 0 || name.length > MAX_NAME) return undefined;
   if (typeof item.text === "string") return { name, text: item.text };
   const file = item.file;
-  if (!isRecord(file) || typeof file.name !== "string" || typeof file.type !== "string") {
+  if (!isPlainObject(file) || typeof file.name !== "string" || typeof file.type !== "string") {
     return undefined;
   }
   const { data } = file;
   if (!(data instanceof Uint8Array) && !(data instanceof ArrayBuffer)) return undefined;
   return { name, file: { name: file.name, type: file.type, data } };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

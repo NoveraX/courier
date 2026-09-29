@@ -1,3 +1,4 @@
+import { isPlainObject } from "../is-plain-object";
 /**
  * What Studio writes down holds no credentials.
  *
@@ -73,12 +74,12 @@ export function headersWithoutCredentials(
  * ```
  */
 export function withoutCredentials(value: unknown): unknown {
-  if (!isRecord(value)) return value;
+  if (!isPlainObject(value)) return value;
   const copy: Record<string, unknown> = { ...value };
   for (const field of HEADER_FIELDS) {
     const headers = value[field];
     if (typeof headers === "string") copy[field] = headerTextWithoutCredentials(headers);
-    else if (isRecord(headers)) copy[field] = redacted<unknown>(headers, REDACTED);
+    else if (isPlainObject(headers)) copy[field] = redacted<unknown>(headers, REDACTED);
   }
   return copy;
 }
@@ -94,7 +95,9 @@ function headerTextWithoutCredentials(text: string): string {
     const parsed: unknown = JSON.parse(
       text.replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1"),
     );
-    return isRecord(parsed) ? JSON.stringify(redacted<unknown>(parsed, REDACTED), null, 2) : "{}";
+    return isPlainObject(parsed)
+      ? JSON.stringify(redacted<unknown>(parsed, REDACTED), null, 2)
+      : "{}";
   } catch {
     /* Unreadable text is dropped, not written down: it may hold a credential. */
     return "{}";
@@ -110,8 +113,4 @@ function redacted<TValue>(
     kept[name] = isCredentialHeader(name) ? replacement : value;
   }
   return kept;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

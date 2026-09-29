@@ -19,30 +19,13 @@
  * a test in `sanitize-runtime-events.test.ts`.
  */
 
+import { isSafeHttpOrigin } from "@noverax/courier-studio-core";
 import type { BindingTransport } from "./catalog/binding-table";
 import { isPlainObject } from "./is-plain-object";
 
 const RUNTIME_ID_PATTERN = /^[a-zA-Z0-9_-]{1,256}$/;
 const SOURCES_HASH_PATTERN = /^[a-f0-9]{16}$/;
 const FRAMEWORK_PATTERN = /^[a-zA-Z0-9_.-]{1,64}$/;
-
-/**
- * Local copy of `isSafeHttpOrigin` semantics — kept inline to avoid pulling
- * studio-core into the studio runtime dep graph for a 10-line guard. The
- * canonical implementation lives at
- * `packages/studio-core/src/lib/is-safe-http-origin.ts`; if you change that
- * one, mirror the change here.
- */
-function isSafeHttpOriginString(value: string): boolean {
-  if (value.length === 0) return false;
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    return false;
-  }
-  return parsed.protocol === "http:" || parsed.protocol === "https:";
-}
 
 export interface SanitizedRuntimeHello {
   runtimeId: string;
@@ -107,7 +90,7 @@ export function sanitizeRuntimeHello(raw: unknown): SanitizedRuntimeHello | unde
   }
   if (!isRuntimeKind(raw.kind)) return undefined;
   const result: SanitizedRuntimeHello = { runtimeId: raw.runtimeId, kind: raw.kind };
-  if (typeof raw.listenOrigin === "string" && isSafeHttpOriginString(raw.listenOrigin)) {
+  if (typeof raw.listenOrigin === "string" && isSafeHttpOrigin(raw.listenOrigin)) {
     result.listenOrigin = raw.listenOrigin;
   }
   if (typeof raw.sourcesHash === "string" && SOURCES_HASH_PATTERN.test(raw.sourcesHash)) {
@@ -136,7 +119,7 @@ export function sanitizeRuntimeAnnounce(raw: unknown): SanitizedRuntimeAnnounce 
     if (isNonEmptyString(s) && !sources.includes(s)) sources.push(s);
   }
   const result: SanitizedRuntimeAnnounce = { transports, sources };
-  if (typeof raw.listenOrigin === "string" && isSafeHttpOriginString(raw.listenOrigin)) {
+  if (typeof raw.listenOrigin === "string" && isSafeHttpOrigin(raw.listenOrigin)) {
     result.listenOrigin = raw.listenOrigin;
   }
   if (typeof raw.framework === "string" && FRAMEWORK_PATTERN.test(raw.framework)) {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useCatalog } from "@/hooks/use-catalog";
+import { useThrottledValue } from "@/hooks/use-throttled-value";
 import { useStudioStore } from "../../store";
 import { runAudit } from "./run-audit";
 import type { AuditCategory, AuditResult } from "./types";
@@ -16,8 +17,14 @@ export interface AuditState {
   filteredItems: AuditResult["items"];
 }
 
+/* How often the audit may run again while requests arrive. */
+const AUDIT_INTERVAL_MS = 1_000;
+
 export function useAudit(): AuditState {
-  const requests = useStudioStore((s) => s.requests);
+  const requests = useThrottledValue(
+    useStudioStore((s) => s.requests),
+    AUDIT_INTERVAL_MS,
+  );
   const catalog = useCatalog();
   const context = useAuditContext();
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");

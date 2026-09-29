@@ -1,5 +1,6 @@
 import { createRouter } from "@tanstack/react-router";
 
+import { RouteError } from "./components/shared/route-error";
 import { studioToken } from "./lib/studio-token";
 import { routeTree } from "./routeTree.gen";
 
@@ -10,6 +11,7 @@ studioToken();
 export const router = createRouter({
   routeTree,
   defaultPreload: "intent",
+  defaultErrorComponent: RouteError,
 });
 
 declare module "@tanstack/react-router" {

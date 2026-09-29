@@ -148,6 +148,8 @@ export interface MockSliceState {
   // Actions
   addServer: (server: MockServerInfo) => void;
   removeServer: (serverId: string) => void;
+  /** Drop every mock Studio runs, before Studio sends them again on connecting. */
+  forgetManagedServers: () => void;
   updateServer: (serverId: string, patch: Partial<MockServerInfo>) => void;
   selectServer: (serverId: string | null) => void;
   setServerCollections: (serverId: string, collections: MockCollectionEntry[]) => void;

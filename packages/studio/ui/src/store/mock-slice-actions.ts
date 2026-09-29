@@ -62,6 +62,20 @@ export function createMockSliceActions(set: Setter, get: Getter): MockActions {
       });
     },
 
+    /* On each (re)connect: Studio sends the mocks it runs, so one it no
+       longer runs would otherwise stay listed for good. */
+    forgetManagedServers() {
+      set((state) => {
+        const kept = Object.values(state.servers).filter((server) => !server.managed);
+        const servers = Object.fromEntries(kept.map((server) => [server.serverId, server]));
+        const activeServerId =
+          state.activeServerId !== null && state.activeServerId in servers
+            ? state.activeServerId
+            : (kept[0]?.serverId ?? null);
+        return { servers, activeServerId };
+      });
+    },
+
     updateServer(serverId: string, patch: Partial<MockServerInfo>) {
       set((state) => patchServer(state, serverId, patch));
     },

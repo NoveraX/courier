@@ -43,7 +43,7 @@ import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 await attachRuntime()
 ```
 
-`attachRuntime()` reads `courier.config.ts` from disk (walking up from `process.cwd()`), registers its sources, and — outside production — connects to Studio. It dials the address the config's `studio` block names, so `studio: { port: 7000 }` moves the Studio server and every runtime together. `COURIER_STUDIO_URL` overrides both.
+`attachRuntime()` reads `courier.config.ts` from disk (walking up from `process.cwd()`), registers its sources, and — outside production — connects to Studio. It dials the address the config's `studio` block names, so `studio: { port: 6290 }` moves the Studio server and every runtime together. `COURIER_STUDIO_URL` overrides both.
 
 Outside production it keeps the registered sources in step with your edits: whenever a module your dev server reloads runs `defineApi()`, the config is read again and its sources registered anew. Only the sources the config declares are ever registered, as the config composes them.
 

@@ -112,7 +112,9 @@ courierHandler({
 })
 ```
 
-`https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme and port.
+`https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme on its default port; name the port to cover another, as in `*.example.com:8443`.
+
+An entry is written as a browser sends an origin — no path, no trailing slash, the scheme's default port left out — since one written otherwise could never match. Such an entry stops the handler from being created, with `INVALID_ALLOWED_ORIGIN` naming the form to use. `null` is refused as well: every sandboxed frame and `data:` page sends it, whatever site it belongs to.
 
 A page on a listed origin calls the proxy with CORS, and the handler answers for it: a preflight gets `204` with `Access-Control-Allow-Origin` and `Access-Control-Allow-Credentials`, the headers it asked to send and the methods the proxy takes, and every answer carries the same permission along with `Access-Control-Expose-Headers`. The preflight is an `OPTIONS` request, so route `OPTIONS` to the handler too — `app.all(...)` in Express and Hono, `export const { GET, POST, OPTIONS } = apiRoute(...)` in Next.js — and on the SSE route as well, since a stream that resumes sends `Last-Event-ID`. The development allowance for local ports is not a listing: it lets such a page's requests through, but gives it no permission to read the answers.
 

@@ -87,7 +87,7 @@ The command exits with status 1 when the server cannot start — the port is tak
 | `sources` | (required) | The API sources this server answers for. They stay its own: a second server or a `registerSources` call in the same process does not change them, and the server does not write them into the process-wide registry |
 | `port` | `3001` | Server port |
 | `host` | `"127.0.0.1"` | Address to listen on. The IPv4 loopback, which a client given `localhost` reaches too; `"::1"` for the IPv6 loopback, `"0.0.0.0"` or `"::"` to accept other machines, as a container needs |
-| `allowedOrigins` | `undefined` | Origins of the browser apps that may call the server (CORS and the WebSocket origin check). Left out, only the server's own origin — and loopback origins outside production |
+| `allowedOrigins` | `undefined` | Origins of the browser apps that may call the server (CORS and the WebSocket origin check), written as a browser sends them: `https://app.example.com`, with no trailing slash — an entry that could never match stops the server from starting. Left out, only the server's own origin — and loopback origins outside production |
 | `allowedHosts` | `undefined` | Host names the server is reached by. A request addressed to any other host gets 421, and a socket is closed with 4421, as a DNS-rebinding page's would be. `localhost`, `*.localhost` and IP addresses are always served; left out, production serves every name and development nothing else |
 | `maxBodyBytes` | 1 MB | Largest JSON envelope a proxied call may send; a larger one is refused with 413 |
 | `maxUploadBytes` | 10 MB | Largest `multipart/form-data` upload a proxied call may send; a larger one is refused with 413 |

@@ -78,7 +78,7 @@ describe("detaching the WebSocket handler", () => {
   it("closes the connections it accepted, telling clients the server is going away", async () => {
     let detach: () => Promise<void> = async () => undefined;
     const host = await listen((s) => {
-      detach = courierWSAttach(s, { allowedOrigins: ["*"] });
+      detach = courierWSAttach(s);
     });
     const client = new WebSocket(`ws://${host}/api/ws`);
     await new Promise((resolve) => client.once("open", resolve));

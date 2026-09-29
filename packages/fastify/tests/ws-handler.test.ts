@@ -79,7 +79,7 @@ describe("courierWSHandler under the plugin's frame limit", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const wss = new WebSocketServer({ noServer: true });
 
-    await connectThrough(wss, courierWSHandler({ maxMessageSize: 1000, allowedOrigins: ["*"] }));
+    await connectThrough(wss, courierWSHandler({ maxMessageSize: 1000 }));
 
     const call = warn.mock.calls.find((args) => String(args[1]).includes("maxPayload"));
     expect(call).toBeDefined();
@@ -91,7 +91,7 @@ describe("courierWSHandler under the plugin's frame limit", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const wss = new WebSocketServer({ noServer: true, maxPayload: 1000 });
 
-    await connectThrough(wss, courierWSHandler({ maxMessageSize: 1000, allowedOrigins: ["*"] }));
+    await connectThrough(wss, courierWSHandler({ maxMessageSize: 1000 }));
 
     expect(warn.mock.calls.some((args) => String(args[1]).includes("maxPayload"))).toBe(false);
     wss.close();

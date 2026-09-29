@@ -46,7 +46,12 @@ export function subscribeSSE<TData = unknown>(
     serverRetryMs: undefined,
   });
 
-  const iter = queue.iterator(() => controller.abort());
+  /* Ended by its reader — close(), or a loop left early — the stream is
+     disconnected; it went on reporting the status it had before. */
+  const iter = queue.iterator(() => {
+    controller.abort();
+    state.set("disconnected");
+  });
 
   return {
     [Symbol.asyncIterator]() {

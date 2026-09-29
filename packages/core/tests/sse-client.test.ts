@@ -285,3 +285,42 @@ describe("subscribeSSE", () => {
     });
   });
 });
+
+/**
+ * A stream its reader ended went on reporting the status it had — connected —
+ * so an indicator bound to it showed a live stream that was gone.
+ */
+describe("a stream its reader ended", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("reports itself disconnected after close(), and tells its listeners", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(mockSSEResponse('data: "a"\n\ndata: "b"\n\n')),
+    );
+    const sub = subscribeSSE<string>("/sse", { maxAttempts: 1 });
+    const statuses: string[] = [];
+    sub.on("status", (status) => statuses.push(status));
+
+    for await (const event of sub) {
+      if (event.data === "b") sub.close();
+    }
+
+    expect(sub.status).toBe("disconnected");
+    expect(statuses.at(-1)).toBe("disconnected");
+  });
+
+  it("reports itself disconnected when a loop over it is left early", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(mockSSEResponse('data: "a"\n\ndata: "b"\n\n')),
+    );
+    const sub = subscribeSSE<string>("/sse", { maxAttempts: 1 });
+
+    for await (const _event of sub) break;
+
+    expect(sub.status).toBe("disconnected");
+  });
+});

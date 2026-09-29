@@ -6,7 +6,8 @@ import { validateDeclarations } from "../../src/server/mocks-edit/validate-decla
 
 const STATE: DeclarationState = {
   sourceKeys: ["users", "orders", "carts"],
-  declaredKeys: ["users"],
+  declaredKeys: ["users", "legacy"],
+  switchedOffKeys: ["legacy"],
   declaredPorts: new Map([[4000, "users"]]),
   studioPort: 6280,
   mocksFileName: "courier.mocks.ts",
@@ -69,6 +70,31 @@ describe("checking declarations against the project", () => {
         source: "orders",
         field: "key",
         message: "courier.mocks.ts already declares users",
+      },
+    ]);
+  });
+
+  it("refuses a key that differs only in case from a declared one written in capitals", () => {
+    const state = { ...STATE, declaredKeys: ["Users"], switchedOffKeys: [] };
+
+    expect(validateDeclarations([request({ key: "users" })], state)).toEqual([
+      {
+        index: 0,
+        source: "orders",
+        field: "key",
+        message: "courier.mocks.ts already declares Users",
+      },
+    ]);
+  });
+
+  it("says a key the mocks file switched off with undefined is declared there, switched off", () => {
+    expect(validateDeclarations([request({ key: "legacy" })], STATE)).toEqual([
+      {
+        index: 0,
+        source: "orders",
+        field: "key",
+        message:
+          "courier.mocks.ts already declares legacy, switched off with undefined; turn it on there, or pick another key",
       },
     ]);
   });

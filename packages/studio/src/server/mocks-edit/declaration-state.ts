@@ -25,6 +25,9 @@ export function declarationState(
   return {
     sourceKeys: Object.keys(loaded.config.sources),
     declaredKeys: Object.keys(loaded.mocks.entries),
+    switchedOffKeys: Object.entries(loaded.mocks.entries)
+      .filter(([, entry]) => entry === undefined)
+      .map(([key]) => key),
     declaredPorts,
     studioPort: ctx.studioPort(),
     mocksFileName,

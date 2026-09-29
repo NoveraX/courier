@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createHandler } from "../src/adapter";
 import { courier } from "../src/define/courier";
 import { extractOriginFromNodeRequest, sendWebResponse, toWebRequest } from "../src/node";
-import { buildProxySSEUrl } from "../src/realtime/caller-sse";
+import { buildProxySSEUrl } from "../src/realtime/sse-address";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 
 function mockIncomingMessage(opts: {

@@ -1,8 +1,8 @@
 import type { ProxyPath } from "../../proxy-caller/proxy-path";
 import type { ResolveOrigin } from "../../proxy-caller/resolve-path";
 import { resolveProxyPath } from "../../proxy-caller/resolve-path";
-import { buildWSTopic } from "../../realtime/caller-ws";
 import type { CallerWSOptions } from "../../realtime/ws/ws-types";
+import { buildWSTopic } from "../../realtime/ws-address";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";
 import type { WSChannelFactory, WSPushFactory } from "../types";

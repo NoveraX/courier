@@ -3,7 +3,7 @@
  * definition says — by a direct caller, and by a proxy relaying it.
  */
 
-import { buildDirectSSEUrl } from "../../realtime/caller-sse";
+import { buildDirectSSEUrl } from "../../realtime/sse-address";
 import { layerHeaders } from "../../utils/layer-headers";
 import { addressCall } from "./address";
 import { fieldOf, textOf } from "./read-definition";

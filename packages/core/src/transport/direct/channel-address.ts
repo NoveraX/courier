@@ -4,7 +4,7 @@
  */
 
 import { getSourceName } from "../../define/api";
-import { buildDirectWSUrl, buildWSTopic } from "../../realtime/caller-ws";
+import { buildDirectWSUrl, buildWSTopic } from "../../realtime/ws-address";
 import { addressCall } from "./address";
 import { fieldOf, textOf } from "./read-definition";
 

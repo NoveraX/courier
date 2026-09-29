@@ -1,7 +1,8 @@
 import type { ProxyPath } from "../../proxy-caller/proxy-path";
 import type { ResolveOrigin } from "../../proxy-caller/resolve-path";
 import { resolveProxyPath } from "../../proxy-caller/resolve-path";
-import { buildProxySSEUrl, executeSSE } from "../../realtime/caller-sse";
+import { executeSSE } from "../../realtime/caller-sse";
+import { buildProxySSEUrl } from "../../realtime/sse-address";
 import { layerHeaders } from "../../utils/layer-headers";
 import type { SSEFactory } from "../types";
 

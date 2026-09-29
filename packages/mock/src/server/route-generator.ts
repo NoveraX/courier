@@ -92,7 +92,7 @@ export async function handleMockRequest(
   // SSE stream — bypass normal JSON response path; logged as finished once it has ended
   if (handler.transport === "sse") {
     pushHistory(config, { group, method, variables, start, status: 200, stream: true });
-    return handleSSEMock(c, handler, ctx, ({ events, error }) => {
+    return handleSSEMock(c, handler, ctx, config.streamsStopping?.(), ({ events, error }) => {
       const duration = performance.now() - start;
       config.networkState?.trackRequest(duration, error !== undefined);
       if (error !== undefined) return config.hooks?.onError?.(requestId, 500, error, duration);

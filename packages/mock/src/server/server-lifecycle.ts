@@ -9,8 +9,16 @@ import type { MockWSHandler } from "./ws-handler";
 /** The part of Node's HTTP server that stopping needs */
 interface ClosableServer {
   close(callback: () => void): void;
+  closeIdleConnections?(): void;
   closeAllConnections?(): void;
 }
+
+/* How long a request being answered may take to finish once the server stops:
+   a mock's latency can hold one, and a fault that waits for the client's
+   timeout holds it longer than is worth waiting for. */
+const STOP_GRACE_MS = 3_000;
+
+const IDLE_SWEEP_MS = 25;
 
 /** Starting and stopping a mock server's listener and its WebSocket channels */
 export interface ServerLifecycle {
@@ -26,6 +34,7 @@ export interface ServerLifecycle {
  * @param hostname - Where to listen; `localhost` means loopback only
  * @param ws - What the WebSocket upgrade route needs
  * @param strictPort - Fail when `port` is busy rather than take the next one
+ * @param stopStreams - Ends the server's open event streams when it stops
  * @returns `start` and `stop`
  */
 export function createServerLifecycle(
@@ -34,6 +43,7 @@ export function createServerLifecycle(
   hostname: string,
   ws: WSUpgradeOptions,
   strictPort = false,
+  stopStreams: () => void = () => undefined,
 ): ServerLifecycle {
   let server: ClosableServer | undefined;
   let wsUpgrade: MockWSHandler | undefined;
@@ -52,18 +62,27 @@ export function createServerLifecycle(
       return tryListen(serve, app, port, hostname, onServer, strictPort ? 0 : undefined);
     },
 
-    /* Closes the channels — each hears onLeave — and every connection, then
-       resolves once the server is closed. It used to close only the listener
-       and not wait: channels stayed open and served, and kept the process
-       alive. */
+    /* Closes the channels — each hears onLeave — and ends the event streams,
+       lets the requests being answered finish, up to a bound, and resolves
+       once the server is closed. Closing every connection at once cut a
+       request in the middle of its latency, which a restart made routine. */
     async stop() {
       const closing = server;
       server = undefined;
       await wsUpgrade?.close();
+      stopStreams();
       if (!closing) return;
       await new Promise<void>((resolve) => {
-        closing.close(() => resolve());
-        closing.closeAllConnections?.();
+        /* A connection whose answer has just ended is kept alive for its
+           next request; it is closed as soon as it is idle. */
+        const sweep = setInterval(() => closing.closeIdleConnections?.(), IDLE_SWEEP_MS);
+        const cut = setTimeout(() => closing.closeAllConnections?.(), STOP_GRACE_MS);
+        closing.close(() => {
+          clearInterval(sweep);
+          clearTimeout(cut);
+          resolve();
+        });
+        closing.closeIdleConnections?.();
       });
     },
   };

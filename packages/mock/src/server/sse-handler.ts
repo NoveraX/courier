@@ -27,18 +27,20 @@ export interface StreamOutcome {
  * @param c        The request's Hono context
  * @param handler  The stream's handler
  * @param ctx      The request as the stream function sees it
+ * @param stopping Fires when the server stops: the answer ends then
  * @param onEnded  Called once the stream has ended, however it ended, so the
  *   request can be logged as finished
  * @returns The streaming response
  * @example
  * ```ts
- * return handleSSEMock(c, handler, ctx, ({ events }) => log(`${events} events sent`));
+ * return handleSSEMock(c, handler, ctx, streams.signal(), ({ events }) => log(`${events} events sent`));
  * ```
  */
 export function handleSSEMock(
   c: HonoContext,
   handler: ResolvedHandler,
   ctx: MockRequestContext,
+  stopping: AbortSignal | undefined,
   onEnded: (outcome: StreamOutcome) => void,
 ): Response {
   const streamFn = handler.streamFn;
@@ -50,7 +52,14 @@ export function handleSSEMock(
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
   const writer = writable.getWriter();
 
-  void pumpEvents(streamFn, ctx, writer, c.req.raw.signal).then(onEnded);
+  const signal = stopping ? AbortSignal.any([c.req.raw.signal, stopping]) : c.req.raw.signal;
+  /* The server stopping ends the answer now, not at the generator's next
+     event — and without the frame that says the stream completed, so its
+     client reconnects. */
+  stopping?.addEventListener("abort", () => void writer.close().catch(() => undefined), {
+    once: true,
+  });
+  void pumpEvents(streamFn, ctx, writer, signal).then(onEnded);
 
   return new Response(readable, {
     status: 200,

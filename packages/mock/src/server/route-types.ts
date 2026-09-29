@@ -52,4 +52,6 @@ export interface RouteConfig {
   /** Dynamic network state — takes precedence over static `network` */
   networkState?: NetworkState;
   hooks?: RequestHooks;
+  /** Fires when the server stops, to end its event streams */
+  streamsStopping?: () => AbortSignal;
 }

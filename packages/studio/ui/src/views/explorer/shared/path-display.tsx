@@ -34,9 +34,8 @@ function parsePath(path: string): PathSegment[] {
   const parts = path.split("/");
   const segments: PathSegment[] = [];
 
-  for (let i = 0; i < parts.length; i++) {
+  for (const [i, part] of parts.entries()) {
     if (i > 0) segments.push({ text: "/", isParam: false });
-    const part = parts[i];
     if (part.startsWith(":")) {
       segments.push({ text: part, isParam: true });
     } else {

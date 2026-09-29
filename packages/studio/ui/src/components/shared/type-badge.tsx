@@ -6,7 +6,7 @@ import type { badgeVariants } from "@/components/ui/badge";
 
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
 
-const TYPE_CONFIG: Record<string, { label: string; variant: BadgeVariant }> = {
+const TYPE_CONFIG: Record<TypeBadgeProps["type"], { label: string; variant: BadgeVariant }> = {
   query: { label: "query", variant: "sky" },
   mutation: { label: "mutation", variant: "amber" },
   untyped: { label: "untyped", variant: "secondary" },
@@ -18,7 +18,7 @@ interface TypeBadgeProps {
 }
 
 export function TypeBadge({ type, className }: TypeBadgeProps): React.ReactElement {
-  const config = TYPE_CONFIG[type] ?? TYPE_CONFIG.untyped;
+  const config = TYPE_CONFIG[type];
 
   return (
     <Badge

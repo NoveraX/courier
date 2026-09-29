@@ -15,8 +15,12 @@ const catalog = buildCatalog([API], []);
 
 function copied(group: string, method: string, variables: unknown, headers: Record<string, string> = {}) {
   const source = catalog.api;
-  const endpoint: EndpointInfo = source.groups[group].endpoints[method];
-  const url = endpointUrl(source, source.groups[group].prefix, endpoint);
+  const entry = source?.groups[group];
+  const endpoint: EndpointInfo | undefined = entry?.endpoints[method];
+  if (source === undefined || entry === undefined || endpoint === undefined) {
+    throw new Error(`The fixture has no ${group}.${method}`);
+  }
+  const url = endpointUrl(source, entry.prefix, endpoint);
   return snippetInput(url, endpoint, { variables, headers });
 }
 
@@ -71,6 +75,8 @@ describe("a copied request", () => {
 
   it("gives no address for a stream, which the app serves", () => {
     const source = catalog.api;
-    expect(endpointUrl(source, "live", source.groups.live.endpoints.ticks)).toBe("");
+    const ticks = source?.groups.live?.endpoints.ticks;
+    if (source === undefined || ticks === undefined) throw new Error("The fixture has no live.ticks");
+    expect(endpointUrl(source, "live", ticks)).toBe("");
   });
 });

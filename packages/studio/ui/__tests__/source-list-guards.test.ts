@@ -10,7 +10,9 @@ import { API } from "./playground-fixtures";
 
 function withTicks(analysis: Record<string, unknown>): unknown {
   const live = API.groups[2];
-  const ticks = { name: "ticks", analysis: { ...live.endpoints[0].analysis, ...analysis } };
+  const first = live?.endpoints[0];
+  if (live === undefined || first === undefined) throw new Error("The fixture has no live group");
+  const ticks = { name: "ticks", analysis: { ...first.analysis, ...analysis } };
   return { ...API, groups: [{ ...live, endpoints: [ticks] }] };
 }
 

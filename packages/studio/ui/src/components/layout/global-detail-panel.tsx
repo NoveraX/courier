@@ -47,6 +47,7 @@ export function GlobalDetailPanel({ children }: GlobalDetailPanelProps): React.R
       }, ANIMATION_MS);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isOpen]);
 
   useEscapeClose(isOpen, closePanel);

@@ -67,11 +67,10 @@ export const ALL_NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
 
 // ── Theme cycle ────────────────────────────────────────────────────────────
 
-const THEME_CYCLE: Theme[] = ["dark", "light", "system"];
+const NEXT_THEME: Record<Theme, Theme> = { dark: "light", light: "system", system: "dark" };
 
 export function nextTheme(current: Theme): Theme {
-  const idx = THEME_CYCLE.indexOf(current);
-  return THEME_CYCLE[(idx + 1) % THEME_CYCLE.length];
+  return NEXT_THEME[current];
 }
 
 export const THEME_LABELS: Record<Theme, string> = {

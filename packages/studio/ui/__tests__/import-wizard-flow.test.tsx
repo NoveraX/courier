@@ -253,7 +253,9 @@ describe("the APIs page", () => {
     studioAnswers(DECLARATION);
     render(<ApisView />);
 
-    fireEvent.click(screen.getAllByRole("button", { name: /Import API/ })[0]);
+    const [importButton] = screen.getAllByRole("button", { name: /Import API/ });
+    if (importButton === undefined) throw new Error("Import API is not shown");
+    fireEvent.click(importButton);
     fireEvent.change(screen.getByPlaceholderText(/swagger\.json/), { target: { value: SPEC_URL } });
     fireEvent.click(screen.getByRole("button", { name: /Parse Spec/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Configure \(1\)/ }));

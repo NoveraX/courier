@@ -21,7 +21,7 @@ export interface SectionConfig {
   description: string;
 }
 
-export const SECTION_CONFIG: SectionConfig[] = [
+export const SECTION_CONFIG: [SectionConfig, ...SectionConfig[]] = [
   { id: "appearance", label: "Appearance", icon: Palette, description: "Theme, color scheme, and UI density" },
   { id: "connection", label: "Connection", icon: Cable, description: "Server connection and reconnection behavior" },
   { id: "recording", label: "Recording", icon: Circle, description: "Request capture limits, log persistence, and ignore patterns" },

@@ -1,0 +1,82 @@
+export const metadata = { title: "courier.config.ts", description: "Every field of courier.config.ts: the sources, the API imports Studio keeps in sync, Studio, the standalone server and the runtime.", mode: "both" }
+
+## Overview
+
+`courier.config.ts`, at the project root, names the project's API sources and what the tools around them need. `defineConfig` types it:
+
+```ts title="courier.config.ts"
+import { defineConfig } from "@noverax/courier/config"
+import { api } from "./api/sources"
+
+export default defineConfig({
+  sources: { api },
+  studio: { port: 6280 },
+  server: { allowedOrigins: ["https://app.example.com"] },
+  runtime: { appOrigin: "http://localhost:3000" },
+})
+```
+
+Studio reads it, and so do the Studio runtime (`attachRuntime()`) and the standalone server (`courier-server`) — both of which run in production. So the file imports nothing meant only for development: mock servers are declared in `courier.mocks.ts` beside it, which only Studio reads — see [Mock Servers](/docs/studio/mock-servers).
+
+The file may also be named `courier.config.mts`, `.cts`, `.js`, `.mjs` or `.cjs`, looked for in that order after `.ts`. [How Studio Loads the Project](/docs/studio/project-loading) says which files Studio watches and how a change reloads them.
+
+## sources
+
+**Required.** The sources the project serves and calls, by the name its callers use: `sources: { api }` is reached as `createProxyCaller<typeof api>("api")`. A project without an API yet starts with `sources: {}`.
+
+## imports
+
+The API specifications Studio imported, by key. Studio writes an entry when it imports a specification and reads it on every re-sync, so an entry is usually Studio's to write; editing one by hand is supported.
+
+| Field | Type | |
+| --- | --- | --- |
+| `type` | `"openapi"` \| `"swagger"` \| `"graphql"` \| `"asyncapi"` \| `"postman"` | The specification's format, which picks its parser |
+| `importType` | `"url"` \| `"file"` \| `"raw"` | Where it came from. A file's path and a pasted specification are supplied in Studio at each re-sync, never stored |
+| `from` | `string` | `url` only: the address Studio fetches it from |
+| `auth` | `{ type: "bearer", token }` \| `{ type: "basic", username, password }` \| `{ type: "header", headers }` | `url` only: sent with every fetch of `from`, to its own origin only |
+| `pinHash` | `string` | `url` only: the one specification the import is generated from, by the hash Studio records; another is refused |
+| `outputDir` | `string` | The directory that holds the import's own directory, `<outputDir>/<source-name>/` |
+| `sourceName` | `string` | The source's name in the generated `defineApi` call — default: the key |
+| `validation` | `"zod"` \| `"valibot"` \| `"arktype"` \| `"none"` | The schema library the generated code uses |
+| `groupBy` | `"tag"` \| `"path"` \| `"single"` | How endpoints are grouped |
+| `generateTypes`, `generateSchemas` | `boolean` | Whether types and schemas are written |
+| `generateClient` | `"direct"` \| `"proxy"` \| `"both"` \| `"none"` | Which callers are generated |
+| `addAuthMiddleware` | `boolean` | Whether the specification's security scheme becomes middleware |
+| `includeComments` | `boolean` | Whether descriptions become doc comments |
+| `include`, `exclude` | `{ tags?, paths?, operationIds? }` | The endpoints generated: `include` names the ones kept, then `exclude` the ones left out |
+| `transform` | `(spec) => spec \| void` | Run on a copy of the parsed specification before anything is generated from it |
+
+See [Import an API](/docs/studio/import-api).
+
+## studio
+
+What `courier-studio` reads when it starts.
+
+| Field | Default | |
+| --- | --- | --- |
+| `port` | `6280` | The port Studio serves on |
+| `host` | `"localhost"` | The address it binds |
+| `mockBasePort` | `7001` | Where the ports Studio assigns to mocks that name none begin |
+| `open` | `false` | Open Studio in the browser when it starts |
+| `allowedSpecHosts` | — | Hosts on a private network Studio may fetch a specification from, such as `["gitlab.internal", "10.0.0.7:8080"]`. This machine needs no entry |
+
+## server
+
+What the [standalone server](/docs/deployment/standalone-server) reads when its command-line flags say nothing.
+
+| Field | Default | |
+| --- | --- | --- |
+| `port` | `3001` | `--port` overrides it |
+| `host` | `"127.0.0.1"` | `--host` overrides it; `"0.0.0.0"` or `"::"` to accept other machines |
+| `allowedOrigins` | — | The origins of the browser apps that call the server, written as a browser sends them. Left out, only the server's own origin, and loopback ones outside production. `--allowed-origins` overrides it |
+| `allowedHosts` | — | The host names the server is reached by; a request to another is refused with `421`. `--allowed-hosts` overrides it |
+| `maxBodyBytes` | 1 MB | The largest JSON envelope the proxy reads; a larger one is refused with `413` |
+| `maxUploadBytes` | 10 MB | The largest `multipart/form-data` upload the proxy reads |
+
+## runtime
+
+What `attachRuntime()` needs in the application's process.
+
+| Field | |
+| --- | --- |
+| `appOrigin` | The origin the application listens on, such as `http://localhost:3000`. Studio's Playground resolves a relative `proxyPath.sse` or `proxyPath.ws` against it. Looked up in turn: this field, `COURIER_APP_URL`, `APP_URL`, then the origin the framework adapter sees on the first request. With none of them, a Playground stream or channel in proxy mode fails with `APP_ORIGIN_NOT_CONFIGURED` |

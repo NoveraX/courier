@@ -69,7 +69,7 @@ export async function fetchSpec(
       );
     const answer: SpecAnswer = await requestSpec(
       current,
-      hopPolicy(current, loopback, allowlist),
+      hopPolicy(current, loopback, allowlist, hop === 0 ? null : url),
       remaining,
       current.origin === origin ? headers : {},
     );
@@ -124,8 +124,17 @@ function redirectTarget(location: string, from: URL, asked: string): URL {
   return target;
 }
 
-function hopPolicy(url: URL, loopback: boolean, allowlist: SpecHostAllowlist): LookupPolicy {
-  return { loopback, admitPrivate: async (what) => admit(await allowlist(), url, what) };
+/* A host a redirect led to is named with the URL that was asked for, which
+   is the one the developer knows. */
+function hopPolicy(
+  url: URL,
+  loopback: boolean,
+  allowlist: SpecHostAllowlist,
+  redirectedFrom: string | null,
+): LookupPolicy {
+  const named = (what: string) =>
+    redirectedFrom === null ? what : `${what}, which ${redirectedFrom} redirects to`;
+  return { loopback, admitPrivate: async (what) => admit(await allowlist(), url, named(what)) };
 }
 
 /* Private hosts are reached only while a config that loads names them: never

@@ -152,6 +152,21 @@ describe("fetchSpec", () => {
     expect(allowlist).toHaveBeenCalledTimes(1);
   });
 
+  it("names the URL asked for when a redirect leads to a private address", async () => {
+    const base = await serve(() => ({
+      status: 302,
+      body: "",
+      headers: { location: "http://10.0.0.7/spec.json" },
+    }));
+
+    await expect(fetchSpec(`${base}/spec.json`, listing())).rejects.toMatchObject({
+      code: "SPEC_HOST_PRIVATE",
+      message: expect.stringContaining(
+        `Blocked request to private address: 10.0.0.7, which ${base}/spec.json redirects to.`,
+      ),
+    });
+  });
+
   it.each([
     [
       { state: "failing", failure: { code: "UNKNOWN", message: "boom", at: 0, cause: null } },

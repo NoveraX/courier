@@ -79,7 +79,7 @@ export class SpecFetchError extends CourierError<SpecFetchErrorCode> {
       : "Name the host in `studio.allowedSpecHosts` to allow it.";
     return new SpecFetchError(
       "SPEC_HOST_PRIVATE",
-      `Blocked request to private address: ${what}. Studio reads a specification on your behalf, so it does not reach into a private network by itself. ${advice}`,
+      `Blocked request to private address: ${what}. Studio reads a specification on your behalf, so it does not reach into a private network — or back to this machine once a redirect has left it — by itself. ${advice}`,
     );
   }
 

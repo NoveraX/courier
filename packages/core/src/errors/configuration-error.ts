@@ -133,7 +133,9 @@ export type ConfigurationErrorCode =
   /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */
   | "READS_ON_CHANGING_VERB"
   /** An endpoint's `idempotencyKey` is not `header:<name>`. */
-  | "INVALID_IDEMPOTENCY_KEY";
+  | "INVALID_IDEMPOTENCY_KEY"
+  /** An `allowedOrigins` entry is not an origin a browser can send, or admits every sandboxed page. */
+  | "INVALID_ALLOWED_ORIGIN";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

@@ -90,7 +90,7 @@ Every call the proxy serves — GET and POST here, and the SSE and WebSocket rou
 - A request with **neither header** — a server, a CDN, a script — is not a browser's cross-origin request, and is served.
 - In **development**, while `allowedOrigins` is empty, another port on the local machine is admitted, so Studio can inspect the app. Configuring `allowedOrigins` replaces the allowance with the list.
 
-A refused call is answered `403` with `{ "success": false, "message": "Origin not allowed" }`; a refused socket is closed with `4403`. A pattern is an exact origin, `https://*.example.com` for the sub-domains of a host over one scheme and port, or `*.example.com` for them over any:
+A refused call is answered `403` with `{ "success": false, "message": "Origin not allowed" }`; a refused socket is closed with `4403`. A pattern is an exact origin, `https://*.example.com` for the sub-domains of a host over one scheme and port, or `*.example.com` for them over any scheme on its default port:
 
 ```ts
 import { createHandler } from "@noverax/courier"
@@ -99,6 +99,8 @@ const handler = createHandler({
   allowedOrigins: ["https://admin.example.com", "https://*.example.com"],
 })
 ```
+
+An entry a browser could never send — `https://admin.example.com/` with its trailing slash, a path, `:443` on HTTPS — stops the handler from being created, with `INVALID_ALLOWED_ORIGIN` naming the form to use.
 
 ## Content-Type handling
 

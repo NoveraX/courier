@@ -56,7 +56,7 @@ function outcome(url: string, waitForMessage = false): Promise<string> {
 describe("courierWSAttach beside the application's own WebSocket", () => {
   it("leaves the application's path to the application", async () => {
     const url = await listen((s) => {
-      courierWSAttach(s, { allowedOrigins: ["*"] });
+      courierWSAttach(s);
       const app = new WebSocketServer({ noServer: true });
       s.on("upgrade", (req, socket, head) => {
         if (req.url !== "/my-ws") return;

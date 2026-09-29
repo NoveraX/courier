@@ -3,6 +3,7 @@ import type { WebSocketLike } from "../realtime/adapters";
 import { createHeartbeat } from "../realtime/ws/heartbeat";
 import { prepareSources } from "../sources";
 import { studioHooks } from "../studio";
+import { assertAllowedOrigins } from "./assert-allowed-origins";
 import type { ConnectResult } from "./connection-meta";
 import { connectionMetaOf } from "./connection-meta-of";
 import { LIMITS } from "./limits";
@@ -43,6 +44,7 @@ export function createWSHandler<TConnect extends ConnectResult = ConnectResult>(
   config?: WSHandlerConfig<TConnect>,
 ): WSHandler;
 export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
+  assertAllowedOrigins(config.allowedOrigins, "createWSHandler");
   if (config.sources !== undefined) {
     prepareSources(config.sources, "createWSHandler", "createWSHandler({ sources: { api } })");
   }

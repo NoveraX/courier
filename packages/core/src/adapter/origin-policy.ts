@@ -55,7 +55,8 @@ export function isOriginAllowed(request: Request, allowedOrigins?: string[]): bo
  * The same rule, for a server that speaks in parts rather than in `Request`.
  *
  * A pattern is an exact origin, `https://*.example.com` for the sub-domains of
- * a host over one scheme and port, or `*.example.com` for them over any.
+ * a host over one scheme and port, or `*.example.com` for them over any scheme
+ * on the default port — `*.example.com:8443` on another.
  *
  * @param origin - The `Origin` header, or null when absent
  * @param self - The origin the request was addressed to

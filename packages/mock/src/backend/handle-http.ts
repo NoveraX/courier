@@ -1,4 +1,5 @@
 import { pickFault, shouldFail } from "../network/failure";
+import type { ScenarioMark } from "../scenario/scenario-state";
 import type { MockHistoryEntry, MockRequestContext, NetworkConfig } from "../types";
 import type { HttpCall } from "./http-outcomes";
 import {
@@ -20,7 +21,9 @@ interface HandleHTTPParams {
   history: MockHistoryEntry[];
   network?: NetworkConfig;
   getScenarioState: () => string;
-  setScenarioState: (state: string) => void;
+  /** The state the handler was picked in */
+  mark: ScenarioMark;
+  transitionScenario: (from: ScenarioMark, to: string) => void;
 }
 
 /** Handle HTTP mock request — resolves handler, applies delay/faults, tracks history */
@@ -57,7 +60,7 @@ export async function handleHTTP(params: HandleHTTPParams): Promise<unknown> {
   }
   if (handler.isError) throw handlerError(call, handler, data);
 
-  if (handler.newState) params.setScenarioState(handler.newState);
+  if (handler.newState) params.transitionScenario(params.mark, handler.newState);
   recordOutcome(call, {
     mocked: true,
     result: { status: handler.status, data, headers: handler.headers },

@@ -64,7 +64,8 @@ export async function handleMockRequest(
     });
   }
 
-  const scenarioState = config.getScenarioState();
+  const mark = config.markScenario();
+  const scenarioState = mark.state;
   const handler = config.registry.get(group, method, scenarioState);
 
   if (!handler || (stream && handler.transport !== "sse")) {
@@ -111,9 +112,7 @@ export async function handleMockRequest(
   try {
     const data = await handler.fn(ctx);
 
-    if (handler.newState) {
-      config.setScenarioState(handler.newState);
-    }
+    if (handler.newState) config.transitionScenario(mark, handler.newState);
 
     const status = handler.isError ? handler.status : handler.status || 200;
 

@@ -6,6 +6,7 @@ import { createMockBackend } from "./backend";
 import { createEnhancedMockBuilder } from "./builder";
 import { createHistory } from "./history";
 import { createMockRegistry } from "./registry";
+import { createScenarioState } from "./scenario/scenario-state";
 import type { TypedMockFn } from "./typed-mock-fn";
 import type { EnhancedMockBuilder, MockHistoryEntry, MockScenario, NetworkConfig } from "./types";
 
@@ -63,16 +64,15 @@ export function createMockClient<TApi extends AnySource>(
   const registry = createMockRegistry();
   const history = createHistory();
   const callCounts = new Map<string, number>();
-  let scenarioState = "Started";
+  const machine = createScenarioState();
 
   const backend = createMockBackend({
     registry,
     history,
     callCounts,
-    getScenarioState: () => scenarioState,
-    setScenarioState: (s) => {
-      scenarioState = s;
-    },
+    getScenarioState: machine.get,
+    markScenario: machine.mark,
+    transitionScenario: machine.transition,
     network: config?.network,
   });
 
@@ -92,25 +92,25 @@ export function createMockClient<TApi extends AnySource>(
     history,
 
     get scenarioState() {
-      return scenarioState;
+      return machine.get();
     },
 
     applyScenario(scenario) {
       registry.clear();
       callCounts.clear();
-      scenarioState = scenario.initialState ?? "Started";
+      machine.set(scenario.initialState ?? "Started");
       scenario.apply(mock);
     },
 
     transition(state) {
-      scenarioState = state;
+      machine.set(state);
     },
 
     reset() {
       registry.clear();
       history.length = 0;
       callCounts.clear();
-      scenarioState = "Started";
+      machine.set("Started");
     },
 
     resetMocks() {

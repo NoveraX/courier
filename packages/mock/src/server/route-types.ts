@@ -11,6 +11,7 @@
 
 import type { NetworkState } from "../network/state";
 import type { MockRegistry } from "../registry";
+import type { ScenarioMark } from "../scenario/scenario-state";
 import type { MockHistoryEntry, NetworkConfig } from "../types";
 
 /** Hooks for emitting request lifecycle events (set by the worker Studio runs a mock in) */
@@ -43,6 +44,10 @@ export interface RouteConfig {
   callCounts: Map<string, number>;
   getScenarioState: () => string;
   setScenarioState: (state: string) => void;
+  /** The state now, for a request matched in it. */
+  markScenario: () => ScenarioMark;
+  /** A matched request's transition; see `createScenarioState`. */
+  transitionScenario: (from: ScenarioMark, to: string) => void;
   network?: NetworkConfig;
   /** Dynamic network state — takes precedence over static `network` */
   networkState?: NetworkState;

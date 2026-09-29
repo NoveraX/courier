@@ -29,6 +29,7 @@ import type { MockServer, MockServerOptions } from "./mock-server-types";
 import type { RequestHooks } from "./route-generator";
 import { createScenarioControls } from "./scenario-controls";
 import { createServerLifecycle } from "./server-lifecycle";
+import { createStreamStopper } from "./stream-stopper";
 
 export type { MockServer, MockServerOptions } from "./mock-server-types";
 
@@ -48,6 +49,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   applyMiddleware(app, config);
 
   const requestHooks: RequestHooks = {};
+  const streams = createStreamStopper();
 
   const setScenarioState = scenario.set;
 
@@ -68,6 +70,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     network: config?.network,
     networkState,
     hooks: requestHooks,
+    streamsStopping: streams.signal,
   };
 
   registerRequestRoutes(app, routeConfig, config?.mappings);
@@ -116,6 +119,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
       hooks: requestHooks,
     },
     config?.strictPort,
+    streams.stopAll,
   );
 
   const mockServer: MockServer = {

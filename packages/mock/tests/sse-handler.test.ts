@@ -40,6 +40,7 @@ describe("handleSSEMock", () => {
         yield { data: "hello" };
       }),
       CTX,
+      undefined,
       () => undefined,
     );
 
@@ -55,6 +56,7 @@ describe("handleSSEMock", () => {
         throw new ForbiddenError("Not a member of this room");
       }),
       CTX,
+      undefined,
       () => undefined,
     );
 
@@ -74,6 +76,7 @@ describe("handleSSEMock", () => {
         throw refused;
       }),
       CTX,
+      undefined,
       () => undefined,
     );
 
@@ -91,6 +94,7 @@ describe("handleSSEMock", () => {
         throw new Error("connect ECONNREFUSED 10.0.0.5:5432");
       }),
       CTX,
+      undefined,
       () => undefined,
     );
 
@@ -107,6 +111,7 @@ describe("handleSSEMock", () => {
         yield { id: "1\ndata: forged", event: "tick\r\n", data: { n: 1 } };
       }),
       CTX,
+      undefined,
       () => undefined,
     );
 
@@ -124,6 +129,7 @@ describe("handleSSEMock", () => {
         yield { data: 2 };
       }),
       CTX,
+      undefined,
       onEnded,
     );
     await finished.text();
@@ -138,6 +144,7 @@ describe("handleSSEMock", () => {
         throw new Error("feed dropped");
       }),
       CTX,
+      undefined,
       failing,
     );
     await failed.text();

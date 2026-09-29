@@ -1,5 +1,6 @@
 import type { ExecuteBackend } from "@noverax/courier/internal";
 import type { MockRegistry } from "../registry";
+import type { ScenarioMark } from "../scenario/scenario-state";
 import type { MockHistoryEntry, NetworkConfig } from "../types";
 import { handleChannel } from "./handle-channel";
 import { handleHTTP } from "./handle-http";
@@ -10,7 +11,8 @@ export interface BackendDeps {
   history: MockHistoryEntry[];
   callCounts: Map<string, number>;
   getScenarioState: () => string;
-  setScenarioState: (state: string) => void;
+  markScenario: () => ScenarioMark;
+  transitionScenario: (from: ScenarioMark, to: string) => void;
   network?: NetworkConfig;
 }
 
@@ -23,7 +25,8 @@ export function createMockBackend(deps: BackendDeps): ExecuteBackend {
     const key = callKey(group, method);
     const index = callCounts.get(key) ?? 0;
     callCounts.set(key, index + 1);
-    const handler = registry.get(group, method, deps.getScenarioState());
+    const mark = deps.markScenario();
+    const handler = registry.get(group, method, mark.state);
 
     if (handler?.transport === "sse" && handler.streamFn) {
       return handleStream(group, method, variables, handler, index, history, deps.getScenarioState);
@@ -49,7 +52,8 @@ export function createMockBackend(deps: BackendDeps): ExecuteBackend {
       history,
       network: deps.network,
       getScenarioState: deps.getScenarioState,
-      setScenarioState: deps.setScenarioState,
+      mark,
+      transitionScenario: deps.transitionScenario,
     });
   };
 }

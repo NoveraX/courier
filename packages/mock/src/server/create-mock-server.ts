@@ -19,6 +19,7 @@ import { Hono } from "hono";
 import { createHistory } from "../history";
 import { createNetworkState } from "../network/state";
 import { createMockRegistry } from "../registry";
+import { createScenarioState } from "../scenario/scenario-state";
 import { createMockStore } from "../store";
 import type { AnyMockScenario } from "../types";
 import { registerAdminRoutes } from "./admin-api";
@@ -39,7 +40,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   const callCounts = new Map<string, number>();
   const scenariosRecord: Record<string, AnyMockScenario> = { ...config?.scenarios };
   const networkState = createNetworkState(config?.network);
-  let scenarioState = "Started";
+  const scenario = createScenarioState();
   let activeScenario: string | null = null;
 
   const app = new Hono();
@@ -48,9 +49,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
 
   const requestHooks: RequestHooks = {};
 
-  const setScenarioState = (s: string) => {
-    scenarioState = s;
-  };
+  const setScenarioState = scenario.set;
 
   const { mock, applyScenario: applyScenarioInternal } = createScenarioControls({
     registry,
@@ -62,8 +61,10 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     registry,
     history,
     callCounts,
-    getScenarioState: () => scenarioState,
+    getScenarioState: scenario.get,
     setScenarioState,
+    markScenario: scenario.mark,
+    transitionScenario: scenario.transition,
     network: config?.network,
     networkState,
     hooks: requestHooks,
@@ -79,7 +80,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
       history,
       store,
       scenarios: scenarioMap,
-      getScenarioState: () => scenarioState,
+      getScenarioState: scenario.get,
       setScenarioState,
       getActiveScenario: () => activeScenario,
       setActiveScenario: (name) => {
@@ -109,7 +110,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
       registry,
       mappings: config?.mappings,
       history,
-      getScenarioState: () => scenarioState,
+      getScenarioState: scenario.get,
       allowedOrigins: config?.ws?.allowedOrigins,
       maxPayload: config?.ws?.maxPayload,
       hooks: requestHooks,
@@ -127,7 +128,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     networkState,
 
     get scenarioState() {
-      return scenarioState;
+      return scenario.get();
     },
 
     /* Applied by name or by object alike, it becomes the one the admin API

@@ -41,9 +41,9 @@ export function handleCors(
   const allowed = isOriginAccepted(origin, self, allowedOrigins, req.headers["sec-fetch-site"]);
 
   if (req.method === "OPTIONS" && origin) {
+    /* Refused as the adapters refuse it, so a client reads one answer. */
     if (!allowed) {
-      res.writeHead(403);
-      res.end();
+      sendError(res, 403, "Origin not allowed");
       return true;
     }
     const requested = requestedHeaders(req);

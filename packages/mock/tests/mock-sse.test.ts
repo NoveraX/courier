@@ -75,9 +75,11 @@ describe("mock client — SSE .stream()", () => {
   it("supports .delay() before stream starts", async () => {
     const { client, mock } = createMockClient();
 
-    mock("notifications", "feed").stream(async function* () {
-      yield { data: "delayed" };
-    }).delay(50);
+    mock("notifications", "feed")
+      .stream(async function* () {
+        yield { data: "delayed" };
+      })
+      .delay(50);
 
     const start = Date.now();
     const sub = (client as any).notifications.feed() as SSESubscription<string>;
@@ -177,6 +179,8 @@ describe("mock client — SSE lifecycle", () => {
 
     expect(events.length).toBeGreaterThanOrEqual(3);
     expect(events.length).toBeLessThan(100);
+    await new Promise((r) => setTimeout(r, 20));
+    expect(yielded).toBeLessThan(10);
   });
 
   it("resetMocks clears SSE mocks", async () => {
@@ -192,7 +196,9 @@ describe("mock client — SSE lifecycle", () => {
       (async () => {
         const sub = (client as any).feed.live();
         if (sub && typeof sub[Symbol.asyncIterator] === "function") {
-          for await (const _ of sub) { /* noop */ }
+          for await (const _ of sub) {
+            /* noop */
+          }
         }
         return sub;
       })(),

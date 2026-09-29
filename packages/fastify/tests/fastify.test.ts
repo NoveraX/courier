@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as CourierModule from "@noverax/courier";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@noverax/courier", async (importOriginal) => {
   const actual = await importOriginal<typeof CourierModule>();
@@ -10,12 +10,39 @@ vi.mock("@noverax/courier", async (importOriginal) => {
       handleGet: vi.fn(),
       handlePost: vi.fn(),
       handleSSE: vi.fn(),
-      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      sseConnections: {
+        count: 0,
+        isShuttingDown: false,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        getByEndpoint: vi.fn(() => []),
+        disconnect: vi.fn(),
+        disconnectAll: vi.fn(),
+        send: vi.fn(() => true),
+        broadcastToEndpoint: vi.fn(() => new Map()),
+        broadcastToMeta: vi.fn(() => new Map()),
+        broadcastAll: vi.fn(() => new Map()),
+      },
       shutdownSSE: vi.fn(),
     })),
     createWSHandler: vi.fn(() => ({
       handleSocket: vi.fn(),
-      connections: { count: 0, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), send: vi.fn(), broadcast: vi.fn(), broadcastToTopic: vi.fn(), broadcastToBaseTopic: vi.fn(), sendToConnection: vi.fn(), disconnect: vi.fn(), disconnectByMeta: vi.fn() },
+      connections: {
+        count: 0,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        send: vi.fn(),
+        broadcast: vi.fn(),
+        broadcastToTopic: vi.fn(),
+        broadcastToBaseTopic: vi.fn(),
+        sendToConnection: vi.fn(),
+        disconnect: vi.fn(),
+        disconnectByMeta: vi.fn(),
+      },
       destroy: vi.fn(),
     })),
   };
@@ -41,7 +68,21 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
     handleGet: vi.fn(),
     handlePost: vi.fn(),
     handleSSE: vi.fn(),
-    sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+    sseConnections: {
+      count: 0,
+      isShuttingDown: false,
+      get: vi.fn(),
+      has: vi.fn(),
+      list: vi.fn(() => []),
+      getByMeta: vi.fn(() => []),
+      getByEndpoint: vi.fn(() => []),
+      disconnect: vi.fn(),
+      disconnectAll: vi.fn(),
+      send: vi.fn(() => true),
+      broadcastToEndpoint: vi.fn(() => new Map()),
+      broadcastToMeta: vi.fn(() => new Map()),
+      broadcastAll: vi.fn(() => new Map()),
+    },
     shutdownSSE: vi.fn(),
     ...overrides,
   };
@@ -50,7 +91,20 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
 function createMockWSResult(handleSocket = vi.fn()) {
   return {
     handleSocket,
-    connections: { count: 0, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), send: vi.fn(), broadcast: vi.fn(), broadcastToTopic: vi.fn(), broadcastToBaseTopic: vi.fn(), sendToConnection: vi.fn(), disconnect: vi.fn(), disconnectByMeta: vi.fn() },
+    connections: {
+      count: 0,
+      get: vi.fn(),
+      has: vi.fn(),
+      list: vi.fn(() => []),
+      getByMeta: vi.fn(() => []),
+      send: vi.fn(),
+      broadcast: vi.fn(),
+      broadcastToTopic: vi.fn(),
+      broadcastToBaseTopic: vi.fn(),
+      sendToConnection: vi.fn(),
+      disconnect: vi.fn(),
+      disconnectByMeta: vi.fn(),
+    },
     destroy: vi.fn(),
   };
 }
@@ -98,10 +152,7 @@ describe("courierPlugin", () => {
     await courierPlugin(fastify, {});
 
     expect(fastify.removeAllContentTypeParsers).toHaveBeenCalled();
-    expect(fastify.addContentTypeParser).toHaveBeenCalledWith(
-      "*",
-      expect.any(Function),
-    );
+    expect(fastify.addContentTypeParser).toHaveBeenCalledWith("*", expect.any(Function));
   });
 
   it("converts request and sends response via handler", async () => {
@@ -178,7 +229,7 @@ describe("courierSSEHandler", () => {
         headers: {
           "content-type": "text/event-stream",
           "cache-control": "no-cache, no-transform",
-          "connection": "keep-alive",
+          connection: "keep-alive",
           "x-accel-buffering": "no",
         },
       }),
@@ -197,7 +248,7 @@ describe("courierSSEHandler", () => {
     expect(status).toBe(200);
     expect(headers["content-type"]).toBe("text/event-stream");
     expect(headers["cache-control"]).toBe("no-cache, no-transform");
-    expect(headers["connection"]).toBe("keep-alive");
+    expect(headers.connection).toBe("keep-alive");
     expect(headers["x-accel-buffering"]).toBe("no");
   });
 
@@ -214,7 +265,7 @@ describe("courierSSEHandler", () => {
       write: vi.fn(),
       end: vi.fn(),
       once: vi.fn(),
-    off: vi.fn(),
+      off: vi.fn(),
       writableFinished: false,
     };
 
@@ -239,7 +290,11 @@ function createMockFastify() {
 
 function createMockFastifyRequest(options: { method: string; url: string }) {
   const { Readable } = require("node:stream");
-  const raw = new Readable({ read() { this.push(null); } });
+  const raw = new Readable({
+    read() {
+      this.push(null);
+    },
+  });
   raw.method = options.method;
   raw.url = options.url;
   raw.headers = { host: "localhost" };
@@ -283,7 +338,13 @@ describe("courierWSHandler", () => {
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
     const handler = courierWSHandler();
-    const mockSocket = { send: vi.fn(), close: vi.fn(), addEventListener: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
+    const mockSocket = {
+      send: vi.fn(),
+      close: vi.fn(),
+      addEventListener: vi.fn(),
+      readyState: 1,
+      bufferedAmount: 0,
+    } as any;
     const request = createMockFastifyRequest({ method: "GET", url: "/ws" });
 
     handler(mockSocket, request);
@@ -299,8 +360,20 @@ describe("courierWSHandler", () => {
     mockCreateWSHandler.mockReturnValue(createMockWSResult(mockHandleSocket));
 
     const handler = courierWSHandler();
-    const socket1 = { send: vi.fn(), close: vi.fn(), addEventListener: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
-    const socket2 = { send: vi.fn(), close: vi.fn(), addEventListener: vi.fn(), readyState: 1, bufferedAmount: 0 } as any;
+    const socket1 = {
+      send: vi.fn(),
+      close: vi.fn(),
+      addEventListener: vi.fn(),
+      readyState: 1,
+      bufferedAmount: 0,
+    } as any;
+    const socket2 = {
+      send: vi.fn(),
+      close: vi.fn(),
+      addEventListener: vi.fn(),
+      readyState: 1,
+      bufferedAmount: 0,
+    } as any;
     const req = createMockFastifyRequest({ method: "GET", url: "/ws" });
 
     handler(socket1, req);

@@ -1,8 +1,7 @@
-import type { RequestEntry, WaterfallSortField, WaterfallGroupBy } from "@/store";
-
-import type { WaterfallRow, GroupedRows, ZoomState } from "./types";
+import type { RequestEntry, WaterfallGroupBy, WaterfallSortField } from "@/store";
 import { buildDirectSegments, buildProxySegments } from "./build-segments";
-import { TICK_INTERVALS, MIN_TICK_GAP_PX, MS_PER_PX_BASE } from "./constants";
+import { MIN_TICK_GAP_PX, MS_PER_PX_BASE, TICK_INTERVALS } from "./constants";
+import type { GroupedRows, WaterfallRow, ZoomState } from "./types";
 
 // Re-export compression utilities (split for file-size compliance)
 export { compressTimeline, decompressMs } from "./compress";
@@ -38,9 +37,14 @@ export function buildRows(requests: RequestEntry[]): WaterfallRow[] {
 export function sortRows(rows: WaterfallRow[], sortBy: WaterfallSortField): WaterfallRow[] {
   return [...rows].sort((a, b) => {
     switch (sortBy) {
-      case "startTime": return a.request.startedAt - b.request.startedAt;
-      case "duration": return b.totalDuration - a.totalDuration;
-      case "size": return (b.request.size ?? 0) - (a.request.size ?? 0);
+      case "startTime":
+        return a.request.startedAt - b.request.startedAt;
+      case "duration":
+        return b.totalDuration - a.totalDuration;
+      case "size":
+        return (b.request.size ?? 0) - (a.request.size ?? 0);
+      default:
+        return 0;
     }
   });
 }

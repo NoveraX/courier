@@ -23,6 +23,7 @@ export function useAutoScroll(
   count: number,
   enabled: React.MutableRefObject<boolean>,
 ): void {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new entry, counted, is what brings the reader back to the head
   useEffect(() => {
     const el = ref.current;
     if (!el || !enabled.current) return;

@@ -1,15 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
 import { Globe } from "lucide-react";
-import { PageShell } from "@/components/shared/page-shell";
+import { useCallback, useEffect, useState } from "react";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PageShell } from "@/components/shared/page-shell";
 import { useEscapeClose } from "@/hooks/use-escape-close";
-import { useActiveServer } from "@/store/mock-slice";
-
 import type { MockRouteEntry } from "@/store/mock-slice";
-
-import { RoutesToolbar } from "./routes-toolbar";
-import { RoutesTable } from "./routes-table";
+import { useActiveServer } from "@/store/mock-slice";
 import { RouteDetail } from "./route-detail";
+import { RoutesTable } from "./routes-table";
+import { RoutesToolbar } from "./routes-toolbar";
 import { useRoutesFilter } from "./use-routes-filter";
 
 export function MockRoutesView(): React.ReactElement {
@@ -21,6 +19,7 @@ export function MockRoutesView(): React.ReactElement {
 
   // Close detail panel when server changes
   const serverId = server?.serverId;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: switching to another server is what closes the panel
   useEffect(() => setSelected(null), [serverId]);
 
   useEscapeClose(selected !== null, closeDetail);
@@ -28,7 +27,11 @@ export function MockRoutesView(): React.ReactElement {
   if (!server) {
     return (
       <PageShell center>
-        <EmptyState icon={Globe} heading="No server selected" description="Select a mock server to browse its routes." />
+        <EmptyState
+          icon={Globe}
+          heading="No server selected"
+          description="Select a mock server to browse its routes."
+        />
       </PageShell>
     );
   }
@@ -36,7 +39,11 @@ export function MockRoutesView(): React.ReactElement {
   if (routes.length === 0) {
     return (
       <PageShell toolbar={<RoutesToolbar filter={filter} routes={routes} />} center>
-        <EmptyState icon={Globe} heading="No routes" description="This server has no registered routes yet." />
+        <EmptyState
+          icon={Globe}
+          heading="No routes"
+          description="This server has no registered routes yet."
+        />
       </PageShell>
     );
   }

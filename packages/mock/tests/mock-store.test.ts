@@ -83,9 +83,7 @@ describe("Collection CRUD", () => {
     const store = createMockStore();
     const users = store.collection<User>("users");
     users.create({ id: "old", name: "Old", role: "user", active: true });
-    users.seed([
-      { id: "1", name: "New", role: "admin", active: true },
-    ]);
+    users.seed([{ id: "1", name: "New", role: "admin", active: true }]);
     expect(users.count()).toBe(1);
     expect(users.getById("1")?.name).toBe("New");
   });
@@ -95,10 +93,7 @@ describe("Collection CRUD", () => {
     const users = store.collection<User>("users");
     users.create({ id: "1", name: "Alice", role: "user", active: true });
 
-    const updated = users.update(
-      (q) => q.where({ id: "1" }),
-      { data: { role: "admin" } },
-    );
+    const updated = users.update((q) => q.where({ id: "1" }), { data: { role: "admin" } });
     expect(updated?.role).toBe("admin");
     expect(updated?.name).toBe("Alice"); // unchanged
   });
@@ -108,10 +103,11 @@ describe("Collection CRUD", () => {
     const users = store.collection<User>("users");
     users.create({ id: "1", name: "alice", role: "user", active: true });
 
-    users.update(
-      (q) => q.where({ id: "1" }),
-      { data: (u) => { u.name = u.name.toUpperCase(); } },
-    );
+    users.update((q) => q.where({ id: "1" }), {
+      data: (u) => {
+        u.name = u.name.toUpperCase();
+      },
+    });
     expect(users.getById("1")?.name).toBe("ALICE");
   });
 
@@ -125,10 +121,7 @@ describe("Collection CRUD", () => {
       active: false,
     }));
 
-    const count = users.updateMany(
-      (q) => q.where({ active: false }),
-      { data: { active: true } },
-    );
+    const count = users.updateMany((q) => q.where({ active: false }), { data: { active: true } });
     expect(count).toBe(3);
     expect(users.getAll().every((u) => u.active)).toBe(true);
   });
@@ -266,7 +259,7 @@ describe("Relations", () => {
 
     const post = posts.getById("p1");
     expect(post).toBeDefined();
-    const author = resolveOne(post!, rels["author"]!);
+    const author = resolveOne(post!, rels.author!);
     expect(author?.name).toBe("Alice");
   });
 

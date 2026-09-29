@@ -9,7 +9,11 @@ interface Answer {
 
 function ask(body: Record<string, unknown>): Answer {
   let handler: Parameters<RouteApp["post"]>[1] | undefined;
-  registerLayoutRoute({ post: (_path, registered) => void (handler = registered) });
+  registerLayoutRoute({
+    post: (_path, registered) => {
+      handler = registered;
+    },
+  });
   const answer: Answer = { status: 200, body: undefined };
   const res: JsonResponse = {
     status(code) {

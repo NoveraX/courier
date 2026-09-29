@@ -29,7 +29,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { argv } from "node:process";
 
@@ -76,78 +76,84 @@ function collectEntries() {
 }
 
 function main() {
-const entries = collectEntries();
-if (entries.length === 0) {
-  console.error("check-exports: no published entry points found — is packages/ present?");
-  process.exit(1);
-}
-
-/* Inside the workspace, so bare specifiers resolve through the root
-   node_modules exactly as they would for an installed consumer. */
-const probeDir = join(ROOT, "node_modules", ".cache", "courier-check-exports");
-mkdirSync(probeDir, { recursive: true });
-const probeSource = entries
-  .map((spec, i) => `import type * as m${i} from "${spec}";\nexport type T${i} = keyof typeof m${i};`)
-  .join("\n");
-
-/** How a consumer resolves and types us. Each is real; none subsumes another. */
-const RESOLUTIONS = [
-  { name: "bundler", module: "esnext", moduleResolution: "bundler", ext: "ts", lib: [] },
-  { name: "node16", module: "node16", moduleResolution: "node16", ext: "mts", lib: [] },
-  {
-    name: "node16 without the DOM library",
-    module: "node16",
-    moduleResolution: "node16",
-    ext: "mts",
-    lib: ["--lib", "esnext"],
-  },
-];
-
-let failed = false;
-
-for (const resolution of RESOLUTIONS) {
-  const probe = join(probeDir, `probe.${resolution.ext}`);
-  writeFileSync(probe, probeSource);
-
-  try {
-    execFileSync(
-      "npx",
-      [
-        "tsc",
-        "--noEmit",
-        "--strict",
-        "--module",
-        resolution.module,
-        "--moduleResolution",
-        resolution.moduleResolution,
-        "--target",
-        "esnext",
-        "--types",
-        "node",
-        ...resolution.lib,
-        "--ignoreConfig",
-        probe,
-      ],
-      { cwd: ROOT, stdio: "pipe", encoding: "utf8" },
-    );
-    console.log(`check-exports: ${entries.length} entry points typecheck under ${resolution.name}`);
-  } catch (error) {
-    const ours = ourErrors(String(error.stdout ?? ""));
-    if (ours.length === 0 && error.stdout) {
-      console.log(`check-exports: ${entries.length} entry points typecheck under ${resolution.name}`);
-      continue;
-    }
-    failed = true;
-    console.error(`\ncheck-exports: entry points fail to typecheck under ${resolution.name}\n`);
-    console.error(ours.length > 0 ? ours.join("\n") : error.message);
+  const entries = collectEntries();
+  if (entries.length === 0) {
+    console.error("check-exports: no published entry points found — is packages/ present?");
+    process.exit(1);
   }
-}
 
-rmSync(probeDir, { recursive: true, force: true });
+  /* Inside the workspace, so bare specifiers resolve through the root
+   node_modules exactly as they would for an installed consumer. */
+  const probeDir = join(ROOT, "node_modules", ".cache", "courier-check-exports");
+  mkdirSync(probeDir, { recursive: true });
+  const probeSource = entries
+    .map(
+      (spec, i) =>
+        `import type * as m${i} from "${spec}";\nexport type T${i} = keyof typeof m${i};`,
+    )
+    .join("\n");
 
-if (failed) process.exit(1);
+  /** How a consumer resolves and types us. Each is real; none subsumes another. */
+  const RESOLUTIONS = [
+    { name: "bundler", module: "esnext", moduleResolution: "bundler", ext: "ts", lib: [] },
+    { name: "node16", module: "node16", moduleResolution: "node16", ext: "mts", lib: [] },
+    {
+      name: "node16 without the DOM library",
+      module: "node16",
+      moduleResolution: "node16",
+      ext: "mts",
+      lib: ["--lib", "esnext"],
+    },
+  ];
+
+  let failed = false;
+
+  for (const resolution of RESOLUTIONS) {
+    const probe = join(probeDir, `probe.${resolution.ext}`);
+    writeFileSync(probe, probeSource);
+
+    try {
+      execFileSync(
+        "npx",
+        [
+          "tsc",
+          "--noEmit",
+          "--strict",
+          "--module",
+          resolution.module,
+          "--moduleResolution",
+          resolution.moduleResolution,
+          "--target",
+          "esnext",
+          "--types",
+          "node",
+          ...resolution.lib,
+          "--ignoreConfig",
+          probe,
+        ],
+        { cwd: ROOT, stdio: "pipe", encoding: "utf8" },
+      );
+      console.log(
+        `check-exports: ${entries.length} entry points typecheck under ${resolution.name}`,
+      );
+    } catch (error) {
+      const ours = ourErrors(String(error.stdout ?? ""));
+      if (ours.length === 0 && error.stdout) {
+        console.log(
+          `check-exports: ${entries.length} entry points typecheck under ${resolution.name}`,
+        );
+        continue;
+      }
+      failed = true;
+      console.error(`\ncheck-exports: entry points fail to typecheck under ${resolution.name}\n`);
+      console.error(ours.length > 0 ? ours.join("\n") : error.message);
+    }
+  }
+
+  rmSync(probeDir, { recursive: true, force: true });
+
+  if (failed) process.exit(1);
 }
 
 // Only run as CLI when invoked directly (not when imported by the self-test).
-if (argv[1] && argv[1].endsWith("check-exports.mjs")) main();
-
+if (argv[1]?.endsWith("check-exports.mjs")) main();

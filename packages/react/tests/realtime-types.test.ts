@@ -33,7 +33,7 @@ describe("the realtime hooks", () => {
   const q = createQueryCaller(api);
 
   it("take a window of events and answer from send whether the message was kept", () => {
-    function used(): void {
+    function useTyped(): void {
       const { events } = q.users.useSubscription("changes", { maxEvents: 10 });
       expectTypeOf(events[0]?.data).toEqualTypeOf<User | undefined>();
 
@@ -41,7 +41,7 @@ describe("the realtime hooks", () => {
       expectTypeOf(send({ text: "hello" })).toEqualTypeOf<boolean>();
     }
 
-    expect(used).toBeTypeOf("function");
+    expect(useTyped).toBeTypeOf("function");
   });
 });
 
@@ -49,7 +49,7 @@ describe("optimisticOptions", () => {
   const q = createQueryCaller(api);
 
   it("spreads into a mutation whose variables it names", () => {
-    function used(queryClient: Parameters<typeof optimisticOptions>[0]): void {
+    function useTyped(queryClient: Parameters<typeof optimisticOptions>[0]): void {
       q.users.useMutation("create", {
         ...optimisticOptions<User[], NewUser>(queryClient, {
           queryKey: ["api", "users", "list"],
@@ -58,6 +58,6 @@ describe("optimisticOptions", () => {
       });
     }
 
-    expect(used).toBeTypeOf("function");
+    expect(useTyped).toBeTypeOf("function");
   });
 });

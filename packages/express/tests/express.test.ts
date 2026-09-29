@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createServer } from "node:http";
 import type * as CourierModule from "@noverax/courier";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@noverax/courier", async (importOriginal) => {
   const actual = await importOriginal<typeof CourierModule>();
@@ -11,12 +11,39 @@ vi.mock("@noverax/courier", async (importOriginal) => {
       handleGet: vi.fn(),
       handlePost: vi.fn(),
       handleSSE: vi.fn(),
-      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      sseConnections: {
+        count: 0,
+        isShuttingDown: false,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        getByEndpoint: vi.fn(() => []),
+        disconnect: vi.fn(),
+        disconnectAll: vi.fn(),
+        send: vi.fn(() => true),
+        broadcastToEndpoint: vi.fn(() => new Map()),
+        broadcastToMeta: vi.fn(() => new Map()),
+        broadcastAll: vi.fn(() => new Map()),
+      },
       shutdownSSE: vi.fn(),
     })),
     createWSHandler: vi.fn(() => ({
       handleSocket: vi.fn(),
-      connections: { count: 0, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), send: vi.fn(), broadcast: vi.fn(), broadcastToTopic: vi.fn(), broadcastToBaseTopic: vi.fn(), sendToConnection: vi.fn(), disconnect: vi.fn(), disconnectByMeta: vi.fn() },
+      connections: {
+        count: 0,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        send: vi.fn(),
+        broadcast: vi.fn(),
+        broadcastToTopic: vi.fn(),
+        broadcastToBaseTopic: vi.fn(),
+        sendToConnection: vi.fn(),
+        disconnect: vi.fn(),
+        disconnectByMeta: vi.fn(),
+      },
       destroy: vi.fn(),
     })),
   };
@@ -47,7 +74,21 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
     handleGet: vi.fn(),
     handlePost: vi.fn(),
     handleSSE: vi.fn(),
-    sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+    sseConnections: {
+      count: 0,
+      isShuttingDown: false,
+      get: vi.fn(),
+      has: vi.fn(),
+      list: vi.fn(() => []),
+      getByMeta: vi.fn(() => []),
+      getByEndpoint: vi.fn(() => []),
+      disconnect: vi.fn(),
+      disconnectAll: vi.fn(),
+      send: vi.fn(() => true),
+      broadcastToEndpoint: vi.fn(() => new Map()),
+      broadcastToMeta: vi.fn(() => new Map()),
+      broadcastAll: vi.fn(() => new Map()),
+    },
     shutdownSSE: vi.fn(),
     ...overrides,
   };
@@ -214,7 +255,7 @@ describe("courierSSEHandler", () => {
         headers: {
           "content-type": "text/event-stream",
           "cache-control": "no-cache, no-transform",
-          "connection": "keep-alive",
+          connection: "keep-alive",
           "x-accel-buffering": "no",
         },
       }),
@@ -265,9 +306,7 @@ type RequestOptions = {
 
 function createMockNodeRequestResponse(options: RequestOptions) {
   const server = createServer();
-  const req = new (require("node:http").IncomingMessage)(
-    new (require("node:net").Socket)(),
-  );
+  const req = new (require("node:http").IncomingMessage)(new (require("node:net").Socket)());
 
   req.method = options.method;
   req.url = options.path;
@@ -289,7 +328,7 @@ function makeNodeRequest(
     const server = createServer(async (req, res) => {
       try {
         await handler(req, res);
-      } catch (err) {
+      } catch {
         res.writeHead(500);
         res.end();
       }

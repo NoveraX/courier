@@ -2,6 +2,9 @@
  * @vitest-environment jsdom
  */
 
+import { courier, defineApi, defineBoundary, defineGroup } from "@noverax/courier/define";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
 /**
  * Groups named like the hooks the runtime reads — `then`, `toJSON`,
  * `valueOf` — at the root of a query client.
@@ -13,11 +16,6 @@
  */
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
-
-import { courier, defineApi, defineBoundary, defineGroup } from "@noverax/courier/define";
 import { createProxyQueryCaller } from "../src/create-proxy-query-caller";
 import { createQueryCaller } from "../src/create-query-caller";
 import { type CourierServer, startCourierServer } from "./helpers/courier-server";
@@ -38,6 +36,7 @@ function namesApi() {
     name: "names",
     baseURL: upstream.origin,
     groups: {
+      // biome-ignore lint/suspicious/noThenProperty: a group named "then" must not make the caller read as a promise
       then: defineGroup({ prefix: "then-group", endpoints: { list: list() } }),
       toJSON: defineGroup({ prefix: "to-json-group", endpoints: { list: list() } }),
       valueOf: defineGroup({ prefix: "value-group", endpoints: { list: list() } }),

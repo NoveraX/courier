@@ -12,10 +12,8 @@ export function PathDisplay({ path, className }: PathDisplayProps): React.ReactE
   return (
     <span className={cn("font-mono text-mono-sm", className)}>
       {segments.map((seg, i) => (
-        <span
-          key={i}
-          className={seg.isParam ? "text-accent-brand" : "text-muted-foreground"}
-        >
+        // biome-ignore lint/suspicious/noArrayIndexKey: the segments of one path, in order; a segment's place is its identity
+        <span key={i} className={seg.isParam ? "text-accent-brand" : "text-muted-foreground"}>
           {seg.text}
         </span>
       ))}

@@ -6,7 +6,14 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["packages/*/src/**", "packages/*/tsdown.config.ts"]
+    "includes": [
+      "packages/*/src/**",
+      "packages/*/tsdown.config.ts",
+      "packages/*/tests/**",
+      "packages/studio/ui/src/**",
+      "packages/studio/ui/__tests__/**",
+      "scripts/**"
+    ]
   },
   "formatter": {
     "indentStyle": "space",
@@ -34,5 +41,47 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "packages/*/tests/**",
+        "packages/studio/ui/__tests__/**",
+        "scripts/**/*.test.mjs"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "correctness": {
+            "useYield": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/studio/ui/src/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": {
+              "level": "error",
+              "options": {
+                "inputComponents": ["Checkbox", "Switch"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

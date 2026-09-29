@@ -1,8 +1,8 @@
-import { memo } from "react";
-import { getBezierPath } from "@xyflow/react";
 import type { EdgeProps } from "@xyflow/react";
-import type { ExplorerEdgeData, EdgeTier } from "../../types";
+import { getBezierPath } from "@xyflow/react";
+import { memo } from "react";
 import { EDGE_CONFIG, PARTICLE_CONFIG } from "../../constants";
+import type { EdgeTier, ExplorerEdgeData } from "../../types";
 
 // ── Gradient ID per tier ────────────────────────────────────────────────────
 
@@ -36,8 +36,12 @@ function AnimatedEdgeComponent({
   const tier = d?.tier ?? "group-to-endpoint";
 
   const [path] = getBezierPath({
-    sourceX, sourceY, targetX, targetY,
-    sourcePosition, targetPosition,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
   });
 
   const gradientUrl = hasErrors ? "url(#edge-grad-error)" : GRADIENT_BY_TIER[tier];
@@ -78,11 +82,18 @@ export const AnimatedEdge = memo(AnimatedEdgeComponent);
 
 // ── Particles ───────────────────────────────────────────────────────────────
 
-function EdgeParticlesComponent({ path, color }: { path: string; color: string }): React.ReactElement {
+function EdgeParticlesComponent({
+  path,
+  color,
+}: {
+  path: string;
+  color: string;
+}): React.ReactElement {
   return (
     <>
       {Array.from({ length: PARTICLE_CONFIG.count }, (_, i) => (
         <circle
+          // biome-ignore lint/suspicious/noArrayIndexKey: decorative particles with no data of their own
           key={i}
           r={PARTICLE_CONFIG.size}
           fill={color}

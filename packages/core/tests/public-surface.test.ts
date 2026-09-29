@@ -5,15 +5,24 @@
  * described them as the engine of the clients' inference.
  */
 import { describe, expect, expectTypeOf, it } from "vitest";
-
+import type { BaseOptions, SearchParamsSerializer } from "../src";
 import * as courier from "../src";
 import * as internal from "../src/internal";
-import * as realtime from "../src/realtime";
-import type { WSConnection } from "../src/realtime";
-import type { BaseOptions, SearchParamsSerializer } from "../src";
 import type { CacheEntry, CacheOptions, CacheScope, CacheStore } from "../src/middleware";
-// @ts-expect-error the proxy transport's call types are its own
-import type { CallerFn, EndpointKey, ResolveEndpoint, SuccessResponse, UntypedCallerFn } from "../src";
+import type { WSConnection } from "../src/realtime";
+import * as realtime from "../src/realtime";
+
+/* The proxy transport's call types are its own: naming one from the root entry does not compile. */
+// @ts-expect-error not exported
+export type NoCallerFn = courier.CallerFn;
+// @ts-expect-error not exported
+export type NoEndpointKey = courier.EndpointKey;
+// @ts-expect-error not exported
+export type NoResolveEndpoint = courier.ResolveEndpoint;
+// @ts-expect-error not exported
+export type NoSuccessResponse = courier.SuccessResponse;
+// @ts-expect-error not exported
+export type NoUntypedCallerFn = courier.UntypedCallerFn;
 
 describe("the root entry", () => {
   it("keeps the proxy transport's call function to itself", () => {
@@ -56,7 +65,13 @@ describe("the realtime entry", () => {
   });
 
   it("keeps the wire protocol and the client's parts to Courier's own packages", () => {
-    const parts = ["encodeMessage", "decodeMessage", "describeFailure", "createConnectionState", "SSE_CONTROL_EVENTS"];
+    const parts = [
+      "encodeMessage",
+      "decodeMessage",
+      "describeFailure",
+      "createConnectionState",
+      "SSE_CONTROL_EVENTS",
+    ];
 
     expect(Object.keys(realtime).filter((name) => parts.includes(name))).toEqual([]);
     expect(parts.filter((name) => !(name in internal))).toEqual([]);
@@ -81,7 +96,12 @@ describe("Courier's own plumbing", () => {
 
   it("is kept out of the root entry", () => {
     expect(Object.keys(courier).filter((name) => PLUMBING.includes(name))).toEqual([]);
-    for (const gone of ["composeBackend", "parseEndpointKey", "requireSources", "abortPlayground"]) {
+    for (const gone of [
+      "composeBackend",
+      "parseEndpointKey",
+      "requireSources",
+      "abortPlayground",
+    ]) {
       expect(Object.keys(courier)).not.toContain(gone);
     }
   });

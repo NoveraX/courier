@@ -69,8 +69,8 @@ describe("a test client", () => {
   });
 
   it("is refused a shape that is not an API", () => {
+    type NotAnApi = { options: { groups: { users: { options: object; list: () => unknown } } } };
     // @ts-expect-error a group's members must be endpoints
-    void (() => createTestClient<{ options: { groups: { users: { options: object; list: () => unknown } } } }>());
+    void (() => createTestClient<NotAnApi>());
   });
 });
-

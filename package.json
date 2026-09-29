@@ -65,10 +65,10 @@
     "dev": "turbo run dev --concurrency 20",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "biome check --write packages/",
+    "lint": "biome check --write .",
     "typecheck": "turbo run typecheck",
-    "format": "biome format --write packages/",
-    "check": "biome check packages/",
+    "format": "biome format --write .",
+    "check": "biome check .",
     "check:names": "node scripts/check-name-conflicts.mjs",
     "check:exports": "node scripts/check-exports.mjs",
     "check:any": "node scripts/check-implicit-any.mjs",
@@ -82,6 +82,6 @@
     "h3": "$h3"
   },
   "lint-staged": {
-    "packages/*/src/**/*.ts": "biome check --write --no-errors-on-unmatched"
+    "{packages,scripts}/**/*.{ts,tsx,mjs,css}": "biome check --write --no-errors-on-unmatched"
   }
 }

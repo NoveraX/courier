@@ -34,7 +34,9 @@ async function startUpstream(): Promise<void> {
       req.on("end", () => {
         const body = Buffer.concat(chunks).toString("latin1");
         res.writeHead(201, { "content-type": "application/json" });
-        res.end(JSON.stringify({ bytes: body.length, named: body.includes('filename="photo.bin"') }));
+        res.end(
+          JSON.stringify({ bytes: body.length, named: body.includes('filename="photo.bin"') }),
+        );
       });
       return;
     }
@@ -132,7 +134,13 @@ async function until(check: () => boolean, what: string): Promise<void> {
   }
 }
 
-function execute(rid: string, group: string, method: string, transport: string, variables = {}): void {
+function execute(
+  rid: string,
+  group: string,
+  method: string,
+  transport: string,
+  variables = {},
+): void {
   runtime?.emit("playground:execute", { rid, source: "api", group, method, transport, variables });
 }
 
@@ -178,7 +186,7 @@ describe("an HTTP endpoint run from the Playground", () => {
     const chunk = framesOf("http-refused")[0]?.payload.chunk;
     expect(chunk?.status).toBe(422);
     expect(chunk?.error).toMatch(/Validation failed \(variables\)/);
-    expect((chunk?.data as { issues: unknown[] }).issues).toHaveLength(1);
+    expect((chunk?.data as { issues: unknown[] } | undefined)?.issues).toHaveLength(1);
   });
 
   it("reports an error answer with the body the upstream sent", async () => {
@@ -216,7 +224,10 @@ describe("an HTTP call run from the Playground in proxy mode", () => {
       mode: "proxy",
       variables: { name: "zed" },
     });
-    await until(() => framesOf("proxy-create").some((f) => f.event === "playground:end"), "the answer");
+    await until(
+      () => framesOf("proxy-create").some((f) => f.event === "playground:end"),
+      "the answer",
+    );
 
     expect(proxied).toEqual(["POST /api/request?_s=api&_g=users&_m=create"]);
     expect(framesOf("proxy-create")[0]?.payload.chunk).toMatchObject({
@@ -257,11 +268,18 @@ describe("a form sent from the Playground", () => {
         { name: "note", text: "hi" },
         {
           name: "file",
-          file: { name: "photo.bin", type: "application/octet-stream", data: new Uint8Array(300_000) },
+          file: {
+            name: "photo.bin",
+            type: "application/octet-stream",
+            data: new Uint8Array(300_000),
+          },
         },
       ],
     });
-    await until(() => framesOf("form-upload").some((f) => f.event === "playground:end"), "the answer");
+    await until(
+      () => framesOf("form-upload").some((f) => f.event === "playground:end"),
+      "the answer",
+    );
 
     const chunks = framesOf("form-upload").map((f) => f.payload.chunk);
     const progress = chunks.filter((c) => c?.kind === "upload-progress");

@@ -39,7 +39,6 @@ describe("clearStudioServerState", () => {
   });
 
   it("removes every entry from runtimeRegistry", () => {
-    // biome-ignore lint/suspicious/noExplicitAny: minimal stub for the Socket shape
     const fakeSocket = { id: "s-1" } as any;
     runtimeRegistry.set("rt-1", {
       runtimeId: "rt-1",
@@ -56,7 +55,6 @@ describe("clearStudioServerState", () => {
 
   it("clears every map in a single call", () => {
     nextSessionVersion("session-x");
-    // biome-ignore lint/suspicious/noExplicitAny: minimal stub for the Socket shape
     const fakeSocket = { id: "s-1" } as any;
     runtimeRegistry.set("rt-1", {
       runtimeId: "rt-1",

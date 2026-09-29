@@ -1,11 +1,9 @@
-import { useMemo } from "react";
 import { motion } from "motion/react";
-
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMemo } from "react";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
-
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CollapsedRegion, DiffRow } from "./diff-row";
 import type { DiffLine } from "./types";
-import { DiffRow, CollapsedRegion } from "./diff-row";
 
 interface DiffViewerProps {
   lines: DiffLine[];
@@ -57,11 +55,7 @@ function groupRegions(lines: DiffLine[]): DiffRegion[] {
   return regions;
 }
 
-export function DiffViewer({
-  lines,
-  leftLabel,
-  rightLabel,
-}: DiffViewerProps): React.ReactElement {
+export function DiffViewer({ lines, leftLabel, rightLabel }: DiffViewerProps): React.ReactElement {
   const regions = useMemo(() => groupRegions(lines), [lines]);
   const hasChanges = lines.some((l) => l.type !== "equal");
 
@@ -99,11 +93,13 @@ export function DiffViewer({
         >
           {regions.map((region, ri) =>
             region.type === "collapsed" ? (
+              // biome-ignore lint/suspicious/noArrayIndexKey: the regions and lines of a diff, in order; each one's place is its identity
               <motion.div key={ri} variants={STAGGER_ITEM_VARIANTS}>
                 <CollapsedRegion lines={region.lines} />
               </motion.div>
             ) : (
               region.lines.map((line, li) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: the regions and lines of a diff, in order; each one's place is its identity
                 <motion.div key={`${ri}-${li}`} variants={STAGGER_ITEM_VARIANTS}>
                   <DiffRow line={line} />
                 </motion.div>

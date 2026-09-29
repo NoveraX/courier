@@ -46,7 +46,6 @@ function makeUiNamespace(sockets: Map<string, FakeUiSocket>) {
 
 function setupRouter(transports: string[] = ["http"], sourceNames: string[] = ["api"]) {
   const bindingTable = new BindingTable();
-  // biome-ignore lint/suspicious/noExplicitAny: test convenience
   bindingTable.attachRuntime("rt-1", transports as any, sourceNames);
 
   const runtimeSock = makeRuntimeSocket("rt-sock-1", FIXED_TOKEN_VALUE);
@@ -54,7 +53,6 @@ function setupRouter(transports: string[] = ["http"], sourceNames: string[] = ["
   registerRuntime({
     runtimeId: "rt-1",
     kind: "server",
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     socket: runtimeSock as any,
     transports: transports as ("http" | "sse" | "ws")[],
     sourceNames,
@@ -64,7 +62,6 @@ function setupRouter(transports: string[] = ["http"], sourceNames: string[] = ["
   const uiNs = makeUiNamespace(new Map([["ui-1", ui]]));
   const router = createRuntimePlaygroundRouter({
     bindingTable,
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     uiNamespace: uiNs as any,
   });
 
@@ -83,7 +80,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("dispatches a valid playground:exec to the bound runtime socket", () => {
     const { runtimeSock, ui, router } = setupRouter();
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-1",
       source: "api",
@@ -105,11 +101,9 @@ describe("createRuntimePlaygroundRouter", () => {
     const uiNs = makeUiNamespace(new Map([["ui-1", ui]]));
     const router = createRuntimePlaygroundRouter({
       bindingTable,
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       uiNamespace: uiNs as any,
     });
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-1",
       source: "api",
@@ -134,11 +128,9 @@ describe("createRuntimePlaygroundRouter", () => {
     const uiNs = makeUiNamespace(new Map([["ui-1", ui]]));
     const router = createRuntimePlaygroundRouter({
       bindingTable,
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       uiNamespace: uiNs as any,
     });
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-1",
       source: "api",
@@ -156,7 +148,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("forwardChunk routes by rid to the originating UI socket", () => {
     const { ui, router } = setupRouter(["sse"]);
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-2",
       source: "api",
@@ -165,8 +156,14 @@ describe("createRuntimePlaygroundRouter", () => {
       transport: "sse",
     });
 
-    router.forwardChunk({ rid: "r-2", chunk: { kind: "sse-event", event: { data: "x" } } }, "rt-sock-1");
-    router.forwardChunk({ rid: "unknown-rid", chunk: { kind: "sse-event", event: { data: "y" } } }, "rt-sock-1");
+    router.forwardChunk(
+      { rid: "r-2", chunk: { kind: "sse-event", event: { data: "x" } } },
+      "rt-sock-1",
+    );
+    router.forwardChunk(
+      { rid: "unknown-rid", chunk: { kind: "sse-event", event: { data: "y" } } },
+      "rt-sock-1",
+    );
 
     expect(ui.emit).toHaveBeenCalledWith(
       "playground:chunk",
@@ -181,7 +178,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("clears in-flight on forwardEnd and forwardError", () => {
     const { ui, router } = setupRouter();
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-end",
       source: "api",
@@ -193,7 +189,6 @@ describe("createRuntimePlaygroundRouter", () => {
     router.forwardEnd({ rid: "r-end", summary: { durationMs: 50 } }, "rt-sock-1");
     expect(router._inFlightSize()).toBe(0);
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-err",
       source: "api",
@@ -209,7 +204,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("synthesizes errors for in-flight rids on runtime disconnect", () => {
     const { ui, router } = setupRouter(["http", "sse"]);
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-a",
       source: "api",
@@ -217,7 +211,6 @@ describe("createRuntimePlaygroundRouter", () => {
       method: "m",
       transport: "http",
     });
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-b",
       source: "api",
@@ -242,7 +235,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("cancels in-flight rids on UI disconnect by emitting playground:cancel to runtime", () => {
     const { runtimeSock, ui, router } = setupRouter();
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-1",
       source: "api",
@@ -259,7 +251,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("cancel forwards to runtime but does not delete inFlight (waits for terminal event)", () => {
     const { runtimeSock, ui, router } = setupRouter(["sse"]);
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-cancel",
       source: "api",
@@ -267,7 +258,6 @@ describe("createRuntimePlaygroundRouter", () => {
       method: "s",
       transport: "sse",
     });
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.cancel(ui as any, { rid: "r-cancel" });
 
     expect(runtimeSock.emit).toHaveBeenCalledWith("playground:cancel", { rid: "r-cancel" });
@@ -283,15 +273,11 @@ describe("createRuntimePlaygroundRouter", () => {
     const uiNs = makeUiNamespace(new Map([["ui-1", ui]]));
     const router = createRuntimePlaygroundRouter({
       bindingTable,
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       uiNamespace: uiNs as any,
     });
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, null);
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, { rid: "r-1" });
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-1",
       source: "api",
@@ -309,7 +295,6 @@ describe("createRuntimePlaygroundRouter", () => {
     void uiNs;
     void bindingTable;
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-x",
       source: "api",
@@ -319,7 +304,6 @@ describe("createRuntimePlaygroundRouter", () => {
     });
     const ui2 = makeUiSocket("ui-2");
     // ui-2 tries to cancel ui-1's request — should be a no-op
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.cancel(ui2 as any, { rid: "r-x" });
 
     expect(runtimeSock.emit).not.toHaveBeenCalledWith(
@@ -332,7 +316,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("write forwards a valid message to the owning runtime for a WS rid", () => {
     const { runtimeSock, ui, router } = setupRouter(["ws"], ["chat"]);
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-ws",
       source: "chat",
@@ -341,7 +324,6 @@ describe("createRuntimePlaygroundRouter", () => {
       transport: "ws",
     });
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.write(ui as any, { rid: "r-ws", data: { type: "message", body: "hi" } });
 
     expect(runtimeSock.emit).toHaveBeenCalledWith("playground:write", {
@@ -353,7 +335,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("write is a silent no-op for a non-WS rid", () => {
     const { runtimeSock, ui, router } = setupRouter();
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-http",
       source: "api",
@@ -363,7 +344,6 @@ describe("createRuntimePlaygroundRouter", () => {
     });
     runtimeSock.emit.mockClear();
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.write(ui as any, { rid: "r-http", data: { any: "payload" } });
 
     expect(runtimeSock.emit).not.toHaveBeenCalledWith("playground:write", expect.anything());
@@ -372,7 +352,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("write rejects cross-socket attempts", () => {
     const { runtimeSock, ui, router } = setupRouter(["ws"], ["chat"]);
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-ws",
       source: "chat",
@@ -383,7 +362,6 @@ describe("createRuntimePlaygroundRouter", () => {
     runtimeSock.emit.mockClear();
 
     const ui2 = makeUiSocket("ui-2");
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.write(ui2 as any, { rid: "r-ws", data: { body: "hijack" } });
 
     expect(runtimeSock.emit).not.toHaveBeenCalled();
@@ -395,15 +373,11 @@ describe("createRuntimePlaygroundRouter", () => {
     const uiNs = makeUiNamespace(new Map([["ui-1", ui]]));
     const router = createRuntimePlaygroundRouter({
       bindingTable,
-      // biome-ignore lint/suspicious/noExplicitAny: stub
       uiNamespace: uiNs as any,
     });
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.write(ui as any, null);
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.write(ui as any, { rid: "", data: 1 });
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.write(ui as any, { rid: "r", __proto__: { polluted: true } });
 
     expect(ui.emit).not.toHaveBeenCalled();
@@ -414,7 +388,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("forwardChunk drops chunks from a non-owning runtime (ownership check)", () => {
     const { ui, router } = setupRouter(["sse"]);
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-own",
       source: "api",
@@ -435,7 +408,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("forwardEnd drops end from a non-owning runtime (ownership check)", () => {
     const { ui, router } = setupRouter();
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-own",
       source: "api",
@@ -454,7 +426,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("forwardError drops error from a non-owning runtime (ownership check)", () => {
     const { ui, router } = setupRouter();
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-own",
       source: "api",
@@ -473,7 +444,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("forwardChunk drops malformed chunks (no valid kind)", () => {
     const { ui, router } = setupRouter(["http"]);
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-bad",
       source: "api",
@@ -494,7 +464,6 @@ describe("createRuntimePlaygroundRouter", () => {
     const { runtimeSock, ui, router } = setupRouter();
     runtimeSock.connected = false;
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-disc",
       source: "api",
@@ -516,7 +485,6 @@ describe("createRuntimePlaygroundRouter", () => {
   it("onUiDisconnect continues cleanup when one emit fails", () => {
     const { runtimeSock, ui, router } = setupRouter(["http", "sse"]);
 
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-a",
       source: "api",
@@ -524,7 +492,6 @@ describe("createRuntimePlaygroundRouter", () => {
       method: "m",
       transport: "http",
     });
-    // biome-ignore lint/suspicious/noExplicitAny: stub
     router.dispatch(ui as any, {
       rid: "r-b",
       source: "api",

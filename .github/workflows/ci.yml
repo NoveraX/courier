@@ -50,7 +50,7 @@ jobs:
         run: npm run build
 
       - name: Lint (Biome)
-        run: npx biome check packages/
+        run: npx biome check .
 
       - name: Check file and directory names
         run: npm run check:names

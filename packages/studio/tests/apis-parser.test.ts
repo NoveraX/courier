@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest"
-import { detectFormat, parseSpec } from "../src/apis/parser"
+import { describe, expect, it } from "vitest";
+import { detectFormat, parseSpec } from "../src/apis/parser";
 
 const OPENAPI3_SPEC = JSON.stringify({
   openapi: "3.0.0",
@@ -69,7 +69,9 @@ const OPENAPI3_SPEC = JSON.stringify({
         operationId: "listUsers",
         responses: {
           "200": {
-            content: { "application/json": { schema: { type: "array", items: { type: "object" } } } },
+            content: {
+              "application/json": { schema: { type: "array", items: { type: "object" } } },
+            },
           },
         },
       },
@@ -100,7 +102,7 @@ const OPENAPI3_SPEC = JSON.stringify({
     },
   },
   security: [],
-})
+});
 
 const SWAGGER2_SPEC = JSON.stringify({
   swagger: "2.0",
@@ -129,10 +131,13 @@ const SWAGGER2_SPEC = JSON.stringify({
       },
     },
   },
-})
+});
 
 const POSTMAN_SPEC = JSON.stringify({
-  info: { name: "My API", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  info: {
+    name: "My API",
+    schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+  },
   item: [
     {
       name: "Users",
@@ -141,215 +146,223 @@ const POSTMAN_SPEC = JSON.stringify({
           name: "Get Users",
           request: {
             method: "GET",
-            url: { raw: "https://api.example.com/users", host: ["api", "example", "com"], path: ["users"] },
+            url: {
+              raw: "https://api.example.com/users",
+              host: ["api", "example", "com"],
+              path: ["users"],
+            },
           },
         },
         {
           name: "Create User",
           request: {
             method: "POST",
-            url: { raw: "https://api.example.com/users", host: ["api", "example", "com"], path: ["users"] },
+            url: {
+              raw: "https://api.example.com/users",
+              host: ["api", "example", "com"],
+              path: ["users"],
+            },
             body: { mode: "raw", raw: '{"name":"Alice","email":"a@b.com"}' },
           },
         },
       ],
     },
   ],
-})
+});
 
 describe("detectFormat", () => {
   it("detects OpenAPI 3.x JSON", () => {
-    expect(detectFormat(OPENAPI3_SPEC)).toBe("openapi3-json")
-  })
+    expect(detectFormat(OPENAPI3_SPEC)).toBe("openapi3-json");
+  });
 
   it("detects Swagger 2.0 JSON", () => {
-    expect(detectFormat(SWAGGER2_SPEC)).toBe("swagger2-json")
-  })
+    expect(detectFormat(SWAGGER2_SPEC)).toBe("swagger2-json");
+  });
 
   it("detects Postman collection", () => {
-    expect(detectFormat(POSTMAN_SPEC)).toBe("postman")
-  })
+    expect(detectFormat(POSTMAN_SPEC)).toBe("postman");
+  });
 
   it("detects OpenAPI 3.x YAML", () => {
-    expect(detectFormat("openapi: '3.0.0'\ninfo:\n  title: Test")).toBe("openapi3-yaml")
-  })
+    expect(detectFormat("openapi: '3.0.0'\ninfo:\n  title: Test")).toBe("openapi3-yaml");
+  });
 
   it("detects Swagger 2.0 YAML", () => {
-    expect(detectFormat("swagger: '2.0'\ninfo:\n  title: Test")).toBe("swagger2-yaml")
-  })
+    expect(detectFormat("swagger: '2.0'\ninfo:\n  title: Test")).toBe("swagger2-yaml");
+  });
 
   it("returns unknown for invalid input", () => {
-    expect(detectFormat("not a spec")).toBe("unknown")
-    expect(detectFormat("{}")).toBe("unknown")
-  })
-})
+    expect(detectFormat("not a spec")).toBe("unknown");
+    expect(detectFormat("{}")).toBe("unknown");
+  });
+});
 
 describe("parseSpec — OpenAPI 3.x", () => {
   it("parses metadata correctly", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
+    const spec = parseSpec(OPENAPI3_SPEC);
 
-    expect(spec.title).toBe("Pet Store")
-    expect(spec.version).toBe("1.0.0")
-    expect(spec.description).toBe("A pet store API")
-    expect(spec.baseURL).toBe("https://api.petstore.com/v1")
-    expect(spec.format).toBe("openapi3")
-  })
+    expect(spec.title).toBe("Pet Store");
+    expect(spec.version).toBe("1.0.0");
+    expect(spec.description).toBe("A pet store API");
+    expect(spec.baseURL).toBe("https://api.petstore.com/v1");
+    expect(spec.format).toBe("openapi3");
+  });
 
   it("extracts groups from tags", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
+    const spec = parseSpec(OPENAPI3_SPEC);
 
-    expect(spec.groups).toHaveLength(2)
-    expect(spec.groups[0]!.name).toBe("pets")
-    expect(spec.groups[1]!.name).toBe("users")
-  })
+    expect(spec.groups).toHaveLength(2);
+    expect(spec.groups[0]!.name).toBe("pets");
+    expect(spec.groups[1]!.name).toBe("users");
+  });
 
   it("extracts group descriptions from tags", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
+    const spec = parseSpec(OPENAPI3_SPEC);
 
-    expect(spec.groups[0]!.description).toBe("Pet operations")
-    expect(spec.groups[1]!.description).toBe("User management")
-  })
+    expect(spec.groups[0]!.description).toBe("Pet operations");
+    expect(spec.groups[1]!.description).toBe("User management");
+  });
 
   it("extracts endpoints with correct HTTP methods", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
-    const pets = spec.groups[0]!
+    const spec = parseSpec(OPENAPI3_SPEC);
+    const pets = spec.groups[0]!;
 
-    expect(pets.endpoints).toHaveLength(4)
-    expect(pets.endpoints.map((e) => e.httpMethod)).toEqual(["get", "post", "get", "delete"])
-  })
+    expect(pets.endpoints).toHaveLength(4);
+    expect(pets.endpoints.map((e) => e.httpMethod)).toEqual(["get", "post", "get", "delete"]);
+  });
 
   it("extracts endpoint names from operationId", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
-    const pets = spec.groups[0]!
+    const spec = parseSpec(OPENAPI3_SPEC);
+    const pets = spec.groups[0]!;
 
-    expect(pets.endpoints[0]!.name).toBe("listPets")
-    expect(pets.endpoints[1]!.name).toBe("createPet")
-    expect(pets.endpoints[2]!.name).toBe("getPetById")
-    expect(pets.endpoints[3]!.name).toBe("deletePet")
-  })
+    expect(pets.endpoints[0]!.name).toBe("listPets");
+    expect(pets.endpoints[1]!.name).toBe("createPet");
+    expect(pets.endpoints[2]!.name).toBe("getPetById");
+    expect(pets.endpoints[3]!.name).toBe("deletePet");
+  });
 
   it("extracts path parameters", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
-    const getPetById = spec.groups[0]!.endpoints[2]!
+    const spec = parseSpec(OPENAPI3_SPEC);
+    const getPetById = spec.groups[0]!.endpoints[2]!;
 
-    expect(getPetById.parameters).toHaveLength(1)
+    expect(getPetById.parameters).toHaveLength(1);
     expect(getPetById.parameters[0]).toMatchObject({
       name: "petId",
       in: "path",
       required: true,
       type: "string",
-    })
-  })
+    });
+  });
 
   it("marks secured endpoints", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
-    const pets = spec.groups[0]!
+    const spec = parseSpec(OPENAPI3_SPEC);
+    const pets = spec.groups[0]!;
 
-    expect(pets.endpoints[0]!.secured).toBe(false)
-    expect(pets.endpoints[1]!.secured).toBe(true)
-    expect(pets.endpoints[3]!.secured).toBe(true)
-  })
+    expect(pets.endpoints[0]!.secured).toBe(false);
+    expect(pets.endpoints[1]!.secured).toBe(true);
+    expect(pets.endpoints[3]!.secured).toBe(true);
+  });
 
   it("extracts request body schema", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
-    const createPet = spec.groups[0]!.endpoints[1]!
+    const spec = parseSpec(OPENAPI3_SPEC);
+    const createPet = spec.groups[0]!.endpoints[1]!;
 
-    expect(createPet.requestBody).not.toBeNull()
-    expect(createPet.requestBody?.type).toBe("ref")
-    expect(createPet.requestBody?.refName).toBe("NewPet")
-  })
+    expect(createPet.requestBody).not.toBeNull();
+    expect(createPet.requestBody?.type).toBe("ref");
+    expect(createPet.requestBody?.refName).toBe("NewPet");
+  });
 
   it("extracts response schema", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
-    const listPets = spec.groups[0]!.endpoints[0]!
+    const spec = parseSpec(OPENAPI3_SPEC);
+    const listPets = spec.groups[0]!.endpoints[0]!;
 
-    expect(listPets.responseSchema).not.toBeNull()
-    expect(listPets.responseSchema?.type).toBe("array")
-  })
+    expect(listPets.responseSchema).not.toBeNull();
+    expect(listPets.responseSchema?.type).toBe("array");
+  });
 
   it("extracts component schemas", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
-    const pet = spec.schemas.Pet!
+    const spec = parseSpec(OPENAPI3_SPEC);
+    const pet = spec.schemas.Pet!;
 
-    expect(Object.keys(spec.schemas)).toEqual(["Pet", "NewPet"])
-    expect(pet.type).toBe("object")
-    expect(pet.properties?.id!.type).toBe("integer")
-    expect(pet.required).toContain("id")
-    expect(pet.required).toContain("name")
-  })
+    expect(Object.keys(spec.schemas)).toEqual(["Pet", "NewPet"]);
+    expect(pet.type).toBe("object");
+    expect(pet.properties?.id?.type).toBe("integer");
+    expect(pet.required).toContain("id");
+    expect(pet.required).toContain("name");
+  });
 
   it("extracts security schemes", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
+    const spec = parseSpec(OPENAPI3_SPEC);
 
-    expect(spec.securitySchemes).toHaveLength(1)
+    expect(spec.securitySchemes).toHaveLength(1);
     expect(spec.securitySchemes[0]).toMatchObject({
       name: "bearerAuth",
       type: "bearer",
-    })
-  })
+    });
+  });
 
   it("computes common prefix for groups", () => {
-    const spec = parseSpec(OPENAPI3_SPEC)
+    const spec = parseSpec(OPENAPI3_SPEC);
 
-    expect(spec.groups[0]!.prefix).toBe("/pets")
+    expect(spec.groups[0]!.prefix).toBe("/pets");
     // Single-endpoint groups get "/" since findCommonPrefix needs 2+ paths
-    expect(spec.groups[1]!.prefix).toBe("/")
-  })
-})
+    expect(spec.groups[1]!.prefix).toBe("/");
+  });
+});
 
 describe("parseSpec — Swagger 2.0", () => {
   it("converts to OpenAPI 3 format", () => {
-    const spec = parseSpec(SWAGGER2_SPEC)
+    const spec = parseSpec(SWAGGER2_SPEC);
 
-    expect(spec.format).toBe("swagger2")
-    expect(spec.title).toBe("Legacy API")
-    expect(spec.baseURL).toBe("/api/v2")
-  })
+    expect(spec.format).toBe("swagger2");
+    expect(spec.title).toBe("Legacy API");
+    expect(spec.baseURL).toBe("/api/v2");
+  });
 
   it("extracts endpoints from Swagger 2.0", () => {
-    const spec = parseSpec(SWAGGER2_SPEC)
+    const spec = parseSpec(SWAGGER2_SPEC);
 
-    expect(spec.groups.length).toBeGreaterThanOrEqual(1)
-    const items = spec.groups.find((g) => g.name === "items")
-    expect(items).toBeDefined()
-    expect(items!.endpoints[0]!.name).toBe("getItems")
-    expect(items!.endpoints[0]!.httpMethod).toBe("get")
-  })
+    expect(spec.groups.length).toBeGreaterThanOrEqual(1);
+    const items = spec.groups.find((g) => g.name === "items");
+    expect(items).toBeDefined();
+    expect(items!.endpoints[0]!.name).toBe("getItems");
+    expect(items!.endpoints[0]!.httpMethod).toBe("get");
+  });
 
   it("converts definitions to schemas", () => {
-    const spec = parseSpec(SWAGGER2_SPEC)
-    const item = spec.schemas.Item!
+    const spec = parseSpec(SWAGGER2_SPEC);
+    const item = spec.schemas.Item!;
 
-    expect(item).toBeDefined()
-    expect(item.type).toBe("object")
-  })
-})
+    expect(item).toBeDefined();
+    expect(item.type).toBe("object");
+  });
+});
 
 describe("parseSpec — Postman", () => {
   it("parses Postman collection", () => {
-    const spec = parseSpec(POSTMAN_SPEC)
+    const spec = parseSpec(POSTMAN_SPEC);
 
-    expect(spec.format).toBe("postman")
-    expect(spec.title).toBe("My API")
-  })
+    expect(spec.format).toBe("postman");
+    expect(spec.title).toBe("My API");
+  });
 
   it("extracts groups from folders", () => {
-    const spec = parseSpec(POSTMAN_SPEC)
+    const spec = parseSpec(POSTMAN_SPEC);
 
-    expect(spec.groups.length).toBeGreaterThanOrEqual(1)
-    const users = spec.groups.find((g) => g.name === "users")
-    expect(users).toBeDefined()
-  })
+    expect(spec.groups.length).toBeGreaterThanOrEqual(1);
+    const users = spec.groups.find((g) => g.name === "users");
+    expect(users).toBeDefined();
+  });
 
   it("extracts endpoints from items", () => {
-    const spec = parseSpec(POSTMAN_SPEC)
-    const users = spec.groups.find((g) => g.name === "users")!
+    const spec = parseSpec(POSTMAN_SPEC);
+    const users = spec.groups.find((g) => g.name === "users")!;
 
-    expect(users.endpoints.length).toBe(2)
-    expect(users.endpoints[0]!.httpMethod).toBe("get")
-    expect(users.endpoints[1]!.httpMethod).toBe("post")
-  })
-})
+    expect(users.endpoints.length).toBe(2);
+    expect(users.endpoints[0]!.httpMethod).toBe("get");
+    expect(users.endpoints[1]!.httpMethod).toBe("post");
+  });
+});
 
 const METHOD_COVERAGE_SPEC = JSON.stringify({
   openapi: "3.0.0",
@@ -364,7 +377,7 @@ const METHOD_COVERAGE_SPEC = JSON.stringify({
       trace: { tags: ["things"], operationId: "traceThings", responses: { "200": {} } },
     },
   },
-})
+});
 
 const SWAGGER2_HEAD_SPEC = JSON.stringify({
   swagger: "2.0",
@@ -376,69 +389,78 @@ const SWAGGER2_HEAD_SPEC = JSON.stringify({
       options: { tags: ["items"], operationId: "optionsItems", responses: { "200": {} } },
     },
   },
-})
+});
 
 const POSTMAN_UNSUPPORTED_SPEC = JSON.stringify({
-  info: { name: "Odd methods", schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  info: {
+    name: "Odd methods",
+    schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+  },
   item: [
     {
       name: "things",
       item: [
-        { name: "Head thing", request: { method: "HEAD", url: { raw: "https://api.example.com/things" } } },
-        { name: "Purge thing", request: { method: "PURGE", url: { raw: "https://api.example.com/things" } } },
+        {
+          name: "Head thing",
+          request: { method: "HEAD", url: { raw: "https://api.example.com/things" } },
+        },
+        {
+          name: "Purge thing",
+          request: { method: "PURGE", url: { raw: "https://api.example.com/things" } },
+        },
       ],
     },
   ],
-})
+});
 
 describe("parseSpec — HTTP methods", () => {
   it("keeps HEAD and OPTIONS, which the builder can express", () => {
-    const spec = parseSpec(METHOD_COVERAGE_SPEC)
-    const things = spec.groups.find((g) => g.name === "things")!
+    const spec = parseSpec(METHOD_COVERAGE_SPEC);
+    const things = spec.groups.find((g) => g.name === "things")!;
 
-    expect(things.endpoints.map((e) => e.httpMethod).sort()).toEqual(["get", "head", "options"])
-  })
+    expect(things.endpoints.map((e) => e.httpMethod).sort()).toEqual(["get", "head", "options"]);
+  });
 
   it("reports TRACE as skipped instead of dropping it", () => {
-    const spec = parseSpec(METHOD_COVERAGE_SPEC)
+    const spec = parseSpec(METHOD_COVERAGE_SPEC);
 
-    expect(spec.skipped.map((o) => o.method)).toEqual(["TRACE"])
-    expect(spec.skipped[0]!.path).toBe("/things")
-    expect(spec.skipped[0]!.reason).toContain("builder")
-  })
+    expect(spec.skipped.map((o) => o.method)).toEqual(["TRACE"]);
+    expect(spec.skipped[0]!.path).toBe("/things");
+    expect(spec.skipped[0]!.reason).toContain("builder");
+  });
 
   it("does not mistake path-level metadata for a lost operation", () => {
-    const spec = parseSpec(METHOD_COVERAGE_SPEC)
+    const spec = parseSpec(METHOD_COVERAGE_SPEC);
 
-    expect(spec.skipped.map((o) => o.method)).not.toContain("PARAMETERS")
-    expect(spec.skipped.map((o) => o.method)).not.toContain("SUMMARY")
-  })
+    expect(spec.skipped.map((o) => o.method)).not.toContain("PARAMETERS");
+    expect(spec.skipped.map((o) => o.method)).not.toContain("SUMMARY");
+  });
 
   it("carries HEAD and OPTIONS through the Swagger 2.0 conversion", () => {
-    const spec = parseSpec(SWAGGER2_HEAD_SPEC)
-    const items = spec.groups.find((g) => g.name === "items")!
+    const spec = parseSpec(SWAGGER2_HEAD_SPEC);
+    const items = spec.groups.find((g) => g.name === "items")!;
 
-    expect(items.endpoints.map((e) => e.httpMethod)).toEqual(["head", "options"])
-    expect(spec.skipped).toEqual([])
-  })
+    expect(items.endpoints.map((e) => e.httpMethod)).toEqual(["head", "options"]);
+    expect(spec.skipped).toEqual([]);
+  });
 
   it("reports a Postman request whose method has no builder verb", () => {
-    const spec = parseSpec(POSTMAN_UNSUPPORTED_SPEC)
-    const things = spec.groups.find((g) => g.name === "things")!
+    const spec = parseSpec(POSTMAN_UNSUPPORTED_SPEC);
+    const things = spec.groups.find((g) => g.name === "things")!;
 
-    expect(things.endpoints.map((e) => e.httpMethod)).toEqual(["head"])
+    expect(things.endpoints.map((e) => e.httpMethod)).toEqual(["head"]);
     expect(spec.skipped).toEqual([
       { method: "PURGE", path: "/things", reason: expect.stringContaining("PURGE") },
-    ])
-  })
-})
+    ]);
+  });
+});
 
 describe("parseSpec — errors", () => {
   it("throws on unknown format", () => {
-    expect(() => parseSpec("random text")).toThrow("Unable to detect spec format")
-  })
+    expect(() => parseSpec("random text")).toThrow("Unable to detect spec format");
+  });
 
   it("throws on empty JSON", () => {
-    expect(() => parseSpec("{}")).toThrow("Unable to detect spec format")
-  })
-})
+    expect(() => parseSpec("{}")).toThrow("Unable to detect spec format");
+  });
+});

@@ -8,9 +8,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import { restartTour } from "@/components/onboarding/tour-provider";
 import { useStudioStore } from "@/store";
-
-import { FRAMEWORKS } from "./frameworks";
 import { FrameworkPicker } from "./framework-picker";
+import { FRAMEWORKS } from "./frameworks";
 import { SetupSteps } from "./setup-steps";
 import { isWelcomeCompleted, markWelcomeCompleted } from "./welcome-storage";
 
@@ -23,8 +22,10 @@ export function WelcomeView(): React.ReactNode {
   const [completed, setCompleted] = useState<Set<string>>(() => new Set());
   const framework = FRAMEWORKS.find((f) => f.id === frameworkId) ?? null;
 
-  // Reset completed steps when framework changes
-  useEffect(() => { setCompleted(new Set()); }, [frameworkId]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: choosing another framework is what starts its steps afresh
+  useEffect(() => {
+    setCompleted(new Set());
+  }, [frameworkId]);
 
   // Auto-complete "connect" step when socket connects and a runtime announces
   useEffect(() => {
@@ -35,24 +36,30 @@ export function WelcomeView(): React.ReactNode {
 
   const currentId = framework?.steps.find((s) => !completed.has(s.id))?.id ?? null;
 
-  const selectFramework = useCallback((id: string) => {
-    navigate({ to: "/", search: { framework: id } });
-  }, [navigate]);
+  const selectFramework = useCallback(
+    (id: string) => {
+      navigate({ to: "/", search: { framework: id } });
+    },
+    [navigate],
+  );
 
   const goBack = useCallback(() => {
     navigate({ to: "/", search: {} });
   }, [navigate]);
 
-  const handleAction = useCallback((stepId: string) => {
-    if (stepId === "explore") {
-      markWelcomeCompleted();
-      navigate({ to: "/timeline" });
-      // Start the feature tour after a short delay (let the page render first)
-      setTimeout(restartTour, 800);
-      return;
-    }
-    setCompleted((prev) => new Set(prev).add(stepId));
-  }, [navigate]);
+  const handleAction = useCallback(
+    (stepId: string) => {
+      if (stepId === "explore") {
+        markWelcomeCompleted();
+        navigate({ to: "/timeline" });
+        // Start the feature tour after a short delay (let the page render first)
+        setTimeout(restartTour, 800);
+        return;
+      }
+      setCompleted((prev) => new Set(prev).add(stepId));
+    },
+    [navigate],
+  );
 
   const handleUndo = useCallback((stepId: string) => {
     setCompleted((prev) => {
@@ -97,6 +104,8 @@ export function WelcomeView(): React.ReactNode {
 
 function RedirectToTimeline(): React.ReactNode {
   const navigate = useNavigate();
-  useEffect(() => { navigate({ to: "/timeline" }); }, [navigate]);
+  useEffect(() => {
+    navigate({ to: "/timeline" });
+  }, [navigate]);
   return null;
 }

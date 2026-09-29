@@ -3,6 +3,7 @@
  * request time. A wrong value accepted here surfaces as a missing endpoint
  * somewhere else entirely, long after the call that caused it.
  */
+import { runInNewContext } from "node:vm";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { courier, defineApi } from "../src/define/index";
@@ -27,6 +28,17 @@ describe("what registerSources accepts", () => {
     expect(Object.keys(getSources() ?? {})).toEqual(["api"]);
   });
 
+  it("accepts a module namespace, and an object made in another realm", () => {
+    const namespace = Object.assign(Object.create(null), { api });
+    const otherRealm = runInNewContext("({})");
+    otherRealm.api = api;
+
+    registerSources(namespace);
+    expect(Object.keys(getSources() ?? {})).toEqual(["api"]);
+    registerSources(otherRealm);
+    expect(Object.keys(getSources() ?? {})).toEqual(["api"]);
+  });
+
   it("accepts an empty dictionary, which is a legitimate state", () => {
     registerSources({});
 
@@ -41,6 +53,10 @@ describe("what it refuses", () => {
     ["a string", "api"],
     ["a number", 7],
     ["an array", [api]],
+    ["a Map", new Map([["api", api]])],
+    ["a Promise", Promise.resolve({ api })],
+    ["a Date", new Date(0)],
+    ["a class instance", new (class Registry {})()],
   ];
 
   for (const [label, value] of rejected) {
@@ -53,6 +69,10 @@ describe("what it refuses", () => {
     expect(() => registerSources(null as never)).toThrow(/received null/);
     expect(() => registerSources([] as never)).toThrow(/received an array/);
     expect(() => registerSources("api" as never)).toThrow(/received string/);
+    expect(() => registerSources(new Map() as never)).toThrow(/received an instance of Map/);
+    expect(() => registerSources(Promise.resolve({}) as never)).toThrow(
+      /received a Promise — await it first/,
+    );
   });
 
   it("carries a code a caller can branch on", () => {

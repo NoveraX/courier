@@ -53,7 +53,18 @@ function getRegistry(): SourcesRegistry {
 function describe(value: unknown): string {
   if (value === null) return "null";
   if (Array.isArray(value)) return "an array";
-  return typeof value;
+  if (value instanceof Promise) return "a Promise — await it first";
+  if (typeof value !== "object") return typeof value;
+  const name: unknown = value.constructor?.name;
+  return typeof name === "string" && name !== "" ? `an instance of ${name}` : "an object";
+}
+
+/* An object literal or a module namespace, from any realm: a Map, a Promise
+   or a class instance would be read as a registry holding no sources. */
+function isPlainRecord(value: unknown): value is Sources {
+  if (value === null || typeof value !== "object") return false;
+  const proto: unknown = Object.getPrototypeOf(value);
+  return proto === null || Object.getPrototypeOf(proto) === null;
 }
 
 /**
@@ -79,7 +90,7 @@ export function prepareSources(sources: Sources, callee: string, usage: string):
   /* Sources are read much later, at request time. Accepting a wrong value
      here reports the mistake as a missing endpoint somewhere else entirely —
      or, for null, as a bare TypeError thrown from inside the library. */
-  if (sources === null || typeof sources !== "object" || Array.isArray(sources)) {
+  if (!isPlainRecord(sources)) {
     throw new ConfigurationError(
       "SOURCES_NOT_A_RECORD",
       [

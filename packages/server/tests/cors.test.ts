@@ -77,6 +77,14 @@ describe("handleCors — preflight", () => {
     expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
   });
 
+  it("refuses it with the body every adapter answers a refused origin with", () => {
+    const res = createMockRes();
+
+    handleCors(preflight("http://evil.com"), res, ["http://trusted.com"]);
+
+    expect(JSON.parse(res._body)).toEqual({ success: false, message: "Origin not allowed" });
+  });
+
   /** Accepting every origin because none was configured is the bug, not the default. */
   it("refuses a foreign origin when nothing is configured", () => {
     const res = createMockRes();

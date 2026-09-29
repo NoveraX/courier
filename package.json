@@ -78,9 +78,6 @@
     "release": "HUSKY=0 semantic-release",
     "prepare": "husky"
   },
-  "overrides": {
-    "h3": "$h3"
-  },
   "lint-staged": {
     "{packages,scripts}/**/*.{ts,tsx,mjs,css}": "biome check --write --no-errors-on-unmatched"
   }

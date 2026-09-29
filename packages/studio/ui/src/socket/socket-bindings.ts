@@ -1,6 +1,7 @@
 import type { Socket } from "socket.io-client";
 import type { useStudioStore } from "@/store";
 import { showBindingErrorToast, showDuplicateRuntimeToast } from "@/store/binding-error-toast";
+import { useMockStore } from "@/store/mock-slice";
 import { notifyFileChange } from "@/store/watcher-notifications";
 import { bindApis } from "./apis-bindings";
 import { isBindingErrorPayload, isBindingSnapshot } from "./binding-guards";
@@ -38,7 +39,10 @@ export interface Bindings {
 
 export function buildBindings(s: Socket, store: typeof useStudioStore.getState): Bindings {
   const b: Bindings = {
-    onConnect: () => store().setConnectionStatus("connected"),
+    onConnect: () => {
+      useMockStore.getState().forgetManagedServers();
+      store().setConnectionStatus("connected");
+    },
     onDisconnect: () => store().setConnectionStatus("disconnected"),
     onReconnectAttempt: (attempt) => {
       store().setConnectionStatus("reconnecting");

@@ -89,12 +89,12 @@ On the client side, use `createProxyCaller` (vanilla) or `createProxyQueryCaller
   headers={["Feature", "fetch", "axios", "tRPC", { label: "Courier", highlight: true }]}
   rows={[
     ["Type Safety", "Manual", "Manual", { label: "Full", highlight: true }, { label: "Full", highlight: true }],
-    ["Framework Agnostic", { label: "Yes", highlight: true }, { label: "Yes", highlight: true }, "No", { label: "Yes", highlight: true }],
+    ["Framework Agnostic", { label: "Yes", highlight: true }, { label: "Yes", highlight: true }, { label: "Yes", highlight: true }, { label: "Yes", highlight: true }],
     ["React Query", "Manual", "Manual", { label: "Built-in", highlight: true }, { label: "Built-in", highlight: true }],
-    ["Server Components", "Manual", "No", "Limited", { label: "First-class", highlight: true }],
+    ["Server Components", "Manual", "Manual", "Supported", { label: "First-class", highlight: true }],
     ["Middleware Chain", "No", "Interceptors", "Built-in", { label: "Composable", highlight: true }],
-    ["Runtime Validation", "No", "No", "Zod only", { label: "Any Standard Schema", highlight: true }],
-    ["Upload Progress", "No", { label: "Yes", highlight: true }, "Plugin", { label: "Built-in", highlight: true }],
+    ["Runtime Validation", "No", "No", { label: "Any validator", highlight: true }, { label: "Any Standard Schema", highlight: true }],
+    ["Upload Progress", "No", { label: "Yes", highlight: true }, "No", { label: "Built-in", highlight: true }],
     ["Backend Requirement", "Any", "Any", "tRPC server", { label: "Any REST", highlight: true }],
   ]}
 />

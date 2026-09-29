@@ -28,8 +28,9 @@ export interface SolidAPIEvent {
  * completion upstream. The handler also watches the Node response on the
  * event and stops the upstream call when the client goes away.
  *
- * @param config - Handler options, including the `allowedOrigins` the SSE
- *   transport checks against. Omit it to accept the defaults.
+ * @param config - Handler options, including the `allowedOrigins` whose pages
+ *   may call the proxy: every call and every stream is checked against them.
+ *   Omit it to accept the defaults.
  * @returns A handler for the route's `GET` and `POST` exports
  *
  * @example

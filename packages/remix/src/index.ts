@@ -11,8 +11,9 @@ import { announceWhenRegistered } from "@noverax/courier/announce";
  * On its first request it tells an attached Studio which sources it serves,
  * so the Playground can run them in this process.
  *
- * @param config - Handler options, including the `allowedOrigins` the SSE
- *   transport checks against. Omit it to accept the defaults.
+ * @param config - Handler options, including the `allowedOrigins` whose pages
+ *   may call the proxy: every call and every stream is checked against them.
+ *   Omit it to accept the defaults.
  *
  * @example
  * ```ts

@@ -71,8 +71,12 @@ export type CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
     "queryKey" | "queryFn" | "initialPageParam" | "getNextPageParam" | "getPreviousPageParam"
   >;
 
-export type CourierMutationOptions<TResponse, TVariables> = Omit<
-  UseMutationOptions<TResponse, Error, MutationVariables<TVariables>>,
+/**
+ * `TOnMutateResult` is what `onMutate` returns — a snapshot to roll back to —
+ * inferred from it and handed to `onError` and `onSettled` as it is typed.
+ */
+export type CourierMutationOptions<TResponse, TVariables, TOnMutateResult = unknown> = Omit<
+  UseMutationOptions<TResponse, Error, MutationVariables<TVariables>, TOnMutateResult>,
   "mutationFn"
 > & {
   requestOptions?: CallOptions;

@@ -7,7 +7,7 @@
  * that: it is a partition, and it leaves every package on the same side of it
  * in whatever order the filesystem happened to return.
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 interface PackageJson {
@@ -88,7 +88,10 @@ export function dependencyGraph(dirs: readonly string[]): Map<string, readonly s
     /* A peer is an ordering edge too: a consumer installing the adapter has
        to be able to resolve the core version it asks for, so core must be on
        the registry first even though npm will not install it for them. */
-    const internal = [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.peerDependencies ?? {})];
+    const internal = [
+      ...Object.keys(pkg.dependencies ?? {}),
+      ...Object.keys(pkg.peerDependencies ?? {}),
+    ];
     needs.set(
       pkg.name,
       [...new Set(internal.filter((dep) => dep.startsWith(SCOPE) && names.has(dep)))].sort(),

@@ -1,20 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ForbiddenError } from "../src/realtime/errors";
-import type { SSEContext, SSEEvent, SSEHandler } from "../src/realtime/types";
-import type { StudioHooks } from "../src/studio/hooks";
 import type { InternalSSERegistry } from "../src/adapter/sse-registry";
 import { createSSEStream } from "../src/adapter/sse-stream";
 import { emitClose } from "../src/adapter/sse-stream-lifecycle";
 import type { SSEStreamOptions } from "../src/adapter/sse-types";
+import { ForbiddenError } from "../src/realtime/errors";
+import type { SSEContext, SSEEvent, SSEHandler } from "../src/realtime/types";
+import type { StudioHooks } from "../src/studio/hooks";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /** Simple async generator yielding given events then returning */
-async function* generateEvents(
-  events: SSEEvent[],
-): AsyncGenerator<SSEEvent, void, unknown> {
+async function* generateEvents(events: SSEEvent[]): AsyncGenerator<SSEEvent, void, unknown> {
   for (const event of events) {
     yield event;
   }
@@ -41,9 +39,7 @@ function createCtx(overrides?: Partial<SSEContext>): {
 }
 
 /** Create a mock InternalSSERegistry */
-function createMockRegistry(
-  overrides?: Partial<InternalSSERegistry>,
-): InternalSSERegistry {
+function createMockRegistry(overrides?: Partial<InternalSSERegistry>): InternalSSERegistry {
   return {
     count: 0,
     isShuttingDown: false,
@@ -117,10 +113,7 @@ afterEach(() => {
 
 describe("createSSEStream", () => {
   it("emits events from async generator in SSE format", async () => {
-    const handler = staticHandler([
-      { data: { msg: "hello" } },
-      { data: { msg: "world" } },
-    ]);
+    const handler = staticHandler([{ data: { msg: "hello" } }, { data: { msg: "world" } }]);
     const { ctx } = createCtx();
     const opts = createOpts();
 
@@ -149,7 +142,9 @@ describe("createSSEStream", () => {
 
     // Generator that blocks until aborted
     let resolveBlock: () => void;
-    const blocker = new Promise<void>((r) => { resolveBlock = r; });
+    const blocker = new Promise<void>((r) => {
+      resolveBlock = r;
+    });
 
     const handler: SSEHandler<unknown, unknown> = async function* (_ctx) {
       yield { data: "start" };
@@ -290,7 +285,9 @@ describe("createSSEStream", () => {
     abortController.abort();
 
     // Drain remaining
-    while (!(await reader.read()).done) { /* drain */ }
+    while (!(await reader.read()).done) {
+      /* drain */
+    }
 
     // Should have stopped early, not infinite
     expect(yieldCount).toBeLessThan(100);
@@ -358,10 +355,7 @@ describe("createSSEStream", () => {
     const registry = createMockRegistry({
       get: vi.fn().mockReturnValue({ eventCount: 1 }),
     });
-    const handler = staticHandler([
-      { data: "a" },
-      { event: "update", data: "b" },
-    ]);
+    const handler = staticHandler([{ data: "a" }, { event: "update", data: "b" }]);
     const { ctx } = createCtx();
     const opts = createOpts({ dt, registry });
 
@@ -415,10 +409,7 @@ describe("createSSEStream", () => {
     await collectText(stream);
 
     expect(registry.recordEvent).toHaveBeenCalledTimes(2);
-    expect(registry.recordEvent).toHaveBeenCalledWith(
-      "conn-1",
-      expect.any(Number),
-    );
+    expect(registry.recordEvent).toHaveBeenCalledWith("conn-1", expect.any(Number));
   });
 });
 

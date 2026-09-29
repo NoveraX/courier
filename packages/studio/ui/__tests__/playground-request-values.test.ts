@@ -16,15 +16,24 @@ describe("the values a request is sent with", () => {
   });
 
   it("reads an empty editor as nothing to send", () => {
-    expect(readRequestValues("", "  ")).toEqual({ ok: true, values: { variables: undefined, headers: {} } });
+    expect(readRequestValues("", "  ")).toEqual({
+      ok: true,
+      values: { variables: undefined, headers: {} },
+    });
   });
 
   it("refuses variables that are not JSON", () => {
-    expect(readRequestValues('{ "id": ', "{}")).toEqual({ ok: false, problem: "Variables are not valid JSON" });
+    expect(readRequestValues('{ "id": ', "{}")).toEqual({
+      ok: false,
+      problem: "Variables are not valid JSON",
+    });
   });
 
   it("refuses headers that are not an object of strings", () => {
-    expect(readRequestValues("{}", '{ "x-tag": ')).toEqual({ ok: false, problem: "Headers are not valid JSON" });
+    expect(readRequestValues("{}", '{ "x-tag": ')).toEqual({
+      ok: false,
+      problem: "Headers are not valid JSON",
+    });
     expect(readRequestValues("{}", '{ "x-retries": 3 }')).toEqual({
       ok: false,
       problem: "Headers must be an object of string values",

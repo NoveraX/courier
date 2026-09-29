@@ -13,7 +13,10 @@ import { compileProject, removeProjects, STRICT, writeProject } from "../helpers
 
 const user = { $ref: "#/components/schemas/User" };
 const customerOrDeleted = {
-  oneOf: [{ $ref: "#/components/schemas/Customer" }, { $ref: "#/components/schemas/DeletedCustomer" }],
+  oneOf: [
+    { $ref: "#/components/schemas/Customer" },
+    { $ref: "#/components/schemas/DeletedCustomer" },
+  ],
 };
 
 const SPEC = parseSpec(
@@ -29,7 +32,9 @@ const SPEC = parseSpec(
           requestBody: {
             content: { "application/json": { schema: { type: "array", items: user } } },
           },
-          responses: { "200": { description: "ok", content: { "application/json": { schema: user } } } },
+          responses: {
+            "200": { description: "ok", content: { "application/json": { schema: user } } },
+          },
         },
       },
       "/customers/{id}": {
@@ -101,7 +106,9 @@ beforeAll(() => {
   const dir = writeProject("endpoint-imports/all", files);
   const roots = CASES.map(({ label }) => `${label}/shop/index.ts`);
   const found = compileProject(dir, roots, { ...STRICT, verbatimModuleSyntax: true });
-  problems = new Map(CASES.map(({ label }) => [label, found.filter((p) => p.startsWith(`${label}/`))]));
+  problems = new Map(
+    CASES.map(({ label }) => [label, found.filter((p) => p.startsWith(`${label}/`))]),
+  );
 }, 120_000);
 
 afterAll(() => {
@@ -109,9 +116,12 @@ afterAll(() => {
 });
 
 describe("the files an import generates", () => {
-  it.each(CASES.map(({ label }) => label))("compile, with verbatimModuleSyntax, for %s", (label) => {
-    expect(problems.get(label)).toEqual([]);
-  });
+  it.each(CASES.map(({ label }) => label))(
+    "compile, with verbatimModuleSyntax, for %s",
+    (label) => {
+      expect(problems.get(label)).toEqual([]);
+    },
+  );
 
   it("import the validator a list body is wrapped in", () => {
     const group = generateCode(SPEC, { type: "openapi", outputDir: "src" }, "shop").find((f) =>
@@ -140,8 +150,11 @@ describe("a flat import", () => {
   /* A response that is itself one of several shapes gets a type of its own;
      a list of them is typed where it is used, naming each alternative. */
   it("imports each type of a list response whose items are one of several", () => {
-    const source = generateCode(SPEC, { type: "openapi", outputDir: "src", groupBy: "single" }, "shop")
-      .find((f) => f.path.endsWith("shop/source.ts"));
+    const source = generateCode(
+      SPEC,
+      { type: "openapi", outputDir: "src", groupBy: "single" },
+      "shop",
+    ).find((f) => f.path.endsWith("shop/source.ts"));
     const imports = source?.content.match(/^import .* from "\.\/schemas";$/m)?.[0] ?? "";
 
     expect(imports).toContain("type Customer");

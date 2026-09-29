@@ -1,14 +1,38 @@
 import { isPlainObject } from "@/socket/is-plain-object";
 
-import type { FileOwnership, FilePlanSummary, KeptReason, PlanConfirmation, PlannedWriteAction } from "./types-file-plan";
+import type {
+  FileOwnership,
+  FilePlanSummary,
+  KeptReason,
+  PlanConfirmation,
+  PlannedWriteAction,
+} from "./types-file-plan";
 
 type Item = Record<string, unknown>;
 
 const OWNERSHIPS = [
-  "absent", "recorded", "recorded-edited", "claimed", "claimed-edited", "foreign", "link", "not-a-file",
+  "absent",
+  "recorded",
+  "recorded-edited",
+  "claimed",
+  "claimed-edited",
+  "foreign",
+  "link",
+  "not-a-file",
 ] as const satisfies readonly FileOwnership[];
-const ACTIONS = ["create", "replace", "merge", "unchanged"] as const satisfies readonly PlannedWriteAction[];
-const KEPT = ["not-written-by-studio", "link", "not-a-file", "unconfirmed", "imported"] as const satisfies readonly KeptReason[];
+const ACTIONS = [
+  "create",
+  "replace",
+  "merge",
+  "unchanged",
+] as const satisfies readonly PlannedWriteAction[];
+const KEPT = [
+  "not-written-by-studio",
+  "link",
+  "not-a-file",
+  "unconfirmed",
+  "imported",
+] as const satisfies readonly KeptReason[];
 const KINDS = ["replace", "remove"] as const;
 const REASONS = ["edited", "claimed", "foreign"] as const;
 const BLOCKED = ["link", "not-a-file"] as const;
@@ -22,7 +46,10 @@ function isPath(raw: unknown): raw is string {
 }
 
 /* Every item read, or nothing when any item is malformed: a plan shown in part would misstate it. */
-function listOf<TItem>(raw: unknown, read: (item: Item, path: string) => TItem | undefined): TItem[] | undefined {
+function listOf<TItem>(
+  raw: unknown,
+  read: (item: Item, path: string) => TItem | undefined,
+): TItem[] | undefined {
   if (!Array.isArray(raw)) return undefined;
   const items: TItem[] = [];
   for (const item of raw) {

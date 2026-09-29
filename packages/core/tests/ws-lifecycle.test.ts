@@ -1,13 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
-
-import { wsFrameLimit } from "../src/node";
-import { wireEvents } from "../src/adapter/ws-lifecycle";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { closeSubscriptionEntry } from "../src/adapter/ws-dispatch-helpers";
+import { wireEvents } from "../src/adapter/ws-lifecycle";
+import type { WSHandlerConfig } from "../src/adapter/ws-types";
+import { wsFrameLimit } from "../src/node";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
-import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 let served: ServedWS | undefined;
@@ -194,8 +193,13 @@ describe("wireEvents", () => {
   it("stops heartbeat and cleans up on close", async () => {
     const ws = createMockWs();
     const onStreamClose = vi.fn();
-    const subIds = new Map([["test.topic", { requestId: "sub-1", seq: { value: 3 }, t0: performance.now() }]]);
-    const { ctx } = createMockCtx({ dt: { onStreamClose } as never, subscriptionIds: subIds as never });
+    const subIds = new Map([
+      ["test.topic", { requestId: "sub-1", seq: { value: 3 }, t0: performance.now() }],
+    ]);
+    const { ctx } = createMockCtx({
+      dt: { onStreamClose } as never,
+      subscriptionIds: subIds as never,
+    });
     const heartbeat = createHeartbeat();
     const topicManager = createTopicManager();
     const config = { sources: {} } as WSHandlerConfig;
@@ -207,7 +211,9 @@ describe("wireEvents", () => {
     await new Promise((r) => setTimeout(r, 10));
 
     expect(heartbeat.stop).toHaveBeenCalledOnce();
-    expect((registry as { remove: ReturnType<typeof vi.fn> }).remove).toHaveBeenCalledWith("conn-1");
+    expect((registry as { remove: ReturnType<typeof vi.fn> }).remove).toHaveBeenCalledWith(
+      "conn-1",
+    );
     expect(topicManager.disconnectAll).toHaveBeenCalledWith("conn-1");
     expect(onStreamClose).toHaveBeenCalledOnce();
   });
@@ -281,7 +287,9 @@ describe("wireEvents", () => {
     const { ctx } = createMockCtx();
     const heartbeat = createHeartbeat();
     const topicManager = createTopicManager();
-    const onDisconnect = vi.fn(() => { throw new Error("hook failed"); });
+    const onDisconnect = vi.fn(() => {
+      throw new Error("hook failed");
+    });
     const config = { sources: {}, onDisconnect } as unknown as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
@@ -336,7 +344,9 @@ describe("wireEvents", () => {
     const { ctx } = createMockCtx();
     const heartbeat = createHeartbeat();
     const topicManager = createTopicManager();
-    const onError = vi.fn(() => { throw new Error("hook failed"); });
+    const onError = vi.fn(() => {
+      throw new Error("hook failed");
+    });
     const config = { sources: {}, onError } as unknown as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 

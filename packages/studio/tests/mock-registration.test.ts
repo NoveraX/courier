@@ -9,8 +9,8 @@
  * mock could not run.
  */
 import { courier, defineApi } from "@noverax/courier/define";
-import { defineMockServer, describeMockServer } from "@noverax/courier-mock/managed";
 import type { MockServerDescription } from "@noverax/courier-mock/managed";
+import { defineMockServer, describeMockServer } from "@noverax/courier-mock/managed";
 import { describe, expect, it, vi } from "vitest";
 
 import type { MockLocation } from "../src/server/mock-manager/mock-registration";
@@ -21,7 +21,10 @@ function description(overrides: Partial<MockServerDescription> = {}): MockServer
   return { autoStart: false, routes: [], collections: [], scenarios: [], ...overrides };
 }
 
-const here: MockLocation = { mocksFile: "/p/courier.mocks.ts", relativePath: "courier.mocks.ts:apiMock" };
+const here: MockLocation = {
+  mocksFile: "/p/courier.mocks.ts",
+  relativePath: "courier.mocks.ts:apiMock",
+};
 
 function registration(basePort = 7001, reserved: number[] = [], alive: string[] = []) {
   const servers = new Map<string, ServerState>();
@@ -59,7 +62,10 @@ describe("the port a managed mock starts on", () => {
 
   it("is allocated from the base for a real definition that names none", () => {
     const { endpoint } = courier();
-    const api = defineApi({ baseURL: "https://api.example", endpoints: { ping: endpoint.get("ping") } });
+    const api = defineApi({
+      baseURL: "https://api.example",
+      endpoints: { ping: endpoint.get("ping") },
+    });
     const { servers, ops } = registration(7430);
 
     ops.registerDeclared("apiMock", here, describeMockServer(defineMockServer({ source: api })));
@@ -135,7 +141,10 @@ describe("a config edit", () => {
     const { servers, ops } = registration();
     ops.registerDeclared("apiMock", here, description());
 
-    const renamed = { mocksFile: "/p/courier.mocks.mts", relativePath: "courier.mocks.mts:apiMock" };
+    const renamed = {
+      mocksFile: "/p/courier.mocks.mts",
+      relativePath: "courier.mocks.mts:apiMock",
+    };
     ops.updateDeclared("apiMock", renamed, description());
 
     expect(servers.get("apiMock")).toMatchObject(renamed);
@@ -148,7 +157,11 @@ describe("a definition that cannot be read", () => {
 
     ops.registerProblem("apiMock", here, { broken: true }, "not a definition");
 
-    expect(servers.get("apiMock")).toMatchObject({ configuredPort: 7600, status: "crashed", lastError: "not a definition" });
+    expect(servers.get("apiMock")).toMatchObject({
+      configuredPort: 7600,
+      status: "crashed",
+      lastError: "not a definition",
+    });
   });
 
   it("keeps the port its raw definition declares", () => {
@@ -166,7 +179,11 @@ describe("a definition that cannot be read", () => {
 
     ops.updateDeclared("apiMock", here, description());
 
-    expect(servers.get("apiMock")).toMatchObject({ configuredPort: tracked, status: "declared", lastError: undefined });
+    expect(servers.get("apiMock")).toMatchObject({
+      configuredPort: tracked,
+      status: "declared",
+      lastError: undefined,
+    });
     expect(tracked).toBeGreaterThanOrEqual(7700);
   });
 
@@ -178,6 +195,8 @@ describe("a definition that cannot be read", () => {
     ops.registerProblem("apiMock", here, { broken: true }, "not a definition.");
 
     expect(servers.get("apiMock")?.status).toBe("running");
-    expect(servers.get("apiMock")?.lastError).toMatch(/not a definition\. It keeps serving its last working definition/);
+    expect(servers.get("apiMock")?.lastError).toMatch(
+      /not a definition\. It keeps serving its last working definition/,
+    );
   });
 });

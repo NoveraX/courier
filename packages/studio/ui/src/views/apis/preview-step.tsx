@@ -1,18 +1,12 @@
-import { FileCode, ChevronRight } from "lucide-react";
+import { ChevronRight, FileCode } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-
-import { Badge } from "@/components/ui/badge";
 import { CodeBlock } from "@/components/shared/code-block";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-
+import { FilePlanView } from "./file-plan-view";
 import type { GeneratedFile } from "./types";
 import type { PlanConsent } from "./types-file-plan";
-import { FilePlanView } from "./file-plan-view";
 
 interface PreviewStepProps {
   files: GeneratedFile[];
@@ -39,9 +33,7 @@ export function PreviewStepView({
   consent,
   onToggleConfirmed,
 }: PreviewStepProps): React.ReactElement {
-  const [expandedFile, setExpandedFile] = useState<string | null>(
-    files[0]?.path ?? null,
-  );
+  const [expandedFile, setExpandedFile] = useState<string | null>(files[0]?.path ?? null);
   const alertRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -53,18 +45,29 @@ export function PreviewStepView({
       <div className="space-y-1.5">
         <h3 className="text-h3 text-foreground">Preview Generated Code</h3>
         <p className="text-body-sm text-muted-foreground">
-          Studio generates {files.length} files for <span className="font-mono text-foreground">{sourceName}</span>
+          Studio generates {files.length} files for{" "}
+          <span className="font-mono text-foreground">{sourceName}</span>
         </p>
       </div>
 
       {error && !consent && (
-        <p ref={alertRef} role="alert" className="text-xs text-destructive">{error}</p>
+        <p ref={alertRef} role="alert" className="text-xs text-destructive">
+          {error}
+        </p>
       )}
 
       {consent && (
         <div className="space-y-3 rounded-md border border-border-subtle p-3">
-          {error && <p ref={alertRef} role="alert" className="text-body-sm text-foreground">{error}</p>}
-          <FilePlanView plan={consent.plan} confirmed={consent.confirmed} onToggle={onToggleConfirmed} />
+          {error && (
+            <p ref={alertRef} role="alert" className="text-body-sm text-foreground">
+              {error}
+            </p>
+          )}
+          <FilePlanView
+            plan={consent.plan}
+            confirmed={consent.confirmed}
+            onToggle={onToggleConfirmed}
+          />
         </div>
       )}
 
@@ -81,10 +84,12 @@ export function PreviewStepView({
               onOpenChange={(open) => setExpandedFile(open ? file.path : null)}
             >
               <CollapsibleTrigger className="flex w-full items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 hover:bg-muted/30 transition-colors">
-                <ChevronRight className={cn(
-                  "size-3 text-muted-foreground transition-transform",
-                  isExpanded && "rotate-90",
-                )} />
+                <ChevronRight
+                  className={cn(
+                    "size-3 text-muted-foreground transition-transform",
+                    isExpanded && "rotate-90",
+                  )}
+                />
                 <FileCode className="size-3.5 text-indigo-400 shrink-0" />
                 <span className="text-xs font-mono text-foreground truncate">{file.path}</span>
                 <Badge variant="secondary" className="ml-auto text-[10px] shrink-0">

@@ -1,7 +1,6 @@
-import type { DiffHunk, DiffLine } from "./wire-types";
-
 import { isPlainObject } from "@/socket/is-plain-object";
 import { isLineNumber } from "./is-line-number";
+import type { DiffHunk, DiffLine } from "./wire-types";
 
 const LINE_KINDS: ReadonlySet<unknown> = new Set(["context", "add", "remove"]);
 

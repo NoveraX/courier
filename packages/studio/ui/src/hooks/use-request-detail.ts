@@ -1,5 +1,5 @@
-import { useCallback } from "react";
 import { useRouter, useRouterState } from "@tanstack/react-router";
+import { useCallback } from "react";
 
 import type { DetailTabKey } from "@/components/shared/detail-panel/constants";
 

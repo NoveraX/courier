@@ -6,14 +6,12 @@
  * `collection-item.tsx` and `seed-controls.tsx`.
  */
 
-import { useState } from "react";
 import { Database } from "lucide-react";
 import { motion } from "motion/react";
-
-import type { MockCollectionEntry } from "@/store/mock-slice";
-
+import { useState } from "react";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
 import { cn } from "@/lib/utils";
+import type { MockCollectionEntry } from "@/store/mock-slice";
 
 import { CollectionItem } from "./collection-item";
 import { SeedControls } from "./seed-controls";

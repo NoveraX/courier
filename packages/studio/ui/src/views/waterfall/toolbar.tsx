@@ -1,10 +1,10 @@
-import { Badge } from "@/components/ui/badge";
 import { CountDisplay } from "@/components/shared/count-display";
 import { SearchInput } from "@/components/shared/search-input";
+import { Badge } from "@/components/ui/badge";
 
-import type { WaterfallSortField, WaterfallGroupBy } from "@/store/types";
+import type { WaterfallGroupBy, WaterfallSortField } from "@/store/types";
+import { GroupSelect, ModeToggle, SortSelect, ZoomControls } from "./toolbar-controls";
 import type { ModeFilter } from "./types";
-import { SortSelect, GroupSelect, ModeToggle, ZoomControls } from "./toolbar-controls";
 
 interface ToolbarProps {
   search: string;
@@ -25,10 +25,21 @@ interface ToolbarProps {
 }
 
 export function Toolbar({
-  search, sortBy, groupBy, modeFilter, zoom,
-  totalCount, filteredCount,
-  onSearchChange, onSortChange, onGroupChange, onModeChange,
-  onZoomIn, onZoomOut, onResetZoom, onZoomToFit,
+  search,
+  sortBy,
+  groupBy,
+  modeFilter,
+  zoom,
+  totalCount,
+  filteredCount,
+  onSearchChange,
+  onSortChange,
+  onGroupChange,
+  onModeChange,
+  onZoomIn,
+  onZoomOut,
+  onResetZoom,
+  onZoomToFit,
 }: ToolbarProps): React.ReactElement {
   return (
     <div className="flex h-11 shrink-0 items-center gap-2 border-b border-border-subtle px-3">
@@ -43,7 +54,13 @@ export function Toolbar({
 
       <div className="h-4 w-px bg-border-subtle" />
 
-      <ZoomControls zoom={zoom} onIn={onZoomIn} onOut={onZoomOut} onReset={onResetZoom} onFit={onZoomToFit} />
+      <ZoomControls
+        zoom={zoom}
+        onIn={onZoomIn}
+        onOut={onZoomOut}
+        onReset={onResetZoom}
+        onFit={onZoomToFit}
+      />
 
       <div className="ml-auto flex items-center gap-2 text-body-sm text-muted-foreground">
         <CountDisplay filtered={filteredCount} total={totalCount} label="requests" />

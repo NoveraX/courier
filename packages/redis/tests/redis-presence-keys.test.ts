@@ -18,9 +18,9 @@ describe("unpackMeta", () => {
     expect(() => unpackMeta(JSON.stringify({ user: "u1" }))).toThrow(
       "A presence record in Redis is not one Courier wrote",
     );
-    expect(() => unpackMeta(JSON.stringify({ userId: "u1", joinedAt: "yesterday", metadata: {} }))).toThrow(
-      "A presence record in Redis is not one Courier wrote",
-    );
+    expect(() =>
+      unpackMeta(JSON.stringify({ userId: "u1", joinedAt: "yesterday", metadata: {} })),
+    ).toThrow("A presence record in Redis is not one Courier wrote");
   });
 
   it("fails on a record that is not JSON", () => {

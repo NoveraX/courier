@@ -22,10 +22,18 @@ const api = defineApi({ baseURL: "https://api.example", groups: { users } });
 
 describe("describeEntry", () => {
   it("lists the routes and collections of a definition, with its port", async () => {
-    const described = await describeEntry("apiMock", defineMockServer({ source: api, port: 7401, autoStart: true }));
+    const described = await describeEntry(
+      "apiMock",
+      defineMockServer({ source: api, port: 7401, autoStart: true }),
+    );
 
-    expect(described).toMatchObject({ description: { autoStart: true, port: 7401, collections: ["users"] } });
-    const routes = "description" in described ? described.description.routes.map((r) => `${r.httpMethod} ${r.fullPath}`) : [];
+    expect(described).toMatchObject({
+      description: { autoStart: true, port: 7401, collections: ["users"] },
+    });
+    const routes =
+      "description" in described
+        ? described.description.routes.map((r) => `${r.httpMethod} ${r.fullPath}`)
+        : [];
     expect(routes).toEqual(["GET /users", "GET /users/:id"]);
   });
 
@@ -40,7 +48,10 @@ describe("describeEntry", () => {
       throw new Error("scenario exploded");
     });
 
-    const described = await describeEntry("apiMock", defineMockServer({ source: api, scenarios: { boom: scenario } }));
+    const described = await describeEntry(
+      "apiMock",
+      defineMockServer({ source: api, scenarios: { boom: scenario } }),
+    );
 
     const boom =
       "description" in described

@@ -107,7 +107,9 @@ describe("a Playground call", () => {
     call();
 
     expect(executed(impostor)).toBe(false);
-    expect(refusals(ui)).toEqual([expect.stringContaining("did not present this project's Studio token")]);
+    expect(refusals(ui)).toEqual([
+      expect.stringContaining("did not present this project's Studio token"),
+    ]);
   });
 
   it("goes to the runtime with the token when another claims the source without it", () => {
@@ -138,7 +140,9 @@ describe("a Playground call", () => {
 
     expect(getRuntimeEntry("server")?.socket).toBe(impostor);
     expect(executed(impostor)).toBe(false);
-    expect(refusals(ui)).toEqual([expect.stringContaining("did not present this project's Studio token")]);
+    expect(refusals(ui)).toEqual([
+      expect.stringContaining("did not present this project's Studio token"),
+    ]);
   });
 
   it("goes to the runtime with the token when one without it took the runtime's id first", () => {

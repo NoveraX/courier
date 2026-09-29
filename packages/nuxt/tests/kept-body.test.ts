@@ -39,7 +39,10 @@ describe("keptBodyOf", () => {
   });
 
   it("prefers raw bytes a host kept over a parsed copy", async () => {
-    const req = Object.assign(streaming(""), { rawBody: Buffer.from('{ "a": 4 }'), body: { a: 4 } });
+    const req = Object.assign(streaming(""), {
+      rawBody: Buffer.from('{ "a": 4 }'),
+      body: { a: 4 },
+    });
 
     expect(await text(await keptBodyOf(req))).toBe('{ "a": 4 }');
   });

@@ -4,7 +4,12 @@
  * the source's credentials. The proxy used to refuse both with 400,
  * "describes where to connect rather than serving the stream".
  */
-import { createServer, type IncomingHttpHeaders, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingHttpHeaders,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer } from "ws";
@@ -14,7 +19,12 @@ import { createHandler } from "../src/adapter";
 import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSHandler, WSHandlerConfig } from "../src/adapter/ws-types";
 import { courier, defineApi, defineGroup } from "../src/define";
-import { attachWebSocketUpgrade, sendWebResponse, toWebRequest, type UpgradeServer } from "../src/node";
+import {
+  attachWebSocketUpgrade,
+  sendWebResponse,
+  toWebRequest,
+  type UpgradeServer,
+} from "../src/node";
 import { createProxyCaller } from "../src/proxy-caller";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
 import type { RealtimeError } from "../src/realtime/errors";
@@ -72,7 +82,12 @@ function wikiApi(origin: string) {
     groups: {
       live: defineGroup({
         prefix: "feed",
-        endpoints: { room: stream.variables<{ room: string; since?: string }>().response<unknown>().get(":room") },
+        endpoints: {
+          room: stream
+            .variables<{ room: string; since?: string }>()
+            .response<unknown>()
+            .get(":room"),
+        },
       }),
     },
   });
@@ -91,7 +106,10 @@ describe("a stream another server serves, through the proxy", () => {
     const upstream = await thirdParty();
     const api = wikiApi(upstream.origin);
     const proxy = await proxyOf({ wiki: api });
-    const caller = createProxyCaller<typeof api>("wiki", { source: api, proxyPath: { sse: `${proxy}/api/sse` } });
+    const caller = createProxyCaller<typeof api>("wiki", {
+      source: api,
+      proxyPath: { sse: `${proxy}/api/sse` },
+    });
 
     const subscription = await caller.live.room({ room: "r1", since: "2026" });
     const events: unknown[] = [];
@@ -131,7 +149,10 @@ describe("a stream another server serves, through the proxy", () => {
     const upstream = await thirdParty();
     const api = wikiApi(upstream.origin);
     const proxy = await proxyOf({ wiki: api });
-    const caller = createProxyCaller<typeof api>("wiki", { source: api, proxyPath: { sse: `${proxy}/api/sse` } });
+    const caller = createProxyCaller<typeof api>("wiki", {
+      source: api,
+      proxyPath: { sse: `${proxy}/api/sse` },
+    });
 
     const failure = await (async () => {
       for await (const _event of await caller.live.room({ room: "secret" })) void _event;
@@ -145,7 +166,9 @@ describe("a stream another server serves, through the proxy", () => {
     const proxy = await proxyOf({ wiki: wikiApi(upstream.origin) });
     const query = new URLSearchParams({ _s: "wiki", _g: "live", _m: "room", _v: '{"room":".."}' });
 
-    const response = await fetch(`${proxy}/api/sse?${query}`, { headers: { Accept: "text/event-stream" } });
+    const response = await fetch(`${proxy}/api/sse?${query}`, {
+      headers: { Accept: "text/event-stream" },
+    });
     const body = await response.text();
 
     expect(body).toContain("would change the route");
@@ -207,7 +230,11 @@ function relayedChat(upstreamOrigin: string) {
       live: defineGroup({
         prefix: "live",
         endpoints: {
-          room: channel.variables(z.object({ room: z.string() })).send(Line).response<{ text: string }>().connect("ws"),
+          room: channel
+            .variables(z.object({ room: z.string() }))
+            .send(Line)
+            .response<{ text: string }>()
+            .connect("ws"),
         },
       }),
     },
@@ -270,7 +297,9 @@ describe("a channel another server serves, through the proxy", () => {
     room.on("error", (error) => errors.push(error));
     await new Promise((resolve) => setTimeout(resolve, 1_500));
 
-    expect(errors.map((error) => [error.code, error.message])).toEqual([[4401, "Connection rejected"]]);
+    expect(errors.map((error) => [error.code, error.message])).toEqual([
+      [4401, "Connection rejected"],
+    ]);
     expect(room.status).toBe("disconnected");
     vi.restoreAllMocks();
   });
@@ -344,4 +373,3 @@ describe("a channel another server serves, through the proxy", () => {
     vi.restoreAllMocks();
   });
 });
-

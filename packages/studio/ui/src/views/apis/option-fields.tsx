@@ -9,7 +9,10 @@ import {
 import { Switch } from "@/components/ui/switch";
 
 /** A labelled row of the options step. */
-export function FieldRow({ label, children }: {
+export function FieldRow({
+  label,
+  children,
+}: {
   label: string;
   children: React.ReactNode;
 }): React.ReactElement {
@@ -37,7 +40,12 @@ export interface OptionChoice<TValue extends string> {
  * @param props.onChange - Told the value picked
  * @returns The row
  */
-export function ChoiceRow<TValue extends string>({ label, value, choices, onChange }: {
+export function ChoiceRow<TValue extends string>({
+  label,
+  value,
+  choices,
+  onChange,
+}: {
   label: string;
   value: TValue;
   choices: ReadonlyArray<OptionChoice<TValue>>;
@@ -55,7 +63,9 @@ export function ChoiceRow<TValue extends string>({ label, value, choices, onChan
         </SelectTrigger>
         <SelectContent>
           {choices.map((choice) => (
-            <SelectItem key={choice.value} value={choice.value}>{choice.label}</SelectItem>
+            <SelectItem key={choice.value} value={choice.value}>
+              {choice.label}
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -64,7 +74,11 @@ export function ChoiceRow<TValue extends string>({ label, value, choices, onChan
 }
 
 /** An option that is on or off. */
-export function SwitchRow({ label, checked, onChange }: {
+export function SwitchRow({
+  label,
+  checked,
+  onChange,
+}: {
   label: string;
   checked: boolean;
   onChange: (value: boolean) => void;

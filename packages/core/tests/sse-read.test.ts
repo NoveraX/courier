@@ -87,7 +87,7 @@ describe("a successful response that is not an event stream", () => {
   it("reads an event stream whose type carries parameters", async () => {
     const url = await serve((res) => {
       res.writeHead(200, { "Content-Type": "Text/Event-Stream; charset=utf-8" });
-      res.end('data: 1\n\nevent: courier:complete\ndata: null\n\n');
+      res.end("data: 1\n\nevent: courier:complete\ndata: null\n\n");
     });
     const seen: unknown[] = [];
 

@@ -22,11 +22,18 @@ function fileNameOf(path: string): string {
  * <MocksFileBanner status={status} />
  * ```
  */
-export function MocksFileBanner({ status }: { status: MocksFileStatus | null }): React.ReactElement | null {
+export function MocksFileBanner({
+  status,
+}: {
+  status: MocksFileStatus | null;
+}): React.ReactElement | null {
   if (!status || status.error === null) return null;
   const file = status.file === null ? "courier.mocks.ts" : fileNameOf(status.file);
   return (
-    <div role="alert" className="flex shrink-0 items-start gap-2 border-b border-rose-500/20 bg-rose-500/10 px-3 py-2">
+    <div
+      role="alert"
+      className="flex shrink-0 items-start gap-2 border-b border-rose-500/20 bg-rose-500/10 px-3 py-2"
+    >
       <AlertTriangle className="mt-0.5 size-3 shrink-0 text-rose-400" />
       <div className="min-w-0 space-y-0.5">
         <p className="text-body-sm text-rose-400">

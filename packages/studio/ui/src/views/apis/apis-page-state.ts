@@ -1,6 +1,5 @@
-import type { ConfigStatusPayload } from "@/store/config-status";
-
 import { configFileName } from "@/store/config-file-name";
+import type { ConfigStatusPayload } from "@/store/config-status";
 
 /**
  * Why the sources shown are not what the config on disk declares: it does

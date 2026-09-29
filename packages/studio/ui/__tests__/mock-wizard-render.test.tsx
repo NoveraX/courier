@@ -23,7 +23,12 @@ describe("text from Studio", () => {
           {
             lines: [
               { kind: "context", text: "// the team's mocks", oldLine: 1, newLine: 1 },
-              { kind: "add", text: `  api: defineMockServer({ source }), // ${MARKUP}`, oldLine: null, newLine: 2 },
+              {
+                kind: "add",
+                text: `  api: defineMockServer({ source }), // ${MARKUP}`,
+                oldLine: null,
+                newLine: 2,
+              },
             ],
           },
         ]}
@@ -46,7 +51,9 @@ describe("text from Studio", () => {
 
   it("names the mocks file that does not load and why, as text", () => {
     const html = renderToStaticMarkup(
-      <MocksFileBanner status={{ file: "/project/courier.mocks.ts", error: `ParseError: ${MARKUP}` }} />,
+      <MocksFileBanner
+        status={{ file: "/project/courier.mocks.ts", error: `ParseError: ${MARKUP}` }}
+      />,
     );
 
     expect(html).toContain("courier.mocks.ts does not load");
@@ -55,7 +62,11 @@ describe("text from Studio", () => {
   });
 
   it("shows no banner while the mocks file loads, or before Studio says how it loads", () => {
-    expect(renderToStaticMarkup(<MocksFileBanner status={{ file: "/project/courier.mocks.ts", error: null }} />)).toBe("");
+    expect(
+      renderToStaticMarkup(
+        <MocksFileBanner status={{ file: "/project/courier.mocks.ts", error: null }} />,
+      ),
+    ).toBe("");
     expect(renderToStaticMarkup(<MocksFileBanner status={null} />)).toBe("");
   });
 });
@@ -76,9 +87,24 @@ describe("the change to confirm", () => {
           hunks: [
             {
               lines: [
-                { kind: "remove", text: 'import { defineMocks } from "@noverax/courier-mock";', oldLine: 1, newLine: null },
-                { kind: "add", text: 'import { defineMocks, defineMockServer } from "@noverax/courier-mock";', oldLine: null, newLine: 1 },
-                { kind: "add", text: 'import courierConfig from "./courier.config";', oldLine: null, newLine: 2 },
+                {
+                  kind: "remove",
+                  text: 'import { defineMocks } from "@noverax/courier-mock";',
+                  oldLine: 1,
+                  newLine: null,
+                },
+                {
+                  kind: "add",
+                  text: 'import { defineMocks, defineMockServer } from "@noverax/courier-mock";',
+                  oldLine: null,
+                  newLine: 1,
+                },
+                {
+                  kind: "add",
+                  text: 'import courierConfig from "./courier.config";',
+                  oldLine: null,
+                  newLine: 2,
+                },
               ],
             },
           ],

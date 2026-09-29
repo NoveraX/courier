@@ -22,7 +22,5 @@ function parseString(v: unknown): string | undefined {
 }
 
 function parseTab(v: unknown): CompareTab | undefined {
-  return typeof v === "string" && VALID_TABS.has(v as CompareTab)
-    ? (v as CompareTab)
-    : undefined;
+  return typeof v === "string" && VALID_TABS.has(v as CompareTab) ? (v as CompareTab) : undefined;
 }

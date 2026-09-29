@@ -8,7 +8,7 @@
 import { Cable, Server } from "lucide-react";
 
 import type { FrameworkConfig } from "../frameworks-types";
-import { EXPLORE_STEP, VERIFY_STEP, installStep } from "./shared";
+import { EXPLORE_STEP, installStep, VERIFY_STEP } from "./shared";
 
 export const ASTRO: FrameworkConfig = {
   id: "astro",
@@ -108,7 +108,8 @@ export default defineConfig({
     {
       id: "instrument-server",
       title: "Add server instrumentation",
-      description: "Tracks proxy-mode requests on the Solid Start server. Add it to the top of the file.",
+      description:
+        "Tracks proxy-mode requests on the Solid Start server. Add it to the top of the file.",
       icon: Server,
       actionLabel: "Copy snippet",
       filePath: "src/entry-server.tsx",

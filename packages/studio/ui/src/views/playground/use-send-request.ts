@@ -61,41 +61,44 @@ export function useSendRequest() {
     });
   }, []);
 
-  const send = useCallback((payload: SendPayload, values: RequestValues): string | null => {
-    if (activeRidRef.current) return null;
-    const id = crypto.randomUUID();
-    const rid = id;
-    const sentAt = Date.now();
-    const isRealtime = payload.transport === "sse" || payload.transport === "ws";
+  const send = useCallback(
+    (payload: SendPayload, values: RequestValues): string | null => {
+      if (activeRidRef.current) return null;
+      const id = crypto.randomUUID();
+      const rid = id;
+      const sentAt = Date.now();
+      const isRealtime = payload.transport === "sse" || payload.transport === "ws";
 
-    const entry: PlaygroundHistoryEntry = {
-      id,
-      rid,
-      ...payload,
-      timestamp: sentAt,
-      status: "pending",
-      /* The headers go out as written: the wire does not echo them back. */
-      ...(Object.keys(values.headers).length > 0 && { requestHeaders: values.headers }),
-      ...(isRealtime && {
-        transport: payload.transport,
-        streamStatus: "connecting" as const,
-      }),
-    };
+      const entry: PlaygroundHistoryEntry = {
+        id,
+        rid,
+        ...payload,
+        timestamp: sentAt,
+        status: "pending",
+        /* The headers go out as written: the wire does not echo them back. */
+        ...(Object.keys(values.headers).length > 0 && { requestHeaders: values.headers }),
+        ...(isRealtime && {
+          transport: payload.transport,
+          streamStatus: "connecting" as const,
+        }),
+      };
 
-    addEntry(entry);
-    setSending(true);
+      addEntry(entry);
+      setSending(true);
 
-    if (isRealtime) {
-      setSending(false);
-      setStreaming(true);
-      activeRidRef.current = rid;
-      initiateStreamRequest({ rid, payload, values });
-    } else {
-      initiateHttpRequest({ id, rid, payload, values, sentAt, updateEntry, setSending });
-    }
+      if (isRealtime) {
+        setSending(false);
+        setStreaming(true);
+        activeRidRef.current = rid;
+        initiateStreamRequest({ rid, payload, values });
+      } else {
+        initiateHttpRequest({ id, rid, payload, values, sentAt, updateEntry, setSending });
+      }
 
-    return id;
-  }, [addEntry, updateEntry]);
+      return id;
+    },
+    [addEntry, updateEntry],
+  );
 
   const unsubscribe = useCallback(() => {
     const rid = activeRidRef.current;

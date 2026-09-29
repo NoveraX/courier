@@ -21,20 +21,31 @@ const servers: Server[] = [];
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   root = mkdtempSync(join(tmpdir(), "courier-parse-url-"));
-  writeFileSync(join(root, "courier.config.ts"), 'export default { sources: { api: { baseURL: "https://api.example" } } };\n');
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'export default { sources: { api: { baseURL: "https://api.example" } } };\n',
+  );
 });
 
 afterEach(async () => {
   await studio?.close();
   studio = undefined;
-  await Promise.all(servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
+  await Promise.all(
+    servers.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
   vi.restoreAllMocks();
   rmSync(root, { recursive: true, force: true });
 });
 
 function start(): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
@@ -67,23 +78,48 @@ describe("POST /api/apis/parse with a URL", () => {
   });
 
   it.each([
-    { label: "a body cut off", path: "/cut.json", reason: "closed the connection before the whole specification arrived (ECONNRESET)." },
-    { label: "a gzip body cut off", path: "/cut-gzip.json", reason: "closed the connection before the whole specification arrived (ECONNRESET)." },
-    { label: "a plain body labelled gzip", path: "/plain-labelled-gzip.json", reason: "sent a gzip body that does not decompress (incorrect header check)." },
-    { label: "a redirect to something that is not a URL", path: "/redirect-nowhere", reason: 'redirects to "http://[", which is not a URL.' },
+    {
+      label: "a body cut off",
+      path: "/cut.json",
+      reason: "closed the connection before the whole specification arrived (ECONNRESET).",
+    },
+    {
+      label: "a gzip body cut off",
+      path: "/cut-gzip.json",
+      reason: "closed the connection before the whole specification arrived (ECONNRESET).",
+    },
+    {
+      label: "a plain body labelled gzip",
+      path: "/plain-labelled-gzip.json",
+      reason: "sent a gzip body that does not decompress (incorrect header check).",
+    },
+    {
+      label: "a redirect to something that is not a URL",
+      path: "/redirect-nowhere",
+      reason: 'redirects to "http://[", which is not a URL.',
+    },
     {
       label: "a redirect to ftp://",
       path: "/redirect-ftp",
-      reason: "redirects to ftp://docs.example.com/spec.json, which is not an http:// or https:// URL, so Studio does not follow it.",
+      reason:
+        "redirects to ftp://docs.example.com/spec.json, which is not an http:// or https:// URL, so Studio does not follow it.",
     },
   ])("answers 502 naming the URL for $label", async ({ path, reason }) => {
     const server = createServer((req, res) => {
       if (req.url === "/redirect-nowhere") res.writeHead(302, { location: "http://[" }).end();
-      else if (req.url === "/redirect-ftp") res.writeHead(302, { location: "ftp://docs.example.com/spec.json" }).end();
-      else if (req.url === "/plain-labelled-gzip.json") res.writeHead(200, { "content-encoding": "gzip" }).end('{"openapi":"3.1.0"}');
+      else if (req.url === "/redirect-ftp")
+        res.writeHead(302, { location: "ftp://docs.example.com/spec.json" }).end();
+      else if (req.url === "/plain-labelled-gzip.json")
+        res.writeHead(200, { "content-encoding": "gzip" }).end('{"openapi":"3.1.0"}');
       else {
-        res.writeHead(200, { "content-length": "4096", ...(req.url === "/cut-gzip.json" ? { "content-encoding": "gzip" } : {}) });
-        res.write(req.url === "/cut-gzip.json" ? gzipSync("x".repeat(4096)).subarray(0, 20) : '{"openapi":', () => res.socket?.destroy());
+        res.writeHead(200, {
+          "content-length": "4096",
+          ...(req.url === "/cut-gzip.json" ? { "content-encoding": "gzip" } : {}),
+        });
+        res.write(
+          req.url === "/cut-gzip.json" ? gzipSync("x".repeat(4096)).subarray(0, 20) : '{"openapi":',
+          () => res.socket?.destroy(),
+        );
       }
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -99,13 +135,18 @@ describe("POST /api/apis/parse with a URL", () => {
   it("parses a specification served on this machine", async () => {
     const server = createServer((_req, res) => {
       res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ openapi: "3.1.0", info: { title: "Probe", version: "1" }, paths: {} }));
+      res.end(
+        JSON.stringify({ openapi: "3.1.0", info: { title: "Probe", version: "1" }, paths: {} }),
+      );
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     servers.push(server);
     const url = await start();
 
-    const reply = await parse(url, `http://127.0.0.1:${(server.address() as { port: number }).port}/openapi.json`);
+    const reply = await parse(
+      url,
+      `http://127.0.0.1:${(server.address() as { port: number }).port}/openapi.json`,
+    );
 
     expect(reply.status).toBe(200);
   });

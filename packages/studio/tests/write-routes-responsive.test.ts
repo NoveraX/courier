@@ -40,14 +40,29 @@ function manyGroups(): unknown {
       get: {
         operationId: `list${i}`,
         tags: [`g${i}`],
-        responses: { "200": { description: "ok", content: { "application/json": { schema: { $ref: `#/components/schemas/Item${i}` } } } } },
+        responses: {
+          "200": {
+            description: "ok",
+            content: { "application/json": { schema: { $ref: `#/components/schemas/Item${i}` } } },
+          },
+        },
       },
     };
   }
   const schemas = Object.fromEntries(
-    Array.from({ length: GROUPS }, (_, i) => [`Item${i}`, { type: "object", properties: { id: { type: "integer" } } }]),
+    Array.from({ length: GROUPS }, (_, i) => [
+      `Item${i}`,
+      { type: "object", properties: { id: { type: "integer" } } },
+    ]),
   );
-  return parseSpec(JSON.stringify({ openapi: "3.1.0", info: { title: "Many", version: "1" }, paths, components: { schemas } }));
+  return parseSpec(
+    JSON.stringify({
+      openapi: "3.1.0",
+      info: { title: "Many", version: "1" },
+      paths,
+      components: { schemas },
+    }),
+  );
 }
 
 /* An apply in progress keeps its journal in .courier/journal until it is done. */
@@ -59,22 +74,36 @@ function applying(): boolean {
 describe("writing an import of hundreds of groups", () => {
   it("answers another request while the files are being written", async () => {
     const url = await new Promise<string>((resolve, reject) => {
-      studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+      studio = createStudioServer({
+        port: 0,
+        host: "127.0.0.1",
+        projectRoot: root,
+        onReady: resolve,
+        onError: reject,
+      });
     });
     const headers = { "content-type": "application/json", origin: url, ...tokenHeader(studio) };
-    const body = JSON.stringify({ sourceName: "many", spec: manyGroups(), options: { type: "openapi", outputDir: "src/api", sourceName: "many" } });
+    const body = JSON.stringify({
+      sourceName: "many",
+      spec: manyGroups(),
+      options: { type: "openapi", outputDir: "src/api", sourceName: "many" },
+    });
     let writtenAt = Number.POSITIVE_INFINITY;
 
-    const writing = fetch(`${url}/api/apis/write`, { method: "POST", headers, body }).then((response) => {
-      writtenAt = performance.now();
-      return response;
-    });
+    const writing = fetch(`${url}/api/apis/write`, { method: "POST", headers, body }).then(
+      (response) => {
+        writtenAt = performance.now();
+        return response;
+      },
+    );
     /* Asked while the apply runs — seen only if the server can look up from it. */
     const answeredAt = await new Promise<number | "never asked">((resolve) => {
       const poll = setInterval(() => {
         if (!applying()) return;
         clearInterval(poll);
-        void fetch(`${url}/api/health`, { headers: { origin: url } }).then(() => resolve(performance.now()));
+        void fetch(`${url}/api/health`, { headers: { origin: url } }).then(() =>
+          resolve(performance.now()),
+        );
       }, 5);
       void writing.then(() => {
         clearInterval(poll);

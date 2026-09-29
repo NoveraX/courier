@@ -1,10 +1,13 @@
-import { Moon, Sun, Monitor } from "lucide-react";
-
-import { useStudioStore } from "@/store";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { nextTheme } from "@/app-config";
-import { SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-
+import {
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 import type { Theme } from "@/store";
+import { useStudioStore } from "@/store";
 
 const THEME_ICON: Record<Theme, React.ReactNode> = {
   dark: <Moon className="size-3.5" />,

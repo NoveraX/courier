@@ -1,6 +1,6 @@
 import type { RequestEntry } from "@/store/types";
 
-import type { SparklinePoint, EndpointImpact, OverheadLevel } from "./types";
+import type { EndpointImpact, OverheadLevel, SparklinePoint } from "./types";
 
 // ── Sparkline extraction ───────────────────────────────────────────────────
 
@@ -42,22 +42,33 @@ export function p95Sparkline(requests: RequestEntry[]): SparklinePoint[] {
 
 // ── Endpoint impact ────────────────────────────────────────────────────────
 
-export function computeEndpointImpact(
-  requests: RequestEntry[],
-): EndpointImpact[] {
-  const map = new Map<string, {
-    source: string; group: string; method: string; httpMethod: string;
-    mwTimes: number[]; overheads: number[]; mwCounts: number[];
-    sampleId: string;
-  }>();
+export function computeEndpointImpact(requests: RequestEntry[]): EndpointImpact[] {
+  const map = new Map<
+    string,
+    {
+      source: string;
+      group: string;
+      method: string;
+      httpMethod: string;
+      mwTimes: number[];
+      overheads: number[];
+      mwCounts: number[];
+      sampleId: string;
+    }
+  >();
 
   for (const r of requests) {
     if (!r.timing || r.timing.total === 0) continue;
     const key = `${r.source}.${r.group ?? ""}.${r.method}`;
     const entry = map.get(key) ?? {
-      source: r.source, group: r.group ?? "", method: r.method,
+      source: r.source,
+      group: r.group ?? "",
+      method: r.method,
       httpMethod: r.httpMethod ?? "GET",
-      mwTimes: [], overheads: [], mwCounts: [], sampleId: r.id,
+      mwTimes: [],
+      overheads: [],
+      mwCounts: [],
+      sampleId: r.id,
     };
     entry.mwTimes.push(r.timing.middleware);
     entry.overheads.push((r.timing.middleware / r.timing.total) * 100);

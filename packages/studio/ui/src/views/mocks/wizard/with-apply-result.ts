@@ -37,7 +37,9 @@ export function withApplyResult(
   switch (result.status) {
     case "stale": {
       const next = withPreview(state, result.plan, mocks, null, at);
-      return next.plan.status === "ready" ? { ...next, plan: { ...next.plan, changedOnDisk: true } } : next;
+      return next.plan.status === "ready"
+        ? { ...next, plan: { ...next.plan, changedOnDisk: true } }
+        : next;
     }
     case "invalid":
     case "manual":

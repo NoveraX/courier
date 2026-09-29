@@ -45,20 +45,25 @@ afterAll(() => {
   removeProjects("generate-code");
 });
 
-describe.each(["tag", "single"] as const)("with no validator and no types, grouped by %s", (groupBy) => {
-  const files = generateCode(
-    SPEC,
-    { type: "openapi", outputDir: "src", validation: "none", generateTypes: false, groupBy },
-    "pets",
-  );
+describe.each(["tag", "single"] as const)(
+  "with no validator and no types, grouped by %s",
+  (groupBy) => {
+    const files = generateCode(
+      SPEC,
+      { type: "openapi", outputDir: "src", validation: "none", generateTypes: false, groupBy },
+      "pets",
+    );
 
-  it("writes no schemas file", () => {
-    expect(files.map((file) => file.path).filter((path) => path.endsWith("schemas.ts"))).toEqual([]);
-  });
+    it("writes no schemas file", () => {
+      expect(files.map((file) => file.path).filter((path) => path.endsWith("schemas.ts"))).toEqual(
+        [],
+      );
+    });
 
-  it("compiles", () => {
-    const dir = writeProject(`generate-code/${groupBy}`, files);
+    it("compiles", () => {
+      const dir = writeProject(`generate-code/${groupBy}`, files);
 
-    expect(compileProject(dir, ["src/pets/index.ts"])).toEqual([]);
-  }, 60_000);
-});
+      expect(compileProject(dir, ["src/pets/index.ts"])).toEqual([]);
+    }, 60_000);
+  },
+);

@@ -2,12 +2,11 @@
  * @vitest-environment jsdom
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createProxyCaller } from "@noverax/courier";
 
 import { renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
-
-import { createProxyCaller } from "@noverax/courier";
 import { useConnectionStatus } from "../src/hooks/use-connection-status";
 import { type CourierServer, startCourierServer } from "./helpers/courier-server";
 import { liveApi } from "./helpers/live-api";

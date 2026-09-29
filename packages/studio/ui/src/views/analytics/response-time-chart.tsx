@@ -2,14 +2,13 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import {
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
 } from "@/components/ui/chart";
-
-import type { HistogramBucket } from "./types";
 import { HISTOGRAM_CHART_CONFIG } from "./constants";
+import type { HistogramBucket } from "./types";
 
 interface ResponseTimeChartProps {
   data: HistogramBucket[];
@@ -19,11 +18,7 @@ export function ResponseTimeChart({ data }: ResponseTimeChartProps): React.React
   return (
     <ChartContainer config={HISTOGRAM_CHART_CONFIG} className="h-[200px] w-full">
       <BarChart data={data} barGap={2}>
-        <CartesianGrid
-          vertical={false}
-          strokeDasharray="3 3"
-          strokeOpacity={0.1}
-        />
+        <CartesianGrid vertical={false} strokeDasharray="3 3" strokeOpacity={0.1} />
         <XAxis
           dataKey="label"
           tickLine={false}
@@ -33,9 +28,7 @@ export function ResponseTimeChart({ data }: ResponseTimeChartProps): React.React
         <YAxis hide />
         <ChartTooltip
           content={
-            <ChartTooltipContent
-              labelFormatter={(_, payload) => rangeOf(payload[0]?.payload)}
-            />
+            <ChartTooltipContent labelFormatter={(_, payload) => rangeOf(payload[0]?.payload)} />
           }
         />
         <Bar
@@ -62,7 +55,10 @@ export function ResponseTimeChart({ data }: ResponseTimeChartProps): React.React
 
 /* Recharts types a point's data as `any`; a bucket's range is read only when it is text. */
 function rangeOf(bucket: unknown): string {
-  return typeof bucket === "object" && bucket !== null && "range" in bucket && typeof bucket.range === "string"
+  return typeof bucket === "object" &&
+    bucket !== null &&
+    "range" in bucket &&
+    typeof bucket.range === "string"
     ? bucket.range
     : "";
 }

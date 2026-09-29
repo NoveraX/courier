@@ -10,7 +10,9 @@ import { allocatePort } from "../src/server/mock-manager/port-allocator";
 const held: Server[] = [];
 
 afterEach(async () => {
-  await Promise.all(held.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
+  await Promise.all(
+    held.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 
 const ipv6 = await new Promise<boolean>((resolve) => {

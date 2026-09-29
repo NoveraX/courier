@@ -18,9 +18,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { parseSync } from "oxc-parser";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseSpec } from "../src/apis/parser/parse-spec";
 import { createStudioServer } from "../src/server/create-studio-server";
@@ -33,12 +32,17 @@ const SPEC = parseSpec(
     info: { title: "Pets", version: "1" },
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
   }),
 );
-const CONFIG_NO_IMPORTS = 'export default { sources: { api: { baseURL: "https://api.example" } } };\n';
+const CONFIG_NO_IMPORTS =
+  'export default { sources: { api: { baseURL: "https://api.example" } } };\n';
 const CONFIG_PETS =
   'export default { sources: { api: { baseURL: "https://api.example" } }, imports: { pets: { importType: "file", type: "openapi", outputDir: "src/api" } } };\n';
 
@@ -54,18 +58,30 @@ function put(path: string, content: string): void {
 
 function start(): Promise<string> {
   return new Promise((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
-async function post(path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+async function post(
+  path: string,
+  body: unknown,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
   const payload: unknown = await response.json();
-  return { status: response.status, body: typeof payload === "object" && payload !== null ? { ...payload } : {} };
+  return {
+    status: response.status,
+    body: typeof payload === "object" && payload !== null ? { ...payload } : {},
+  };
 }
 
 /* Every entry under the scratch directory, the project and what lies beside it, without following links. */
@@ -165,21 +181,30 @@ describe("POST /api/apis/write refuses an output directory the contract refuses"
   beforeEach(() => void vi.spyOn(console, "warn").mockImplementation(() => {}));
   afterEach(() => vi.restoreAllMocks());
 
-  it.each(REFUSED_OUTPUT_DIRS)("%s → 400, nothing changed", async (_label, outputDir) => {
-    const before = snapshot();
+  it.each(REFUSED_OUTPUT_DIRS)(
+    "%s → 400, nothing changed",
+    async (_label, outputDir) => {
+      const before = snapshot();
 
-    const reply = await post("/api/apis/write", {
-      sourceName: "pets",
-      spec: SPEC,
-      options: { type: "openapi", outputDir, sourceName: "pets" },
-    });
+      const reply = await post("/api/apis/write", {
+        sourceName: "pets",
+        spec: SPEC,
+        options: { type: "openapi", outputDir, sourceName: "pets" },
+      });
 
-    expect.soft({ status: reply.status, code: reply.body.code }, JSON.stringify(reply.body).slice(0, 300)).toEqual({
-      status: 400,
-      code: "INVALID_IMPORT",
-    });
-    expect.soft(snapshot()).toEqual(before);
-  }, 20_000);
+      expect
+        .soft(
+          { status: reply.status, code: reply.body.code },
+          JSON.stringify(reply.body).slice(0, 300),
+        )
+        .toEqual({
+          status: 400,
+          code: "INVALID_IMPORT",
+        });
+      expect.soft(snapshot()).toEqual(before);
+    },
+    20_000,
+  );
 });
 
 describe("POST /api/apis/layout refuses the same output directories and reads nothing", () => {
@@ -194,7 +219,10 @@ describe("POST /api/apis/layout refuses the same output directories and reads no
 
     const reply = await post("/api/apis/layout", { importName: "pets", outputDir });
 
-    expect({ status: reply.status, field: reply.body.field }).toEqual({ status: 400, field: "outputDir" });
+    expect({ status: reply.status, field: reply.body.field }).toEqual({
+      status: 400,
+      field: "outputDir",
+    });
     expect(snapshot()).toEqual(before);
   });
 });
@@ -241,53 +269,75 @@ describe("POST /api/apis/write with a hostile import name or source name", () =>
     await stop();
   });
 
-  it.each(HOSTILE_NAMES)("options.sourceName %s → refused, or written only in src/api/<kebab binding>/", async (_label, name) => {
-    const before = snapshot();
+  it.each(HOSTILE_NAMES)(
+    "options.sourceName %s → refused, or written only in src/api/<kebab binding>/",
+    async (_label, name) => {
+      const before = snapshot();
 
-    const reply = await post("/api/apis/write", {
-      sourceName: "pets",
-      spec: SPEC,
-      options: { type: "openapi", outputDir: "src/api", sourceName: name },
-    });
+      const reply = await post("/api/apis/write", {
+        sourceName: "pets",
+        spec: SPEC,
+        options: { type: "openapi", outputDir: "src/api", sourceName: name },
+      });
 
-    if (reply.status !== 200) {
-      expect.soft(reply.status, JSON.stringify(reply.body).slice(0, 300)).toBe(400);
-      expect.soft(snapshot()).toEqual(before);
-      return;
-    }
-    const layout = await post("/api/apis/layout", { importName: "pets", outputDir: "src/api", sourceName: name });
-    const dir = String(layout.body.dir);
-    expect(dir).toMatch(/^src\/api\/[a-z0-9_][a-z0-9_-]*$/);
-    expect(writtenPaths(reply).every((path) => path.startsWith(`${dir}/`))).toBe(true);
-    const changed = Object.keys(snapshot()).filter((path) => !(path in before));
-    expect(changed.filter((path) => !path.startsWith(`proj/${dir}`) && !path.startsWith("proj/.courier") && path !== "proj/src" && path !== "proj/src/api")).toEqual([]);
-    expect(readFileSync(join(scratch, "outside/keep.ts"), "utf8")).toBe("keep\n");
-  }, 20_000);
+      if (reply.status !== 200) {
+        expect.soft(reply.status, JSON.stringify(reply.body).slice(0, 300)).toBe(400);
+        expect.soft(snapshot()).toEqual(before);
+        return;
+      }
+      const layout = await post("/api/apis/layout", {
+        importName: "pets",
+        outputDir: "src/api",
+        sourceName: name,
+      });
+      const dir = String(layout.body.dir);
+      expect(dir).toMatch(/^src\/api\/[a-z0-9_][a-z0-9_-]*$/);
+      expect(writtenPaths(reply).every((path) => path.startsWith(`${dir}/`))).toBe(true);
+      const changed = Object.keys(snapshot()).filter((path) => !(path in before));
+      expect(
+        changed.filter(
+          (path) =>
+            !path.startsWith(`proj/${dir}`) &&
+            !path.startsWith("proj/.courier") &&
+            path !== "proj/src" &&
+            path !== "proj/src/api",
+        ),
+      ).toEqual([]);
+      expect(readFileSync(join(scratch, "outside/keep.ts"), "utf8")).toBe("keep\n");
+    },
+    20_000,
+  );
 
-  it.each(HOSTILE_NAMES)("import key %s (no options.sourceName) → refused, or written only in src/api/<kebab binding>/", async (_label, name) => {
-    const before = snapshot();
+  it.each(HOSTILE_NAMES)(
+    "import key %s (no options.sourceName) → refused, or written only in src/api/<kebab binding>/",
+    async (_label, name) => {
+      const before = snapshot();
 
-    const reply = await post("/api/apis/write", {
-      sourceName: name,
-      spec: SPEC,
-      options: { type: "openapi", outputDir: "src/api" },
-    });
+      const reply = await post("/api/apis/write", {
+        sourceName: name,
+        spec: SPEC,
+        options: { type: "openapi", outputDir: "src/api" },
+      });
 
-    if (reply.status !== 200) {
-      expect.soft(reply.status, JSON.stringify(reply.body).slice(0, 300)).toBe(400);
-      expect.soft(snapshot()).toEqual(before);
-      return;
-    }
-    const layout = await post("/api/apis/layout", { importName: name, outputDir: "src/api" });
-    const dir = String(layout.body.dir);
-    expect(dir).toMatch(/^src\/api\/[a-z0-9_][a-z0-9_-]*$/);
-    expect(writtenPaths(reply).every((path) => path.startsWith(`${dir}/`))).toBe(true);
-    const state: unknown = JSON.parse(readFileSync(join(root, ".courier/imports-state.json"), "utf8"));
-    expect(state).toMatchObject({ imports: {} });
-    const record = (state as { imports: Record<string, { dir: string }> }).imports;
-    expect(Object.hasOwn(record, name)).toBe(true);
-    expect(record[name]?.dir).toBe(dir);
-  }, 20_000);
+      if (reply.status !== 200) {
+        expect.soft(reply.status, JSON.stringify(reply.body).slice(0, 300)).toBe(400);
+        expect.soft(snapshot()).toEqual(before);
+        return;
+      }
+      const layout = await post("/api/apis/layout", { importName: name, outputDir: "src/api" });
+      const dir = String(layout.body.dir);
+      expect(dir).toMatch(/^src\/api\/[a-z0-9_][a-z0-9_-]*$/);
+      expect(writtenPaths(reply).every((path) => path.startsWith(`${dir}/`))).toBe(true);
+      const state: unknown = JSON.parse(
+        readFileSync(join(root, ".courier/imports-state.json"), "utf8"),
+      );
+      expect(state).toMatchObject({ imports: {} });
+      const record = (state as { imports: Record<string, { dir: string }> }).imports;
+      expect(Object.hasOwn(record, name)).toBe(true);
+      expect(record[name]?.dir).toBe(dir);
+    },
+    20_000,
+  );
 });
 
 describe("the import key is written into each file's first line", () => {
@@ -304,27 +354,34 @@ describe("the import key is written into each file's first line", () => {
   it.each([
     ["LINE SEPARATOR", "pets\u2028export const injected = 1;//"],
     ["PARAGRAPH SEPARATOR", "pets\u2029export const injected = 1;//"],
-  ])("a key holding %s is refused or kept inside the comment line", async (_label, name) => {
-    const reply = await post("/api/apis/write", {
-      sourceName: name,
-      spec: SPEC,
-      options: { type: "openapi", outputDir: "src/api", sourceName: "pets" },
-    });
+  ])(
+    "a key holding %s is refused or kept inside the comment line",
+    async (_label, name) => {
+      const reply = await post("/api/apis/write", {
+        sourceName: name,
+        spec: SPEC,
+        options: { type: "openapi", outputDir: "src/api", sourceName: "pets" },
+      });
 
-    if (reply.status !== 200) {
-      expect(reply.status).toBe(400);
-      return;
-    }
-    const source = readFileSync(join(root, "src/api/pets/source.ts"), "utf8");
-    /* JavaScript ends a line comment at U+2028 and U+2029 as well as at \n. */
-    const declared = parseSync("source.ts", source).program.body.flatMap((statement) =>
-      statement.type === "ExportNamedDeclaration" && statement.declaration?.type === "VariableDeclaration"
-        ? statement.declaration.declarations.map((d) => (d.id.type === "Identifier" ? d.id.name : ""))
-        : [],
-    );
-    expect.soft(declared).not.toContain("injected");
-    expect.soft(source.split("\n")[0]).not.toMatch(/[\u2028\u2029]/);
-  }, 20_000);
+      if (reply.status !== 200) {
+        expect(reply.status).toBe(400);
+        return;
+      }
+      const source = readFileSync(join(root, "src/api/pets/source.ts"), "utf8");
+      /* JavaScript ends a line comment at U+2028 and U+2029 as well as at \n. */
+      const declared = parseSync("source.ts", source).program.body.flatMap((statement) =>
+        statement.type === "ExportNamedDeclaration" &&
+        statement.declaration?.type === "VariableDeclaration"
+          ? statement.declaration.declarations.map((d) =>
+              d.id.type === "Identifier" ? d.id.name : "",
+            )
+          : [],
+      );
+      expect.soft(declared).not.toContain("injected");
+      expect.soft(source.split("\n")[0]).not.toMatch(/[\u2028\u2029]/);
+    },
+    20_000,
+  );
 });
 
 describe("routes that name an import only look it up", () => {
@@ -334,25 +391,44 @@ describe("routes that name an import only look it up", () => {
   }, 30_000);
   afterAll(stop);
 
-  const NAMES = ["__proto__", "constructor", "hasOwnProperty", "toString", "../pets", "pets/..", "PETS", "pets\u0000", "cafe\u0301"];
+  const NAMES = [
+    "__proto__",
+    "constructor",
+    "hasOwnProperty",
+    "toString",
+    "../pets",
+    "pets/..",
+    "PETS",
+    "pets\u0000",
+    "cafe\u0301",
+  ];
   const ROUTES: Array<[string, (name: string) => unknown]> = [
     ["/api/apis/update/preview", (name) => ({ name, newSpec: SPEC })],
     ["/api/apis/update/apply", (name) => ({ name, newSpec: SPEC, planDigest: "0".repeat(64) })],
     ["/api/apis/manage/preview", (name) => ({ name, spec: SPEC, toAdd: { pets: ["listPets"] } })],
-    ["/api/apis/manage/apply", (name) => ({ name, spec: SPEC, toAdd: { pets: ["listPets"] }, planDigest: "0".repeat(64) })],
+    [
+      "/api/apis/manage/apply",
+      (name) => ({ name, spec: SPEC, toAdd: { pets: ["listPets"] }, planDigest: "0".repeat(64) }),
+    ],
     ["/api/apis/imports/remove/preview", (name) => ({ name })],
     ["/api/apis/imports/remove", (name) => ({ name, planDigest: "0".repeat(64) })],
   ];
-  const CASES = ROUTES.flatMap(([route, body]) => NAMES.map((name): [string, string, unknown] => [route, name, body(name)]));
+  const CASES = ROUTES.flatMap(([route, body]) =>
+    NAMES.map((name): [string, string, unknown] => [route, name, body(name)]),
+  );
 
-  it.each(CASES)("%s with name %j → 404, nothing changed", async (route, _name, body) => {
-    const before = snapshot();
+  it.each(CASES)(
+    "%s with name %j → 404, nothing changed",
+    async (route, _name, body) => {
+      const before = snapshot();
 
-    const reply = await post(route, body);
+      const reply = await post(route, body);
 
-    expect(reply.status).toBe(404);
-    expect(snapshot()).toEqual(before);
-  }, 20_000);
+      expect(reply.status).toBe(404);
+      expect(snapshot()).toEqual(before);
+    },
+    20_000,
+  );
 
   it.each([
     ["/api/apis/update/preview", { name: "", newSpec: SPEC }],
@@ -362,16 +438,23 @@ describe("routes that name an import only look it up", () => {
     ["/api/apis/manage/preview", { name: ["pets"], spec: SPEC }],
     ["/api/apis/write", { sourceName: ["pets"], spec: SPEC, options: { outputDir: "src/api" } }],
     ["/api/apis/write", { sourceName: "pets", spec: SPEC, options: { outputDir: ["src/api"] } }],
-    ["/api/apis/write", { sourceName: "pets", spec: SPEC, options: { outputDir: "src/api", sourceName: 7 } }],
+    [
+      "/api/apis/write",
+      { sourceName: "pets", spec: SPEC, options: { outputDir: "src/api", sourceName: 7 } },
+    ],
     ["/api/apis/layout", { importName: "pets", outputDir: 7 }],
-  ])("%s with a malformed name %j → 400", async (route, body) => {
-    const before = snapshot();
+  ])(
+    "%s with a malformed name %j → 400",
+    async (route, body) => {
+      const before = snapshot();
 
-    const reply = await post(route, body);
+      const reply = await post(route, body);
 
-    expect(reply.status).toBe(400);
-    expect(snapshot()).toEqual(before);
-  }, 20_000);
+      expect(reply.status).toBe(400);
+      expect(snapshot()).toEqual(before);
+    },
+    20_000,
+  );
 });
 
 describe("an import declared in courier.config with a refused directory", () => {
@@ -381,28 +464,45 @@ describe("an import declared in courier.config with a refused directory", () => 
     await stop();
   });
 
-  it.each([
-    ["/tmp/courier-b2-declared"],
-    ["../outside"],
-    [".git"],
-    ["node_modules/x"],
-    ["C:/api"],
-  ])("outputDir %s → update, manage and write refuse with 400, nothing changed", async (outputDir) => {
-    makeScratch(CONFIG_PETS.replace('outputDir: "src/api"', `outputDir: ${JSON.stringify(outputDir)}`));
-    url = await start();
-    const before = snapshot();
+  it.each([["/tmp/courier-b2-declared"], ["../outside"], [".git"], ["node_modules/x"], ["C:/api"]])(
+    "outputDir %s → update, manage and write refuse with 400, nothing changed",
+    async (outputDir) => {
+      makeScratch(
+        CONFIG_PETS.replace('outputDir: "src/api"', `outputDir: ${JSON.stringify(outputDir)}`),
+      );
+      url = await start();
+      const before = snapshot();
 
-    const replies = [
-      await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }),
-      await post("/api/apis/update/apply", { name: "pets", newSpec: SPEC, planDigest: "0".repeat(64) }),
-      await post("/api/apis/manage/preview", { name: "pets", spec: SPEC, toAdd: { pets: ["listPets"] } }),
-      await post("/api/apis/manage/apply", { name: "pets", spec: SPEC, toAdd: { pets: ["listPets"] }, planDigest: "0".repeat(64) }),
-      await post("/api/apis/write", { sourceName: "pets", spec: SPEC, options: { type: "openapi", outputDir, sourceName: "pets" } }),
-    ];
+      const replies = [
+        await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }),
+        await post("/api/apis/update/apply", {
+          name: "pets",
+          newSpec: SPEC,
+          planDigest: "0".repeat(64),
+        }),
+        await post("/api/apis/manage/preview", {
+          name: "pets",
+          spec: SPEC,
+          toAdd: { pets: ["listPets"] },
+        }),
+        await post("/api/apis/manage/apply", {
+          name: "pets",
+          spec: SPEC,
+          toAdd: { pets: ["listPets"] },
+          planDigest: "0".repeat(64),
+        }),
+        await post("/api/apis/write", {
+          sourceName: "pets",
+          spec: SPEC,
+          options: { type: "openapi", outputDir, sourceName: "pets" },
+        }),
+      ];
 
-    expect(replies.map((reply) => reply.status)).toEqual([400, 400, 400, 400, 400]);
-    expect(snapshot()).toEqual(before);
-  }, 30_000);
+      expect(replies.map((reply) => reply.status)).toEqual([400, 400, 400, 400, 400]);
+      expect(snapshot()).toEqual(before);
+    },
+    30_000,
+  );
 });
 
 describe("unicode spellings of one directory", () => {

@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
-
-import type { EndpointInventory } from "./types";
 import { computeAllToggle, computeGroupToggle, toggleInSet } from "./manage-toggle";
+import type { EndpointInventory } from "./types";
 
 /** The endpoints the user picked to add and to remove, and the toggles that pick them. */
 export interface ManageSelection {
@@ -33,8 +32,8 @@ export function useManageSelection(inventory: EndpointInventory | null): ManageS
   const [toAdd, setToAdd] = useState<Record<string, Set<string>>>({});
   const [toRemove, setToRemove] = useState<Record<string, Set<string>>>({});
 
-  const hasChanges = Object.values(toAdd).some((s) => s.size > 0)
-    || Object.values(toRemove).some((s) => s.size > 0);
+  const hasChanges =
+    Object.values(toAdd).some((s) => s.size > 0) || Object.values(toRemove).some((s) => s.size > 0);
 
   const toggleEndpoint = useCallback((group: string, name: string, currentlyActive: boolean) => {
     if (currentlyActive) {
@@ -44,14 +43,17 @@ export function useManageSelection(inventory: EndpointInventory | null): ManageS
     }
   }, []);
 
-  const toggleGroup = useCallback((groupName: string) => {
-    if (!inventory) return;
-    const group = inventory.groups.find((g) => g.name === groupName);
-    if (!group) return;
-    const result = computeGroupToggle(group, toAdd, toRemove);
-    setToAdd(result.toAdd);
-    setToRemove(result.toRemove);
-  }, [inventory, toAdd, toRemove]);
+  const toggleGroup = useCallback(
+    (groupName: string) => {
+      if (!inventory) return;
+      const group = inventory.groups.find((g) => g.name === groupName);
+      if (!group) return;
+      const result = computeGroupToggle(group, toAdd, toRemove);
+      setToAdd(result.toAdd);
+      setToRemove(result.toRemove);
+    },
+    [inventory, toAdd, toRemove],
+  );
 
   const toggleAll = useCallback(() => {
     if (!inventory) return;

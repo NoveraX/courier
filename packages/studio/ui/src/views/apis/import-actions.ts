@@ -2,26 +2,14 @@
  * Async operations and selection reducers for the import wizard.
  */
 
-import type {
-  ImportState,
-  GenerateOptions,
-  ParsedSpec,
-} from "./types";
-import {
-  parseSpecFromUrl,
-  parseSpecFromRaw,
-  generateCode,
-} from "./client";
+import { ownValue } from "@/lib/own-value";
+import type { Settings } from "@/store/types-ui";
+import { generateCode, parseSpecFromRaw, parseSpecFromUrl } from "./client";
 import { writeFiles } from "./client-file-changes";
 import { deriveSourceName } from "./derive-source-name";
+import { buildDefaultOptions, selectAllEndpoints } from "./helpers";
 import { consentBody } from "./plan-consent";
-import {
-  selectAllEndpoints,
-  buildDefaultOptions,
-} from "./helpers";
-
-import type { Settings } from "@/store/types-ui";
-import { ownValue } from "@/lib/own-value";
+import type { GenerateOptions, ImportState, ParsedSpec } from "./types";
 
 // ── Spec parsing ────────────────────────────────────────────────────────────
 
@@ -29,9 +17,7 @@ export async function parseSpec(
   source: "url" | "raw" | "file",
   content: string,
 ): Promise<ParsedSpec> {
-  return source === "url"
-    ? parseSpecFromUrl(content)
-    : parseSpecFromRaw(content);
+  return source === "url" ? parseSpecFromUrl(content) : parseSpecFromRaw(content);
 }
 
 export function buildPostParseState(
@@ -95,17 +81,12 @@ export function toggleEndpointReducer(
     ...state,
     selectedEndpoints: {
       ...state.selectedEndpoints,
-      [group]: has
-        ? groupEps.filter((e) => e !== endpoint)
-        : [...groupEps, endpoint],
+      [group]: has ? groupEps.filter((e) => e !== endpoint) : [...groupEps, endpoint],
     },
   };
 }
 
-export function toggleGroupReducer(
-  state: ImportState,
-  groupName: string,
-): ImportState {
+export function toggleGroupReducer(state: ImportState, groupName: string): ImportState {
   if (!state.spec) return state;
   const group = state.spec.groups.find((g) => g.name === groupName);
   if (!group) return state;

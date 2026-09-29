@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { generateCode } from "../src/apis/generator";
+import { parseSpec } from "../src/apis/parser";
 
 function parse(components: Record<string, unknown>, version = "3.0.0") {
   return parseSpec(
@@ -103,7 +102,11 @@ describe("a group whose prefix carries path placeholders", () => {
         info: { title: "T", version: "1" },
         paths: {
           "/Accounts/{AccountSid}/Calls/{CallSid}/Recordings": {
-            get: { operationId: "listRecordings", tags: ["recordings"], responses: { "200": { description: "ok" } } },
+            get: {
+              operationId: "listRecordings",
+              tags: ["recordings"],
+              responses: { "200": { description: "ok" } },
+            },
           },
         },
       }),
@@ -126,7 +129,11 @@ describe("text a specification supplies to the source file", () => {
           servers: [{ url: 'https://api.test/a"b' }],
           paths: {
             "/things": {
-              get: { operationId: "list", tags: ["things"], responses: { "200": { description: "ok" } } },
+              get: {
+                operationId: "list",
+                tags: ["things"],
+                responses: { "200": { description: "ok" } },
+              },
             },
           },
           components: {

@@ -50,7 +50,9 @@ describe("adding a stream to a file that names only endpoint", () => {
   });
 
   it("reaches it through a base kept whole", () => {
-    const onDisk = groupFile("const api = courier();", ['    list: api.endpoint.get("").response<unknown>(),']);
+    const onDisk = groupFile("const api = courier();", [
+      '    list: api.endpoint.get("").response<unknown>(),',
+    ]);
 
     const merged = appendEndpointsToGroup(PATH, onDisk, GENERATED, ["watch"]);
 
@@ -81,7 +83,10 @@ describe("adding a stream to a file that names only endpoint", () => {
 });
 
 describe("merging an update that brings a first stream", () => {
-  const fingerprints: FingerprintResult = { endpoints: { list: "safe", watch: "new" }, existingCode: {} };
+  const fingerprints: FingerprintResult = {
+    endpoints: { list: "safe", watch: "new" },
+    existingCode: {},
+  };
 
   it("names stream in the file's destructuring", () => {
     const onDisk = groupFile("const { endpoint } = courier();", [LIST]);
@@ -94,7 +99,9 @@ describe("merging an update that brings a first stream", () => {
   });
 
   it("reaches it through a base kept whole", () => {
-    const onDisk = groupFile("const api = courier();", ['    list: api.endpoint.get("").response<unknown>(),']);
+    const onDisk = groupFile("const api = courier();", [
+      '    list: api.endpoint.get("").response<unknown>(),',
+    ]);
 
     const { content } = mergeGroupFile(onDisk, GENERATED, fingerprints);
 

@@ -1,4 +1,4 @@
-import type { RequestEntry } from "./types"
+import type { RequestEntry } from "./types";
 
 /**
  * The request list while a batch of events changes it.
@@ -10,16 +10,16 @@ import type { RequestEntry } from "./types"
  */
 export interface RequestDraft {
   /** Replace the entry with this id by what `change` makes of it; an unknown id changes nothing. */
-  update: (id: string, change: (entry: RequestEntry) => RequestEntry) => void
+  update: (id: string, change: (entry: RequestEntry) => RequestEntry) => void;
   /** Whether the list holds an entry with this id. */
-  has: (id: string) => boolean
+  has: (id: string) => boolean;
   /** Put a new entry at the head of the list. */
-  add: (entry: RequestEntry) => void
+  add: (entry: RequestEntry) => void;
   /**
    * The list the batch made, newest first and cut to `maxRequests` — the very
    * array it started from when nothing changed.
    */
-  finish: (maxRequests: number) => { requests: RequestEntry[]; droppedCount: number }
+  finish: (maxRequests: number) => { requests: RequestEntry[]; droppedCount: number };
 }
 
 /**
@@ -36,48 +36,48 @@ export interface RequestDraft {
  * ```
  */
 export function createRequestDraft(requests: RequestEntry[]): RequestDraft {
-  const added: RequestEntry[] = []
-  const addedAt = new Map<string, number>()
-  let kept = requests
-  let keptAt: Map<string, number> | undefined
-  let changed = false
+  const added: RequestEntry[] = [];
+  const addedAt = new Map<string, number>();
+  let kept = requests;
+  let keptAt: Map<string, number> | undefined;
+  let changed = false;
 
   function indexOfKept(id: string): number | undefined {
-    keptAt ??= indexById(requests)
-    return keptAt.get(id)
+    keptAt ??= indexById(requests);
+    return keptAt.get(id);
   }
 
   return {
     update(id, change) {
-      const newAt = addedAt.get(id)
+      const newAt = addedAt.get(id);
       if (newAt !== undefined) {
-        added[newAt] = change(added[newAt]!)
-        return
+        added[newAt] = change(added[newAt]!);
+        return;
       }
-      const at = indexOfKept(id)
-      if (at === undefined) return
-      if (kept === requests) kept = requests.slice()
-      kept[at] = change(kept[at]!)
-      changed = true
+      const at = indexOfKept(id);
+      if (at === undefined) return;
+      if (kept === requests) kept = requests.slice();
+      kept[at] = change(kept[at]!);
+      changed = true;
     },
     has: (id) => addedAt.has(id) || indexOfKept(id) !== undefined,
     add(entry) {
-      addedAt.set(entry.id, added.length)
-      added.push(entry)
-      changed = true
+      addedAt.set(entry.id, added.length);
+      added.push(entry);
+      changed = true;
     },
     finish(maxRequests) {
-      if (!changed) return { requests, droppedCount: 0 }
-      const next = added.length === 0 ? kept : added.reverse().concat(kept)
-      const droppedCount = Math.max(0, next.length - maxRequests)
-      return { requests: droppedCount > 0 ? next.slice(0, maxRequests) : next, droppedCount }
+      if (!changed) return { requests, droppedCount: 0 };
+      const next = added.length === 0 ? kept : added.reverse().concat(kept);
+      const droppedCount = Math.max(0, next.length - maxRequests);
+      return { requests: droppedCount > 0 ? next.slice(0, maxRequests) : next, droppedCount };
     },
-  }
+  };
 }
 
 /** Where each id sits; the newest entry wins when an id repeats. */
 function indexById(requests: RequestEntry[]): Map<string, number> {
-  const at = new Map<string, number>()
-  for (let i = requests.length - 1; i >= 0; i--) at.set(requests[i]!.id, i)
-  return at
+  const at = new Map<string, number>();
+  for (let i = requests.length - 1; i >= 0; i--) at.set(requests[i]!.id, i);
+  return at;
 }

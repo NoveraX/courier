@@ -4,9 +4,9 @@
  * events to the canonical local executors.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { defineApi } from "@noverax/courier/define";
 import { announceHosting } from "@noverax/courier/announce";
+import { defineApi } from "@noverax/courier/define";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetAnnouncements } from "../../core/src/announce/test-support";
 import {
   _resetSourceRegistryForTests,

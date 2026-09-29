@@ -1,10 +1,4 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  type LucideIcon,
-  XCircle,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, type LucideIcon, XCircle } from "lucide-react";
 
 import type { AuditCategory, AuditSeverity } from "./types";
 
@@ -53,12 +47,7 @@ export const SEVERITY_CONFIG: Record<AuditSeverity, SeverityConfig> = {
   },
 };
 
-import {
-  Activity,
-  Gauge,
-  Lock,
-  Sparkles,
-} from "lucide-react";
+import { Activity, Gauge, Lock, Sparkles } from "lucide-react";
 
 export const CATEGORY_CONFIG: Record<AuditCategory, CategoryConfig> = {
   performance: {

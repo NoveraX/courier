@@ -17,22 +17,21 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { createServer, type Server } from "node:http";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { io as connect } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { loadImportsState, recordImport, saveImportsState } from "../src/apis/imports-state";
 import { parseSpec } from "../src/apis/parser/parse-spec";
+import { createStudioServer } from "../src/server/create-studio-server";
 import { bodyHash } from "../src/server/import-files/body-hash";
 import { signGeneratedFile } from "../src/server/import-files/generated-header";
-import { createStudioServer } from "../src/server/create-studio-server";
 import { withImportsLock } from "../src/server/imports-lock";
 import { ACT_BUDGET_MS } from "../src/server/project-state/budgets";
 import type { FreshSnapshot, ProjectImports } from "../src/server/project-state/types";
 import { registerRegistryRoutes } from "../src/server/registry-routes";
 import type { JsonResponse, RouteApp } from "../src/server/route-types";
-import { io as connect } from "socket.io-client";
 import type { StudioServer } from "../src/server/types";
 import { tokenHeader } from "./helpers/token-header";
 
@@ -140,13 +139,18 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /* An apply's body once its preview was shown: the plan's digest quoted, as the UI sends it. */
-async function quoted(url: string, route: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function quoted(
+  url: string,
+  route: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const preview = PREVIEWS.get(route);
   if (preview === undefined) return body;
   const reply = await post(url, preview, body);
   const plan = isRecord(reply.body) ? reply.body.plan : undefined;
   const digest = isRecord(plan) ? plan.digest : undefined;
-  if (typeof digest !== "string") throw new Error(`${preview} gave no plan: ${JSON.stringify(reply.body)}`);
+  if (typeof digest !== "string")
+    throw new Error(`${preview} gave no plan: ${JSON.stringify(reply.body)}`);
   return { ...body, planDigest: digest };
 }
 
@@ -170,10 +174,7 @@ function writeFor(sourceName: string, outputDir = "src/api"): Record<string, unk
 const ACT_ROUTES: ReadonlyArray<readonly [string, Record<string, unknown>]> = [
   ["/api/apis/write", writeFor("pets")],
   ["/api/apis/manage/apply", ADD],
-  [
-    "/api/apis/update/apply",
-    { name: "pets", newSpec: SPEC },
-  ],
+  ["/api/apis/update/apply", { name: "pets", newSpec: SPEC }],
 ];
 
 async function refusals(
@@ -399,7 +400,9 @@ describe("a write for an import, after courier.config moved its output directory
     expect(existsSync(join(root, "src/new/pets/source.ts"))).toBe(true);
     expect(existsSync(join(root, "src/new/pets/stale.ts"))).toBe(true);
     expect(existsSync(join(root, "src/old/pets/source.ts"))).toBe(true);
-    expect(reply.body).toMatchObject({ leftBehind: expect.arrayContaining(["src/old/pets/source.ts"]) });
+    expect(reply.body).toMatchObject({
+      leftBehind: expect.arrayContaining(["src/old/pets/source.ts"]),
+    });
   }, 15_000);
 
   it("acts on the saved declaration when it waited for the imports lock while courier.config was saved", async () => {
@@ -426,19 +429,29 @@ describe("a write for an import, after courier.config moved its output directory
 describe("a write whose options contradict the import's declaration", () => {
   /* The declaration names no validation or grouping, so it generates with zod, by tag. */
   function writeWith(options: Record<string, unknown>): Record<string, unknown> {
-    return { sourceName: "pets", spec: SPEC, options: { type: "openapi", sourceName: "pets", outputDir: "src/api", ...options } };
+    return {
+      sourceName: "pets",
+      spec: SPEC,
+      options: { type: "openapi", sourceName: "pets", outputDir: "src/api", ...options },
+    };
   }
 
   it("is refused 409, naming each option the declaration gives otherwise, before anything is written", async () => {
     project(declaring("src/api"));
     const url = await started();
 
-    const reply = await post(url, "/api/apis/write", writeWith({ validation: "valibot", groupBy: "single" }));
+    const reply = await post(
+      url,
+      "/api/apis/write",
+      writeWith({ validation: "valibot", groupBy: "single" }),
+    );
 
     expect(reply.status).toBe(409);
     expect(reply.body).toMatchObject({
       code: "DECLARATION_MISMATCH",
-      error: expect.stringContaining("validation zod and groupBy tag, but this write asks for validation valibot and groupBy single"),
+      error: expect.stringContaining(
+        "validation zod and groupBy tag, but this write asks for validation valibot and groupBy single",
+      ),
     });
     expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(false);
   }, 15_000);
@@ -447,7 +460,11 @@ describe("a write whose options contradict the import's declaration", () => {
     project(declaring("src/api"));
     const url = await started();
 
-    const reply = await post(url, "/api/apis/write", writeWith({ validation: "zod", groupBy: "tag", generateTypes: true }));
+    const reply = await post(
+      url,
+      "/api/apis/write",
+      writeWith({ validation: "zod", groupBy: "tag", generateTypes: true }),
+    );
 
     expect(reply.status).toBe(200);
     expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(true);
@@ -502,10 +519,14 @@ describe("a declaration Studio refuses to lay out", () => {
 });
 
 describe("what a write for an import says courier.config must still declare", () => {
-  const SOURCES_ONLY = 'import "./count";\nexport default { sources: { api: { baseURL: "https://api.example" } } };\n';
+  const SOURCES_ONLY =
+    'import "./count";\nexport default { sources: { api: { baseURL: "https://api.example" } } };\n';
 
   /* The write the import wizard sends for `name`, generated under src/api with the wizard's defaults. */
-  function wizardWrite(name: string, choices: Record<string, unknown> = {}): Record<string, unknown> {
+  function wizardWrite(
+    name: string,
+    choices: Record<string, unknown> = {},
+  ): Record<string, unknown> {
     return {
       sourceName: name,
       spec: SPEC,
@@ -531,10 +552,16 @@ describe("what a write for an import says courier.config must still declare", ()
     project(SOURCES_ONLY);
     const url = await started();
 
-    const reply = await post(url, "/api/apis/write", wizardWrite("pets", { validation: "valibot" }));
+    const reply = await post(
+      url,
+      "/api/apis/write",
+      wizardWrite("pets", { validation: "valibot" }),
+    );
 
     expect(reply.status).toBe(200);
-    expect(reply.body).toMatchObject({ written: expect.arrayContaining(["src/api/pets/source.ts"]) });
+    expect(reply.body).toMatchObject({
+      written: expect.arrayContaining(["src/api/pets/source.ts"]),
+    });
     expect(reply.body).toHaveProperty("declaration", {
       configFile: "courier.config.ts",
       source: { importLine: 'import { pets } from "./src/api/pets/source";', entry: "pets," },
@@ -589,13 +616,18 @@ describe("what a write for an import says courier.config must still declare", ()
   it("names nothing once the config declares the generated source and the import", async () => {
     const head = 'import { pets } from "./src/api/pets/source";\n';
     project(declaring("src/api", head).replace("sources: {", "sources: { pets,"));
-    writeProjectFile("src/api/pets/source.ts", signGeneratedFile("pets", 'export const pets = { baseURL: "https://pets.example" };\n'));
+    writeProjectFile(
+      "src/api/pets/source.ts",
+      signGeneratedFile("pets", 'export const pets = { baseURL: "https://pets.example" };\n'),
+    );
     const url = await started();
 
     const reply = await post(url, "/api/apis/write", wizardWrite("pets"));
 
     expect(reply.status).toBe(200);
-    expect(reply.body).toMatchObject({ written: expect.arrayContaining(["src/api/pets/source.ts"]) });
+    expect(reply.body).toMatchObject({
+      written: expect.arrayContaining(["src/api/pets/source.ts"]),
+    });
     expect(reply.body).not.toHaveProperty("declaration");
   }, 15_000);
 
@@ -603,7 +635,10 @@ describe("what a write for an import says courier.config must still declare", ()
     const head = 'import { pets } from "./src/api";\n';
     project(declaring("src/api", head).replace("sources: {", "sources: { pets,"));
     writeProjectFile("src/api/index.ts", 'export { pets } from "./pets/source";\n');
-    writeProjectFile("src/api/pets/source.ts", signGeneratedFile("pets", 'export const pets = { baseURL: "https://pets.example" };\n'));
+    writeProjectFile(
+      "src/api/pets/source.ts",
+      signGeneratedFile("pets", 'export const pets = { baseURL: "https://pets.example" };\n'),
+    );
     const url = await started();
 
     const reply = await post(url, "/api/apis/write", wizardWrite("pets"));
@@ -613,7 +648,12 @@ describe("what a write for an import says courier.config must still declare", ()
   }, 15_000);
 
   it("refuses 409 NAME_TAKEN and writes nothing while sources names another API under it", async () => {
-    project(declaring("src/api").replace("sources: {", 'sources: { pets: { baseURL: "https://pets.example" },'));
+    project(
+      declaring("src/api").replace(
+        "sources: {",
+        'sources: { pets: { baseURL: "https://pets.example" },',
+      ),
+    );
     const url = await started();
 
     const reply = await post(url, "/api/apis/write", wizardWrite("pets"));
@@ -627,7 +667,11 @@ describe("what a write for an import says courier.config must still declare", ()
     project(SOURCES_ONLY);
     const url = await started();
 
-    const reply = await post(url, "/api/apis/write", wizardWrite("pets", { selectedEndpoints: { pets: [] } }));
+    const reply = await post(
+      url,
+      "/api/apis/write",
+      wizardWrite("pets", { selectedEndpoints: { pets: [] } }),
+    );
 
     expect(reply.status).toBe(200);
     expect(reply.body).toHaveProperty("declaration.leftOut", 1);
@@ -680,7 +724,9 @@ describe("the imports lists every UI is sent", () => {
     )
       return null;
     return latest.sources
-      .map((source) => (typeof source === "object" && source !== null && "name" in source ? source.name : undefined))
+      .map((source) =>
+        typeof source === "object" && source !== null && "name" in source ? source.name : undefined,
+      )
       .filter((name) => typeof name === "string")
       .sort();
   }
@@ -764,7 +810,10 @@ describe("the update checks of URL imports", () => {
       }
       res.writeHead(200, { "content-type": "application/json" });
       if (req.url === "/empty.json") res.end();
-      else res.end(JSON.stringify({ openapi: "3.1.0", info: { title: "Pets", version: "1" }, paths: {} }));
+      else
+        res.end(
+          JSON.stringify({ openapi: "3.1.0", info: { title: "Pets", version: "1" }, paths: {} }),
+        );
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     specServer = server;
@@ -779,7 +828,10 @@ describe("the update checks of URL imports", () => {
   /* A config that declares URL imports, by name, and names these private hosts. */
   function declaringUrls(urls: Record<string, string>, allowed: readonly string[] = []): string {
     const imports = Object.entries(urls)
-      .map(([name, from]) => `${name}: { importType: "url", type: "openapi", from: "${from}", outputDir: "src/${name}" }`)
+      .map(
+        ([name, from]) =>
+          `${name}: { importType: "url", type: "openapi", from: "${from}", outputDir: "src/${name}" }`,
+      )
       .join(", ");
     return `import "./count";\nexport default { sources: { api: { baseURL: "https://api.example" } }, studio: { allowedSpecHosts: ${JSON.stringify(allowed)} }, imports: { ${imports} } };\n`;
   }
@@ -807,32 +859,56 @@ describe("the update checks of URL imports", () => {
     project(declaringUrls({ empty: `${specBase}/empty.json` }));
     const url = await started();
 
-    const reply = await post(url, "/api/apis/imports/check-updates", { name: "empty" }, AbortSignal.timeout(5_000));
+    const reply = await post(
+      url,
+      "/api/apis/imports/check-updates",
+      { name: "empty" },
+      AbortSignal.timeout(5_000),
+    );
 
     expect(reply).toEqual({
       status: 502,
       body: {
         code: "SPEC_UNREADABLE",
-        error: expect.stringMatching(/empty\.json did not answer with a specification Studio can read: Unable to detect spec format/),
+        error: expect.stringMatching(
+          /empty\.json did not answer with a specification Studio can read: Unable to detect spec format/,
+        ),
       },
     });
   }, 15_000);
 
   it.each([
-    ["redirects to something that is not a URL", "/redirect-nowhere", 'redirects to "http://[", which is not a URL.'],
-    ["closes the connection partway through the body", "/cut.json", "closed the connection before the whole specification arrived (ECONNRESET)."],
-  ])("check-updates answers 502 for a spec URL that %s, naming it", async (_what, path, reason) => {
-    const from = `${specBase}${path}`;
-    project(declaringUrls({ pets: from }));
-    const url = await started();
+    [
+      "redirects to something that is not a URL",
+      "/redirect-nowhere",
+      'redirects to "http://[", which is not a URL.',
+    ],
+    [
+      "closes the connection partway through the body",
+      "/cut.json",
+      "closed the connection before the whole specification arrived (ECONNRESET).",
+    ],
+  ])(
+    "check-updates answers 502 for a spec URL that %s, naming it",
+    async (_what, path, reason) => {
+      const from = `${specBase}${path}`;
+      project(declaringUrls({ pets: from }));
+      const url = await started();
 
-    const reply = await post(url, "/api/apis/imports/check-updates", { name: "pets" }, AbortSignal.timeout(5_000));
+      const reply = await post(
+        url,
+        "/api/apis/imports/check-updates",
+        { name: "pets" },
+        AbortSignal.timeout(5_000),
+      );
 
-    expect(reply).toEqual({
-      status: 502,
-      body: { error: `Failed to fetch spec from ${from}: ${from} ${reason}` },
-    });
-  }, 15_000);
+      expect(reply).toEqual({
+        status: 502,
+        body: { error: `Failed to fetch spec from ${from}: ${from} ${reason}` },
+      });
+    },
+    15_000,
+  );
 
   it("check-all reports a body cut off as that import's own error, naming its URL", async () => {
     project(declaringUrls({ here: `${specBase}/spec.json`, cut: `${specBase}/cut.json` }));
@@ -863,7 +939,10 @@ describe("the update checks of URL imports", () => {
 
     expect(reply).toEqual({
       status: 409,
-      body: { code: "CONFIG_NOT_LOADING", error: expect.stringContaining("courier.config is broken on purpose") },
+      body: {
+        code: "CONFIG_NOT_LOADING",
+        error: expect.stringContaining("courier.config is broken on purpose"),
+      },
     });
   }, 15_000);
 
@@ -886,8 +965,14 @@ describe("the update checks of URL imports", () => {
       body: {
         results: {
           here: { changed: true },
-          inside: { changed: false, error: expect.stringContaining("Blocked request to private address: 10.0.0.7.") },
-          beside: { changed: false, error: expect.stringContaining("Blocked request to private address: [fd00::7].") },
+          inside: {
+            changed: false,
+            error: expect.stringContaining("Blocked request to private address: 10.0.0.7."),
+          },
+          beside: {
+            changed: false,
+            error: expect.stringContaining("Blocked request to private address: [fd00::7]."),
+          },
         },
       },
     });
@@ -926,7 +1011,11 @@ describe("a check of all imports", () => {
       settling: false,
     };
     const fresh = vi.fn(async (_budgetMs: number) => view);
-    const project: ProjectImports = { snapshot: () => view, fresh, importsChanged: () => undefined };
+    const project: ProjectImports = {
+      snapshot: () => view,
+      fresh,
+      importsChanged: () => undefined,
+    };
     let handler: Handler | undefined;
     const app: RouteApp = {
       post: (path, next) => {
@@ -976,10 +1065,13 @@ describe("a check of all imports", () => {
     const { reply } = checkAll(declarations);
 
     const { status, body } = await reply;
-    const results: unknown = typeof body === "object" && body !== null && "results" in body ? body.results : null;
+    const results: unknown =
+      typeof body === "object" && body !== null && "results" in body ? body.results : null;
 
     expect(status).toBe(200);
-    expect(results !== null && typeof results === "object" && Object.hasOwn(results, "__proto__")).toBe(true);
+    expect(
+      results !== null && typeof results === "object" && Object.hasOwn(results, "__proto__"),
+    ).toBe(true);
     expect(JSON.stringify(results)).toBe(
       '{"__proto__":{"changed":false,"unchecked":"A file import has no URL to check; upload its specification in Manage to compare."}}',
     );

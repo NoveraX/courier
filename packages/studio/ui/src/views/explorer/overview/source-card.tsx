@@ -1,7 +1,7 @@
-import { Server, FolderTree, Zap } from "lucide-react";
+import { FolderTree, Server, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { HealthIndicator } from "../shared/health-indicator";
 import { getHealthLevel } from "../compute-metrics";
+import { HealthIndicator } from "../shared/health-indicator";
 
 import type { SourceNodeData } from "../types";
 
@@ -23,9 +23,7 @@ export function SourceCard({ source }: SourceCardProps): React.ReactElement {
             <Server className="size-4 text-indigo-400" />
           </div>
           <div>
-            <h4 className="text-body-sm font-semibold text-foreground">
-              {source.name}
-            </h4>
+            <h4 className="text-body-sm font-semibold text-foreground">{source.name}</h4>
             {source.baseURL && (
               <span className="text-mono-xs text-muted-foreground/60 truncate max-w-45 block">
                 {source.baseURL}
@@ -64,7 +62,9 @@ export function SourceCard({ source }: SourceCardProps): React.ReactElement {
             level === "critical" && "bg-rose-400/70",
             level === "inactive" && "bg-zinc-500/40",
           )}
-          style={{ width: level === "inactive" ? "0%" : `${Math.min(source.metrics.successRate, 100)}%` }}
+          style={{
+            width: level === "inactive" ? "0%" : `${Math.min(source.metrics.successRate, 100)}%`,
+          }}
         />
       </div>
     </div>

@@ -4,8 +4,9 @@
  * "disturbed or locked", which tells the developer nothing about the
  * middleware that did it — and the documented Express setup did exactly this.
  */
-import { Readable } from "node:stream";
+
 import type { IncomingMessage } from "node:http";
+import { Readable } from "node:stream";
 
 import { describe, expect, it } from "vitest";
 

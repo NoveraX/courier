@@ -38,7 +38,11 @@ describe("a managed mock in the UI", () => {
     } as never);
 
     const server = useMockStore.getState().servers.apiMock;
-    expect(server).toMatchObject({ port: 56214, url: "http://localhost:56214", processStatus: "running" });
+    expect(server).toMatchObject({
+      port: 56214,
+      url: "http://localhost:56214",
+      processStatus: "running",
+    });
   });
 
   it("shows why it crashed", () => {
@@ -50,7 +54,9 @@ describe("a managed mock in the UI", () => {
       lastError: "Cannot find package '@hono/node-server'",
     } as never);
 
-    expect(useMockStore.getState().servers.apiMock?.lastError).toBe("Cannot find package '@hono/node-server'");
+    expect(useMockStore.getState().servers.apiMock?.lastError).toBe(
+      "Cannot find package '@hono/node-server'",
+    );
   });
 
   it("keeps its request and error counts through a state update that carries none", () => {
@@ -59,7 +65,10 @@ describe("a managed mock in the UI", () => {
 
     handleServerConnect("apiMock", { ...declared, processStatus: "running" } as never);
 
-    expect(useMockStore.getState().servers.apiMock).toMatchObject({ requestsServed: 12, errorCount: 3 });
+    expect(useMockStore.getState().servers.apiMock).toMatchObject({
+      requestsServed: 12,
+      errorCount: 3,
+    });
   });
 
   it("leaves the list when the config no longer declares it", () => {

@@ -47,10 +47,13 @@ describe("control frames", () => {
   it("are refused past twice the subscription cap in a second", async () => {
     const client = await connect(5);
 
-    for (let i = 0; i < 30; i += 1) client.send({ type: "subscribe", id: `s${i}`, topic: `api.live.none#${i}` });
+    for (let i = 0; i < 30; i += 1)
+      client.send({ type: "subscribe", id: `s${i}`, topic: `api.live.none#${i}` });
     await settle(100);
 
-    expect(rateLimited(client).map((m) => m.id)).toEqual(Array.from({ length: 20 }, (_, i) => `s${i + 10}`));
+    expect(rateLimited(client).map((m) => m.id)).toEqual(
+      Array.from({ length: 20 }, (_, i) => `s${i + 10}`),
+    );
   });
 
   it("count auth refreshes too", async () => {
@@ -65,8 +68,10 @@ describe("control frames", () => {
   it("let a client renew every subscription at once", async () => {
     const client = await connect(5);
 
-    for (let i = 0; i < 5; i += 1) client.send({ type: "unsubscribe", topic: `api.live.none#${i}` });
-    for (let i = 0; i < 5; i += 1) client.send({ type: "subscribe", id: `s${i}`, topic: `api.live.none#${i}` });
+    for (let i = 0; i < 5; i += 1)
+      client.send({ type: "unsubscribe", topic: `api.live.none#${i}` });
+    for (let i = 0; i < 5; i += 1)
+      client.send({ type: "subscribe", id: `s${i}`, topic: `api.live.none#${i}` });
     await settle(100);
 
     expect(rateLimited(client)).toEqual([]);
@@ -75,7 +80,8 @@ describe("control frames", () => {
   it("are not held back by a flood of other messages", async () => {
     const client = await connect(5);
 
-    for (let i = 0; i < 150; i += 1) client.send({ type: "message", topic: "api.live.none", payload: i });
+    for (let i = 0; i < 150; i += 1)
+      client.send({ type: "message", topic: "api.live.none", payload: i });
     client.send({ type: "subscribe", id: "after", topic: "api.live.none#after" });
     await settle(100);
 

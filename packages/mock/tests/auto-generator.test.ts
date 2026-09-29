@@ -2,11 +2,21 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { generateRecord, generateRecords } from "../src/auto/data-generator";
-import { detectEntityContext, generateBoolean, generateFallbackRecords } from "../src/auto/data-generator/context";
+import {
+  detectEntityContext,
+  generateBoolean,
+  generateFallbackRecords,
+} from "../src/auto/data-generator/context";
 import { generateValue } from "../src/auto/data-generator/value";
-import { generateString, generateDateString } from "../src/auto/gen-string";
+import {
+  deterministicHex,
+  formatKeyAsLabel,
+  pick,
+  pseudoRandom,
+  roundTo,
+} from "../src/auto/gen-helpers";
 import { generateNumber } from "../src/auto/gen-number";
-import { pseudoRandom, roundTo, formatKeyAsLabel, deterministicHex, pick } from "../src/auto/gen-helpers";
+import { generateDateString, generateString } from "../src/auto/gen-string";
 import { analyzeField, extractShape, unwrapArraySchema } from "../src/auto/schema-introspect";
 
 // ── gen-helpers ──────────────────────────────────────────────────────────────

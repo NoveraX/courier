@@ -72,7 +72,10 @@ function makeProject(): { root: string; config: string; direct: string; deep: st
   const config = join(root, "courier.config.ts");
   writeFileSync(deep, 'export const host = "v1.example.com"\n');
   writeFileSync(direct, 'import { host } from "./deep"\nexport const api = { baseURL: host }\n');
-  writeFileSync(config, 'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n');
+  writeFileSync(
+    config,
+    'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n',
+  );
   return { root, config, direct, deep };
 }
 
@@ -92,7 +95,8 @@ function slowModule(file: string, tail: string): string {
 }
 
 function baseURLOf(loaded: LoadedCourierConfig | null | undefined): unknown {
-  return (loaded?.config.sources as Record<string, { baseURL?: unknown }> | undefined)?.demo?.baseURL;
+  return (loaded?.config.sources as Record<string, { baseURL?: unknown }> | undefined)?.demo
+    ?.baseURL;
 }
 
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
@@ -264,7 +268,10 @@ describe("startConfigWatcher — reload", () => {
 
     const added = join(root, "src", "added.ts");
     writeFileSync(added, 'export const host = "added.example.com"\n');
-    writeFileSync(config, 'import { host } from "./src/added"\nexport default { sources: { demo: { baseURL: host } } }\n');
+    writeFileSync(
+      config,
+      'import { host } from "./src/added"\nexport default { sources: { demo: { baseURL: host } } }\n',
+    );
     const afterImport = await nextReload(reloads);
     expect(baseURLOf(afterImport)).toBe("added.example.com");
     expect(afterImport?.deps).toContain(added);
@@ -284,9 +291,7 @@ describe("startConfigWatcher — reload", () => {
     /* Waiting for the first call alone would be hostage to a late notification
        about the fixture's own creation arriving ahead of the edit. */
     const reported = () =>
-      status.emitChange.mock.calls.some(
-        ([kind, paths]) => kind === "api" && paths.includes(deep),
-      );
+      status.emitChange.mock.calls.some(([kind, paths]) => kind === "api" && paths.includes(deep));
     for (let waited = 0; waited < 4000 && !reported(); waited += 50) {
       await sleep(50);
     }
@@ -360,7 +365,10 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const { deep, watcher, reloads, emitChange, current } = await watched();
 
-    writeFileSync(deep, 'await new Promise((r) => setTimeout(r, 900))\nexport const host = "slow.example.com"\n');
+    writeFileSync(
+      deep,
+      'await new Promise((r) => setTimeout(r, 900))\nexport const host = "slow.example.com"\n',
+    );
     await until(() => emitChange.mock.calls.length > 0);
     await sleep(100);
     writeFileSync(deep, 'export const host = "fast.example.com"\n');
@@ -414,7 +422,10 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
     const original = readFileSync(deep, "utf8");
 
     const failure = await watcher.runExclusive(async (ctx) => {
-      writeFileSync(deep, 'await new Promise((r) => setTimeout(r, 1500))\nexport const host = "late.example.com"\n');
+      writeFileSync(
+        deep,
+        'await new Promise((r) => setTimeout(r, 1500))\nexport const host = "late.example.com"\n',
+      );
       ctx.acknowledge([deep]);
       const error = await ctx.load().catch((err: unknown) => err);
       writeFileSync(deep, original);
@@ -454,7 +465,10 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
     let editDone = false;
 
     const edit = watcher.runExclusive(async (ctx) => {
-      writeFileSync(deep, 'await new Promise((r) => setTimeout(r, 1500))\nexport const host = "slow.example.com"\n');
+      writeFileSync(
+        deep,
+        'await new Promise((r) => setTimeout(r, 1500))\nexport const host = "slow.example.com"\n',
+      );
       ctx.acknowledge([deep]);
       ctx.reloadAfter([deep]);
       editDone = true;
@@ -472,7 +486,10 @@ describe("startConfigWatcher — one reload at a time, and edits", () => {
     const { watcher } = await watched();
     watcher.stop();
 
-    const failure = await watcher.runExclusive((ctx) => ctx.load().catch((err: unknown) => err), 1000);
+    const failure = await watcher.runExclusive(
+      (ctx) => ctx.load().catch((err: unknown) => err),
+      1000,
+    );
 
     expect(failure).toMatchObject({ code: "CONFIG_WATCHER_STOPPED" });
   });
@@ -504,7 +521,10 @@ describe("startConfigWatcher — a load that fails", () => {
     expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
     await sleep(SETTLE_MS);
 
-    writeFileSync(project.config, 'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n');
+    writeFileSync(
+      project.config,
+      'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n',
+    );
     await until(() => applied.length > 0);
     expect(baseURLOf(current())).toBe("v1.example.com");
 
@@ -573,7 +593,10 @@ describe("startConfigWatcher — a change made while it loads", () => {
     const added = join(root, "src", "added.ts");
     const marker = slowModule(added, 'export const host = "added-v1.example.com"');
 
-    writeFileSync(config, 'import { host } from "./src/added"\nexport default { sources: { demo: { baseURL: host } } }\n');
+    writeFileSync(
+      config,
+      'import { host } from "./src/added"\nexport default { sources: { demo: { baseURL: host } } }\n',
+    );
     await until(() => Reflect.get(globalThis, marker) === true);
     expect(Reflect.get(globalThis, marker)).toBe(true);
     writeFileSync(added, 'export const host = "added-v2.example.com"\n');
@@ -637,7 +660,10 @@ describe("startConfigWatcher — a change made while it loads", () => {
     const broken = join(root, "src", "broken.ts");
     writeFileSync(broken, 'throw new Error("broken does not load")\n');
 
-    writeFileSync(config, 'import { host } from "./src/broken"\nexport default { sources: { demo: { baseURL: host } } }\n');
+    writeFileSync(
+      config,
+      'import { host } from "./src/broken"\nexport default { sources: { demo: { baseURL: host } } }\n',
+    );
     await until(() => failed.length > 0);
     expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
     await sleep(SETTLE_MS);
@@ -671,10 +697,16 @@ describe("startConfigWatcher — a change made while it loads", () => {
     const generate = (host: string) => {
       mkdirSync(generated, { recursive: true });
       writeFileSync(join(generated, "host.ts"), `export const host = "${host}"\n`);
-      writeFileSync(join(generated, "index.ts"), 'import { host } from "./host"\nexport const api = { baseURL: host }\n');
+      writeFileSync(
+        join(generated, "index.ts"),
+        'import { host } from "./host"\nexport const api = { baseURL: host }\n',
+      );
     };
     generate("generated-v1.example.com");
-    writeFileSync(config, 'import { api } from "./generated"\nexport default { sources: { demo: api } }\n');
+    writeFileSync(
+      config,
+      'import { api } from "./generated"\nexport default { sources: { demo: api } }\n',
+    );
     const { watcher, applied, failed } = start(root);
     await watcher.settled();
     expect(baseURLOf(applied[0])).toBe("generated-v1.example.com");
@@ -693,7 +725,10 @@ describe("startConfigWatcher — a change made while it loads", () => {
     const { root, deep } = makeProject();
     writeFileSync(
       deep,
-      Buffer.concat([Buffer.from('export const host = "v1.example.com"\n// caf'), Buffer.from([0xe9, 0x0a])]),
+      Buffer.concat([
+        Buffer.from('export const host = "v1.example.com"\n// caf'),
+        Buffer.from([0xe9, 0x0a]),
+      ]),
     );
     const { watcher, applied, failed } = start(root);
     await watcher.settled();
@@ -736,7 +771,11 @@ describe("startConfigWatcher — a save during a reload", () => {
     await sleep(1500);
     await watcher.settled();
 
-    expect(applied.map(baseURLOf)).toEqual(["v1.example.com", "saved.example.com", "saved.example.com"]);
+    expect(applied.map(baseURLOf)).toEqual([
+      "v1.example.com",
+      "saved.example.com",
+      "saved.example.com",
+    ]);
   });
 
   it("a watched module changed and restored while a load evaluates ends loaded as it is on disk", async () => {
@@ -761,7 +800,10 @@ describe("startConfigWatcher — a save during a reload", () => {
     await until(() => Reflect.get(globalThis, between) === true);
     expect(Reflect.get(globalThis, between)).toBe(true);
     writeFileSync(shared, restored);
-    await until(() => applied.length > 2 && baseURLOf(applied.at(-1)) === "restored.example.com", 3000);
+    await until(
+      () => applied.length > 2 && baseURLOf(applied.at(-1)) === "restored.example.com",
+      3000,
+    );
     await sleep(SETTLE_MS);
     await watcher.settled();
 
@@ -847,7 +889,10 @@ describe("startConfigWatcher — an import that names no module yet", () => {
   it("creating a module the first load could not find reloads the config", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const { root, config } = makeProject();
-    writeFileSync(config, 'import { host } from "./src/missing"\nexport default { sources: { demo: { baseURL: host } } }\n');
+    writeFileSync(
+      config,
+      'import { host } from "./src/missing"\nexport default { sources: { demo: { baseURL: host } } }\n',
+    );
     const { watcher, applied, failed } = start(root);
     await watcher.settled();
     expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
@@ -862,14 +907,20 @@ describe("startConfigWatcher — an import that names no module yet", () => {
   it("creating the directory an import names, and the module in it, reloads the config", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const { root, config } = makeProject();
-    writeFileSync(config, 'import { api } from "./generated/api"\nexport default { sources: { demo: api } }\n');
+    writeFileSync(
+      config,
+      'import { api } from "./generated/api"\nexport default { sources: { demo: api } }\n',
+    );
     const { watcher, applied, failed } = start(root);
     await watcher.settled();
     expect(failed).toMatchObject([{ code: "CONFIG_INVALID" }]);
     await sleep(SETTLE_MS);
 
     mkdirSync(join(root, "generated"));
-    writeFileSync(join(root, "generated", "api.ts"), 'export const api = { baseURL: "generated.example.com" }\n');
+    writeFileSync(
+      join(root, "generated", "api.ts"),
+      'export const api = { baseURL: "generated.example.com" }\n',
+    );
     await until(() => applied.length > 0, 3000);
 
     expect(baseURLOf(applied[0])).toBe("generated.example.com");
@@ -890,7 +941,8 @@ function projectOf(files: Record<string, string>): string {
 const petsAt = (host: string) => `export const pets = { baseURL: "${host}" }\n`;
 const configImporting = (specifier: string) =>
   `import { pets } from "${specifier}"\nexport default { sources: { demo: pets } }\n`;
-const pathsTo = (target: string) => JSON.stringify({ compilerOptions: { paths: { "@/*": [target] } } });
+const pathsTo = (target: string) =>
+  JSON.stringify({ compilerOptions: { paths: { "@/*": [target] } } });
 
 /**
  * The module watched is the module the loader runs. With a compiled `.js`

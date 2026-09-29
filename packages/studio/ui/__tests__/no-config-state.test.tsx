@@ -46,9 +46,12 @@ describe("the APIs page of a project without courier.config", () => {
 
     expect(screen.getByRole("heading", { name: "No courier.config.ts" })).toBeDefined();
     expect(page.textContent).toContain("Create courier.config.ts at the project root.");
-    await vi.waitFor(() => expect(page.querySelector(".shiki-block pre")?.textContent).toBe(SNIPPET), {
-      timeout: 10_000,
-    });
+    await vi.waitFor(
+      () => expect(page.querySelector(".shiki-block pre")?.textContent).toBe(SNIPPET),
+      {
+        timeout: 10_000,
+      },
+    );
   }, 15_000);
 
   it("copies that config as it is", async () => {

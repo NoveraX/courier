@@ -27,7 +27,9 @@ vi.mock("socket.io-client", () => ({
   },
 }));
 
-const { attachRuntime, _resetRuntimeHandlesForTests } = await import("../src/runtime/attach-runtime");
+const { attachRuntime, _resetRuntimeHandlesForTests } = await import(
+  "../src/runtime/attach-runtime"
+);
 
 const cleanups: Array<() => void> = [];
 

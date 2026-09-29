@@ -40,10 +40,7 @@ let foreignURL: string;
 const upstreamSeen: Seen[] = [];
 const foreignSeen: Seen[] = [];
 
-function recording(
-  seen: Seen[],
-  answer: (url: URL, res: ServerResponse, body: string) => void,
-) {
+function recording(seen: Seen[], answer: (url: URL, res: ServerResponse, body: string) => void) {
   return createServer((req, res) => {
     let body = "";
     req.on("data", (chunk: Buffer) => {

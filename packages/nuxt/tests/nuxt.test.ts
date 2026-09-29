@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as CourierModule from "@noverax/courier";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@noverax/courier", async (importOriginal) => {
   const actual = await importOriginal<typeof CourierModule>();
@@ -10,7 +10,21 @@ vi.mock("@noverax/courier", async (importOriginal) => {
       handleGet: vi.fn(),
       handlePost: vi.fn(),
       handleSSE: vi.fn(),
-      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      sseConnections: {
+        count: 0,
+        isShuttingDown: false,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        getByEndpoint: vi.fn(() => []),
+        disconnect: vi.fn(),
+        disconnectAll: vi.fn(),
+        send: vi.fn(() => true),
+        broadcastToEndpoint: vi.fn(() => new Map()),
+        broadcastToMeta: vi.fn(() => new Map()),
+        broadcastAll: vi.fn(() => new Map()),
+      },
       shutdownSSE: vi.fn(),
     })),
   };
@@ -98,7 +112,9 @@ describe("courierHandler", () => {
       new Response("data: hello\n\n", { status: 200, headers: sseHeaders }),
     );
 
-    const result = await handler({ req: new Request("http://localhost/api/request?_s=api&_m=feed") });
+    const result = await handler({
+      req: new Request("http://localhost/api/request?_s=api&_m=feed"),
+    });
 
     expect(result.headers.get("content-type")).toBe("text/event-stream");
     expect(result.headers.get("cache-control")).toBe("no-cache, no-transform");
@@ -111,7 +127,10 @@ describe("what the handler tells an attached Studio", () => {
   it("names the sources it serves once, as soon as they are registered", async () => {
     const { endpoint: ping } = courier();
     registerSources({
-      api: defineApi({ baseURL: "https://upstream.example", endpoints: { ping: ping.get("ping") } }),
+      api: defineApi({
+        baseURL: "https://upstream.example",
+        endpoints: { ping: ping.get("ping") },
+      }),
     });
     /* Handlers the earlier cases made announced as the sources came; only this one is under test. */
     resetAnnouncements();
@@ -127,8 +146,8 @@ describe("what the handler tells an attached Studio", () => {
     vi.unstubAllGlobals();
     resetAnnouncements();
 
-    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual([
-      [["http", "sse"], "nuxt", ["api"]],
-    ]);
+    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual(
+      [[["http", "sse"], "nuxt", ["api"]]],
+    );
   });
 });

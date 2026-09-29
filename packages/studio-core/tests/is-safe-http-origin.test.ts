@@ -32,24 +32,17 @@ describe("isSafeHttpOrigin", () => {
   });
 
   describe("rejects malformed input", () => {
-    it.each([
-      "",
-      "not a url",
-      "://broken",
-      "//missing-scheme.com",
-      "/relative/path",
-      "http://",
-    ])("rejects %s", (value) => {
-      expect(isSafeHttpOrigin(value)).toBe(false);
-    });
-  });
-
-  describe("rejects non-string input", () => {
-    it.each([null, undefined, 42, true, {}, [], Symbol("x")])(
-      "rejects %p",
+    it.each(["", "not a url", "://broken", "//missing-scheme.com", "/relative/path", "http://"])(
+      "rejects %s",
       (value) => {
         expect(isSafeHttpOrigin(value)).toBe(false);
       },
     );
+  });
+
+  describe("rejects non-string input", () => {
+    it.each([null, undefined, 42, true, {}, [], Symbol("x")])("rejects %p", (value) => {
+      expect(isSafeHttpOrigin(value)).toBe(false);
+    });
   });
 });

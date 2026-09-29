@@ -1,9 +1,9 @@
-import type { RequestEntry, StreamEventRecord } from "./types"
-import { str, num, optStr } from "./event-helpers"
+import { num, optStr, str } from "./event-helpers";
+import type { RequestEntry, StreamEventRecord } from "./types";
 
-type EventPayload = Record<string, unknown>
+type EventPayload = Record<string, unknown>;
 
-const MAX_STREAM_EVENTS = 200
+const MAX_STREAM_EVENTS = 200;
 
 /** Append to array with cap — avoids spread+slice on every call */
 function appendCapped<T>(prev: T[] | undefined, item: T, max: number): T[] {
@@ -17,13 +17,13 @@ function appendCapped<T>(prev: T[] | undefined, item: T, max: number): T[] {
 
 /** Header bags a stream opening carries; an empty bag is left out so the UI shows "no headers". */
 function openingHeaders(event: EventPayload): Pick<RequestEntry, "requestHeaders" | "headers"> {
-  const requestHeaders = nonEmpty(event.requestHeaders as Record<string, string> | undefined)
-  const headers = nonEmpty(event.responseHeaders as Record<string, string> | undefined)
-  return { ...(requestHeaders && { requestHeaders }), ...(headers && { headers }) }
+  const requestHeaders = nonEmpty(event.requestHeaders as Record<string, string> | undefined);
+  const headers = nonEmpty(event.responseHeaders as Record<string, string> | undefined);
+  return { ...(requestHeaders && { requestHeaders }), ...(headers && { headers }) };
 }
 
 function nonEmpty(bag: Record<string, string> | undefined): Record<string, string> | undefined {
-  return bag && Object.keys(bag).length > 0 ? bag : undefined
+  return bag && Object.keys(bag).length > 0 ? bag : undefined;
 }
 
 /** A new RequestEntry for an SSE/WS stream opening. */
@@ -46,7 +46,7 @@ export function streamFromOpen(event: EventPayload): RequestEntry {
     streamEventCount: 0,
     streamTotalBytes: 0,
     ...openingHeaders(event),
-  }
+  };
 }
 
 /**
@@ -55,32 +55,32 @@ export function streamFromOpen(event: EventPayload): RequestEntry {
  * resolves): merge it into the existing entry instead of creating a duplicate.
  */
 export function withStreamOpen(r: RequestEntry, event: EventPayload): RequestEntry {
-  return { ...r, ...openingHeaders(event) }
+  return { ...r, ...openingHeaders(event) };
 }
 
 /** Increment event count and total bytes, store event record */
 export function withStreamMessage(r: RequestEntry, event: EventPayload): RequestEntry {
-  const dataSize = num(event.dataSize)
-  const eventType = optStr(event.eventType)
-  const dataPreview = optStr(event.dataPreview)
+  const dataSize = num(event.dataSize);
+  const eventType = optStr(event.eventType);
+  const dataPreview = optStr(event.dataPreview);
   const record: StreamEventRecord = {
     seq: num(event.seq),
     dataSize,
     timestamp: num(event.timestamp, Date.now()),
     ...(eventType && { eventType }),
     ...(dataPreview && { dataPreview }),
-  }
+  };
   return {
     ...r,
     streamEventCount: (r.streamEventCount ?? 0) + 1,
     streamTotalBytes: (r.streamTotalBytes ?? 0) + dataSize,
     streamEvents: appendCapped(r.streamEvents, record, MAX_STREAM_EVENTS),
-  }
+  };
 }
 
 /** Finalize a stream — mark as complete with duration */
 export function withStreamClose(r: RequestEntry, event: EventPayload): RequestEntry {
-  const failed = str(event.reason, "complete") === "error"
+  const failed = str(event.reason, "complete") === "error";
   return {
     ...r,
     status: failed ? "error" : "success",
@@ -88,7 +88,7 @@ export function withStreamClose(r: RequestEntry, event: EventPayload): RequestEn
     streamEventCount: Math.max(num(event.eventCount), r.streamEventCount ?? 0),
     streamTotalBytes: Math.max(num(event.totalBytes), r.streamTotalBytes ?? 0),
     streamDuration: num(event.duration),
-  }
+  };
 }
 
 /** Mark a stream as errored */
@@ -98,5 +98,5 @@ export function withStreamError(r: RequestEntry, event: EventPayload): RequestEn
     status: "error",
     streamStatus: "error",
     error: { type: "StreamError", message: str(event.error, "Stream error") },
-  }
+  };
 }

@@ -39,31 +39,45 @@ describe("snippetInputFromDisk", () => {
     });
   });
 
-  it.skipIf(process.getuid?.() === 0)("names an existing file it cannot read, without its text", () => {
-    writeFileSync(join(root, "courier.mocks.ts"), "export default {};\n");
-    chmodSync(join(root, "courier.mocks.ts"), 0o000);
+  it.skipIf(process.getuid?.() === 0)(
+    "names an existing file it cannot read, without its text",
+    () => {
+      writeFileSync(join(root, "courier.mocks.ts"), "export default {};\n");
+      chmodSync(join(root, "courier.mocks.ts"), 0o000);
 
-    const input = snippetInputFromDisk(root, requests);
+      const input = snippetInputFromDisk(root, requests);
 
-    chmodSync(join(root, "courier.mocks.ts"), 0o644);
-    expect(input.existing).toEqual({ name: "courier.mocks.ts", text: null });
-  });
+      chmodSync(join(root, "courier.mocks.ts"), 0o644);
+      expect(input.existing).toEqual({ name: "courier.mocks.ts", text: null });
+    },
+  );
 
   it("names a link without reading through it", () => {
     writeFileSync(join(root, "elsewhere.ts"), "export default {};\n");
     symlinkSync(join(root, "elsewhere.ts"), join(root, "courier.mocks.ts"));
 
-    expect(snippetInputFromDisk(root, requests).existing).toEqual({ name: "courier.mocks.ts", text: null });
+    expect(snippetInputFromDisk(root, requests).existing).toEqual({
+      name: "courier.mocks.ts",
+      text: null,
+    });
   });
 
   it("creates a file beside the config when there is none, named after its flavour", () => {
     writeFileSync(join(root, "courier.config.mts"), "export default {};\n");
 
-    expect(snippetInputFromDisk(root, requests)).toMatchObject({ existing: null, createName: "courier.mocks.mts", configName: "courier.config.mts" });
+    expect(snippetInputFromDisk(root, requests)).toMatchObject({
+      existing: null,
+      createName: "courier.mocks.mts",
+      configName: "courier.config.mts",
+    });
   });
 
   it("assumes courier.config.ts when the project has no config", () => {
-    expect(snippetInputFromDisk(root, requests)).toMatchObject({ existing: null, createName: "courier.mocks.ts", configName: "courier.config.ts" });
+    expect(snippetInputFromDisk(root, requests)).toMatchObject({
+      existing: null,
+      createName: "courier.mocks.ts",
+      configName: "courier.config.ts",
+    });
   });
 
   it("names extensions in a type module project that resolves modules as Node does, as the edit would", () => {
@@ -71,14 +85,24 @@ describe("snippetInputFromDisk", () => {
     writeFileSync(join(root, "tsconfig.json"), '{ "compilerOptions": { "module": "NodeNext" } }');
     writeFileSync(join(root, "courier.config.ts"), "export default {};\n");
 
-    expect(snippetInputFromDisk(root, requests)).toMatchObject({ existing: null, createName: "courier.mocks.ts", explicitExtensions: true });
+    expect(snippetInputFromDisk(root, requests)).toMatchObject({
+      existing: null,
+      createName: "courier.mocks.ts",
+      explicitExtensions: true,
+    });
   });
 
   it("names extensions where the config's own relative imports carry them", () => {
-    writeFileSync(join(root, "courier.config.ts"), 'import { api } from "./src/api.js";\nexport default { sources: { api } };\n');
+    writeFileSync(
+      join(root, "courier.config.ts"),
+      'import { api } from "./src/api.js";\nexport default { sources: { api } };\n',
+    );
     writeFileSync(join(root, "courier.mocks.ts"), "export default {};\n");
 
-    expect(snippetInputFromDisk(root, requests)).toMatchObject({ createName: "courier.mocks.ts", explicitExtensions: true });
+    expect(snippetInputFromDisk(root, requests)).toMatchObject({
+      createName: "courier.mocks.ts",
+      explicitExtensions: true,
+    });
   });
 });
 

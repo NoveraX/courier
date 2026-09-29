@@ -27,7 +27,8 @@ const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
 const RUNTIME_FILES = new Map([["@noverax/courier-studio", ["ui/dist/index.html"]]]);
 
 /* Paths no tarball carries: sources, tests, local state and editor files. */
-const FORBIDDEN = /^(src|tests?|__tests__|scratch|\.courier)\/|\.test\.|\.spec\.|(^|\/)\.env|(^|\/)\.DS_Store$|^tsconfig/;
+const FORBIDDEN =
+  /^(src|tests?|__tests__|scratch|\.courier)\/|\.test\.|\.spec\.|(^|\/)\.env|(^|\/)\.DS_Store$|^tsconfig/;
 
 /**
  * What is wrong with one package's tarball.
@@ -50,9 +51,16 @@ export function packageProblems(manifest, files, { release = false } = {}) {
     ...(typeof manifest.bin === "string" ? [manifest.bin] : Object.values(manifest.bin ?? {})),
   ].filter((target) => typeof target === "string");
   for (const target of new Set(required.map((path) => path.replace(/^\.\//, "")))) {
-    if (!present.has(target)) problems.push(`${manifest.name}: ./${target}, which its manifest points at, is not in the tarball`);
+    if (!present.has(target))
+      problems.push(
+        `${manifest.name}: ./${target}, which its manifest points at, is not in the tarball`,
+      );
   }
-  for (const needed of [...(RUNTIME_FILES.get(manifest.name) ?? []), "README.md", ...(release ? ["LICENSE"] : [])]) {
+  for (const needed of [
+    ...(RUNTIME_FILES.get(manifest.name) ?? []),
+    "README.md",
+    ...(release ? ["LICENSE"] : []),
+  ]) {
     if (!present.has(needed)) problems.push(`${manifest.name}: ${needed} is not in the tarball`);
   }
   for (const file of files) {
@@ -70,7 +78,10 @@ function targetsOf(exportsField) {
 
 /* The paths `npm pack` would publish for a package directory. */
 function packedFiles(dir) {
-  const output = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], { cwd: dir, encoding: "utf8" });
+  const output = execFileSync("npm", ["pack", "--dry-run", "--json", "--ignore-scripts"], {
+    cwd: dir,
+    encoding: "utf8",
+  });
   const [report] = JSON.parse(output);
   return report.files.map((file) => file.path);
 }

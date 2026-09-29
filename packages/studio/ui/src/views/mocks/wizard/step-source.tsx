@@ -1,13 +1,16 @@
 import { Loader2 } from "lucide-react";
 
 import type { ScannedSource } from "@/views/apis/types";
+import { ModeSwitch } from "./mode-switch";
 import type { SourceAvailability } from "./source-availability";
+import { SourceList } from "./source-list";
 import type { MockWizardState, WizardMode } from "./types";
 
-import { ModeSwitch } from "./mode-switch";
-import { SourceList } from "./source-list";
-
-function Unavailable({ availability }: { availability: SourceAvailability }): React.ReactElement | null {
+function Unavailable({
+  availability,
+}: {
+  availability: SourceAvailability;
+}): React.ReactElement | null {
   const note = (text: string): React.ReactElement => (
     <p className="py-8 text-center text-body-sm text-muted-foreground">{text}</p>
   );
@@ -17,14 +20,20 @@ function Unavailable({ availability }: { availability: SourceAvailability }): Re
       return (
         <p className="flex items-center justify-center gap-1.5 py-8 text-body-sm text-muted-foreground">
           <Loader2 className="size-3 animate-spin" />
-          {availability.kind === "connecting" ? "Connecting to Studio…" : "Studio is loading courier.config…"}
+          {availability.kind === "connecting"
+            ? "Connecting to Studio…"
+            : "Studio is loading courier.config…"}
         </p>
       );
     case "failed":
       return (
-        <div role="alert" className="space-y-1 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2">
+        <div
+          role="alert"
+          className="space-y-1 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2"
+        >
           <p className="text-body-sm text-rose-400">
-            {availability.configFile} does not load, so there are no sources to mock. Fix it and they appear here.
+            {availability.configFile} does not load, so there are no sources to mock. Fix it and
+            they appear here.
           </p>
           <p className="whitespace-pre-wrap mono-xs text-rose-400/80">{availability.message}</p>
         </div>
@@ -63,7 +72,13 @@ interface SourceStepProps {
  * <SourceStep state={state} availability={availability} sources={scanSources} onModeChange={setMode} onToggle={toggle} />
  * ```
  */
-export function SourceStep({ state, availability, sources, onModeChange, onToggle }: SourceStepProps): React.ReactElement {
+export function SourceStep({
+  state,
+  availability,
+  sources,
+  onModeChange,
+  onToggle,
+}: SourceStepProps): React.ReactElement {
   return (
     <div className="space-y-5">
       <div className="space-y-1.5">

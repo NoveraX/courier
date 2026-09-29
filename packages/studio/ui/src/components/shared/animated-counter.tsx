@@ -1,5 +1,5 @@
+import { useMotionValueEvent, useSpring } from "motion/react";
 import { useEffect, useRef } from "react";
-import { useSpring, useMotionValueEvent } from "motion/react";
 
 import { displayedCount } from "@/lib/displayed-count";
 import { cn } from "@/lib/utils";

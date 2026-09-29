@@ -63,8 +63,17 @@ describe("decodeMessage", () => {
 
   it("handles all message types", () => {
     const types: WSMessageType[] = [
-      "subscribe", "unsubscribe", "data", "message",
-      "ping", "pong", "error", "subscribed", "unsubscribed", "auth", "auth_required",
+      "subscribe",
+      "unsubscribe",
+      "data",
+      "message",
+      "ping",
+      "pong",
+      "error",
+      "subscribed",
+      "unsubscribed",
+      "auth",
+      "auth_required",
     ];
 
     for (const type of types) {

@@ -5,24 +5,30 @@
  * as from Studio — an apply is sent once per click and never again on its
  * own, and a retryable manual outcome is checked again on request.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Mock } from "vitest";
+
 import { io } from "socket.io-client";
+import type { Mock } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { create } from "zustand";
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn() } }));
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), success: vi.fn(), info: vi.fn(), warning: vi.fn() },
+}));
 
 import type { Socket } from "socket.io-client";
 import type { ApisStore } from "../src/socket/apis-bindings";
-import type { ScannedSource } from "../src/views/apis/types";
-import type { DeclareClient } from "../src/views/mocks/wizard/declare-client";
-import type { DeclarePreview, ManualOutcome, ReadyOutcome } from "../src/views/mocks/wizard/wire-types";
-import type { WizardSession } from "../src/views/mocks/wizard/wizard-session";
-
 import { bindApis } from "../src/socket/apis-bindings";
 import { DEFAULT_SETTINGS } from "../src/store/constants";
+import type { ScannedSource } from "../src/views/apis/types";
+import type { DeclareClient } from "../src/views/mocks/wizard/declare-client";
 import { reviewCta } from "../src/views/mocks/wizard/review-cta";
 import { watchProject } from "../src/views/mocks/wizard/watch-project";
+import type {
+  DeclarePreview,
+  ManualOutcome,
+  ReadyOutcome,
+} from "../src/views/mocks/wizard/wire-types";
+import type { WizardSession } from "../src/views/mocks/wizard/wizard-session";
 import { createWizardSession } from "../src/views/mocks/wizard/wizard-session";
 
 const READY: ReadyOutcome = {
@@ -31,18 +37,31 @@ const READY: ReadyOutcome = {
   creates: true,
   baseHash: null,
   planDigest: "b".repeat(64),
-  hunks: [{ lines: [{ kind: "add", text: "export default defineMocks({", oldLine: null, newLine: 1 }] }],
+  hunks: [
+    { lines: [{ kind: "add", text: "export default defineMocks({", oldLine: null, newLine: 1 }] },
+  ],
   warnings: [],
 };
 const BUSY: ManualOutcome = {
   status: "manual",
   target: null,
   creates: true,
-  reasons: [{ code: "STUDIO_BUSY", source: null, message: "Studio is still loading courier.config; try again in a moment." }],
+  reasons: [
+    {
+      code: "STUDIO_BUSY",
+      source: null,
+      message: "Studio is still loading courier.config; try again in a moment.",
+    },
+  ],
   snippet: 'import { defineMocks } from "@noverax/courier-mock";\n',
   retryable: true,
 };
-const LOADED = { state: "loaded", revision: 2, configFile: "courier.config.ts", loadedAt: 1_000 } as const;
+const LOADED = {
+  state: "loaded",
+  revision: 2,
+  configFile: "courier.config.ts",
+  loadedAt: 1_000,
+} as const;
 
 type ProjectStoreState = ApisStore & { scanSources: ScannedSource[] };
 
@@ -80,8 +99,15 @@ beforeEach(() => {
   preview = vi.fn<DeclareClient["preview"]>();
   apply = vi.fn<DeclareClient["apply"]>();
   clock = 5_000;
-  session = createWizardSession({ client: { preview, apply }, now: () => clock, log: { error: vi.fn() } });
-  stops.push(bindApis(socket, store.getState), watchProject(store, () => session.projectChanged()));
+  session = createWizardSession({
+    client: { preview, apply },
+    now: () => clock,
+    log: { error: vi.fn() },
+  });
+  stops.push(
+    bindApis(socket, store.getState),
+    watchProject(store, () => session.projectChanged()),
+  );
 });
 
 afterEach(() => {
@@ -122,13 +148,29 @@ describe("a plan on screen when the project changes", () => {
 
   it("is left alone while an apply is in flight, and after one Studio took back", async () => {
     await reviewWith(READY);
-    let answer: (value: { status: "rolledBack"; target: string; creates: boolean; reason: string; snippet: string }) => void = () => {};
-    apply.mockReturnValueOnce(new Promise((resolve) => { answer = resolve; }));
+    let answer: (value: {
+      status: "rolledBack";
+      target: string;
+      creates: boolean;
+      reason: string;
+      snippet: string;
+    }) => void = () => {};
+    apply.mockReturnValueOnce(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
 
     clock += 60_000;
     session.apply();
     deliver(socket, "config:status", { ...LOADED, revision: 3, loadedAt: 2_000 });
-    answer({ status: "rolledBack", target: "courier.mocks.ts", creates: true, reason: "did not load", snippet: "x" });
+    answer({
+      status: "rolledBack",
+      target: "courier.mocks.ts",
+      creates: true,
+      reason: "did not load",
+      snippet: "x",
+    });
     await vi.waitFor(() => expect(session.getState().apply.status).toBe("rolledBack"));
     deliver(socket, "config:status", { ...LOADED, revision: 4, loadedAt: 3_000 });
 
@@ -139,7 +181,12 @@ describe("a plan on screen when the project changes", () => {
 describe("applying", () => {
   it("sends the previewed declarations with the preview's hashes, once however often it is clicked", async () => {
     await reviewWith(READY);
-    apply.mockResolvedValue({ status: "applied", target: "courier.mocks.ts", keys: ["api"], warnings: [] });
+    apply.mockResolvedValue({
+      status: "applied",
+      target: "courier.mocks.ts",
+      keys: ["api"],
+      warnings: [],
+    });
 
     clock += 60_000;
     session.apply();
@@ -158,7 +205,12 @@ describe("applying", () => {
 
   it("sends nothing for a click that comes as the plan appears, such as the second click of a double click", async () => {
     await reviewWith(READY);
-    apply.mockResolvedValue({ status: "applied", target: "courier.mocks.ts", keys: ["api"], warnings: [] });
+    apply.mockResolvedValue({
+      status: "applied",
+      target: "courier.mocks.ts",
+      keys: ["api"],
+      warnings: [],
+    });
 
     session.apply();
     expect(session.getState().apply).toEqual({ status: "idle" });
@@ -194,11 +246,18 @@ describe("a manual outcome", () => {
     await vi.waitFor(() => expect(session.getState().plan.status).toBe("ready"));
 
     expect(preview).toHaveBeenCalledTimes(2);
-    expect(reviewCta(session.getState())).toMatchObject({ kind: "apply", label: "Create courier.mocks.ts" });
+    expect(reviewCta(session.getState())).toMatchObject({
+      kind: "apply",
+      label: "Create courier.mocks.ts",
+    });
   });
 
   it("offers only to close when asking again cannot succeed without a change", async () => {
-    await reviewWith({ ...BUSY, retryable: false, reasons: [{ code: "MOCKS_JAVASCRIPT", source: null, message: "js" }] });
+    await reviewWith({
+      ...BUSY,
+      retryable: false,
+      reasons: [{ code: "MOCKS_JAVASCRIPT", source: null, message: "js" }],
+    });
 
     expect(reviewCta(session.getState())).toEqual({ kind: "close", label: "Close" });
   });

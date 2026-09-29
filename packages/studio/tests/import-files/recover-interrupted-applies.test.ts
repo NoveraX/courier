@@ -6,16 +6,27 @@
  * runs is writing is its own to finish or undo.
  */
 import { type ChildProcess, spawn } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import { createStudioServer } from "../../src/server/create-studio-server";
 import { saveJournal } from "../../src/server/import-files/apply-journal";
 import { exactHash } from "../../src/server/import-files/exact-hash";
-import { readGeneratedFile, signGeneratedFile } from "../../src/server/import-files/generated-header";
+import {
+  readGeneratedFile,
+  signGeneratedFile,
+} from "../../src/server/import-files/generated-header";
 import { saveImportEntry } from "../../src/server/import-files/save-import-entry";
-import { createStudioServer } from "../../src/server/create-studio-server";
 import type { StudioServer } from "../../src/server/types";
 
 const DIR = "src/api/pets";
@@ -30,8 +41,16 @@ let writer: ChildProcess | undefined;
 beforeEach(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   root = realpathSync(mkdtempSync(join(tmpdir(), "courier-recover-live-")));
-  writeFileSync(join(root, "courier.config.ts"), 'export default { sources: { api: { baseURL: "https://api.example" } } };\n');
-  saveImportEntry(root, "pets", { specHash: "h", fetchedAt: "", lastSyncedAt: "", dir: DIR, files: {} }, BEFORE);
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'export default { sources: { api: { baseURL: "https://api.example" } } };\n',
+  );
+  saveImportEntry(
+    root,
+    "pets",
+    { specHash: "h", fetchedAt: "", lastSyncedAt: "", dir: DIR, files: {} },
+    BEFORE,
+  );
 });
 
 afterEach(async () => {
@@ -90,8 +109,18 @@ function writeInProgress(pid: number): void {
     state: "committing",
     backupDir: `.courier/backups/${ID}`,
     entries: [
-      { path: `${DIR}/index.ts`, step: "write", existed: true, sha256: exactHash(signed("new index\n")) },
-      { path: `${DIR}/new/index.ts`, step: "write", existed: false, sha256: exactHash(signed("new group\n")) },
+      {
+        path: `${DIR}/index.ts`,
+        step: "write",
+        existed: true,
+        sha256: exactHash(signed("new index\n")),
+      },
+      {
+        path: `${DIR}/new/index.ts`,
+        step: "write",
+        existed: false,
+        sha256: exactHash(signed("new group\n")),
+      },
     ],
     createdDirs: [`${DIR}/new`],
     temps: [`${DIR}/new/.courier.import.${pid}-0a1b2c3d.tmp`],
@@ -100,7 +129,13 @@ function writeInProgress(pid: number): void {
 
 function start(): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 

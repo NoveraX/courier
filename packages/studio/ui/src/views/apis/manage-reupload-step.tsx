@@ -2,15 +2,14 @@
  * Reupload step inside the manage dialog — upload file or paste spec content.
  */
 
-import { useState } from "react";
 import { FileText, Upload } from "lucide-react";
+import { useState } from "react";
 
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-
-import type { ParsedSpec } from "./types";
 import { parseSpecFromRaw } from "./client";
+import type { ParsedSpec } from "./types";
 
 type ReuploadSource = "file" | "raw";
 
@@ -40,8 +39,14 @@ export function ReuploadStep({ state, onContentChange }: ReuploadStepProps): Rea
       {source === "file" && (
         <FileDropzone
           fileName={fileName}
-          onFile={(text, name) => { onContentChange(text); setFileName(name); }}
-          onClear={() => { onContentChange(""); setFileName(null); }}
+          onFile={(text, name) => {
+            onContentChange(text);
+            setFileName(name);
+          }}
+          onClear={() => {
+            onContentChange("");
+            setFileName(null);
+          }}
         />
       )}
 
@@ -87,7 +92,10 @@ const OPTIONS: Array<{
   { value: "raw", label: "Paste", icon: FileText },
 ];
 
-function SourceToggle({ source, onChange }: {
+function SourceToggle({
+  source,
+  onChange,
+}: {
   source: ReuploadSource;
   onChange: (s: ReuploadSource) => void;
 }): React.ReactElement {

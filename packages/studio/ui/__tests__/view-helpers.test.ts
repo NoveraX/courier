@@ -15,7 +15,9 @@ import { toggleComment } from "../src/views/playground/jsonc-helpers";
 
 describe("computeTextDiff", () => {
   it("keeps the common lines and marks what each side has alone", () => {
-    expect(computeTextDiff("a\nb\nc", "a\nx\nc").map((line) => [line.type, line.left ?? line.right])).toEqual([
+    expect(
+      computeTextDiff("a\nb\nc", "a\nx\nc").map((line) => [line.type, line.left ?? line.right]),
+    ).toEqual([
       ["equal", "a"],
       ["removed", "b"],
       ["added", "x"],
@@ -49,7 +51,9 @@ describe("computeHistogram", () => {
     hasValidation: { variables: false, response: false },
     startedAt: 0,
     sessionId: "server",
-    ...(total === undefined ? {} : { timing: { total, middleware: 0, fetch: total, validation: 0 } }),
+    ...(total === undefined
+      ? {}
+      : { timing: { total, middleware: 0, fetch: total, validation: 0 } }),
   });
 
   it("counts each finished request in the bucket of its duration, split by outcome", () => {
@@ -89,7 +93,11 @@ describe("toggleComment", () => {
 
 describe("nextTheme", () => {
   it("cycles dark, light, system", () => {
-    expect([nextTheme("dark"), nextTheme("light"), nextTheme("system")]).toEqual(["light", "system", "dark"]);
+    expect([nextTheme("dark"), nextTheme("light"), nextTheme("system")]).toEqual([
+      "light",
+      "system",
+      "dark",
+    ]);
   });
 });
 

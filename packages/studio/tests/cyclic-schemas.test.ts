@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { generateCode } from "../src/apis/generator";
 import { findCyclicSchemas } from "../src/apis/generator/cyclic-schemas";
 import { schemaComponents } from "../src/apis/generator/schema-components";
+import { parseSpec } from "../src/apis/parser";
 import type { ParsedSchema } from "../src/apis/parser/types";
 
 function object(properties: Record<string, { refName?: string; type?: string }>): ParsedSchema {

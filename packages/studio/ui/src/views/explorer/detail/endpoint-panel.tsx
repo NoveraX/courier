@@ -1,6 +1,6 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { PanelContent } from "./panel-content";
 import { parseEndpointKey } from "../helpers";
+import { PanelContent } from "./panel-content";
 
 // ── Props ────────────────────────────────────────────────────────────────────
 

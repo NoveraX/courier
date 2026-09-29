@@ -63,38 +63,49 @@ const ERROR_ANSWER = {
   content: { "application/json": { schema: { $ref: "#/components/schemas/ClientError" } } },
 };
 
-describe.each(VALIDATORS)("an operation answering 204 beside a default error (%s)", (validation) => {
-  const deleteFile = {
-    tags: ["files"],
-    operationId: "deleteFile",
-    parameters: [{ name: "file_id", in: "path", required: true, schema: { type: "string" } }],
-    responses: { "204": { description: "Deleted." }, default: ERROR_ANSWER },
-  };
-
-  it("resolves when the server answers 204", async () => {
-    const call = callFor(specWith({ "/files/{file_id}": { delete: deleteFile } }), validation, "deleteFile");
-
-    await expect(call({ file_id: "f1" })).resolves.toBeNull();
-    expect(server.requests.at(-1)).toMatchObject({ method: "DELETE", path: "/v1/files/f1" });
-  });
-
-  it("still takes a declared 200 over the default", async () => {
-    const getFile = {
-      ...deleteFile,
-      operationId: "getFile",
-      responses: {
-        default: ERROR_ANSWER,
-        "200": {
-          description: "ok",
-          content: { "application/json": { schema: { $ref: "#/components/schemas/File" } } },
-        },
-      },
+describe.each(VALIDATORS)(
+  "an operation answering 204 beside a default error (%s)",
+  (validation) => {
+    const deleteFile = {
+      tags: ["files"],
+      operationId: "deleteFile",
+      parameters: [{ name: "file_id", in: "path", required: true, schema: { type: "string" } }],
+      responses: { "204": { description: "Deleted." }, default: ERROR_ANSWER },
     };
-    const call = callFor(specWith({ "/files/{file_id}": { get: getFile } }), validation, "getFile");
 
-    await expect(call({ file_id: "f1" })).resolves.toEqual({ id: "f1" });
-  });
-});
+    it("resolves when the server answers 204", async () => {
+      const call = callFor(
+        specWith({ "/files/{file_id}": { delete: deleteFile } }),
+        validation,
+        "deleteFile",
+      );
+
+      await expect(call({ file_id: "f1" })).resolves.toBeNull();
+      expect(server.requests.at(-1)).toMatchObject({ method: "DELETE", path: "/v1/files/f1" });
+    });
+
+    it("still takes a declared 200 over the default", async () => {
+      const getFile = {
+        ...deleteFile,
+        operationId: "getFile",
+        responses: {
+          default: ERROR_ANSWER,
+          "200": {
+            description: "ok",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/File" } } },
+          },
+        },
+      };
+      const call = callFor(
+        specWith({ "/files/{file_id}": { get: getFile } }),
+        validation,
+        "getFile",
+      );
+
+      await expect(call({ file_id: "f1" })).resolves.toEqual({ id: "f1" });
+    });
+  },
+);
 
 describe.each(VALIDATORS)("a HEAD operation that declares a response body (%s)", (validation) => {
   it("resolves, since a HEAD answer never carries the body", async () => {
@@ -109,7 +120,11 @@ describe.each(VALIDATORS)("a HEAD operation that declares a response body (%s)",
         },
       },
     };
-    const call = callFor(specWith({ "/files/{file_id}": { head: headFile } }), validation, "fileExists");
+    const call = callFor(
+      specWith({ "/files/{file_id}": { head: headFile } }),
+      validation,
+      "fileExists",
+    );
 
     await expect(call({ file_id: "f1" })).resolves.toBeNull();
     expect(server.requests.at(-1)).toMatchObject({ method: "HEAD", path: "/v1/files/f1" });
@@ -148,8 +163,8 @@ describe.each(VALIDATORS)("a query parameter named with a hyphen (%s)", (validat
       'export const read = () => boxApi.files.getFile({ file_id: "f1", "page-size": 10 });',
     ].join("\n");
 
-    expect(project.diagnostics(`hyphen-${validation}`, generate(spec(), validation), check)).toEqual(
-      [],
-    );
+    expect(
+      project.diagnostics(`hyphen-${validation}`, generate(spec(), validation), check),
+    ).toEqual([]);
   });
 });

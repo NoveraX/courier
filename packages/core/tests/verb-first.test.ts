@@ -57,7 +57,9 @@ describe("the verb that addresses an endpoint", () => {
   });
 
   it("assumes a closure writes, since a cacheable write is the dangerous mistake", () => {
-    const computed = endpoint.variables<{ ids: string[] }>().via((http, vars) => http.get(`items/${vars.ids.join(",")}`));
+    const computed = endpoint
+      .variables<{ ids: string[] }>()
+      .via((http, vars) => http.get(`items/${vars.ids.join(",")}`));
 
     expect(computed.kind).toBe("mutation");
     expect(computed.reads().kind).toBe("query");

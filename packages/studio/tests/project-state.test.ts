@@ -8,7 +8,15 @@
  * start are kept for the banner; and every outcome is told, even one that
  * cannot be applied, while the reloads after it still run.
  */
-import { appendFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { io as connect } from "socket.io-client";
@@ -48,15 +56,16 @@ vi.mock("../src/server/startup-issues", async (importOriginal) => {
   };
 });
 
+import { IMPORTS_STATE_VERSION } from "../src/apis/imports-state";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { clearStartupIssues, startupIssues } from "../src/server/startup-issues";
-import { IMPORTS_STATE_VERSION } from "../src/apis/imports-state";
 
 const CACHE = join(__dirname, "../../../node_modules/.cache/courier-studio-tests");
 const BROKEN = 'import "./src/missing";\nexport default { sources: {} };\n';
 const FIXED = 'import { demo } from "./src/demo";\nexport default { sources: { demo } };\n';
-const MISSPELLED = 'import { demoo } from "./src/demo";\nexport default { sources: { demo: demoo } };\n';
+const MISSPELLED =
+  'import { demoo } from "./src/demo";\nexport default { sources: { demo: demoo } };\n';
 
 const cleanups: Array<() => Promise<void> | void> = [];
 let fixtures = 0;
@@ -127,7 +136,8 @@ function project({ config = "good" }: ProjectOptions = {}): Project {
   );
   const file = join(root, "courier.config.ts");
   if (config === "broken") writeFileSync(file, BROKEN);
-  if (config === "good" || config === "slow") writeFileSync(file, goodConfig(key, config === "slow"));
+  if (config === "good" || config === "slow")
+    writeFileSync(file, goodConfig(key, config === "slow"));
   return {
     root,
     config: file,
@@ -176,7 +186,14 @@ async function freePort(): Promise<number> {
 async function start(root: string): Promise<string> {
   const mockBasePort = await freePort();
   return new Promise<string>((resolve, reject) => {
-    const server = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, mockBasePort, onReady: resolve, onError: reject });
+    const server = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      mockBasePort,
+      onReady: resolve,
+      onError: reject,
+    });
     cleanups.push(() => server.close());
   });
 }
@@ -250,7 +267,9 @@ async function preview(url: string): Promise<Record<string, unknown>> {
   const response = await fetch(`${url}/api/mocks/declare/preview`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url },
-    body: JSON.stringify({ mocks: [{ key: "apiMock", source: "demo", port: null, seedCount: 20, autoStart: false }] }),
+    body: JSON.stringify({
+      mocks: [{ key: "apiMock", source: "demo", port: null, seedCount: 20, autoStart: false }],
+    }),
   });
   const body: unknown = await response.json();
   return isRecord(body) ? body : {};
@@ -268,7 +287,11 @@ describe("a UI that connects", () => {
     const evaluated = fixture.configEvaluations();
 
     const second = ui(url);
-    await until(() => payloads(second, "scan:sources").length > 0 && payloads(second, "registry:updated").length > 0);
+    await until(
+      () =>
+        payloads(second, "scan:sources").length > 0 &&
+        payloads(second, "registry:updated").length > 0,
+    );
     await sleep(400);
 
     expect(importNames(payloads(second, "registry:updated").at(-1))).toEqual(["remote"]);
@@ -299,7 +322,12 @@ describe("a UI that connects", () => {
     const u = ui(url);
     await until(() => hasStatus(u, "missing"));
 
-    expect(lastStatus(u, "missing")).toEqual({ state: "missing", revision: 1, configFile: null, lastGoodAt: null });
+    expect(lastStatus(u, "missing")).toEqual({
+      state: "missing",
+      revision: 1,
+      configFile: null,
+      lastGoodAt: null,
+    });
     expect(importNames(payloads(u, "registry:updated").at(-1))).toEqual(["petstore"]);
     expect(payloads(u, "scan:sources").at(-1)).toEqual({ sources: [], scannedFiles: 0 });
   }, 20_000);
@@ -315,9 +343,15 @@ describe("a UI that connects", () => {
     await until(() => hasStatus(late, "failed"));
 
     const failed = lastStatus(late, "failed");
-    expect(failed).toMatchObject({ state: "failed", configFile: "courier.config.ts", lastGoodAt: loadedAt });
+    expect(failed).toMatchObject({
+      state: "failed",
+      configFile: "courier.config.ts",
+      lastGoodAt: loadedAt,
+    });
     const error = failed?.error;
-    expect(isRecord(error) ? error.message : undefined).toEqual(expect.stringContaining("src/missing"));
+    expect(isRecord(error) ? error.message : undefined).toEqual(
+      expect.stringContaining("src/missing"),
+    );
     expect(demoBaseURL(payloads(late, "scan:sources").at(-1))).toBe("https://v1.example");
     expect(importNames(payloads(late, "registry:updated").at(-1))).toEqual(["remote"]);
   }, 20_000);
@@ -350,7 +384,9 @@ describe("a save", () => {
     await sleep(600);
 
     expect(fixture.demoEvaluations()).toBe(evaluated + 1);
-    expect(demoBaseURL(payloads(first, "scan:sources").at(-1))).toBe(`https://v${evaluated + 1}.example`);
+    expect(demoBaseURL(payloads(first, "scan:sources").at(-1))).toBe(
+      `https://v${evaluated + 1}.example`,
+    );
   }, 20_000);
 
   it("sends the lists, then the status, then a binding snapshot the UI accepts", async () => {
@@ -362,7 +398,12 @@ describe("a save", () => {
     await until(() => payloads(first, "binding:snapshot").length > 0);
 
     const snapshot = payloads(first, "binding:snapshot").at(-1);
-    expect(snapshot).toEqual({ rows: expect.any(Array), runtimeCount: 0, sourceCount: 0, runtimes: [] });
+    expect(snapshot).toEqual({
+      rows: expect.any(Array),
+      runtimeCount: 0,
+      sourceCount: 0,
+      runtimes: [],
+    });
     const status = indexOf(first, "config:status");
     expect(status).toBeGreaterThan(indexOf(first, "scan:sources"));
     expect(indexOf(first, "scan:sources")).toBeGreaterThan(indexOf(first, "registry:updated"));
@@ -438,11 +479,16 @@ describe("problems at start", () => {
 
   it("records a mocks file that does not load, and still serves the config's sources", async () => {
     const fixture = project();
-    writeFileSync(join(fixture.root, "courier.mocks.ts"), 'import { missing } from "./missing";\nexport default { missing };\n');
+    writeFileSync(
+      join(fixture.root, "courier.mocks.ts"),
+      'import { missing } from "./missing";\nexport default { missing };\n',
+    );
     const { first } = await loadedStudio(fixture);
 
     expect(startupIssues()).toHaveLength(1);
-    expect(startupIssues()[0]).toMatch(/^courier\.mocks\.ts did not load, so no mocks are declared: /);
+    expect(startupIssues()[0]).toMatch(
+      /^courier\.mocks\.ts did not load, so no mocks are declared: /,
+    );
     expect(demoBaseURL(payloads(first, "scan:sources").at(-1))).toBe("https://v1.example");
   }, 20_000);
 
@@ -466,9 +512,16 @@ describe("a config whose source import is misspelled", () => {
     await until(() => hasStatus(late, "failed"));
     const outcome = await preview(url);
 
-    const invalid = { code: "CONFIG_INVALID", message: expect.stringContaining("courier.config.sources.demo is undefined") };
+    const invalid = {
+      code: "CONFIG_INVALID",
+      message: expect.stringContaining("courier.config.sources.demo is undefined"),
+    };
     expect(lastStatus(first, "failed")).toMatchObject({ state: "failed", error: invalid });
-    expect(lastStatus(late, "failed")).toMatchObject({ state: "failed", configFile: "courier.config.ts", error: invalid });
+    expect(lastStatus(late, "failed")).toMatchObject({
+      state: "failed",
+      configFile: "courier.config.ts",
+      error: invalid,
+    });
     expect(demoBaseURL(payloads(late, "scan:sources").at(-1))).toBe("https://v1.example");
     expect(reasonCode(outcome)).toBe("CONFIG_LOAD_FAILING");
   }, 20_000);
@@ -482,7 +535,11 @@ describe("a config whose source import is misspelled", () => {
     await until(() => hasStatus(u, "failed"));
     const outcome = await preview(url);
 
-    expect(lastStatus(u, "failed")).toMatchObject({ configFile: null, lastGoodAt: null, error: { code: "CONFIG_INVALID" } });
+    expect(lastStatus(u, "failed")).toMatchObject({
+      configFile: null,
+      lastGoodAt: null,
+      error: { code: "CONFIG_INVALID" },
+    });
     expect(reasonCode(outcome)).toBe("CONFIG_LOAD_FAILING");
   }, 20_000);
 });
@@ -502,7 +559,11 @@ describe("an outcome that cannot be applied", () => {
     await until(() => hasStatus(late, "failed"));
 
     expect(refused).toHaveBeenCalledOnce();
-    const failed = { state: "failed", lastGoodAt: loadedAt, error: { message: "the binding table refused the config" } };
+    const failed = {
+      state: "failed",
+      lastGoodAt: loadedAt,
+      error: { message: "the binding table refused the config" },
+    };
     expect(lastStatus(first, "failed")).toMatchObject(failed);
     expect(lastStatus(late, "failed")).toMatchObject(failed);
     expect(demoBaseURL(payloads(late, "scan:sources").at(-1))).toBe("https://v1.example");
@@ -538,7 +599,9 @@ describe("an outcome that cannot be applied", () => {
 
     expect(lastStatus(u, "loaded")).toMatchObject({ configFile: "courier.config.ts" });
     expect(reasonCode(outcome)).toBe("MOCKS_LOAD_FAILING");
-    expect(startupIssues()).toEqual(["courier.mocks.ts did not load, so no mocks are declared: [Object: null prototype] {}"]);
+    expect(startupIssues()).toEqual([
+      "courier.mocks.ts did not load, so no mocks are declared: [Object: null prototype] {}",
+    ]);
   }, 20_000);
 
   it("is told even when recording it for the banner throws, and the reloads after it run", async () => {
@@ -554,7 +617,10 @@ describe("an outcome that cannot be applied", () => {
 
     expect(issues.throwNext).toBe(false);
     expect(told).toMatchObject({ state: "failed", configFile: null, lastGoodAt: null });
-    expect(lastStatus(u, "loaded")).toMatchObject({ state: "loaded", configFile: "courier.config.ts" });
+    expect(lastStatus(u, "loaded")).toMatchObject({
+      state: "loaded",
+      configFile: "courier.config.ts",
+    });
     expect(demoBaseURL(payloads(u, "scan:sources").at(-1))).toBe("https://v1.example");
   }, 20_000);
 });

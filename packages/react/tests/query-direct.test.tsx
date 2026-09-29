@@ -2,13 +2,11 @@
  * @vitest-environment jsdom
  */
 
-import { Suspense, type ReactNode, createElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-
-import { defineApi, defineGroup, courier } from "@noverax/courier/define";
+import { createElement, type ReactNode, Suspense } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryCaller } from "../src/create-query-caller";
 import { createQueryKeys } from "../src/keys";
 
@@ -28,8 +26,15 @@ const usersGroup = defineGroup({
   prefix: "users",
   endpoints: {
     getAll: endpoint.get("").response<{ id: number; name: string }[]>(),
-    getById: endpoint.variables<{ id: number }>().via((http, vars) => http.get(`${vars.id}`)).reads().response<{ id: number; name: string }>(),
-    create: endpoint.post("").variables<{ name: string }>().response<{ id: number; name: string }>(),
+    getById: endpoint
+      .variables<{ id: number }>()
+      .via((http, vars) => http.get(`${vars.id}`))
+      .reads()
+      .response<{ id: number; name: string }>(),
+    create: endpoint
+      .post("")
+      .variables<{ name: string }>()
+      .response<{ id: number; name: string }>(),
   },
 });
 
@@ -189,10 +194,9 @@ describe("createQueryCaller (direct mode)", () => {
 
   it("respects enabled: false (skips fetch)", () => {
     const q = createQueryCaller(api);
-    const { result } = renderHook(
-      () => (q as any).users.useQuery("getAll", { enabled: false }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => (q as any).users.useQuery("getAll", { enabled: false }), {
+      wrapper,
+    });
 
     expect(result.current.fetchStatus).toBe("idle");
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -215,17 +219,14 @@ describe("createQueryCaller (direct mode)", () => {
     fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
     const q = createQueryCaller(api);
-    const { result } = renderHook(
-      () => (q as any).users.useSuspenseQuery("getAll"),
-      {
-        wrapper: ({ children }: { children: ReactNode }) =>
-          createElement(
-            QueryClientProvider,
-            { client: queryClient },
-            createElement(Suspense, { fallback: null }, children),
-          ),
-      },
-    );
+    const { result } = renderHook(() => (q as any).users.useSuspenseQuery("getAll"), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(
+          QueryClientProvider,
+          { client: queryClient },
+          createElement(Suspense, { fallback: null }, children),
+        ),
+    });
 
     await waitFor(() => expect(result.current?.data).toEqual(users));
   });
@@ -307,12 +308,7 @@ describe("createQueryKeys (direct mode)", () => {
 
   it("appends variables when provided", () => {
     const keys = createQueryKeys(api);
-    expect(keys("users", "getById", { id: 1 })).toEqual([
-      "demo",
-      "users",
-      "getById",
-      { id: 1 },
-    ]);
+    expect(keys("users", "getById", { id: 1 })).toEqual(["demo", "users", "getById", { id: 1 }]);
   });
 
   it("uses '_' fallback when api has no name", () => {

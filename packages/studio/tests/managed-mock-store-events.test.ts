@@ -9,7 +9,10 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createProcessManager, type ProcessManagerEvents } from "../src/server/mock-manager/process-manager";
+import {
+  createProcessManager,
+  type ProcessManagerEvents,
+} from "../src/server/mock-manager/process-manager";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 
@@ -29,7 +32,7 @@ function project(): string {
       'import { z } from "zod";\n' +
       "const { endpoint } = courier();\n" +
       "const User = z.object({ id: z.number(), name: z.string() });\n" +
-      "const users = defineGroup({ prefix: \"users\", endpoints: {\n" +
+      'const users = defineGroup({ prefix: "users", endpoints: {\n' +
       '  list: endpoint.get("").response(z.array(User)),\n' +
       '  create: endpoint.post("").variables(z.object({ name: z.string() })).response(User),\n' +
       "} });\n" +
@@ -52,8 +55,17 @@ async function freePort(): Promise<number> {
   return port;
 }
 
-async function startMock(): Promise<{ port: number; events: ProcessManagerEvents & { onEvent: ReturnType<typeof vi.fn> } }> {
-  const events = { onReady: vi.fn(), onError: vi.fn(), onStopped: vi.fn(), onExited: vi.fn(), onEvent: vi.fn() };
+async function startMock(): Promise<{
+  port: number;
+  events: ProcessManagerEvents & { onEvent: ReturnType<typeof vi.fn> };
+}> {
+  const events = {
+    onReady: vi.fn(),
+    onError: vi.fn(),
+    onStopped: vi.fn(),
+    onExited: vi.fn(),
+    onEvent: vi.fn(),
+  };
   const pm = createProcessManager(events, { transformCacheDirectory: () => null });
   cleanups.push(() => pm.dispose());
   const port = await freePort();
@@ -64,9 +76,14 @@ async function startMock(): Promise<{ port: number; events: ProcessManagerEvents
 
 function usersCounts(onEvent: ReturnType<typeof vi.fn>): number[] {
   return onEvent.mock.calls
-    .map(([, event]) => event as { type?: string; collections?: Array<{ name: string; count: number }> })
+    .map(
+      ([, event]) =>
+        event as { type?: string; collections?: Array<{ name: string; count: number }> },
+    )
     .filter((event) => event.type === "mock:store:snapshot")
-    .map((event) => event.collections?.find((collection) => collection.name === "users")?.count ?? -1);
+    .map(
+      (event) => event.collections?.find((collection) => collection.name === "users")?.count ?? -1,
+    );
 }
 
 describe("a managed mock server's store, as Studio sees it", () => {
@@ -88,7 +105,10 @@ describe("a managed mock server's store, as Studio sees it", () => {
 
     await fetch(`http://127.0.0.1:${port}/users`);
     await vi.waitFor(() =>
-      expect(events.onEvent).toHaveBeenCalledWith("apiMock", expect.objectContaining({ type: "mock:request:end" })),
+      expect(events.onEvent).toHaveBeenCalledWith(
+        "apiMock",
+        expect.objectContaining({ type: "mock:request:end" }),
+      ),
     );
 
     expect(usersCounts(events.onEvent)).toEqual([]);

@@ -7,11 +7,11 @@
  * It also took `/` and `/*`: with no prefix, every path the app did not
  * route itself answered 400 with a Courier error body instead of 404.
  */
-import Fastify from "fastify";
-import { afterEach, describe, expect, it } from "vitest";
 
 import { registerSources } from "@noverax/courier";
 import { courier, defineApi } from "@noverax/courier/define";
+import Fastify from "fastify";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { courierPlugin } from "../src/index";
 

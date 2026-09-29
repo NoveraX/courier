@@ -43,7 +43,9 @@ describe("an endpoint the user wrote under a name Object.prototype has", () => {
     );
     const path = "src/api/shop/users/index.ts";
 
-    const merged = previewUpdate(generateFingerprints(GENERATED), [{ path, content: GENERATED }], { [path]: onDisk });
+    const merged = previewUpdate(generateFingerprints(GENERATED), [{ path, content: GENERATED }], {
+      [path]: onDisk,
+    });
 
     expect(merged.files[0]?.content).toContain('constructor: endpoint.get("mine/ctor")');
     expect(merged.files[0]?.content).toContain('toString: endpoint.get("mine/str")');
@@ -53,20 +55,29 @@ describe("an endpoint the user wrote under a name Object.prototype has", () => {
 describe("a schema named like an Object.prototype member", () => {
   it("is generated like any other", () => {
     const ok = (name: string) => ({
-      "200": { description: "ok", content: { "application/json": { schema: { $ref: `#/components/schemas/${name}` } } } },
+      "200": {
+        description: "ok",
+        content: { "application/json": { schema: { $ref: `#/components/schemas/${name}` } } },
+      },
     });
     const spec = parseSpec(
       JSON.stringify({
         openapi: "3.1.0",
         info: { title: "Shop", version: "1" },
-        paths: { "/a": { get: { operationId: "getA", tags: ["a"], responses: ok("constructor") } } },
-        components: { schemas: { constructor: { type: "object", properties: { id: { type: "string" } } } } },
+        paths: {
+          "/a": { get: { operationId: "getA", tags: ["a"], responses: ok("constructor") } },
+        },
+        components: {
+          schemas: { constructor: { type: "object", properties: { id: { type: "string" } } } },
+        },
       }),
     );
 
     const files = generateCode(spec, { type: "openapi", outputDir: "src/api" }, "shop");
 
-    expect(files.map((file) => file.content).join("\n")).toMatch(/export const \w*[Cc]onstructor\w*Schema/);
+    expect(files.map((file) => file.content).join("\n")).toMatch(
+      /export const \w*[Cc]onstructor\w*Schema/,
+    );
   });
 });
 
@@ -86,7 +97,10 @@ describe("an update that gives a group another prefix", () => {
       "",
     ].join("\n");
   const path = "src/api/shop/customers/index.ts";
-  const WRITTEN = group("/v1/customers", ['listCustomers: endpoint.get("")', 'getCustomer: endpoint.get(":id")']);
+  const WRITTEN = group("/v1/customers", [
+    'listCustomers: endpoint.get("")',
+    'getCustomer: endpoint.get(":id")',
+  ]);
 
   it("keeps every endpoint the user edited or added at the URL it called", () => {
     const onDisk = group("/v1/customers", [
@@ -100,7 +114,9 @@ describe("an update that gives a group another prefix", () => {
       'listCharges: endpoint.get("charges")',
     ]);
 
-    const merged = previewUpdate(generateFingerprints(WRITTEN), [{ path, content: next }], { [path]: onDisk }).files[0]?.content ?? "";
+    const merged =
+      previewUpdate(generateFingerprints(WRITTEN), [{ path, content: next }], { [path]: onDisk })
+        .files[0]?.content ?? "";
 
     expect(merged).toContain('prefix: "/v1",');
     expect(merged).toContain('getCustomer: endpoint.get("customers/:id").with({ timeout: 1 })');
@@ -109,10 +125,18 @@ describe("an update that gives a group another prefix", () => {
   });
 
   it("widens the prefix to what both share when the user's endpoints are not under the new one", () => {
-    const onDisk = group("/v2/customers", ['listCustomers: endpoint.get("")', 'searchCustomers: endpoint.get("search")']);
-    const next = group("/v1/customers", ['listCustomers: endpoint.get("")', 'getCustomer: endpoint.get(":id")']);
+    const onDisk = group("/v2/customers", [
+      'listCustomers: endpoint.get("")',
+      'searchCustomers: endpoint.get("search")',
+    ]);
+    const next = group("/v1/customers", [
+      'listCustomers: endpoint.get("")',
+      'getCustomer: endpoint.get(":id")',
+    ]);
 
-    const merged = previewUpdate(generateFingerprints(WRITTEN), [{ path, content: next }], { [path]: onDisk }).files[0]?.content ?? "";
+    const merged =
+      previewUpdate(generateFingerprints(WRITTEN), [{ path, content: next }], { [path]: onDisk })
+        .files[0]?.content ?? "";
 
     expect(merged).toContain('prefix: "/",');
     expect(merged).toContain('searchCustomers: endpoint.get("v2/customers/search")');

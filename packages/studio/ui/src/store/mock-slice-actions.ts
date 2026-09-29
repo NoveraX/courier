@@ -7,7 +7,8 @@
  */
 
 import type { StoreApi } from "zustand";
-
+import { mockServerOf } from "./mock-server-of";
+import type { RouteOverride, SavedScenario } from "./mock-slice-network-types";
 import type {
   MockCollectionEntry,
   MockRequestLog,
@@ -16,9 +17,6 @@ import type {
   MockServerInfo,
   MockSliceState,
 } from "./mock-slice-types";
-import type { RouteOverride, SavedScenario } from "./mock-slice-network-types";
-
-import { mockServerOf } from "./mock-server-of";
 
 const MAX_LOGS = 500;
 const MAX_EXPERIMENT_HISTORY = 100;
@@ -76,7 +74,11 @@ export function createMockSliceActions(set: Setter, get: Getter): MockActions {
       /* The dashboard's counts follow the store as it was last sent. */
       const recordCount = collections.reduce((sum, collection) => sum + collection.count, 0);
       set((state) =>
-        patchServer(state, serverId, { collections, collectionCount: collections.length, recordCount }),
+        patchServer(state, serverId, {
+          collections,
+          collectionCount: collections.length,
+          recordCount,
+        }),
       );
     },
 

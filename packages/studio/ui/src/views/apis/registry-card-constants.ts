@@ -2,8 +2,8 @@
  * Constants and icon maps used by RegistryCard.
  */
 
-import type { ComponentType } from "react";
 import { FileText, FileUp, Globe } from "lucide-react";
+import type { ComponentType } from "react";
 
 interface StatusConfigEntry {
   label: string;

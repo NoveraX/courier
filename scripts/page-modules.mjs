@@ -77,7 +77,9 @@ export function pointImports(sample, index, files, written, complete = () => tru
     const path = appPath(specifier, sample.file);
     if (path === undefined) return match;
     const target = definitionOf(path, index, files);
-    const wanted = importedNames(sample.code.slice(sample.code.lastIndexOf("import", offset), offset));
+    const wanted = importedNames(
+      sample.code.slice(sample.code.lastIndexOf("import", offset), offset),
+    );
     const found = target !== undefined && target.written !== written && complete(target.written);
     if (!found || !wanted.every((name) => exports(target.code, name))) {
       unresolved = true;
@@ -156,7 +158,13 @@ function importedNames(statement) {
   const list = /\{([^}]*)\}/.exec(statement)?.[1] ?? "";
   return list
     .split(",")
-    .map((entry) => entry.replace(/^\s*type\s+/, "").split(/\s+as\s+/)[0]?.trim() ?? "")
+    .map(
+      (entry) =>
+        entry
+          .replace(/^\s*type\s+/, "")
+          .split(/\s+as\s+/)[0]
+          ?.trim() ?? "",
+    )
     .filter((name) => name !== "");
 }
 
@@ -168,6 +176,13 @@ function exports(code, name) {
   );
   if (declared.test(code)) return true;
   return [...code.matchAll(/\bexport\s+(?:type\s+)?\{([^}]*)\}/g)].some((match) =>
-    (match[1] ?? "").split(",").some((entry) => entry.trim().split(/\s+as\s+/).at(-1)?.trim() === name),
+    (match[1] ?? "").split(",").some(
+      (entry) =>
+        entry
+          .trim()
+          .split(/\s+as\s+/)
+          .at(-1)
+          ?.trim() === name,
+    ),
   );
 }

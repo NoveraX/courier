@@ -4,8 +4,8 @@ import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 import type { MockRouteEntry } from "@/store/mock-slice";
-import type { RouteSortKey, SortDir } from "./use-routes-filter";
 import { RouteRow } from "./route-row";
+import type { RouteSortKey, SortDir } from "./use-routes-filter";
 
 interface RoutesTableProps {
   routes: MockRouteEntry[];
@@ -30,12 +30,47 @@ export function RoutesTable({
         <TableHeader>
           <TableRow className="border-border-subtle hover:bg-transparent">
             <TableHead className="w-20">Method</TableHead>
-            <SortCol label="Path" sortKey="fullPath" current={sortKey} dir={sortDir} onSort={onSort} align="left" />
-            <SortCol label="Group" sortKey="group" current={sortKey} dir={sortDir} onSort={onSort} align="left" />
+            <SortCol
+              label="Path"
+              sortKey="fullPath"
+              current={sortKey}
+              dir={sortDir}
+              onSort={onSort}
+              align="left"
+            />
+            <SortCol
+              label="Group"
+              sortKey="group"
+              current={sortKey}
+              dir={sortDir}
+              onSort={onSort}
+              align="left"
+            />
             <TableHead className="text-left">Endpoint</TableHead>
-            <SortCol label="Source" sortKey="source" current={sortKey} dir={sortDir} onSort={onSort} align="left" />
-            <SortCol label="Avg Latency" sortKey="avgLatency" current={sortKey} dir={sortDir} onSort={onSort} align="right" />
-            <SortCol label="Hits" sortKey="hits" current={sortKey} dir={sortDir} onSort={onSort} align="right" />
+            <SortCol
+              label="Source"
+              sortKey="source"
+              current={sortKey}
+              dir={sortDir}
+              onSort={onSort}
+              align="left"
+            />
+            <SortCol
+              label="Avg Latency"
+              sortKey="avgLatency"
+              current={sortKey}
+              dir={sortDir}
+              onSort={onSort}
+              align="right"
+            />
+            <SortCol
+              label="Hits"
+              sortKey="hits"
+              current={sortKey}
+              dir={sortDir}
+              onSort={onSort}
+              align="right"
+            />
           </TableRow>
         </TableHeader>
         <motion.tbody
@@ -91,12 +126,17 @@ function SortCol({
 
   return (
     <TableHead
-      className={cn("cursor-pointer select-none whitespace-nowrap", align === "right" && "text-right")}
+      className={cn(
+        "cursor-pointer select-none whitespace-nowrap",
+        align === "right" && "text-right",
+      )}
       onClick={() => onSort(sortKey)}
       role="columnheader"
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
-      <span className={cn("inline-flex items-center gap-1 text-[11px]", active && "text-foreground")}>
+      <span
+        className={cn("inline-flex items-center gap-1 text-[11px]", active && "text-foreground")}
+      >
         {label}
         <Icon className="size-3 shrink-0" />
       </span>

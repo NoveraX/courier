@@ -1,7 +1,7 @@
-import type { RequestEntry } from "./types"
-import { requestFromStart } from "./handle-request-events"
+import { requestFromStart } from "./handle-request-events";
+import type { RequestEntry } from "./types";
 
-type EventPayload = Record<string, unknown>
+type EventPayload = Record<string, unknown>;
 
 /**
  * A request announced again.
@@ -22,7 +22,7 @@ type EventPayload = Record<string, unknown>
  * ```
  */
 export function withRepeatedStart(r: RequestEntry, event: EventPayload): RequestEntry {
-  const fresh = requestFromStart(event)
+  const fresh = requestFromStart(event);
   return {
     ...r,
     source: fresh.source || r.source,
@@ -39,7 +39,7 @@ export function withRepeatedStart(r: RequestEntry, event: EventPayload): Request
     },
     url: fresh.url ?? r.url,
     sessionId: r.sessionId || fresh.sessionId,
-  }
+  };
 }
 
 /**
@@ -60,5 +60,5 @@ export function withRepeatedStart(r: RequestEntry, event: EventPayload): Request
 export function withProxyParse(r: RequestEntry, event: EventPayload): RequestEntry {
   return r.variables === undefined && event.variables !== undefined
     ? { ...r, variables: event.variables }
-    : r
+    : r;
 }

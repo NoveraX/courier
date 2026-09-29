@@ -1,7 +1,7 @@
-import type { RequestEntry } from "./types"
-import { num, optStr, str } from "./event-helpers"
+import { num, optStr, str } from "./event-helpers";
+import type { RequestEntry } from "./types";
 
-type EventPayload = Record<string, unknown>
+type EventPayload = Record<string, unknown>;
 
 /**
  * A request first seen through its upload's progress.
@@ -19,8 +19,8 @@ type EventPayload = Record<string, unknown>
  * ```
  */
 export function requestFromUpload(event: EventPayload): RequestEntry | undefined {
-  const method = optStr(event.method)
-  if (!method) return undefined
+  const method = optStr(event.method);
+  if (!method) return undefined;
   return withUploadProgress(
     {
       id: str(event.requestId),
@@ -37,7 +37,7 @@ export function requestFromUpload(event: EventPayload): RequestEntry | undefined
       sessionId: str(event.sessionId),
     },
     event,
-  )
+  );
 }
 
 /**
@@ -53,7 +53,7 @@ export function requestFromUpload(event: EventPayload): RequestEntry | undefined
  * ```
  */
 export function withUploadProgress(r: RequestEntry, event: EventPayload): RequestEntry {
-  const percentage = Math.min(100, Math.max(0, num(event.percentage)))
+  const percentage = Math.min(100, Math.max(0, num(event.percentage)));
   return {
     ...r,
     upload: {
@@ -62,7 +62,7 @@ export function withUploadProgress(r: RequestEntry, event: EventPayload): Reques
       percentage,
       done: r.upload?.done === true || percentage >= 100,
     },
-  }
+  };
 }
 
 /**
@@ -77,6 +77,6 @@ export function withUploadProgress(r: RequestEntry, event: EventPayload): Reques
  * ```
  */
 export function withUploadComplete(r: RequestEntry): RequestEntry {
-  const upload = r.upload ?? { loaded: 0, total: 0, percentage: 100, done: true }
-  return { ...r, upload: { ...upload, percentage: 100, done: true } }
+  const upload = r.upload ?? { loaded: 0, total: 0, percentage: 100, done: true };
+  return { ...r, upload: { ...upload, percentage: 100, done: true } };
 }

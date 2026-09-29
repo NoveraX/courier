@@ -17,7 +17,9 @@ const flatApi = defineApi({
 describe("defineScenario", () => {
   it("takes a source without groups", () => {
     defineScenario<typeof flatApi>("flat", (mock) => {
-      expectTypeOf(mock("users", "listUsers").resolves).parameter(0).toEqualTypeOf<Array<{ id: number }>>();
+      expectTypeOf(mock("users", "listUsers").resolves)
+        .parameter(0)
+        .toEqualTypeOf<Array<{ id: number }>>();
       // @ts-expect-error "listPosts" is not an endpoint of the source
       mock("users", "listPosts");
     });

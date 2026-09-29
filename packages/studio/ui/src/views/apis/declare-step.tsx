@@ -60,7 +60,10 @@ export function DeclareStepView({ sourceName, declaration }: DeclareStepProps): 
       </div>
       {source && (
         <>
-          <Part label="Import the generated source at the top of the file:" code={source.importLine} />
+          <Part
+            label="Import the generated source at the top of the file:"
+            code={source.importLine}
+          />
           <Part label="Add it to sources:" code={source.entry} />
         </>
       )}

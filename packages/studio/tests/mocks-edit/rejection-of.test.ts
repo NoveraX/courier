@@ -13,7 +13,10 @@ const FILE = "/p/courier.mocks.ts";
 const api = { name: "api" };
 const billing = { name: "billing" };
 
-function loaded(entries: Record<string, unknown>, sources: Record<string, unknown> = { api, billing }): LoadedCourierConfig {
+function loaded(
+  entries: Record<string, unknown>,
+  sources: Record<string, unknown> = { api, billing },
+): LoadedCourierConfig {
   return {
     config: { sources } as unknown as LoadedCourierConfig["config"],
     configFile: "/p/courier.config.ts",
@@ -39,7 +42,9 @@ describe("rejectionOf", () => {
     const after = loaded({});
     after.mocks.error = new Error("Unexpected token");
 
-    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe("the mocks file does not load: Unexpected token");
+    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe(
+      "the mocks file does not load: Unexpected token",
+    );
   });
 
   it("rejects a load of another mocks file than the one written", () => {
@@ -52,19 +57,25 @@ describe("rejectionOf", () => {
   });
 
   it("rejects a load where the requested mock is missing", () => {
-    expect(rejectionOf(loaded({}), loaded({}), [request], FILE, ROOT)).toBe("apiMock is not declared after the edit");
+    expect(rejectionOf(loaded({}), loaded({}), [request], FILE, ROOT)).toBe(
+      "apiMock is not declared after the edit",
+    );
   });
 
   it("rejects a requested mock that is not a definition", () => {
     const after = loaded({ apiMock: { source: api } });
 
-    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe("apiMock is not a defineMockServer() definition");
+    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe(
+      "apiMock is not a defineMockServer() definition",
+    );
   });
 
   it("rejects a mock serving an equal but different source object", () => {
     const after = loaded({ apiMock: mock({ name: "api" }) });
 
-    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe("apiMock does not serve the config's sources.api");
+    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe(
+      "apiMock does not serve the config's sources.api",
+    );
   });
 
   it("does not take an inherited name for a declared mock", () => {
@@ -85,13 +96,17 @@ describe("rejectionOf", () => {
   it("rejects a load whose config no longer has the requested mock's source", () => {
     const after = loaded({ apiMock: mock(api) }, { billing });
 
-    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe("courier.config no longer has sources.api");
+    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe(
+      "courier.config no longer has sources.api",
+    );
   });
 
   it("rejects a requested mock declared as something other than an object", () => {
     const after = loaded({ apiMock: 42 });
 
-    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe("apiMock is not a defineMockServer() definition");
+    expect(rejectionOf(loaded({}), after, [request], FILE, ROOT)).toBe(
+      "apiMock is not a defineMockServer() definition",
+    );
   });
 
   it("names the files relative to the project", () => {
@@ -107,6 +122,8 @@ describe("rejectionOf", () => {
     const before = loaded({});
     const after = loaded({ apiMock: mock(api) }, { api });
 
-    expect(rejectionOf(before, after, [request], FILE, ROOT)).toBe("the config's sources changed while Studio was editing");
+    expect(rejectionOf(before, after, [request], FILE, ROOT)).toBe(
+      "the config's sources changed while Studio was editing",
+    );
   });
 });

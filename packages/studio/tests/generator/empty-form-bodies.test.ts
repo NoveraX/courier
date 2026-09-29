@@ -18,7 +18,7 @@ import {
   STRICT,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const NOTHING = {
   required: false,
@@ -38,13 +38,22 @@ const expand = {
   schema: { type: "array", items: { type: "string" } },
 };
 const Customer = { type: "object", properties: { id: { type: "string" } } };
-const json = { "200": { description: "ok", content: { "application/json": { schema: Customer } } } };
+const json = {
+  "200": { description: "ok", content: { "application/json": { schema: Customer } } },
+};
 const pdf = {
-  "200": { description: "ok", content: { "application/pdf": { schema: { type: "string", format: "binary" } } } },
+  "200": {
+    description: "ok",
+    content: { "application/pdf": { schema: { type: "string", format: "binary" } } },
+  },
 };
 
 function spec(origin: string): ParsedSpec {
-  const operation = (operationId: string, responses: unknown, parameters: unknown[] = [customer]) => ({
+  const operation = (
+    operationId: string,
+    responses: unknown,
+    parameters: unknown[] = [customer],
+  ) => ({
     operationId,
     tags: ["customers"],
     parameters,
@@ -61,7 +70,9 @@ function spec(origin: string): ParsedSpec {
           get: operation("GetCustomersCustomer", json, [customer, expand]),
           delete: operation("DeleteCustomersCustomer", json),
         },
-        "/v1/customers/{customer}/statement": { get: operation("GetCustomersCustomerStatement", pdf) },
+        "/v1/customers/{customer}/statement": {
+          get: operation("GetCustomersCustomerStatement", pdf),
+        },
       },
     }),
   );
@@ -89,7 +100,11 @@ afterAll(async () => {
 });
 
 function generate(options: Partial<GenerateOptions>) {
-  return generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "shop");
+  return generateCode(
+    spec(upstream.origin),
+    { type: "openapi", outputDir: "src/api", ...options },
+    "shop",
+  );
 }
 
 describe("the parsed operation", () => {
@@ -105,13 +120,27 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
     const { shopApi } = loadGenerated(generate(options), "src/api/shop/index.ts");
     upstream.requests.length = 0;
 
-    const found = await endpointAt(shopApi, "customers", "getCustomersCustomer")({ customer: "cus_1", expand: ["tax"] });
-    const removed = await endpointAt(shopApi, "customers", "deleteCustomersCustomer")({ customer: "cus_1" });
-    const statement = await endpointAt(shopApi, "customers", "getCustomersCustomerStatement")({ customer: "cus_1" });
+    const found = await endpointAt(
+      shopApi,
+      "customers",
+      "getCustomersCustomer",
+    )({ customer: "cus_1", expand: ["tax"] });
+    const removed = await endpointAt(
+      shopApi,
+      "customers",
+      "deleteCustomersCustomer",
+    )({ customer: "cus_1" });
+    const statement = await endpointAt(
+      shopApi,
+      "customers",
+      "getCustomersCustomerStatement",
+    )({ customer: "cus_1" });
 
     expect([found, removed]).toEqual([{ id: "cus_1" }, { id: "cus_1" }]);
     expect(statement).toBeInstanceOf(Blob);
-    expect(upstream.requests.map((request) => [request.method, request.path, request.body])).toEqual([
+    expect(
+      upstream.requests.map((request) => [request.method, request.path, request.body]),
+    ).toEqual([
       ["GET", "/v1/customers/cus_1", ""],
       ["DELETE", "/v1/customers/cus_1", ""],
       ["GET", "/v1/customers/cus_1/statement", ""],
@@ -128,7 +157,9 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
       "}",
       "",
     ].join("\n");
-    const dir = writeProject(`empty-form-bodies/${label}`, generate(options), { "src/use.ts": use });
+    const dir = writeProject(`empty-form-bodies/${label}`, generate(options), {
+      "src/use.ts": use,
+    });
 
     expect(compileProject(dir, ["src/use.ts"], STRICT)).toEqual([]);
   }, 60_000);

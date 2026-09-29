@@ -28,7 +28,9 @@ export async function serveWS(
   endpoints: Record<string, unknown>,
   config?: WSHandlerConfig,
 ): Promise<ServedWS> {
-  registerSources({ api: { options: { groups: { live: { options: {}, ...endpoints } } } } } as never);
+  registerSources({
+    api: { options: { groups: { live: { options: {}, ...endpoints } } } },
+  } as never);
   const handler = createWSHandler(config);
   const server = createServer();
   attachWebSocketUpgrade(server, {

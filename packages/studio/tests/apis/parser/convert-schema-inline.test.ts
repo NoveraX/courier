@@ -67,7 +67,11 @@ function spec(): string {
 
 describe.each(VALIDATORS)("a response whose type array lists null (%s)", (validation) => {
   const call = (name: string) => {
-    const files = generateCode(parseSpec(spec()), { type: "openapi", outputDir: "src", validation }, "shapes");
+    const files = generateCode(
+      parseSpec(spec()),
+      { type: "openapi", outputDir: "src", validation },
+      "shapes",
+    );
     return generatedCall(loadGenerated(files, "src/shapes/index.ts"), ["shapesApi", "nodes", name]);
   };
 

@@ -1,10 +1,9 @@
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { Line, LineChart } from "recharts";
-
-import { cn } from "@/lib/utils";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
+import { cn } from "@/lib/utils";
 
-import type { TrendInfo, SparklinePoint } from "./types";
+import type { SparklinePoint, TrendInfo } from "./types";
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -38,16 +37,12 @@ export function KPICard({
         <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
           {label}
         </span>
-        {sparkline && sparkline.length > 1 && (
-          <Sparkline data={sparkline} color={sparklineColor} />
-        )}
+        {sparkline && sparkline.length > 1 && <Sparkline data={sparkline} color={sparklineColor} />}
       </div>
 
       <div className="mt-2 flex items-baseline gap-2">
         <AnimatedCounter value={value} format={format} className={cn("text-h1", color)} />
-        {trend && trend.direction !== "flat" && (
-          <TrendBadge trend={trend} invert={invertTrend} />
-        )}
+        {trend && trend.direction !== "flat" && <TrendBadge trend={trend} invert={invertTrend} />}
       </div>
     </div>
   );
@@ -55,10 +50,7 @@ export function KPICard({
 
 // ── Trend Badge ──────────────────────────────────────────────────────────────
 
-function TrendBadge({ trend, invert }: {
-  trend: TrendInfo;
-  invert: boolean;
-}): React.ReactElement {
+function TrendBadge({ trend, invert }: { trend: TrendInfo; invert: boolean }): React.ReactElement {
   const isUp = trend.direction === "up";
   const isBad = invert ? isUp : !isUp;
   const color = isBad ? "text-rose-400" : "text-emerald-400";
@@ -79,10 +71,7 @@ function formatTrendPercent(percent: number): string {
 
 // ── Sparkline ────────────────────────────────────────────────────────────────
 
-function Sparkline({ data, color }: {
-  data: SparklinePoint[];
-  color: string;
-}): React.ReactElement {
+function Sparkline({ data, color }: { data: SparklinePoint[]; color: string }): React.ReactElement {
   return (
     <LineChart width={48} height={20} data={data} accessibilityLayer={false}>
       <Line

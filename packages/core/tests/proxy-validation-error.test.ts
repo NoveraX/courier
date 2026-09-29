@@ -15,7 +15,7 @@ import { HTTPError } from "../src/errors";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
 import { isValidationError } from "../src/validation";
-import { startProxyServer, type ProxyServer } from "./helpers/proxy-server";
+import { type ProxyServer, startProxyServer } from "./helpers/proxy-server";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
 const { endpoint } = courier();
@@ -56,7 +56,9 @@ async function failureOf(call: Promise<unknown>): Promise<unknown> {
 
 describe("variables the schema refuses", () => {
   it("reject a proxy call with the ValidationError a direct call rejects with", async () => {
-    const proxied = createProxyCaller<ReturnType<typeof api>>("shop", { proxyPath: { http: proxy.url } });
+    const proxied = createProxyCaller<ReturnType<typeof api>>("shop", {
+      proxyPath: { http: proxy.url },
+    });
     const direct = createCaller(api());
 
     const throughProxy = await failureOf(proxied.order({ qty: 0 }));
@@ -76,7 +78,9 @@ describe("variables the schema refuses", () => {
 
 describe("an upstream that answers 422 itself", () => {
   it("rejects with the HTTPError that carries its own body", async () => {
-    const proxied = createProxyCaller<ReturnType<typeof api>>("shop", { proxyPath: { http: proxy.url } });
+    const proxied = createProxyCaller<ReturnType<typeof api>>("shop", {
+      proxyPath: { http: proxy.url },
+    });
 
     const failure = await failureOf(proxied.order({ qty: 2 }));
 

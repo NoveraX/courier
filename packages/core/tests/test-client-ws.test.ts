@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { defineApi, defineGroup, courier } from "../src/define";
+import { courier, defineApi, defineGroup } from "../src/define";
 import type { WSChannel } from "../src/realtime/types";
 import { createTestClient } from "../src/testing/create-test-client";
 

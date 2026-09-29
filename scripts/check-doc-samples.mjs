@@ -108,7 +108,9 @@ export function checkSamples(samples) {
     if (isOmission(diagnostic.code, text, { ...sample, standIn })) continue;
     const { line } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start ?? 0);
     const shift = shifts.get(diagnostic.file.fileName) ?? 0;
-    problems.push(`${sample.page}:${sample.line + Math.max(0, line - shift)} TS${diagnostic.code} ${text}`);
+    problems.push(
+      `${sample.page}:${sample.line + Math.max(0, line - shift)} TS${diagnostic.code} ${text}`,
+    );
   }
   rmSync(OUT, { recursive: true, force: true });
   return problems;
@@ -137,7 +139,11 @@ function addMissingImports(roots, exported) {
     if ((diagnostic.code !== 2304 && diagnostic.code !== 2552) || !diagnostic.file) continue;
     const text = ts.flattenDiagnosticMessageText(diagnostic.messageText, " ");
     const name = /Cannot find name '([^']+)'/.exec(text)?.[1];
-    if (name) missing.set(diagnostic.file.fileName, [...(missing.get(diagnostic.file.fileName) ?? []), name]);
+    if (name)
+      missing.set(diagnostic.file.fileName, [
+        ...(missing.get(diagnostic.file.fileName) ?? []),
+        name,
+      ]);
   }
   const shifts = new Map();
   for (const [file, names] of missing) {
@@ -151,7 +157,10 @@ function addMissingImports(roots, exported) {
 
 function main() {
   const samples = samplePages(ROOT).flatMap((page) =>
-    extractSamples(readFileSync(page, "utf8")).map((sample) => ({ ...sample, page: relative(ROOT, page) })),
+    extractSamples(readFileSync(page, "utf8")).map((sample) => ({
+      ...sample,
+      page: relative(ROOT, page),
+    })),
   );
   const problems = checkSamples(samples);
   if (problems.length === 0) {

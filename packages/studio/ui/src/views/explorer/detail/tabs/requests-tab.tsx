@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import { HealthIndicator } from "../../shared/health-indicator";
 import type { RequestEntry } from "@/store/types";
+import { HealthIndicator } from "../../shared/health-indicator";
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -28,11 +28,7 @@ export function RequestsTab({
   return (
     <div className="space-y-0.5">
       {sorted.map((req) => (
-        <RequestRow
-          key={req.id}
-          request={req}
-          onClick={() => onNavigateToTimeline?.(req.id)}
-        />
+        <RequestRow key={req.id} request={req} onClick={() => onNavigateToTimeline?.(req.id)} />
       ))}
     </div>
   );
@@ -64,15 +60,19 @@ function RequestRow({
       </span>
 
       {request.statusCode && (
-        <span className={cn("text-[11px] tabular-nums shrink-0", statusCodeColor(request.statusCode))}>
+        <span
+          className={cn("text-[11px] tabular-nums shrink-0", statusCodeColor(request.statusCode))}
+        >
           {request.statusCode}
         </span>
       )}
 
-      <span className={cn(
-        "ml-auto text-[11px] tabular-nums shrink-0",
-        isStreaming ? "text-emerald-400" : "text-muted-foreground/40",
-      )}>
+      <span
+        className={cn(
+          "ml-auto text-[11px] tabular-nums shrink-0",
+          isStreaming ? "text-emerald-400" : "text-muted-foreground/40",
+        )}
+      >
         {isStreaming ? "streaming" : duration != null ? formatDuration(duration) : "pending"}
       </span>
     </button>
@@ -81,7 +81,9 @@ function RequestRow({
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function statusToHealth(status: RequestEntry["status"]): "healthy" | "degraded" | "critical" | "inactive" {
+function statusToHealth(
+  status: RequestEntry["status"],
+): "healthy" | "degraded" | "critical" | "inactive" {
   if (status === "success") return "healthy";
   if (status === "pending") return "inactive";
   if (status === "validation_error") return "degraded";

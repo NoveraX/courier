@@ -1,15 +1,8 @@
-import { useState } from "react";
 import { ChevronsUpDown } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -18,6 +11,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 export interface FilterOption {
   value: string;
@@ -76,19 +71,14 @@ export function FilterSelect({
             <CommandEmpty>No results</CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  onSelect={() => toggle(option.value)}
-                >
+                <CommandItem key={option.value} onSelect={() => toggle(option.value)}>
                   <Checkbox
                     checked={selected.includes(option.value)}
                     className="pointer-events-none size-3.5"
                   />
                   <span className="flex-1 truncate">{option.label}</span>
                   {option.count !== undefined && (
-                    <span className="mono-xs text-muted-foreground">
-                      {option.count}
-                    </span>
+                    <span className="mono-xs text-muted-foreground">{option.count}</span>
                   )}
                 </CommandItem>
               ))}

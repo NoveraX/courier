@@ -14,14 +14,23 @@ import {
 
 describe("orderByDependency", () => {
   it("puts a dependency before the package that needs it", () => {
-    const order = orderByDependency(new Map([["b", ["a"]], ["a", []]]));
+    const order = orderByDependency(
+      new Map([
+        ["b", ["a"]],
+        ["a", []],
+      ]),
+    );
 
     expect(order).toEqual(["a", "b"]);
   });
 
   it("orders a chain end to end", () => {
     const order = orderByDependency(
-      new Map([["c", ["b"]], ["b", ["a"]], ["a", []]]),
+      new Map([
+        ["c", ["b"]],
+        ["b", ["a"]],
+        ["a", []],
+      ]),
     );
 
     expect(order).toEqual(["a", "b", "c"]);
@@ -29,22 +38,46 @@ describe("orderByDependency", () => {
 
   /** Two runs from the same commit must publish in the same order. */
   it("breaks ties by name, not by insertion order", () => {
-    const one = orderByDependency(new Map([["z", []], ["a", []], ["m", []]]));
-    const two = orderByDependency(new Map([["m", []], ["z", []], ["a", []]]));
+    const one = orderByDependency(
+      new Map([
+        ["z", []],
+        ["a", []],
+        ["m", []],
+      ]),
+    );
+    const two = orderByDependency(
+      new Map([
+        ["m", []],
+        ["z", []],
+        ["a", []],
+      ]),
+    );
 
     expect(one).toEqual(["a", "m", "z"]);
     expect(two).toEqual(one);
   });
 
   it("refuses a cycle instead of emitting an arbitrary order", () => {
-    expect(() => orderByDependency(new Map([["a", ["b"]], ["b", ["a"]]]))).toThrow(
-      /cycle among: a, b/,
-    );
+    expect(() =>
+      orderByDependency(
+        new Map([
+          ["a", ["b"]],
+          ["b", ["a"]],
+        ]),
+      ),
+    ).toThrow(/cycle among: a, b/);
   });
 
   it("names every package caught in the cycle", () => {
     expect(() =>
-      orderByDependency(new Map([["a", ["b"]], ["b", ["c"]], ["c", ["a"]], ["ok", []]])),
+      orderByDependency(
+        new Map([
+          ["a", ["b"]],
+          ["b", ["c"]],
+          ["c", ["a"]],
+          ["ok", []],
+        ]),
+      ),
     ).toThrow(/a, b, c/);
   });
 

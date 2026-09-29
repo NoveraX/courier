@@ -9,7 +9,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { printBanner } from "../src/server/banner";
-import { clearStartupIssues, recordStartupIssue, startupIssues } from "../src/server/startup-issues";
+import {
+  clearStartupIssues,
+  recordStartupIssue,
+  startupIssues,
+} from "../src/server/startup-issues";
 
 /** The escape sequence that resets the terminal and drops the scrollback. */
 const WIPES_HISTORY = "\x1b[3J";

@@ -65,7 +65,9 @@ describe("a server that falls silent", () => {
   it("is reconnected once heartbeatTimeout passes, and the stream goes on", async () => {
     const fetchMock = vi
       .fn()
-      .mockImplementationOnce((_url: string, init?: RequestInit) => stream("data: 1\n\n", init, true))
+      .mockImplementationOnce((_url: string, init?: RequestInit) =>
+        stream("data: 1\n\n", init, true),
+      )
       .mockImplementation((_url: string, init?: RequestInit) => stream("data: 2\n\n", init, true));
     vi.stubGlobal("fetch", fetchMock);
     const sub = subscribeSSE<number>("/sse", { heartbeatTimeout: 30, backoff: FAST });

@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-
-import type { MockServerInfo } from "@/store/mock-slice";
-import type { ScannedSource } from "@/views/apis/types";
-import type { SourceAvailability } from "./source-availability";
-import type { DraftErrors, MockWizardState } from "./types";
-import type { WizardSession } from "./wizard-session";
-
 import { useStudioStore } from "@/store";
+import type { MockServerInfo } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
+import type { ScannedSource } from "@/views/apis/types";
 import { declareClient } from "./declare-client";
 import { mergeDraftErrors } from "./merge-draft-errors";
+import type { SourceAvailability } from "./source-availability";
 import { sourceAvailability } from "./source-availability";
+import type { DraftErrors, MockWizardState } from "./types";
 import { validateDrafts } from "./validate-drafts";
 import { watchProject } from "./watch-project";
 import { wizardBus } from "./wizard-bus";
+import type { WizardSession } from "./wizard-session";
 import { createWizardSession } from "./wizard-session";
 
 /** Everything the mock wizard's dialog reads and does. */
@@ -61,7 +59,11 @@ export function useMockWizard(): MockWizardHandle {
   const sources = useStudioStore((s) => s.scanSources);
   const servers = useMockStore((s) => s.servers);
   const declaredKeys = useMemo(() => declaredKeysOf(servers), [servers]);
-  const availability = sourceAvailability({ connected, status: configStatus, sourceCount: sources.length });
+  const availability = sourceAvailability({
+    connected,
+    status: configStatus,
+    sourceCount: sources.length,
+  });
 
   const errors = useMemo(() => {
     const sourceKeys = sources.map((source) => source.name);

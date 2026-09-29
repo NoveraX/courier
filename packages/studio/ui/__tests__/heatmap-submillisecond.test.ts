@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { computeTimingBreakdown } from "@/views/explorer/heatmap/compute-heatmap";
 import type { RequestEntry } from "@/store/types";
+import { computeTimingBreakdown } from "@/views/explorer/heatmap/compute-heatmap";
 import type { EndpointNodeData } from "@/views/explorer/types";
 
 const endpoint = {

@@ -47,7 +47,11 @@ type Api = ReturnType<typeof defineSources>["api"];
 beforeAll(async () => {
   upstream = await startUpstream({
     "GET /users": { status: 200, body: [{ id: 1 }] },
-    "GET /faults/missing": { status: 404, body: { message: "not here" }, headers: { "x-upstream": "yes" } },
+    "GET /faults/missing": {
+      status: 404,
+      body: { message: "not here" },
+      headers: { "x-upstream": "yes" },
+    },
     "GET /faults/bad-shape": { status: 200, body: { id: "one" } },
     "GET /faults/slow": { status: 200, body: {}, delayMs: 1_000 },
   });
@@ -104,7 +108,10 @@ describe("a call that fails", () => {
   ): Promise<Record<string, unknown>> {
     const before = eventsOf("request:start").length;
     await call().catch(() => undefined);
-    const started = () => eventsOf("request:start").slice(before).find((e) => e.method === method);
+    const started = () =>
+      eventsOf("request:start")
+        .slice(before)
+        .find((e) => e.method === method);
     await until(() => started() !== undefined, "the call");
     const failure = () => eventsOf("request:error").find((e) => e.requestId === started()?.id);
     await until(() => failure() !== undefined, "the failure");

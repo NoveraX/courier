@@ -24,7 +24,9 @@ const forever = stream.response<number>().implement(async function* (ctx) {
 });
 
 beforeEach(() => {
-  registerSources({ api: defineApi({ baseURL: "https://upstream.example", endpoints: { forever } }) });
+  registerSources({
+    api: defineApi({ baseURL: "https://upstream.example", endpoints: { forever } }),
+  });
 });
 
 afterEach(async () => {
@@ -55,7 +57,8 @@ async function openStream(url: string): Promise<{ rest: Promise<string> }> {
   return { rest };
 }
 
-const timeout = (ms: number) => new Promise((resolve) => setTimeout(() => resolve("still open"), ms));
+const timeout = (ms: number) =>
+  new Promise((resolve) => setTimeout(() => resolve("still open"), ms));
 
 describe("closing a Fastify host with a stream open", () => {
   it("drains the proxy plugin's streams on app.close()", async () => {

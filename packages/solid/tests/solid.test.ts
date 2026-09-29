@@ -64,7 +64,9 @@ describe("a call the browser cancels", () => {
   it("stops the upstream request", async () => {
     const upstream = await slowUpstream();
     const { endpoint } = courier();
-    registerSources({ api: defineApi({ baseURL: upstream.url, endpoints: { slow: endpoint.post("slow") } }) });
+    registerSources({
+      api: defineApi({ baseURL: upstream.url, endpoints: { slow: endpoint.post("slow") } }),
+    });
     const handler = courierHandler();
     const proxy = await listen(
       createServer(async (req, res) => {
@@ -91,7 +93,9 @@ describe("a call the browser waits for", () => {
   it("is answered", async () => {
     const upstream = await listen(createServer((_req, res) => res.end('{"ok":true}')));
     const { endpoint } = courier();
-    registerSources({ api: defineApi({ baseURL: upstream, endpoints: { fast: endpoint.post("fast") } }) });
+    registerSources({
+      api: defineApi({ baseURL: upstream, endpoints: { fast: endpoint.post("fast") } }),
+    });
     const handler = courierHandler();
     const proxy = await listen(
       createServer(async (req, res) => {
@@ -114,7 +118,10 @@ describe("what the handler tells an attached Studio", () => {
     resetAnnouncements();
     const { endpoint: ping } = courier();
     registerSources({
-      api: defineApi({ baseURL: "https://upstream.example", endpoints: { ping: ping.get("ping") } }),
+      api: defineApi({
+        baseURL: "https://upstream.example",
+        endpoints: { ping: ping.get("ping") },
+      }),
     });
     vi.stubGlobal("fetch", async () => Response.json({ ok: true }));
     const announced: BufferedAnnouncement[] = [];
@@ -128,8 +135,8 @@ describe("what the handler tells an attached Studio", () => {
     vi.unstubAllGlobals();
     resetAnnouncements();
 
-    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual([
-      [["http", "sse"], "solid", ["api"]],
-    ]);
+    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual(
+      [[["http", "sse"], "solid", ["api"]]],
+    );
   });
 });

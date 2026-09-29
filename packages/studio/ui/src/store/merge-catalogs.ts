@@ -1,5 +1,5 @@
-import type { Catalog, CatalogEndpoint, CatalogEntry } from "./types-ui"
-import { ownValue } from "@/lib/own-value"
+import { ownValue } from "@/lib/own-value";
+import type { Catalog, CatalogEndpoint, CatalogEntry } from "./types-ui";
 
 /**
  * Merge the API the config declares with the endpoints traffic showed.
@@ -19,38 +19,38 @@ import { ownValue } from "@/lib/own-value"
  * ```
  */
 export function mergeCatalogs(declared: Catalog, observed: Catalog): Catalog {
-  const merged: Catalog = {}
-  const declaredName = new Map<string, string>()
+  const merged: Catalog = {};
+  const declaredName = new Map<string, string>();
   for (const [name, entry] of Object.entries(declared)) {
-    merged[name] = copyEntry(entry)
-    declaredName.set(name.toLowerCase(), name)
+    merged[name] = copyEntry(entry);
+    declaredName.set(name.toLowerCase(), name);
   }
   for (const [name, entry] of Object.entries(observed)) {
-    const target = declaredName.get(name.toLowerCase()) ?? name
-    merged[target] = mergeEntry(ownValue(merged, target), entry)
+    const target = declaredName.get(name.toLowerCase()) ?? name;
+    merged[target] = mergeEntry(ownValue(merged, target), entry);
   }
-  return merged
+  return merged;
 }
 
 function copyEntry(entry: CatalogEntry): CatalogEntry {
-  const groups: CatalogEntry["groups"] = {}
+  const groups: CatalogEntry["groups"] = {};
   for (const [name, group] of Object.entries(entry.groups)) {
-    groups[name] = { prefix: group.prefix, endpoints: { ...group.endpoints } }
+    groups[name] = { prefix: group.prefix, endpoints: { ...group.endpoints } };
   }
-  return { ...entry, groups }
+  return { ...entry, groups };
 }
 
 function mergeEntry(into: CatalogEntry | undefined, observed: CatalogEntry): CatalogEntry {
-  if (!into) return copyEntry(observed)
+  if (!into) return copyEntry(observed);
   for (const [groupName, group] of Object.entries(observed.groups)) {
-    const target = ownValue(into.groups, groupName) ?? { prefix: group.prefix, endpoints: {} }
-    into.groups[groupName] = target
+    const target = ownValue(into.groups, groupName) ?? { prefix: group.prefix, endpoints: {} };
+    into.groups[groupName] = target;
     for (const [method, endpoint] of Object.entries(group.endpoints)) {
-      const known = ownValue(target.endpoints, method)
-      target.endpoints[method] = known ? mergeEndpoint(known, endpoint) : endpoint
+      const known = ownValue(target.endpoints, method);
+      target.endpoints[method] = known ? mergeEndpoint(known, endpoint) : endpoint;
     }
   }
-  return into
+  return into;
 }
 
 function mergeEndpoint(declared: CatalogEndpoint, observed: CatalogEndpoint): CatalogEndpoint {
@@ -58,5 +58,5 @@ function mergeEndpoint(declared: CatalogEndpoint, observed: CatalogEndpoint): Ca
     ...declared,
     origin: "both",
     ...(observed.middleware?.length && { middleware: observed.middleware }),
-  }
+  };
 }

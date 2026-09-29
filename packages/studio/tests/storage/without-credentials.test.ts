@@ -18,15 +18,20 @@ import {
 
 describe("a header that carries a credential", () => {
   it("is told by its name, in any case", () => {
-    const credentials = ["Authorization", "proxy-authorization", "Cookie", "Set-Cookie", "X-Api-Key", "api-key"];
+    const credentials = [
+      "Authorization",
+      "proxy-authorization",
+      "Cookie",
+      "Set-Cookie",
+      "X-Api-Key",
+      "api-key",
+    ];
     const others = ["accept", "content-type", "x-request-id", "user-agent", "x-trace"];
 
     expect(credentials.filter(isCredentialHeader)).toEqual(credentials);
-    expect([...others, "x-auth-token", "x_session_id", "x-csrf-token"].filter(isCredentialHeader)).toEqual([
-      "x-auth-token",
-      "x_session_id",
-      "x-csrf-token",
-    ]);
+    expect(
+      [...others, "x-auth-token", "x_session_id", "x-csrf-token"].filter(isCredentialHeader),
+    ).toEqual(["x-auth-token", "x_session_id", "x-csrf-token"]);
   });
 
   it("keeps its name, with its value replaced", () => {
@@ -55,7 +60,10 @@ describe("an event or a history entry, as it is written down", () => {
   });
 
   it("reads the Playground's headers as its editor writes them, comments and all", () => {
-    const entry = { id: "e1", headers: '{\n  // who calls\n  "Authorization": "Bearer t",\n  "x-trace": "abc",\n}' };
+    const entry = {
+      id: "e1",
+      headers: '{\n  // who calls\n  "Authorization": "Bearer t",\n  "x-trace": "abc",\n}',
+    };
 
     expect(withoutCredentials(entry)).toEqual({
       id: "e1",
@@ -84,8 +92,14 @@ describe("a saved session", () => {
   });
 
   it("keeps no credential", () => {
-    expect(session.requests[0]?.requestHeaders).toEqual({ authorization: REDACTED, accept: "json" });
-    expect(session.requests[0]?.responseHeaders).toEqual({ "set-cookie": REDACTED, "content-type": "application/json" });
+    expect(session.requests[0]?.requestHeaders).toEqual({
+      authorization: REDACTED,
+      accept: "json",
+    });
+    expect(session.requests[0]?.responseHeaders).toEqual({
+      "set-cookie": REDACTED,
+      "content-type": "application/json",
+    });
   });
 
   it("exports none, as a HAR or a Postman collection", () => {

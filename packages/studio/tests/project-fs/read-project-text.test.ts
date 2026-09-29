@@ -36,7 +36,10 @@ describe("readProjectText", () => {
       refusal = error;
     }
 
-    expect(refusal).toMatchObject({ code: "NOT_REGULAR_FILE", message: "specs is a directory, not a regular file." });
+    expect(refusal).toMatchObject({
+      code: "NOT_REGULAR_FILE",
+      message: "specs is a directory, not a regular file.",
+    });
     expect(String(refusal)).not.toContain(root);
   });
 });

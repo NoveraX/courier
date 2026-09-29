@@ -169,4 +169,3 @@ describe("what a channel's send answers", () => {
     expect(data).toEqual(["welcome to answers", "echo early", "echo open"]);
   });
 });
-

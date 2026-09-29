@@ -1,10 +1,9 @@
 import { useMemo } from "react";
-import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { SliderRow } from "./slider-row";
-
 import type { FaultWeight } from "@/store/mock-slice";
+import { SliderRow } from "./slider-row";
 
 const ALL_FAULT_TYPES = ["500", "502", "503", "timeout", "reset"] as const;
 
@@ -35,7 +34,14 @@ export function FaultConfigPanel({
 
   return (
     <div className="space-y-3 rounded-lg border border-border-subtle bg-muted/10 p-3">
-      <SliderRow label="Error Rate" value={errorRate} onChange={onErrorRateChange} max={100} step={5} unit="%" />
+      <SliderRow
+        label="Error Rate"
+        value={errorRate}
+        onChange={onErrorRateChange}
+        max={100}
+        step={5}
+        unit="%"
+      />
 
       {/* Weighted fault distribution */}
       <div className="space-y-1.5">
@@ -66,10 +72,14 @@ export function FaultConfigPanel({
                     if (!active) onToggleFault(type);
                     onAdjustWeight(type, v ?? 5);
                   }}
-                  min={0} max={100} step={5}
+                  min={0}
+                  max={100}
+                  step={5}
                   disabled={!active}
                 />
-                <span className="w-10 shrink-0 text-right text-mono-xs text-muted-foreground/60 tabular-nums">{pct}%</span>
+                <span className="w-10 shrink-0 text-right text-mono-xs text-muted-foreground/60 tabular-nums">
+                  {pct}%
+                </span>
               </div>
             );
           })}

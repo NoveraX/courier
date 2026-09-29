@@ -1,9 +1,8 @@
-import { useMemo } from "react";
-import { motion } from "motion/react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
-
-import type { TourStep } from "./tour-steps";
+import { motion } from "motion/react";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import type { TourStep } from "./tour-steps";
 
 const GAP = 14;
 const TOOLTIP_W = 300;
@@ -21,7 +20,13 @@ interface TourTooltipProps {
 }
 
 export function TourTooltip({
-  step, rect, current, total, onNext, onPrev, onSkip,
+  step,
+  rect,
+  current,
+  total,
+  onNext,
+  onPrev,
+  onSkip,
 }: TourTooltipProps): React.ReactElement {
   const style = useMemo(() => computePosition(step.placement, rect), [step.placement, rect]);
   const isLast = current === total - 1;
@@ -39,14 +44,18 @@ export function TourTooltip({
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         <h4 className="text-h4 text-foreground">{step.title}</h4>
-        <Button variant="ghost" size="icon" aria-label="Close tour" className="size-6 shrink-0" onClick={onSkip}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Close tour"
+          className="size-6 shrink-0"
+          onClick={onSkip}
+        >
           <X className="size-3" />
         </Button>
       </div>
 
-      <p className="mb-4 text-body-sm leading-relaxed text-muted-foreground">
-        {step.description}
-      </p>
+      <p className="mb-4 text-body-sm leading-relaxed text-muted-foreground">{step.description}</p>
 
       <div className="flex items-center justify-between">
         <span className="text-xs tabular-nums text-muted-foreground/60">
@@ -70,10 +79,7 @@ export function TourTooltip({
 }
 
 /** Compute tooltip position with viewport clamping. */
-function computePosition(
-  placement: TourStep["placement"],
-  rect: DOMRect,
-): React.CSSProperties {
+function computePosition(placement: TourStep["placement"], rect: DOMRect): React.CSSProperties {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 

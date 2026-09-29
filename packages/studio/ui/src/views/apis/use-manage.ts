@@ -53,10 +53,13 @@ export function useManage(onSuccess?: (message: string) => void): UseManageRetur
   const [error, setError] = useState<string | null>(null);
   const { reset, ...selection } = useManageSelection(inventory);
   const { toAdd, toRemove } = selection;
-  const onApplied = useCallback((message: string) => {
-    setOpen(false);
-    onSuccess?.(message);
-  }, [onSuccess]);
+  const onApplied = useCallback(
+    (message: string) => {
+      setOpen(false);
+      onSuccess?.(message);
+    },
+    [onSuccess],
+  );
   const plan = useManagePlan({ sourceName, spec, toAdd, toRemove, setStep, setError, onApplied });
   const { clear } = plan;
 
@@ -67,29 +70,35 @@ export function useManage(onSuccess?: (message: string) => void): UseManageRetur
     setSpec,
   });
 
-  const start = useCallback((source: SourceSummary, newSpec?: ParsedSpec) => {
-    setSourceName(source.name);
-    setImportType(source.importType);
-    setSpec(newSpec ?? null);
-    setInventory(null);
-    reset();
-    clear();
-    setError(null);
-    setOpen(true);
+  const start = useCallback(
+    (source: SourceSummary, newSpec?: ParsedSpec) => {
+      setSourceName(source.name);
+      setImportType(source.importType);
+      setSpec(newSpec ?? null);
+      setInventory(null);
+      reset();
+      clear();
+      setError(null);
+      setOpen(true);
 
-    if (newSpec) {
-      void loadInventory(source.name, newSpec);
-    } else if (source.importType === "url" && source.specUrl) {
-      void fetchSpecAndLoadInventory(source.name, source.specUrl);
-    } else {
-      setStep("reupload");
-    }
-  }, [loadInventory, fetchSpecAndLoadInventory, reset, clear]);
+      if (newSpec) {
+        void loadInventory(source.name, newSpec);
+      } else if (source.importType === "url" && source.specUrl) {
+        void fetchSpecAndLoadInventory(source.name, source.specUrl);
+      } else {
+        setStep("reupload");
+      }
+    },
+    [loadInventory, fetchSpecAndLoadInventory, reset, clear],
+  );
 
-  const provideSpec = useCallback(async (parsedSpec: ParsedSpec) => {
-    setSpec(parsedSpec);
-    await loadInventory(sourceName, parsedSpec);
-  }, [sourceName, loadInventory]);
+  const provideSpec = useCallback(
+    async (parsedSpec: ParsedSpec) => {
+      setSpec(parsedSpec);
+      await loadInventory(sourceName, parsedSpec);
+    },
+    [sourceName, loadInventory],
+  );
 
   const back = useCallback(() => {
     if (step === "preview") setStep("inventory");
@@ -103,13 +112,20 @@ export function useManage(onSuccess?: (message: string) => void): UseManageRetur
 
   return {
     ...selection,
-    open, step, sourceName, importType, inventory, error,
+    open,
+    step,
+    sourceName,
+    importType,
+    inventory,
+    error,
     preview: plan.preview,
     consent: plan.consent,
-    start, provideSpec,
+    start,
+    provideSpec,
     requestPreview: plan.requestPreview,
     apply: plan.apply,
     toggleConfirmed: plan.toggleConfirmed,
-    back, close,
+    back,
+    close,
   };
 }

@@ -1,23 +1,19 @@
-import { useMemo, useCallback } from "react";
 import { Activity, SearchX } from "lucide-react";
+import { useCallback, useMemo } from "react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { useRequestDetail } from "@/hooks/use-request-detail";
 import { useStudioStore } from "@/store";
-
-import { filterRequests } from "./filters";
-import { useTimelineSearch } from "./use-timeline-search";
-import { Toolbar } from "./toolbar";
 import { TimelineFilterBar } from "./filter-bar";
+import { filterRequests } from "./filters";
 import { RequestList } from "./request-list";
+import { Toolbar } from "./toolbar";
+import { useTimelineSearch } from "./use-timeline-search";
 
 export function TimelineView(): React.ReactElement {
   const requests = useStudioStore((s) => s.requests);
   const { selectRequest } = useRequestDetail();
-  const {
-    filters, showFilters,
-    setFilter, resetFilters, toggleFilters,
-  } = useTimelineSearch();
+  const { filters, showFilters, setFilter, resetFilters, toggleFilters } = useTimelineSearch();
 
   const filtered = useMemo(() => filterRequests(requests, filters), [requests, filters]);
   const pinned = useMemo(() => filtered.filter((r) => r.pinned), [filtered]);
@@ -30,7 +26,9 @@ export function TimelineView(): React.ReactElement {
   );
 
   const handleSelect = useCallback(
-    (id: string | null) => { if (id) selectRequest(id); },
+    (id: string | null) => {
+      if (id) selectRequest(id);
+    },
     [selectRequest],
   );
 

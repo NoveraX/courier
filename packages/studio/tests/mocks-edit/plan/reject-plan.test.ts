@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-
+import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
 import { rejectPlan } from "../../../src/server/mocks-edit/plan/reject-plan";
 import type { PlannedInsertion } from "../../../src/server/mocks-edit/plan/types";
-import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
 
 const PLAN: PlannedInsertion = {
   fileName: "courier.mocks.ts",

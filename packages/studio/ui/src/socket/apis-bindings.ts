@@ -1,10 +1,8 @@
 import type { Socket } from "socket.io-client";
-
+import { notifyConfigTransition } from "@/store/config-notifications";
 import type { ApiSourceChange } from "@/store/config-transition";
 import type { MocksFileStatus } from "@/store/mocks-file-status";
 import type { StudioState } from "@/store/store-types";
-
-import { notifyConfigTransition } from "@/store/config-notifications";
 import { isConfigStatusPayload } from "./config-status-guard";
 import { isPlainObject } from "./is-plain-object";
 import { isScannedSource, isSourceSummary } from "./source-list-guards";

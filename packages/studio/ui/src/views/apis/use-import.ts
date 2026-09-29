@@ -1,26 +1,20 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { useStudioStore } from "@/store";
-
-import type {
-  ImportStep,
-  ImportSource,
-  ImportState,
-  GenerateOptions,
-} from "./types";
 import {
-  parseSpec,
   buildPostParseState,
   generatePreview,
-  writeGeneratedFiles,
+  parseSpec,
+  toggleAllReducer,
   toggleEndpointReducer,
   toggleGroupReducer,
-  toggleAllReducer,
+  writeGeneratedFiles,
 } from "./import-actions";
 import { INITIAL_IMPORT_STATE } from "./initial-import-state";
 import { consentFor, toggleConfirmed } from "./plan-consent";
 import { readPlanRefusal } from "./plan-refusal";
 import { settleWrite } from "./settle-write";
+import type { GenerateOptions, ImportSource, ImportState, ImportStep } from "./types";
 
 export interface UseImportReturn {
   state: ImportState;
@@ -71,7 +65,10 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
     setOpen(true);
   }, []);
 
-  const close = useCallback(() => { setOpen(false); setError(null); }, []);
+  const close = useCallback(() => {
+    setOpen(false);
+    setError(null);
+  }, []);
 
   const setSource = useCallback((source: ImportSource) => {
     setState((s) => ({ ...s, source, content: "" }));
@@ -131,16 +128,36 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
   }, [state, close, onWritten]);
 
   return {
-    state, parsing, error, open,
-    openWizard, close, setSource, setContent, parse,
-    toggleEndpoint: useCallback((g: string, e: string) => setState((s) => toggleEndpointReducer(s, g, e)), []),
+    state,
+    parsing,
+    error,
+    open,
+    openWizard,
+    close,
+    setSource,
+    setContent,
+    parse,
+    toggleEndpoint: useCallback(
+      (g: string, e: string) => setState((s) => toggleEndpointReducer(s, g, e)),
+      [],
+    ),
     toggleGroup: useCallback((g: string) => setState((s) => toggleGroupReducer(s, g)), []),
     toggleAll: useCallback(() => setState(toggleAllReducer), []),
-    setOptions: useCallback((patch: Partial<GenerateOptions>) => setState((s) => ({ ...s, options: { ...s.options, ...patch } })), []),
-    preview, write,
-    toggleConfirmed: useCallback((path: string) => setState((s) => (
-      s.consent ? { ...s, consent: toggleConfirmed(s.consent, path) } : s
-    )), []),
-    goToStep: useCallback((step: ImportStep) => { setState((s) => ({ ...s, step })); setError(null); }, []),
+    setOptions: useCallback(
+      (patch: Partial<GenerateOptions>) =>
+        setState((s) => ({ ...s, options: { ...s.options, ...patch } })),
+      [],
+    ),
+    preview,
+    write,
+    toggleConfirmed: useCallback(
+      (path: string) =>
+        setState((s) => (s.consent ? { ...s, consent: toggleConfirmed(s.consent, path) } : s)),
+      [],
+    ),
+    goToStep: useCallback((step: ImportStep) => {
+      setState((s) => ({ ...s, step }));
+      setError(null);
+    }, []),
   };
 }

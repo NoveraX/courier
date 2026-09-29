@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { generateCode } from "../src/apis/generator";
+import { parseSpec } from "../src/apis/parser";
 
 function parse(paths: Record<string, unknown>, components?: Record<string, unknown>) {
   return parseSpec(
@@ -79,7 +78,9 @@ describe("a property the server generates", () => {
           post: {
             operationId: "createThing",
             requestBody: { content: { "application/json": { schema: thing } } },
-            responses: { "201": { description: "ok", content: { "application/json": { schema: thing } } } },
+            responses: {
+              "201": { description: "ok", content: { "application/json": { schema: thing } } },
+            },
           },
         },
       },

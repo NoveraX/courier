@@ -88,7 +88,11 @@ function collection(): string {
 }
 
 function caller(groupBy: (typeof GROUPINGS)[number]) {
-  const files = generateCode(parseSpec(collection()), { type: "postman", outputDir: "src", groupBy }, "acme");
+  const files = generateCode(
+    parseSpec(collection()),
+    { type: "postman", outputDir: "src", groupBy },
+    "acme",
+  );
   const index = loadGenerated(files, "src/acme/index.ts");
   /* Folders and first path segments name the groups alike here. */
   const group = (name: string) => (groupBy === "single" ? ["acmeApi"] : ["acmeApi", name]);
@@ -109,29 +113,37 @@ describe("a collection whose requests name {{baseUrl}}", () => {
     expect(api.requests.at(-1)).toMatchObject({ method: "GET", path: "/pm/users/u1" });
   });
 
-  it.each(GROUPINGS)("sends a request written with another host to that host (%s)", async (groupBy) => {
-    const before = api.requests.length;
+  it.each(GROUPINGS)(
+    "sends a request written with another host to that host (%s)",
+    async (groupBy) => {
+      const before = api.requests.length;
 
-    await caller(groupBy).auth("login")({ username: "u" });
-    await caller(groupBy).auth("verify")({ code: "1" });
+      await caller(groupBy).auth("login")({ username: "u" });
+      await caller(groupBy).auth("verify")({ code: "1" });
 
-    expect(auth.requests.at(-1)).toMatchObject({ method: "POST", path: "/auth/login" });
-    expect(api.requests.slice(before)).toMatchObject([{ method: "POST", path: "/pm/auth/verify" }]);
-  });
+      expect(auth.requests.at(-1)).toMatchObject({ method: "POST", path: "/auth/login" });
+      expect(api.requests.slice(before)).toMatchObject([
+        { method: "POST", path: "/pm/auth/verify" },
+      ]);
+    },
+  );
 
   /* A write with a query parameter is sent through a closure, which has to
      name the other host as well. */
-  it.each(GROUPINGS)("sends a write with a query parameter to its own host (%s)", async (groupBy) => {
-    const before = api.requests.length;
+  it.each(GROUPINGS)(
+    "sends a write with a query parameter to its own host (%s)",
+    async (groupBy) => {
+      const before = api.requests.length;
 
-    await caller(groupBy).auth("refresh")({ scope: "write" });
+      await caller(groupBy).auth("refresh")({ scope: "write" });
 
-    expect(auth.requests.at(-1)).toMatchObject({
-      method: "POST",
-      path: "/auth/refresh",
-      query: [["scope", "write"]],
-      body: "",
-    });
-    expect(api.requests.length).toBe(before);
-  });
+      expect(auth.requests.at(-1)).toMatchObject({
+        method: "POST",
+        path: "/auth/refresh",
+        query: [["scope", "write"]],
+        body: "",
+      });
+      expect(api.requests.length).toBe(before);
+    },
+  );
 });

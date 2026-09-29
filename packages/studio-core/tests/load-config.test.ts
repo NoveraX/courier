@@ -13,9 +13,8 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type * as JitiModule from "jiti";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import { createJiti } from "jiti";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createTransformCache,
   loadCourierConfig,
@@ -217,7 +216,10 @@ describe("loadCourierConfig — transform cache", () => {
 
 describe("loadCourierConfigFile — path aliases", () => {
   beforeEach(() => {
-    writeConfig("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }));
+    writeConfig(
+      "tsconfig.json",
+      JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }),
+    );
     writeConfig("src/origin.ts", 'export const origin = "project";\n');
     writeConfig("src/shared.ts", 'export const origin = "project";\n');
     writeConfig(
@@ -262,10 +264,10 @@ describe("loadCourierConfigFile — native imports", () => {
 
   it("sees an edit on the next load even when JITI_TRY_NATIVE asks for native imports first", async () => {
     vi.stubEnv("JITI_TRY_NATIVE", "true");
-    writeConfig("courier.config.ts", 'export default { sources: { first: {} } };\n');
+    writeConfig("courier.config.ts", "export default { sources: { first: {} } };\n");
     const first = await loadCourierConfigFile(join(dir, "courier.config.ts"));
 
-    writeConfig("courier.config.ts", 'export default { sources: { second: {} } };\n');
+    writeConfig("courier.config.ts", "export default { sources: { second: {} } };\n");
     const second = await loadCourierConfigFile(join(dir, "courier.config.ts"));
 
     expect(Object.keys(first.config.sources ?? {})).toEqual(["first"]);

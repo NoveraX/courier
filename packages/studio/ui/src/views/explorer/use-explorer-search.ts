@@ -1,15 +1,13 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
-import { useSearch, useNavigate } from "@tanstack/react-router";
-import type { ExplorerSearchParams, ExplorerLayout, ExplorerMetricMode } from "./types";
+import type { ExplorerLayout, ExplorerMetricMode, ExplorerSearchParams } from "./types";
 
 // ── Validation ──────────────────────────────────────────────────────────────
 
 const VALID_LAYOUTS = new Set<ExplorerLayout>(["LR", "TB"]);
 const VALID_METRICS = new Set<ExplorerMetricMode>(["latency", "errors", "traffic", "size"]);
 
-export function validateExplorerSearch(
-  raw: Record<string, unknown>,
-): ExplorerSearchParams {
+export function validateExplorerSearch(raw: Record<string, unknown>): ExplorerSearchParams {
   return {
     layout: parseLayout(raw.layout),
     search: parseString(raw.search),
@@ -44,28 +42,37 @@ export function useExplorerSearch(): ExplorerSearchState & ExplorerSearchActions
   const search = useSearch({ from: "/explorer/graph" }) as ExplorerSearchParams;
   const navigate = useNavigate({ from: "/explorer/graph" });
 
-  const state: ExplorerSearchState = useMemo(() => ({
-    layout: search.layout ?? "LR",
-    search: search.search ?? "",
-    selectedEndpoint: search.selected ?? null,
-    metricMode: search.metricMode ?? "latency",
-    showMinimap: search.minimap ?? true,
-  }), [search]);
+  const state: ExplorerSearchState = useMemo(
+    () => ({
+      layout: search.layout ?? "LR",
+      search: search.search ?? "",
+      selectedEndpoint: search.selected ?? null,
+      metricMode: search.metricMode ?? "latency",
+      showMinimap: search.minimap ?? true,
+    }),
+    [search],
+  );
 
   const update = useCallback(
     (patch: Partial<ExplorerSearchParams>) => {
-      navigate({ search: (prev) => clean({ ...(prev as ExplorerSearchParams), ...patch }), replace: true });
+      navigate({
+        search: (prev) => clean({ ...(prev as ExplorerSearchParams), ...patch }),
+        replace: true,
+      });
     },
     [navigate],
   );
 
-  const actions: ExplorerSearchActions = useMemo(() => ({
-    setLayout: (layout) => update({ layout }),
-    setSearch: (s) => update({ search: s || undefined }),
-    selectEndpoint: (key) => update({ selected: key ?? undefined }),
-    setMetricMode: (mode) => update({ metricMode: mode }),
-    toggleMinimap: () => update({ minimap: !state.showMinimap }),
-  }), [update, state.showMinimap]);
+  const actions: ExplorerSearchActions = useMemo(
+    () => ({
+      setLayout: (layout) => update({ layout }),
+      setSearch: (s) => update({ search: s || undefined }),
+      selectEndpoint: (key) => update({ selected: key ?? undefined }),
+      setMetricMode: (mode) => update({ metricMode: mode }),
+      toggleMinimap: () => update({ minimap: !state.showMinimap }),
+    }),
+    [update, state.showMinimap],
+  );
 
   return useMemo(() => ({ ...state, ...actions }), [state, actions]);
 }

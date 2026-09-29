@@ -32,7 +32,10 @@ export function endpointUrl(
   if (!source || !endpoint || endpoint.path === undefined || endpoint.transport) return "";
   return [source.baseURL, prefix, endpoint.path]
     .filter((part) => part !== "")
-    .reduce((url, part) => (url === "" ? part : `${url.replace(/\/+$/, "")}/${part.replace(/^\/+/, "")}`), "");
+    .reduce(
+      (url, part) => (url === "" ? part : `${url.replace(/\/+$/, "")}/${part.replace(/^\/+/, "")}`),
+      "",
+    );
 }
 
 /**
@@ -52,7 +55,11 @@ export function endpointUrl(
  * // → "http://localhost:7501/users/2"
  * ```
  */
-export function snippetInput(url: string, endpoint: EndpointInfo, values: RequestValues): SnippetInput {
+export function snippetInput(
+  url: string,
+  endpoint: EndpointInfo,
+  values: RequestValues,
+): SnippetInput {
   const method = endpoint.httpMethod ?? (endpoint.type === "mutation" ? "POST" : "GET");
   const { variables, headers } = values;
   const fields = isRecord(variables) ? variables : undefined;

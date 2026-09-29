@@ -30,9 +30,9 @@ describe("isOriginAllowed", () => {
   });
 
   it("allows a configured origin", () => {
-    expect(isOriginAllowed(request("https://studio.example.com"), ["https://studio.example.com"])).toBe(
-      true,
-    );
+    expect(
+      isOriginAllowed(request("https://studio.example.com"), ["https://studio.example.com"]),
+    ).toBe(true);
   });
 
   it("allows a sub-domain through a wildcard but not the apex", () => {

@@ -26,12 +26,41 @@ export function deriveSourceName(spec: ParsedSpec, url?: string): string {
 }
 
 const SKIP_NAMES = new Set([
-  "api", "docs", "public", "swagger", "openapi", "v1", "v2", "v3",
-  "www", "app", "cdn", "static", "dev", "staging",
+  "api",
+  "docs",
+  "public",
+  "swagger",
+  "openapi",
+  "v1",
+  "v2",
+  "v3",
+  "www",
+  "app",
+  "cdn",
+  "static",
+  "dev",
+  "staging",
 ]);
 const TLDS = new Set([
-  "com", "org", "net", "io", "dev", "cloud", "app", "co", "me", "ru",
-  "uk", "de", "fr", "jp", "us", "eu", "info", "biz", "xyz",
+  "com",
+  "org",
+  "net",
+  "io",
+  "dev",
+  "cloud",
+  "app",
+  "co",
+  "me",
+  "ru",
+  "uk",
+  "de",
+  "fr",
+  "jp",
+  "us",
+  "eu",
+  "info",
+  "biz",
+  "xyz",
 ]);
 
 function isUsable(name: string): boolean {
@@ -39,7 +68,10 @@ function isUsable(name: string): boolean {
 }
 
 function sanitize(raw: string): string {
-  return raw.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 /* The most telling part of a URL's host, skipping its TLD and generic subdomains. */

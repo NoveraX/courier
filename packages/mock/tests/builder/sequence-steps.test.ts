@@ -82,7 +82,9 @@ describe("sequence entries on the mock client", () => {
 
   it("keeps a status set with withStatus for entries that declare none", async () => {
     const mc = createMockClient<typeof api>();
-    mc.mock("users", "getAll").withStatus(202).sequence([["a"], { data: ["b"], status: 201 }]);
+    mc.mock("users", "getAll")
+      .withStatus(202)
+      .sequence([["a"], { data: ["b"], status: 201 }]);
 
     await mc.client.users.getAll();
     await mc.client.users.getAll();

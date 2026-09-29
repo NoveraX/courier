@@ -17,9 +17,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
+import { useStudioStore } from "@/store";
 import { createStudioServer } from "../../src/server/create-studio-server";
 import type { StudioServer } from "../../src/server/types";
-import { useStudioStore } from "@/store";
 import { SessionHistorySection } from "../src/views/settings/session-history-section";
 import { useSessionHistory } from "../src/views/settings/use-session-history";
 import { trafficRequest } from "./playground-fixtures";
@@ -37,12 +37,19 @@ function Harness(): React.ReactElement {
 
 async function startStudio(): Promise<string> {
   const url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
   /* The page is served by Studio, so the browser resolves its relative API URLs against Studio. */
   const nodeFetch = globalThis.fetch;
   vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
-    nodeFetch(typeof input === "string" ? new URL(input, url) : input, init));
+    nodeFetch(typeof input === "string" ? new URL(input, url) : input, init),
+  );
   return url;
 }
 
@@ -58,7 +65,9 @@ beforeEach(() => {
   writeFileSync(join(root, "courier.config.ts"), "export default { sources: {} };\n");
   mkdirSync(join(root, ".courier"));
   writeFileSync(join(root, ".courier", "studio-token"), `${TOKEN}\n`, { mode: 0o600 });
-  useStudioStore.setState({ requests: [trafficRequest(), trafficRequest({ id: "req-2", status: "error" })] });
+  useStudioStore.setState({
+    requests: [trafficRequest(), trafficRequest({ id: "req-2", status: "error" })],
+  });
 });
 
 afterEach(async () => {
@@ -85,7 +94,10 @@ describe("saving the current session", () => {
     const rows = db.prepare("SELECT body FROM sessions").all();
     db.close();
     expect(rows.map((row) => JSON.parse(String(row.body)))).toEqual([
-      expect.objectContaining({ name: "Debugging auth", stats: expect.objectContaining({ totalRequests: 2, errorCount: 1 }) }),
+      expect.objectContaining({
+        name: "Debugging auth",
+        stats: expect.objectContaining({ totalRequests: 2, errorCount: 1 }),
+      }),
     ]);
     expect(screen.queryByLabelText("Session name")).toBeNull();
   });

@@ -16,7 +16,10 @@ let file: string;
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "courier-fingerprints-"));
   mkdirSync(join(root, "src"));
-  writeFileSync(join(root, "src/api.ts"), 'import { base } from "./base";\nexport const api = { base };\n');
+  writeFileSync(
+    join(root, "src/api.ts"),
+    'import { base } from "./base";\nexport const api = { base };\n',
+  );
   writeFileSync(join(root, "src/base.ts"), 'export const base = "https://api.example";\n');
   writeFileSync(join(root, "src/pets.ts"), "export const pets = {};\nexport const extra = 1;\n");
   file = join(root, "courier.mocks.ts");
@@ -64,10 +67,22 @@ describe("a mock's fingerprint", () => {
   it("stays when an import it uses gains a binding it does not use", () => {
     const users = "  users: defineMockServer({ source: pets }),";
     const before = fingerprints(
-      mocksText(HEAD, 'import { pets } from "./src/pets";', "export default defineMocks({", users, "});"),
+      mocksText(
+        HEAD,
+        'import { pets } from "./src/pets";',
+        "export default defineMocks({",
+        users,
+        "});",
+      ),
     );
     const after = fingerprints(
-      mocksText(HEAD, 'import { extra, pets } from "./src/pets";', "export default defineMocks({", users, "});"),
+      mocksText(
+        HEAD,
+        'import { extra, pets } from "./src/pets";',
+        "export default defineMocks({",
+        users,
+        "});",
+      ),
     );
 
     expect(after.get("users")).toBe(before.get("users"));
@@ -75,7 +90,9 @@ describe("a mock's fingerprint", () => {
 
   it("changes with its own declaration, and only its own", () => {
     const pets = "  pets: defineMockServer({ source: api }),";
-    const before = fingerprints(mocksText(HEAD, "export default defineMocks({", USERS, pets, "});"));
+    const before = fingerprints(
+      mocksText(HEAD, "export default defineMocks({", USERS, pets, "});"),
+    );
     const after = fingerprints(
       mocksText(
         HEAD,
@@ -143,7 +160,13 @@ describe("a mock's fingerprint", () => {
   });
 
   it("is not given when the mocks' keys cannot all be read", () => {
-    const text = mocksText(HEAD, "const more = {};", "export default defineMocks({ ...more, ", USERS, "});");
+    const text = mocksText(
+      HEAD,
+      "const more = {};",
+      "export default defineMocks({ ...more, ",
+      USERS,
+      "});",
+    );
 
     expect(fingerprintMocks(file, text)).toBeNull();
   });

@@ -1,9 +1,8 @@
-import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-
-import { useStudioStore } from "@/store";
+import { useRef } from "react";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { useKeyboardNav } from "@/hooks/use-keyboard-nav";
+import { useStudioStore } from "@/store";
 
 import type { MockRequestLog } from "@/store/mock-slice";
 
@@ -59,11 +58,7 @@ export function LogList({ logs, selectedId, onSelect }: LogListProps): React.Rea
                   transform: `translateY(${vi.start}px)`,
                 }}
               >
-                <LogRow
-                  log={log}
-                  selected={selectedId === log.id}
-                  onSelect={onSelect}
-                />
+                <LogRow log={log} selected={selectedId === log.id} onSelect={onSelect} />
               </div>
             );
           })}

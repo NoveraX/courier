@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { DEFAULT_STYLE } from "../../../src/server/mocks-edit/plan/detect-style";
 import { applyEdits } from "../../../src/server/mocks-edit/plan/apply-edits";
+import { DEFAULT_STYLE } from "../../../src/server/mocks-edit/plan/detect-style";
 import type { RenderEntries } from "../../../src/server/mocks-edit/plan/list-insertion";
 import { planListInsertion } from "../../../src/server/mocks-edit/plan/list-insertion";
 import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";

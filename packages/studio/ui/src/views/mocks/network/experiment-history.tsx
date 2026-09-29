@@ -1,17 +1,19 @@
-import { useMemo, useState } from "react";
 import { ChevronDown, Clock, StopCircle, Zap } from "lucide-react";
 import { motion } from "motion/react";
+import { useMemo, useState } from "react";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { cn } from "@/lib/utils";
-import { useMockStore } from "@/store/mock-slice";
-
 import type { ExperimentEvent } from "@/store/mock-slice";
+import { useMockStore } from "@/store/mock-slice";
 
 interface ExperimentHistoryProps {
   serverId: string;
 }
 
-const TYPE_STYLES: Record<ExperimentEvent["type"], { icon: React.ElementType; color: string; label: string }> = {
+const TYPE_STYLES: Record<
+  ExperimentEvent["type"],
+  { icon: React.ElementType; color: string; label: string }
+> = {
   started: { icon: Zap, color: "text-sky-400", label: "Started" },
   stopped: { icon: StopCircle, color: "text-emerald-400", label: "Stopped" },
   "auto-halted": { icon: Clock, color: "text-amber-400", label: "Auto-halted" },
@@ -60,13 +62,20 @@ export function ExperimentHistory({ serverId }: ExperimentHistoryProps): React.R
             {history.length}
           </span>
         )}
-        <ChevronDown className={cn("size-3.5 text-muted-foreground/40 transition-transform", open && "rotate-180")} />
+        <ChevronDown
+          className={cn(
+            "size-3.5 text-muted-foreground/40 transition-transform",
+            open && "rotate-180",
+          )}
+        />
       </button>
 
       {open && (
         <div className="border-t border-border-subtle">
           {history.length === 0 ? (
-            <p className="py-6 text-center text-body-xs text-muted-foreground/40">No experiments yet</p>
+            <p className="py-6 text-center text-body-xs text-muted-foreground/40">
+              No experiments yet
+            </p>
           ) : (
             <motion.div
               className="divide-y divide-border-subtle"
@@ -78,7 +87,11 @@ export function ExperimentHistory({ serverId }: ExperimentHistoryProps): React.R
                 const style = TYPE_STYLES[event.type];
                 const Icon = style.icon;
                 return (
-                  <motion.div key={event.id} variants={STAGGER_ITEM_VARIANTS} className="flex items-start gap-3 px-4 py-2.5">
+                  <motion.div
+                    key={event.id}
+                    variants={STAGGER_ITEM_VARIANTS}
+                    className="flex items-start gap-3 px-4 py-2.5"
+                  >
                     <Icon className={cn("mt-0.5 size-3.5 shrink-0", style.color)} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
@@ -86,7 +99,9 @@ export function ExperimentHistory({ serverId }: ExperimentHistoryProps): React.R
                           {style.label} · {event.mode}
                         </span>
                         {event.reason && (
-                          <span className="truncate text-caption text-amber-400/70">{event.reason}</span>
+                          <span className="truncate text-caption text-amber-400/70">
+                            {event.reason}
+                          </span>
                         )}
                       </div>
                       <div className="mt-0.5 flex items-center gap-3 text-caption text-muted-foreground/50">
@@ -95,7 +110,9 @@ export function ExperimentHistory({ serverId }: ExperimentHistoryProps): React.R
                           <span>Duration: {formatDuration(event.durationMs)}</span>
                         )}
                         {event.peakErrorRate !== undefined && (
-                          <span className="text-rose-400/60">Peak err: {Math.round(event.peakErrorRate)}%</span>
+                          <span className="text-rose-400/60">
+                            Peak err: {Math.round(event.peakErrorRate)}%
+                          </span>
                         )}
                         {event.peakP99 !== undefined && (
                           <span className="text-amber-400/60">Peak P99: {event.peakP99}ms</span>

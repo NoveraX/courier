@@ -12,7 +12,9 @@ afterEach(() => {
 
 describe("messageOf", () => {
   it("returns an Error's message as written, line breaks included", () => {
-    expect(messageOf(new Error("Failed to load\n  courier.config.ts:3"))).toBe("Failed to load\n  courier.config.ts:3");
+    expect(messageOf(new Error("Failed to load\n  courier.config.ts:3"))).toBe(
+      "Failed to load\n  courier.config.ts:3",
+    );
   });
 
   it("converts any other thrown value as String() does", () => {

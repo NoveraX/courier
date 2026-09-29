@@ -11,7 +11,7 @@ import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
 import type { ParsedSpec } from "../../src/apis/parser/types";
 import { endpointAt, loadGenerated } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 function header(name: string, required = false, schema: object = { type: "string" }): object {
   return { name, in: "header", required, schema };
@@ -88,7 +88,11 @@ afterAll(async () => {
 });
 
 function client(options: Partial<GenerateOptions>): Record<string, unknown> {
-  const files = generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "things");
+  const files = generateCode(
+    spec(upstream.origin),
+    { type: "openapi", outputDir: "src/api", ...options },
+    "things",
+  );
   return loadGenerated(files, "src/api/things/index.ts").thingsApi as Record<string, unknown>;
 }
 
@@ -96,7 +100,11 @@ describe.each(VARIANTS)("a generated client validated with %s", (_label, options
   it("sends a read's header parameters as headers, and only its query in the query", async () => {
     upstream.requests.length = 0;
 
-    await endpointAt(client(options), "things", "findThings")({
+    await endpointAt(
+      client(options),
+      "things",
+      "findThings",
+    )({
       q: "red",
       "X-Digest": "sha-256=abc",
       "X-Tags": ["a", "b"],
@@ -111,7 +119,11 @@ describe.each(VARIANTS)("a generated client validated with %s", (_label, options
   it("sends a write's header parameter as a header, and its body without it", async () => {
     upstream.requests.length = 0;
 
-    await endpointAt(client(options), "things", "createThing")({ name: "chair", "Idempotency-Key": "k-1" });
+    await endpointAt(
+      client(options),
+      "things",
+      "createThing",
+    )({ name: "chair", "Idempotency-Key": "k-1" });
 
     const [sent] = upstream.requests;
     expect(JSON.parse(sent?.body ?? "null")).toEqual({ name: "chair" });
@@ -121,7 +133,11 @@ describe.each(VARIANTS)("a generated client validated with %s", (_label, options
   it("sends a list body whole beside a header parameter", async () => {
     upstream.requests.length = 0;
 
-    await endpointAt(client(options), "things", "bulkThings")({
+    await endpointAt(
+      client(options),
+      "things",
+      "bulkThings",
+    )({
       "X-Request-Id": "r-9",
       body: [{ name: "x" }],
     });
@@ -134,11 +150,17 @@ describe.each(VARIANTS)("a generated client validated with %s", (_label, options
 
 describe("the header parameters a generated client takes", () => {
   it("leave out the ones a client sets itself, and one named like a query parameter", () => {
-    const files = generateCode(spec("http://127.0.0.1:1"), { type: "openapi", outputDir: "src/api" }, "things");
+    const files = generateCode(
+      spec("http://127.0.0.1:1"),
+      { type: "openapi", outputDir: "src/api" },
+      "things",
+    );
     const group = files.find((file) => file.path.endsWith("things/things/index.ts"))?.content ?? "";
 
     expect(group).toContain('.use(headerVariablesMiddleware(["X-Digest", "X-Tags"]))');
-    expect(group).toContain('import { headerVariablesMiddleware } from "@noverax/courier/middleware";');
+    expect(group).toContain(
+      'import { headerVariablesMiddleware } from "@noverax/courier/middleware";',
+    );
     expect(group).not.toMatch(/"(Authorization|Accept)"/);
   });
 });

@@ -1,18 +1,16 @@
-import type { Socket } from "socket.io-client"
-
-import type { StudioState } from "@/store/store-types"
-import type { StudioEvent } from "@/store/types-events"
-
-import { handleMockEvent, isMockEvent } from "@/store/handle-mock-events"
-import { isStudioEvent } from "./event-guards"
-import { createEventQueue } from "./event-queue"
-import { replayMockEvents } from "./replay-mock-events"
-import { shownSessionOf } from "./shown-session-of"
+import type { Socket } from "socket.io-client";
+import { handleMockEvent, isMockEvent } from "@/store/handle-mock-events";
+import type { StudioState } from "@/store/store-types";
+import type { StudioEvent } from "@/store/types-events";
+import { isStudioEvent } from "./event-guards";
+import { createEventQueue } from "./event-queue";
+import { replayMockEvents } from "./replay-mock-events";
+import { shownSessionOf } from "./shown-session-of";
 
 /** The part of the store runtime events write. */
-export type EventsStore = Pick<StudioState, "handleEvents" | "replayEvents" | "showSession">
+export type EventsStore = Pick<StudioState, "handleEvents" | "replayEvents" | "showSession">;
 
-type EventPayload = StudioEvent & Record<string, unknown>
+type EventPayload = StudioEvent & Record<string, unknown>;
 
 /**
  * Listen for runtime events: each live `event` as it arrives, gathered into
@@ -34,40 +32,42 @@ type EventPayload = StudioEvent & Record<string, unknown>
  * ```
  */
 export function bindEvents(socket: Socket, store: () => EventsStore): () => void {
-  const queue = createEventQueue<EventPayload>((batch) => store().handleEvents(batch))
+  const queue = createEventQueue<EventPayload>((batch) => store().handleEvents(batch));
 
   const onEvent = (event: unknown): void => {
-    if (!isStudioEvent(event)) return
-    if (isMockEvent(event.type)) handleMockEvent(event)
-    else queue.push(event)
-  }
+    if (!isStudioEvent(event)) return;
+    if (isMockEvent(event.type)) handleMockEvent(event);
+    else queue.push(event);
+  };
   /* Live events queued before the replay arrived belong before it. */
   const onReplay = (data: unknown): void => {
-    if (!Array.isArray(data)) return
-    queue.flush()
-    store().replayEvents(data.filter((e): e is EventPayload => isStudioEvent(e) && !isMockEvent(e.type)))
-  }
+    if (!Array.isArray(data)) return;
+    queue.flush();
+    store().replayEvents(
+      data.filter((e): e is EventPayload => isStudioEvent(e) && !isMockEvent(e.type)),
+    );
+  };
 
   const onView = (data: unknown): void => {
-    const shown = shownSessionOf(data)
-    if (!shown) return
-    queue.flush()
-    store().showSession(shown.session, shown.requests)
-  }
+    const shown = shownSessionOf(data);
+    if (!shown) return;
+    queue.flush();
+    store().showSession(shown.session, shown.requests);
+  };
 
   const onMockReplay = (data: unknown): void => {
-    if (Array.isArray(data)) replayMockEvents(data)
-  }
+    if (Array.isArray(data)) replayMockEvents(data);
+  };
 
-  socket.on("event", onEvent)
-  socket.on("events:replay", onReplay)
-  socket.on("view:session", onView)
-  socket.on("mock:events:replay", onMockReplay)
+  socket.on("event", onEvent);
+  socket.on("events:replay", onReplay);
+  socket.on("view:session", onView);
+  socket.on("mock:events:replay", onMockReplay);
   return () => {
-    socket.off("event", onEvent)
-    socket.off("events:replay", onReplay)
-    socket.off("view:session", onView)
-    socket.off("mock:events:replay", onMockReplay)
-    queue.flush()
-  }
+    socket.off("event", onEvent);
+    socket.off("events:replay", onReplay);
+    socket.off("view:session", onView);
+    socket.off("mock:events:replay", onMockReplay);
+    queue.flush();
+  };
 }

@@ -62,7 +62,10 @@ describe("specHostAllowlist", () => {
     for (const named of [undefined, "gitlab.internal"]) {
       const { project } = projectAt({ ...LOADED, running: running(named) });
 
-      expect(await specHostAllowlist(project, "/work/app")()).toEqual({ state: "listed", hosts: [] });
+      expect(await specHostAllowlist(project, "/work/app")()).toEqual({
+        state: "listed",
+        hosts: [],
+      });
     }
   });
 
@@ -70,13 +73,19 @@ describe("specHostAllowlist", () => {
     const failed = failure("UNKNOWN");
     const { project } = projectAt({ ...LOADED, failure: failed });
 
-    expect(await specHostAllowlist(project, "/work/app")()).toEqual({ state: "failing", failure: failed });
+    expect(await specHostAllowlist(project, "/work/app")()).toEqual({
+      state: "failing",
+      failure: failed,
+    });
   });
 
   it("names the root for a project whose courier.config is gone, and uses no list it had", async () => {
     const { project } = projectAt({ ...LOADED, failure: failure("CONFIG_NOT_FOUND") });
 
-    expect(await specHostAllowlist(project, "/work/app")()).toEqual({ state: "missing", root: "/work/app" });
+    expect(await specHostAllowlist(project, "/work/app")()).toEqual({
+      state: "missing",
+      root: "/work/app",
+    });
   });
 
   it("says Studio is starting before the first load has an outcome", async () => {

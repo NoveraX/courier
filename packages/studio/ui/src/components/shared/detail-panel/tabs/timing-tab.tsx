@@ -1,6 +1,11 @@
-import type { RequestEntry } from "@/store/types";
-import { BreakdownCard, buildProxySegments, buildRequestSegments, computeProxyTotal } from "@/components/shared/timing-breakdown";
 import { StreamTimingSummary } from "@/components/shared/stream-timing-summary";
+import {
+  BreakdownCard,
+  buildProxySegments,
+  buildRequestSegments,
+  computeProxyTotal,
+} from "@/components/shared/timing-breakdown";
+import type { RequestEntry } from "@/store/types";
 import { MiddlewareTiming } from "./middleware-timing";
 import { FlowDiagram } from "./proxy-tab";
 
@@ -39,12 +44,14 @@ export function TimingTab({ request }: TimingTabProps): React.ReactElement {
   if (isStream && request.streamStatus === "complete") {
     return (
       <div className="p-4">
-        <StreamTimingSummary data={{
-          duration: request.streamDuration,
-          eventCount: request.streamEventCount,
-          totalBytes: request.streamTotalBytes,
-          transport: request.transport,
-        }} />
+        <StreamTimingSummary
+          data={{
+            duration: request.streamDuration,
+            eventCount: request.streamEventCount,
+            totalBytes: request.streamTotalBytes,
+            transport: request.transport,
+          }}
+        />
       </div>
     );
   }

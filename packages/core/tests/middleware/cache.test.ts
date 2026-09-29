@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createCaller } from "../../src/caller";
-import { courier } from "../../src/define/courier";
 import { defineApi } from "../../src/define/api";
+import { courier } from "../../src/define/courier";
 import { cacheMiddleware, defineMiddleware } from "../../src/middleware/index";
 import type { Middleware } from "../../src/middleware/types";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";

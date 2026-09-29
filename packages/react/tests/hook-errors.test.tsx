@@ -2,6 +2,10 @@
  * @vitest-environment jsdom
  */
 
+import { type HTTPError, isHTTPError, isValidationError } from "@noverax/courier";
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { QueryClient, QueryClientProvider, type UseQueryResult } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
 /**
  * What a hook's `error` holds, and what its type says it holds.
  *
@@ -16,12 +20,6 @@
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
-
-import { QueryClient, QueryClientProvider, type UseQueryResult } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
-
-import { type HTTPError, isHTTPError, isValidationError } from "@noverax/courier";
-import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { createQueryCaller } from "../src/create-query-caller";
 import { optimisticOptions } from "../src/optimistic";
 import { sendJson, startTestServer, type TestServer } from "./helpers/test-server";
@@ -134,7 +132,9 @@ describe("a mutation's error", () => {
         },
       });
       expectTypeOf(mutation.error).toEqualTypeOf<Error | null>();
-      expectTypeOf(optimisticOptions(queryClient, { queryKey: ["users"], updater: (x) => x }).onError)
+      expectTypeOf(
+        optimisticOptions(queryClient, { queryKey: ["users"], updater: (x) => x }).onError,
+      )
         .parameter(0)
         .toEqualTypeOf<Error>();
     };

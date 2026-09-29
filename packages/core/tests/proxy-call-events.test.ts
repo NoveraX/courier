@@ -7,7 +7,7 @@
  * proxy refused with 413. A call now names its endpoint in its URL and is
  * announced as it arrives.
  */
-import { request as httpRequest, createServer, type Server } from "node:http";
+import { createServer, request as httpRequest, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -28,7 +28,9 @@ const events: Array<{ type: string; id?: string; status?: number; variables?: un
 
 beforeEach(async () => {
   upstream = await startUpstream(echo);
-  registerSources({ api: defineApi({ baseURL: upstream.url, endpoints: { upload: endpoint.post("upload") } }) });
+  registerSources({
+    api: defineApi({ baseURL: upstream.url, endpoints: { upload: endpoint.post("upload") } }),
+  });
   const handler = createHandler({ maxUploadBytes: 1024 });
   server = createServer(async (req, res) => {
     await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
@@ -36,9 +38,11 @@ beforeEach(async () => {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   port = (server.address() as AddressInfo).port;
 
-  studioHooks.onRequestStart = (e) => events.push({ type: "start", id: e.id, variables: e.variables });
+  studioHooks.onRequestStart = (e) =>
+    events.push({ type: "start", id: e.id, variables: e.variables });
   studioHooks.onRequestEnd = (e) => events.push({ type: "end", id: e.id, status: e.status });
-  studioHooks.onRequestError = (e) => events.push({ type: "error", id: e.id, status: e.error.status });
+  studioHooks.onRequestError = (e) =>
+    events.push({ type: "error", id: e.id, status: e.error.status });
   studioHooks.onProxyParse = (e) => events.push({ type: "parse", id: e.requestId });
 });
 

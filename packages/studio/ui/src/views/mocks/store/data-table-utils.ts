@@ -13,7 +13,10 @@ export function detectColumns(records: Record<string, unknown>[]): string[] {
 }
 
 /** Detect dominant type per column from first N records */
-export function detectColumnTypes(records: Record<string, unknown>[], columns: string[]): Record<string, FieldType> {
+export function detectColumnTypes(
+  records: Record<string, unknown>[],
+  columns: string[],
+): Record<string, FieldType> {
   const types: Record<string, FieldType> = {};
   if (records.length === 0) return types;
   const sample = records[0]!;
@@ -39,10 +42,19 @@ export function formatValue(val: unknown): string {
 }
 
 export function parseValue(raw: string, type: FieldType): unknown {
-  if (type === "num") { const n = Number(raw); return Number.isNaN(n) ? raw : n; }
+  if (type === "num") {
+    const n = Number(raw);
+    return Number.isNaN(n) ? raw : n;
+  }
   if (type === "bool") return raw === "true";
   if (type === "null") return null;
-  if (type === "obj" || type === "arr") { try { return JSON.parse(raw); } catch { return raw; } }
+  if (type === "obj" || type === "arr") {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw;
+    }
+  }
   return raw;
 }
 
@@ -81,7 +93,11 @@ export function recordKey(record: Record<string, unknown>, idx: number): string 
   return id !== undefined ? String(id) : `row-${idx}`;
 }
 
-export function sortRecords(records: Record<string, unknown>[], col: string, dir: SortDir): Record<string, unknown>[] {
+export function sortRecords(
+  records: Record<string, unknown>[],
+  col: string,
+  dir: SortDir,
+): Record<string, unknown>[] {
   const sorted = [...records].sort((a, b) => {
     const aVal = a[col];
     const bVal = b[col];

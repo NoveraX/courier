@@ -61,11 +61,7 @@ export interface ExplorerSearchParams {
 
 // ── Heatmap types ───────────────────────────────────────────────────────────
 
-export type HeatmapMetric =
-  | "avgResponseTime"
-  | "p95ResponseTime"
-  | "errorRate"
-  | "calls";
+export type HeatmapMetric = "avgResponseTime" | "p95ResponseTime" | "errorRate" | "calls";
 
 export type HeatmapLevel = "good" | "warn" | "bad" | "critical" | "none";
 

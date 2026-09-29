@@ -65,10 +65,13 @@ beforeAll(async () => {
 
   const handler = createHandler({ sources: { api: usersApi(upstreamUrl) } });
   await new Promise<void>((resolve) => {
-    proxy = serve({ fetch: (req) => handler.handle(req), port: 0, hostname: "127.0.0.1" }, (info) => {
-      proxyUrl = `http://127.0.0.1:${info.port}`;
-      resolve();
-    });
+    proxy = serve(
+      { fetch: (req) => handler.handle(req), port: 0, hostname: "127.0.0.1" },
+      (info) => {
+        proxyUrl = `http://127.0.0.1:${info.port}`;
+        resolve();
+      },
+    );
   });
 });
 
@@ -79,7 +82,10 @@ afterAll(async () => {
 
 describe("recording against a plain REST API", () => {
   it("calls the endpoints' REST paths and records what they answered", async () => {
-    const recorder = createRecorder({ source: usersApi("http://placeholder.invalid"), targetUrl: upstreamUrl });
+    const recorder = createRecorder({
+      source: usersApi("http://placeholder.invalid"),
+      targetUrl: upstreamUrl,
+    });
 
     expect(await recorder.client.users.getAll()).toEqual(USERS);
     expect(await recorder.client.users.getById({ id: 2 })).toEqual(USERS[1]);

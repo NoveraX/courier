@@ -42,8 +42,8 @@ export const STATUS_CHART_CONFIG: ChartConfig = {
   "3xx": { label: "3xx Redirect", color: "var(--chart-5)" },
   "4xx": { label: "4xx Client", color: "var(--chart-3)" },
   "5xx": { label: "5xx Server", color: "var(--chart-7)" },
-  "Error": { label: "Error", color: "var(--destructive-foreground)" },
-  "Other": { label: "Other", color: "var(--muted-foreground)" },
+  Error: { label: "Error", color: "var(--destructive-foreground)" },
+  Other: { label: "Other", color: "var(--muted-foreground)" },
 };
 
 export const TIME_SERIES_CHART_CONFIG: ChartConfig = {

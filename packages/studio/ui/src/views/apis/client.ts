@@ -3,14 +3,14 @@
  * All requests go through the Vite dev server proxy → Express backend.
  */
 
+import { post } from "@/lib/api-client";
 import type {
   EndpointInventory,
-  GenerateOptions,
   GeneratedFile,
+  GenerateOptions,
   ParsedSpec,
   SpecDiff,
 } from "./types";
-import { post } from "@/lib/api-client";
 
 // ── Parse ───────────────────────────────────────────────────────────────────
 
@@ -76,18 +76,12 @@ export function checkAllUpdates(): Promise<{
 
 // ── Diff ────────────────────────────────────────────────────────────────────
 
-export function diffSpecs(
-  oldSpec: ParsedSpec,
-  newSpec: ParsedSpec,
-): Promise<SpecDiff> {
+export function diffSpecs(oldSpec: ParsedSpec, newSpec: ParsedSpec): Promise<SpecDiff> {
   return post("/api/apis/diff", { oldSpec, newSpec });
 }
 
 // ── Manage ───────────────────────────────────────────────────────────────────
 
-export function fetchInventory(
-  name: string,
-  spec: ParsedSpec,
-): Promise<EndpointInventory> {
+export function fetchInventory(name: string, spec: ParsedSpec): Promise<EndpointInventory> {
   return post("/api/apis/manage/inventory", { name, newSpec: spec });
 }

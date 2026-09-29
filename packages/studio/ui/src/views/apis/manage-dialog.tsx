@@ -2,24 +2,15 @@
  * Unified manage dialog — reupload, inventory, preview, and apply.
  */
 
-import { useEffect, useState } from "react";
 import { Loader2, Settings2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
-import type { UseManageReturn } from "./use-manage";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ManageFooter } from "./manage-footer";
 import { ManageInventoryView } from "./manage-inventory";
 import { ManagePreviewView } from "./manage-preview";
-import { ManageFooter } from "./manage-footer";
-import {
-  ReuploadStep,
-  type ReuploadStepState,
-} from "./manage-reupload-step";
+import { ReuploadStep, type ReuploadStepState } from "./manage-reupload-step";
+import type { UseManageReturn } from "./use-manage";
 
 interface ManageDialogProps {
   manage: UseManageReturn;
@@ -39,12 +30,18 @@ export function ManageDialog({ manage }: ManageDialogProps): React.ReactElement 
     setReupload((prev) => ({ ...prev, ...update }));
   };
 
-  const title = manage.step === "reupload"
-    ? `Upload spec — ${manage.sourceName}`
-    : `Manage endpoints — ${manage.sourceName}`;
+  const title =
+    manage.step === "reupload"
+      ? `Upload spec — ${manage.sourceName}`
+      : `Manage endpoints — ${manage.sourceName}`;
 
   return (
-    <Dialog open={manage.open} onOpenChange={(open) => { if (!open && manage.step !== "applying") manage.close(); }}>
+    <Dialog
+      open={manage.open}
+      onOpenChange={(open) => {
+        if (!open && manage.step !== "applying") manage.close();
+      }}
+    >
       <DialogContent className="p-0 sm:max-w-[700px] max-h-[80vh] flex flex-col">
         <DialogHeader className="px-6 pt-5 shrink-0">
           <DialogTitle className="text-balance flex items-center gap-2">
@@ -55,11 +52,18 @@ export function ManageDialog({ manage }: ManageDialogProps): React.ReactElement 
 
         <div className="flex-1 overflow-y-auto px-6 pb-4">
           {manage.error && (
-            <p role="alert" className="mb-3 rounded-md border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-body-sm text-destructive">
+            <p
+              role="alert"
+              className="mb-3 rounded-md border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-body-sm text-destructive"
+            >
               {manage.error}
             </p>
           )}
-          <StepContent manage={manage} reupload={reupload} onContentChange={(c) => updateReupload({ content: c })} />
+          <StepContent
+            manage={manage}
+            reupload={reupload}
+            onContentChange={(c) => updateReupload({ content: c })}
+          />
         </div>
 
         {manage.step !== "loading" && manage.step !== "done" && (
@@ -72,7 +76,11 @@ export function ManageDialog({ manage }: ManageDialogProps): React.ReactElement 
 
 // ── Step content ─────────────────────────────────────────────────────────────
 
-function StepContent({ manage, reupload, onContentChange }: {
+function StepContent({
+  manage,
+  reupload,
+  onContentChange,
+}: {
   manage: UseManageReturn;
   reupload: ReuploadStepState;
   onContentChange: (content: string) => void;

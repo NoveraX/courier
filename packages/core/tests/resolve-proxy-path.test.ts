@@ -14,7 +14,7 @@
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { ConfigurationError, isConfigurationError } from "../src/errors";
+import { type ConfigurationError, isConfigurationError } from "../src/errors";
 import { mergeProxyPath } from "../src/proxy-caller/proxy-path";
 import { resolveProxyPath } from "../src/proxy-caller/resolve-path";
 
@@ -174,9 +174,7 @@ describe("resolveProxyPath — invalid inputs", () => {
   });
 
   it("relative path without leading slash is rejected", () => {
-    expect(() => resolveProxyPath("http", { http: "api/request" })).toThrow(
-      /must start with "\/"/,
-    );
+    expect(() => resolveProxyPath("http", { http: "api/request" })).toThrow(/must start with "\/"/);
   });
 
   it("invalid inputs throw ConfigurationError with PROXY_PATH_INVALID code", () => {

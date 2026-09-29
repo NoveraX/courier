@@ -13,7 +13,9 @@ const FILE = "/p/courier.mocks.ts";
 function consumers() {
   const calls: string[] = [];
   const mockRegistry = {
-    syncFromMocks: vi.fn((mocks: Record<string, unknown>) => calls.push(`sync ${Object.keys(mocks).join(",")}`)),
+    syncFromMocks: vi.fn((mocks: Record<string, unknown>) =>
+      calls.push(`sync ${Object.keys(mocks).join(",")}`),
+    ),
     getEntries: vi.fn(() => []),
     attach: vi.fn(() => () => {}),
   };
@@ -58,7 +60,10 @@ describe("applyLoadedMocks", () => {
   it("passes on the loader's message on one line", () => {
     const target = consumers();
 
-    applyLoadedMocks(mocks({ error: new Error("ParseError: Unexpected token  \n /p/courier.mocks.ts:3:0") }), target);
+    applyLoadedMocks(
+      mocks({ error: new Error("ParseError: Unexpected token  \n /p/courier.mocks.ts:3:0") }),
+      target,
+    );
 
     expect(target.mockManager.setMocksFile).toHaveBeenCalledWith({
       file: FILE,

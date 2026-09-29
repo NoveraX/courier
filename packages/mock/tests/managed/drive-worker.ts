@@ -10,9 +10,13 @@ export interface DrivenWorker {
   /** Deliver a message from Studio */
   deliver(message: ParentMessage): void;
   /** Resolve with the first message sent, now or later, that `match` accepts */
-  next<TMessage extends ChildMessage>(match: (message: ChildMessage) => message is TMessage): Promise<TMessage>;
+  next<TMessage extends ChildMessage>(
+    match: (message: ChildMessage) => message is TMessage,
+  ): Promise<TMessage>;
   /** Send a command and resolve with its result */
-  command(command: Record<string, unknown>): Promise<Extract<ChildMessage, { type: "command-result" }>>;
+  command(
+    command: Record<string, unknown>,
+  ): Promise<Extract<ChildMessage, { type: "command-result" }>>;
 }
 
 /**

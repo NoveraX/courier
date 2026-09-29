@@ -1,7 +1,6 @@
 import { useCallback } from "react";
-
-import { useStudioStore } from "@/store";
 import { getSocket } from "@/socket/socket-instance";
+import { useStudioStore } from "@/store";
 
 /**
  * Clear the captured requests, here and in what Studio replays to the next

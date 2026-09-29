@@ -13,10 +13,7 @@ export interface ActivityEntry {
   timestamp: number;
 }
 
-export function computeActivityFeed(
-  requests: RequestEntry[],
-  limit = 50,
-): ActivityEntry[] {
+export function computeActivityFeed(requests: RequestEntry[], limit = 50): ActivityEntry[] {
   return requests
     .filter((r) => r.status !== "pending")
     .slice(-limit)

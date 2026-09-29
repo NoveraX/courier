@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { generateCode } from "../src/apis/generator";
+import { parseSpec } from "../src/apis/parser";
 
 const ok = { responses: { "200": { description: "ok" } } };
 
@@ -149,9 +148,7 @@ describe("Swagger 2.0", () => {
   });
 
   it("builds the base URL from scheme, host and base path", () => {
-    const spec = parse(
-      swagger({ schemes: ["https"], host: "api.example.com", basePath: "/v2" }),
-    );
+    const spec = parse(swagger({ schemes: ["https"], host: "api.example.com", basePath: "/v2" }));
 
     expect(spec.baseURL).toBe("https://api.example.com/v2");
   });

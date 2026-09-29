@@ -11,16 +11,6 @@
  *   and chaos experiment events.
  */
 
-import type { MockCollectionEntry, MockScenarioEntry } from "./mock-slice-types";
-import type { MockEvent } from "./mock-event-types";
-
-import { useMockStore } from "./mock-slice";
-import { mockServerOf } from "./mock-server-of";
-import {
-  handleScenarioActive,
-  handleServerConnect,
-  handleStoreChange,
-} from "./handle-mock-server-events";
 import {
   handleExperimentEvent,
   handleNetworkConfig,
@@ -28,6 +18,15 @@ import {
   handleRequestError,
   handleRequestStart,
 } from "./handle-mock-request-events";
+import {
+  handleScenarioActive,
+  handleServerConnect,
+  handleStoreChange,
+} from "./handle-mock-server-events";
+import type { MockEvent } from "./mock-event-types";
+import { mockServerOf } from "./mock-server-of";
+import { useMockStore } from "./mock-slice";
+import type { MockCollectionEntry, MockScenarioEntry } from "./mock-slice-types";
 
 /** Route mock:* events to the mock Zustand store */
 export function handleMockEvent(event: MockEvent): void {

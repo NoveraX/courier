@@ -53,7 +53,10 @@ function listing(): string[] {
   return readdirSync(directory).sort();
 }
 
-function transformOnce(cache = createTransformCache({ directory }), filename = "/project/courier.config.ts"): void {
+function transformOnce(
+  cache = createTransformCache({ directory }),
+  filename = "/project/courier.config.ts",
+): void {
   const options: TransformOptions = { filename, source: "export default {};", async: true };
   cache.transform(options, (miss): TransformResult => ({ code: `compiled:${miss.source}` }));
 }

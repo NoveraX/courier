@@ -2,16 +2,15 @@
  * Pure toggle helpers for manage endpoint selection.
  */
 
-import type { EndpointInventory, InventoryEndpoint } from "./types";
 import { ownValue } from "@/lib/own-value";
+import type { EndpointInventory, InventoryEndpoint } from "./types";
 
 type SetMap = Record<string, Set<string>>;
 
 const isToggleable = (e: InventoryEndpoint): boolean =>
   e.status === "active" || e.status === "removed-from-spec";
 
-const isAvailable = (e: InventoryEndpoint): boolean =>
-  e.status === "available";
+const isAvailable = (e: InventoryEndpoint): boolean => e.status === "available";
 
 /** Toggle a name in a group's set — add if missing, remove if present */
 export function toggleInSet(prev: SetMap, group: string, name: string): SetMap {
@@ -54,11 +53,19 @@ export function computeGroupToggle(
   if (allSelected) {
     return {
       toAdd: clearGroup(toAdd, groupName),
-      toRemove: setAll(toRemove, groupName, active.map((e) => e.name)),
+      toRemove: setAll(
+        toRemove,
+        groupName,
+        active.map((e) => e.name),
+      ),
     };
   }
   return {
-    toAdd: setAll(toAdd, groupName, available.map((e) => e.name)),
+    toAdd: setAll(
+      toAdd,
+      groupName,
+      available.map((e) => e.name),
+    ),
     toRemove: clearGroup(toRemove, groupName),
   };
 }
@@ -70,7 +77,11 @@ export function computeAllToggle(
   toRemove: SetMap,
 ): { toAdd: SetMap; toRemove: SetMap } {
   const allSelected = inventory.groups.every((g) =>
-    isGroupAllSelected(g, ownValue(toAdd, g.name) ?? new Set(), ownValue(toRemove, g.name) ?? new Set()),
+    isGroupAllSelected(
+      g,
+      ownValue(toAdd, g.name) ?? new Set(),
+      ownValue(toRemove, g.name) ?? new Set(),
+    ),
   );
 
   if (allSelected) {

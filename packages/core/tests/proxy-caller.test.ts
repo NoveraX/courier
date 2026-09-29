@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createProxyCaller } from "../src/proxy-caller";
 import { HTTPError } from "../src/errors";
+import { createProxyCaller } from "../src/proxy-caller";
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -217,7 +217,10 @@ describe("createProxyCaller", () => {
 
     it("resolves a raw streamed call to the response around the body", async () => {
       fetchSpy.mockResolvedValue(
-        new Response(new ReadableStream(), { status: 206, headers: { "content-type": "text/plain" } }),
+        new Response(new ReadableStream(), {
+          status: 206,
+          headers: { "content-type": "text/plain" },
+        }),
       );
 
       const client = createProxyCaller("api") as any;

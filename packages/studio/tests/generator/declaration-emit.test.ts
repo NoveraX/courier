@@ -5,7 +5,7 @@
  * the builder types, and declaration emit failed on every generated file.
  */
 import { join } from "node:path";
-import ts from "typescript";
+import type ts from "typescript";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { GenerateOptions } from "../../src/apis/generator";
@@ -13,7 +13,11 @@ import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
 import { compileProject, removeProjects, STRICT, writeProject } from "../helpers/generated-project";
 
-const Pet = { type: "object", required: ["name"], properties: { name: { type: "string" }, tag: { type: "string" } } };
+const Pet = {
+  type: "object",
+  required: ["name"],
+  properties: { name: { type: "string" }, tag: { type: "string" } },
+};
 const json = (schema: unknown) => ({ content: { "application/json": { schema } } });
 
 const spec = parseSpec(
@@ -23,15 +27,26 @@ const spec = parseSpec(
     servers: [{ url: "https://api.example/v1" }],
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok", ...json({ type: "array", items: Pet }) } } },
-        post: { operationId: "createPet", tags: ["pets"], requestBody: json(Pet), responses: { "200": { description: "ok", ...json(Pet) } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok", ...json({ type: "array", items: Pet }) } },
+        },
+        post: {
+          operationId: "createPet",
+          tags: ["pets"],
+          requestBody: json(Pet),
+          responses: { "200": { description: "ok", ...json(Pet) } },
+        },
       },
       "/pets/{id}/events": {
         get: {
           operationId: "watchPet",
           tags: ["pets"],
           parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-          responses: { "200": { description: "events", content: { "text/event-stream": { schema: Pet } } } },
+          responses: {
+            "200": { description: "events", content: { "text/event-stream": { schema: Pet } } },
+          },
         },
       },
     },

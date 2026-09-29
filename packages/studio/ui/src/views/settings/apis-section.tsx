@@ -1,9 +1,5 @@
-import { Controller } from "react-hook-form";
-
 import type { UseFormReturn } from "react-hook-form";
-import type { Settings } from "@/store/types";
-
-import { Switch } from "@/components/ui/switch";
+import { Controller } from "react-hook-form";
 import {
   Select,
   SelectContent,
@@ -11,11 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  VALIDATION_LIB_OPTIONS,
-  GROUP_BY_OPTIONS,
-  CLIENT_OPTIONS,
-} from "./constants";
+
+import { Switch } from "@/components/ui/switch";
+import type { Settings } from "@/store/types";
+import { CLIENT_OPTIONS, GROUP_BY_OPTIONS, VALIDATION_LIB_OPTIONS } from "./constants";
 import { SettingRow } from "./setting-row";
 
 // ── APIs defaults section ────────────────────────────────────────────────────
@@ -24,9 +19,7 @@ interface ApisSectionProps {
   form: UseFormReturn<Settings>;
 }
 
-export function ApisSection({
-  form,
-}: ApisSectionProps): React.ReactElement {
+export function ApisSection({ form }: ApisSectionProps): React.ReactElement {
   return (
     <>
       <SettingRow label="Validation library">
@@ -101,11 +94,7 @@ export function ApisSection({
           control={form.control}
           name="apisGenerateTypes"
           render={({ field }) => (
-            <Switch
-              id="apisGenerateTypes"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
+            <Switch id="apisGenerateTypes" checked={field.value} onCheckedChange={field.onChange} />
           )}
         />
       </SettingRow>

@@ -47,11 +47,11 @@ function createSocket(): Socket {
 
 function serve(maxSubscriptionsPerConnection: number): { socket: Socket; live: () => number } {
   let live = 0;
-  const feed = channel.response<string>().implement((async function* () {
+  const feed = channel.response<string>().implement(async function* () {
     live += 1;
     yield "hello";
     await new Promise(() => {});
-  }) as never);
+  } as never);
   registerSources({ api: { options: { groups: { live: { options: {}, feed } } } } } as Sources);
   const socket = createSocket();
   createWSHandler({ maxSubscriptionsPerConnection }).handleSocket(

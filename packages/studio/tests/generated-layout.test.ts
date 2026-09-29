@@ -27,7 +27,11 @@ function specTagged(tags: string[]): ParsedSpec {
   const paths: Record<string, unknown> = {};
   tags.forEach((tag, index) => {
     paths[`/r${index}`] = {
-      get: { operationId: `list${index}`, tags: [tag], responses: { "200": { description: "ok" } } },
+      get: {
+        operationId: `list${index}`,
+        tags: [tag],
+        responses: { "200": { description: "ok" } },
+      },
     };
   });
   return parseSpec(JSON.stringify({ openapi: "3.1.0", info: { title: "T", version: "1" }, paths }));
@@ -60,7 +64,10 @@ describe("generateCode layout", () => {
       /^[^/]+\/index\.ts$/.test(path.slice("src/api/pets/".length)),
     );
 
-    expect(groupFiles).toEqual(["src/api/pets/webhooks/index.ts", "src/api/pets/web-hooks/index.ts"]);
+    expect(groupFiles).toEqual([
+      "src/api/pets/webhooks/index.ts",
+      "src/api/pets/web-hooks/index.ts",
+    ]);
   });
 
   it("moves a group named like a Windows device into a directory Windows can create", () => {
@@ -68,8 +75,11 @@ describe("generateCode layout", () => {
   });
 
   it("imports a group named like the source under an alias, keeping its key", () => {
-    const source = generateCode(specTagged(["Pets"]), { type: "openapi", outputDir: "src/api" }, "pets")
-      .find((file) => file.path === "src/api/pets/source.ts");
+    const source = generateCode(
+      specTagged(["Pets"]),
+      { type: "openapi", outputDir: "src/api" },
+      "pets",
+    ).find((file) => file.path === "src/api/pets/source.ts");
 
     expect(source?.content).toContain('import { pets as group_pets } from "./pets/index";');
     expect(source?.content).toContain("    pets: group_pets,");
@@ -86,29 +96,39 @@ describe("generateCode layout", () => {
     ["a group named like the source", ["Pets", "Store"], "pets", "tag"],
     ["groups named like what the files use", ["Courier", "Endpoint", "Type"], "pets", "tag"],
     ["a flat import named like what the files use", ["Pets"], "courier", "single"],
-  ] as const)("compiles with %s", (label, tags, importName, groupBy) => {
-    const files = generateCode(specTagged([...tags]), { type: "openapi", outputDir: "gen", groupBy }, importName);
-    const dir = join(ROOT, label.replaceAll(" ", "-"));
-    for (const file of files) {
-      mkdirSync(dirname(join(dir, file.path)), { recursive: true });
-      writeFileSync(join(dir, file.path), file.content);
-    }
-    const index = files.find((file) => file.path.endsWith("/index.ts") && file.path.split("/").length === 3);
-    const program = ts.createProgram([join(dir, index?.path ?? "")], {
-      strict: true,
-      noEmit: true,
-      module: ts.ModuleKind.ESNext,
-      moduleResolution: ts.ModuleResolutionKind.Bundler,
-      target: ts.ScriptTarget.ES2022,
-      skipLibCheck: true,
-      types: [],
-    });
+  ] as const)(
+    "compiles with %s",
+    (label, tags, importName, groupBy) => {
+      const files = generateCode(
+        specTagged([...tags]),
+        { type: "openapi", outputDir: "gen", groupBy },
+        importName,
+      );
+      const dir = join(ROOT, label.replaceAll(" ", "-"));
+      for (const file of files) {
+        mkdirSync(dirname(join(dir, file.path)), { recursive: true });
+        writeFileSync(join(dir, file.path), file.content);
+      }
+      const index = files.find(
+        (file) => file.path.endsWith("/index.ts") && file.path.split("/").length === 3,
+      );
+      const program = ts.createProgram([join(dir, index?.path ?? "")], {
+        strict: true,
+        noEmit: true,
+        module: ts.ModuleKind.ESNext,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
+        target: ts.ScriptTarget.ES2022,
+        skipLibCheck: true,
+        types: [],
+      });
 
-    const problems = ts
-      .getPreEmitDiagnostics(program)
-      .map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
+      const problems = ts
+        .getPreEmitDiagnostics(program)
+        .map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"));
 
-    expect(index).toBeDefined();
-    expect(problems).toEqual([]);
-  }, 60_000);
+      expect(index).toBeDefined();
+      expect(problems).toEqual([]);
+    },
+    60_000,
+  );
 });

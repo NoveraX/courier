@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-
-import { closeSubscriptionEntry, extractHeaders } from "../src/adapter/ws-dispatch-helpers";
 import type { SubscriptionTracker, WSSocketContext } from "../src/adapter/ws-context";
+import { closeSubscriptionEntry, extractHeaders } from "../src/adapter/ws-dispatch-helpers";
 
-function createCtx(
-  overrides: { onWSUntrack?: () => void; onStreamClose?: () => void } = {},
-): { ctx: WSSocketContext; subs: Map<string, SubscriptionTracker> } {
+function createCtx(overrides: { onWSUntrack?: () => void; onStreamClose?: () => void } = {}): {
+  ctx: WSSocketContext;
+  subs: Map<string, SubscriptionTracker>;
+} {
   const subs = new Map<string, SubscriptionTracker>();
   const ctx = {
     subscriptionIds: subs,
@@ -52,7 +52,11 @@ describe("closeSubscriptionEntry", () => {
     expect(onWSUntrack).toHaveBeenCalledTimes(1);
     expect(onStreamClose).toHaveBeenCalledTimes(1);
     expect(onStreamClose).toHaveBeenCalledWith(
-      expect.objectContaining({ requestId: "req-api.chat.room", reason: "complete", eventCount: 3 }),
+      expect.objectContaining({
+        requestId: "req-api.chat.room",
+        reason: "complete",
+        eventCount: 3,
+      }),
     );
     expect(subs.size).toBe(0);
   });
@@ -64,9 +68,7 @@ describe("closeSubscriptionEntry", () => {
 
     closeSubscriptionEntry(ctx, "api.chat.room", "error");
 
-    expect(onStreamClose).toHaveBeenCalledWith(
-      expect.objectContaining({ reason: "error" }),
-    );
+    expect(onStreamClose).toHaveBeenCalledWith(expect.objectContaining({ reason: "error" }));
   });
 
   it("is a no-op when topic is not subscribed", () => {

@@ -25,10 +25,18 @@ afterEach(() => {
 /** The places reported in `source`, as `line:name`. */
 function reported(source) {
   mkdirSync(join(root, "src"));
-  const compilerOptions = { strict: true, target: "ES2022", lib: ["ES2022", "DOM"], types: [], noEmit: true };
+  const compilerOptions = {
+    strict: true,
+    target: "ES2022",
+    lib: ["ES2022", "DOM"],
+    types: [],
+    noEmit: true,
+  };
   writeFileSync(join(root, "tsconfig.json"), JSON.stringify({ compilerOptions, include: ["src"] }));
   writeFileSync(join(root, "src", "read.ts"), source);
-  return findImplicitAny(join(root, "tsconfig.json"), /\/src\//).map(({ line, name }) => `${line}:${name}`);
+  return findImplicitAny(join(root, "tsconfig.json"), /\/src\//).map(
+    ({ line, name }) => `${line}:${name}`,
+  );
 }
 
 describe("check-implicit-any", () => {
@@ -40,7 +48,8 @@ describe("check-implicit-any", () => {
   });
 
   it("reports a field read from a value typed any", () => {
-    const source = "export function count(text: string): number {\n  return JSON.parse(text).count;\n}\n";
+    const source =
+      "export function count(text: string): number {\n  return JSON.parse(text).count;\n}\n";
 
     expect(reported(source)).toEqual(["2:JSON.parse(text)", "2:count"]);
   });

@@ -1,16 +1,14 @@
 import { useMemo } from "react";
 
 import { CountDisplay } from "@/components/shared/count-display";
-import { SearchInput } from "@/components/shared/search-input";
 import { FilterBar as SharedFilterBar } from "@/components/shared/filter-bar";
+import { SearchInput } from "@/components/shared/search-input";
+import type { SingleSelectOption } from "@/components/shared/single-select";
 import { SingleSelect } from "@/components/shared/single-select";
-
 import type { EndpointNodeData } from "../types";
 import type { HeatmapFilters } from "./heatmap-filters";
-import type { TimingSort } from "./timing-types";
 import { buildHeatmapFilterConfigs } from "./heatmap-filters";
-
-import type { SingleSelectOption } from "@/components/shared/single-select";
+import type { TimingSort } from "./timing-types";
 
 // ── Sort options ───────────────────────────────────────────────────────────
 
@@ -47,10 +45,7 @@ export function HeatmapToolbar({
   total,
   filtered,
 }: HeatmapToolbarProps): React.ReactElement {
-  const filterConfigs = useMemo(
-    () => buildHeatmapFilterConfigs(endpoints),
-    [endpoints],
-  );
+  const filterConfigs = useMemo(() => buildHeatmapFilterConfigs(endpoints), [endpoints]);
 
   const values: Record<string, string[]> = {
     source: filters.source,
@@ -76,9 +71,7 @@ export function HeatmapToolbar({
       <SharedFilterBar
         filters={filterConfigs}
         values={values}
-        onChange={(key, selected) =>
-          onFilterChange(key as keyof HeatmapFilters, selected as never)
-        }
+        onChange={(key, selected) => onFilterChange(key as keyof HeatmapFilters, selected as never)}
         onReset={onReset}
       />
 

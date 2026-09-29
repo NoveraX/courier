@@ -38,11 +38,7 @@ interface ToggleCommentResult {
  * @returns The updated text plus a new selection range that compensates for
  *   inserted/removed comment markers.
  */
-export function toggleComment(
-  text: string,
-  selStart: number,
-  selEnd: number,
-): ToggleCommentResult {
+export function toggleComment(text: string, selStart: number, selEnd: number): ToggleCommentResult {
   const lines = text.split("\n");
   const startLine = text.slice(0, selStart).split("\n").length - 1;
   const endLine = text.slice(0, selEnd).split("\n").length - 1;

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { bodyHash } from "../../src/server/import-files/body-hash";
-import { readGeneratedFile, signGeneratedFile } from "../../src/server/import-files/generated-header";
+import {
+  readGeneratedFile,
+  signGeneratedFile,
+} from "../../src/server/import-files/generated-header";
 
-const BODY = 'import { defineApi } from "@noverax/courier/define";\n\nexport const pets = defineApi({});\n';
+const BODY =
+  'import { defineApi } from "@noverax/courier/define";\n\nexport const pets = defineApi({});\n';
 
 describe("signGeneratedFile", () => {
   it("heads the body with the import's name and the body's hash, and a note", () => {
@@ -37,7 +41,10 @@ describe("readGeneratedFile", () => {
   });
 
   it("tells an edited body by its hash", () => {
-    const edited = signGeneratedFile("pets", BODY).replace("defineApi({})", "defineApi({ baseURL: 'x' })");
+    const edited = signGeneratedFile("pets", BODY).replace(
+      "defineApi({})",
+      "defineApi({ baseURL: 'x' })",
+    );
 
     const { header, body } = readGeneratedFile(edited);
 

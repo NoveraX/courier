@@ -67,10 +67,18 @@ function manager() {
     onExited: vi.fn(),
     onEvent: vi.fn(),
   };
-  return { events, pm: createProcessManager(events, { transformCacheDirectory: () => transformCacheDirectory }) };
+  return {
+    events,
+    pm: createProcessManager(events, { transformCacheDirectory: () => transformCacheDirectory }),
+  };
 }
 
-const request = { serverId: "apiMock", mocksFile: "/work/courier.mocks.ts", mockKey: "apiMock", port: 7401 };
+const request = {
+  serverId: "apiMock",
+  mocksFile: "/work/courier.mocks.ts",
+  mockKey: "apiMock",
+  port: 7401,
+};
 
 afterEach(() => {
   forks.length = 0;
@@ -194,7 +202,6 @@ describe("stopping a managed mock", () => {
     await vi.advanceTimersByTimeAsync(50);
     await stopping;
 
-
     expect(child.signalCode).toBe("SIGKILL");
     await pm.dispose();
   });
@@ -229,7 +236,8 @@ describe("stopping a managed mock", () => {
 /** The id each command went to the worker under, in the order sent. */
 function commandIds(child: FakeChild): string[] {
   return child.send.mock.calls.flatMap(([msg]: unknown[]) => {
-    if (typeof msg !== "object" || msg === null || Reflect.get(msg, "type") !== "command") return [];
+    if (typeof msg !== "object" || msg === null || Reflect.get(msg, "type") !== "command")
+      return [];
     const id: unknown = Reflect.get(msg, "requestId");
     return typeof id === "string" ? [id] : [];
   });
@@ -244,7 +252,12 @@ describe("a command sent to a managed mock", () => {
     const first = pm.sendCommand("apiMock", { action: "mock:store:seed" });
     const second = pm.sendCommand("apiMock", { action: "mock:store:update", id: 9 });
     const [firstId, secondId] = commandIds(child);
-    child.emit("message", { type: "command-result", requestId: secondId, ok: false, error: "no record 9" });
+    child.emit("message", {
+      type: "command-result",
+      requestId: secondId,
+      ok: false,
+      error: "no record 9",
+    });
     child.emit("message", { type: "command-result", requestId: firstId, ok: true });
 
     expect(firstId).not.toBe(secondId);
@@ -262,7 +275,10 @@ describe("a command sent to a managed mock", () => {
     exit(child, 1, null);
     child.emit("close", 1, null);
 
-    await expect(reply).resolves.toEqual({ ok: false, error: "The mock stopped before it answered." });
+    await expect(reply).resolves.toEqual({
+      ok: false,
+      error: "The mock stopped before it answered.",
+    });
   });
 
   it("resolves as refused for a mock with no worker", async () => {
@@ -284,6 +300,8 @@ describe("the host process", () => {
     await pm.dispose();
 
     expect(during).toEqual(before.slice(0, 3));
-    expect(["SIGINT", "SIGTERM", "SIGHUP", "exit"].map((e) => process.listenerCount(e))).toEqual(before);
+    expect(["SIGINT", "SIGTERM", "SIGHUP", "exit"].map((e) => process.listenerCount(e))).toEqual(
+      before,
+    );
   });
 });

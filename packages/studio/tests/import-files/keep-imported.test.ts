@@ -5,7 +5,15 @@
  * went without a question, and the project stopped compiling on
  * "Cannot find module './schemas'".
  */
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -24,21 +32,47 @@ const SPEC = parseSpec(
         get: {
           operationId: "listPets",
           tags: ["pets"],
-          responses: { "200": { description: "ok", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Pet" } } } } } },
+          responses: {
+            "200": {
+              description: "ok",
+              content: {
+                "application/json": {
+                  schema: { type: "array", items: { $ref: "#/components/schemas/Pet" } },
+                },
+              },
+            },
+          },
         },
       },
       "/store/orders": {
         get: {
           operationId: "listOrders",
           tags: ["store"],
-          responses: { "200": { description: "ok", content: { "application/json": { schema: { type: "array", items: { $ref: "#/components/schemas/Order" } } } } } },
+          responses: {
+            "200": {
+              description: "ok",
+              content: {
+                "application/json": {
+                  schema: { type: "array", items: { $ref: "#/components/schemas/Order" } },
+                },
+              },
+            },
+          },
         },
       },
     },
     components: {
       schemas: {
-        Pet: { type: "object", required: ["id"], properties: { id: { type: "integer" }, name: { type: "string" } } },
-        Order: { type: "object", required: ["id"], properties: { id: { type: "integer" }, total: { type: "number" } } },
+        Pet: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" }, name: { type: "string" } },
+        },
+        Order: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "integer" }, total: { type: "number" } },
+        },
       },
     },
   }),
@@ -61,7 +95,13 @@ beforeEach(async () => {
   root = mkdtempSync(join(cache, "keep-imported-"));
   put("courier.config.ts", CONFIG);
   url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }, 30_000);
 
@@ -81,19 +121,31 @@ function read(path: string): string {
   return readFileSync(join(root, path), "utf8");
 }
 
-async function write(body: Record<string, unknown>): Promise<{ status: number; body: Record<string, unknown> }> {
+async function write(
+  body: Record<string, unknown>,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}/api/apis/write`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
-    body: JSON.stringify({ sourceName: "pets", spec: SPEC, specUrl: "", importType: "file", ...body }),
+    body: JSON.stringify({
+      sourceName: "pets",
+      spec: SPEC,
+      specUrl: "",
+      importType: "file",
+      ...body,
+    }),
   });
   const payload: unknown = await response.json();
-  return { status: response.status, body: typeof payload === "object" && payload !== null ? { ...payload } : {} };
+  return {
+    status: response.status,
+    body: typeof payload === "object" && payload !== null ? { ...payload } : {},
+  };
 }
 
 function digestOf(reply: { body: Record<string, unknown> }): string {
   const plan = reply.body.plan;
-  const digest = typeof plan === "object" && plan !== null && "digest" in plan ? plan.digest : undefined;
+  const digest =
+    typeof plan === "object" && plan !== null && "digest" in plan ? plan.digest : undefined;
   if (typeof digest !== "string") throw new Error(`no plan in ${JSON.stringify(reply.body)}`);
   return digest;
 }
@@ -116,15 +168,22 @@ function compileErrors(dir: string): string[] {
   });
   return ts
     .getPreEmitDiagnostics(program)
-    .map((d) => `${d.file?.fileName ?? ""}: ${ts.flattenDiagnosticMessageText(d.messageText, "\n")}`);
+    .map(
+      (d) => `${d.file?.fileName ?? ""}: ${ts.flattenDiagnosticMessageText(d.messageText, "\n")}`,
+    );
 }
 
 describe("importing again without a group whose edited file the user keeps", () => {
   it("keeps the files that file imports, and the project compiles", async () => {
     expect((await write({ options: OPTIONS })).status).toBe(200);
     put(BARREL, `${read(BARREL)}\n// my note\n`);
-    put(STORE, read(STORE).replace("  endpoints: {\n", '  endpoints: {\n    mine: endpoint.get("/mine"),\n'));
-    const imported = (read(STORE).match(/from "(\.\/[^"]+)"/g) ?? []).map((from) => from.slice(6, -1));
+    put(
+      STORE,
+      read(STORE).replace("  endpoints: {\n", '  endpoints: {\n    mine: endpoint.get("/mine"),\n'),
+    );
+    const imported = (read(STORE).match(/from "(\.\/[^"]+)"/g) ?? []).map((from) =>
+      from.slice(6, -1),
+    );
     expect(imported).toContain("./schemas");
     const options = { ...OPTIONS, selectedEndpoints: { pets: ["listPets"] } };
 
@@ -135,13 +194,19 @@ describe("importing again without a group whose edited file the user keeps", () 
     expect(applied.status).toBe(200);
     expect(existsSync(join(root, STORE))).toBe(true);
     expect(existsSync(join(root, "src/api/pets/store/schemas.ts"))).toBe(true);
-    expect(applied.body.kept).toContainEqual({ path: "src/api/pets/store/schemas.ts", reason: "imported" });
+    expect(applied.body.kept).toContainEqual({
+      path: "src/api/pets/store/schemas.ts",
+      reason: "imported",
+    });
     expect(compileErrors("src/api/pets")).toEqual([]);
   }, 30_000);
 
   it("removes them with it once the user allows the removal", async () => {
     expect((await write({ options: OPTIONS })).status).toBe(200);
-    put(STORE, read(STORE).replace("  endpoints: {\n", '  endpoints: {\n    mine: endpoint.get("/mine"),\n'));
+    put(
+      STORE,
+      read(STORE).replace("  endpoints: {\n", '  endpoints: {\n    mine: endpoint.get("/mine"),\n'),
+    );
     const options = { ...OPTIONS, selectedEndpoints: { pets: ["listPets"] } };
 
     const asked = await write({ options });

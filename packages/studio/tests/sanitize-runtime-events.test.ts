@@ -47,9 +47,7 @@ describe("sanitizeRuntimeHello", () => {
   });
 
   it("rejects runtimeId longer than 256 chars", () => {
-    expect(
-      sanitizeRuntimeHello({ runtimeId: "a".repeat(257), kind: "browser" }),
-    ).toBeUndefined();
+    expect(sanitizeRuntimeHello({ runtimeId: "a".repeat(257), kind: "browser" })).toBeUndefined();
   });
 
   it("accepts an http listenOrigin", () => {
@@ -179,9 +177,7 @@ describe("sanitizeRuntimeAnnounce", () => {
   });
 
   it("rejects non-array transports", () => {
-    expect(
-      sanitizeRuntimeAnnounce({ transports: "http", sources: ["api"] }),
-    ).toBeUndefined();
+    expect(sanitizeRuntimeAnnounce({ transports: "http", sources: ["api"] })).toBeUndefined();
   });
 
   it("rejects non-object root", () => {

@@ -15,7 +15,10 @@ const { endpoint } = courier();
 const api = defineApi({
   baseURL: "http://api.test",
   groups: {
-    users: defineGroup({ prefix: "/users", endpoints: { list: endpoint.get("").response<string[]>() } }),
+    users: defineGroup({
+      prefix: "/users",
+      endpoints: { list: endpoint.get("").response<string[]>() },
+    }),
   },
 });
 

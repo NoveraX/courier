@@ -6,14 +6,13 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  isBindingErrorPayload,
-  isBindingSnapshot,
-} from "../src/socket/binding-guards";
+import { isBindingErrorPayload, isBindingSnapshot } from "../src/socket/binding-guards";
 
 describe("isBindingSnapshot", () => {
   it("accepts a well-formed empty snapshot", () => {
-    expect(isBindingSnapshot({ rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] })).toBe(true);
+    expect(isBindingSnapshot({ rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] })).toBe(
+      true,
+    );
   });
 
   it("accepts the connected runtimes with their kinds", () => {
@@ -32,7 +31,12 @@ describe("isBindingSnapshot", () => {
 
   it("rejects a runtime of an unknown kind, and a snapshot without runtimes", () => {
     expect(
-      isBindingSnapshot({ rows: [], runtimeCount: 1, sourceCount: 0, runtimes: [{ runtimeId: "x", kind: "edge" }] }),
+      isBindingSnapshot({
+        rows: [],
+        runtimeCount: 1,
+        sourceCount: 0,
+        runtimes: [{ runtimeId: "x", kind: "edge" }],
+      }),
     ).toBe(false);
     expect(isBindingSnapshot({ rows: [], runtimeCount: 0, sourceCount: 0 })).toBe(false);
   });
@@ -97,9 +101,7 @@ describe("isBindingSnapshot", () => {
   });
 
   it("rejects non-finite counts", () => {
-    expect(
-      isBindingSnapshot({ rows: [], runtimeCount: Number.NaN, sourceCount: 0 }),
-    ).toBe(false);
+    expect(isBindingSnapshot({ rows: [], runtimeCount: Number.NaN, sourceCount: 0 })).toBe(false);
     expect(
       isBindingSnapshot({ rows: [], runtimeCount: 0, sourceCount: Number.POSITIVE_INFINITY }),
     ).toBe(false);

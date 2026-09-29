@@ -20,7 +20,9 @@ const SPEC = parseSpec(
         get: {
           operationId: "getValue",
           tags: ["values"],
-          responses: { "200": { description: "ok", content: { "application/json": { schema: json } } } },
+          responses: {
+            "200": { description: "ok", content: { "application/json": { schema: json } } },
+          },
         },
       },
     },
@@ -45,11 +47,18 @@ interface StandardSchema {
 }
 
 function isStandardSchema(value: unknown): value is StandardSchema {
-  return typeof value === "function" || (typeof value === "object" && value !== null && "~standard" in value);
+  return (
+    typeof value === "function" ||
+    (typeof value === "object" && value !== null && "~standard" in value)
+  );
 }
 
 function accepts(value: unknown): boolean {
-  const files = generateCode(SPEC, { type: "openapi", outputDir: "src", validation: "arktype" }, "cycles");
+  const files = generateCode(
+    SPEC,
+    { type: "openapi", outputDir: "src", validation: "arktype" },
+    "cycles",
+  );
   const schema = loadGenerated(files, "src/cycles/values/schemas.ts").JsonSchema;
   if (!isStandardSchema(schema)) throw new Error("JsonSchema is not a schema");
   const result = schema["~standard"].validate(value);

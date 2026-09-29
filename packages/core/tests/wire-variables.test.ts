@@ -19,7 +19,10 @@ describe("variables sent to the proxy", () => {
   });
 
   it("are refused when the document is not an object", () => {
-    expect(parseWireVariables("[1]")).toEqual({ ok: false, reason: "variables must be a JSON object" });
+    expect(parseWireVariables("[1]")).toEqual({
+      ok: false,
+      reason: "variables must be a JSON object",
+    });
     expect(parseWireVariables("{x")).toEqual({ ok: false, reason: "variables are not valid JSON" });
   });
 });

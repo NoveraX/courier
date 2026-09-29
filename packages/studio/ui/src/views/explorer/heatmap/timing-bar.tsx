@@ -1,10 +1,6 @@
-import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { formatDuration } from "@/components/shared/formatters";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 import type { PhaseValue } from "./timing-types";
 
@@ -42,14 +38,18 @@ export function TimingBar({ phases, total, maxTotal }: TimingBarProps): React.Re
             <Tooltip key={phase.key}>
               <TooltipTrigger asChild>
                 <div
-                  className={cn(phase.color, "h-full transition-all duration-300 hover:brightness-125")}
+                  className={cn(
+                    phase.color,
+                    "h-full transition-all duration-300 hover:brightness-125",
+                  )}
                   style={{ width: `${Math.max(phase.pct, 1)}%` }}
                 />
               </TooltipTrigger>
               <TooltipContent side="top" className="text-body-xs">
                 <span className="text-background font-medium">{phase.label}</span>
                 <span className="text-background/60">
-                  {" "}{formatDuration(phase.avg)} ({phase.pct.toFixed(1)}%)
+                  {" "}
+                  {formatDuration(phase.avg)} ({phase.pct.toFixed(1)}%)
                 </span>
               </TooltipContent>
             </Tooltip>

@@ -9,10 +9,7 @@ interface UnsavedBannerProps {
   onDiscard: () => void;
 }
 
-export function UnsavedBanner({
-  onSave,
-  onDiscard,
-}: UnsavedBannerProps): React.ReactElement {
+export function UnsavedBanner({ onSave, onDiscard }: UnsavedBannerProps): React.ReactElement {
   return (
     <div className="flex items-center justify-between border-b border-warning/30 bg-warning/5 px-4 py-2">
       <p className="text-body-sm text-warning">You have unsaved changes</p>

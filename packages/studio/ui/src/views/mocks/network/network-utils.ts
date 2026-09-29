@@ -56,9 +56,10 @@ export function computeNetworkStats(logs: MockRequestLog[]): NetworkStats {
   const errors = logs.filter((l) => l.status !== undefined && l.status >= 400);
 
   const latency: LatencyStats = {
-    avg: latencies.length > 0
-      ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
-      : 0,
+    avg:
+      latencies.length > 0
+        ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length)
+        : 0,
     p50: computePercentile(latencies, 50),
     p95: computePercentile(latencies, 95),
     p99: computePercentile(latencies, 99),
@@ -79,10 +80,14 @@ function buildErrorBreakdown(errors: MockRequestLog[], total: number): ErrorBrea
     by500: errors.filter((e) => e.status === 500).length,
     by502: errors.filter((e) => e.status === 502).length,
     by503: errors.filter((e) => e.status === 503).length,
-    timeout: errors.filter((e) => e.status === 408 || e.error?.toLowerCase().includes("timeout")).length,
+    timeout: errors.filter((e) => e.status === 408 || e.error?.toLowerCase().includes("timeout"))
+      .length,
     reset: errors.filter((e) => e.error?.toLowerCase().includes("reset")).length,
-    other4xx: errors.filter((e) => e.status !== undefined && e.status >= 400 && e.status < 500).length,
-    other5xx: errors.filter((e) => e.status !== undefined && e.status >= 500 && ![500, 502, 503].includes(e.status)).length,
+    other4xx: errors.filter((e) => e.status !== undefined && e.status >= 400 && e.status < 500)
+      .length,
+    other5xx: errors.filter(
+      (e) => e.status !== undefined && e.status >= 500 && ![500, 502, 503].includes(e.status),
+    ).length,
   };
 }
 
@@ -115,7 +120,17 @@ function computeReqPerSec(logs: MockRequestLog[]): number {
 function emptyStats(): NetworkStats {
   return {
     latency: { avg: 0, p50: 0, p95: 0, p99: 0 },
-    errors: { total: 0, rate: 0, by500: 0, by502: 0, by503: 0, timeout: 0, reset: 0, other4xx: 0, other5xx: 0 },
+    errors: {
+      total: 0,
+      rate: 0,
+      by500: 0,
+      by502: 0,
+      by503: 0,
+      timeout: 0,
+      reset: 0,
+      other4xx: 0,
+      other5xx: 0,
+    },
     requestCount: 0,
     requestsPerSec: 0,
     timeline: [],

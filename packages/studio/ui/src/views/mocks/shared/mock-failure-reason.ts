@@ -16,7 +16,11 @@ const PORT_TAKEN = /EADDRINUSE\b.*?:(\d+)\s*$/;
  * ```
  */
 export function mockFailureReason(lastError: string): string {
-  const firstLine = lastError.split("\n").find((line) => line.trim() !== "")?.trim() ?? lastError.trim();
+  const firstLine =
+    lastError
+      .split("\n")
+      .find((line) => line.trim() !== "")
+      ?.trim() ?? lastError.trim();
   const message = firstLine.replace(ERROR_NAME, "");
   const port = PORT_TAKEN.exec(message)?.[1];
   return port ? `Port ${port} is in use by another process` : message;

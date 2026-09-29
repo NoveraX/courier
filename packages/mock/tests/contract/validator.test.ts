@@ -10,7 +10,10 @@ const users = defineGroup({
   prefix: "users",
   endpoints: {
     getAll: endpoint.get("").response(z.array(User)),
-    getById: endpoint.get(":id").variables(z.object({ id: z.number() })).response(User),
+    getById: endpoint
+      .get(":id")
+      .variables(z.object({ id: z.number() }))
+      .response(User),
   },
 });
 
@@ -52,9 +55,7 @@ describe("validateSource variables", () => {
 
     const results = await validateSource(api, responses, { direction: "both", variables });
 
-    const byTarget = results
-      .filter((r) => r.method === "getById")
-      .map((r) => [r.target, r.status]);
+    const byTarget = results.filter((r) => r.method === "getById").map((r) => [r.target, r.status]);
     expect(byTarget).toEqual([
       ["response", "pass"],
       ["variables", "pass"],

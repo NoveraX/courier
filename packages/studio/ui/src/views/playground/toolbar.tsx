@@ -60,11 +60,25 @@ function uiToGroup(value: string): string {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function PlaygroundToolbar({
-  sources, groups, methods,
-  source, group, method, mode, sourceInfo,
-  endpointInfo, sending, canSend, streaming,
-  onSourceChange, onGroupChange, onMethodChange,
-  onModeChange, onSend, onUnsubscribe, historySlot,
+  sources,
+  groups,
+  methods,
+  source,
+  group,
+  method,
+  mode,
+  sourceInfo,
+  endpointInfo,
+  sending,
+  canSend,
+  streaming,
+  onSourceChange,
+  onGroupChange,
+  onMethodChange,
+  onModeChange,
+  onSend,
+  onUnsubscribe,
+  historySlot,
 }: ToolbarProps): React.ReactElement {
   const isRealtime = endpointInfo?.transport === "sse" || endpointInfo?.transport === "ws";
   const groupOptions = toGroupOptions(groups);
@@ -98,7 +112,9 @@ export function PlaygroundToolbar({
       {endpointInfo && (
         <>
           {!isRealtime && <TypeBadge type={endpointInfo.type ?? "untyped"} />}
-          {isRealtime && endpointInfo.transport && <TransportBadge transport={endpointInfo.transport} />}
+          {isRealtime && endpointInfo.transport && (
+            <TransportBadge transport={endpointInfo.transport} />
+          )}
         </>
       )}
 
@@ -108,9 +124,7 @@ export function PlaygroundToolbar({
           for the current endpoint in proxy mode (HTTP, SSE, or WS).
           Sits to the LEFT of the mode toggle so the URL is read first as
           context for which endpoint the toggle is switching against. */}
-      {showProxyPath && (
-        <ProxyPathBadge transport={proxyTransport} source={sourceInfo} />
-      )}
+      {showProxyPath && <ProxyPathBadge transport={proxyTransport} source={sourceInfo} />}
 
       {/* Mode toggle */}
       <ModeToggle mode={mode} onChange={onModeChange} />

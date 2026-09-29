@@ -2,9 +2,9 @@ import type { CourierConfig } from "@noverax/courier/config";
 import type { Namespace } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
+import { TOKEN_PAGES } from "../src/server/live-events";
 import { setupRuntimeNamespace } from "../src/server/runtime-namespace";
 import { clearStudioServerState, getRuntimeEntry } from "../src/server/runtime-namespace-state";
-import { TOKEN_PAGES } from "../src/server/live-events";
 import { FIXED_TOKEN, FIXED_TOKEN_VALUE } from "./helpers/fixed-token";
 
 type Handler = (raw: unknown) => void;
@@ -83,7 +83,7 @@ describe("setupRuntimeNamespace", () => {
 
     socket.emit("runtime:announce", { transports: ["http"], sources: ["api"] });
     expect(bindingTable.resolveBinding("api", "http")?.runtimeId).toBe("next-server");
-    expect((ui.emit as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+    expect(ui.emit as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
       "binding:snapshot",
       expect.objectContaining({
         rows: expect.any(Array),
@@ -97,7 +97,9 @@ describe("setupRuntimeNamespace", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
     setupRuntimeNamespace(ns as unknown as Namespace, {
-      token: FIXED_TOKEN, bindingTable });
+      token: FIXED_TOKEN,
+      bindingTable,
+    });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -109,7 +111,9 @@ describe("setupRuntimeNamespace", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
     setupRuntimeNamespace(ns as unknown as Namespace, {
-      token: FIXED_TOKEN, bindingTable });
+      token: FIXED_TOKEN,
+      bindingTable,
+    });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -121,7 +125,9 @@ describe("setupRuntimeNamespace", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
     setupRuntimeNamespace(ns as unknown as Namespace, {
-      token: FIXED_TOKEN, bindingTable });
+      token: FIXED_TOKEN,
+      bindingTable,
+    });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -139,7 +145,9 @@ describe("setupRuntimeNamespace", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
     setupRuntimeNamespace(ns as unknown as Namespace, {
-      token: FIXED_TOKEN, bindingTable });
+      token: FIXED_TOKEN,
+      bindingTable,
+    });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -154,7 +162,9 @@ describe("setupRuntimeNamespace", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
     setupRuntimeNamespace(ns as unknown as Namespace, {
-      token: FIXED_TOKEN, bindingTable });
+      token: FIXED_TOKEN,
+      bindingTable,
+    });
 
     const socket = makeSocket();
     ns.connect(socket);
@@ -269,7 +279,9 @@ describe("setupRuntimeNamespace", () => {
     const bindingTable = new BindingTable();
     const ns = makeNamespace();
     setupRuntimeNamespace(ns as unknown as Namespace, {
-      token: FIXED_TOKEN, bindingTable });
+      token: FIXED_TOKEN,
+      bindingTable,
+    });
 
     const socket = makeSocket();
     ns.connect(socket);

@@ -65,7 +65,10 @@ export async function startUpstream(
     const route = routes[`${req.method} ${req.url}`];
     setTimeout(() => {
       if (res.destroyed) return;
-      res.writeHead(route?.status ?? 404, { "content-type": "application/json", ...route?.headers });
+      res.writeHead(route?.status ?? 404, {
+        "content-type": "application/json",
+        ...route?.headers,
+      });
       res.end(JSON.stringify(route?.body ?? { message: "no such route" }));
     }, route?.delayMs ?? 0);
   });

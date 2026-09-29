@@ -13,7 +13,12 @@ import { API } from "./playground-fixtures";
 
 const catalog = buildCatalog([API], []);
 
-function copied(group: string, method: string, variables: unknown, headers: Record<string, string> = {}) {
+function copied(
+  group: string,
+  method: string,
+  variables: unknown,
+  headers: Record<string, string> = {},
+) {
   const source = catalog.api;
   const entry = source?.groups[group];
   const endpoint: EndpointInfo | undefined = entry?.endpoints[method];
@@ -70,13 +75,16 @@ describe("a copied request", () => {
   });
 
   it("addresses a group by its prefix, not its name", () => {
-    expect(copied("misc", "headers", undefined).url).toBe("http://localhost:7501/v2/misc/echo/headers");
+    expect(copied("misc", "headers", undefined).url).toBe(
+      "http://localhost:7501/v2/misc/echo/headers",
+    );
   });
 
   it("gives no address for a stream, which the app serves", () => {
     const source = catalog.api;
     const ticks = source?.groups.live?.endpoints.ticks;
-    if (source === undefined || ticks === undefined) throw new Error("The fixture has no live.ticks");
+    if (source === undefined || ticks === undefined)
+      throw new Error("The fixture has no live.ticks");
     expect(endpointUrl(source, "live", ticks)).toBe("");
   });
 });

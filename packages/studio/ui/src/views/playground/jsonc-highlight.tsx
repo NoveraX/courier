@@ -7,11 +7,11 @@
  */
 
 const JSONC_PATTERNS: [RegExp, string][] = [
-  [/\/\/.*$/gm, "text-zinc-600 italic"],                 // comments (dimmed)
-  [/"(?:[^"\\]|\\.)*"\s*(?=:)/g, "text-cyan-400"],       // property keys
-  [/"(?:[^"\\]|\\.)*"/g, "text-emerald-400"],            // string values
+  [/\/\/.*$/gm, "text-zinc-600 italic"], // comments (dimmed)
+  [/"(?:[^"\\]|\\.)*"\s*(?=:)/g, "text-cyan-400"], // property keys
+  [/"(?:[^"\\]|\\.)*"/g, "text-emerald-400"], // string values
   [/\b-?\d+\.?\d*(?:[eE][+-]?\d+)?\b/g, "text-sky-400"], // numbers
-  [/\b(?:true|false|null)\b/g, "text-amber-400"],        // keywords
+  [/\b(?:true|false|null)\b/g, "text-amber-400"], // keywords
 ];
 
 interface Match {
@@ -32,7 +32,7 @@ export function highlightJsonc(code: string): React.ReactNode[] {
   }
 
   // Sort by start, then by length (longest first) so wider matches win on overlap
-  matches.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+  matches.sort((a, b) => a.start - b.start || b.end - b.start - (a.end - a.start));
 
   const nodes: React.ReactNode[] = [];
   let pos = 0;

@@ -17,23 +17,14 @@ export function TourOverlay({ rect, onClose }: TourOverlayProps): React.ReactEle
   const h = rect.height + PADDING * 2;
 
   return (
-    <svg
-      className="fixed inset-0 size-full"
-      onClick={onClose}
-      aria-hidden
-    >
+    <svg className="fixed inset-0 size-full" onClick={onClose} aria-hidden>
       <defs>
         <mask id="tour-mask">
           <rect width="100%" height="100%" fill="white" />
           <rect x={x} y={y} width={w} height={h} rx={RADIUS} fill="black" />
         </mask>
       </defs>
-      <rect
-        width="100%"
-        height="100%"
-        fill="oklch(0.13 0.01 264 / 0.7)"
-        mask="url(#tour-mask)"
-      />
+      <rect width="100%" height="100%" fill="oklch(0.13 0.01 264 / 0.7)" mask="url(#tour-mask)" />
       {/* Glow ring around cutout */}
       <rect
         x={x}

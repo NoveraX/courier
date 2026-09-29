@@ -80,9 +80,7 @@ export function DataTable({
 
         {state.filtered.length === 0 ? (
           <div className="py-12 text-center text-body-sm text-muted-foreground/50">
-            {state.search
-              ? "No records match your search."
-              : "No records in this collection."}
+            {state.search ? "No records match your search." : "No records in this collection."}
           </div>
         ) : (
           <div

@@ -1,10 +1,10 @@
-import type { RequestEntry } from "./types"
+import type { RequestEntry } from "./types";
 
 export interface MergeReplayedOptions {
   /** How many requests the list keeps. */
-  maxRequests: number
+  maxRequests: number;
   /** While recording is paused, a replay brings no request the page does not hold. */
-  paused: boolean
+  paused: boolean;
 }
 
 /**
@@ -29,15 +29,15 @@ export function mergeReplayed(
   replayed: RequestEntry[],
   { maxRequests, paused }: MergeReplayedOptions,
 ): RequestEntry[] {
-  const heldById = new Map(held.map((r) => [r.id, r]))
-  const merged: RequestEntry[] = []
-  const replayedIds = new Set<string>()
+  const heldById = new Map(held.map((r) => [r.id, r]));
+  const merged: RequestEntry[] = [];
+  const replayedIds = new Set<string>();
   for (const request of replayed) {
-    const mine = heldById.get(request.id)
-    if (paused && !mine) continue
-    replayedIds.add(request.id)
-    merged.push(mine?.pinned ? { ...request, pinned: true } : request)
+    const mine = heldById.get(request.id);
+    if (paused && !mine) continue;
+    replayedIds.add(request.id);
+    merged.push(mine?.pinned ? { ...request, pinned: true } : request);
   }
-  for (const request of held) if (!replayedIds.has(request.id)) merged.push(request)
-  return merged.sort((a, b) => b.startedAt - a.startedAt).slice(0, maxRequests)
+  for (const request of held) if (!replayedIds.has(request.id)) merged.push(request);
+  return merged.sort((a, b) => b.startedAt - a.startedAt).slice(0, maxRequests);
 }

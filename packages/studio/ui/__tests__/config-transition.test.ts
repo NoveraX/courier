@@ -9,9 +9,8 @@ import { describe, expect, it } from "vitest";
 
 import type { ConfigStatusPayload } from "../src/store/config-status";
 import type { ConfigReloadContext } from "../src/store/config-transition";
-import type { MocksFileStatus } from "../src/store/mocks-file-status";
-
 import { configTransitionNotice } from "../src/store/config-transition";
+import type { MocksFileStatus } from "../src/store/mocks-file-status";
 
 const STARTING: ConfigStatusPayload = { state: "starting", revision: 0 };
 

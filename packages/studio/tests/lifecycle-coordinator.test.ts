@@ -14,10 +14,12 @@ import { courier, defineApi } from "@noverax/courier/define";
 import { defineMockServer } from "@noverax/courier-mock/managed";
 import type { Namespace } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { ProcessManagerEvents, ProcessManagerOptions } from "../src/server/mock-manager/process-manager";
-import type { SpawnRequest } from "../src/server/mock-manager/types";
 import { TOKEN_PAGES } from "../src/server/live-events";
+import type {
+  ProcessManagerEvents,
+  ProcessManagerOptions,
+} from "../src/server/mock-manager/process-manager";
+import type { SpawnRequest } from "../src/server/mock-manager/types";
 
 const fake = {
   events: undefined as ProcessManagerEvents | undefined,
@@ -47,7 +49,13 @@ vi.mock("../src/server/mock-manager/process-manager", () => ({
         setTimeout(() => {
           if (fake.children.get(request.serverId) !== request) return;
           const url = `http://localhost:${request.port}`;
-          events.onReady(request.serverId, { port: request.port, url, routes: [], collections: [], scenarios: [] });
+          events.onReady(request.serverId, {
+            port: request.port,
+            url,
+            routes: [],
+            collections: [],
+            scenarios: [],
+          });
         }, 2);
         return { pid: 1 };
       },
@@ -61,11 +69,16 @@ vi.mock("../src/server/mock-manager/process-manager", () => ({
   },
 }));
 
-const { createLifecycleCoordinator } = await import("../src/server/mock-manager/lifecycle-coordinator");
+const { createLifecycleCoordinator } = await import(
+  "../src/server/mock-manager/lifecycle-coordinator"
+);
 const { createMockRegistry } = await import("../src/server/mock-registry");
 
 const { endpoint } = courier();
-const api = defineApi({ baseURL: "https://api.example", endpoints: { ping: endpoint.get("ping") } });
+const api = defineApi({
+  baseURL: "https://api.example",
+  endpoints: { ping: endpoint.get("ping") },
+});
 
 type Emitted = {
   type: string;
@@ -86,13 +99,17 @@ function studio() {
     mockRegistry: registry,
     basePort: 7001,
     /* The pages with the token, which see each event whole. */
-    uiNamespace: { emit, to: (room: string) => ({ emit: room === TOKEN_PAGES ? emit : vi.fn() }) } as unknown as Namespace,
+    uiNamespace: {
+      emit,
+      to: (room: string) => ({ emit: room === TOKEN_PAGES ? emit : vi.fn() }),
+    } as unknown as Namespace,
     transformCacheDirectory: () => STUDIO_TRANSFORMS,
   });
   coordinator.setMocksFile({ file: MOCKS_FILE, error: null });
   const emitted = (): Emitted[] =>
     emit.mock.calls.filter(([name]) => name === "event").map(([, event]) => event as Emitted);
-  const statuses = () => emit.mock.calls.filter(([name]) => name === "mocks:status").map(([, status]) => status);
+  const statuses = () =>
+    emit.mock.calls.filter(([name]) => name === "mocks:status").map(([, status]) => status);
   const last = (serverId: string) =>
     emitted()
       .filter((e) => e.serverId === serverId && e.type === "mock:server:connect")
@@ -324,7 +341,10 @@ describe("what the UI is told", () => {
 describe("a mocks file that fails to load", () => {
   it("keeps its mocks running, says why on each, and the next load that works clears it", async () => {
     const { coordinator, declare, last } = studio();
-    declare({ a: defineMockServer({ source: api, autoStart: true }), b: defineMockServer({ source: api }) });
+    declare({
+      a: defineMockServer({ source: api, autoStart: true }),
+      b: defineMockServer({ source: api }),
+    });
     await settle();
 
     coordinator.setMocksFile({ file: MOCKS_FILE, error: "Unexpected token" });
@@ -409,7 +429,10 @@ describe("the workers Studio starts", () => {
 describe("what an edit of the mocks file is told", () => {
   it("lists each tracked mock with whether it runs and its port", async () => {
     const { coordinator, declare } = studio();
-    declare({ a: defineMockServer({ source: api, autoStart: true, port: 7555 }), b: defineMockServer({ source: api }) });
+    declare({
+      a: defineMockServer({ source: api, autoStart: true, port: 7555 }),
+      b: defineMockServer({ source: api }),
+    });
     await settle();
 
     expect(coordinator.summarizeServers()).toEqual([

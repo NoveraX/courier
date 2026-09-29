@@ -33,10 +33,12 @@ describe("sendRouteFailure", () => {
   });
 
   it("answers a path outside the project 400 with its code", () => {
-    expect(answered(new PathOutsideProjectError("../a.ts", "it leaves the project"))).toMatchObject({
-      status: 400,
-      body: { code: "PATH_OUTSIDE_PROJECT" },
-    });
+    expect(answered(new PathOutsideProjectError("../a.ts", "it leaves the project"))).toMatchObject(
+      {
+        status: 400,
+        body: { code: "PATH_OUTSIDE_PROJECT" },
+      },
+    );
   });
 
   it("answers a project that cannot serve the request with the status it names", () => {

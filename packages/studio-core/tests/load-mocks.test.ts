@@ -106,7 +106,9 @@ describe("readMocksExport", () => {
     ["a string", "api"],
     ["null", null],
   ])("rejects a default export that is %s", (_, value) => {
-    expect(() => readMocksExport({ default: value }, file)).toThrow("must export an object of mocks by key");
+    expect(() => readMocksExport({ default: value }, file)).toThrow(
+      "must export an object of mocks by key",
+    );
   });
 });
 
@@ -124,7 +126,10 @@ describe("loadCourierMocksFile", () => {
   });
 
   it.each([
-    ["courier.mocks.ts", "const enabled: boolean = false;\nexport default enabled ? { api: { port: 1 } } : undefined;\n"],
+    [
+      "courier.mocks.ts",
+      "const enabled: boolean = false;\nexport default enabled ? { api: { port: 1 } } : undefined;\n",
+    ],
     ["courier.mocks.mjs", "export default undefined;\n"],
     ["courier.mocks.cjs", "module.exports = undefined;\n"],
   ])("reads no mocks from a %s whose default export is undefined", async (name, source) => {
@@ -147,7 +152,10 @@ describe("loadCourierMocksFile", () => {
   });
 
   it("reports a mocks file that does not load", async () => {
-    writeFileSync(join(dir, "courier.mocks.ts"), 'import { missing } from "./missing";\nexport default { missing };\n');
+    writeFileSync(
+      join(dir, "courier.mocks.ts"),
+      'import { missing } from "./missing";\nexport default { missing };\n',
+    );
 
     await expect(loadCourierMocksFile(join(dir, "courier.mocks.ts"))).rejects.toThrow(/missing/);
   });
@@ -185,13 +193,18 @@ describe("loadCourierMocksFile — loader options", () => {
 
   it("a mocks file loaded through a new cache on the same directory transforms nothing, as in a mock worker", async () => {
     write("port.ts", "export const port: number = 7001;\n");
-    write("courier.mocks.ts", 'import { port } from "./port";\nexport default { api: { port } };\n');
+    write(
+      "courier.mocks.ts",
+      'import { port } from "./port";\nexport default { api: { port } };\n',
+    );
     const directory = join(dir, "transforms");
     const studio = counting(createTransformCache({ directory }));
     const worker = counting(createTransformCache({ directory }));
 
     await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache: studio.cache });
-    const loaded = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache: worker.cache });
+    const loaded = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), {
+      transformCache: worker.cache,
+    });
 
     expect(studio.computed.sort()).toEqual([join(dir, "courier.mocks.ts"), join(dir, "port.ts")]);
     expect(worker.computed).toEqual([]);
@@ -200,9 +213,14 @@ describe("loadCourierMocksFile — loader options", () => {
 
   it("a mock worker's read-only cache reuses what Studio kept and adds nothing to the directory", async () => {
     write("port.ts", "export const port: number = 7001;\n");
-    write("courier.mocks.ts", 'import { port } from "./port";\nexport default { api: { port } };\n');
+    write(
+      "courier.mocks.ts",
+      'import { port } from "./port";\nexport default { api: { port } };\n',
+    );
     const directory = join(dir, "transforms");
-    await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache: createTransformCache({ directory }) });
+    await loadCourierMocksFile(join(dir, "courier.mocks.ts"), {
+      transformCache: createTransformCache({ directory }),
+    });
     const kept = readdirSync(directory).sort();
     write("host.ts", 'export const host = "localhost";\n');
     write(
@@ -211,7 +229,9 @@ describe("loadCourierMocksFile — loader options", () => {
     );
     const worker = counting(createTransformCache({ directory, readOnly: true, maxMemoryChars: 0 }));
 
-    const loaded = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { transformCache: worker.cache });
+    const loaded = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), {
+      transformCache: worker.cache,
+    });
 
     expect(worker.computed.sort()).toEqual([join(dir, "courier.mocks.ts"), join(dir, "host.ts")]);
     expect(readdirSync(directory).sort()).toEqual(kept);
@@ -219,11 +239,20 @@ describe("loadCourierMocksFile — loader options", () => {
   });
 
   it("resolves an installed package of an aliased scope to the package, with aliases on or off", async () => {
-    write("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }));
+    write(
+      "tsconfig.json",
+      JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }),
+    );
     write("src/port.ts", "export const port = 1;\n");
-    write("node_modules/@app/port/package.json", JSON.stringify({ name: "@app/port", main: "index.js" }));
+    write(
+      "node_modules/@app/port/package.json",
+      JSON.stringify({ name: "@app/port", main: "index.js" }),
+    );
     write("node_modules/@app/port/index.js", "exports.port = 2;\n");
-    write("courier.mocks.ts", 'import { port } from "@app/port";\nexport default { api: { port } };\n');
+    write(
+      "courier.mocks.ts",
+      'import { port } from "@app/port";\nexport default { api: { port } };\n',
+    );
 
     const aliased = await loadCourierMocksFile(join(dir, "courier.mocks.ts"));
     const plain = await loadCourierMocksFile(join(dir, "courier.mocks.ts"), { aliases: false });
@@ -233,15 +262,21 @@ describe("loadCourierMocksFile — loader options", () => {
   });
 
   it("follows the project's path aliases only when they are on", async () => {
-    write("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }));
+    write(
+      "tsconfig.json",
+      JSON.stringify({ compilerOptions: { paths: { "@app/*": ["./src/*"] } } }),
+    );
     write("src/local.ts", "export const port = 1;\n");
-    write("courier.mocks.ts", 'import { port } from "@app/local";\nexport default { api: { port } };\n');
+    write(
+      "courier.mocks.ts",
+      'import { port } from "@app/local";\nexport default { api: { port } };\n',
+    );
 
     const aliased = await loadCourierMocksFile(join(dir, "courier.mocks.ts"));
 
     expect(aliased.mocks).toEqual({ api: { port: 1 } });
-    await expect(loadCourierMocksFile(join(dir, "courier.mocks.ts"), { aliases: false })).rejects.toThrow(
-      "@app/local",
-    );
+    await expect(
+      loadCourierMocksFile(join(dir, "courier.mocks.ts"), { aliases: false }),
+    ).rejects.toThrow("@app/local");
   });
 });

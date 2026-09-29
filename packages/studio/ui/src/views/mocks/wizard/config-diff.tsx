@@ -1,10 +1,13 @@
-import type { DiffHunk, DiffLine } from "./wire-types";
-
 import { cn } from "@/lib/utils";
 import { diffStats } from "./diff-stats";
+import type { DiffHunk, DiffLine } from "./wire-types";
 
 const MARK: Record<DiffLine["kind"], string> = { context: " ", add: "+", remove: "−" };
-const SPOKEN: Record<DiffLine["kind"], string> = { context: "", add: "added: ", remove: "removed: " };
+const SPOKEN: Record<DiffLine["kind"], string> = {
+  context: "",
+  add: "added: ",
+  remove: "removed: ",
+};
 
 function DiffRow({ line }: { line: DiffLine }): React.ReactElement {
   return (
@@ -67,7 +70,10 @@ export function ConfigDiff({
               <div className="select-none px-3 py-1 mono-xs text-muted-foreground/60">⋯</div>
             )}
             {hunk.lines.map((line) => (
-              <DiffRow key={`${line.kind}:${line.oldLine ?? ""}:${line.newLine ?? ""}`} line={line} />
+              <DiffRow
+                key={`${line.kind}:${line.oldLine ?? ""}:${line.newLine ?? ""}`}
+                line={line}
+              />
             ))}
           </div>
         ))}

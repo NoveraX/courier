@@ -11,12 +11,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  detectAppOrigin,
-  getAppOrigin,
-  getAppOriginParsed,
-  setAppOrigin,
-} from "../src/app-origin";
+import { detectAppOrigin, getAppOrigin, getAppOriginParsed, setAppOrigin } from "../src/app-origin";
 import { isConfigurationError } from "../src/errors";
 
 const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");

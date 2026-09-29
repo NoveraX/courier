@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Command as CommandPrimitive } from "cmdk"
+import { Command as CommandPrimitive } from "cmdk";
+import type * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function CommandGroup({
   className,
@@ -14,11 +14,11 @@ function CommandGroup({
       data-slot="command-group"
       className={cn(
         "overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 function CommandSeparator({
@@ -31,7 +31,7 @@ function CommandSeparator({
       className={cn("-mx-1 h-px bg-border", className)}
       {...props}
     />
-  )
+  );
 }
 
-export { CommandGroup, CommandSeparator }
+export { CommandGroup, CommandSeparator };

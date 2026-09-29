@@ -1,6 +1,6 @@
 import type { RequestEntry } from "@/store/types";
+import { extractSparkline, percentile } from "./kpi-helpers";
 import type { KPIData, TrendInfo } from "./types";
-import { percentile, extractSparkline } from "./kpi-helpers";
 
 const TREND_THRESHOLD = 0.1;
 const SPARKLINE_BUCKETS = 12;
@@ -25,9 +25,7 @@ export function computeKPIs(requests: RequestEntry[]): KPIData {
     .filter((r) => r.status !== "pending")
     .sort((a, b) => a.startedAt - b.startedAt);
   const successes = completed.filter((r) => r.status === "success");
-  const errors = completed.filter(
-    (r) => r.status === "error" || r.status === "validation_error",
-  );
+  const errors = completed.filter((r) => r.status === "error" || r.status === "validation_error");
   const durations = completed
     .filter((r) => r.timing)
     .map((r) => r.timing!.total)
@@ -119,7 +117,10 @@ function bucketAvgSize(bucket: RequestEntry[]): number {
 // ── Utilities ────────────────────────────────────────────────────────────────
 
 function extractDurations(requests: RequestEntry[]): number[] {
-  return requests.filter((r) => r.timing).map((r) => r.timing!.total).sort((a, b) => a - b);
+  return requests
+    .filter((r) => r.timing)
+    .map((r) => r.timing!.total)
+    .sort((a, b) => a - b);
 }
 
 /**

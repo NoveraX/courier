@@ -1,7 +1,6 @@
-import type { EndpointNodeData } from "../types";
-
 import type { FilterConfig, FilterOption } from "@/components/shared/filter-bar";
 import { extractUniqueValues } from "@/lib/filter-utils";
+import type { EndpointNodeData } from "../types";
 
 // ── Filter state ───────────────────────────────────────────────────────────
 
@@ -66,13 +65,25 @@ const TYPE_OPTIONS: FilterOption[] = [
   { value: "untyped", label: "Untyped" },
 ];
 
-export function buildHeatmapFilterConfigs(
-  endpoints: EndpointNodeData[],
-): FilterConfig[] {
+export function buildHeatmapFilterConfigs(endpoints: EndpointNodeData[]): FilterConfig[] {
   return [
-    { key: "source", label: "Source", options: extractUniqueValues(endpoints, (ep) => ep.source), searchable: true },
-    { key: "group", label: "Group", options: extractUniqueValues(endpoints, (ep) => ep.group), searchable: true },
+    {
+      key: "source",
+      label: "Source",
+      options: extractUniqueValues(endpoints, (ep) => ep.source),
+      searchable: true,
+    },
+    {
+      key: "group",
+      label: "Group",
+      options: extractUniqueValues(endpoints, (ep) => ep.group),
+      searchable: true,
+    },
     { key: "endpointType", label: "Type", options: TYPE_OPTIONS },
-    { key: "httpMethod", label: "HTTP", options: extractUniqueValues(endpoints, (ep) => ep.httpMethod) },
+    {
+      key: "httpMethod",
+      label: "HTTP",
+      options: extractUniqueValues(endpoints, (ep) => ep.httpMethod),
+    },
   ];
 }

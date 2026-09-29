@@ -85,7 +85,9 @@ describe("mock for a source without groups", () => {
       source: flatApi,
       overrides: (mock) => {
         expectTypeOf(mock("users", "listUsers").resolves).parameter(0).toEqualTypeOf<User[]>();
-        expectTypeOf(mock("ticks", "ticks").emits).parameter(0).toEqualTypeOf<Array<SSEEvent<{ n: number }>>>();
+        expectTypeOf(mock("ticks", "ticks").emits)
+          .parameter(0)
+          .toEqualTypeOf<Array<SSEEvent<{ n: number }>>>();
       },
     });
   });
@@ -107,7 +109,9 @@ describe("mock for a source with groups and top-level endpoints", () => {
       source: mixedApi,
       overrides: (mock) => {
         expectTypeOf(mock("users", "getAll").resolves).parameter(0).toEqualTypeOf<User[]>();
-        expectTypeOf(mock("health", "health").resolves).parameter(0).toEqualTypeOf<{ ok: boolean }>();
+        expectTypeOf(mock("health", "health").resolves)
+          .parameter(0)
+          .toEqualTypeOf<{ ok: boolean }>();
       },
     });
   });

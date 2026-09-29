@@ -8,10 +8,8 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
-
-import { deriveScenarioType, type ScenarioType } from "./scenario-utils";
-
 import type { MockScenarioEntry } from "@/store/mock-slice";
+import { deriveScenarioType, type ScenarioType } from "./scenario-utils";
 
 export interface UseScenarioFilterReturn {
   search: string;
@@ -36,10 +34,11 @@ export function useScenarioFilter(scenarios: MockScenarioEntry[]): UseScenarioFi
     let list = scenarios;
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter((s) =>
-        s.name.toLowerCase().includes(q) ||
-        (s.description?.toLowerCase().includes(q) ?? false) ||
-        (s.tags?.some((t) => t.toLowerCase().includes(q)) ?? false),
+      list = list.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          (s.description?.toLowerCase().includes(q) ?? false) ||
+          (s.tags?.some((t) => t.toLowerCase().includes(q)) ?? false),
       );
     }
     if (selectedTypes.length > 0) {

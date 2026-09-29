@@ -20,7 +20,7 @@ import {
   writeProject,
 } from "../helpers/generated-project";
 import { type ProxyServer, startProxyServer } from "../helpers/proxy-server";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const media = (type: string, schema?: unknown) => ({
   required: true,
@@ -55,26 +55,43 @@ function spec(origin: string): ParsedSpec {
         },
         "/avatars": {
           post: op("uploadAvatar", {
-            requestBody: media("multipart/form-data", { $ref: "#/components/schemas/AvatarUpload" }),
+            requestBody: media("multipart/form-data", {
+              $ref: "#/components/schemas/AvatarUpload",
+            }),
           }),
         },
         "/files/content": {
           post: op("uploadContent", {
             parameters: [{ name: "fields", in: "query", schema: strings }],
-            requestBody: media("multipart/form-data", { type: "object", properties: { file: binary } }),
+            requestBody: media("multipart/form-data", {
+              type: "object",
+              properties: { file: binary },
+            }),
           }),
         },
         "/files/{fileId}": {
-          put: op("replaceFile", { parameters: [fileId], requestBody: media("application/octet-stream", binary) }),
-          delete: op("deleteVersions", { parameters: [fileId], requestBody: media("application/json", strings) }),
+          put: op("replaceFile", {
+            parameters: [fileId],
+            requestBody: media("application/octet-stream", binary),
+          }),
+          delete: op("deleteVersions", {
+            parameters: [fileId],
+            requestBody: media("application/json", strings),
+          }),
         },
         "/raw": { put: op("putRaw", { requestBody: media("application/octet-stream") }) },
         "/files/{fileId}/tags": {
-          post: op("tagFile", { parameters: [fileId], requestBody: media("application/json", strings) }),
+          post: op("tagFile", {
+            parameters: [fileId],
+            requestBody: media("application/json", strings),
+          }),
         },
         "/bulk": {
           post: op("bulkCreate", {
-            requestBody: media("application/json", { type: "array", items: { $ref: "#/components/schemas/Item" } }),
+            requestBody: media("application/json", {
+              type: "array",
+              items: { $ref: "#/components/schemas/Item" },
+            }),
           }),
         },
       },
@@ -97,36 +114,64 @@ function form(entries: Record<string, string | Blob>): FormData {
 /** Each call, and what the server has to receive for it. */
 function calls(): [string, () => unknown, (r: UpstreamServer["requests"][number]) => void][] {
   return [
-    ["uploadFile", () => form({ file: new Blob(["png bytes"]), note: "hi" }), (r) => {
-      expect(`${r.method} ${r.path}`).toBe("POST /v1/files");
-      expect(r.contentType).toMatch(/^multipart\/form-data/);
-      expect(r.body).toContain("png bytes");
-      expect(r.body).toContain('name="note"');
-    }],
-    ["uploadAvatar", () => form({ image: new Blob(["avatar bytes"]) }), (r) => {
-      expect(r.contentType).toMatch(/^multipart\/form-data/);
-      expect(r.body).toContain("avatar bytes");
-    }],
-    ["uploadContent", () => form({ file: new Blob(["content"]), fields: "name" }), (r) => {
-      expect(r.query).toEqual([["fields", "name"]]);
-      expect(r.body).toContain("content");
-      expect(r.body).not.toContain('name="fields"');
-    }],
-    ["tagFile", () => ({ fileId: "f1", body: ["a", "b"] }), (r) => {
-      expect(`${r.method} ${r.path} ${r.body}`).toBe('POST /v1/files/f1/tags ["a","b"]');
-    }],
-    ["deleteVersions", () => ({ fileId: "f1", body: ["v1"] }), (r) => {
-      expect(`${r.method} ${r.path} ${r.body}`).toBe('DELETE /v1/files/f1 ["v1"]');
-      expect(r.query).toEqual([]);
-    }],
-    ["bulkCreate", () => [{ name: "a" }], (r) => {
-      expect(`${r.method} ${r.path} ${r.body}`).toBe('POST /v1/bulk [{"name":"a"}]');
-    }],
+    [
+      "uploadFile",
+      () => form({ file: new Blob(["png bytes"]), note: "hi" }),
+      (r) => {
+        expect(`${r.method} ${r.path}`).toBe("POST /v1/files");
+        expect(r.contentType).toMatch(/^multipart\/form-data/);
+        expect(r.body).toContain("png bytes");
+        expect(r.body).toContain('name="note"');
+      },
+    ],
+    [
+      "uploadAvatar",
+      () => form({ image: new Blob(["avatar bytes"]) }),
+      (r) => {
+        expect(r.contentType).toMatch(/^multipart\/form-data/);
+        expect(r.body).toContain("avatar bytes");
+      },
+    ],
+    [
+      "uploadContent",
+      () => form({ file: new Blob(["content"]), fields: "name" }),
+      (r) => {
+        expect(r.query).toEqual([["fields", "name"]]);
+        expect(r.body).toContain("content");
+        expect(r.body).not.toContain('name="fields"');
+      },
+    ],
+    [
+      "tagFile",
+      () => ({ fileId: "f1", body: ["a", "b"] }),
+      (r) => {
+        expect(`${r.method} ${r.path} ${r.body}`).toBe('POST /v1/files/f1/tags ["a","b"]');
+      },
+    ],
+    [
+      "deleteVersions",
+      () => ({ fileId: "f1", body: ["v1"] }),
+      (r) => {
+        expect(`${r.method} ${r.path} ${r.body}`).toBe('DELETE /v1/files/f1 ["v1"]');
+        expect(r.query).toEqual([]);
+      },
+    ],
+    [
+      "bulkCreate",
+      () => [{ name: "a" }],
+      (r) => {
+        expect(`${r.method} ${r.path} ${r.body}`).toBe('POST /v1/bulk [{"name":"a"}]');
+      },
+    ],
   ];
 }
 
 const DIRECT_ONLY: [string, () => unknown, string][] = [
-  ["replaceFile", () => ({ fileId: "f1", body: new Blob(["file bytes"]) }), "PUT /v1/files/f1 file bytes"],
+  [
+    "replaceFile",
+    () => ({ fileId: "f1", body: new Blob(["file bytes"]) }),
+    "PUT /v1/files/f1 file bytes",
+  ],
   ["putRaw", () => new Blob(["raw bytes"]), "PUT /v1/raw raw bytes"],
 ];
 
@@ -172,12 +217,17 @@ afterAll(async () => {
 /** The one request the server received. */
 function onlyRequest(): UpstreamServer["requests"][number] {
   const [request, ...more] = upstream.requests;
-  if (!request || more.length > 0) throw new Error(`expected one request, got ${upstream.requests.length}`);
+  if (!request || more.length > 0)
+    throw new Error(`expected one request, got ${upstream.requests.length}`);
   return request;
 }
 
 function generate(options: Partial<GenerateOptions>) {
-  return generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "shop");
+  return generateCode(
+    spec(upstream.origin),
+    { type: "openapi", outputDir: "src/api", ...options },
+    "shop",
+  );
 }
 
 describe.each(VARIANTS)("a generated client validated with %s", (label, options) => {
@@ -200,7 +250,9 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
   });
 
   it("types each body as its media type asks", () => {
-    const dir = writeProject(`request-body/${label}`, generate(options), { "consumer.ts": CONSUMER });
+    const dir = writeProject(`request-body/${label}`, generate(options), {
+      "consumer.ts": CONSUMER,
+    });
     const strictest = { ...STRICT, noUnusedLocals: true, noUnusedParameters: true };
 
     expect(compileProject(dir, ["consumer.ts"], strictest)).toEqual([]);

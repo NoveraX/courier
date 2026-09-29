@@ -10,23 +10,32 @@
  * on the preview with the plan, and the next write quotes it with the steps
  * allowed. The page with no sources says where an API has to be declared.
  */
-import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() } }));
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
+}));
 vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 vi.mock("@/components/shared/code-block", async () => {
   const { createElement } = await import("react");
   return { CodeBlock: ({ code }: { code: string }) => createElement("pre", null, code) };
 });
 
-import type { ParsedSpec } from "../src/views/apis/types";
-
 import { toast } from "sonner";
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
 import { useStudioStore } from "@/store";
 import { ApisView } from "../src/views/apis";
+import type { ParsedSpec } from "../src/views/apis/types";
 import { useImport } from "../src/views/apis/use-import";
 
 const SPEC_URL = "https://specs.example/pets.json";
@@ -91,7 +100,9 @@ const PLAN = {
   writes: [{ path: "src/api/pets/source.ts", action: "create", was: "absent" }],
   removals: [],
   kept: [],
-  pending: [{ path: "src/api/pets/index.ts", kind: "replace", reason: "foreign", preselected: false }],
+  pending: [
+    { path: "src/api/pets/index.ts", kind: "replace", reason: "foreign", preselected: false },
+  ],
   blocked: [],
   forgotten: [],
 };
@@ -106,7 +117,8 @@ function studioAnswers(declaration?: unknown): void {
   vi.mocked(post).mockImplementation(async (url: string) => {
     if (url === "/api/apis/parse") return SPEC;
     if (url === "/api/apis/generate") return { files: FILES };
-    if (url === "/api/apis/write") return { ...WRITTEN, ...(declaration === undefined ? {} : { declaration }) };
+    if (url === "/api/apis/write")
+      return { ...WRITTEN, ...(declaration === undefined ? {} : { declaration }) };
     throw new Error(`unexpected request to ${url}`);
   });
 }
@@ -125,7 +137,12 @@ function studioAsksFirst(): void {
 beforeEach(() => {
   useStudioStore.setState({
     connected: true,
-    configStatus: { state: "loaded", revision: 1, configFile: "courier.config.ts", loadedAt: 1_000 },
+    configStatus: {
+      state: "loaded",
+      revision: 1,
+      configFile: "courier.config.ts",
+      loadedAt: 1_000,
+    },
     scanSources: [],
   });
 });
@@ -153,7 +170,10 @@ describe("the import wizard's write", () => {
 
     await importAndWrite(result);
 
-    expect(vi.mocked(post)).toHaveBeenCalledWith("/api/apis/write", expect.objectContaining({ sourceName: "pets" }));
+    expect(vi.mocked(post)).toHaveBeenCalledWith(
+      "/api/apis/write",
+      expect.objectContaining({ sourceName: "pets" }),
+    );
     expect(result.current.state.step).toBe("declare");
     expect(result.current.state.declaration).toMatchObject({ configFile: "courier.config.ts" });
     expect(result.current.open).toBe(true);
@@ -167,7 +187,10 @@ describe("the import wizard's write", () => {
 
     await importAndWrite(result);
 
-    expect(vi.mocked(post)).toHaveBeenCalledWith("/api/apis/write", expect.objectContaining({ sourceName: "pets" }));
+    expect(vi.mocked(post)).toHaveBeenCalledWith(
+      "/api/apis/write",
+      expect.objectContaining({ sourceName: "pets" }),
+    );
     expect(result.current.open).toBe(false);
     expect(onWritten).toHaveBeenCalledWith("pets: wrote 2 files");
     expect(result.current.state.declaration).toBeNull();
@@ -210,10 +233,15 @@ describe("a write Studio will not apply unasked", () => {
 
   it("does not quote a plan with blocked files, so the next write plans afresh", async () => {
     studioAnswers();
-    vi.mocked(post).mockImplementationOnce(async () => SPEC)
+    vi.mocked(post)
+      .mockImplementationOnce(async () => SPEC)
       .mockImplementationOnce(async () => ({ files: FILES }))
       .mockImplementationOnce(async () => {
-        throw refusal("TARGET_BLOCKED", { ...PLAN, pending: [], blocked: [{ path: "src/api/pets", reason: "link" }] });
+        throw refusal("TARGET_BLOCKED", {
+          ...PLAN,
+          pending: [],
+          blocked: [{ path: "src/api/pets", reason: "link" }],
+        });
       });
     const { result } = renderHook(() => useImport());
 
@@ -231,7 +259,11 @@ describe("a write Studio will not apply unasked", () => {
     studioAsksFirst();
     const { result } = renderHook(() => useImport());
     await importAndWrite(result);
-    const nameTaken = new StudioRequestError("sources names another API pets.", { error: "sources names another API pets.", code: "NAME_TAKEN" }, undefined);
+    const nameTaken = new StudioRequestError(
+      "sources names another API pets.",
+      { error: "sources names another API pets.", code: "NAME_TAKEN" },
+      undefined,
+    );
     vi.mocked(post).mockRejectedValueOnce(nameTaken);
 
     await act(() => result.current.write());
@@ -245,7 +277,9 @@ describe("the APIs page", () => {
   it("says Studio lists the APIs courier.config declares under sources while there are none", () => {
     render(<ApisView />);
 
-    expect(screen.getByText(/Studio lists the APIs courier\.config declares under sources\./)).toBeTruthy();
+    expect(
+      screen.getByText(/Studio lists the APIs courier\.config declares under sources\./),
+    ).toBeTruthy();
     expect(screen.queryByText(/automatically/)).toBeNull();
   });
 
@@ -262,7 +296,9 @@ describe("the APIs page", () => {
     fireEvent.click(screen.getByRole("button", { name: /Generate Preview/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Write to Disk/ }));
 
-    expect(await screen.findByRole("heading", { name: "Declare pets in courier.config.ts" })).toBeTruthy();
+    expect(
+      await screen.findByRole("heading", { name: "Declare pets in courier.config.ts" }),
+    ).toBeTruthy();
     expect(screen.getByText(DECLARATION.source.importLine)).toBeTruthy();
     expect(vi.mocked(toast.success)).toHaveBeenCalledWith("pets: wrote 2 files");
     expect(vi.mocked(toast.success)).not.toHaveBeenCalledWith("API imported successfully");

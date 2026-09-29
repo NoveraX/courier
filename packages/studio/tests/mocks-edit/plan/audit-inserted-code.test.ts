@@ -4,7 +4,7 @@
  * rejects each one and logs why.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
 import { auditInsertedCode } from "../../../src/server/mocks-edit/plan/audit-inserted-code";
 import { draftMocksEdit } from "../../../src/server/mocks-edit/plan/draft-mocks-edit";
 import { isPureInsertion } from "../../../src/server/mocks-edit/plan/is-pure-insertion";
@@ -14,7 +14,6 @@ import type {
   PlanInput,
   PlannedInsertion,
 } from "../../../src/server/mocks-edit/plan/types";
-import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
 import type { MockDeclaration } from "../../../src/server/mocks-edit/types";
 
 const API: MockDeclaration = {

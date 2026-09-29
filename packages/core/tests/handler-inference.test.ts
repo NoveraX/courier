@@ -16,7 +16,10 @@ describe("handler inference", () => {
   const { stream, channel } = courier();
 
   it("types the generator serving a stream", () => {
-    const feed = stream.variables<{ userId: string }>().response<{ n: number }>().implement(async function* (ctx) {
+    const feed = stream
+      .variables<{ userId: string }>()
+      .response<{ n: number }>()
+      .implement(async function* (ctx) {
         const userId: string = ctx.variables.userId;
         yield { data: { n: userId.length } };
       });
@@ -25,7 +28,10 @@ describe("handler inference", () => {
   });
 
   it("types the generator serving a channel nothing can send on", () => {
-    const ticker = channel.variables<{ symbol: string }>().response<{ price: number }>().implement(async function* (ctx) {
+    const ticker = channel
+      .variables<{ symbol: string }>()
+      .response<{ price: number }>()
+      .implement(async function* (ctx) {
         const symbol: string = ctx.variables.symbol;
         yield { price: symbol.length };
       });
@@ -34,7 +40,11 @@ describe("handler inference", () => {
   });
 
   it("types both directions of a channel that accepts messages", () => {
-    const room = channel.variables<{ roomId: string }>().send(Incoming).response<{ text: string }>().implement((variables) => {
+    const room = channel
+      .variables<{ roomId: string }>()
+      .send(Incoming)
+      .response<{ text: string }>()
+      .implement((variables) => {
         const roomId: string = variables.roomId;
         return {
           onJoin(ctx) {
@@ -73,7 +83,10 @@ describe("per-call options in a wire closure", () => {
   const { endpoint, stream } = courier();
 
   it("accepts the options the client carries out at request time", () => {
-    const download = endpoint.variables<{ id: string }>().via((http) => http.get(":id/download", vars(), { timeout: 30_000 })).reads();
+    const download = endpoint
+      .variables<{ id: string }>()
+      .via((http) => http.get(":id/download", vars(), { timeout: 30_000 }))
+      .reads();
 
     expect(download.method).toBe("get");
     expect(download.path).toBe(":id/download");

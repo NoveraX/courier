@@ -88,7 +88,9 @@ describe("a timeout on a direct call", () => {
 
 describe("an answer that stops arriving", () => {
   it("is a timeout when the timeout runs out while the body is read", async () => {
-    const error = await rejection(createCaller(api()).partial.with({ timeout: 150 })({ status: 200 }));
+    const error = await rejection(
+      createCaller(api()).partial.with({ timeout: 150 })({ status: 200 }),
+    );
 
     expect(error).toBeInstanceOf(HTTPError);
     expect(error).toMatchObject({ status: 0, message: "Request timed out" });

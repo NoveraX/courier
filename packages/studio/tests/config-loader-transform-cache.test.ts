@@ -32,7 +32,9 @@ interface Project {
 }
 
 /** A config that imports a module, which imports another, and a mocks file beside it. */
-function makeProject({ mocks = 'import { api } from "./src/api";\nexport default { apiMock: { source: api } };\n' } = {}): Project {
+function makeProject({
+  mocks = 'import { api } from "./src/api";\nexport default { apiMock: { source: api } };\n',
+} = {}): Project {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "courier-transform-loads-")));
   roots.push(root);
   mkdirSync(join(root, "src"));
@@ -44,7 +46,10 @@ function makeProject({ mocks = 'import { api } from "./src/api";\nexport default
     mocks: join(root, "courier.mocks.ts"),
   };
   writeFileSync(project.host, 'export const host: string = "v1.example.com";\n');
-  writeFileSync(project.api, 'import { host } from "./host";\nexport const api = { baseURL: host };\n');
+  writeFileSync(
+    project.api,
+    'import { host } from "./host";\nexport const api = { baseURL: host };\n',
+  );
   writeFileSync(
     project.config,
     'import { api } from "./src/api";\nexport default { sources: { api }, studio: { port: 7777 } };\n',
@@ -54,7 +59,11 @@ function makeProject({ mocks = 'import { api } from "./src/api";\nexport default
 }
 
 /** Wraps a cache to record the file of every transform asked of it, and of every one it computed. */
-function counting(inner: TransformCache): { cache: TransformCache; asked: string[]; computed: string[] } {
+function counting(inner: TransformCache): {
+  cache: TransformCache;
+  asked: string[];
+  computed: string[];
+} {
   const asked: string[] = [];
   const computed: string[] = [];
   const cache: TransformCache = {
@@ -99,7 +108,9 @@ describe("loadCourierConfig through a transform cache", () => {
     const first = computed.splice(0);
     const second = await loadCourierConfig(project.root, { transformCache });
 
-    expect(first).toEqual(expect.arrayContaining([project.config, project.api, project.host, project.mocks]));
+    expect(first).toEqual(
+      expect.arrayContaining([project.config, project.api, project.host, project.mocks]),
+    );
     expect(computed).toEqual([]);
     expect(baseURLOf(second)).toBe("v1.example.com");
   });
@@ -118,7 +129,9 @@ describe("loadCourierConfig through a transform cache", () => {
   });
 
   it("a config whose mocks file does not load is transformed once", async () => {
-    const project = makeProject({ mocks: 'import { missing } from "./missing";\nexport default { missing };\n' });
+    const project = makeProject({
+      mocks: 'import { missing } from "./missing";\nexport default { missing };\n',
+    });
     const { cache: transformCache, asked, computed } = counting(createTransformCache());
 
     const loaded = await loadCourierConfig(project.root, { transformCache });
@@ -137,7 +150,9 @@ describe("loadCourierConfig through a transform cache", () => {
     await loadCourierConfig(project.root);
 
     expect(address.port).toBe(7777);
-    expect(byAddressRead).toEqual(expect.arrayContaining([project.config, project.api, project.host]));
+    expect(byAddressRead).toEqual(
+      expect.arrayContaining([project.config, project.api, project.host]),
+    );
     expect(computed).toContain(project.mocks);
     expect(repeated(computed)).toEqual([]);
   });

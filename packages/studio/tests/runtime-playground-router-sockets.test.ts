@@ -27,9 +27,18 @@ const sockets: Socket[] = [];
 beforeEach(async () => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   root = realpathSync(mkdtempSync(join(tmpdir(), "courier-playground-sockets-")));
-  writeFileSync(join(root, "courier.config.ts"), 'export default { sources: { api: { baseURL: "https://api.example" } } };\n');
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'export default { sources: { api: { baseURL: "https://api.example" } } };\n',
+  );
   url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }, 30_000);
 
@@ -57,7 +66,10 @@ async function open(namespace: "/ui" | "/runtime"): Promise<Socket> {
 }
 
 /* A runtime serving `api` over HTTP and SSE, which hands every request it is sent to `onExecute`. */
-async function runtime(id: string, onExecute: (payload: { rid: string }) => void = () => {}): Promise<Socket> {
+async function runtime(
+  id: string,
+  onExecute: (payload: { rid: string }) => void = () => {},
+): Promise<Socket> {
   const socket = await open("/runtime");
   socket.on("playground:execute", onExecute);
   socket.emit("runtime:hello", { runtimeId: id, kind: "server" });
@@ -65,7 +77,12 @@ async function runtime(id: string, onExecute: (payload: { rid: string }) => void
   return socket;
 }
 
-function next<TPayload>(socket: Socket, event: string, rid: string, ms = 3_000): Promise<TPayload | "timeout"> {
+function next<TPayload>(
+  socket: Socket,
+  event: string,
+  rid: string,
+  ms = 3_000,
+): Promise<TPayload | "timeout"> {
   return new Promise((resolve) => {
     const timer = setTimeout(() => resolve("timeout"), ms);
     const listener = (payload: TPayload & { rid?: unknown }) => {
@@ -98,20 +115,23 @@ describe("two runtimes under one id", () => {
 });
 
 describe("the first of two runtimes under one id disconnecting mid-request", () => {
-  it.each(["sse", "http"] as const)("ends its %s request with an error at once", async (transport) => {
-    const executed: string[] = [];
-    const first = await runtime("server", ({ rid }) => executed.push(rid));
-    await runtime("server");
-    const ui = await open("/ui");
-    await settle();
-    exec(ui, "r1", transport);
-    await vi.waitFor(() => expect(executed).toEqual(["r1"]));
-    const error = next<{ error: { message: string } }>(ui, "playground:error", "r1");
+  it.each(["sse", "http"] as const)(
+    "ends its %s request with an error at once",
+    async (transport) => {
+      const executed: string[] = [];
+      const first = await runtime("server", ({ rid }) => executed.push(rid));
+      await runtime("server");
+      const ui = await open("/ui");
+      await settle();
+      exec(ui, "r1", transport);
+      await vi.waitFor(() => expect(executed).toEqual(["r1"]));
+      const error = next<{ error: { message: string } }>(ui, "playground:error", "r1");
 
-    first.close();
+      first.close();
 
-    expect(await error).toMatchObject({ error: { message: "Runtime disconnected mid-request" } });
-  });
+      expect(await error).toMatchObject({ error: { message: "Runtime disconnected mid-request" } });
+    },
+  );
 
   it("sends the next request to the runtime still running", async () => {
     const executed: string[] = [];
@@ -144,7 +164,10 @@ describe("a rid already in flight", () => {
 
     const chunk = next(first, "playground:chunk", "same");
     const stolen = next(second, "playground:chunk", "same", 300);
-    app.emit("playground:chunk", { rid: "same", chunk: { kind: "sse-event", event: { data: "tick" } } });
+    app.emit("playground:chunk", {
+      rid: "same",
+      chunk: { kind: "sse-event", event: { data: "tick" } },
+    });
     expect(await chunk).toMatchObject({ rid: "same" });
     expect(await stolen).toBe("timeout");
     expect(executed).toEqual(["same"]);

@@ -45,13 +45,17 @@ describe("studioTransformCache", () => {
   it("keeps a separate cache for a project with a node_modules of its own", () => {
     mkdirSync(join(dir, "node_modules"));
 
-    expect(studioTransformCache(root("web"))).not.toBe(studioTransformCache(root("api", { nodeModules: true })));
+    expect(studioTransformCache(root("web"))).not.toBe(
+      studioTransformCache(root("api", { nodeModules: true })),
+    );
   });
 
   it("hands every project with no directory the one memory-only cache", () => {
     vi.stubEnv("COURIER_TRANSFORM_CACHE", "off");
 
-    expect(studioTransformCache(root("web"))).toBe(studioTransformCache(root("api", { nodeModules: true })));
+    expect(studioTransformCache(root("web"))).toBe(
+      studioTransformCache(root("api", { nodeModules: true })),
+    );
   });
 
   it("looks the directory up again on each call, so turning it off takes effect at the next load", () => {

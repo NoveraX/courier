@@ -22,11 +22,7 @@ function lcsTable(a: string[], b: string[]): number[][] {
   return dp;
 }
 
-function backtrack(
-  leftLines: string[],
-  rightLines: string[],
-  dp: number[][],
-): DiffLine[] {
+function backtrack(leftLines: string[], rightLines: string[], dp: number[][]): DiffLine[] {
   const result: DiffLine[] = [];
   let i = leftLines.length;
   let j = rightLines.length;

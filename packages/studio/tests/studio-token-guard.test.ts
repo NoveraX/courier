@@ -26,7 +26,13 @@ const sockets: Socket[] = [];
 
 async function start(): Promise<void> {
   url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
@@ -48,10 +54,18 @@ function token(): string {
   return studio.token;
 }
 
-async function post(path: string, body: unknown, presented?: string): Promise<{ status: number; body: unknown }> {
+async function post(
+  path: string,
+  body: unknown,
+  presented?: string,
+): Promise<{ status: number; body: unknown }> {
   const headers: Record<string, string> = { "content-type": "application/json", origin: url };
   if (presented !== undefined) headers[TOKEN_HEADER] = presented;
-  const response = await fetch(`${url}${path}`, { method: "POST", headers, body: JSON.stringify(body) });
+  const response = await fetch(`${url}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
   return { status: response.status, body: await response.json() };
 }
 
@@ -68,7 +82,11 @@ async function page(presented?: string): Promise<Socket> {
 }
 
 async function runtime(): Promise<Socket> {
-  const socket = connect(`${url}/runtime`, { transports: ["websocket"], forceNew: true, reconnection: false });
+  const socket = connect(`${url}/runtime`, {
+    transports: ["websocket"],
+    forceNew: true,
+    reconnection: false,
+  });
   sockets.push(socket);
   await new Promise<void>((resolve) => socket.once("connect", () => resolve()));
   socket.emit("runtime:hello", { runtimeId: "server", kind: "server" });
@@ -87,7 +105,10 @@ describe("a route that changes something", () => {
   it("refuses a caller whose token is not the project's", async () => {
     const other = token().replace(/^./, (c) => (c === "a" ? "b" : "a"));
 
-    expect(await post("/api/sessions/save", { name: "x", requests: [] }, other)).toEqual({ status: 401, body: REFUSED });
+    expect(await post("/api/sessions/save", { name: "x", requests: [] }, other)).toEqual({
+      status: 401,
+      body: REFUSED,
+    });
   });
 
   it("changes nothing for a caller it refused", async () => {
@@ -100,7 +121,9 @@ describe("a route that changes something", () => {
     const saved = await post("/api/sessions/save", { name: "Kept", requests: [] }, token());
 
     expect(saved.status).toBe(200);
-    expect((await post("/api/sessions/list", {})).body).toEqual([expect.objectContaining({ name: "Kept" })]);
+    expect((await post("/api/sessions/list", {})).body).toEqual([
+      expect.objectContaining({ name: "Kept" }),
+    ]);
   });
 
   it("refuses a caller without the token before reading its body", async () => {
@@ -123,7 +146,11 @@ describe("a route that only reads", () => {
 
 describe("a page without the token", () => {
   it("is still sent what Studio shows", async () => {
-    const socket = connect(`${url}/ui`, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const socket = connect(`${url}/ui`, {
+      transports: ["websocket"],
+      forceNew: true,
+      reconnection: false,
+    });
     sockets.push(socket);
 
     expect(await new Promise((resolve) => socket.once("config:status", resolve))).toEqual(
@@ -134,7 +161,9 @@ describe("a page without the token", () => {
   it("has a mock command answered with the refusal", async () => {
     const socket = await page();
 
-    const reply: unknown = await socket.timeout(5_000).emitWithAck("mock:command", { action: "mock:stop", serverId: "api" });
+    const reply: unknown = await socket
+      .timeout(5_000)
+      .emitWithAck("mock:command", { action: "mock:stop", serverId: "api" });
 
     expect(reply).toEqual({ ok: false, error: TOKEN_REFUSAL });
   });
@@ -152,14 +181,25 @@ describe("a page without the token", () => {
     const app = await runtime();
     const watching = await page();
     const seen = new Promise((resolve) => watching.once("event", resolve));
-    app.emit("event", { id: "r1", type: "request:start", timestamp: Date.now(), sessionId: "server", source: "api", method: "list" });
+    app.emit("event", {
+      id: "r1",
+      type: "request:start",
+      timestamp: Date.now(),
+      sessionId: "server",
+      source: "api",
+      method: "list",
+    });
     await seen;
     const told = new Promise((resolve) => watching.once("studio:read-only", resolve));
 
     watching.emit("requests:clear", { keep: [] });
 
     expect(await told).toEqual({ event: "requests:clear", error: TOKEN_REFUSAL });
-    const next = connect(`${url}/ui`, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const next = connect(`${url}/ui`, {
+      transports: ["websocket"],
+      forceNew: true,
+      reconnection: false,
+    });
     sockets.push(next);
     expect(await replayOf(next)).toEqual([expect.objectContaining({ id: "r1" })]);
   });
@@ -184,10 +224,14 @@ describe("the live traffic", () => {
     });
 
     expect(await seenByReader).toEqual(
-      expect.objectContaining({ requestHeaders: { authorization: "[redacted]", accept: "application/json" } }),
+      expect.objectContaining({
+        requestHeaders: { authorization: "[redacted]", accept: "application/json" },
+      }),
     );
     expect(await seenByOwner).toEqual(
-      expect.objectContaining({ requestHeaders: { authorization: "Bearer secret", accept: "application/json" } }),
+      expect.objectContaining({
+        requestHeaders: { authorization: "Bearer secret", accept: "application/json" },
+      }),
     );
   });
 });
@@ -197,7 +241,14 @@ describe("a page with the token", () => {
     const app = await runtime();
     const watching = await page(token());
     const seen = new Promise((resolve) => watching.once("event", resolve));
-    app.emit("event", { id: "r1", type: "request:start", timestamp: Date.now(), sessionId: "server", source: "api", method: "list" });
+    app.emit("event", {
+      id: "r1",
+      type: "request:start",
+      timestamp: Date.now(),
+      sessionId: "server",
+      source: "api",
+      method: "list",
+    });
     await seen;
     let told = false;
     watching.once("studio:read-only", () => {
@@ -207,9 +258,16 @@ describe("a page with the token", () => {
     watching.emit("requests:clear", { keep: [] });
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const next = connect(`${url}/ui`, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const next = connect(`${url}/ui`, {
+      transports: ["websocket"],
+      forceNew: true,
+      reconnection: false,
+    });
     sockets.push(next);
-    const replayed = await Promise.race([replayOf(next), new Promise((resolve) => setTimeout(() => resolve("none"), 300))]);
+    const replayed = await Promise.race([
+      replayOf(next),
+      new Promise((resolve) => setTimeout(() => resolve("none"), 300)),
+    ]);
     expect(replayed === "none" || (Array.isArray(replayed) && replayed.length === 0)).toBe(true);
     expect(told).toBe(false);
   });

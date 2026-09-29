@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { matchStatusRange } from "@/lib/filter-utils";
 
@@ -44,11 +44,23 @@ export function useLogFilter(logs: MockRequestLog[]): LogFilterResult {
   }, [state]);
 
   const setSearch = useCallback((search: string) => setState((s) => ({ ...s, search })), []);
-  const setFilter = useCallback((key: string, values: string[]) => setState((s) => ({ ...s, [key]: values })), []);
+  const setFilter = useCallback(
+    (key: string, values: string[]) => setState((s) => ({ ...s, [key]: values })),
+    [],
+  );
   const resetFilters = useCallback(() => setState(INITIAL_STATE), []);
   const toggleFilters = useCallback(() => setShowFilters((v) => !v), []);
 
-  return { state, filtered, showFilters, activeFilterCount, setSearch, setFilter, resetFilters, toggleFilters };
+  return {
+    state,
+    filtered,
+    showFilters,
+    activeFilterCount,
+    setSearch,
+    setFilter,
+    resetFilters,
+    toggleFilters,
+  };
 }
 
 function applyFilters(logs: MockRequestLog[], state: LogFilterState): MockRequestLog[] {
@@ -56,8 +68,8 @@ function applyFilters(logs: MockRequestLog[], state: LogFilterState): MockReques
 
   if (state.search) {
     const q = state.search.toLowerCase();
-    result = result.filter((l) =>
-      l.path.toLowerCase().includes(q) || l.endpoint.toLowerCase().includes(q),
+    result = result.filter(
+      (l) => l.path.toLowerCase().includes(q) || l.endpoint.toLowerCase().includes(q),
     );
   }
 
@@ -78,4 +90,3 @@ function applyFilters(logs: MockRequestLog[], state: LogFilterState): MockReques
 
   return result;
 }
-

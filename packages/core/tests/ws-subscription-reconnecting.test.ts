@@ -29,9 +29,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
+import type { WSClientSocket } from "../src/realtime/ws/ws-types";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";
-import type { WSClientSocket } from "../src/realtime/ws/ws-types";
 
 class MockSocket implements WSClientSocket {
   static instances: MockSocket[] = [];
@@ -82,12 +82,10 @@ afterEach(() => {
 
 describe("executeWSChannel — status forwarding", () => {
   it("forwards `reconnecting` to channel-level state when first connect fails", async () => {
-    const channel = executeWSChannel(
-      "ws://test/ws-channel-1",
-      "src.grp.method",
-      undefined,
-      { socketFactory: mockFactory, backoff: { initialMs: 100_000, jitter: false } },
-    );
+    const channel = executeWSChannel("ws://test/ws-channel-1", "src.grp.method", undefined, {
+      socketFactory: mockFactory,
+      backoff: { initialMs: 100_000, jitter: false },
+    });
     await flushMicrotasks();
 
     const seen: string[] = [];
@@ -104,12 +102,10 @@ describe("executeWSChannel — status forwarding", () => {
 
 describe("executeWSPush — status forwarding", () => {
   it("forwards `reconnecting` to push-level state when first connect fails", async () => {
-    const sub = executeWSPush(
-      "ws://test/ws-push-1",
-      "src.grp.method",
-      undefined,
-      { socketFactory: mockFactory, backoff: { initialMs: 100_000, jitter: false } },
-    );
+    const sub = executeWSPush("ws://test/ws-push-1", "src.grp.method", undefined, {
+      socketFactory: mockFactory,
+      backoff: { initialMs: 100_000, jitter: false },
+    });
     await flushMicrotasks();
 
     const seen: string[] = [];

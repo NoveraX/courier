@@ -20,8 +20,16 @@ const SPEC = parseSpec(
     info: { title: "Pets", version: "1" },
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
-        post: { operationId: "createPet", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
+        post: {
+          operationId: "createPet",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
   }),
@@ -39,9 +47,19 @@ beforeEach(async () => {
   mkdirSync(dirname(join(root, "courier.config.ts")), { recursive: true });
   writeFileSync(join(root, "courier.config.ts"), CONFIG);
   url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
-  const written = await post("/api/apis/write", { sourceName: "pets", spec: SPEC, options: { type: "openapi", outputDir: "src/api", sourceName: "pets" } });
+  const written = await post("/api/apis/write", {
+    sourceName: "pets",
+    spec: SPEC,
+    options: { type: "openapi", outputDir: "src/api", sourceName: "pets" },
+  });
   expect(written.status).toBe(200);
 }, 30_000);
 
@@ -67,16 +85,27 @@ describe("removing an endpoint the import's files do not hold", () => {
     ["an endpoint its group has not", { pets: ["nosuch"] }, "pets.nosuch"],
   ])("is refused 400 for %s, by preview and by apply", async (_label, toRemove, named) => {
     const preview = await post("/api/apis/manage/preview", { name: "pets", spec: SPEC, toRemove });
-    const apply = await post("/api/apis/manage/apply", { name: "pets", spec: SPEC, toRemove, planDigest: "x" });
+    const apply = await post("/api/apis/manage/apply", {
+      name: "pets",
+      spec: SPEC,
+      toRemove,
+      planDigest: "x",
+    });
 
     for (const reply of [preview, apply]) {
       expect(reply.status).toBe(400);
-      expect(reply.body).toEqual({ error: `The import's files hold no endpoint ${named} to remove` });
+      expect(reply.body).toEqual({
+        error: `The import's files hold no endpoint ${named} to remove`,
+      });
     }
   });
 
   it("is planned for one its files hold", async () => {
-    const preview = await post("/api/apis/manage/preview", { name: "pets", spec: SPEC, toRemove: { pets: ["createPet"] } });
+    const preview = await post("/api/apis/manage/preview", {
+      name: "pets",
+      spec: SPEC,
+      toRemove: { pets: ["createPet"] },
+    });
 
     expect(preview.status).toBe(200);
   });

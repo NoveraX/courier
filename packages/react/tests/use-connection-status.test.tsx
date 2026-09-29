@@ -2,15 +2,13 @@
  * @vitest-environment jsdom
  */
 
-import { type ReactNode, createElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import { createConnectionState } from "@noverax/courier/internal";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook } from "@testing-library/react";
-import { createConnectionState } from "@noverax/courier/internal";
-
-import { useConnectionStatus } from "../src/hooks/use-connection-status";
+import { createElement, type ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConnectionStatusSource } from "../src/hooks/use-connection-status";
+import { useConnectionStatus } from "../src/hooks/use-connection-status";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -22,7 +20,9 @@ function wrapper({ children }: { children: ReactNode }) {
   return createElement(QueryClientProvider, { client: queryClient }, children);
 }
 
-function createSource(initial: "disconnected" | "connecting" | "connected" | "reconnecting" = "disconnected"): {
+function createSource(
+  initial: "disconnected" | "connecting" | "connected" | "reconnecting" = "disconnected",
+): {
   source: ConnectionStatusSource;
   setState: (s: "disconnected" | "connecting" | "connected" | "reconnecting") => void;
 } {
@@ -152,10 +152,7 @@ describe("useConnectionStatus", () => {
 
     let activeSource = first.source;
 
-    const { result, rerender } = renderHook(
-      () => useConnectionStatus(activeSource),
-      { wrapper },
-    );
+    const { result, rerender } = renderHook(() => useConnectionStatus(activeSource), { wrapper });
 
     expect(result.current.isConnected).toBe(true);
 

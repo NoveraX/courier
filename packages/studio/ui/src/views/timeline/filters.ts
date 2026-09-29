@@ -1,5 +1,4 @@
-import type { RequestEntry } from "@/store/types";
-import type { TimelineFilters } from "@/store/types";
+import type { RequestEntry, TimelineFilters } from "@/store/types";
 
 import { requestName } from "./request-name";
 

@@ -42,7 +42,10 @@ function snapshotOf(running: LoadedCourierConfig): ProjectSnapshot {
 
 function recorder() {
   const sent: Array<[string, unknown]> = [];
-  return { sent, target: { emit: (event: string, payload: unknown) => sent.push([event, payload]) } };
+  return {
+    sent,
+    target: { emit: (event: string, payload: unknown) => sent.push([event, payload]) },
+  };
 }
 
 describe("sendProject", () => {
@@ -50,20 +53,37 @@ describe("sendProject", () => {
     const { sent, target } = recorder();
     const config: CourierConfig = {
       sources: {},
-      imports: { remote: { importType: "url", type: "openapi", from: "https://specs.example/a.json", outputDir: "src/gen" } },
+      imports: {
+        remote: {
+          importType: "url",
+          type: "openapi",
+          from: "https://specs.example/a.json",
+          outputDir: "src/gen",
+        },
+      },
     };
 
     sendProject(target, snapshotOf(loadedWith(config)), root);
 
-    expect(sent.map(([event]) => event)).toEqual(["registry:updated", "scan:sources", "config:status"]);
-    expect(sent[0]?.[1]).toMatchObject({ sources: [{ name: "remote", specUrl: "https://specs.example/a.json" }] });
+    expect(sent.map(([event]) => event)).toEqual([
+      "registry:updated",
+      "scan:sources",
+      "config:status",
+    ]);
+    expect(sent[0]?.[1]).toMatchObject({
+      sources: [{ name: "remote", specUrl: "https://specs.example/a.json" }],
+    });
     expect(sent[2]?.[1]).toMatchObject({ state: "loaded", configFile: "courier.config.ts" });
   });
 
   it("sends only the status while Studio starts", () => {
     const { sent, target } = recorder();
 
-    sendProject(target, { revision: 0, starting: true, running: null, loadedAt: null, failure: null }, root);
+    sendProject(
+      target,
+      { revision: 0, starting: true, running: null, loadedAt: null, failure: null },
+      root,
+    );
 
     expect(sent).toEqual([["config:status", { state: "starting", revision: 0 }]]);
   });
@@ -81,6 +101,8 @@ describe("sendProject", () => {
 
     expect(sent.map(([event]) => event)).toEqual(["config:status"]);
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0]?.[1])).toContain("Studio could not send the imports and sources to the UI");
+    expect(String(warn.mock.calls[0]?.[1])).toContain(
+      "Studio could not send the imports and sources to the UI",
+    );
   });
 });

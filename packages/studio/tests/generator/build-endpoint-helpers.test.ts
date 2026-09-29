@@ -60,8 +60,14 @@ let problems = new Map<string, string[]>();
 beforeAll(() => {
   problems = new Map(
     VARIANTS.map(([label, options]) => {
-      const files = generateCode(SPEC, { type: "openapi", outputDir: "src/api", ...options }, "pets");
-      const dir = writeProject(`build-endpoint-helpers/${label}`, files, { "consumer.ts": CONSUMER });
+      const files = generateCode(
+        SPEC,
+        { type: "openapi", outputDir: "src/api", ...options },
+        "pets",
+      );
+      const dir = writeProject(`build-endpoint-helpers/${label}`, files, {
+        "consumer.ts": CONSUMER,
+      });
       return [label, compileProject(dir, ["consumer.ts"])];
     }),
   );

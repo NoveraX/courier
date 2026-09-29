@@ -1,21 +1,18 @@
-import { useState, useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import {
-  Table, TableCell, TableHeader, TableRow,
-} from "@/components/ui/table";
-import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
+import { useMemo, useState } from "react";
 import { formatDuration, formatSize } from "@/components/shared/formatters";
+import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
+import { Button } from "@/components/ui/button";
+import { Table, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { useRequestDetail } from "@/hooks/use-request-detail";
+import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
-
-import type { EndpointStat, EndpointSortKey, SortDir } from "./types";
 import { sortEndpoints } from "./compute-endpoints";
-import { MAX_ENDPOINTS_SHOWN, durationColor, errorRateColor } from "./constants";
+import { durationColor, errorRateColor, MAX_ENDPOINTS_SHOWN } from "./constants";
 import { EndpointCalls } from "./endpoint-calls";
 import { SortHead } from "./sort-head";
+import type { EndpointSortKey, EndpointStat, SortDir } from "./types";
 
 interface EndpointsTableProps {
   data: EndpointStat[];
@@ -35,7 +32,10 @@ export function EndpointsTable({ data, requests }: EndpointsTableProps): React.R
 
   function handleSort(key: EndpointSortKey): void {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("desc"); }
+    else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
   }
 
   function handleRowClick(stat: EndpointStat): void {
@@ -52,14 +52,63 @@ export function EndpointsTable({ data, requests }: EndpointsTableProps): React.R
         <Table>
           <TableHeader>
             <TableRow className="border-border-subtle hover:bg-transparent">
-              <SortHead label="Endpoint" sortKey="endpoint" current={sortKey} dir={sortDir} onSort={handleSort} align="left" />
-              <SortHead label="Calls" sortKey="calls" current={sortKey} dir={sortDir} onSort={handleSort} />
-              <SortHead label="Avg" sortKey="avgResponseTime" current={sortKey} dir={sortDir} onSort={handleSort} />
-              <SortHead label="P50" sortKey="p50" current={sortKey} dir={sortDir} onSort={handleSort} />
-              <SortHead label="P95" sortKey="p95" current={sortKey} dir={sortDir} onSort={handleSort} />
-              <SortHead label="P99" sortKey="p99" current={sortKey} dir={sortDir} onSort={handleSort} />
-              <SortHead label="Size" sortKey="avgSize" current={sortKey} dir={sortDir} onSort={handleSort} />
-              <SortHead label="Errors" sortKey="errorRate" current={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortHead
+                label="Endpoint"
+                sortKey="endpoint"
+                current={sortKey}
+                dir={sortDir}
+                onSort={handleSort}
+                align="left"
+              />
+              <SortHead
+                label="Calls"
+                sortKey="calls"
+                current={sortKey}
+                dir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHead
+                label="Avg"
+                sortKey="avgResponseTime"
+                current={sortKey}
+                dir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHead
+                label="P50"
+                sortKey="p50"
+                current={sortKey}
+                dir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHead
+                label="P95"
+                sortKey="p95"
+                current={sortKey}
+                dir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHead
+                label="P99"
+                sortKey="p99"
+                current={sortKey}
+                dir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHead
+                label="Size"
+                sortKey="avgSize"
+                current={sortKey}
+                dir={sortDir}
+                onSort={handleSort}
+              />
+              <SortHead
+                label="Errors"
+                sortKey="errorRate"
+                current={sortKey}
+                dir={sortDir}
+                onSort={handleSort}
+              />
             </TableRow>
           </TableHeader>
           <motion.tbody
@@ -94,7 +143,12 @@ export function EndpointsTable({ data, requests }: EndpointsTableProps): React.R
 
 // ── Endpoint Group (row + expandable calls) ─────────────────────────────────
 
-function EndpointGroup({ stat, isExpanded, requestsMap, onClick }: {
+function EndpointGroup({
+  stat,
+  isExpanded,
+  requestsMap,
+  onClick,
+}: {
   stat: EndpointStat;
   isExpanded: boolean;
   requestsMap: Map<string, RequestEntry>;
@@ -104,34 +158,49 @@ function EndpointGroup({ stat, isExpanded, requestsMap, onClick }: {
 
   return (
     <>
-      <motion.tr variants={STAGGER_ITEM_VARIANTS} className="cursor-pointer border-b border-border-subtle hover:bg-muted/40" onClick={onClick}>
+      <motion.tr
+        variants={STAGGER_ITEM_VARIANTS}
+        className="cursor-pointer border-b border-border-subtle hover:bg-muted/40"
+        onClick={onClick}
+      >
         <TableCell className="mono-sm text-foreground">
           <span className="flex items-center gap-1.5">
             {expandable && (
-              <ChevronRight className={cn("size-3 shrink-0 text-muted-foreground transition-transform", isExpanded && "rotate-90")} />
+              <ChevronRight
+                className={cn(
+                  "size-3 shrink-0 text-muted-foreground transition-transform",
+                  isExpanded && "rotate-90",
+                )}
+              />
             )}
             {stat.endpoint}
           </span>
         </TableCell>
-        <TableCell className="text-right tabular-nums text-muted-foreground">{stat.calls}</TableCell>
-        <TableCell className={cn("text-right mono-sm tabular-nums", durationColor(stat.avgResponseTime))}>
+        <TableCell className="text-right tabular-nums text-muted-foreground">
+          {stat.calls}
+        </TableCell>
+        <TableCell
+          className={cn("text-right mono-sm tabular-nums", durationColor(stat.avgResponseTime))}
+        >
           {formatDuration(stat.avgResponseTime)}
         </TableCell>
-        <TableCell className="text-right mono-sm tabular-nums text-muted-foreground">{formatDuration(stat.p50)}</TableCell>
+        <TableCell className="text-right mono-sm tabular-nums text-muted-foreground">
+          {formatDuration(stat.p50)}
+        </TableCell>
         <TableCell className={cn("text-right mono-sm tabular-nums", durationColor(stat.p95))}>
           {formatDuration(stat.p95)}
         </TableCell>
         <TableCell className="text-right mono-sm tabular-nums text-muted-foreground">
           {formatDuration(stat.p99)}
         </TableCell>
-        <TableCell className="text-right mono-sm tabular-nums text-muted-foreground">{formatSize(stat.avgSize)}</TableCell>
+        <TableCell className="text-right mono-sm tabular-nums text-muted-foreground">
+          {formatSize(stat.avgSize)}
+        </TableCell>
         <TableCell className={cn("text-right tabular-nums", errorRateColor(stat.errorRate))}>
           {stat.errorRate.toFixed(1)}%
         </TableCell>
       </motion.tr>
-      {isExpanded && (
-        <EndpointCalls requestIds={stat.requestIds} requestsMap={requestsMap} />
-      )}
+      {isExpanded && <EndpointCalls requestIds={stat.requestIds} requestsMap={requestsMap} />}
     </>
   );
 }

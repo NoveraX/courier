@@ -4,12 +4,11 @@
  * recorded as complete, like a channel the server closed without a reason.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { StudioHooks } from "../src/studio/hooks";
 import { courier } from "../src/define/courier";
 import { ForbiddenError } from "../src/realtime/errors";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { studioHooks } from "../src/studio";
+import type { StudioHooks } from "../src/studio/hooks";
 import { instrumentWSChannel } from "../src/transport/instrument";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
@@ -83,7 +82,12 @@ describe("the Timeline's record of a channel", () => {
 
   it("is failed when the server refuses the connection", async () => {
     served = await serveWS(
-      { room: channel.send<string>().response<string>().implement(() => ({ onMessage() {} })) },
+      {
+        room: channel
+          .send<string>()
+          .response<string>()
+          .implement(() => ({ onMessage() {} })),
+      },
       {
         onConnect: () => {
           throw new Error("not today");

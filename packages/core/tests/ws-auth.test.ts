@@ -46,10 +46,7 @@ describe("extractWSAuth", () => {
   });
 
   it("prioritizes query param over cookie", () => {
-    const req = makeRequest(
-      { Cookie: "token=cookie-val" },
-      "http://localhost/ws?token=query-val",
-    );
+    const req = makeRequest({ Cookie: "token=cookie-val" }, "http://localhost/ws?token=query-val");
     expect(extractWSAuth(req)).toBe("query-val");
   });
 });

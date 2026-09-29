@@ -11,7 +11,12 @@ import { INITIAL_WIZARD_STATE } from "../src/views/mocks/wizard/wizard-reducer";
 
 function presetLine(name: string): string {
   const html = renderToStaticMarkup(
-    <ConfigureStep state={INITIAL_WIZARD_STATE} errors={new Map()} onEdit={() => {}} onRemove={() => {}} />,
+    <ConfigureStep
+      state={INITIAL_WIZARD_STATE}
+      errors={new Map()}
+      onEdit={() => {}}
+      onRemove={() => {}}
+    />,
   );
   const line = html.split("<li>").find((item) => item.includes(`>${name}<`));
   return line?.replace(/<[^>]+>/g, "") ?? "";

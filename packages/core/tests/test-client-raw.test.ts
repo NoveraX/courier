@@ -18,10 +18,7 @@ const api = defineApi({
     users: defineGroup({
       prefix: "users",
       endpoints: {
-        getById: endpoint
-          .get(":id")
-          .variables<{ id: number }>()
-          .response<{ id: number }>(),
+        getById: endpoint.get(":id").variables<{ id: number }>().response<{ id: number }>(),
       },
     }),
   },

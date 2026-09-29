@@ -1,12 +1,11 @@
+import { Database, RotateCcw, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Trash2, RotateCcw, Database } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { useStudioStore } from "@/store";
 import { useClearRequests } from "@/hooks/use-clear-requests";
-
-import type { useSessionHistory } from "./use-session-history";
+import { useStudioStore } from "@/store";
 import { ConfirmDialog } from "./confirm-dialog";
+import type { useSessionHistory } from "./use-session-history";
 
 // ── Danger zone ──────────────────────────────────────────────────────────────
 
@@ -23,10 +22,7 @@ interface DangerZoneProps {
   history: ReturnType<typeof useSessionHistory>;
 }
 
-export function DangerZone({
-  onResetDefaults,
-  history,
-}: DangerZoneProps): React.ReactElement {
+export function DangerZone({ onResetDefaults, history }: DangerZoneProps): React.ReactElement {
   const [confirm, setConfirm] = useState<string | null>(null);
   const requests = useStudioStore((s) => s.requests);
   const clearRequests = useClearRequests();
@@ -82,11 +78,7 @@ export function DangerZone({
                   )}
                 </p>
               </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirm(action.id)}
-              >
+              <Button variant="destructive" size="sm" onClick={() => setConfirm(action.id)}>
                 {action.label.split(" ")[0]}
               </Button>
             </div>

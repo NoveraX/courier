@@ -1,17 +1,15 @@
 import { Pin } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { MethodBadge } from "@/components/shared/method-badge";
 import { formatTimestamp } from "@/components/shared/formatters";
+import { MethodBadge } from "@/components/shared/method-badge";
 import { MetricsPill } from "@/components/shared/metrics-cells";
-import { useStudioStore } from "@/store";
+import { Badge } from "@/components/ui/badge";
 import { useNow } from "@/hooks/use-tick";
+import { describeUpload } from "@/lib/upload-progress";
+import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
+import type { RequestEntry } from "@/store/types";
 import { STATUS_CONFIG } from "./constants";
 import { requestName } from "./request-name";
-
-import type { RequestEntry } from "@/store/types";
-import { describeUpload } from "@/lib/upload-progress";
 
 interface RequestRowProps {
   request: RequestEntry;
@@ -19,11 +17,7 @@ interface RequestRowProps {
   onSelect: (id: string) => void;
 }
 
-export function RequestRow({
-  request,
-  selected,
-  onSelect,
-}: RequestRowProps): React.ReactElement {
+export function RequestRow({ request, selected, onSelect }: RequestRowProps): React.ReactElement {
   const timestampFormat = useStudioStore((s) => s.settings.timestampFormat);
   const showPreview = useStudioStore((s) => s.settings.showRequestPreview);
   const now = useNow();
@@ -51,9 +45,7 @@ export function RequestRow({
         {verb && <MethodBadge method={verb} />}
       </span>
 
-      <span className="min-w-0 flex-1 truncate mono-sm text-foreground">
-        {path}
-      </span>
+      <span className="min-w-0 flex-1 truncate mono-sm text-foreground">{path}</span>
 
       {showPreview && (
         <>
@@ -87,9 +79,7 @@ export function RequestRow({
         {formatTimestamp(request.startedAt, timestampFormat, now)}
       </span>
 
-      {request.pinned && (
-        <Pin className="size-3 shrink-0 text-violet-400" />
-      )}
+      {request.pinned && <Pin className="size-3 shrink-0 text-violet-400" />}
     </button>
   );
 }

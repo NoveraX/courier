@@ -35,7 +35,9 @@ describe("where there is no process", () => {
   it("defines an API", () => {
     const users = defineGroup({ prefix: "users", endpoints: { list: endpoint.get("") } });
 
-    const api = withoutProcess(() => defineApi({ baseURL: "https://api.example", groups: { users } }));
+    const api = withoutProcess(() =>
+      defineApi({ baseURL: "https://api.example", groups: { users } }),
+    );
 
     expect(api.options.baseURL).toBe("https://api.example");
   });

@@ -10,7 +10,17 @@
  * Node's to share, so Studio runs it afresh while the config keeps Node's copy.
  */
 import { createHash } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { loadCourierMocksFile } from "@noverax/courier-studio-core/config";
@@ -82,8 +92,13 @@ describe("loadCourierConfig with a mocks file", () => {
   });
 
   it("hands the mocks the config's own object when they import it", async () => {
-    writeFileSync(join(dir, "courier.config.ts"), `${counted("courierTestConfigEvaluations")}${CONFIG}`);
-    writeMocks('import config from "./courier.config";\nimport { api } from "./src/api";\nexport default { apiMock: { config, source: api } };\n');
+    writeFileSync(
+      join(dir, "courier.config.ts"),
+      `${counted("courierTestConfigEvaluations")}${CONFIG}`,
+    );
+    writeMocks(
+      'import config from "./courier.config";\nimport { api } from "./src/api";\nexport default { apiMock: { config, source: api } };\n',
+    );
 
     const loaded = await loadCourierConfig(dir);
 
@@ -96,7 +111,10 @@ describe("loadCourierConfig with a mocks file", () => {
   });
 
   it("evaluates the config once when the mocks file does not load", async () => {
-    writeFileSync(join(dir, "courier.config.ts"), `${counted("courierTestConfigEvaluations")}${CONFIG}`);
+    writeFileSync(
+      join(dir, "courier.config.ts"),
+      `${counted("courierTestConfigEvaluations")}${CONFIG}`,
+    );
     writeMocks('import { missing } from "./src/missing";\nexport default { missing };\n');
 
     const loaded = await loadCourierConfig(dir);
@@ -154,12 +172,17 @@ describe("loadCourierConfig with a mocks file", () => {
   });
 
   it("reports a module that failed under the config's catch when the mocks file imports it", async () => {
-    writeFileSync(join(dir, "src", "flaky.ts"), 'export const early = 1;\nthrow new Error("flaky does not load");\n');
+    writeFileSync(
+      join(dir, "src", "flaky.ts"),
+      'export const early = 1;\nthrow new Error("flaky does not load");\n',
+    );
     writeFileSync(
       join(dir, "courier.config.ts"),
       'import { api } from "./src/api";\ntry {\n  await import("./src/flaky");\n} catch {}\nexport default { sources: { api } };\n',
     );
-    writeMocks('import * as flaky from "./src/flaky";\nexport default { flakyMock: { keys: Object.keys(flaky) } };\n');
+    writeMocks(
+      'import * as flaky from "./src/flaky";\nexport default { flakyMock: { keys: Object.keys(flaky) } };\n',
+    );
 
     const loaded = await loadCourierConfig(dir);
 
@@ -221,19 +244,25 @@ describe("loadCourierConfig with a mocks file", () => {
   });
 
   it.each([
-    ["courier.mocks.ts", "const enabled: boolean = false;\nexport default enabled ? { apiMock: {} } : undefined;\n"],
+    [
+      "courier.mocks.ts",
+      "const enabled: boolean = false;\nexport default enabled ? { apiMock: {} } : undefined;\n",
+    ],
     ["courier.mocks.mjs", "export default undefined;\n"],
     ["courier.mocks.cjs", "module.exports = undefined;\n"],
-  ])("declares no mocks from a %s whose default export is undefined, as the mock worker reads it", async (name, source) => {
-    const file = writeMocks(source, name);
+  ])(
+    "declares no mocks from a %s whose default export is undefined, as the mock worker reads it",
+    async (name, source) => {
+      const file = writeMocks(source, name);
 
-    const loaded = await loadCourierConfig(dir);
-    const worker = await loadCourierMocksFile(file);
+      const loaded = await loadCourierConfig(dir);
+      const worker = await loadCourierMocksFile(file);
 
-    expect(loaded.mocks).toMatchObject({ file, error: null });
-    expect(loaded.mocks.entries).toStrictEqual({});
-    expect(worker.mocks).toStrictEqual({});
-  });
+      expect(loaded.mocks).toMatchObject({ file, error: null });
+      expect(loaded.mocks.entries).toStrictEqual({});
+      expect(worker.mocks).toStrictEqual({});
+    },
+  );
 
   it("says a mocks file with only named exports has no default export, and keeps the config", async () => {
     writeMocks('import { api } from "./src/api";\nexport const apiMock = { source: api };\n');
@@ -242,7 +271,9 @@ describe("loadCourierConfig with a mocks file", () => {
 
     expect(Object.keys(loaded.config.sources)).toEqual(["api"]);
     expect(loaded.mocks.entries).toEqual({});
-    expect(String(loaded.mocks.error)).toContain("has no default export; export default defineMocks({ ... })");
+    expect(String(loaded.mocks.error)).toContain(
+      "has no default export; export default defineMocks({ ... })",
+    );
   });
 
   it("keeps the config working when the mocks file does not load, and says why", async () => {
@@ -256,17 +287,20 @@ describe("loadCourierConfig with a mocks file", () => {
     expect(String(loaded.mocks.error)).toContain("src/missing");
   });
 
-  it.skipIf(process.getuid?.() === 0)("keeps the config working when the mocks file cannot be read", async () => {
-    const file = writeMocks("export default {};\n");
-    chmodSync(file, 0o000);
+  it.skipIf(process.getuid?.() === 0)(
+    "keeps the config working when the mocks file cannot be read",
+    async () => {
+      const file = writeMocks("export default {};\n");
+      chmodSync(file, 0o000);
 
-    const loaded = await loadCourierConfig(dir);
+      const loaded = await loadCourierConfig(dir);
 
-    chmodSync(file, 0o644);
-    expect(Object.keys(loaded.config.sources)).toEqual(["api"]);
-    expect(loaded.mocks).toMatchObject({ file, entries: {}, contentHash: null });
-    expect(String(loaded.mocks.error)).toContain("courier.mocks.ts cannot be read");
-  });
+      chmodSync(file, 0o644);
+      expect(Object.keys(loaded.config.sources)).toEqual(["api"]);
+      expect(loaded.mocks).toMatchObject({ file, entries: {}, contentHash: null });
+      expect(String(loaded.mocks.error)).toContain("courier.mocks.ts cannot be read");
+    },
+  );
 
   it("keeps the config working when a directory takes the mocks file's name", async () => {
     mkdirSync(join(dir, "courier.mocks.ts"));
@@ -278,7 +312,10 @@ describe("loadCourierConfig with a mocks file", () => {
   });
 
   it("fails as a config error when the config itself does not load", async () => {
-    writeFileSync(join(dir, "courier.config.ts"), 'import { api } from "./src/nowhere";\nexport default { sources: { api } };\n');
+    writeFileSync(
+      join(dir, "courier.config.ts"),
+      'import { api } from "./src/nowhere";\nexport default { sources: { api } };\n',
+    );
     writeMocks("export default {};\n");
 
     await expect(loadCourierConfig(dir)).rejects.toBeInstanceOf(ConfigLoaderError);
@@ -297,7 +334,10 @@ describe("loadCourierConfig with a mocks file", () => {
 describe("finding the mocks file", () => {
   it("looks beside the config Studio was pointed at, not where a linked config really lives", async () => {
     mkdirSync(join(dir, "shared"));
-    writeFileSync(join(dir, "shared", "courier.config.ts"), 'import { api } from "../src/api";\nexport default { sources: { api } };\n');
+    writeFileSync(
+      join(dir, "shared", "courier.config.ts"),
+      'import { api } from "../src/api";\nexport default { sources: { api } };\n',
+    );
     writeFileSync(join(dir, "shared", "courier.mocks.ts"), "export default { elsewhere: {} };\n");
     rmSync(join(dir, "courier.config.ts"));
     symlinkSync(join(dir, "shared", "courier.config.ts"), join(dir, "courier.config.ts"));
@@ -350,15 +390,26 @@ describe("finding the mocks file", () => {
   });
 
   it("resolves the mocks file's path aliases from its own directory when the config is a link", async () => {
-    writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: { paths: { "@fixtures/*": ["./fixtures/*"] } } }));
+    writeFileSync(
+      join(dir, "tsconfig.json"),
+      JSON.stringify({ compilerOptions: { paths: { "@fixtures/*": ["./fixtures/*"] } } }),
+    );
     mkdirSync(join(dir, "fixtures"));
     writeFileSync(join(dir, "fixtures", "users.ts"), "export const users = [{ id: 1 }];\n");
     mkdirSync(join(dir, "shared"));
-    writeFileSync(join(dir, "shared", "tsconfig.json"), JSON.stringify({ compilerOptions: { strict: true } }));
-    writeFileSync(join(dir, "shared", "courier.config.ts"), 'import { api } from "../src/api";\nexport default { sources: { api } };\n');
+    writeFileSync(
+      join(dir, "shared", "tsconfig.json"),
+      JSON.stringify({ compilerOptions: { strict: true } }),
+    );
+    writeFileSync(
+      join(dir, "shared", "courier.config.ts"),
+      'import { api } from "../src/api";\nexport default { sources: { api } };\n',
+    );
     rmSync(join(dir, "courier.config.ts"));
     symlinkSync(join(dir, "shared", "courier.config.ts"), join(dir, "courier.config.ts"));
-    writeMocks('import { users } from "@fixtures/users";\nexport default { apiMock: { users } };\n');
+    writeMocks(
+      'import { users } from "@fixtures/users";\nexport default { apiMock: { users } };\n',
+    );
 
     const loaded = await loadCourierConfig(dir);
 
@@ -370,7 +421,10 @@ describe("finding the mocks file", () => {
   it("loads a linked mocks file whose target imports a module beside it", async () => {
     mkdirSync(join(dir, "mocks"));
     writeFileSync(join(dir, "mocks", "handlers.ts"), "export const handlers = { users: [] };\n");
-    writeFileSync(join(dir, "mocks", "index.ts"), 'import { handlers } from "./handlers";\nexport default { linked: handlers };\n');
+    writeFileSync(
+      join(dir, "mocks", "index.ts"),
+      'import { handlers } from "./handlers";\nexport default { linked: handlers };\n',
+    );
     symlinkSync(join(dir, "mocks", "index.ts"), join(dir, "courier.mocks.ts"));
 
     const loaded = await loadCourierConfig(dir);

@@ -1,5 +1,5 @@
+import type { Edge, Node, NodeMouseHandler } from "@xyflow/react";
 import { useCallback, useMemo } from "react";
-import type { Node, Edge, NodeMouseHandler } from "@xyflow/react";
 
 interface DimmingActions {
   onNodeMouseEnter: NodeMouseHandler;
@@ -29,80 +29,89 @@ export function useGraphDimming(
   }, [edges]);
 
   /** Walk up to all ancestors */
-  const collectAncestors = useCallback((nodeId: string): Set<string> => {
-    const result = new Set<string>();
-    const queue = [nodeId];
-    while (queue.length > 0) {
-      const id = queue.shift()!;
-      const pars = parents.get(id);
-      if (!pars) continue;
-      for (const p of pars) {
-        if (!result.has(p)) {
-          result.add(p);
-          queue.push(p);
+  const collectAncestors = useCallback(
+    (nodeId: string): Set<string> => {
+      const result = new Set<string>();
+      const queue = [nodeId];
+      while (queue.length > 0) {
+        const id = queue.shift()!;
+        const pars = parents.get(id);
+        if (!pars) continue;
+        for (const p of pars) {
+          if (!result.has(p)) {
+            result.add(p);
+            queue.push(p);
+          }
         }
       }
-    }
-    return result;
-  }, [parents]);
+      return result;
+    },
+    [parents],
+  );
 
   /** Walk down to all descendants */
-  const collectDescendants = useCallback((nodeId: string): Set<string> => {
-    const result = new Set<string>();
-    const queue = [nodeId];
-    while (queue.length > 0) {
-      const id = queue.shift()!;
-      const chs = children.get(id);
-      if (!chs) continue;
-      for (const c of chs) {
-        if (!result.has(c)) {
-          result.add(c);
-          queue.push(c);
+  const collectDescendants = useCallback(
+    (nodeId: string): Set<string> => {
+      const result = new Set<string>();
+      const queue = [nodeId];
+      while (queue.length > 0) {
+        const id = queue.shift()!;
+        const chs = children.get(id);
+        if (!chs) continue;
+        for (const c of chs) {
+          if (!result.has(c)) {
+            result.add(c);
+            queue.push(c);
+          }
         }
       }
-    }
-    return result;
-  }, [children]);
+      return result;
+    },
+    [children],
+  );
 
-  const applyOpacity = useCallback((nodeId: string | null) => {
-    if (!nodeId) {
-      setNodes((prev) => prev.map((n) => ({ ...n, style: { ...n.style, opacity: 1 } })));
-      setEdges((prev) => prev.map((e) => ({ ...e, style: { ...e.style, opacity: 1 } })));
-      return;
-    }
-
-    const connected = new Set<string>([nodeId]);
-    for (const a of collectAncestors(nodeId)) connected.add(a);
-    for (const d of collectDescendants(nodeId)) connected.add(d);
-
-    const connectedEdges = new Set<string>();
-    for (const e of edges) {
-      if (connected.has(e.source) && connected.has(e.target)) {
-        connectedEdges.add(e.id);
+  const applyOpacity = useCallback(
+    (nodeId: string | null) => {
+      if (!nodeId) {
+        setNodes((prev) => prev.map((n) => ({ ...n, style: { ...n.style, opacity: 1 } })));
+        setEdges((prev) => prev.map((e) => ({ ...e, style: { ...e.style, opacity: 1 } })));
+        return;
       }
-    }
 
-    setNodes((prev) =>
-      prev.map((n) => ({
-        ...n,
-        style: {
-          ...n.style,
-          opacity: connected.has(n.id) ? 1 : 0.25,
-          transition: "opacity 200ms ease",
-        },
-      })),
-    );
-    setEdges((prev) =>
-      prev.map((e) => ({
-        ...e,
-        style: {
-          ...e.style,
-          opacity: connectedEdges.has(e.id) ? 1 : 0.12,
-          transition: "opacity 200ms ease",
-        },
-      })),
-    );
-  }, [collectAncestors, collectDescendants, edges, setNodes, setEdges]);
+      const connected = new Set<string>([nodeId]);
+      for (const a of collectAncestors(nodeId)) connected.add(a);
+      for (const d of collectDescendants(nodeId)) connected.add(d);
+
+      const connectedEdges = new Set<string>();
+      for (const e of edges) {
+        if (connected.has(e.source) && connected.has(e.target)) {
+          connectedEdges.add(e.id);
+        }
+      }
+
+      setNodes((prev) =>
+        prev.map((n) => ({
+          ...n,
+          style: {
+            ...n.style,
+            opacity: connected.has(n.id) ? 1 : 0.25,
+            transition: "opacity 200ms ease",
+          },
+        })),
+      );
+      setEdges((prev) =>
+        prev.map((e) => ({
+          ...e,
+          style: {
+            ...e.style,
+            opacity: connectedEdges.has(e.id) ? 1 : 0.12,
+            transition: "opacity 200ms ease",
+          },
+        })),
+      );
+    },
+    [collectAncestors, collectDescendants, edges, setNodes, setEdges],
+  );
 
   const onNodeMouseEnter: NodeMouseHandler = useCallback(
     (_event, node) => applyOpacity(node.id),

@@ -16,7 +16,8 @@ type TransformOptions = Parameters<TransformCache["transform"]>[0];
 const directories: string[] = [];
 
 afterEach(() => {
-  for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true });
+  for (const directory of directories.splice(0))
+    rmSync(directory, { recursive: true, force: true });
 });
 
 function transformDirectory(): string {
@@ -58,7 +59,9 @@ describe("workerTransformCache", () => {
 
   it("adds nothing to the directory for a module Studio did not keep", () => {
     const directory = transformDirectory();
-    createTransformCache({ directory }).transform(optionsFor("/app/courier.mocks.ts"), () => ({ code: "kept" }));
+    createTransformCache({ directory }).transform(optionsFor("/app/courier.mocks.ts"), () => ({
+      code: "kept",
+    }));
     const before = readdirSync(directory).sort();
     const compute = compiler();
 

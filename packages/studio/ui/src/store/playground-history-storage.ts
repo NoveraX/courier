@@ -1,12 +1,12 @@
-import type { PlaygroundHistoryEntry } from "./types-ui"
-import { PLAYGROUND_MAX_HISTORY } from "./constants"
+import { PLAYGROUND_MAX_HISTORY } from "./constants";
+import type { PlaygroundHistoryEntry } from "./types-ui";
 
 /* An answer bigger than this is not kept across reloads; its entry says so. */
-const MAX_KEPT_ANSWER = 64 * 1024
+const MAX_KEPT_ANSWER = 64 * 1024;
 /* A stream keeps its latest messages. */
-const MAX_KEPT_CHUNKS = 50
+const MAX_KEPT_CHUNKS = 50;
 
-const INTERRUPTED = "The page was reloaded before the answer arrived."
+const INTERRUPTED = "The page was reloaded before the answer arrived.";
 
 /**
  * The Playground history Studio kept for the project, as the page left it.
@@ -24,8 +24,8 @@ const INTERRUPTED = "The page was reloaded before the answer arrived."
  * ```
  */
 export function readPlaygroundHistory(raw: unknown): PlaygroundHistoryEntry[] {
-  if (!Array.isArray(raw)) return []
-  return raw.filter(isEntry).slice(0, PLAYGROUND_MAX_HISTORY).map(settled)
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(isEntry).slice(0, PLAYGROUND_MAX_HISTORY).map(settled);
 }
 
 /**
@@ -43,33 +43,35 @@ export function readPlaygroundHistory(raw: unknown): PlaygroundHistoryEntry[] {
 export function keptPlaygroundHistory(
   entries: readonly PlaygroundHistoryEntry[],
 ): PlaygroundHistoryEntry[] {
-  return entries.map(kept)
+  return entries.map(kept);
 }
 
 function kept(entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry {
-  const chunks = entry.chunks?.slice(-MAX_KEPT_CHUNKS)
-  const size = JSON.stringify(entry.response ?? null).length
+  const chunks = entry.chunks?.slice(-MAX_KEPT_CHUNKS);
+  const size = JSON.stringify(entry.response ?? null).length;
   const response =
-    size > MAX_KEPT_ANSWER ? `The answer (${size} characters) was too large to keep across reloads.` : entry.response
-  return { ...entry, response, ...(chunks && { chunks }) }
+    size > MAX_KEPT_ANSWER
+      ? `The answer (${size} characters) was too large to keep across reloads.`
+      : entry.response;
+  return { ...entry, response, ...(chunks && { chunks }) };
 }
 
 function settled(entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry {
-  if (entry.status !== "pending") return entry
+  if (entry.status !== "pending") return entry;
   return {
     ...entry,
     status: "error",
     response: INTERRUPTED,
     ...(entry.streamStatus && { streamStatus: "error" }),
-  }
+  };
 }
 
 function isEntry(value: unknown): value is PlaygroundHistoryEntry {
-  if (typeof value !== "object" || value === null) return false
-  const field = (key: string): unknown => Reflect.get(value, key)
-  const status = field("status")
+  if (typeof value !== "object" || value === null) return false;
+  const field = (key: string): unknown => Reflect.get(value, key);
+  const status = field("status");
   return (
     ["id", "rid", "source", "method"].every((key) => typeof field(key) === "string") &&
     (status === "pending" || status === "success" || status === "error")
-  )
+  );
 }

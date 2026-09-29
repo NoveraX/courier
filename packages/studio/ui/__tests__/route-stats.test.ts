@@ -3,9 +3,8 @@
  * announced without an average starts from none rather than becoming NaN.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-
-import { useMockStore } from "../src/store/mock-slice";
 import { handleServerConnect } from "../src/store/handle-mock-server-events";
+import { useMockStore } from "../src/store/mock-slice";
 import { updateRouteStats } from "../src/store/route-stats";
 
 beforeEach(() => {
@@ -20,7 +19,17 @@ describe("a route's average latency", () => {
       type: "mock:server:connect",
       serverId: "m",
       managed: true,
-      routes: [{ group: "users", endpoint: "getAll", httpMethod: "GET", path: "", fullPath: "/users", source: "auto", hits: 0 }],
+      routes: [
+        {
+          group: "users",
+          endpoint: "getAll",
+          httpMethod: "GET",
+          path: "",
+          fullPath: "/users",
+          source: "auto",
+          hits: 0,
+        },
+      ],
     } as never);
 
     updateRouteStats("m", "users", "getAll", "GET", 40);

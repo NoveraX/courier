@@ -4,7 +4,7 @@
  * defineApi/defineGroup/endpoint → executeRequest → HttpClient → fetch (mocked) → response
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineApi, defineGroup, courier } from "../src/define/index";
+import { courier, defineApi, defineGroup } from "../src/define/index";
 import { HTTPError } from "../src/errors";
 import { executeRequest } from "../src/utils/execute";
 
@@ -13,16 +13,16 @@ const { endpoint } = courier();
 const fetchSpy = vi.fn();
 
 function mockFetchResponse(data: unknown, status = 200, headers = new Headers()) {
-	return new Response(status === 204 ? null : JSON.stringify(data), { status, headers });
+  return new Response(status === 204 ? null : JSON.stringify(data), { status, headers });
 }
 
 beforeEach(() => {
-	fetchSpy.mockReset();
-	vi.stubGlobal("fetch", fetchSpy);
+  fetchSpy.mockReset();
+  vi.stubGlobal("fetch", fetchSpy);
 });
 
 afterEach(() => {
-	vi.restoreAllMocks();
+  vi.restoreAllMocks();
 });
 
 // ---- define a realistic API ----
@@ -31,30 +31,30 @@ type User = { id: number; name: string; email: string };
 type Post = { id: number; title: string; body: string };
 
 const usersGroup = defineGroup({
-	prefix: "users",
-	endpoints: {
-		getAll: endpoint.get("").response<User[]>(),
-		getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
-		create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
-		update: endpoint.put(":id").variables<{ id: number; name: string }>().response<User>(),
-		remove: endpoint.del(":id").variables<{ id: number }>(),
-	},
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+    create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
+    update: endpoint.put(":id").variables<{ id: number; name: string }>().response<User>(),
+    remove: endpoint.del(":id").variables<{ id: number }>(),
+  },
 });
 
 const postsGroup = defineGroup({
-	prefix: "posts",
-	endpoints: {
-		list: endpoint.get("").response<Post[]>(),
-		getById: endpoint.get(":id").variables<{ id: number }>().response<Post>(),
-	},
+  prefix: "posts",
+  endpoints: {
+    list: endpoint.get("").response<Post[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<Post>(),
+  },
 });
 
 const api = defineApi({
-	baseURL: "https://api.example.com",
-	groups: {
-		users: usersGroup,
-		posts: postsGroup,
-	},
+  baseURL: "https://api.example.com",
+  groups: {
+    users: usersGroup,
+    posts: postsGroup,
+  },
 });
 
 const sources = { api };
@@ -62,470 +62,509 @@ const sources = { api };
 // ---- tests ----
 
 describe("integration: functional API → executeRequest → response", () => {
-	it("GET all users via group endpoint", async () => {
-		const users: User[] = [
-			{ id: 1, name: "Alice", email: "alice@test.com" },
-			{ id: 2, name: "Bob", email: "bob@test.com" },
-		];
-		fetchSpy.mockResolvedValue(mockFetchResponse(users));
+  it("GET all users via group endpoint", async () => {
+    const users: User[] = [
+      { id: 1, name: "Alice", email: "alice@test.com" },
+      { id: 2, name: "Bob", email: "bob@test.com" },
+    ];
+    fetchSpy.mockResolvedValue(mockFetchResponse(users));
 
-		const result = await executeRequest(sources, {
-			source: "api",
-			group: "users",
-			method: "getAll",
-		});
+    const result = await executeRequest(sources, {
+      source: "api",
+      group: "users",
+      method: "getAll",
+    });
 
-		expect(result).toEqual(users);
-		expect(fetchSpy).toHaveBeenCalled();
-		const [, options] = fetchSpy.mock.calls[0]!;
-		expect(options.method).toBe("GET");
-	});
+    expect(result).toEqual(users);
+    expect(fetchSpy).toHaveBeenCalled();
+    const [, options] = fetchSpy.mock.calls[0]!;
+    expect(options.method).toBe("GET");
+  });
 
-	it("GET user by id with path params", async () => {
-		const user: User = { id: 42, name: "Charlie", email: "charlie@test.com" };
-		fetchSpy.mockResolvedValue(mockFetchResponse(user));
+  it("GET user by id with path params", async () => {
+    const user: User = { id: 42, name: "Charlie", email: "charlie@test.com" };
+    fetchSpy.mockResolvedValue(mockFetchResponse(user));
 
-		const result = await executeRequest(sources, {
-			source: "api",
-			group: "users",
-			method: "getById",
-			variables: { id: 42 },
-		});
+    const result = await executeRequest(sources, {
+      source: "api",
+      group: "users",
+      method: "getById",
+      variables: { id: 42 },
+    });
 
-		expect(result).toEqual(user);
-		expect(fetchSpy).toHaveBeenCalled();
-		const [, options] = fetchSpy.mock.calls[0]!;
-		expect(options.method).toBe("GET");
-	});
+    expect(result).toEqual(user);
+    expect(fetchSpy).toHaveBeenCalled();
+    const [, options] = fetchSpy.mock.calls[0]!;
+    expect(options.method).toBe("GET");
+  });
 
-	it("POST create user with body", async () => {
-		const newUser: User = { id: 3, name: "Diana", email: "diana@test.com" };
-		fetchSpy.mockResolvedValue(mockFetchResponse(newUser, 201));
+  it("POST create user with body", async () => {
+    const newUser: User = { id: 3, name: "Diana", email: "diana@test.com" };
+    fetchSpy.mockResolvedValue(mockFetchResponse(newUser, 201));
 
-		const result = await executeRequest(sources, {
-			source: "api",
-			group: "users",
-			method: "create",
-			variables: { name: "Diana", email: "diana@test.com" },
-		});
+    const result = await executeRequest(sources, {
+      source: "api",
+      group: "users",
+      method: "create",
+      variables: { name: "Diana", email: "diana@test.com" },
+    });
 
-		expect(result).toEqual(newUser);
-		expect(fetchSpy).toHaveBeenCalled();
-		const [, options] = fetchSpy.mock.calls[0]!;
-		expect(options.method).toBe("POST");
-	});
+    expect(result).toEqual(newUser);
+    expect(fetchSpy).toHaveBeenCalled();
+    const [, options] = fetchSpy.mock.calls[0]!;
+    expect(options.method).toBe("POST");
+  });
 
-	it("PUT update user", async () => {
-		const updated: User = { id: 1, name: "Alice Updated", email: "alice@test.com" };
-		fetchSpy.mockResolvedValue(mockFetchResponse(updated));
+  it("PUT update user", async () => {
+    const updated: User = { id: 1, name: "Alice Updated", email: "alice@test.com" };
+    fetchSpy.mockResolvedValue(mockFetchResponse(updated));
 
-		const result = await executeRequest(sources, {
-			source: "api",
-			group: "users",
-			method: "update",
-			variables: { id: 1, name: "Alice Updated" },
-		});
+    const result = await executeRequest(sources, {
+      source: "api",
+      group: "users",
+      method: "update",
+      variables: { id: 1, name: "Alice Updated" },
+    });
 
-		expect(result).toEqual(updated);
-		expect(fetchSpy).toHaveBeenCalled();
-		const [, options] = fetchSpy.mock.calls[0]!;
-		expect(options.method).toBe("PUT");
-	});
+    expect(result).toEqual(updated);
+    expect(fetchSpy).toHaveBeenCalled();
+    const [, options] = fetchSpy.mock.calls[0]!;
+    expect(options.method).toBe("PUT");
+  });
 
-	it("DELETE user", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse(null, 204));
+  it("DELETE user", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse(null, 204));
 
-		const result = await executeRequest(sources, {
-			source: "api",
-			group: "users",
-			method: "remove",
-			variables: { id: 1 },
-		});
+    const result = await executeRequest(sources, {
+      source: "api",
+      group: "users",
+      method: "remove",
+      variables: { id: 1 },
+    });
 
-		expect(result).toBeNull();
-	});
+    expect(result).toBeNull();
+  });
 
-	it("works across different groups (posts)", async () => {
-		const posts: Post[] = [{ id: 1, title: "Hello", body: "World" }];
-		fetchSpy.mockResolvedValue(mockFetchResponse(posts));
+  it("works across different groups (posts)", async () => {
+    const posts: Post[] = [{ id: 1, title: "Hello", body: "World" }];
+    fetchSpy.mockResolvedValue(mockFetchResponse(posts));
 
-		const result = await executeRequest(sources, {
-			source: "api",
-			group: "posts",
-			method: "list",
-		});
+    const result = await executeRequest(sources, {
+      source: "api",
+      group: "posts",
+      method: "list",
+    });
 
-		expect(result).toEqual(posts);
-	});
+    expect(result).toEqual(posts);
+  });
 
-	it("returns rawData envelope when requested", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1 }]));
+  it("returns rawData envelope when requested", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1 }]));
 
-		const result = await executeRequest(sources, {
-			source: "api",
-			group: "users",
-			method: "getAll",
-			options: { rawData: true },
-		});
+    const result = await executeRequest(sources, {
+      source: "api",
+      group: "users",
+      method: "getAll",
+      options: { rawData: true },
+    });
 
-		expect(result).toEqual(
-			expect.objectContaining({
-				status: 200,
-				data: [{ id: 1 }],
-			}),
-		);
-	});
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: 200,
+        data: [{ id: 1 }],
+      }),
+    );
+  });
 });
 
 describe("integration: middleware with functional API", () => {
-	it("middleware receives correct context", async () => {
-		const spy = vi.fn();
-		fetchSpy.mockResolvedValue(mockFetchResponse([]));
+  it("middleware receives correct context", async () => {
+    const spy = vi.fn();
+    fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-		const { defineMiddleware } = await import("../src/middleware/index");
+    const { defineMiddleware } = await import("../src/middleware/index");
 
-		const mw = defineMiddleware("spy", "wrap", async (ctx, next) => {
-			spy(ctx);
-			return next();
-		});
+    const mw = defineMiddleware("spy", "wrap", async (ctx, next) => {
+      spy(ctx);
+      return next();
+    });
 
-		const api = defineApi({
-			baseURL: "https://api.example.com",
-			middleware: [mw],
-			groups: {
-				users: defineGroup({
-					prefix: "users",
-					endpoints: {
-						getAll: endpoint.get("").response<User[]>(),
-					},
-				}),
-			},
-		});
+    const api = defineApi({
+      baseURL: "https://api.example.com",
+      middleware: [mw],
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: {
+            getAll: endpoint.get("").response<User[]>(),
+          },
+        }),
+      },
+    });
 
-		await executeRequest({ api }, {
-			source: "api",
-			group: "users",
-			method: "getAll",
-		});
+    await executeRequest(
+      { api },
+      {
+        source: "api",
+        group: "users",
+        method: "getAll",
+      },
+    );
 
-		expect(spy).toHaveBeenCalledWith(
-			expect.objectContaining({
-				source: "api",
-				group: "users",
-				method: "getAll",
-			}),
-		);
-	});
+    expect(spy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: "api",
+        group: "users",
+        method: "getAll",
+      }),
+    );
+  });
 
-	it("middleware can transform response", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse({ raw: true }));
+  it("middleware can transform response", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse({ raw: true }));
 
-		const { defineMiddleware } = await import("../src/middleware/index");
+    const { defineMiddleware } = await import("../src/middleware/index");
 
-		const mw = defineMiddleware("transform", "wrap", async (_ctx, next) => {
-			const res = await next();
-			return { ...res, data: { transformed: true } };
-		});
+    const mw = defineMiddleware("transform", "wrap", async (_ctx, next) => {
+      const res = await next();
+      return { ...res, data: { transformed: true } };
+    });
 
-		const api = defineApi({
-			baseURL: "https://api.example.com",
-			middleware: [mw],
-			groups: {
-				data: defineGroup({
-					prefix: "data",
-					endpoints: {
-						fetch: endpoint.get(""),
-					},
-				}),
-			},
-		});
+    const api = defineApi({
+      baseURL: "https://api.example.com",
+      middleware: [mw],
+      groups: {
+        data: defineGroup({
+          prefix: "data",
+          endpoints: {
+            fetch: endpoint.get(""),
+          },
+        }),
+      },
+    });
 
-		const result = await executeRequest({ api }, {
-			source: "api",
-			group: "data",
-			method: "fetch",
-		});
+    const result = await executeRequest(
+      { api },
+      {
+        source: "api",
+        group: "data",
+        method: "fetch",
+      },
+    );
 
-		expect(result).toEqual({ transformed: true });
-	});
+    expect(result).toEqual({ transformed: true });
+  });
 
-	it("middleware can catch endpoint errors", async () => {
-		const errorSpy = vi.fn();
+  it("middleware can catch endpoint errors", async () => {
+    const errorSpy = vi.fn();
 
-		const { defineMiddleware } = await import("../src/middleware/index");
+    const { defineMiddleware } = await import("../src/middleware/index");
 
-		const mw = defineMiddleware("errorCatcher", "wrap", async (_ctx, next) => {
-			try {
-				return await next();
-			} catch (error) {
-				errorSpy(error);
-				throw error;
-			}
-		});
+    const mw = defineMiddleware("errorCatcher", "wrap", async (_ctx, next) => {
+      try {
+        return await next();
+      } catch (error) {
+        errorSpy(error);
+        throw error;
+      }
+    });
 
-		const api = defineApi({
-			baseURL: "https://api.example.com",
-			middleware: [mw],
-			groups: {
-				ops: defineGroup({
-					prefix: "ops",
-					endpoints: {
-						fail: endpoint.get("fail").response<never>(),
-					},
-				}),
-			},
-		});
+    const api = defineApi({
+      baseURL: "https://api.example.com",
+      middleware: [mw],
+      groups: {
+        ops: defineGroup({
+          prefix: "ops",
+          endpoints: {
+            fail: endpoint.get("fail").response<never>(),
+          },
+        }),
+      },
+    });
 
-		fetchSpy.mockResolvedValueOnce(
-			new Response(JSON.stringify({ message: "boom" }), {
-				status: 500,
-				headers: new Headers({ "content-type": "application/json" }),
-			}),
-		);
+    fetchSpy.mockResolvedValueOnce(
+      new Response(JSON.stringify({ message: "boom" }), {
+        status: 500,
+        headers: new Headers({ "content-type": "application/json" }),
+      }),
+    );
 
-		try {
-			await executeRequest({ api }, {
-				source: "api",
-				group: "ops",
-				method: "fail",
-			});
-		} catch {
-			// expected
-		}
+    try {
+      await executeRequest(
+        { api },
+        {
+          source: "api",
+          group: "ops",
+          method: "fail",
+        },
+      );
+    } catch {
+      // expected
+    }
 
-		expect(errorSpy).toHaveBeenCalledWith(expect.any(HTTPError));
-	});
+    expect(errorSpy).toHaveBeenCalledWith(expect.any(HTTPError));
+  });
 });
 
 describe("integration: multiple sources", () => {
-	it("routes to correct source", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse({ token: "abc" }));
+  it("routes to correct source", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse({ token: "abc" }));
 
-		const authApi = defineApi({
-			baseURL: "https://auth.example.com",
-			groups: {
-				session: defineGroup({
-					prefix: "session",
-					endpoints: {
-						me: endpoint.get("me").response<{ token: string }>(),
-					},
-				}),
-			},
-		});
+    const authApi = defineApi({
+      baseURL: "https://auth.example.com",
+      groups: {
+        session: defineGroup({
+          prefix: "session",
+          endpoints: {
+            me: endpoint.get("me").response<{ token: string }>(),
+          },
+        }),
+      },
+    });
 
-		const multiSources = { api, auth: authApi };
+    const multiSources = { api, auth: authApi };
 
-		const result = await executeRequest(multiSources, {
-			source: "auth",
-			group: "session",
-			method: "me",
-		});
+    const result = await executeRequest(multiSources, {
+      source: "auth",
+      group: "session",
+      method: "me",
+    });
 
-		expect(result).toEqual({ token: "abc" });
-	});
+    expect(result).toEqual({ token: "abc" });
+  });
 
-	it("rejects unknown source", async () => {
-		try {
-			await executeRequest(sources, {
-				source: "unknown",
-				group: "users",
-				method: "getAll",
-			});
-			expect.fail("should have thrown");
-		} catch (error) {
-			expect(error).toBeInstanceOf(HTTPError);
-			expect((error as HTTPError).status).toBe(400);
-		}
-	});
+  it("rejects unknown source", async () => {
+    try {
+      await executeRequest(sources, {
+        source: "unknown",
+        group: "users",
+        method: "getAll",
+      });
+      expect.fail("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(HTTPError);
+      expect((error as HTTPError).status).toBe(400);
+    }
+  });
 
-	it("rejects unknown method in group", async () => {
-		try {
-			await executeRequest(sources, {
-				source: "api",
-				group: "users",
-				method: "nonexistent",
-			});
-			expect.fail("should have thrown");
-		} catch (error) {
-			expect(error).toBeInstanceOf(HTTPError);
-			expect((error as HTTPError).status).toBe(400);
-		}
-	});
+  it("rejects unknown method in group", async () => {
+    try {
+      await executeRequest(sources, {
+        source: "api",
+        group: "users",
+        method: "nonexistent",
+      });
+      expect.fail("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(HTTPError);
+      expect((error as HTTPError).status).toBe(400);
+    }
+  });
 });
 
 describe("integration: HTTP-semantic proxy", () => {
-	it("rejects GET proxy for a write", async () => {
-		// `create` is a mutation, so it must not be reachable over a cacheable GET
-		try {
-			await executeRequest(sources, {
-				source: "api",
-				group: "users",
-				method: "create",
-			}, { proxyMethod: "GET" } as any);
-			expect.fail("should have thrown");
-		} catch (error) {
-			expect(error).toBeInstanceOf(HTTPError);
-			expect((error as HTTPError).status).toBe(405);
-		}
-	});
+  it("rejects GET proxy for a write", async () => {
+    // `create` is a mutation, so it must not be reachable over a cacheable GET
+    try {
+      await executeRequest(
+        sources,
+        {
+          source: "api",
+          group: "users",
+          method: "create",
+        },
+        { proxyMethod: "GET" } as any,
+      );
+      expect.fail("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(HTTPError);
+      expect((error as HTTPError).status).toBe(405);
+    }
+  });
 
-	it("allows GET proxy for endpoints with type: query", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "A", email: "a@b.com" }]));
+  it("allows GET proxy for endpoints with type: query", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "A", email: "a@b.com" }]));
 
-		const queryApi = defineApi({
-			baseURL: "https://api.example.com",
-			groups: {
-				users: defineGroup({
-					prefix: "users",
-					endpoints: {
-						getAll: endpoint.get("").response<User[]>(),
-					},
-				}),
-			},
-		});
+    const queryApi = defineApi({
+      baseURL: "https://api.example.com",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: {
+            getAll: endpoint.get("").response<User[]>(),
+          },
+        }),
+      },
+    });
 
-		const result = await executeRequest({ api: queryApi }, {
-			source: "api",
-			group: "users",
-			method: "getAll",
-		}, { proxyMethod: "GET" } as any);
+    const result = await executeRequest(
+      { api: queryApi },
+      {
+        source: "api",
+        group: "users",
+        method: "getAll",
+      },
+      { proxyMethod: "GET" } as any,
+    );
 
-		expect(result).toEqual([{ id: 1, name: "A", email: "a@b.com" }]);
-	});
+    expect(result).toEqual([{ id: 1, name: "A", email: "a@b.com" }]);
+  });
 
-	it("allows POST proxy for any endpoint regardless of type", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse([]));
+  it("allows POST proxy for any endpoint regardless of type", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-		const queryApi = defineApi({
-			baseURL: "https://api.example.com",
-			groups: {
-				users: defineGroup({
-					prefix: "users",
-					endpoints: {
-						getAll: endpoint.get("").response<User[]>(),
-					},
-				}),
-			},
-		});
+    const queryApi = defineApi({
+      baseURL: "https://api.example.com",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: {
+            getAll: endpoint.get("").response<User[]>(),
+          },
+        }),
+      },
+    });
 
-		const result = await executeRequest({ api: queryApi }, {
-			source: "api",
-			group: "users",
-			method: "getAll",
-		}, { proxyMethod: "POST" } as any);
+    const result = await executeRequest(
+      { api: queryApi },
+      {
+        source: "api",
+        group: "users",
+        method: "getAll",
+      },
+      { proxyMethod: "POST" } as any,
+    );
 
-		expect(result).toEqual([]);
-	});
+    expect(result).toEqual([]);
+  });
 
-	it("adds Cache-Control header for GET proxy with cache config", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "A", email: "a@b.com" }]));
+  it("adds Cache-Control header for GET proxy with cache config", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse([{ id: 1, name: "A", email: "a@b.com" }]));
 
-		const { NextResponse } = await import("next/server");
+    const { NextResponse } = await import("next/server");
 
-		const cachedApi = defineApi({
-			baseURL: "https://api.example.com",
-			groups: {
-				users: defineGroup({
-					prefix: "users",
-					endpoints: {
-						getAll: endpoint.get("").response<User[]>().cache({ revalidate: 60 }),
-					},
-				}),
-			},
-		});
+    const cachedApi = defineApi({
+      baseURL: "https://api.example.com",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: {
+            getAll: endpoint.get("").response<User[]>().cache({ revalidate: 60 }),
+          },
+        }),
+      },
+    });
 
-		const response = await executeRequest({ api: cachedApi }, {
-			source: "api",
-			group: "users",
-			method: "getAll",
-		}, {
-			res: new NextResponse(),
-			proxyMethod: "GET",
-			req: new Request("https://app.example.com/api/request"),
-		}) as Response;
+    const response = (await executeRequest(
+      { api: cachedApi },
+      {
+        source: "api",
+        group: "users",
+        method: "getAll",
+      },
+      {
+        res: new NextResponse(),
+        proxyMethod: "GET",
+        req: new Request("https://app.example.com/api/request"),
+      },
+    )) as Response;
 
-		expect(response.headers.get("cache-control")).toBe("s-maxage=60, stale-while-revalidate");
-	});
+    expect(response.headers.get("cache-control")).toBe("s-maxage=60, stale-while-revalidate");
+  });
 
-	it("adds x-courier-tags header for GET proxy with cache tags", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse([]));
+  it("adds x-courier-tags header for GET proxy with cache tags", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-		const { NextResponse } = await import("next/server");
+    const { NextResponse } = await import("next/server");
 
-		const taggedApi = defineApi({
-			baseURL: "https://api.example.com",
-			groups: {
-				users: defineGroup({
-					prefix: "users",
-					endpoints: {
-						getAll: endpoint.get("").response<User[]>().cache({ revalidate: 30, tags: ["users", "list"] }),
-					},
-				}),
-			},
-		});
+    const taggedApi = defineApi({
+      baseURL: "https://api.example.com",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: {
+            getAll: endpoint
+              .get("")
+              .response<User[]>()
+              .cache({ revalidate: 30, tags: ["users", "list"] }),
+          },
+        }),
+      },
+    });
 
-		const response = await executeRequest({ api: taggedApi }, {
-			source: "api",
-			group: "users",
-			method: "getAll",
-		}, {
-			res: new NextResponse(),
-			proxyMethod: "GET",
-			req: new Request("https://app.example.com/api/request"),
-		}) as Response;
+    const response = (await executeRequest(
+      { api: taggedApi },
+      {
+        source: "api",
+        group: "users",
+        method: "getAll",
+      },
+      {
+        res: new NextResponse(),
+        proxyMethod: "GET",
+        req: new Request("https://app.example.com/api/request"),
+      },
+    )) as Response;
 
-		expect(response.headers.get("x-courier-tags")).toBe("users,list");
-		expect(response.headers.get("cache-control")).toBe("s-maxage=30, stale-while-revalidate");
-	});
+    expect(response.headers.get("x-courier-tags")).toBe("users,list");
+    expect(response.headers.get("cache-control")).toBe("s-maxage=30, stale-while-revalidate");
+  });
 
-	it("does not add cache headers for POST proxy even with cache config", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse([]));
+  it("does not add cache headers for POST proxy even with cache config", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse([]));
 
-		const { NextResponse } = await import("next/server");
+    const { NextResponse } = await import("next/server");
 
-		const cachedApi = defineApi({
-			baseURL: "https://api.example.com",
-			groups: {
-				users: defineGroup({
-					prefix: "users",
-					endpoints: {
-						getAll: endpoint.get("").response<User[]>().cache({ revalidate: 60 }),
-					},
-				}),
-			},
-		});
+    const cachedApi = defineApi({
+      baseURL: "https://api.example.com",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: {
+            getAll: endpoint.get("").response<User[]>().cache({ revalidate: 60 }),
+          },
+        }),
+      },
+    });
 
-		const response = await executeRequest({ api: cachedApi }, {
-			source: "api",
-			group: "users",
-			method: "getAll",
-		}, { res: new NextResponse(), proxyMethod: "POST" }) as Response;
+    const response = (await executeRequest(
+      { api: cachedApi },
+      {
+        source: "api",
+        group: "users",
+        method: "getAll",
+      },
+      { res: new NextResponse(), proxyMethod: "POST" },
+    )) as Response;
 
-		expect(response.headers.get("cache-control")).toBeNull();
-	});
+    expect(response.headers.get("cache-control")).toBeNull();
+  });
 
-	it("works with type: mutation for POST endpoints", async () => {
-		fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1, name: "Alice", email: "a@b.com" }, 201));
+  it("works with type: mutation for POST endpoints", async () => {
+    fetchSpy.mockResolvedValue(mockFetchResponse({ id: 1, name: "Alice", email: "a@b.com" }, 201));
 
-		const mutationApi = defineApi({
-			baseURL: "https://api.example.com",
-			groups: {
-				users: defineGroup({
-					prefix: "users",
-					endpoints: {
-						create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
-					},
-				}),
-			},
-		});
+    const mutationApi = defineApi({
+      baseURL: "https://api.example.com",
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: {
+            create: endpoint.post("").variables<{ name: string; email: string }>().response<User>(),
+          },
+        }),
+      },
+    });
 
-		const result = await executeRequest({ api: mutationApi }, {
-			source: "api",
-			group: "users",
-			method: "create",
-			variables: { name: "Alice", email: "a@b.com" },
-		});
+    const result = await executeRequest(
+      { api: mutationApi },
+      {
+        source: "api",
+        group: "users",
+        method: "create",
+        variables: { name: "Alice", email: "a@b.com" },
+      },
+    );
 
-		expect(result).toEqual({ id: 1, name: "Alice", email: "a@b.com" });
-	});
+    expect(result).toEqual({ id: 1, name: "Alice", email: "a@b.com" });
+  });
 });

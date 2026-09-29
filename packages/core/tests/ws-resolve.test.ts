@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-
-import { parseTopic, resolveSubscribeTopic } from "../src/adapter/ws-resolve";
 import type { WSSocketContext } from "../src/adapter/ws-context";
+import { parseTopic, resolveSubscribeTopic } from "../src/adapter/ws-resolve";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { ENDPOINT_SCHEMA } from "../src/validation";
 
@@ -9,9 +8,10 @@ import { ENDPOINT_SCHEMA } from "../src/validation";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createMockCtx(
-  sources: Record<string, unknown> = {},
-): { ctx: WSSocketContext; sent: WSMessage[] } {
+function createMockCtx(sources: Record<string, unknown> = {}): {
+  ctx: WSSocketContext;
+  sent: WSMessage[];
+} {
   const sent: WSMessage[] = [];
   const ctx = {
     sources,

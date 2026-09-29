@@ -1,13 +1,8 @@
 import { useMemo } from "react";
-import { useStudioStore } from "@/store";
-import type {
-  SourceNodeData,
-  GroupNodeData,
-  EndpointNodeData,
-  ExplorerEdgeData,
-} from "./types";
-import { buildExplorerData } from "./build-explorer-data";
 import { useCatalog } from "@/hooks/use-catalog";
+import { useStudioStore } from "@/store";
+import { buildExplorerData } from "./build-explorer-data";
+import type { EndpointNodeData, ExplorerEdgeData, GroupNodeData, SourceNodeData } from "./types";
 
 // ── Result type ─────────────────────────────────────────────────────────────
 

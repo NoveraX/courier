@@ -2,14 +2,12 @@
  * @vitest-environment jsdom
  */
 
-import { createElement, type ReactNode, useEffect } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import { isConfigurationError } from "@noverax/courier";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode, useEffect } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
-
-import { isConfigurationError } from "@noverax/courier";
 import { createProxyQueryCaller } from "../src/create-proxy-query-caller";
 import { type CourierServer, startCourierServer } from "./helpers/courier-server";
 import { liveApi } from "./helpers/live-api";
@@ -75,11 +73,15 @@ describe("useChannel over a real WebSocket", () => {
       { wrapper, initialProps: { room: "r1" } },
     );
 
-    await waitFor(() => expect(result.current.lastMessage).toEqual({ echo: "hello-r1", room: "r1" }));
+    await waitFor(() =>
+      expect(result.current.lastMessage).toEqual({ echo: "hello-r1", room: "r1" }),
+    );
 
     rerender({ room: "r2" });
 
-    await waitFor(() => expect(result.current.lastMessage).toEqual({ echo: "hello-r2", room: "r2" }));
+    await waitFor(() =>
+      expect(result.current.lastMessage).toEqual({ echo: "hello-r2", room: "r2" }),
+    );
   });
 
   it("reports a missing WebSocket proxy path through error and onError", async () => {

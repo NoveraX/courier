@@ -12,9 +12,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createChainLoad } from "../src/server/chain-load";
+import { ConfigLoadTimeoutError } from "../src/server/config-load-timeout-error";
 import type { LoadedCourierConfig } from "../src/server/config-loader";
 import { loadCourierConfig } from "../src/server/config-loader";
-import { ConfigLoadTimeoutError } from "../src/server/config-load-timeout-error";
 
 const TIMEOUT_MS = 200;
 
@@ -57,7 +57,12 @@ afterEach(() => {
 describe("createChainLoad", () => {
   it("loads the project when it takes less than the timeout", async () => {
     writeFileSync(config, 'export default { sources: { demo: { baseURL: "v1.example.com" } } }\n');
-    const chain = createChainLoad({ projectRoot: root, timeoutMs: 5000, onLateSuccess: vi.fn(), onLateFailure: vi.fn() });
+    const chain = createChainLoad({
+      projectRoot: root,
+      timeoutMs: 5000,
+      onLateSuccess: vi.fn(),
+      onLateFailure: vi.fn(),
+    });
 
     const loaded = await chain.load();
 
@@ -66,7 +71,12 @@ describe("createChainLoad", () => {
 
   it("the timeout message names COURIER_CONFIG_LOAD_TIMEOUT_MS, and a budget under a second in milliseconds", async () => {
     writeFileSync(config, "await new Promise(() => {})\nexport default { sources: {} }\n");
-    const chain = createChainLoad({ projectRoot: root, timeoutMs: TIMEOUT_MS, onLateSuccess: vi.fn(), onLateFailure: vi.fn() });
+    const chain = createChainLoad({
+      projectRoot: root,
+      timeoutMs: TIMEOUT_MS,
+      onLateSuccess: vi.fn(),
+      onLateFailure: vi.fn(),
+    });
 
     const error = await chain.load().catch((err: unknown) => err);
 
@@ -78,8 +88,16 @@ describe("createChainLoad", () => {
 
   it("the timeout message names courier.mocks, which a load evaluates after the config and may be what hangs", async () => {
     writeFileSync(config, 'export default { sources: { demo: { baseURL: "v1.example.com" } } }\n');
-    writeFileSync(join(root, "courier.mocks.ts"), "await new Promise(() => {})\nexport default {}\n");
-    const chain = createChainLoad({ projectRoot: root, timeoutMs: TIMEOUT_MS, onLateSuccess: vi.fn(), onLateFailure: vi.fn() });
+    writeFileSync(
+      join(root, "courier.mocks.ts"),
+      "await new Promise(() => {})\nexport default {}\n",
+    );
+    const chain = createChainLoad({
+      projectRoot: root,
+      timeoutMs: TIMEOUT_MS,
+      onLateSuccess: vi.fn(),
+      onLateFailure: vi.fn(),
+    });
 
     const error = await chain.load().catch((err: unknown) => err);
 
@@ -91,13 +109,23 @@ describe("createChainLoad", () => {
     const text = "await new Promise(() => {})\nexport default { sources: {} }\n";
     writeFileSync(config, text);
     const onInputs = vi.fn();
-    const chain = createChainLoad({ projectRoot: root, timeoutMs: TIMEOUT_MS, onInputs, onLateSuccess: vi.fn(), onLateFailure: vi.fn() });
+    const chain = createChainLoad({
+      projectRoot: root,
+      timeoutMs: TIMEOUT_MS,
+      onInputs,
+      onLateSuccess: vi.fn(),
+      onLateFailure: vi.fn(),
+    });
 
     const error = await chain.load().catch((err: unknown) => err);
 
-    expect(error instanceof ConfigLoadTimeoutError && error.depHashes?.get(config)).toBe(sha256(text));
+    expect(error instanceof ConfigLoadTimeoutError && error.depHashes?.get(config)).toBe(
+      sha256(text),
+    );
     expect(onInputs).toHaveBeenCalledOnce();
-    expect(onInputs.mock.calls[0]?.[0]).toBe(error instanceof ConfigLoadTimeoutError ? error.depHashes : null);
+    expect(onInputs.mock.calls[0]?.[0]).toBe(
+      error instanceof ConfigLoadTimeoutError ? error.depHashes : null,
+    );
   });
 
   it("hands a load given up that succeeds later over once, with the error its caller was thrown", async () => {
@@ -129,7 +157,10 @@ describe("createChainLoad", () => {
     const { promise, reject } = Promise.withResolvers<void>();
     promise.catch(() => {});
     Reflect.set(globalThis, key, promise);
-    writeFileSync(config, `await Reflect.get(globalThis, "${key}")\nexport default { sources: {} }\n`);
+    writeFileSync(
+      config,
+      `await Reflect.get(globalThis, "${key}")\nexport default { sources: {} }\n`,
+    );
     const onLateSuccess = vi.fn();
     const late: Array<[unknown, ConfigLoadTimeoutError]> = [];
     const chain = createChainLoad({
@@ -149,14 +180,21 @@ describe("createChainLoad", () => {
     expect(error instanceof Error && error.message).toContain("ECONNREFUSED");
     expect(gaveUp).toBe(thrown);
     const lines = debug.mock.calls.map((call) => call.slice(1).join(" "));
-    expect(lines.some((line) => line.includes("has failed; 0 loads given up are still running"))).toBe(true);
+    expect(
+      lines.some((line) => line.includes("has failed; 0 loads given up are still running")),
+    ).toBe(true);
   });
 
   it("warns once five loads given up are still running, since each keeps its modules in memory", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const gate = gatedConfig();
     writeFileSync(config, gate.text);
-    const chain = createChainLoad({ projectRoot: root, timeoutMs: TIMEOUT_MS, onLateSuccess: vi.fn(), onLateFailure: vi.fn() });
+    const chain = createChainLoad({
+      projectRoot: root,
+      timeoutMs: TIMEOUT_MS,
+      onLateSuccess: vi.fn(),
+      onLateFailure: vi.fn(),
+    });
 
     for (let load = 0; load < 4; load += 1) await chain.load().catch(() => undefined);
     expect(warn).not.toHaveBeenCalled();
@@ -175,7 +213,12 @@ describe("createChainLoad", () => {
     const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
     const gate = gatedConfig();
     writeFileSync(config, gate.text);
-    const chain = createChainLoad({ projectRoot: root, timeoutMs: TIMEOUT_MS, onLateSuccess: vi.fn(), onLateFailure: vi.fn() });
+    const chain = createChainLoad({
+      projectRoot: root,
+      timeoutMs: TIMEOUT_MS,
+      onLateSuccess: vi.fn(),
+      onLateFailure: vi.fn(),
+    });
 
     await chain.load().catch(() => undefined);
     await chain.load().catch(() => undefined);

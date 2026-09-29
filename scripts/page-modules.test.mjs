@@ -38,7 +38,8 @@ describe("appPath", () => {
 });
 
 describe("placeSamples", () => {
-  const code = (samples) => [...placeSamples(samples, "/out").values()].map((sample) => sample.code);
+  const code = (samples) =>
+    [...placeSamples(samples, "/out").values()].map((sample) => sample.code);
 
   it("points an import at the last sample before it that shows the file", () => {
     const [, , third] = code([

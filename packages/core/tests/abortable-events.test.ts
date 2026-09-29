@@ -170,7 +170,9 @@ describe("abortableEvents", () => {
     fail(failure);
     await settle();
 
-    const line = warn.mock.calls.find((call) => String(call[1]).includes("Stream generator failed"));
+    const line = warn.mock.calls.find((call) =>
+      String(call[1]).includes("Stream generator failed"),
+    );
     expect(line?.at(-1)).toBe(failure);
   });
 
@@ -190,6 +192,8 @@ describe("abortableEvents", () => {
     await reading;
     await settle();
 
-    expect(warn.mock.calls.some((call) => String(call[1]).includes("Stream generator"))).toBe(false);
+    expect(warn.mock.calls.some((call) => String(call[1]).includes("Stream generator"))).toBe(
+      false,
+    );
   });
 });

@@ -1,6 +1,6 @@
-import { useMemo } from "react";
-import { MiniMap } from "@xyflow/react";
 import type { Node } from "@xyflow/react";
+import { MiniMap } from "@xyflow/react";
+import { useMemo } from "react";
 
 // ── Read CSS var at render time (canvas API needs resolved color) ────────────
 
@@ -27,10 +27,14 @@ export function GraphMinimap(): React.ReactElement {
 
   const nodeColor = (node: Node): string => {
     switch (node.type) {
-      case "source": return colors.source;
-      case "group": return colors.group;
-      case "endpoint": return colors.endpoint;
-      default: return colors.fallback;
+      case "source":
+        return colors.source;
+      case "group":
+        return colors.group;
+      case "endpoint":
+        return colors.endpoint;
+      default:
+        return colors.fallback;
     }
   };
 

@@ -1,7 +1,7 @@
-import { handleMockEvent, isMockEvent } from "@/store/handle-mock-events"
-import { useMockStore } from "@/store/mock-slice"
+import { handleMockEvent, isMockEvent } from "@/store/handle-mock-events";
+import { useMockStore } from "@/store/mock-slice";
 
-import { isStudioEvent } from "./event-guards"
+import { isStudioEvent } from "./event-guards";
 
 /**
  * Take in the requests Studio's mocks answered, which Studio replays to a
@@ -18,11 +18,12 @@ import { isStudioEvent } from "./event-guards"
  */
 export function replayMockEvents(events: readonly unknown[]): void {
   for (const event of events) {
-    if (!isStudioEvent(event)) continue
-    const type: string = event.type
-    if (!isMockEvent(type)) continue
-    const shown = useMockStore.getState().logs.find((log) => log.id === event.requestId)
-    const starts = type === "mock:request:start"
-    if (starts ? shown === undefined : shown !== undefined && shown.status === undefined) handleMockEvent(event)
+    if (!isStudioEvent(event)) continue;
+    const type: string = event.type;
+    if (!isMockEvent(type)) continue;
+    const shown = useMockStore.getState().logs.find((log) => log.id === event.requestId);
+    const starts = type === "mock:request:start";
+    if (starts ? shown === undefined : shown !== undefined && shown.status === undefined)
+      handleMockEvent(event);
   }
 }

@@ -13,7 +13,10 @@ import type { FilePlanSummary, PlanConsent } from "./types-file-plan";
  * ```
  */
 export function consentFor(plan: FilePlanSummary): PlanConsent {
-  return { plan, confirmed: plan.pending.filter((step) => step.preselected).map((step) => step.path) };
+  return {
+    plan,
+    confirmed: plan.pending.filter((step) => step.preselected).map((step) => step.path),
+  };
 }
 
 /**
@@ -43,7 +46,10 @@ export function toggleConfirmed(consent: PlanConsent, path: string): PlanConsent
  * post("/api/apis/imports/remove", { name, ...consentBody(consent) });
  * ```
  */
-export function consentBody(consent: PlanConsent | null): { planDigest?: string; confirm?: string[] } {
+export function consentBody(consent: PlanConsent | null): {
+  planDigest?: string;
+  confirm?: string[];
+} {
   if (consent === null || consent.plan.blocked.length > 0) return {};
   return { planDigest: consent.plan.digest, confirm: consent.confirmed };
 }

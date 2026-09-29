@@ -12,7 +12,10 @@ const { endpoint } = courier();
 const api = defineApi({
   baseURL: "http://api.test",
   groups: {
-    users: defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response<string[]>() } }),
+    users: defineGroup({
+      prefix: "users",
+      endpoints: { getAll: endpoint.get("").response<string[]>() },
+    }),
   },
 });
 
@@ -78,7 +81,11 @@ describe("a HAR entry's request", () => {
       { ...HAND_WRITTEN, request: { method: "GET", url: "https://api.example/users/1" } },
     ]).log.entries;
 
-    expect(entry?.request).toEqual({ method: "GET", url: "https://api.example/users/1", headers: [] });
+    expect(entry?.request).toEqual({
+      method: "GET",
+      url: "https://api.example/users/1",
+      headers: [],
+    });
     expect(entry?._courier.variables).toEqual({ id: 1 });
   });
 
@@ -89,4 +96,3 @@ describe("a HAR entry's request", () => {
     expect(harToFixtures(har)).toEqual([HAND_WRITTEN]);
   });
 });
-

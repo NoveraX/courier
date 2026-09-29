@@ -1,7 +1,6 @@
+import { configFileName } from "./config-file-name";
 import type { ConfigStatusPayload } from "./config-status";
 import type { MocksFileStatus } from "./mocks-file-status";
-
-import { configFileName } from "./config-file-name";
 
 /** How a notice about the config is presented: one per kind of toast. */
 export type ConfigNoticeTone = "error" | "success" | "info" | "warning";

@@ -23,7 +23,12 @@ describe("EnhancedMockBuilder", () => {
     const { builder, getHandler } = buildAndCapture();
     builder.returns((ctx) => `user-${ctx.variables.id}`);
 
-    const ctx = { variables: { id: "42" }, headers: new Headers(), callIndex: 0, scenarioState: "Started" };
+    const ctx = {
+      variables: { id: "42" },
+      headers: new Headers(),
+      callIndex: 0,
+      scenarioState: "Started",
+    };
     expect(getHandler().fn(ctx)).toBe("user-42");
   });
 

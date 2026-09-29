@@ -33,7 +33,11 @@ describe("a mock whose key names an inherited member", () => {
 
     const servers = useMockStore.getState().servers;
     expect(Object.hasOwn(servers, "toString")).toBe(true);
-    expect(servers.toString).toMatchObject({ serverId: "toString", processStatus: "running", port: 7002 });
+    expect(servers.toString).toMatchObject({
+      serverId: "toString",
+      processStatus: "running",
+      port: 7002,
+    });
   });
 
   it("is removed once courier.mocks.ts stops declaring it", () => {
@@ -44,8 +48,17 @@ describe("a mock whose key names an inherited member", () => {
   });
 
   it("changes nothing when an event names a mock that is not listed", () => {
-    handleMockEvent({ type: "mock:store:change", serverId: "valueOf", collection: "users", count: 3 });
-    handleMockEvent({ type: "mock:scenario:active", serverId: "hasOwnProperty", scenario: "empty" });
+    handleMockEvent({
+      type: "mock:store:change",
+      serverId: "valueOf",
+      collection: "users",
+      count: 3,
+    });
+    handleMockEvent({
+      type: "mock:scenario:active",
+      serverId: "hasOwnProperty",
+      scenario: "empty",
+    });
     useMockStore.getState().updateServer("isPrototypeOf", { port: 7003 });
 
     expect(useMockStore.getState().servers).toEqual({});

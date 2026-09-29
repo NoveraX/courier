@@ -17,7 +17,7 @@ import {
   removeProjects,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const json = (schema: unknown) => ({ content: { "application/json": { schema } } });
 const query = (name: string, type: string) => ({ name, in: "query", schema: { type } });
@@ -40,7 +40,10 @@ function spec(origin: string): ParsedSpec {
                 ...json({
                   type: "object",
                   required: ["total"],
-                  properties: { total: { type: "integer" }, items: { type: "array", items: { type: "string" } } },
+                  properties: {
+                    total: { type: "integer" },
+                    items: { type: "array", items: { type: "string" } },
+                  },
                 }),
               },
             },
@@ -50,21 +53,39 @@ function spec(origin: string): ParsedSpec {
           get: {
             operationId: "list",
             tags: ["a"],
-            responses: { "200": { description: "ok", ...json({ type: "object", properties: { x: { type: "string" } } }) } },
+            responses: {
+              "200": {
+                description: "ok",
+                ...json({ type: "object", properties: { x: { type: "string" } } }),
+              },
+            },
           },
         },
         "/b/list": {
           get: {
             operationId: "list",
             tags: ["b"],
-            responses: { "200": { description: "ok", ...json({ type: "object", properties: { y: { type: "number" } } }) } },
+            responses: {
+              "200": {
+                description: "ok",
+                ...json({ type: "object", properties: { y: { type: "number" } } }),
+              },
+            },
           },
         },
       },
       components: {
         schemas: {
-          ListItemsParams: { type: "object", required: ["color"], properties: { color: { type: "string" } } },
-          ListItemsResponse: { type: "object", required: ["legacy"], properties: { legacy: { type: "boolean" } } },
+          ListItemsParams: {
+            type: "object",
+            required: ["color"],
+            properties: { color: { type: "string" } },
+          },
+          ListItemsResponse: {
+            type: "object",
+            required: ["legacy"],
+            properties: { legacy: { type: "boolean" } },
+          },
         },
       },
     }),
@@ -98,25 +119,36 @@ afterAll(async () => {
   removeProjects("extracted-type-names");
 });
 
-describe.each(["zod", "valibot", "arktype", "none"] as const)("types extracted with %s", (validation) => {
-  const generate = () =>
-    generateCode(spec(server.origin), { type: "openapi", outputDir: "src/api", validation }, "shop");
+describe.each(["zod", "valibot", "arktype", "none"] as const)(
+  "types extracted with %s",
+  (validation) => {
+    const generate = () =>
+      generateCode(
+        spec(server.origin),
+        { type: "openapi", outputDir: "src/api", validation },
+        "shop",
+      );
 
-  it("take names nothing else has, each reachable from the barrel", () => {
-    const dir = writeProject(`extracted-type-names/${validation}`, generate(), { "consumer.ts": CONSUMER });
+    it("take names nothing else has, each reachable from the barrel", () => {
+      const dir = writeProject(`extracted-type-names/${validation}`, generate(), {
+        "consumer.ts": CONSUMER,
+      });
 
-    expect(compileProject(dir, ["consumer.ts"])).toEqual([]);
-  }, 60_000);
+      expect(compileProject(dir, ["consumer.ts"])).toEqual([]);
+    }, 60_000);
 
-  it("validate the response the endpoint really returns", async () => {
-    const { shopApi } = loadGenerated(generate(), "src/api/shop/index.ts");
+    it("validate the response the endpoint really returns", async () => {
+      const { shopApi } = loadGenerated(generate(), "src/api/shop/index.ts");
 
-    await expect(endpointAt(shopApi, "items", "listItems")({ page: 1, q: "x" })).resolves.toEqual({
-      total: 1,
-      items: ["a"],
+      await expect(endpointAt(shopApi, "items", "listItems")({ page: 1, q: "x" })).resolves.toEqual(
+        {
+          total: 1,
+          items: ["a"],
+        },
+      );
     });
-  });
-});
+  },
+);
 
 describe("the name a type takes", () => {
   it("does not change when fewer endpoints are selected", () => {

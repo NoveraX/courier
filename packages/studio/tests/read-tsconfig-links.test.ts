@@ -4,7 +4,10 @@ import { readTsconfigLinks } from "../src/server/read-tsconfig-links";
 describe("readTsconfigLinks", () => {
   it("reads a single extends and a declared paths map", () => {
     const links = readTsconfigLinks(
-      JSON.stringify({ extends: "./tsconfig.base.json", compilerOptions: { paths: { "@/*": ["./src/*"] } } }),
+      JSON.stringify({
+        extends: "./tsconfig.base.json",
+        compilerOptions: { paths: { "@/*": ["./src/*"] } },
+      }),
     );
 
     expect(links).toEqual({ extends: ["./tsconfig.base.json"], declaresPaths: true });
@@ -32,7 +35,10 @@ describe("readTsconfigLinks", () => {
       "} // trailing comment",
     ].join("\n");
 
-    expect(readTsconfigLinks(text)).toEqual({ extends: ["./tsconfig.base.json"], declaresPaths: true });
+    expect(readTsconfigLinks(text)).toEqual({
+      extends: ["./tsconfig.base.json"],
+      declaresPaths: true,
+    });
   });
 
   it("counts the last of a key written twice", () => {
@@ -43,13 +49,18 @@ describe("readTsconfigLinks", () => {
 
   it("does not count paths set to null, or compilerOptions without paths", () => {
     expect(readTsconfigLinks('{ "compilerOptions": { "paths": null } }').declaresPaths).toBe(false);
-    expect(readTsconfigLinks('{ "compilerOptions": { "strict": true } }').declaresPaths).toBe(false);
+    expect(readTsconfigLinks('{ "compilerOptions": { "strict": true } }').declaresPaths).toBe(
+      false,
+    );
   });
 
   it("counts paths set to any truthy value, as the reader does, and no falsy one", () => {
-    const declares = (paths: string) => readTsconfigLinks(`{ compilerOptions: { paths: ${paths} } }`).declaresPaths;
+    const declares = (paths: string) =>
+      readTsconfigLinks(`{ compilerOptions: { paths: ${paths} } }`).declaresPaths;
 
-    expect(["[]", "'./src/*'", "1", "true", "Infinity", "-1", "+Infinity"].map(declares)).toEqual(Array(7).fill(true));
+    expect(["[]", "'./src/*'", "1", "true", "Infinity", "-1", "+Infinity"].map(declares)).toEqual(
+      Array(7).fill(true),
+    );
     expect(["0", "''", "false", "NaN", "-0", "-NaN"].map(declares)).toEqual(Array(6).fill(false));
   });
 

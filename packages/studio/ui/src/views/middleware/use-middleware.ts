@@ -1,22 +1,21 @@
-import { useMemo, useCallback } from "react";
-import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useCallback, useMemo } from "react";
 
 import { useStudioStore } from "@/store";
-
-import type { MiddlewareMode } from "./types";
-import type { MiddlewareSearchParams } from "./search-schema";
 import {
-  computeAggregateStats,
-  buildChain,
-  computeOverheadStats,
-  filterWithMiddleware,
-} from "./helpers";
-import {
+  computeEndpointImpact,
   executionSparkline,
   overheadSparkline,
   p95Sparkline,
-  computeEndpointImpact,
 } from "./compute-insights";
+import {
+  buildChain,
+  computeAggregateStats,
+  computeOverheadStats,
+  filterWithMiddleware,
+} from "./helpers";
+import type { MiddlewareSearchParams } from "./search-schema";
+import type { MiddlewareMode } from "./types";
 
 export function useMiddleware() {
   const requests = useStudioStore((s) => s.requests);
@@ -56,7 +55,8 @@ export function useMiddleware() {
   const endpointImpact = useMemo(() => computeEndpointImpact(withMiddleware), [withMiddleware]);
 
   const selectedRequest = useMemo(
-    () => (selectedRequestId ? withMiddleware.find((r) => r.id === selectedRequestId) ?? null : null),
+    () =>
+      selectedRequestId ? (withMiddleware.find((r) => r.id === selectedRequestId) ?? null) : null,
     [withMiddleware, selectedRequestId],
   );
 

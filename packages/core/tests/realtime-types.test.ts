@@ -63,9 +63,10 @@ describe("endpoint with transport", () => {
   });
 
   it("attaches transport: ws with receive schema to metadata", () => {
-    const ep = channel.response<string>().send(fakeSchema).implement(
-      () => ({ onMessage: () => {} }),
-    );
+    const ep = channel
+      .response<string>()
+      .send(fakeSchema)
+      .implement(() => ({ onMessage: () => {} }));
     const meta = getMeta(ep);
 
     expect(meta).toBeDefined();
@@ -74,9 +75,12 @@ describe("endpoint with transport", () => {
   });
 
   it("keeps declared options alongside the transport", () => {
-    const ep = stream.response<string>().implement(async function* () {
+    const ep = stream.response<string>().implement(
+      async function* () {
         yield { data: "test" };
-      }, { tags: ["feed"] });
+      },
+      { tags: ["feed"] },
+    );
     const meta = getMeta(ep);
 
     expect(meta).toBeDefined();

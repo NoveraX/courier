@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 import type { HeaderDiff } from "./types";
 
@@ -55,10 +55,7 @@ export function HeadersDiffView({ headers }: HeadersDiffProps): React.ReactEleme
           {headers.map((h) => (
             <tr
               key={h.key}
-              className={cn(
-                "border-b border-border-subtle/50 transition-colors",
-                ROW_BG[h.status],
-              )}
+              className={cn("border-b border-border-subtle/50 transition-colors", ROW_BG[h.status])}
             >
               <td className="px-3 py-1.5 font-mono text-[11px] text-foreground font-medium">
                 {h.key}

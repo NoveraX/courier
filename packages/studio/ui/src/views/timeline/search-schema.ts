@@ -1,6 +1,5 @@
-import type { TimelineFilters } from "@/store/types";
-import type { RequestStatus } from "@/store/types";
 import { EMPTY_FILTERS } from "@/store/constants";
+import type { RequestStatus, TimelineFilters } from "@/store/types";
 
 /** URL search params shape for /timeline */
 export interface TimelineSearchParams {

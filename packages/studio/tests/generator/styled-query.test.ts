@@ -19,18 +19,29 @@ import {
   STRICT,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
-const deep = (name: string, schema: unknown) => ({ name, in: "query", style: "deepObject", explode: true, schema });
+const deep = (name: string, schema: unknown) => ({
+  name,
+  in: "query",
+  style: "deepObject",
+  explode: true,
+  schema,
+});
 const created = deep("created", {
-  anyOf: [{ type: "object", properties: { gte: { type: "integer" }, lt: { type: "integer" } } }, { type: "integer" }],
+  anyOf: [
+    { type: "object", properties: { gte: { type: "integer" }, lt: { type: "integer" } } },
+    { type: "integer" },
+  ],
 });
 const expand = deep("expand", { type: "array", items: { type: "string" } });
 const limit = { name: "limit", in: "query", schema: { type: "integer" } };
 const path = (name: string) => ({ name, in: "path", required: true, schema: { type: "string" } });
 const Item = { type: "object", properties: { id: { type: "string" } } };
 const json = { "200": { description: "ok", content: { "application/json": { schema: Item } } } };
-const csv = { "200": { description: "ok", content: { "text/csv": { schema: { type: "string" } } } } };
+const csv = {
+  "200": { description: "ok", content: { "text/csv": { schema: { type: "string" } } } },
+};
 const form = {
   content: {
     "application/x-www-form-urlencoded": {
@@ -59,13 +70,27 @@ function openApi(origin: string): ParsedSpec {
         "/customers/{customer}/tax_ids": { get: op("listTaxIds", [path("customer"), expand]) },
         "/items": {
           delete: op("deleteItems", [
-            { name: "ids", in: "query", style: "pipeDelimited", explode: false, schema: { type: "array", items: { type: "string" } } },
+            {
+              name: "ids",
+              in: "query",
+              style: "pipeDelimited",
+              explode: false,
+              schema: { type: "array", items: { type: "string" } },
+            },
           ]),
         },
         "/reports/{report}": {
           get: op(
             "exportReport",
-            [path("report"), { name: "columns", in: "query", explode: false, schema: { type: "array", items: { type: "string" } } }],
+            [
+              path("report"),
+              {
+                name: "columns",
+                in: "query",
+                explode: false,
+                schema: { type: "array", items: { type: "string" } },
+              },
+            ],
             csv,
           ),
         },
@@ -95,7 +120,9 @@ function swagger(origin: string): ParsedSpec {
             operationId: "findPets",
             tags: ["pets"],
             parameters: [list("tags"), list("status", "multi"), list("owners", "pipes")],
-            responses: { "200": { description: "ok", schema: { type: "array", items: { type: "string" } } } },
+            responses: {
+              "200": { description: "ok", schema: { type: "array", items: { type: "string" } } },
+            },
           },
         },
       },
@@ -115,7 +142,10 @@ let upstream: UpstreamServer;
 beforeAll(async () => {
   upstream = await startUpstreamServer(
     { id: "cus_1" },
-    { "/v1/reports/r1": { contentType: "text/csv", body: "id\n1" }, "/v2/pets": { contentType: "application/json", body: "[]" } },
+    {
+      "/v1/reports/r1": { contentType: "text/csv", body: "id\n1" },
+      "/v2/pets": { contentType: "application/json", body: "[]" },
+    },
   );
 });
 
@@ -134,7 +164,10 @@ function sent(): [string, string, [string, string][]][] {
 
 describe.each(VARIANTS)("a generated client validated with %s", (label, options) => {
   it("writes each query parameter in its declared style", async () => {
-    const { shopApi } = loadGenerated(generated(openApi(upstream.origin), options, "shop"), "src/api/shop/index.ts");
+    const { shopApi } = loadGenerated(
+      generated(openApi(upstream.origin), options, "shop"),
+      "src/api/shop/index.ts",
+    );
     const call = (method: string) => endpointAt(shopApi, "shop", method);
     upstream.requests.length = 0;
 
@@ -146,9 +179,24 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
     const report = await call("exportReport")({ report: "r1", columns: ["id", "name"] });
 
     expect(sent()).toEqual([
-      ["GET", "/v1/customers", [["created[gte]", "1680000000"], ["expand[0]", "data.tax"], ["limit", "3"]]],
+      [
+        "GET",
+        "/v1/customers",
+        [
+          ["created[gte]", "1680000000"],
+          ["expand[0]", "data.tax"],
+          ["limit", "3"],
+        ],
+      ],
       ["GET", "/v1/customers", [["created", "1680000000"]]],
-      ["GET", "/v1/customers/cus_1/tax_ids", [["expand[0]", "a"], ["expand[1]", "b"]]],
+      [
+        "GET",
+        "/v1/customers/cus_1/tax_ids",
+        [
+          ["expand[0]", "a"],
+          ["expand[1]", "b"],
+        ],
+      ],
       ["POST", "/v1/customers/cus_1", [["expand[0]", "tax"]]],
       ["DELETE", "/v1/items", [["ids", "i1|i2"]]],
       ["GET", "/v1/reports/r1", [["columns", "id,name"]]],
@@ -158,7 +206,10 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
   });
 
   it("compiles with every unused name reported", () => {
-    const dir = writeProject(`styled-query/${label}`, generated(openApi(upstream.origin), options, "shop"));
+    const dir = writeProject(
+      `styled-query/${label}`,
+      generated(openApi(upstream.origin), options, "shop"),
+    );
     const strictest = { ...STRICT, noUnusedLocals: true, noUnusedParameters: true };
 
     expect(compileProject(dir, ["src/api/shop/index.ts"], strictest)).toEqual([]);
@@ -167,20 +218,38 @@ describe.each(VARIANTS)("a generated client validated with %s", (label, options)
 
 describe("a Swagger 2.0 list in the query", () => {
   it("is joined with commas unless its collectionFormat says otherwise", async () => {
-    const { petsApi } = loadGenerated(generated(swagger(upstream.origin), {}, "pets"), "src/api/pets/index.ts");
+    const { petsApi } = loadGenerated(
+      generated(swagger(upstream.origin), {}, "pets"),
+      "src/api/pets/index.ts",
+    );
     upstream.requests.length = 0;
 
-    await endpointAt(petsApi, "pets", "findPets")({ tags: ["a", "b"], status: ["x", "y"], owners: ["o1", "o2"] });
+    await endpointAt(
+      petsApi,
+      "pets",
+      "findPets",
+    )({ tags: ["a", "b"], status: ["x", "y"], owners: ["o1", "o2"] });
 
     expect(sent()).toEqual([
-      ["GET", "/v2/pets", [["tags", "a,b"], ["status", "x"], ["status", "y"], ["owners", "o1|o2"]]],
+      [
+        "GET",
+        "/v2/pets",
+        [
+          ["tags", "a,b"],
+          ["status", "x"],
+          ["status", "y"],
+          ["owners", "o1|o2"],
+        ],
+      ],
     ]);
   });
 });
 
 describe("the parsed parameters", () => {
   it("keep a style only when it is not OpenAPI's default", () => {
-    const listCustomers = openApi("http://127.0.0.1:1").groups[0]?.endpoints.find((ep) => ep.name === "listCustomers");
+    const listCustomers = openApi("http://127.0.0.1:1").groups[0]?.endpoints.find(
+      (ep) => ep.name === "listCustomers",
+    );
 
     expect(listCustomers?.parameters.map((param) => [param.name, param.encoding])).toEqual([
       ["created", { style: "deepObject", explode: true }],

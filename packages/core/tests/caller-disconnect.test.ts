@@ -83,7 +83,9 @@ describe("a caller that leaves before the upstream answers", () => {
     expect(error).not.toHaveBeenCalled();
     expect(warn).not.toHaveBeenCalled();
     expect(debug).toHaveBeenCalledOnce();
-    expect(debug.mock.calls[0]?.map(String).join(" ")).toContain("left before the upstream answered");
+    expect(debug.mock.calls[0]?.map(String).join(" ")).toContain(
+      "left before the upstream answered",
+    );
   });
 
   it("leaves a caller that stays to get its answer", async () => {

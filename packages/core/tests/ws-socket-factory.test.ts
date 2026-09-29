@@ -9,9 +9,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket as WsSocket } from "ws";
 
 import { courier } from "../src/define/courier";
-import type { WSConnection } from "../src/realtime/ws/ws-types";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
-import type { WSSocketFactory } from "../src/realtime/ws/ws-types";
+import type { WSConnection, WSSocketFactory } from "../src/realtime/ws/ws-types";
 import { type ServedWS, serveWS, stopWS } from "./helpers/ws-server";
 
 const { channel } = courier();

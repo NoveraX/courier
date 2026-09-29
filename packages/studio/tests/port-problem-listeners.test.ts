@@ -13,7 +13,9 @@ import { portProblem } from "../src/server/mock-manager/port-problem";
 const held: Server[] = [];
 
 afterEach(async () => {
-  await Promise.all(held.splice(0).map((server) => new Promise((resolve) => server.close(resolve))));
+  await Promise.all(
+    held.splice(0).map((server) => new Promise((resolve) => server.close(resolve))),
+  );
 });
 
 const ipv6 = await new Promise<boolean>((resolve) => {
@@ -39,7 +41,9 @@ const bindsBesideWildcard = await new Promise<boolean>((resolve) => {
 
 async function holdOn(host: string): Promise<number> {
   const server = createServer();
-  await new Promise<void>((resolve) => server.listen({ port: 0, host, ipv6Only: host === "::1" }, resolve));
+  await new Promise<void>((resolve) =>
+    server.listen({ port: 0, host, ipv6Only: host === "::1" }, resolve),
+  );
   held.push(server);
   const address = server.address();
   if (address === null || typeof address === "string") throw new Error("The holder has no port.");
@@ -75,7 +79,8 @@ describe("portProblem with another listener on the port", () => {
       await new Promise<void>((resolve) => server.listen({ port: 0, host: "0.0.0.0" }, resolve));
       held.push(server);
       const address = server.address();
-      if (address === null || typeof address === "string") throw new Error("The holder has no port.");
+      if (address === null || typeof address === "string")
+        throw new Error("The holder has no port.");
 
       expect(await portProblem(address.port)).toBe("in use");
       await clientClosed;

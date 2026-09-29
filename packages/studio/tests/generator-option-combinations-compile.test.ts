@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
-import { generateCode } from "../src/apis/generator";
-import { toSafeIdentifier } from "../src/apis/parser/naming-utils";
 import type { GenerateOptions } from "../src/apis/generator";
+import { generateCode } from "../src/apis/generator";
+import { parseSpec } from "../src/apis/parser";
+import { toSafeIdentifier } from "../src/apis/parser/naming-utils";
 
 const ok = { responses: { "200": { description: "ok" } } };
 
@@ -27,10 +26,12 @@ const SPEC = {
 };
 
 function files(options: Partial<GenerateOptions>): { path: string; content: string }[] {
-  return generateCode(
-    parseSpec(JSON.stringify(SPEC)),
-    { type: "openapi", sourceName: "api", outputDir: "src", ...options },
-  );
+  return generateCode(parseSpec(JSON.stringify(SPEC)), {
+    type: "openapi",
+    sourceName: "api",
+    outputDir: "src",
+    ...options,
+  });
 }
 
 /** Every relative import must name a file the same run produced. */

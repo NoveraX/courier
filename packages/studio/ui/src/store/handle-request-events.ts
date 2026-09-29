@@ -1,13 +1,13 @@
+import { num, optNum, optStr, str } from "./event-helpers";
 import type {
   ProxyTiming,
   RequestEntry,
   RequestStatus,
   RequestTiming,
   ValidationIssue,
-} from "./types"
-import { str, num, optStr, optNum } from "./event-helpers"
+} from "./types";
 
-type EventPayload = Record<string, unknown>
+type EventPayload = Record<string, unknown>;
 
 export function requestFromStart(event: EventPayload): RequestEntry {
   return {
@@ -35,7 +35,7 @@ export function requestFromStart(event: EventPayload): RequestEntry {
     startedAt: num(event.timestamp, Date.now()),
     url: optStr(event.url),
     sessionId: str(event.sessionId),
-  }
+  };
 }
 
 export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEntry {
@@ -54,7 +54,7 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
     requestHeaders: event.requestHeaders as Record<string, string> | undefined,
     headers: event.headers as Record<string, string> | undefined,
     middlewareHeaders: event.middlewareHeaders as Record<string, string[]> | undefined,
-  }
+  };
 }
 
 /**
@@ -63,16 +63,15 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
  * body, and how long it ran. Issues a `validation:fail` recorded stay with it.
  */
 export function withRequestError(r: RequestEntry, event: EventPayload): RequestEntry {
-  const rawError = event.error as Record<string, unknown> | undefined
+  const rawError = event.error as Record<string, unknown> | undefined;
   const errorData = rawError
     ? {
         type: str(rawError.type, "Error"),
         status: optNum(rawError.status),
         message: str(rawError.message, "Unknown error"),
-        validationIssues:
-          (rawError.validationIssues as ValidationIssue[] | undefined) ?? undefined,
+        validationIssues: (rawError.validationIssues as ValidationIssue[] | undefined) ?? undefined,
       }
-    : undefined
+    : undefined;
   return {
     ...r,
     status: failureStatus(errorData?.type),
@@ -84,14 +83,14 @@ export function withRequestError(r: RequestEntry, event: EventPayload): RequestE
     timing: (event.timing as RequestTiming | undefined) ?? r.timing,
     headers: (event.headers as Record<string, string> | undefined) ?? r.headers,
     data: event.data !== undefined ? event.data : r.data,
-  }
+  };
 }
 
 /* The runtime names failures in lower case; the older capitalised names stay understood. */
 function failureStatus(type: string | undefined): RequestStatus {
-  if (type === "validation" || type === "ValidationError") return "validation_error"
-  if (type === "abort" || type === "aborted" || type === "AbortError") return "aborted"
-  return "error"
+  if (type === "validation" || type === "ValidationError") return "validation_error";
+  if (type === "abort" || type === "aborted" || type === "AbortError") return "aborted";
+  return "error";
 }
 
 export function withProxyClientTiming(r: RequestEntry, event: EventPayload): RequestEntry {
@@ -103,7 +102,7 @@ export function withProxyClientTiming(r: RequestEntry, event: EventPayload): Req
       backendToProxy: r.proxyTiming?.backendToProxy ?? 0,
       proxyToClient: num(event.download),
     },
-  }
+  };
 }
 
 export function withFetchStart(r: RequestEntry, event: EventPayload): RequestEntry {
@@ -111,7 +110,7 @@ export function withFetchStart(r: RequestEntry, event: EventPayload): RequestEnt
     ...r,
     url: optStr(event.url) ?? r.url,
     httpMethod: optStr(event.method) ?? r.httpMethod,
-  }
+  };
 }
 
 /** The issues a failed validation reported, kept until the request's own failure arrives. */
@@ -123,7 +122,7 @@ export function withValidationFail(r: RequestEntry, issues: ValidationIssue[]): 
       message: `Validation failed: ${issues.length} issue(s)`,
       validationIssues: issues,
     },
-  }
+  };
 }
 
 /** Merge server-side proxyTiming with already-received browser-side values */
@@ -131,10 +130,10 @@ function mergeProxyTiming(
   server: ProxyTiming | undefined,
   existing: ProxyTiming | undefined,
 ): ProxyTiming | undefined {
-  if (!server) return existing
+  if (!server) return existing;
   return {
     ...server,
     clientToProxy: server.clientToProxy || existing?.clientToProxy || 0,
     proxyToClient: server.proxyToClient || existing?.proxyToClient || 0,
-  }
+  };
 }

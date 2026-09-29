@@ -19,7 +19,12 @@ export type FileOwnership =
 export type PlannedWriteAction = "create" | "replace" | "merge" | "unchanged";
 
 /** Why a file the operation touched is left as it is. `imported`: a file that stays imports it. */
-export type KeptReason = "not-written-by-studio" | "link" | "not-a-file" | "unconfirmed" | "imported";
+export type KeptReason =
+  | "not-written-by-studio"
+  | "link"
+  | "not-a-file"
+  | "unconfirmed"
+  | "imported";
 
 /** A step only the user may allow: replacing or removing a file that is not Studio's untouched own. */
 export interface PlanConfirmation {

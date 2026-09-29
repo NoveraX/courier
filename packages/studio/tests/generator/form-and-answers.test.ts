@@ -21,7 +21,7 @@ import {
   writeProject,
 } from "../helpers/generated-project";
 import { type ProxyServer, startProxyServer } from "../helpers/proxy-server";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const FORM = "application/x-www-form-urlencoded";
 const customerId = { name: "id", in: "path", required: true, schema: { type: "string" } };
@@ -55,7 +55,12 @@ function spec(origin: string): ParsedSpec {
                 },
               },
             },
-            responses: { "200": { description: "ok", content: { "application/json": { schema: { type: "object" } } } } },
+            responses: {
+              "200": {
+                description: "ok",
+                content: { "application/json": { schema: { type: "object" } } },
+              },
+            },
           },
         },
         "/reports/{month}": {
@@ -117,23 +122,39 @@ afterAll(async () => {
 });
 
 function generate(options: Partial<GenerateOptions>) {
-  return generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "billing");
+  return generateCode(
+    spec(upstream.origin),
+    { type: "openapi", outputDir: "src/api", ...options },
+    "billing",
+  );
 }
 
-const UPDATE = { id: "cus_1", expand: "invoices", email: "ada@example.com", metadata: { plan: "pro" }, tags: ["a", "b"] };
+const UPDATE = {
+  id: "cus_1",
+  expand: "invoices",
+  email: "ada@example.com",
+  metadata: { plan: "pro" },
+  tags: ["a", "b"],
+};
 
 async function exercise(caller: unknown): Promise<void> {
   upstream.requests.length = 0;
 
   await endpointAt(caller, "customers", "updateCustomer")(UPDATE);
   const csv = await endpointAt(caller, "customers", "exportReport")({ month: "2026-01" });
-  const pdf = await endpointAt(caller, "customers", "renderInvoice")({ month: "2026-01", copies: 2 });
+  const pdf = await endpointAt(
+    caller,
+    "customers",
+    "renderInvoice",
+  )({ month: "2026-01", copies: 2 });
 
   const [update, report, invoice] = upstream.requests;
   expect(update?.path).toBe("/v1/customers/cus_1");
   expect(update?.query).toEqual([["expand", "invoices"]]);
   expect(update?.contentType).toMatch(/^application\/x-www-form-urlencoded/);
-  expect(decodeURIComponent(update?.body ?? "")).toBe("email=ada@example.com&metadata[plan]=pro&tags=a&tags=b");
+  expect(decodeURIComponent(update?.body ?? "")).toBe(
+    "email=ada@example.com&metadata[plan]=pro&tags=a&tags=b",
+  );
   expect(report?.path).toBe("/v1/reports/2026-01");
   expect(invoice?.body).toBe('{"copies":2}');
   expect(csv).toBe("id,total\n1,20\n");

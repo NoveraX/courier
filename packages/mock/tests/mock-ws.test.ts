@@ -1,4 +1,4 @@
-import { defineApi, defineGroup, courier } from "@noverax/courier/define";
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import type { WSChannel } from "@noverax/courier/realtime";
 import { describe, expect, it, vi } from "vitest";
 import { createMockClient } from "../src/create-mock-client";

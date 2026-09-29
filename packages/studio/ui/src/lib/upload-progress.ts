@@ -1,5 +1,5 @@
-import type { UploadState } from "@/store/types"
-import { formatSize } from "@/components/shared/formatters"
+import { formatSize } from "@/components/shared/formatters";
+import type { UploadState } from "@/store/types";
 
 /**
  * An upload's progress as one line: how much is sent, of how much.
@@ -13,7 +13,7 @@ import { formatSize } from "@/components/shared/formatters"
  * ```
  */
 export function describeUpload(upload: UploadState): string {
-  if (upload.done) return `Sent · ${formatSize(upload.total || upload.loaded)}`
-  const of = upload.total > 0 ? ` of ${formatSize(upload.total)}` : ""
-  return `${upload.percentage}% · ${formatSize(upload.loaded)}${of}`
+  if (upload.done) return `Sent · ${formatSize(upload.total || upload.loaded)}`;
+  const of = upload.total > 0 ? ` of ${formatSize(upload.total)}` : "";
+  return `${upload.percentage}% · ${formatSize(upload.loaded)}${of}`;
 }

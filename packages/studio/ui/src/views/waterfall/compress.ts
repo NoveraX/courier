@@ -1,5 +1,5 @@
-import type { WaterfallRow, TimeGap } from "./types";
 import { GAP_THRESHOLD_MS, GAP_VISUAL_MS } from "./constants";
+import type { TimeGap, WaterfallRow } from "./types";
 
 // ── Timeline compression ──────────────────────────────────────────────────
 

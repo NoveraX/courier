@@ -18,7 +18,9 @@ function withTicks(analysis: Record<string, unknown>): unknown {
 
 describe("a declared source from Studio", () => {
   it("is shown with its transports, variable stubs and proxy routes", () => {
-    expect(isScannedSource(withTicks({ variablesStub: { count: 0 }, hasReceiveSchema: true }))).toBe(true);
+    expect(
+      isScannedSource(withTicks({ variablesStub: { count: 0 }, hasReceiveSchema: true })),
+    ).toBe(true);
   });
 
   it("is left out when a field it carries has the wrong shape", () => {

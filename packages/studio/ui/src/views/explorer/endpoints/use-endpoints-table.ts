@@ -1,11 +1,10 @@
-import { useMemo, useState } from "react";
 import type { SortingState } from "@tanstack/react-table";
+import { useMemo, useState } from "react";
 
 import type { EndpointNodeData } from "../types";
 import { useExplorerData } from "../use-explorer-data";
-import { applyFilters, EMPTY_FILTERS } from "./endpoints-filters";
-
 import type { EndpointFilters } from "./endpoints-filters";
+import { applyFilters, EMPTY_FILTERS } from "./endpoints-filters";
 
 // ── Return type ────────────────────────────────────────────────────────────
 
@@ -39,15 +38,9 @@ export function useEndpointsTable(): EndpointsTableState {
   const [filters, setFilters] = useState<EndpointFilters>(EMPTY_FILTERS);
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_SORTING);
 
-  const rows = useMemo(
-    () => applyFilters(endpoints, filters),
-    [endpoints, filters],
-  );
+  const rows = useMemo(() => applyFilters(endpoints, filters), [endpoints, filters]);
 
-  const setFilter = <K extends keyof EndpointFilters>(
-    key: K,
-    value: EndpointFilters[K],
-  ): void => {
+  const setFilter = <K extends keyof EndpointFilters>(key: K, value: EndpointFilters[K]): void => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 

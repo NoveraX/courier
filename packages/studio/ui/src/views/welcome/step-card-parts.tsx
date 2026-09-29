@@ -21,25 +21,25 @@ interface StepHeaderProps {
   isActive: boolean;
 }
 
-export function StepHeader({
-  step,
-  isCompleted,
-  isActive,
-}: StepHeaderProps): React.ReactElement {
+export function StepHeader({ step, isCompleted, isActive }: StepHeaderProps): React.ReactElement {
   return (
     <>
-      <p className={cn(
-        "text-body-sm font-medium leading-6",
-        isCompleted && "text-muted-foreground/50 line-through",
-        isActive && "text-foreground",
-        !isCompleted && !isActive && "text-muted-foreground",
-      )}>
+      <p
+        className={cn(
+          "text-body-sm font-medium leading-6",
+          isCompleted && "text-muted-foreground/50 line-through",
+          isActive && "text-foreground",
+          !isCompleted && !isActive && "text-muted-foreground",
+        )}
+      >
         {step.title}
       </p>
-      <p className={cn(
-        "mt-0.5 text-body-xs leading-5",
-        isActive ? "text-muted-foreground" : "text-muted-foreground/60",
-      )}>
+      <p
+        className={cn(
+          "mt-0.5 text-body-xs leading-5",
+          isActive ? "text-muted-foreground" : "text-muted-foreground/60",
+        )}
+      >
         {step.description}
       </p>
     </>
@@ -110,10 +110,12 @@ export function StepIndicator({
     );
   }
   return (
-    <div className={cn(
-      "flex size-7 items-center justify-center rounded-full text-xs font-semibold",
-      isActive ? "bg-accent-brand text-white" : "bg-muted text-muted-foreground",
-    )}>
+    <div
+      className={cn(
+        "flex size-7 items-center justify-center rounded-full text-xs font-semibold",
+        isActive ? "bg-accent-brand text-white" : "bg-muted text-muted-foreground",
+      )}
+    >
       {index + 1}
     </div>
   );

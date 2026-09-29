@@ -1,8 +1,7 @@
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-
 import type { VariantProps } from "class-variance-authority";
 import type { badgeVariants } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
 
@@ -21,18 +20,12 @@ interface MethodBadgeProps {
   className?: string;
 }
 
-export function MethodBadge({
-  method,
-  className,
-}: MethodBadgeProps): React.ReactElement {
+export function MethodBadge({ method, className }: MethodBadgeProps): React.ReactElement {
   const upper = method.toUpperCase();
   const variant = METHOD_VARIANT[upper] ?? "secondary";
 
   return (
-    <Badge
-      variant={variant}
-      className={cn("font-mono text-[10px] tracking-wider", className)}
-    >
+    <Badge variant={variant} className={cn("font-mono text-[10px] tracking-wider", className)}>
       {upper}
     </Badge>
   );

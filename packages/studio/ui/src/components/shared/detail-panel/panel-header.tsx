@@ -1,7 +1,6 @@
 import { X } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { MethodBadge } from "@/components/shared/method-badge";
+import { Button } from "@/components/ui/button";
 import type { RequestEntry } from "@/store/types";
 
 export function PanelHeader({
@@ -20,12 +19,7 @@ export function PanelHeader({
           {request.method}
         </span>
       </div>
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        onClick={onClose}
-        aria-label="Close panel"
-      >
+      <Button variant="ghost" size="icon-xs" onClick={onClose} aria-label="Close panel">
         <X className="size-3.5" />
       </Button>
     </div>

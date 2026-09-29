@@ -35,21 +35,29 @@ describe("subscribeSSE", () => {
   });
 
   it("yields parsed SSE events as async iterable", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
-      mockSSEResponse('data: {"msg":"hello"}\n\ndata: {"msg":"world"}\n\nevent: courier:complete\ndata: null\n\n'),
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          mockSSEResponse(
+            'data: {"msg":"hello"}\n\ndata: {"msg":"world"}\n\nevent: courier:complete\ndata: null\n\n',
+          ),
+        ),
+    );
 
     const sub = subscribeSSE<{ msg: string }>("/sse", { maxAttempts: 1 });
     const events = await drain(sub);
 
-    expect(events.map((e) => e.data)).toEqual([
-      { msg: "hello" },
-      { msg: "world" },
-    ]);
+    expect(events.map((e) => e.data)).toEqual([{ msg: "hello" }, { msg: "world" }]);
   });
 
   it("sends Accept and custom headers", async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(mockSSEResponse('data: "ok"\n\nevent: courier:complete\ndata: null\n\n'));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        mockSSEResponse('data: "ok"\n\nevent: courier:complete\ndata: null\n\n'),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     const sub = subscribeSSE("/sse", {
@@ -59,7 +67,10 @@ describe("subscribeSSE", () => {
 
     await drain(sub);
 
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit & { headers: Record<string, string> }];
+    const [, init] = fetchMock.mock.calls[0] as [
+      string,
+      RequestInit & { headers: Record<string, string> },
+    ];
     expect(init.headers).toMatchObject({
       Accept: "text/event-stream",
       Authorization: "Bearer token123",
@@ -67,9 +78,12 @@ describe("subscribeSSE", () => {
   });
 
   it("sends Last-Event-ID on reconnect", async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(mockSSEResponse('id: evt-2\ndata: "a"\n\n'))
-      .mockResolvedValueOnce(mockSSEResponse('data: "b"\n\nevent: courier:complete\ndata: null\n\n'));
+      .mockResolvedValueOnce(
+        mockSSEResponse('data: "b"\n\nevent: courier:complete\ndata: null\n\n'),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     const sub = subscribeSSE("/sse", {
@@ -80,14 +94,22 @@ describe("subscribeSSE", () => {
     await drain(sub);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    const [, secondInit] = fetchMock.mock.calls[1] as [string, RequestInit & { headers: Record<string, string> }];
+    const [, secondInit] = fetchMock.mock.calls[1] as [
+      string,
+      RequestInit & { headers: Record<string, string> },
+    ];
     expect(secondInit.headers["Last-Event-ID"]).toBe("evt-2");
   });
 
   it("transitions through connected → disconnected statuses", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
-      mockSSEResponse('data: "x"\n\nevent: courier:complete\ndata: null\n\n'),
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          mockSSEResponse('data: "x"\n\nevent: courier:complete\ndata: null\n\n'),
+        ),
+    );
 
     const sub = subscribeSSE("/sse", { maxAttempts: 1 });
     const statuses: string[] = [];
@@ -116,7 +138,10 @@ describe("subscribeSSE", () => {
   });
 
   it("hands over nothing it had buffered once closed", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockSSEResponse("data: 1\n\ndata: 2\n\ndata: 3\n\n")));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(mockSSEResponse("data: 1\n\ndata: 2\n\ndata: 3\n\n")),
+    );
     const sub = subscribeSSE<number>("/sse", { maxAttempts: 1 });
     /* Nothing reads yet, so the three events wait in the buffer. */
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -150,9 +175,16 @@ describe("subscribeSSE", () => {
   it("skips an event whose data cannot be parsed, and logs only an excerpt of it", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const secret = `not json ${"x".repeat(5000)} %c`;
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
-      mockSSEResponse(`data: ${secret}\n\ndata: {"ok":true}\n\nevent: courier:complete\ndata: null\n\n`),
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          mockSSEResponse(
+            `data: ${secret}\n\ndata: {"ok":true}\n\nevent: courier:complete\ndata: null\n\n`,
+          ),
+        ),
+    );
 
     const events = await drain(subscribeSSE<{ ok: boolean }>("/sse", { maxAttempts: 1 }));
 
@@ -165,9 +197,14 @@ describe("subscribeSSE", () => {
   });
 
   it("uses custom parse function", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
-      mockSSEResponse('data: HELLO\n\nevent: courier:complete\ndata: null\n\n'),
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          mockSSEResponse("data: HELLO\n\nevent: courier:complete\ndata: null\n\n"),
+        ),
+    );
 
     const sub = subscribeSSE<string>("/sse", {
       maxAttempts: 1,
@@ -194,9 +231,12 @@ describe("subscribeSSE", () => {
   });
 
   it("reconnects on 500 (retriable)", async () => {
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
       .mockResolvedValueOnce(mockSSEResponse("", 500))
-      .mockResolvedValueOnce(mockSSEResponse('data: "ok"\n\nevent: courier:complete\ndata: null\n\n'));
+      .mockResolvedValueOnce(
+        mockSSEResponse('data: "ok"\n\nevent: courier:complete\ndata: null\n\n'),
+      );
     vi.stubGlobal("fetch", fetchMock);
 
     const sub = subscribeSSE("/sse", {
@@ -224,9 +264,16 @@ describe("subscribeSSE", () => {
   });
 
   it("preserves event id and event type in yielded events", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(
-      mockSSEResponse('id: 42\nevent: notification\ndata: "payload"\n\nevent: courier:complete\ndata: null\n\n'),
-    ));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          mockSSEResponse(
+            'id: 42\nevent: notification\ndata: "payload"\n\nevent: courier:complete\ndata: null\n\n',
+          ),
+        ),
+    );
 
     const sub = subscribeSSE("/sse", { maxAttempts: 1 });
     const events = await drain(sub);

@@ -23,7 +23,9 @@ describe("HEAD", () => {
   it.each([401, 404, 500])("rejects with an HTTPError when answered %i", async (status) => {
     answer(new Response(null, { status }));
 
-    const error = await createFetch({ baseURL: "https://api.example" }).head("/file").catch((e) => e);
+    const error = await createFetch({ baseURL: "https://api.example" })
+      .head("/file")
+      .catch((e) => e);
 
     expect(error).toBeInstanceOf(HTTPError);
     expect((error as HTTPError).status).toBe(status);
@@ -42,6 +44,8 @@ describe("a success with no body", () => {
   it.each([200, 201])("reads as null when answered %i", async (status) => {
     answer(new Response("", { status, headers: { "content-type": "application/json" } }));
 
-    await expect(createFetch({ baseURL: "https://api.example" }).post("/items")).resolves.toBeNull();
+    await expect(
+      createFetch({ baseURL: "https://api.example" }).post("/items"),
+    ).resolves.toBeNull();
   });
 });

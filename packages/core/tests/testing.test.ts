@@ -72,9 +72,7 @@ describe("createTestClient", () => {
     });
 
     it("throws descriptive error when no mock is found", async () => {
-      await expect((client as any).users.unknown()).rejects.toThrow(
-        /No mock for "users.unknown"/,
-      );
+      await expect((client as any).users.unknown()).rejects.toThrow(/No mock for "users.unknown"/);
     });
   });
 

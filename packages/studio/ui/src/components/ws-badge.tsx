@@ -1,5 +1,5 @@
-import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store";
+import { useStudioStore } from "@/store";
 
 /** Compact inline WS count for status bar */
 export function WsBadge(): React.ReactElement | null {

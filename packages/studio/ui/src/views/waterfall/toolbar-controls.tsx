@@ -1,20 +1,12 @@
-import {
-  ArrowDownWideNarrow,
-  Layers,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  Maximize2,
-} from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ArrowDownWideNarrow, Layers, Maximize2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { KbdHint } from "@/components/shared/kbd-hint";
 import { SegmentedControl } from "@/components/shared/segmented-control";
-import { SingleSelect } from "@/components/shared/single-select";
 import type { SingleSelectOption } from "@/components/shared/single-select";
+import { SingleSelect } from "@/components/shared/single-select";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-import type { WaterfallSortField, WaterfallGroupBy } from "@/store/types";
+import type { WaterfallGroupBy, WaterfallSortField } from "@/store/types";
 import type { ModeFilter } from "./types";
 
 // ── Sort select ────────────────────────────────────────────────────────────
@@ -103,7 +95,13 @@ export function ZoomControls({
       <ZoomButton icon={ZoomIn} tooltip="Zoom in" kbd="+" onClick={onIn} />
       <ZoomButton icon={ZoomOut} tooltip="Zoom out" kbd="-" onClick={onOut} />
       <ZoomButton icon={Maximize2} tooltip="Fit to view" onClick={onFit} />
-      <ZoomButton icon={RotateCcw} tooltip="Reset zoom" kbd="0" onClick={onReset} disabled={zoom === 1} />
+      <ZoomButton
+        icon={RotateCcw}
+        tooltip="Reset zoom"
+        kbd="0"
+        onClick={onReset}
+        disabled={zoom === 1}
+      />
     </div>
   );
 }

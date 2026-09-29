@@ -1,11 +1,11 @@
-import { Clock, ArrowUpDown, FileKey } from "lucide-react";
+import { ArrowUpDown, Clock, FileKey } from "lucide-react";
 
 import { formatDuration } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 
 import type { RequestEntry } from "@/store/types";
+import { ComparisonRow, Section, StatusBadge, TimingRow } from "./chain-context-parts";
 import type { AggregateMiddleware, ChainEntry } from "./types";
-import { Section, TimingRow, ComparisonRow, StatusBadge } from "./chain-context-parts";
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -48,10 +48,20 @@ export function ChainContext({
       {/* Timing breakdown */}
       {timing && (
         <Section title="Timing Breakdown">
-          <TimingRow label="Middleware" value={timing.middleware} total={timing.total} icon={Clock} />
+          <TimingRow
+            label="Middleware"
+            value={timing.middleware}
+            total={timing.total}
+            icon={Clock}
+          />
           <TimingRow label="Fetch" value={timing.fetch} total={timing.total} icon={ArrowUpDown} />
           {timing.validation > 0 && (
-            <TimingRow label="Validation" value={timing.validation} total={timing.total} icon={FileKey} />
+            <TimingRow
+              label="Validation"
+              value={timing.validation}
+              total={timing.total}
+              icon={FileKey}
+            />
           )}
         </Section>
       )}
@@ -63,7 +73,15 @@ export function ChainContext({
           if (!avg) return null;
           const diff = step.duration - avg.avgDuration;
           const pct = avg.avgDuration > 0 ? (diff / avg.avgDuration) * 100 : 0;
-          return <ComparisonRow key={step.index} name={step.name} actual={step.duration} avg={avg.avgDuration} diffPct={pct} />;
+          return (
+            <ComparisonRow
+              key={step.index}
+              name={step.name}
+              actual={step.duration}
+              avg={avg.avgDuration}
+              diffPct={pct}
+            />
+          );
         })}
       </Section>
 
@@ -74,7 +92,9 @@ export function ChainContext({
             <div key={step.index} className="space-y-1">
               <span className="mono-xs font-medium text-muted-foreground">{step.name}</span>
               {step.headersAdded!.map((h) => (
-                <div key={h} className="mono-xs pl-3 text-foreground/80">{h}</div>
+                <div key={h} className="mono-xs pl-3 text-foreground/80">
+                  {h}
+                </div>
               ))}
             </div>
           ))}

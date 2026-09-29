@@ -7,7 +7,15 @@
  * keeps in `.courier`: it used to list, read, write and delete JSON files
  * wherever the link pointed.
  */
-import { mkdirSync, mkdtempSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
@@ -61,9 +69,18 @@ beforeEach(async () => {
   scratch = realpathSync(mkdtempSync(join(tmpdir(), "courier-sessions-")));
   root = join(scratch, "proj");
   mkdirSync(root);
-  writeFileSync(join(root, "courier.config.ts"), 'export default { sources: { api: { baseURL: "https://api.example" } } };\n');
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'export default { sources: { api: { baseURL: "https://api.example" } } };\n',
+  );
   url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }, 30_000);
 
@@ -74,7 +91,11 @@ afterEach(async () => {
   rmSync(scratch, { recursive: true, force: true });
 });
 
-async function call(path: string, body: unknown, type = "application/json"): Promise<{ status: number; body: unknown }> {
+async function call(
+  path: string,
+  body: unknown,
+  type = "application/json",
+): Promise<{ status: number; body: unknown }> {
   const response = await fetch(`${url}/api/sessions/${path}`, {
     method: "POST",
     headers: { "content-type": type, origin: url, ...tokenHeader(studio) },
@@ -84,7 +105,9 @@ async function call(path: string, body: unknown, type = "application/json"): Pro
 }
 
 function field(value: unknown, key: string): unknown {
-  return typeof value === "object" && value !== null && key in value ? Reflect.get(value, key) : undefined;
+  return typeof value === "object" && value !== null && key in value
+    ? Reflect.get(value, key)
+    : undefined;
 }
 
 describe("a saved session", () => {
@@ -97,7 +120,11 @@ describe("a saved session", () => {
     const listed = await call("list", {});
     expect(listed.status).toBe(200);
     expect(listed.body).toEqual([
-      expect.objectContaining({ id, name: "first", stats: expect.objectContaining({ totalRequests: 2, errorCount: 1 }) }),
+      expect.objectContaining({
+        id,
+        name: "first",
+        stats: expect.objectContaining({ totalRequests: 2, errorCount: 1 }),
+      }),
     ]);
 
     const loaded = await call("load", { id });
@@ -115,10 +142,13 @@ describe("a saved session", () => {
 });
 
 describe("a session request Studio cannot read", () => {
-  it.each(["save", "load", "delete", "export"])("is answered 400 by %s without a JSON body", async (route) => {
-    expect((await call(route, undefined)).status).toBe(400);
-    expect((await call(route, "id=x", "text/plain")).status).toBe(400);
-  });
+  it.each(["save", "load", "delete", "export"])(
+    "is answered 400 by %s without a JSON body",
+    async (route) => {
+      expect((await call(route, undefined)).status).toBe(400);
+      expect((await call(route, "id=x", "text/plain")).status).toBe(400);
+    },
+  );
 
   it.each([
     ["a request that is not an object", { requests: [null] }],
@@ -134,16 +164,24 @@ describe("a session request Studio cannot read", () => {
   });
 
   it("is answered 413 for more requests than a session holds", async () => {
-    const many = Array.from({ length: MAX_SESSION_REQUESTS + 1 }, (_, i) => ({ id: `r${i}`, startedAt: i }));
+    const many = Array.from({ length: MAX_SESSION_REQUESTS + 1 }, (_, i) => ({
+      id: `r${i}`,
+      startedAt: i,
+    }));
 
     const reply = await call("save", { requests: many });
 
     expect(reply.status).toBe(413);
-    expect(field(reply.body, "error")).toBe(`A session holds at most ${MAX_SESSION_REQUESTS} requests.`);
+    expect(field(reply.body, "error")).toBe(
+      `A session holds at most ${MAX_SESSION_REQUESTS} requests.`,
+    );
   });
 
   it("saves as many requests as a session holds", async () => {
-    const many = Array.from({ length: MAX_SESSION_REQUESTS }, (_, i) => ({ id: `r${i}`, startedAt: i + 1 }));
+    const many = Array.from({ length: MAX_SESSION_REQUESTS }, (_, i) => ({
+      id: `r${i}`,
+      startedAt: i + 1,
+    }));
 
     const reply = await call("save", { requests: many });
 
@@ -178,7 +216,13 @@ describe("a .courier/sessions folder, as sessions were once kept", () => {
 async function restart(): Promise<void> {
   await studio?.close();
   url = await new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
@@ -215,7 +259,11 @@ describe("a saved session", () => {
 
 /** A page that connects, with the session it is shown and the replays it is sent. */
 async function page(): Promise<{ socket: Socket; shown: unknown[]; replays: unknown[] }> {
-  const socket = connect(`${url}/ui`, { transports: ["websocket"], reconnection: false, auth: { token: studio?.token } });
+  const socket = connect(`${url}/ui`, {
+    transports: ["websocket"],
+    reconnection: false,
+    auth: { token: studio?.token },
+  });
   const seen = { socket, shown: [] as unknown[], replays: [] as unknown[] };
   socket.on("view:session", (session: unknown) => seen.shown.push(session));
   socket.on("events:replay", (events: unknown) => seen.replays.push(events));

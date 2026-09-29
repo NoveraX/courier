@@ -97,7 +97,10 @@ describe("saveImportsState (atomic)", () => {
   it("leaves no temporary file behind on success", () => {
     saveImportsState(projectRoot, { version: IMPORTS_STATE_VERSION, imports: {}, applied: [] });
 
-    expect(readdirSync(join(projectRoot, ".courier")).sort()).toEqual([".gitignore", "imports-state.json"]);
+    expect(readdirSync(join(projectRoot, ".courier")).sort()).toEqual([
+      ".gitignore",
+      "imports-state.json",
+    ]);
   });
 });
 
@@ -166,7 +169,11 @@ describe("digest field", () => {
 
   it("recordImport round-trips an entry with digest set", () => {
     const entry: ImportStateEntry = { ...makeEntry("abc"), digest };
-    const state = recordImport({ version: IMPORTS_STATE_VERSION, imports: {}, applied: [] }, "github", entry);
+    const state = recordImport(
+      { version: IMPORTS_STATE_VERSION, imports: {}, applied: [] },
+      "github",
+      entry,
+    );
     expect(state.imports.github?.digest).toEqual(digest);
   });
 
@@ -211,10 +218,14 @@ describe("loadImportsState — backup and validation", () => {
     loadImportsState(projectRoot);
     loadImportsState(projectRoot);
 
-    const copies = readdirSync(dirname(path)).filter((name) => name.startsWith("imports-state.json.corrupt"));
+    const copies = readdirSync(dirname(path)).filter((name) =>
+      name.startsWith("imports-state.json.corrupt"),
+    );
     expect(readFileSync(`${path}.corrupt`, "utf8")).toBe("the first corrupt state");
     expect(copies).toHaveLength(2);
-    expect(copies.map((name) => readFileSync(join(dirname(path), name), "utf8"))).toContain("{broken json!!!");
+    expect(copies.map((name) => readFileSync(join(dirname(path), name), "utf8"))).toContain(
+      "{broken json!!!",
+    );
   });
 
   it("keeps a state of another shape aside as invalid", () => {
@@ -227,24 +238,29 @@ describe("loadImportsState — backup and validation", () => {
     expect(readFileSync(`${path}.invalid`, "utf8")).toContain('"sources"');
   });
 
-  it.skipIf(IS_WINDOWS || IS_ROOT)("says the state was corrupt even when its copy cannot be written", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const path = writeState("{broken json!!!");
-    chmodSync(dirname(path), 0o555);
-    let read: ReturnType<typeof readImportsState>;
-    try {
-      read = readImportsState(projectRoot);
-    } finally {
-      chmodSync(dirname(path), 0o755);
-    }
+  it.skipIf(IS_WINDOWS || IS_ROOT)(
+    "says the state was corrupt even when its copy cannot be written",
+    () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const path = writeState("{broken json!!!");
+      chmodSync(dirname(path), 0o555);
+      let read: ReturnType<typeof readImportsState>;
+      try {
+        read = readImportsState(projectRoot);
+      } finally {
+        chmodSync(dirname(path), 0o755);
+      }
 
-    const lines = warn.mock.calls.map((call) => String(call[1]));
-    expect(read.state.imports).toEqual({});
-    expect(read.intact).toBe(false);
-    expect(lines.some((line) => line.includes("Corrupt imports-state JSON"))).toBe(true);
-    expect(lines.some((line) => line.includes("Could not save the previous imports-state"))).toBe(true);
-    warn.mockRestore();
-  });
+      const lines = warn.mock.calls.map((call) => String(call[1]));
+      expect(read.state.imports).toEqual({});
+      expect(read.intact).toBe(false);
+      expect(lines.some((line) => line.includes("Corrupt imports-state JSON"))).toBe(true);
+      expect(lines.some((line) => line.includes("Could not save the previous imports-state"))).toBe(
+        true,
+      );
+      warn.mockRestore();
+    },
+  );
 
   it("keeps a state of another version aside and starts from an empty one", () => {
     const earlier = { version: 1, imports: { github: { specHash: "x", generatedFiles: [] } } };
@@ -264,7 +280,10 @@ describe("loadImportsState — backup and validation", () => {
         valid: makeEntry("abc"),
         missing: { specHash: 123 },
         outside: { ...makeEntry("abc"), files: { "src/other/index.ts": { sha256: HASH } } },
-        climbing: { ...makeEntry("abc"), files: { "src/api/github/../../../x.ts": { sha256: HASH } } },
+        climbing: {
+          ...makeEntry("abc"),
+          files: { "src/api/github/../../../x.ts": { sha256: HASH } },
+        },
         shortHash: { ...makeEntry("abc"), files: { "src/api/github/index.ts": { sha256: "abc" } } },
       },
     });
@@ -289,7 +308,8 @@ describe("loadImportsState — backup and validation", () => {
 
 describe("saving an import's record as an apply's commit", () => {
   it("records the apply's id with it, keeping the latest twenty", () => {
-    for (let n = 1; n <= 22; n += 1) saveImportEntry(projectRoot, "github", makeEntry(`h${n}`), `apply-${n}`);
+    for (let n = 1; n <= 22; n += 1)
+      saveImportEntry(projectRoot, "github", makeEntry(`h${n}`), `apply-${n}`);
 
     const { applied, imports } = loadImportsState(projectRoot);
 
@@ -300,10 +320,20 @@ describe("saving an import's record as an apply's commit", () => {
   });
 
   it("keeps an older id while its apply's journal is still on disk, so a restart never undoes that apply", () => {
-    const journal = { pid: process.pid, importName: "github", dir: "src/api/github", after: null, state: "committing" as const, entries: [], createdDirs: [], temps: [] };
+    const journal = {
+      pid: process.pid,
+      importName: "github",
+      dir: "src/api/github",
+      after: null,
+      state: "committing" as const,
+      entries: [],
+      createdDirs: [],
+      temps: [],
+    };
     saveJournal(projectRoot, { ...journal, id: "apply-1", backupDir: ".courier/backups/apply-1" });
 
-    for (let n = 1; n <= 22; n += 1) saveImportEntry(projectRoot, "github", makeEntry(`h${n}`), `apply-${n}`);
+    for (let n = 1; n <= 22; n += 1)
+      saveImportEntry(projectRoot, "github", makeEntry(`h${n}`), `apply-${n}`);
 
     const { applied } = loadImportsState(projectRoot);
     expect(applied).toContain("apply-1");
@@ -311,22 +341,29 @@ describe("saving an import's record as an apply's commit", () => {
     expect(applied).toHaveLength(21);
   });
 
-  it.skipIf(IS_WINDOWS || IS_ROOT)("refuses to save over a state it cannot read, which keeps every other import's record", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
-    saveImportsState(projectRoot, { version: IMPORTS_STATE_VERSION, imports: { other: makeEntry("o") }, applied: [] });
-    const path = resolveImportsStatePath(projectRoot);
-    const before = readFileSync(path, "utf8");
-    chmodSync(path, 0o000);
-    try {
-      expect(() => saveImportEntry(projectRoot, "github", makeEntry("g"), "apply-1")).toThrow(
-        expect.objectContaining({ code: "IMPORTS_STATE_UNSAFE" }),
-      );
-    } finally {
-      chmodSync(path, 0o644);
-    }
+  it.skipIf(IS_WINDOWS || IS_ROOT)(
+    "refuses to save over a state it cannot read, which keeps every other import's record",
+    () => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      saveImportsState(projectRoot, {
+        version: IMPORTS_STATE_VERSION,
+        imports: { other: makeEntry("o") },
+        applied: [],
+      });
+      const path = resolveImportsStatePath(projectRoot);
+      const before = readFileSync(path, "utf8");
+      chmodSync(path, 0o000);
+      try {
+        expect(() => saveImportEntry(projectRoot, "github", makeEntry("g"), "apply-1")).toThrow(
+          expect.objectContaining({ code: "IMPORTS_STATE_UNSAFE" }),
+        );
+      } finally {
+        chmodSync(path, 0o644);
+      }
 
-    expect(readFileSync(path, "utf8")).toBe(before);
-  });
+      expect(readFileSync(path, "utf8")).toBe(before);
+    },
+  );
 });
 
 describe("computeSpecHash re-export", () => {

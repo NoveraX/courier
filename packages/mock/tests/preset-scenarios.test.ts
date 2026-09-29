@@ -22,7 +22,10 @@ const api = defineApi({
       endpoints: {
         list: endpoint.get("").response(z.array(Item)),
         get: endpoint.get(":id").response(Item),
-        create: endpoint.post("").variables(z.object({ name: z.string() })).response(Item),
+        create: endpoint
+          .post("")
+          .variables(z.object({ name: z.string() }))
+          .response(Item),
       },
     }),
   },
@@ -56,7 +59,9 @@ describe("the built-in scenarios", () => {
     const scenario = preset("server-error");
     server.applyScenario(scenario);
 
-    const statuses = [await timed("/items"), await timed("/items"), await timed("/items/x")].map((r) => r.status);
+    const statuses = [await timed("/items"), await timed("/items"), await timed("/items/x")].map(
+      (r) => r.status,
+    );
 
     expect(scenario.description).toContain("depending on the endpoint");
     expect(statuses[0]).toBe(statuses[1]);

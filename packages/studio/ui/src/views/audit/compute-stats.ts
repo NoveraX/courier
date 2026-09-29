@@ -38,9 +38,7 @@ function createEmptyStats(r: RequestEntry, key: string): EndpointStats {
 }
 
 /** Pre-aggregate per-endpoint statistics from raw requests. */
-export function computeEndpointStats(
-  requests: RequestEntry[],
-): Map<string, EndpointStats> {
+export function computeEndpointStats(requests: RequestEntry[]): Map<string, EndpointStats> {
   const map = new Map<string, EndpointStats>();
 
   for (const r of requests) {
@@ -77,18 +75,13 @@ function computeDurations(s: EndpointStats, reqs: RequestEntry[]): void {
     .filter((d) => d > 0)
     .sort((a, b) => a - b);
 
-  const errors = reqs.filter(
-    (r) => r.status === "error" || r.status === "validation_error",
-  ).length;
+  const errors = reqs.filter((r) => r.status === "error" || r.status === "validation_error").length;
 
-  s.avgDuration = durations.length > 0
-    ? durations.reduce((a, b) => a + b, 0) / durations.length
-    : 0;
+  s.avgDuration =
+    durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
   s.p95 = percentile(durations, 95);
   s.errorRate = s.count > 0 ? errors / s.count : 0;
-  s.avgSize = s.sizes.length > 0
-    ? s.sizes.reduce((a, b) => a + b, 0) / s.sizes.length
-    : 0;
+  s.avgSize = s.sizes.length > 0 ? s.sizes.reduce((a, b) => a + b, 0) / s.sizes.length : 0;
 }
 
 function computeOverheads(s: EndpointStats, reqs: RequestEntry[]): void {
@@ -112,8 +105,7 @@ function computeOverheads(s: EndpointStats, reqs: RequestEntry[]): void {
       valCount++;
     }
     if (r.proxyTiming) {
-      const proxyOverhead =
-        (r.proxyTiming.clientToProxy ?? 0) + (r.proxyTiming.proxyToClient ?? 0);
+      const proxyOverhead = (r.proxyTiming.clientToProxy ?? 0) + (r.proxyTiming.proxyToClient ?? 0);
       proxySum += proxyOverhead / total;
       proxyCount++;
     }

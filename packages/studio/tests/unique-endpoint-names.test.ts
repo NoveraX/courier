@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { parseSpec } from "../src/apis/parser";
-import { uniqueEndpointNames } from "../src/apis/parser/unique-endpoint-names";
 import type { ParsedEndpoint } from "../src/apis/parser/types";
+import { uniqueEndpointNames } from "../src/apis/parser/unique-endpoint-names";
 
 function endpoint(over: Partial<ParsedEndpoint>): ParsedEndpoint {
   return {
@@ -55,12 +55,10 @@ describe("uniqueEndpointNames", () => {
   });
 
   it("keeps a collection apart from a single item on the same resource", () => {
-    const result = uniqueEndpointNames(
-      [
-        endpoint({ name: "getAll", fullPath: "/keys" }),
-        endpoint({ name: "getAll", fullPath: "/keys/{id}" }),
-      ],
-    );
+    const result = uniqueEndpointNames([
+      endpoint({ name: "getAll", fullPath: "/keys" }),
+      endpoint({ name: "getAll", fullPath: "/keys/{id}" }),
+    ]);
 
     expect(new Set(result.map((e) => e.name)).size).toBe(2);
   });

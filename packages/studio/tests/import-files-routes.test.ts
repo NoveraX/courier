@@ -20,11 +20,11 @@ import { parseSync } from "oxc-parser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { parseSpec } from "../src/apis/parser/parse-spec";
+import { createStudioServer } from "../src/server/create-studio-server";
 import { saveJournal } from "../src/server/import-files/apply-journal";
 import { exactHash } from "../src/server/import-files/exact-hash";
 import { readGeneratedFile, signGeneratedFile } from "../src/server/import-files/generated-header";
 import { saveImportEntry } from "../src/server/import-files/save-import-entry";
-import { createStudioServer } from "../src/server/create-studio-server";
 import type { StudioServer } from "../src/server/types";
 import { tokenHeader } from "./helpers/token-header";
 
@@ -37,15 +37,27 @@ const SPEC = parseSpec(
     info: { title: "Pets", version: "1" },
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
-        post: { operationId: "createPet", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
+        post: {
+          operationId: "createPet",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
     },
   }),
 );
 const CONFIG =
   'export default { sources: { api: { baseURL: "https://api.example" } }, imports: { pets: { importType: "file", type: "openapi", outputDir: "src/api" } } };\n';
-const WRITE = { sourceName: "pets", spec: SPEC, options: { type: "openapi", outputDir: "src/api", sourceName: "pets" } };
+const WRITE = {
+  sourceName: "pets",
+  spec: SPEC,
+  options: { type: "openapi", outputDir: "src/api", sourceName: "pets" },
+};
 const GROUP_FILE = "src/api/pets/pets/index.ts";
 
 let scratch: string;
@@ -77,18 +89,31 @@ function read(path: string): string {
 
 function start(): Promise<string> {
   return new Promise((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
-async function post(url: string, path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+async function post(
+  url: string,
+  path: string,
+  body: unknown,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   const payload: unknown = await response.json();
-  return { status: response.status, body: typeof payload === "object" && payload !== null ? { ...payload } : {} };
+  return {
+    status: response.status,
+    body: typeof payload === "object" && payload !== null ? { ...payload } : {},
+  };
 }
 
 function planOf(reply: { body: Record<string, unknown> }): {
@@ -96,15 +121,23 @@ function planOf(reply: { body: Record<string, unknown> }): {
   pending: Array<{ path: string; preselected?: boolean }>;
 } {
   const plan = reply.body.plan;
-  if (typeof plan !== "object" || plan === null || !("digest" in plan) || typeof plan.digest !== "string") {
+  if (
+    typeof plan !== "object" ||
+    plan === null ||
+    !("digest" in plan) ||
+    typeof plan.digest !== "string"
+  ) {
     throw new Error(`no plan in ${JSON.stringify(reply.body)}`);
   }
-  const pending = "pending" in plan && Array.isArray(plan.pending) ? plan.pending.filter(isPendingFile) : [];
+  const pending =
+    "pending" in plan && Array.isArray(plan.pending) ? plan.pending.filter(isPendingFile) : [];
   return { digest: plan.digest, pending };
 }
 
 function isPendingFile(entry: unknown): entry is { path: string; preselected?: boolean } {
-  return typeof entry === "object" && entry !== null && "path" in entry && typeof entry.path === "string";
+  return (
+    typeof entry === "object" && entry !== null && "path" in entry && typeof entry.path === "string"
+  );
 }
 
 describe("writing an import's files", () => {
@@ -124,26 +157,33 @@ describe("writing an import's files", () => {
     put("package.json", '{ "name": "mine" }\n');
     const url = await start();
 
-    const reply = await post(url, "/api/apis/write", { ...WRITE, files: [{ path: "package.json", content: "pwned" }] });
+    const reply = await post(url, "/api/apis/write", {
+      ...WRITE,
+      files: [{ path: "package.json", content: "pwned" }],
+    });
 
     expect(reply.status).toBe(200);
     expect(read("package.json")).toBe('{ "name": "mine" }\n');
   }, 20_000);
 
-  it.skipIf(IS_WINDOWS)("writes nothing through a directory link that leads outside the project", async () => {
-    mkdirSync(join(scratch, "outside"));
-    writeFileSync(join(scratch, "outside/keep.ts"), "keep\n");
-    mkdirSync(join(root, "src/api"), { recursive: true });
-    symlinkSync(join(scratch, "outside"), join(root, "src/api/pets"));
-    const url = await start();
+  it.skipIf(IS_WINDOWS)(
+    "writes nothing through a directory link that leads outside the project",
+    async () => {
+      mkdirSync(join(scratch, "outside"));
+      writeFileSync(join(scratch, "outside/keep.ts"), "keep\n");
+      mkdirSync(join(root, "src/api"), { recursive: true });
+      symlinkSync(join(scratch, "outside"), join(root, "src/api/pets"));
+      const url = await start();
 
-    const reply = await post(url, "/api/apis/write", WRITE);
+      const reply = await post(url, "/api/apis/write", WRITE);
 
-    expect(reply.status).toBe(409);
-    expect(reply.body).toMatchObject({ code: "TARGET_BLOCKED" });
-    expect(readFileSync(join(scratch, "outside/keep.ts"), "utf8")).toBe("keep\n");
-    expect(existsSync(join(scratch, "outside/source.ts"))).toBe(false);
-  }, 20_000);
+      expect(reply.status).toBe(409);
+      expect(reply.body).toMatchObject({ code: "TARGET_BLOCKED" });
+      expect(readFileSync(join(scratch, "outside/keep.ts"), "utf8")).toBe("keep\n");
+      expect(existsSync(join(scratch, "outside/source.ts"))).toBe(false);
+    },
+    20_000,
+  );
 
   it("asks before replacing a file Studio never wrote, and backs it up once allowed", async () => {
     put("src/api/pets/index.ts", "hand-written\n");
@@ -151,7 +191,11 @@ describe("writing an import's files", () => {
 
     const asked = await post(url, "/api/apis/write", WRITE);
     const { digest, pending } = planOf(asked);
-    const allowed = await post(url, "/api/apis/write", { ...WRITE, planDigest: digest, confirm: ["src/api/pets/index.ts"] });
+    const allowed = await post(url, "/api/apis/write", {
+      ...WRITE,
+      planDigest: digest,
+      confirm: ["src/api/pets/index.ts"],
+    });
 
     expect(asked.status).toBe(409);
     expect(asked.body).toMatchObject({ code: "NEEDS_CONFIRMATION" });
@@ -166,7 +210,11 @@ describe("writing an import's files", () => {
     const url = await start();
     const { digest } = planOf(await post(url, "/api/apis/write", WRITE));
 
-    const reply = await post(url, "/api/apis/write", { ...WRITE, planDigest: digest, confirm: ["package.json"] });
+    const reply = await post(url, "/api/apis/write", {
+      ...WRITE,
+      planDigest: digest,
+      confirm: ["package.json"],
+    });
 
     expect(reply.status).toBe(400);
     expect(reply.body).toMatchObject({ code: "CONFIRMATION_NOT_IN_PLAN" });
@@ -179,7 +227,11 @@ describe("writing an import's files", () => {
     const { digest } = planOf(await post(url, "/api/apis/write", WRITE));
     put("src/api/pets/index.ts", "edited since\n");
 
-    const reply = await post(url, "/api/apis/write", { ...WRITE, planDigest: digest, confirm: ["src/api/pets/index.ts"] });
+    const reply = await post(url, "/api/apis/write", {
+      ...WRITE,
+      planDigest: digest,
+      confirm: ["src/api/pets/index.ts"],
+    });
 
     expect(reply.status).toBe(409);
     expect(reply.body).toMatchObject({ code: "PLAN_STALE" });
@@ -189,7 +241,10 @@ describe("writing an import's files", () => {
   it("keeps the user's edit to an endpoint through a rewrite", async () => {
     const url = await start();
     await post(url, "/api/apis/write", WRITE);
-    const edited = read(GROUP_FILE).replace('endpoint.get("")', 'endpoint.get("").query<{ page: number }>()');
+    const edited = read(GROUP_FILE).replace(
+      'endpoint.get("")',
+      'endpoint.get("").query<{ page: number }>()',
+    );
     expect(edited).toContain(".query<{ page: number }>()");
     put(GROUP_FILE, edited);
 
@@ -228,7 +283,11 @@ describe("imports that would share a directory", () => {
     );
     const url = await start();
 
-    const reply = await post(url, "/api/apis/manage/preview", { name: "pets", spec: SPEC, toAdd: { pets: ["listPets"] } });
+    const reply = await post(url, "/api/apis/manage/preview", {
+      name: "pets",
+      spec: SPEC,
+      toAdd: { pets: ["listPets"] },
+    });
 
     expect(reply.status).toBe(409);
     expect(reply.body).toMatchObject({ code: "DIR_OVERLAP" });
@@ -237,7 +296,11 @@ describe("imports that would share a directory", () => {
   it("refuses to write an import inside a directory another import wrote", async () => {
     const url = await start();
     await post(url, "/api/apis/write", WRITE);
-    const nested = { ...WRITE, sourceName: "inner", options: { ...WRITE.options, outputDir: "src/api/pets", sourceName: "inner" } };
+    const nested = {
+      ...WRITE,
+      sourceName: "inner",
+      options: { ...WRITE.options, outputDir: "src/api/pets", sourceName: "inner" },
+    };
 
     const reply = await post(url, "/api/apis/write", nested);
 
@@ -255,14 +318,19 @@ describe("removing an import", () => {
 
     const preview = await post(url, "/api/apis/imports/remove/preview", { name: "pets" });
     const { digest, pending } = planOf(preview);
-    const removed = await post(url, "/api/apis/imports/remove", { name: "pets", planDigest: digest });
+    const removed = await post(url, "/api/apis/imports/remove", {
+      name: "pets",
+      planDigest: digest,
+    });
 
     expect(preview.status).toBe(200);
     expect(pending.map((step) => step.path)).toEqual([GROUP_FILE]);
     expect(removed.status).toBe(200);
     expect(existsSync(join(root, "src/api/pets/source.ts"))).toBe(false);
     expect(read(GROUP_FILE)).toContain("// my note");
-    expect(existsSync(join(root, String(removed.body.backupDir), "src/api/pets/source.ts"))).toBe(true);
+    expect(existsSync(join(root, String(removed.body.backupDir), "src/api/pets/source.ts"))).toBe(
+      true,
+    );
   }, 20_000);
 });
 
@@ -275,7 +343,11 @@ describe("removing an import Studio has no record of", () => {
     const preview = await post(url, "/api/apis/imports/remove/preview", { name: "pets" });
     const { digest, pending } = planOf(preview);
     const confirmed = pending.filter((step) => step.preselected === true).map((step) => step.path);
-    const removed = await post(url, "/api/apis/imports/remove", { name: "pets", planDigest: digest, confirm: confirmed });
+    const removed = await post(url, "/api/apis/imports/remove", {
+      name: "pets",
+      planDigest: digest,
+      confirm: confirmed,
+    });
 
     expect(pending.length).toBeGreaterThan(0);
     expect(confirmed).toEqual(pending.map((step) => step.path));
@@ -302,7 +374,9 @@ describe("removing an import whose files are all Studio's", () => {
   it("removes its folder once nothing is left in it", async () => {
     const url = await start();
     await post(url, "/api/apis/write", WRITE);
-    const { digest } = planOf(await post(url, "/api/apis/imports/remove/preview", { name: "pets" }));
+    const { digest } = planOf(
+      await post(url, "/api/apis/imports/remove/preview", { name: "pets" }),
+    );
 
     const reply = await post(url, "/api/apis/imports/remove", { name: "pets", planDigest: digest });
 
@@ -320,8 +394,12 @@ describe("starting Studio after a crash while it saved its own files", () => {
 
     await start();
 
-    expect(existsSync(join(root, `.courier/journal/.courier.journal.${process.pid}-0a1b2c3d.tmp`))).toBe(false);
-    expect(existsSync(join(root, `.courier/.courier.state.${process.pid}-0a1b2c3d.tmp`))).toBe(false);
+    expect(
+      existsSync(join(root, `.courier/journal/.courier.journal.${process.pid}-0a1b2c3d.tmp`)),
+    ).toBe(false);
+    expect(existsSync(join(root, `.courier/.courier.state.${process.pid}-0a1b2c3d.tmp`))).toBe(
+      false,
+    );
     expect(read(".courier/notes.tmp")).toBe("mine");
   }, 20_000);
 });
@@ -331,7 +409,10 @@ describe("removing an import the config still imports", () => {
     symlinkSync(REPO_NODE_MODULES, join(root, "node_modules"), "dir");
     await post(await start(), "/api/apis/write", WRITE);
     await studio?.close();
-    put("courier.config.ts", `import { pets } from "./src/api/pets/source";\n${CONFIG.replace("sources: {", "sources: { pets,")}`);
+    put(
+      "courier.config.ts",
+      `import { pets } from "./src/api/pets/source";\n${CONFIG.replace("sources: {", "sources: { pets,")}`,
+    );
     const url = await start();
 
     const preview = await post(url, "/api/apis/imports/remove/preview", { name: "pets" });
@@ -348,7 +429,12 @@ describe("managing an import's endpoints", () => {
     const url = await start();
     await post(url, "/api/apis/write", WRITE);
     put("src/api/pets/pets/helpers.ts", "export const help = 1;\n");
-    const body = { name: "pets", spec: SPEC, toAdd: {}, toRemove: { pets: ["listPets", "createPet"] } };
+    const body = {
+      name: "pets",
+      spec: SPEC,
+      toAdd: {},
+      toRemove: { pets: ["listPets", "createPet"] },
+    };
     const { digest } = planOf(await post(url, "/api/apis/manage/preview", body));
 
     const reply = await post(url, "/api/apis/manage/apply", { ...body, planDigest: digest });
@@ -365,8 +451,16 @@ const TWO_GROUPS = parseSpec(
     info: { title: "Pets", version: "1" },
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
-        post: { operationId: "createPet", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
+        post: {
+          operationId: "createPet",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
       "/users": {
         get: {
@@ -396,7 +490,11 @@ async function manage(
 }
 
 function writeSome(groupBy: "tag" | "single"): unknown {
-  const options = { ...WRITE.options, groupBy, selectedEndpoints: { pets: ["listPets"], users: ["listUsers"] } };
+  const options = {
+    ...WRITE.options,
+    groupBy,
+    selectedEndpoints: { pets: ["listPets"], users: ["listUsers"] },
+  };
   return { ...WRITE, spec: TWO_GROUPS, options };
 }
 
@@ -420,20 +518,34 @@ describe("adding and removing endpoints through manage", () => {
     const url = await start();
     await post(url, "/api/apis/write", writeSome("tag"));
     const source = read("src/api/pets/source.ts");
-    const body = { name: "pets", spec: TWO_GROUPS, toAdd: { nope: ["x"], users: ["createPet"] }, toRemove: {} };
+    const body = {
+      name: "pets",
+      spec: TWO_GROUPS,
+      toAdd: { nope: ["x"], users: ["createPet"] },
+      toRemove: {},
+    };
 
     const preview = await post(url, "/api/apis/manage/preview", body);
-    const apply = await post(url, "/api/apis/manage/apply", { ...body, planDigest: "", confirm: [] });
+    const apply = await post(url, "/api/apis/manage/apply", {
+      ...body,
+      planDigest: "",
+      confirm: [],
+    });
 
     expect(preview.status).toBe(400);
-    expect(preview.body.error).toBe("The spec generates no endpoint nope.x, users.createPet to add");
+    expect(preview.body.error).toBe(
+      "The spec generates no endpoint nope.x, users.createPet to add",
+    );
     expect(apply.status).toBe(400);
     expect(read("src/api/pets/source.ts")).toBe(source);
     expect(existsSync(join(root, "src/api/pets/nope"))).toBe(false);
   }, 30_000);
 
   it("adds to a flat import's source, which imports no group file", async () => {
-    put("courier.config.ts", CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'));
+    put(
+      "courier.config.ts",
+      CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'),
+    );
     const url = await start();
     await post(url, "/api/apis/write", writeSome("single"));
 
@@ -448,31 +560,51 @@ describe("adding and removing endpoints through manage", () => {
   }, 30_000);
 
   it("refuses to remove every endpoint of a flat import, writing nothing", async () => {
-    put("courier.config.ts", CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'));
+    put(
+      "courier.config.ts",
+      CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'),
+    );
     const url = await start();
     await post(url, "/api/apis/write", writeSome("single"));
     const source = read("src/api/pets/source.ts");
-    const body = { name: "pets", spec: TWO_GROUPS, toAdd: {}, toRemove: { api: ["listPets", "listUsers"] } };
+    const body = {
+      name: "pets",
+      spec: TWO_GROUPS,
+      toAdd: {},
+      toRemove: { api: ["listPets", "listUsers"] },
+    };
 
     const preview = await post(url, "/api/apis/manage/preview", body);
 
     expect(preview.status).toBe(400);
-    expect(preview.body.error).toBe("A flat import keeps at least one endpoint; remove the import to drop them all");
+    expect(preview.body.error).toBe(
+      "A flat import keeps at least one endpoint; remove the import to drop them all",
+    );
     expect(read("src/api/pets/source.ts")).toBe(source);
   }, 30_000);
 
   it("lists, adds and removes a flat import's endpoints in its one group, in its source", async () => {
-    put("courier.config.ts", CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'));
+    put(
+      "courier.config.ts",
+      CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'),
+    );
     const url = await start();
     await post(url, "/api/apis/write", writeSome("single"));
 
-    const inventory = await post(url, "/api/apis/manage/inventory", { name: "pets", newSpec: TWO_GROUPS });
+    const inventory = await post(url, "/api/apis/manage/inventory", {
+      name: "pets",
+      newSpec: TWO_GROUPS,
+    });
     const groups = inventory.body.groups;
     const added = await manage(url, { toAdd: { api: ["createPet"] } });
     const removed = await manage(url, { toRemove: { api: ["listPets"] } });
 
     const source = read("src/api/pets/source.ts");
-    expect(Array.isArray(groups) ? groups.map((g) => (typeof g === "object" && g !== null && "name" in g ? g.name : null)) : null).toEqual(["api"]);
+    expect(
+      Array.isArray(groups)
+        ? groups.map((g) => (typeof g === "object" && g !== null && "name" in g ? g.name : null))
+        : null,
+    ).toEqual(["api"]);
     expect(added.status).toBe(200);
     expect(removed.status).toBe(200);
     expect(parseSync("source.ts", source).errors).toEqual([]);
@@ -498,7 +630,11 @@ describe("adding and removing endpoints through manage", () => {
     const url = await start();
     await post(url, "/api/apis/write", writeSome("tag"));
 
-    const reply = await post(url, "/api/apis/manage/apply", { name: "pets", spec: TWO_GROUPS, toRemove: { users: ["listUsers"] } });
+    const reply = await post(url, "/api/apis/manage/apply", {
+      name: "pets",
+      spec: TWO_GROUPS,
+      toRemove: { users: ["listUsers"] },
+    });
 
     expect(reply.status).toBe(409);
     expect(reply.body).toMatchObject({ code: "PLAN_NOT_SEEN" });
@@ -507,20 +643,31 @@ describe("adding and removing endpoints through manage", () => {
 });
 
 describe("reading a spec file the request names", () => {
-  it.skipIf(IS_WINDOWS)("reads nothing outside the project, through a link or by path, and names no absolute path", async () => {
-    writeFileSync(join(scratch, "secret.json"), '{"openapi":"3.1.0"}');
-    symlinkSync(join(scratch, "secret.json"), join(root, "spec.json"));
-    const url = await start();
+  it.skipIf(IS_WINDOWS)(
+    "reads nothing outside the project, through a link or by path, and names no absolute path",
+    async () => {
+      writeFileSync(join(scratch, "secret.json"), '{"openapi":"3.1.0"}');
+      symlinkSync(join(scratch, "secret.json"), join(root, "spec.json"));
+      const url = await start();
 
-    const linked = await post(url, "/api/apis/parse", { source: "file", content: "spec.json" });
-    const outside = await post(url, "/api/apis/parse", { source: "file", content: "../secret.json" });
-    const missing = await post(url, "/api/apis/parse", { source: "file", content: "specs/none.json" });
+      const linked = await post(url, "/api/apis/parse", { source: "file", content: "spec.json" });
+      const outside = await post(url, "/api/apis/parse", {
+        source: "file",
+        content: "../secret.json",
+      });
+      const missing = await post(url, "/api/apis/parse", {
+        source: "file",
+        content: "specs/none.json",
+      });
 
-    expect(linked.status).toBe(400);
-    expect(outside.status).toBe(400);
-    expect(missing.status).toBe(400);
-    for (const reply of [linked, outside, missing]) expect(JSON.stringify(reply.body)).not.toContain(scratch);
-  }, 20_000);
+      expect(linked.status).toBe(400);
+      expect(outside.status).toBe(400);
+      expect(missing.status).toBe(400);
+      for (const reply of [linked, outside, missing])
+        expect(JSON.stringify(reply.body)).not.toContain(scratch);
+    },
+    20_000,
+  );
 });
 
 describe("starting Studio", () => {
@@ -528,7 +675,13 @@ describe("starting Studio", () => {
     const crashed = signGeneratedFile("pets", "written by the crashed apply\n");
     put("src/api/pets/index.ts", crashed);
     put(".courier/backups/1700000000000-0000c0de/src/api/pets/index.ts", "as it was\n");
-    const record = { specHash: "h", fetchedAt: "", lastSyncedAt: "", dir: "src/api/pets", files: {} };
+    const record = {
+      specHash: "h",
+      fetchedAt: "",
+      lastSyncedAt: "",
+      dir: "src/api/pets",
+      files: {},
+    };
     saveImportEntry(root, "pets", record, "1600000000000-0000beef");
     saveJournal(root, {
       id: "1700000000000-0000c0de",

@@ -1,6 +1,5 @@
-import type { ConfigStatusPayload } from "@/store/config-status";
-
 import { configFileName } from "@/store/config-file-name";
+import type { ConfigStatusPayload } from "@/store/config-status";
 
 /** Whether sources can be picked for new mocks, and why not. */
 export type SourceAvailability =
@@ -65,7 +64,11 @@ export function sourceAvailability({
     case "missing":
       return status.lastGoodAt === null
         ? { kind: "missing", blocked: "Create courier.config.ts first", deleted: false }
-        : { kind: "missing", blocked: `${configFile} was deleted; restore it first`, deleted: true };
+        : {
+            kind: "missing",
+            blocked: `${configFile} was deleted; restore it first`,
+            deleted: true,
+          };
     case "loaded":
       return sourceCount > 0
         ? { kind: "sources", blocked: null }

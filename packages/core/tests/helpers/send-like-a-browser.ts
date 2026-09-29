@@ -40,7 +40,10 @@ const CHUNK = new Uint8Array(65_536).fill(0x20);
  * @param upload - What to send
  * @returns What came back, and how long it took
  */
-export async function sendLikeABrowser(port: number, upload: BrowserUpload): Promise<BrowserAnswer> {
+export async function sendLikeABrowser(
+  port: number,
+  upload: BrowserUpload,
+): Promise<BrowserAnswer> {
   const socket = connect(port, "127.0.0.1");
   await once(socket, "connect");
   socket.pause();

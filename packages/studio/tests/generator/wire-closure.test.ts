@@ -20,7 +20,7 @@ import {
   writeProject,
 } from "../helpers/generated-project";
 import { type ProxyServer, startProxyServer } from "../helpers/proxy-server";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const json = (schema: unknown) => ({ content: { "application/json": { schema } } });
@@ -104,8 +104,16 @@ const CALLS: [string, unknown, string][] = [
     'PUT /v1/items/7?dryRun=All&fieldManager=kubectl {"name":"thing"}',
   ],
   ["createItem", { name: "thing", dryRun: "All" }, 'POST /v1/items?dryRun=All {"name":"thing"}'],
-  ["deleteItem", { item_id: 7, message: "bye", sha: "abc" }, 'DELETE /v1/items/7 {"message":"bye","sha":"abc"}'],
-  ["renameItem", { item_id: 7, name: "new", class: "a" }, "POST /v1/items/7/rename?name=new&class=a "],
+  [
+    "deleteItem",
+    { item_id: 7, message: "bye", sha: "abc" },
+    'DELETE /v1/items/7 {"message":"bye","sha":"abc"}',
+  ],
+  [
+    "renameItem",
+    { item_id: 7, name: "new", class: "a" },
+    "POST /v1/items/7/rename?name=new&class=a ",
+  ],
   ["noteItem", { item_id: 7, note: "n", body: "b" }, 'PATCH /v1/items/7/notes?body=b {"note":"n"}'],
 ];
 
@@ -129,7 +137,11 @@ afterAll(async () => {
 });
 
 function generate(options: Partial<GenerateOptions>) {
-  return generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "shop");
+  return generateCode(
+    spec(upstream.origin),
+    { type: "openapi", outputDir: "src/api", ...options },
+    "shop",
+  );
 }
 
 function sent(): string[] {
@@ -140,14 +152,17 @@ function sent(): string[] {
 }
 
 describe.each(VARIANTS)("a generated client validated with %s", (label, options) => {
-  it.each(CALLS)("sends %s's variables where the specification puts them", async (name, variables, request) => {
-    const { shopApi } = loadGenerated(generate(options), "src/api/shop/index.ts");
-    upstream.requests.length = 0;
+  it.each(CALLS)(
+    "sends %s's variables where the specification puts them",
+    async (name, variables, request) => {
+      const { shopApi } = loadGenerated(generate(options), "src/api/shop/index.ts");
+      upstream.requests.length = 0;
 
-    await endpointAt(shopApi, "items", name)(variables);
+      await endpointAt(shopApi, "items", name)(variables);
 
-    expect(sent()).toEqual([request]);
-  });
+      expect(sent()).toEqual([request]);
+    },
+  );
 
   it("compiles with every unused name reported", () => {
     const dir = writeProject(`wire-closure/${label}`, generate(options));
@@ -168,12 +183,15 @@ describe("through the proxy", () => {
     await proxy.close();
   });
 
-  it.each(CALLS)("sends %s's variables where the specification puts them", async (name, variables, request) => {
-    const caller = createProxyCaller("shop", { proxyPath: { http: proxy.url } });
-    upstream.requests.length = 0;
+  it.each(CALLS)(
+    "sends %s's variables where the specification puts them",
+    async (name, variables, request) => {
+      const caller = createProxyCaller("shop", { proxyPath: { http: proxy.url } });
+      upstream.requests.length = 0;
 
-    await endpointAt(caller, "items", name)(variables);
+      await endpointAt(caller, "items", name)(variables);
 
-    expect(sent()).toEqual([request]);
-  });
+      expect(sent()).toEqual([request]);
+    },
+  );
 });

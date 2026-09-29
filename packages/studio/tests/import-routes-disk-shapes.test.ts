@@ -37,16 +37,34 @@ const SPEC = parseSpec(
     info: { title: "Pets", version: "1" },
     paths: {
       "/pets": {
-        get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
-        post: { operationId: "createPet", tags: ["pets"], responses: { "200": { description: "ok" } } },
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
+        post: {
+          operationId: "createPet",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
       },
-      "/users": { get: { operationId: "listUsers", tags: ["users"], responses: { "200": { description: "ok" } } } },
+      "/users": {
+        get: {
+          operationId: "listUsers",
+          tags: ["users"],
+          responses: { "200": { description: "ok" } },
+        },
+      },
     },
   }),
 );
 const CONFIG =
   'export default { sources: { api: { baseURL: "https://api.example" } }, imports: { pets: { importType: "file", type: "openapi", outputDir: "src/api" } } };\n';
-const WRITE = { sourceName: "pets", spec: SPEC, options: { type: "openapi", outputDir: "src/api", sourceName: "pets" } };
+const WRITE = {
+  sourceName: "pets",
+  spec: SPEC,
+  options: { type: "openapi", outputDir: "src/api", sourceName: "pets" },
+};
 const DIR = "src/api/pets";
 const SOURCE = `${DIR}/source.ts`;
 const INDEX = `${DIR}/index.ts`;
@@ -87,18 +105,30 @@ function read(path: string): string {
 
 async function start(): Promise<void> {
   url = await new Promise((resolve, reject) => {
-    studio = createStudioServer({ port: 0, host: "127.0.0.1", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port: 0,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
-async function post(path: string, body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+async function post(
+  path: string,
+  body: unknown,
+): Promise<{ status: number; body: Record<string, unknown> }> {
   const response = await fetch(`${url}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
   });
   const payload: unknown = await response.json();
-  return { status: response.status, body: typeof payload === "object" && payload !== null ? { ...payload } : {} };
+  return {
+    status: response.status,
+    body: typeof payload === "object" && payload !== null ? { ...payload } : {},
+  };
 }
 
 function snapshot(under: string = scratch): Record<string, string> {
@@ -123,7 +153,12 @@ function snapshot(under: string = scratch): Record<string, string> {
 
 function digestOf(reply: { body: Record<string, unknown> }): string {
   const plan = reply.body.plan;
-  if (typeof plan !== "object" || plan === null || !("digest" in plan) || typeof plan.digest !== "string") {
+  if (
+    typeof plan !== "object" ||
+    plan === null ||
+    !("digest" in plan) ||
+    typeof plan.digest !== "string"
+  ) {
     throw new Error(`no plan in ${JSON.stringify(reply.body)}`);
   }
   return plan.digest;
@@ -133,13 +168,22 @@ describe("a file changed between preview and apply", () => {
   it("update → 409 PLAN_STALE, the change kept, nothing else changed", async () => {
     await start();
     await post("/api/apis/write", WRITE);
-    const digest = digestOf(await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }));
+    const digest = digestOf(
+      await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }),
+    );
     put(GROUP_FILE, `${read(GROUP_FILE)}// changed since the preview\n`);
     const before = snapshot();
 
-    const reply = await post("/api/apis/update/apply", { name: "pets", newSpec: SPEC, planDigest: digest });
+    const reply = await post("/api/apis/update/apply", {
+      name: "pets",
+      newSpec: SPEC,
+      planDigest: digest,
+    });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "PLAN_STALE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "PLAN_STALE",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
@@ -153,7 +197,10 @@ describe("a file changed between preview and apply", () => {
 
     const reply = await post("/api/apis/manage/apply", { ...body, planDigest: digest });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "PLAN_STALE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "PLAN_STALE",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
@@ -166,21 +213,36 @@ describe("a file changed between preview and apply", () => {
 
     const reply = await post("/api/apis/imports/remove", { name: "pets", planDigest: digest });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "PLAN_STALE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "PLAN_STALE",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
   it("a file created, after the preview, where the update would create one → 409 PLAN_STALE", async () => {
     await start();
-    const petsOnly = { ...WRITE, options: { ...WRITE.options, selectedEndpoints: { pets: ["listPets", "createPet"] } } };
+    const petsOnly = {
+      ...WRITE,
+      options: { ...WRITE.options, selectedEndpoints: { pets: ["listPets", "createPet"] } },
+    };
     await post("/api/apis/write", petsOnly);
-    const digest = digestOf(await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }));
+    const digest = digestOf(
+      await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }),
+    );
     put(`${DIR}/users/index.ts`, HAND);
     const before = snapshot();
 
-    const reply = await post("/api/apis/update/apply", { name: "pets", newSpec: SPEC, planDigest: digest });
+    const reply = await post("/api/apis/update/apply", {
+      name: "pets",
+      newSpec: SPEC,
+      planDigest: digest,
+    });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "PLAN_STALE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "PLAN_STALE",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 });
@@ -193,15 +255,29 @@ describe("a hand-written file in the import's folder", () => {
     put(`${DIR}/users/notes.ts`, HAND);
 
     const write = await post("/api/apis/write", WRITE);
-    const updateDigest = digestOf(await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }));
-    const update = await post("/api/apis/update/apply", { name: "pets", newSpec: SPEC, planDigest: updateDigest });
+    const updateDigest = digestOf(
+      await post("/api/apis/update/preview", { name: "pets", newSpec: SPEC }),
+    );
+    const update = await post("/api/apis/update/apply", {
+      name: "pets",
+      newSpec: SPEC,
+      planDigest: updateDigest,
+    });
     const manageBody = { name: "pets", spec: SPEC, toRemove: { users: ["listUsers"] } };
     const manageDigest = digestOf(await post("/api/apis/manage/preview", manageBody));
-    const manage = await post("/api/apis/manage/apply", { ...manageBody, planDigest: manageDigest });
+    const manage = await post("/api/apis/manage/apply", {
+      ...manageBody,
+      planDigest: manageDigest,
+    });
     const removeDigest = digestOf(await post("/api/apis/imports/remove/preview", { name: "pets" }));
-    const removal = await post("/api/apis/imports/remove", { name: "pets", planDigest: removeDigest });
+    const removal = await post("/api/apis/imports/remove", {
+      name: "pets",
+      planDigest: removeDigest,
+    });
 
-    expect([write.status, update.status, manage.status, removal.status]).toEqual([200, 200, 200, 200]);
+    expect([write.status, update.status, manage.status, removal.status]).toEqual([
+      200, 200, 200, 200,
+    ]);
     expect(read(`${DIR}/helpers.ts`)).toBe(HAND);
     expect(read(`${DIR}/users/notes.ts`)).toBe(HAND);
     expect(existsSync(join(root, SOURCE))).toBe(false);
@@ -256,7 +332,11 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as the import's folder or above it"
     const before = snapshot(join(root, "lib"));
 
     const preview = await post("/api/apis/imports/remove/preview", { name: "pets" });
-    const reply = await post("/api/apis/imports/remove", { name: "pets", planDigest: digestOf(preview), confirm: [] });
+    const reply = await post("/api/apis/imports/remove", {
+      name: "pets",
+      planDigest: digestOf(preview),
+      confirm: [],
+    });
 
     expect.soft(reply.status, JSON.stringify(reply.body).slice(0, 300)).not.toBe(500);
     expect.soft(snapshot(join(root, "lib"))).toEqual(before);
@@ -270,7 +350,10 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as the import's folder or above it"
     const before = snapshot(join(scratch, "outside"));
 
     const preview = await post("/api/apis/imports/remove/preview", { name: "pets" });
-    const reply = await post("/api/apis/imports/remove", { name: "pets", planDigest: digestOf(preview) });
+    const reply = await post("/api/apis/imports/remove", {
+      name: "pets",
+      planDigest: digestOf(preview),
+    });
 
     expect(reply.status).not.toBe(500);
     expect(snapshot(join(scratch, "outside"))).toEqual(before);
@@ -282,11 +365,29 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as the import's folder or above it"
     cpSync(join(root, DIR), join(root, "lib/pets-copy"), { recursive: true });
     rmSync(join(root, DIR), { recursive: true });
     symlinkSync(join(root, "lib/pets-copy"), join(root, DIR));
-    const newSpec = parseSpec(JSON.stringify({ openapi: "3.1.0", info: { title: "Pets", version: "2" }, paths: { "/pets": { get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } } } } }));
+    const newSpec = parseSpec(
+      JSON.stringify({
+        openapi: "3.1.0",
+        info: { title: "Pets", version: "2" },
+        paths: {
+          "/pets": {
+            get: {
+              operationId: "listPets",
+              tags: ["pets"],
+              responses: { "200": { description: "ok" } },
+            },
+          },
+        },
+      }),
+    );
     const before = snapshot(join(root, "lib"));
 
     const preview = await post("/api/apis/update/preview", { name: "pets", newSpec });
-    const reply = await post("/api/apis/update/apply", { name: "pets", newSpec, planDigest: preview.status === 200 ? digestOf(preview) : "" });
+    const reply = await post("/api/apis/update/apply", {
+      name: "pets",
+      newSpec,
+      planDigest: preview.status === 200 ? digestOf(preview) : "",
+    });
 
     expect.soft(reply.status, JSON.stringify(reply.body).slice(0, 300)).toBe(409);
     expect.soft(snapshot(join(root, "lib"))).toEqual(before);
@@ -297,18 +398,25 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as a target file", () => {
   it.each([
     ["a project file", "../../../package.json", "package.json"],
     ["a file outside the project", "../../../../outside/keep.ts", "../outside/keep.ts"],
-  ])("index.ts → %s: 409 TARGET_BLOCKED, the link and its target unchanged", async (_label, link, target) => {
-    mkdirSync(join(root, DIR), { recursive: true });
-    symlinkSync(link, join(root, INDEX));
-    await start();
-    const before = snapshot();
+  ])(
+    "index.ts → %s: 409 TARGET_BLOCKED, the link and its target unchanged",
+    async (_label, link, target) => {
+      mkdirSync(join(root, DIR), { recursive: true });
+      symlinkSync(link, join(root, INDEX));
+      await start();
+      const before = snapshot();
 
-    const reply = await post("/api/apis/write", WRITE);
+      const reply = await post("/api/apis/write", WRITE);
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "TARGET_BLOCKED" });
-    expect(snapshot()).toEqual(before);
-    expect(readFileSync(join(root, target), "utf8")).not.toContain("courier-generated");
-  }, 20_000);
+      expect({ status: reply.status, code: reply.body.code }).toEqual({
+        status: 409,
+        code: "TARGET_BLOCKED",
+      });
+      expect(snapshot()).toEqual(before);
+      expect(readFileSync(join(root, target), "utf8")).not.toContain("courier-generated");
+    },
+    20_000,
+  );
 
   it("a recorded file replaced by a link: removal keeps the link and its target", async () => {
     await start();
@@ -319,7 +427,10 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as a target file", () => {
     symlinkSync("../../../lib/index-copy.ts", join(root, INDEX));
 
     const preview = await post("/api/apis/imports/remove/preview", { name: "pets" });
-    const reply = await post("/api/apis/imports/remove", { name: "pets", planDigest: digestOf(preview) });
+    const reply = await post("/api/apis/imports/remove", {
+      name: "pets",
+      planDigest: digestOf(preview),
+    });
 
     expect(reply.status).toBe(200);
     expect(lstatSync(join(root, INDEX)).isSymbolicLink()).toBe(true);
@@ -333,7 +444,10 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as a target file", () => {
 
     const reply = await post("/api/apis/write", WRITE);
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "TARGET_BLOCKED" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "TARGET_BLOCKED",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
@@ -344,7 +458,10 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as a target file", () => {
 
     const reply = await post("/api/apis/write", WRITE);
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "TARGET_BLOCKED" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "TARGET_BLOCKED",
+    });
     expect(existsSync(join(root, SOURCE))).toBe(false);
   }, 20_000);
 
@@ -369,7 +486,10 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as .courier or a folder in it", () 
 
     const reply = await post("/api/apis/write", WRITE);
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "COURIER_DIR_UNSAFE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "COURIER_DIR_UNSAFE",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
@@ -383,9 +503,15 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as .courier or a folder in it", () 
     const preview = await post("/api/apis/imports/remove/preview", { name: "pets" });
     const before = snapshot();
 
-    const reply = await post("/api/apis/imports/remove", { name: "pets", planDigest: preview.status === 200 ? digestOf(preview) : "" });
+    const reply = await post("/api/apis/imports/remove", {
+      name: "pets",
+      planDigest: preview.status === 200 ? digestOf(preview) : "",
+    });
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "COURIER_DIR_UNSAFE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "COURIER_DIR_UNSAFE",
+    });
     expect(snapshot()).toEqual(before);
   }, 30_000);
 
@@ -396,7 +522,10 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as .courier or a folder in it", () 
 
     const reply = await post("/api/apis/write", WRITE);
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "COURIER_DIR_UNSAFE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "COURIER_DIR_UNSAFE",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 
@@ -409,7 +538,10 @@ describe.skipIf(IS_WINDOWS)("a symbolic link as .courier or a folder in it", () 
 
     const reply = await post("/api/apis/write", WRITE);
 
-    expect({ status: reply.status, code: reply.body.code }).toEqual({ status: 409, code: "COURIER_DIR_UNSAFE" });
+    expect({ status: reply.status, code: reply.body.code }).toEqual({
+      status: 409,
+      code: "COURIER_DIR_UNSAFE",
+    });
     expect(snapshot()).toEqual(before);
   }, 20_000);
 

@@ -12,7 +12,7 @@ import { generateCode } from "../../src/apis/generator";
 import { parseSpec } from "../../src/apis/parser";
 import type { ParsedSpec } from "../../src/apis/parser/types";
 import { endpointAt, loadGenerated } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 function spec(origin: string): ParsedSpec {
   const user = { $ref: "#/components/schemas/User" };
@@ -40,7 +40,9 @@ function spec(origin: string): ParsedSpec {
             operationId: "createUser",
             tags: ["users"],
             requestBody: { required: true, content: { "application/json": { schema: user } } },
-            responses: { "201": { description: "created", content: { "application/json": { schema: user } } } },
+            responses: {
+              "201": { description: "created", content: { "application/json": { schema: user } } },
+            },
           },
         },
       },
@@ -66,25 +68,42 @@ afterAll(async () => {
 
 describe.each(VARIANTS)("a generated client validated with %s", (_label, options) => {
   it("sends a body without the field the server assigns, and reads an answer without the one it never returns", async () => {
-    const files = generateCode(spec(upstream.origin), { type: "openapi", outputDir: "src/api", ...options }, "users");
+    const files = generateCode(
+      spec(upstream.origin),
+      { type: "openapi", outputDir: "src/api", ...options },
+      "users",
+    );
     const { usersApi } = loadGenerated(files, "src/api/users/index.ts");
     upstream.requests.length = 0;
 
-    const created = await endpointAt(usersApi, "users", "createUser")({ email: "ada@example.com", password: "s3cret" });
+    const created = await endpointAt(
+      usersApi,
+      "users",
+      "createUser",
+    )({ email: "ada@example.com", password: "s3cret" });
 
     expect(created).toEqual({ id: "u1", email: "ada@example.com" });
-    expect(JSON.parse(upstream.requests[0]?.body ?? "null")).toEqual({ email: "ada@example.com", password: "s3cret" });
+    expect(JSON.parse(upstream.requests[0]?.body ?? "null")).toEqual({
+      email: "ada@example.com",
+      password: "s3cret",
+    });
   });
 
   it("refuses an answer without the id the server always assigns", async () => {
     const idless = await startUpstreamServer({ email: "ada@example.com" });
     try {
-      const files = generateCode(spec(idless.origin), { type: "openapi", outputDir: "src/api", ...options }, "users");
+      const files = generateCode(
+        spec(idless.origin),
+        { type: "openapi", outputDir: "src/api", ...options },
+        "users",
+      );
       const { usersApi } = loadGenerated(files, "src/api/users/index.ts");
 
-      const failure = await endpointAt(usersApi, "users", "createUser")({ email: "ada@example.com", password: "s3cret" }).catch(
-        (error: unknown) => error,
-      );
+      const failure = await endpointAt(
+        usersApi,
+        "users",
+        "createUser",
+      )({ email: "ada@example.com", password: "s3cret" }).catch((error: unknown) => error);
 
       expect(failure).toMatchObject({ name: "ValidationError", target: "response" });
     } finally {

@@ -39,7 +39,10 @@ describe("createTransformCache", () => {
 
     const first = cache.transform(optionsFor(), compute);
     const second = cache.transform(optionsFor(), compute);
-    const edited = cache.transform(optionsFor({ source: "export default { edited: 1 };" }), compute);
+    const edited = cache.transform(
+      optionsFor({ source: "export default { edited: 1 };" }),
+      compute,
+    );
 
     expect(compute).toHaveBeenCalledTimes(2);
     expect(second).toEqual(first);
@@ -81,7 +84,8 @@ describe("createTransformCache", () => {
   it("transforms again a source whose transform failed, and hands back the later success", () => {
     const cache = createTransformCache();
     const overflow = new RangeError("Maximum call stack size exceeded");
-    const failure = 'exports.__JITI_ERROR__ = {"line":0,"column":0,"message":"Maximum call stack size exceeded"}';
+    const failure =
+      'exports.__JITI_ERROR__ = {"line":0,"column":0,"message":"Maximum call stack size exceeded"}';
     const compute = vi
       .fn<(options: TransformOptions) => TransformResult>()
       .mockReturnValueOnce({ code: failure, error: overflow })
@@ -115,7 +119,8 @@ describe("createTransformCache", () => {
   it("drops the least recently used file beyond the memory bound", () => {
     const cache = createTransformCache({ maxMemoryChars: 20 });
     const compute = vi.fn(echo);
-    const file = (name: string): TransformOptions => optionsFor({ filename: `/p/${name}.ts`, source: "8 chars." });
+    const file = (name: string): TransformOptions =>
+      optionsFor({ filename: `/p/${name}.ts`, source: "8 chars." });
 
     cache.transform(file("a"), compute);
     cache.transform(file("b"), compute);
@@ -167,18 +172,24 @@ describe("createTransformCache", () => {
   it.each<[string, unknown]>([
     ["a babel plugin given as a function", [() => ({ visitor: {} })]],
     ["a pattern", [/generated/]],
-    ["a function that defines toJSON", [Object.assign(() => ({ visitor: {} }), { toJSON: () => "plugin" })]],
+    [
+      "a function that defines toJSON",
+      [Object.assign(() => ({ visitor: {} }), { toJSON: () => "plugin" })],
+    ],
     ["a Map", new Map([["retainLines", true]])],
-  ])("transforms every time when a babel option holds %s, which no digest tells apart", (_name, value) => {
-    const cache = createTransformCache();
-    const compute = compiler();
-    const options = optionsFor({ babel: { plugins: value } });
+  ])(
+    "transforms every time when a babel option holds %s, which no digest tells apart",
+    (_name, value) => {
+      const cache = createTransformCache();
+      const compute = compiler();
+      const options = optionsFor({ babel: { plugins: value } });
 
-    cache.transform(options, compute);
-    cache.transform(options, compute);
+      cache.transform(options, compute);
+      cache.transform(options, compute);
 
-    expect(compute).toHaveBeenCalledTimes(2);
-  });
+      expect(compute).toHaveBeenCalledTimes(2);
+    },
+  );
 
   it("transforms a babel option that refers to itself every time, instead of throwing", () => {
     const cache = createTransformCache();
@@ -208,10 +219,18 @@ describe("createTransformCache", () => {
 
   describe("hands back the transform of the options it is given, not of a kept look-alike", () => {
     it.each<[string, Partial<TransformOptions>, Partial<TransformOptions>]>([
-      ["an option left out and one set to undefined", { babel: {} }, { babel: { retainLines: undefined } }],
+      [
+        "an option left out and one set to undefined",
+        { babel: {} },
+        { babel: { retainLines: undefined } },
+      ],
       ["NaN and null", { babel: { level: Number.NaN } }, { babel: { level: null } }],
       ["-0 and 0", { babel: { level: -0 } }, { babel: { level: 0 } }],
-      ["a lone surrogate and the character that replaces it", { source: "'\uD800'" }, { source: "'\uFFFD'" }],
+      [
+        "a lone surrogate and the character that replaces it",
+        { source: "'\uD800'" },
+        { source: "'\uFFFD'" },
+      ],
     ])("%s", (_name, first, second) => {
       const cache = createTransformCache();
       const compute = vi.fn((options: TransformOptions) => ({ code: JSON.stringify(options) }));

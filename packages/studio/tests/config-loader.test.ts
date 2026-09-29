@@ -11,8 +11,8 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import { getSourceName } from "@noverax/courier/define";
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ConfigLoaderError,
   ConfigNotFoundError,
@@ -129,14 +129,21 @@ describe("loadCourierConfig", () => {
       message: "courier.config.sources is a string, not an object of named sources",
     });
 
-    writeFileSync(join(dir, "api.ts"), 'export const api = { options: { baseURL: "https://api.example" } };\n');
-    writeConfig(`import { api } from "./api";\nexport default { sources: new Map([["api", api]]) };\n`);
+    writeFileSync(
+      join(dir, "api.ts"),
+      'export const api = { options: { baseURL: "https://api.example" } };\n',
+    );
+    writeConfig(
+      `import { api } from "./api";\nexport default { sources: new Map([["api", api]]) };\n`,
+    );
     await expect(loadCourierConfig(dir)).rejects.toMatchObject({
       code: "CONFIG_INVALID",
       message: "courier.config.sources is a Map, not an object of named sources",
     });
 
-    writeConfig(`import { api } from "./api";\nexport default { sources: Promise.resolve({ api }) };\n`);
+    writeConfig(
+      `import { api } from "./api";\nexport default { sources: Promise.resolve({ api }) };\n`,
+    );
     await expect(loadCourierConfig(dir)).rejects.toMatchObject({
       code: "CONFIG_INVALID",
       message: "courier.config.sources is a Promise, not an object of named sources",
@@ -159,7 +166,10 @@ describe("loadCourierConfig", () => {
   });
 
   it("throws CONFIG_INVALID naming a source that a misspelled import leaves undefined", async () => {
-    writeFileSync(join(dir, "api.ts"), "export const api = { options: { baseURL: \"https://api.example\" } };\n");
+    writeFileSync(
+      join(dir, "api.ts"),
+      'export const api = { options: { baseURL: "https://api.example" } };\n',
+    );
     writeConfig(`import { apii } from "./api";\nexport default { sources: { api: apii } };\n`);
 
     await expect(loadCourierConfig(dir)).rejects.toMatchObject({
@@ -194,7 +204,10 @@ describe("loadCourierConfig — what it read", () => {
   beforeEach(() => {
     root = realpathSync(dir);
     mkdirSync(join(root, "src"));
-    writeFileSync(join(root, "src", "api.ts"), 'export const api = { baseURL: "https://api.example.com" };\n');
+    writeFileSync(
+      join(root, "src", "api.ts"),
+      'export const api = { baseURL: "https://api.example.com" };\n',
+    );
   });
 
   it("returns every file it depends on with the hash of the bytes it read, and null for each absent name", async () => {
@@ -204,7 +217,9 @@ describe("loadCourierConfig — what it read", () => {
 
     const config = join(root, "courier.config.ts");
     expect(loaded.depHashes.get(config)).toBe(sha256(config));
-    expect(loaded.depHashes.get(join(root, "src", "api.ts"))).toBe(sha256(join(root, "src", "api.ts")));
+    expect(loaded.depHashes.get(join(root, "src", "api.ts"))).toBe(
+      sha256(join(root, "src", "api.ts")),
+    );
     expect(loaded.depHashes.get(join(root, "courier.mocks.ts"))).toBeNull();
     expect(loaded.depHashes.get(join(root, "courier.config.mts"))).toBeNull();
     expect([...loaded.depHashes.keys()]).toEqual(loaded.deps);
@@ -232,7 +247,9 @@ describe("loadCourierConfig — what it read", () => {
   it("a load that fails carries every file it read, the module that threw included", async () => {
     const broken = join(root, "src", "broken.ts");
     writeFileSync(broken, 'throw new Error("broken module");\n');
-    writeConfig('import "./src/broken";\nimport { api } from "./src/api";\nexport default { sources: { api } };\n');
+    writeConfig(
+      'import "./src/broken";\nimport { api } from "./src/api";\nexport default { sources: { api } };\n',
+    );
 
     const error = await loadCourierConfig(root).catch((err: unknown) => err);
 
@@ -248,24 +265,30 @@ describe("loadCourierConfig — what it read", () => {
     const error = await loadCourierConfig(root).catch((err: unknown) => err);
 
     assert(error instanceof ConfigLoaderError, "the load did not fail with a ConfigLoaderError");
-    expect(error.depHashes?.get(join(root, "src", "api.ts"))).toBe(sha256(join(root, "src", "api.ts")));
+    expect(error.depHashes?.get(join(root, "src", "api.ts"))).toBe(
+      sha256(join(root, "src", "api.ts")),
+    );
   });
 
   it("a load whose tsconfig paths cannot be read carries the tsconfig, and every module it reached", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const tsconfig = join(root, "tsconfig.json");
     writeFileSync(tsconfig, JSON.stringify({ compilerOptions: { paths: { "@/*": "./src/*" } } }));
-    writeConfig('import { api } from "./src/api";\nimport "@/api";\nexport default { sources: { api } };\n');
+    writeConfig(
+      'import { api } from "./src/api";\nimport "@/api";\nexport default { sources: { api } };\n',
+    );
     const handed: string[] = [];
 
-    const error = await loadCourierConfig(root, { onInputs: (inputs) => handed.push(...inputs.keys()) }).catch(
-      (err: unknown) => err,
-    );
+    const error = await loadCourierConfig(root, {
+      onInputs: (inputs) => handed.push(...inputs.keys()),
+    }).catch((err: unknown) => err);
 
     assert(error instanceof ConfigLoaderError, "the load did not fail with a ConfigLoaderError");
     expect(error.code).toBe("CONFIG_INVALID");
     expect(error.depHashes?.get(tsconfig)).toBe(sha256(tsconfig));
-    expect(error.depHashes?.get(join(root, "src", "api.ts"))).toBe(sha256(join(root, "src", "api.ts")));
+    expect(error.depHashes?.get(join(root, "src", "api.ts"))).toBe(
+      sha256(join(root, "src", "api.ts")),
+    );
     expect(handed).toContain(tsconfig);
   });
 });

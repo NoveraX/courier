@@ -1,12 +1,12 @@
 import type { RequestEntry } from "@/store/types";
-import type {
-  SourceNodeData,
-  GroupNodeData,
-  EndpointNodeData,
-  NodeMetrics,
-  HealthLevel,
-} from "../types";
 import { getHealthLevel } from "../compute-metrics";
+import type {
+  EndpointNodeData,
+  GroupNodeData,
+  HealthLevel,
+  NodeMetrics,
+  SourceNodeData,
+} from "../types";
 
 // ── Shared types ────────────────────────────────────────────────────────────
 
@@ -37,9 +37,7 @@ export function computeOverviewKPIs(
     .filter((r) => r.status !== "pending")
     .sort((a, b) => a.startedAt - b.startedAt);
   const successes = completed.filter((r) => r.status === "success").length;
-  const overallHealth = completed.length > 0
-    ? (successes / completed.length) * 100
-    : 100;
+  const overallHealth = completed.length > 0 ? (successes / completed.length) * 100 : 100;
 
   return {
     totalSources: sources.length,
@@ -61,9 +59,7 @@ export interface HealthMatrixCell {
   metrics: NodeMetrics;
 }
 
-export function computeHealthMatrix(
-  groups: GroupNodeData[],
-): HealthMatrixCell[] {
+export function computeHealthMatrix(groups: GroupNodeData[]): HealthMatrixCell[] {
   return groups.map((g) => ({
     source: g.source,
     group: g.name,
@@ -112,10 +108,14 @@ export function computeTopEndpoints(
 
 function extractMetricValue(ep: EndpointNodeData, metric: TopMetric): number {
   switch (metric) {
-    case "latency": return ep.metrics.p95ResponseTime;
-    case "errors": return ep.metrics.errorCount;
-    case "traffic": return ep.metrics.totalRequests;
-    case "size": return ep.metrics.avgSize;
+    case "latency":
+      return ep.metrics.p95ResponseTime;
+    case "errors":
+      return ep.metrics.errorCount;
+    case "traffic":
+      return ep.metrics.totalRequests;
+    case "size":
+      return ep.metrics.avgSize;
   }
 }
 

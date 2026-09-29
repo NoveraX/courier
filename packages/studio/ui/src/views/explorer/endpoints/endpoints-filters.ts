@@ -60,14 +60,26 @@ export function applyFilters(
 import type { FilterConfig, FilterOption } from "@/components/shared/filter-bar";
 import { extractUniqueValues } from "@/lib/filter-utils";
 
-export function buildFilterConfigs(
-  endpoints: EndpointNodeData[],
-): FilterConfig[] {
+export function buildFilterConfigs(endpoints: EndpointNodeData[]): FilterConfig[] {
   return [
-    { key: "source", label: "Source", options: extractUniqueValues(endpoints, (ep) => ep.source), searchable: true },
-    { key: "group", label: "Group", options: extractUniqueValues(endpoints, (ep) => ep.group), searchable: true },
+    {
+      key: "source",
+      label: "Source",
+      options: extractUniqueValues(endpoints, (ep) => ep.source),
+      searchable: true,
+    },
+    {
+      key: "group",
+      label: "Group",
+      options: extractUniqueValues(endpoints, (ep) => ep.group),
+      searchable: true,
+    },
     { key: "endpointType", label: "Type", options: TYPE_OPTIONS },
-    { key: "httpMethod", label: "HTTP", options: extractUniqueValues(endpoints, (ep) => ep.httpMethod) },
+    {
+      key: "httpMethod",
+      label: "HTTP",
+      options: extractUniqueValues(endpoints, (ep) => ep.httpMethod),
+    },
   ];
 }
 

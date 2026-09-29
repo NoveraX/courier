@@ -36,12 +36,19 @@ describe("an SSE stream behind express", () => {
         finished = true;
       }
     });
-    registerSources({ api: defineApi({ baseURL: "https://upstream.example", endpoints: { ticks } }) });
+    registerSources({
+      api: defineApi({ baseURL: "https://upstream.example", endpoints: { ticks } }),
+    });
 
     const app = express();
-    app.get("/api/sse", courierSSEHandler({ onSSEDisconnect: ({ reason }) => {
-      reasons.push(reason);
-    } }));
+    app.get(
+      "/api/sse",
+      courierSSEHandler({
+        onSSEDisconnect: ({ reason }) => {
+          reasons.push(reason);
+        },
+      }),
+    );
     server = createServer(app);
     await new Promise<void>((resolve) => server?.listen(0, "127.0.0.1", resolve));
     const port = (server.address() as AddressInfo).port;

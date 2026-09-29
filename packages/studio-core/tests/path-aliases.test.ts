@@ -193,7 +193,10 @@ describe("readPathAliases", () => {
 
   it("prefers its own paths over the ones it extends", () => {
     tsconfig({ compilerOptions: { paths: { "@/*": ["./base/*"] } } }, "base/tsconfig.json");
-    tsconfig({ extends: "./base/tsconfig.json", compilerOptions: { paths: { "@/*": ["./own/*"] } } });
+    tsconfig({
+      extends: "./base/tsconfig.json",
+      compilerOptions: { paths: { "@/*": ["./own/*"] } },
+    });
 
     expect(readPathAliases(root).candidatesFor("@/x")).toEqual([join(root, "own/x")]);
   });

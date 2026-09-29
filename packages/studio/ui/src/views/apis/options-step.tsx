@@ -1,8 +1,7 @@
 import { Input } from "@/components/ui/input";
-
-import type { GenerateOptions } from "./types";
 import { ChoiceRow, FieldRow, type OptionChoice, SwitchRow } from "./option-fields";
 import { TargetDirHint } from "./target-dir-hint";
+import type { GenerateOptions } from "./types";
 
 const VALIDATION: ReadonlyArray<OptionChoice<GenerateOptions["validation"]>> = [
   { value: "zod", label: "Zod" },
@@ -61,8 +60,18 @@ export function OptionsStepView({
 
         <TargetDirHint outputDir={options.outputDir} sourceName={options.sourceName} />
 
-        <ChoiceRow label="Validation library" value={options.validation} choices={VALIDATION} onChange={(validation) => onChange({ validation })} />
-        <ChoiceRow label="Group by" value={options.groupBy} choices={GROUP_BY} onChange={(groupBy) => onChange({ groupBy })} />
+        <ChoiceRow
+          label="Validation library"
+          value={options.validation}
+          choices={VALIDATION}
+          onChange={(validation) => onChange({ validation })}
+        />
+        <ChoiceRow
+          label="Group by"
+          value={options.groupBy}
+          choices={GROUP_BY}
+          onChange={(groupBy) => onChange({ groupBy })}
+        />
         <ChoiceRow
           label="Generate client"
           value={options.generateClient}

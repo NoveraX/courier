@@ -91,7 +91,9 @@ describe("the request", () => {
     await client.get("/a", { headers: { authorization: "Bearer call" } });
     await client.get("/a", { headers: new Headers({ authorization: "Bearer headers" }) });
 
-    expect(sent.map((request) => [request.headers.get("x-app"), request.headers.get("authorization")])).toEqual([
+    expect(
+      sent.map((request) => [request.headers.get("x-app"), request.headers.get("authorization")]),
+    ).toEqual([
       ["studio", "Bearer call"],
       ["studio", "Bearer headers"],
     ]);
@@ -108,19 +110,29 @@ describe("the answer", () => {
   });
 
   it("rejects a failure with its status and the body the upstream explained it with, JSON or not", async () => {
-    recording(() => new Response("Bad gateway: upstream down", { status: 502, headers: { "content-type": "application/json" } }));
+    recording(
+      () =>
+        new Response("Bad gateway: upstream down", {
+          status: 502,
+          headers: { "content-type": "application/json" },
+        }),
+    );
 
-    const error = await createFetch({ baseURL: "https://api.example" }).get("/a").catch((e: unknown) => e);
+    const error = await createFetch({ baseURL: "https://api.example" })
+      .get("/a")
+      .catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(HTTPError);
     expect(error).toMatchObject({ status: 502, data: "Bad gateway: upstream down" });
   });
 
   it("rejects a request that ran out of time as one that got no answer", async () => {
-    vi.stubGlobal("fetch", (_input: unknown, init?: RequestInit) =>
-      new Promise((_resolve, reject) => {
-        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
-      }),
+    vi.stubGlobal(
+      "fetch",
+      (_input: unknown, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+        }),
     );
 
     const error = await createFetch({ baseURL: "https://api.example", timeout: 20 })

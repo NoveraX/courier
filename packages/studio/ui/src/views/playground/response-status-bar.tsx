@@ -19,29 +19,37 @@ export function StatusBar({ entry }: { entry: PlaygroundHistoryEntry }): React.R
   return (
     <div className="flex h-8 items-center gap-2 border-b border-border-subtle px-3">
       {/* Status pill */}
-      <span className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-        isError
-          ? "bg-rose-500/10 text-rose-400"
-          : isStreaming
-            ? "bg-emerald-500/8 text-emerald-400"
-            : isComplete
-              ? "bg-zinc-500/10 text-muted-foreground"
-              : "bg-zinc-500/10 text-muted-foreground",
-      )}>
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+          isError
+            ? "bg-rose-500/10 text-rose-400"
+            : isStreaming
+              ? "bg-emerald-500/8 text-emerald-400"
+              : isComplete
+                ? "bg-zinc-500/10 text-muted-foreground"
+                : "bg-zinc-500/10 text-muted-foreground",
+        )}
+      >
         {isStreaming && <span className="size-1.5 animate-pulse rounded-full bg-current" />}
         {isStream ? streamLabel(entry) : httpLabel(entry)}
       </span>
 
       {/* Transport chip */}
       {isStream && entry.transport && (
-        <span className={cn(
-          "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide",
-          entry.transport === "ws"
-            ? "bg-sky-500/8 text-sky-400"
-            : "bg-emerald-500/8 text-emerald-400",
-        )}>
-          {entry.transport === "ws" ? <Wifi className="size-2.5" /> : <Radio className="size-2.5" />}
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium tracking-wide",
+            entry.transport === "ws"
+              ? "bg-sky-500/8 text-sky-400"
+              : "bg-emerald-500/8 text-emerald-400",
+          )}
+        >
+          {entry.transport === "ws" ? (
+            <Wifi className="size-2.5" />
+          ) : (
+            <Radio className="size-2.5" />
+          )}
           {entry.transport.toUpperCase()}
         </span>
       )}

@@ -1,10 +1,14 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { WebSocketServer } from "ws";
-
 import { createHandler, createWSHandler, type ProxyPath, registerSources } from "@noverax/courier";
-import { attachWebSocketUpgrade, sendWebResponse, toWebRequest, type UpgradeServer } from "@noverax/courier/node";
 import { clearWSConnectionPool } from "@noverax/courier/internal";
+import {
+  attachWebSocketUpgrade,
+  sendWebResponse,
+  toWebRequest,
+  type UpgradeServer,
+} from "@noverax/courier/node";
+import { WebSocketServer } from "ws";
 
 /** The origin jsdom gives the test page, which a proxy must accept. */
 const PAGE_ORIGIN = "http://localhost:3000";

@@ -63,7 +63,9 @@ describe("a call the browser cancels", () => {
   it("stops the upstream request", async () => {
     const upstream = await slowUpstream();
     const { endpoint } = courier();
-    registerSources({ api: defineApi({ baseURL: upstream.url, endpoints: { slow: endpoint.post("slow") } }) });
+    registerSources({
+      api: defineApi({ baseURL: upstream.url, endpoints: { slow: endpoint.post("slow") } }),
+    });
     const handler = courierHandler();
     const proxy = await listen(
       createServer(async (req, res) => {
@@ -91,12 +93,17 @@ describe("a call the browser waits for", () => {
   async function fastProxy(onAnswered: (listeners: { before: number; after: number }) => void) {
     const upstream = await listen(createServer((_req, res) => res.end('{"ok":true}')));
     const { endpoint } = courier();
-    registerSources({ api: defineApi({ baseURL: upstream, endpoints: { fast: endpoint.post("fast") } }) });
+    registerSources({
+      api: defineApi({ baseURL: upstream, endpoints: { fast: endpoint.post("fast") } }),
+    });
     const handler = courierHandler();
     return listen(
       createServer(async (req, res) => {
         const before = req.socket.listenerCount("close");
-        const response = await handler({ request: sveltekitRequest(req, "http://127.0.0.1"), platform: { req } });
+        const response = await handler({
+          request: sveltekitRequest(req, "http://127.0.0.1"),
+          platform: { req },
+        });
         onAnswered({ before, after: req.socket.listenerCount("close") });
         await sendWebResponse(response, res);
       }),
@@ -122,7 +129,9 @@ describe("a call the browser waits for", () => {
   it("is answered on a server that exposes no connection", async () => {
     const upstream = await listen(createServer((_req, res) => res.end('{"ok":true}')));
     const { endpoint } = courier();
-    registerSources({ api: defineApi({ baseURL: upstream, endpoints: { fast: endpoint.post("fast") } }) });
+    registerSources({
+      api: defineApi({ baseURL: upstream, endpoints: { fast: endpoint.post("fast") } }),
+    });
     const request = new Request("http://127.0.0.1/api/request?_s=api&_m=fast", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -140,7 +149,10 @@ describe("what the handler tells an attached Studio", () => {
     resetAnnouncements();
     const { endpoint: ping } = courier();
     registerSources({
-      api: defineApi({ baseURL: "https://upstream.example", endpoints: { ping: ping.get("ping") } }),
+      api: defineApi({
+        baseURL: "https://upstream.example",
+        endpoints: { ping: ping.get("ping") },
+      }),
     });
     vi.stubGlobal("fetch", async () => Response.json({ ok: true }));
     const announced: BufferedAnnouncement[] = [];
@@ -154,8 +166,8 @@ describe("what the handler tells an attached Studio", () => {
     vi.unstubAllGlobals();
     resetAnnouncements();
 
-    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual([
-      [["http", "sse"], "sveltekit", ["api"]],
-    ]);
+    expect(announced.map((a) => [a.transports, a.framework, a.sources.map(getSourceName)])).toEqual(
+      [[["http", "sse"], "sveltekit", ["api"]]],
+    );
   });
 });

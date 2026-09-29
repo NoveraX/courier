@@ -18,8 +18,14 @@ import { createSSESender } from "../src/adapter/sse-sender";
 function unreadStream(onSlow = vi.fn()) {
   let sender!: ReturnType<typeof createSSESender>;
   const stream = new ReadableStream<Uint8Array>(
-    { start: (controller) => { sender = createSSESender(controller, onSlow); } },
-    new ByteLengthQueuingStrategy({ highWaterMark: LIMITS.SSE_MAX_BUFFERED_BYTES }) as QueuingStrategy<Uint8Array>,
+    {
+      start: (controller) => {
+        sender = createSSESender(controller, onSlow);
+      },
+    },
+    new ByteLengthQueuingStrategy({
+      highWaterMark: LIMITS.SSE_MAX_BUFFERED_BYTES,
+    }) as QueuingStrategy<Uint8Array>,
   );
   return { stream, sender, onSlow };
 }
@@ -100,6 +106,8 @@ describe("a client that stops reading", () => {
   it("still takes any single event into an empty buffer, however large", () => {
     const { sender } = unreadStream();
 
-    expect(sender.broadcast({ data: "x".repeat(LIMITS.SSE_MAX_BUFFERED_BYTES * 2) })).not.toBe(false);
+    expect(sender.broadcast({ data: "x".repeat(LIMITS.SSE_MAX_BUFFERED_BYTES * 2) })).not.toBe(
+      false,
+    );
   });
 });

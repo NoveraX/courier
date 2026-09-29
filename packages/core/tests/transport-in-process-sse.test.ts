@@ -5,8 +5,8 @@ import type { WrapMiddleware } from "../src/middleware/types";
 import { RealtimeValidationError } from "../src/realtime/errors";
 import type { SSEContext, SSEEvent } from "../src/realtime/types";
 import type { StudioHooks } from "../src/studio/hooks";
-import { ValidationError } from "../src/validation";
 import { executeDirectSSE } from "../src/transport/in-process/sse";
+import { ValidationError } from "../src/validation";
 
 const { endpoint, stream } = courier();
 
@@ -228,10 +228,13 @@ describe("executeDirectSSE — headers + middleware", () => {
           groups: {
             chat: {
               options: {},
-              feed: stream.variables<unknown>().response<unknown>().implement(async function* (ctx) {
-                receivedHeaders = ctx.headers;
-                yield { data: "ok" };
-              }),
+              feed: stream
+                .variables<unknown>()
+                .response<unknown>()
+                .implement(async function* (ctx) {
+                  receivedHeaders = ctx.headers;
+                  yield { data: "ok" };
+                }),
             },
           },
         },
@@ -310,7 +313,9 @@ describe("executeDirectSSE — studio instrumentation", () => {
     // (merge in store), but for the executor + complete lifecycle that's
     // exactly two calls with identical requestId.
     expect(onStreamOpen).toHaveBeenCalled();
-    const ids = new Set(onStreamOpen.mock.calls.map((c) => (c[0] as { requestId: string }).requestId));
+    const ids = new Set(
+      onStreamOpen.mock.calls.map((c) => (c[0] as { requestId: string }).requestId),
+    );
     expect(ids.size).toBe(1);
     const last = onStreamOpen.mock.calls.at(-1)![0] as Record<string, unknown>;
     expect(last).toMatchObject({
@@ -328,12 +333,20 @@ describe("executeDirectSSE — studio instrumentation", () => {
 
   it("emits onStreamClose with reason=complete after iterator drains", async () => {
     const onStreamClose = vi.fn();
-    const cleanup = installHooks({ onStreamOpen: vi.fn(), onStreamMessage: vi.fn(), onStreamClose });
+    const cleanup = installHooks({
+      onStreamOpen: vi.fn(),
+      onStreamMessage: vi.fn(),
+      onStreamClose,
+    });
     const sources = makeSources(async function* () {
       yield { data: 1 };
       yield { data: 2 };
     });
-    const sub = await executeDirectSSE(sources as any, { source: "api", group: "chat", method: "feed" });
+    const sub = await executeDirectSSE(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
     await collect(sub);
     expect(onStreamClose.mock.calls[0]![0]).toMatchObject({ reason: "complete", eventCount: 2 });
     cleanup();
@@ -348,7 +361,11 @@ describe("executeDirectSSE — studio instrumentation", () => {
       yield { data: "before" };
       throw new Error("boom");
     });
-    const sub = await executeDirectSSE(sources as any, { source: "api", group: "chat", method: "feed" });
+    const sub = await executeDirectSSE(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
 
     await expect(collect(sub)).rejects.toThrow("boom");
     expect(onStreamError).toHaveBeenCalledOnce();
@@ -390,7 +407,11 @@ describe("executeDirectSSE — cancellation", () => {
       });
       yield { data: "x" };
     });
-    const sub = await executeDirectSSE(sources as any, { source: "api", group: "chat", method: "feed" });
+    const sub = await executeDirectSSE(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
     const iter = sub[Symbol.asyncIterator]();
     await iter.next();
     sub.close();
@@ -402,7 +423,11 @@ describe("executeDirectSSE — cancellation", () => {
       yield { data: 1 };
       await new Promise(() => {});
     });
-    const sub = await executeDirectSSE(sources as any, { source: "api", group: "chat", method: "feed" });
+    const sub = await executeDirectSSE(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
     const reading = collect(sub);
     await new Promise((r) => setTimeout(r, 10));
 

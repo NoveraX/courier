@@ -4,15 +4,21 @@
  * the problems it shows on each field, and what it sends.
  */
 import { describe, expect, it } from "vitest";
-
-import type { MockDraft } from "../src/views/mocks/wizard/types";
-
 import { suggestMockKey } from "../src/views/mocks/wizard/suggest-mock-key";
 import { toDeclarations } from "../src/views/mocks/wizard/to-declarations";
+import type { MockDraft } from "../src/views/mocks/wizard/types";
 import { validateDrafts } from "../src/views/mocks/wizard/validate-drafts";
 
 function draft(patch: Partial<MockDraft> = {}): MockDraft {
-  return { source: "api", key: "api", portMode: "auto", portText: "", seedCountText: "20", autoStart: true, ...patch };
+  return {
+    source: "api",
+    key: "api",
+    portMode: "auto",
+    portText: "",
+    seedCountText: "20",
+    autoStart: true,
+    ...patch,
+  };
 }
 
 const PROJECT = { sourceKeys: ["api", "billing"], declaredKeys: [] };
@@ -50,17 +56,26 @@ describe("key suggestions", () => {
 describe("draft checks", () => {
   it("refuses a key that is not an identifier, is too long, or names an inherited member", () => {
     for (const key of ["", "my-api", "2fa", "a".repeat(65), "ключ"]) {
-      expect(validateDrafts([draft({ key })], PROJECT).get(0)?.key).toMatch(/must be an identifier/);
+      expect(validateDrafts([draft({ key })], PROJECT).get(0)?.key).toMatch(
+        /must be an identifier/,
+      );
     }
     for (const key of ["toString", "constructor", "__proto__", "hasOwnProperty"]) {
-      expect(validateDrafts([draft({ key })], PROJECT).get(0)?.key).toMatch(/every object inherits/);
+      expect(validateDrafts([draft({ key })], PROJECT).get(0)?.key).toMatch(
+        /every object inherits/,
+      );
     }
   });
 
   it("refuses a key another new mock has or a mock already declares, ignoring letter case", () => {
-    const twice = validateDrafts([draft({ key: "Api" }), draft({ source: "billing", key: "api" })], PROJECT);
+    const twice = validateDrafts(
+      [draft({ key: "Api" }), draft({ source: "billing", key: "api" })],
+      PROJECT,
+    );
     expect(twice.get(0)).toBeUndefined();
-    expect(twice.get(1)?.key).toBe('another new mock is named "Api"; keys must differ in more than letter case');
+    expect(twice.get(1)?.key).toBe(
+      'another new mock is named "Api"; keys must differ in more than letter case',
+    );
 
     const declared = validateDrafts([draft({ key: "API" })], { ...PROJECT, declaredKeys: ["api"] });
     expect(declared.get(0)?.key).toBe("a mock named api is already declared");
@@ -79,11 +94,16 @@ describe("draft checks", () => {
       );
     }
     const twice = validateDrafts(
-      [draft({ portMode: "fixed", portText: "7001" }), draft({ source: "billing", key: "billing", portMode: "fixed", portText: "7001" })],
+      [
+        draft({ portMode: "fixed", portText: "7001" }),
+        draft({ source: "billing", key: "billing", portMode: "fixed", portText: "7001" }),
+      ],
       PROJECT,
     );
     expect(twice.get(1)?.port).toBe("api in this request already asks for port 7001");
-    expect(validateDrafts([draft({ portMode: "auto", portText: "garbage" })], PROJECT).size).toBe(0);
+    expect(validateDrafts([draft({ portMode: "auto", portText: "garbage" })], PROJECT).size).toBe(
+      0,
+    );
   });
 
   it("refuses records per collection outside 1 to 1000", () => {
@@ -100,7 +120,14 @@ describe("what is sent", () => {
   it("sends each mock as Studio's declaration: an automatic port as null, numbers as typed", () => {
     const sent = toDeclarations([
       draft({ portText: "9999" }),
-      draft({ source: "billing", key: "billingMock", portMode: "fixed", portText: " 7002 ", seedCountText: "5", autoStart: false }),
+      draft({
+        source: "billing",
+        key: "billingMock",
+        portMode: "fixed",
+        portText: " 7002 ",
+        seedCountText: "5",
+        autoStart: false,
+      }),
     ]);
 
     expect(sent).toEqual([

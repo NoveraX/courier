@@ -4,8 +4,8 @@ import { courier } from "../src/define/courier";
 import { RealtimeValidationError } from "../src/realtime/errors";
 import type { WSContext } from "../src/realtime/types";
 import type { StudioHooks } from "../src/studio/hooks";
-import { ValidationError } from "../src/validation";
 import { executeDirectWSPush } from "../src/transport/in-process/ws-push";
+import { ValidationError } from "../src/validation";
 
 const { endpoint, channel } = courier();
 
@@ -25,7 +25,10 @@ function makePushSources(
   handler: (ctx: WSContext) => AsyncGenerator<unknown, void, unknown>,
   variablesSchema?: z.ZodTypeAny,
 ) {
-  const feed = channel.variables(variablesSchema).response<unknown>().implement(handler as never);
+  const feed = channel
+    .variables(variablesSchema)
+    .response<unknown>()
+    .implement(handler as never);
   return {
     api: {
       options: { groups: { chat: { options: {}, feed } } },
@@ -119,9 +122,12 @@ describe("executeDirectWSPush", () => {
           groups: {
             chat: {
               options: {},
-              feed: channel.variables<unknown>().response<unknown>().implement(async function* () {
-                yield "ok";
-              } as never),
+              feed: channel
+                .variables<unknown>()
+                .response<unknown>()
+                .implement(async function* () {
+                  yield "ok";
+                } as never),
             },
           },
         },
@@ -131,7 +137,7 @@ describe("executeDirectWSPush", () => {
       source: "api",
       group: "chat",
       method: "feed",
-      headers: { "authorization": "abc123" },
+      headers: { authorization: "abc123" },
     });
     await collect(sub);
     expect(observed).toBe("abc123");
@@ -147,10 +153,16 @@ describe("executeDirectWSPush", () => {
       yield "a";
       yield "b";
     });
-    const sub = await executeDirectWSPush(sources as any, { source: "api", group: "chat", method: "feed" });
+    const sub = await executeDirectWSPush(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
     await collect(sub);
 
-    const ids = new Set(onStreamOpen.mock.calls.map((c) => (c[0] as { requestId: string }).requestId));
+    const ids = new Set(
+      onStreamOpen.mock.calls.map((c) => (c[0] as { requestId: string }).requestId),
+    );
     expect(ids.size).toBe(1);
     const last = onStreamOpen.mock.calls.at(-1)![0] as Record<string, unknown>;
     expect(last).toMatchObject({ transport: "ws", mode: "direct" });
@@ -170,7 +182,11 @@ describe("executeDirectWSPush", () => {
         observed = true;
       }
     });
-    const sub = await executeDirectWSPush(sources as any, { source: "api", group: "chat", method: "feed" });
+    const sub = await executeDirectWSPush(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
     const it = sub[Symbol.asyncIterator]();
     await it.next();
     sub.close();
@@ -183,7 +199,11 @@ describe("executeDirectWSPush", () => {
       yield 1;
       await new Promise(() => {});
     });
-    const sub = await executeDirectWSPush(sources as any, { source: "api", group: "chat", method: "feed" });
+    const sub = await executeDirectWSPush(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
     const reading = collect(sub);
     await new Promise((r) => setTimeout(r, 10));
 
@@ -202,7 +222,11 @@ describe("executeDirectWSPush", () => {
         released = true;
       }
     });
-    const sub = await executeDirectWSPush(sources as any, { source: "api", group: "chat", method: "feed" });
+    const sub = await executeDirectWSPush(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "feed",
+    });
     const reading = collect(sub);
     await new Promise((r) => setTimeout(r, 10));
 

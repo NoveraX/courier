@@ -104,7 +104,9 @@ describe("buildProxySSEUrl", () => {
 
 vi.mock("../src/realtime/sse/sse-client", () => ({
   subscribeSSE: vi.fn(() => ({
-    [Symbol.asyncIterator]: () => ({ next: () => Promise.resolve({ done: true, value: undefined }) }),
+    [Symbol.asyncIterator]: () => ({
+      next: () => Promise.resolve({ done: true, value: undefined }),
+    }),
     close: vi.fn(),
     status: "connecting" as const,
     on: vi.fn(),
@@ -155,8 +157,8 @@ describe("SSE transport detection — createCaller", () => {
     });
 
     const client = createCaller(api);
-    const result = (client as unknown as Record<string, Record<string, () => unknown>>)
-      .users!.getAll!();
+    const result = (client as unknown as Record<string, Record<string, () => unknown>>).users!
+      .getAll!();
 
     // HTTP returns a Promise, SSE was not called
     expect(result).toBeInstanceOf(Promise);

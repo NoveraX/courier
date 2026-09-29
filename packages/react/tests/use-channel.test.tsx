@@ -2,16 +2,15 @@
  * @vitest-environment jsdom
  */
 
-import { type ReactNode, StrictMode, createElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
 import { ForbiddenError, type WSChannel } from "@noverax/courier/realtime";
 import { createMockWSChannel } from "@noverax/courier/testing";
 
-import { useChannel } from "../src/hooks/use-channel";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode, StrictMode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChannelFn } from "../src/hooks/use-channel";
+import { useChannel } from "../src/hooks/use-channel";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -66,10 +65,7 @@ describe("useChannel", () => {
   it("receives initial message from server onJoin", async () => {
     const { channelFn } = createChannelSpy();
 
-    const { result } = renderHook(
-      () => useChannel(channelFn, "chat", "room"),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
 
     expect(result.current.lastMessage).toBeUndefined();
 
@@ -82,10 +78,7 @@ describe("useChannel", () => {
     const { channelFn } = createChannelSpy();
     const variables = { room: "general" };
 
-    renderHook(
-      () => useChannel(channelFn, "chat", "room", { variables }),
-      { wrapper },
-    );
+    renderHook(() => useChannel(channelFn, "chat", "room", { variables }), { wrapper });
 
     await waitFor(() => {
       expect(channelFn).toHaveBeenCalledWith("chat", "room", variables);
@@ -95,10 +88,9 @@ describe("useChannel", () => {
   it("does not connect when enabled=false", () => {
     const { channelFn } = createChannelSpy();
 
-    const { result } = renderHook(
-      () => useChannel(channelFn, "chat", "room", { enabled: false }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room", { enabled: false }), {
+      wrapper,
+    });
 
     expect(channelFn).not.toHaveBeenCalled();
     expect(result.current.status).toBe("disconnected");
@@ -152,10 +144,9 @@ describe("useChannel", () => {
     const { channelFn } = createChannelSpy();
     const onData = vi.fn();
 
-    const { result } = renderHook(
-      () => useChannel(channelFn, "chat", "room", { onData }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room", { onData }), {
+      wrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.lastMessage).toBeDefined();
@@ -225,10 +216,9 @@ describe("useChannel", () => {
   it("closes channel on unmount", async () => {
     const { channelFn, lastChannel } = createChannelSpy();
 
-    const { result, unmount } = renderHook(
-      () => useChannel(channelFn, "chat", "room"),
-      { wrapper },
-    );
+    const { result, unmount } = renderHook(() => useChannel(channelFn, "chat", "room"), {
+      wrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.lastMessage).toBeDefined();
@@ -243,10 +233,7 @@ describe("useChannel", () => {
   it("close() terminates channel manually", async () => {
     const { channelFn, lastChannel } = createChannelSpy();
 
-    const { result } = renderHook(
-      () => useChannel(channelFn, "chat", "room"),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), { wrapper });
 
     await waitFor(() => {
       expect(result.current.lastMessage).toBeDefined();
@@ -263,10 +250,9 @@ describe("useChannel", () => {
     const { channelFn } = createChannelSpy();
     const onStatusChange = vi.fn();
 
-    const { result } = renderHook(
-      () => useChannel(channelFn, "chat", "room", { onStatusChange }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room", { onStatusChange }), {
+      wrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.lastMessage).toBeDefined();
@@ -310,10 +296,9 @@ describe("useChannel", () => {
         createElement(QueryClientProvider, { client: queryClient }, children),
       );
 
-    const { result } = renderHook(
-      () => useChannel(channelFn, "chat", "room"),
-      { wrapper: strictWrapper },
-    );
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room"), {
+      wrapper: strictWrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.lastMessage).toEqual({ msg: "welcome" });
@@ -387,10 +372,9 @@ describe("useChannel's send", () => {
   it("answers false, with a warning, for a message sent while disabled", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const { channelFn } = createChannelSpy();
-    const { result } = renderHook(
-      () => useChannel(channelFn, "chat", "room", { enabled: false }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useChannel(channelFn, "chat", "room", { enabled: false }), {
+      wrapper,
+    });
 
     expect(result.current.send({ text: "lost" })).toBe(false);
     expect(warn).toHaveBeenCalled();

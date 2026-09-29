@@ -1,5 +1,5 @@
-import type { TimeGap, ZoomState } from "./types";
 import { msToPixels } from "./helpers";
+import type { TimeGap, ZoomState } from "./types";
 
 interface GapIndicatorProps {
   gap: TimeGap;

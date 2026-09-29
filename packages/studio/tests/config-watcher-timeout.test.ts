@@ -73,8 +73,14 @@ function makeProject(): { root: string; config: string; deep: string } {
   const deep = join(root, "src", "deep.ts");
   const config = join(root, "courier.config.ts");
   writeFileSync(deep, 'export const host = "v1.example.com"\n');
-  writeFileSync(join(root, "src", "api.ts"), 'import { host } from "./deep"\nexport const api = { baseURL: host }\n');
-  writeFileSync(config, 'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n');
+  writeFileSync(
+    join(root, "src", "api.ts"),
+    'import { host } from "./deep"\nexport const api = { baseURL: host }\n',
+  );
+  writeFileSync(
+    config,
+    'import { api } from "./src/api"\nexport default { sources: { demo: api } }\n',
+  );
   return { root, config, deep };
 }
 
@@ -117,7 +123,8 @@ function slowModule(key: string, host: string, ms: number): string {
 }
 
 function baseURLOf(loaded: LoadedCourierConfig | null | undefined): unknown {
-  return (loaded?.config.sources as Record<string, { baseURL?: unknown }> | undefined)?.demo?.baseURL;
+  return (loaded?.config.sources as Record<string, { baseURL?: unknown }> | undefined)?.demo
+    ?.baseURL;
 }
 
 /* The first load in a process sets up the transformer, which alone can take
@@ -253,7 +260,9 @@ describe("startConfigWatcher — a load given up that finishes after all", () =>
 
     expect(applied.map(baseURLOf)).not.toContain("late.example.com");
     expect(baseURLOf(applied.at(-1))).toBe("saved.example.com");
-    const reloadsOfConfig = status.emitChange.mock.calls.filter(([, paths]) => paths.join() === config);
+    const reloadsOfConfig = status.emitChange.mock.calls.filter(
+      ([, paths]) => paths.join() === config,
+    );
     expect(reloadsOfConfig).toHaveLength(1);
   });
 
@@ -294,9 +303,11 @@ describe("startConfigWatcher — a load given up that finishes after all", () =>
     expect(applied.map(baseURLOf)).toEqual(["v2.example.com"]);
     expect(count(key)).toBe(loads);
     expect(failed.length).toBeGreaterThan(0);
-    expect(failed.every((error) => error instanceof ConfigLoaderError && error.code === "CONFIG_LOAD_TIMEOUT")).toBe(
-      true,
-    );
+    expect(
+      failed.every(
+        (error) => error instanceof ConfigLoaderError && error.code === "CONFIG_LOAD_TIMEOUT",
+      ),
+    ).toBe(true);
   });
 });
 

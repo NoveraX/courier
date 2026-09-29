@@ -7,10 +7,10 @@
  * started. The handlers now read the registry when they serve a request.
  */
 import { registerSources } from "@noverax/courier";
-import { _resetSourcesForTests } from "../../core/src/sources";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { Hono } from "hono";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { _resetSourcesForTests } from "../../core/src/sources";
 
 import { courierHandler, courierSSEHandler, courierWSHandler } from "../src/index";
 

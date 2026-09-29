@@ -21,7 +21,13 @@ export function MockDashboardView(): React.ReactElement {
             {addBlocked ?? "Add a mock server for one of your API sources to get started"}
           </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-1.5" disabled={addBlocked !== null} onClick={openMockWizard}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          disabled={addBlocked !== null}
+          onClick={openMockWizard}
+        >
           Add mock server
         </Button>
       </div>
@@ -29,7 +35,11 @@ export function MockDashboardView(): React.ReactElement {
   }
 
   if (!activeServer) {
-    return <div className="flex flex-1 items-center justify-center text-muted-foreground">Select a server</div>;
+    return (
+      <div className="flex flex-1 items-center justify-center text-muted-foreground">
+        Select a server
+      </div>
+    );
   }
 
   return (

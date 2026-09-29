@@ -1,14 +1,14 @@
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { MethodBadge } from "@/components/shared/method-badge";
 import { CopyButton } from "@/components/shared/copy-button";
-import { formatDuration, formatTimestamp, formatSize } from "@/components/shared/formatters";
-import type { RequestEntry } from "@/store/types";
-import { useStudioStore } from "@/store";
+import { formatDuration, formatSize, formatTimestamp } from "@/components/shared/formatters";
+import { MethodBadge } from "@/components/shared/method-badge";
+import { Badge } from "@/components/ui/badge";
 import { useNow } from "@/hooks/use-tick";
-import { STATUS_CONFIG } from "../constants";
-import { DetailSection as Section, DetailRow as Row } from "../detail-rows";
 import { describeUpload } from "@/lib/upload-progress";
+import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
+import type { RequestEntry } from "@/store/types";
+import { STATUS_CONFIG } from "../constants";
+import { DetailRow as Row, DetailSection as Section } from "../detail-rows";
 
 interface GeneralTabProps {
   request: RequestEntry;
@@ -35,16 +35,15 @@ export function GeneralTab({ request, hideSourceMode }: GeneralTabProps): React.
         </Row>
         <Row label="Endpoint">
           <code className="mono-sm">
-            {request.group ? `${request.group}.` : ""}{request.method}
+            {request.group ? `${request.group}.` : ""}
+            {request.method}
           </code>
         </Row>
         {!hideSourceMode && (
           <>
             <Row label="Source">{request.source}</Row>
             <Row label="Mode">
-              <Badge variant={request.mode === "proxy" ? "sky" : "secondary"}>
-                {request.mode}
-              </Badge>
+              <Badge variant={request.mode === "proxy" ? "sky" : "secondary"}>{request.mode}</Badge>
             </Row>
           </>
         )}
@@ -74,22 +73,15 @@ export function GeneralTab({ request, hideSourceMode }: GeneralTabProps): React.
           <Row label="Size">{formatSize(request.size)}</Row>
         )}
         <Row label="Started">{formatTimestamp(request.startedAt, timestampFormat, now)}</Row>
-        {request.middlewareCount > 0 && (
-          <Row label="Middleware">{request.middlewareCount}</Row>
-        )}
+        {request.middlewareCount > 0 && <Row label="Middleware">{request.middlewareCount}</Row>}
         {request.cache && <Row label="Cache">{cacheOutcome(request.cache)}</Row>}
         {request.upload && <Row label="Upload">{describeUpload(request.upload)}</Row>}
-        {request.hasValidation.variables && (
-          <Row label="Variables Validated">Yes</Row>
-        )}
-        {request.hasValidation.response && (
-          <Row label="Response Validated">Yes</Row>
-        )}
+        {request.hasValidation.variables && <Row label="Variables Validated">Yes</Row>}
+        {request.hasValidation.response && <Row label="Response Validated">Yes</Row>}
       </Section>
     </div>
   );
 }
-
 
 // ── Value renderers ───────────────────────────────────────────────────────
 
@@ -101,13 +93,14 @@ function cacheOutcome(cache: NonNullable<RequestEntry["cache"]>): string {
 }
 
 function StatusCodePill({ code }: { code: number }): React.ReactElement {
-  const styles = code >= 500
-    ? "bg-fuchsia-500/10 text-fuchsia-400"
-    : code >= 400
-      ? "bg-rose-500/10 text-rose-400"
-      : code >= 300
-        ? "bg-amber-500/10 text-amber-400"
-        : "bg-emerald-500/10 text-emerald-400";
+  const styles =
+    code >= 500
+      ? "bg-fuchsia-500/10 text-fuchsia-400"
+      : code >= 400
+        ? "bg-rose-500/10 text-rose-400"
+        : code >= 300
+          ? "bg-amber-500/10 text-amber-400"
+          : "bg-emerald-500/10 text-emerald-400";
 
   return (
     <span className={cn("mono-sm rounded-md px-1.5 py-0.5 font-medium tabular-nums", styles)}>
@@ -117,11 +110,8 @@ function StatusCodePill({ code }: { code: number }): React.ReactElement {
 }
 
 function DurationValue({ duration }: { duration: number }): React.ReactElement {
-  const color = duration > 1000
-    ? "text-rose-400"
-    : duration > 300
-      ? "text-amber-400"
-      : "text-emerald-400";
+  const color =
+    duration > 1000 ? "text-rose-400" : duration > 300 ? "text-amber-400" : "text-emerald-400";
 
   return (
     <span className={cn("mono-sm font-medium tabular-nums", color)}>

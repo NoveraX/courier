@@ -2,72 +2,83 @@ import { GitBranch, Inbox, Layers, Shield, Shuffle, Timer, Zap } from "lucide-re
 
 import type { MockScenarioEntry } from "@/store/mock-slice";
 
-export type ScenarioType = "error" | "latency" | "empty" | "auth" | "sequence" | "mixed" | "unknown";
+export type ScenarioType =
+  | "error"
+  | "latency"
+  | "empty"
+  | "auth"
+  | "sequence"
+  | "mixed"
+  | "unknown";
 
 export const SCENARIO_TYPE_META: Record<
   ScenarioType,
-  { label: string; color: "rose" | "amber" | "sky" | "violet" | "indigo" | "secondary"; icon: React.ComponentType<{ className?: string }> }
+  {
+    label: string;
+    color: "rose" | "amber" | "sky" | "violet" | "indigo" | "secondary";
+    icon: React.ComponentType<{ className?: string }>;
+  }
 > = {
-  error:    { label: "Error",    color: "rose",      icon: Zap },
-  latency:  { label: "Latency",  color: "amber",     icon: Timer },
-  empty:    { label: "Empty",    color: "sky",       icon: Inbox },
-  auth:     { label: "Auth",     color: "violet",    icon: Shield },
-  sequence: { label: "Sequence", color: "indigo",    icon: Shuffle },
-  mixed:    { label: "Mixed",    color: "amber",     icon: Layers },
-  unknown:  { label: "Custom",   color: "secondary", icon: GitBranch },
+  error: { label: "Error", color: "rose", icon: Zap },
+  latency: { label: "Latency", color: "amber", icon: Timer },
+  empty: { label: "Empty", color: "sky", icon: Inbox },
+  auth: { label: "Auth", color: "violet", icon: Shield },
+  sequence: { label: "Sequence", color: "indigo", icon: Shuffle },
+  mixed: { label: "Mixed", color: "amber", icon: Layers },
+  unknown: { label: "Custom", color: "secondary", icon: GitBranch },
 };
 
 export const SCENARIO_TYPE_STRIPE: Record<ScenarioType, string> = {
-  error:    "bg-rose-500/60",
-  latency:  "bg-amber-500/60",
-  empty:    "bg-sky-500/60",
-  auth:     "bg-violet-500/60",
+  error: "bg-rose-500/60",
+  latency: "bg-amber-500/60",
+  empty: "bg-sky-500/60",
+  auth: "bg-violet-500/60",
   sequence: "bg-indigo-500/60",
-  mixed:    "bg-amber-400/50",
-  unknown:  "bg-border",
+  mixed: "bg-amber-400/50",
+  unknown: "bg-border",
 };
 
 export const SCENARIO_TYPE_COVERAGE: Record<ScenarioType, string> = {
-  error:    "bg-rose-500/50",
-  latency:  "bg-amber-500/50",
-  empty:    "bg-sky-500/50",
-  auth:     "bg-violet-500/50",
+  error: "bg-rose-500/50",
+  latency: "bg-amber-500/50",
+  empty: "bg-sky-500/50",
+  auth: "bg-violet-500/50",
   sequence: "bg-indigo-500/50",
-  mixed:    "bg-amber-400/40",
-  unknown:  "bg-muted-foreground/30",
+  mixed: "bg-amber-400/40",
+  unknown: "bg-muted-foreground/30",
 };
 
 /** Gradient background for the detail panel hero header */
 export const SCENARIO_TYPE_GRADIENT: Record<ScenarioType, string> = {
-  error:    "from-rose-500/12 to-transparent",
-  latency:  "from-amber-500/12 to-transparent",
-  empty:    "from-sky-500/12 to-transparent",
-  auth:     "from-violet-500/12 to-transparent",
+  error: "from-rose-500/12 to-transparent",
+  latency: "from-amber-500/12 to-transparent",
+  empty: "from-sky-500/12 to-transparent",
+  auth: "from-violet-500/12 to-transparent",
   sequence: "from-indigo-500/12 to-transparent",
-  mixed:    "from-amber-400/10 to-transparent",
-  unknown:  "from-muted-foreground/6 to-transparent",
+  mixed: "from-amber-400/10 to-transparent",
+  unknown: "from-muted-foreground/6 to-transparent",
 };
 
 /** Icon container bg + text color (combined classes) */
 export const SCENARIO_TYPE_ICON_BG: Record<ScenarioType, string> = {
-  error:    "bg-rose-500/12 text-rose-400",
-  latency:  "bg-amber-500/12 text-amber-400",
-  empty:    "bg-sky-500/12 text-sky-400",
-  auth:     "bg-violet-500/12 text-violet-400",
+  error: "bg-rose-500/12 text-rose-400",
+  latency: "bg-amber-500/12 text-amber-400",
+  empty: "bg-sky-500/12 text-sky-400",
+  auth: "bg-violet-500/12 text-violet-400",
   sequence: "bg-indigo-500/12 text-indigo-400",
-  mixed:    "bg-amber-400/10 text-amber-400",
-  unknown:  "bg-muted/60 text-muted-foreground/70",
+  mixed: "bg-amber-400/10 text-amber-400",
+  unknown: "bg-muted/60 text-muted-foreground/70",
 };
 
 /** Ring color for icon container */
 export const SCENARIO_TYPE_RING: Record<ScenarioType, string> = {
-  error:    "ring-rose-500/20",
-  latency:  "ring-amber-500/20",
-  empty:    "ring-sky-500/20",
-  auth:     "ring-violet-500/20",
+  error: "ring-rose-500/20",
+  latency: "ring-amber-500/20",
+  empty: "ring-sky-500/20",
+  auth: "ring-violet-500/20",
   sequence: "ring-indigo-500/20",
-  mixed:    "ring-amber-400/15",
-  unknown:  "ring-border-subtle",
+  mixed: "ring-amber-400/15",
+  unknown: "ring-border-subtle",
 };
 
 /**
@@ -90,8 +101,8 @@ export function deriveScenarioType(scenario: MockScenarioEntry): ScenarioType {
   const hasSequence = behaviors.some((b) => b === "sequence");
   if (hasSequence) return "sequence";
 
-  const allErrors  = behaviors.every((b) => b === "rejects");
-  const hasErrors  = behaviors.some((b) => b === "rejects");
+  const allErrors = behaviors.every((b) => b === "rejects");
+  const hasErrors = behaviors.some((b) => b === "rejects");
   const hasLatency = scenario.endpoints.some((e) => (e.latency ?? 0) > 200);
   const allResolveEmpty = behaviors.every((b) => b === "resolves" || b === "returns");
 
@@ -109,4 +120,3 @@ export function coveragePercent(endpointCount: number, totalRoutes: number): num
   if (totalRoutes === 0) return 0;
   return Math.min(100, Math.round((endpointCount / totalRoutes) * 100));
 }
-

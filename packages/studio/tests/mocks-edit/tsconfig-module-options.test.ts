@@ -33,7 +33,11 @@ function optionsOf(config: Record<string, unknown>) {
 
 describe("tsconfigModuleOptions", () => {
   it("takes the tsconfig's own module and moduleResolution", () => {
-    expect(optionsOf({ compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", strict: true } })).toEqual({
+    expect(
+      optionsOf({
+        compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", strict: true },
+      }),
+    ).toEqual({
       module: "NodeNext",
       moduleResolution: "NodeNext",
     });
@@ -69,7 +73,9 @@ describe("tsconfigModuleOptions", () => {
   it("lets the tsconfig's own options override those it extends", () => {
     write("base.json", { compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" } });
 
-    expect(optionsOf({ extends: "./base.json", compilerOptions: { moduleResolution: "bundler" } })).toEqual({
+    expect(
+      optionsOf({ extends: "./base.json", compilerOptions: { moduleResolution: "bundler" } }),
+    ).toEqual({
       module: "NodeNext",
       moduleResolution: "bundler",
     });
@@ -79,16 +85,28 @@ describe("tsconfigModuleOptions", () => {
     write("node.json", { compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" } });
     write("bundler.json", { compilerOptions: { module: "ESNext", moduleResolution: "bundler" } });
 
-    expect(optionsOf({ extends: ["./node.json", "./bundler.json"] })).toEqual({ module: "ESNext", moduleResolution: "bundler" });
-    expect(optionsOf({ extends: ["./bundler.json", "./node.json"] })).toEqual({ module: "NodeNext", moduleResolution: "NodeNext" });
+    expect(optionsOf({ extends: ["./node.json", "./bundler.json"] })).toEqual({
+      module: "ESNext",
+      moduleResolution: "bundler",
+    });
+    expect(optionsOf({ extends: ["./bundler.json", "./node.json"] })).toEqual({
+      module: "NodeNext",
+      moduleResolution: "NodeNext",
+    });
   });
 
   it("brings a base again with each entry of an extends array that extends it, as TypeScript does", () => {
     write("base.json", { compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" } });
-    write("bundler.json", { extends: "./base.json", compilerOptions: { module: "ESNext", moduleResolution: "bundler" } });
+    write("bundler.json", {
+      extends: "./base.json",
+      compilerOptions: { module: "ESNext", moduleResolution: "bundler" },
+    });
     write("strict.json", { extends: "./base.json" });
 
-    expect(optionsOf({ extends: ["./bundler.json", "./strict.json"] })).toEqual({ module: "NodeNext", moduleResolution: "NodeNext" });
+    expect(optionsOf({ extends: ["./bundler.json", "./strict.json"] })).toEqual({
+      module: "NodeNext",
+      moduleResolution: "NodeNext",
+    });
   });
 
   it("ends a chain of configs that extend each other", () => {

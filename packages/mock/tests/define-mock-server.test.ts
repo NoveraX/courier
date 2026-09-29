@@ -10,15 +10,24 @@ import { defineScenario } from "../src";
 import { defineMockServer } from "../src/managed";
 
 const { endpoint } = courier();
-const users = defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response<Array<{ id: number }>>() } });
-const orders = defineGroup({ prefix: "orders", endpoints: { list: endpoint.get("").response<Array<{ id: string }>>() } });
+const users = defineGroup({
+  prefix: "users",
+  endpoints: { getAll: endpoint.get("").response<Array<{ id: number }>>() },
+});
+const orders = defineGroup({
+  prefix: "orders",
+  endpoints: { list: endpoint.get("").response<Array<{ id: string }>>() },
+});
 const api = defineApi({ baseURL: "https://api.example", groups: { users } });
 const otherApi = defineApi({ baseURL: "https://other.example", groups: { orders } });
 const largerApi = defineApi({ baseURL: "https://api.example", groups: { users, orders } });
 
 describe("defineMockServer scenarios", () => {
   it("accepts a scenario written for its source, and one written for none", () => {
-    const typed = defineScenario<typeof api>("typed", (mock) => void mock("users", "getAll").resolves([]));
+    const typed = defineScenario<typeof api>(
+      "typed",
+      (mock) => void mock("users", "getAll").resolves([]),
+    );
     const untyped = defineScenario("untyped", (mock) => void mock("users", "getAll").resolves([]));
     const plain = { name: "plain", apply: () => {} };
 
@@ -28,23 +37,34 @@ describe("defineMockServer scenarios", () => {
   });
 
   it("rejects a scenario written for another source", () => {
-    const foreign = defineScenario<typeof otherApi>("foreign", (mock) => void mock("orders", "list").resolves([]));
+    const foreign = defineScenario<typeof otherApi>(
+      "foreign",
+      (mock) => void mock("orders", "list").resolves([]),
+    );
 
     // @ts-expect-error the scenario mocks orders, which this source does not have
     defineMockServer({ source: api, scenarios: { foreign } });
   });
 
   it("rejects a scenario written for a source with endpoints this one lacks", () => {
-    const larger = defineScenario<typeof largerApi>("larger", (mock) => void mock("orders", "list").resolves([]));
+    const larger = defineScenario<typeof largerApi>(
+      "larger",
+      (mock) => void mock("orders", "list").resolves([]),
+    );
 
     // @ts-expect-error the scenario may mock orders, which this source does not have
     defineMockServer({ source: api, scenarios: { larger } });
   });
 
   it("accepts a scenario written for a source whose endpoints this one has", () => {
-    const smaller = defineScenario<typeof api>("smaller", (mock) => void mock("users", "getAll").resolves([]));
+    const smaller = defineScenario<typeof api>(
+      "smaller",
+      (mock) => void mock("users", "getAll").resolves([]),
+    );
 
-    expect(defineMockServer({ source: largerApi, scenarios: { smaller } }).scenarios).toHaveProperty("smaller");
+    expect(
+      defineMockServer({ source: largerApi, scenarios: { smaller } }).scenarios,
+    ).toHaveProperty("smaller");
   });
 });
 

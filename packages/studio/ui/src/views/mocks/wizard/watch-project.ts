@@ -14,7 +14,10 @@ export interface ProjectStore<TState extends ProjectSignals> {
   subscribe(listener: (state: TState, previous: TState) => void): () => void;
 }
 
-function configChanged(next: ConfigStatusPayload | null, prev: ConfigStatusPayload | null): boolean {
+function configChanged(
+  next: ConfigStatusPayload | null,
+  prev: ConfigStatusPayload | null,
+): boolean {
   return next?.state !== prev?.state || next?.revision !== prev?.revision;
 }
 

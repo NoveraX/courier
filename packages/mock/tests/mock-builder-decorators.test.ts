@@ -51,7 +51,10 @@ async function serve(overrides: Parameters<typeof createAutoMockServer>[0]["over
 describe("decorators before the response method", () => {
   it("apply to the response they come before", async () => {
     const { url } = await serve((mock) => {
-      mock("todos", "list").delay(150).withHeaders({ "X-Stub": "yes" }).resolves([{ id: 99, title: "stub" }]);
+      mock("todos", "list")
+        .delay(150)
+        .withHeaders({ "X-Stub": "yes" })
+        .resolves([{ id: 99, title: "stub" }]);
     });
 
     const started = performance.now();

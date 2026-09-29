@@ -1,4 +1,4 @@
-import type { RequestTiming, ProxyTiming } from "@/store/types-events";
+import type { ProxyTiming, RequestTiming } from "@/store/types-events";
 
 import type { WaterfallSegment } from "./types";
 
@@ -25,10 +25,7 @@ export function buildDirectSegments(timing: RequestTiming): WaterfallSegment[] {
 
 // ── Proxy mode: 6 segments (network + server phases) ─────────────────────
 
-export function buildProxySegments(
-  timing: RequestTiming,
-  proxy: ProxyTiming,
-): WaterfallSegment[] {
+export function buildProxySegments(timing: RequestTiming, proxy: ProxyTiming): WaterfallSegment[] {
   let offset = 0;
   const segments: WaterfallSegment[] = [];
 

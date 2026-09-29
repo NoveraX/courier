@@ -22,8 +22,16 @@ describe("appliedMessage", () => {
   });
 
   it("says nothing of folders when every emptied one went", () => {
-    const applied = { written: [], removed: ["a.ts"], kept: [], backupDir: ".courier/backups/1", pruneFailures: [] };
+    const applied = {
+      written: [],
+      removed: ["a.ts"],
+      kept: [],
+      backupDir: ".courier/backups/1",
+      pruneFailures: [],
+    };
 
-    expect(appliedMessage("Updated pets", countsOf(applied))).toBe("Updated pets: removed 1 file, keeping a copy");
+    expect(appliedMessage("Updated pets", countsOf(applied))).toBe(
+      "Updated pets: removed 1 file, keeping a copy",
+    );
   });
 });

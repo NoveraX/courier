@@ -1,9 +1,6 @@
-import { Controller } from "react-hook-form";
-
 import type { UseFormReturn } from "react-hook-form";
-import type { Settings } from "@/store/types";
-
-import { Switch } from "@/components/ui/switch";
+import { Controller } from "react-hook-form";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -11,8 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useStudioStore } from "@/store";
+import type { Settings } from "@/store/types";
 import { RECONNECT_DELAY_OPTIONS } from "./constants";
 import { SettingRow } from "./setting-row";
 
@@ -22,9 +20,7 @@ interface ConnectionSectionProps {
   form: UseFormReturn<Settings>;
 }
 
-export function ConnectionSection({
-  form,
-}: ConnectionSectionProps): React.ReactElement {
+export function ConnectionSection({ form }: ConnectionSectionProps): React.ReactElement {
   const connected = useStudioStore((s) => s.connected);
 
   return (
@@ -44,27 +40,17 @@ export function ConnectionSection({
           control={form.control}
           name="autoReconnect"
           render={({ field }) => (
-            <Switch
-              id="autoReconnect"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
+            <Switch id="autoReconnect" checked={field.value} onCheckedChange={field.onChange} />
           )}
         />
       </SettingRow>
 
-      <SettingRow
-        label="Reconnect delay"
-        description="Time to wait before attempting reconnection"
-      >
+      <SettingRow label="Reconnect delay" description="Time to wait before attempting reconnection">
         <Controller
           control={form.control}
           name="reconnectDelay"
           render={({ field }) => (
-            <Select
-              value={String(field.value)}
-              onValueChange={(v) => field.onChange(Number(v))}
-            >
+            <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
               <SelectTrigger className="w-28" size="sm">
                 <SelectValue />
               </SelectTrigger>

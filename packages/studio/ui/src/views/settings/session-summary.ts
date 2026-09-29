@@ -17,7 +17,13 @@ export interface SessionSummary {
   appCount: number;
 }
 
-const STAT_FIELDS = ["totalRequests", "successCount", "errorCount", "avgDuration", "totalSize"] as const;
+const STAT_FIELDS = [
+  "totalRequests",
+  "successCount",
+  "errorCount",
+  "avgDuration",
+  "totalSize",
+] as const;
 
 /**
  * The saved sessions in Studio's answer to `/api/sessions/list`, which is

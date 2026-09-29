@@ -2,16 +2,15 @@
  * @vitest-environment jsdom
  */
 
-import { type ReactNode, StrictMode, createElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
 import type { SSESubscription } from "@noverax/courier/realtime";
 import { createMockSSESubscription } from "@noverax/courier/testing";
 
-import { useSubscription } from "../src/hooks/use-subscription";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement, type ReactNode, StrictMode } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SubscribeFn } from "../src/hooks/use-subscription";
+import { useSubscription } from "../src/hooks/use-subscription";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -60,10 +59,9 @@ describe("useSubscription", () => {
   it("receives events and updates data", async () => {
     const { subscribeFn } = createSubscribeSpy();
 
-    const { result } = renderHook(
-      () => useSubscription(subscribeFn, "notifications", "feed"),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useSubscription(subscribeFn, "notifications", "feed"), {
+      wrapper,
+    });
 
     expect(result.current.data).toBeUndefined();
     expect(result.current.events).toEqual([]);
@@ -81,10 +79,9 @@ describe("useSubscription", () => {
     const { subscribeFn } = createSubscribeSpy();
     const variables = { userId: 42 };
 
-    renderHook(
-      () => useSubscription(subscribeFn, "notifications", "feed", { variables }),
-      { wrapper },
-    );
+    renderHook(() => useSubscription(subscribeFn, "notifications", "feed", { variables }), {
+      wrapper,
+    });
 
     await waitFor(() => {
       expect(subscribeFn).toHaveBeenCalledWith("notifications", "feed", variables);
@@ -129,10 +126,9 @@ describe("useSubscription", () => {
     const { subscribeFn } = createSubscribeSpy();
     const onData = vi.fn();
 
-    renderHook(
-      () => useSubscription(subscribeFn, "notifications", "feed", { onData }),
-      { wrapper },
-    );
+    renderHook(() => useSubscription(subscribeFn, "notifications", "feed", { onData }), {
+      wrapper,
+    });
 
     await waitFor(() => {
       expect(onData).toHaveBeenCalledTimes(2);
@@ -171,10 +167,9 @@ describe("useSubscription", () => {
       });
     });
 
-    const { result } = renderHook(
-      () => useSubscription(subscribeFn, "chat", "messages"),
-      { wrapper },
-    );
+    const { result } = renderHook(() => useSubscription(subscribeFn, "chat", "messages"), {
+      wrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.events).toHaveLength(1);
@@ -305,10 +300,9 @@ describe("useSubscription", () => {
         createElement(QueryClientProvider, { client: queryClient }, children),
       );
 
-    const { result } = renderHook(
-      () => useSubscription(subscribeFn, "notifications", "feed"),
-      { wrapper: strictWrapper },
-    );
+    const { result } = renderHook(() => useSubscription(subscribeFn, "notifications", "feed"), {
+      wrapper: strictWrapper,
+    });
 
     await waitFor(() => {
       expect(result.current.events).toHaveLength(2);

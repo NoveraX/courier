@@ -11,8 +11,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { writesExplicitExtensions } from "../../src/server/mocks-edit/writes-explicit-extensions";
 
-const NODE_NEXT = JSON.stringify({ compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" } });
-const BUNDLER = JSON.stringify({ compilerOptions: { module: "ESNext", moduleResolution: "bundler" } });
+const NODE_NEXT = JSON.stringify({
+  compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext" },
+});
+const BUNDLER = JSON.stringify({
+  compilerOptions: { module: "ESNext", moduleResolution: "bundler" },
+});
 const CONFIG = 'import { api } from "./src/api";\n\nexport default { sources: { api } };\n';
 
 let root: string;
@@ -33,7 +37,11 @@ function project(files: Record<string, string>): void {
 
 describe("writesExplicitExtensions", () => {
   it("names extensions for a .ts mocks file in a type module package that resolves as Node does", () => {
-    project({ "package.json": '{ "type": "module" }', "tsconfig.json": NODE_NEXT, "courier.config.ts": CONFIG });
+    project({
+      "package.json": '{ "type": "module" }',
+      "tsconfig.json": NODE_NEXT,
+      "courier.config.ts": CONFIG,
+    });
 
     expect(writesExplicitExtensions(root, "courier.mocks.ts", "courier.config.ts")).toBe(true);
   });
@@ -41,7 +49,10 @@ describe("writesExplicitExtensions", () => {
   it("names extensions where a solution tsconfig references a project that resolves as Node does", () => {
     project({
       "package.json": '{ "type": "module" }',
-      "tsconfig.json": JSON.stringify({ files: [], references: [{ path: "./tsconfig.node.json" }] }),
+      "tsconfig.json": JSON.stringify({
+        files: [],
+        references: [{ path: "./tsconfig.node.json" }],
+      }),
       "tsconfig.node.json": NODE_NEXT,
       "courier.config.ts": CONFIG,
     });
@@ -50,7 +61,11 @@ describe("writesExplicitExtensions", () => {
   });
 
   it("names none where the project resolves modules as a bundler does", () => {
-    project({ "package.json": '{ "type": "module" }', "tsconfig.json": BUNDLER, "courier.config.ts": CONFIG });
+    project({
+      "package.json": '{ "type": "module" }',
+      "tsconfig.json": BUNDLER,
+      "courier.config.ts": CONFIG,
+    });
 
     expect(writesExplicitExtensions(root, "courier.mocks.ts", "courier.config.ts")).toBe(false);
   });
@@ -58,7 +73,11 @@ describe("writesExplicitExtensions", () => {
   it.each([['{ "type": "commonjs" }'], ["{}"]])(
     "names none for a .ts mocks file in a package of %s, which TypeScript reads as CommonJS",
     (manifest) => {
-      project({ "package.json": manifest, "tsconfig.json": NODE_NEXT, "courier.config.ts": CONFIG });
+      project({
+        "package.json": manifest,
+        "tsconfig.json": NODE_NEXT,
+        "courier.config.ts": CONFIG,
+      });
 
       expect(writesExplicitExtensions(root, "courier.mocks.ts", "courier.config.ts")).toBe(false);
     },
@@ -71,7 +90,11 @@ describe("writesExplicitExtensions", () => {
   });
 
   it("names none for a .cts mocks file, which is CommonJS whatever its package says", () => {
-    project({ "package.json": '{ "type": "module" }', "tsconfig.json": NODE_NEXT, "courier.config.cts": CONFIG });
+    project({
+      "package.json": '{ "type": "module" }',
+      "tsconfig.json": NODE_NEXT,
+      "courier.config.cts": CONFIG,
+    });
 
     expect(writesExplicitExtensions(root, "courier.mocks.cts", "courier.config.cts")).toBe(false);
   });

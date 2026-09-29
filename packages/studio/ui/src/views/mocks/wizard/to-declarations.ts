@@ -1,13 +1,13 @@
-import type { MockDraft } from "./types";
-import type { MockDeclaration } from "./wire-types";
-
 import { DRAFT_LIMITS } from "./draft-limits";
 import { parseWholeNumber } from "./parse-whole-number";
+import type { MockDraft } from "./types";
+import type { MockDeclaration } from "./wire-types";
 
 function toDeclaration(draft: MockDraft): MockDeclaration | null {
   const { minPort, maxPort, minSeedCount, maxSeedCount } = DRAFT_LIMITS;
   const seedCount = parseWholeNumber(draft.seedCountText, minSeedCount, maxSeedCount);
-  const port = draft.portMode === "auto" ? null : parseWholeNumber(draft.portText, minPort, maxPort);
+  const port =
+    draft.portMode === "auto" ? null : parseWholeNumber(draft.portText, minPort, maxPort);
   if (seedCount === null || (draft.portMode === "fixed" && port === null)) return null;
   return { key: draft.key, source: draft.source, port, seedCount, autoStart: draft.autoStart };
 }

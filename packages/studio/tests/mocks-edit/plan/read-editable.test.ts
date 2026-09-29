@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { readEditable } from "../../../src/server/mocks-edit/plan/read-editable";
 import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
+import { readEditable } from "../../../src/server/mocks-edit/plan/read-editable";
 
 function refusalOf(text: string): MocksEditRefusal {
   try {

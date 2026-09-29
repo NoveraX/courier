@@ -1,5 +1,5 @@
-import { useCallback, useRef } from "react";
 import { Timer } from "lucide-react";
+import { useCallback, useRef } from "react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatDuration } from "@/components/shared/formatters";
@@ -8,8 +8,8 @@ import { useStudioStore } from "@/store";
 
 import { SegmentLegend } from "./segment-legend";
 import { Toolbar } from "./toolbar";
-import { WaterfallCanvas } from "./waterfall-canvas";
 import { useWaterfall } from "./use-waterfall";
+import { WaterfallCanvas } from "./waterfall-canvas";
 
 export function WaterfallView(): React.ReactElement {
   const requests = useStudioStore((s) => s.requests);
@@ -19,10 +19,25 @@ export function WaterfallView(): React.ReactElement {
   const { selectedId, selectRequest } = useRequestDetail();
 
   const {
-    rows, groups, gaps, timeSpan, actualTimeSpan, zoom,
-    sortBy, groupBy, modeFilter, search,
-    setSortBy, setGroupBy, setModeFilter, setSearch,
-    zoomIn, zoomOut, resetZoom, zoomToFit, handleWheelZoom,
+    rows,
+    groups,
+    gaps,
+    timeSpan,
+    actualTimeSpan,
+    zoom,
+    sortBy,
+    groupBy,
+    modeFilter,
+    search,
+    setSortBy,
+    setGroupBy,
+    setModeFilter,
+    setSearch,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    zoomToFit,
+    handleWheelZoom,
   } = useWaterfall(requests);
 
   const handleZoomToFit = useCallback(() => {

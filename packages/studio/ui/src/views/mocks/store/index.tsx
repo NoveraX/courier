@@ -1,7 +1,7 @@
-import { useEffect } from "react";
 import { Database } from "lucide-react";
-import { PageShell } from "@/components/shared/page-shell";
+import { useEffect } from "react";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PageShell } from "@/components/shared/page-shell";
 import { useActiveServer } from "@/store/mock-slice";
 import { CollectionList } from "./collection-list";
 import { DataTable } from "./data-table";
@@ -22,7 +22,11 @@ export function MockStoreView(): React.ReactElement {
   if (!server) {
     return (
       <PageShell center>
-        <EmptyState icon={Database} heading="No server selected" description="Select a mock server to browse its store." />
+        <EmptyState
+          icon={Database}
+          heading="No server selected"
+          description="Select a mock server to browse its store."
+        />
       </PageShell>
     );
   }
@@ -30,7 +34,11 @@ export function MockStoreView(): React.ReactElement {
   if (collections.length === 0) {
     return (
       <PageShell center>
-        <EmptyState icon={Database} heading="No collections" description="This server has no data collections yet." />
+        <EmptyState
+          icon={Database}
+          heading="No collections"
+          description="This server has no data collections yet."
+        />
       </PageShell>
     );
   }

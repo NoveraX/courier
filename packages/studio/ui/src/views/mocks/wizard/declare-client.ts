@@ -1,13 +1,12 @@
+import { post } from "@/lib/api-client";
+import { isDeclareApplyResult } from "./is-declare-apply-result";
+import { isDeclarePreview } from "./is-declare-preview";
 import type {
   DeclareApplyBody,
   DeclareApplyResult,
   DeclarePreview,
   MockDeclaration,
 } from "./wire-types";
-
-import { post } from "@/lib/api-client";
-import { isDeclareApplyResult } from "./is-declare-apply-result";
-import { isDeclarePreview } from "./is-declare-preview";
 
 /** How the wizard asks Studio to plan and make the edit. */
 export interface DeclareClient {

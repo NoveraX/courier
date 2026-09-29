@@ -1,20 +1,18 @@
+import { Loader2, Save } from "lucide-react";
 import { useState } from "react";
-import { Save, Loader2 } from "lucide-react";
-
+import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { EmptyState } from "@/components/shared/empty-state";
-
-import type { useSessionHistory } from "./use-session-history";
 import { SessionCard } from "./session-card";
+import type { useSessionHistory } from "./use-session-history";
 
 // ── Session history section ──────────────────────────────────────────────────
 
@@ -22,9 +20,7 @@ interface SessionHistorySectionProps {
   history: ReturnType<typeof useSessionHistory>;
 }
 
-export function SessionHistorySection({
-  history,
-}: SessionHistorySectionProps): React.ReactElement {
+export function SessionHistorySection({ history }: SessionHistorySectionProps): React.ReactElement {
   const [saveOpen, setSaveOpen] = useState(false);
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -55,11 +51,7 @@ export function SessionHistorySection({
         <p className="text-body-xs text-muted-foreground">
           {history.sessions.length} saved session{history.sessions.length !== 1 && "s"}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setSaveOpen(true)}
-        >
+        <Button variant="outline" size="sm" onClick={() => setSaveOpen(true)}>
           <Save className="mr-1.5 size-3.5" />
           Save current
         </Button>

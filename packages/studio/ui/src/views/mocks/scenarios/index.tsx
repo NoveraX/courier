@@ -1,19 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { Network } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageShell } from "@/components/shared/page-shell";
 import { useEscapeClose } from "@/hooks/use-escape-close";
+import type { MockScenarioEntry } from "@/store/mock-slice";
 import { useActiveServer } from "@/store/mock-slice";
-
 import { ActiveBanner } from "./active-banner";
 import { ScenarioDetail } from "./scenario-detail";
 import { ScenarioList } from "./scenario-list";
 import { ScenariosToolbar } from "./scenarios-toolbar";
 import { useScenarioActions } from "./use-scenario-actions";
 import { useScenarioFilter } from "./use-scenario-filter";
-
-import type { MockScenarioEntry } from "@/store/mock-slice";
 
 export function MockScenariosView(): React.ReactElement {
   const server = useActiveServer();
@@ -79,7 +77,9 @@ export function MockScenariosView(): React.ReactElement {
 
   return (
     <PageShell toolbar={toolbar} noScroll>
-      <div className={`flex min-h-0 flex-1 flex-col overflow-hidden${isRunning ? "" : " pointer-events-none opacity-40"}`}>
+      <div
+        className={`flex min-h-0 flex-1 flex-col overflow-hidden${isRunning ? "" : " pointer-events-none opacity-40"}`}
+      >
         {isScenarioActive && (
           <ActiveBanner
             scenarioName={activeScenario}

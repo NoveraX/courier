@@ -37,9 +37,7 @@ export function EmptyState({
 
       <div className="space-y-1.5">
         <h3 className="text-h3 text-foreground">{heading}</h3>
-        <p className="text-body-sm text-muted-foreground max-w-[360px]">
-          {description}
-        </p>
+        <p className="text-body-sm text-muted-foreground max-w-[360px]">{description}</p>
       </div>
 
       {children}

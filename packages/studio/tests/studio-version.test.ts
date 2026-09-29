@@ -45,7 +45,9 @@ describe("studioVersion", () => {
       logLevel: "silent",
     });
 
-    const published: { studioVersion: typeof studioVersion } = await import(pathToFileURL(chunk).href);
+    const published: { studioVersion: typeof studioVersion } = await import(
+      pathToFileURL(chunk).href
+    );
 
     expect(published.studioVersion()).toBe("9.9.9");
   });

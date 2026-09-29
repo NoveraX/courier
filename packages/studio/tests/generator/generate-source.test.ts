@@ -16,7 +16,7 @@ import {
   removeProjects,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 function spec(origin: string, scheme: Record<string, unknown>): ParsedSpec {
   return parseSpec(
@@ -28,7 +28,11 @@ function spec(origin: string, scheme: Record<string, unknown>): ParsedSpec {
       security: [{ auth: [] }],
       paths: {
         "/pets": {
-          get: { operationId: "listPets", tags: ["pets"], responses: { "200": { description: "ok" } } },
+          get: {
+            operationId: "listPets",
+            tags: ["pets"],
+            responses: { "200": { description: "ok" } },
+          },
         },
       },
     }),
@@ -38,7 +42,13 @@ function spec(origin: string, scheme: Record<string, unknown>): ParsedSpec {
 const SCHEMES: [string, Record<string, unknown>, string, string, string][] = [
   ["bearer", { type: "http", scheme: "bearer" }, "SHOP_TOKEN", "authorization", "Bearer secret"],
   ["basic", { type: "http", scheme: "basic" }, "SHOP_CREDENTIALS", "authorization", "Basic secret"],
-  ["an API key", { type: "apiKey", in: "header", name: "X-Api-Key" }, "SHOP_API_KEY", "x-api-key", "secret"],
+  [
+    "an API key",
+    { type: "apiKey", in: "header", name: "X-Api-Key" },
+    "SHOP_API_KEY",
+    "x-api-key",
+    "secret",
+  ],
   ["OAuth 2", { type: "oauth2", flows: {} }, "SHOP_ACCESS_TOKEN", "authorization", "Bearer secret"],
 ];
 
@@ -58,44 +68,51 @@ afterAll(async () => {
   removeProjects("generate-source");
 });
 
-describe.each(SCHEMES)("a source generated with %s auth", (label, scheme, variable, header, sent) => {
-  const files = () =>
-    generateCode(spec(server.origin, scheme), { type: "openapi", outputDir: "src", addAuthMiddleware: true }, "shop");
+describe.each(SCHEMES)(
+  "a source generated with %s auth",
+  (label, scheme, variable, header, sent) => {
+    const files = () =>
+      generateCode(
+        spec(server.origin, scheme),
+        { type: "openapi", outputDir: "src", addAuthMiddleware: true },
+        "shop",
+      );
 
-  it("loads without the variable it reads", () => {
-    expect(() => loadGenerated(files(), "src/shop/source.ts")).not.toThrow();
-  });
+    it("loads without the variable it reads", () => {
+      expect(() => loadGenerated(files(), "src/shop/source.ts")).not.toThrow();
+    });
 
-  it("reads the variable on every request", async () => {
-    const { shopApi } = loadGenerated(files(), "src/shop/index.ts");
-    const listPets = endpointAt(shopApi, "pets", "listPets");
-    server.requests.length = 0;
+    it("reads the variable on every request", async () => {
+      const { shopApi } = loadGenerated(files(), "src/shop/index.ts");
+      const listPets = endpointAt(shopApi, "pets", "listPets");
+      server.requests.length = 0;
 
-    process.env[variable] = "secret";
-    await listPets();
-    process.env[variable] = "rotated";
-    await listPets();
+      process.env[variable] = "secret";
+      await listPets();
+      process.env[variable] = "rotated";
+      await listPets();
 
-    expect(server.requests.map((r) => r.headers[header])).toEqual([
-      sent,
-      sent.replace("secret", "rotated"),
-    ]);
-  });
+      expect(server.requests.map((r) => r.headers[header])).toEqual([
+        sent,
+        sent.replace("secret", "rotated"),
+      ]);
+    });
 
-  it("fails a call made without the variable, naming it", async () => {
-    const { shopApi } = loadGenerated(files(), "src/shop/index.ts");
-    server.requests.length = 0;
+    it("fails a call made without the variable, naming it", async () => {
+      const { shopApi } = loadGenerated(files(), "src/shop/index.ts");
+      server.requests.length = 0;
 
-    await expect(endpointAt(shopApi, "pets", "listPets")()).rejects.toThrow(variable);
-    expect(server.requests).toEqual([]);
-  });
+      await expect(endpointAt(shopApi, "pets", "listPets")()).rejects.toThrow(variable);
+      expect(server.requests).toEqual([]);
+    });
 
-  it("compiles", () => {
-    const dir = writeProject(`generate-source/${label.replaceAll(" ", "-")}`, files());
+    it("compiles", () => {
+      const dir = writeProject(`generate-source/${label.replaceAll(" ", "-")}`, files());
 
-    expect(compileProject(dir, ["src/shop/index.ts"])).toEqual([]);
-  }, 60_000);
-});
+      expect(compileProject(dir, ["src/shop/index.ts"])).toEqual([]);
+    }, 60_000);
+  },
+);
 
 describe("an import generated flat with auth", () => {
   it("sends the secret too", async () => {

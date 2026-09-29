@@ -154,8 +154,9 @@ describe("countedStream", () => {
   it("reports a chunk only once the next one is asked for", async () => {
     const source = new Blob([new Uint8Array(100 * 1024)]).stream();
     const events: number[] = [];
-    const reader = countedStream(source, 100 * 1024, (p) => events.push(p.transferredBytes))
-      .getReader();
+    const reader = countedStream(source, 100 * 1024, (p) =>
+      events.push(p.transferredBytes),
+    ).getReader();
 
     await reader.read();
     const afterFirst = [...events];

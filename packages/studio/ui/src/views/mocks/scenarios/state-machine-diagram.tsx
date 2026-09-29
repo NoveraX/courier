@@ -8,7 +8,10 @@ interface StateMachineDiagramProps {
   transitions: StateTransition[];
 }
 
-export function StateMachineDiagram({ initialState, transitions }: StateMachineDiagramProps): React.ReactElement {
+export function StateMachineDiagram({
+  initialState,
+  transitions,
+}: StateMachineDiagramProps): React.ReactElement {
   // Collect all unique states preserving order of appearance
   const stateSet = new Set<string>();
   if (initialState) stateSet.add(initialState);
@@ -57,16 +60,26 @@ export function StateMachineDiagram({ initialState, transitions }: StateMachineD
   );
 }
 
-function StateNode({ label, isInitial, isTerminal }: { label: string; isInitial: boolean; isTerminal: boolean }): React.ReactElement {
+function StateNode({
+  label,
+  isInitial,
+  isTerminal,
+}: {
+  label: string;
+  isInitial: boolean;
+  isTerminal: boolean;
+}): React.ReactElement {
   return (
-    <div className={cn(
-      "flex items-center gap-1 rounded-md border px-2 py-0.5",
-      isInitial
-        ? "border-violet-500/30 bg-violet-500/8 text-violet-400"
-        : isTerminal
-        ? "border-emerald-500/30 bg-emerald-500/8 text-emerald-400"
-        : "border-border-subtle bg-muted/30 text-muted-foreground/70",
-    )}>
+    <div
+      className={cn(
+        "flex items-center gap-1 rounded-md border px-2 py-0.5",
+        isInitial
+          ? "border-violet-500/30 bg-violet-500/8 text-violet-400"
+          : isTerminal
+            ? "border-emerald-500/30 bg-emerald-500/8 text-emerald-400"
+            : "border-border-subtle bg-muted/30 text-muted-foreground/70",
+      )}
+    >
       {isInitial && <Circle className="size-1.5 fill-violet-400 text-violet-400 shrink-0" />}
       <span className="mono-xs">{label}</span>
     </div>

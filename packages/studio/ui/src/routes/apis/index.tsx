@@ -9,9 +9,7 @@ function ApisPage(): React.ReactNode {
       </div>
       <div className="text-center">
         <h2 className="text-h2 text-foreground">APIs</h2>
-        <p className="text-body-sm text-muted-foreground mt-1">
-          API registry, import and updates
-        </p>
+        <p className="text-body-sm text-muted-foreground mt-1">API registry, import and updates</p>
       </div>
     </div>
   );

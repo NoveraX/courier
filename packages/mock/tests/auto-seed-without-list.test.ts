@@ -15,8 +15,16 @@ import { createAutoMockServer } from "../src/auto/create-auto-server";
 
 const { endpoint } = courier();
 
-const Pet = z.object({ id: z.number().int().optional(), name: z.string(), status: z.string().optional() });
-const Order = z.object({ id: z.number().int().optional(), petId: z.number().int(), quantity: z.number().int() });
+const Pet = z.object({
+  id: z.number().int().optional(),
+  name: z.string(),
+  status: z.string().optional(),
+});
+const Order = z.object({
+  id: z.number().int().optional(),
+  petId: z.number().int(),
+  quantity: z.number().int(),
+});
 const User = z.object({ id: z.number().int().optional(), username: z.string(), email: z.email() });
 
 function petstore(baseURL: string) {
@@ -27,7 +35,10 @@ function petstore(baseURL: string) {
         prefix: "/pet",
         endpoints: {
           addPet: endpoint.post("").variables(Pet).response(Pet),
-          findPetsByStatus: endpoint.get("findByStatus").variables<{ status: string }>().response(z.array(Pet)),
+          findPetsByStatus: endpoint
+            .get("findByStatus")
+            .variables<{ status: string }>()
+            .response(z.array(Pet)),
           getPetById: endpoint.get(":petId").variables<{ petId: number }>().response(Pet),
         },
       }),
@@ -35,7 +46,10 @@ function petstore(baseURL: string) {
         prefix: "/store",
         endpoints: {
           getInventory: endpoint.get("inventory").response<Record<string, number>>(),
-          getOrderById: endpoint.get("order/:orderId").variables<{ orderId: number }>().response(Order),
+          getOrderById: endpoint
+            .get("order/:orderId")
+            .variables<{ orderId: number }>()
+            .response(Order),
         },
       }),
       user: defineGroup({

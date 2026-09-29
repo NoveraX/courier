@@ -1,10 +1,10 @@
 import { motion } from "motion/react";
-import { Badge } from "@/components/ui/badge";
-import { TableCell } from "@/components/ui/table";
-import { MethodBadge } from "@/components/shared/method-badge";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
 import { formatDuration } from "@/components/shared/formatters";
+import { MethodBadge } from "@/components/shared/method-badge";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
+import { Badge } from "@/components/ui/badge";
+import { TableCell } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 import type { MockRouteEntry } from "@/store/mock-slice";
@@ -25,12 +25,18 @@ export function RouteRow({ route, selected, onClick }: RouteRowProps): React.Rea
       )}
       onClick={onClick}
     >
-      <TableCell><MethodBadge method={route.httpMethod} /></TableCell>
+      <TableCell>
+        <MethodBadge method={route.httpMethod} />
+      </TableCell>
       <TableCell className="font-mono text-body-sm">{route.fullPath}</TableCell>
       <TableCell className="text-body-sm text-muted-foreground">{route.group}</TableCell>
       <TableCell className="text-body-sm">{route.endpoint}</TableCell>
       <TableCell>
-        <Badge variant={route.source === "auto" ? "secondary" : route.source === "override" ? "amber" : "violet"}>
+        <Badge
+          variant={
+            route.source === "auto" ? "secondary" : route.source === "override" ? "amber" : "violet"
+          }
+        >
           {route.source}
         </Badge>
       </TableCell>

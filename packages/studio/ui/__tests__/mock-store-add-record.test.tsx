@@ -73,11 +73,15 @@ describe("adding a record in the Store view", () => {
 
     await act(async () => screen.getByRole("button", { name: "Add" }).click());
 
-    expect(emit).toHaveBeenCalledWith("mock:command", {
-      action: "mock:store:create",
-      serverId: "apiMock",
-      collection: "users",
-      record: { name: "", admin: false, tags: [], address: {} },
-    }, expect.any(Function));
+    expect(emit).toHaveBeenCalledWith(
+      "mock:command",
+      {
+        action: "mock:store:create",
+        serverId: "apiMock",
+        collection: "users",
+        record: { name: "", admin: false, tags: [], address: {} },
+      },
+      expect.any(Function),
+    );
   });
 });

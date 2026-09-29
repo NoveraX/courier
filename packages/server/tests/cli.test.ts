@@ -89,7 +89,15 @@ describe("courier-server", () => {
   it("serves a TypeScript config named relative to the working directory", async () => {
     const root = project();
 
-    const url = await serve(root, "--config", "./courier.config.ts", "--host", "127.0.0.1", "--port", String(await freePort()));
+    const url = await serve(
+      root,
+      "--config",
+      "./courier.config.ts",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(await freePort()),
+    );
 
     expect((await fetch(`${url}/health`)).status).toBe(200);
   }, 30_000);
@@ -125,7 +133,15 @@ describe("courier-server", () => {
   it("admits the origins it is told to allow", async () => {
     const root = project();
     const port = String(await freePort());
-    const url = await serve(root, "--host", "127.0.0.1", "--port", port, "--allowed-origins", "https://app.example");
+    const url = await serve(
+      root,
+      "--host",
+      "127.0.0.1",
+      "--port",
+      port,
+      "--allowed-origins",
+      "https://app.example",
+    );
     const call = (origin: string) =>
       fetch(`${url}/api/request?_s=api&_m=ping`, { headers: { Origin: origin } });
 
@@ -137,15 +153,32 @@ describe("courier-server", () => {
     const statusFor = (url: string, host: string) =>
       new Promise<number>((resolve, reject) => {
         const { port } = new URL(url);
-        httpRequest({ host: "127.0.0.1", port, path: "/api/request?_s=api&_m=ping", headers: { host } }, (res) => {
-          res.resume();
-          resolve(res.statusCode ?? 0);
-        })
+        httpRequest(
+          { host: "127.0.0.1", port, path: "/api/request?_s=api&_m=ping", headers: { host } },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode ?? 0);
+          },
+        )
           .on("error", reject)
           .end();
       });
-    const flagged = await serve(project(), "--host", "127.0.0.1", "--port", String(await freePort()), "--allowed-hosts", "app.example, api.example");
-    const configured = await serve(project('{ allowedHosts: ["cfg.example"] }'), "--host", "127.0.0.1", "--port", String(await freePort()));
+    const flagged = await serve(
+      project(),
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(await freePort()),
+      "--allowed-hosts",
+      "app.example, api.example",
+    );
+    const configured = await serve(
+      project('{ allowedHosts: ["cfg.example"] }'),
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(await freePort()),
+    );
 
     expect(await statusFor(flagged, "api.example")).not.toBe(421);
     expect(await statusFor(flagged, "rebound.example")).toBe(421);

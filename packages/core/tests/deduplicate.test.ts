@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import type { HttpClient } from "../src/http-client/index";
 import {
   cleanupDeduplication,
   deduplicateAndAbortPrevious,
   getDedupeKey,
   supportsAbortController,
 } from "../src/utils/deduplicate";
-import type { HttpClient } from "../src/http-client/index";
 
 describe("supportsAbortController", () => {
   it("is true in Node.js test environment", () => {
@@ -15,15 +15,11 @@ describe("supportsAbortController", () => {
 
 describe("getDedupeKey", () => {
   it("returns method:url without query string", () => {
-    expect(getDedupeKey("https://api.com/users?page=1", "GET")).toBe(
-      "GET:https://api.com/users",
-    );
+    expect(getDedupeKey("https://api.com/users?page=1", "GET")).toBe("GET:https://api.com/users");
   });
 
   it("strips hash from url", () => {
-    expect(getDedupeKey("https://api.com/users#section", "GET")).toBe(
-      "GET:https://api.com/users",
-    );
+    expect(getDedupeKey("https://api.com/users#section", "GET")).toBe("GET:https://api.com/users");
   });
 
   it("returns empty string for empty url", () => {
@@ -35,9 +31,7 @@ describe("getDedupeKey", () => {
   });
 
   it("prefers query index over hash index", () => {
-    expect(getDedupeKey("https://api.com/users?q=1#top", "GET")).toBe(
-      "GET:https://api.com/users",
-    );
+    expect(getDedupeKey("https://api.com/users?q=1#top", "GET")).toBe("GET:https://api.com/users");
   });
 
   it("keeps hash when query follows it", () => {

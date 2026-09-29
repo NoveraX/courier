@@ -3,9 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { MocksEditRefusal } from "../../src/server/mocks-edit/mocks-edit-refusal";
 import { checkWriteAccess } from "../../src/server/mocks-edit/check-write-access";
+import { MocksEditRefusal } from "../../src/server/mocks-edit/mocks-edit-refusal";
 
 /* Root may write anything, so permission bits cannot refuse it. */
 const RUNS_AS_ROOT = process.getuid?.() === 0;
@@ -63,7 +62,11 @@ describe("checkWriteAccess", () => {
     chmodSync(project, 0o555);
 
     const error = thrownBy(() =>
-      checkWriteAccess(project, "the project directory", "Studio would create courier.mocks.ts there."),
+      checkWriteAccess(
+        project,
+        "the project directory",
+        "Studio would create courier.mocks.ts there.",
+      ),
     );
     chmodSync(project, 0o755);
 

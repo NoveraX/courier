@@ -32,13 +32,20 @@ function policyFor(allowed: boolean, loopback: boolean): LookupPolicy {
   };
 }
 
-function lookupWith(policy: LookupPolicy, all = false): Promise<{ error: Error | null; address: unknown }> {
+function lookupWith(
+  policy: LookupPolicy,
+  all = false,
+): Promise<{ error: Error | null; address: unknown }> {
   return new Promise((resolve) => {
     guardedLookup(policy)("spec.example", { all }, (error, address) => resolve({ error, address }));
   });
 }
 
-function lookup(allowed: boolean, loopback = true, all = false): Promise<{ error: Error | null; address: unknown }> {
+function lookup(
+  allowed: boolean,
+  loopback = true,
+  all = false,
+): Promise<{ error: Error | null; address: unknown }> {
   return lookupWith(policyFor(allowed, loopback), all);
 }
 
@@ -106,7 +113,10 @@ describe("guardedLookup", () => {
     answers.addresses = [{ address: "10.0.0.7", family: 4 }];
     const unavailable = SpecHostsUnavailableError.reloading("spec.example (10.0.0.7)");
 
-    const { error } = await lookupWith({ loopback: true, admitPrivate: async () => Promise.reject(unavailable) });
+    const { error } = await lookupWith({
+      loopback: true,
+      admitPrivate: async () => Promise.reject(unavailable),
+    });
 
     expect(error).toBe(unavailable);
   });

@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 /**
  * PageShell — unified layout wrapper for all page views.
@@ -59,17 +59,11 @@ export function PageShell({
       {toolbar && <div className="shrink-0">{toolbar}</div>}
 
       {center ? (
-        <div className="flex min-h-0 flex-1 items-center justify-center p-8">
-          {children}
-        </div>
+        <div className="flex min-h-0 flex-1 items-center justify-center p-8">{children}</div>
       ) : noScroll ? (
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          {children}
-        </div>
+        <div className="flex min-h-0 flex-1 overflow-hidden">{children}</div>
       ) : (
-        <ScrollArea className="min-h-0 flex-1">
-          {children}
-        </ScrollArea>
+        <ScrollArea className="min-h-0 flex-1">{children}</ScrollArea>
       )}
 
       {footer && <div className="shrink-0">{footer}</div>}

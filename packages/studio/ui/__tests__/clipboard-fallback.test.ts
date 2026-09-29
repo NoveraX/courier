@@ -21,7 +21,10 @@ interface FakeTextArea {
   remove: ReturnType<typeof vi.fn>;
 }
 
-function pageWithSelection(copies: boolean): { area: FakeTextArea; execCommand: ReturnType<typeof vi.fn> } {
+function pageWithSelection(copies: boolean): {
+  area: FakeTextArea;
+  execCommand: ReturnType<typeof vi.fn>;
+} {
   const area: FakeTextArea = {
     value: "",
     style: {},
@@ -89,7 +92,9 @@ describe("copying", () => {
 
     expect(writeText).toHaveBeenCalledWith("x");
     expect(execCommand).toHaveBeenCalledWith("copy");
-    expect(toast.error.mock.calls[0]?.[0]).toMatch(/^The browser refused to copy \(Document is not focused\.\)/);
+    expect(toast.error.mock.calls[0]?.[0]).toMatch(
+      /^The browser refused to copy \(Document is not focused\.\)/,
+    );
   });
 
   it("uses the clipboard API where the page has it", async () => {

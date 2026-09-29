@@ -4,9 +4,9 @@ import { z } from "zod";
 
 import { courier } from "../src/define/courier";
 import { AuthError, ForbiddenError, RateLimitError } from "../src/realtime/errors";
-import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { shouldReconnect } from "../src/realtime/ws/reconnect-classifier";
 import type { WSClientSocket } from "../src/realtime/ws/ws-types";
+import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 describe("shouldReconnect", () => {

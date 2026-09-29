@@ -8,7 +8,17 @@
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from "vitest";
 
 import { createHandler } from "../src/adapter";
 import { defineBoundary } from "../src/define/boundary";
@@ -22,22 +32,22 @@ import { executeRequest } from "../src/utils/execute";
 const { channel, endpoint, stream } = courier();
 
 const groups = {
-    posts: defineGroup({
-      prefix: "posts",
-      endpoints: {
-        list: endpoint.get("").response<unknown>(),
-        feed: stream.get("events").response<unknown>(),
-        room: channel.connect("room").response<unknown>(),
-        chat: channel.connect("chat").response<unknown>().send<{ text: string }>(),
-      },
-    }),
-    admin: defineGroup({
-      prefix: "admin",
-      endpoints: {
-        exportPayouts: endpoint.get("payouts/export").response<unknown>(),
-        purge: endpoint.del("purge").response<unknown>(),
-      },
-    }),
+  posts: defineGroup({
+    prefix: "posts",
+    endpoints: {
+      list: endpoint.get("").response<unknown>(),
+      feed: stream.get("events").response<unknown>(),
+      room: channel.connect("room").response<unknown>(),
+      chat: channel.connect("chat").response<unknown>().send<{ text: string }>(),
+    },
+  }),
+  admin: defineGroup({
+    prefix: "admin",
+    endpoints: {
+      exportPayouts: endpoint.get("payouts/export").response<unknown>(),
+      purge: endpoint.del("purge").response<unknown>(),
+    },
+  }),
 };
 
 const api = defineApi({ baseURL: "https://internal-api.corp.example", groups });
@@ -135,7 +145,10 @@ describe("defineBoundary — what it describes", () => {
     const baseURL = "https://internal-api.corp.example";
     const readAsWrite = defineBoundary({ source: "api", expose: { "posts.list": "mutation" } });
     const writeAsRead = defineBoundary({ source: "api", expose: { "admin.purge": "query" } });
-    const misspelt = defineBoundary({ source: "api", expose: { "posts.list": "query", "posts.lsit": "query" } });
+    const misspelt = defineBoundary({
+      source: "api",
+      expose: { "posts.list": "query", "posts.lsit": "query" },
+    });
 
     // @ts-expect-error — a GET endpoint reads
     defineApi({ baseURL, groups, boundary: readAsWrite });
@@ -218,11 +231,14 @@ describe("defineBoundary — what it refuses", () => {
 /** A server-side caller holds the source and never addresses anything by name. */
 describe("defineBoundary — in-process calls are untouched", () => {
   it("reaches a withheld endpoint from server code", async () => {
-    await executeRequest({ api: gatedSource() } as never, {
-      source: "api",
-      group: "admin",
-      method: "exportPayouts",
-    } as never);
+    await executeRequest(
+      { api: gatedSource() } as never,
+      {
+        source: "api",
+        group: "admin",
+        method: "exportPayouts",
+      } as never,
+    );
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });

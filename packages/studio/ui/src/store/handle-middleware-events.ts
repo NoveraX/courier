@@ -1,7 +1,7 @@
-import type { RequestEntry, MiddlewareEntry } from "./types"
-import { str, num, optNum } from "./event-helpers"
+import { num, optNum, str } from "./event-helpers";
+import type { MiddlewareEntry, RequestEntry } from "./types";
 
-type EventPayload = Record<string, unknown>
+type EventPayload = Record<string, unknown>;
 
 export function withMiddlewareEnter(r: RequestEntry, event: EventPayload): RequestEntry {
   const mwEntry: MiddlewareEntry = {
@@ -12,12 +12,12 @@ export function withMiddlewareEnter(r: RequestEntry, event: EventPayload): Reque
     startedAt: num(event.timestamp, Date.now()),
     status: "running",
     phase: typeof event.phase === "string" ? event.phase : undefined,
-  }
-  return { ...r, middlewareEntries: [...r.middlewareEntries, mwEntry] }
+  };
+  return { ...r, middlewareEntries: [...r.middlewareEntries, mwEntry] };
 }
 
 export function withMiddlewareExit(r: RequestEntry, event: EventPayload): RequestEntry {
-  const index = num(event.index)
+  const index = num(event.index);
   return {
     ...r,
     middlewareEntries: r.middlewareEntries.map((m) =>
@@ -29,15 +29,17 @@ export function withMiddlewareExit(r: RequestEntry, event: EventPayload): Reques
             phase: typeof event.phase === "string" ? event.phase : m.phase,
             beforeDuration: optNum(event.beforeDuration),
             afterDuration: optNum(event.afterDuration),
-            headersAdded: Array.isArray(event.headersAdded) ? event.headersAdded as string[] : undefined,
+            headersAdded: Array.isArray(event.headersAdded)
+              ? (event.headersAdded as string[])
+              : undefined,
           }
-        : m
+        : m,
     ),
-  }
+  };
 }
 
 export function withMiddlewareError(r: RequestEntry, event: EventPayload): RequestEntry {
-  const index = num(event.index)
+  const index = num(event.index);
   return {
     ...r,
     middlewareEntries: r.middlewareEntries.map((m) =>
@@ -50,7 +52,7 @@ export function withMiddlewareError(r: RequestEntry, event: EventPayload): Reque
                 ? event.error
                 : str((event.error as Record<string, unknown> | undefined)?.message),
           }
-        : m
+        : m,
     ),
-  }
+  };
 }

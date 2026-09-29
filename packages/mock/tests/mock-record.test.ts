@@ -1,12 +1,12 @@
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createMockServer } from "../src/server/create-mock-server";
-import { createRecorder } from "../src/record/recorder";
-import { replayFixtures } from "../src/record/replay";
-import { diffFixtures } from "../src/record/diff";
-import { fixturesToHar, harToFixtures } from "../src/record/fixture";
 import { createMockClient } from "../src/create-mock-client";
 import { defineFactory } from "../src/factory";
+import { diffFixtures } from "../src/record/diff";
+import { fixturesToHar, harToFixtures } from "../src/record/fixture";
+import { createRecorder } from "../src/record/recorder";
+import { replayFixtures } from "../src/record/replay";
+import { createMockServer } from "../src/server/create-mock-server";
 
 type User = { id: string; name: string };
 
@@ -49,7 +49,11 @@ describe("Record & Replay", () => {
 
   /** A recorder calling the mock server through its proxy route */
   function recorderFor(extra: Omit<Parameters<typeof createRecorder>[0], "source"> = {}) {
-    return createRecorder({ source: api, proxy: { url: `${targetUrl}/api/request`, source: "api" }, ...extra });
+    return createRecorder({
+      source: api,
+      proxy: { url: `${targetUrl}/api/request`, source: "api" },
+      ...extra,
+    });
   }
 
   describe("createRecorder", () => {
@@ -104,7 +108,9 @@ describe("Record & Replay", () => {
       await recorder.client.users.getAll();
       expect(recorder.getFixtures()).toHaveLength(1);
 
-      await expect(recorder.client.users.getById({ id: "1" })).rejects.toThrow("excluded by filter");
+      await expect(recorder.client.users.getById({ id: "1" })).rejects.toThrow(
+        "excluded by filter",
+      );
     });
 
     it("clears recorded fixtures", async () => {
@@ -171,11 +177,23 @@ describe("Record & Replay", () => {
   describe("diffFixtures", () => {
     it("detects added endpoints", () => {
       const baseline = [
-        { group: "users", method: "getAll", response: { status: 200, data: [], headers: {} }, duration: 10, recordedAt: "" },
+        {
+          group: "users",
+          method: "getAll",
+          response: { status: 200, data: [], headers: {} },
+          duration: 10,
+          recordedAt: "",
+        },
       ];
       const current = [
         ...baseline,
-        { group: "posts", method: "getAll", response: { status: 200, data: [], headers: {} }, duration: 10, recordedAt: "" },
+        {
+          group: "posts",
+          method: "getAll",
+          response: { status: 200, data: [], headers: {} },
+          duration: 10,
+          recordedAt: "",
+        },
       ];
 
       const diffs = diffFixtures(baseline, current);
@@ -186,8 +204,20 @@ describe("Record & Replay", () => {
 
     it("detects removed endpoints", () => {
       const baseline = [
-        { group: "users", method: "getAll", response: { status: 200, data: [], headers: {} }, duration: 10, recordedAt: "" },
-        { group: "posts", method: "getAll", response: { status: 200, data: [], headers: {} }, duration: 10, recordedAt: "" },
+        {
+          group: "users",
+          method: "getAll",
+          response: { status: 200, data: [], headers: {} },
+          duration: 10,
+          recordedAt: "",
+        },
+        {
+          group: "posts",
+          method: "getAll",
+          response: { status: 200, data: [], headers: {} },
+          duration: 10,
+          recordedAt: "",
+        },
       ];
       const current = [baseline[0]!];
 
@@ -199,10 +229,26 @@ describe("Record & Replay", () => {
 
     it("detects changed response data", () => {
       const baseline = [
-        { group: "users", method: "getAll", response: { status: 200, data: [{ id: "1", name: "Alice" }], headers: {} }, duration: 10, recordedAt: "" },
+        {
+          group: "users",
+          method: "getAll",
+          response: { status: 200, data: [{ id: "1", name: "Alice" }], headers: {} },
+          duration: 10,
+          recordedAt: "",
+        },
       ];
       const current = [
-        { group: "users", method: "getAll", response: { status: 200, data: [{ id: "1", name: "Bob", email: "bob@test.com" }], headers: {} }, duration: 10, recordedAt: "" },
+        {
+          group: "users",
+          method: "getAll",
+          response: {
+            status: 200,
+            data: [{ id: "1", name: "Bob", email: "bob@test.com" }],
+            headers: {},
+          },
+          duration: 10,
+          recordedAt: "",
+        },
       ];
 
       const diffs = diffFixtures(baseline, current);
@@ -217,7 +263,13 @@ describe("Record & Replay", () => {
 
     it("returns empty for identical fixtures", () => {
       const fixtures = [
-        { group: "users", method: "getAll", response: { status: 200, data: [1, 2, 3], headers: {} }, duration: 10, recordedAt: "" },
+        {
+          group: "users",
+          method: "getAll",
+          response: { status: 200, data: [1, 2, 3], headers: {} },
+          duration: 10,
+          recordedAt: "",
+        },
       ];
 
       const diffs = diffFixtures(fixtures, fixtures);

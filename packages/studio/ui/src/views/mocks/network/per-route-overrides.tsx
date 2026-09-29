@@ -1,12 +1,11 @@
-import { useMemo, useState } from "react";
 import { GitMerge } from "lucide-react";
 import { motion } from "motion/react";
+import { useMemo, useState } from "react";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { getSocket } from "@/socket";
+import type { MockServerInfo, RouteOverride } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
 import { RouteOverrideRow } from "./route-override-row";
-
-import type { MockServerInfo, RouteOverride } from "@/store/mock-slice";
 
 interface PerRouteOverridesProps {
   server: MockServerInfo;
@@ -40,7 +39,8 @@ export function PerRouteOverrides({ server }: PerRouteOverridesProps): React.Rea
 
   const clearOverride = (routeId: string) => {
     const cleared: RouteOverride = {
-      routeId, enabled: false,
+      routeId,
+      enabled: false,
       latency: { min: 0, max: 0, jitter: 0 },
       errorRate: 0,
     };
@@ -80,7 +80,9 @@ export function PerRouteOverrides({ server }: PerRouteOverridesProps): React.Rea
         </div>
         <div>
           <h3 className="text-body-sm font-semibold text-foreground">Per-Route Overrides</h3>
-          <p className="text-body-xs text-muted-foreground/60">Override latency and errors per endpoint</p>
+          <p className="text-body-xs text-muted-foreground/60">
+            Override latency and errors per endpoint
+          </p>
         </div>
         {activeCount > 0 && (
           <span className="ml-auto rounded-md bg-accent-brand/10 px-1.5 py-0.5 text-caption text-accent-brand ring-1 ring-accent-brand/20">

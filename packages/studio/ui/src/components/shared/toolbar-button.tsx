@@ -1,7 +1,7 @@
-import { cn } from "@/lib/utils";
+import { KbdHint } from "@/components/shared/kbd-hint";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { KbdHint } from "@/components/shared/kbd-hint";
+import { cn } from "@/lib/utils";
 
 interface ToolbarButtonProps {
   icon: React.ComponentType<{ className?: string }>;

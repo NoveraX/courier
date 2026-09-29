@@ -127,11 +127,17 @@ describe("a diff raised on one replica", () => {
     b.onDiff("lobby", (d) => seen.push(d));
     await new Promise((r) => setTimeout(r, 10));
 
-    const cutShort = { origin: "other", topic: "lobby", diff: { joins: [{ userId: "u1" }], leaves: [] } };
+    const cutShort = {
+      origin: "other",
+      topic: "lobby",
+      diff: { joins: [{ userId: "u1" }], leaves: [] },
+    };
     bus.publish("p:diff:lobby", JSON.stringify(cutShort));
 
     expect(seen).toHaveLength(0);
-    expect(errors.map((err) => err.message)).toEqual(['Not a Courier presence change on channel "p:diff:lobby"']);
+    expect(errors.map((err) => err.message)).toEqual([
+      'Not a Courier presence change on channel "p:diff:lobby"',
+    ]);
   });
 
   /** Without a second connection there is nothing to listen on, and the
@@ -165,7 +171,12 @@ describe("connect", () => {
   });
 
   it("verifies the subscriber connection too", async () => {
-    const good = { status: "ready", ping: vi.fn().mockResolvedValue("PONG"), on: () => good, off: () => good };
+    const good = {
+      status: "ready",
+      ping: vi.fn().mockResolvedValue("PONG"),
+      on: () => good,
+      off: () => good,
+    };
     const bad = {
       status: "end",
       ping: vi.fn().mockRejectedValue(new Error("subscriber is down")),
@@ -173,7 +184,11 @@ describe("connect", () => {
       off: () => bad,
     };
 
-    const adapter = createRedisPresence({ redis: good as never, subscriber: bad as never, prefix: "p:" });
+    const adapter = createRedisPresence({
+      redis: good as never,
+      subscriber: bad as never,
+      prefix: "p:",
+    });
 
     await expect(adapter.connect()).rejects.toThrow(/subscriber is down/);
   });

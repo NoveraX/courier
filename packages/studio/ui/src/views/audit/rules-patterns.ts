@@ -150,10 +150,7 @@ function emitWaterfallItem(chain: RequestEntry[], items: AuditItem[]): void {
   });
 }
 
-function findTimeClusters(
-  reqs: RequestEntry[],
-  windowMs: number,
-): RequestEntry[][] {
+function findTimeClusters(reqs: RequestEntry[], windowMs: number): RequestEntry[][] {
   const sorted = [...reqs].sort((a, b) => a.startedAt - b.startedAt);
   const clusters: RequestEntry[][] = [];
   let current: RequestEntry[] = [sorted[0]!];

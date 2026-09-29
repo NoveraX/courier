@@ -1,15 +1,10 @@
-import { useState, useCallback } from "react";
 import { Check, Copy } from "lucide-react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
-
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { writeClipboardText } from "@/lib/write-clipboard-text";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface CopyButtonProps {
   value: string;
@@ -48,16 +43,10 @@ export function CopyButton({
           onClick={handleCopy}
           aria-label={copied ? "Copied" : label}
         >
-          {copied ? (
-            <Check className="text-success-foreground" />
-          ) : (
-            <Copy />
-          )}
+          {copied ? <Check className="text-success-foreground" /> : <Copy />}
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="top">
-        {copied ? "Copied!" : label}
-      </TooltipContent>
+      <TooltipContent side="top">{copied ? "Copied!" : label}</TooltipContent>
     </Tooltip>
   );
 }

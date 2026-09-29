@@ -4,9 +4,9 @@
  * answers a plan it will not apply unasked with 409 and the plan.
  */
 
+import { post } from "@/lib/api-client";
 import type { GenerateOptions, ManagePreviewResult, ParsedSpec, SpecDiff } from "./types";
 import type { FilePlanSummary, KeptReason } from "./types-file-plan";
-import { post } from "@/lib/api-client";
 
 /** The plan a request applies, as the user saw it, and the pending steps they allowed. */
 export interface PlanQuote {
@@ -50,13 +50,15 @@ export interface RemovalConfigNotes {
  * @returns Studio's answer: what it wrote, and what courier.config must still declare
  * @throws {StudioRequestError} `NEEDS_CONFIRMATION`, `PLAN_STALE` or `TARGET_BLOCKED` with the plan, and nothing written
  */
-export function writeFiles(payload: {
-  sourceName: string;
-  spec: ParsedSpec;
-  specUrl: string;
-  importType: string;
-  options: GenerateOptions;
-} & PlanQuote): Promise<unknown> {
+export function writeFiles(
+  payload: {
+    sourceName: string;
+    spec: ParsedSpec;
+    specUrl: string;
+    importType: string;
+    options: GenerateOptions;
+  } & PlanQuote,
+): Promise<unknown> {
   return post("/api/apis/write", payload);
 }
 
@@ -69,7 +71,9 @@ export function writeFiles(payload: {
  * @param name - The import
  * @returns The plan and the notes
  */
-export function previewRemoval(name: string): Promise<{ plan: FilePlanSummary } & RemovalConfigNotes> {
+export function previewRemoval(
+  name: string,
+): Promise<{ plan: FilePlanSummary } & RemovalConfigNotes> {
   return post("/api/apis/imports/remove/preview", { name });
 }
 
@@ -81,7 +85,10 @@ export function previewRemoval(name: string): Promise<{ plan: FilePlanSummary } 
  * @returns What was removed and kept, and where the copies are
  * @throws {StudioRequestError} `PLAN_STALE` with the plan when the files changed since the preview
  */
-export function removeImport(name: string, quote: PlanQuote): Promise<AppliedFiles & RemovalConfigNotes> {
+export function removeImport(
+  name: string,
+  quote: PlanQuote,
+): Promise<AppliedFiles & RemovalConfigNotes> {
   return post("/api/apis/imports/remove", { name, ...quote });
 }
 
@@ -93,10 +100,7 @@ export function removeImport(name: string, quote: PlanQuote): Promise<AppliedFil
  * @param payload - The import and the new specification
  * @returns The plan, the files left in a previous folder, and what changed in the specification
  */
-export function previewUpdate(payload: {
-  name: string;
-  newSpec: ParsedSpec;
-}): Promise<{
+export function previewUpdate(payload: { name: string; newSpec: ParsedSpec }): Promise<{
   plan: FilePlanSummary;
   /** Files written before the import's directory moved, left where they are. */
   leftBehind: string[];
@@ -113,10 +117,12 @@ export function previewUpdate(payload: {
  * @returns What was written, removed and kept, and the files left in a previous folder
  * @throws {StudioRequestError} `PLAN_NOT_SEEN` without a quoted plan, `PLAN_STALE` when the files changed
  */
-export function applyUpdate(payload: {
-  name: string;
-  newSpec: ParsedSpec;
-} & PlanQuote): Promise<AppliedFiles & { leftBehind: string[] }> {
+export function applyUpdate(
+  payload: {
+    name: string;
+    newSpec: ParsedSpec;
+  } & PlanQuote,
+): Promise<AppliedFiles & { leftBehind: string[] }> {
   return post("/api/apis/update/apply", payload);
 }
 

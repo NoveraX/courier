@@ -27,21 +27,24 @@ export function buildFetchSnippet(r: RequestEntry): string {
 
 /** Build a JSON representation of a request entry */
 export function buildRequestJson(r: RequestEntry): string {
-  return safeStringify({
-    id: r.id,
-    source: r.source,
-    group: r.group,
-    method: r.method,
-    httpMethod: r.httpMethod,
-    mode: r.mode,
-    type: r.type,
-    status: r.status,
-    statusCode: r.statusCode,
-    url: r.url,
-    variables: r.variables,
-    data: r.data,
-    timing: r.timing,
-    headers: r.headers,
-    error: r.error,
-  }, 2);
+  return safeStringify(
+    {
+      id: r.id,
+      source: r.source,
+      group: r.group,
+      method: r.method,
+      httpMethod: r.httpMethod,
+      mode: r.mode,
+      type: r.type,
+      status: r.status,
+      statusCode: r.statusCode,
+      url: r.url,
+      variables: r.variables,
+      data: r.data,
+      timing: r.timing,
+      headers: r.headers,
+      error: r.error,
+    },
+    2,
+  );
 }

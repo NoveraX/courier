@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   mkdirSync,
   mkdtempSync,
@@ -8,7 +9,6 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -435,7 +435,11 @@ describe("createWatchSet", () => {
     const files = [first, ...["b.ts", "c.ts", "d.ts", "e.ts"].map((name) => join(root, name))];
     for (const file of files) writeFileSync(file, "export const v = 1;\n");
     const reports: Array<{ at: number; paths: string[] }> = [];
-    const set = start({ paths: files, onChange: (paths) => reports.push({ at: Date.now(), paths }), debounceMs: 300 });
+    const set = start({
+      paths: files,
+      onChange: (paths) => reports.push({ at: Date.now(), paths }),
+      debounceMs: 300,
+    });
     await sleep(SETTLE_MS);
 
     /* A code generator writing one file after another, each well within the debounce of the last. */

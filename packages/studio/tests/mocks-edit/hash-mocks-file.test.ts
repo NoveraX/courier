@@ -43,6 +43,8 @@ describe("hashMocksFile", () => {
     writeFileSync(join(dir, "real.ts"), "export default {};\n");
     symlinkSync(join(dir, "real.ts"), join(dir, "courier.mocks.ts"));
 
-    expect(thrownBy(() => hashMocksFile(join(dir, "courier.mocks.ts")))).toBeInstanceOf(MocksFileChangedError);
+    expect(thrownBy(() => hashMocksFile(join(dir, "courier.mocks.ts")))).toBeInstanceOf(
+      MocksFileChangedError,
+    );
   });
 });

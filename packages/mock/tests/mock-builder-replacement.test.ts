@@ -12,14 +12,17 @@ import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createMockClient } from "../src/create-mock-client";
-import { createMockServer } from "../src/server/create-mock-server";
 import { defineScenario } from "../src/scenario";
+import { createMockServer } from "../src/server/create-mock-server";
 
 const { endpoint } = courier();
 const api = defineApi({
   baseURL: "http://placeholder.invalid",
   groups: {
-    users: defineGroup({ prefix: "users", endpoints: { getAll: endpoint.get("").response<string>() } }),
+    users: defineGroup({
+      prefix: "users",
+      endpoints: { getAll: endpoint.get("").response<string>() },
+    }),
   },
 });
 
@@ -103,7 +106,8 @@ describe("the mock server's base layer", () => {
     const url = await start(server);
 
     const bodies = [];
-    for (let call = 0; call < 3; call++) bodies.push(await (await fetch(`${url}/api/users/getAll`)).json());
+    for (let call = 0; call < 3; call++)
+      bodies.push(await (await fetch(`${url}/api/users/getAll`)).json());
     expect(bodies).toEqual(["later", "later", "later"]);
   });
 

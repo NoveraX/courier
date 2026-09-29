@@ -19,7 +19,9 @@ const sources = {
   api: defineApi({
     baseURL: "https://upstream.example",
     groups: {
-      users: defineGroup({ endpoints: { list: endpoint.get("/users").response<{ id: number }[]>() } }),
+      users: defineGroup({
+        endpoints: { list: endpoint.get("/users").response<{ id: number }[]>() },
+      }),
     },
   }),
 };

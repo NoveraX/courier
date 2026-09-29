@@ -40,9 +40,7 @@ function buildConfig(overrides?: Partial<CourierServerOptions>): CourierServerOp
 
 // --- Helpers ---
 
-function startServer(
-  overrides?: Partial<CourierServerOptions>,
-): Promise<CourierServer> {
+function startServer(overrides?: Partial<CourierServerOptions>): Promise<CourierServer> {
   return new Promise((resolve) => {
     const server = createCourierServer(
       buildConfig({ ...overrides, onReady: () => resolve(server) }),

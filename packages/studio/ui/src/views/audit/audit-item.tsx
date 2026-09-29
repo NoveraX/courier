@@ -1,9 +1,8 @@
 import { ChevronDown, ExternalLink, Lightbulb } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-
-import { Badge } from "../../components/ui/badge";
 import { CodeBlock as SyntaxBlock } from "../../components/shared/code-block";
+import { Badge } from "../../components/ui/badge";
 import { useRequestDetail } from "../../hooks/use-request-detail";
 import { cn } from "../../lib/utils";
 import { SEVERITY_CONFIG } from "./constants";
@@ -17,11 +16,7 @@ interface AuditItemProps {
   onToggle: () => void;
 }
 
-export function AuditItemCard({
-  item,
-  expanded,
-  onToggle,
-}: AuditItemProps): React.ReactNode {
+export function AuditItemCard({ item, expanded, onToggle }: AuditItemProps): React.ReactNode {
   const cfg = SEVERITY_CONFIG[item.severity];
   const Icon = cfg.icon;
   const count = item.endpoints?.length ?? 0;
@@ -39,9 +34,7 @@ export function AuditItemCard({
         className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
       >
         <Icon className={cn("size-4 shrink-0", cfg.color)} />
-        <span className="text-body-sm font-medium flex-1 truncate">
-          {item.title}
-        </span>
+        <span className="text-body-sm font-medium flex-1 truncate">{item.title}</span>
         {count > 0 && (
           <Badge variant="outline" className="text-[10px] px-1.5 py-0 tabular-nums">
             {count}
@@ -77,15 +70,11 @@ function ExpandedContent({ item }: { item: AuditItemType }): React.ReactNode {
         {item.suggestion && (
           <div className="flex items-start gap-2 rounded-md bg-info-muted/30 px-3 py-2">
             <Lightbulb className="size-3.5 shrink-0 text-info-foreground mt-0.5" />
-            <span className="text-body-sm text-info-foreground">
-              {item.suggestion}
-            </span>
+            <span className="text-body-sm text-info-foreground">{item.suggestion}</span>
           </div>
         )}
 
-        {item.codeSuggestion && (
-          <SyntaxBlock code={item.codeSuggestion} language="ts" />
-        )}
+        {item.codeSuggestion && <SyntaxBlock code={item.codeSuggestion} language="ts" />}
 
         {item.endpoints && item.endpoints.length > 0 && (
           <EndpointsList endpoints={item.endpoints} />
@@ -115,9 +104,7 @@ function EndpointsList({
           <span className="mono-xs text-foreground">{ep.label}</span>
           <div className="flex items-center gap-2">
             {ep.detail && (
-              <span className="text-[10px] text-muted-foreground tabular-nums">
-                {ep.detail}
-              </span>
+              <span className="text-[10px] text-muted-foreground tabular-nums">{ep.detail}</span>
             )}
             {ep.requestIds?.[0] && (
               <button

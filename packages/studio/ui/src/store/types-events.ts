@@ -29,53 +29,53 @@ export type EventType =
   | "stream:open"
   | "stream:message"
   | "stream:close"
-  | "stream:error"
+  | "stream:error";
 
 export interface StudioEvent {
-  id: string
-  type: EventType
-  timestamp: number
-  sessionId: string
+  id: string;
+  type: EventType;
+  timestamp: number;
+  sessionId: string;
 }
 
 export interface RequestTiming {
-  total: number
-  middleware: number
-  fetch: number
-  validation: number
+  total: number;
+  middleware: number;
+  fetch: number;
+  validation: number;
 }
 
 export interface ProxyTiming {
-  clientToProxy: number
-  proxyToBackend: number
-  backendToProxy: number
-  proxyToClient: number
+  clientToProxy: number;
+  proxyToBackend: number;
+  backendToProxy: number;
+  proxyToClient: number;
 }
 
 export interface ValidationIssue {
-  path: string
-  message: string
-  expected?: string
-  received?: string
+  path: string;
+  message: string;
+  expected?: string;
+  received?: string;
 }
 
 // ── Middleware event model ─────────────────────────────────────────────────
 
 export interface MiddlewareEntry {
-  requestId: string
-  name: string
-  index: number
-  totalCount?: number
-  startedAt: number
-  duration?: number
-  status: "running" | "completed" | "error"
-  error?: string
+  requestId: string;
+  name: string;
+  index: number;
+  totalCount?: number;
+  startedAt: number;
+  duration?: number;
+  status: "running" | "completed" | "error";
+  error?: string;
   /** Declared phase: "before" | "after" | "wrap" */
-  phase?: string
+  phase?: string;
   /** Time spent before calling next() (ms) */
-  beforeDuration?: number
+  beforeDuration?: number;
   /** Time spent after next() returned (ms) */
-  afterDuration?: number
+  afterDuration?: number;
   /** Header names added by this middleware */
-  headersAdded?: string[]
+  headersAdded?: string[];
 }

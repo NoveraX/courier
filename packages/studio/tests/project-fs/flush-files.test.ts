@@ -34,7 +34,9 @@ describe("flushFiles", () => {
   });
 
   it("fails on a file it cannot flush", async () => {
-    await expect(flushFiles([...files(3), join(dir, "gone.txt")])).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(flushFiles([...files(3), join(dir, "gone.txt")])).rejects.toMatchObject({
+      code: "ENOENT",
+    });
   });
 
   it("hands a file it cannot flush to the caller that tolerates it, and flushes the rest", async () => {

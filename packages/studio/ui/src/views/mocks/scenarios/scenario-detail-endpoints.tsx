@@ -22,8 +22,12 @@ export function EndpointSection({ label, endpoints }: EndpointSectionProps): Rea
   return (
     <div className="border-t border-border-subtle">
       <div className="flex h-8 items-center px-5">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/35">{label}</span>
-        <span className="ml-auto text-caption tabular-nums text-muted-foreground/25">{endpoints.length}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/35">
+          {label}
+        </span>
+        <span className="ml-auto text-caption tabular-nums text-muted-foreground/25">
+          {endpoints.length}
+        </span>
       </div>
       <div className="pb-1.5">
         {endpoints.map((ep) => (
@@ -49,7 +53,8 @@ function EndpointRow({ endpoint }: { endpoint: MockScenarioEndpoint }): React.Re
     <div className="flex items-center gap-2 px-5 py-1.5 transition-colors hover:bg-muted/20">
       <MethodBadge method={endpoint.httpMethod} />
       <span className="mono-xs min-w-0 flex-1 truncate text-foreground/65">
-        {endpoint.group ? `${endpoint.group}.` : ""}{endpoint.endpoint}
+        {endpoint.group ? `${endpoint.group}.` : ""}
+        {endpoint.endpoint}
       </span>
       <div className="flex shrink-0 items-center gap-1.5">
         <Badge variant={variant} className="px-1.5 py-0 text-[9px]">
@@ -59,7 +64,8 @@ function EndpointRow({ endpoint }: { endpoint: MockScenarioEndpoint }): React.Re
         </Badge>
         {endpoint.latency !== undefined && (
           <span className="mono-xs flex items-center gap-0.5 tabular-nums text-muted-foreground/35">
-            <Clock className="size-2.5" />{endpoint.latency}ms
+            <Clock className="size-2.5" />
+            {endpoint.latency}ms
           </span>
         )}
         {endpoint.stateCondition && (

@@ -5,11 +5,10 @@
  */
 import { parseSync } from "oxc-parser";
 import { describe, expect, it } from "vitest";
-
+import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
 import { applyEdits } from "../../../src/server/mocks-edit/plan/apply-edits";
 import { planMocksEdit } from "../../../src/server/mocks-edit/plan/plan-mocks-edit";
 import type { PlanInput } from "../../../src/server/mocks-edit/plan/types";
-import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
 import type { MockDeclaration, RefusalCode } from "../../../src/server/mocks-edit/types";
 
 function request(key: string, overrides: Partial<MockDeclaration> = {}): MockDeclaration {
@@ -657,7 +656,14 @@ describe("planMocksEdit creating the file", () => {
     configText: string | null,
     createName = "courier.mocks.ts",
   ): PlanInput {
-    return { existing: null, createName, configName, configText, explicitExtensions: false, requests: [API] };
+    return {
+      existing: null,
+      createName,
+      configName,
+      configText,
+      explicitExtensions: false,
+      requests: [API],
+    };
   }
 
   it.each([
@@ -853,7 +859,10 @@ describe("planMocksEdit importing the config the way the project resolves module
   it("imports a .cts config through .cjs whether or not the project names extensions", () => {
     const before = `${MOCK_IMPORT}\n\nexport default defineMocks({});\n`;
 
-    const plan = planMocksEdit({ ...editOf(before, [API], "courier.config.cts"), explicitExtensions: true });
+    const plan = planMocksEdit({
+      ...editOf(before, [API], "courier.config.cts"),
+      explicitExtensions: true,
+    });
 
     expect(plan.configSpecifier).toBe("./courier.config.cjs");
   });

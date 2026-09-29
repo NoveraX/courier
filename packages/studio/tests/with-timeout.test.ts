@@ -22,7 +22,7 @@ function waitForever(keepAlive: boolean) {
     `import { withTimeout } from ${JSON.stringify(WITH_TIMEOUT)};\n` +
     "const started = Date.now();\n" +
     `withTimeout(new Promise(() => {}), 300, () => new Error("timed out"), { keepAlive: ${keepAlive} })` +
-    '.catch((error) => console.log(`${error.message} after ${Date.now() - started} ms`));\n';
+    ".catch((error) => console.log(`${error.message} after ${Date.now() - started} ms`));\n";
   return spawnSync(process.execPath, ["--import", TSX, "--input-type=module", "-e", script], {
     encoding: "utf8",
     timeout: 20_000,
@@ -40,7 +40,9 @@ describe("withTimeout", () => {
   it("rejects with what the work rejects with when it settles in time", async () => {
     const expired = vi.fn(() => new Error("timed out"));
 
-    await expect(withTimeout(Promise.reject(new Error("refused")), 1000, expired)).rejects.toThrow("refused");
+    await expect(withTimeout(Promise.reject(new Error("refused")), 1000, expired)).rejects.toThrow(
+      "refused",
+    );
     expect(expired).not.toHaveBeenCalled();
   });
 

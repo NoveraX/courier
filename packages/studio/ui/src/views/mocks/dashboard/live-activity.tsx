@@ -1,16 +1,15 @@
 import { Link } from "@tanstack/react-router";
 import { Activity, ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
-import { cn } from "@/lib/utils";
+import { formatTimestamp } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { MetricsPill, statusDotClass } from "@/components/shared/metrics-cells";
-import { formatTimestamp } from "@/components/shared/formatters";
-import { useStudioStore } from "@/store";
+import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { useNow } from "@/hooks/use-tick";
-import { useMockStore } from "@/store/mock-slice";
-
+import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
 import type { MockRequestLog } from "@/store/mock-slice";
+import { useMockStore } from "@/store/mock-slice";
 
 const RECENT_COUNT = 8;
 
@@ -79,9 +78,7 @@ function EmptyState(): React.ReactElement {
       <div className="flex size-9 items-center justify-center rounded-lg bg-muted/40">
         <Activity className="size-4 text-muted-foreground/30" />
       </div>
-      <p className="text-body-xs text-muted-foreground/50">
-        Waiting for requests…
-      </p>
+      <p className="text-body-xs text-muted-foreground/50">Waiting for requests…</p>
     </div>
   );
 }
@@ -117,9 +114,7 @@ function ActivityRow({ log }: { log: MockRequestLog }): React.ReactElement {
         <MethodBadge method={log.httpMethod} />
       </span>
 
-      <span className="min-w-0 flex-1 truncate mono-sm text-foreground">
-        {path}
-      </span>
+      <span className="min-w-0 flex-1 truncate mono-sm text-foreground">{path}</span>
 
       <MetricsPill statusCode={log.status} duration={log.duration} />
 

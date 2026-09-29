@@ -1,18 +1,17 @@
-import { useMemo, useCallback } from "react";
-import { useSearch, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useCallback, useMemo } from "react";
 
 import { useStudioStore } from "@/store";
-
-import type { CompareTab } from "./types";
-import type { CompareSearchParams } from "./search-schema";
 import {
-  computeTextDiff,
   computeHeaderDiff,
+  computeTextDiff,
   computeTimingDiff,
-  serializeForDiff,
   getPayloadData,
   getResponseData,
+  serializeForDiff,
 } from "./helpers";
+import type { CompareSearchParams } from "./search-schema";
+import type { CompareTab } from "./types";
 
 export function useCompare() {
   const params = useSearch({ from: "/compare" }) as CompareSearchParams;
@@ -24,15 +23,9 @@ export function useCompare() {
   const leftId = params.left;
   const rightId = params.right;
 
-  const leftReq = useMemo(
-    () => requests.find((r) => r.id === leftId),
-    [requests, leftId],
-  );
+  const leftReq = useMemo(() => requests.find((r) => r.id === leftId), [requests, leftId]);
 
-  const rightReq = useMemo(
-    () => requests.find((r) => r.id === rightId),
-    [requests, rightId],
-  );
+  const rightReq = useMemo(() => requests.find((r) => r.id === rightId), [requests, rightId]);
 
   // Memoized diffs — only computed when both sides present
   const payloadDiff = useMemo(() => {
@@ -77,20 +70,11 @@ export function useCompare() {
     [navigate],
   );
 
-  const setTab = useCallback(
-    (t: CompareTab) => updateUrl({ tab: t }),
-    [updateUrl],
-  );
+  const setTab = useCallback((t: CompareTab) => updateUrl({ tab: t }), [updateUrl]);
 
-  const setLeft = useCallback(
-    (id: string | undefined) => updateUrl({ left: id }),
-    [updateUrl],
-  );
+  const setLeft = useCallback((id: string | undefined) => updateUrl({ left: id }), [updateUrl]);
 
-  const setRight = useCallback(
-    (id: string | undefined) => updateUrl({ right: id }),
-    [updateUrl],
-  );
+  const setRight = useCallback((id: string | undefined) => updateUrl({ right: id }), [updateUrl]);
 
   const swap = useCallback(
     () => updateUrl({ left: rightId, right: leftId }),

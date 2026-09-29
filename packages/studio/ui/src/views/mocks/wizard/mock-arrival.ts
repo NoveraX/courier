@@ -1,6 +1,5 @@
-import type { MockServerInfo } from "@/store/mock-slice";
-
 import { mockServerOf } from "@/store/mock-server-of";
+import type { MockServerInfo } from "@/store/mock-slice";
 
 /** How long after the mocks are added the wizard waits before saying one is late. */
 export const ARRIVAL_PATIENCE_MS = 15_000;

@@ -1,5 +1,5 @@
-import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
+import { cn } from "@/lib/utils";
 
 import type { RequestTiming } from "@/store/types-events";
 
@@ -43,9 +43,7 @@ export function TimingRow({ timing, className }: TimingRowProps): React.ReactEle
         {SEGMENTS.map(({ key, label, color }) => (
           <div key={key} className="flex items-center gap-1.5">
             <div className={cn("size-2 rounded-full", color)} />
-            <span className="text-[10px] text-muted-foreground">
-              {label}
-            </span>
+            <span className="text-[10px] text-muted-foreground">{label}</span>
             <span className="text-[10px] tabular-nums text-foreground/70">
               {formatDuration(timing[key])}
             </span>

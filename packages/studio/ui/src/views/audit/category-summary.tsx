@@ -15,10 +15,7 @@ function worstSeverity(items: AuditItem[]): AuditSeverity | null {
   return null;
 }
 
-export function CategorySummary({
-  items,
-  onCategoryClick,
-}: CategorySummaryProps): React.ReactNode {
+export function CategorySummary({ items, onCategoryClick }: CategorySummaryProps): React.ReactNode {
   return (
     <div className="grid grid-cols-4 gap-3">
       {CATEGORY_ORDER.map((cat) => {
@@ -67,9 +64,7 @@ function CategoryCard({
           <Icon className="size-4 text-muted-foreground" />
           <span className="text-body-sm font-medium">{cfg.label}</span>
         </div>
-        {worstCfg && (
-          <div className={cn("size-2 rounded-full", getSeverityDotBg(worst!))} />
-        )}
+        {worstCfg && <div className={cn("size-2 rounded-full", getSeverityDotBg(worst!))} />}
       </div>
       <div className="flex items-center gap-1.5">
         {severityCounts.map(({ severity, count }) => (
@@ -84,9 +79,7 @@ function CategoryCard({
             {count}
           </span>
         ))}
-        {items.length === 0 && (
-          <span className="text-[10px] text-muted-foreground">No issues</span>
-        )}
+        {items.length === 0 && <span className="text-[10px] text-muted-foreground">No issues</span>}
       </div>
     </button>
   );
@@ -102,9 +95,7 @@ function getSeverityDotBg(severity: AuditSeverity): string {
   return map[severity];
 }
 
-function countSeverities(
-  items: AuditItem[],
-): { severity: AuditSeverity; count: number }[] {
+function countSeverities(items: AuditItem[]): { severity: AuditSeverity; count: number }[] {
   const order: AuditSeverity[] = ["error", "warning", "hint", "pass"];
   return order
     .map((s) => ({ severity: s, count: items.filter((i) => i.severity === s).length }))

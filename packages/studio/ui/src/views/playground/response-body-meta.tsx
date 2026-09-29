@@ -6,7 +6,10 @@ export function BodyMeta({ data }: { data: unknown }): React.ReactElement | null
   return (
     <>
       {chips.map((chip) => (
-        <span key={chip} className="rounded bg-card/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/50">
+        <span
+          key={chip}
+          className="rounded bg-card/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground/50"
+        >
           {chip}
         </span>
       ))}

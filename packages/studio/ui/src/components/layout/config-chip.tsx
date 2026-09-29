@@ -1,11 +1,9 @@
 import { AlertTriangle } from "lucide-react";
-
-import type { ConfigStatusPayload } from "@/store/config-status";
-
 import { formatClockTime } from "@/components/shared/formatters";
+import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { configFileName } from "@/store/config-file-name";
-import { cn } from "@/lib/utils";
+import type { ConfigStatusPayload } from "@/store/config-status";
 
 interface ConfigChipState {
   label: string;

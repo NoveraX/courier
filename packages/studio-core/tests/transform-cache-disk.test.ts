@@ -461,7 +461,10 @@ describe("createTransformCache reading a directory only", () => {
     const longAgo = new Date(Date.now() - 60 * DAY_MS);
     utimesSync(stale, longAgo, longAgo);
 
-    createTransformCache({ directory, readOnly: true }).transform(optionsFor({ filename: SOURCES }), compute);
+    createTransformCache({ directory, readOnly: true }).transform(
+      optionsFor({ filename: SOURCES }),
+      compute,
+    );
 
     expect(compute).toHaveBeenCalledTimes(2);
     expect(listing()).toEqual([basename(stale)]);

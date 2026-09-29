@@ -1,8 +1,7 @@
 import { motion } from "motion/react";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
-import { ScenarioRow } from "./scenario-row";
-
 import type { MockScenarioEntry } from "@/store/mock-slice";
+import { ScenarioRow } from "./scenario-row";
 
 interface ScenarioListProps {
   scenarios: MockScenarioEntry[];

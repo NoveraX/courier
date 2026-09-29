@@ -64,11 +64,17 @@ describe("appendEndpointsToGroup", () => {
 
     expect(parses(merged)).toBe(true);
     expect(merged.match(/getPet:/g)).toHaveLength(1);
-    expect(merged).toContain('    getPet: endpoint.get("/{id}"),\n    createPet: endpoint.post("").body(PetSchema),\n  },');
+    expect(merged).toContain(
+      '    getPet: endpoint.get("/{id}"),\n    createPet: endpoint.post("").body(PetSchema),\n  },',
+    );
   });
 
   it("keeps the user's comments, spreads and code after the declaration", () => {
-    const existing = edited(['    listPets: endpoint.get(""),', "    // TODO: paging", "    ...extra,"]);
+    const existing = edited([
+      '    listPets: endpoint.get(""),',
+      "    // TODO: paging",
+      "    ...extra,",
+    ]);
 
     const merged = appendEndpointsToGroup(PATH, existing, GENERATED, ["createPet"]);
 
@@ -80,7 +86,9 @@ describe("appendEndpointsToGroup", () => {
   });
 
   it("separates a last entry left without a comma, even one closed by a comment", () => {
-    const existing = edited(['    listPets: endpoint.get("https://x.example//list") // the old list']);
+    const existing = edited([
+      '    listPets: endpoint.get("https://x.example//list") // the old list',
+    ]);
 
     const merged = appendEndpointsToGroup(PATH, existing, GENERATED, ["createPet"]);
 
@@ -90,7 +98,12 @@ describe("appendEndpointsToGroup", () => {
 
   it("reads a comment with a quote in it, and commented-out code, as comments", () => {
     const quoted = edited(['    listPets: endpoint.get(""), // don\'t cache']);
-    const blocked = edited(['    listPets: endpoint.get(""),', "    /*", '      oldPets: endpoint.get("/old")', "    */"]);
+    const blocked = edited([
+      '    listPets: endpoint.get(""),',
+      "    /*",
+      '      oldPets: endpoint.get("/old")',
+      "    */",
+    ]);
 
     const first = appendEndpointsToGroup(PATH, quoted, GENERATED, ["createPet"]);
     const second = appendEndpointsToGroup(PATH, blocked, GENERATED, ["createPet"]);
@@ -231,14 +244,16 @@ describe("appendEndpointsToGroup", () => {
     const merged = appendEndpointsToGroup(PATH, existing, GENERATED, ["createPet"]);
 
     expect(parses(merged)).toBe(true);
-    expect(merged).toContain('    listPets: endpoint.get(""),\n    createPet: endpoint.post("").body(PetSchema),');
+    expect(merged).toContain(
+      '    listPets: endpoint.get(""),\n    createPet: endpoint.post("").body(PetSchema),',
+    );
   });
 
   it("uses a base the file configures, and imports nothing the added code does not use", () => {
     const existing = [
       'import { courier, defineGroup } from "@noverax/courier/define";',
       "",
-      "const api = courier({ headers: { tenant: \"a\" } });",
+      'const api = courier({ headers: { tenant: "a" } });',
       "",
       "const pets = defineGroup({",
       '  prefix: "/pets",',
@@ -273,11 +288,15 @@ describe("appendEndpointsToGroup", () => {
 
     expect(parses(merged)).toBe(true);
     expect(merged.startsWith("\uFEFF")).toBe(true);
-    expect(merged).toContain("const { endpoint } = courier();\n\n/** The pets group. */\nexport const pets");
+    expect(merged).toContain(
+      "const { endpoint } = courier();\n\n/** The pets group. */\nexport const pets",
+    );
   });
 
   it("adds nothing an endpoint of the same name is already there for", () => {
-    const existing = edited(['    createPet: endpoint.post("").body(PetSchema).meta({ mine: true }),']);
+    const existing = edited([
+      '    createPet: endpoint.post("").body(PetSchema).meta({ mine: true }),',
+    ]);
 
     expect(appendEndpointsToGroup(PATH, existing, GENERATED, ["createPet"])).toBe(existing);
   });

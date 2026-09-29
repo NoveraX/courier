@@ -15,7 +15,11 @@ const BUCKETS = [
   { label: ">1s", max: Infinity, color: "bg-rose-400/70" },
 ];
 
-export function LatencyHistogram({ latencies, p50, p95 }: LatencyHistogramProps): React.ReactElement {
+export function LatencyHistogram({
+  latencies,
+  p50,
+  p95,
+}: LatencyHistogramProps): React.ReactElement {
   const { buckets, maxCount } = useMemo(() => {
     const counts = BUCKETS.map((b, i) => {
       const min = i === 0 ? 0 : BUCKETS[i - 1]!.max;
@@ -25,7 +29,9 @@ export function LatencyHistogram({ latencies, p50, p95 }: LatencyHistogramProps)
   }, [latencies]);
 
   if (latencies.length === 0) {
-    return <p className="py-6 text-center text-body-xs text-muted-foreground/40">No latency data yet</p>;
+    return (
+      <p className="py-6 text-center text-body-xs text-muted-foreground/40">No latency data yet</p>
+    );
   }
 
   return (

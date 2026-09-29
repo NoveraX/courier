@@ -53,7 +53,8 @@ describe("requestClock", () => {
 
     expect(error).toMatchObject({
       code: "SPEC_TIMEOUT",
-      message: "https://specs.example.test/openapi.json did not send the whole specification within 60 s.",
+      message:
+        "https://specs.example.test/openapi.json did not send the whole specification within 60 s.",
     });
   });
 
@@ -67,7 +68,9 @@ describe("requestClock", () => {
     expect(error).toBeInstanceOf(SpecHostsUnavailableError);
     expect(error).toMatchObject({
       code: "CONFIG_RELOADING",
-      message: expect.stringContaining("Blocked request to private address: lan.spec.test (10.0.0.7)."),
+      message: expect.stringContaining(
+        "Blocked request to private address: lan.spec.test (10.0.0.7).",
+      ),
     });
   });
 
@@ -91,7 +94,10 @@ describe("requestClock", () => {
     await admission;
     const error = clock.expire();
 
-    expect(error).toMatchObject({ code: "SPEC_TIMEOUT", message: "https://specs.example.test/openapi.json did not answer within 300 ms." });
+    expect(error).toMatchObject({
+      code: "SPEC_TIMEOUT",
+      message: "https://specs.example.test/openapi.json did not answer within 300 ms.",
+    });
   });
 
   it("passes the project's refusal on as it is", async () => {

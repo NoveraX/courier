@@ -57,7 +57,9 @@ afterEach(async () => {
 });
 
 function caller(options: { defaultBody?: Record<string, unknown> } = {}) {
-  return createCaller(defineApi({ name: "api", baseURL: upstream.origin, ...options, groups: { items } }));
+  return createCaller(
+    defineApi({ name: "api", baseURL: upstream.origin, ...options, groups: { items } }),
+  );
 }
 
 describe("variables that are a JSON value other than an object", () => {
@@ -99,7 +101,9 @@ describe("variables that are a JSON value other than an object", () => {
   });
 
   it("sends an array that arrived through the proxy as an array", async () => {
-    registerSources({ api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }) });
+    registerSources({
+      api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }),
+    });
 
     const response = await createHandler().handlePost(
       new Request("http://app.localhost/api/request?_s=api&_g=items&_m=create", {
@@ -192,7 +196,9 @@ describe("a FormData sent as the body", () => {
   });
 
   it("keeps a named empty file and drops a blank input through the proxy too", async () => {
-    registerSources({ api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }) });
+    registerSources({
+      api: defineApi({ name: "api", baseURL: upstream.origin, groups: { items } }),
+    });
     /* Written out as a browser serializes a form with a blank file input:
        a file part whose filename is empty. */
     const part = (disposition: string, value = "") =>

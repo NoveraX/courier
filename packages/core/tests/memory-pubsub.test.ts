@@ -103,7 +103,9 @@ describe("createMemoryPubSub", () => {
 
     // Register a throwing handler directly via subscribe
     // The handler runs on the envelope, so it will throw before echo check
-    await ps.subscribe("t", () => { throw new Error("boom"); });
+    await ps.subscribe("t", () => {
+      throw new Error("boom");
+    });
 
     // Self-publish: echo prevention skips the wrapped handler,
     // so error handler won't fire. This is correct — errors only

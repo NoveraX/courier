@@ -2,13 +2,11 @@
  * @vitest-environment jsdom
  */
 
-import { createElement, type ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from "vitest";
-
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-
-import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { createElement, type ReactNode } from "react";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from "vitest";
 import { createQueryCaller } from "../src/create-query-caller";
 import { createQueryKeys } from "../src/keys";
 import { optimisticOptions } from "../src/optimistic";

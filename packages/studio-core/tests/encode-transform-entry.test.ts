@@ -17,7 +17,9 @@ describe("encodeTransformEntry", () => {
 
     const entry = encodeTransformEntry(DIGEST, CODE);
 
-    expect(entry.toString("utf8")).toBe(`// courier-transform 2 ${DIGEST} ${body.length} ${sha}\n${CODE}`);
+    expect(entry.toString("utf8")).toBe(
+      `// courier-transform 2 ${DIGEST} ${body.length} ${sha}\n${CODE}`,
+    );
     expect(entry.toString("latin1").startsWith(TRANSFORM_ENTRY_FORMAT.prefix)).toBe(true);
   });
 });

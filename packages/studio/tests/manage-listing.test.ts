@@ -37,9 +37,19 @@ const SPEC = parseSpec(
 );
 const LAYOUT = resolveImportLayout({ outputDir: "src/api" }, "shop");
 
-function written(groupBy: "single" | "path", selected: Record<string, string[]>): Record<string, string> {
-  const options = { type: "openapi" as const, outputDir: "src/api", groupBy, selectedEndpoints: selected };
-  return Object.fromEntries(generateCode(SPEC, options, "shop").map((file) => [file.path, file.content]));
+function written(
+  groupBy: "single" | "path",
+  selected: Record<string, string[]>,
+): Record<string, string> {
+  const options = {
+    type: "openapi" as const,
+    outputDir: "src/api",
+    groupBy,
+    selectedEndpoints: selected,
+  };
+  return Object.fromEntries(
+    generateCode(SPEC, options, "shop").map((file) => [file.path, file.content]),
+  );
 }
 
 describe("generating a selection", () => {
@@ -67,7 +77,11 @@ describe("listedSelection", () => {
   });
 
   it("names every pick the specification does not generate", () => {
-    const { unknown } = listedSelection(SPEC, "tag", { nope: ["x"], shop: ["getAll"], animals: ["getAll"] });
+    const { unknown } = listedSelection(SPEC, "tag", {
+      nope: ["x"],
+      shop: ["getAll"],
+      animals: ["getAll"],
+    });
 
     expect(unknown).toEqual(["nope.x", "shop.getAll"]);
   });
@@ -92,7 +106,8 @@ describe("adding to an import generated from a selection", () => {
 
     const result = previewAddEndpoints(SPEC, { pets: ["getAll"] }, options, existing, LAYOUT);
 
-    const group = result.files.find((file) => file.path === LAYOUT.groupFile("pets"))?.content ?? "";
+    const group =
+      result.files.find((file) => file.path === LAYOUT.groupFile("pets"))?.content ?? "";
     expect(group).toContain('prefix: "/pets",');
     expect(group).toContain('getById: endpoint.get(":id")');
     expect(group).toContain('getAll: endpoint.get("")');
@@ -116,19 +131,36 @@ describe("the inventory", () => {
       mkdirSync(dirname(join(root, path)), { recursive: true });
       writeFileSync(join(root, path), content);
     }
-    const declarations = { shop: { importType: "file" as const, type: "openapi" as const, outputDir: "src/api", groupBy } };
-    return handleInventory({ name: "shop", newSpec: SPEC }, importsSnapshotOf(declarations, root), projectRootAt(root));
+    const declarations = {
+      shop: {
+        importType: "file" as const,
+        type: "openapi" as const,
+        outputDir: "src/api",
+        groupBy,
+      },
+    };
+    return handleInventory(
+      { name: "shop", newSpec: SPEC },
+      importsSnapshotOf(declarations, root),
+      projectRootAt(root),
+    );
   }
 
   it("lists a flat import under the names its source holds", () => {
-    expect(inventoryOf("single", { animals: ["getById"] })).toMatchObject({ totalActive: 1, totalAvailable: 2 });
+    expect(inventoryOf("single", { animals: ["getById"] })).toMatchObject({
+      totalActive: 1,
+      totalAvailable: 2,
+    });
   });
 
   it("lists an import grouped by path by the groups its files hold", () => {
     const inventory = inventoryOf("path", { animals: ["getById"] });
 
     expect(inventory).toMatchObject({ totalActive: 1, totalAvailable: 2 });
-    expect("groups" in inventory ? inventory.groups.map((group) => group.name) : []).toEqual(["pets", "store"]);
+    expect("groups" in inventory ? inventory.groups.map((group) => group.name) : []).toEqual([
+      "pets",
+      "store",
+    ]);
   });
 });
 
@@ -145,7 +177,11 @@ describe("names that Object.prototype also has", () => {
   );
 
   it("generates a selection that leaves out a group named like one", () => {
-    const files = generateCode(PROTO, { type: "openapi", outputDir: "src/api", selectedEndpoints: { toString: ["listA"] } }, "shop");
+    const files = generateCode(
+      PROTO,
+      { type: "openapi", outputDir: "src/api", selectedEndpoints: { toString: ["listA"] } },
+      "shop",
+    );
 
     expect(files.map((file) => file.path)).toContain(LAYOUT.groupFile("toString"));
     expect(files.map((file) => file.path)).not.toContain(LAYOUT.groupFile("constructor"));
@@ -159,7 +195,13 @@ describe("names that Object.prototype also has", () => {
   });
 
   it("lists an endpoint named like one, never generated, as the user's own", () => {
-    const endpoint = classifyDiskEndpoint("pets", "constructor", { prefix: "/", endpoints: [] }, {}, { constructor: "h" });
+    const endpoint = classifyDiskEndpoint(
+      "pets",
+      "constructor",
+      { prefix: "/", endpoints: [] },
+      {},
+      { constructor: "h" },
+    );
 
     expect(endpoint.status).toBe("custom");
   });
@@ -168,9 +210,12 @@ describe("names that Object.prototype also has", () => {
 describe("adding to a group whose file declares another prefix than the spec gives it", () => {
   const customers = {
     "/v1/customers": { get: { operationId: "listCustomers", tags: ["customers"], responses: OK } },
-    "/v1/customers/{id}": { get: { operationId: "getCustomer", tags: ["customers"], responses: OK } },
+    "/v1/customers/{id}": {
+      get: { operationId: "getCustomer", tags: ["customers"], responses: OK },
+    },
   };
-  const spec = (paths: object) => parseSpec(JSON.stringify({ openapi: "3.1.0", info: { title: "Shop", version: "1" }, paths }));
+  const spec = (paths: object) =>
+    parseSpec(JSON.stringify({ openapi: "3.1.0", info: { title: "Shop", version: "1" }, paths }));
   const V1 = spec(customers);
   const V2 = spec({
     ...customers,
@@ -179,10 +224,11 @@ describe("adding to a group whose file declares another prefix than the spec giv
   const options = { type: "openapi" as const, outputDir: "src/api" };
   const written = (prefix: string) => {
     const files = Object.fromEntries(
-      generateCode(V1, { ...options, selectedEndpoints: { customers: ["listCustomers"] } }, "shop").map((f) => [
-        f.path,
-        f.content,
-      ]),
+      generateCode(
+        V1,
+        { ...options, selectedEndpoints: { customers: ["listCustomers"] } },
+        "shop",
+      ).map((f) => [f.path, f.content]),
     );
     const group = LAYOUT.groupFile("customers");
     files[group] = (files[group] ?? "").replace('prefix: "/v1/customers",', prefix);
@@ -194,12 +240,18 @@ describe("adding to a group whose file declares another prefix than the spec giv
     )?.content ?? "";
 
   it("writes the path relative to the prefix the file declares, so it calls the same URL", () => {
-    expect(added(written('prefix: "/v1",'))).toContain('getCustomer: endpoint.get("customers/:id")');
-    expect(added(written('prefix: "/v1/customers/",'))).toContain('getCustomer: endpoint.get(":id")');
+    expect(added(written('prefix: "/v1",'))).toContain(
+      'getCustomer: endpoint.get("customers/:id")',
+    );
+    expect(added(written('prefix: "/v1/customers/",'))).toContain(
+      'getCustomer: endpoint.get(":id")',
+    );
   });
 
   it("reads a prefix written as a template or as a constant in the file", () => {
-    expect(added(written("prefix: `/v1/customers`,"))).toContain('getCustomer: endpoint.get(":id")');
+    expect(added(written("prefix: `/v1/customers`,"))).toContain(
+      'getCustomer: endpoint.get(":id")',
+    );
     const withConstant = written("prefix: PREFIX,");
     const group = LAYOUT.groupFile("customers");
     withConstant[group] = `const PREFIX = "/v1";\n${withConstant[group]}`;
@@ -207,14 +259,16 @@ describe("adding to a group whose file declares another prefix than the spec giv
   });
 
   it("refuses an endpoint whose URL the file's prefix cannot reach, naming the URL", () => {
-    const files = Object.fromEntries(generateCode(V1, options, "shop").map((f) => [f.path, f.content]));
+    const files = Object.fromEntries(
+      generateCode(V1, options, "shop").map((f) => [f.path, f.content]),
+    );
 
-    expect(() => previewAddEndpoints(V2, { customers: ["listCharges"] }, options, files, LAYOUT)).toThrow(
-      /listCharges calls \/v1\/charges, which is not under the prefix "\/v1\/customers"/,
-    );
-    expect(() => previewAddEndpoints(V2, { customers: ["listCharges"] }, options, files, LAYOUT)).toThrow(
-      EndpointOutsidePrefixError,
-    );
+    expect(() =>
+      previewAddEndpoints(V2, { customers: ["listCharges"] }, options, files, LAYOUT),
+    ).toThrow(/listCharges calls \/v1\/charges, which is not under the prefix "\/v1\/customers"/);
+    expect(() =>
+      previewAddEndpoints(V2, { customers: ["listCharges"] }, options, files, LAYOUT),
+    ).toThrow(EndpointOutsidePrefixError);
   });
 
   it("refuses when it cannot read the prefix, saying so", () => {

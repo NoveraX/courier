@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
 import type * as CourierModule from "@noverax/courier";
+import { NextRequest } from "next/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockHandleGet = vi.fn();
 const mockHandlePost = vi.fn();
@@ -14,7 +14,21 @@ vi.mock("@noverax/courier", async (importOriginal) => {
       handleGet: mockHandleGet,
       handlePost: mockHandlePost,
       handleSSE: vi.fn(),
-      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      sseConnections: {
+        count: 0,
+        isShuttingDown: false,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        getByEndpoint: vi.fn(() => []),
+        disconnect: vi.fn(),
+        disconnectAll: vi.fn(),
+        send: vi.fn(() => true),
+        broadcastToEndpoint: vi.fn(() => new Map()),
+        broadcastToMeta: vi.fn(() => new Map()),
+        broadcastAll: vi.fn(() => new Map()),
+      },
       shutdownSSE: vi.fn(),
     })),
   };
@@ -81,9 +95,7 @@ describe("apiRoute", () => {
       mockHandleGet.mockResolvedValue(new Response("{}"));
 
       const { GET } = apiRoute();
-      const req = new NextRequest(
-        "http://localhost:3000/api/request?_s=api&_g=users&_m=getAll",
-      );
+      const req = new NextRequest("http://localhost:3000/api/request?_s=api&_g=users&_m=getAll");
 
       await GET(req);
 
@@ -103,7 +115,10 @@ describe("apiRoute", () => {
 
     it("returns 400 when params missing (via createHandler)", async () => {
       mockHandleGet.mockResolvedValue(
-        Response.json({ success: false, message: "Missing required params: _s, _m" }, { status: 400 }),
+        Response.json(
+          { success: false, message: "Missing required params: _s, _m" },
+          { status: 400 },
+        ),
       );
 
       const { GET } = apiRoute();

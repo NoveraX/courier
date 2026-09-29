@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
+import { describe, expect, it } from "vitest";
 
 import { createProxyQueryKeys } from "../src/keys";
 
@@ -15,7 +15,10 @@ const testApi = defineApi({
         getById: endpoint.get(":id").variables<{ id: number }>().response<unknown>(),
       },
     }),
-    posts: defineGroup({ prefix: "posts", endpoints: { list: endpoint.get("").response<unknown[]>() } }),
+    posts: defineGroup({
+      prefix: "posts",
+      endpoints: { list: endpoint.get("").response<unknown[]>() },
+    }),
   },
 });
 

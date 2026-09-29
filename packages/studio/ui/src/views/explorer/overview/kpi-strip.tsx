@@ -1,17 +1,10 @@
-import {
-  Server,
-  FolderTree,
-  Zap,
-  HeartPulse,
-  Activity,
-} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Activity, FolderTree, HeartPulse, Server, Zap } from "lucide-react";
 import { Line, LineChart } from "recharts";
-import { cn } from "@/lib/utils";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
 import { formatNumber } from "@/components/shared/formatters";
-
+import { cn } from "@/lib/utils";
 import type { OverviewKPI, SparklinePoint } from "./compute-overview";
-import type { LucideIcon } from "lucide-react";
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
@@ -90,22 +83,15 @@ export function KPIStrip({ kpis }: KPIStripProps): React.ReactElement {
         const sparkline = entry.getSparkline(kpis);
 
         return (
-          <div
-            key={entry.key}
-            className="rounded-xl border border-border-subtle bg-card p-4"
-          >
+          <div key={entry.key} className="rounded-xl border border-border-subtle bg-card p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex size-7 items-center justify-center rounded-lg bg-muted/50 ring-1 ring-border-subtle">
                   <entry.icon className="size-3.5 text-muted-foreground" />
                 </div>
-                <span className="text-caption text-muted-foreground/70">
-                  {entry.label}
-                </span>
+                <span className="text-caption text-muted-foreground/70">{entry.label}</span>
               </div>
-              {sparkline.length > 1 && (
-                <Sparkline data={sparkline} color={entry.sparklineColor!} />
-              )}
+              {sparkline.length > 1 && <Sparkline data={sparkline} color={entry.sparklineColor!} />}
             </div>
             <AnimatedCounter
               value={value}
@@ -121,10 +107,7 @@ export function KPIStrip({ kpis }: KPIStripProps): React.ReactElement {
 
 // ── Sparkline ───────────────────────────────────────────────────────────────
 
-function Sparkline({ data, color }: {
-  data: SparklinePoint[];
-  color: string;
-}): React.ReactElement {
+function Sparkline({ data, color }: { data: SparklinePoint[]; color: string }): React.ReactElement {
   return (
     <LineChart width={48} height={20} data={data} accessibilityLayer={false}>
       <Line

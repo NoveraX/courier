@@ -26,7 +26,11 @@ interface MockFailureNoteProps {
  * <MockFailureNote serverId={server.serverId} status={server.processStatus} lastError={server.lastError} />
  * ```
  */
-export function MockFailureNote({ serverId, status, lastError }: MockFailureNoteProps): React.ReactElement | null {
+export function MockFailureNote({
+  serverId,
+  status,
+  lastError,
+}: MockFailureNoteProps): React.ReactElement | null {
   if (!lastError) return null;
   const reason = mockFailureReason(lastError);
   const outcome = OUTCOME[status] ?? "reported a problem";

@@ -1,13 +1,13 @@
-import { toast } from "sonner";
-
 import type { Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 import { isPlainObject } from "./is-plain-object";
 
 /* One notice however many changes are refused: a page without the token has every one refused. */
 const NOTICE_ID = "studio-read-only";
 
-const UNEXPLAINED = "Studio makes changes only for a page opened from the link it printed in its terminal.";
+const UNEXPLAINED =
+  "Studio makes changes only for a page opened from the link it printed in its terminal.";
 
 /**
  * Say why Studio did not make a change this page asked for: the page did not

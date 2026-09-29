@@ -1,5 +1,5 @@
-import { Badge } from "@/components/ui/badge";
 import { Check, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { EndpointNodeData } from "../../types";
 
 // ── Props ────────────────────────────────────────────────────────────────────
@@ -26,14 +26,8 @@ export function SchemaTab({ endpoint }: SchemaTabProps): React.ReactElement {
 
       {/* Validation badges */}
       <div className="flex flex-wrap gap-2 pt-2 border-t border-border-subtle">
-        <ValidationBadge
-          label="Variables Validated"
-          active={endpoint.hasVariablesSchema}
-        />
-        <ValidationBadge
-          label="Response Validated"
-          active={endpoint.hasResponseSchema}
-        />
+        <ValidationBadge label="Variables Validated" active={endpoint.hasVariablesSchema} />
+        <ValidationBadge label="Response Validated" active={endpoint.hasResponseSchema} />
       </div>
     </div>
   );

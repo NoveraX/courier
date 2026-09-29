@@ -1,18 +1,16 @@
-import { useCallback } from "react";
 import { Workflow } from "lucide-react";
-
-import { PageShell } from "@/components/shared/page-shell";
+import { useCallback } from "react";
 import { EmptyState } from "@/components/shared/empty-state";
-
-import { useMiddleware } from "./use-middleware";
-import { Toolbar } from "./toolbar";
+import { PageShell } from "@/components/shared/page-shell";
 import { AggregateCards } from "./aggregate-cards";
-import { OverheadGauge } from "./overhead-gauge";
+import { ChainView } from "./chain-view";
+import { EndpointImpactPanel } from "./endpoint-impact";
 import { MiddlewareBars } from "./middleware-bars";
 import { MiddlewareProfiles } from "./middleware-profiles";
 import { MiddlewareTable } from "./middleware-table";
-import { EndpointImpactPanel } from "./endpoint-impact";
-import { ChainView } from "./chain-view";
+import { OverheadGauge } from "./overhead-gauge";
+import { Toolbar } from "./toolbar";
+import { useMiddleware } from "./use-middleware";
 
 /** Threshold: use profile cards for ≤ this many, table for more */
 const PROFILE_CARDS_MAX = 6;
@@ -25,7 +23,11 @@ export function MiddlewareView(): React.ReactElement {
   if (mw.totalRequests === 0) {
     return (
       <PageShell center>
-        <EmptyState icon={Workflow} heading="No requests yet" description="Make some API calls to see middleware statistics." />
+        <EmptyState
+          icon={Workflow}
+          heading="No requests yet"
+          description="Make some API calls to see middleware statistics."
+        />
       </PageShell>
     );
   }
@@ -33,7 +35,11 @@ export function MiddlewareView(): React.ReactElement {
   if (mw.requests.length === 0) {
     return (
       <PageShell center>
-        <EmptyState icon={Workflow} heading="No middleware detected" description="None of the captured requests used middleware." />
+        <EmptyState
+          icon={Workflow}
+          heading="No middleware detected"
+          description="None of the captured requests used middleware."
+        />
       </PageShell>
     );
   }
@@ -43,16 +49,10 @@ export function MiddlewareView(): React.ReactElement {
 
 // ── Content ────────────────────────────────────────────────────────────────
 
-function MiddlewareContent({
-  mw,
-}: {
-  mw: ReturnType<typeof useMiddleware>;
-}): React.ReactElement {
+function MiddlewareContent({ mw }: { mw: ReturnType<typeof useMiddleware> }): React.ReactElement {
   const handleProfileSelect = useCallback(
     (name: string) => {
-      const req = mw.requests.find((r) =>
-        r.middlewareEntries.some((e) => e.name === name),
-      );
+      const req = mw.requests.find((r) => r.middlewareEntries.some((e) => e.name === name));
       if (req) {
         mw.setMode("chain");
         mw.setSelectedRequest(req.id);
@@ -84,7 +84,11 @@ function MiddlewareContent({
     <PageShell toolbar={toolbar}>
       <div className="space-y-5 p-5">
         {mw.mode === "aggregate" ? (
-          <AggregateContent mw={mw} onProfileSelect={handleProfileSelect} onEndpointSelect={handleEndpointSelect} />
+          <AggregateContent
+            mw={mw}
+            onProfileSelect={handleProfileSelect}
+            onEndpointSelect={handleEndpointSelect}
+          />
         ) : (
           <ChainView
             requests={mw.requests}

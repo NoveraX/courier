@@ -1,12 +1,8 @@
 import { useMemo } from "react";
-
+import type { FilterConfig, FilterOption } from "@/components/shared/filter-bar";
 import { FilterBar as SharedFilterBar } from "@/components/shared/filter-bar";
 import { extractUniqueValues } from "@/lib/filter-utils";
-
-import type { FilterConfig } from "@/components/shared/filter-bar";
-import type { FilterOption } from "@/components/shared/filter-bar";
-import type { RequestEntry } from "@/store/types";
-import type { TimelineFilters } from "@/store/types";
+import type { RequestEntry, TimelineFilters } from "@/store/types";
 
 interface TimelineFilterBarProps {
   requests: readonly RequestEntry[];
@@ -51,9 +47,24 @@ function buildFilterConfigs(requests: readonly RequestEntry[]): FilterConfig[] {
     { key: "status", label: "Status", options: STATUS_OPTIONS },
     { key: "mode", label: "Mode", options: MODE_OPTIONS },
     { key: "type", label: "Type", options: TYPE_OPTIONS },
-    { key: "httpMethod", label: "Method", options: extractUniqueValues(requests, (r) => r.httpMethod), searchable: true },
-    { key: "source", label: "Source", options: extractUniqueValues(requests, (r) => r.source), searchable: true },
-    { key: "group", label: "Group", options: extractUniqueValues(requests, (r) => r.group), searchable: true },
+    {
+      key: "httpMethod",
+      label: "Method",
+      options: extractUniqueValues(requests, (r) => r.httpMethod),
+      searchable: true,
+    },
+    {
+      key: "source",
+      label: "Source",
+      options: extractUniqueValues(requests, (r) => r.source),
+      searchable: true,
+    },
+    {
+      key: "group",
+      label: "Group",
+      options: extractUniqueValues(requests, (r) => r.group),
+      searchable: true,
+    },
   ];
 }
 

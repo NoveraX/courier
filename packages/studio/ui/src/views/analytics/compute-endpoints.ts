@@ -1,6 +1,6 @@
 import type { RequestEntry } from "@/store/types";
-import type { EndpointStat, EndpointSortKey, SortDir } from "./types";
 import { percentile } from "./kpi-helpers";
+import type { EndpointSortKey, EndpointStat, SortDir } from "./types";
 
 export function computeEndpointStats(requests: RequestEntry[]): EndpointStat[] {
   const map = new Map<string, RequestEntry[]>();
@@ -23,9 +23,8 @@ export function computeEndpointStats(requests: RequestEntry[]): EndpointStat[] {
     ).length;
 
     const totalSize = entries.reduce((s, r) => s + (r.size ?? 0), 0);
-    const avgTime = durations.length > 0
-      ? durations.reduce((s, d) => s + d, 0) / durations.length
-      : 0;
+    const avgTime =
+      durations.length > 0 ? durations.reduce((s, d) => s + d, 0) / durations.length : 0;
 
     return {
       endpoint,

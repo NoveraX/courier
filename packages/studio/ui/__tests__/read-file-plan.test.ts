@@ -63,7 +63,10 @@ describe("consent to a plan", () => {
     if (plan === null) throw new Error("the plan did not read");
     const blocked = { ...plan, blocked: [{ path: "src/api/pets", reason: "link" as const }] };
 
-    expect(consentBody(consentFor(plan))).toEqual({ planDigest: "plan-1", confirm: ["src/api/pets/gone/index.ts"] });
+    expect(consentBody(consentFor(plan))).toEqual({
+      planDigest: "plan-1",
+      confirm: ["src/api/pets/gone/index.ts"],
+    });
     expect(consentBody(consentFor(blocked))).toEqual({});
     expect(consentBody(null)).toEqual({});
   });

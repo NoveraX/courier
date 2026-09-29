@@ -48,7 +48,11 @@ describe("MockRegistry", () => {
   it("filters by requiredState", () => {
     const registry = createMockRegistry();
     registry.set("users", "getAll", makeHandler({ fn: () => "default" }));
-    registry.set("users", "getAll", makeHandler({ fn: () => "authed", requiredState: "authenticated" }));
+    registry.set(
+      "users",
+      "getAll",
+      makeHandler({ fn: () => "authed", requiredState: "authenticated" }),
+    );
 
     expect(registry.get("users", "getAll", "Started")?.fn({} as never)).toBe("default");
     expect(registry.get("users", "getAll", "authenticated")?.fn({} as never)).toBe("authed");

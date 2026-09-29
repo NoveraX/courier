@@ -7,9 +7,9 @@
  * comfortably in a few lines.
  */
 
-import { Badge } from "@/components/ui/badge";
-import { JsonTree } from "@/components/shared/json-tree";
 import { DetailEmpty, DetailSection } from "@/components/shared/detail-panel/detail-rows";
+import { JsonTree } from "@/components/shared/json-tree";
+import { Badge } from "@/components/ui/badge";
 
 export { GeneralTab } from "./route-general-tab";
 export { HandlerTab } from "./route-handler-tab";
@@ -27,7 +27,9 @@ export function SchemaTab({ schema }: SchemaTabProps): React.ReactElement {
         {Object.entries(schema).map(([field, type]) => (
           <div key={field} className="flex items-center justify-between gap-4 px-3 py-2">
             <span className="font-mono text-body-sm text-violet-400/90">{field}</span>
-            <Badge variant="secondary" className="text-[10px] font-mono">{type}</Badge>
+            <Badge variant="secondary" className="text-[10px] font-mono">
+              {type}
+            </Badge>
           </div>
         ))}
       </DetailSection>

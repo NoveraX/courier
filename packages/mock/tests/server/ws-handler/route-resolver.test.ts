@@ -40,7 +40,9 @@ async function channelVariables(query: string): Promise<unknown> {
   });
   const ws = new WebSocket(`${url.replace(/^http/, "ws")}/rt/room?${query}`);
   await new Promise<void>((resolve, reject) => {
-    ws.once("open", () => ws.send(encodeMessage({ type: "subscribe", topic: "rt.room", id: "s1" })));
+    ws.once("open", () =>
+      ws.send(encodeMessage({ type: "subscribe", topic: "rt.room", id: "s1" })),
+    );
     ws.once("message", (raw: Buffer) => {
       const frame = decodeMessage(raw.toString());
       if (frame.type === "subscribed") resolve();

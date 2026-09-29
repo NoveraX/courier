@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { HTTPError } from "../src/errors";
 import { createCaller } from "../src/caller";
+import { HTTPError } from "../src/errors";
 
 vi.mock("../src/utils/execute", () => ({
   executeRequest: vi.fn(),
@@ -288,9 +288,7 @@ describe("createCaller", () => {
     });
 
     it("same property works as both flat call and group accessor", async () => {
-      mockExecuteRequest
-        .mockResolvedValueOnce("flat")
-        .mockResolvedValueOnce("nested");
+      mockExecuteRequest.mockResolvedValueOnce("flat").mockResolvedValueOnce("nested");
 
       const client = createCaller(mockSource);
 
@@ -416,10 +414,7 @@ describe("createCaller", () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
       const client = createCaller(mockSource);
-      await (client as any)
-        .with({ timeout: 5000 })
-        .with({ timeout: 1000 })
-        .users.list();
+      await (client as any).with({ timeout: 5000 }).with({ timeout: 1000 }).users.list();
 
       const payload = mockExecuteRequest.mock.calls[0]?.[1] as any;
       expect(payload.options.timeout).toBe(1000);
@@ -571,9 +566,7 @@ describe("createCaller", () => {
     });
 
     it("method-level .with() does not affect sibling methods", async () => {
-      mockExecuteRequest
-        .mockResolvedValueOnce({ ok: true })
-        .mockResolvedValueOnce({ ok: true });
+      mockExecuteRequest.mockResolvedValueOnce({ ok: true }).mockResolvedValueOnce({ ok: true });
 
       const client = createCaller(mockSource);
       await (client as any).healthCheck.with({ timeout: 500 })();

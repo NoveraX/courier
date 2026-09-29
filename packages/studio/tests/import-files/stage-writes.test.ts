@@ -10,7 +10,11 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applyFilePlan } from "../../src/server/import-files/apply-file-plan";
-import { type ApplyJournal, readJournals, saveJournal } from "../../src/server/import-files/apply-journal";
+import {
+  type ApplyJournal,
+  readJournals,
+  saveJournal,
+} from "../../src/server/import-files/apply-journal";
 import type { PlanTarget } from "../../src/server/import-files/file-plan-types";
 import { planFiles } from "../../src/server/import-files/plan-files";
 import { recoverInterruptedApplies } from "../../src/server/import-files/recover-interrupted-applies";
@@ -23,7 +27,8 @@ vi.mock("node:fs", async (importOriginal) => {
   return { ...actual, renameSync: vi.fn(actual.renameSync) };
 });
 vi.mock("../../src/server/project-fs/write-temp-beside", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../src/server/project-fs/write-temp-beside")>();
+  const actual =
+    await importOriginal<typeof import("../../src/server/project-fs/write-temp-beside")>();
   return { writeTempBeside: vi.fn(actual.writeTempBeside) };
 });
 
@@ -49,7 +54,11 @@ function generated(path: string): PlanTarget {
 }
 
 function planOf(paths: string[]) {
-  return planFiles(root, { importName: "pets", dir: DIR, targets: paths.map(generated), removals: [] }, {});
+  return planFiles(
+    root,
+    { importName: "pets", dir: DIR, targets: paths.map(generated), removals: [] },
+    {},
+  );
 }
 
 describe("stageWrites", () => {
@@ -73,7 +82,9 @@ describe("stageWrites", () => {
       return actual ? actual(path, ...rest) : "";
     });
 
-    await expect(stageWrites(root, planOf([`${DIR}/users/index.ts`]), journal)).rejects.toThrow("killed");
+    await expect(stageWrites(root, planOf([`${DIR}/users/index.ts`]), journal)).rejects.toThrow(
+      "killed",
+    );
 
     const [onDisk] = readJournals(root.path);
     expect(onDisk?.journal.createdDirs).toEqual(["src", "src/api", DIR, `${DIR}/users`]);

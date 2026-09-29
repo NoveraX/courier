@@ -18,11 +18,7 @@ import { createWSHandler } from "../src/adapter/handle-ws";
 import { courier } from "../src/define/courier";
 import { attachWebSocketUpgrade, type UpgradeServer } from "../src/node";
 import { clearWSConnectionPool } from "../src/realtime/caller-ws";
-import {
-  ForbiddenError,
-  RealtimeError,
-  RealtimeValidationError,
-} from "../src/realtime/errors";
+import { ForbiddenError, RealtimeError, RealtimeValidationError } from "../src/realtime/errors";
 import type { WSChannelContext, WSContext } from "../src/realtime/types";
 import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { executeWSPush } from "../src/realtime/ws-subscription";

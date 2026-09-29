@@ -1,14 +1,16 @@
 import { Switch } from "@/components/ui/switch";
-import { SliderRow } from "./slider-row";
-
 import type { StopCondition } from "@/store/mock-slice";
+import { SliderRow } from "./slider-row";
 
 interface StopConditionsPanelProps {
   value: StopCondition;
   onChange: (v: StopCondition) => void;
 }
 
-export function StopConditionsPanel({ value, onChange }: StopConditionsPanelProps): React.ReactElement {
+export function StopConditionsPanel({
+  value,
+  onChange,
+}: StopConditionsPanelProps): React.ReactElement {
   return (
     <div className="space-y-3 rounded-lg border border-border-subtle bg-muted/30 p-3">
       <label className="flex items-center gap-2 text-body-xs text-muted-foreground/70">

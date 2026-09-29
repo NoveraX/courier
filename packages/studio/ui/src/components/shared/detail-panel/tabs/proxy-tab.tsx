@@ -1,7 +1,6 @@
-import { ArrowRight, Monitor, Server, Globe } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { ArrowRight, Globe, Monitor, Server } from "lucide-react";
 import { formatDuration } from "@/components/shared/formatters";
+import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
 import type { ProxyTiming } from "@/store/types-events";
 import { ProxyWaterfall } from "./proxy-waterfall";
@@ -12,10 +11,16 @@ interface ProxyTabProps {
 
 export function ProxyTab({ request }: ProxyTabProps): React.ReactElement {
   if (request.mode !== "proxy") {
-    return <p className="py-8 text-center text-body-sm text-muted-foreground">Direct mode — no proxy data</p>;
+    return (
+      <p className="py-8 text-center text-body-sm text-muted-foreground">
+        Direct mode — no proxy data
+      </p>
+    );
   }
   if (!request.proxyTiming) {
-    return <p className="py-8 text-center text-body-sm text-muted-foreground">No proxy timing data</p>;
+    return (
+      <p className="py-8 text-center text-body-sm text-muted-foreground">No proxy timing data</p>
+    );
   }
 
   const t = request.proxyTiming;
@@ -51,17 +56,23 @@ export function FlowDiagram({ timing }: { timing: ProxyTiming }): React.ReactEle
   );
 }
 
-function FlowNode({ icon: Icon, label, accent }: {
+function FlowNode({
+  icon: Icon,
+  label,
+  accent,
+}: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   accent?: boolean;
 }): React.ReactElement {
   return (
     <div className="flex flex-col items-center gap-1.5">
-      <div className={cn(
-        "flex size-10 items-center justify-center rounded-xl border bg-card shadow-sm",
-        accent ? "border-sky-500/30 shadow-sky-500/5" : "border-border-subtle",
-      )}>
+      <div
+        className={cn(
+          "flex size-10 items-center justify-center rounded-xl border bg-card shadow-sm",
+          accent ? "border-sky-500/30 shadow-sky-500/5" : "border-border-subtle",
+        )}
+      >
         <Icon className={cn("size-4", accent ? "text-sky-400" : "text-muted-foreground")} />
       </div>
       <span className="text-caption text-muted-foreground">{label}</span>
@@ -69,7 +80,10 @@ function FlowNode({ icon: Icon, label, accent }: {
   );
 }
 
-function FlowLink({ forward, backward }: {
+function FlowLink({
+  forward,
+  backward,
+}: {
   forward: number;
   backward: number;
 }): React.ReactElement {
@@ -102,7 +116,10 @@ const METRICS: { key: keyof ProxyTiming; label: string }[] = [
   { key: "proxyToClient", label: "Proxy → Client" },
 ];
 
-function MetricsBreakdown({ timing, total }: {
+function MetricsBreakdown({
+  timing,
+  total,
+}: {
   timing: ProxyTiming;
   total: number;
 }): React.ReactElement {
@@ -123,13 +140,23 @@ function MetricsBreakdown({ timing, total }: {
           const value = timing[m.key];
           const pct = total > 0 ? (value / total) * 100 : 0;
           return (
-            <div key={m.key} className="flex items-center gap-3 border-b border-border-subtle px-3 py-2 last:border-b-0">
+            <div
+              key={m.key}
+              className="flex items-center gap-3 border-b border-border-subtle px-3 py-2 last:border-b-0"
+            >
               <span className="w-28 shrink-0 text-body-sm text-muted-foreground">{m.label}</span>
               <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted/20">
-                <div className="h-full rounded-full bg-sky-500/60 transition-all duration-500" style={{ width: `${Math.max(pct, 1)}%` }} />
+                <div
+                  className="h-full rounded-full bg-sky-500/60 transition-all duration-500"
+                  style={{ width: `${Math.max(pct, 1)}%` }}
+                />
               </div>
-              <span className="w-12 shrink-0 text-right text-caption tabular-nums text-muted-foreground/60">{pct.toFixed(1)}%</span>
-              <span className="w-16 shrink-0 text-right mono-sm tabular-nums text-foreground">{formatDuration(value)}</span>
+              <span className="w-12 shrink-0 text-right text-caption tabular-nums text-muted-foreground/60">
+                {pct.toFixed(1)}%
+              </span>
+              <span className="w-16 shrink-0 text-right mono-sm tabular-nums text-foreground">
+                {formatDuration(value)}
+              </span>
             </div>
           );
         })}
@@ -144,7 +171,9 @@ function SummaryRow({ label, value }: { label: string; value: number }): React.R
   return (
     <div className="flex items-center justify-between border-t border-border-subtle bg-muted/20 px-3 py-2">
       <span className="text-body-sm font-medium text-foreground">{label}</span>
-      <span className="mono-sm tabular-nums font-medium text-foreground">{formatDuration(value)}</span>
+      <span className="mono-sm tabular-nums font-medium text-foreground">
+        {formatDuration(value)}
+      </span>
     </div>
   );
 }

@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  ConfigurationError,
-  HTTPError,
-  isCourierError,
-  CourierError,
-} from "../src/errors";
-import { ValidationError } from "../src/validation";
+import { ConfigurationError, CourierError, HTTPError, isCourierError } from "../src/errors";
 import { RealtimeError } from "../src/realtime/errors";
+import { ValidationError } from "../src/validation";
 
 describe("CourierError", () => {
   it("stores code, message, and context", () => {

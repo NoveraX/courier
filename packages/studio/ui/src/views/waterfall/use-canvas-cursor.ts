@@ -46,18 +46,21 @@ export function useCanvasCursor({
     return () => el.removeEventListener("wheel", onWheel);
   }, [onWheelZoom, scrollRef]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (draggingRef.current) return;
-    const el = scrollRef.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const x = e.clientX - rect.left + el.scrollLeft - labelWidth;
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
-      setCursorX(x);
-      rafRef.current = 0;
-    });
-  }, [labelWidth, draggingRef, scrollRef]);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (draggingRef.current) return;
+      const el = scrollRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const x = e.clientX - rect.left + el.scrollLeft - labelWidth;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        setCursorX(x);
+        rafRef.current = 0;
+      });
+    },
+    [labelWidth, draggingRef, scrollRef],
+  );
 
   const handleMouseLeave = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);

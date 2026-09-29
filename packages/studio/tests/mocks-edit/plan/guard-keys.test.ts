@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-
-import { guardKeys } from "../../../src/server/mocks-edit/plan/guard-keys";
 import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
+import { guardKeys } from "../../../src/server/mocks-edit/plan/guard-keys";
 import type { MockDeclaration } from "../../../src/server/mocks-edit/types";
 
 function request(key: string, source = key): MockDeclaration {

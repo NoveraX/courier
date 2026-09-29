@@ -24,16 +24,26 @@ const PLAN = {
   writes: [],
   removals: [{ path: "src/api/pets/source.ts", was: "recorded" }],
   kept: [{ path: "src/api/pets/helpers.ts", reason: "not-written-by-studio" }],
-  pending: [{ path: "src/api/pets/pets/index.ts", kind: "remove", reason: "edited", preselected: false }],
+  pending: [
+    { path: "src/api/pets/pets/index.ts", kind: "remove", reason: "edited", preselected: false },
+  ],
   blocked: [],
   forgotten: [],
 };
 
-const NOTES = { configFile: "courier.config.ts", importDeclared: true, configImports: ["src/api/pets/source.ts"] };
+const NOTES = {
+  configFile: "courier.config.ts",
+  importDeclared: true,
+  configImports: ["src/api/pets/source.ts"],
+};
 
 let removal: UseRemoveImportReturn;
 
-function Harness({ onRemoved }: { onRemoved: (name: string, message: string) => void }): React.ReactElement {
+function Harness({
+  onRemoved,
+}: {
+  onRemoved: (name: string, message: string) => void;
+}): React.ReactElement {
   removal = useRemoveImport(onRemoved);
   return <RemoveImportDialog removal={removal} />;
 }
@@ -51,7 +61,9 @@ describe("the remove dialog", () => {
     await act(() => removal.start("pets"));
 
     expect(vi.mocked(post)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(post)).toHaveBeenCalledWith("/api/apis/imports/remove/preview", { name: "pets" });
+    expect(vi.mocked(post)).toHaveBeenCalledWith("/api/apis/imports/remove/preview", {
+      name: "pets",
+    });
     expect(screen.getByText("src/api/pets/helpers.ts")).toBeTruthy();
     expect(screen.getByText(/it holds edits of yours/)).toBeTruthy();
     expect(screen.getByText(/courier\.config\.ts imports these files/)).toBeTruthy();
@@ -62,7 +74,14 @@ describe("the remove dialog", () => {
     const onRemoved = vi.fn();
     vi.mocked(post)
       .mockResolvedValueOnce({ plan: PLAN, ...NOTES })
-      .mockResolvedValueOnce({ success: true, removed: ["src/api/pets/source.ts"], kept: [], backupDir: ".courier/backups/1-a", pruneFailures: [], ...NOTES });
+      .mockResolvedValueOnce({
+        success: true,
+        removed: ["src/api/pets/source.ts"],
+        kept: [],
+        backupDir: ".courier/backups/1-a",
+        pruneFailures: [],
+        ...NOTES,
+      });
     render(<Harness onRemoved={onRemoved} />);
     await act(() => removal.start("pets"));
 
@@ -75,7 +94,10 @@ describe("the remove dialog", () => {
       planDigest: "plan-1",
       confirm: ["src/api/pets/pets/index.ts"],
     });
-    expect(onRemoved).toHaveBeenCalledWith("pets", "Removed pets: moved 1 file into .courier/backups/1-a");
+    expect(onRemoved).toHaveBeenCalledWith(
+      "pets",
+      "Removed pets: moved 1 file into .courier/backups/1-a",
+    );
     expect(removal.name).toBeNull();
   });
 
@@ -102,7 +124,14 @@ describe("the remove dialog", () => {
     const kept = [{ path: "src/api/pets/pets/index.ts", reason: "unconfirmed" }];
     vi.mocked(post)
       .mockResolvedValueOnce({ plan: { ...PLAN, removals: [] }, ...NOTES })
-      .mockResolvedValueOnce({ success: true, removed: [], kept, backupDir: ".courier/backups/1-a", pruneFailures: [], ...NOTES });
+      .mockResolvedValueOnce({
+        success: true,
+        removed: [],
+        kept,
+        backupDir: ".courier/backups/1-a",
+        pruneFailures: [],
+        ...NOTES,
+      });
     render(<Harness onRemoved={onRemoved} />);
     await act(() => removal.start("pets"));
 
@@ -113,7 +142,11 @@ describe("the remove dialog", () => {
 
   it("shows the plan as it stands when the files changed since the preview, with nothing allowed", async () => {
     const changed = { ...PLAN, digest: "plan-2" };
-    const stale = new StudioRequestError("The files changed.", { error: "The files changed.", code: "PLAN_STALE", plan: changed }, undefined);
+    const stale = new StudioRequestError(
+      "The files changed.",
+      { error: "The files changed.", code: "PLAN_STALE", plan: changed },
+      undefined,
+    );
     vi.mocked(post)
       .mockResolvedValueOnce({ plan: PLAN, ...NOTES })
       .mockRejectedValueOnce(stale)

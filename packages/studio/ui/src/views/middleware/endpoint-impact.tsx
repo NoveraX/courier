@@ -1,9 +1,8 @@
 import { motion } from "motion/react";
-
-import { cn } from "@/lib/utils";
 import { formatDuration } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
-import { StaggerList, STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
+import { STAGGER_ITEM_VARIANTS, StaggerList } from "@/components/shared/stagger-list";
+import { cn } from "@/lib/utils";
 
 import type { EndpointImpact } from "./types";
 
@@ -29,9 +28,7 @@ export function EndpointImpactPanel({
 
   return (
     <div className="rounded-xl border border-border-subtle bg-card p-4">
-      <h4 className="mb-3 text-caption text-muted-foreground/70">
-        Endpoint Impact
-      </h4>
+      <h4 className="mb-3 text-caption text-muted-foreground/70">Endpoint Impact</h4>
       <StaggerList className="space-y-1.5">
         {shown.map((ep) => (
           <EndpointRow
@@ -68,7 +65,8 @@ function EndpointRow({
     >
       <MethodBadge method={ep.httpMethod} />
       <span className="min-w-0 flex-1 truncate mono-sm text-left text-foreground">
-        {ep.source}.{ep.group ? `${ep.group}.` : ""}{ep.method}
+        {ep.source}.{ep.group ? `${ep.group}.` : ""}
+        {ep.method}
       </span>
 
       {/* Overhead bar */}
@@ -79,7 +77,11 @@ function EndpointRow({
           transition={{ delay: 0.1, duration: 0.4 }}
           className={cn(
             "h-full rounded-full",
-            ep.overheadPercent > 20 ? "bg-rose-500" : ep.overheadPercent > 5 ? "bg-amber-500" : "bg-sky-500",
+            ep.overheadPercent > 20
+              ? "bg-rose-500"
+              : ep.overheadPercent > 5
+                ? "bg-amber-500"
+                : "bg-sky-500",
           )}
         />
       </div>

@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { courier } from "../src/define/courier";
-import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { qualifyTopic, unqualifyTopic } from "../src/realtime/ws/topic-key";
+import { executeWSChannel } from "../src/realtime/ws-channel-client";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 
 const { channel } = courier();

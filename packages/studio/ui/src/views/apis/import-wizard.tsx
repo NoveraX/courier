@@ -6,22 +6,16 @@
  * write is under way.
  */
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
-import type { UseImportReturn } from "./use-import";
-import type { ImportStep } from "./types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DeclareStepView } from "./declare-step";
 import { ImportStepView } from "./import-step";
+import { WizardFooter } from "./import-wizard-footer";
+import { StepDot } from "./import-wizard-step-dot";
 import { OptionsStepView } from "./options-step";
 import { PreviewStepView } from "./preview-step";
 import { SelectStepView } from "./select-step";
-import { StepDot } from "./import-wizard-step-dot";
-import { WizardFooter } from "./import-wizard-footer";
+import type { ImportStep } from "./types";
+import type { UseImportReturn } from "./use-import";
 
 interface ImportWizardProps {
   wizard: UseImportReturn;
@@ -40,7 +34,12 @@ export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement 
   const currentIdx = written ? STEPS.length : STEPS.findIndex((s) => s.key === state.step);
 
   return (
-    <Dialog open={wizard.open} onOpenChange={(open) => { if (!open && !wizard.state.writing) wizard.close(); }}>
+    <Dialog
+      open={wizard.open}
+      onOpenChange={(open) => {
+        if (!open && !wizard.state.writing) wizard.close();
+      }}
+    >
       <DialogContent className="p-0 sm:max-w-3xl">
         <DialogHeader className="px-6 pt-5">
           <DialogTitle className="text-balance">Import API</DialogTitle>
@@ -80,11 +79,7 @@ export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement 
           )}
 
           {state.step === "options" && (
-            <OptionsStepView
-              options={state.options}
-              error={error}
-              onChange={wizard.setOptions}
-            />
+            <OptionsStepView options={state.options} error={error} onChange={wizard.setOptions} />
           )}
 
           {state.step === "preview" && (
@@ -98,7 +93,10 @@ export function ImportWizard({ wizard }: ImportWizardProps): React.ReactElement 
           )}
 
           {state.step === "declare" && state.declaration && (
-            <DeclareStepView sourceName={state.options.sourceName} declaration={state.declaration} />
+            <DeclareStepView
+              sourceName={state.options.sourceName}
+              declaration={state.declaration}
+            />
           )}
         </div>
 

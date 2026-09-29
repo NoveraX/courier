@@ -20,27 +20,37 @@ const SPEC = parseSpec(
     servers: [{ url: "https://store.test" }],
     paths: {
       "/inventory": {
-        get: { operationId: "getInventory", tags: ["store"], responses: { "200": { description: "ok", ...json(counts) } } },
+        get: {
+          operationId: "getInventory",
+          tags: ["store"],
+          responses: { "200": { description: "ok", ...json(counts) } },
+        },
       },
       "/stock": {
         get: {
           operationId: "getStock",
           tags: ["store"],
-          responses: { "200": { description: "ok", ...json({ $ref: "#/components/schemas/Stock" }) } },
+          responses: {
+            "200": { description: "ok", ...json({ $ref: "#/components/schemas/Stock" }) },
+          },
         },
       },
       "/json": {
         get: {
           operationId: "getJson",
           tags: ["store"],
-          responses: { "200": { description: "ok", ...json({ $ref: "#/components/schemas/Json" }) } },
+          responses: {
+            "200": { description: "ok", ...json({ $ref: "#/components/schemas/Json" }) },
+          },
         },
       },
       "/value": {
         get: {
           operationId: "getValue",
           tags: ["store"],
-          responses: { "200": { description: "ok", ...json({ oneOf: [{ type: "string" }, counts] }) } },
+          responses: {
+            "200": { description: "ok", ...json({ oneOf: [{ type: "string" }, counts] }) },
+          },
         },
       },
     },
@@ -87,7 +97,11 @@ let problems = new Map<string, string[]>();
 beforeAll(() => {
   problems = new Map(
     VARIANTS.map(([label, options]) => {
-      const files = generateCode(SPEC, { type: "openapi", outputDir: "src/api", ...options }, "store");
+      const files = generateCode(
+        SPEC,
+        { type: "openapi", outputDir: "src/api", ...options },
+        "store",
+      );
       const dir = writeProject(`inline-types/${label}`, files, { "consumer.ts": CONSUMER });
       return [label, compileProject(dir, ["consumer.ts"])];
     }),

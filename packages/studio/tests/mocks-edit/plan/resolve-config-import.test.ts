@@ -8,7 +8,11 @@ import { resolveConfigImport } from "../../../src/server/mocks-edit/plan/resolve
 
 function resolve(text: string, configName = "courier.config.ts"): ConfigImport {
   const { program } = parseSource("x.ts", text);
-  return resolveConfigImport(program, collectModuleBindings(program), configSpecifiers(configName, false));
+  return resolveConfigImport(
+    program,
+    collectModuleBindings(program),
+    configSpecifiers(configName, false),
+  );
 }
 
 describe("resolveConfigImport", () => {

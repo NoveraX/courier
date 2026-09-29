@@ -7,7 +7,9 @@ export function exportAsMarkdown(result: AuditResult): string {
 
   lines.push(`# Courier Audit Report`);
   lines.push("");
-  lines.push(`**Score: ${result.score}/100** | ${result.breakdown.error} errors, ${result.breakdown.warning} warnings, ${result.breakdown.hint} hints, ${result.breakdown.pass} passes`);
+  lines.push(
+    `**Score: ${result.score}/100** | ${result.breakdown.error} errors, ${result.breakdown.warning} warnings, ${result.breakdown.hint} hints, ${result.breakdown.pass} passes`,
+  );
   lines.push("");
 
   for (const cat of CATEGORY_ORDER) {

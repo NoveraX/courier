@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-
+import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
 import type { LocatedMocks } from "../../../src/server/mocks-edit/plan/locate-mocks-object";
 import { locateMocksObject } from "../../../src/server/mocks-edit/plan/locate-mocks-object";
 import { readMockImports } from "../../../src/server/mocks-edit/plan/mock-imports";
 import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
-import { MocksEditRefusal } from "../../../src/server/mocks-edit/mocks-edit-refusal";
 
 const HEADER = `import { defineMocks } from "@noverax/courier-mock";\n`;
 

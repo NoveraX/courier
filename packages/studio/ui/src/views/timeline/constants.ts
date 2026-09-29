@@ -1,6 +1,11 @@
 // Re-export shared constants used by timeline components
-export { STATUS_CONFIG, HTTP_METHOD_COLORS, DETAIL_TABS } from "@/components/shared/detail-panel/constants";
+
 export type { DetailTabKey } from "@/components/shared/detail-panel/constants";
+export {
+  DETAIL_TABS,
+  HTTP_METHOD_COLORS,
+  STATUS_CONFIG,
+} from "@/components/shared/detail-panel/constants";
 
 // ── Timeline-specific constants ───────────────────────────────────────────
 

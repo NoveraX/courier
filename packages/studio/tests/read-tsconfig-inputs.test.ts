@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { readPathAliases } from "@noverax/courier-studio-core/config";
@@ -114,7 +123,9 @@ describe("readTsconfigInputs", () => {
   });
 
   it("records where a missing extends target would be created", () => {
-    const tsconfig = file("tsconfig.json", { extends: ["../configs/base.json", "./tsconfig.base"] });
+    const tsconfig = file("tsconfig.json", {
+      extends: ["../configs/base.json", "./tsconfig.base"],
+    });
 
     expect([...readTsconfigInputs(dir)]).toEqual([
       [tsconfig, sha256(tsconfig)],
@@ -169,7 +180,12 @@ const STRICT = { compilerOptions: { strict: true } };
  */
 describe("readTsconfigInputs — the files the alias reader depends on", () => {
   const layouts: ReadonlyArray<[string, Record<string, unknown>, string, string[]]> = [
-    ["a tsconfig that declares paths", { "tsconfig.json": PATHS }, ".", ["tsconfig.json", "tsconfig.base.json"]],
+    [
+      "a tsconfig that declares paths",
+      { "tsconfig.json": PATHS },
+      ".",
+      ["tsconfig.json", "tsconfig.base.json"],
+    ],
     [
       "an extends chain",
       {
@@ -206,7 +222,10 @@ describe("readTsconfigInputs — the files the alias reader depends on", () => {
     ],
     [
       "a tsconfig above the directory",
-      { "tsconfig.json": { compilerOptions: { paths: { "@/*": ["./app/src/*"] } } }, "app/courier.config.ts": "" },
+      {
+        "tsconfig.json": { compilerOptions: { paths: { "@/*": ["./app/src/*"] } } },
+        "app/courier.config.ts": "",
+      },
       "app",
       ["tsconfig.json", "app/tsconfig.json"],
     ],
@@ -230,7 +249,10 @@ describe("readTsconfigInputs — the files the alias reader depends on", () => {
       ] as const
     ).map(([name, paths]): [string, Record<string, unknown>, string, string[]] => [
       name,
-      { "tsconfig.json": { extends: "./base.json", compilerOptions: { paths } }, "base.json": PATHS },
+      {
+        "tsconfig.json": { extends: "./base.json", compilerOptions: { paths } },
+        "base.json": PATHS,
+      },
       ".",
       ["tsconfig.json", "base.json"],
     ]),

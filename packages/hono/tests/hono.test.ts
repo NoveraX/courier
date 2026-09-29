@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as CourierModule from "@noverax/courier";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@noverax/courier", async (importOriginal) => {
   const actual = await importOriginal<typeof CourierModule>();
@@ -10,12 +10,39 @@ vi.mock("@noverax/courier", async (importOriginal) => {
       handleGet: vi.fn(),
       handlePost: vi.fn(),
       handleSSE: vi.fn(),
-      sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+      sseConnections: {
+        count: 0,
+        isShuttingDown: false,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        getByEndpoint: vi.fn(() => []),
+        disconnect: vi.fn(),
+        disconnectAll: vi.fn(),
+        send: vi.fn(() => true),
+        broadcastToEndpoint: vi.fn(() => new Map()),
+        broadcastToMeta: vi.fn(() => new Map()),
+        broadcastAll: vi.fn(() => new Map()),
+      },
       shutdownSSE: vi.fn(),
     })),
     createWSHandler: vi.fn(() => ({
       handleSocket: vi.fn(),
-      connections: { count: 0, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), send: vi.fn(), broadcast: vi.fn(), broadcastToTopic: vi.fn(), broadcastToBaseTopic: vi.fn(), sendToConnection: vi.fn(), disconnect: vi.fn(), disconnectByMeta: vi.fn() },
+      connections: {
+        count: 0,
+        get: vi.fn(),
+        has: vi.fn(),
+        list: vi.fn(() => []),
+        getByMeta: vi.fn(() => []),
+        send: vi.fn(),
+        broadcast: vi.fn(),
+        broadcastToTopic: vi.fn(),
+        broadcastToBaseTopic: vi.fn(),
+        sendToConnection: vi.fn(),
+        disconnect: vi.fn(),
+        disconnectByMeta: vi.fn(),
+      },
       destroy: vi.fn(),
     })),
   };
@@ -41,7 +68,21 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
     handleGet: vi.fn(),
     handlePost: vi.fn(),
     handleSSE: vi.fn(),
-    sseConnections: { count: 0, isShuttingDown: false, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), getByEndpoint: vi.fn(() => []), disconnect: vi.fn(), disconnectAll: vi.fn(), send: vi.fn(() => true), broadcastToEndpoint: vi.fn(() => new Map()), broadcastToMeta: vi.fn(() => new Map()), broadcastAll: vi.fn(() => new Map()) },
+    sseConnections: {
+      count: 0,
+      isShuttingDown: false,
+      get: vi.fn(),
+      has: vi.fn(),
+      list: vi.fn(() => []),
+      getByMeta: vi.fn(() => []),
+      getByEndpoint: vi.fn(() => []),
+      disconnect: vi.fn(),
+      disconnectAll: vi.fn(),
+      send: vi.fn(() => true),
+      broadcastToEndpoint: vi.fn(() => new Map()),
+      broadcastToMeta: vi.fn(() => new Map()),
+      broadcastAll: vi.fn(() => new Map()),
+    },
     shutdownSSE: vi.fn(),
     ...overrides,
   };
@@ -50,7 +91,20 @@ function createMockHandlerResult(overrides: Record<string, unknown> = {}) {
 function createMockWSResult(handleSocket = vi.fn()) {
   return {
     handleSocket,
-    connections: { count: 0, get: vi.fn(), has: vi.fn(), list: vi.fn(() => []), getByMeta: vi.fn(() => []), send: vi.fn(), broadcast: vi.fn(), broadcastToTopic: vi.fn(), broadcastToBaseTopic: vi.fn(), sendToConnection: vi.fn(), disconnect: vi.fn(), disconnectByMeta: vi.fn() },
+    connections: {
+      count: 0,
+      get: vi.fn(),
+      has: vi.fn(),
+      list: vi.fn(() => []),
+      getByMeta: vi.fn(() => []),
+      send: vi.fn(),
+      broadcast: vi.fn(),
+      broadcastToTopic: vi.fn(),
+      broadcastToBaseTopic: vi.fn(),
+      sendToConnection: vi.fn(),
+      disconnect: vi.fn(),
+      disconnectByMeta: vi.fn(),
+    },
     destroy: vi.fn(),
   };
 }
@@ -165,7 +219,7 @@ describe("courierSSEHandler", () => {
       headers: {
         "content-type": "text/event-stream",
         "cache-control": "no-cache, no-transform",
-        "connection": "keep-alive",
+        connection: "keep-alive",
         "x-accel-buffering": "no",
       },
     });

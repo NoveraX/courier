@@ -13,13 +13,16 @@
  * - message size limits via maxPayload
  */
 
+import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/internal";
+import { ForbiddenError } from "@noverax/courier/realtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 
-import { ForbiddenError } from "@noverax/courier/realtime";
-import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/internal";
-
-import { createMockServer, type MockServer, type MockServerOptions } from "../src/server/create-mock-server";
+import {
+  createMockServer,
+  type MockServer,
+  type MockServerOptions,
+} from "../src/server/create-mock-server";
 import type { PrefixMapping } from "../src/server/prefix-routes";
 
 // ---------------------------------------------------------------------------
@@ -220,8 +223,22 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     await waitForClose(ws);
     await new Promise((r) => setTimeout(r, 30));
 
-    expect(started).toHaveBeenCalledWith(expect.any(String), "GET", "/chat/room", "chat", "room", {});
-    expect(ended).toHaveBeenCalledWith(started.mock.calls[0]?.[0], 101, undefined, expect.any(Number), 0, "Started");
+    expect(started).toHaveBeenCalledWith(
+      expect.any(String),
+      "GET",
+      "/chat/room",
+      "chat",
+      "room",
+      {},
+    );
+    expect(ended).toHaveBeenCalledWith(
+      started.mock.calls[0]?.[0],
+      101,
+      undefined,
+      expect.any(Number),
+      0,
+      "Started",
+    );
   });
 
   it("records non-zero duration in history after connection closes", async () => {
@@ -386,7 +403,10 @@ describe("mock ws-handler — real HTTP upgrade", () => {
       error: { code: 5000, message: "Handler error" },
     });
     send(ws, { type: "message", topic: "chat.room", payload: { text: "fine" } });
-    expect(await waitForFrame(ws)).toMatchObject({ type: "data", payload: { echo: { text: "fine" } } });
+    expect(await waitForFrame(ws)).toMatchObject({
+      type: "data",
+      payload: { echo: { text: "fine" } },
+    });
     ws.close();
     await waitForClose(ws);
   });
@@ -437,7 +457,9 @@ describe("mock ws-handler — real HTTP upgrade", () => {
   it("returns 404 for paths not matched by any prefix mapping", async () => {
     const ws = new WebSocket(wsUrlFor(baseUrl, "/not-a-route"));
     const result = await new Promise<{ rejected: boolean; status?: number }>((resolve) => {
-      ws.on("unexpected-response", (_req, res) => resolve({ rejected: true, status: res.statusCode }));
+      ws.on("unexpected-response", (_req, res) =>
+        resolve({ rejected: true, status: res.statusCode }),
+      );
       ws.on("error", () => resolve({ rejected: true }));
       ws.on("open", () => resolve({ rejected: false }));
     });
@@ -585,7 +607,9 @@ describe("mock ws-handler — origin allowlist", () => {
     });
 
     const result = await new Promise<{ status?: number; rejected: boolean }>((resolve) => {
-      ws.on("unexpected-response", (_req, res) => resolve({ status: res.statusCode, rejected: true }));
+      ws.on("unexpected-response", (_req, res) =>
+        resolve({ status: res.statusCode, rejected: true }),
+      );
       ws.on("error", () => resolve({ rejected: true }));
       ws.on("open", () => resolve({ rejected: false }));
     });

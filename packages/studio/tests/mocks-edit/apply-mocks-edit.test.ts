@@ -5,7 +5,17 @@
  * the developer saved meanwhile is left alone; a plan that is not the one
  * previewed writes nothing; only an accepted load is applied.
  */
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -27,9 +37,9 @@ vi.mock("../../src/server/mocks-edit/replace-mocks-file", async (importOriginal)
 
 import { type LoadedCourierConfig, loadCourierConfig } from "../../src/server/config-loader";
 import type { ExclusiveContext, ExclusiveTransaction } from "../../src/server/exclusive-reload";
-import { MocksFileChangedError } from "../../src/server/mocks-edit/mocks-file-changed-error";
 import { applyMocksEdit } from "../../src/server/mocks-edit/apply-mocks-edit";
 import type { MocksEditContext } from "../../src/server/mocks-edit/mocks-edit-context";
+import { MocksFileChangedError } from "../../src/server/mocks-edit/mocks-file-changed-error";
 import { previewMocksEdit } from "../../src/server/mocks-edit/preview-mocks-edit";
 import type { ReadyOutcome } from "../../src/server/mocks-edit/types";
 import { ACT_BUDGET_MS, CONFIG_LOAD_TIMEOUT_MS } from "../../src/server/project-state/budgets";
@@ -56,7 +66,10 @@ beforeEach(() => {
     join(root, "src", "api.ts"),
     'import { defineApi } from "@noverax/courier/define";\nexport const api = defineApi({ baseURL: "https://api.example", endpoints: {} });\n',
   );
-  writeFileSync(join(root, "courier.config.ts"), 'import { api } from "./src/api";\nexport default { sources: { api } };\n');
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    'import { api } from "./src/api";\nexport default { sources: { api } };\n',
+  );
 });
 
 afterEach(() => {
@@ -81,7 +94,9 @@ interface Harness {
 }
 
 /* A project that runs the transaction when its slot is free, with a load the test decides. */
-async function harness(load: (real: () => Promise<LoadedCourierConfig>) => Promise<LoadedCourierConfig>): Promise<Harness> {
+async function harness(
+  load: (real: () => Promise<LoadedCourierConfig>) => Promise<LoadedCourierConfig>,
+): Promise<Harness> {
   let current = await loadCourierConfig(root);
   let slotFree: Promise<void> = Promise.resolve();
   const tx = {
@@ -94,8 +109,21 @@ async function harness(load: (real: () => Promise<LoadedCourierConfig>) => Promi
     reloadAfter: vi.fn(),
   };
   const project: ProjectState = {
-    snapshot: () => ({ revision: 1, starting: false, running: current, loadedAt: 0, failure: null }),
-    fresh: async () => ({ revision: 1, starting: false, running: current, loadedAt: 0, failure: null, settling: false }),
+    snapshot: () => ({
+      revision: 1,
+      starting: false,
+      running: current,
+      loadedAt: 0,
+      failure: null,
+    }),
+    fresh: async () => ({
+      revision: 1,
+      starting: false,
+      running: current,
+      loadedAt: 0,
+      failure: null,
+      settling: false,
+    }),
     importsChanged: () => undefined,
     runExclusive: async <TResult>(transaction: ExclusiveTransaction<TResult>) => {
       await slotFree;
@@ -139,7 +167,12 @@ describe("applyMocksEdit", () => {
 
     const result = await applyMocksEdit(ctx, await confirmed(ctx));
 
-    expect(result).toEqual({ status: "applied", target: "courier.mocks.ts", keys: ["second"], warnings: [] });
+    expect(result).toEqual({
+      status: "applied",
+      target: "courier.mocks.ts",
+      keys: ["second"],
+      warnings: [],
+    });
     expect(tx.apply).toHaveBeenCalledTimes(1);
     expect(tx.acknowledge).toHaveBeenCalledWith([join(root, "courier.mocks.ts")]);
   });
@@ -154,9 +187,15 @@ describe("applyMocksEdit", () => {
 
     const result = await applyMocksEdit(ctx, await confirmed(ctx));
 
-    expect(result).toMatchObject({ status: "rolledBack", target: "courier.mocks.ts", creates: false });
+    expect(result).toMatchObject({
+      status: "rolledBack",
+      target: "courier.mocks.ts",
+      creates: false,
+    });
     expect(String((result as { reason: string }).reason)).toContain("Unexpected token");
-    expect((result as { snippet: string }).snippet).toContain("second: defineMockServer({ source: courierConfig.sources.api })");
+    expect((result as { snippet: string }).snippet).toContain(
+      "second: defineMockServer({ source: courierConfig.sources.api })",
+    );
     expect(readFileSync(file, "utf8")).toBe(EXISTING);
     expect(statSync(file).mode & 0o777).toBe(0o664);
     expect(tx.apply).not.toHaveBeenCalled();
@@ -173,7 +212,10 @@ describe("applyMocksEdit", () => {
 
     const result = await applyMocksEdit(ctx, await confirmed(ctx));
 
-    expect(result).toMatchObject({ status: "rolledBack", reason: "second is not declared after the edit" });
+    expect(result).toMatchObject({
+      status: "rolledBack",
+      reason: "second is not declared after the edit",
+    });
     expect(readFileSync(join(root, "courier.mocks.ts"), "utf8")).toBe(EXISTING);
     expect(tx.apply).not.toHaveBeenCalled();
   });
@@ -231,20 +273,23 @@ describe("applyMocksEdit", () => {
     expect(tx.reloadAfter).toHaveBeenCalledWith([file]);
   });
 
-  it.skipIf(process.getuid?.() === 0)("says so when it cannot take its edit back, and has the file reloaded", async () => {
-    const file = join(root, "courier.mocks.ts");
-    writeFileSync(file, EXISTING);
-    const { ctx, tx } = await harness(async () => {
-      chmodSync(root, 0o555);
-      throw new Error("Unexpected token");
-    });
+  it.skipIf(process.getuid?.() === 0)(
+    "says so when it cannot take its edit back, and has the file reloaded",
+    async () => {
+      const file = join(root, "courier.mocks.ts");
+      writeFileSync(file, EXISTING);
+      const { ctx, tx } = await harness(async () => {
+        chmodSync(root, 0o555);
+        throw new Error("Unexpected token");
+      });
 
-    const result = await applyMocksEdit(ctx, await confirmed(ctx));
+      const result = await applyMocksEdit(ctx, await confirmed(ctx));
 
-    chmodSync(root, 0o755);
-    expect(result).toMatchObject({ status: "rollbackFailed", insertedLines: [{ line: 6 }] });
-    expect(tx.reloadAfter).toHaveBeenCalledWith([file]);
-  });
+      chmodSync(root, 0o755);
+      expect(result).toMatchObject({ status: "rollbackFailed", insertedLines: [{ line: 6 }] });
+      expect(tx.reloadAfter).toHaveBeenCalledWith([file]);
+    },
+  );
 
   it("writes nothing for a plan other than the one previewed", async () => {
     writeFileSync(join(root, "courier.mocks.ts"), EXISTING);
@@ -302,11 +347,19 @@ describe("applyMocksEdit", () => {
     writeFileSync(join(root, "courier.mocks.ts"), EXISTING);
     const { ctx, tx } = await harness((real) => real());
     const body = await confirmed(ctx);
-    writes.failNext = Object.assign(new Error(`EACCES: permission denied, open '${root}/.courier.mocks.1-abc.tmp'`), { code: "EACCES" });
+    writes.failNext = Object.assign(
+      new Error(`EACCES: permission denied, open '${root}/.courier.mocks.1-abc.tmp'`),
+      { code: "EACCES" },
+    );
 
     const result = await applyMocksEdit(ctx, body);
 
-    expect(result).toMatchObject({ status: "manual", target: "courier.mocks.ts", creates: false, reasons: [{ code: "WRITE_FAILED" }] });
+    expect(result).toMatchObject({
+      status: "manual",
+      target: "courier.mocks.ts",
+      creates: false,
+      reasons: [{ code: "WRITE_FAILED" }],
+    });
     const [reason] = (result as { reasons: Array<{ message: string }> }).reasons;
     expect(reason?.message).toBe(
       "Studio could not write courier.mocks.ts (EACCES: permission denied, open '.courier.mocks.1-abc.tmp').",
@@ -327,7 +380,11 @@ describe("applyMocksEdit", () => {
     release();
     await vi.runAllTimersAsync();
 
-    expect(result).toMatchObject({ status: "manual", retryable: true, reasons: [{ code: "STUDIO_BUSY" }] });
+    expect(result).toMatchObject({
+      status: "manual",
+      retryable: true,
+      reasons: [{ code: "STUDIO_BUSY" }],
+    });
     expect(readFileSync(join(root, "courier.mocks.ts"), "utf8")).toBe(EXISTING);
     expect(tx.acknowledge).not.toHaveBeenCalled();
   });
@@ -363,17 +420,20 @@ describe("applyMocksEdit", () => {
     expect(tx.apply).not.toHaveBeenCalled();
   });
 
-  it.skipIf(process.getuid?.() === 0)("answers a file that became unreadable after the preview without failing", async () => {
-    const file = join(root, "courier.mocks.ts");
-    writeFileSync(file, EXISTING);
-    const { ctx } = await harness((real) => real());
-    const body = await confirmed(ctx);
-    chmodSync(file, 0o000);
+  it.skipIf(process.getuid?.() === 0)(
+    "answers a file that became unreadable after the preview without failing",
+    async () => {
+      const file = join(root, "courier.mocks.ts");
+      writeFileSync(file, EXISTING);
+      const { ctx } = await harness((real) => real());
+      const body = await confirmed(ctx);
+      chmodSync(file, 0o000);
 
-    const result = await applyMocksEdit(ctx, body);
+      const result = await applyMocksEdit(ctx, body);
 
-    chmodSync(file, 0o644);
-    expect(result.status).toBe("stale");
-    expect((result as { plan: { status: string } }).plan.status).toBe("manual");
-  });
+      chmodSync(file, 0o644);
+      expect(result.status).toBe("stale");
+      expect((result as { plan: { status: string } }).plan.status).toBe("manual");
+    },
+  );
 });

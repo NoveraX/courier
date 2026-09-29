@@ -272,9 +272,7 @@ describe("HttpClient", () => {
   describe("searchParamsSerializer", () => {
     it("uses custom searchParamsSerializer.stringify for GET", async () => {
       const serializer = {
-        stringify: vi.fn(
-          (obj: Record<string, unknown>) => `custom=${Object.keys(obj).join(",")}`,
-        ),
+        stringify: vi.fn((obj: Record<string, unknown>) => `custom=${Object.keys(obj).join(",")}`),
         parse: vi.fn((str: string) => Object.fromEntries(new URLSearchParams(str).entries())),
       };
       const instance = new HttpClient({ searchParamsSerializer: serializer });

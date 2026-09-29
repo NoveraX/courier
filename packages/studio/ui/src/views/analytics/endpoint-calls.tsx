@@ -1,11 +1,10 @@
 import { ExternalLink } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { formatDuration, formatSize } from "@/components/shared/formatters";
-import { useRequestDetail } from "@/hooks/use-request-detail";
-import type { RequestEntry } from "@/store/types";
 import { STATUS_CONFIG } from "@/components/shared/detail-panel";
+import { formatDuration, formatSize } from "@/components/shared/formatters";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { useRequestDetail } from "@/hooks/use-request-detail";
+import { cn } from "@/lib/utils";
+import type { RequestEntry } from "@/store/types";
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
@@ -36,7 +35,10 @@ export function EndpointCalls({ requestIds, requestsMap }: EndpointCallsProps): 
 
 // ── Call Row ─────────────────────────────────────────────────────────────────
 
-function CallRow({ request, onClick }: {
+function CallRow({
+  request,
+  onClick,
+}: {
   request: RequestEntry;
   onClick: () => void;
 }): React.ReactElement {

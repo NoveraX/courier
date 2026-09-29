@@ -1,8 +1,7 @@
-import type { DraftErrors, MockDraft } from "./types";
-
 import { DRAFT_LIMITS } from "./draft-limits";
 import { keyRuleProblem } from "./key-rule-problem";
 import { parseWholeNumber } from "./parse-whole-number";
+import type { DraftErrors, MockDraft } from "./types";
 
 /** What the project has, as the UI knows it, to check drafts against. */
 export interface DraftProject {
@@ -18,7 +17,11 @@ interface Earlier {
   ports: Map<number, string>;
 }
 
-function keyProblem(key: string, earlier: Earlier, declared: ReadonlyMap<string, string>): string | undefined {
+function keyProblem(
+  key: string,
+  earlier: Earlier,
+  declared: ReadonlyMap<string, string>,
+): string | undefined {
   const rule = keyRuleProblem(key);
   if (rule !== null) return rule;
   const repeated = earlier.keys.get(key.toLowerCase());
@@ -38,7 +41,9 @@ function portProblem(draft: MockDraft, earlier: Earlier): string | undefined {
   const port = fixedPort(draft);
   if (port === null) return `a port must be a whole number from 1 to ${DRAFT_LIMITS.maxPort}`;
   const holder = earlier.ports.get(port);
-  return holder === undefined ? undefined : `${holder} in this request already asks for port ${port}`;
+  return holder === undefined
+    ? undefined
+    : `${holder} in this request already asks for port ${port}`;
 }
 
 function seedCountProblem(draft: MockDraft): string | undefined {
@@ -87,7 +92,9 @@ export function validateDrafts(
   const problems = new Map<number, DraftErrors>();
   for (const [index, draft] of drafts.entries()) {
     const errors = withoutEmpty({
-      source: sources.has(draft.source) ? undefined : `courier.config has no sources.${draft.source}`,
+      source: sources.has(draft.source)
+        ? undefined
+        : `courier.config has no sources.${draft.source}`,
       key: keyProblem(draft.key, earlier, declared),
       port: portProblem(draft, earlier),
       seedCount: seedCountProblem(draft),

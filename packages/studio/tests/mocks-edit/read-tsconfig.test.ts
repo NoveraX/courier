@@ -24,7 +24,10 @@ afterEach(() => {
 describe("readTsconfig", () => {
   it("reads a tsconfig with comments and trailing commas", () => {
     const file = join(root, "tsconfig.json");
-    writeFileSync(file, '{\n  // Node\'s own resolution\n  "compilerOptions": { "module": "NodeNext", },\n  "files": [],\n}\n');
+    writeFileSync(
+      file,
+      '{\n  // Node\'s own resolution\n  "compilerOptions": { "module": "NodeNext", },\n  "files": [],\n}\n',
+    );
 
     expect(readTsconfig(file)).toEqual({ compilerOptions: { module: "NodeNext" }, files: [] });
   });
@@ -37,7 +40,9 @@ describe("readTsconfig", () => {
     expect(readTsconfig(file)).toBeNull();
     expect(console.debug).toHaveBeenCalledWith(
       "%s",
-      expect.stringContaining(`[Studio] Could not read ${file}, so the module options it sets are not known`),
+      expect.stringContaining(
+        `[Studio] Could not read ${file}, so the module options it sets are not known`,
+      ),
       expect.any(SyntaxError),
     );
   });

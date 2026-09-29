@@ -1,9 +1,5 @@
-import { Controller } from "react-hook-form";
-
 import type { UseFormReturn } from "react-hook-form";
-import type { Settings } from "@/store/types";
-
-import { Switch } from "@/components/ui/switch";
+import { Controller } from "react-hook-form";
 import {
   Select,
   SelectContent,
@@ -11,7 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TIMESTAMP_OPTIONS, JSON_INDENT_OPTIONS } from "./constants";
+
+import { Switch } from "@/components/ui/switch";
+import type { Settings } from "@/store/types";
+import { JSON_INDENT_OPTIONS, TIMESTAMP_OPTIONS } from "./constants";
 import { SettingRow } from "./setting-row";
 
 // ── Display section ──────────────────────────────────────────────────────────
@@ -20,9 +19,7 @@ interface DisplaySectionProps {
   form: UseFormReturn<Settings>;
 }
 
-export function DisplaySection({
-  form,
-}: DisplaySectionProps): React.ReactElement {
+export function DisplaySection({ form }: DisplaySectionProps): React.ReactElement {
   return (
     <>
       <SettingRow label="Timestamp format">
@@ -51,10 +48,7 @@ export function DisplaySection({
           control={form.control}
           name="jsonIndent"
           render={({ field }) => (
-            <Select
-              value={String(field.value)}
-              onValueChange={(v) => field.onChange(Number(v))}
-            >
+            <Select value={String(field.value)} onValueChange={(v) => field.onChange(Number(v))}>
               <SelectTrigger className="w-28" size="sm">
                 <SelectValue />
               </SelectTrigger>

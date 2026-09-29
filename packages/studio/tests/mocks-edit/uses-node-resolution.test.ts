@@ -43,11 +43,14 @@ describe("usesNodeResolution", () => {
     },
   );
 
-  it.each([["NodeNext"], ["node16"]])("takes a moduleResolution of %s for Node's resolution", (moduleResolution) => {
-    tsconfig({ module: "NodeNext", moduleResolution });
+  it.each([["NodeNext"], ["node16"]])(
+    "takes a moduleResolution of %s for Node's resolution",
+    (moduleResolution) => {
+      tsconfig({ module: "NodeNext", moduleResolution });
 
-    expect(usesNodeResolution(root)).toBe(true);
-  });
+      expect(usesNodeResolution(root)).toBe(true);
+    },
+  );
 
   it.each([
     [{ module: "ESNext", moduleResolution: "bundler" }],
@@ -74,28 +77,46 @@ describe("usesNodeResolution", () => {
   });
 
   it("reads a tsconfig with comments and trailing commas", () => {
-    write("tsconfig.json", '{\n  // Node\'s own resolution\n  "compilerOptions": { "module": "NodeNext", },\n}\n');
+    write(
+      "tsconfig.json",
+      '{\n  // Node\'s own resolution\n  "compilerOptions": { "module": "NodeNext", },\n}\n',
+    );
 
     expect(usesNodeResolution(root)).toBe(true);
   });
 
   it("takes the options of the config a tsconfig extends", () => {
     tsconfig({ module: "NodeNext" }, "configs/base.json");
-    write("tsconfig.json", JSON.stringify({ extends: "./configs/base.json", compilerOptions: { strict: "true" } }));
+    write(
+      "tsconfig.json",
+      JSON.stringify({ extends: "./configs/base.json", compilerOptions: { strict: "true" } }),
+    );
 
     expect(usesNodeResolution(root)).toBe(true);
   });
 
   it("takes a moduleResolution from one extended config over a module from another", () => {
     tsconfig({ module: "NodeNext" }, "node.json");
-    write("tsconfig.json", JSON.stringify({ extends: ["./node.json"], compilerOptions: { moduleResolution: "nodenext" } }));
+    write(
+      "tsconfig.json",
+      JSON.stringify({
+        extends: ["./node.json"],
+        compilerOptions: { moduleResolution: "nodenext" },
+      }),
+    );
 
     expect(usesNodeResolution(root)).toBe(true);
   });
 
   it("takes Node's resolution from a base that a later entry of an extends array brings again", () => {
     tsconfig({ module: "NodeNext", moduleResolution: "NodeNext" }, "base.json");
-    write("bundler.json", JSON.stringify({ extends: "./base.json", compilerOptions: { module: "ESNext", moduleResolution: "bundler" } }));
+    write(
+      "bundler.json",
+      JSON.stringify({
+        extends: "./base.json",
+        compilerOptions: { module: "ESNext", moduleResolution: "bundler" },
+      }),
+    );
     write("strict.json", JSON.stringify({ extends: "./base.json" }));
     write("tsconfig.json", JSON.stringify({ extends: ["./bundler.json", "./strict.json"] }));
 
@@ -109,7 +130,9 @@ describe("usesNodeResolution", () => {
     expect(usesNodeResolution(root)).toBe(false);
     expect(console.debug).toHaveBeenCalledWith(
       "%s",
-      expect.stringContaining(`[Studio] Could not read ${join(root, "tsconfig.json")}, so the module options it sets are not known`),
+      expect.stringContaining(
+        `[Studio] Could not read ${join(root, "tsconfig.json")}, so the module options it sets are not known`,
+      ),
       expect.any(SyntaxError),
     );
   });
@@ -117,12 +140,18 @@ describe("usesNodeResolution", () => {
 
 describe("usesNodeResolution with project references", () => {
   function solution(...paths: string[]): void {
-    write("tsconfig.json", JSON.stringify({ files: [], references: paths.map((path) => ({ path })) }));
+    write(
+      "tsconfig.json",
+      JSON.stringify({ files: [], references: paths.map((path) => ({ path })) }),
+    );
   }
 
   it("takes Node's resolution from a project a solution tsconfig references", () => {
     solution("./tsconfig.node.json");
-    write("tsconfig.node.json", JSON.stringify({ compilerOptions: { module: "NodeNext" }, include: ["*.ts"] }));
+    write(
+      "tsconfig.node.json",
+      JSON.stringify({ compilerOptions: { module: "NodeNext" }, include: ["*.ts"] }),
+    );
 
     expect(usesNodeResolution(root)).toBe(true);
   });
@@ -160,7 +189,10 @@ describe("usesNodeResolution with project references", () => {
 
   it("follows the references of a referenced solution", () => {
     solution("./packages");
-    write("packages/tsconfig.json", JSON.stringify({ files: [], references: [{ path: "./server/tsconfig.build.json" }] }));
+    write(
+      "packages/tsconfig.json",
+      JSON.stringify({ files: [], references: [{ path: "./server/tsconfig.build.json" }] }),
+    );
     tsconfig({ module: "NodeNext" }, "packages/server/tsconfig.build.json");
 
     expect(usesNodeResolution(root)).toBe(true);
@@ -168,7 +200,13 @@ describe("usesNodeResolution with project references", () => {
 
   it("ends references that come back to a project already read", () => {
     solution("./a.json");
-    write("a.json", JSON.stringify({ files: [], references: [{ path: "./tsconfig.json" }, { path: "./a.json" }] }));
+    write(
+      "a.json",
+      JSON.stringify({
+        files: [],
+        references: [{ path: "./tsconfig.json" }, { path: "./a.json" }],
+      }),
+    );
 
     expect(usesNodeResolution(root)).toBe(false);
   });
@@ -176,7 +214,15 @@ describe("usesNodeResolution with project references", () => {
   it("skips a reference it cannot read and an entry without a path, reading the others", () => {
     write(
       "tsconfig.json",
-      JSON.stringify({ files: [], references: [{ path: "./missing.json" }, { prepend: true }, "./x.json", { path: "./tsconfig.node.json" }] }),
+      JSON.stringify({
+        files: [],
+        references: [
+          { path: "./missing.json" },
+          { prepend: true },
+          "./x.json",
+          { path: "./tsconfig.node.json" },
+        ],
+      }),
     );
     tsconfig({ module: "NodeNext" }, "tsconfig.node.json");
 

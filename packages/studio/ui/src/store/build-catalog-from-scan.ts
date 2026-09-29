@@ -1,8 +1,8 @@
-import type { Catalog, CatalogEndpoint, CatalogGroup } from "./types-ui"
-import type { ScannedEndpoint, ScannedSource } from "@/views/apis/types"
+import type { ScannedEndpoint, ScannedSource } from "@/views/apis/types";
+import type { Catalog, CatalogEndpoint, CatalogGroup } from "./types-ui";
 
 /** Endpoints a source declares without a group are keyed under `""`. */
-const FLAT_GROUP = ""
+const FLAT_GROUP = "";
 
 /**
  * Build a `Catalog` from the sources the config declares, as Studio
@@ -18,26 +18,26 @@ const FLAT_GROUP = ""
  * ```
  */
 export function buildCatalogFromScan(sources: readonly ScannedSource[]): Catalog {
-  const catalog: Catalog = {}
+  const catalog: Catalog = {};
   for (const source of sources) {
-    const groups: Record<string, CatalogGroup> = {}
+    const groups: Record<string, CatalogGroup> = {};
     for (const group of source.groups) {
-      groups[group.name] = { prefix: group.prefix, endpoints: endpointsOf(group.endpoints) }
+      groups[group.name] = { prefix: group.prefix, endpoints: endpointsOf(group.endpoints) };
     }
     if (source.inlineEndpoints?.length) {
-      groups[FLAT_GROUP] = { prefix: "", endpoints: endpointsOf(source.inlineEndpoints) }
+      groups[FLAT_GROUP] = { prefix: "", endpoints: endpointsOf(source.inlineEndpoints) };
     }
     catalog[source.name] = {
       baseURL: source.baseURL,
       ...(source.proxyPath && { proxyPath: source.proxyPath }),
       groups,
-    }
+    };
   }
-  return catalog
+  return catalog;
 }
 
 function endpointsOf(endpoints: readonly ScannedEndpoint[]): Record<string, CatalogEndpoint> {
-  const byName: Record<string, CatalogEndpoint> = {}
+  const byName: Record<string, CatalogEndpoint> = {};
   for (const { name, analysis } of endpoints) {
     byName[name] = {
       type: analysis.type ?? undefined,
@@ -50,7 +50,7 @@ function endpointsOf(endpoints: readonly ScannedEndpoint[]): Record<string, Cata
       ...(analysis.middleware?.length && { middleware: analysis.middleware }),
       ...(analysis.variablesStub && { variablesStub: analysis.variablesStub }),
       ...(analysis.hasReceiveSchema && { hasReceiveSchema: true }),
-    }
+    };
   }
-  return byName
+  return byName;
 }

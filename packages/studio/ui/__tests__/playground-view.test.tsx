@@ -35,7 +35,9 @@ function renderPlayground(at: Record<string, string> = {}): void {
 }
 
 function execCalls(): unknown[] {
-  return emit.mock.calls.filter(([event]) => event === "playground:exec").map(([, payload]) => payload);
+  return emit.mock.calls
+    .filter(([event]) => event === "playground:exec")
+    .map(([, payload]) => payload);
 }
 
 function variablesEditor(): HTMLTextAreaElement {
@@ -140,7 +142,9 @@ describe("the Playground", () => {
     await act(async () => screen.getByRole("button", { name: /Headers/ }).click());
     const [, headersEditor] = screen.getAllByRole("textbox");
     if (headersEditor === undefined) throw new Error("The headers editor is not shown");
-    fireEvent.change(headersEditor, { target: { value: '{ "x-client-tag": "pg", "x-not-allowed": "1" }' } });
+    fireEvent.change(headersEditor, {
+      target: { value: '{ "x-client-tag": "pg", "x-not-allowed": "1" }' },
+    });
     await act(async () => screen.getByRole("button", { name: "Send" }).click());
     const tabs = screen.getAllByRole("button", { name: /^Headers$/ });
     await act(async () => tabs.at(-1)?.click());
@@ -155,9 +159,17 @@ describe("the Playground", () => {
   it("lists the headers a proxy reported it did not forward", async () => {
     useStudioStore.setState({
       playgroundActiveResponse: {
-        id: "e1", rid: "e1", source: "api", group: "users", method: "create",
-        variables: "{}", headers: '{ "x-client-tag": "pg", "x-not-allowed": "1" }',
-        mode: "proxy", timestamp: 1, status: "success", statusCode: 201,
+        id: "e1",
+        rid: "e1",
+        source: "api",
+        group: "users",
+        method: "create",
+        variables: "{}",
+        headers: '{ "x-client-tag": "pg", "x-not-allowed": "1" }',
+        mode: "proxy",
+        timestamp: 1,
+        status: "success",
+        statusCode: 201,
         requestHeaders: { "x-client-tag": "pg" },
       },
     });

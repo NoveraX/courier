@@ -1,12 +1,10 @@
 import { X } from "lucide-react";
-
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-
-import { FilterSelect } from "./filter-select";
+import { cn } from "@/lib/utils";
 import type { FilterOption } from "./filter-select";
+import { FilterSelect } from "./filter-select";
 
 export interface FilterConfig {
   key: string;
@@ -51,11 +49,7 @@ export function FilterBar({
           <Separator orientation="vertical" className="h-5" />
 
           {activeFilters.map((af) => (
-            <Badge
-              key={`${af.filterKey}-${af.value}`}
-              variant="secondary"
-              className="gap-1 pr-1"
-            >
+            <Badge key={`${af.filterKey}-${af.value}`} variant="secondary" className="gap-1 pr-1">
               <span className="text-[10px] text-muted-foreground">{af.filterLabel}:</span>
               <span className="text-[10px]">{af.optionLabel}</span>
               <button
@@ -69,12 +63,7 @@ export function FilterBar({
             </Badge>
           ))}
 
-          <Button
-            variant="ghost"
-            size="xs"
-            className="text-muted-foreground"
-            onClick={onReset}
-          >
+          <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={onReset}>
             Reset
           </Button>
         </>
@@ -119,8 +108,11 @@ function removeFilter(
   onChange: (key: string, selected: string[]) => void,
 ): void {
   const current = values[key] ?? [];
-  onChange(key, current.filter((v) => v !== value));
+  onChange(
+    key,
+    current.filter((v) => v !== value),
+  );
 }
 
-export { FilterSelect } from "./filter-select";
 export type { FilterOption } from "./filter-select";
+export { FilterSelect } from "./filter-select";

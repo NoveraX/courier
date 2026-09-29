@@ -1,8 +1,8 @@
-import { X } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { X } from "lucide-react";
+import { MethodBadge } from "@/components/shared/method-badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MethodBadge } from "@/components/shared/method-badge";
 
 import type { MockRouteEntry } from "@/store/mock-slice";
 
@@ -15,10 +15,18 @@ interface RouteDetailProps {
   onClose: () => void;
 }
 
-export function RouteDetail({ route, serverUrl, sourceName, onClose }: RouteDetailProps): React.ReactElement {
+export function RouteDetail({
+  route,
+  serverUrl,
+  sourceName,
+  onClose,
+}: RouteDetailProps): React.ReactElement {
   const navigate = useNavigate();
   const openInPlayground = () => {
-    void navigate({ to: "/playground", search: { source: sourceName, group: route.group, method: route.endpoint } });
+    void navigate({
+      to: "/playground",
+      search: { source: sourceName, group: route.group, method: route.endpoint },
+    });
   };
 
   const hasSchema = route.responseSchema && Object.keys(route.responseSchema).length > 0;
@@ -42,10 +50,18 @@ export function RouteDetail({ route, serverUrl, sourceName, onClose }: RouteDeta
         <div className="border-b border-border-subtle">
           <div className="px-3">
             <TabsList variant="line" className="h-9 w-max">
-              <TabsTrigger value="general" className="text-body-sm">General</TabsTrigger>
-              <TabsTrigger value="schema" className="text-body-sm" disabled={!hasSchema}>Schema</TabsTrigger>
-              <TabsTrigger value="example" className="text-body-sm" disabled={!hasExample}>Example</TabsTrigger>
-              <TabsTrigger value="handler" className="text-body-sm">Handler</TabsTrigger>
+              <TabsTrigger value="general" className="text-body-sm">
+                General
+              </TabsTrigger>
+              <TabsTrigger value="schema" className="text-body-sm" disabled={!hasSchema}>
+                Schema
+              </TabsTrigger>
+              <TabsTrigger value="example" className="text-body-sm" disabled={!hasExample}>
+                Example
+              </TabsTrigger>
+              <TabsTrigger value="handler" className="text-body-sm">
+                Handler
+              </TabsTrigger>
             </TabsList>
           </div>
         </div>

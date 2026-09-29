@@ -14,7 +14,11 @@ import type { InsertedLine } from "./wire-types";
  * <InsertedLinesList lines={outcome.insertedLines} />
  * ```
  */
-export function InsertedLinesList({ lines }: { lines: readonly InsertedLine[] }): React.ReactElement {
+export function InsertedLinesList({
+  lines,
+}: {
+  lines: readonly InsertedLine[];
+}): React.ReactElement {
   return (
     <ol className="overflow-auto rounded-lg border border-zinc-800 bg-zinc-950 py-2 text-zinc-200">
       {lines.map((line) => (

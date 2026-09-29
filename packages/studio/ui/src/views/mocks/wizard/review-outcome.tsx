@@ -1,13 +1,18 @@
-import type { ApplyState } from "./types";
-
 import { CodeBlock } from "@/components/shared/code-block";
 import { InsertedLinesList } from "./inserted-lines-list";
+import type { ApplyState } from "./types";
 
-type ShownOutcome = Extract<ApplyState, { status: "failed" | "rolledBack" | "notVerified" | "rollbackFailed" }>;
+type ShownOutcome = Extract<
+  ApplyState,
+  { status: "failed" | "rolledBack" | "notVerified" | "rollbackFailed" }
+>;
 
 function Panel({ title, detail }: { title: string; detail: string }): React.ReactElement {
   return (
-    <div role="alert" className="space-y-1 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2">
+    <div
+      role="alert"
+      className="space-y-1 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2"
+    >
       <p className="text-body-sm text-rose-400">{title}</p>
       <p className="whitespace-pre-wrap mono-xs text-rose-400/80">{detail}</p>
     </div>
@@ -30,7 +35,13 @@ function Panel({ title, detail }: { title: string; detail: string }): React.Reac
  * <ReviewOutcome outcome={state.apply} target={plan.outcome.target} />
  * ```
  */
-export function ReviewOutcome({ outcome, target }: { outcome: ShownOutcome; target: string }): React.ReactElement {
+export function ReviewOutcome({
+  outcome,
+  target,
+}: {
+  outcome: ShownOutcome;
+  target: string;
+}): React.ReactElement {
   switch (outcome.status) {
     case "failed":
       return (
@@ -46,7 +57,9 @@ export function ReviewOutcome({ outcome, target }: { outcome: ShownOutcome; targ
             title={`Studio wrote the change, but the mocks did not check out, so it ${outcome.creates ? "removed" : "put back"} ${outcome.target}.`}
             detail={outcome.reason}
           />
-          <p className="text-body-xs text-muted-foreground">Add it by hand once the cause is fixed:</p>
+          <p className="text-body-xs text-muted-foreground">
+            Add it by hand once the cause is fixed:
+          </p>
           <CodeBlock code={outcome.snippet} language="ts" />
         </div>
       );

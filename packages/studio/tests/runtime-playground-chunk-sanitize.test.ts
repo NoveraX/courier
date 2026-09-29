@@ -90,7 +90,9 @@ describe("sanitizeChunk", () => {
 
   it("rejects http-result with non-finite status", () => {
     expect(sanitizeChunk({ rid: "r-1", chunk: { kind: "http-result", status: NaN } })).toBeNull();
-    expect(sanitizeChunk({ rid: "r-1", chunk: { kind: "http-result", status: Infinity } })).toBeNull();
+    expect(
+      sanitizeChunk({ rid: "r-1", chunk: { kind: "http-result", status: Infinity } }),
+    ).toBeNull();
   });
 
   it("rejects sse-event missing event field", () => {

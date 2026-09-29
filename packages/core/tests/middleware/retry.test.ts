@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { createCaller } from "../../src/caller";
-import { courier } from "../../src/define/courier";
 import { defineApi } from "../../src/define/api";
+import { courier } from "../../src/define/courier";
 import { HTTPError } from "../../src/errors";
 import { retryMiddleware } from "../../src/middleware/index";
 import type { Middleware, MiddlewareResponse } from "../../src/middleware/types";

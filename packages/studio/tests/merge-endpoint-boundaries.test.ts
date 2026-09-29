@@ -75,7 +75,10 @@ describe("a bracket inside a comment or a string", () => {
 
   it("does not move where an endpoint ends", () => {
     /* Edited by hand, the endpoint is kept as the file has it. */
-    const edited: FingerprintResult = { ...SAFE, endpoints: { ...SAFE.endpoints, listUsers: "modified" } };
+    const edited: FingerprintResult = {
+      ...SAFE,
+      endpoints: { ...SAFE.endpoints, listUsers: "modified" },
+    };
     const merged = mergeGroupFile(file, GENERATED, edited);
 
     expect(merged.content.match(/createUser:/g)).toHaveLength(1);

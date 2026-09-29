@@ -28,7 +28,9 @@ const forever = stream.response<number>().implement(async function* (ctx) {
 });
 
 beforeEach(() => {
-  registerSources({ api: defineApi({ baseURL: "https://upstream.example", endpoints: { forever } }) });
+  registerSources({
+    api: defineApi({ baseURL: "https://upstream.example", endpoints: { forever } }),
+  });
 });
 
 afterEach(async () => {
@@ -64,7 +66,8 @@ function closeServer(): Promise<string> {
   return new Promise((resolve) => server?.close(() => resolve("closed")));
 }
 
-const timeout = (ms: number) => new Promise((resolve) => setTimeout(() => resolve("still open"), ms));
+const timeout = (ms: number) =>
+  new Promise((resolve) => setTimeout(() => resolve("still open"), ms));
 
 describe("draining an Express host's SSE streams", () => {
   it("tells each stream's client to come back later and lets the server close", async () => {

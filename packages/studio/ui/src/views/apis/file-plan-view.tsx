@@ -1,7 +1,7 @@
-import type { FilePlanSummary } from "./types-file-plan";
-import { KEPT_LABEL, writeLabel } from "./file-plan-labels";
 import { FilePlanBlocked } from "./file-plan-blocked";
+import { KEPT_LABEL, writeLabel } from "./file-plan-labels";
 import { FilePlanPending } from "./file-plan-pending";
+import type { FilePlanSummary } from "./types-file-plan";
 
 interface FilePlanViewProps {
   plan: FilePlanSummary;
@@ -69,7 +69,8 @@ export function FilePlanView({ plan, confirmed, onToggle }: FilePlanViewProps): 
       <FileList title="Left as they are" rows={kept} />
       {unchanged > 0 && (
         <p className="text-body-sm text-muted-foreground">
-          {unchanged === 1 ? "1 file is" : `${unchanged} files are`} already as Studio would write it.
+          {unchanged === 1 ? "1 file is" : `${unchanged} files are`} already as Studio would write
+          it.
         </p>
       )}
     </div>

@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
-
-import { parseSpec } from "../src/apis/parser";
 import { DEFAULT_OPTIONS, generateCode } from "../src/apis/generator";
+import { parseSpec } from "../src/apis/parser";
 
 const SPEC = JSON.stringify({
   openapi: "3.0.0",
   info: { title: "Pet", version: "1" },
   servers: [{ url: "https://api.pet.test" }],
   paths: {
-    "/p": { get: { operationId: "list", tags: ["p"], responses: { "200": { description: "ok" } } } },
+    "/p": {
+      get: { operationId: "list", tags: ["p"], responses: { "200": { description: "ok" } } },
+    },
   },
   components: { securitySchemes: { b: { type: "http", scheme: "bearer" } } },
   security: [{ b: [] }],
@@ -16,10 +17,12 @@ const SPEC = JSON.stringify({
 
 function source(options: Record<string, unknown> = {}): string {
   return (
-    generateCode(
-      parseSpec(SPEC),
-      { type: "openapi", sourceName: "pet", outputDir: "src", ...options },
-    ).find((f) => f.path.endsWith("source.ts"))?.content ?? ""
+    generateCode(parseSpec(SPEC), {
+      type: "openapi",
+      sourceName: "pet",
+      outputDir: "src",
+      ...options,
+    }).find((f) => f.path.endsWith("source.ts"))?.content ?? ""
   );
 }
 

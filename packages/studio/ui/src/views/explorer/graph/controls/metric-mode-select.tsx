@@ -1,8 +1,6 @@
-import { Timer, AlertTriangle, Activity, HardDrive } from "lucide-react";
-
-import { SingleSelect } from "@/components/shared/single-select";
-
+import { Activity, AlertTriangle, HardDrive, Timer } from "lucide-react";
 import type { SingleSelectOption } from "@/components/shared/single-select";
+import { SingleSelect } from "@/components/shared/single-select";
 import type { ExplorerMetricMode } from "../../types";
 
 // ── Options ────────────────────────────────────────────────────────────────

@@ -1,13 +1,9 @@
-import { useCallback, useRef, useState } from "react";
 import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
+import { useCallback, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-export function ScrollableTabs({
-  children,
-}: {
-  children: React.ReactNode;
-}): React.ReactElement {
+export function ScrollableTabs({ children }: { children: React.ReactNode }): React.ReactElement {
   const ref = useRef<HTMLDivElement>(null);
   const [canScroll, setCanScroll] = useState({ left: false, right: false });
 

@@ -1,13 +1,12 @@
-import { useMemo } from "react";
 import { Activity, AlertTriangle, Timer, TrendingUp } from "lucide-react";
+import { useMemo } from "react";
+import type { MockServerInfo } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
+import { CorrelationPanel } from "./correlation-timeline";
+import { ErrorBreakdown } from "./error-breakdown";
+import { LatencyHistogram } from "./latency-histogram";
 import { computeNetworkStats } from "./network-utils";
 import { PercentileCard, StatCard } from "./stat-cards";
-import { LatencyHistogram } from "./latency-histogram";
-import { ErrorBreakdown } from "./error-breakdown";
-import { CorrelationPanel } from "./correlation-timeline";
-
-import type { MockServerInfo } from "@/store/mock-slice";
 
 interface NetworkStatsProps {
   server: MockServerInfo;
@@ -50,7 +49,9 @@ export function NetworkStats({ server }: NetworkStatsProps): React.ReactElement 
         <div className="mb-3 flex items-center gap-2">
           <Timer className="size-3.5 text-muted-foreground/50" />
           <span className="text-caption text-muted-foreground/70">LATENCY PERCENTILES</span>
-          <span className="ml-auto text-caption text-muted-foreground/40">{stats.requestCount} requests</span>
+          <span className="ml-auto text-caption text-muted-foreground/40">
+            {stats.requestCount} requests
+          </span>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <PercentileCard label="P50" value={stats.latency.p50} />
@@ -63,7 +64,8 @@ export function NetworkStats({ server }: NetworkStatsProps): React.ReactElement 
         </div>
         {stats.latency.p99 > stats.latency.p50 * 3 && stats.latency.p50 > 0 && (
           <p className="mt-2 text-caption text-amber-400/80">
-            ⚠ P99 is {Math.round(stats.latency.p99 / stats.latency.p50)}× P50 — long-tail latency detected
+            ⚠ P99 is {Math.round(stats.latency.p99 / stats.latency.p50)}× P50 — long-tail latency
+            detected
           </p>
         )}
       </div>
@@ -105,7 +107,9 @@ export function NetworkStats({ server }: NetworkStatsProps): React.ReactElement 
           <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="size-3.5 text-muted-foreground/50" />
             <span className="text-caption text-muted-foreground/70">ERROR BREAKDOWN</span>
-            <span className="ml-auto text-caption text-rose-400/70">{stats.errors.total} total</span>
+            <span className="ml-auto text-caption text-rose-400/70">
+              {stats.errors.total} total
+            </span>
           </div>
           <ErrorBreakdown errors={stats.errors} />
         </div>

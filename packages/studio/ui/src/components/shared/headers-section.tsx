@@ -8,7 +8,11 @@ interface HeadersSectionProps {
   warning?: string;
 }
 
-export function HeadersSection({ title, headers, warning }: HeadersSectionProps): React.ReactElement | null {
+export function HeadersSection({
+  title,
+  headers,
+  warning,
+}: HeadersSectionProps): React.ReactElement | null {
   const entries = headers ? Object.entries(headers).sort(([a], [b]) => a.localeCompare(b)) : [];
   if (entries.length === 0) return null;
 
@@ -62,13 +66,20 @@ export function HeadersSection({ title, headers, warning }: HeadersSectionProps)
  * <DroppedHeadersSection sent={entry.headers} forwarded={entry.mode === "proxy" ? entry.requestHeaders : undefined} />
  * ```
  */
-export function DroppedHeadersSection({ sent, forwarded }: {
+export function DroppedHeadersSection({
+  sent,
+  forwarded,
+}: {
   sent: string;
   forwarded?: Record<string, string>;
 }): React.ReactElement | null {
   if (!forwarded) return null;
   let parsed: unknown;
-  try { parsed = JSON.parse(sent); } catch { return null; }
+  try {
+    parsed = JSON.parse(sent);
+  } catch {
+    return null;
+  }
   if (!parsed || typeof parsed !== "object") return null;
 
   const forwardedLower = new Set(Object.keys(forwarded).map((k) => k.toLowerCase()));

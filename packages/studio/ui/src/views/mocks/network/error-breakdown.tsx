@@ -19,12 +19,22 @@ export function ErrorBreakdown({ errors }: ErrorBreakdownProps): React.ReactElem
 
   const rows: FaultRow[] = [
     { label: "500 Internal", count: errors.by500, color: "bg-rose-400/70", bg: "text-rose-400" },
-    { label: "502 Bad Gateway", count: errors.by502, color: "bg-fuchsia-400/70", bg: "text-fuchsia-400" },
+    {
+      label: "502 Bad Gateway",
+      count: errors.by502,
+      color: "bg-fuchsia-400/70",
+      bg: "text-fuchsia-400",
+    },
     { label: "503 Unavailable", count: errors.by503, color: "bg-rose-400/50", bg: "text-rose-300" },
     { label: "Timeout", count: errors.timeout, color: "bg-amber-400/70", bg: "text-amber-400" },
     { label: "Reset", count: errors.reset, color: "bg-orange-400/70", bg: "text-orange-400" },
     { label: "Other 4xx", count: errors.other4xx, color: "bg-sky-400/50", bg: "text-sky-400" },
-    { label: "Other 5xx", count: errors.other5xx, color: "bg-violet-400/60", bg: "text-violet-400" },
+    {
+      label: "Other 5xx",
+      count: errors.other5xx,
+      color: "bg-violet-400/60",
+      bg: "text-violet-400",
+    },
   ].filter((r) => r.count > 0);
 
   return (

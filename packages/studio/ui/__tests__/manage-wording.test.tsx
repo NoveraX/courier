@@ -59,6 +59,8 @@ describe("the manage dialog's wording", () => {
       />,
     );
 
-    expect(screen.getByText(/Spec has changed/).textContent).toBe("Spec has changed — 1 new endpoint available");
+    expect(screen.getByText(/Spec has changed/).textContent).toBe(
+      "Spec has changed — 1 new endpoint available",
+    );
   });
 });

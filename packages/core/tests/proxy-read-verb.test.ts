@@ -28,7 +28,9 @@ function api() {
     groups: {},
     endpoints: {
       search: endpoint.get("products").variables<{ q: string }>().cache({ revalidate: 60 }),
-      byEmail: endpoint.get("customers", { sensitiveVariables: true }).variables<{ email: string }>(),
+      byEmail: endpoint
+        .get("customers", { sensitiveVariables: true })
+        .variables<{ email: string }>(),
       order: endpoint.post("orders").variables<{ item: string }>(),
       upload: endpoint.post("files").reads().variables<FormData>(),
     },
@@ -48,7 +50,11 @@ beforeEach(async () => {
     if (url.startsWith(upstream.url)) return realFetch(input, init);
     const request = new Request(new URL(url, "http://app.local"), init);
     const response = await handler.handle(request);
-    proxied.push({ method: request.method, url: new URL(request.url), cacheControl: response.headers.get("cache-control") });
+    proxied.push({
+      method: request.method,
+      url: new URL(request.url),
+      cacheControl: response.headers.get("cache-control"),
+    });
     return response;
   });
 });
@@ -68,7 +74,10 @@ describe("a proxy client", () => {
     await client().search({ q: "lamp" });
 
     expect(proxied).toEqual([
-      expect.objectContaining({ method: "GET", cacheControl: "s-maxage=60, stale-while-revalidate" }),
+      expect.objectContaining({
+        method: "GET",
+        cacheControl: "s-maxage=60, stale-while-revalidate",
+      }),
     ]);
     expect(proxied[0]?.url.searchParams.get("_v")).toBe('{"q":"lamp"}');
   });

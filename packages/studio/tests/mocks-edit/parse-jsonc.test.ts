@@ -21,11 +21,15 @@ describe("parseJsonc", () => {
       "} // trailing",
     ].join("\n");
 
-    expect(parseJsonc(text)).toEqual({ compilerOptions: { module: "NodeNext", include: ["src/**/*"] } });
+    expect(parseJsonc(text)).toEqual({
+      compilerOptions: { module: "NodeNext", include: ["src/**/*"] },
+    });
   });
 
   it("keeps comment markers inside strings", () => {
-    expect(parseJsonc('{ "url": "https://example.test/*x*/" }')).toEqual({ url: "https://example.test/*x*/" });
+    expect(parseJsonc('{ "url": "https://example.test/*x*/" }')).toEqual({
+      url: "https://example.test/*x*/",
+    });
   });
 
   it("reads a leading byte-order mark as whitespace", () => {

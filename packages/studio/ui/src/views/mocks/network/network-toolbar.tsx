@@ -1,10 +1,9 @@
-import { useCallback } from "react";
 import { Square, Zap } from "lucide-react";
+import { useCallback } from "react";
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { useElapsed } from "@/hooks/use-tick";
-import { stopAllFaults } from "./stop-all-faults";
-
 import type { MockServerInfo } from "@/store/mock-slice";
+import { stopAllFaults } from "./stop-all-faults";
 
 export type PanelMode = "global" | "per-route";
 
@@ -19,7 +18,11 @@ interface NetworkToolbarProps {
   onPanelModeChange: (mode: PanelMode) => void;
 }
 
-export function NetworkToolbar({ server, panelMode, onPanelModeChange }: NetworkToolbarProps): React.ReactElement {
+export function NetworkToolbar({
+  server,
+  panelMode,
+  onPanelModeChange,
+}: NetworkToolbarProps): React.ReactElement {
   const latencyActive = server.latencyPreset !== "none";
   const chaosActive = server.chaosPreset !== "none";
   const anyActive = latencyActive || chaosActive;

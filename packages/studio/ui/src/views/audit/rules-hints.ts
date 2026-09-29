@@ -7,19 +7,15 @@
  */
 
 import type { Catalog } from "../../store/types-ui";
-import type { AuditItem, EndpointStats } from "./types";
-import { formatEndpoint } from "./hints-utils";
-import {
-  missingAllSchemas,
-  noResponseValidation,
-  noVariablesValidation,
-} from "./hints-validation";
 import {
   inconsistentStatusCodes,
   noCachingDetected,
   proxyLatencyOverhead,
   validationOverhead,
 } from "./hints-performance";
+import { formatEndpoint } from "./hints-utils";
+import { missingAllSchemas, noResponseValidation, noVariablesValidation } from "./hints-validation";
+import type { AuditItem, EndpointStats } from "./types";
 
 /** Collect pass items for endpoints that meet all quality criteria. */
 export function collectPasses(stats: Map<string, EndpointStats>): AuditItem[] {
@@ -32,24 +28,23 @@ export function collectPasses(stats: Map<string, EndpointStats>): AuditItem[] {
       s.count >= 3,
   );
   if (matched.length === 0) return [];
-  return [{
-    id: "pass-healthy",
-    severity: "pass",
-    category: "best-practices",
-    title: "Healthy endpoints",
-    description: "Endpoints with schemas, low error rate, and fast response times.",
-    endpoints: matched.map((s) => ({
-      ...formatEndpoint(s),
-      detail: `P95 = ${s.p95.toFixed(0)}ms`,
-    })),
-  }];
+  return [
+    {
+      id: "pass-healthy",
+      severity: "pass",
+      category: "best-practices",
+      title: "Healthy endpoints",
+      description: "Endpoints with schemas, low error rate, and fast response times.",
+      endpoints: matched.map((s) => ({
+        ...formatEndpoint(s),
+        detail: `P95 = ${s.p95.toFixed(0)}ms`,
+      })),
+    },
+  ];
 }
 
 /** Collect all hint-severity audit items. */
-export function collectHints(
-  stats: Map<string, EndpointStats>,
-  catalog: Catalog,
-): AuditItem[] {
+export function collectHints(stats: Map<string, EndpointStats>, catalog: Catalog): AuditItem[] {
   return [
     ...noCachingDetected(stats),
     ...noResponseValidation(stats),

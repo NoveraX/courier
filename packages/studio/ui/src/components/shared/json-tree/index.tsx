@@ -1,10 +1,9 @@
-import { useState, useCallback } from "react";
-
-import { cn } from "@/lib/utils";
-import { safeStringify } from "@/lib/snippets";
-import { useStudioStore } from "@/store";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCallback, useState } from "react";
 import { CopyButton } from "@/components/shared/copy-button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { safeStringify } from "@/lib/snippets";
+import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
 import { JsonTreeNode } from "./json-tree-node";
 import { PathBreadcrumb } from "./path-breadcrumb";
 
@@ -41,11 +40,13 @@ export function JsonTree({
   const scrollStyle = !fill && maxHeight !== "none" ? { maxHeight } : undefined;
 
   return (
-    <div className={cn(
-      "overflow-hidden rounded-lg border border-border-subtle bg-background-inset",
-      fill && "flex min-h-0 flex-1 flex-col",
-      className,
-    )}>
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border border-border-subtle bg-background-inset",
+        fill && "flex min-h-0 flex-1 flex-col",
+        className,
+      )}
+    >
       {(showPath || showCopy || headerExtra) && (
         <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle px-3 py-1.5">
           {showPath && <PathBreadcrumb path={selectedPath} />}
@@ -57,10 +58,7 @@ export function JsonTree({
 
       <ScrollArea style={scrollStyle} className={cn("p-2", fill && "min-h-0 flex-1")}>
         {isExpandable ? (
-          <RootEntries
-            data={data}
-            onSelect={handleSelect}
-          />
+          <RootEntries data={data} onSelect={handleSelect} />
         ) : (
           <pre className="mono-sm px-1 py-0.5">{serialized}</pre>
         )}
@@ -85,14 +83,7 @@ function RootEntries({
   return (
     <>
       {entries.map(([key, val]) => (
-        <JsonTreeNode
-          key={key}
-          name={key}
-          value={val}
-          depth={0}
-          onSelect={onSelect}
-          path={[key]}
-        />
+        <JsonTreeNode key={key} name={key} value={val} depth={0} onSelect={onSelect} path={[key]} />
       ))}
     </>
   );
@@ -102,6 +93,6 @@ function isComplex(value: unknown): boolean {
   return value !== null && typeof value === "object";
 }
 
-export { PathBreadcrumb } from "./path-breadcrumb";
 export { JsonTreeNode } from "./json-tree-node";
 export { JsonTreePrimitive } from "./json-tree-primitive";
+export { PathBreadcrumb } from "./path-breadcrumb";

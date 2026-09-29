@@ -1,30 +1,30 @@
-export { useSidebar } from "./sidebar-context"
-export { SidebarProvider } from "./sidebar-provider"
-export { Sidebar } from "./sidebar"
-export { SidebarTrigger, SidebarRail } from "./sidebar-trigger"
-export {
-  SidebarInset,
-  SidebarInput,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarSeparator,
-  SidebarContent,
-} from "./sidebar-layout"
+export { Sidebar } from "./sidebar";
+export { useSidebar } from "./sidebar-context";
 export {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarGroupAction,
   SidebarGroupContent,
-} from "./sidebar-group"
-export { SidebarMenu, SidebarMenuItem } from "./sidebar-menu"
-export { SidebarMenuButton } from "./sidebar-menu-button"
+  SidebarGroupLabel,
+} from "./sidebar-group";
+export {
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInput,
+  SidebarInset,
+  SidebarSeparator,
+} from "./sidebar-layout";
+export { SidebarMenu, SidebarMenuItem } from "./sidebar-menu";
 export {
   SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuSkeleton,
-} from "./sidebar-menu-action"
+} from "./sidebar-menu-action";
+export { SidebarMenuButton } from "./sidebar-menu-button";
 export {
   SidebarMenuSub,
-  SidebarMenuSubItem,
   SidebarMenuSubButton,
-} from "./sidebar-menu-sub"
+  SidebarMenuSubItem,
+} from "./sidebar-menu-sub";
+export { SidebarProvider } from "./sidebar-provider";
+export { SidebarRail, SidebarTrigger } from "./sidebar-trigger";

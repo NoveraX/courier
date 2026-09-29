@@ -5,8 +5,9 @@
  * `127.0.0.1`, as a container forward or a tool does, was refused, while
  * the mock servers Studio starts listen on `127.0.0.1`.
  */
-import { createServer as createNetServer, type Server } from "node:net";
+
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { createServer as createNetServer, type Server } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { io as connect } from "socket.io-client";
@@ -31,7 +32,8 @@ async function listening(port: number, host: string): Promise<Server | null> {
 async function freePort(): Promise<number> {
   const probe = await listening(0, "127.0.0.1");
   const address = probe?.address();
-  if (probe === null || address === null || address === undefined || typeof address === "string") throw new Error("no port");
+  if (probe === null || address === null || address === undefined || typeof address === "string")
+    throw new Error("no port");
   await new Promise<void>((resolve) => probe.close(() => resolve()));
   return address.port;
 }
@@ -51,14 +53,21 @@ beforeEach(() => {
 afterEach(async () => {
   await studio?.close();
   studio = undefined;
-  for (const holder of holders.splice(0)) await new Promise<void>((resolve) => holder.close(() => resolve()));
+  for (const holder of holders.splice(0))
+    await new Promise<void>((resolve) => holder.close(() => resolve()));
   vi.restoreAllMocks();
   rmSync(root, { recursive: true, force: true });
 });
 
 function start(port: number): Promise<string> {
   return new Promise<string>((resolve, reject) => {
-    studio = createStudioServer({ port, host: "localhost", projectRoot: root, onReady: resolve, onError: reject });
+    studio = createStudioServer({
+      port,
+      host: "localhost",
+      projectRoot: root,
+      onReady: resolve,
+      onError: reject,
+    });
   });
 }
 
@@ -89,7 +98,10 @@ describe("Studio on localhost", () => {
     const hosts = ipv6 ? ["127.0.0.1", "[::1]"] : ["127.0.0.1"];
 
     for (const host of hosts) {
-      const socket = connect(`http://${host}:${port}/runtime`, { transports: ["websocket"], reconnection: false });
+      const socket = connect(`http://${host}:${port}/runtime`, {
+        transports: ["websocket"],
+        reconnection: false,
+      });
       const connected = await new Promise<boolean>((resolve) => {
         socket.once("connect", () => resolve(true));
         socket.once("connect_error", () => resolve(false));

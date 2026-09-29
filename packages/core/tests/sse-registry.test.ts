@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createSSEConnectionRegistry } from "../src/adapter/sse-registry";
 import type { InternalSSERegistry, SSERegistryEntry } from "../src/adapter/sse-registry";
+import { createSSEConnectionRegistry } from "../src/adapter/sse-registry";
 
 function createEntry(overrides?: Partial<SSERegistryEntry>): SSERegistryEntry {
   return {

@@ -7,7 +7,12 @@ interface StoreCrudActions {
   activeCollection: string | null;
   selectCollection: (name: string) => void;
   createRecord: (serverId: string, collection: string, record: Record<string, unknown>) => void;
-  updateRecord: (serverId: string, collection: string, id: string, data: Record<string, unknown>) => void;
+  updateRecord: (
+    serverId: string,
+    collection: string,
+    id: string,
+    data: Record<string, unknown>,
+  ) => void;
   deleteRecords: (serverId: string, collection: string, ids: string[]) => void;
   seedCollection: (serverId: string, collection: string, count: number) => void;
   clearCollection: (serverId: string, collection: string) => void;
@@ -33,16 +38,36 @@ export function useStoreCrud(): StoreCrudActions {
     activeCollection,
     selectCollection: setActiveCollection,
     createRecord: (serverId, collection, record) =>
-      void run({ action: "mock:store:create", serverId, collection, record }, `Created a record in ${collection}`, `Could not create a record in ${collection}`),
+      void run(
+        { action: "mock:store:create", serverId, collection, record },
+        `Created a record in ${collection}`,
+        `Could not create a record in ${collection}`,
+      ),
     updateRecord: (serverId, collection, id, data) =>
-      void run({ action: "mock:store:update", serverId, collection, id, data }, `Updated #${id}`, `Could not update #${id}`),
+      void run(
+        { action: "mock:store:update", serverId, collection, id, data },
+        `Updated #${id}`,
+        `Could not update #${id}`,
+      ),
     deleteRecords: (serverId, collection, ids) => void deleteAll(serverId, collection, ids),
     seedCollection: (serverId, collection, count) =>
-      void run({ action: "mock:store:seed", serverId, collection, count }, `Seeded ${collection} (${count})`, `Could not seed ${collection}`),
+      void run(
+        { action: "mock:store:seed", serverId, collection, count },
+        `Seeded ${collection} (${count})`,
+        `Could not seed ${collection}`,
+      ),
     clearCollection: (serverId, collection) =>
-      void run({ action: "mock:store:delete", serverId, collection, id: "*" }, `Cleared ${collection}`, `Could not clear ${collection}`),
+      void run(
+        { action: "mock:store:delete", serverId, collection, id: "*" },
+        `Cleared ${collection}`,
+        `Could not clear ${collection}`,
+      ),
     seedAll: (serverId, count) =>
-      void run({ action: "mock:store:seed", serverId, collection: "*", count }, `Re-seeded all (${count})`, "Could not re-seed the store"),
+      void run(
+        { action: "mock:store:seed", serverId, collection: "*", count },
+        `Re-seeded all (${count})`,
+        "Could not re-seed the store",
+      ),
   };
 }
 

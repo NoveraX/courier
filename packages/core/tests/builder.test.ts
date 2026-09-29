@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { courier } from "../src/define/courier";
 import type { InferResponse } from "../src/define/marker";
-import { ENDPOINT_SCHEMA } from "../src/validation";
 import type { ChannelProbe, HttpProbe, StreamProbe } from "../src/define/probe";
 import type { Middleware } from "../src/middleware/types";
+import { ENDPOINT_SCHEMA } from "../src/validation";
 
 const UserSchema = z.object({ id: z.string(), email: z.string() });
 const ById = z.object({ id: z.string() });
@@ -41,23 +41,28 @@ describe("courier", () => {
     });
 
     it("records the verb the vendor requires, not the declared semantics", () => {
-      const search = base.endpoint.post("search").variables(z.object({ q: z.string() })).response(UserSchema).reads();
+      const search = base.endpoint
+        .post("search")
+        .variables(z.object({ q: z.string() }))
+        .response(UserSchema)
+        .reads();
 
       expect(search.method).toBe("post");
       expect(search.kind).toBe("query");
     });
 
     it("maps a channel connect onto a get for the wire shape", () => {
-      const presence = base.channel.connect(":room/presence").variables(z.object({ room: z.string() })).response(UserSchema);
+      const presence = base.channel
+        .connect(":room/presence")
+        .variables(z.object({ room: z.string() }))
+        .response(UserSchema);
 
       expect(presence.path).toBe(":room/presence");
       expect(presence.kind).toBe("channel");
     });
 
     it("rejects a closure that addresses nothing", () => {
-      expect(() => base.endpoint.via((() => ({})) as never)).toThrow(
-        /made no wire call/,
-      );
+      expect(() => base.endpoint.via((() => ({})) as never)).toThrow(/made no wire call/);
     });
   });
 
@@ -80,7 +85,10 @@ describe("courier", () => {
     });
 
     it("carries no schema when only a type argument was given", () => {
-      const listAudit = base.endpoint.get("audit").variables<{ since: string }>().response<readonly Audit[]>();
+      const listAudit = base.endpoint
+        .get("audit")
+        .variables<{ since: string }>()
+        .response<readonly Audit[]>();
 
       expect(meta(listAudit).response).toBeUndefined();
       expect(meta(listAudit).variables).toBeUndefined();
@@ -88,7 +96,10 @@ describe("courier", () => {
     });
 
     it("validates what is sent while leaving what is received untyped at runtime", () => {
-      const impersonate = base.endpoint.post(":id/impersonate").variables(ById).response<{ token: string }>();
+      const impersonate = base.endpoint
+        .post(":id/impersonate")
+        .variables(ById)
+        .response<{ token: string }>();
 
       expect(meta(impersonate).variables).toBe(ById);
       expect(meta(impersonate).response).toBeUndefined();
@@ -108,7 +119,8 @@ describe("courier", () => {
     });
 
     it("names the endpoint and the remedy when a slot is filled twice", () => {
-      const refusal = () => base.endpoint.del("files/:id").response(UserSchema).response(UserSchema);
+      const refusal = () =>
+        base.endpoint.del("files/:id").response(UserSchema).response(UserSchema);
 
       expect(refusal).toThrow(
         '[courier] .response() was called twice on DELETE "files/:id". Each slot takes one schema or type, and the second would replace the first: remove one of the two calls.',
@@ -276,7 +288,11 @@ describe("type level guarantees", () => {
     const cached = base.endpoint.get("").response(UserSchema).cache({ revalidate: 60 });
     expect(cached.kind).toBe("query");
 
-    const overPost = base.endpoint.post("search").response(UserSchema).reads().cache({ revalidate: 60 });
+    const overPost = base.endpoint
+      .post("search")
+      .response(UserSchema)
+      .reads()
+      .cache({ revalidate: 60 });
     expect(overPost.kind).toBe("query");
 
     function rejected(): void {

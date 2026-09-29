@@ -1,7 +1,7 @@
-import type { ExplorerLayout } from "../../types";
+import { ArrowDownFromLine, ArrowRightFromLine } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowRightFromLine, ArrowDownFromLine } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ExplorerLayout } from "../../types";
 
 interface LayoutToggleProps {
   value: ExplorerLayout;

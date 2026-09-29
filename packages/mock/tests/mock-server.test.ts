@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createMockServer } from "../src/server/create-mock-server";
-import { defineScenario } from "../src/scenario";
 import { defineFactory } from "../src/factory";
+import { defineScenario } from "../src/scenario";
+import { createMockServer } from "../src/server/create-mock-server";
 
 interface User {
   id: string;

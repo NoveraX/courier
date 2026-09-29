@@ -12,15 +12,23 @@ const CODE = 'exports.greeting = "héllo, world";\n';
 
 describe("decodeTransformEntry", () => {
   it("hands back the code, byte for byte, for the input it names", () => {
-    expect(decodeTransformEntry(encodeTransformEntry(DIGEST, CODE), DIGEST)).toEqual({ state: "hit", code: CODE });
+    expect(decodeTransformEntry(encodeTransformEntry(DIGEST, CODE), DIGEST)).toEqual({
+      state: "hit",
+      code: CODE,
+    });
   });
 
   it("hands back empty code", () => {
-    expect(decodeTransformEntry(encodeTransformEntry(DIGEST, ""), DIGEST)).toEqual({ state: "hit", code: "" });
+    expect(decodeTransformEntry(encodeTransformEntry(DIGEST, ""), DIGEST)).toEqual({
+      state: "hit",
+      code: "",
+    });
   });
 
   it("calls an entry for another input stale", () => {
-    expect(decodeTransformEntry(encodeTransformEntry(OTHER_DIGEST, CODE), DIGEST)).toEqual({ state: "stale" });
+    expect(decodeTransformEntry(encodeTransformEntry(OTHER_DIGEST, CODE), DIGEST)).toEqual({
+      state: "stale",
+    });
   });
 
   it("calls an entry in another version of the format stale", () => {
@@ -30,7 +38,9 @@ describe("decodeTransformEntry", () => {
   });
 
   it("calls a file with no header line near its start stale", () => {
-    expect(decodeTransformEntry(Buffer.from("x".repeat(4096), "latin1"), DIGEST)).toEqual({ state: "stale" });
+    expect(decodeTransformEntry(Buffer.from("x".repeat(4096), "latin1"), DIGEST)).toEqual({
+      state: "stale",
+    });
   });
 
   it.each<[string, (entry: Buffer) => Buffer]>([

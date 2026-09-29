@@ -12,12 +12,42 @@ import { studioUrls, tokenLink, withToken } from "../src/server/studio-urls";
 
 const INTERFACES: Record<string, NetworkInterfaceInfo[]> = {
   lo0: [
-    { address: "127.0.0.1", family: "IPv4", internal: true, netmask: "255.0.0.0", mac: "", cidr: null },
+    {
+      address: "127.0.0.1",
+      family: "IPv4",
+      internal: true,
+      netmask: "255.0.0.0",
+      mac: "",
+      cidr: null,
+    },
   ],
   en0: [
-    { address: "192.0.2.10", family: "IPv4", internal: false, netmask: "255.255.255.0", mac: "", cidr: null },
-    { address: "fe80::1", family: "IPv6", internal: false, netmask: "ffff::", mac: "", cidr: null, scopeid: 4 },
-    { address: "2001:db8::5", family: "IPv6", internal: false, netmask: "ffff::", mac: "", cidr: null, scopeid: 0 },
+    {
+      address: "192.0.2.10",
+      family: "IPv4",
+      internal: false,
+      netmask: "255.255.255.0",
+      mac: "",
+      cidr: null,
+    },
+    {
+      address: "fe80::1",
+      family: "IPv6",
+      internal: false,
+      netmask: "ffff::",
+      mac: "",
+      cidr: null,
+      scopeid: 4,
+    },
+    {
+      address: "2001:db8::5",
+      family: "IPv6",
+      internal: false,
+      netmask: "ffff::",
+      mac: "",
+      cidr: null,
+      scopeid: 0,
+    },
   ],
 };
 
@@ -27,7 +57,10 @@ describe("studioUrls", () => {
       local: "http://localhost:6280",
       network: [],
     });
-    expect(studioUrls("::1", 6280, INTERFACES)).toEqual({ local: "http://[::1]:6280", network: [] });
+    expect(studioUrls("::1", 6280, INTERFACES)).toEqual({
+      local: "http://[::1]:6280",
+      network: [],
+    });
   });
 
   it("lists every IPv4 address for an IPv4 wildcard", () => {
@@ -60,7 +93,9 @@ describe("tokenLink", () => {
 
 describe("withToken", () => {
   it("gives every address the token", () => {
-    expect(withToken({ local: "http://localhost:6280", network: ["http://192.0.2.10:6280"] }, "k3y")).toEqual({
+    expect(
+      withToken({ local: "http://localhost:6280", network: ["http://192.0.2.10:6280"] }, "k3y"),
+    ).toEqual({
       local: "http://localhost:6280/#token=k3y",
       network: ["http://192.0.2.10:6280/#token=k3y"],
     });

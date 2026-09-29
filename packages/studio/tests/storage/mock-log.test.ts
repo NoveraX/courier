@@ -33,8 +33,18 @@ function run(root: string) {
   return { log, stop };
 }
 
-const start = (id: string) => ({ type: "mock:request:start", requestId: id, serverId: "petstore", path: "/pets" });
-const end = (id: string) => ({ type: "mock:request:end", requestId: id, serverId: "petstore", status: 200 });
+const start = (id: string) => ({
+  type: "mock:request:start",
+  requestId: id,
+  serverId: "petstore",
+  path: "/pets",
+});
+const end = (id: string) => ({
+  type: "mock:request:end",
+  requestId: id,
+  serverId: "petstore",
+  status: 200,
+});
 
 describe("the mocks' request logs", () => {
   it("outlive the Studio that kept them", () => {

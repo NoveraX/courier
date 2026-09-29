@@ -1,5 +1,5 @@
-import type { RequestEntry, RequestStatus, RequestTiming } from "@/store/types"
-import { isRecord, optNum, optStr, str } from "@/store/event-helpers"
+import { isRecord, optNum, optStr, str } from "@/store/event-helpers";
+import type { RequestEntry, RequestStatus, RequestTiming } from "@/store/types";
 
 const STATUSES: ReadonlySet<string> = new Set<RequestStatus>([
   "pending",
@@ -7,7 +7,7 @@ const STATUSES: ReadonlySet<string> = new Set<RequestStatus>([
   "error",
   "aborted",
   "validation_error",
-])
+]);
 
 /**
  * What a saved session keeps of a request: what the Timeline shows of it,
@@ -43,7 +43,7 @@ export function savedRequestOf(r: RequestEntry): Record<string, unknown> {
     startedAt: r.startedAt,
     url: r.url,
     sessionId: r.sessionId,
-  }
+  };
 }
 
 /**
@@ -60,10 +60,11 @@ export function savedRequestOf(r: RequestEntry): Record<string, unknown> {
  * ```
  */
 export function requestFromSaved(raw: unknown): RequestEntry | undefined {
-  if (!isRecord(raw)) return undefined
-  const { id, source, method, startedAt } = raw
-  if (typeof id !== "string" || typeof source !== "string" || typeof method !== "string") return undefined
-  if (typeof startedAt !== "number") return undefined
+  if (!isRecord(raw)) return undefined;
+  const { id, source, method, startedAt } = raw;
+  if (typeof id !== "string" || typeof source !== "string" || typeof method !== "string")
+    return undefined;
+  if (typeof startedAt !== "number") return undefined;
   return {
     id,
     source,
@@ -87,28 +88,34 @@ export function requestFromSaved(raw: unknown): RequestEntry | undefined {
     middlewareCount: 0,
     middlewareEntries: [],
     hasValidation: { variables: false, response: false },
-  }
+  };
 }
 
 function isStatus(value: unknown): value is RequestStatus {
-  return typeof value === "string" && STATUSES.has(value)
+  return typeof value === "string" && STATUSES.has(value);
 }
 
 function timingOf(raw: unknown): RequestTiming | undefined {
-  if (!isRecord(raw)) return undefined
-  const { total, middleware, fetch, validation } = raw
-  if (typeof total !== "number") return undefined
-  return { total, middleware: optNum(middleware) ?? 0, fetch: optNum(fetch) ?? 0, validation: optNum(validation) ?? 0 }
+  if (!isRecord(raw)) return undefined;
+  const { total, middleware, fetch, validation } = raw;
+  if (typeof total !== "number") return undefined;
+  return {
+    total,
+    middleware: optNum(middleware) ?? 0,
+    fetch: optNum(fetch) ?? 0,
+    validation: optNum(validation) ?? 0,
+  };
 }
 
 function headersOf(raw: unknown): Record<string, string> | undefined {
-  if (!isRecord(raw)) return undefined
-  const headers: Record<string, string> = {}
-  for (const [name, value] of Object.entries(raw)) if (typeof value === "string") headers[name] = value
-  return headers
+  if (!isRecord(raw)) return undefined;
+  const headers: Record<string, string> = {};
+  for (const [name, value] of Object.entries(raw))
+    if (typeof value === "string") headers[name] = value;
+  return headers;
 }
 
 function errorOf(raw: unknown): RequestEntry["error"] {
-  if (!isRecord(raw) || typeof raw.message !== "string") return undefined
-  return { type: str(raw.type, "Error"), message: raw.message, status: optNum(raw.status) }
+  if (!isRecord(raw) || typeof raw.message !== "string") return undefined;
+  return { type: str(raw.type, "Error"), message: raw.message, status: optNum(raw.status) };
 }

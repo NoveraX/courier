@@ -53,7 +53,11 @@ const SPEC = JSON.stringify({
 });
 
 function diagnostics(label: string, options: Partial<GenerateOptions>): string[] {
-  const files = generateCode(parseSpec(SPEC), { type: "openapi", outputDir: "src", ...options }, "unions");
+  const files = generateCode(
+    parseSpec(SPEC),
+    { type: "openapi", outputDir: "src", ...options },
+    "unions",
+  );
   return project.diagnostics(label, files);
 }
 

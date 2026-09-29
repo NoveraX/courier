@@ -1,3 +1,5 @@
+import { Code, Copy, Download, FileJson, Pin, PinOff, RotateCcw } from "lucide-react";
+import { buildCurl, buildFetchSnippet, buildRequestJson } from "@/components/shared/detail-panel";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -5,13 +7,10 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Copy, Code, FileJson, Pin, PinOff, RotateCcw, Download } from "lucide-react";
-
 import { copyToClipboard } from "@/lib/clipboard";
 import { downloadFile } from "@/lib/export";
-import type { RequestEntry } from "@/store/types";
 import { useStudioStore } from "@/store";
-import { buildCurl, buildFetchSnippet, buildRequestJson } from "@/components/shared/detail-panel";
+import type { RequestEntry } from "@/store/types";
 
 interface RequestContextMenuProps {
   request: RequestEntry;

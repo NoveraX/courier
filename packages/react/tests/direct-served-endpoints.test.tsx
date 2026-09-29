@@ -2,6 +2,11 @@
  * @vitest-environment jsdom
  */
 
+import { isConfigurationError } from "@noverax/courier";
+import { clearWSConnectionPool } from "@noverax/courier/internal";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
 /**
  * A direct React caller on streams and channels this process serves.
  *
@@ -11,12 +16,6 @@
  */
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
-
-import { isConfigurationError } from "@noverax/courier";
-import { clearWSConnectionPool } from "@noverax/courier/internal";
 import { createQueryCaller } from "../src/create-query-caller";
 import { liveApi } from "./helpers/live-api";
 
@@ -72,10 +71,9 @@ describe("a direct React caller on an endpoint this process serves", () => {
   it("reports a channel through useChannel's error, and dials nothing", async () => {
     const q = createQueryCaller(liveApi);
 
-    const { result } = renderHook(
-      () => q.live.useChannel("room", { variables: { room: "r1" } }),
-      { wrapper },
-    );
+    const { result } = renderHook(() => q.live.useChannel("room", { variables: { room: "r1" } }), {
+      wrapper,
+    });
 
     await waitFor(() => expect(result.current.error).toBeDefined());
     expect(result.current.error).toMatchObject({ code: "DIRECT_CALL_TO_SERVED_ENDPOINT" });

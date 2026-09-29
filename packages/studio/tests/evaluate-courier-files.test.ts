@@ -57,7 +57,10 @@ describe("evaluateCourierFiles", () => {
         "evaluations.courierTestConfigEvaluations = (evaluations.courierTestConfigEvaluations ?? 0) + 1;\n" +
         CONFIG,
     );
-    writeFileSync(join(dir, "courier.mocks.ts"), 'import config from "./courier.config";\nexport default { config };\n');
+    writeFileSync(
+      join(dir, "courier.mocks.ts"),
+      'import config from "./courier.config";\nexport default { config };\n',
+    );
     const spelledOtherwise = `${dir}${sep}.${sep}courier.config.ts`;
 
     const evaluated = await evaluateCourierFiles(
@@ -83,7 +86,10 @@ describe("evaluateCourierFiles", () => {
       'const pending = import("./pending");\n' +
         'export default { sources: { api: { baseURL: "https://api.example.com" } }, pending };\n',
     );
-    writeFileSync(join(dir, "courier.mocks.ts"), 'import { db } from "./pending";\nexport default { db };\n');
+    writeFileSync(
+      join(dir, "courier.mocks.ts"),
+      'import { db } from "./pending";\nexport default { db };\n',
+    );
 
     const evaluated = await evaluateCourierFiles(
       join(dir, "courier.config.ts"),
@@ -101,9 +107,16 @@ describe("evaluateCourierFiles", () => {
   it("leaves no module of a courier.config.cjs in Node's require cache once the load is over", async () => {
     const file = join(dir, "courier.config.cjs");
     writeFileSync(file, `module.exports = ${CONFIG.slice("export default ".length)}`);
-    writeFileSync(join(dir, "courier.mocks.cjs"), 'module.exports = { config: require("./courier.config.cjs") };\n');
+    writeFileSync(
+      join(dir, "courier.mocks.cjs"),
+      'module.exports = { config: require("./courier.config.cjs") };\n',
+    );
 
-    const evaluated = await evaluateCourierFiles(file, join(dir, "courier.mocks.cjs"), createTransformCache());
+    const evaluated = await evaluateCourierFiles(
+      file,
+      join(dir, "courier.mocks.cjs"),
+      createTransformCache(),
+    );
 
     expect(mocksDefaultOf(evaluated.mocksNamespace).config).toBe(evaluated.config);
     expect(NODE_REQUIRE_CACHE[file]).toBeUndefined();

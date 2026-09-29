@@ -44,7 +44,10 @@ function redirect(location: string, remoteAddress: string): SpecAnswer {
 
 /* Each hop's URL, and whether its policy lets it reach this machine. */
 function hops(): Array<[string, boolean]> {
-  return requestSpec.mock.calls.map(([url, policy]): [string, boolean] => [url.href, policy.loopback]);
+  return requestSpec.mock.calls.map(([url, policy]): [string, boolean] => [
+    url.href,
+    policy.loopback,
+  ]);
 }
 
 /* A private host answers once the project admits it, as the lookup would ask. */
@@ -89,7 +92,17 @@ describe("fetchSpec hops", () => {
 
   it("keeps this machine reachable from a hop at one of its own addresses", async () => {
     listed.mockReturnValue({
-      en0: [{ address: OWN_V6, family: "IPv6", internal: false, netmask: "ffff::", mac: "", cidr: null, scopeid: 0 }],
+      en0: [
+        {
+          address: OWN_V6,
+          family: "IPv6",
+          internal: false,
+          netmask: "ffff::",
+          mac: "",
+          cidr: null,
+          scopeid: 0,
+        },
+      ],
     });
     requestSpec
       .mockResolvedValueOnce(redirect("http://localhost:3000/spec.json", OWN_V6))
@@ -133,13 +146,17 @@ describe("fetchSpec hops", () => {
   ])("refuses %s when the project lists only %s", async (url, entry) => {
     answerOnceAdmitted();
 
-    await expect(fetchSpec(url, listing(entry))).rejects.toMatchObject({ code: "SPEC_HOST_PRIVATE" });
+    await expect(fetchSpec(url, listing(entry))).rejects.toMatchObject({
+      code: "SPEC_HOST_PRIVATE",
+    });
     expect(requestSpec).toHaveBeenCalledTimes(1);
   });
 
   it("admits a listed host on any port when the entry names none", async () => {
     answerOnceAdmitted();
 
-    expect(await fetchSpec("https://gitlab.internal:8443/spec.json", listing("gitlab.internal"))).toBe("spec");
+    expect(
+      await fetchSpec("https://gitlab.internal:8443/spec.json", listing("gitlab.internal")),
+    ).toBe("spec");
   });
 });

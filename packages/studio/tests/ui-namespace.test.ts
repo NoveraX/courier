@@ -11,9 +11,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import type { LifecycleCoordinator } from "../src/server/mock-manager";
 import type { ProjectReads } from "../src/server/project-state/types";
+import type { StudioToken } from "../src/server/studio-token";
 import { setupUiNamespace } from "../src/server/ui-namespace";
 import { createWatcherStatus } from "../src/server/watcher-status";
-import type { StudioToken } from "../src/server/studio-token";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 
@@ -40,7 +40,10 @@ async function listening(): Promise<{ http: HttpServer; io: Server; url: string 
 }
 
 /* The page's token; a page presenting it may change what Studio runs. */
-const TOKEN: StudioToken = { value: "page-token", matches: (candidate) => candidate === "page-token" };
+const TOKEN: StudioToken = {
+  value: "page-token",
+  matches: (candidate) => candidate === "page-token",
+};
 
 describe("setupUiNamespace", () => {
   it("logs a replay that throws and still serves the UI the rest of its state", async () => {
@@ -64,7 +67,11 @@ describe("setupUiNamespace", () => {
       token: TOKEN,
     });
 
-    const socket = connect(`${url}/ui`, { transports: ["websocket"], forceNew: true, reconnection: false });
+    const socket = connect(`${url}/ui`, {
+      transports: ["websocket"],
+      forceNew: true,
+      reconnection: false,
+    });
     cleanups.push(() => {
       socket.disconnect();
     });
@@ -76,7 +83,9 @@ describe("setupUiNamespace", () => {
 
     expect(events).toEqual(["binding:snapshot", "watcher:status"]);
     const logged = warn.mock.calls.map((call) => call.join(" "));
-    expect(logged.some((line) => line.includes("Failed to send the project to a UI that connected"))).toBe(true);
+    expect(
+      logged.some((line) => line.includes("Failed to send the project to a UI that connected")),
+    ).toBe(true);
   });
 
   it("acknowledges a mock command with the mock's answer, and says why when there is none", async () => {
@@ -112,11 +121,21 @@ describe("setupUiNamespace", () => {
     cleanups.push(() => {
       socket.disconnect();
     });
-    const update = { action: "mock:store:update", serverId: "apiMock", collection: "users", id: 9, data: {} };
+    const update = {
+      action: "mock:store:update",
+      serverId: "apiMock",
+      collection: "users",
+      id: 9,
+      data: {},
+    };
 
     const answered = await socket.timeout(5000).emitWithAck("mock:command", update);
-    const unknownMock = await socket.timeout(5000).emitWithAck("mock:command", { action: "mock:store:seed", serverId: "other" });
-    const unreadable = await socket.timeout(5000).emitWithAck("mock:command", { serverId: "apiMock" });
+    const unknownMock = await socket
+      .timeout(5000)
+      .emitWithAck("mock:command", { action: "mock:store:seed", serverId: "other" });
+    const unreadable = await socket
+      .timeout(5000)
+      .emitWithAck("mock:command", { serverId: "apiMock" });
 
     expect(forwarded).toEqual([update, { action: "mock:store:seed", serverId: "other" }]);
     expect(answered).toEqual({ ok: false, error: "users has no record with id 9" });

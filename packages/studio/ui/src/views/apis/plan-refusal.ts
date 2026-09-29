@@ -1,7 +1,6 @@
 import { StudioRequestError } from "@/lib/studio-request-error";
-
-import type { FilePlanSummary } from "./types-file-plan";
 import { readFilePlan } from "./read-file-plan";
+import type { FilePlanSummary } from "./types-file-plan";
 
 const PLAN_CODES = ["NEEDS_CONFIRMATION", "PLAN_NOT_SEEN", "PLAN_STALE", "TARGET_BLOCKED"] as const;
 

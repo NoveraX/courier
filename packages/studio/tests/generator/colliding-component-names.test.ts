@@ -17,7 +17,7 @@ import {
   removeProjects,
   writeProject,
 } from "../helpers/generated-project";
-import { type UpstreamServer, startUpstreamServer } from "../helpers/upstream-server";
+import { startUpstreamServer, type UpstreamServer } from "../helpers/upstream-server";
 
 const SCHEMAS = {
   OrderItem: { type: "object", required: ["sku"], properties: { sku: { type: "string" } } },
@@ -49,19 +49,35 @@ function spec(origin: string, swagger: boolean): ParsedSpec {
     "/z": operation("getZ", `${at}order_item`, swagger),
   };
   const document = swagger
-    ? { swagger: "2.0", info: { title: "Shop", version: "1" }, host: new URL(origin).host, schemes: ["http"], definitions: SCHEMAS, paths }
-    : { openapi: "3.0.0", info: { title: "Shop", version: "1" }, servers: [{ url: origin }], components: { schemas: SCHEMAS }, paths };
+    ? {
+        swagger: "2.0",
+        info: { title: "Shop", version: "1" },
+        host: new URL(origin).host,
+        schemes: ["http"],
+        definitions: SCHEMAS,
+        paths,
+      }
+    : {
+        openapi: "3.0.0",
+        info: { title: "Shop", version: "1" },
+        servers: [{ url: origin }],
+        components: { schemas: SCHEMAS },
+        paths,
+      };
   return parseSpec(JSON.stringify(document));
 }
 
 let upstream: UpstreamServer;
 
 beforeAll(async () => {
-  upstream = await startUpstreamServer({}, {
-    "/x": { contentType: "application/json", body: '{"sku":"A-1"}' },
-    "/y": { contentType: "application/json", body: '{"price":9.5}' },
-    "/z": { contentType: "application/json", body: '{"qty":3}' },
-  });
+  upstream = await startUpstreamServer(
+    {},
+    {
+      "/x": { contentType: "application/json", body: '{"sku":"A-1"}' },
+      "/y": { contentType: "application/json", body: '{"price":9.5}' },
+      "/z": { contentType: "application/json", body: '{"qty":3}' },
+    },
+  );
 });
 
 afterAll(async () => {
@@ -74,14 +90,20 @@ describe.each([
 ])("in %s, each of three schemas named alike", (_label, swagger) => {
   it("is referenced by its own identifier", () => {
     const parsed = spec(upstream.origin, swagger);
-    const refs = parsed.groups.flatMap((group) => group.endpoints.map((ep) => ep.responseSchema?.refName));
+    const refs = parsed.groups.flatMap((group) =>
+      group.endpoints.map((ep) => ep.responseSchema?.refName),
+    );
 
     expect(refs).toEqual(["OrderItem", "OrderItem2", "OrderItem3"]);
     expect(Object.keys(parsed.schemas).sort()).toEqual(["OrderItem", "OrderItem2", "OrderItem3"]);
   });
 
   it("validates each answer against its own schema", async () => {
-    const files = generateCode(spec(upstream.origin, swagger), { type: "openapi", outputDir: "src/api" }, "shop");
+    const files = generateCode(
+      spec(upstream.origin, swagger),
+      { type: "openapi", outputDir: "src/api" },
+      "shop",
+    );
     const { shopApi } = loadGenerated(files, "src/api/shop/index.ts");
 
     const answers = await Promise.all(
@@ -103,8 +125,32 @@ describe("a component named like another's schema constant", () => {
         openapi: "3.0.3",
         info: { title: "Names", version: "1" },
         paths: {
-          "/pet": { get: { operationId: "getPet", tags: ["things"], responses: { "200": { description: "ok", content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } } } } } },
-          "/raw": { get: { operationId: "raw", tags: ["things"], responses: { "200": { description: "ok", content: { "application/json": { schema: { $ref: "#/components/schemas/PetSchema" } } } } } } },
+          "/pet": {
+            get: {
+              operationId: "getPet",
+              tags: ["things"],
+              responses: {
+                "200": {
+                  description: "ok",
+                  content: { "application/json": { schema: { $ref: "#/components/schemas/Pet" } } },
+                },
+              },
+            },
+          },
+          "/raw": {
+            get: {
+              operationId: "raw",
+              tags: ["things"],
+              responses: {
+                "200": {
+                  description: "ok",
+                  content: {
+                    "application/json": { schema: { $ref: "#/components/schemas/PetSchema" } },
+                  },
+                },
+              },
+            },
+          },
         },
         components: {
           schemas: {

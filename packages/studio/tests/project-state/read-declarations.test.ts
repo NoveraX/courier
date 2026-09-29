@@ -38,7 +38,12 @@ function running(): LoadedCourierConfig {
 }
 
 function failure(code: ConfigFailure["code"]): ConfigFailure {
-  return { code, message: "courier.config.ts: Unexpected token (3:1)", at: 2, cause: new Error("boom") };
+  return {
+    code,
+    message: "courier.config.ts: Unexpected token (3:1)",
+    at: 2,
+    cause: new Error("boom"),
+  };
 }
 
 const BASE: FreshSnapshot = {
@@ -54,7 +59,12 @@ const STATES: Record<string, FreshSnapshot> = {
   loaded: { ...BASE, running: running(), loadedAt: 1 },
   "fails, loaded before": { ...BASE, running: running(), loadedAt: 1, failure: failure("UNKNOWN") },
   "fails, never loaded": { ...BASE, failure: failure("UNKNOWN") },
-  "deleted after a load": { ...BASE, running: running(), loadedAt: 1, failure: failure("CONFIG_NOT_FOUND") },
+  "deleted after a load": {
+    ...BASE,
+    running: running(),
+    loadedAt: 1,
+    failure: failure("CONFIG_NOT_FOUND"),
+  },
   "never had one": { ...BASE, failure: failure("CONFIG_NOT_FOUND") },
   "no outcome yet": { ...BASE, revision: 0, starting: true, settling: true },
   "still reloading": { ...BASE, running: running(), loadedAt: 1, settling: true },
@@ -135,25 +145,33 @@ describe("readDeclarations", () => {
   it("names why the config does not load, and what to do", async () => {
     const view = STATES["fails, loaded before"] ?? BASE;
 
-    const refusal = await readDeclarations(projectAt(view), ROOT, "act").catch((err: unknown) => err);
+    const refusal = await readDeclarations(projectAt(view), ROOT, "act").catch(
+      (err: unknown) => err,
+    );
 
     expect(refusal).toBeInstanceOf(ProjectUnavailableError);
     expect(refusal).toMatchObject({
       message: expect.stringContaining("courier.config.ts: Unexpected token (3:1)"),
       cause: view.failure?.cause,
     });
-    expect(refusal).toMatchObject({ message: expect.stringContaining("Fix courier.config and try again") });
+    expect(refusal).toMatchObject({
+      message: expect.stringContaining("Fix courier.config and try again"),
+    });
   });
 
   it("names where the config belongs when there is none", async () => {
     const view = STATES["never had one"] ?? BASE;
 
-    const refusal = await readDeclarations(projectAt(view), ROOT, "act").catch((err: unknown) => err);
+    const refusal = await readDeclarations(projectAt(view), ROOT, "act").catch(
+      (err: unknown) => err,
+    );
 
     expect(refusal).toBeInstanceOf(ProjectUnavailableError);
     expect(refusal).toMatchObject({
       message: expect.stringContaining(`There is no courier.config in ${ROOT}`),
     });
-    expect(refusal).toMatchObject({ message: expect.stringContaining("Create courier.config.ts first") });
+    expect(refusal).toMatchObject({
+      message: expect.stringContaining("Create courier.config.ts first"),
+    });
   });
 });

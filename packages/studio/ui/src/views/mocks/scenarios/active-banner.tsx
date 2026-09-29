@@ -45,9 +45,7 @@ export function ActiveBanner({
       <div className="h-2.5 w-px shrink-0 bg-border-subtle" />
 
       {/* Scenario name — primary info */}
-      <span className="text-body-xs font-semibold text-foreground/90 truncate">
-        {scenarioName}
-      </span>
+      <span className="text-body-xs font-semibold text-foreground/90 truncate">{scenarioName}</span>
 
       {/* Stats group */}
       <div className="ml-auto flex items-center gap-3">

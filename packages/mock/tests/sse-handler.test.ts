@@ -5,8 +5,9 @@
  * and replayed it forever; a generator that threw rejected with nobody
  * listening; and a string payload went out raw, which the client dropped.
  */
-import { ForbiddenError } from "@noverax/courier/realtime";
+
 import { SSE_CONTROL_EVENTS } from "@noverax/courier/internal";
+import { ForbiddenError } from "@noverax/courier/realtime";
 import type { Context as HonoContext } from "hono";
 import { describe, expect, it, vi } from "vitest";
 
@@ -140,7 +141,9 @@ describe("handleSSEMock", () => {
       failing,
     );
     await failed.text();
-    await vi.waitFor(() => expect(failing).toHaveBeenCalledWith({ events: 1, error: "feed dropped" }));
+    await vi.waitFor(() =>
+      expect(failing).toHaveBeenCalledWith({ events: 1, error: "feed dropped" }),
+    );
     warn.mockRestore();
   });
 });

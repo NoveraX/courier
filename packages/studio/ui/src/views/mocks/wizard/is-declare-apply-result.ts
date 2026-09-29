@@ -1,9 +1,8 @@
-import type { DeclareApplyResult } from "./wire-types";
-
 import { isPlainObject } from "@/socket/is-plain-object";
 import { isDeclarePreview } from "./is-declare-preview";
 import { isInsertedLine } from "./is-inserted-line";
 import { isStringList } from "./is-string-list";
+import type { DeclareApplyResult } from "./wire-types";
 
 function isApplied(raw: Record<string, unknown>): boolean {
   return (

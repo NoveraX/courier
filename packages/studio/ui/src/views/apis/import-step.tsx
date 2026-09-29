@@ -1,5 +1,5 @@
+import { FileText, Globe, Upload } from "lucide-react";
 import { useState } from "react";
-import { Globe, FileText, Upload } from "lucide-react";
 
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { Input } from "@/components/ui/input";
@@ -76,8 +76,14 @@ export function ImportStepView({
       {source === "file" && (
         <FileDropzone
           fileName={fileName}
-          onFile={(text, name) => { onContentChange(text); setFileName(name); }}
-          onClear={() => { onContentChange(""); setFileName(null); }}
+          onFile={(text, name) => {
+            onContentChange(text);
+            setFileName(name);
+          }}
+          onClear={() => {
+            onContentChange("");
+            setFileName(null);
+          }}
         />
       )}
 

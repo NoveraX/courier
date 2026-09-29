@@ -5,24 +5,25 @@ export const metadata = { title: "Mocking", description: "MockBuilder API for co
 When you call `mock(group, method)`, you get a `MockBuilder` with a fluent chainable API:
 
 ```ts title="types"
-type MockBuilder<R> = {
+// R is the endpoint's response, V the variables it is called with
+type MockBuilder<R, V> = {
   /** Return static data (status 200) */
-  resolves(data: R): MockBuilder<R>
+  resolves(data: R): MockBuilder<R, V>
 
-  /** Return dynamic data based on variables */
-  returns(fn: (variables?: unknown) => R | Promise<R>): MockBuilder<R>
+  /** Return data computed from the variables of the call */
+  returns(fn: (variables: V) => R | Promise<R>): MockBuilder<R, V>
 
   /** Throw HTTPError with the given status and optional data */
-  rejects(status: number, data?: unknown): MockBuilder<R>
+  rejects(status: number, data?: unknown): MockBuilder<R, V>
 
   /** Limit this mock to a single invocation */
-  once(): MockBuilder<R>
+  once(): MockBuilder<R, V>
 
   /** Limit this mock to N invocations */
-  times(n: number): MockBuilder<R>
+  times(n: number): MockBuilder<R, V>
 
   /** Add artificial delay (ms) before responding */
-  delay(ms: number): MockBuilder<R>
+  delay(ms: number): MockBuilder<R, V>
 }
 ```
 
@@ -42,11 +43,10 @@ const users = await client.users.getAll()
 
 ## returns
 
-Provide a function that receives the request variables and returns data dynamically:
+Provide a function that receives the request variables and returns data dynamically. The variables are typed as the endpoint declares them:
 
 ```ts
-mock("users", "getById").returns((vars) => {
-  const { id } = vars as { id: number }
+mock("users", "getById").returns(({ id }) => {
   return { id, name: `User ${id}`, email: `user${id}@test.com` }
 })
 
@@ -60,10 +60,9 @@ const user2 = await client.users.getById({ id: 2 })
 The function can also be `async`:
 
 ```ts
-mock("users", "getById").returns(async (vars) => {
-  const { id } = vars as { id: number }
+mock("users", "getById").returns(async ({ id }) => {
   // Simulate async work
-  return { id, name: "Loaded" }
+  return { id, name: "Loaded", email: `user${id}@test.com` }
 })
 ```
 

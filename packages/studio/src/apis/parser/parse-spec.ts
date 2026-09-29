@@ -48,6 +48,7 @@ export function detectFormat(raw: string): SpecFormat {
  */
 export function parseSpec(raw: string): ParsedSpec {
   const text = raw.trim();
+  if (text === "") throw new Error("The specification is empty: there is nothing to import.");
   /* A JSON specification is read once: its format is told from the document
      it is read into. Read once to tell the format and again to parse it,
      Stripe's 7 MB took twice as long. */

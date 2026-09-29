@@ -151,3 +151,20 @@ describe("POST /api/apis/parse with a URL", () => {
     expect(reply.status).toBe(200);
   });
 });
+
+describe("POST /api/apis/parse for a URL that answers with nothing", () => {
+  it("answers 400 saying the specification is empty", async () => {
+    const server = createServer((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" }).end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    servers.push(server);
+    const specUrl = `http://127.0.0.1:${(server.address() as { port: number }).port}/spec.json`;
+    const url = await start();
+
+    const reply = await parse(url, specUrl);
+
+    expect(reply.status).toBe(400);
+    expect(String(reply.body.error)).toMatch(/empty/i);
+  });
+});

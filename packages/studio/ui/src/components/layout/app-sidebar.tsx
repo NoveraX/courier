@@ -16,6 +16,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { useCatalog } from "@/hooks/use-catalog";
+import { useThrottledValue } from "@/hooks/use-throttled-value";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { runAudit } from "@/views/audit/run-audit";
@@ -54,8 +55,14 @@ function NavBadge({ item }: { item: NavItem }): React.ReactNode {
   );
 }
 
+/* How often the badge may run the whole audit again while requests arrive. */
+const AUDIT_BADGE_INTERVAL_MS = 1_000;
+
 function AuditScoreBadge(): React.ReactNode {
-  const requests = useStudioStore((s) => s.requests);
+  const requests = useThrottledValue(
+    useStudioStore((s) => s.requests),
+    AUDIT_BADGE_INTERVAL_MS,
+  );
   const catalog = useCatalog();
   const context = useAuditContext();
 

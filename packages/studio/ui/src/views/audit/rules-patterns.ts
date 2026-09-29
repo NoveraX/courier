@@ -15,7 +15,12 @@ const WATERFALL_MIN_TOTAL_MS = 2000;
 /** Detect N+1: list call followed by N detail calls within a time window. */
 /** Requests passed here are already filtered to completed in run-audit.ts */
 export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
-  const completed = requests.filter((r) => r.timing?.total);
+  /* Oldest first: the store holds requests newest first, which left every
+     follower before its list call, so none was found, and the window's early
+     exit never fired. */
+  const completed = requests
+    .filter((r) => r.timing?.total)
+    .sort((a, b) => a.startedAt - b.startedAt);
   const items: AuditItem[] = [];
   const seen = new Set<string>();
 

@@ -84,3 +84,15 @@ describe("createProxyQueryCaller for an API that holds a boundary", () => {
     expect(q.users).toBeTypeOf("object");
   });
 });
+
+describe("createProxyQueryCaller given the API as its source", () => {
+  it("is typed from it without a type argument", () => {
+    const typeOnly = () => {
+      const q = createProxyQueryCaller("api", { source: httpOnlyApi });
+      q.users.useQuery("list");
+      // @ts-expect-error — the API has no such group
+      q.orders.useQuery("list");
+    };
+    expect(typeOnly).toBeTypeOf("function");
+  });
+});

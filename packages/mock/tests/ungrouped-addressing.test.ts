@@ -2,6 +2,7 @@ import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createAutoMockServer } from "../src/auto/create-auto-server";
+import { MockTargetError } from "../src/auto/mock-target-error";
 
 const { endpoint } = courier();
 
@@ -117,5 +118,65 @@ describe("a name two groups both claim", () => {
     const { status } = await call(url, { source: "api", group: "orders", method: "listUsers" });
 
     expect(status).toBe(200);
+  });
+});
+
+/**
+ * An endpoint declared outside any group is mocked under the collection its
+ * path starts with. Named under another, the mock registered a second
+ * handler, and a call naming no group — matching two — was answered 404.
+ */
+describe("a mock of an ungrouped endpoint under another collection", () => {
+  it("is refused, naming the collection it belongs to", () => {
+    expect(() =>
+      createAutoMockServer({
+        source: flatApi as never,
+        port: 0,
+        log: false,
+        overrides: (mock) => {
+          mock("people", "listUsers").resolves([]);
+        },
+      }),
+    ).toThrow(MockTargetError);
+    expect(() =>
+      createAutoMockServer({
+        source: flatApi as never,
+        port: 0,
+        log: false,
+        overrides: (mock) => {
+          mock("people", "listUsers").resolves([]);
+        },
+      }),
+    ).toThrow('mock("users", "listUsers")');
+  });
+
+  it("is refused in a scenario too", () => {
+    const server = createAutoMockServer({
+      source: flatApi as never,
+      port: 0,
+      log: false,
+      scenarios: {
+        wrong: { name: "wrong", apply: (mock) => void mock("people", "listUsers").resolves([]) },
+      },
+    });
+
+    expect(() => server.applyScenario(server.scenarios.wrong!)).toThrow(MockTargetError);
+  });
+
+  it("is taken under its own collection", async () => {
+    const server = createAutoMockServer({
+      source: flatApi as never,
+      port: 0,
+      log: false,
+      overrides: (mock) => {
+        mock("users", "listUsers").resolves([{ id: "only" }]);
+      },
+    });
+    const url = (await server.start()).url;
+
+    const { status, body } = await call(url, { source: "api", method: "listUsers" });
+    await server.stop();
+
+    expect([status, body]).toEqual([200, [{ id: "only" }]]);
   });
 });

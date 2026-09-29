@@ -5,10 +5,10 @@
  * import from "@noverax/courier-mock/testing" instead.
  */
 
+export { MockTargetError, type MockTargetErrorCode } from "./auto/mock-target-error";
 // Factory (test data generation helpers)
 export type { FactoryConfig, ResponseFactory } from "./factory";
 export { defineFactory } from "./factory";
-
 // Managed server definitions — the default export of courier.mocks.ts
 export type {
   MockServerConfig,
@@ -17,10 +17,8 @@ export type {
   MockServerSeedConfig,
 } from "./managed";
 export { defineMockServer, defineMocks, isMockServerDefinition } from "./managed";
-
 // Scenarios
 export { defineScenario } from "./scenario";
-
 // Errors (used in override handlers)
 export { isMockHttpError, MockHttpError } from "./server/errors";
 

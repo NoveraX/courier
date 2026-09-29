@@ -1,3 +1,4 @@
+import type { RetryOptions } from "../define/options";
 import { HTTPError } from "../errors";
 import { isAbortError } from "../utils/abort";
 import { defineMiddleware } from "./define";
@@ -38,38 +39,21 @@ const CLIENT_CLOSED_REQUEST = 499;
  * @example
  * ```ts
  * defineApi({
- *   middleware: [retryMiddleware({ limit: 3, backoff: 300 })],
+ *   middleware: [retryMiddleware({ limit: 3, delay: 300 })],
  *   groups: { ... },
  * });
  *
  * // Also retry a rate-limited request
- * retryMiddleware({ retryOn: (response) => response.status === 429 || response.status >= 500 });
+ * retryMiddleware({ retryOn: [0, 429, 500, 502, 503, 504] });
  *
  * // Writes too: the upstream deduplicates them by their Idempotency-Key
  * retryMiddleware({ mutations: true });
  * ```
  */
-export function retryMiddleware(options?: {
-  /** Maximum number of retries (default: 3) */
-  limit?: number;
-  /** Base delay in ms between attempts (default: 300) */
-  backoff?: number;
-  /** How the delay grows between attempts (default: "exponential") */
-  mode?: "fixed" | "exponential";
-  /** Which answers deserve another attempt (default: status 0 or status >= 500) */
-  retryOn?: (response: MiddlewareResponse) => boolean;
-  /** Retry endpoints that write as well as those that read (default: false) */
-  mutations?: boolean;
-}): Middleware {
-  const {
-    limit = 3,
-    backoff = 300,
-    mode = "exponential",
-    retryOn = isServerFailure,
-    mutations = false,
-  } = options ?? {};
-  const waitFor = (attempt: number): number =>
-    mode === "fixed" ? backoff : backoff * 2 ** attempt;
+export function retryMiddleware(options: RetryOptions = {}): Middleware {
+  const { limit = 3, delay = 300, backoff = "exponential", mutations = false } = options;
+  const retryOn = conditionOf(options.retryOn);
+  const waitFor = (attempt: number): number => (backoff === "fixed" ? delay : delay * 2 ** attempt);
 
   return defineMiddleware("retry", "wrap", async (ctx, next) => {
     const retries = ctx.kind === "mutation" && !mutations ? 0 : limit;
@@ -88,6 +72,13 @@ export function retryMiddleware(options?: {
 /** The default condition: the upstream failed, or never answered. */
 function isServerFailure(response: MiddlewareResponse): boolean {
   return response.status === 0 || response.status >= 500;
+}
+
+/** The test an answer is put to, from the statuses or the test a policy names. */
+function conditionOf(retryOn: RetryOptions["retryOn"]): (response: MiddlewareResponse) => boolean {
+  if (retryOn === undefined) return isServerFailure;
+  if (typeof retryOn === "function") return retryOn;
+  return (response) => retryOn.includes(response.status);
 }
 
 async function settle(next: NextFn): Promise<Attempt> {

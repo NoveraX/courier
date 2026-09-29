@@ -25,7 +25,7 @@ const { endpoint } = courier();
 // Tried again, up to 3 times, when the upstream fails or does not answer:
 export const listOrders = endpoint
   .get("orders")
-  .retry({ attempts: 3, backoff: "exponential", on: [0, 502, 503, 504] })
+  .retry({ limit: 3, backoff: "exponential", retryOn: [0, 502, 503, 504] })
   .response<{ id: string }[]>();
 `;
 

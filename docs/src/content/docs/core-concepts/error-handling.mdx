@@ -180,7 +180,7 @@ const api = defineApi({
   baseURL: process.env.API_URL!,
   middleware: [
     logMiddleware(),                                   // logs endpoint, status, duration
-    retryMiddleware({ limit: 2, backoff: 300 }),       // retries on 5xx
+    retryMiddleware({ limit: 2, delay: 300 }),         // retries on 5xx
     authMiddleware({ getToken: () => getAuthToken() }),  // attaches Bearer token
     errorMiddleware,                                   // custom error handling
   ],

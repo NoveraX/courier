@@ -35,7 +35,7 @@ function client() {
       endpoints: {
         order: endpoint
           .post("orders", { idempotencyKey: "header:Idempotency-Key" })
-          .retry({ attempts: 2, backoff: "fixed", on: [503], mutations: true })
+          .retry({ limit: 2, backoff: "fixed", retryOn: [503], mutations: true })
           .variables<{ item: string }>(),
       },
     }),

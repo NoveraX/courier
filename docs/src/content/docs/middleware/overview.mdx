@@ -129,7 +129,7 @@ const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
     logMiddleware(),
-    retryMiddleware({ limit: 3, backoff: 300 }),
+    retryMiddleware({ limit: 3, delay: 300 }),
     authMiddleware({ getToken: () => getAccessToken() }),
   ],
   groups: {

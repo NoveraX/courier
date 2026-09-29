@@ -141,7 +141,7 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            flaky: endpoint.get("flaky").retry({ attempts: 3, backoff: "fixed", on: [503] }).response(UserSchema),
+            flaky: endpoint.get("flaky").retry({ limit: 3, backoff: "fixed", retryOn: [503] }).response(UserSchema),
           },
         }),
       },
@@ -162,7 +162,7 @@ describe("policies an endpoint declares", () => {
         users: defineGroup({
           prefix: "/users",
           endpoints: {
-            flaky: endpoint.get("flaky").retry({ attempts: 3, backoff: "fixed", on: [503] }).response(UserSchema),
+            flaky: endpoint.get("flaky").retry({ limit: 3, backoff: "fixed", retryOn: [503] }).response(UserSchema),
           },
         }),
       },

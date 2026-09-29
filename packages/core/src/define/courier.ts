@@ -54,7 +54,7 @@ function makeBase(inherited: Partial<BuilderState>): Courier {
  *   id: "vendor",
  *   middleware: [bearer],
  *   timeout: 10_000,
- *   retry: { attempts: 3, backoff: "exponential", on: [429, 503] },
+ *   retry: { limit: 3, backoff: "exponential", retryOn: [429, 503] },
  * });
  *
  * const { endpoint } = vendor;

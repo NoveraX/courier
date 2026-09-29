@@ -23,6 +23,12 @@ export function StreamEventsTab({ entry }: { entry: PlaygroundHistoryEntry }): R
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-auto">
+        {entry.chunksDropped ? (
+          <p className="px-3 pt-2 text-body-xs text-muted-foreground/60">
+            {entry.chunksDropped} earlier {entry.chunksDropped === 1 ? "event is" : "events are"}{" "}
+            not shown; the last {chunks.length} are.
+          </p>
+        ) : null}
         {chunks.length > 0 ? (
           <PlaygroundStreamList chunks={chunks} />
         ) : (

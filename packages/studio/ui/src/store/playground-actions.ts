@@ -3,6 +3,9 @@ import type { StudioSet } from "./store-access";
 import type { StudioState } from "./store-types";
 import type { PlaygroundHistoryEntry } from "./types-ui";
 
+/** How many of a stream's events the Playground keeps to show. */
+export const MAX_SHOWN_CHUNKS = 500;
+
 type PlaygroundActions = Pick<
   StudioState,
   | "addPlaygroundEntry"
@@ -59,8 +62,15 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
             const { loaded, total, percentage } = chunk;
             return { ...entry, upload: { loaded, total, percentage } };
           }
-          const nextChunks = [...(entry.chunks ?? []), chunk];
-          const next: PlaygroundHistoryEntry = { ...entry, chunks: nextChunks };
+          /* The last ones only: a long stream copied its whole list for
+             every event, and grew without end. */
+          const previous = entry.chunks ?? [];
+          const shed = Math.max(0, previous.length + 1 - MAX_SHOWN_CHUNKS);
+          const next: PlaygroundHistoryEntry = {
+            ...entry,
+            chunks: [...previous.slice(shed), chunk],
+            ...(shed > 0 && { chunksDropped: (entry.chunksDropped ?? 0) + shed }),
+          };
           if (chunk.kind === "http-result") {
             next.statusCode = chunk.status;
             // An error answer's body says more than the message lifted from it.

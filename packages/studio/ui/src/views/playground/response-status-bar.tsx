@@ -14,7 +14,7 @@ export function StatusBar({ entry }: { entry: PlaygroundHistoryEntry }): React.R
   // rid-keyed wire populates `entry.chunks` per SSE event / WS message,
   // so the length is the same number the legacy wire used to stamp as
   // `streamEventCount` via the event channel.
-  const streamEventCount = entry.chunks?.length ?? 0;
+  const streamEventCount = (entry.chunks?.length ?? 0) + (entry.chunksDropped ?? 0);
 
   return (
     <div className="flex h-8 items-center gap-2 border-b border-border-subtle px-3">

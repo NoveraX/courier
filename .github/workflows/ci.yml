@@ -82,6 +82,11 @@ jobs:
       - name: Check documentation samples
         run: npm run check:docs
 
+      # What `npm pack` would publish, read the way it reads the `files` list:
+      # every file a manifest points at, and nothing that must stay here.
+      - name: Check package contents
+        run: npm run check:packages
+
   # The commit-msg hook runs only where it is installed and can be skipped, so
   # the same rules run here. A pull request is checked from its merge base; a
   # push, from the last release tag, so a cancelled or skipped run leaves

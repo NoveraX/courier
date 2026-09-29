@@ -156,19 +156,18 @@ executeRequest
 
 ## Context (Direct Mode)
 
-In direct mode, you can pass an optional `Context` as the last argument to forward incoming request headers (useful in Server Components and API routes):
+In direct mode, a caller built with a `Context` forwards the incoming request's headers (useful in Server Components and API routes). A context belongs to one incoming request, so the caller is built for that request:
 
 ```ts
 import { createCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
-const caller = createCaller(api)
-
 // In a Server Component or API route
-const user = await caller.users.getById(
-  { id: "1" },
-  { req: request, headers: request.headers },
-)
+export async function GET(request: Request): Promise<Response> {
+  const caller = createCaller(api, { context: { req: request } })
+  const user = await caller.users.getById({ id: "1" })
+  return Response.json(user)
+}
 ```
 
 The context object accepts:

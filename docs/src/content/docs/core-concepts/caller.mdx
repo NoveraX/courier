@@ -119,18 +119,26 @@ await caller.users.with({ signal: controller.signal }).getAll()
 
 ## Using Both Modes Together
 
-Most apps use both modes — proxy for the browser, direct for the server:
+Most apps use both modes — proxy for the browser, direct for the server. Keep them in separate modules: the server's caller holds the API definition, and a browser module that imported it would ship the definition with the page.
 
-```ts title="lib/caller.ts"
-import { createCaller, createProxyCaller } from "@noverax/courier"
+```ts title="lib/server-caller.ts"
+import { createCaller } from "@noverax/courier"
 import { api } from "@/api/sources"
 
 // Server-side (RSC, Server Actions, API routes)
 export const serverCaller = createCaller(api)
-
-// Client-side (React components)
-export const clientCaller = createProxyCaller<typeof api>("api")
 ```
+
+```ts title="lib/client-caller.ts"
+import { createProxyCaller } from "@noverax/courier"
+import type { api } from "@/api/sources"
+import { boundary } from "@/api/boundary"
+
+// Client-side (React components): the API as a type, the boundary as the value
+export const clientCaller = createProxyCaller<typeof api>("api", { boundary })
+```
+
+See [defineBoundary](/docs/proxy-mode/boundary) for what the boundary names and why the API is imported as a type.
 
 ## Next Steps
 

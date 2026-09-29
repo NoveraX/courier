@@ -80,7 +80,7 @@ export const caller = createCaller(api, {
   timeout: 10000,
 })
 
-// Usage: caller.group.method(variables?, context?)
+// Usage: caller.group.method(variables?)
 const result = await caller.users.getAll()
 const user = await caller.users.getById({ id: "123" })
 ```

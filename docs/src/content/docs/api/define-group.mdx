@@ -95,7 +95,7 @@ Path options from `defineApi()` are resolved first, then group-level `pathOption
 
 ## Describing an Endpoint
 
-Each endpoint is built from one of the heads `courier()` returns, and closed with `.via()`:
+Each endpoint is built from one of the heads `courier()` returns — `endpoint`, `stream` or `channel` — and addressed with a verb, or with `.via()` when its address is worked out from the variables:
 
 ```ts
 const { endpoint } = courier()
@@ -106,6 +106,23 @@ endpoint.get("").response<User[]>()
 endpoint.get(":id").variables<{ id: string }>().response<User>()
 // Variables required — caller must pass { id: string }
 ```
+
+## Streams and Channels
+
+A `stream` delivers server-sent events and a `channel` is a WebSocket subscription. Each is either served by the process that defines it, with `.implement()`, or addressed where another process serves it:
+
+| Method | `stream` | `channel` | |
+| --- | :---: | :---: | --- |
+| `.variables(schema?)` | ✓ | ✓ | What the caller subscribes with |
+| `.response(schema?)` | ✓ | ✓ | What each event or message carries |
+| `.send(schema?)` | | ✓ | What the caller may send; without it the channel only pushes |
+| `.topic(key)` | | ✓ | What subscribers share a topic by, when not all of their variables |
+| `.get(path?, options?)` | ✓ | | Where another process serves the stream |
+| `.connect(path?, options?)` | | ✓ | Where another process serves the channel |
+| `.via(probe, options?)` | ✓ | ✓ | The address worked out from the variables |
+| `.implement(handler, options?)` | ✓ | ✓ | Serve it here: a stream's generator of `{ data }` events; a channel's generator of messages, or its `onJoin` / `onMessage` / `onLeave` handlers once it takes `.send()` |
+
+`.use()`, `.headers()`, `.timeout()`, `.retry()` and `.meta()` refine a stream or a channel as they do an endpoint. [Streams & Channels](/docs/advanced/realtime) shows each one served and consumed.
 
 ## Endpoint Types
 

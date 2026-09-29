@@ -30,6 +30,42 @@ export const chat = defineGroup({
 })
 ```
 
+## Serving a stream
+
+A stream's `.implement()` takes an async generator, handed the subscription's `variables`, a `signal` that aborts when the client leaves, the `lastEventId` a reconnecting client resumes after, and the request's `headers`. Each event it yields is `{ data }`, with an `event` name or an `id` where it needs them; `tracked(id, data)` gives the event an id, so a client that reconnects is handed only what it missed:
+
+```ts title="api/orders.ts"
+import { courier, defineGroup } from "@noverax/courier/define"
+import { ForbiddenError } from "@noverax/courier"
+import { tracked } from "@noverax/courier/realtime"
+import { z } from "zod"
+
+const { stream, channel } = courier()
+
+export const orders = defineGroup({
+  prefix: "orders",
+  endpoints: {
+    updates: stream
+      .variables(z.object({ shop: z.string() }))
+      .response(z.object({ id: z.string(), state: z.string() }))
+      .implement(async function* (ctx) {
+        if (!(await canWatch(ctx.headers, ctx.variables.shop))) {
+          throw new ForbiddenError("Not a member of this shop")
+        }
+        for await (const order of orderChanges(ctx.variables.shop, ctx.lastEventId, ctx.signal)) {
+          yield tracked(order.id, order)
+        }
+      }),
+    // A channel nobody sends on is served the same way; it yields the values themselves
+    ticker: channel.response(z.number()).implement(async function* () {
+      yield 1
+    }),
+  },
+})
+```
+
+Returning ends the stream: the client stops reading and does not reconnect. Throwing fails it. A `RealtimeError` — `ForbiddenError`, `AuthError`, `RateLimitError`, `TimeoutError`, or one built with its own code — reaches the client with its code and message; any other error reaches it as code `5000`, "Stream failed", and in full only the server's log.
+
 ## Reaching a stream or a channel
 
 A stream or channel served with `.implement()` is reached through the server that serves it — the proxy routes of your framework adapter, or a [standalone server](/docs/deployment/standalone-server) — so a proxy caller opens it: `createProxyCaller`, or `createProxyQueryCaller` for the React hooks.
@@ -42,6 +78,35 @@ A proxy caller reaches another process's stream or channel too: the proxy relays
 - The stream ends as the upstream's ends. It fails as the upstream's fails: a refusal carries the upstream's status as code `4000 + status`, so a `401` arrives as `4401`. A client that leaves closes the upstream stream.
 - A channel's frames pass both ways, and it ends as its upstream subscription ends, with its code — a connection the upstream refuses included. A message the upstream subscription has no room to hold, while it joins or comes back, is answered with a `4429` error on the channel, which goes on. Subscribers of the server with equal variables share one upstream subscription.
 - A path parameter that is empty, `.` or `..` is refused before anything is sent, as it is for an HTTP call. Otherwise it would reach a route above the declared one with the server's credentials.
+
+## How a subscription ends
+
+A subscription ends in one of three ways, and the client can tell them apart.
+
+- **The client closes it** — `close()`, or a React hook unmounting. Nothing is reported.
+- **The server finishes it** — a stream's generator returned, or a channel closed itself. Iterating a stream ends (`for await` leaves its loop); a channel's status becomes `disconnected`. Neither reconnects.
+- **The server fails it** — the handler threw, the subscription or the join was refused, its variables failed their schema, or a limit was reached. Iterating a stream rejects with a `RealtimeError` carrying the code and message the server sent; a channel emits it on `error`, then its status becomes `disconnected`. A refusal answered with an HTTP status arrives as code `4000 + status`, so a `401` is `4401`.
+
+A dropped connection is none of these: the client reconnects, resumes a stream after the last event id it saw, and subscribes its channels again. When it has spent its retries, iterating the stream rejects with a `ConnectionError`.
+
+```ts
+import { isRealtimeError } from "@noverax/courier"
+
+const updates = client.orders.updates({ shop: "north" })
+try {
+  for await (const event of updates) render(event.data)
+  // the server finished the stream
+} catch (error) {
+  if (isRealtimeError(error) && error.code === 4403) showNoAccess(error.message)
+  else throw error
+}
+
+const room = client.chat.room({ room: "general", nick: "ada" })
+room.on("error", (error) => notify(error.message)) // a refused message: the channel goes on
+room.on("status", (status) => setOnline(status === "connected"))
+```
+
+A channel's `error` event also reports what it refused without ending: a message that failed its schema (`4422`), one larger than the server accepts (`4413`), or an `onMessage` that threw. `send()` returns whether the message went out or waits for the channel; `false` means it was dropped, with a warning.
 
 ## Topics
 

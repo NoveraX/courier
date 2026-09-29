@@ -4,9 +4,18 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+/* Paths resolve from this directory, not from wherever the build is run. */
+const uiDir = import.meta.dirname;
+
 export default defineConfig({
+  root: uiDir,
   plugins: [
-    tanstackRouter({ target: "react", autoCodeSplitting: true }),
+    tanstackRouter({
+      target: "react",
+      autoCodeSplitting: true,
+      routesDirectory: path.join(uiDir, "src/routes"),
+      generatedRouteTree: path.join(uiDir, "src/routeTree.gen.ts"),
+    }),
     /* The React Compiler runs natively through oxc-transform-react, in the
        same pass that strips types and transforms JSX. */
     react({ compiler: true }),
@@ -14,7 +23,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "./src"),
+      "@": path.resolve(uiDir, "./src"),
     },
   },
   server: {
@@ -40,6 +49,7 @@ export default defineConfig({
           if (id.includes("motion")) return "vendor-motion";
           if (id.includes("shiki")) return "vendor-shiki";
           if (id.includes("sonner") || id.includes("react-resizable-panels") || id.includes("cmdk")) return "vendor-ui";
+          return undefined;
         },
       },
     },

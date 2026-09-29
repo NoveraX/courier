@@ -21,12 +21,20 @@ export interface MocksConsumers {
  *
  * @param mocks - The mocks part of a config load
  * @param consumers - The registry the mocks are synced into, and the manager told of the file
+ * @param root - The project root, which the reason a page is shown names paths relative to
  */
-export function applyLoadedMocks(mocks: LoadedCourierMocks, consumers: MocksConsumers): void {
+export function applyLoadedMocks(
+  mocks: LoadedCourierMocks,
+  consumers: MocksConsumers,
+  root: string,
+): void {
   if (mocks.error !== null) {
     log.warn(`${mocks.file} failed to load`, mocks.error);
     /* The loader's message spans lines; the UI shows it on one, the terminal has it whole. */
-    consumers.mockManager.setMocksFile({ file: mocks.file, error: describeError(mocks.error) });
+    consumers.mockManager.setMocksFile({
+      file: mocks.file,
+      error: describeError(mocks.error, root),
+    });
     return;
   }
   consumers.mockManager.setMocksFile({ file: mocks.file, error: null });

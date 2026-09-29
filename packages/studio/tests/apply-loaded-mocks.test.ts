@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyLoadedMocks } from "../src/server/apply-loaded-mocks";
 import type { LoadedCourierMocks } from "../src/server/config-loader";
 
+const ROOT = "/p";
 const FILE = "/p/courier.mocks.ts";
 
 function consumers() {
@@ -43,7 +44,7 @@ describe("applyLoadedMocks", () => {
   it("tells the manager which file loaded before the mocks it declares arrive", () => {
     const target = consumers();
 
-    applyLoadedMocks(mocks({ entries: { a: {}, b: {} } }), target);
+    applyLoadedMocks(mocks({ entries: { a: {}, b: {} } }), target, ROOT);
 
     expect(target.calls).toEqual([`status ${FILE} null`, "sync a,b"]);
   });
@@ -51,30 +52,31 @@ describe("applyLoadedMocks", () => {
   it("leaves the mocks as they were when the file did not load, and passes on why", () => {
     const target = consumers();
 
-    applyLoadedMocks(mocks({ error: new SyntaxError("Unexpected token") }), target);
+    applyLoadedMocks(mocks({ error: new SyntaxError("Unexpected token") }), target, ROOT);
 
     expect(target.calls).toEqual([`status ${FILE} Unexpected token`]);
     expect(target.mockRegistry.syncFromMocks).not.toHaveBeenCalled();
   });
 
-  it("passes on the loader's message on one line", () => {
+  it("passes on the loader's message on one line, naming paths from the project root", () => {
     const target = consumers();
 
     applyLoadedMocks(
       mocks({ error: new Error("ParseError: Unexpected token  \n /p/courier.mocks.ts:3:0") }),
       target,
+      ROOT,
     );
 
     expect(target.mockManager.setMocksFile).toHaveBeenCalledWith({
       file: FILE,
-      error: "ParseError: Unexpected token /p/courier.mocks.ts:3:0",
+      error: "ParseError: Unexpected token courier.mocks.ts:3:0",
     });
   });
 
   it("passes on why a file that threw a value with no string form did not load", () => {
     const target = consumers();
 
-    applyLoadedMocks(mocks({ error: Object.create(null) }), target);
+    applyLoadedMocks(mocks({ error: Object.create(null) }), target, ROOT);
 
     expect(target.calls).toEqual([`status ${FILE} [Object: null prototype] {}`]);
   });
@@ -83,7 +85,7 @@ describe("applyLoadedMocks", () => {
     const target = consumers();
     const error = new SyntaxError("Unexpected token");
 
-    applyLoadedMocks(mocks({ error }), target);
+    applyLoadedMocks(mocks({ error }), target, ROOT);
 
     const [call] = vi.mocked(console.warn).mock.calls;
     expect(call).toBeDefined();
@@ -94,7 +96,7 @@ describe("applyLoadedMocks", () => {
   it("removes every mock when the project has no mocks file", () => {
     const target = consumers();
 
-    applyLoadedMocks(mocks({ file: null, contentHash: null }), target);
+    applyLoadedMocks(mocks({ file: null, contentHash: null }), target, ROOT);
 
     expect(target.calls).toEqual(["status null null", "sync "]);
   });

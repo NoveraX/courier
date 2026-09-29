@@ -871,7 +871,7 @@ describe("the update checks of URL imports", () => {
       body: {
         code: "SPEC_UNREADABLE",
         error: expect.stringMatching(
-          /empty\.json did not answer with a specification Studio can read: Unable to detect spec format/,
+          /empty\.json did not answer with a specification Studio can read: The specification is empty/,
         ),
       },
     });

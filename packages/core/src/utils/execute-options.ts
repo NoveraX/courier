@@ -1,7 +1,7 @@
-import type { ResolvedEndpointOptions, RetryOptions } from "../define/options";
+import type { ResolvedEndpointOptions } from "../define/options";
 import type { BoundMethodOptions } from "../http-client/types";
 import { retryMiddleware } from "../middleware/retry";
-import type { Middleware, MiddlewareResponse } from "../middleware/types";
+import type { Middleware } from "../middleware/types";
 import { anySignal } from "./any-signal";
 
 /**
@@ -16,21 +16,8 @@ export function resolveMiddlewareChain(
   sourceMiddleware: readonly Middleware[] | undefined,
   endpointOptions: ResolvedEndpointOptions | undefined,
 ): Middleware[] {
-  const retry = endpointOptions?.retry ? [toRetryMiddleware(endpointOptions.retry)] : [];
+  const retry = endpointOptions?.retry ? [retryMiddleware(endpointOptions.retry)] : [];
   return [...(sourceMiddleware ?? []), ...retry, ...(endpointOptions?.middleware ?? [])];
-}
-
-/** Express a declared retry policy as the middleware that carries it out. */
-function toRetryMiddleware(retry: RetryOptions): Middleware {
-  const statuses = retry.on;
-  return retryMiddleware({
-    ...(retry.attempts !== undefined && { limit: retry.attempts }),
-    ...(retry.backoff !== undefined && { mode: retry.backoff }),
-    ...(retry.mutations !== undefined && { mutations: retry.mutations }),
-    ...(statuses?.length && {
-      retryOn: (response: MiddlewareResponse) => statuses.includes(response.status),
-    }),
-  });
 }
 
 /**

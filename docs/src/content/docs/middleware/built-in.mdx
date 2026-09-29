@@ -20,27 +20,29 @@ import {
 Automatic retry with exponential backoff. By default it retries server errors (status >= 500) and requests that got no answer at all — a network failure or a timeout. A 4xx is never retried by default: the same request would be refused again.
 
 ```ts title="signature"
-declare function retryMiddleware(options?: {
-  /** Maximum number of retries (default: 3) */
+declare function retryMiddleware(options?: RetryOptions): Middleware
+
+interface RetryOptions {
+  /** How many times a failed attempt is made again (default: 3) */
   limit?: number
-  /** Base delay in ms between attempts (default: 300) */
-  backoff?: number
-  /** How the delay grows between attempts (default: "exponential") */
-  mode?: "fixed" | "exponential"
-  /** Which answers deserve another attempt (default: status 0 or status >= 500) */
-  retryOn?: (response: MiddlewareResponse) => boolean
+  /** The wait before the first retry, in ms (default: 300) */
+  delay?: number
+  /** How the wait grows between retries (default: "exponential") */
+  backoff?: "fixed" | "exponential"
+  /** Which answers deserve another attempt: statuses, or a test (default: 0 and >= 500) */
+  retryOn?: readonly number[] | ((response: MiddlewareResponse) => boolean)
   /** Retry endpoints that write as well as those that read (default: false) */
   mutations?: boolean
-}): Middleware
+}
 ```
 
-The delay between retries follows the formula `backoff * 2^attempt` -- so with the default 300ms base, the delays are 300ms, 600ms, 1200ms.
+With `backoff: "exponential"` the wait doubles from `delay` — with the default 300 ms, the waits are 300 ms, 600 ms, 1200 ms; with `"fixed"` every wait is `delay`. An endpoint's `.retry()` and a `courier()` base's `retry` take the same `RetryOptions`.
 
 ```ts title="lib/sources.ts"
 const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
-    retryMiddleware({ limit: 3, backoff: 300 }),
+    retryMiddleware({ limit: 3, delay: 300 }),
   ],
   groups: { /* ... */ },
 })
@@ -48,14 +50,13 @@ const api = defineApi({
 
 ### Custom retry condition
 
-Override `retryOn` to retry on specific status codes:
+Give `retryOn` the statuses to retry, 0 standing for a request that got no answer, or a test of the answer:
 
 ```ts title="lib/sources.ts"
+retryMiddleware({ limit: 2, delay: 500, retryOn: [0, 429, 502, 503, 504] })
+
 retryMiddleware({
-  limit: 2,
-  backoff: 500,
-  retryOn: (response) =>
-    response.status === 0 || response.status === 429 || response.status >= 500,
+  retryOn: (response) => response.status === 429 && response.headers.has("retry-after"),
 })
 ```
 
@@ -325,7 +326,7 @@ const api = defineApi({
     logMiddleware(),                                    // 1. Log everything
     cacheMiddleware({ scope: "public", ttl: 30_000 }),  // 2. Return cached if available
     rateLimitMiddleware({ maxRequests: 10, window: 1000 }), // 3. Throttle outgoing
-    retryMiddleware({ limit: 3, backoff: 300 }),        // 4. Retry on failure
+    retryMiddleware({ limit: 3, delay: 300 }),          // 4. Retry on failure
     authMiddleware({ getToken: () => getToken() }),     // 5. Attach token last
   ],
   groups: { /* ... */ },

@@ -84,11 +84,7 @@ const api = defineApi({
 
   // Retry failed requests via middleware
   middleware: [
-    retryMiddleware({
-      limit: 3,
-      backoff: 300,
-      retryOn: (response) => [408, 502, 503, 504].includes(response.status),
-    }),
+    retryMiddleware({ limit: 3, delay: 300, retryOn: [408, 502, 503, 504] }),
   ],
 })
 ```

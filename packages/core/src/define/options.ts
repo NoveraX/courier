@@ -1,4 +1,4 @@
-import type { Middleware } from "../middleware/types";
+import type { Middleware, MiddlewareResponse } from "../middleware/types";
 import type { CacheConfig } from "../validation";
 
 /** How an endpoint reads against a collection, used by mocks and codegen. */
@@ -88,18 +88,31 @@ export type CacheArg<TKind extends "query" | "mutation"> = TKind extends "query"
   : never;
 
 /**
- * Retry policy applied to an endpoint or inherited from its base.
+ * A retry policy: on an endpoint, inherited from its base, or given to
+ * `retryMiddleware` — one vocabulary for all three.
  *
- * Without `on`, a 5xx and a request that got no answer are retried. An
+ * Without `retryOn`, a 5xx and a request that got no answer are retried. An
  * endpoint that writes is sent once unless `mutations` is set, since a write
  * whose answer was lost may already have been carried out.
+ *
+ * @example
+ * ```ts
+ * endpoint.get("report").retry({ limit: 5, delay: 1_000, backoff: "fixed", retryOn: [429, 503] });
+ * ```
  */
 export interface RetryOptions {
-  attempts?: number;
+  /** How many times a failed attempt is made again (default: 3) */
+  limit?: number;
+  /** The wait before the first retry, in ms (default: 300) */
+  delay?: number;
+  /** How the wait grows between retries (default: "exponential", doubling it) */
   backoff?: "fixed" | "exponential";
-  /** Response statuses worth retrying; 0 stands for a request that got no answer. */
-  on?: readonly number[];
-  /** Retry the endpoint even though it writes (default: false). */
+  /**
+   * Which answers deserve another attempt: their statuses, 0 standing for a
+   * request that got no answer, or a test of the answer (default: 0 and 5xx).
+   */
+  retryOn?: readonly number[] | ((response: MiddlewareResponse) => boolean);
+  /** Retry an endpoint that writes as well as one that reads (default: false) */
   mutations?: boolean;
 }
 

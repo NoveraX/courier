@@ -586,7 +586,7 @@ import {
 const api = defineApi({
   baseURL: "https://api.example.com",
   middleware: [
-    retryMiddleware({ limit: 3, backoff: 300 }), // exponential from 300 ms
+    retryMiddleware({ limit: 3, delay: 300 }), // waits 300 ms, then 600, then 1200
     authMiddleware({
       getToken: () => localStorage.getItem("token") ?? "",
       refreshToken: () => refreshAccessToken(), // renews the token; the call is sent again once on a 401

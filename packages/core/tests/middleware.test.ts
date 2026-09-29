@@ -311,7 +311,7 @@ describe("integration: middleware in executeRequest", () => {
 describe("retryMiddleware", () => {
 	it("retries on 500+ status by default", async () => {
 		let calls = 0;
-		const handler = retryMiddleware({ limit: 2, backoff: 0 }).handler as WrapHandler;
+		const handler = retryMiddleware({ limit: 2, delay: 0 }).handler as WrapHandler;
 
 		const result = await handler(
 			{ source: "api", method: "test", headers: new Headers() },
@@ -327,7 +327,7 @@ describe("retryMiddleware", () => {
 
 	it("stops after limit is reached", async () => {
 		let calls = 0;
-		const handler = retryMiddleware({ limit: 1, backoff: 0 }).handler as WrapHandler;
+		const handler = retryMiddleware({ limit: 1, delay: 0 }).handler as WrapHandler;
 
 		const result = await handler(
 			{ source: "api", method: "test", headers: new Headers() },
@@ -345,7 +345,7 @@ describe("retryMiddleware", () => {
 		let calls = 0;
 		const handler = retryMiddleware({
 			limit: 2,
-			backoff: 0,
+			delay: 0,
 			retryOn: (res) => res.status === 429,
 		}).handler as WrapHandler;
 
@@ -364,7 +364,7 @@ describe("retryMiddleware", () => {
 
 	it("retries a request that got no answer", async () => {
 		let calls = 0;
-		const handler = retryMiddleware({ limit: 1, backoff: 0 }).handler as WrapHandler;
+		const handler = retryMiddleware({ limit: 1, delay: 0 }).handler as WrapHandler;
 
 		const result = await handler(
 			{ source: "api", method: "test", headers: new Headers() },
@@ -381,7 +381,7 @@ describe("retryMiddleware", () => {
 
 	it("throws the last failure after exhausting retries", async () => {
 		let calls = 0;
-		const handler = retryMiddleware({ limit: 1, backoff: 0 }).handler as WrapHandler;
+		const handler = retryMiddleware({ limit: 1, delay: 0 }).handler as WrapHandler;
 
 		await expect(
 			handler(
@@ -397,7 +397,7 @@ describe("retryMiddleware", () => {
 
 	it("does not retry an error that is not an HTTP failure", async () => {
 		let calls = 0;
-		const handler = retryMiddleware({ limit: 3, backoff: 0 }).handler as WrapHandler;
+		const handler = retryMiddleware({ limit: 3, delay: 0 }).handler as WrapHandler;
 
 		await expect(
 			handler(
@@ -413,7 +413,7 @@ describe("retryMiddleware", () => {
 
 	it("does not retry on success", async () => {
 		let calls = 0;
-		const handler = retryMiddleware({ limit: 3, backoff: 0 }).handler as WrapHandler;
+		const handler = retryMiddleware({ limit: 3, delay: 0 }).handler as WrapHandler;
 
 		await handler(
 			{ source: "api", method: "test", headers: new Headers() },

@@ -34,7 +34,7 @@ describe("a retry policy and a response that fails validation", () => {
       defineApi({
         name: "typed",
         baseURL: upstream.url,
-        middleware: [retryMiddleware({ limit: 3, backoff: 1 })],
+        middleware: [retryMiddleware({ limit: 3, delay: 1 })],
         endpoints: { item: endpoint.get("item").response(z.object({ id: z.number() })) },
       }),
     );

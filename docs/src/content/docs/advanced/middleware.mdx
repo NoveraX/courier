@@ -122,8 +122,9 @@ import { retryMiddleware } from "@noverax/courier/middleware"
 
 retryMiddleware({
   limit: 3,                                        // Max retries (default: 3)
-  backoff: 300,                                    // Base delay in ms (default: 300)
-  retryOn: (response) => response.status >= 500,   // Custom condition (default: status 0 or >= 500)
+  delay: 300,                                      // First wait in ms (default: 300)
+  backoff: "exponential",                          // How the wait grows (default: "exponential")
+  retryOn: [0, 502, 503, 504],                     // Statuses or a test (default: 0 and >= 500)
 })
 ```
 
@@ -249,7 +250,7 @@ const api = defineApi({
   middleware: [
     logMiddleware(),
     authMiddleware({ getToken: () => getAuthToken() }),
-    retryMiddleware({ limit: 3, backoff: 500 }),
+    retryMiddleware({ limit: 3, delay: 500 }),
   ],
   groups: { users, posts },
 })

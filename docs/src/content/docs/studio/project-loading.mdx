@@ -24,7 +24,7 @@ A module Node runs itself stays as Node first ran it until Studio restarts, so a
 | Variable | Unset | Set |
 |---|---|---|
 | `COURIER_CONFIG_LOAD_TIMEOUT_MS` | One load may take 20 s. | A whole number of milliseconds, from 1 to 86400000, gives a slow project longer. Read when Studio starts; any other value is ignored with a warning, in the terminal and the startup banner. |
-| `COURIER_TRANSFORM_CACHE` | Transforms are kept in `node_modules/.cache/courier/transform`. | `0`, `false` or `off`, in any case, keeps them in memory only. |
+| `COURIER_TRANSFORM_CACHE` | Transforms are kept in `node_modules/.cache/courier/transform`. | `0`, `false` or `off`, in any case, keeps them in memory only; `1`, `true` or `on` keeps the default. Studio warns once about any other value, and keeps the default. |
 
 ## Programmatic
 

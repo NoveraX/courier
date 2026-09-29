@@ -110,6 +110,20 @@ describe("findTransformCacheDirectory", () => {
     );
   });
 
+  it("keeps the directory for a value it does not know, and says so once", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const project = directory(join(dir, "app"));
+    const nodeModules = directory(join(project, "node_modules"));
+
+    const first = findTransformCacheDirectory(project, { COURIER_TRANSFORM_CACHE: "nope" });
+    findTransformCacheDirectory(project, { COURIER_TRANSFORM_CACHE: "nope" });
+
+    expect(first).toBe(transformIn(nodeModules));
+    const said = warn.mock.calls.filter((call) => String(call[1]).includes("=nope"));
+    expect(said).toHaveLength(1);
+    expect(String(said[0]?.[1])).toContain("the transform cache stays on");
+  });
+
   it("reads COURIER_TRANSFORM_CACHE from the process environment by default", () => {
     const project = directory(join(dir, "app"));
     directory(join(project, "node_modules"));

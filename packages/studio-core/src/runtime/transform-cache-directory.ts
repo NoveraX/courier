@@ -8,6 +8,12 @@ const log = createLogger("Studio");
 /** Values of `COURIER_TRANSFORM_CACHE` that turn the directory off. */
 const OFF_VALUES: ReadonlySet<string> = new Set(["0", "false", "off"]);
 
+/** Values of `COURIER_TRANSFORM_CACHE` that keep it, as leaving it unset does. */
+const ON_VALUES: ReadonlySet<string> = new Set(["", "1", "true", "on"]);
+
+/* Each value Studio does not know is said once, not at every load. */
+const unknownSettings = new Set<string>();
+
 /* The first entry named node_modules at or above `start` that is a
    directory or a link; a file of that name is passed over, as module
    resolution passes over it. */
@@ -114,6 +120,12 @@ export function findTransformCacheDirectory(
   const setting = env.COURIER_TRANSFORM_CACHE?.trim().toLowerCase();
   if (setting !== undefined && OFF_VALUES.has(setting)) {
     return refuse(root, `COURIER_TRANSFORM_CACHE=${setting}`);
+  }
+  if (setting !== undefined && !ON_VALUES.has(setting) && !unknownSettings.has(setting)) {
+    unknownSettings.add(setting);
+    log.warn(
+      `COURIER_TRANSFORM_CACHE=${setting} is not one of 0, false, off, 1, true or on; the transform cache stays on`,
+    );
   }
   let located: Located;
   try {

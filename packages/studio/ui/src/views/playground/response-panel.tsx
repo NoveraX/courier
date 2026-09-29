@@ -68,7 +68,7 @@ export function ResponsePanel({
   const timing = entry.timing;
   const proxyTiming = entry.proxyTiming;
   const duration = entry.duration;
-  const streamEventCount = entry.chunks?.length ?? 0;
+  const streamEventCount = (entry.chunks?.length ?? 0) + (entry.chunksDropped ?? 0);
 
   return (
     <div className="flex h-full flex-col">

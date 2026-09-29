@@ -48,12 +48,18 @@ export function keptPlaygroundHistory(
 
 function kept(entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry {
   const chunks = entry.chunks?.slice(-MAX_KEPT_CHUNKS);
+  const shed = (entry.chunks?.length ?? 0) - (chunks?.length ?? 0);
   const size = JSON.stringify(entry.response ?? null).length;
   const response =
     size > MAX_KEPT_ANSWER
       ? `The answer (${size} characters) was too large to keep across reloads.`
       : entry.response;
-  return { ...entry, response, ...(chunks && { chunks }) };
+  return {
+    ...entry,
+    response,
+    ...(chunks && { chunks }),
+    ...(shed > 0 && { chunksDropped: (entry.chunksDropped ?? 0) + shed }),
+  };
 }
 
 function settled(entry: PlaygroundHistoryEntry): PlaygroundHistoryEntry {

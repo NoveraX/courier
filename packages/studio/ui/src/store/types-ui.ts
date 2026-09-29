@@ -172,6 +172,8 @@ export interface PlaygroundHistoryEntry {
    * the render layer can unwrap it uniformly.
    */
   chunks?: PlaygroundChunk[];
+  /** How many earlier chunks were let go to keep `chunks` to its last ones */
+  chunksDropped?: number;
 }
 
 // ── Timeline filters ────────────────────────────────────────────────────────

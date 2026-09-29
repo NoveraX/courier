@@ -42,7 +42,7 @@ const { client: replayed } = createMockClient<typeof api>({ scenario: replayFixt
 
 - The calls go to each endpoint's own method and path, at `targetUrl` or at the source's `baseURL`. To record through a Courier proxy — `createCourierServer`, or an app with Courier's handler — pass `proxy: { url, source }`: the proxy route's URL and the name the source has there.
 - `mode` is `"record"` by default. `"passthrough"` calls the backend and records nothing; `"replay"` answers from the `fixtures` given, without the network, and rejects a call it has no recording of; `"record-missing"` replays what `fixtures` has and records the rest.
-- `sanitize` rewrites what is recorded, not what the call returns; `filter` names the endpoints the recorder may call.
+- `sanitize(data, part)` rewrites what is recorded — each call's variables (`part` is `"variables"`) and each answer's body (`"response"`) — never what the call returns. A recording made with it keeps no query in its URL, and replay passes a call's variables through the same function before looking for their recording; give `replayFixtures` and `replayHar` the sanitizer as their third argument for the same reason. `Authorization`, `Proxy-Authorization`, `Cookie` and `Set-Cookie` are never recorded. `filter` names the endpoints the recorder may call.
 
 ## Exports
 

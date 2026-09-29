@@ -57,7 +57,11 @@ let proxyUrl: string;
 beforeAll(async () => {
   upstream = createServer((req, res) => {
     const { status, body } = answer(req.url ?? "/");
-    res.writeHead(status, { "content-type": "application/json", "x-upstream": "yes" });
+    res.writeHead(status, {
+      "content-type": "application/json",
+      "x-upstream": "yes",
+      "set-cookie": "sid=abc",
+    });
     res.end(JSON.stringify(body));
   });
   await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
@@ -209,5 +213,44 @@ describe("the HAR a recorder writes", () => {
     const [fixture] = recorder.getFixtures();
     expect(entry?.startedDateTime).toBe(fixture?.recordedAt);
     expect(entry?.request).toMatchObject({ method: "GET", url: `${upstreamUrl}/users/1` });
+  });
+});
+
+/**
+ * `sanitize` rewrote each answer's body only: the variables a call was made
+ * with — a password, a token — its URL's query and the answer's cookies went
+ * into the recording as they were.
+ */
+describe("what a recording keeps of a call's credentials", () => {
+  const redact = (data: unknown) =>
+    JSON.parse(JSON.stringify(data).replace(/secret-\d|hunter2/g, "[redacted]"));
+
+  it("rewrites the variables and the URL's query, and drops the credential headers", async () => {
+    const recorder = createRecorder({ source: usersApi(upstreamUrl), sanitize: redact });
+
+    await recorder.client.users.getById({ id: 1, password: "hunter2" } as { id: number });
+
+    const [fixture] = recorder.getFixtures();
+    expect(fixture?.variables).toEqual({ id: 1, password: "[redacted]" });
+    expect(fixture?.request?.url).not.toContain("?");
+    expect(fixture?.response.headers).not.toHaveProperty("set-cookie");
+    expect(fixture?.response.headers).toHaveProperty("x-upstream", "yes");
+    expect(JSON.stringify(recorder.toHar())).not.toMatch(/hunter2|secret-1|sid=/);
+  });
+
+  it("finds a recording made with the sanitizer for the call it stands for", async () => {
+    const recording = createRecorder({ source: usersApi(upstreamUrl), sanitize: redact });
+    await recording.client.users.getById({ id: 1, password: "hunter2" } as { id: number });
+
+    const replay = createRecorder({
+      source: usersApi("http://offline.invalid"),
+      mode: "replay",
+      fixtures: recording.getFixtures(),
+      sanitize: redact,
+    });
+
+    await expect(
+      replay.client.users.getById({ id: 1, password: "hunter2" } as { id: number }),
+    ).resolves.toMatchObject({ id: 1, name: "Alice", token: "[redacted]" });
   });
 });

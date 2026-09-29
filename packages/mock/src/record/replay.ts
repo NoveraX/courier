@@ -6,6 +6,7 @@ import type { Fixture } from "./fixture";
 import { harToFixtures } from "./fixture";
 import type { HarLog } from "./har-format";
 import { findFixture, replayAnswer } from "./match-fixture";
+import type { Sanitizer } from "./recorder-types";
 
 /**
  * Create a scenario from recorded fixtures.
@@ -18,6 +19,9 @@ import { findFixture, replayAnswer } from "./match-fixture";
  *
  * @param fixtures Recordings, from `createRecorder` or `harToFixtures`
  * @param name     The scenario's name
+ * @param sanitize The sanitizer the recordings were made with, if any: a
+ *                 call's variables go through it before their recording is
+ *                 looked for
  * @returns The scenario
  * @example
  * ```ts
@@ -30,13 +34,14 @@ import { findFixture, replayAnswer } from "./match-fixture";
 export function replayFixtures<TApi extends AnySource>(
   fixtures: Fixture[],
   name = "replay",
+  sanitize?: Sanitizer,
 ): MockScenario<TApi> {
   return {
     name,
     apply(mock) {
       for (const [key, recorded] of groupByEndpoint(fixtures)) {
         const [group = "", method = ""] = key.split("/");
-        mock(group, method).returns(replayer(group, method, recorded));
+        mock(group, method).returns(replayer(group, method, recorded, sanitize));
       }
     },
   };
@@ -45,8 +50,9 @@ export function replayFixtures<TApi extends AnySource>(
 /**
  * Create a replay scenario from a HAR log.
  *
- * @param har  A HAR log written by `toHar` or `fixturesToHar`
- * @param name The scenario's name
+ * @param har      A HAR log written by `toHar` or `fixturesToHar`
+ * @param name     The scenario's name
+ * @param sanitize The sanitizer the log was recorded with, if any
  * @returns The scenario, as `replayFixtures` builds it
  * @example
  * ```ts
@@ -57,9 +63,10 @@ export function replayFixtures<TApi extends AnySource>(
 export function replayHar<TApi extends AnySource>(
   har: HarLog,
   name = "har-replay",
+  sanitize?: Sanitizer,
 ): MockScenario<TApi> {
   const fixtures = harToFixtures(har);
-  return replayFixtures(fixtures, name);
+  return replayFixtures(fixtures, name, sanitize);
 }
 
 /** Answers each call from the recordings of its variables, in order, the last one repeating */
@@ -67,14 +74,16 @@ function replayer(
   group: string,
   method: string,
   recorded: Fixture[],
+  sanitize: Sanitizer | undefined,
 ): (ctx: MockRequestContext) => unknown {
   /* A recording leaves the list once answered, unless it is the last of
      its call, which then answers every later one. */
   const remaining = [...recorded];
   return (ctx) => {
-    const fixture = findFixture(remaining, group, method, ctx.variables);
+    const variables = sanitize ? sanitize(ctx.variables, "variables") : ctx.variables;
+    const fixture = findFixture(remaining, group, method, variables);
     if (!fixture) throw new RecorderError("RECORDING_NOT_FOUND", group, method, ctx.variables);
-    if (hasAnother(remaining, fixture, group, method, ctx.variables)) {
+    if (hasAnother(remaining, fixture, group, method, variables)) {
       remaining.splice(remaining.indexOf(fixture), 1);
     }
     return replayAnswer(fixture, false);

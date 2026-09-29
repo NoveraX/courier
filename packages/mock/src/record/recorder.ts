@@ -8,11 +8,12 @@ import { RecorderError } from "./errors";
 import type { Fixture } from "./fixture";
 import { fixturesToHar, sanitizeFixture } from "./fixture";
 import { findFixture, replayAnswer } from "./match-fixture";
+import { recordedHeaders } from "./recorded-headers";
 import type { RecorderClient, RecorderConfig } from "./recorder-types";
 import type { RecordingTransport } from "./recording-transport";
 import { createRecordingTransport } from "./recording-transport";
 
-export type { RecorderClient, RecorderConfig, RecordMode } from "./recorder-types";
+export type { RecorderClient, RecorderConfig, RecordMode, Sanitizer } from "./recorder-types";
 
 /**
  * Create a client that calls a real API and records its responses.
@@ -51,7 +52,7 @@ export function createRecorder<TSource extends AnyDefinedApi>(
       throw new RecorderError("ENDPOINT_EXCLUDED", group, method, variables);
     }
     if (mode === "replay" || mode === "record-missing") {
-      const fixture = findFixture(recorded, group, method, variables);
+      const fixture = findFixture(recorded, group, method, asRecorded(config, variables));
       if (fixture) return replayAnswer(fixture, raw);
       if (mode === "replay")
         throw new RecorderError("RECORDING_NOT_FOUND", group, method, variables);
@@ -124,9 +125,14 @@ function fixtureOf(transport: RecordingTransport, call: Call, response: Captured
     response: {
       status: response.status,
       data: response.data,
-      headers: Object.fromEntries(response.headers),
+      headers: recordedHeaders(response.headers),
     },
     duration: response.duration,
     recordedAt: response.startedAt,
   };
+}
+
+/* The variables as a recording made with the config's sanitizer holds them. */
+function asRecorded(config: RecorderConfig<AnyDefinedApi>, variables: unknown): unknown {
+  return config.sanitize ? config.sanitize(variables, "variables") : variables;
 }

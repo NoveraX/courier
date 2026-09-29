@@ -1,5 +1,6 @@
 import type { HarEntry, HarLog } from "./har-format";
 import { createHarLog } from "./har-format";
+import type { Sanitizer } from "./recorder-types";
 
 /** The scheme of the URL an entry gets for a fixture that names no request. */
 const CALL_URL = "courier:";
@@ -91,15 +92,32 @@ function callUrl({ group, method }: Fixture): string {
   return group ? `${CALL_URL}${group}/${method}` : `${CALL_URL}${method}`;
 }
 
-/** Sanitize a fixture by applying a transform to sensitive data */
-export function sanitizeFixture(fixture: Fixture, sanitizer: (data: unknown) => unknown): Fixture {
+/**
+ * A recording with its sensitive values rewritten: the call's variables and
+ * the answer's body go through `sanitizer`, and the request's URL loses its
+ * query, which held the variables of a read as they were sent.
+ *
+ * @param fixture - The recording
+ * @param sanitizer - Rewrites each value it is handed
+ * @returns The recording, rewritten
+ * @example
+ * ```ts
+ * sanitizeFixture(fixture, (data) => redact(data, ["password", "token"]));
+ * ```
+ */
+export function sanitizeFixture(fixture: Fixture, sanitizer: Sanitizer): Fixture {
+  const { variables, request, ...recorded } = fixture;
   return {
-    ...fixture,
-    response: {
-      ...fixture.response,
-      data: sanitizer(fixture.response.data),
-    },
+    ...recorded,
+    ...(variables !== undefined && { variables: sanitizer(variables, "variables") }),
+    ...(request && { request: { method: request.method, url: withoutQuery(request.url) } }),
+    response: { ...fixture.response, data: sanitizer(fixture.response.data, "response") },
   };
+}
+
+function withoutQuery(url: string): string {
+  const query = url.indexOf("?");
+  return query === -1 ? url : url.slice(0, query);
 }
 
 function safeJsonParse(text: string): unknown {

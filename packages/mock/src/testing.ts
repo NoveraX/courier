@@ -24,6 +24,7 @@ export type {
   RecorderConfig,
   RecorderErrorCode,
   RecordMode,
+  Sanitizer,
 } from "./record";
 export {
   createRecorder,

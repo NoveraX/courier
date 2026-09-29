@@ -36,9 +36,17 @@ export interface RecorderConfig<TSource extends AnyDefinedApi> {
   fixtures?: readonly Fixture[];
   /** Filter which endpoints to record; a call to any other is refused */
   filter?: (group: string, method: string) => boolean;
-  /** Sanitize sensitive data before saving; the call itself still returns the real data */
-  sanitize?: (data: unknown) => unknown;
+  /**
+   * Rewrites what is recorded — each call's variables and each answer's
+   * body — never what the call returns. Replay passes a call's variables
+   * through it before looking for their recording, so a recording made with
+   * it is found for the call it stands for.
+   */
+  sanitize?: Sanitizer;
 }
+
+/** Rewrites a recorded value; `part` says which one it is handed. */
+export type Sanitizer = (data: unknown, part: "variables" | "response") => unknown;
 
 /** Recorder client that captures real API responses */
 export interface RecorderClient<TSource extends AnyDefinedApi> {

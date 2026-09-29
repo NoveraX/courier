@@ -2,6 +2,7 @@ import type { LookupAddress } from "node:dns";
 import { promises as dns } from "node:dns";
 import { createLogger } from "@noverax/courier";
 import { approveSpecAddresses } from "./approve-spec-addresses";
+import { messageOf } from "./message-of";
 
 const log = createLogger("Studio");
 
@@ -50,7 +51,7 @@ export function guardedLookup(policy: LookupPolicy): LookupCallback {
           else callback(null, addresses[0]?.address ?? "", addresses[0]?.family ?? 4);
         },
         (error: unknown) =>
-          callback(error instanceof Error ? error : new Error(String(error)), [], 0),
+          callback(error instanceof Error ? error : new Error(messageOf(error)), [], 0),
       )
       /* What the connection does with the address is its own affair; a throw
          there must not turn into a second answer or an unhandled rejection. */

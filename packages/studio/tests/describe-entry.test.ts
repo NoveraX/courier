@@ -43,6 +43,19 @@ describe("describeEntry", () => {
     });
   });
 
+  it("reports a thrown value that has no string form, instead of failing on it", async () => {
+    const definition = defineMockServer({ source: api });
+    Object.defineProperty(definition, "source", {
+      get() {
+        throw Object.create(null);
+      },
+    });
+
+    await expect(describeEntry("apiMock", definition)).resolves.toEqual({
+      problem: 'Mock "apiMock" could not be described: [Object: null prototype] {}',
+    });
+  });
+
   it("reports a scenario that throws while it is read, and still describes the mock", async () => {
     const scenario = defineScenario("boom", () => {
       throw new Error("scenario exploded");

@@ -1,6 +1,7 @@
 import { createLogger } from "@noverax/courier";
 import type * as ManagedMocks from "@noverax/courier-mock/managed";
 import type { MockServerDescription } from "@noverax/courier-mock/managed";
+import { messageOf } from "../message-of";
 
 /** A declared mock described, or the reason it could not be. */
 export type DescribedEntry = { description: MockServerDescription } | { problem: string };
@@ -26,7 +27,7 @@ export async function describeEntry(key: string, definition: unknown): Promise<D
   } catch (err) {
     managed = undefined;
     return {
-      problem: `Mock "${key}" needs @noverax/courier-mock, which could not be loaded: ${reason(err)}`,
+      problem: `Mock "${key}" needs @noverax/courier-mock, which could not be loaded: ${messageOf(err)}`,
     };
   }
   if (!mock.isMockServerDefinition(definition)) {
@@ -36,7 +37,7 @@ export async function describeEntry(key: string, definition: unknown): Promise<D
   try {
     description = mock.describeMockServer(definition);
   } catch (err) {
-    return { problem: `Mock "${key}" could not be described: ${reason(err)}` };
+    return { problem: `Mock "${key}" could not be described: ${messageOf(err)}` };
   }
   for (const scenario of description.scenarios) {
     if (scenario.introspectionError === undefined) continue;
@@ -45,8 +46,4 @@ export async function describeEntry(key: string, definition: unknown): Promise<D
     );
   }
   return { description };
-}
-
-function reason(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
 }

@@ -10,6 +10,7 @@
 
 import { type FSWatcher, watch } from "node:fs";
 import { basename, dirname } from "node:path";
+import { messageOf } from "./message-of";
 
 /** Why the platform refused a native watch. */
 export interface WatchDegradation {
@@ -60,7 +61,7 @@ export function groupByDirectory(paths: readonly string[]): TrackedByDirectory {
 
 function classify(err: unknown, path: string): WatchDegradation {
   const code = (err as { code?: string }).code;
-  const message = err instanceof Error ? err.message : String(err);
+  const message = messageOf(err);
   if (code === "ENOSPC") return { kind: "limit", path, message };
   if (code === "EPERM" || code === "EACCES") return { kind: "permission", path, message };
   return { kind: "unknown", path, message };

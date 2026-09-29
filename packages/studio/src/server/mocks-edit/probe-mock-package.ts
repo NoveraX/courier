@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { createConfigJiti } from "@noverax/courier-studio-core/config";
 import { describeError } from "../describe-error";
+import { messageOf } from "../message-of";
 import { installCommand } from "./install-command";
 import { MOCK_PACKAGE } from "./mock-package";
 import { MocksEditRefusal } from "./mocks-edit-refusal";
@@ -52,7 +53,7 @@ function missingExports(namespace: unknown): string[] {
 /* A loader's message goes on with a require stack naming the mocks file,
    which need not exist yet; its first line is the part that explains. */
 function firstLineOf(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = messageOf(error);
   return (message.split("\n", 1)[0] ?? "").replace(/\.$/, "");
 }
 

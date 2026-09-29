@@ -31,7 +31,6 @@ export function createInitialState(savedTheme: StudioState["theme"]) {
     clientTick: 0,
     droppedRequests: 0,
     watcherApiPaths: 0,
-    watcherMockFiles: 0,
     watcherLastChange: null,
   };
 }

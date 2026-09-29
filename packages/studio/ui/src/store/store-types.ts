@@ -74,7 +74,6 @@ export interface StudioState {
 
   // Watcher (unified hot reload indicator)
   watcherApiPaths: number;
-  watcherMockFiles: number;
   watcherLastChange: { source: "api" | "mock"; files: string[]; timestamp: number } | null;
 
   // Actions — UI
@@ -140,7 +139,7 @@ export interface StudioState {
   errorPlayground: (rid: string, error: { message: string }) => void;
 
   // Actions — Watcher
-  setWatcherStatus: (apiPaths: number, mockFiles: number) => void;
+  setWatcherStatus: (apiPaths: number) => void;
   setWatcherChange: (change: StudioState["watcherLastChange"]) => void;
 
   // Actions — Settings

@@ -16,10 +16,9 @@ export function StatusBar(): React.ReactNode {
   const droppedRequests = useStudioStore((s) => s.droppedRequests);
   const sessionStartedAt = useStudioStore((s) => s.sessionStartedAt);
   const watcherApiPaths = useStudioStore((s) => s.watcherApiPaths);
-  const watcherMockFiles = useStudioStore((s) => s.watcherMockFiles);
   const elapsed = useElapsed(sessionStartedAt, connectionStatus === "connected");
 
-  const totalWatched = watcherApiPaths + watcherMockFiles;
+  const totalWatched = watcherApiPaths;
   const isRestarting = useMockStore((s) =>
     Object.values(s.servers).some((srv) => srv.processStatus === "restarting"),
   );

@@ -52,7 +52,7 @@ export function ResponsePanel({
   const isStream = entry.transport === "sse" || entry.transport === "ws";
   const tabs = isStream ? STREAM_TABS : HTTP_TABS;
   const validKeys = tabs.map((t) => t.key);
-  const safeTab = validKeys.includes(activeTab) ? activeTab : validKeys[0];
+  const safeTab = validKeys.includes(activeTab) ? activeTab : (validKeys[0] ?? activeTab);
 
   // Every field reads from the playground entry directly — the rid-keyed
   // wire folds chunk/end/error reducers into the same entry slice, so

@@ -27,10 +27,12 @@ function groupRegions(lines: DiffLine[]): DiffRegion[] {
 
   const flushEqual = (): void => {
     if (equalBuf.length === 0) return;
-    if (equalBuf.length > COLLAPSE_THRESHOLD) {
-      regions.push({ type: "diff", lines: [equalBuf[0]] });
-      regions.push({ type: "collapsed", lines: equalBuf.slice(1, -1) });
-      regions.push({ type: "diff", lines: [equalBuf[equalBuf.length - 1]] });
+    const [first, ...rest] = equalBuf;
+    const last = rest.pop();
+    if (equalBuf.length > COLLAPSE_THRESHOLD && first !== undefined && last !== undefined) {
+      regions.push({ type: "diff", lines: [first] });
+      regions.push({ type: "collapsed", lines: rest });
+      regions.push({ type: "diff", lines: [last] });
     } else {
       regions.push({ type: "diff", lines: equalBuf });
     }

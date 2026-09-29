@@ -78,7 +78,7 @@ export function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
   const copy = [...sorted].sort((a, b) => a - b);
   const idx = Math.ceil((p / 100) * copy.length) - 1;
-  return copy[Math.max(0, idx)];
+  return copy[Math.max(0, idx)] ?? 0;
 }
 
 function isRecentlyActive(timestamp: number | null): boolean {

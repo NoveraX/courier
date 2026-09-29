@@ -47,7 +47,8 @@ function extractDomain(url?: string): string {
   if (!url || !URL.canParse(url)) return "";
   const parts = new URL(url).hostname.split(".");
   for (let i = parts.length - 2; i >= 0; i--) {
-    if (isUsable(parts[i])) return parts[i];
+    const part = parts[i];
+    if (part !== undefined && isUsable(part)) return part;
   }
   return "";
 }

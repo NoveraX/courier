@@ -53,17 +53,18 @@ export function toggleComment(
 
   let offset = 0;
   for (let i = startLine; i <= endLine; i++) {
+    const line = lines[i];
+    if (line === undefined) continue;
     if (allCommented) {
       // Uncomment: remove `// ` or `//`
-      const idx = lines[i].indexOf("//");
+      const idx = line.indexOf("//");
       if (idx === -1) continue;
-      const hasSpace = lines[i][idx + 2] === " ";
-      const removed = hasSpace ? 3 : 2;
-      lines[i] = lines[i].slice(0, idx) + lines[i].slice(idx + removed);
+      const removed = line[idx + 2] === " " ? 3 : 2;
+      lines[i] = line.slice(0, idx) + line.slice(idx + removed);
       if (i === startLine) offset -= removed;
     } else {
-      const indent = lines[i].match(/^(\s*)/)?.[1] ?? "";
-      lines[i] = `${indent}// ${lines[i].slice(indent.length)}`;
+      const indent = line.match(/^(\s*)/)?.[1] ?? "";
+      lines[i] = `${indent}// ${line.slice(indent.length)}`;
       if (i === startLine) offset += 3;
     }
   }

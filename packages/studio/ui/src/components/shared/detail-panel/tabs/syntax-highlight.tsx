@@ -15,6 +15,13 @@ const COLORS: Record<TokenType, string> = {
 
 // ── Language patterns (order = priority for overlaps) ─────────────────────
 
+const JSON_PATTERNS: [RegExp, TokenType][] = [
+  [/"(?:[^"\\]|\\.)*"\s*(?=:)/g, "property"],
+  [/"(?:[^"\\]|\\.)*"/g, "string"],
+  [/\b-?\d+\.?\d*(?:[eE][+-]?\d+)?\b/g, "number"],
+  [/\b(?:true|false|null)\b/g, "boolean"],
+];
+
 const PATTERNS: Record<string, [RegExp, TokenType][]> = {
   curl: [
     [/'(?:[^'\\]|\\.)*'/g, "string"],
@@ -30,12 +37,7 @@ const PATTERNS: Record<string, [RegExp, TokenType][]> = {
     [/\b\d+\.?\d*\b/g, "number"],
     [/\b(?:true|false|null|undefined)\b/g, "boolean"],
   ],
-  json: [
-    [/"(?:[^"\\]|\\.)*"\s*(?=:)/g, "property"],
-    [/"(?:[^"\\]|\\.)*"/g, "string"],
-    [/\b-?\d+\.?\d*(?:[eE][+-]?\d+)?\b/g, "number"],
-    [/\b(?:true|false|null)\b/g, "boolean"],
-  ],
+  json: JSON_PATTERNS,
 };
 
 // ── Tokenizer ─────────────────────────────────────────────────────────────
@@ -47,7 +49,7 @@ interface Match {
 }
 
 export function highlightLine(code: string, language: string): React.ReactNode[] {
-  const patterns = PATTERNS[language] ?? PATTERNS.json;
+  const patterns = PATTERNS[language] ?? JSON_PATTERNS;
   const matches: Match[] = [];
 
   for (const [regex, type] of patterns) {

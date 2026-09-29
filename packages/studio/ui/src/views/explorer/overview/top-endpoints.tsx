@@ -72,7 +72,7 @@ export function TopEndpoints({
               rank={i + 1}
               entry={ep}
               format={activeOption.format}
-              maxValue={endpoints[0].value}
+              maxValue={endpoints[0]?.value ?? ep.value}
               onSelect={onSelectEndpoint ? () => onSelectEndpoint(ep.source, ep.group, ep.method) : undefined}
             />
           ))}

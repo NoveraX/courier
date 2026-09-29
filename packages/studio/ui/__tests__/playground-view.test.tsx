@@ -139,10 +139,11 @@ describe("the Playground", () => {
 
     await act(async () => screen.getByRole("button", { name: /Headers/ }).click());
     const [, headersEditor] = screen.getAllByRole("textbox");
+    if (headersEditor === undefined) throw new Error("The headers editor is not shown");
     fireEvent.change(headersEditor, { target: { value: '{ "x-client-tag": "pg", "x-not-allowed": "1" }' } });
     await act(async () => screen.getByRole("button", { name: "Send" }).click());
     const tabs = screen.getAllByRole("button", { name: /^Headers$/ });
-    await act(async () => tabs[tabs.length - 1].click());
+    await act(async () => tabs.at(-1)?.click());
 
     expect(execCalls()).toEqual([
       expect.objectContaining({ headers: { "x-client-tag": "pg", "x-not-allowed": "1" } }),
@@ -163,7 +164,7 @@ describe("the Playground", () => {
     renderPlayground({ source: "api", group: "users", method: "create" });
 
     const tabs = screen.getAllByRole("button", { name: /^Headers$/ });
-    await act(async () => tabs[tabs.length - 1].click());
+    await act(async () => tabs.at(-1)?.click());
 
     expect(screen.getByText("Dropped Headers (1)")).toBeTruthy();
     expect(screen.getByText("x-not-allowed")).toBeTruthy();

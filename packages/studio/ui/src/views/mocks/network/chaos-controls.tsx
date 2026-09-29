@@ -63,7 +63,8 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
       return;
     }
     setCustomDraft(false);
-    const cfg = PRESET_CONFIG[next] ?? PRESET_CONFIG.stable;
+    const cfg = PRESET_CONFIG[next];
+    if (cfg === undefined) return;
     sendConfig(cfg.errorRate, cfg.faultWeights, next);
   };
 

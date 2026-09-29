@@ -2,17 +2,21 @@ import type { DiffLine } from "./types";
 
 // ── LCS-based line diff ─────────────────────────────────────────────────────
 
-function lcsTable(a: string[], b: string[]): number[][] {
-  const m = a.length;
-  const n = b.length;
-  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+/* The length of the longest common run of lines ending at a cell; 0 outside the table. */
+function cell(dp: number[][], i: number, j: number): number {
+  return dp[i]?.[j] ?? 0;
+}
 
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1] + 1
-        : Math.max(dp[i - 1][j], dp[i][j - 1]);
+function lcsTable(a: string[], b: string[]): number[][] {
+  const dp: number[][] = [];
+  for (let i = 0; i <= a.length; i++) {
+    const row: number[] = [];
+    for (let j = 0; j <= b.length; j++) {
+      if (i === 0 || j === 0) row.push(0);
+      else if (a[i - 1] === b[j - 1]) row.push(cell(dp, i - 1, j - 1) + 1);
+      else row.push(Math.max(cell(dp, i - 1, j), row[j - 1] ?? 0));
     }
+    dp.push(row);
   }
 
   return dp;
@@ -37,7 +41,7 @@ function backtrack(
       });
       i--;
       j--;
-    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+    } else if (j > 0 && (i === 0 || cell(dp, i, j - 1) >= cell(dp, i - 1, j))) {
       result.push({
         type: "added",
         right: rightLines[j - 1],

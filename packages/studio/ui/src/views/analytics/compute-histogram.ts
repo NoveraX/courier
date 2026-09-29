@@ -23,13 +23,10 @@ export function computeHistogram(requests: RequestEntry[]): HistogramBucket[] {
     const t = r.timing.total;
     const isError = r.status === "error" || r.status === "validation_error";
 
-    for (let i = 0; i < BUCKETS.length; i++) {
-      if (t >= BUCKETS[i].min && t < BUCKETS[i].max) {
-        if (isError) counts[i]!.error++;
-        else counts[i]!.success++;
-        break;
-      }
-    }
+    const count = counts[BUCKETS.findIndex((b) => t >= b.min && t < b.max)];
+    if (count === undefined) continue;
+    if (isError) count.error++;
+    else count.success++;
   }
 
   return counts;

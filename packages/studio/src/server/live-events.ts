@@ -8,7 +8,7 @@
  * `Authorization` or the cookies they carried.
  */
 
-import type { Namespace } from "socket.io";
+import type { Namespace, Socket } from "socket.io";
 
 import { withoutCredentials } from "./storage/without-credentials";
 
@@ -32,4 +32,19 @@ export const READ_ONLY_PAGES = "pages:read-only";
 export function emitLiveEvent(uiNamespace: Namespace, event: Record<string, unknown>): void {
   uiNamespace.to(TOKEN_PAGES).emit("event", event);
   uiNamespace.to(READ_ONLY_PAGES).emit("event", withoutCredentials(event));
+}
+
+/**
+ * Send an event to one page, as `emitLiveEvent` sends it to the page's room:
+ * whole when the page presented the token, without its credentials otherwise.
+ *
+ * @param socket - The page's socket
+ * @param event - The event, whole
+ * @example
+ * ```ts
+ * emitLiveEventTo(socket, { type: "mock:server:connect", serverId: "api" });
+ * ```
+ */
+export function emitLiveEventTo(socket: Socket, event: Record<string, unknown>): void {
+  socket.emit("event", socket.rooms.has(TOKEN_PAGES) ? event : withoutCredentials(event));
 }

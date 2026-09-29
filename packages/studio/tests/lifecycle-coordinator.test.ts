@@ -12,7 +12,7 @@
  */
 import { courier, defineApi } from "@noverax/courier/define";
 import { defineMockServer } from "@noverax/courier-mock/managed";
-import type { Namespace } from "socket.io";
+import type { Namespace, Socket } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TOKEN_PAGES } from "../src/server/live-events";
 import type {
@@ -406,14 +406,33 @@ describe("the mocks file's status", () => {
     ]);
   });
 
-  it("is sent to a UI that connects", () => {
+  it("is sent to the UI that connects, and to no other", () => {
     const { coordinator, statuses } = studio();
     coordinator.setMocksFile({ file: MOCKS_FILE, error: "Unexpected token" });
+    const page = { emit: vi.fn(), rooms: new Set([TOKEN_PAGES]) };
 
-    coordinator.sendSnapshot();
+    coordinator.sendSnapshot(page as unknown as Socket);
 
-    expect(statuses().at(-1)).toEqual({ file: MOCKS_FILE, error: "Unexpected token" });
-    expect(statuses()).toHaveLength(3);
+    expect(page.emit).toHaveBeenCalledWith("mocks:status", {
+      file: MOCKS_FILE,
+      error: "Unexpected token",
+    });
+    expect(statuses()).toHaveLength(2);
+  });
+
+  it("gives the page that connects each mock's state, leaving the open pages alone", async () => {
+    const { coordinator, declare, emitted } = studio();
+    declare({ a: defineMockServer({ source: api }) });
+    await vi.waitFor(() => expect(emitted().length).toBeGreaterThan(0));
+    const before = emitted().length;
+    const page = { emit: vi.fn(), rooms: new Set([TOKEN_PAGES]) };
+
+    coordinator.sendSnapshot(page as unknown as Socket);
+
+    const sent = page.emit.mock.calls.filter(([name]) => name === "event");
+    expect(sent.map(([, event]) => event.type)).toEqual(["mock:server:connect"]);
+    expect(emitted()).toHaveLength(before);
+    await coordinator.stop();
   });
 });
 

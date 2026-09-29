@@ -7,6 +7,8 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { sampleFile } from "./page-modules.mjs";
+
 /* A fence may sit indented inside a component; its closing fence matches the opening indent. */
 const FENCE = /^([ \t]*)```(ts|tsx|typescript)\b([^\n]*)\n([\s\S]*?)^\1```/gm;
 
@@ -14,13 +16,14 @@ const FENCE = /^([ \t]*)```(ts|tsx|typescript)\b([^\n]*)\n([\s\S]*?)^\1```/gm;
  * Every ts, tsx and typescript fence of a Markdown or MDX text.
  *
  * @param {string} text - The page
- * @returns {Array<{ line: number, jsx: boolean, listing: boolean, code: string }>}
+ * @returns {Array<{ line: number, jsx: boolean, listing: boolean, code: string, file?: string }>}
  *   Each sample: the line of its first code line, whether it holds JSX,
  *   whether it lists the packages' types or signatures rather than using
- *   them, and its code without the fence's indentation
+ *   them, its code without the fence's indentation, and the file it says
+ *   it is, when it names one
  * @example
  * extractSamples("# A\n\n```ts\nconst a = 1\n```\n");
- * // → [{ line: 4, jsx: false, listing: false, code: "const a = 1\n" }]
+ * // → [{ line: 4, jsx: false, listing: false, code: "const a = 1\n", file: undefined }]
  */
 export function extractSamples(text) {
   return [...text.matchAll(FENCE)].map((match) => {
@@ -32,7 +35,8 @@ export function extractSamples(text) {
     /* A ts fence that holds JSX is read as tsx: the fence's name is a nit, not a failure. */
     const jsx = match[2] === "tsx" || /<\/[A-Za-z]|\/>/.test(code);
     const listing = /title="(types|signature)"/.test(match[3] ?? "") || /^declare (function|class) /m.test(code);
-    return { line: text.slice(0, match.index).split("\n").length + 1, jsx, listing, code };
+    const file = sampleFile(match[3] ?? "", code);
+    return { line: text.slice(0, match.index).split("\n").length + 1, jsx, listing, code, file };
   });
 }
 

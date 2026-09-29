@@ -59,20 +59,44 @@ describe("validateParseBody", () => {
   });
 });
 
+const SPEC = {
+  title: "Pets",
+  version: "1",
+  description: "",
+  baseURL: "https://pets.example",
+  format: "openapi3",
+  groups: [],
+  schemas: {},
+  securitySchemes: [],
+  skipped: [],
+};
+const OPTIONS = { type: "openapi", outputDir: "src/api", selectedEndpoints: {} };
+
 describe("validateGenerateBody", () => {
   it("reads the specification and the options", () => {
     const res = response();
 
-    expect(validateGenerateBody({ spec: { name: "api" }, options: {} }, res)).toEqual({
-      spec: { name: "api" },
-      options: {},
+    expect(validateGenerateBody({ spec: SPEC, options: OPTIONS }, res)).toEqual({
+      spec: SPEC,
+      options: OPTIONS,
     });
   });
 
+  /* Both reached the generator cast to their types, unread. */
   it.each([
-    ["a specification that is an array", { spec: [], options: {} }, "spec"],
-    ["missing options", { spec: {} }, "options"],
-    ["options that are null", { spec: {}, options: null }, "options"],
+    ["a specification that is an array", { spec: [], options: OPTIONS }, "spec"],
+    [
+      "an object that is not a parsed specification",
+      { spec: { name: "api" }, options: OPTIONS },
+      "spec",
+    ],
+    ["missing options", { spec: SPEC }, "options"],
+    ["options that are null", { spec: SPEC, options: null }, "options"],
+    [
+      "options without an output directory",
+      { spec: SPEC, options: { type: "openapi" } },
+      "options",
+    ],
   ])("refuses %s", (_case, body, field) => {
     const res = response();
 
@@ -83,15 +107,18 @@ describe("validateGenerateBody", () => {
 
 describe("validateDiffBody", () => {
   it("reads the two specifications", () => {
-    expect(validateDiffBody({ oldSpec: { a: 1 }, newSpec: { b: 2 } }, response())).toEqual({
-      oldSpec: { a: 1 },
-      newSpec: { b: 2 },
+    const newer = { ...SPEC, version: "2" };
+
+    expect(validateDiffBody({ oldSpec: SPEC, newSpec: newer }, response())).toEqual({
+      oldSpec: SPEC,
+      newSpec: newer,
     });
   });
 
   it.each([
-    ["a missing old specification", { newSpec: {} }, "oldSpec"],
-    ["a new specification that is text", { oldSpec: {}, newSpec: "{}" }, "newSpec"],
+    ["a missing old specification", { newSpec: SPEC }, "oldSpec"],
+    ["an old specification that is not one", { oldSpec: { a: 1 }, newSpec: SPEC }, "oldSpec"],
+    ["a new specification that is text", { oldSpec: SPEC, newSpec: "{}" }, "newSpec"],
   ])("refuses %s", (_case, body, field) => {
     const res = response();
 

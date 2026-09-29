@@ -5,6 +5,9 @@
  * Keeps validation at the system boundary — internal code can trust the shapes.
  */
 
+import type { GenerateOptions, ParsedSpec } from "../apis";
+import { readGenerateOptions } from "./generate-options-guard";
+import { isParsedSpec } from "./parsed-spec-guard";
 import type { JsonResponse } from "./route-types";
 
 /**
@@ -70,8 +73,8 @@ export function validateParseBody(body: unknown, res: JsonResponse): ParseBody |
 // ── Generate route ──────────────────────────────────────────────────────────
 
 interface GenerateBody {
-  spec: Record<string, unknown>;
-  options: Record<string, unknown>;
+  spec: ParsedSpec;
+  options: GenerateOptions;
 }
 
 /**
@@ -87,16 +90,17 @@ interface GenerateBody {
  */
 export function validateGenerateBody(body: unknown, res: JsonResponse): GenerateBody | null {
   if (!isObject(body)) return reject(res, "body");
-  if (!isObject(body.spec)) return reject(res, "spec");
-  if (!isObject(body.options)) return reject(res, "options");
-  return { spec: body.spec, options: body.options };
+  if (!isParsedSpec(body.spec)) return reject(res, "spec");
+  const options = readGenerateOptions(body.options);
+  if (options === null) return reject(res, "options");
+  return { spec: body.spec, options };
 }
 
 // ── Diff route ──────────────────────────────────────────────────────────────
 
 interface DiffBody {
-  oldSpec: Record<string, unknown>;
-  newSpec: Record<string, unknown>;
+  oldSpec: ParsedSpec;
+  newSpec: ParsedSpec;
 }
 
 /**
@@ -112,7 +116,7 @@ interface DiffBody {
  */
 export function validateDiffBody(body: unknown, res: JsonResponse): DiffBody | null {
   if (!isObject(body)) return reject(res, "body");
-  if (!isObject(body.oldSpec)) return reject(res, "oldSpec");
-  if (!isObject(body.newSpec)) return reject(res, "newSpec");
+  if (!isParsedSpec(body.oldSpec)) return reject(res, "oldSpec");
+  if (!isParsedSpec(body.newSpec)) return reject(res, "newSpec");
   return { oldSpec: body.oldSpec, newSpec: body.newSpec };
 }

@@ -83,6 +83,16 @@ describe("a peer at one of this machine's own addresses", () => {
   ])("is not local when the address is link-local: %s", (address) => {
     expect(isLocalPeer(address, INTERFACES)).toBe(false);
   });
+
+  /* fe80::/10 ends at febf::; fec0:: is the first address past it. */
+  it.each([
+    ["febf:ffff::5", false],
+    ["fec0::5", true],
+  ])("reads %s as link-local only inside fe80::/10 (local: %s)", (address, local) => {
+    const interfaces = { en1: [ipv6("febf:ffff::5", 4), ipv6("fec0::5")] };
+
+    expect(isLocalPeer(address, interfaces)).toBe(local);
+  });
 });
 
 describe("any other peer", () => {

@@ -16,6 +16,26 @@ import type { SubscribeFn } from "./hooks/use-subscription";
 import type { QueryCallerClient } from "./types";
 
 /**
+ * Create a proxy-mode query client typed from the API it is given as
+ * `source`, for code that runs where the definition may be — a server
+ * render, a test. A browser bundle names the API as a type and passes a
+ * `boundary` instead (next overload).
+ *
+ * @param source - Source name matching the key in server-side apiRoute({ [source]: ... })
+ * @param defaults - Proxy configuration, with the API itself as `source`
+ * @returns A client with each group's hooks under its name
+ * @example
+ * ```ts
+ * const q = createProxyQueryCaller("api", { source: api });
+ * const { data } = q.users.useQuery("getAll");
+ * ```
+ */
+export function createProxyQueryCaller<TApi extends DefinedApi>(
+  source: string,
+  defaults: ProxyCallerDefaults & { source: TApi },
+): QueryCallerClient<BrowserApi<TApi>>;
+
+/**
  * Create a proxy-mode query client with dot-notation access to react-query hooks per API group.
  *
  * Proxy mode routes all requests through the server adapter (apiRoute / sseRoute / WS handler).

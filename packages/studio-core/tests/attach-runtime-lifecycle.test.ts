@@ -7,7 +7,7 @@
  * and a process that attached never exited while Studio was not running.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -90,6 +90,7 @@ describe("a process that attached", () => {
       timeout: 15_000,
       encoding: "utf8",
     });
+    rmSync(dir, { recursive: true, force: true });
 
     expect(run.error).toBeUndefined();
     expect(run.status).toBe(0);

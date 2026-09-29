@@ -25,6 +25,14 @@ export function handleHello(
     log.warn("Rejected malformed runtime:hello payload");
     return;
   }
+  /* A socket speaks for one runtime: taking a second id would leave the
+     first registered and bound past the socket's disconnect. */
+  if (ref.runtimeId !== undefined && ref.runtimeId !== hello.runtimeId) {
+    log.warn(
+      `Rejected runtime:hello as "${hello.runtimeId}" from a socket attached as "${ref.runtimeId}"`,
+    );
+    return;
+  }
   ref.runtimeId = hello.runtimeId;
   const claim = registerRuntime({
     runtimeId: hello.runtimeId,

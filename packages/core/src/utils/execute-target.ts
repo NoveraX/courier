@@ -63,18 +63,24 @@ export function resolveCallTarget(
   context?: Context,
 ): CallResolution {
   const { source, group, method, variables, options } = call;
-  const dataSource =
-    typeof source === "string" && Object.hasOwn(sources, source) ? sources[source] : undefined;
-
-  const methodPath = group ? `[${String(group)}][${String(method)}]` : `[${String(method)}]`;
-  const notFound = `[${String(source)}]${methodPath}: method not found`;
   const refuse = (status: number, message: string): CallResolution => ({
     refusal: buildErrorResponse(context, status, message),
   });
+  /* A request that leaves a name out is malformed, not a guess at one. */
+  if (typeof source !== "string" || source === "") {
+    return refuse(400, "[source] is required: the call names no source");
+  }
+  if (typeof method !== "string" || method === "") {
+    return refuse(400, "[method] is required: the call names no endpoint");
+  }
+  const dataSource = Object.hasOwn(sources, source) ? sources[source] : undefined;
+
+  const methodPath = group ? `[${String(group)}][${method}]` : `[${method}]`;
+  const notFound = `[${source}]${methodPath}: method not found`;
 
   if (!dataSource) {
     const fromWire = context?.proxyMethod !== undefined;
-    return refuse(400, fromWire ? notFound : `[${String(source)}]: source not found`);
+    return refuse(400, fromWire ? notFound : `[${source}]: source not found`);
   }
   if (variables !== undefined && variables !== null && !SENDABLE.has(typeof variables)) {
     return refuse(400, "[variables] must be a JSON value or a request body");

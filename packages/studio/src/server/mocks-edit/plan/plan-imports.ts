@@ -75,7 +75,10 @@ export function planImports(
   const callees = resolveCallees(parsed, imports, bindings, needsDefineMocks);
   const config = resolveConfigImport(parsed.program, bindings, specifiers);
   const mock = planPackageImport(parsed, imports.joinable, callees.missing, style);
-  const clause = { defaultLocal: config.local };
+  const clause =
+    specifiers.form === "namespace"
+      ? { namespaceLocal: config.local }
+      : { defaultLocal: config.local };
   const configLine = config.add ? [importDeclaration(clause, config.specifier, style)] : [];
   const lines = planImportLines(parsed, [...mock.declarations, ...configLine], style);
   return {

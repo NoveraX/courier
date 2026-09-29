@@ -12,6 +12,7 @@ function planFor(oldText: string): PlannedInsertion {
     serverCallee: "defineMockServer",
     configLocal: "courierConfig",
     configSpecifiers: ["./courier.config"],
+    configForm: "default",
     addedStatements: [],
     extendedImport: null,
   };

@@ -21,6 +21,7 @@ function audit(
     serverCallee: "defineMockServer",
     configLocal: "c",
     configSpecifiers: ["./courier.config"],
+    configForm: "default",
     addedStatements: [],
     extendedImport: null,
     ...overrides,

@@ -14,6 +14,7 @@ const PLAN: PlannedInsertion = {
   serverCallee: "defineMockServer",
   configLocal: "courierConfig",
   configSpecifiers: [],
+  configForm: "default",
   addedStatements: [],
   extendedImport: null,
 };

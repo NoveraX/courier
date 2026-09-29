@@ -1,5 +1,6 @@
 import { MOCK_PACKAGE } from "../mock-package";
 import { findCommonJsExport } from "./commonjs-export";
+import { configImportForm } from "./config-import-form";
 import { configSpecifiers } from "./config-specifiers";
 import { findDefaultExport } from "./default-export";
 import { detectStyle } from "./detect-style";
@@ -115,7 +116,8 @@ function snippetNames(parsed: ParsedSource, input: PlanInput, appends: boolean):
   const bindings = collectModuleBindings(program);
   const imports = readMockImports(program);
   const explicit = input.explicitExtensions || importsCarryExtensions(program);
-  const specifiers = configSpecifiers(input.configName, explicit);
+  const form = configImportForm(input.configName, input.configText);
+  const specifiers = configSpecifiers(input.configName, explicit, form);
   const missing: ImportedName[] = [];
   const mocksCallee = appends ? calleeFor("defineMocks", imports, bindings, missing) : null;
   const serverCallee = calleeFor("defineMockServer", imports, bindings, missing);
@@ -123,7 +125,9 @@ function snippetNames(parsed: ParsedSource, input: PlanInput, appends: boolean):
   const declarations =
     missing.length === 0 ? [] : [importDeclaration({ names: missing }, MOCK_PACKAGE, style)];
   if (config.add) {
-    declarations.push(importDeclaration({ defaultLocal: config.local }, config.specifier, style));
+    const clause =
+      form === "namespace" ? { namespaceLocal: config.local } : { defaultLocal: config.local };
+    declarations.push(importDeclaration(clause, config.specifier, style));
   }
   const ctx = { serverCallee, configLocal: config.local, style, guardMocksColon: true };
   return { ctx, mocksCallee, declarations };

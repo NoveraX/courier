@@ -282,7 +282,7 @@ describe("auditInsertedCode", () => {
     };
 
     expect(rejectionOf(forged, plan)).toBe(
-      "Studio could not verify its edit of courier.mocks.ts (courierConfig is not the config's default export in the edited file), so it changed nothing.",
+      "Studio could not verify its edit of courier.mocks.ts (courierConfig is not bound to the config in the edited file), so it changed nothing.",
     );
   });
 });

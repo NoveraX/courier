@@ -20,6 +20,7 @@ import { createServerOps } from "./lifecycle-server-ops";
 import { declaredPorts } from "./mock-ports";
 import { createMockRegistration } from "./mock-registration";
 import { createMocksFileState } from "./mocks-file-state";
+import { patchChanges } from "./patch-changes";
 import { createProcessManager } from "./process-manager";
 import type { CoordinatorConfig, MockSummary, ServerState } from "./types";
 import { createUiEmitter } from "./ui-emitter";
@@ -41,7 +42,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
 
   const updateAndEmit = (serverId: string, patch: Partial<ServerState>) => {
     const state = servers.get(serverId);
-    if (!state) return;
+    if (!state || !patchChanges(state, patch)) return;
     Object.assign(state, patch);
     emitServerState(state);
   };

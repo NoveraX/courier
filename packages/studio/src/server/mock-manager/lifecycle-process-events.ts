@@ -64,9 +64,13 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
       updateAndEmit(serverId, { status: "crashed", lastError: reason });
     },
 
+    /* A mock that restarts says so until it starts again: what its worker
+       served is gone meanwhile, and the start that follows sends that on. */
     onStopped(serverId) {
       log.info(`[${nameOf(serverId)}] stopped`);
-      updateAndEmit(serverId, { status: "stopped", ...GONE });
+      const state = servers.get(serverId);
+      if (state?.status === "restarting") Object.assign(state, GONE);
+      else updateAndEmit(serverId, { status: "stopped", ...GONE });
     },
 
     /* A reason the worker reported before it died is the better one; the exit

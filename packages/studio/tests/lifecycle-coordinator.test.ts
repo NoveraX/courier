@@ -37,9 +37,11 @@ vi.mock("../src/server/mock-manager/process-manager", () => ({
   createProcessManager: (events: ProcessManagerEvents, options: ProcessManagerOptions) => {
     fake.events = events;
     fake.options = options;
+    /* A worker asked to stop says it stopped, and then exits. */
     const kill = async (serverId: string) => {
       if (!fake.children.has(serverId)) return;
       await new Promise((resolve) => setTimeout(resolve, fake.killDelay));
+      events.onStopped(serverId);
       fake.children.delete(serverId);
     };
     return {
@@ -325,6 +327,40 @@ describe("what the UI is told", () => {
     await settle();
 
     expect(last("a")).toMatchObject({ port: 7445, url: "" });
+    await coordinator.stop();
+  });
+
+  it("tells each step of a restart once, and a restarting mock as restarting until it starts", async () => {
+    const { coordinator, declare, emitted } = studio();
+    declare({ a: defineMockServer({ source: api, autoStart: true }) });
+    await settle();
+    const before = emitted().length;
+
+    declare({ a: defineMockServer({ source: api, autoStart: true, port: 7556 }) });
+    await settle();
+
+    const steps = emitted()
+      .slice(before)
+      .filter((e) => e.serverId === "a" && e.type === "mock:server:connect")
+      .map((e) => e.processStatus);
+    expect(steps).toEqual(["running", "restarting", "starting", "running"]);
+    await coordinator.stop();
+  });
+
+  it("tells a stop once it has stopped, and once", async () => {
+    const { coordinator, declare, emitted } = studio();
+    declare({ a: defineMockServer({ source: api, autoStart: true }) });
+    await settle();
+    const before = emitted().length;
+
+    coordinator.handleCommand("mock:managed:stop", { serverId: "a" });
+    await settle();
+
+    const steps = emitted()
+      .slice(before)
+      .filter((e) => e.serverId === "a" && e.type === "mock:server:connect")
+      .map((e) => e.processStatus);
+    expect(steps).toEqual(["stopping", "stopped"]);
     await coordinator.stop();
   });
 

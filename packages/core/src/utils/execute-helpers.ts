@@ -27,7 +27,7 @@ export function clientForCall(
   context?: Context,
   kind?: "query" | "mutation",
 ): HttpClient {
-  const inBrowser = typeof (globalThis as { document?: unknown }).document !== "undefined";
+  const inBrowser = Reflect.get(globalThis, "document") !== undefined;
   const dedupes = inBrowser && context?.proxyMethod === undefined && kind === "query";
   const options = dedupes ? dataSource.options : { ...dataSource.options, deduplicate: false };
   const client = new HttpClient(options, context);

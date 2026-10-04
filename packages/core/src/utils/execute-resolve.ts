@@ -37,15 +37,17 @@ export function resolveEndpoint(
 
 /** The verb the endpoint was addressed with, as HTTP spells it: `"DELETE"` for `.del()`. */
 function readHttpMethod(endpoint: unknown): string | undefined {
-  if (typeof endpoint !== "object" || endpoint === null) return undefined;
-  const { method } = endpoint as { method?: unknown };
+  if (typeof endpoint !== "object" || endpoint === null || !("method" in endpoint))
+    return undefined;
+  const { method } = endpoint;
   return typeof method === "string" ? normalizeHttpMethod(method) : undefined;
 }
 
 /** Is the endpoint's closure its implementation rather than a wire description? */
 function isServed(endpoint: unknown): boolean {
-  if (typeof endpoint !== "object" || endpoint === null) return false;
-  return (endpoint as { served?: unknown }).served === true;
+  return typeof endpoint === "object" && endpoint !== null && "served" in endpoint
+    ? endpoint.served === true
+    : false;
 }
 
 /**
@@ -56,8 +58,10 @@ function isServed(endpoint: unknown): boolean {
  * one place rather than re-deriving it.
  */
 function readOptions(endpoint: unknown): ResolvedEndpointOptions | undefined {
-  if (typeof endpoint !== "object" || endpoint === null) return undefined;
-  const { options } = endpoint as { options?: unknown };
+  if (typeof endpoint !== "object" || endpoint === null || !("options" in endpoint)) {
+    return undefined;
+  }
+  const { options } = endpoint;
   return typeof options === "object" && options !== null
     ? (options as ResolvedEndpointOptions)
     : undefined;
@@ -72,9 +76,14 @@ type WireFn = (...args: unknown[]) => unknown;
  * on which of the two an endpoint is.
  */
 function toCallable(endpoint: unknown): WireFn | undefined {
-  if (typeof endpoint !== "object" || endpoint === null) return undefined;
-  const { probe } = endpoint as { probe?: unknown };
-  return typeof probe === "function" ? (probe as WireFn) : undefined;
+  if (typeof endpoint !== "object" || endpoint === null || !("probe" in endpoint)) return undefined;
+  const { probe } = endpoint;
+  return isWireFn(probe) ? probe : undefined;
+}
+
+/* A closure is called with what the request hands it; it says what it takes. */
+function isWireFn(value: unknown): value is WireFn {
+  return typeof value === "function";
 }
 
 /** Read the metadata stamped on an endpoint, whichever shape it has. */

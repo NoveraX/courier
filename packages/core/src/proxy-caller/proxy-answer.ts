@@ -35,7 +35,7 @@ export function buildHttpError(
 ): HTTPError {
   const data =
     raw && typeof responseData === "object" && responseData !== null && "data" in responseData
-      ? (responseData as { data: unknown }).data
+      ? responseData.data
       : responseData;
 
   return new HTTPError({ status, headers, data });
@@ -112,9 +112,14 @@ function withHeaders(envelope: unknown): unknown {
   if (typeof envelope !== "object" || envelope === null || !("headers" in envelope)) {
     return envelope;
   }
-  const { headers } = envelope as { headers: unknown };
+  const { headers } = envelope;
   if (headers instanceof Headers || typeof headers !== "object" || headers === null) {
     return envelope;
   }
-  return { ...envelope, headers: new Headers(headers as Record<string, string>) };
+  const read = new Headers();
+  for (const name of Object.keys(headers)) {
+    const value: unknown = Reflect.get(headers, name);
+    if (typeof value === "string") read.set(name, value);
+  }
+  return { ...envelope, headers: read };
 }

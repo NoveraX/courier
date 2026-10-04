@@ -27,7 +27,7 @@ export type WSMessageType =
   | "auth_required"
   | "renamed";
 
-const VALID_TYPES = new Set<WSMessageType>([
+const VALID_TYPES: ReadonlySet<string> = new Set<WSMessageType>([
   "subscribe",
   "unsubscribe",
   "data",
@@ -94,9 +94,9 @@ function validateType(parsed: unknown): void {
     throw new Error("WS protocol: missing 'type' field");
   }
 
-  const { type } = parsed as { type: unknown };
+  const { type } = parsed;
 
-  if (typeof type !== "string" || !VALID_TYPES.has(type as WSMessageType)) {
+  if (typeof type !== "string" || !VALID_TYPES.has(type)) {
     throw new Error(`WS protocol: invalid type '${String(type)}'`);
   }
 }

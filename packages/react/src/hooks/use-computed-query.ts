@@ -48,7 +48,7 @@ interface HeldEvents<TStreamData> {
  * })
  */
 export function useComputedQuery<TQueryData, TStreamData>(
-  queryFn: (variables: unknown, signal: AbortSignal) => Promise<unknown>,
+  queryFn: (variables: unknown, signal: AbortSignal) => Promise<TQueryData>,
   subscribeFn: SubscribeFn,
   queryKey: QueryKey,
   groupName: string,
@@ -73,8 +73,8 @@ export function useComputedQuery<TQueryData, TStreamData>(
   const queryResult = useQuery<TQueryData, Error>({
     queryKey,
     queryFn: async ({ signal }) => {
-      const answer = (await queryFn(variables, signal)) as TQueryData;
-      return take().reduce((merged, event) => mapperRef.current(merged, event), answer);
+      const answer = await queryFn(variables, signal);
+      return take().reduce<TQueryData>((merged, event) => mapperRef.current(merged, event), answer);
     },
     enabled,
     staleTime,

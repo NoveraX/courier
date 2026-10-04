@@ -41,10 +41,11 @@ export function handleRequestEnd(serverId: string, event: MockEvent): void {
   const log = logs[idx];
   if (!log) return;
 
+  const status = num(event.status, 200);
   const updated = [...logs];
   updated[idx] = {
     ...log,
-    status: num(event.status, 200),
+    status,
     duration,
     data: event.data,
     responseHeaders: readStringRecord(event.responseHeaders),
@@ -54,7 +55,12 @@ export function handleRequestEnd(serverId: string, event: MockEvent): void {
 
   const server = mockServerOf(useMockStore.getState().servers, serverId);
   if (!server) return;
-  const patch: Partial<MockServerInfo> = { requestsServed: server.requestsServed + 1 };
+  /* An error the mock answered with — an override's or a scenario's — is an
+     error its caller got, as much as one its handler threw. */
+  const patch: Partial<MockServerInfo> = {
+    requestsServed: server.requestsServed + 1,
+    ...(status >= 400 && { errorCount: server.errorCount + 1 }),
+  };
   const scenarioCount = optNum(event.scenarioRequestCount);
   if (scenarioCount !== undefined) patch.scenarioRequestCount = scenarioCount;
   store.updateServer(serverId, patch);

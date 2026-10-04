@@ -201,3 +201,28 @@ describe("what Studio keeps of a managed mock's events", () => {
     expect(emit).not.toHaveBeenCalled();
   });
 });
+
+describe("the requests a managed mock answered", () => {
+  it("are kept as the page was sent them, with the time they were shown", () => {
+    const emit = vi.fn();
+    const record = vi.fn();
+    const servers = new Map<string, ServerState>();
+    const mockLog = { record, events: () => [], close: () => undefined };
+    const { onEvent } = createProcessEvents({ servers, emit, updateAndEmit: vi.fn(), mockLog });
+    const start = {
+      type: "mock:request:start",
+      requestId: "r1",
+      httpMethod: "GET",
+      path: "/users",
+    };
+    vi.spyOn(Date, "now").mockReturnValue(1_791_100_000_000);
+
+    onEvent("apiMock", start);
+
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(record).toHaveBeenCalledTimes(1);
+    const kept: unknown = record.mock.calls[0]?.[0];
+    expect(kept).toEqual({ ...start, serverId: "apiMock", timestamp: 1_791_100_000_000 });
+    expect(emit.mock.calls[0]).toEqual(["mock:request:start", kept]);
+  });
+});

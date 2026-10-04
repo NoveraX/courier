@@ -5,6 +5,7 @@ import { HealthIndicator } from "../../shared/health-indicator";
 // ── Props ────────────────────────────────────────────────────────────────────
 
 interface RequestsTabProps {
+  /** The endpoint's latest calls, newest first, listed in that order */
   requests: RequestEntry[];
   onNavigateToTimeline?: (requestId: string) => void;
 }
@@ -23,11 +24,9 @@ export function RequestsTab({
     );
   }
 
-  const sorted = [...requests].reverse();
-
   return (
     <div className="space-y-0.5">
-      {sorted.map((req) => (
+      {requests.map((req) => (
         <RequestRow key={req.id} request={req} onClick={() => onNavigateToTimeline?.(req.id)} />
       ))}
     </div>

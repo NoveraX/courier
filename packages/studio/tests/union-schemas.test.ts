@@ -83,10 +83,10 @@ describe("a union schema, per validator", () => {
     expect(generate("valibot")).toMatch(/v\.union\(\[CatSchema, DogSchema\]\)/);
   });
 
-  it("is a tuple for arktype, not a string operator", () => {
+  it("is joined with type.or for arktype, not a string operator", () => {
     const out = generate("arktype");
 
-    expect(out).toMatch(/type\(\[CatSchema, "\|", DogSchema\]\)/);
+    expect(out).toMatch(/type\.or\(CatSchema, DogSchema\)/);
   });
 });
 

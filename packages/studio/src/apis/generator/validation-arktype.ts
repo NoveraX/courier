@@ -123,12 +123,15 @@ function mapOf(valueType: ParsedSchema | undefined, lazy?: LazyTargets): string 
 }
 
 /**
- * Join alternatives. ArkType's tuple form takes exactly two operands, so a
- * longer union nests: `[[A, "|", B], "|", C]`.
+ * Join alternatives with `type.or`, which takes any number of them. Nested
+ * two at a time, as ArkType's tuple form takes them — `[[A, "|", B], "|", C]`
+ * — a union of some thirty members, such as OpenAI's response items and
+ * GitHub's timeline events, took TypeScript past its instantiation depth,
+ * and the file did not compile.
  */
 function unionOf(variants: string[]): string {
   const [first, ...rest] = variants;
   if (first === undefined) return arkType("never");
   if (rest.length === 0) return first;
-  return `type(${rest.reduce((joined, variant) => `[${joined}, "|", ${variant}]`, first)})`;
+  return `type.or(${variants.join(", ")})`;
 }

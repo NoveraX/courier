@@ -51,20 +51,22 @@ let canonMap: Map<string, string> | null = null;
 let canonMapCatalog: Catalog | null = null;
 
 export function normalizeEventSource(event: EventPayload, catalog: Catalog): EventPayload {
-  if (!event.source || typeof event.source !== "string") return event;
+  const { source } = event;
+  if (typeof source !== "string" || source === "") return event;
 
-  // Rebuild lookup only when the catalog reference changes.
-  if (catalog !== canonMapCatalog) {
-    canonMap = new Map();
-    for (const key of Object.keys(catalog)) {
-      canonMap.set(key.toLowerCase(), key);
-    }
-    canonMapCatalog = catalog;
-  }
-
-  const canonical = canonMap!.get((event.source as string).toLowerCase());
-  if (canonical && canonical !== event.source) {
+  const canonical = canonicalNames(catalog).get(source.toLowerCase());
+  if (canonical && canonical !== source) {
     return { ...event, source: canonical };
   }
   return event;
+}
+
+/* Rebuilt only when the catalog reference changes. */
+function canonicalNames(catalog: Catalog): Map<string, string> {
+  if (canonMap !== null && catalog === canonMapCatalog) return canonMap;
+  const names = new Map<string, string>();
+  for (const key of Object.keys(catalog)) names.set(key.toLowerCase(), key);
+  canonMap = names;
+  canonMapCatalog = catalog;
+  return names;
 }

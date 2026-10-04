@@ -6,44 +6,48 @@
  * adjust the chaos engine state.
  */
 
+import { isPlainObject } from "@/socket/is-plain-object";
+import { num, optNum, optStr, str } from "./event-helpers";
 import type { MockEvent } from "./mock-event-types";
 import { mockServerOf } from "./mock-server-of";
 import { useMockStore } from "./mock-slice";
-import type { NetworkConfig } from "./mock-slice-network-types";
 import type { MockServerInfo } from "./mock-slice-types";
+import { readNetworkConfig, readOneOf, readStringRecord } from "./payload";
 import { updateRouteStats } from "./route-stats";
+
+const EXPERIMENT_EVENTS = ["started", "stopped", "auto-halted"] as const;
 
 export function handleRequestStart(serverId: string, event: MockEvent): void {
   const store = useMockStore.getState();
   store.addLog({
-    id: (event.requestId as string) ?? `${Date.now()}`,
+    id: str(event.requestId, `${Date.now()}`),
     serverId,
-    timestamp: (event.timestamp as number) ?? Date.now(),
-    httpMethod: (event.httpMethod as string) ?? "GET",
-    path: (event.path as string) ?? "",
-    group: (event.group as string) ?? "",
-    endpoint: (event.endpoint as string) ?? "",
+    timestamp: num(event.timestamp, Date.now()),
+    httpMethod: str(event.httpMethod, "GET"),
+    path: str(event.path),
+    group: str(event.group),
+    endpoint: str(event.endpoint),
     variables: event.variables,
-    requestHeaders: event.requestHeaders as Record<string, string> | undefined,
+    requestHeaders: readStringRecord(event.requestHeaders),
   });
 }
 
 export function handleRequestEnd(serverId: string, event: MockEvent): void {
   const store = useMockStore.getState();
-  const requestId = event.requestId as string;
-  const duration = (event.duration as number) ?? 0;
+  const requestId = optStr(event.requestId);
+  const duration = num(event.duration);
   const logs = store.logs;
   const idx = logs.findIndex((l) => l.id === requestId);
-  if (idx < 0) return;
+  const log = logs[idx];
+  if (!log) return;
 
-  const log = logs[idx]!;
   const updated = [...logs];
   updated[idx] = {
     ...log,
-    status: (event.status as number) ?? 200,
+    status: num(event.status, 200),
     duration,
     data: event.data,
-    responseHeaders: event.responseHeaders as Record<string, string> | undefined,
+    responseHeaders: readStringRecord(event.responseHeaders),
   };
   useMockStore.setState({ logs: updated });
   updateRouteStats(serverId, log.group, log.endpoint, log.httpMethod, duration);
@@ -51,26 +55,26 @@ export function handleRequestEnd(serverId: string, event: MockEvent): void {
   const server = mockServerOf(useMockStore.getState().servers, serverId);
   if (!server) return;
   const patch: Partial<MockServerInfo> = { requestsServed: server.requestsServed + 1 };
-  const scenarioCount = event.scenarioRequestCount as number | undefined;
+  const scenarioCount = optNum(event.scenarioRequestCount);
   if (scenarioCount !== undefined) patch.scenarioRequestCount = scenarioCount;
   store.updateServer(serverId, patch);
 }
 
 export function handleRequestError(serverId: string, event: MockEvent): void {
   const store = useMockStore.getState();
-  const requestId = event.requestId as string;
-  const duration = (event.duration as number) ?? 0;
+  const requestId = optStr(event.requestId);
+  const duration = num(event.duration);
   const logs = store.logs;
   const idx = logs.findIndex((l) => l.id === requestId);
-  if (idx < 0) return;
+  const log = logs[idx];
+  if (!log) return;
 
-  const log = logs[idx]!;
   const updated = [...logs];
   updated[idx] = {
     ...log,
-    status: (event.status as number) ?? 500,
+    status: num(event.status, 500),
     duration,
-    error: (event.message as string) ?? "Unknown error",
+    error: str(event.message, "Unknown error"),
   };
   useMockStore.setState({ logs: updated });
   updateRouteStats(serverId, log.group, log.endpoint, log.httpMethod, duration);
@@ -85,7 +89,7 @@ export function handleRequestError(serverId: string, event: MockEvent): void {
 
 export function handleNetworkConfig(serverId: string, event: MockEvent): void {
   const store = useMockStore.getState();
-  const cfg = event.config as Record<string, unknown> | undefined;
+  const cfg = isPlainObject(event.config) ? event.config : undefined;
   const autoHalted = cfg?.autoHalted === true;
 
   if (autoHalted) {
@@ -104,32 +108,28 @@ export function handleNetworkConfig(serverId: string, event: MockEvent): void {
       timestamp: Date.now(),
       type: "auto-halted",
       mode: "chaos",
-      errorRate: (cfg?.errorRate as number) ?? 0,
-      reason: (cfg?.haltReason as string) ?? "stop condition met",
+      errorRate: num(cfg?.errorRate),
+      reason: str(cfg?.haltReason, "stop condition met"),
     });
     return;
   }
 
-  if (cfg) {
-    store.updateServer(serverId, {
-      networkConfig: cfg as unknown as NetworkConfig,
-    });
-  }
+  const networkConfig = readNetworkConfig(cfg);
+  if (networkConfig) store.updateServer(serverId, { networkConfig });
 }
 
 export function handleExperimentEvent(serverId: string, event: MockEvent): void {
   const store = useMockStore.getState();
-  const eventType = (event.eventType as string) ?? "started";
   store.addExperimentEvent({
     id: `exp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
     serverId,
-    timestamp: (event.timestamp as number) ?? Date.now(),
-    type: eventType as "started" | "stopped" | "auto-halted",
-    mode: (event.mode as string) ?? "unknown",
-    errorRate: (event.errorRate as number) ?? 0,
-    peakErrorRate: event.peakErrorRate as number | undefined,
-    peakP99: event.peakP99 as number | undefined,
-    durationMs: event.durationMs as number | undefined,
-    reason: event.reason as string | undefined,
+    timestamp: num(event.timestamp, Date.now()),
+    type: readOneOf(event.eventType, EXPERIMENT_EVENTS) ?? "started",
+    mode: str(event.mode, "unknown"),
+    errorRate: num(event.errorRate),
+    peakErrorRate: optNum(event.peakErrorRate),
+    peakP99: optNum(event.peakP99),
+    durationMs: optNum(event.durationMs),
+    reason: optStr(event.reason),
   });
 }

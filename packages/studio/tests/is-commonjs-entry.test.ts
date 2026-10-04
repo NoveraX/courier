@@ -32,6 +32,10 @@ describe("isCommonJsEntry", () => {
     expect(isCommonJsEntry(join(dir, "courier.config.cjs"), COMMONJS)).toBe(true);
   });
 
+  it("takes a .cjs file written as an ES module for one, as Node could not run it", () => {
+    expect(isCommonJsEntry(join(dir, "courier.config.cjs"), "export default {};\n")).toBe(false);
+  });
+
   it.each([
     ["courier.config.mjs"],
     ["courier.config.ts"],

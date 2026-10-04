@@ -21,7 +21,7 @@ type ChartContextProps = {
 
 export const ChartContext = React.createContext<ChartContextProps | null>(null);
 
-export function useChart() {
+export function useChart(): ChartContextProps {
   const context = React.useContext(ChartContext);
 
   if (!context) {

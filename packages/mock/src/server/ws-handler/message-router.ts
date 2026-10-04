@@ -5,7 +5,7 @@ import {
   encodeMessage,
   type WSMessage,
 } from "@noverax/courier/internal";
-import type { ChannelHandlers } from "@noverax/courier/realtime";
+import type { ChannelHandlers, WSChannelContext } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { WSConnectionRegistry } from "./connection-registry";
@@ -19,10 +19,13 @@ export interface ConnectionState {
   ended: AbortController;
 }
 
-/** Minimal channel context shape used by the message router */
-export interface MessageRouterContext {
+/**
+ * A channel's context as the router drives it: the context its handlers
+ * receive, with a topic the router sets to the one the client subscribed
+ * under.
+ */
+export interface MessageRouterContext extends WSChannelContext {
   topic: string;
-  connectionId: string;
 }
 
 /** Decode an incoming raw frame to a typed WSMessage, sending an error frame on failure */
@@ -45,11 +48,11 @@ export function parseMessage(ws: NodeWebSocket, raw: Buffer | string): WSMessage
  * - `message` → fire `onMessage` (rejected before subscribe)
  * - `ping` → reply `pong`
  */
-export async function dispatchMessage<TChannelCtx extends MessageRouterContext>(
+export async function dispatchMessage(
   msg: WSMessage,
   ws: NodeWebSocket,
   handlers: ChannelHandlers<unknown, unknown>,
-  channelCtx: TChannelCtx,
+  channelCtx: MessageRouterContext,
   state: ConnectionState,
   registry: WSConnectionRegistry,
 ): Promise<void> {
@@ -66,7 +69,7 @@ export async function dispatchMessage<TChannelCtx extends MessageRouterContext>(
     channelCtx.topic = clientTopic;
     registry.register(clientTopic, ws);
     try {
-      await handlers.onJoin?.(channelCtx as never);
+      await handlers.onJoin?.(channelCtx);
     } catch (err) {
       logger.warn("MockWS", `onJoin threw (${channelCtx.connectionId})`, err);
       endSubscriptionAndClose(ws, clientTopic, describeFailure(err, "Subscription failed"));
@@ -93,7 +96,7 @@ export async function dispatchMessage<TChannelCtx extends MessageRouterContext>(
       return;
     }
     try {
-      await handlers.onMessage?.(channelCtx as never, msg.payload);
+      await handlers.onMessage?.(channelCtx, msg.payload);
     } catch (err) {
       logger.warn("MockWS", `onMessage threw (${channelCtx.connectionId})`, err);
       sendError(ws, describeFailure(err, "Handler error"), channelCtx.topic);
@@ -110,10 +113,10 @@ export async function dispatchMessage<TChannelCtx extends MessageRouterContext>(
  * Run `onLeave` exactly once across all close paths (explicit unsubscribe,
  * socket close, transport error). Unregisters from the broadcast registry.
  */
-export async function callOnLeaveOnce<TChannelCtx extends MessageRouterContext>(
+export async function callOnLeaveOnce(
   state: ConnectionState,
   handlers: ChannelHandlers<unknown, unknown>,
-  channelCtx: TChannelCtx,
+  channelCtx: MessageRouterContext,
   registry: WSConnectionRegistry,
   ws: NodeWebSocket,
 ): Promise<void> {
@@ -122,7 +125,7 @@ export async function callOnLeaveOnce<TChannelCtx extends MessageRouterContext>(
   state.ended.abort();
   registry.unregister(channelCtx.topic, ws);
   try {
-    await handlers.onLeave?.(channelCtx as never);
+    await handlers.onLeave?.(channelCtx);
   } catch (err) {
     logger.warn("MockWS", `onLeave threw (${channelCtx.connectionId})`, err);
   }

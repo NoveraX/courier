@@ -2,7 +2,7 @@ import { encodeMessage, type StreamFailure } from "@noverax/courier/internal";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { WSConnectionRegistry } from "./connection-registry";
-import { type ConnectionState, parseMessage } from "./message-router";
+import { type ConnectionState, type MessageRouterContext, parseMessage } from "./message-router";
 import { endSubscriptionAndClose } from "./protocol";
 
 /**
@@ -24,14 +24,14 @@ export function buildChannelContext(
   connectionId: string,
   registry: WSConnectionRegistry,
   state: ConnectionState,
-) {
+): MessageRouterContext {
   // `topic` is mutable: when the client subscribes with a fully qualified
   // topic — `{source}.{group}.{method}`, then `#` and its variables as
   // canonical JSON — the message router rewrites `ctx.topic` so outbound
   // `data` frames echo the client's exact topic. Without this, clients
   // dispatch frames by topic and would silently drop everything sent under
   // the server-local short topic.
-  const ctx = {
+  const ctx: MessageRouterContext = {
     topic: initialTopic,
     variables,
     connectionId,

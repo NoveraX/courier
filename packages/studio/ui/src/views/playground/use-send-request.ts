@@ -10,6 +10,16 @@ import { initiateStreamRequest } from "./send-stream-request";
 
 export type { SendPayload };
 
+/** Sending a Playground request, and what is under way. */
+interface SendRequest {
+  /** Send a request: its rid, or `null` when nothing was sent */
+  send: (payload: SendPayload, values: RequestValues) => string | null;
+  sending: boolean;
+  streaming: boolean;
+  /** Close the live stream */
+  unsubscribe: () => void;
+}
+
 /**
  * React hook driving playground request dispatch over the rid-keyed wire.
  *
@@ -25,7 +35,7 @@ export type { SendPayload };
  * Unsubscribe closes, and a second request would take that place and leave
  * the stream running with nothing left to close it.
  */
-export function useSendRequest() {
+export function useSendRequest(): SendRequest {
   const addEntry = useStudioStore((s) => s.addPlaygroundEntry);
   const updateEntry = useStudioStore((s) => s.updatePlaygroundEntry);
   const [sending, setSending] = useState(false);

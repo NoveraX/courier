@@ -7,7 +7,7 @@ export type DedupeHost = {
 
 export const supportsAbortController = typeof globalThis.AbortController === "function";
 
-export function getDedupeKey(url: string, method: string) {
+export function getDedupeKey(url: string, method: string): string {
   if (!url) return "";
   const queryIndex = url.indexOf("?");
   const hashIndex = url.indexOf("#");
@@ -55,7 +55,7 @@ export function cleanupDeduplication(
   host: DedupeHost,
   dedupeKey: string,
   controller: AbortController,
-) {
+): void {
   if (host.pendingRequests[dedupeKey] === controller) {
     delete host.pendingRequests[dedupeKey];
   }

@@ -6,11 +6,24 @@ import { normalizeHttpMethod } from "./helpers";
 
 type ResolvedGroup = Record<string, unknown> & { options?: GroupOptions };
 
+/** An endpoint found in a source, with what its descriptor says about it. */
+interface ResolvedEndpoint {
+  /** Its closure, or `undefined` when the source holds no such endpoint */
+  endpoint: WireFn | undefined;
+  endpointGroup: ResolvedGroup | undefined;
+  schema: SchemaMetadata | undefined;
+  options: ResolvedEndpointOptions | undefined;
+  /** Whether the closure is the implementation rather than a wire description */
+  served: boolean;
+  /** The verb as HTTP spells it */
+  httpMethod: string | undefined;
+}
+
 export function resolveEndpoint(
   dataSource: Record<string, unknown>,
   group: unknown,
   method: unknown,
-) {
+): ResolvedEndpoint {
   const endpointGroup: ResolvedGroup | undefined =
     typeof group === "string" &&
     dataSource.options &&

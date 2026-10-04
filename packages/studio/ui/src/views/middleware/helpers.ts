@@ -1,6 +1,6 @@
 import type { RequestEntry } from "@/store/types";
 import { SLOW_STEP_MS } from "./constants";
-import type { AggregateMiddleware, ChainEntry, MiddlewareStep } from "./types";
+import type { AggregateMiddleware, ChainEntry, MiddlewareStep, OverheadStats } from "./types";
 
 // ── Aggregate stats ────────────────────────────────────────────────────────
 
@@ -66,13 +66,9 @@ export function buildChain(request: RequestEntry): ChainEntry {
 
 // ── Overhead across all requests ───────────────────────────────────────────
 
-export function computeOverheadStats(requests: RequestEntry[]): {
-  avgOverheadPercent: number;
-  avgFetchPercent: number;
-  avgOtherPercent: number;
-} {
-  const withTiming = requests.filter((r) => r.timing && r.timing.total > 0);
-  if (withTiming.length === 0) {
+export function computeOverheadStats(requests: RequestEntry[]): OverheadStats {
+  const timings = requests.flatMap((r) => (r.timing && r.timing.total > 0 ? [r.timing] : []));
+  if (timings.length === 0) {
     return { avgOverheadPercent: 0, avgFetchPercent: 0, avgOtherPercent: 0 };
   }
 
@@ -80,8 +76,7 @@ export function computeOverheadStats(requests: RequestEntry[]): {
   let sumFetch = 0;
   let sumOther = 0;
 
-  for (const r of withTiming) {
-    const t = r.timing!;
+  for (const t of timings) {
     const mwPct = (t.middleware / t.total) * 100;
     const fetchPct = (t.fetch / t.total) * 100;
     sumMw += mwPct;
@@ -89,7 +84,7 @@ export function computeOverheadStats(requests: RequestEntry[]): {
     sumOther += 100 - mwPct - fetchPct;
   }
 
-  const n = withTiming.length;
+  const n = timings.length;
   return {
     avgOverheadPercent: sumMw / n,
     avgFetchPercent: sumFetch / n,

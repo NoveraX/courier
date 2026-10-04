@@ -13,28 +13,22 @@ interface ConfigTabProps {
 export function ConfigTab({ endpoint }: ConfigTabProps): React.ReactElement {
   return (
     <div className="space-y-4">
-      {/* Endpoint type */}
       <ConfigSection icon={Route} title="Endpoint Type">
         <div className="flex items-center gap-2">
           <Badge variant={typeVariant(endpoint.endpointType)} className="text-[10px]">
-            {endpoint.endpointType}
+            {kindOf(endpoint)}
           </Badge>
-          <span className="text-body-xs text-muted-foreground/60">
-            {typeDescription(endpoint.endpointType)}
-          </span>
+          <span className="text-body-xs text-muted-foreground/60">{kindDescription(endpoint)}</span>
         </div>
       </ConfigSection>
 
-      {/* HTTP method inference */}
       <ConfigSection icon={ArrowRight} title="HTTP Method">
         <p className="text-body-xs text-muted-foreground">
-          <span className="font-medium text-foreground">{endpoint.httpMethod}</span> &mdash;
-          inferred from endpoint name{" "}
-          <code className="text-mono-sm text-accent-brand">{endpoint.method}</code>
+          <span className="font-medium text-foreground">{endpoint.httpMethod}</span> &mdash;{" "}
+          {methodNote(endpoint)}
         </p>
       </ConfigSection>
 
-      {/* Source info */}
       <ConfigSection icon={Globe} title="Source">
         <p className="text-body-xs text-muted-foreground">
           <span className="font-medium text-foreground">{endpoint.source}</span> / {endpoint.group}
@@ -42,7 +36,6 @@ export function ConfigTab({ endpoint }: ConfigTabProps): React.ReactElement {
         <p className="mt-1 text-mono-sm text-muted-foreground/60">{endpoint.fullPath}</p>
       </ConfigSection>
 
-      {/* Middleware chain */}
       <ConfigSection icon={Layers} title="Middleware">
         {(endpoint.middleware?.length ?? 0) > 0 ? (
           <div className="flex flex-wrap gap-1.5">
@@ -91,8 +84,23 @@ function typeVariant(t: string): "sky" | "amber" | "secondary" {
   return "secondary";
 }
 
-function typeDescription(t: string): string {
-  if (t === "query") return "Read-only data fetching endpoint";
-  if (t === "mutation") return "Data mutation endpoint (create/update/delete)";
+/* A stream or a channel is named by its transport, which its type leaves out. */
+function kindOf(endpoint: EndpointNodeData): string {
+  if (endpoint.transport === "sse") return "stream";
+  if (endpoint.transport === "ws") return "channel";
+  return endpoint.endpointType;
+}
+
+function kindDescription(endpoint: EndpointNodeData): string {
+  if (endpoint.transport === "sse") return "Server-sent events the endpoint pushes to its caller";
+  if (endpoint.transport === "ws") return "A WebSocket subscription";
+  if (endpoint.endpointType === "query") return "Read-only data fetching endpoint";
+  if (endpoint.endpointType === "mutation") return "Data mutation endpoint (create/update/delete)";
   return "Endpoint without explicit type annotation";
+}
+
+function methodNote(endpoint: EndpointNodeData): string {
+  if (endpoint.transport === "sse") return "a stream opens with a GET";
+  if (endpoint.transport === "ws") return "a channel opens with a WebSocket upgrade over GET";
+  return "as the definition declares it";
 }

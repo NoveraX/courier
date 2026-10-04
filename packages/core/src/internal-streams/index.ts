@@ -18,6 +18,7 @@
    the entry browser code builds on, which would carry the WebSocket client
    with it. */
 export { clearWSConnectionPool } from "../realtime/caller-ws";
+export { servedHere } from "../transport/in-process/served-here";
 export { executeDirectSSE } from "../transport/in-process/sse";
 export type {
   ExecuteDirectSSEPayload,

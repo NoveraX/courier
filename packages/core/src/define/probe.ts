@@ -83,10 +83,27 @@ function standIn(name = "", owner?: unknown): unknown {
   return proxy;
 }
 
+type WireMethod = HttpMethod | "connect";
+
+const WIRE_METHODS: ReadonlySet<string> = new Set<WireMethod>([
+  "get",
+  "post",
+  "put",
+  "patch",
+  "del",
+  "head",
+  "options",
+  "connect",
+]);
+
+function isWireMethod(name: string): name is WireMethod {
+  return WIRE_METHODS.has(name);
+}
+
 /** The call a closure made to address its endpoint. */
 export interface WireCallRecord {
   /** The wire method it called — a verb, or `connect` for a channel. */
-  readonly name: string;
+  readonly name: WireMethod;
   readonly path: string;
   /** What it passed after the path. */
   readonly variables: unknown;
@@ -113,6 +130,7 @@ export interface WireCallRecord {
  */
 export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRecord {
   let recorded: WireCallRecord | undefined;
+  let refused: ConfigurationError | undefined;
 
   const recorder = new Proxy(
     {},
@@ -120,8 +138,10 @@ export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRec
       get: (_target, property) => {
         if (typeof property !== "string") return undefined;
         return (...args: unknown[]): unknown => {
-          // A closure may chain several calls; the first one addresses the endpoint.
-          recorded ??= {
+          refused ??= refusalOf(property, recorded);
+          if (refused) throw refused;
+          if (!isWireMethod(property)) return {};
+          recorded = {
             name: property,
             path: typeof args[0] === "string" ? args[0] : "",
             variables: args[1],
@@ -141,6 +161,7 @@ export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRec
     thrown = error;
   }
 
+  if (refused) throw refused;
   if (recorded) return recorded;
   if (thrown !== undefined) throw thrown;
   throw new ConfigurationError(
@@ -165,5 +186,24 @@ export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRec
  */
 export function probeWire(probe: AnyProbe): WireShape {
   const { name, path } = recordWireCall(probe, standIn());
-  return { method: (name === "connect" ? CHANNEL_METHOD : name) as HttpMethod, path };
+  return { method: name === "connect" ? CHANNEL_METHOD : name, path };
+}
+
+/* A closure describes one request: a method the wire does not have
+   addresses none, and a second call would send one its shape leaves out. */
+function refusalOf(
+  method: string,
+  recorded: WireCallRecord | undefined,
+): ConfigurationError | undefined {
+  if (!isWireMethod(method)) {
+    return new ConfigurationError(
+      "ENDPOINT_UNKNOWN_WIRE_METHOD",
+      `[courier] endpoint closure called ${method}, which the wire does not have — call one of ${[...WIRE_METHODS].join(", ")}`,
+    );
+  }
+  if (recorded === undefined) return undefined;
+  return new ConfigurationError(
+    "ENDPOINT_EXTRA_WIRE_CALL",
+    `[courier] endpoint closure called the wire twice, ${recorded.name} and then ${method} — it describes one request, so it must call the wire once`,
+  );
 }

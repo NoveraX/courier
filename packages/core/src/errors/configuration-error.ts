@@ -88,6 +88,16 @@ export type ConfigurationErrorCode =
    */
   | "ENDPOINT_NO_WIRE_CALL"
   /**
+   * An endpoint's wire closure called a method the wire does not have, so it
+   * addresses no verb: `http.fetch("x")` where `http.get("x")` was meant.
+   */
+  | "ENDPOINT_UNKNOWN_WIRE_METHOD"
+  /**
+   * An endpoint's wire closure called the wire more than once. It describes
+   * one request, and a second call would send one its shape leaves out.
+   */
+  | "ENDPOINT_EXTRA_WIRE_CALL"
+  /**
    * A builder slot was filled twice. Slots replace rather than merge, so a
    * second call is a mistake rather than a refinement and is reported at the
    * definition site instead of silently discarding one of the two values.

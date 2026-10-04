@@ -5,8 +5,8 @@ import type { RequestFailureKind, StudioHooks } from "../studio";
 import { ValidationError } from "../validation";
 import { isAbortError } from "./abort";
 import { callerLeft } from "./caller-left";
-import type { TimingState } from "./execute-studio";
-import { headersToObject } from "./helpers";
+import { proxyTimingOf, type TimingState } from "./execute-studio";
+import { estimateResponseSize, headersToObject } from "./helpers";
 
 /** What Studio needs to describe a request that failed. */
 export interface FailureReport {
@@ -53,11 +53,10 @@ export function failureKind(
 }
 
 /**
- * Tell Studio a request failed, with what its caller received.
- *
- * A failure used to carry its kind and message alone, so its row had no
- * duration, no status and nothing to show for the answer: the upstream's
- * headers and error body went unseen, and every average counted it as 0µs.
+ * Tell Studio a request failed, with what its caller received: its kind and
+ * message, the status, the upstream's headers, error body and its size, how
+ * long it ran and — for a proxied call — how that time split, so its row and
+ * every average read it as they read a success.
  *
  * @param error - What the request threw
  * @param report - The request, and the hooks and timings Studio reads
@@ -75,6 +74,9 @@ export function reportRequestError(
   const { dt, timing } = report;
   if (!dt.onRequestError) return;
   const answered = error instanceof HTTPError && error.status > 0 ? error : undefined;
+  const total = timing && timing.t0 > 0 ? performance.now() - timing.t0 : undefined;
+  const proxyTiming =
+    timing && total !== undefined ? proxyTimingOf(report.context, timing, total) : undefined;
   dt.onRequestError({
     id: report.requestId,
     error: {
@@ -83,14 +85,19 @@ export function reportRequestError(
       message: error instanceof Error ? error.message : String(error),
     },
     ...(status !== undefined && { status }),
-    ...(answered && { headers: headersToObject(answered.headers) ?? {}, data: answered.data }),
-    ...(timing && timing.t0 > 0 && { timing: timingOf(timing, report.middlewareCount ?? 0) }),
+    ...(answered && {
+      headers: headersToObject(answered.headers) ?? {},
+      data: answered.data,
+      size: estimateResponseSize(answered.data, answered.headers),
+    }),
+    ...(timing &&
+      total !== undefined && { timing: timingOf(timing, total, report.middlewareCount ?? 0) }),
+    ...(proxyTiming && { proxyTiming }),
     timestamp: Date.now(),
   });
 }
 
-function timingOf(timing: TimingState, middlewareCount: number) {
-  const total = performance.now() - timing.t0;
+function timingOf(timing: TimingState, total: number, middlewareCount: number) {
   const validation = timing.tVarValidation + timing.tRespValidation;
   /* As for a success: middleware's own time, what the fetch and validation left. */
   const middleware = middlewareCount > 0 ? Math.max(0, total - timing.tFetch - validation) : 0;

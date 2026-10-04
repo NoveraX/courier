@@ -73,12 +73,21 @@ export interface RequestLifecycleHooks {
     headers?: Record<string, string>;
     /** The upstream's error body, when it answered. */
     data?: unknown;
+    /** How large the upstream's error body was, when it answered. */
+    size?: number;
     /** How long the request took before it failed. */
     timing?: {
       total: number;
       middleware: number;
       fetch: number;
       validation: number;
+    };
+    /** How a proxied call's time split, as for one that succeeded. */
+    proxyTiming?: {
+      clientToProxy: number;
+      proxyToBackend: number;
+      backendToProxy: number;
+      proxyToClient: number;
     };
     timestamp: number;
   }) => void;

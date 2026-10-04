@@ -2,6 +2,7 @@ import { Outlet } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { useHotkeys } from "@/hooks/use-hotkeys";
+import { RequestInspector } from "@/inspector/request-inspector";
 import { CommandPalette } from "./command-palette/command-palette";
 import { useRunAction } from "./command-palette/use-run-action";
 import { ConnectionBanner } from "./connection-banner";
@@ -11,9 +12,10 @@ import { StatusBar } from "./status-bar/status-bar";
 
 /**
  * Studio's frame around every view: the sidebar, the header, a banner while
- * Studio cannot be reached, the view, the status bar, and the command
- * palette — ⌘K opens it, ⌘. pauses or resumes recording, ⇧⌘L changes the
- * theme.
+ * Studio cannot be reached, the view, the status bar, the request inspector
+ * over the view while a request is open, and the command palette — ⌘K
+ * opens it, ⌘. pauses or resumes recording, ⇧⌘L changes the theme, ⌘E
+ * exports the requests and ⌘⌫ clears them.
  *
  * @returns The shell, with the current view inside
  * @example
@@ -29,6 +31,8 @@ export function StudioShell(): React.ReactNode {
       "mod+k": () => setPaletteOpen(true),
       "mod+.": () => run({ kind: "toggle-recording" }),
       "mod+shift+l": () => run({ kind: "toggle-theme" }),
+      "mod+e": () => run({ kind: "export" }),
+      "mod+backspace": () => run({ kind: "clear-requests" }),
     }),
     [run],
   );
@@ -47,6 +51,7 @@ export function StudioShell(): React.ReactNode {
         </main>
       </div>
       <StatusBar />
+      <RequestInspector />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );

@@ -41,7 +41,7 @@ export function WelcomeScreen(): React.ReactNode {
   }, [fromLink, detectedId, frameworkId, select]);
   if (!setup && (isWelcomeCompleted() || (attached && !fromLink))) {
     if (attached) markWelcomeCompleted();
-    return <Navigate to="/timeline" replace />;
+    return <Navigate to="/next/timeline" replace />;
   }
   const framework = FRAMEWORKS.find((f) => f.id === frameworkId) ?? null;
   const progress = framework ? setupProgress(framework, copied, attached, false) : null;

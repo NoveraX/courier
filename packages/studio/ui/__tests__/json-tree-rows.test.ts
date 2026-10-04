@@ -6,7 +6,12 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { containerPaths, jsonTreeRows, valueAtPath } from "@/features/requests/json-tree";
+import {
+  containerPaths,
+  jsonLines,
+  jsonTreeRows,
+  valueAtPath,
+} from "@/features/requests/json-tree";
 
 const VALUE = { hits: [{ price: 189 }, { price: "64.00" }], took: 41, done: true, next: null };
 
@@ -69,5 +74,23 @@ describe("the value at a path", () => {
     expect(valueAtPath(VALUE, "took.x")).toEqual({ found: false, value: undefined });
     expect(valueAtPath(VALUE, "hits.5")).toEqual({ found: false, value: undefined });
     expect(valueAtPath(VALUE, "missing")).toEqual({ found: false, value: undefined });
+  });
+});
+
+describe("a JSON value printed raw", () => {
+  it("reads exactly as JSON.stringify prints it two spaces deep", () => {
+    const value = { ...VALUE, empty: {}, none: [], nested: [[1], { "a b": "c" }] };
+
+    const text = jsonLines(value, new Map())
+      .map((line) => line.text)
+      .join("\n");
+
+    expect(text).toBe(JSON.stringify(value, null, 2));
+  });
+
+  it("marks the line of the value an issue points at", () => {
+    const lines = jsonLines(VALUE, new Map([["hits.1.price", "Expected number"]]));
+
+    expect(lines.filter((l) => l.issue).map((l) => l.text.trim())).toEqual(['"price": "64.00"']);
   });
 });

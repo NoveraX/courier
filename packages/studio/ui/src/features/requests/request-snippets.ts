@@ -109,3 +109,38 @@ export function requestSnippet(r: RequestEntry, flavor: SnippetFlavor): Snippet 
   const code = flavor === "shell" ? buildCurlSnippet(input) : buildFetchSnippet(input);
   return { code, redacted };
 }
+
+/**
+ * A request as JSON, to copy or download: what identifies it, how it went,
+ * its variables and its answer — its headers left out, credentials among
+ * them.
+ *
+ * @param r - The request
+ * @returns The JSON, two spaces deep
+ * @example
+ * ```ts
+ * JSON.parse(requestAsJson(request)).endpoint; // "api.users.list"
+ * ```
+ */
+export function requestAsJson(r: RequestEntry): string {
+  const endpoint = [r.source, r.group, r.method].filter(Boolean).join(".");
+  return JSON.stringify(
+    {
+      id: r.id,
+      endpoint,
+      method: httpMethodOf(r),
+      url: r.url,
+      mode: r.mode,
+      transport: r.transport ?? "http",
+      status: r.status,
+      statusCode: r.statusCode,
+      startedAt: new Date(r.startedAt).toISOString(),
+      timing: r.timing,
+      variables: r.variables,
+      response: r.data,
+      error: r.error,
+    },
+    null,
+    2,
+  );
+}

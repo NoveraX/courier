@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { CodeTone } from "./tokenize-line";
+import type { CodeToken, CodeTone } from "./tokenize-line";
 import { tokenizeLine } from "./tokenize-line";
 
 const TONES: Readonly<Record<CodeTone, string>> = {
@@ -7,41 +7,67 @@ const TONES: Readonly<Record<CodeTone, string>> = {
   function: "text-syntax-function",
   string: "text-syntax-string",
   type: "text-syntax-type",
+  number: "text-syntax-number",
   plain: "text-syntax-plain",
   punctuation: "text-fg-subtle",
   space: "",
 };
 
+/* A setup snippet reads at the size of the page; code in the inspector, a size down. */
+const VARIANTS = {
+  snippet: { pre: "pt-6 pb-6.5 text-control", line: "min-h-5.25", number: "opacity-55" },
+  panel: { pre: "pt-2.5 pb-3 text-small", line: "min-h-5", number: "opacity-50" },
+} as const;
+
 interface CodeLinesProps {
   code: string;
-  /** Whether a line, numbered from 1, is one the reader is asked to add. */
+  /** Whether a line, numbered from 1, is one to draw the eye to. */
   isHighlighted?: ((line: string, number: number) => boolean) | undefined;
+  /** How a line splits into pieces to colour; TypeScript and shell by default. */
+  tokenize?: ((line: string) => CodeToken[]) | undefined;
+  variant?: keyof typeof VARIANTS | undefined;
+  /** The ground of a highlighted line: a hint, or a warning. */
+  highlight?: "brand" | "warn" | undefined;
 }
 
 /**
  * Lines of code, numbered and coloured, the highlighted ones tinted.
  *
- * @param props - The code, and which lines to tint
+ * @param props - The code, which lines to tint, how to colour it, and its size
  * @returns The block
  * @example
  * ```tsx
  * <CodeLines code={snippet} isHighlighted={(line) => line.includes("courier")} />
  * ```
  */
-export function CodeLines({ code, isHighlighted }: CodeLinesProps): React.ReactNode {
+export function CodeLines({
+  code,
+  isHighlighted,
+  tokenize = tokenizeLine,
+  variant = "snippet",
+  highlight = "brand",
+}: CodeLinesProps): React.ReactNode {
+  const v = VARIANTS[variant];
   return (
-    <pre className="overflow-auto pt-6 pb-6.5 text-control leading-[1.7]">
+    <pre className={cn("overflow-auto leading-[1.7]", v.pre)}>
       {code.split("\n").map((line, index) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: a snippet's lines are fixed; the number is the line's identity
           key={index}
-          className={cn("flex min-h-5.25", isHighlighted?.(line, index + 1) && "bg-brand-tint")}
+          className={cn(
+            "flex",
+            v.line,
+            isHighlighted?.(line, index + 1) &&
+              (highlight === "warn" ? "bg-warn-dim" : "bg-brand-tint"),
+          )}
         >
-          <span className="w-10 shrink-0 pr-3.5 text-right text-fg-subtle opacity-55 select-none">
+          <span
+            className={cn("w-10 shrink-0 pr-3.5 text-right text-fg-subtle select-none", v.number)}
+          >
             {index + 1}
           </span>
           <span className="pr-4 whitespace-pre">
-            {tokenizeLine(line).map((token, at) => (
+            {tokenize(line).map((token, at) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: tokens of a fixed line, in order
               <span key={at} className={TONES[token.tone]}>
                 {token.text}

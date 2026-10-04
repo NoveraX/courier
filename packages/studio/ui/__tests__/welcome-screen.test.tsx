@@ -33,12 +33,12 @@ async function open(url: string) {
     validateSearch: validateWelcomeSearch,
   });
   const timeline = createRoute({
-    getParentRoute: () => root,
+    getParentRoute: () => next,
     path: "timeline",
     component: () => <p>Timeline view</p>,
   });
   const router = createRouter({
-    routeTree: root.addChildren([next.addChildren([welcome]), timeline]),
+    routeTree: root.addChildren([next.addChildren([welcome, timeline])]),
     history: createMemoryHistory({ initialEntries: [url] }),
   });
   await act(() => router.load());
@@ -145,7 +145,7 @@ describe("the setup", () => {
     attach();
 
     const router = await open("/next");
-    expect(router.state.location.pathname).toBe("/timeline");
+    expect(router.state.location.pathname).toBe("/next/timeline");
 
     cleanup();
     const asked = await open("/next?setup=true");

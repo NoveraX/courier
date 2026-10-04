@@ -1,0 +1,107 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowRightLeft,
+  CircleDot,
+  Database,
+  Folder,
+  RadioTower,
+  Shuffle,
+  Tag,
+} from "lucide-react";
+
+import type { SegmentedOption } from "@/design/segmented";
+import { Segmented } from "@/design/segmented";
+import { DIMENSION_META, filterOptions, viewCounts } from "@/features/requests/filter-options";
+import type {
+  FilterDimension,
+  TimelineFilter,
+  TimelineView,
+} from "@/features/requests/timeline-filter";
+import {
+  activeFilterCount,
+  FILTER_DIMENSIONS,
+  NO_SELECTION,
+} from "@/features/requests/timeline-filter";
+import { useStudioStore } from "@/store";
+import { FilterMenu } from "./filter-menu";
+
+const ICONS: Readonly<Record<FilterDimension, LucideIcon>> = {
+  status: CircleDot,
+  method: ArrowRightLeft,
+  transport: RadioTower,
+  source: Database,
+  group: Folder,
+  mode: Shuffle,
+  type: Tag,
+};
+
+const VIEW_LABELS: Readonly<Record<TimelineView, string>> = {
+  all: "All",
+  errors: "Errors",
+  slow: "Slow",
+  pending: "In flight",
+};
+
+interface FilterBarProps {
+  filter: TimelineFilter;
+  onChange: (next: TimelineFilter) => void;
+}
+
+/**
+ * The Timeline's filters: the quick views with their counts, a menu per
+ * filter, and Reset all once anything is chosen.
+ *
+ * @param props - What the Timeline shows, and what changes it
+ * @returns The bar
+ * @example
+ * ```tsx
+ * <FilterBar filter={filter} onChange={setFilter} />
+ * ```
+ */
+export function FilterBar({ filter, onChange }: FilterBarProps): React.ReactNode {
+  const requests = useStudioStore((s) => s.requests);
+  const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
+  const counts = viewCounts(requests, filter, slowMs);
+  const views: SegmentedOption<TimelineView>[] = (
+    ["all", "errors", "slow", "pending"] as const
+  ).map((view) => ({
+    value: view,
+    label: VIEW_LABELS[view],
+    count: counts[view],
+    countTone: view === "errors" ? "err" : "subtle",
+  }));
+  const choose = (dimension: FilterDimension, chosen: string[]) =>
+    onChange({ ...filter, selected: { ...filter.selected, [dimension]: chosen } });
+  const changed = activeFilterCount(filter) > 0;
+  return (
+    <div className="flex min-h-11.5 shrink-0 flex-wrap items-center gap-1.5 border-b border-line bg-bg-subtle py-2 pr-4 pl-5">
+      <Segmented
+        label="View"
+        options={views}
+        value={filter.view}
+        onChange={(view) => onChange({ ...filter, view })}
+      />
+      <span aria-hidden="true" className="mx-1.5 h-4.5 w-px bg-line" />
+      {FILTER_DIMENSIONS.map((dimension) => (
+        <FilterMenu
+          key={dimension}
+          label={DIMENSION_META[dimension].label}
+          icon={ICONS[dimension]}
+          mono={DIMENSION_META[dimension].mono}
+          options={filterOptions(requests, filter, dimension, slowMs)}
+          chosen={filter.selected[dimension]}
+          onChange={(chosen) => choose(dimension, chosen)}
+        />
+      ))}
+      {changed && (
+        <button
+          type="button"
+          onClick={() => onChange({ ...filter, view: "all", selected: NO_SELECTION })}
+          className="h-7 cursor-pointer px-2 text-small font-strong text-brand"
+        >
+          Reset all
+        </button>
+      )}
+    </div>
+  );
+}

@@ -33,6 +33,8 @@ const twMerge = extendTailwindMerge({
             "title",
             "lead",
             "prompt",
+            "heading",
+            "figure",
             "metric",
             "wordmark",
             "hero",

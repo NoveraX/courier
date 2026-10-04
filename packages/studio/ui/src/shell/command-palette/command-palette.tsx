@@ -63,7 +63,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
   const requests = useStudioStore((s) => s.requests);
   const paused = useStudioStore((s) => s.paused);
   const run = useRunAction();
-  const entries = paletteEntries(requests, paused);
+  const exportFormat = useStudioStore((s) => s.settings.defaultExportFormat);
+  const entries = paletteEntries(requests, paused, exportFormat);
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>

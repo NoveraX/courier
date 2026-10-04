@@ -1,0 +1,61 @@
+import type { InspectorTab, InspectorTabInfo } from "@/features/requests/inspector-tabs";
+import { cn } from "@/lib/utils";
+
+interface TabBarProps {
+  tabs: readonly InspectorTabInfo[];
+  current: InspectorTab;
+  onSelect: (tab: InspectorTab) => void;
+}
+
+/**
+ * The inspector's tabs, the one shown underlined, with their counts and a
+ * dot on the failure's.
+ *
+ * @param props - The tabs, the one shown, and what shows another
+ * @returns The bar
+ * @example
+ * ```tsx
+ * <TabBar tabs={inspectorTabsOf(request)} current={tab} onSelect={show} />
+ * ```
+ */
+export function TabBar({ tabs, current, onSelect }: TabBarProps): React.ReactNode {
+  return (
+    <div
+      role="tablist"
+      aria-label="Request"
+      className="-mx-1.5 flex overflow-x-auto [scrollbar-width:none]"
+    >
+      {tabs.map((tab) => {
+        const on = tab.key === current;
+        return (
+          <button
+            key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onSelect(tab.key)}
+            className={cn(
+              "relative flex h-9.5 shrink-0 cursor-pointer items-center gap-1.5 px-1.5 text-control whitespace-nowrap transition-colors hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+              on ? "font-semibold text-fg" : "font-medium text-fg-subtle",
+            )}
+          >
+            {tab.label}
+            {tab.count !== undefined && (
+              <span className="inline-flex h-4 min-w-4.5 items-center justify-center rounded-full bg-raised px-1.25 text-meta font-medium text-fg-subtle tabular-nums">
+                {tab.count}
+              </span>
+            )}
+            {tab.alert && <span aria-hidden="true" className="size-1.5 rounded-full bg-err" />}
+            <span
+              aria-hidden="true"
+              className={cn(
+                "absolute inset-x-1.5 -bottom-px h-0.5 rounded-t-[2px]",
+                on ? "bg-brand" : "bg-transparent",
+              )}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}

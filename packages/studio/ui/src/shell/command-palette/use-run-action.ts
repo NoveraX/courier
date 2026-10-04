@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 
+import { exportShownRequests } from "@/features/sessions/export-requests";
 import { useBackToLive } from "@/hooks/use-back-to-live";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import { useStudioStore } from "@/store";
@@ -28,10 +29,16 @@ export function useRunAction(): (action: PaletteAction) => void {
         void navigate({ to: action.to });
         return;
       case "open-request":
-        void navigate({ to: "/timeline", search: { selectedReq: action.id } });
+        void navigate({ to: "/next/timeline", search: { req: action.id } });
         return;
       case "show-errors":
-        void navigate({ to: "/timeline", search: { status: "error" } });
+        void navigate({ to: "/next/timeline", search: { view: "errors" } });
+        return;
+      case "show-streams":
+        void navigate({ to: "/next/timeline", search: { transport: "sse,ws" } });
+        return;
+      case "export":
+        void exportShownRequests(state.settings.defaultExportFormat);
         return;
       case "toggle-recording":
         if (state.shownSession) backToLive();

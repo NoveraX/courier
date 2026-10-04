@@ -91,6 +91,57 @@ export function jsonTreeRows(
   return rows;
 }
 
+/** A line of a JSON value printed two spaces deep, and the issue at its value. */
+export interface JsonLine {
+  text: string;
+  issue?: string | undefined;
+}
+
+/**
+ * A JSON value printed as `JSON.stringify(value, null, 2)` prints it, line
+ * by line, each line knowing the issue at its value — so a raw view can mark
+ * the line a validation issue points at.
+ *
+ * @param value - The value, as parsed from JSON
+ * @param issues - Validation issues by path
+ * @returns The lines
+ * @example
+ * ```ts
+ * jsonLines({ a: 1 }, new Map([["a", "Expected string"]])); // [{ text: "{" }, { text: '  "a": 1', issue: "Expected string" }, { text: "}" }]
+ * ```
+ */
+export function jsonLines(value: Json, issues: ReadonlyMap<string, string>): JsonLine[] {
+  const lines: JsonLine[] = [];
+  const walk = (v: Json, key: string | null, path: string, depth: number, last: boolean) => {
+    const indent = "  ".repeat(depth);
+    const prefix = key === null ? "" : `${JSON.stringify(key)}: `;
+    const comma = last ? "" : ",";
+    if (!isContainer(v)) {
+      lines.push({
+        text: `${indent}${prefix}${JSON.stringify(v) ?? "null"}${comma}`,
+        issue: issues.get(path),
+      });
+      return;
+    }
+    const array = Array.isArray(v);
+    const entries = entriesOf(v);
+    if (entries.length === 0) {
+      lines.push({
+        text: `${indent}${prefix}${array ? "[]" : "{}"}${comma}`,
+        issue: issues.get(path),
+      });
+      return;
+    }
+    lines.push({ text: `${indent}${prefix}${array ? "[" : "{"}`, issue: issues.get(path) });
+    entries.forEach(([k, item, index], i) => {
+      walk(item, index ? null : k, join(path, k), depth + 1, i === entries.length - 1);
+    });
+    lines.push({ text: `${indent}${array ? "]" : "}"}${comma}` });
+  };
+  walk(value, null, "", 0, true);
+  return lines;
+}
+
 /**
  * The paths of every object and array in a JSON value, to close them all.
  *

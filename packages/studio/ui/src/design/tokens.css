@@ -1,0 +1,175 @@
+/*
+ * Studio's design tokens: colours, type, radii and motion for every screen
+ * built on `src/design`. Dark is the default; `data-theme="light"` on the
+ * root element switches to light, as `store/theme.ts` sets it. Each colour
+ * names its role; the status colours are tuned per theme to stay legible.
+ */
+
+@theme {
+  --color-bg: #08090a;
+  --color-bg-subtle: #0b0c0e;
+  --color-panel: #101114;
+  --color-panel-subtle: #141619;
+  --color-raised: #1b1d22;
+  --color-inset: #060708;
+
+  --color-line: rgb(255 255 255 / 0.07);
+  --color-line-strong: rgb(255 255 255 / 0.13);
+
+  --color-fg: #f7f8f8;
+  --color-fg-muted: #a8aeb7;
+  --color-fg-subtle: #80868f;
+
+  --color-brand: #7db9ff;
+  --color-brand-dim: rgb(125 185 255 / 0.1);
+  --color-brand-tint: rgb(125 185 255 / 0.06);
+
+  --color-ok: #5ed3a3;
+  --color-ok-dim: rgb(94 211 163 / 0.12);
+  --color-warn: #e8b573;
+  --color-warn-dim: rgb(232 181 115 / 0.12);
+  --color-err: #f0806a;
+  --color-err-dim: rgb(240 128 106 / 0.12);
+
+  --color-method-get: #7db9ff;
+  --color-method-post: #9bd68c;
+  --color-method-put: #b8a1f5;
+  --color-method-patch: #e8b573;
+  --color-method-delete: #f0806a;
+
+  --color-syntax-keyword: #b8a1f5;
+  --color-syntax-function: #7db9ff;
+  --color-syntax-string: #9bd68c;
+  --color-syntax-type: #6fd3c7;
+  --color-syntax-plain: #e6e8eb;
+
+  --shadow-overlay: 0 24px 80px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.08);
+
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --font-weight-strong: 550;
+  --font-weight-wordmark: 750;
+
+  --tracking-ui: -0.011em;
+  --tracking-wordmark: -0.04em;
+  --tracking-caps: 0.08em;
+
+  --text-micro: 10px;
+  --text-meta: 10.5px;
+  --text-badge: 11px;
+  --text-label: 11.5px;
+  --text-small: 12px;
+  --text-control: 12.5px;
+  --text-ui: 13px;
+  --text-item: 13.5px;
+  --text-title: 14px;
+  --text-lead: 14.5px;
+  --text-prompt: 15px;
+  --text-metric: 17px;
+  --text-wordmark: 20px;
+  --text-hero: 32px;
+
+  --radius-chip: 4px;
+  --radius-control: 7px;
+  --radius-card: 8px;
+  --radius-dialog: 12px;
+
+  --animate-pulse-live: courier-pulse 1.6s ease-in-out infinite;
+  --animate-pop-in: courier-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-ripple: courier-ripple 2s ease-out infinite;
+  --animate-caret: courier-caret 1s step-end infinite;
+}
+
+:root[data-theme="light"] {
+  --color-bg: #fbfbfa;
+  --color-bg-subtle: #f4f4f2;
+  --color-panel: #ffffff;
+  --color-panel-subtle: #f8f8f6;
+  --color-raised: #ecece9;
+  --color-inset: #f1f1ee;
+
+  --color-line: rgb(12 13 15 / 0.09);
+  --color-line-strong: rgb(12 13 15 / 0.16);
+
+  --color-fg: #0c0d0f;
+  --color-fg-muted: #474c54;
+  --color-fg-subtle: #646a73;
+
+  --color-brand: #1c63d6;
+  --color-brand-dim: rgb(28 99 214 / 0.09);
+  --color-brand-tint: rgb(28 99 214 / 0.05);
+
+  --color-ok: #0f7a55;
+  --color-ok-dim: rgb(15 122 85 / 0.1);
+  --color-warn: #a3500a;
+  --color-warn-dim: rgb(163 80 10 / 0.1);
+  --color-err: #c0392b;
+  --color-err-dim: rgb(192 57 43 / 0.09);
+
+  --color-method-get: #1c63d6;
+  --color-method-post: #1d7338;
+  --color-method-put: #7a3bd6;
+  --color-method-patch: #a3500a;
+  --color-method-delete: #c0392b;
+
+  --color-syntax-keyword: #7a3bd6;
+  --color-syntax-function: #1c63d6;
+  --color-syntax-string: #1d7338;
+  --color-syntax-type: #0b6f68;
+  --color-syntax-plain: #1e2227;
+
+  --shadow-overlay: 0 24px 70px -16px rgb(24 26 32 / 0.28), 0 0 0 1px rgb(12 13 15 / 0.1);
+}
+
+@keyframes courier-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes courier-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes courier-ripple {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@keyframes courier-caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --animate-pulse-live: none;
+    --animate-pop-in: none;
+    --animate-ripple: none;
+    --animate-caret: none;
+  }
+}

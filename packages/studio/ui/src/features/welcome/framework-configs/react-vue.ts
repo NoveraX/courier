@@ -12,12 +12,13 @@ import { EXPLORE_STEP, installStep, VERIFY_STEP } from "./shared";
 export const REACT: FrameworkConfig = {
   id: "react",
   name: "React",
+  tag: "vite",
   description: "React with Vite",
   steps: [
     installStep(),
     {
       id: "instrument",
-      title: "Add Vite plugin",
+      title: "Add the Vite plugin",
       description: "Register the Studio plugin in your Vite config.",
       icon: Cable,
       actionLabel: "Copy snippet",
@@ -38,12 +39,13 @@ export default defineConfig({
 export const VUE: FrameworkConfig = {
   id: "vue",
   name: "Vue",
+  tag: "vite",
   description: "Vue with Vite",
   steps: [
     installStep(),
     {
       id: "instrument",
-      title: "Add Vite plugin",
+      title: "Add the Vite plugin",
       description: "Register the Studio plugin in your Vite config.",
       icon: Cable,
       actionLabel: "Copy snippet",

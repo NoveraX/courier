@@ -1,6 +1,5 @@
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
-import { formatDuration } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import {
   Command,
@@ -11,6 +10,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 import type { RequestEntry } from "@/store/types";

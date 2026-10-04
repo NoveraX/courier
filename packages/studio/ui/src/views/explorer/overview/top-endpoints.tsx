@@ -1,6 +1,6 @@
-import { formatDuration, formatNumber, formatSize } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { buttonProps } from "@/lib/button-props";
+import { formatDuration, formatNumber, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { TopEndpointEntry, TopMetric } from "./compute-overview";
 

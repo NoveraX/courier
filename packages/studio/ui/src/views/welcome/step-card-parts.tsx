@@ -10,10 +10,8 @@
  */
 
 import { CircleCheck, FileCode2 } from "lucide-react";
-
+import type { CodeVariant, SetupStep } from "@/features/welcome/frameworks";
 import { cn } from "@/lib/utils";
-
-import type { CodeVariant, SetupStep } from "./frameworks";
 
 interface StepHeaderProps {
   step: SetupStep;

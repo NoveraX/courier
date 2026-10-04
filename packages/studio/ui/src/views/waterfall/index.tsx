@@ -2,8 +2,8 @@ import { Timer } from "lucide-react";
 import { useCallback, useRef } from "react";
 
 import { EmptyState } from "@/components/shared/empty-state";
-import { formatDuration } from "@/components/shared/formatters";
 import { useRequestDetail } from "@/hooks/use-request-detail";
+import { formatDuration } from "@/lib/formatters";
 import { useStudioStore } from "@/store";
 
 import { SegmentLegend } from "./segment-legend";

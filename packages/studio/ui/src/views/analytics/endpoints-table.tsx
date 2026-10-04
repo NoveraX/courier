@@ -1,11 +1,11 @@
 import { ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
-import { formatDuration, formatSize } from "@/components/shared/formatters";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { Button } from "@/components/ui/button";
 import { Table, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { useRequestDetail } from "@/hooks/use-request-detail";
+import { formatDuration, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
 import { sortEndpoints } from "./compute-endpoints";

@@ -9,10 +9,10 @@ import { useState } from "react";
 
 import { CodeBlock } from "@/components/shared/code-block";
 import { Button } from "@/components/ui/button";
+import type { SetupStep } from "@/features/welcome/frameworks";
 import { buttonProps } from "@/lib/button-props";
 import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
-import type { SetupStep } from "./frameworks";
 import { FilePathHint, StepHeader, StepIndicator, VariantTabs } from "./step-card-parts";
 
 interface StepCardProps {

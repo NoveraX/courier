@@ -1,9 +1,9 @@
 import { History, Trash2 } from "lucide-react";
-import { formatDuration } from "@/components/shared/formatters";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 import { useStudioStore } from "@/store";

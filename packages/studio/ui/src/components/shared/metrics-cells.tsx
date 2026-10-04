@@ -1,4 +1,4 @@
-import { formatDuration } from "@/components/shared/formatters";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 /** Status dot background class based on HTTP status code */

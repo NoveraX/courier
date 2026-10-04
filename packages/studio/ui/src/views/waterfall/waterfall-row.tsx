@@ -1,9 +1,8 @@
 import { memo } from "react";
-
-import { formatDuration } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { Badge } from "@/components/ui/badge";
 import { buttonProps } from "@/lib/button-props";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { MIN_BAR_HEIGHT } from "./constants";
 import { SegmentBar } from "./segment-bar";

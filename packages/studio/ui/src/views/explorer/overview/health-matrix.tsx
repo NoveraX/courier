@@ -1,5 +1,5 @@
-import { formatDuration, formatNumber } from "@/components/shared/formatters";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatDuration, formatNumber } from "@/lib/formatters";
 import { HealthIndicator } from "../shared/health-indicator";
 
 import type { HealthMatrixCell } from "./compute-overview";

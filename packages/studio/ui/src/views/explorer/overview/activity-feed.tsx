@@ -1,7 +1,7 @@
-import { formatDuration, formatTimestamp } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { useNow } from "@/hooks/use-tick";
 import { buttonProps } from "@/lib/button-props";
+import { formatDuration, formatTimestamp } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { ActivityEntry } from "./compute-activity";

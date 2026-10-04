@@ -12,6 +12,7 @@ import { EXPLORE_STEP, installStep, VERIFY_STEP } from "./shared";
 export const NUXT: FrameworkConfig = {
   id: "nuxt",
   name: "Nuxt",
+  tag: "nitro",
   description: "Vue meta-framework with SSR",
   steps: [
     installStep({ withRuntime: true }),

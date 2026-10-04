@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { formatDuration } from "@/components/shared/formatters";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { durationColor } from "./constants";
 import type { AggregateMiddleware } from "./types";

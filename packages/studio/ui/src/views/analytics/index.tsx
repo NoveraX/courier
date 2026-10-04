@@ -2,8 +2,8 @@ import { BarChart3 } from "lucide-react";
 import { useMemo } from "react";
 
 import { EmptyState } from "@/components/shared/empty-state";
-import { formatDuration, formatNumber, formatSize } from "@/components/shared/formatters";
 import { PageShell } from "@/components/shared/page-shell";
+import { formatDuration, formatNumber, formatSize } from "@/lib/formatters";
 import { useStudioStore } from "@/store";
 import { computeEndpointStats } from "./compute-endpoints";
 import { computeHistogram } from "./compute-histogram";

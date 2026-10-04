@@ -16,7 +16,7 @@ const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/components/shared/code-block", () => ({ CodeBlock: () => null }));
 
-import type { SetupStep } from "../src/views/welcome/frameworks-types";
+import type { SetupStep } from "../src/features/welcome/frameworks-types";
 
 import { StepCard } from "../src/views/welcome/step-card";
 

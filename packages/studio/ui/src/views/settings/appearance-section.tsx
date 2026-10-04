@@ -6,9 +6,9 @@ import { Controller } from "react-hook-form";
 import { restartTour } from "@/components/onboarding/tour-provider";
 import { SegmentedControl, type SegmentOption } from "@/components/shared/segmented-control";
 import { Button } from "@/components/ui/button";
+import { WELCOME_STORAGE_KEY } from "@/features/welcome/frameworks";
 import { browserStorage } from "@/lib/browser-storage";
 import type { DensityMode, Settings, Theme } from "@/store/types";
-import { WELCOME_STORAGE_KEY } from "@/views/welcome/frameworks";
 import { SettingRow } from "./setting-row";
 
 // ── Theme options ────────────────────────────────────────────────────────────

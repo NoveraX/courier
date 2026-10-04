@@ -29,6 +29,8 @@ export interface SetupStep {
 export interface FrameworkConfig {
   id: string;
   name: string;
+  /** A word or two on what the setup hooks into, for the framework's tile: `vite`, `app router`. */
+  tag: string;
   description: string;
   steps: SetupStep[];
 }

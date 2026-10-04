@@ -1,9 +1,9 @@
 import { Pin } from "lucide-react";
-import { formatTimestamp } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { MetricsPill } from "@/components/shared/metrics-cells";
 import { Badge } from "@/components/ui/badge";
 import { useNow } from "@/hooks/use-tick";
+import { formatTimestamp } from "@/lib/formatters";
 import { describeUpload } from "@/lib/upload-progress";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";

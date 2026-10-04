@@ -1,7 +1,7 @@
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { STATUS_CONFIG } from "@/components/shared/detail-panel/constants";
-import { formatDuration } from "@/components/shared/formatters";
 import { Badge } from "@/components/ui/badge";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 import type { RequestEntry, RequestStatus } from "@/store/types";

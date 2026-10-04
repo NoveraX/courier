@@ -1,7 +1,6 @@
 import { ArrowUpDown, Clock, FileKey } from "lucide-react";
-
-import { formatDuration } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
+import { formatDuration } from "@/lib/formatters";
 
 import type { RequestEntry } from "@/store/types";
 import { ComparisonRow, Section, StatusBadge, TimingRow } from "./chain-context-parts";

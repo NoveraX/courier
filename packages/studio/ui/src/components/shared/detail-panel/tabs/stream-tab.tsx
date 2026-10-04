@@ -1,8 +1,7 @@
 import { ArrowDown, ArrowUp, ChevronRight, Radio } from "lucide-react";
 import { useCallback, useState } from "react";
-
-import { formatDuration, formatSize } from "@/components/shared/formatters";
 import { buttonProps } from "@/lib/button-props";
+import { formatDuration, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { RequestEntry, StreamEventRecord } from "@/store/types";
 import { highlightLine } from "./syntax-highlight";

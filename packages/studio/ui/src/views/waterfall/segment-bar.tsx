@@ -1,4 +1,4 @@
-import { formatDuration } from "@/components/shared/formatters";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { SEGMENT_CONFIG } from "./constants";
 import type { WaterfallRow, WaterfallSegment } from "./types";

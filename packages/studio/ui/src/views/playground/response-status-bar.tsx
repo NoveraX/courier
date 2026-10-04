@@ -1,6 +1,6 @@
 import { Activity, Clock, Radio, Wifi } from "lucide-react";
 
-import { formatDuration } from "@/components/shared/formatters";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";

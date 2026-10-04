@@ -1,5 +1,5 @@
 import { AlertTriangle, CircleAlert } from "lucide-react";
-import { formatClockTime } from "@/components/shared/formatters";
+import { formatClockTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { ConfigNoticeState } from "./apis-page-state";
 

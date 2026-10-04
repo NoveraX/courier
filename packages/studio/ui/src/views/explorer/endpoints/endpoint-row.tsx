@@ -1,9 +1,9 @@
 import { motion } from "motion/react";
 import { memo } from "react";
-import { formatDuration, formatNumber, formatSize } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { TypeBadge } from "@/components/shared/type-badge";
+import { formatDuration, formatNumber, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { TransportBadge } from "@/views/playground/transport-badge";
 import { getHealthLevel } from "../compute-metrics";

@@ -13,12 +13,13 @@ import { EXPLORE_STEP, installStep, VERIFY_STEP } from "./shared";
 export const SVELTEKIT: FrameworkConfig = {
   id: "sveltekit",
   name: "SvelteKit",
+  tag: "vite · ssr",
   description: "Svelte meta-framework with SSR",
   steps: [
     installStep({ withRuntime: true }),
     {
       id: "instrument-client",
-      title: "Add Vite plugin",
+      title: "Add the Vite plugin",
       description: "SvelteKit uses Vite — auto-injects client connection in dev mode.",
       icon: Cable,
       actionLabel: "Copy snippet",
@@ -54,12 +55,13 @@ if (dev) {
 export const REMIX: FrameworkConfig = {
   id: "remix",
   name: "Remix",
+  tag: "vite · ssr",
   description: "React Router (Remix) with Vite",
   steps: [
     installStep({ withRuntime: true }),
     {
       id: "instrument-client",
-      title: "Add Vite plugin",
+      title: "Add the Vite plugin",
       description: "Remix uses Vite — auto-injects client connection in dev mode.",
       icon: Cable,
       actionLabel: "Copy snippet",

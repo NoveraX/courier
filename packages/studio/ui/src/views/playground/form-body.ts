@@ -1,4 +1,4 @@
-import { formatSize } from "@/components/shared/formatters";
+import { formatSize } from "@/lib/formatters";
 
 /** A row of the Playground's form body: a named text value, or a named file */
 export interface FormBodyField {

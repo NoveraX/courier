@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { auditBindings } from "../../../src/server/mocks-edit/plan/audit-bindings";
 import { openAudit } from "../../../src/server/mocks-edit/plan/audit-scope";
-import { splitStatements } from "../../../src/server/mocks-edit/plan/audit-statements";
+import { splitStatements } from "../../../src/server/mocks-edit/plan/split-statements";
 import type { PlannedInsertion } from "../../../src/server/mocks-edit/plan/types";
 
 function audit(

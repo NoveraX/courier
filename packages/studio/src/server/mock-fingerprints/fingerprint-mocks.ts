@@ -1,13 +1,12 @@
 import { createLogger } from "@noverax/courier";
 import type { IdentifierName, IdentifierReference, ObjectExpression, Span } from "oxc-parser";
 import { Visitor } from "oxc-parser";
-
-import { sha256Hex } from "../file-hash";
 import { MocksEditRefusal } from "../mocks-edit/mocks-edit-refusal";
 import type { ParsedSource } from "../mocks-edit/plan/parse-source";
 import { propertyKeyName } from "../mocks-edit/plan/property-key-name";
 import { readEditable } from "../mocks-edit/plan/read-editable";
 import { textOf } from "../mocks-edit/plan/text-of";
+import { sha256Hex } from "../sha256-hex";
 import { createClosureDigests } from "./closure-digests";
 import type { TopLevel } from "./top-level-bindings";
 import { topLevelBindings } from "./top-level-bindings";

@@ -1,4 +1,4 @@
-import { hashFile } from "../file-hash";
+import { hashFile } from "../hash-file";
 import { NotRegularFileError } from "../not-regular-file-error";
 import { MocksFileChangedError } from "./mocks-file-changed-error";
 

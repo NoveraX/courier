@@ -1,7 +1,7 @@
 import type { ObjectExpression } from "oxc-parser";
 import type { MockDeclaration, TextEdit } from "../types";
+import { countLineTerminators } from "./count-line-terminators";
 import { insertion } from "./insertion";
-import { countLineTerminators } from "./line-terminator";
 import { planListInsertion } from "./list-insertion";
 import type { LocatedMocks } from "./locate-mocks-object";
 import { mocksExport } from "./mocks-export";

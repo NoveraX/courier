@@ -19,9 +19,9 @@
 
 import { createLogger } from "@noverax/courier";
 import { UNREADABLE } from "./file-content-hash";
-import { sha256Hex } from "./file-hash";
 import { moduleSpecifiers } from "./module-specifiers";
 import { readWatchedBytes } from "./read-watched-bytes";
+import { sha256Hex } from "./sha256-hex";
 
 const log = createLogger("Studio");
 

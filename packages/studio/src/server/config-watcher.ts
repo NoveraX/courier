@@ -48,7 +48,7 @@ import { armWatchSet } from "./arm-watch-set";
 import { createChainLoad } from "./chain-load";
 import type { LoadedCourierConfig } from "./config-loader";
 import { createEditRunner } from "./edit-runner";
-import type { ExclusiveTransaction } from "./exclusive-reload";
+import type { ExclusiveTransaction } from "./exclusive-context";
 import { inputsOnDisk } from "./inputs-on-disk";
 import { CONFIG_LOAD_TIMEOUT_MS } from "./project-state/budgets";
 import type { ProjectInputs } from "./read-project-inputs";

@@ -7,7 +7,7 @@ import { closingRun } from "./closing-run";
 import { insertion } from "./insertion";
 import { lineStart } from "./line-start";
 import type { CommentEnds } from "./skip-trivia";
-import { trailingCommaAfter } from "./skip-trivia";
+import { trailingCommaAfter } from "./trailing-comma-after";
 import type { FileStyle } from "./types";
 
 /** A list between braces: an object literal's properties, or an import's names. */

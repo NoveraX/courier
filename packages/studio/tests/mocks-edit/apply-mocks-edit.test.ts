@@ -46,7 +46,7 @@ vi.mock("../../src/server/mock-fingerprints", async (importOriginal) => {
 });
 
 import { type LoadedCourierConfig, loadCourierConfig } from "../../src/server/config-loader";
-import type { ExclusiveContext, ExclusiveTransaction } from "../../src/server/exclusive-reload";
+import type { ExclusiveContext, ExclusiveTransaction } from "../../src/server/exclusive-context";
 import { applyMocksEdit } from "../../src/server/mocks-edit/apply-mocks-edit";
 import type { MocksEditContext } from "../../src/server/mocks-edit/mocks-edit-context";
 import { MocksFileChangedError } from "../../src/server/mocks-edit/mocks-file-changed-error";

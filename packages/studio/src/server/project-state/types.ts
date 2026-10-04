@@ -1,5 +1,5 @@
 import type { ConfigLoaderErrorCode, LoadedCourierConfig } from "../config-loader";
-import type { ExclusiveTransaction } from "../exclusive-reload";
+import type { ExclusiveTransaction } from "../exclusive-context";
 
 /** Why the latest load of the config failed. */
 export interface ConfigFailure {

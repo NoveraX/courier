@@ -1,7 +1,7 @@
 import { realpathSync } from "node:fs";
 import { createLogger } from "@noverax/courier";
 import { findMocksFile } from "@noverax/courier-studio-core/config";
-import type { ExclusiveContext } from "../exclusive-reload";
+import type { ExclusiveContext } from "../exclusive-context";
 import { hashMocksFile } from "./hash-mocks-file";
 import type { MocksEditContext } from "./mocks-edit-context";
 import { prepareEdit } from "./prepare-edit";

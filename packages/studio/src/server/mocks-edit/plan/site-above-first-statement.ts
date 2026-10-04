@@ -1,7 +1,8 @@
 import type { Comment, Directive, Statement } from "oxc-parser";
 import { BYTE_ORDER_MARK } from "./byte-order-mark";
+import { countLineTerminators } from "./count-line-terminators";
 import { isFilePragma } from "./is-file-pragma";
-import { countLineTerminators, lineTerminatorLength } from "./line-terminator";
+import { lineTerminatorLength } from "./line-terminator-length";
 import type { ParsedSource } from "./parse-source";
 
 /**

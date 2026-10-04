@@ -1,6 +1,6 @@
 import { existsSync, lstatSync, readdirSync, type Stats } from "node:fs";
 import { basename, extname, join, relative, sep } from "node:path";
-import { sha256Hex } from "../file-hash";
+import { sha256Hex } from "../sha256-hex";
 import { checkWriteAccess } from "./check-write-access";
 import type { ExistingMocksTarget } from "./inspect-mocks-target";
 import { MocksEditRefusal } from "./mocks-edit-refusal";

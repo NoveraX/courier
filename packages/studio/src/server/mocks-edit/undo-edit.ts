@@ -1,6 +1,6 @@
 import { relative, sep } from "node:path";
 import { createLogger } from "@noverax/courier";
-import type { ExclusiveContext } from "../exclusive-reload";
+import type { ExclusiveContext } from "../exclusive-context";
 import { insertedLines } from "./inserted-lines";
 import { MocksFileChangedError } from "./mocks-file-changed-error";
 import { buildMocksSnippet } from "./plan/mocks-snippet";

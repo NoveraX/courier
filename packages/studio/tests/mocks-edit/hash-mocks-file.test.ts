@@ -6,10 +6,9 @@ import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
-import { sha256Hex } from "../../src/server/file-hash";
 import { hashMocksFile } from "../../src/server/mocks-edit/hash-mocks-file";
 import { MocksFileChangedError } from "../../src/server/mocks-edit/mocks-file-changed-error";
+import { sha256Hex } from "../../src/server/sha256-hex";
 
 let dir: string;
 

@@ -1,11 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { openAudit } from "../../../src/server/mocks-edit/plan/audit-scope";
-import {
-  auditStatements,
-  splitStatements,
-} from "../../../src/server/mocks-edit/plan/audit-statements";
-import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
+import { auditStatements } from "../../../src/server/mocks-edit/plan/audit-statements";
+import { splitStatements } from "../../../src/server/mocks-edit/plan/split-statements";
 import type { PlannedInsertion } from "../../../src/server/mocks-edit/plan/types";
 
 function planFor(oldText: string, overrides: Partial<PlannedInsertion> = {}): PlannedInsertion {
@@ -35,29 +32,6 @@ function audit(
   const split = splitStatements(scope.next, plan);
   return typeof split === "string" ? split : auditStatements(scope, split);
 }
-
-describe("splitStatements", () => {
-  it("tells the claimed statements from the file's own, in order", () => {
-    const next = parseSource("x.ts", `import a from "a";\nconst x = 1;\nimport b from "b";\n`);
-
-    const split = splitStatements(
-      next,
-      planFor("", { addedStatements: [`import a from "a";`, `import b from "b";`] }),
-    );
-
-    expect(typeof split === "string" ? split : [split.added.length, split.kept.length]).toEqual([
-      2, 1,
-    ]);
-  });
-
-  it("names a claimed statement the text lacks", () => {
-    const next = parseSource("x.ts", "const x = 1;\n");
-
-    expect(splitStatements(next, planFor("", { addedStatements: [`import a from "a";`] }))).toBe(
-      `the planned statement import a from "a"; is not in the edited file`,
-    );
-  });
-});
 
 describe("auditStatements", () => {
   it("accepts unchanged statements and a claimed import", () => {

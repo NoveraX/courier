@@ -3,11 +3,11 @@ import { dirname, join, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 
 import { UNREADABLE } from "./file-content-hash";
-import { sha256Hex } from "./file-hash";
 import { firstMissingPath } from "./first-missing-path";
 import { readTsconfigLinks } from "./read-tsconfig-links";
 import { readWatchedBytes } from "./read-watched-bytes";
 import { resolveTsconfigExtends } from "./resolve-tsconfig-extends";
+import { sha256Hex } from "./sha256-hex";
 
 const log = createLogger("Studio");
 

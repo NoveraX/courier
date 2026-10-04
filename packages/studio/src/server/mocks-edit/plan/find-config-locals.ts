@@ -1,7 +1,8 @@
 import type { ImportDeclaration, Program } from "oxc-parser";
 import type { ConfigImportForm } from "./config-import-form";
 import { exportName } from "./export-name";
-import { isValueImport, isValueSpecifier } from "./is-value-import";
+import { isValueImport } from "./is-value-import";
+import { isValueSpecifier } from "./is-value-specifier";
 
 /** A local name the config's default export is bound to, and the specifier it is imported by. */
 export interface ConfigLocal {

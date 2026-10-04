@@ -1,12 +1,13 @@
 /**
  * The `courier-studio` command, run as a user runs it.
  *
- * `--version` prints its version; a port written as `3001abc` is refused,
- * not read as 3001; a mistyped `--cwd` is named, without a stack; and a
- * command it does not have is refused instead of starting the server. It
- * listens where courier.config's `studio` block says, evaluating the config
- * once as it starts. A config that awaits something that never comes does
- * not keep Studio from listening, nor end it in silence.
+ * `--version` prints its version and `--help` its options, as plain text
+ * into a pipe; a port written as `3001abc` is refused, not read as 3001; a
+ * mistyped `--cwd` is named, without a stack; and a command it does not
+ * have is refused instead of starting the server. It listens where
+ * courier.config's `studio` block says, evaluating the config once as it
+ * starts. A config that awaits something that never comes does not keep
+ * Studio from listening, nor end it in silence.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -99,6 +100,29 @@ describe("courier-studio", () => {
     const result = run("--help");
 
     expect(result.stdout).not.toContain("(Default: )");
+  });
+
+  it("prints its help as plain text into a pipe, each option with the value it takes", () => {
+    /* Neither NO_COLOR nor the TEST and CI a test runner sets: a pipe alone
+       must keep colour out. A variable set to undefined is not passed on. */
+    const env = {
+      ...process.env,
+      NO_COLOR: undefined,
+      FORCE_COLOR: undefined,
+      TEST: undefined,
+      CI: undefined,
+    };
+    const result = spawnSync(process.execPath, ["--import", TSX, CLI, "--help"], {
+      encoding: "utf8",
+      timeout: 20_000,
+      env,
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("\x1b[");
+    expect(result.stdout).toContain(`Courier Studio v${manifest.version}`);
+    expect(result.stdout).toMatch(/--cwd <dir> +Project root directory/);
+    expect(result.stdout).toMatch(/--open +Open a browser on start/);
   });
 
   it("closes and reports the signal that ended it", async () => {

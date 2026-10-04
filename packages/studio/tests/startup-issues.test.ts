@@ -17,6 +17,8 @@ import {
 
 /** The escape sequence that resets the terminal and drops the scrollback. */
 const WIPES_HISTORY = "\x1b[3J";
+// biome-ignore lint/suspicious/noControlCharactersInRegex: it matches the ESC that starts a terminal colour
+const ESCAPE = /\x1b\[[\d;]*m/g;
 
 let written: string[];
 let logged: string[];
@@ -99,6 +101,6 @@ describe("the banner when something went wrong", () => {
   it("still prints the banner itself", () => {
     printBanner("1.0.0", URLS);
 
-    expect(logged.join("\n")).toContain("localhost:6280");
+    expect(logged.join("\n").replace(ESCAPE, "")).toContain("localhost:6280");
   });
 });

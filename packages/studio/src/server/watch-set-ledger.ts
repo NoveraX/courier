@@ -12,14 +12,18 @@ export interface ChangeLedgerOptions {
  * The state each watched path was last reported at, and the changes waiting
  * to be reported.
  *
- * The native and the poll layer see the same edit, so a notification for a
- * state already reported is dropped; without that, one save surfaces twice.
+ * The native watch and the comparison pass see the same edit, so a
+ * notification for a state already reported is dropped; without that, one
+ * save surfaces twice.
  */
 export interface ChangeLedger {
   /** Take a path as seen in the state given, or its present one. */
   baseline(path: string, signature?: FileSignature): void;
-  /** A notification for a path: report it once the burst settles, unless its state was reported. */
-  record(path: string): void;
+  /**
+   * A notification for a path: report it once the burst settles, unless its
+   * state was reported. Returns whether it was a state not yet reported.
+   */
+  record(path: string): boolean;
   /**
    * Report these paths now, together with every change still waiting, each
    * taken as seen in the state given, so a notification of that same state
@@ -97,12 +101,13 @@ export function createChangeLedger({ debounceMs, onChange }: ChangeLedgerOptions
       if (!stopped) reportedAt.set(path, signature.key);
     },
     record(path) {
-      if (stopped) return;
+      if (stopped) return false;
       const { key } = signatureOf(path);
-      if (reportedAt.get(path) === key) return;
+      if (reportedAt.get(path) === key) return false;
       reportedAt.set(path, key);
       pending.add(path);
       schedule();
+      return true;
     },
     markChanged(changes) {
       if (changes.size > 0) report(changes);

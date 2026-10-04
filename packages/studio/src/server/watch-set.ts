@@ -3,12 +3,12 @@
  *
  * Two mechanisms run together because they fail on opposite axes. Native
  * directory notifications (see `watch-set-directories`) cost one descriptor
- * per directory and carry the latency; `fs.watchFile` polls each path by name,
- * costs no descriptors at all, and is the only mechanism that survives a path
- * that does not exist yet, a parent directory that does not exist yet, and a
- * filesystem where notifications never arrive — a container bind mount, a
- * network share. That last case is why no separate liveness handshake is
- * needed.
+ * per directory and report a save at once, but never arrive from some
+ * filesystems — a container bind mount, a network share — and say nothing of
+ * a directory that does not exist yet. A comparison pass (see
+ * `watch-set-verify`) looks the tracked paths up every half second, all in
+ * one go, and catches what the notifications missed, on any filesystem; that
+ * is why no separate liveness handshake is needed.
  *
  * Both see the same edit, so each path carries the state it was last reported
  * at and a repeat of that state is dropped (see `watch-set-ledger`); without
@@ -18,9 +18,10 @@
  * that are still wanted so no event falls into a teardown gap.
  */
 
-import { unwatchFile, watchFile } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { type FileSignature, signatureOf } from "./file-signature";
+import { createNotificationTrust, type NotificationTrust } from "./notification-trust";
+import { pollsEverywhere } from "./watch-polling-setting";
 import { pathAliases } from "./watch-set-aliases";
 import {
   createDirectoryWatchers,
@@ -29,18 +30,36 @@ import {
 } from "./watch-set-directories";
 import { createChangeLedger } from "./watch-set-ledger";
 import { createWatchSetSweep } from "./watch-set-sweep";
+import { createVerifier, type Suspicion } from "./watch-set-verify";
 
 export type { WatchDegradation } from "./watch-set-directories";
 
-/** Poll interval for the path layer. The directory layer carries the latency. */
-const POLL_INTERVAL_MS = 500;
 const DEFAULT_DEBOUNCE_MS = 100;
+
+/** How the comparison passes run. The directory layer carries the latency. */
+export interface WatchSetComparison {
+  /** How often a pass runs: a path where saves are not announced is compared every pass. */
+  intervalMs: number;
+  /** Every how many passes a path where saves are announced is compared, as a safety net. */
+  safetyEvery: number;
+  /**
+   * How old a save the safety net finds, unreported, must be to count as one
+   * no notification announced, rather than one whose notification is on its way.
+   */
+  graceMs: number;
+}
+
+const DEFAULT_COMPARISON: WatchSetComparison = { intervalMs: 500, safetyEvery: 10, graceMs: 2_000 };
 
 export interface WatchSetStatus {
   /** Paths tracked right now */
   pathCount: number;
   /** Directories carrying a native watch right now */
   directoryCount: number;
+  /** Paths the comparison passes look up: the tracked files there are, and a directory for the absent paths in it */
+  comparedCount: number;
+  /** How many of them every pass looks up: those where saves are not announced */
+  comparedEveryPass: number;
   /** Set once the platform refuses a watch; cleared by the next re-arm */
   degraded: WatchDegradation | null;
 }
@@ -53,6 +72,10 @@ export interface WatchSetOptions {
   /** Receives the first refusal after each re-arm. */
   onDegraded?: (degradation: WatchDegradation) => void;
   debounceMs?: number;
+  /** How the comparison passes run; half-second passes and a five-second safety net by default. */
+  comparison?: WatchSetComparison;
+  /** Which directories announce their saves; judged from the filesystems and `COURIER_WATCH_POLLING` by default. */
+  trust?: NotificationTrust;
 }
 
 export interface WatchSet {
@@ -117,10 +140,12 @@ export interface WatchSet {
  */
 export function createWatchSet(options: WatchSetOptions): WatchSet {
   const { onChange, onDegraded, debounceMs = DEFAULT_DEBOUNCE_MS } = options;
+  const comparison = options.comparison ?? DEFAULT_COMPARISON;
+  const trust = options.trust ?? createNotificationTrust({ pollEverywhere: pollsEverywhere() });
 
   let tracked: string[] = [];
+  let trackedSet: ReadonlySet<string> = new Set();
   let aliases: ReadonlyMap<string, readonly string[]> = new Map();
-  const polled = new Set<string>();
   /* A link and its target are one file: a save is told once, by whichever
      of the two told of it first. */
   const ledger = createChangeLedger({
@@ -147,36 +172,36 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
     onHit: (path) => ledger.record(path),
     onOverflow: () => ledger.markAll(tracked),
     onRefused: (refusal) => {
+      trust.refused(refusal.path);
+      verifier.retier();
       if (degraded) return;
       degraded = refusal;
       onDegraded?.(refusal);
     },
   });
 
-  /* The state a path is watched from. `watchFile` calls back once at once
-     for a file that does not exist, and without a baseline that call would
-     read as a change: a Studio started before its config existed would
-     report a failed reload on every start. A path with an expected hash
-     takes its baseline from the comparison instead, read once the watches
-     are armed. */
-  function watch(path: string, expected: ReadonlyMap<string, string | null>): void {
-    if (!expected.has(path)) ledger.baseline(path);
-    watchFile(path, { persistent: true, interval: POLL_INTERVAL_MS }, () => ledger.record(path));
-    polled.add(path);
+  /* A save the safety net finds that no notification reported, old enough
+     that one would have come, says the filesystem does not announce saves:
+     from the second, its paths are compared every pass. */
+  function suspected(path: string, { safetyNet, modifiedAt }: Suspicion): void {
+    if (!ledger.record(path) || !safetyNet || modifiedAt === null) return;
+    if (Date.now() - modifiedAt < comparison.graceMs) return;
+    if (trust.missed(dirname(path))) verifier.retier();
   }
 
-  function release(path: string): void {
-    unwatchFile(path);
-    polled.delete(path);
-    ledger.forget(path);
-  }
+  const verifier = createVerifier({
+    intervalMs: comparison.intervalMs,
+    safetyEvery: comparison.safetyEvery,
+    announces: (directory) => trust.announces(directory),
+    onSuspect: suspected,
+  });
 
   /* Read after the watches are armed: a change before the read shows up as a
      difference from the load's hash, and one after it as a notification. */
   function compare(expected: ReadonlyMap<string, string | null>, added: ReadonlySet<string>): void {
     const changes = new Map<string, FileSignature>();
     for (const [path, hash] of expected) {
-      if (!polled.has(path)) continue;
+      if (!trackedSet.has(path)) continue;
       const signature = signatureOf(path);
       if (signature.contentHash !== hash) changes.set(path, signature);
       else if (added.has(path)) ledger.baseline(path, signature);
@@ -186,16 +211,22 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
 
   function update(paths: readonly string[], expected?: ReadonlyMap<string, string | null>): void {
     if (stopped) return;
+    const previous = trackedSet;
     tracked = [...new Set(paths.map((p) => resolve(p)))];
+    trackedSet = new Set(tracked);
     aliases = pathAliases(tracked);
     const wanted = new Map([...(expected ?? [])].map(([path, hash]) => [resolve(path), hash]));
 
-    for (const path of polled) if (!tracked.includes(path)) release(path);
-    const added = new Set(tracked.filter((path) => !polled.has(path)));
-    for (const path of added) watch(path, wanted);
+    for (const path of previous) if (!trackedSet.has(path)) ledger.forget(path);
+    const added = new Set(tracked.filter((path) => !previous.has(path)));
+    /* The state a path is watched from. A path with an expected hash takes
+       its baseline from the comparison instead, read once the watches are
+       armed. */
+    for (const path of added) if (!wanted.has(path)) ledger.baseline(path);
 
     degraded = null;
     directories.sync(groupByDirectory(tracked));
+    verifier.sync(tracked);
     compare(wanted, added);
   }
 
@@ -204,7 +235,7 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
   function acknowledge(paths: readonly string[]): void {
     if (stopped) return;
     for (const path of paths.map((p) => resolve(p))) {
-      if (polled.has(path)) ledger.acknowledge(path);
+      if (trackedSet.has(path)) ledger.acknowledge(path);
     }
   }
 
@@ -217,11 +248,16 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
       sweeper.stop();
       ledger.stop();
       directories.closeAll();
-      for (const path of polled) unwatchFile(path);
-      polled.clear();
+      verifier.stop();
     },
     status(): WatchSetStatus {
-      return { pathCount: tracked.length, directoryCount: directories.size, degraded };
+      return {
+        pathCount: tracked.length,
+        directoryCount: directories.size,
+        comparedCount: verifier.size,
+        comparedEveryPass: verifier.everyPass,
+        degraded,
+      };
     },
   };
 }

@@ -74,8 +74,8 @@ export function createDirectoryWatchers(options: DirectoryWatchersOptions): Dire
   let names: TrackedByDirectory = new Map();
 
   /* A directory that is not there — not created yet, or removed — is no
-     refusal: its paths are polled, and the next sync arms it once it
-     exists. */
+     refusal: the comparison pass covers the paths in it, and the next sync
+     arms it once it exists. */
   const arm = (directory: string): void => {
     if (!existsSync(directory)) return;
     let watcher: FSWatcher;
@@ -99,8 +99,8 @@ export function createDirectoryWatchers(options: DirectoryWatchersOptions): Dire
       }
       /* Compared case-blind: the filesystem reports the name as it is stored
          on disk, which need not be the casing the writer used. The hit names
-         the path as tracked, so the poll layer's report of the same save is
-         recognised as the same path. */
+         the path as tracked, so the comparison pass's report of the same
+         save is recognised as the same path. */
       const name = basename(filename.toString()).toLowerCase();
       for (const path of names.get(directory)?.get(name) ?? []) onHit(path);
     });

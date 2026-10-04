@@ -118,11 +118,13 @@ export interface ConfigWatcher {
   ): Promise<TResult>;
 }
 
-/** A refused watch leaves the poll layer running, so say so rather than throw. */
+/** A refused watch leaves the comparison pass running, so say so rather than throw. */
 function reportDegradation({ kind, path, message }: WatchDegradation): void {
   const advice =
     kind === "limit" ? " Raise fs.inotify.max_user_watches to restore native notifications." : "";
-  log.warn(`Cannot watch ${path}: ${message}. Falling back to polling it.${advice}`);
+  log.warn(
+    `Cannot watch ${path}: ${message}. Studio compares it with the disk every half second instead.${advice}`,
+  );
 }
 
 /**

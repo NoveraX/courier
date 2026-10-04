@@ -1,8 +1,9 @@
 import { Send, SendHorizontal } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
-import { JsonEditor, stripComments } from "./json-editor";
+import { JsonEditor } from "./json-editor";
+import { parseJsonc, stripComments } from "./jsonc-helpers";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,20 +24,14 @@ export function WSComposePanel({
   const [value, setValue] = useState("{}");
   const isMac = useRef(navigator.platform?.includes("Mac")).current;
 
-  const isValid = isValidJsonc(value);
-  const canSend = !disabled && value.trim() !== "" && value.trim() !== "{}" && isValid;
+  const draft = useMemo(() => messageOf(value), [value]);
+  const canSend = !disabled && draft !== undefined;
 
   const handleSend = useCallback(() => {
-    if (!canSend) return;
-    const stripped = stripComments(value).trim();
-    if (!stripped || stripped === "{}") return;
-    try {
-      onSend(JSON.parse(stripped));
-      setValue("{}");
-    } catch {
-      /* skip */
-    }
-  }, [value, canSend, onSend]);
+    if (disabled || draft === undefined) return;
+    onSend(draft.message);
+    setValue("{}");
+  }, [disabled, draft, onSend]);
 
   return (
     <div className={cn("flex flex-col border-t border-border-subtle", className)}>
@@ -83,11 +78,10 @@ export function WSComposePanel({
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isValidJsonc(str: string): boolean {
-  try {
-    JSON.parse(stripComments(str));
-    return true;
-  } catch {
-    return false;
-  }
+/* The message a draft holds; an empty one, or one that is not JSON, holds none. */
+function messageOf(value: string): { message: unknown } | undefined {
+  const stripped = stripComments(value).trim();
+  if (stripped === "" || stripped === "{}") return undefined;
+  const parsed = parseJsonc(stripped);
+  return parsed.ok ? { message: parsed.value } : undefined;
 }

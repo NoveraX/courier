@@ -1,4 +1,5 @@
-import { stripComments } from "./jsonc-helpers";
+import type { JsoncResult } from "./jsonc-helpers";
+import { parseJsonc } from "./jsonc-helpers";
 
 /** What the Variables and Headers editors hold, read as values. */
 export interface RequestValues {
@@ -10,8 +11,6 @@ export interface RequestValues {
 export type RequestValuesResult =
   | { ok: true; values: RequestValues }
   | { ok: false; problem: string };
-
-type JsoncResult = { ok: true; value: unknown } | { ok: false };
 
 /**
  * Read the Variables and Headers editors as the request they describe.
@@ -44,14 +43,7 @@ export function readRequestValues(variables: string, headers: string): RequestVa
 }
 
 function readJsonc(text: string): JsoncResult {
-  if (text.trim() === "") return { ok: true, value: undefined };
-  try {
-    const value: unknown = JSON.parse(stripComments(text));
-    return { ok: true, value };
-  } catch {
-    /* The parse error is the answer: the caller reports the text as invalid. */
-    return { ok: false };
-  }
+  return text.trim() === "" ? { ok: true, value: undefined } : parseJsonc(text);
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {

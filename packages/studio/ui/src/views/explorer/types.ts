@@ -61,17 +61,7 @@ export interface ExplorerSearchParams {
 
 // ── Heatmap types ───────────────────────────────────────────────────────────
 
-export type HeatmapMetric = "avgResponseTime" | "p95ResponseTime" | "errorRate" | "calls";
-
 export type HeatmapLevel = "good" | "warn" | "bad" | "critical" | "none";
-
-export interface HeatmapCell {
-  source: string;
-  group: string;
-  method: string;
-  value: number;
-  level: HeatmapLevel;
-}
 
 // ── Edge data ───────────────────────────────────────────────────────────────
 

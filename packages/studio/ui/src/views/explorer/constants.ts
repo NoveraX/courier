@@ -25,21 +25,6 @@ export const ACTIVE_THRESHOLD_MS = 30_000;
 
 // ── Node colors (CSS custom properties → theme-aware) ─────────────────────
 
-export const NODE_COLORS = {
-  source: {
-    bg: "var(--graph-node-source-bg)",
-    border: "var(--graph-node-source-border)",
-  },
-  group: {
-    bg: "var(--graph-node-group-bg)",
-    border: "var(--graph-node-group-border)",
-  },
-  endpoint: {
-    bg: "var(--graph-node-ep-bg)",
-    border: "var(--graph-node-ep-border)",
-  },
-} as const;
-
 // ── Health colors ───────────────────────────────────────────────────────────
 
 export const HEALTH_COLORS = {
@@ -72,12 +57,6 @@ export const EDGE_CONFIG = {
 } as const;
 
 // ── Endpoint type badge colors ──────────────────────────────────────────────
-
-export const ENDPOINT_TYPE_COLORS = {
-  query: "text-sky-400 bg-sky-400/10 border-sky-400/20",
-  mutation: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-  untyped: "text-zinc-400 bg-zinc-400/10 border-zinc-400/20",
-} as const;
 
 // ── Particle animation ─────────────────────────────────────────────────────
 

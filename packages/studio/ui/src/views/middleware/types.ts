@@ -69,12 +69,4 @@ export type OverheadLevel = "good" | "warning" | "critical";
 
 export type MiddlewareMode = "aggregate" | "chain";
 
-export type AggregateSortField =
-  | "calls"
-  | "avgDuration"
-  | "p95Duration"
-  | "maxDuration"
-  | "errors"
-  | "errorRate";
-
 export type SortDir = "asc" | "desc";

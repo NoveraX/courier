@@ -5,7 +5,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { toggleEndpointSelection } from "../src/views/apis/helpers";
+import { toggleEndpointReducer } from "../src/views/apis/import-actions";
+import { INITIAL_IMPORT_STATE } from "../src/views/apis/initial-import-state";
 import { toggleInSet } from "../src/views/apis/manage-toggle";
 
 describe("a group named like an Object.prototype member", () => {
@@ -16,6 +17,10 @@ describe("a group named like an Object.prototype member", () => {
   });
 
   it("is picked from in the wizard like any other", () => {
-    expect(toggleEndpointSelection({}, "constructor", "listB")).toEqual({ constructor: ["listB"] });
+    const state = { ...INITIAL_IMPORT_STATE, selectedEndpoints: {} };
+
+    const next = toggleEndpointReducer(state, "constructor", "listB");
+
+    expect(Object.entries(next.selectedEndpoints)).toEqual([["constructor", ["listB"]]]);
   });
 });

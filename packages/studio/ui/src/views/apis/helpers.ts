@@ -1,17 +1,6 @@
-import { ownValue } from "@/lib/own-value";
-import type {
-  GenerateOptions,
-  ParsedGroup,
-  ParsedSpec,
-  ScannedSource,
-  SourceSummary,
-} from "./types";
+import type { GenerateOptions, ParsedSpec, ScannedSource } from "./types";
 
 // ── Endpoint counting ───────────────────────────────────────────────────────
-
-export function countSpecEndpoints(spec: ParsedSpec): number {
-  return spec.groups.reduce((sum, g) => sum + g.endpoints.length, 0);
-}
 
 export function countScannedEndpoints(source: ScannedSource): number {
   const grouped = source.groups.reduce((s, g) => s + g.endpoints.length, 0);
@@ -77,33 +66,6 @@ export function countSelectedEndpoints(selected: Record<string, string[]>): numb
   return Object.values(selected).reduce((sum, arr) => sum + arr.length, 0);
 }
 
-/** Toggle a single endpoint in the selection map */
-export function toggleEndpointSelection(
-  selected: Record<string, string[]>,
-  group: string,
-  endpoint: string,
-): Record<string, string[]> {
-  const groupEndpoints = ownValue(selected, group) ?? [];
-  const has = groupEndpoints.includes(endpoint);
-  return {
-    ...selected,
-    [group]: has ? groupEndpoints.filter((e) => e !== endpoint) : [...groupEndpoints, endpoint],
-  };
-}
-
-/** Toggle all endpoints in a group */
-export function toggleGroupSelection(
-  selected: Record<string, string[]>,
-  group: ParsedGroup,
-): Record<string, string[]> {
-  const current = ownValue(selected, group.name) ?? [];
-  const allSelected = current.length === group.endpoints.length;
-  return {
-    ...selected,
-    [group.name]: allSelected ? [] : group.endpoints.map((e) => e.name),
-  };
-}
-
 // ── Default options from settings ───────────────────────────────────────────
 
 export function buildDefaultOptions(
@@ -133,15 +95,6 @@ export function buildDefaultOptions(
 
 // ── Format helpers ──────────────────────────────────────────────────────────
 
-export function formatSpecFormat(format: string): string {
-  const map: Record<string, string> = {
-    openapi3: "OpenAPI 3.x",
-    swagger2: "Swagger 2.0",
-    postman: "Postman",
-  };
-  return map[format] ?? format;
-}
-
 export function formatImportType(type: string): string {
   const map: Record<string, string> = {
     url: "URL",
@@ -149,10 +102,4 @@ export function formatImportType(type: string): string {
     raw: "Raw",
   };
   return map[type] ?? type;
-}
-
-/** Determine import source label for a registry source */
-export function sourceLabel(source: SourceSummary): string {
-  if (source.importType === "url" && source.specUrl) return source.specUrl;
-  return formatImportType(source.importType);
 }

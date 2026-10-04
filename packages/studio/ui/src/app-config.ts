@@ -70,25 +70,10 @@ export function nextTheme(current: Theme): Theme {
   return NEXT_THEME[current];
 }
 
-export const THEME_LABELS: Record<Theme, string> = {
-  dark: "Dark",
-  light: "Light",
-  system: "System",
-};
-
 // ── Breadcrumb helpers ─────────────────────────────────────────────────────
 
 export function getPageTitle(pathname: string): string {
   if (pathname === "/") return "Welcome";
   const item = ALL_NAV_ITEMS.find((n) => pathname.startsWith(n.path));
   return item?.label ?? "Not Found";
-}
-
-export function getPageGroup(pathname: string): string | null {
-  for (const group of NAV_GROUPS) {
-    if (group.items.some((n) => pathname.startsWith(n.path))) {
-      return group.label;
-    }
-  }
-  return null;
 }

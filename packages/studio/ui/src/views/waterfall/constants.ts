@@ -23,11 +23,6 @@ export const SEGMENT_CONFIG: Record<SegmentKey, SegmentConfig> = {
 
 export const MIN_BAR_HEIGHT = 32;
 export const GROUP_HEADER_HEIGHT = 32;
-export const RULER_HEIGHT = 24;
-export const PROXY_INDENT = 20;
-export const LABEL_COLUMN_MIN = 200;
-export const LABEL_COLUMN_DEFAULT = 260;
-export const ROW_GAP = 2;
 export const VIRTUAL_OVERSCAN = 15;
 
 // ── Timeline compression ──────────────────────────────────────────────────

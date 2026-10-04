@@ -28,26 +28,6 @@ export const SCENARIO_TYPE_META: Record<
   unknown: { label: "Custom", color: "secondary", icon: GitBranch },
 };
 
-export const SCENARIO_TYPE_STRIPE: Record<ScenarioType, string> = {
-  error: "bg-rose-500/60",
-  latency: "bg-amber-500/60",
-  empty: "bg-sky-500/60",
-  auth: "bg-violet-500/60",
-  sequence: "bg-indigo-500/60",
-  mixed: "bg-amber-400/50",
-  unknown: "bg-border",
-};
-
-export const SCENARIO_TYPE_COVERAGE: Record<ScenarioType, string> = {
-  error: "bg-rose-500/50",
-  latency: "bg-amber-500/50",
-  empty: "bg-sky-500/50",
-  auth: "bg-violet-500/50",
-  sequence: "bg-indigo-500/50",
-  mixed: "bg-amber-400/40",
-  unknown: "bg-muted-foreground/30",
-};
-
 /** Gradient background for the detail panel hero header */
 export const SCENARIO_TYPE_GRADIENT: Record<ScenarioType, string> = {
   error: "from-rose-500/12 to-transparent",

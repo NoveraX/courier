@@ -22,10 +22,6 @@ export function parseSpecFromRaw(content: string): Promise<ParsedSpec> {
   return post("/api/apis/parse", { source: "raw", content });
 }
 
-export function parseSpecFromFile(filePath: string): Promise<ParsedSpec> {
-  return post("/api/apis/parse", { source: "file", content: filePath });
-}
-
 // ── Generate ────────────────────────────────────────────────────────────────
 
 export function generateCode(

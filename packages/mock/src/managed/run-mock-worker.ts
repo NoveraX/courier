@@ -109,7 +109,7 @@ async function start(
     return undefined;
   }
   const served: ServedMock = {
-    server: createServer(definition, msg.port),
+    server: createServer(definition, msg.port, msg.storeFile),
     routes: analyzeRoutes(definition.source),
     groupNames: getSourceGroupNames(definition.source),
     seed: seedOptionsOf(definition.seed),
@@ -132,11 +132,16 @@ async function start(
   return served;
 }
 
-function createServer(definition: MockServerDefinition, port: number): MockServer {
+function createServer(
+  definition: MockServerDefinition,
+  port: number,
+  storeFile: string | null,
+): MockServer {
   return createAutoMockServer({
     source: definition.source,
     port,
     strictPort: true,
+    ...(storeFile !== null && definition.persist !== false && { persist: { file: storeFile } }),
     ...(definition.hostname && { hostname: definition.hostname }),
     cors: definition.cors,
     admin: definition.admin,

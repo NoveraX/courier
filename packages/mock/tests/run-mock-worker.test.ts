@@ -38,6 +38,7 @@ describe("runMockWorker", () => {
       mockKey: "apiMock",
       port: 7401,
       transformCacheDirectory: "/app/node_modules/.cache/courier/transform",
+      storeFile: null,
     });
 
     expect(loader).toHaveBeenCalledWith(
@@ -58,6 +59,7 @@ describe("runMockWorker", () => {
       mockKey: "apiMock",
       port: 7401,
       transformCacheDirectory: null,
+      storeFile: null,
     });
 
     expect(loader).toHaveBeenCalledWith("/app/courier.mocks.ts", "apiMock", null);

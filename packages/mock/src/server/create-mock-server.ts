@@ -26,6 +26,7 @@ import { registerAdminRoutes } from "./admin-api";
 import { registerRequestRoutes } from "./api-routes";
 import { applyMiddleware } from "./app-middleware";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
+import { persistedStore } from "./persisted-store";
 import type { RequestHooks } from "./route-types";
 import { createScenarioControls } from "./scenario-controls";
 import { createServerLifecycle } from "./server-lifecycle";
@@ -47,6 +48,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   const app = new Hono();
 
   applyMiddleware(app, config);
+  const persistence = persistedStore(app, store, config?.persist);
 
   const requestHooks: RequestHooks = {};
   const streams = createStreamStopper();
@@ -145,6 +147,11 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     resetStore() {
       store.reset();
       config?.reseed?.();
+      persistence?.schedule();
+    },
+
+    saveStore: async () => {
+      await persistence?.flush();
     },
 
     getRouteSource(group, method) {
@@ -154,6 +161,16 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     },
 
     ...lifecycle,
+
+    start: async () => {
+      persistence?.restore();
+      return lifecycle.start();
+    },
+
+    stop: async () => {
+      await lifecycle.stop();
+      await persistence?.flush();
+    },
   };
 
   return mockServer;

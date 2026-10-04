@@ -66,7 +66,10 @@ async function startMock(): Promise<{
     onExited: vi.fn(),
     onEvent: vi.fn(),
   };
-  const pm = createProcessManager(events, { transformCacheDirectory: () => null });
+  const pm = createProcessManager(events, {
+    transformCacheDirectory: () => null,
+    storeFile: () => null,
+  });
   cleanups.push(() => pm.dispose());
   const port = await freePort();
   pm.spawn({ serverId: "apiMock", mocksFile: project(), mockKey: "apiMock", port });

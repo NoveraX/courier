@@ -71,6 +71,7 @@ export async function startWorker(worker: DrivenWorker): Promise<string> {
     mockKey: "api",
     port: 0,
     transformCacheDirectory: null,
+    storeFile: null,
   });
   const ready = await worker.next(
     (m): m is Extract<ChildMessage, { type: "ready" }> => m.type === "ready",

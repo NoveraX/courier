@@ -62,7 +62,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
 
   const processManager = createProcessManager(
     createProcessEvents({ servers, emit, updateAndEmit, mockLog: config.mockLog }),
-    { transformCacheDirectory: config.transformCacheDirectory },
+    { transformCacheDirectory: config.transformCacheDirectory, storeFile: config.storeFile },
   );
   const reservedPorts = () => declaredPorts(config.mockRegistry.getEntries());
   const isClosed = () => closed;

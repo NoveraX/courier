@@ -52,6 +52,7 @@ describe("a mock whose port another process holds", () => {
       mockKey: "api",
       port,
       transformCacheDirectory: null,
+      storeFile: null,
     });
     const failure = await worker.next(
       (m): m is Extract<ChildMessage, { type: "error" }> => m.type === "error",
@@ -84,6 +85,7 @@ describe("a mock that fails to start for another reason", () => {
       mockKey: "api",
       port: 0,
       transformCacheDirectory: null,
+      storeFile: null,
     });
     const failure = await worker.next(
       (m): m is Extract<ChildMessage, { type: "error" }> => m.type === "error",

@@ -61,6 +61,12 @@ export interface MockServerDefinition<TSource extends AnySource = AnySource>
   admin?: boolean;
   /** Request logging (default: "normal") */
   log?: "silent" | "normal" | "verbose" | boolean;
+  /**
+   * Keep the mock's records in the project's `.courier/mocks/`, so they
+   * survive a restart of the mock — an edit that changes it included — and
+   * of Studio (default: true). `false` starts it from its seeds each time.
+   */
+  persist?: boolean;
 }
 
 /** Seed data configuration */
@@ -106,6 +112,8 @@ export type ParentMessage =
        * keeps none.
        */
       transformCacheDirectory: string | null;
+      /** The file Studio keeps the mock's store in; `null` when it keeps none. */
+      storeFile: string | null;
     }
   | { type: "stop" }
   | { type: "command"; command: Record<string, unknown>; requestId: string };

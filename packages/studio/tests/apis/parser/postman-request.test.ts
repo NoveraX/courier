@@ -83,3 +83,61 @@ describe("a request whose URL is a plain string", () => {
     expect(server.requests.at(-1)).toMatchObject({ method: "DELETE", path: "/users/u1" });
   });
 });
+
+describe("a request whose body Postman writes in GraphQL mode", () => {
+  const spec = () =>
+    collection(
+      [
+        {
+          name: "Search",
+          request: {
+            method: "POST",
+            url: "{{baseUrl}}/graphql",
+            body: { mode: "graphql", graphql: { query: "{ users { id } }", variables: "" } },
+          },
+        },
+      ],
+      { variable: [{ key: "baseUrl", value: server.url }] },
+    );
+
+  it("takes the query, its variables and the operation's name", () => {
+    const body = parseSpec(spec()).groups[0]?.endpoints[0]?.requestBody;
+
+    expect(body?.required).toEqual(["query"]);
+    expect(Object.keys(body?.properties ?? {})).toEqual(["query", "variables", "operationName"]);
+  });
+
+  it("is sent as GraphQL over HTTP sends it: JSON with the query and its variables", async () => {
+    await call(spec(), "search")({ query: "{ users { id } }", variables: { first: 2 } });
+
+    const request = server.requests.at(-1);
+    expect(request).toMatchObject({ method: "POST", path: "/graphql" });
+    expect(JSON.parse(request?.body ?? "")).toEqual({
+      query: "{ users { id } }",
+      variables: { first: 2 },
+    });
+  });
+});
+
+describe("a raw JSON body with comments and trailing commas", () => {
+  it("is typed by its fields, as Postman strips them before sending", () => {
+    const spec = collection([
+      {
+        name: "Order",
+        request: {
+          method: "POST",
+          url: "{{baseUrl}}/orders",
+          body: {
+            mode: "raw",
+            raw: '{\n  // the order\n  "id": "a",\n  "total": 1,\n}',
+            options: { raw: { language: "json" } },
+          },
+        },
+      },
+    ]);
+
+    const body = parseSpec(spec).groups[0]?.endpoints[0]?.requestBody;
+
+    expect(Object.keys(body?.properties ?? {})).toEqual(["id", "total"]);
+  });
+});

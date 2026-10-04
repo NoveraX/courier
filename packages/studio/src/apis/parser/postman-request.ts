@@ -11,6 +11,7 @@
 import { inferSchemaFromValue } from "./infer-schema";
 import { pathParamName } from "./path-utils";
 import { withoutHost } from "./postman-base";
+import { readJsonText } from "./read-json-text";
 import { fieldOf, nodesAt, textAt } from "./spec-node";
 import type { ParsedParameter, ParsedSchema, ParsedSecurityScheme, SpecNode } from "./types";
 
@@ -77,17 +78,26 @@ export function requestParameters(url: unknown): ParsedParameter[] {
   return parameters;
 }
 
-/** The body, whichever of Postman's three modes carries it. */
+/* A GraphQL request is sent as JSON over HTTP: the query, with its variables and the operation's name when it names one. */
+const GRAPHQL_BODY: ParsedSchema = {
+  name: "RequestBody",
+  type: "object",
+  properties: {
+    query: { type: "string", required: true },
+    variables: { type: "object", required: false },
+    operationName: { type: "string", required: false },
+  },
+  required: ["query"],
+};
+
+/** The body, whichever of Postman's modes carries it. */
 export function requestBody(body: SpecNode | undefined): ParsedSchema | null {
   if (!body || typeof body !== "object") return null;
 
+  if (body.mode === "graphql") return GRAPHQL_BODY;
   if (body.mode === "raw" && typeof body.raw === "string") {
-    try {
-      return inferSchemaFromValue("RequestBody", JSON.parse(body.raw));
-    } catch {
-      /* A raw body that is not JSON describes no shape worth generating. */
-      return null;
-    }
+    const read = readJsonText(body.raw);
+    return read ? inferSchemaFromValue("RequestBody", read.value) : null;
   }
 
   const fields = nodesAt(body, body.mode === "urlencoded" ? "urlencoded" : "formdata");
@@ -105,6 +115,7 @@ export function requestBody(body: SpecNode | undefined): ParsedSchema | null {
 /** Media type of each body mode `requestBody` reads a shape from; a raw one only when it is JSON. */
 const MODE_MEDIA_TYPES: ReadonlyMap<unknown, string> = new Map([
   ["raw", "application/json"],
+  ["graphql", "application/json"],
   ["urlencoded", "application/x-www-form-urlencoded"],
   ["formdata", "multipart/form-data"],
 ]);

@@ -91,7 +91,9 @@ export function KPIStrip({ kpis }: KPIStripProps): React.ReactElement {
                 </div>
                 <span className="text-caption text-muted-foreground/70">{entry.label}</span>
               </div>
-              {sparkline.length > 1 && <Sparkline data={sparkline} color={entry.sparklineColor!} />}
+              {sparkline.length > 1 && entry.sparklineColor && (
+                <Sparkline data={sparkline} color={entry.sparklineColor} />
+              )}
             </div>
             <AnimatedCounter
               value={value}

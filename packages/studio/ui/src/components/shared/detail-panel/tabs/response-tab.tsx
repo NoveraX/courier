@@ -44,10 +44,10 @@ export function ResponseTab({ request }: ResponseTabProps): React.ReactElement {
         </TabsContent>
       )}
 
-      {hasRaw && (
+      {request.rawResponse && (
         <TabsContent value="raw" className="mt-0 min-h-0 overflow-auto p-4">
           <div className="flex justify-end">
-            <CopyButton value={request.rawResponse!} label="Copy raw response" />
+            <CopyButton value={request.rawResponse} label="Copy raw response" />
           </div>
           <pre className="mt-2 whitespace-pre-wrap rounded-lg border border-border-subtle bg-background-inset p-3 mono-sm">
             {request.rawResponse}

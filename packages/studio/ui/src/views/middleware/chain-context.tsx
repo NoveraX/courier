@@ -91,7 +91,7 @@ export function ChainContext({
           {stepsWithHeaders.map((step) => (
             <div key={step.index} className="space-y-1">
               <span className="mono-xs font-medium text-muted-foreground">{step.name}</span>
-              {step.headersAdded!.map((h) => (
+              {(step.headersAdded ?? []).map((h) => (
                 <div key={h} className="mono-xs pl-3 text-foreground/80">
                   {h}
                 </div>

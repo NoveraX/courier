@@ -51,14 +51,15 @@ export function GlobalDetailPanel({ children }: GlobalDetailPanelProps): React.R
   }, [isOpen, visible]);
 
   useEscapeClose(isOpen, closePanel);
+  const shownRequest = selectedRequest ?? cachedRequest.current;
 
   return (
     <div className="relative flex min-h-0 flex-1 overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">{children}</div>
 
-      {visible && (selectedRequest ?? cachedRequest.current) && (
+      {visible && shownRequest && (
         <DetailSidebar
-          request={(selectedRequest ?? cachedRequest.current)!}
+          request={shownRequest}
           activeTab={detailTab}
           onTabChange={setDetailTab}
           onClose={closePanel}

@@ -76,7 +76,7 @@ function SectionContent({
   form: UseFormReturn<Settings>;
   history: ReturnType<typeof useSessionHistory>;
   onResetDefaults: () => void;
-}): React.ReactElement {
+}): React.ReactNode {
   switch (sectionId) {
     case "appearance":
       return <AppearanceSection form={form} />;
@@ -97,6 +97,6 @@ function SectionContent({
     case "danger":
       return <DangerZone onResetDefaults={onResetDefaults} history={history} />;
     default:
-      return <></>;
+      return null;
   }
 }

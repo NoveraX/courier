@@ -91,7 +91,8 @@ export function DataTable({
             }}
           >
             {state.virtualizer.getVirtualItems().map((vi) => {
-              const record = state.filtered[vi.index]!;
+              const record = state.filtered[vi.index];
+              if (!record) return null;
               const key = recordKey(record, vi.index);
               return (
                 <DataTableRow

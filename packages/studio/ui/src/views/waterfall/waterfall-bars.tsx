@@ -54,7 +54,8 @@ export function WaterfallBars({
       )}
 
       {virtualItems.map((vi) => {
-        const item = flatItems[vi.index]!;
+        const item = flatItems[vi.index];
+        if (!item) return null;
         if (item.type === "group-header") {
           return <div key={vi.key} className="absolute inset-x-0 h-8" style={{ top: vi.start }} />;
         }
@@ -65,10 +66,10 @@ export function WaterfallBars({
             style={{ top: vi.start, height: vi.size }}
           >
             <WaterfallRowItem
-              row={item.row!}
+              row={item.row}
               index={item.rowIndex}
               pxPerMs={pxPerMs}
-              isSelected={item.row!.request.id === selectedId}
+              isSelected={item.row.request.id === selectedId}
               onSelect={onSelect}
               onSegmentHover={onSegmentHover}
             />

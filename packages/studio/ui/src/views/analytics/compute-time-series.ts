@@ -10,23 +10,24 @@ const HOUR = 60 * MINUTE;
  * Bucket size adapts to the span of data so we always get 20–60 data points.
  */
 export function computeTimeSeries(requests: RequestEntry[]): TimeSeriesBucket[] {
-  if (requests.length === 0) return [];
-
   const sorted = [...requests].sort((a, b) => a.startedAt - b.startedAt);
-  const span = sorted[sorted.length - 1]!.startedAt - sorted[0]!.startedAt;
-  const bucketSize = pickBucketSize(span);
-  const start = sorted[0]!.startedAt;
+  const first = sorted[0];
+  const last = sorted.at(-1);
+  if (first === undefined || last === undefined) return [];
+  const bucketSize = pickBucketSize(last.startedAt - first.startedAt);
+  const start = first.startedAt;
 
   const buckets = new Map<number, TimeSeriesBucket>();
 
   for (const r of sorted) {
     const key = Math.floor((r.startedAt - start) / bucketSize) * bucketSize + start;
 
-    if (!buckets.has(key)) {
-      buckets.set(key, { label: formatBucketLabel(key), success: 0, error: 0, pending: 0 });
+    let bucket = buckets.get(key);
+    if (!bucket) {
+      bucket = { label: formatBucketLabel(key), success: 0, error: 0, pending: 0 };
+      buckets.set(key, bucket);
     }
 
-    const bucket = buckets.get(key)!;
     if (r.status === "pending") bucket.pending++;
     else if (r.status === "error" || r.status === "validation_error") bucket.error++;
     else bucket.success++;

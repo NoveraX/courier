@@ -22,7 +22,7 @@ export function LatencyHistogram({
 }: LatencyHistogramProps): React.ReactElement {
   const { buckets, maxCount } = useMemo(() => {
     const counts = BUCKETS.map((b, i) => {
-      const min = i === 0 ? 0 : BUCKETS[i - 1]!.max;
+      const min = BUCKETS[i - 1]?.max ?? 0;
       return { ...b, count: latencies.filter((v) => v >= min && v < b.max).length };
     });
     return { buckets: counts, maxCount: Math.max(...counts.map((b) => b.count), 1) };

@@ -24,27 +24,18 @@ export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
   const items: AuditItem[] = [];
   const seen = new Set<string>();
 
-  for (let i = 0; i < completed.length; i++) {
-    const listReq = completed[i]!;
+  for (const [i, listReq] of completed.entries()) {
     if (!Array.isArray(listReq.data)) continue;
     if (listReq.data.length < 2) continue;
 
-    const listEnd = listReq.startedAt + (listReq.timing?.total ?? 0);
-    const followers: RequestEntry[] = [];
+    const followers = followersOf(completed, i + 1, listReq);
+    const [firstFollower] = followers;
+    if (followers.length < 2 || firstFollower === undefined) continue;
 
-    for (let j = i + 1; j < completed.length; j++) {
-      const r = completed[j]!;
-      if (r.startedAt - listEnd > N1_WINDOW_MS) break;
-      if (r.source === listReq.source && r.startedAt >= listEnd) {
-        followers.push(r);
-      }
-    }
-
-    if (followers.length < 2) continue;
-
-    const detailKey = buildKey(followers[0]!);
+    const detailKey = buildKey(firstFollower);
     const matching = followers.filter((r) => buildKey(r) === detailKey);
-    if (matching.length < 2) continue;
+    const [firstMatch] = matching;
+    if (matching.length < 2 || firstMatch === undefined) continue;
 
     const patternId = `${buildKey(listReq)}→${detailKey}`;
     if (seen.has(patternId)) continue;
@@ -56,7 +47,7 @@ export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
       severity: "error",
       category: "performance",
       title: "N+1 request pattern",
-      description: `List call to "${formatLabel(listReq)}" followed by ${matching.length} sequential detail calls to "${formatLabel(matching[0]!)}".`,
+      description: `List call to "${formatLabel(listReq)}" followed by ${matching.length} sequential detail calls to "${formatLabel(firstMatch)}".`,
       suggestion: "Fetch all needed data in one request, or use batching.",
       codeSuggestion: `// Consider batching:\nconst items = await ${callOf(listReq)};\n// Instead of N calls, fetch all at once`,
       requestIds: allIds,
@@ -64,6 +55,18 @@ export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
   }
 
   return items;
+}
+
+/* The calls to the list's source that start after it ends, within the window. */
+function followersOf(completed: RequestEntry[], from: number, list: RequestEntry): RequestEntry[] {
+  const listEnd = list.startedAt + (list.timing?.total ?? 0);
+  const followers: RequestEntry[] = [];
+  for (let j = from; j < completed.length; j++) {
+    const r = completed[j];
+    if (r === undefined || r.startedAt - listEnd > N1_WINDOW_MS) break;
+    if (r.source === list.source && r.startedAt >= listEnd) followers.push(r);
+  }
+  return followers;
 }
 
 /** Detect duplicate requests: same endpoint + same variables within a short window. */
@@ -88,7 +91,8 @@ export function detectDuplicates(requests: RequestEntry[]): AuditItem[] {
 
     const allIds = dupes.flatMap((c) => c.map((r) => r.id));
     const totalCount = dupes.reduce((s, c) => s + c.length, 0);
-    const first = dupes[0]![0]!;
+    const first = dupes[0]?.[0];
+    if (first === undefined) continue;
     const fullName = formatLabel(first);
     items.push({
       id: `warn-duplicate-${sig}`,
@@ -137,20 +141,21 @@ export function detectWaterfall(requests: RequestEntry[]): AuditItem[] {
 }
 
 function emitWaterfallItem(chain: RequestEntry[], items: AuditItem[]): void {
-  if (chain.length < WATERFALL_MIN_CHAIN) return;
+  const [a, b] = chain;
+  if (chain.length < WATERFALL_MIN_CHAIN || a === undefined || b === undefined) return;
 
   const totalMs = chain.reduce((s, r) => s + (r.timing?.total ?? 0), 0);
   if (totalMs < WATERFALL_MIN_TOTAL_MS) return;
 
   const names = chain.map((r) => r.method).join(" → ");
   items.push({
-    id: `warn-waterfall-${chain[0]!.id}`,
+    id: `warn-waterfall-${a.id}`,
     severity: "warning",
     category: "performance",
     title: "Sequential waterfall",
     description: `${chain.length} requests run in series (${(totalMs / 1000).toFixed(1)}s total): ${names}.`,
     suggestion: "Use Promise.all() to parallelize independent requests.",
-    codeSuggestion: `// Before (sequential):\nconst a = await ${callOf(chain[0]!)};\nconst b = await ${callOf(chain[1]!)};\n\n// After (parallel):\nconst [a, b] = await Promise.all([\n  ${callOf(chain[0]!)},\n  ${callOf(chain[1]!)},\n]);`,
+    codeSuggestion: `// Before (sequential):\nconst a = await ${callOf(a)};\nconst b = await ${callOf(b)};\n\n// After (parallel):\nconst [a, b] = await Promise.all([\n  ${callOf(a)},\n  ${callOf(b)},\n]);`,
     requestIds: chain.map((r) => r.id),
   });
 }
@@ -158,11 +163,11 @@ function emitWaterfallItem(chain: RequestEntry[], items: AuditItem[]): void {
 function findTimeClusters(reqs: RequestEntry[], windowMs: number): RequestEntry[][] {
   const sorted = [...reqs].sort((a, b) => a.startedAt - b.startedAt);
   const clusters: RequestEntry[][] = [];
-  let current: RequestEntry[] = [sorted[0]!];
+  let current: RequestEntry[] = [];
 
-  for (let i = 1; i < sorted.length; i++) {
-    const r = sorted[i]!;
-    if (r.startedAt - current[0]!.startedAt <= windowMs) {
+  for (const r of sorted) {
+    const first = current[0];
+    if (first === undefined || r.startedAt - first.startedAt <= windowMs) {
       current.push(r);
     } else {
       if (current.length >= 2) clusters.push(current);

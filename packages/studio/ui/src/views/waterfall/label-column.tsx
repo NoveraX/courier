@@ -24,16 +24,16 @@ export function LabelRow({
     <div className="absolute inset-x-0" style={{ top, height }}>
       {item.type === "group-header" ? (
         <GroupHeader
-          group={item.group!}
-          isCollapsed={item.isCollapsed ?? false}
-          onToggle={() => onToggleGroup(item.group!.key)}
+          group={item.group}
+          isCollapsed={item.isCollapsed}
+          onToggle={() => onToggleGroup(item.group.key)}
         />
       ) : (
         <RowLabel
-          row={item.row!}
+          row={item.row}
           index={item.rowIndex}
           onSelect={onSelect}
-          isSelected={item.row!.request.id === selectedId}
+          isSelected={item.row.request.id === selectedId}
         />
       )}
     </div>

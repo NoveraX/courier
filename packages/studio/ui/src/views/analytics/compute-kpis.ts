@@ -27,8 +27,7 @@ export function computeKPIs(requests: RequestEntry[]): KPIData {
   const successes = completed.filter((r) => r.status === "success");
   const errors = completed.filter((r) => r.status === "error" || r.status === "validation_error");
   const durations = completed
-    .filter((r) => r.timing)
-    .map((r) => r.timing!.total)
+    .flatMap((r) => (r.timing ? [r.timing.total] : []))
     .sort((a, b) => a - b);
 
   const totalSize = completed.reduce((s, r) => s + (r.size ?? 0), 0);
@@ -117,10 +116,7 @@ function bucketAvgSize(bucket: RequestEntry[]): number {
 // ── Utilities ────────────────────────────────────────────────────────────────
 
 function extractDurations(requests: RequestEntry[]): number[] {
-  return requests
-    .filter((r) => r.timing)
-    .map((r) => r.timing!.total)
-    .sort((a, b) => a - b);
+  return requests.flatMap((r) => (r.timing ? [r.timing.total] : [])).sort((a, b) => a - b);
 }
 
 /**

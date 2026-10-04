@@ -6,7 +6,7 @@ import type { SparklinePoint } from "./types";
 export function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
   const idx = Math.ceil((p / 100) * sorted.length) - 1;
-  return sorted[Math.max(0, idx)]!;
+  return sorted[Math.max(0, idx)] ?? 0;
 }
 
 // ── Sparkline extraction ─────────────────────────────────────────────────────

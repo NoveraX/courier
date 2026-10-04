@@ -96,29 +96,32 @@ function EndpointsList({
 
   return (
     <div className="rounded-md border border-border-subtle overflow-hidden">
-      {visible.map((ep) => (
-        <div
-          key={ep.key}
-          className="flex items-center justify-between px-3 py-1.5 border-b border-border-subtle last:border-b-0"
-        >
-          <span className="mono-xs text-foreground">{ep.label}</span>
-          <div className="flex items-center gap-2">
-            {ep.detail && (
-              <span className="text-[10px] text-muted-foreground tabular-nums">{ep.detail}</span>
-            )}
-            {ep.requestIds?.[0] && (
-              <button
-                type="button"
-                onClick={() => selectRequest(ep.requestIds![0]!)}
-                className="text-accent-brand hover:text-accent-brand/80 transition-colors"
-                title="View request details"
-              >
-                <ExternalLink className="size-3" />
-              </button>
-            )}
+      {visible.map((ep) => {
+        const firstId = ep.requestIds?.[0];
+        return (
+          <div
+            key={ep.key}
+            className="flex items-center justify-between px-3 py-1.5 border-b border-border-subtle last:border-b-0"
+          >
+            <span className="mono-xs text-foreground">{ep.label}</span>
+            <div className="flex items-center gap-2">
+              {ep.detail && (
+                <span className="text-[10px] text-muted-foreground tabular-nums">{ep.detail}</span>
+              )}
+              {firstId && (
+                <button
+                  type="button"
+                  onClick={() => selectRequest(firstId)}
+                  className="text-accent-brand hover:text-accent-brand/80 transition-colors"
+                  title="View request details"
+                >
+                  <ExternalLink className="size-3" />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {needsCollapse && !showAll && (
         <button
           type="button"

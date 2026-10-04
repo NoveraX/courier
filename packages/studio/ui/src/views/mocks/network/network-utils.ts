@@ -49,8 +49,7 @@ export function computeNetworkStats(logs: MockRequestLog[]): NetworkStats {
   if (logs.length === 0) return emptyStats();
 
   const latencies = logs
-    .filter((l) => l.duration !== undefined)
-    .map((l) => l.duration!)
+    .flatMap((l) => (l.duration === undefined ? [] : [l.duration]))
     .sort((a, b) => a - b);
 
   const errors = logs.filter((l) => l.status !== undefined && l.status >= 400);
@@ -98,7 +97,7 @@ function buildTimeline(logs: MockRequestLog[]): TimelinePoint[] {
   const points: TimelinePoint[] = [];
   for (let i = 0; i < logs.length; i += bucketSize) {
     const bucket = logs.slice(i, i + bucketSize);
-    const lats = bucket.filter((l) => l.duration !== undefined).map((l) => l.duration!);
+    const lats = bucket.flatMap((l) => (l.duration === undefined ? [] : [l.duration]));
     const errs = bucket.filter((l) => l.status !== undefined && l.status >= 400);
     points.push({
       timestamp: bucket[0]?.timestamp ?? 0,

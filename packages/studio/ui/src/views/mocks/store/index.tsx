@@ -14,9 +14,8 @@ export function MockStoreView(): React.ReactElement {
 
   const { activeCollection, selectCollection } = crud;
   useEffect(() => {
-    if (!activeCollection && collections.length > 0) {
-      selectCollection(collections[0]!.name);
-    }
+    const [first] = collections;
+    if (!activeCollection && first) selectCollection(first.name);
   }, [collections, activeCollection, selectCollection]);
 
   if (!server) {

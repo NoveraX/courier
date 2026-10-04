@@ -59,12 +59,17 @@ export interface GroupedRows {
 
 // ── Flat item for virtualization ──────────────────────────────────────────
 
-export interface FlatItem {
-  type: "row" | "group-header";
-  row?: WaterfallRow;
-  group?: GroupedRows;
-  /** Zebra-stripe index (rows only) */
-  rowIndex: number;
-  /** Whether group is collapsed (group-headers only) */
-  isCollapsed?: boolean;
-}
+export type FlatItem =
+  | {
+      type: "row";
+      row: WaterfallRow;
+      /** Zebra-stripe index */
+      rowIndex: number;
+    }
+  | {
+      type: "group-header";
+      group: GroupedRows;
+      rowIndex: number;
+      /** Whether the group is collapsed */
+      isCollapsed: boolean;
+    };

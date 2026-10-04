@@ -105,9 +105,9 @@ function TimingRow({
 
 // ── Total summary ───────────────────────────────────────────────────────────
 
-function TotalSummary({ comparisons }: { comparisons: TimingComparison[] }): React.ReactElement {
+function TotalSummary({ comparisons }: { comparisons: TimingComparison[] }): React.ReactNode {
   const totalEntry = comparisons.find((c) => c.phase === "Total");
-  if (!totalEntry) return <></>;
+  if (!totalEntry) return null;
 
   const isFaster = totalEntry.diffMs < 0;
   const isSlower = totalEntry.diffMs > 0;

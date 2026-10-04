@@ -55,17 +55,18 @@ export function decompressMs(compressedMs: number, gaps: TimeGap[]): number {
 
 function detectGaps(sorted: WaterfallRow[]): RawGap[] {
   const gaps: RawGap[] = [];
-  let maxEndSoFar = sorted[0]!.offsetMs + sorted[0]!.totalDuration;
+  const [first, ...rest] = sorted;
+  if (first === undefined) return gaps;
+  let maxEndSoFar = first.offsetMs + first.totalDuration;
 
-  for (let i = 1; i < sorted.length; i++) {
-    const currStart = sorted[i]!.offsetMs;
-    const gap = currStart - maxEndSoFar;
+  for (const row of rest) {
+    const gap = row.offsetMs - maxEndSoFar;
 
     if (gap > GAP_THRESHOLD_MS) {
-      gaps.push({ rawStart: maxEndSoFar, rawEnd: currStart, duration: gap });
+      gaps.push({ rawStart: maxEndSoFar, rawEnd: row.offsetMs, duration: gap });
     }
 
-    maxEndSoFar = Math.max(maxEndSoFar, currStart + sorted[i]!.totalDuration);
+    maxEndSoFar = Math.max(maxEndSoFar, row.offsetMs + row.totalDuration);
   }
 
   return gaps;

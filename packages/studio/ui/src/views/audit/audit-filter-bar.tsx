@@ -86,7 +86,7 @@ function SeverityButtons({
             )}
           >
             {Icon && <Icon className={cn("size-3", isActive && cfg.color)} />}
-            <span>{sev === "all" ? "All" : cfg!.label}</span>
+            <span>{cfg ? cfg.label : "All"}</span>
             {count != null && count > 0 && <span className="tabular-nums opacity-60">{count}</span>}
           </button>
         );

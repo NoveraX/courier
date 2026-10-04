@@ -21,7 +21,7 @@ export function computeNodeMetrics(requests: RequestEntry[]): NodeMetrics {
     (r) => r.status === "error" || r.status === "validation_error",
   ).length;
 
-  const durations = completed.filter((r) => r.timing).map((r) => r.timing!.total);
+  const durations = completed.flatMap((r) => (r.timing ? [r.timing.total] : []));
 
   const sizes = completed.map((r) => r.size ?? 0);
   const lastRequest = completed[completed.length - 1];

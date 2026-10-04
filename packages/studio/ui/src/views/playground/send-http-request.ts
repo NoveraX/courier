@@ -7,9 +7,9 @@
  * result into the store through `appendPlaygroundChunk` / `endPlayground`
  * / `errorPlayground` — no per-request callback is attached here.
  *
- * The 30s timeout that the legacy callback wire enforced lives server-side
- * in `runtime-playground-router.ts` now, so hung requests surface as
- * `playground:error` through the same store path as natural errors.
+ * A request that hangs is ended by the timeout in Studio's
+ * `runtime-playground-router.ts`, so it surfaces as `playground:error`
+ * through the same store path as any other error.
  */
 
 import { getSocket } from "@/socket";
@@ -37,7 +37,6 @@ interface InitiateHttpParams {
   rid: string;
   payload: SendPayload;
   values: RequestValues;
-  sentAt: number;
   updateEntry: UpdateEntry;
   setSending: (sending: boolean) => void;
 }
@@ -52,7 +51,6 @@ export function initiateHttpRequest({
   rid,
   payload,
   values,
-  sentAt,
   updateEntry,
   setSending,
 }: InitiateHttpParams): void {
@@ -74,7 +72,7 @@ export function initiateHttpRequest({
   // responder and finalizes status/duration on the entry.
   setSending(false);
 
-  // The timing comes from the parallel `event` stream the runtime
-  // publishes via `wireHooks`, which the rid-keyed wire does not carry.
-  subscribeForRunData(id, payload, sentAt, updateEntry);
+  // The timing comes from the request events the runtime publishes, which
+  // the rid-keyed wire does not carry.
+  subscribeForRunData(id, rid, updateEntry);
 }

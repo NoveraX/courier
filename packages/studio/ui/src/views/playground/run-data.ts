@@ -1,27 +1,34 @@
+import { playgroundRequestId } from "@noverax/courier-studio-core";
+
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types-request";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 
 const SUBSCRIBE_TIMEOUT_MS = 5_000;
 
-interface MatchPayload {
-  source: string;
-  group: string;
-  method: string;
-}
-
 /**
- * Subscribe to store and copy timing + headers when the runtime reports the
- * request the Playground ran. The runtime runs it in-process whichever mode
- * the Playground is in, so it is reported as a direct request; looking for a
- * proxy request found none, and the Timing tab stayed empty.
+ * Copy the timing and headers of the request a Playground run made, once the
+ * runtime reports it, onto the run's entry.
+ *
+ * The runtime runs the call under `playgroundRequestId(rid)`, so the request
+ * is found by that id alone: any other call the app makes to the endpoint is
+ * none of the run's, and a run that failed before it sent anything has no
+ * request to take a status from.
+ *
+ * @param playgroundId - The run's history entry
+ * @param rid - The run's id
+ * @param updateEntry - Patches the entry
+ * @example
+ * ```ts
+ * subscribeForRunData(entry.id, rid, updatePlaygroundEntry);
+ * ```
  */
 export function subscribeForRunData(
   playgroundId: string,
-  payload: MatchPayload,
-  sentAt: number,
+  rid: string,
   updateEntry: (id: string, patch: Partial<PlaygroundHistoryEntry>) => void,
 ): void {
+  const requestId = playgroundRequestId(rid);
   let done = false;
 
   const cleanup = () => {
@@ -32,7 +39,7 @@ export function subscribeForRunData(
   };
 
   const unsub = useStudioStore.subscribe((state) => {
-    const match = findMatchingRequest(state.requests, payload, sentAt);
+    const match = state.requests.find((r) => r.id === requestId);
     if (!match?.timing) return;
 
     cleanup();
@@ -41,26 +48,11 @@ export function subscribeForRunData(
 
   const timeout = setTimeout(cleanup, SUBSCRIBE_TIMEOUT_MS);
 
-  // Check immediately — data may already be in store
-  const match = findMatchingRequest(useStudioStore.getState().requests, payload, sentAt);
+  const match = useStudioStore.getState().requests.find((r) => r.id === requestId);
   if (match?.timing) {
     cleanup();
     applyProxyData(playgroundId, match, updateEntry);
   }
-}
-
-function findMatchingRequest(
-  requests: RequestEntry[],
-  payload: MatchPayload,
-  sentAt: number,
-): RequestEntry | undefined {
-  return requests.find(
-    (r) =>
-      r.source.toLowerCase() === payload.source.toLowerCase() &&
-      r.group === payload.group &&
-      r.method === payload.method &&
-      r.startedAt >= sentAt - 1000,
-  );
 }
 
 function applyProxyData(

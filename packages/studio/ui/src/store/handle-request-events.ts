@@ -61,8 +61,9 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
 
 /**
  * A request that failed keeps what its caller received — the proxy's own
- * status where the upstream gave none — the upstream's headers and error
- * body, and how long it ran. Issues a `validation:fail` recorded stay with it.
+ * status where the upstream gave none — the upstream's headers, error body
+ * and its size, how long it ran and, for a proxied call, how that time split.
+ * Issues a `validation:fail` recorded stay with it.
  */
 export function withRequestError(r: RequestEntry, event: EventPayload): RequestEntry {
   const rawError = isPlainObject(event.error) ? event.error : undefined;
@@ -83,15 +84,16 @@ export function withRequestError(r: RequestEntry, event: EventPayload): RequestE
     },
     statusCode: optNum(event.status) ?? errorData?.status ?? r.statusCode,
     timing: readRequestTiming(event.timing) ?? r.timing,
+    proxyTiming: mergeProxyTiming(readProxyTiming(event.proxyTiming), r.proxyTiming),
+    size: optNum(event.size) ?? r.size,
     headers: readStringRecord(event.headers) ?? r.headers,
     data: event.data !== undefined ? event.data : r.data,
   };
 }
 
-/* The runtime names failures in lower case; the older capitalised names stay understood. */
 function failureStatus(type: string | undefined): RequestStatus {
-  if (type === "validation" || type === "ValidationError") return "validation_error";
-  if (type === "abort" || type === "aborted" || type === "AbortError") return "aborted";
+  if (type === "validation") return "validation_error";
+  if (type === "aborted") return "aborted";
   return "error";
 }
 

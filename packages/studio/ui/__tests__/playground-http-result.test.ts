@@ -2,14 +2,11 @@
  * @vitest-environment jsdom
  */
 /**
- * What the Playground shows for an HTTP request it ran.
- *
- * Its Timing and Headers tabs were always empty: the timing was looked up
- * only for a proxy-mode request, and only among proxy requests, while the
- * runtime runs every Playground request in-process, where it is reported as
- * direct. An error answer showed a message lifted out of its body instead of
- * the body.
+ * What the Playground shows for an HTTP request it ran: the timing and
+ * headers of the request the runtime ran under the run's id, in either mode,
+ * and an error answer's body rather than a message lifted out of it.
  */
+import { playgroundRequestId } from "@noverax/courier-studio-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const emit = vi.hoisted(() => vi.fn());
@@ -47,7 +44,6 @@ function send(mode: "direct" | "proxy"): PlaygroundHistoryEntry {
     rid: entry.rid,
     payload: { ...entry, mode },
     values: { variables: { name: "zed" }, headers: {} },
-    sentAt: entry.timestamp,
     updateEntry: updatePlaygroundEntry,
     setSending: () => {},
   });
@@ -56,11 +52,12 @@ function send(mode: "direct" | "proxy"): PlaygroundHistoryEntry {
 
 type Event = StudioEvent & Record<string, unknown>;
 
-/** The runtime's report of the run, as it reaches the UI: in-process, so direct. */
-function reportRun(): void {
+/** The runtime's report of the run, under the run's id, as it reaches the UI. */
+function reportRun(rid: string): void {
   const { handleEvents } = useStudioStore.getState();
+  const id = playgroundRequestId(rid);
   const start: Event = {
-    id: "req-1",
+    id,
     sessionId: "app",
     type: "request:start",
     timestamp: Date.now(),
@@ -72,10 +69,10 @@ function reportRun(): void {
     hasValidation: { variables: false, response: false },
   };
   const end: Event = {
-    id: "req-1",
+    id,
     sessionId: "app",
     type: "request:end",
-    requestId: "req-1",
+    requestId: id,
     timestamp: Date.now(),
     status: 201,
     data: { id: 3 },
@@ -94,7 +91,7 @@ function entryOf(rid: string): PlaygroundHistoryEntry | undefined {
 describe("an HTTP request run from the Playground", () => {
   it.each(["direct", "proxy"] as const)("shows its timing in %s mode", (mode) => {
     const entry = send(mode);
-    reportRun();
+    reportRun(entry.rid);
 
     expect(entryOf(entry.rid)?.timing?.total).toBe(12);
     expect(entryOf(entry.rid)?.responseHeaders).toEqual({ location: "/users/3" });

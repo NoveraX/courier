@@ -92,7 +92,7 @@ export function useSendRequest() {
         activeRidRef.current = rid;
         initiateStreamRequest({ rid, payload, values });
       } else {
-        initiateHttpRequest({ id, rid, payload, values, sentAt, updateEntry, setSending });
+        initiateHttpRequest({ id, rid, payload, values, updateEntry, setSending });
       }
 
       return id;

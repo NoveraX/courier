@@ -14,6 +14,7 @@ import { Server, type Socket } from "socket.io";
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 import { z } from "zod";
 
+import { playgroundRequestId } from "../src/lib/playground-request-id";
 import { connectRuntimeSocket } from "../src/runtime/connect-runtime-socket";
 
 interface Frame {
@@ -138,6 +139,34 @@ async function until(check: () => boolean, what: string): Promise<void> {
   }
 }
 
+/* The app's proxy route, in this process, as an app serves it. */
+async function startProxy(): Promise<{ url: string; proxied: string[] }> {
+  const { createHandler } = await import("@noverax/courier");
+  const { sendWebResponse, toWebRequest } = await import("@noverax/courier/node");
+  const handler = createHandler();
+  const proxied: string[] = [];
+  const proxy: HttpServer = createServer(async (req, res) => {
+    proxied.push(`${req.method} ${req.url}`);
+    await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
+  });
+  await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
+  cleanups.push(() => new Promise<void>((resolve) => proxy.close(() => resolve())));
+  return { url: `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`, proxied };
+}
+
+/* Studio's request hooks, as an attached runtime has them, for one test. */
+async function watchRequests(): Promise<string[]> {
+  const { studioHooks } = await import("@noverax/courier/internal");
+  const started: string[] = [];
+  studioHooks.onRequestStart = (event) => {
+    started.push(event.id);
+  };
+  onTestFinished(() => {
+    delete studioHooks.onRequestStart;
+  });
+  return started;
+}
+
 function execute(
   rid: string,
   group: string,
@@ -242,17 +271,9 @@ describe("an HTTP endpoint run from the Playground", () => {
 
 describe("an HTTP call run from the Playground in proxy mode", () => {
   it("goes through the app's proxy route and answers as the browser would see it", async () => {
-    const { createHandler, setAppOrigin } = await import("@noverax/courier");
-    const { sendWebResponse, toWebRequest } = await import("@noverax/courier/node");
-    const handler = createHandler();
-    const proxied: string[] = [];
-    const proxy: HttpServer = createServer(async (req, res) => {
-      proxied.push(`${req.method} ${req.url}`);
-      await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
-    });
-    await new Promise<void>((resolve) => proxy.listen(0, "127.0.0.1", resolve));
-    cleanups.push(() => new Promise<void>((resolve) => proxy.close(() => resolve())));
-    setAppOrigin(`http://127.0.0.1:${(proxy.address() as AddressInfo).port}`);
+    const { setAppOrigin } = await import("@noverax/courier");
+    const { url, proxied } = await startProxy();
+    setAppOrigin(url);
     cleanups.push(() => setAppOrigin(undefined));
 
     runtime?.emit("playground:execute", {
@@ -293,6 +314,38 @@ describe("an HTTP call run from the Playground in proxy mode", () => {
     await until(() => framesOf("proxy-no-origin").length > 0, "the refusal");
 
     expect(String(framesOf("proxy-no-origin")[0]?.payload.chunk?.error)).toContain("appOrigin");
+  });
+});
+
+describe("the request a Playground run makes", () => {
+  it("is shown under the run's own id when it runs here", async () => {
+    const started = await watchRequests();
+
+    execute("run-direct", "users", "create", "http", { name: "zed" });
+    await until(() => framesOf("run-direct").length >= 1, "the result");
+
+    expect(started).toEqual([playgroundRequestId("run-direct")]);
+  });
+
+  it("is shown under the run's own id when it goes through the app's proxy route", async () => {
+    const { setAppOrigin } = await import("@noverax/courier");
+    const started = await watchRequests();
+    const { url } = await startProxy();
+    setAppOrigin(url);
+    onTestFinished(() => setAppOrigin(undefined));
+
+    runtime?.emit("playground:execute", {
+      rid: "run-proxy",
+      source: "api",
+      group: "users",
+      method: "create",
+      transport: "http",
+      mode: "proxy",
+      variables: { name: "zed" },
+    });
+    await until(() => framesOf("run-proxy").some((f) => f.event === "playground:end"), "the end");
+
+    expect(new Set(started)).toEqual(new Set([playgroundRequestId("run-proxy")]));
   });
 });
 

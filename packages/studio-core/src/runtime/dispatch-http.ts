@@ -1,7 +1,8 @@
 import type { UploadProgress } from "@noverax/courier";
 import { HTTPError, ValidationError } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
-import type { executeRequest } from "@noverax/courier/internal";
+import { type executeRequest, STUDIO_REQUEST_HEADER } from "@noverax/courier/internal";
+import { playgroundRequestId } from "../lib/playground-request-id";
 import { formDataOf } from "./playground-form";
 import type { PlaygroundExecutePayload } from "./playground-payloads";
 import type { ResponderSocket } from "./playground-responder";
@@ -23,11 +24,13 @@ const VALIDATION_FAILED = 422;
 /**
  * Run an HTTP endpoint for the Playground and send back what it answered.
  *
- * The answer keeps its own status — a 201 was reported as 200 — and its
- * headers. A failure keeps the body it came with rather than a message
- * lifted out of it, and variables the schema refuses are reported with the
- * 422 the proxy answers them with, where they used to read as a server's 500
- * although nothing had been sent.
+ * The answer keeps its own status and its headers. A failure keeps the body
+ * it came with rather than a message lifted out of it, and variables the
+ * schema refuses are reported with the 422 the proxy answers them with, not
+ * as a server's 500, since nothing was sent.
+ *
+ * The call runs under `playgroundRequestId(rid)`, through the proxy as well,
+ * so the request Studio shows for it is the Playground's own.
  *
  * @param socket - The runtime's Studio socket
  * @param payload - What the Playground asked to run
@@ -71,21 +74,26 @@ async function run(
   exec: typeof executeRequest,
   onUploadProgress: ((progress: UploadProgress) => void) | undefined,
 ): Promise<HttpResultChunk> {
+  const requestId = playgroundRequestId(payload.rid);
   try {
     const answer =
       payload.mode === "proxy"
-        ? await callThroughProxy(sources, callOf(payload), true, onUploadProgress)
-        : await exec(sources, {
-            source: payload.source,
-            group: payload.group,
-            method: payload.method,
-            variables: variablesOf(payload),
-            options: {
-              headers: payload.headers ?? {},
-              rawData: true,
-              ...(onUploadProgress && { onUploadProgress }),
+        ? await callThroughProxy(sources, callOf(payload, requestId), true, onUploadProgress)
+        : await exec(
+            sources,
+            {
+              source: payload.source,
+              group: payload.group,
+              method: payload.method,
+              variables: variablesOf(payload),
+              options: {
+                headers: payload.headers ?? {},
+                rawData: true,
+                ...(onUploadProgress && { onUploadProgress }),
+              },
             },
-          });
+            { studioRequestId: requestId },
+          );
     if (!isRawAnswer(answer)) return { kind: "http-result", status: 200, data: answer };
     const { status, headers, data } = answer;
     return { kind: "http-result", status, data, headers: Object.fromEntries(headers) };
@@ -127,13 +135,14 @@ function isRawAnswer(value: unknown): value is { status: number; headers: Header
   return typeof value.status === "number" && value.headers instanceof Headers;
 }
 
-function callOf(payload: PlaygroundExecutePayload): PlaygroundCall {
+/* The proxy shows the call under the id its header names. */
+function callOf(payload: PlaygroundExecutePayload, requestId: string): PlaygroundCall {
   return {
     source: payload.source,
     group: payload.group,
     method: payload.method,
     variables: variablesOf(payload),
-    headers: payload.headers ?? {},
+    headers: { ...payload.headers, [STUDIO_REQUEST_HEADER]: requestId },
   };
 }
 

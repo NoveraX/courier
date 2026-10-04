@@ -3,8 +3,8 @@ import { buildClientProxy } from "../client";
 import { shapeOfSource } from "../client/shape";
 import type { BrowserApi } from "../define/exposed-api";
 import { composeBackend, type StreamingFactories } from "../transport/compose-backend";
-import { lazySSEFactory, lazyWSChannelFactory } from "../transport/lazy-streams";
 import { createProxyHTTPExecutor } from "../transport/proxy/http";
+import { proxyStreamingFactories } from "../transport/proxy-streaming";
 import { sourceFromBoundary } from "./from-boundary";
 import { mergeProxyPath, type ProxyPath } from "./proxy-path";
 import type { ProxyCallerArguments, ProxyCallerDefaults } from "./types";
@@ -90,31 +90,19 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
 
   const http = createProxyHTTPExecutor(source, effectiveDefaults);
 
-  // Streaming primitives are only constructed when apiSource is provided —
-  // transport detection in composeBackend requires endpoint schema. Without
-  // it, all calls fall through to HTTP. Construction is always safe (no
-  // network), so we can wire SSE and WS unconditionally — `resolveProxyPath`
-  // is invoked lazily on the first subscribe / connect call, and WS-specific
-  // misconfiguration surfaces there as `WS_PATH_NOT_CONFIGURED`.
-  const streaming: StreamingFactories = {};
-  if (apiSource) {
-    /* Loaded on the first stream or channel, so an application that makes
-       none does not carry their clients. */
-    const sseDefaults = { proxyPath: mergedProxyPath, headers: defaults.headers };
-    streaming.sse = lazySSEFactory(async () =>
-      (await import("../transport/proxy/sse")).createProxySSEFactory(source, sseDefaults),
-    );
-    // ⚠️ defaults.headers is intentionally NOT forwarded to WS factories.
-    // Browser WebSocket cannot send custom HTTP headers in the upgrade
-    // handshake. See `ProxyWSDefaults` for supported auth alternatives.
-    const wsDefaults = { proxyPath: mergedProxyPath, ws: defaults.ws };
-    streaming.wsChannel = lazyWSChannelFactory(async () =>
-      (await import("../transport/proxy/ws")).createProxyWSChannelFactory(source, wsDefaults),
-    );
-    streaming.wsPush = lazySSEFactory(async () =>
-      (await import("../transport/proxy/ws")).createProxyWSPushFactory(source, wsDefaults),
-    );
-  }
+  /* Streams and channels are told apart by the endpoints' schemas, so a
+     client with no source sends every call as HTTP. Their client code is
+     loaded on the first stream or channel, so an application that makes
+     none does not carry it, and their proxy paths are resolved on the first
+     call, so a missing `proxyPath.ws` is reported there. defaults.headers is
+     not given to the WS factories: a browser WebSocket cannot send headers
+     on its upgrade (see `ProxyWSDefaults` for what authenticates it). */
+  const streaming: StreamingFactories = apiSource
+    ? proxyStreamingFactories(source, {
+        sse: { proxyPath: mergedProxyPath, headers: defaults.headers },
+        ws: { proxyPath: mergedProxyPath, ws: defaults.ws },
+      })
+    : {};
 
   const backend = composeBackend(apiSource, http, streaming, {
     exhaustive: defaults.boundary !== undefined,

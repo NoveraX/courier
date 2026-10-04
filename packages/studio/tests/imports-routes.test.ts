@@ -780,6 +780,35 @@ describe("the imports lists every UI is sent", () => {
     expect(namesSince(second, marks[1] ?? 0)).toEqual(["pets"]);
   }, 15_000);
 
+  it("carry what manage/apply changed to every UI", async () => {
+    project(declaring("src/api"));
+    const url = await started();
+    const body = await quoted(url, "/api/apis/manage/apply", ADD);
+    const first = await ui(url);
+    const mark = first.events.length;
+
+    const reply = await post(url, "/api/apis/manage/apply", body);
+    await until(() => namesSince(first, mark) !== null && scansSince(first, mark) > 0);
+
+    expect(reply.status).toBe(200);
+    expect(namesSince(first, mark)).toEqual(["pets"]);
+    expect(scansSince(first, mark)).toBe(1);
+  }, 15_000);
+
+  it("carry what update/apply changed to every UI", async () => {
+    project(declaring("src/api"));
+    const url = await started();
+    const body = await quoted(url, "/api/apis/update/apply", { name: "pets", newSpec: SPEC });
+    const first = await ui(url);
+    const mark = first.events.length;
+
+    const reply = await post(url, "/api/apis/update/apply", body);
+    await until(() => namesSince(first, mark) !== null);
+
+    expect(reply.status).toBe(200);
+    expect(namesSince(first, mark)).toEqual(["pets"]);
+  }, 15_000);
+
   it("reach a UI only through its socket: there is no route that lists them", async () => {
     project(declaring("src/api"));
     const url = await started();

@@ -329,6 +329,28 @@ describe("applyMocksEdit", () => {
     expect((result as { plan: { status: string } }).plan.status).toBe("ready");
     expect(readFileSync(file, "utf8")).toBe(saved);
     expect(tx.apply).toHaveBeenCalledTimes(1);
+    /* The save is still on its way through the watcher; loaded here, it need not load again. */
+    expect(tx.acknowledge).toHaveBeenCalledWith([file]);
+  });
+
+  it("leaves a save that lands while it loads the file to the watcher", async () => {
+    const file = join(root, "courier.mocks.ts");
+    writeFileSync(file, EXISTING);
+    const again = EXISTING.replace("export default", "// again\nexport default");
+    let loads = 0;
+    const { ctx, tx } = await harness(async (real) => {
+      const loaded = await real();
+      loads += 1;
+      if (loads === 1) writeFileSync(file, again);
+      return loaded;
+    });
+    const body = await confirmed(ctx);
+    writeFileSync(file, EXISTING.replace("export default", "// saved\nexport default"));
+
+    const result = await applyMocksEdit(ctx, body);
+
+    expect(result.status).toBe("stale");
+    expect(tx.acknowledge).not.toHaveBeenCalled();
   });
 
   it("answers stale when the file changes between the plan and the write", async () => {

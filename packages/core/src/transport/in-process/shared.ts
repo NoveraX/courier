@@ -57,7 +57,8 @@ export type StreamKind = "sse" | "push" | "channel";
 
 /**
  * Resolve a stream endpoint from the sources map and assert its transport,
- * and for a WS endpoint whether it is a push or a channel.
+ * for a WS endpoint whether it is a push or a channel, and that this
+ * process serves it — an endpoint it only calls is reached as a client.
  *
  * Throws a tagged Error (with `cause.status`) on any failure — mirroring the
  * canonical adapter's 4xx Response semantics but surfaced as an exception so
@@ -72,7 +73,11 @@ export function resolveStreamEndpoint(
   const dataSource = Object.hasOwn(sources, locator.source) ? sources[locator.source] : undefined;
   if (!dataSource) throw streamResolveError(executorName, locator, 400, "source not found");
 
-  const { endpoint, schema, options } = resolveEndpoint(dataSource, locator.group, locator.method);
+  const { endpoint, schema, options, served } = resolveEndpoint(
+    dataSource,
+    locator.group,
+    locator.method,
+  );
   if (typeof endpoint !== "function") {
     throw streamResolveError(executorName, locator, 400, "method not found");
   }
@@ -87,6 +92,11 @@ export function resolveStreamEndpoint(
   }
   const mismatch = kindMismatch(expected, schema);
   if (mismatch) throw streamResolveError(executorName, locator, 400, mismatch);
+  /* An endpoint this process only calls has no implementation here to run:
+     its upstream serves it, and a client reaches it there. */
+  if (!served) {
+    throw streamResolveError(executorName, locator, 400, "not served by this process");
+  }
   return {
     endpoint,
     schema,

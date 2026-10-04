@@ -98,13 +98,19 @@ describe("a double click on Review change", () => {
     fireEvent.click(screen.getByRole("button", { name: "Review change" }));
     await act(() => vi.advanceTimersByTimeAsync(200));
     expect(preview).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole("button", { name: "Create courier.mocks.ts" }));
+    const applyButton = screen.getByRole("button", { name: "Create courier.mocks.ts" });
+    expect(applyButton).toHaveProperty("disabled", true);
+    fireEvent.click(applyButton);
     await act(() => vi.advanceTimersByTimeAsync(0));
 
     expect(apply).not.toHaveBeenCalled();
     expect(session.getState().step).toBe("review");
 
     await act(() => vi.advanceTimersByTimeAsync(1_000));
+    expect(screen.getByRole("button", { name: "Create courier.mocks.ts" })).toHaveProperty(
+      "disabled",
+      false,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Create courier.mocks.ts" }));
     await act(() => vi.advanceTimersByTimeAsync(0));
 

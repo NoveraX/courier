@@ -128,6 +128,10 @@ function findConfigFile(startDir: string): string | null {
  *
  * @param cwd - The directory to look in
  * @returns The first of {@link CONFIG_BASENAMES} present there, or `null`
+ * @example
+ * ```ts
+ * findConfigFileAt(process.cwd()); // → "/app/courier.config.ts", or null
+ * ```
  */
 export function findConfigFileAt(cwd: string): string | null {
   for (const basename of CONFIG_BASENAMES) {

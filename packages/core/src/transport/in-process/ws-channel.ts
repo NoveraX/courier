@@ -1,4 +1,6 @@
 import type { Sources } from "../../define/types";
+import { channelHandlersOf } from "../../realtime/implementation";
+import { streamLabel } from "../../realtime/stream-label";
 import type { ChannelHandlers } from "../../realtime/types";
 import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
@@ -40,7 +42,12 @@ export async function executeDirectWSChannel(
   options: ExecuteDirectWSChannelOptions = {},
 ): Promise<InProcessWSChannel> {
   const registry = options.registry ?? sharedPlaygroundWSRegistry;
-  const { endpoint, schema, topicKey } = resolveStreamEndpoint(sources, payload, "ws", EXECUTOR);
+  const { endpoint, schema, topicKey } = resolveStreamEndpoint(
+    sources,
+    payload,
+    "channel",
+    EXECUTOR,
+  );
   const variables = await validateStreamVariables(payload.variables, schema);
 
   const requestId = generateRequestId();
@@ -55,14 +62,14 @@ export async function executeDirectWSChannel(
     requestId,
   });
 
+  const baseTopic = streamLabel(payload);
   let handlers: ChannelHandlers;
   try {
-    handlers = (endpoint as (v: unknown) => ChannelHandlers)(variables);
+    handlers = channelHandlersOf(endpoint, variables, baseTopic);
   } catch (error) {
     throw wrapStreamError(EXECUTOR, "channel factory init failed", error);
   }
 
-  const baseTopic = `${payload.source}.${payload.group ? `${payload.group}.` : ""}${payload.method}`;
   const topic = servedTopic(baseTopic, variables, topicKey);
   const connectionId = crypto.randomUUID();
 

@@ -1,5 +1,7 @@
 import { createLogger } from "../logger";
-import type { SSEContext, SSEHandler } from "../realtime/types";
+import { eventsOf } from "../realtime/implementation";
+import { streamLabel } from "../realtime/stream-label";
+import type { SSEContext } from "../realtime/types";
 import { generateRequestId, registerPlaygroundAbort, studioHooks } from "../studio";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { connectionMetaOf } from "./connection-meta-of";
@@ -143,9 +145,10 @@ export function createSSEHandler(
       headers,
     };
 
+    const label = streamLabel({ source, group, method });
     const sseHandler = resolved.relayed
       ? relayStream(resolved.api, group ?? "", method)
-      : (resolved.endpoint as unknown as SSEHandler<unknown, unknown>);
+      : (ctx: SSEContext) => eventsOf(resolved.endpoint, ctx, label);
     const stream = createSSEStream(sseHandler, sseCtx, {
       connectionId,
       requestId,

@@ -3,6 +3,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { TopicKeyReader } from "../../define/options";
 import type { Sources } from "../../define/types";
 import { checkResponse } from "../../realtime/check-response";
+import { isChannelSchema } from "../../realtime/is-channel-schema";
 import type { SSEEvent } from "../../realtime/types";
 import { resolveEndpoint } from "../../utils/execute-resolve";
 import { type SchemaMetadata, validateSchema } from "../../validation";
@@ -33,7 +34,7 @@ export function headersToRecord(h: Headers): Record<string, string> {
 /** Schema slice exposed to in-process executors (only the fields they touch). */
 export type InProcessStreamSchema = Pick<
   SchemaMetadata,
-  "variables" | "response" | "receive" | "transport"
+  "variables" | "response" | "receive" | "transport" | "bidirectional"
 >;
 
 /** Identifies a stream endpoint inside a Sources map. */
@@ -51,8 +52,12 @@ export interface ResolvedStreamEndpoint {
   topicKey?: TopicKeyReader;
 }
 
+/** What an in-process executor runs: an SSE stream, a WS push, or a WS channel. */
+export type StreamKind = "sse" | "push" | "channel";
+
 /**
- * Resolve a stream endpoint from the sources map and assert its transport.
+ * Resolve a stream endpoint from the sources map and assert its transport,
+ * and for a WS endpoint whether it is a push or a channel.
  *
  * Throws a tagged Error (with `cause.status`) on any failure — mirroring the
  * canonical adapter's 4xx Response semantics but surfaced as an exception so
@@ -61,7 +66,7 @@ export interface ResolvedStreamEndpoint {
 export function resolveStreamEndpoint(
   sources: Sources,
   locator: StreamEndpointLocator,
-  expectedTransport: "sse" | "ws",
+  expected: StreamKind,
   executorName: string,
 ): ResolvedStreamEndpoint {
   const dataSource = Object.hasOwn(sources, locator.source) ? sources[locator.source] : undefined;
@@ -71,19 +76,28 @@ export function resolveStreamEndpoint(
   if (typeof endpoint !== "function") {
     throw streamResolveError(executorName, locator, 400, "method not found");
   }
-  if (schema?.transport !== expectedTransport) {
+  const transport = expected === "sse" ? "sse" : "ws";
+  if (schema?.transport !== transport) {
     throw streamResolveError(
       executorName,
       locator,
       400,
-      `endpoint is not a ${expectedTransport.toUpperCase()} transport`,
+      `endpoint is not a ${transport.toUpperCase()} transport`,
     );
   }
+  const mismatch = kindMismatch(expected, schema);
+  if (mismatch) throw streamResolveError(executorName, locator, 400, mismatch);
   return {
     endpoint,
-    schema: schema ?? {},
+    schema,
     topicKey: options?.topicKey,
   };
+}
+
+function kindMismatch(expected: StreamKind, schema: InProcessStreamSchema): string | undefined {
+  if (expected === "sse") return undefined;
+  const actual = isChannelSchema(schema) ? "channel" : "push";
+  return actual === expected ? undefined : `endpoint is a WS ${actual}, not a ${expected}`;
 }
 
 /**

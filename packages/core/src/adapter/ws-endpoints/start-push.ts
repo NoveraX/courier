@@ -3,7 +3,9 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { createLogger } from "../../logger";
 import { checkResponse } from "../../realtime/check-response";
 import { describeFailure } from "../../realtime/describe-failure";
-import type { WSContext, WSPushHandler } from "../../realtime/types";
+import { eventsOf } from "../../realtime/implementation";
+import type { WSContext } from "../../realtime/types";
+import { unqualifyTopic } from "../../realtime/ws/topic-key";
 import { abortableEvents } from "../../utils/abortable-events";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
@@ -32,7 +34,6 @@ export function startPush(
   subscribeId?: string,
   responseSchema?: StandardSchemaV1,
 ): void {
-  const handler = endpoint as WSPushHandler<unknown, unknown>;
   const ended = new AbortController();
   const wsCtx: WSContext = {
     topic,
@@ -42,9 +43,9 @@ export function startPush(
     signal: ended.signal,
   };
 
-  let generator: AsyncGenerator<unknown>;
+  let generator: AsyncIterable<unknown>;
   try {
-    generator = handler(wsCtx);
+    generator = eventsOf(endpoint, wsCtx, unqualifyTopic(topic).baseTopic);
   } catch (error) {
     /* Thrown on so the subscribe flow refuses the subscription; answering
        here as well left the client told both "failed" and "subscribed". */

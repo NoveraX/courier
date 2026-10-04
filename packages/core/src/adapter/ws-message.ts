@@ -1,5 +1,6 @@
 import { createLogger } from "../logger";
 import { describeFailure, type StreamFailure } from "../realtime/describe-failure";
+import { isChannelSchema } from "../realtime/is-channel-schema";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import { ValidationError, validateSchema } from "../validation";
@@ -44,7 +45,7 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
      not it also declared a schema to check the payload against. Requiring the
      schema meant a channel typed with `.send<T>()` alone dropped every message
      in silence — no handler, no error, nothing to see. */
-  if (!schema?.bidirectional && !schema?.receive) {
+  if (!schema || !isChannelSchema(schema)) {
     refuseMessage(ctx, msg, { code: 4400, message: "Endpoint does not accept messages" });
     return;
   }

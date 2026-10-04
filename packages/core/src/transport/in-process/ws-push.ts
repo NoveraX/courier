@@ -1,5 +1,7 @@
 import type { Sources } from "../../define/types";
-import type { SSEEvent, SSESubscription, WSContext, WSPushHandler } from "../../realtime/types";
+import { eventsOf } from "../../realtime/implementation";
+import { streamLabel } from "../../realtime/stream-label";
+import type { SSEEvent, SSESubscription, WSContext } from "../../realtime/types";
 import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
@@ -32,7 +34,7 @@ export async function executeDirectWSPush(
   payload: ExecuteDirectWSPushPayload,
   options: ExecuteDirectStreamOptions = {},
 ): Promise<SSESubscription> {
-  const { endpoint, schema, topicKey } = resolveStreamEndpoint(sources, payload, "ws", EXECUTOR);
+  const { endpoint, schema, topicKey } = resolveStreamEndpoint(sources, payload, "push", EXECUTOR);
   const variables = await validateStreamVariables(payload.variables, schema);
 
   const requestId = generateRequestId();
@@ -53,7 +55,7 @@ export async function executeDirectWSPush(
     else options.signal.addEventListener("abort", () => ownAC.abort(), { once: true });
   }
 
-  const baseTopic = `${payload.source}.${payload.group ? `${payload.group}.` : ""}${payload.method}`;
+  const baseTopic = streamLabel(payload);
   const wsCtx: WSContext = {
     topic: servedTopic(baseTopic, variables, topicKey),
     variables: variables ?? {},
@@ -73,8 +75,7 @@ export async function executeDirectWSPush(
   const instr = beginStream(meta, options.requestId);
   instr?.updateMeta({ responseHeaders: headersToRecord(headers) });
 
-  const handler = endpoint as WSPushHandler<unknown, unknown>;
-  const events = liftToEvents(abortableEvents(handler(wsCtx), ownAC.signal));
+  const events = liftToEvents(abortableEvents(eventsOf(endpoint, wsCtx, baseTopic), ownAC.signal));
   const subscription = wrapPushAsSubscription(
     schema.response ? checkedEvents(events, schema.response) : events,
     ownAC,

@@ -10,7 +10,8 @@ const UNAVAILABLE: ReadonlySet<string> = new Set(["EADDRNOTAVAIL", "EAFNOSUPPORT
 /**
  * Listen on a second loopback address, handing every request and upgrade
  * to `primary` — Express and Socket.IO alike — so one server answers at
- * both. The companion closes with `primary`.
+ * both. The companion closes with `primary`, at once when `primary` closed
+ * while the companion was still binding.
  *
  * @param primary - The server Studio listens on
  * @param port - The port it listens on
@@ -40,6 +41,12 @@ export function listenLoopbackCompanion(
       resolve();
     });
     companion.listen(port, address, () => {
+      /* The primary closed while this one was binding: nothing is left to serve. */
+      if (!primary.listening) {
+        companion.close();
+        resolve();
+        return;
+      }
       primary.once("close", () => {
         companion.close();
         companion.closeAllConnections();

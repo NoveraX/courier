@@ -59,6 +59,17 @@ async function until(check: () => boolean): Promise<void> {
   throw new Error("timed out");
 }
 
+/** Whether nothing listens on the port at the address, found by listening there. */
+async function free(port: number, host: string): Promise<boolean> {
+  const probe = createNetServer();
+  const listened = await new Promise<boolean>((resolve) => {
+    probe.once("error", () => resolve(false));
+    probe.listen(port, host, () => resolve(true));
+  });
+  if (listened) await new Promise<void>((resolve) => probe.close(() => resolve()));
+  return listened;
+}
+
 function holds(): number {
   return process.getActiveResourcesInfo().filter((kind) => kind === "Timeout").length;
 }
@@ -173,8 +184,9 @@ describe("Studio with less pinned", () => {
     const { handle, started } = startup(server, { port: 0 });
 
     handle.start();
-    handle.close();
+    const closing = handle.close();
     const afterClose = holds();
+    await closing;
     handle.configRead(config({ host: "127.0.0.1" }));
     await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -202,6 +214,37 @@ describe("Studio with less pinned", () => {
 
     expect(errors[0]?.message).toContain(String(taken));
     expect(afterListen).toBe(before);
+  });
+});
+
+describe("Studio closed while it starts to listen", () => {
+  it("waits for the listen under way, tells no one it is ready, and leaves nothing listening once the server closes", async ({
+    skip,
+  }) => {
+    if (!(await free(0, "::1"))) skip();
+    const server = httpServer();
+    const port = await freePort();
+    const told = vi.fn();
+    const handle = createStudioStartup(server, {
+      port,
+      host: "localhost",
+      onReady: told,
+      onStarted: told,
+    });
+    handle.configRead(config(undefined));
+    /* The primary address listens, and the second loopback one is still binding. */
+    const closing = new Promise<void>((resolve) => {
+      server.once("listening", () => resolve(handle.close()));
+    });
+
+    handle.start();
+    await closing;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(told).not.toHaveBeenCalled();
+    expect(await free(port, "127.0.0.1")).toBe(true);
+    expect(await free(port, "::1")).toBe(true);
   });
 });
 

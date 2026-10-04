@@ -20,6 +20,11 @@ export interface StudioAddress {
   url(): string;
   /** The port listened on, once listening. */
   port(): number | null;
+  /**
+   * Resolves once listening has succeeded, failed or been closed: a close
+   * waits for a listen still under way, which would otherwise come up after it.
+   */
+  settled(): Promise<void>;
 }
 
 /**
@@ -49,8 +54,14 @@ export function listenStudio(httpServer: Server, options: ListenOptions): Studio
   const { port, host, onReady, onError } = options;
   let url = formatStudioUrl(host, port);
   let listeningOn: number | null = null;
+  let settle: () => void = () => undefined;
+  const settled = new Promise<void>((resolve) => {
+    settle = resolve;
+  });
+  httpServer.once("close", () => settle());
 
   const fail = (err: Error, at: string): void => {
+    settle();
     const failure = errnoCode(err) === "EADDRINUSE" ? new StudioPortInUseError(port, at, err) : err;
     if (onError) onError(failure);
     else log.error("Courier Studio could not start", failure);
@@ -63,6 +74,9 @@ export function listenStudio(httpServer: Server, options: ListenOptions): Studio
     const address = httpServer.address();
     const bound = typeof address === "object" && address !== null ? address.port : port;
     const ready = (): void => {
+      settle();
+      /* Closed while the second loopback address was being bound. */
+      if (!httpServer.listening) return;
       listeningOn = bound;
       url = formatStudioUrl(host, bound);
       onReady?.(url);
@@ -85,5 +99,5 @@ export function listenStudio(httpServer: Server, options: ListenOptions): Studio
     process.nextTick(() => fail(error, host));
   }
 
-  return { url: () => url, port: () => listeningOn };
+  return { url: () => url, port: () => listeningOn, settled: () => settled };
 }

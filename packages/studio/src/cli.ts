@@ -3,7 +3,8 @@ import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
-import { defineCommand, runMain } from "citty";
+import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
+import { type ArgsDef, defineCommand, runMain } from "citty";
 import { closeOnFatal } from "./close-on-fatal";
 import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
@@ -24,31 +25,46 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-const main = defineCommand({
-  meta: {
-    name: "courier-studio",
+const SUMMARY = "Visual debugging studio for Courier projects";
+
+const ARGS = {
+  port: {
+    type: "string",
+    valueHint: "port",
+    description: `Server port (falls back to studio.port, then ${STUDIO_DEFAULT_PORT})`,
+  },
+  host: {
+    type: "string",
+    valueHint: "host",
+    description: `Server host (falls back to studio.host, then ${STUDIO_DEFAULT_HOST})`,
+  },
+  cwd: {
+    type: "string",
+    valueHint: "dir",
+    description: "Project root directory (default: current working directory)",
+  },
+  open: {
+    type: "boolean",
+    description: "Open a browser on start (falls back to studio.open); --no-open to keep it closed",
+  },
+} as const satisfies ArgsDef;
+
+/* citty's own help colours a pipe and a log file; this one follows the
+   terminal, as every line Studio prints does. */
+async function printHelp(): Promise<void> {
+  const help = {
+    product: "Courier Studio",
     version: studioVersion(),
-    description: "Courier Studio — standalone inspection & debugging server",
-  },
-  args: {
-    port: {
-      type: "string",
-      description: `Server port (falls back to studio.port, then ${STUDIO_DEFAULT_PORT})`,
-    },
-    host: {
-      type: "string",
-      description: `Server host (falls back to studio.host, then ${STUDIO_DEFAULT_HOST})`,
-    },
-    cwd: {
-      type: "string",
-      description: "Project root directory (default: current working directory)",
-    },
-    open: {
-      type: "boolean",
-      description:
-        "Open a browser on start (falls back to studio.open); --no-open to keep it closed",
-    },
-  },
+    summary: SUMMARY,
+    command: "courier-studio",
+    options: helpOptions(ARGS),
+  };
+  console.log(formatHelp(help, styleFor(process.stdout)));
+}
+
+const main = defineCommand({
+  meta: { name: "courier-studio", version: studioVersion(), description: SUMMARY },
+  args: ARGS,
   run({ args }) {
     /* Studio takes no command: an unknown word is refused rather than
        ignored, so `courier-studio init` does not start the server. */
@@ -112,4 +128,4 @@ function closeOnSignals(server: { close: () => Promise<void> }): void {
   }
 }
 
-runMain(main);
+runMain(main, { showUsage: printHelp });

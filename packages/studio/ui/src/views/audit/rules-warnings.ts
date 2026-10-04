@@ -80,13 +80,13 @@ function middlewareOverhead(stats: Map<string, EndpointStats>): AuditItem[] {
   ];
 }
 
+/* A read over another verb than GET is one `.reads()` declared, which is
+   valid — a search sent as POST; a write over GET is not, since GET answers
+   are cached and repeated. */
 function httpMethodMismatch(stats: Map<string, EndpointStats>): AuditItem[] {
-  const matched = [...stats.values()].filter((s) => {
-    if (!s.type || s.httpMethods.size === 0) return false;
-    if (s.type === "query" && !s.httpMethods.has("GET")) return true;
-    if (s.type === "mutation" && s.httpMethods.has("GET")) return true;
-    return false;
-  });
+  const matched = [...stats.values()].filter(
+    (s) => s.type === "mutation" && s.httpMethods.has("GET"),
+  );
   if (matched.length === 0) return [];
   return [
     {
@@ -94,9 +94,9 @@ function httpMethodMismatch(stats: Map<string, EndpointStats>): AuditItem[] {
       severity: "warning",
       category: "best-practices",
       title: "HTTP method mismatch",
-      description:
-        "Endpoint type doesn't match HTTP method (e.g. query using POST, mutation using GET).",
-      suggestion: "Use GET for queries and POST/PUT/PATCH/DELETE for mutations.",
+      description: "A write is sent over GET, whose answers are cached and may be repeated.",
+      suggestion:
+        "Declare it with .reads() if it only reads, or send it with a verb that writes: POST, PUT, PATCH or DELETE.",
       endpoints: matched.map((s) => ({
         ...formatEp(s),
         detail: `type: ${s.type}, methods: ${[...s.httpMethods].join("/")}`,

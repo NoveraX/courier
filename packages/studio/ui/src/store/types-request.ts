@@ -7,6 +7,9 @@ export type RequestStatus = "pending" | "success" | "error" | "aborted" | "valid
 /** What a request validates against its endpoint's schemas. */
 export type ValidationTarget = "variables" | "response";
 
+/** The HTTP version a request went over, as a protocol's name for it. */
+export type HttpVersion = "HTTP/1.0" | "HTTP/1.1" | "HTTP/2" | "HTTP/3";
+
 export interface RequestEntry {
   id: string;
   source: string;
@@ -44,6 +47,8 @@ export interface RequestEntry {
   validated?: Partial<Record<ValidationTarget, "passed" | "failed">> | undefined;
   startedAt: number;
   url?: string | undefined;
+  /** The HTTP version the request went over, when its runtime could tell. */
+  httpVersion?: HttpVersion | undefined;
   pinned?: boolean | undefined;
   sessionId: string;
   /** What the cache middleware did: answered from a stored response (`age` ms old), or missed. */

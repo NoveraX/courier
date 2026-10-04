@@ -47,6 +47,8 @@ export interface SavedRequest {
   error?: { type: string; status?: number; message: string } | undefined;
   startedAt: number;
   url?: string | undefined;
+  /** The HTTP version the request went over, when its runtime could tell. */
+  httpVersion?: string | undefined;
   sessionId: string;
 }
 

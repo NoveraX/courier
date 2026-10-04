@@ -105,6 +105,19 @@ describe("the request inspector", () => {
     expect(panel.queryByText("Variables validated")).toBeNull();
   });
 
+  it("names the HTTP version the request went over, or just HTTP when it is not known", async () => {
+    useStudioStore.setState({ requests: [ok, { ...failed, httpVersion: "HTTP/2" }] });
+
+    await openShell("/next/timeline?req=failed&tab=overview");
+    expect(within(inspector()).getByText("HTTP/2")).toBeTruthy();
+
+    cleanup();
+    await openShell("/next/timeline?req=ok");
+    const panel = within(inspector());
+    expect(panel.queryByText(/^HTTP\/\d/)).toBeNull();
+    expect(panel.getAllByText("HTTP")).toHaveLength(2);
+  });
+
   it("keeps the tab shown in the address, and shows the answer as a tree", async () => {
     const router = await openShell("/next/timeline?req=ok");
 

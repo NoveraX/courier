@@ -63,8 +63,16 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     error: errorOf(raw.error),
     startedAt: optionalNumber(raw.startedAt) ?? Date.now(),
     url: optionalString(raw.url),
+    httpVersion: httpVersionOf(raw.httpVersion),
     sessionId: String(raw.sessionId ?? ""),
   };
+}
+
+const HTTP_VERSIONS: ReadonlySet<string> = new Set(["HTTP/1.0", "HTTP/1.1", "HTTP/2", "HTTP/3"]);
+
+/* A version the page says a request went over, kept only when it is one. */
+function httpVersionOf(value: unknown): string | undefined {
+  return typeof value === "string" && HTTP_VERSIONS.has(value) ? value : undefined;
 }
 
 /* A session is written down and exported to be handed around: no credentials go with it. */

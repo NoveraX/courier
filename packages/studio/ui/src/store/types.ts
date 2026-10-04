@@ -9,6 +9,7 @@ export type {
 } from "./types-events";
 
 export type {
+  HttpVersion,
   RequestEntry,
   RequestStatus,
   StreamEventRecord,

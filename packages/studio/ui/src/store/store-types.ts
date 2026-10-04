@@ -41,6 +41,8 @@ export interface StudioState {
   // Requests
   requests: RequestEntry[];
   paused: boolean;
+  /** Requests that began while recording was paused, held out of the list until it resumes. */
+  heldRequests: RequestEntry[];
   /** The saved session shown in place of the live requests; `null` while they show. */
   shownSession: ShownSession | null;
 
@@ -101,6 +103,7 @@ export interface StudioState {
   setMocksFileStatus: (status: MocksFileStatus | null) => void;
 
   // Actions — Requests
+  /** Pause recording, or resume it: the requests held meanwhile join the list on top. */
   togglePaused: () => void;
   togglePreserveLog: () => void;
   clearRequests: () => void;

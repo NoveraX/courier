@@ -1,7 +1,7 @@
 /**
  * What a page is told of Studio when it connects: Studio's version, when it
  * started, and the project by its package's name — or its folder's, when the
- * package names none or cannot be read.
+ * package names none or cannot be read — with the packages it depends on.
  */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -31,8 +31,31 @@ describe("studioInfo", () => {
     expect(studioInfo(root, "1.2.3", 1_700)).toEqual({
       version: "1.2.3",
       startedAt: 1_700,
-      project: { name: "acme-web" },
+      project: { name: "acme-web", dependencies: [] },
     });
+  });
+
+  it("lists the packages the project depends on, dev ones included, once each and sorted", () => {
+    const root = project(
+      JSON.stringify({
+        dependencies: { react: "^19.0.0", "react-dom": "^19.0.0" },
+        devDependencies: { vite: "^7.0.0", react: "^19.0.0" },
+        peerDependencies: { typescript: "*" },
+      }),
+    );
+
+    expect(studioInfo(root, "1.2.3").project.dependencies).toEqual(["react", "react-dom", "vite"]);
+  });
+
+  it("lists no packages when the manifest has no usable dependency maps, or none at all", () => {
+    for (const manifest of [
+      undefined,
+      "{ not json",
+      "[]",
+      JSON.stringify({ dependencies: ["react"], devDependencies: "vite" }),
+    ]) {
+      expect(studioInfo(project(manifest), "1.2.3").project.dependencies).toEqual([]);
+    }
   });
 
   it("names the project after its folder when the package names nothing usable", () => {

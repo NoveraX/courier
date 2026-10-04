@@ -1,7 +1,8 @@
 /**
  * @vitest-environment jsdom
  *
- * The rebuilt setup: picking a framework shows its steps; each copy
+ * The rebuilt setup: the framework the project's packages tell is picked
+ * until another is; picking a framework shows its steps; each copy
  * completes its step, here and in the sidebar's progress; an attached app
  * completes the connect step and opens the way to the Timeline — and a
  * project set up already goes straight on, unless the setup was asked for.
@@ -62,6 +63,7 @@ beforeEach(() => {
   localStorage.clear();
   useSetupStore.setState({ frameworkId: null, copied: new Set() });
   useStudioStore.setState({
+    studioInfo: null,
     connected: true,
     connectionStatus: "connected",
     requests: [],
@@ -85,6 +87,31 @@ describe("the setup", () => {
 
     expect(screen.getByText("Add the Vite plugin")).toBeTruthy();
     expect(screen.getByText("0 of 4 complete")).toBeTruthy();
+  });
+
+  it("picks the framework the project's packages tell, and names them, until another is picked", async () => {
+    useStudioStore.setState({
+      studioInfo: {
+        version: "1.2.3",
+        startedAt: 1_700,
+        project: { name: "acme-web", dependencies: ["react", "react-dom", "vite"] },
+      },
+    });
+
+    await open("/next");
+
+    expect(screen.getByText("detected: vite · react")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^React/ }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+    expect(screen.getByText("Add the Vite plugin")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Vue/ }));
+
+    expect(screen.getByRole("button", { name: /^Vue/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: /^React/ }).getAttribute("aria-pressed")).toBe(
+      "false",
+    );
   });
 
   it("completes a step when its command is copied", async () => {

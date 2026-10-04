@@ -2,6 +2,7 @@ import { Navigate, useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { attachedApps } from "@/features/runtimes/attached-apps";
+import { detectFramework } from "@/features/welcome/detect-framework";
 import { FRAMEWORKS } from "@/features/welcome/frameworks";
 import { setupProgress } from "@/features/welcome/setup-progress";
 import { useSetupStore } from "@/features/welcome/setup-store";
@@ -12,10 +13,11 @@ import { LiveCapture } from "./live-capture";
 import { StepsCard } from "./steps-card";
 
 /**
- * The setup: pick the framework, follow its steps — each completes as its
- * command or snippet is copied, the connect step once an app attaches — and
- * watch the first requests arrive beside it. A project set up already goes
- * on to the Timeline, unless the setup was asked for.
+ * The setup: pick the framework — the one the project's packages tell is
+ * picked until another is — follow its steps, each complete as its command
+ * or snippet is copied and the connect step once an app attaches, and watch
+ * the first requests arrive beside it. A project set up already goes on to
+ * the Timeline, unless the setup was asked for.
  *
  * @returns The screen
  * @example
@@ -29,10 +31,14 @@ export function WelcomeScreen(): React.ReactNode {
   const copied = useSetupStore((s) => s.copied);
   const select = useSetupStore((s) => s.select);
   const snapshot = useStudioStore((s) => s.bindingSnapshot);
+  const dependencies = useStudioStore((s) => s.studioInfo?.project.dependencies);
+  const detected = dependencies ? detectFramework(dependencies) : null;
+  const detectedId = detected?.id;
   const attached = snapshot.runtimeCount > 0;
   useEffect(() => {
     if (fromLink) select(fromLink);
-  }, [fromLink, select]);
+    else if (detectedId && frameworkId === null) select(detectedId);
+  }, [fromLink, detectedId, frameworkId, select]);
   if (!setup && (isWelcomeCompleted() || (attached && !fromLink))) {
     if (attached) markWelcomeCompleted();
     return <Navigate to="/timeline" replace />;
@@ -70,6 +76,7 @@ export function WelcomeScreen(): React.ReactNode {
             selected={frameworkId}
             onSelect={select}
             attached={attachedApps(snapshot)[0]?.id}
+            detected={detected?.label}
           />
           {framework ? (
             <StepsCard framework={framework} />

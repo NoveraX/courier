@@ -36,7 +36,7 @@ export function StudioShell(): React.ReactNode {
   return (
     <div
       data-shell=""
-      className="grid h-screen grid-cols-[236px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_24px] overflow-hidden bg-bg font-sans text-ui tracking-ui text-fg antialiased max-[820px]:grid-cols-[minmax(0,1fr)]"
+      className="grid h-screen grid-cols-[236px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_24px] overflow-hidden bg-bg max-[820px]:grid-cols-[minmax(0,1fr)]"
     >
       <Sidebar />
       <div className="row-start-1 flex min-h-0 min-w-0 flex-col">

@@ -30,7 +30,7 @@ interface CodeLinesProps {
  */
 export function CodeLines({ code, isHighlighted }: CodeLinesProps): React.ReactNode {
   return (
-    <pre className="overflow-auto pt-3 pb-3.5 text-control leading-[1.7]">
+    <pre className="overflow-auto pt-6 pb-6.5 text-control leading-[1.7]">
       {code.split("\n").map((line, index) => (
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: a snippet's lines are fixed; the number is the line's identity

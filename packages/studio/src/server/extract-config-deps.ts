@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 
@@ -54,8 +54,10 @@ export function extractConfigDeps(entries: readonly string[]): Map<string, strin
   const absent = new Set<string>();
 
   const walk = (file: string, aliases: PathAliases): void => {
-    const normalized = resolve(file);
-    if (hashes.has(normalized) || !existsSync(normalized)) return;
+    if (!existsSync(file)) return;
+    /* A module reached through a link and by its own path is one module. */
+    const normalized = realpathSync(resolve(file));
+    if (hashes.has(normalized)) return;
     const { contentHash, specifiers } = readModuleImports(normalized);
     hashes.set(normalized, contentHash);
 

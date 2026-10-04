@@ -77,8 +77,15 @@ function importBases(fromDir: string, specifier: string, aliases: PathAliases): 
 }
 
 /** True for a relative or absolute path — false for a bare/package specifier */
+/* `.` and `..` name a directory relative to the importer, as `./` does. */
 function isPathSpecifier(specifier: string): boolean {
-  return specifier.startsWith("./") || specifier.startsWith("../") || isAbsolute(specifier);
+  return (
+    specifier === "." ||
+    specifier === ".." ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../") ||
+    isAbsolute(specifier)
+  );
 }
 
 /* Adds to `tried` each path tried that the loader does not take. A FIFO a

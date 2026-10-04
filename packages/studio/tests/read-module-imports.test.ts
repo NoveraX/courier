@@ -41,7 +41,8 @@ describe("readModuleImports", () => {
     expect(readImportSpecifiers(file("a.ts", `export const x = 1;`))).toEqual([]);
   });
 
-  it("reads value, type-only, default, namespace and side-effect imports", () => {
+  /* A module imported for its types alone is erased before the config runs. */
+  it("reads value, default, namespace and side-effect imports, and leaves out type-only ones", () => {
     const path = file(
       "a.ts",
       `import { a } from "./value";
@@ -55,12 +56,11 @@ describe("readModuleImports", () => {
       "./default",
       "./namespace",
       "./side-effect",
-      "./type",
       "./value",
     ]);
   });
 
-  it("reads re-export sources and ignores local exports", () => {
+  it("reads re-export sources, and ignores local exports and type-only re-exports", () => {
     const path = file(
       "a.ts",
       `export { a } from "./named";
@@ -70,12 +70,7 @@ describe("readModuleImports", () => {
        export const local = 1;`,
     );
 
-    expect(readImportSpecifiers(path).sort()).toEqual([
-      "./all",
-      "./named",
-      "./namespaced",
-      "./types",
-    ]);
+    expect(readImportSpecifiers(path).sort()).toEqual(["./all", "./named", "./namespaced"]);
   });
 
   it("reads a dynamic import written as a literal", () => {
@@ -102,7 +97,7 @@ describe("readModuleImports", () => {
     expect(readImportSpecifiers(path)).toEqual([]);
   });
 
-  it("reads TypeScript syntax the runtime never sees", () => {
+  it("reads through TypeScript syntax the runtime never sees, keeping an import that brings a value", () => {
     const path = file(
       "a.ts",
       `import type { A } from "./a";
@@ -113,7 +108,7 @@ describe("readModuleImports", () => {
        const x = <T,>(v: T): T => v satisfies T;`,
     );
 
-    expect(readImportSpecifiers(path).sort()).toEqual(["./a", "./b"]);
+    expect(readImportSpecifiers(path).sort()).toEqual(["./b"]);
   });
 
   it("reads JSX from a .tsx file", () => {

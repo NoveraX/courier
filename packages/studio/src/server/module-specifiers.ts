@@ -23,12 +23,15 @@ export function moduleSpecifiers(fileName: string, source: string): string[] {
   const { module } = parseSync(fileName, source);
   const specifiers: string[] = [];
 
+  /* A module imported for its types alone is erased before the config
+     runs, so a change to it changes nothing Studio loads. */
   for (const entry of module.staticImports) {
-    specifiers.push(entry.moduleRequest.value);
+    const typesOnly = entry.entries.length > 0 && entry.entries.every((named) => named.isType);
+    if (!typesOnly) specifiers.push(entry.moduleRequest.value);
   }
   for (const statement of module.staticExports) {
     for (const entry of statement.entries) {
-      if (entry.moduleRequest) specifiers.push(entry.moduleRequest.value);
+      if (entry.moduleRequest && !entry.isType) specifiers.push(entry.moduleRequest.value);
     }
   }
   for (const entry of module.dynamicImports) {

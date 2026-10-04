@@ -37,19 +37,47 @@ describe("the checks", () => {
     ]);
   });
 
-  it("say what was not checked, and why", () => {
+  it("say what was not checked, and why, without claiming it passed", () => {
     const failed = requestEntry({
       status: "error",
       hasValidation: validated,
       validated: { variables: "passed" },
     });
+    const pending = requestEntry({
+      status: "pending",
+      hasValidation: validated,
+      validated: { variables: "passed" },
+    });
 
-    expect(requestChecks(requestEntry()).map((c) => [c.detail, c.state])).toEqual([
-      ["The endpoint declares no input schema", "idle"],
-      ["The endpoint declares no response schema", "idle"],
-      ["No middleware ran", "idle"],
+    expect(requestChecks(requestEntry()).map((c) => [c.label, c.detail, c.state])).toEqual([
+      ["No input validation", "The endpoint declares no input schema", "idle"],
+      ["No response validation", "The endpoint declares no response schema", "idle"],
+      ["Middleware", "No middleware ran", "idle"],
     ]);
-    expect(requestChecks(failed)[1]?.detail).toBe("Skipped · no response to check");
+    expect(requestChecks(failed)[1]).toMatchObject({
+      label: "Response not validated",
+      detail: "Skipped · no response to check",
+    });
+    expect(requestChecks(pending)[1]).toMatchObject({
+      label: "Response not validated yet",
+      detail: "Waiting for the response",
+    });
+  });
+
+  it("say the variables were rejected when the input schema refused them", () => {
+    const r = requestEntry({
+      status: "validation_error",
+      variables: { page: -1 },
+      hasValidation: validated,
+      validated: { variables: "failed" },
+    });
+
+    expect(requestChecks(r)[0]).toEqual({
+      label: "Variables rejected",
+      detail: "Refused by the input schema; nothing was sent",
+      meta: "1 field",
+      state: "err",
+    });
   });
 
   it("name the issues a broken response has, and the cache when it took part", () => {
@@ -68,7 +96,7 @@ describe("the checks", () => {
     const checks = requestChecks(r);
 
     expect(checks[1]).toEqual({
-      label: "Response validated",
+      label: "Response schema mismatch",
       detail: "1 issue · hits.1.price",
       meta: "1 issue",
       state: "warn",

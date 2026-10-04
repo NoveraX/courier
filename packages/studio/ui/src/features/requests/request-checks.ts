@@ -1,5 +1,5 @@
 import { formatDuration } from "@/lib/formatters";
-import type { RequestEntry } from "@/store/types";
+import type { RequestEntry, ValidationIssue } from "@/store/types";
 import { isStreamRequest, requestStateOf } from "./request-state";
 
 /** A check the Overview lists: what Courier verified of the request, and how it went. */
@@ -15,40 +15,51 @@ function fieldCount(value: unknown): number {
 }
 
 function variablesCheck(r: RequestEntry): RequestCheck {
-  const label = "Variables validated";
   const fields = fieldCount(r.variables);
   const meta = fields > 0 ? `${fields} ${fields === 1 ? "field" : "fields"}` : "";
-  if (!r.hasValidation.variables)
-    return { label, detail: "The endpoint declares no input schema", meta, state: "idle" };
+  if (!r.hasValidation.variables) {
+    const detail = "The endpoint declares no input schema";
+    return { label: "No input validation", detail, meta, state: "idle" };
+  }
   if (r.validated?.variables === "failed") {
-    return { label, detail: "Refused by the input schema; nothing was sent", meta, state: "err" };
+    const detail = "Refused by the input schema; nothing was sent";
+    return { label: "Variables rejected", detail, meta, state: "err" };
   }
   if (r.validated?.variables === "passed")
-    return { label, detail: "Matched the input schema", meta, state: "ok" };
-  return { label, detail: "Not run", meta, state: "idle" };
+    return { label: "Variables validated", detail: "Matched the input schema", meta, state: "ok" };
+  return { label: "Variables not validated", detail: "Not run", meta, state: "idle" };
+}
+
+function mismatchCheck(issues: ValidationIssue[]): RequestCheck {
+  const [first] = issues;
+  const count = `${issues.length} ${issues.length === 1 ? "issue" : "issues"}`;
+  const detail = first ? `${count} · ${first.path || "root"}` : count;
+  return { label: "Response schema mismatch", detail, meta: count, state: "warn" };
 }
 
 function responseCheck(r: RequestEntry): RequestCheck {
-  const label = "Response validated";
-  const issues = r.error?.validationIssues ?? [];
-  if (!r.hasValidation.response)
-    return { label, detail: "The endpoint declares no response schema", meta: "", state: "idle" };
-  if (r.validated?.response === "failed") {
-    const [first] = issues;
-    const count = `${issues.length} ${issues.length === 1 ? "issue" : "issues"}`;
-    return {
-      label,
-      detail: first ? `${count} · ${first.path || "root"}` : count,
-      meta: count,
-      state: "warn",
-    };
+  if (!r.hasValidation.response) {
+    const detail = "The endpoint declares no response schema";
+    return { label: "No response validation", detail, meta: "", state: "idle" };
   }
-  if (r.validated?.response === "passed")
-    return { label, detail: "Matched the response schema", meta: "", state: "ok" };
-  const state = requestStateOf(r);
-  const detail =
-    state === "pending" ? "Waiting for the response" : "Skipped · no response to check";
-  return { label, detail, meta: "", state: "idle" };
+  if (r.validated?.response === "failed") return mismatchCheck(r.error?.validationIssues ?? []);
+  if (r.validated?.response === "passed") {
+    const detail = "Matched the response schema";
+    return { label: "Response validated", detail, meta: "", state: "ok" };
+  }
+  return requestStateOf(r) === "pending"
+    ? {
+        label: "Response not validated yet",
+        detail: "Waiting for the response",
+        meta: "",
+        state: "idle",
+      }
+    : {
+        label: "Response not validated",
+        detail: "Skipped · no response to check",
+        meta: "",
+        state: "idle",
+      };
 }
 
 function middlewareCheck(r: RequestEntry): RequestCheck {
@@ -109,7 +120,8 @@ function streamChecks(r: RequestEntry): RequestCheck[] {
  * What Courier checked of a request, in the order it ran the checks: the
  * variables against the input schema, the answer against the response
  * schema, the middleware chain and — when it took part — the cache; for a
- * stream, its handshake, its connection and its middleware.
+ * stream, its handshake, its connection and its middleware. Each title
+ * says what happened, so a check that did not run never reads as passed.
  *
  * @param r - The request
  * @returns The checks

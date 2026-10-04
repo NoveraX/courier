@@ -99,7 +99,8 @@ describe("the request inspector", () => {
       "Snippets",
     ]);
     expect(panel.getByText("Properties")).toBeTruthy();
-    expect(panel.getByText("Variables validated")).toBeTruthy();
+    expect(panel.getByText("No input validation")).toBeTruthy();
+    expect(panel.queryByText("Variables validated")).toBeNull();
   });
 
   it("keeps the tab shown in the address, and shows the answer as a tree", async () => {

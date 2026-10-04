@@ -4,8 +4,8 @@
  * A caller given the incoming request forwards its allowed headers — the
  * end user's token, and their cookie where the source names it. Headers the caller sets itself, as a
  * default or for one call, are its explicit choice: a service token for a
- * backend the user may not reach directly. The forwarded ones used to be
- * written last and replaced them, so the service token never left.
+ * backend the user may not reach directly, which the forwarded ones do not
+ * replace.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

@@ -2,11 +2,10 @@
  * A stream endpoint read back through the Courier SSE client, end to end:
  * the real handler answers the client's own requests.
  *
- * String data used to be written raw while the client parsed every event as
- * JSON, so "hello" was dropped and "42" arrived as a number. A stream the
- * server finished was reconnected and replayed from the start, forever; a
- * failed one sent its error text as an ordinary event, then replayed too;
- * and leaving a `for await` kept the connection open.
+ * String data arrives as it was sent — "hello" as itself, "42" as a string —
+ * a stream the server finishes ends rather than replaying from the start, a
+ * failed one ends with its error rather than an ordinary event, and leaving a
+ * `for await` closes the connection.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";

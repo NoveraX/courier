@@ -1,7 +1,7 @@
 /**
- * An upstream answer the proxy cannot parse. The 200 it came with used to be
- * passed on, so the browser saw a success carrying `{ success: false }` where
- * the endpoint's data should be; the same call in direct mode threw.
+ * An upstream answer the proxy cannot parse fails the call, as it does in
+ * direct mode: the browser does not see the 200 it came with, a success
+ * carrying `{ success: false }` where the endpoint's data should be.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";

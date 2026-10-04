@@ -1,7 +1,7 @@
 /**
  * A body the operation does not require — a list, a scalar — may be left
- * out of a call. The call signature used to demand it, and a call made
- * without it was validated as an empty object, which no list schema takes.
+ * out of a call: the signature does not demand it, and a call made without it
+ * is not validated as an empty object, which no list schema takes.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";

@@ -1,11 +1,9 @@
 /**
  * @vitest-environment jsdom
  *
- * The events of a stream the Playground runs. Each one copied the whole list
- * kept so far, and the list grew for as long as the stream ran: a stream of
- * a few thousand events made every new one slower to show. The Playground
- * now keeps the last 500, says how many earlier ones it let go, and counts
- * all of them.
+ * The events of a stream the Playground runs: it keeps the last 500, says how
+ * many earlier ones it let go, and counts all of them, so a stream of a few
+ * thousand events does not make every new one slower to show.
  */
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

@@ -84,7 +84,7 @@ describe("runTransportMiddleware", () => {
     expect(order).toEqual(["source"]);
   });
 
-  it("runs the middleware declared on the endpoint, which it used to skip", async () => {
+  it("runs the middleware declared on the endpoint", async () => {
     const order: string[] = [];
 
     await run(sourcesWith({ endpointLevel: [recorder("endpoint", order)] }));

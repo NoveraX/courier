@@ -1,10 +1,10 @@
 /**
  * An operation that answers a GET with a stream of events is generated as a
  * stream a client subscribes to, `stream.get(…)`, and its events are typed
- * by the schema the specification gives them. It used to be generated as a
- * JSON GET, which read the stream as one body and failed. A POST that answers
- * with events has no stream builder, and stays an HTTP endpoint. Through the
- * proxy, the stream is relayed from the API.
+ * by the schema the specification gives them — not as a JSON GET, which would
+ * read the stream as one body and fail. A POST that answers with events has
+ * no stream builder, and stays an HTTP endpoint. Through the proxy, the
+ * stream is relayed from the API.
  */
 import { createProxyCaller } from "@noverax/courier";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

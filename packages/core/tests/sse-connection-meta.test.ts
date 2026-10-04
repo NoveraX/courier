@@ -23,8 +23,7 @@ function serveFeed(): void {
  * The metadata an SSE stream carries is what `onSSEConnect` returned, and the
  * other SSE hooks are typed from that return. One that hands back anything
  * but an object, or nothing, is refused as a throw from it is; one that
- * returns nothing gives the stream no fields, where the hooks used to get
- * `undefined` for it.
+ * returns nothing gives the stream no fields, not `undefined`.
  */
 describe("the metadata the SSE hooks receive", () => {
   it("is typed from what onSSEConnect returns", () => {

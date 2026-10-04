@@ -1,10 +1,9 @@
 /**
  * The end of a WebSocket subscription reaching the endpoint that serves it.
  *
- * Ending a push subscription used to set a flag read only after the handler's
- * next yield, and the handler's context had no signal: a push endpoint waiting
- * on an upstream event kept its timers and upstream subscriptions after the
- * client had gone, for the life of the process.
+ * Ending a push subscription ends the handler's wait and fires its context's
+ * signal, so a push endpoint waiting on an upstream event does not keep its
+ * timers and upstream subscriptions after the client has gone.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";

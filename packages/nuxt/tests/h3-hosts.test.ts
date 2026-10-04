@@ -3,10 +3,11 @@
  *
  * Nuxt 3 and 4 run Nitro 2, whose events come from h3 1.x and wrap Node's
  * request and response. h3 2.x hands the route a Web `Request` instead. The
- * adapter used to pass every event to the `fromWebHandler` of whichever h3
- * *it* resolved, and a package manager is free to resolve a different major
- * than Nitro's: in a fresh Nuxt 4 app npm picked h3 2.x for the adapter, and
- * every call answered 500 with "request.headers.get is not a function".
+ * adapter reads the event as the h3 that made it does, whichever major its
+ * own dependency resolves to — a package manager is free to pick a different
+ * one than Nitro's, as npm does in a fresh Nuxt 4 app, where reading it the
+ * other way answers every call 500 with "request.headers.get is not a
+ * function".
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";

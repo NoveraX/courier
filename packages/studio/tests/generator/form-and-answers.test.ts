@@ -1,9 +1,8 @@
 /**
  * A generated client sends a url-encoded body url-encoded, as Stripe and
- * Twilio take every write, and reads an answer that is not JSON — a CSV, a
- * PDF — as what it is: text or a blob. Both used to fail: the fields went as
- * JSON, and the answer failed to parse as JSON. Directly and through the
- * proxy, whichever validator the client was generated with.
+ * Twilio take every write, not as JSON, and reads an answer that is not
+ * JSON — a CSV, a PDF — as what it is: text or a blob. Directly and through
+ * the proxy, whichever validator the client was generated with.
  */
 import { createProxyCaller } from "@noverax/courier";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

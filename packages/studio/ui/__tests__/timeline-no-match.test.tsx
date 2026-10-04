@@ -3,7 +3,7 @@
  */
 /**
  * A Timeline search that matches nothing says so, and offers to clear the
- * filters; it used to leave a blank pane.
+ * filters, rather than leaving a blank pane.
  */
 import {
   createMemoryHistory,

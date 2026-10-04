@@ -135,9 +135,8 @@ describe("proxy boundary — a server-side caller keeps the full option set", ()
 });
 
 /**
- * A stream or a channel is reached by opening one. An ordinary POST used to
- * run a channel's implementation factory, which expects a socket it has not
- * been given.
+ * A stream or a channel is reached by opening one: an ordinary POST does not
+ * run a channel's implementation factory, which expects a socket.
  */
 describe("proxy boundary — a transport is not a verb", () => {
   function callOverHttp(method: string) {

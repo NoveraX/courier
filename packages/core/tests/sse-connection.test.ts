@@ -1,10 +1,11 @@
 /**
  * How an SSE subscription treats a connection that stops delivering.
  *
- * A server that fell silent for longer than `heartbeatTimeout` used to abort
- * the whole subscription, which then ended as though the server had
- * finished it; and every attempt over the subscription's life counted
- * towards `maxAttempts`, so a long-lived stream died after its Nth drop.
+ * A server that falls silent for longer than `heartbeatTimeout` drops the
+ * connection, not the subscription, which reconnects rather than ending as
+ * though the server had finished it; and only attempts in a row that deliver
+ * nothing count towards `maxAttempts`, so a long-lived stream survives its
+ * Nth drop.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 

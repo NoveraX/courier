@@ -1,8 +1,8 @@
 /**
  * The URL a client dials for a Studio bound to a given host.
  *
- * Clients used to dial the bind host verbatim, so `studio.host: "0.0.0.0"`
- * sent them to an address that cannot be dialled and an IPv6 host produced
+ * Clients do not dial the bind host verbatim: `studio.host: "0.0.0.0"` would
+ * send them to an address that cannot be dialled, and an IPv6 host would make
  * the invalid `http://::1:6280`.
  */
 import { describe, expect, it } from "vitest";

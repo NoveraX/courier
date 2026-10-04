@@ -1,9 +1,7 @@
 /**
- * A proxied request whose caller goes away before the upstream answers.
- *
- * The proxy used to run the upstream call to completion anyway, so a page
- * that navigated or cancelled its queries left the server holding upstream
- * connections nobody was waiting for.
+ * A proxied request whose caller goes away before the upstream answers stops
+ * its upstream call, so a page that navigates or cancels its queries leaves
+ * the server holding no upstream connection nobody waits for.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -1,10 +1,10 @@
 /**
  * Adopting the app's origin from the requests it serves.
  *
- * Adapters used to give up after the first request, whatever it carried: a
- * host-less probe that happened to come first left the origin unset for the
- * life of the process, and Studio Playground proxy mode failed with
- * `APP_ORIGIN_NOT_CONFIGURED` on one deployment and not another.
+ * Adapters keep trying until a request carries a host, so a host-less probe
+ * that happens to come first does not leave the origin unset for the life of
+ * the process, nor Studio Playground proxy mode failing on one deployment and
+ * not another.
  */
 import type { IncomingMessage } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";

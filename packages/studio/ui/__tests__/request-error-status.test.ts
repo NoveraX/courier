@@ -4,9 +4,9 @@
 /**
  * A request that failed its schema is a validation error with its issues
  * listed, and a cancelled one is aborted — as the runtime reports them
- * (`validation`, `aborted`). Both used to show as a red "Error", the Status
- * filter's "Validation Error" and "Aborted" matched nothing, and the issues
- * a failed validation reported were thrown away.
+ * (`validation`, `aborted`) — not a red "Error", so the Status filter's
+ * "Validation Error" and "Aborted" match them and the issues a failed
+ * validation reported are kept.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 

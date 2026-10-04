@@ -1,7 +1,7 @@
 /**
- * An absent body is an answer, not a failure. A HEAD request's only standard
- * success carries none, and neither does a write that returns nothing — both
- * used to surface as an HTTPError whose status was 200.
+ * An absent body is an answer, not a failure: a HEAD request's only standard
+ * success carries none, and neither does a write that returns nothing —
+ * neither is an HTTPError whose status is 200.
  */
 import { describe, expect, it } from "vitest";
 

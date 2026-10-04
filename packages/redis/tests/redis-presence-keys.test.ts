@@ -1,7 +1,7 @@
 /**
  * A presence record is read back from a hash any process can write to. One
- * that is not the shape Courier writes fails as damaged, where it used to be
- * read as an entry with no user and no join time.
+ * that is not the shape Courier writes fails as damaged, rather than reading
+ * as an entry with no user and no join time.
  */
 import { describe, expect, it } from "vitest";
 

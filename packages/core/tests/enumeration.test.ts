@@ -1,8 +1,8 @@
 /**
  * A caller guessing names off the wire must learn nothing from the shape of
- * the refusal. The exposure gate already hides endpoints; this pins the level
- * above it, where an unknown *source* used to be answered differently from an
- * unknown method and so announced the registry one guess at a time.
+ * the refusal. The exposure gate hides endpoints; this pins the level above
+ * it: an unknown *source* is answered as an unknown method is, so guesses
+ * announce nothing of the registry.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 

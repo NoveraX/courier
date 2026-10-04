@@ -1,11 +1,10 @@
 /**
  * `courierWSAttach` on a server the application also uses for WebSockets.
  *
- * It used to take every upgrade on the server. With the application's own
- * WebSocket beside it, both handlers accepted the same socket and the process
- * died on the first connection; alone, it gave a Courier connection to a
- * client that asked for any path; and it buffered frames up to 100 MiB before
- * the configured size limit was consulted.
+ * It takes only the upgrades to its path, so the application's own WebSocket
+ * beside it is not accepted twice — which kills the process on the first
+ * connection — a client asking for any other path gets no Courier connection,
+ * and frames are limited by the configured size, not buffered up to 100 MiB.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

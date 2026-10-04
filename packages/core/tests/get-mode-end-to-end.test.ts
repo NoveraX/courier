@@ -2,9 +2,9 @@
  * A GET-mode proxy call, end to end: the browser client, the handler, and the
  * request it makes upstream.
  *
- * Every variable used to arrive at the handler as a string, so a numeric
- * variable failed the endpoint's own schema — the same call over POST
- * succeeded — and a list reached the upstream as `a,b`.
+ * Each variable arrives at the handler with its type, as over POST, so a
+ * numeric variable passes the endpoint's own schema and a list reaches the
+ * upstream as a list, not as `a,b`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";

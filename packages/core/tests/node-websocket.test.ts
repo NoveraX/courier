@@ -1,11 +1,11 @@
 /**
  * WebSocket upgrades on a Node HTTP server shared with the application.
  *
- * Every upgrade on the server used to be taken, whatever its path. An
- * application with a WebSocket of its own then had two handlers accept one
- * socket and the process died on its first connection; with nothing else
- * listening, a client that opened any path got a Courier connection. Frames
- * were buffered up to `ws`'s 100 MiB default before the size limit was read.
+ * Only upgrades to Courier's path are taken, so an application's own
+ * WebSocket is not accepted by two handlers — which kills the process on its
+ * first connection — and a client opening any other path gets no Courier
+ * connection. Frames are limited before they are buffered, not at `ws`'s
+ * 100 MiB default.
  */
 import { createServer, type Server } from "node:http";
 import { type AddressInfo, connect, type Socket } from "node:net";

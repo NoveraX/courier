@@ -46,13 +46,7 @@ export function createProxySSEFactory(source: string, defaults: ProxySSEDefaults
   return function subscribeSSE(group, method, variables, options) {
     const headers = layerHeaders(defaultHeaders, options.headers);
     const sseBase = resolveProxyPath("sse", proxyPath, origin);
-    const url = buildProxySSEUrl(
-      sseBase,
-      source,
-      group,
-      method,
-      variables as Record<string, unknown>,
-    );
+    const url = buildProxySSEUrl(sseBase, source, group, method, variables);
     return executeSSE(url, headers);
   };
 }

@@ -33,7 +33,7 @@ export function buildProxySSEUrl(
   source: string,
   group: string,
   method: string,
-  variables?: Record<string, unknown>,
+  variables?: unknown,
 ): string {
   const params = new URLSearchParams({ _s: source, _m: method });
   if (group) params.set("_g", group);

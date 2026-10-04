@@ -77,7 +77,7 @@ export function useComputedQuery<TQueryData, TStreamData>(
       return take().reduce<TQueryData>((merged, event) => mapperRef.current(merged, event), answer);
     },
     enabled,
-    staleTime,
+    ...(staleTime !== undefined && { staleTime }),
   });
 
   const merge = (events: SSEEvent<TStreamData>[]) =>

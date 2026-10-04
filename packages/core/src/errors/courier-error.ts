@@ -23,7 +23,7 @@ export interface CourierErrorOptions<TCode> {
   /** Underlying cause — chained via the standard `Error.cause` property (Node 16+) */
   cause?: unknown;
   /** Structured context for logging — never put secrets here */
-  context?: Record<string, unknown>;
+  context?: Record<string, unknown> | undefined;
 }
 
 export class CourierError<TCode = string> extends Error {

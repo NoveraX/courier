@@ -51,7 +51,7 @@ export interface RegistryEntry {
   sendEncoded: (encoded: string) => void;
   close: (code?: number, reason?: string) => void;
   /** When a token asked for with `auth_required` must have come in by */
-  authDeadline?: ReturnType<typeof setTimeout>;
+  authDeadline?: ReturnType<typeof setTimeout> | undefined;
 }
 
 /** @internal Registry with add/remove methods for handler integration */

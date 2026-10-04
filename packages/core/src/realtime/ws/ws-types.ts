@@ -53,27 +53,27 @@ export interface WSConnectionConfig {
   /** WebSocket endpoint URL */
   url: string;
   /** Sub-protocols for the WS handshake */
-  protocols?: string[];
+  protocols?: string[] | undefined;
   /** Heartbeat (ping/pong) configuration */
-  heartbeat?: HeartbeatConfig;
+  heartbeat?: HeartbeatConfig | undefined;
   /** Reconnection backoff configuration */
-  backoff?: BackoffConfig;
+  backoff?: BackoffConfig | undefined;
   /** Outbound message queue configuration */
-  messageQueue?: MessageQueueConfig;
+  messageQueue?: MessageQueueConfig | undefined;
   /** Called to get a fresh auth token before connect/reconnect */
-  getAuthToken?: () => string | Promise<string>;
+  getAuthToken?: (() => string | Promise<string>) | undefined;
   /** Status change listener */
-  onStatusChange?: (status: ConnectionStatus) => void;
+  onStatusChange?: ((status: ConnectionStatus) => void) | undefined;
   /** Max bufferedAmount before dropping sends (default 1MB) */
-  maxBufferedAmount?: number;
+  maxBufferedAmount?: number | undefined;
   /**
    * Largest message sent, as the length of its encoded frame — the server's
    * `maxMessageSize` (default 64 KB). A larger one is not sent: its topic
    * hears a 4413 error, and the connection goes on.
    */
-  maxMessageSize?: number;
+  maxMessageSize?: number | undefined;
   /** WebSocket factory — override for testing */
-  socketFactory?: WSSocketFactory;
+  socketFactory?: WSSocketFactory | undefined;
 }
 
 /**

@@ -13,7 +13,7 @@ export interface Subscription {
   labels: Set<string>;
   confirmed: boolean;
   /** Id of the subscribe the server has yet to confirm */
-  awaiting?: string;
+  awaiting?: string | undefined;
   held: HeldMessages;
   /** Set once another subscription took over its subscribers */
   mergedInto?: Subscription;

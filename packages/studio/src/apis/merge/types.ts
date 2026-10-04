@@ -94,7 +94,7 @@ export interface ExistingEndpointInfo {
   /** Full code block including indentation and trailing comma */
   code: string;
   /** JSDoc comment above the endpoint (if any) */
-  comment?: string;
+  comment?: string | undefined;
 }
 
 export interface ExistingGroupInfo {

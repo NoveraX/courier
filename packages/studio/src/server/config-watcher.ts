@@ -63,7 +63,7 @@ export interface ConfigWatcherDeps {
   /** The project root, symlinks resolved. */
   projectRoot: string;
   /** Told the watched count and each change. */
-  watcherStatus?: WatcherStatus;
+  watcherStatus?: WatcherStatus | undefined;
   /** What Studio runs now, lent to exclusive edits. */
   current(): LoadedCourierConfig | null;
   /** A load succeeded; Studio runs it from now on. Called in chain order. */

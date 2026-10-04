@@ -26,7 +26,7 @@ export interface WSHandlerConfig {
   /** Request history (shared with HTTP routes) */
   history: MockHistoryEntry[];
   /** Told of each channel subscription as it opens and ends — Studio's mock logs */
-  hooks?: RequestHooks;
+  hooks?: RequestHooks | undefined;
   /** Get current scenario state */
   getScenarioState: () => string;
   /**
@@ -34,9 +34,9 @@ export interface WSHandlerConfig {
    * - `undefined` (default) → all origins permitted (mock dev mode)
    * - `string[]` → only listed origins are allowed; all others get HTTP 403
    */
-  allowedOrigins?: readonly string[];
+  allowedOrigins?: readonly string[] | undefined;
   /** Maximum payload size in bytes (default 1 MiB) */
-  maxPayload?: number;
+  maxPayload?: number | undefined;
 }
 
 /** What `createMockWSHandler` hands the server: the upgrade route, and its shutdown */

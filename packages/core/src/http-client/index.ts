@@ -18,19 +18,19 @@ import type { WebBody } from "./web-types";
 
 export class HttpClient {
   private responseType: ResponseType = "json";
-  private responseParser?: (response: Response) => Promise<unknown>;
+  private responseParser: ((response: Response) => Promise<unknown>) | undefined;
   private defaultBody: Record<string, unknown> = {};
-  private defaultQueryParams?: Record<string, unknown>;
-  private pathOptions?: PathOptions;
-  private bodySerializer?: (data: Record<string, unknown>) => WebBody;
-  private searchParamsSerializer?: SearchParamsSerializer;
+  private defaultQueryParams: Record<string, unknown> | undefined;
+  private pathOptions: PathOptions | undefined;
+  private bodySerializer: ((data: Record<string, unknown>) => WebBody) | undefined;
+  private searchParamsSerializer: SearchParamsSerializer | undefined;
   private deduplicate = false;
   private prefixUrl = "";
-  private baseTimeout?: number;
-  private baseHeaders?: HeadersInit;
+  private baseTimeout: number | undefined;
+  private baseHeaders: HeadersInit | undefined;
   private baseFetchInit: RequestInit = {};
 
-  context?: Context;
+  context: Context | undefined;
   pendingRequests: { [key: string]: AbortController } = {};
   /** Hook called with resolved (method, fullUrl) right before fetch */
   onBeforeFetch?: (method: string, url: string) => void;

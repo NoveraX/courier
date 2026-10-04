@@ -22,7 +22,7 @@ interface RequestPickerProps {
   selectedId: string | undefined;
   onSelect: (id: string | undefined) => void;
   label: string;
-  excludeId?: string;
+  excludeId?: string | undefined;
 }
 
 function buildLabel(r: RequestEntry): string {

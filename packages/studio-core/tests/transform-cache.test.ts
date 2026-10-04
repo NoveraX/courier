@@ -247,7 +247,7 @@ describe("createTransformCache", () => {
   it("transforms a source with no file name every time", () => {
     const cache = createTransformCache();
     const compute = compiler();
-    const nameless = optionsFor({ filename: undefined });
+    const { filename: _, ...nameless } = optionsFor();
 
     cache.transform(nameless, compute);
     cache.transform(nameless, compute);

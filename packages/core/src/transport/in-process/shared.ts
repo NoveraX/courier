@@ -49,7 +49,7 @@ export interface ResolvedStreamEndpoint {
   endpoint: unknown;
   schema: InProcessStreamSchema;
   /** What a channel's subscribers share a topic by, from its `.topic()` */
-  topicKey?: TopicKeyReader;
+  topicKey?: TopicKeyReader | undefined;
 }
 
 /** What an in-process executor runs: an SSE stream, a WS push, or a WS channel. */

@@ -55,7 +55,10 @@ export function toWebRequest(
     }
   }
 
-  const init: RequestInit & { duplex?: string } = { method: nodeReq.method, headers };
+  const init: RequestInit & { duplex?: string } = {
+    ...(nodeReq.method !== undefined && { method: nodeReq.method }),
+    headers,
+  };
   if (nodeRes) init.signal = abortedWhenClientLeaves(nodeRes);
 
   if (nodeReq.method !== "GET" && nodeReq.method !== "HEAD") {

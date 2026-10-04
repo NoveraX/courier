@@ -6,17 +6,20 @@ import { fetchWithinOrigin } from "./fetch-within-origin";
 import { normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
 
-export type CoreFetchInit = Omit<RequestInit, "method"> & {
+export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
+  /** What the request sends; absent, nothing unless `json` is given. */
+  body?: WebBody | null | undefined;
+  signal?: AbortSignal | null | undefined;
   json?: unknown;
-  searchParams?: string | URLSearchParams | Record<string, string>;
-  timeout?: number;
-  onUploadProgress?: (progress: UploadProgress) => void;
-  onDownloadProgress?: (progress: DownloadProgress) => void;
+  searchParams?: string | URLSearchParams | Record<string, string> | undefined;
+  timeout?: number | undefined;
+  onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
+  onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
   /**
    * Follow redirects only while they stay on the request's origin — see
    * `fetchWithinOrigin`. An explicit `redirect` takes precedence.
    */
-  withinOrigin?: boolean;
+  withinOrigin?: boolean | undefined;
 };
 
 export async function coreFetch(
@@ -71,7 +74,7 @@ export async function coreFetch(
     ...rest,
     method: normalizeHttpMethod(method),
     headers: requestHeaders,
-    body: requestBody,
+    body: requestBody ?? null,
     ...(finalSignal != null && { signal: finalSignal }),
     /* Fetch refuses a streamed body unless the request says so. */
     ...(requestBody instanceof ReadableStream && { duplex: "half" }),

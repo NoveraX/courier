@@ -22,7 +22,12 @@ let upstream: Upstream;
 let server: Server;
 let port = 0;
 
-const events: Array<{ type: string; id?: string; status?: number; variables?: unknown }> = [];
+const events: Array<{
+  type: string;
+  id?: string | undefined;
+  status?: number | undefined;
+  variables?: unknown;
+}> = [];
 
 beforeEach(async () => {
   upstream = await startUpstream(echo);

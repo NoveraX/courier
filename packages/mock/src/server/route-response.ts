@@ -9,8 +9,8 @@
 
 import { HTTPError } from "@noverax/courier";
 import type { Context as HonoContext } from "hono";
-
 import { isRecord } from "../is-record";
+import type { ResolvedHandler } from "../types";
 import { isMockHttpError } from "./errors";
 import type { RouteConfig } from "./route-types";
 
@@ -24,7 +24,7 @@ import type { RouteConfig } from "./route-types";
  */
 export function buildResponse(
   c: HonoContext,
-  handler: { isError: boolean; status: number; headers?: Record<string, string> },
+  handler: Pick<ResolvedHandler, "isError" | "status" | "headers">,
   status: number,
   data: unknown,
   raw = false,

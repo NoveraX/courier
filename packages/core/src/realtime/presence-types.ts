@@ -5,11 +5,11 @@ export interface PresenceConfig {
    * Set to `0` to disable auto-sweep (manual `sweep()` only).
    * @default 30_000
    */
-  sweepIntervalMs?: number;
+  sweepIntervalMs?: number | undefined;
   /**
    * Entries without a heartbeat for longer than this are considered stale.
    * Should be ~1.5× the heartbeat interval.
    * @default 45_000
    */
-  staleThresholdMs?: number;
+  staleThresholdMs?: number | undefined;
 }

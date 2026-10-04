@@ -117,13 +117,15 @@ export function defineApi<
      * Omitted, it is derived from the `baseURL` hostname. It is not a display
      * string: a label with spaces in it produces a source nothing can reach.
      */
-    name?: string;
+    name?: string | undefined;
     /**
      * The endpoints a browser may call, from `defineBoundary`, checked against
      * this API: a path it does not declare, or a shape it declares otherwise,
      * does not compile. A proxy client typed from this API reaches those alone.
      */
-    boundary?: TBoundary & NoInfer<BoundaryOf<DefinedMixedApi<TGroups, TEndpoints>, TBoundary>>;
+    boundary?:
+      | (TBoundary & NoInfer<BoundaryOf<DefinedMixedApi<TGroups, TEndpoints>, TBoundary>>)
+      | undefined;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
     /** Map of flat endpoint functions (not in any group) */
@@ -145,13 +147,13 @@ export function defineApi<
      * Omitted, it is derived from the `baseURL` hostname. It is not a display
      * string: a label with spaces in it produces a source nothing can reach.
      */
-    name?: string;
+    name?: string | undefined;
     /**
      * The endpoints a browser may call, from `defineBoundary`, checked against
      * this API: a path it does not declare, or a shape it declares otherwise,
      * does not compile. A proxy client typed from this API reaches those alone.
      */
-    boundary?: TBoundary & NoInfer<BoundaryOf<DefinedApi<TGroups>, TBoundary>>;
+    boundary?: (TBoundary & NoInfer<BoundaryOf<DefinedApi<TGroups>, TBoundary>>) | undefined;
     /** Map of named endpoint groups created with defineGroup() */
     groups: TGroups;
   },
@@ -171,20 +173,24 @@ export function defineApi<
      * Omitted, it is derived from the `baseURL` hostname. It is not a display
      * string: a label with spaces in it produces a source nothing can reach.
      */
-    name?: string;
+    name?: string | undefined;
     /**
      * The endpoints a browser may call, from `defineBoundary`, checked against
      * this API: a path it does not declare, or a shape it declares otherwise,
      * does not compile. A proxy client typed from this API reaches those alone.
      */
-    boundary?: TBoundary & NoInfer<BoundaryOf<DefinedFlatApi<TEndpoints>, TBoundary>>;
+    boundary?: (TBoundary & NoInfer<BoundaryOf<DefinedFlatApi<TEndpoints>, TBoundary>>) | undefined;
     /** Map of flat endpoint functions (not in any group) */
     endpoints: TEndpoints;
   },
 ): WithBoundary<DefinedFlatApi<TEndpoints>, TBoundary>;
 
 export function defineApi(
-  config: BaseOptions & { name?: string; groups?: GroupRecord; endpoints?: EndpointRecord },
+  config: BaseOptions & {
+    name?: string | undefined;
+    groups?: GroupRecord | undefined;
+    endpoints?: EndpointRecord | undefined;
+  },
 ): DefinedApi | DefinedFlatApi | DefinedMixedApi {
   const { endpoints, name, ...rest } = config;
   if (endpoints) assertNoReservedName(endpoints, "source");

@@ -3,8 +3,8 @@ import type { NetworkState } from "./state";
 
 /** Preset names to record for the parts of the config a command turned on */
 export interface PresetNames {
-  latency?: string;
-  chaos?: string;
+  latency?: string | undefined;
+  chaos?: string | undefined;
 }
 
 /**

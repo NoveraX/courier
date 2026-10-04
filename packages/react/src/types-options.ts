@@ -26,7 +26,7 @@ export type CourierQueryOptions<
   TData = TResponse,
 > = WithVariables<TVariables> &
   Omit<UseQueryOptions<TResponse, Error, TData, QueryKey>, "queryKey" | "queryFn"> & {
-    requestOptions?: CallOptions;
+    requestOptions?: CallOptions | undefined;
   };
 
 /** `TData` is what the hook returns: the response, or what `select` makes of it. */
@@ -36,11 +36,11 @@ export type CourierSuspenseQueryOptions<
   TData = TResponse,
 > = WithVariables<TVariables> &
   Omit<UseSuspenseQueryOptions<TResponse, Error, TData, QueryKey>, "queryKey" | "queryFn"> & {
-    requestOptions?: CallOptions;
+    requestOptions?: CallOptions | undefined;
   };
 
 export type CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
-  requestOptions?: CallOptions;
+  requestOptions?: CallOptions | undefined;
   initialPageParam: TPageParam;
   getNextPageParam: (
     lastPage: TResponse,
@@ -48,17 +48,19 @@ export type CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
     lastPageParam: TPageParam,
     allPageParams: TPageParam[],
   ) => TPageParam | undefined | null;
-  getPreviousPageParam?: (
-    firstPage: TResponse,
-    allPages: TResponse[],
-    firstPageParam: TPageParam,
-    allPageParams: TPageParam[],
-  ) => TPageParam | undefined | null;
+  getPreviousPageParam?:
+    | ((
+        firstPage: TResponse,
+        allPages: TResponse[],
+        firstPageParam: TPageParam,
+        allPageParams: TPageParam[],
+      ) => TPageParam | undefined | null)
+    | undefined;
   // biome-ignore lint/suspicious/noConfusingVoidType: void is the builder's sentinel for an endpoint that takes no variables
 } & ([TVariables] extends [undefined | void]
-  ? { variables?: (pageParam: TPageParam) => TVariables }
+  ? { variables?: ((pageParam: TPageParam) => TVariables) | undefined }
   : MayOmitVariables<TVariables> extends true
-    ? { variables?: (pageParam: TPageParam) => TVariables }
+    ? { variables?: ((pageParam: TPageParam) => TVariables) | undefined }
     : { variables: (pageParam: TPageParam) => TVariables }) &
   Omit<
     UseInfiniteQueryOptions<
@@ -79,20 +81,32 @@ export type CourierMutationOptions<TResponse, TVariables, TOnMutateResult = unkn
   UseMutationOptions<TResponse, Error, MutationVariables<TVariables>, TOnMutateResult>,
   "mutationFn"
 > & {
-  requestOptions?: CallOptions;
+  requestOptions?: CallOptions | undefined;
   /**
    * Query keys to invalidate once the mutation has succeeded — not after a
    * failure. The mutation stays pending until their refetch is done.
    */
-  invalidate?: QueryKey[];
+  invalidate?: QueryKey[] | undefined;
 };
 
 // biome-ignore lint/suspicious/noConfusingVoidType: void is the builder's sentinel for an endpoint that takes no variables
 export type CourierPrefetchOptions<TVariables> = [TVariables] extends [undefined | void]
-  ? { variables?: undefined; requestOptions?: CallOptions; staleTime?: number }
+  ? {
+      variables?: undefined;
+      requestOptions?: CallOptions | undefined;
+      staleTime?: number | undefined;
+    }
   : MayOmitVariables<TVariables> extends true
-    ? { variables?: TVariables; requestOptions?: CallOptions; staleTime?: number }
-    : { variables: TVariables; requestOptions?: CallOptions; staleTime?: number };
+    ? {
+        variables?: TVariables | undefined;
+        requestOptions?: CallOptions | undefined;
+        staleTime?: number | undefined;
+      }
+    : {
+        variables: TVariables;
+        requestOptions?: CallOptions | undefined;
+        staleTime?: number | undefined;
+      };
 
 /**
  * `TStream` is the stream named by `subscriptionMethod` and `TStreamData`
@@ -111,16 +125,16 @@ export type CourierComputedQueryOptions<
   /** Merge each stream event into the cached query data */
   mapper: (current: TQueryResponse | undefined, event: SSEEvent<TStreamData>) => TQueryResponse;
   /** Disable both query and subscription (default: true) */
-  enabled?: boolean;
+  enabled?: boolean | undefined;
   /** react-query staleTime */
-  staleTime?: number;
+  staleTime?: number | undefined;
   /** Per-request options for the HTTP query */
-  requestOptions?: CallOptions;
+  requestOptions?: CallOptions | undefined;
   /**
    * Called when the stream fails or is refused, or cannot be opened at all;
    * the query keeps its last data and goes on without live updates
    */
-  onStreamError?: (error: Error) => void;
+  onStreamError?: ((error: Error) => void) | undefined;
   /** Called when the stream's connection status changes */
-  onStreamStatusChange?: (status: ConnectionStatus) => void;
+  onStreamStatusChange?: ((status: ConnectionStatus) => void) | undefined;
 };

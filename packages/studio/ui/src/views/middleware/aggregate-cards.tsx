@@ -79,7 +79,7 @@ function Card({
   value?: number;
   display?: string;
   format?: (n: number) => string;
-  color?: string;
+  color?: string | undefined;
   sparkline?: SparklinePoint[];
   sparkColor?: string;
 }): React.ReactElement {

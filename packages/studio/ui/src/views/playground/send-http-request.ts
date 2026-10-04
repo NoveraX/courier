@@ -25,7 +25,7 @@ export interface SendPayload {
   variables: string;
   headers: string;
   mode: "direct" | "proxy";
-  transport?: "sse" | "ws";
+  transport?: "sse" | "ws" | undefined;
   /** A form sent as the body in place of the variables */
   form?: WireFormField[];
 }

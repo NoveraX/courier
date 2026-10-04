@@ -16,7 +16,7 @@ export interface ProxySSEDefaults {
    * factory can be constructed in SSR contexts without `globalThis.location`
    * being defined yet.
    */
-  proxyPath?: ProxyPath;
+  proxyPath?: ProxyPath | undefined;
   /**
    * Optional explicit origin (`{ protocol, host }`) used when resolving
    * relative `proxyPath.sse` values. Required in Node contexts where
@@ -24,9 +24,9 @@ export interface ProxySSEDefaults {
    * executor running inside the user-app process. Browser callers can
    * leave this undefined; `resolveProxyPath` falls back to `location`.
    */
-  origin?: ResolveOrigin;
+  origin?: ResolveOrigin | undefined;
   /** Default headers merged into every SSE connection */
-  headers?: Record<string, string>;
+  headers?: Record<string, string> | undefined;
 }
 
 /**

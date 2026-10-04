@@ -10,7 +10,7 @@ import type { RouteInfo } from "./route-types";
 /** Seed data configuration */
 export interface SeedConfig {
   /** Default records per collection (default: 20) */
-  count?: number;
+  count?: number | undefined;
   /** Per-group overrides: `{ products: { count: 100 } }` */
   [groupName: string]: { count: number } | number | undefined;
 }

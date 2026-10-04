@@ -4,9 +4,9 @@
  */
 export interface FormFieldEncoding {
   /** `form` unless said otherwise */
-  style?: "form" | "spaceDelimited" | "pipeDelimited" | "deepObject";
+  style?: "form" | "spaceDelimited" | "pipeDelimited" | "deepObject" | undefined;
   /** `true` for `form`, the default style, unless said otherwise */
-  explode?: boolean;
+  explode?: boolean | undefined;
 }
 
 const DELIMITERS = { form: ",", spaceDelimited: " ", pipeDelimited: "|" } as const;

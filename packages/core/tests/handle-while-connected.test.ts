@@ -23,7 +23,7 @@ function post(signal?: AbortSignal): Request {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: '{"source":"api","method":"list"}',
-    signal,
+    signal: signal ?? null,
   });
 }
 

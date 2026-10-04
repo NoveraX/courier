@@ -34,41 +34,41 @@ export interface CourierServerOptions<
    */
   sources: Sources;
   /** Server port (default 3001) */
-  port?: number;
+  port?: number | undefined;
   /**
    * Address to listen on (default "127.0.0.1", the IPv4 loopback, which a
    * client given `localhost` reaches too). `"::1"` listens on the IPv6
    * loopback; `"0.0.0.0"` or `"::"` accepts other machines, as a container
    * needs.
    */
-  host?: string;
+  host?: string | undefined;
   /**
    * Origins of the browser apps that may call the server, for CORS and the
    * WebSocket origin check. Left out, the server answers its own origin only,
    * and loopback origins outside production.
    */
-  allowedOrigins?: string[];
+  allowedOrigins?: string[] | undefined;
   /**
    * Largest WebSocket frame read at all, in bytes; a bigger one closes the
    * connection with 1009 before it is buffered. Default 1 MB, or twice
    * `maxMessageSize` when that is larger, so a message over `maxMessageSize`
    * is refused with a `4413` error on a connection that stays open.
    */
-  maxPayload?: number;
+  maxPayload?: number | undefined;
   /**
    * Drain on SIGTERM/SIGINT, then end the process (default true). When the
    * application handles the signal too, the server still drains but leaves
    * ending the process to the application's handler.
    */
-  signals?: boolean;
+  signals?: boolean | undefined;
   /** Callback fired when server starts listening */
-  onReady?: (url: string) => void;
+  onReady?: ((url: string) => void) | undefined;
   /**
    * Called when the server itself fails — a port already in use, a socket
    * error after start. Without it such a failure is only logged; the process
    * is never ended on the host's behalf.
    */
-  onServerError?: (error: Error) => void;
+  onServerError?: ((error: Error) => void) | undefined;
 }
 
 /** Handle returned by createCourierServer for lifecycle control */

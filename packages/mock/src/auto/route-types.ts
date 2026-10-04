@@ -26,21 +26,21 @@ export interface RouteInfo {
    * The parameter naming one record, for a path that names one
    * (`":petId"` → `"petId"`, `"by-email/:email"` → `"email"`)
    */
-  idParam?: string;
+  idParam?: string | undefined;
   /** Detected CRUD operation */
   operation: CrudOperation;
   /** Response schema if available */
-  responseSchema?: StandardSchemaV1;
+  responseSchema?: StandardSchemaV1 | undefined;
   /** Variables schema if available */
-  variablesSchema?: StandardSchemaV1;
+  variablesSchema?: StandardSchemaV1 | undefined;
   /** Endpoint type (query/mutation) */
-  type?: "query" | "mutation";
+  type?: "query" | "mutation" | undefined;
   /** Transport mode — "http" (default), "sse", or "ws" */
-  transport?: Transport;
+  transport?: Transport | undefined;
   /** True for WS bidirectional channel endpoints (have a `receive` schema) */
-  isChannel?: boolean;
+  isChannel?: boolean | undefined;
   /** For a WS endpoint: what the proxy's WebSocket route checks a subscription against */
-  channel?: ChannelShape;
+  channel?: ChannelShape | undefined;
 }
 
 export type CrudOperation =

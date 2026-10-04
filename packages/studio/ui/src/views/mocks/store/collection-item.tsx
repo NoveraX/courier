@@ -18,7 +18,7 @@ interface CollectionItemProps {
   name: string;
   count: number;
   isActive: boolean;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   onSelect: () => void;
   onSeed: () => void;
   onClear: () => void;

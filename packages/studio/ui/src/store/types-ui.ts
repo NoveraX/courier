@@ -157,28 +157,28 @@ export interface PlaygroundHistoryEntry {
   mode: "direct" | "proxy";
   timestamp: number;
   status: "pending" | "success" | "error";
-  statusCode?: number;
-  duration?: number;
+  statusCode?: number | undefined;
+  duration?: number | undefined;
   response?: unknown;
-  responseHeaders?: Record<string, string>;
-  timing?: RequestTiming;
-  proxyTiming?: ProxyTiming;
-  requestHeaders?: Record<string, string>;
+  responseHeaders?: Record<string, string> | undefined;
+  timing?: RequestTiming | undefined;
+  proxyTiming?: ProxyTiming | undefined;
+  requestHeaders?: Record<string, string> | undefined;
   /** How much of a form body has been sent, while it uploads */
-  upload?: { loaded: number; total: number; percentage: number };
+  upload?: { loaded: number; total: number; percentage: number } | undefined;
   /** Transport used — undefined = HTTP */
-  transport?: "sse" | "ws";
+  transport?: "sse" | "ws" | undefined;
   /** Streaming lifecycle state */
-  streamStatus?: "connecting" | "streaming" | "complete" | "error";
+  streamStatus?: "connecting" | "streaming" | "complete" | "error" | undefined;
   /**
    * Realtime chunks accumulated from `playground:chunk` events. SSE streams
    * append one per yielded event, WS channels append one per incoming
    * message, HTTP one-shot stores its single `http-result` chunk here so
    * the render layer can unwrap it uniformly.
    */
-  chunks?: PlaygroundChunk[];
+  chunks?: PlaygroundChunk[] | undefined;
   /** How many earlier chunks were let go to keep `chunks` to its last ones */
-  chunksDropped?: number;
+  chunksDropped?: number | undefined;
 }
 
 // ── Timeline filters ────────────────────────────────────────────────────────

@@ -56,10 +56,10 @@ function keepRawBody(req: IncomingMessage, _res: unknown, buffer: Buffer): void 
 
 /** An application wired the way `NestFactory.create` wires its Express adapter. */
 async function nestLikeApp(options: { rawBody?: boolean } = {}): Promise<string> {
-  const verify = options.rawBody ? keepRawBody : undefined;
+  const kept = options.rawBody ? { verify: keepRawBody } : {};
   const app = express();
-  app.use(bodyParser.json({ verify }));
-  app.use(bodyParser.urlencoded({ extended: true, verify }));
+  app.use(bodyParser.json(kept));
+  app.use(bodyParser.urlencoded({ extended: true, ...kept }));
   app.use("/api/request", courierMiddleware());
   return listen(createServer(app));
 }

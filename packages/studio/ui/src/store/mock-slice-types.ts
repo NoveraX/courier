@@ -62,8 +62,8 @@ export interface MockServerInfo {
   managed: boolean;
   processStatus: ProcessStatus;
   origin: "studio" | "external";
-  filePath?: string;
-  lastError?: string;
+  filePath?: string | undefined;
+  lastError?: string | undefined;
   /** Per-server data */
   collections: MockCollectionEntry[];
   routes: MockRouteEntry[];
@@ -129,13 +129,13 @@ export interface MockRequestLog {
   path: string;
   group: string;
   endpoint: string;
-  status?: number;
-  duration?: number;
-  error?: string;
+  status?: number | undefined;
+  duration?: number | undefined;
+  error?: string | undefined;
   variables?: unknown;
   data?: unknown;
-  requestHeaders?: Record<string, string>;
-  responseHeaders?: Record<string, string>;
+  requestHeaders?: Record<string, string> | undefined;
+  responseHeaders?: Record<string, string> | undefined;
 }
 
 export interface MockSliceState {

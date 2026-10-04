@@ -110,7 +110,7 @@ export function commonBase(bases: readonly (string | undefined)[]): string | und
   return best;
 }
 
-function hostOf(url: unknown): { scheme?: string; host?: string } {
+function hostOf(url: unknown): { scheme?: string | undefined; host?: string | undefined } {
   if (isNode(url) && Array.isArray(url.host)) {
     const host = url.host.map((part: unknown) => String(part)).join(".");
     const port = typeof url.port === "string" && url.port !== "" ? `:${url.port}` : "";

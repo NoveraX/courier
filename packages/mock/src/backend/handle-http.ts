@@ -19,7 +19,7 @@ interface HandleHTTPParams {
   handler: ResolvedHandler | undefined;
   index: number;
   history: MockHistoryEntry[];
-  network?: NetworkConfig;
+  network?: NetworkConfig | undefined;
   getScenarioState: () => string;
   /** The state the handler was picked in */
   mark: ScenarioMark;

@@ -16,7 +16,7 @@ export interface ImportPlacement {
   /** The directory the import's own directory goes into, relative to the project. */
   outputDir: string;
   /** The name the source is exported under; the import's key when absent. */
-  sourceName?: string;
+  sourceName?: string | undefined;
 }
 
 /**

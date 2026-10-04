@@ -85,7 +85,7 @@ function HeaderName({ children }: { children: string }): React.ReactElement {
 function MiddlewareHeadersSection({
   headers,
 }: {
-  headers?: Record<string, string[]>;
+  headers?: Record<string, string[]> | undefined;
 }): React.ReactElement | null {
   if (!headers || Object.keys(headers).length === 0) return null;
 

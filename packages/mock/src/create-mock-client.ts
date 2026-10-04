@@ -13,9 +13,9 @@ import type { EnhancedMockBuilder, MockHistoryEntry, MockScenario, NetworkConfig
 /** Configuration for the mock client */
 export interface MockClientConfig<TApi extends AnySource = AnySource> {
   /** Default network simulation for all endpoints */
-  network?: NetworkConfig;
+  network?: NetworkConfig | undefined;
   /** Initial scenario to apply — written for `TApi`, or for no source */
-  scenario?: MockScenario<NoInfer<TApi>>;
+  scenario?: MockScenario<NoInfer<TApi>> | undefined;
 }
 
 /** The mock client returned by createMockClient */

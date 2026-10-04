@@ -28,9 +28,9 @@ let proxyUrl = "";
 const starts: string[] = [];
 const progress: Array<{
   requestId: string;
-  source?: string;
-  group?: string;
-  method?: string;
+  source?: string | undefined;
+  group?: string | undefined;
+  method?: string | undefined;
   percentage: number;
 }> = [];
 const completed: string[] = [];

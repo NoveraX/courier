@@ -24,7 +24,7 @@ export interface ActivateConnectionParams {
   url: string;
   history: MockHistoryEntry[];
   /** Told of the channel as it opens and ends — Studio's mock logs */
-  hooks?: RequestHooks;
+  hooks?: RequestHooks | undefined;
   registry: WSConnectionRegistry;
   scenarioState: string;
 }

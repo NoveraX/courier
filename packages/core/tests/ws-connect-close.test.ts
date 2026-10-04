@@ -24,7 +24,7 @@ afterEach(() => {
 
 type Socket = WebSocketLike & {
   emit(type: string, event?: unknown): void;
-  closedWith?: number;
+  closedWith?: number | undefined;
   sent: string[];
 };
 

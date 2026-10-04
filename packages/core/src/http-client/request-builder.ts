@@ -11,10 +11,10 @@ import type {
 import type { WebBody } from "./web-types";
 
 type RequestBuilderDeps = {
-  defaultQueryParams?: Record<string, unknown>;
+  defaultQueryParams?: Record<string, unknown> | undefined;
   defaultBody: Record<string, unknown>;
-  searchParamsSerializer?: SearchParamsSerializer;
-  bodySerializer?: (data: Record<string, unknown>) => WebBody;
+  searchParamsSerializer?: SearchParamsSerializer | undefined;
+  bodySerializer?: ((data: Record<string, unknown>) => WebBody) | undefined;
 };
 
 /**

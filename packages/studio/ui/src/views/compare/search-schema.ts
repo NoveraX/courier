@@ -2,9 +2,9 @@ import type { CompareTab } from "./types";
 
 /** URL search params shape for /compare */
 export interface CompareSearchParams {
-  left?: string;
-  right?: string;
-  tab?: CompareTab;
+  left?: string | undefined;
+  right?: string | undefined;
+  tab?: CompareTab | undefined;
 }
 
 const VALID_TABS = new Set<CompareTab>(["payload", "response", "headers", "timing"]);

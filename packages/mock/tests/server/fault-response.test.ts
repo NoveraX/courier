@@ -41,7 +41,7 @@ function call(signal?: AbortSignal): Promise<Response> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({}),
-    signal,
+    signal: signal ?? null,
   });
 }
 

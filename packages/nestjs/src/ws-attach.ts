@@ -17,7 +17,7 @@ export interface CourierWSAttachOptions<TConnect extends ConnectResult = Connect
    * to. Upgrades on any other path are left to the application's own
    * handlers. Defaults to `/api/ws`.
    */
-  path?: string;
+  path?: string | undefined;
 }
 
 /**

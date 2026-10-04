@@ -32,47 +32,47 @@ export interface MockServerDefinition<TSource extends AnySource = AnySource>
    * Port to listen on. Studio holds a mock to it and reports it when it is
    * taken; left out, Studio assigns one from `studio.mockBasePort`.
    */
-  port?: number;
+  port?: number | undefined;
   /**
    * Where to listen (default: `"localhost"`, loopback only). Use `"0.0.0.0"`
    * to reach the mock from another machine or a container — its admin API,
    * which has no authentication, is then reachable there too.
    */
-  hostname?: string;
+  hostname?: string | undefined;
   /** Seed configuration */
-  seed?: MockServerSeedConfig;
+  seed?: MockServerSeedConfig | undefined;
   /** Start automatically when Studio launches (default: false) */
   autoStart: boolean;
   /**
    * Endpoint overrides applied after auto-generation — persist across all
    * scenario switches. `mock` takes the source's group and endpoint names.
    */
-  overrides?: (mock: TypedMockFn<NoInfer<TSource>>, store: MockStore) => void;
+  overrides?: ((mock: TypedMockFn<NoInfer<TSource>>, store: MockStore) => void) | undefined;
   /**
    * Named scenarios, each written for this source or for none (happy-path is
    * auto-generated from the source).
    */
-  scenarios?: Record<string, MockScenario<NoInfer<TSource>>>;
+  scenarios?: Record<string, MockScenario<NoInfer<TSource>>> | undefined;
   /** Default network simulation */
-  network?: NetworkConfig;
+  network?: NetworkConfig | undefined;
   /** CORS config (default: true) */
-  cors?: boolean | { origin: string | string[] };
+  cors?: boolean | { origin: string | string[] } | undefined;
   /** Enable admin API at /__admin/ (default: true) */
-  admin?: boolean;
+  admin?: boolean | undefined;
   /** Request logging (default: "normal") */
-  log?: "silent" | "normal" | "verbose" | boolean;
+  log?: "silent" | "normal" | "verbose" | boolean | undefined;
   /**
    * Keep the mock's records in the project's `.courier/mocks/`, so they
    * survive a restart of the mock — an edit that changes it included — and
    * of Studio (default: true). `false` starts it from its seeds each time.
    */
-  persist?: boolean;
+  persist?: boolean | undefined;
 }
 
 /** Seed data configuration */
 export interface MockServerSeedConfig {
   /** Default records per collection (default: 20) */
-  count?: number;
+  count?: number | undefined;
   /** Per-group overrides */
   [groupName: string]: { count: number } | number | undefined;
 }
@@ -83,7 +83,7 @@ export type MockServerConfig<TSource extends AnySource = AnySource> = Omit<
   "__type" | "autoStart"
 > & {
   /** Start automatically when Studio launches (default: false) */
-  autoStart?: boolean;
+  autoStart?: boolean | undefined;
 };
 
 /** A mock a worker serves: the running server, its routes and how it is seeded */

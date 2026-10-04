@@ -53,8 +53,8 @@ export function shapeOfSource(
  * ```
  */
 export function shapeOfClient(given: {
-  source?: Record<string, unknown>;
-  boundary?: ProxyBoundary;
+  source?: Record<string, unknown> | undefined;
+  boundary?: ProxyBoundary | undefined;
 }): ClientShape | undefined {
   return shapeOfSource(given.boundary ? sourceFromBoundary(given.boundary) : given.source);
 }

@@ -10,7 +10,7 @@ const OUTCOME: Partial<Record<ProcessStatus, string>> = {
 interface MockFailureNoteProps {
   serverId: string;
   status: ProcessStatus;
-  lastError?: string;
+  lastError?: string | undefined;
 }
 
 /**

@@ -79,7 +79,10 @@ export function TourTooltip({
 }
 
 /** Compute tooltip position with viewport clamping. */
-function computePosition(placement: TourStep["placement"], rect: DOMRect): React.CSSProperties {
+function computePosition(
+  placement: TourStep["placement"],
+  rect: DOMRect,
+): { left: number; top: number } {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 

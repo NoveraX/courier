@@ -70,7 +70,12 @@ describe("isHostAccepted", () => {
 /** Send one request with the Host header a rebound browser would write. */
 function send(
   port: number,
-  init: { method: string; host: string; headers?: Record<string, string>; body?: string },
+  init: {
+    method: string;
+    host: string;
+    headers?: Record<string, string> | undefined;
+    body?: string | undefined;
+  },
 ) {
   return new Promise<{ status: number; body: string }>((resolve, reject) => {
     const req = httpRequest(

@@ -4,7 +4,7 @@ const DEFAULT_MAX_SIZE = 1000;
 
 interface MemoryStreamOptions {
   /** Max events per topic before auto-trim (default 1000) */
-  maxSize?: number;
+  maxSize?: number | undefined;
 }
 
 /**

@@ -35,7 +35,7 @@ export function ProcessStatusBadge({
   lastError,
 }: {
   status: ProcessStatus;
-  lastError?: string;
+  lastError?: string | undefined;
 }): React.ReactElement {
   const { label, variant } = STATUS_BADGE[status];
   if (!lastError)

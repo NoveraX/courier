@@ -65,7 +65,7 @@ export interface EndpointStats {
   /** HTTP methods used (GET, POST, etc.) */
   httpMethods: Set<string>;
   /** Endpoint type from catalog */
-  type?: "query" | "mutation";
+  type?: "query" | "mutation" | undefined;
   /** All request IDs for this endpoint */
   requestIds: string[];
   /** Whether any call went through a cache, hit or miss */

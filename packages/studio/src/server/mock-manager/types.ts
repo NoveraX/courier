@@ -32,21 +32,21 @@ export interface ServerState {
   autoStart: boolean;
   status: ServerStatus;
   origin: "studio" | "external";
-  actualPort?: number;
-  url?: string;
-  pid?: number;
-  startedAt?: number;
-  lastError?: string;
+  actualPort?: number | undefined;
+  url?: string | undefined;
+  pid?: number | undefined;
+  startedAt?: number | undefined;
+  lastError?: string | undefined;
   routes: DescribedRoute[];
   collections: Array<{ name: string; count: number; records: unknown[] }>;
   scenarios: ScenarioMeta[];
   activeScenario: string | null;
   /** Network simulation presets — persisted for UI restore on reconnect */
-  latencyPreset?: string;
-  latencyStartedAt?: number | null;
-  chaosPreset?: string;
-  chaosStartedAt?: number | null;
-  networkConfig?: Record<string, unknown>;
+  latencyPreset?: string | undefined;
+  latencyStartedAt?: number | null | undefined;
+  chaosPreset?: string | undefined;
+  chaosStartedAt?: number | null | undefined;
+  networkConfig?: Record<string, unknown> | undefined;
 }
 
 export interface CoordinatorConfig {

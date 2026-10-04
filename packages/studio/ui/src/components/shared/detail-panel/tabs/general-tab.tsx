@@ -14,7 +14,7 @@ import { DetailRow as Row, DetailSection as Section } from "../detail-rows";
 interface GeneralTabProps {
   request: RequestEntry;
   /** Hide Source and Mode rows (e.g. for mock logs) */
-  hideSourceMode?: boolean;
+  hideSourceMode?: boolean | undefined;
 }
 
 export function GeneralTab({ request, hideSourceMode }: GeneralTabProps): React.ReactElement {

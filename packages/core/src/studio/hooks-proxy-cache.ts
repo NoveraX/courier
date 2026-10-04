@@ -13,84 +13,101 @@
  */
 export interface ProxyHooks {
   /** Fired as a call arrives, before its body is read. */
-  onProxyReceive?: (event: {
-    proxyMethod: "GET" | "POST";
-    source: string;
-    group: string | undefined;
-    method: string;
-    requestId: string | undefined;
-    timestamp: number;
-  }) => void;
+  onProxyReceive?:
+    | ((event: {
+        proxyMethod: "GET" | "POST";
+        source: string;
+        group: string | undefined;
+        method: string;
+        requestId: string | undefined;
+        timestamp: number;
+      }) => void)
+    | undefined;
 
   /** Fired when the proxy answers, a refusal included. */
-  onProxyRespond?: (event: {
-    proxyMethod: "GET" | "POST";
-    source: string;
-    group: string | undefined;
-    method: string;
-    status: number;
-    requestId: string | undefined;
-    timestamp: number;
-  }) => void;
+  onProxyRespond?:
+    | ((event: {
+        proxyMethod: "GET" | "POST";
+        source: string;
+        group: string | undefined;
+        method: string;
+        status: number;
+        requestId: string | undefined;
+        timestamp: number;
+      }) => void)
+    | undefined;
 
   /** Fired once the call's variables are read. */
-  onProxyParse?: (event: {
-    source: string;
-    group: string | undefined;
-    method: string;
-    variables: unknown;
-    requestId: string | undefined;
-    timestamp: number;
-  }) => void;
+  onProxyParse?:
+    | ((event: {
+        source: string;
+        group: string | undefined;
+        method: string;
+        variables: unknown;
+        requestId: string | undefined;
+        timestamp: number;
+      }) => void)
+    | undefined;
 
-  onProxyOriginReject?: (event: { origin: string; timestamp: number }) => void;
+  onProxyOriginReject?: ((event: { origin: string; timestamp: number }) => void) | undefined;
 
   /** Browser-side proxy timing — fired after fetch completes with network measurement */
-  onProxyClientTiming?: (event: {
-    requestId: string;
-    networkLatency: number;
-    download: number;
-    totalRoundTrip: number;
-    timestamp: number;
-  }) => void;
+  onProxyClientTiming?:
+    | ((event: {
+        requestId: string;
+        networkLatency: number;
+        download: number;
+        totalRoundTrip: number;
+        timestamp: number;
+      }) => void)
+    | undefined;
 }
 
 /** Response cache hit/miss/store/invalidate instrumentation */
 export interface CacheHooks {
-  onCacheHit?: (event: { requestId: string; key: string; age: number; timestamp: number }) => void;
+  onCacheHit?:
+    | ((event: { requestId: string; key: string; age: number; timestamp: number }) => void)
+    | undefined;
 
-  onCacheMiss?: (event: { requestId: string; key: string; timestamp: number }) => void;
+  onCacheMiss?:
+    | ((event: { requestId: string; key: string; timestamp: number }) => void)
+    | undefined;
 
-  onCacheStore?: (event: {
-    requestId: string;
-    key: string;
-    ttl: number;
-    timestamp: number;
-  }) => void;
+  onCacheStore?:
+    | ((event: { requestId: string; key: string; ttl: number; timestamp: number }) => void)
+    | undefined;
 
-  onCacheInvalidate?: (event: { key: string; reason: string; timestamp: number }) => void;
+  onCacheInvalidate?:
+    | ((event: { key: string; reason: string; timestamp: number }) => void)
+    | undefined;
 }
 
 /** In-flight request deduplication abort/reuse instrumentation */
 export interface DedupHooks {
-  onDedupAbort?: (event: { requestId: string; key: string; timestamp: number }) => void;
+  onDedupAbort?:
+    | ((event: { requestId: string; key: string; timestamp: number }) => void)
+    | undefined;
 
-  onDedupReuse?: (event: { requestId: string; key: string; timestamp: number }) => void;
+  onDedupReuse?:
+    | ((event: { requestId: string; key: string; timestamp: number }) => void)
+    | undefined;
 }
 
 /** Multipart upload progress + completion */
 export interface UploadHooks {
-  onUploadProgress?: (event: {
-    requestId: string;
-    /** The endpoint the upload is for, when the caller knows it. */
-    source?: string;
-    group?: string;
-    method?: string;
-    loaded: number;
-    total: number;
-    percentage: number;
-    timestamp: number;
-  }) => void;
+  onUploadProgress?:
+    | ((event: {
+        requestId: string;
+        /** The endpoint the upload is for, when the caller knows it. */
+        source?: string | undefined;
+        group?: string | undefined;
+        method?: string | undefined;
+        loaded: number;
+        total: number;
+        percentage: number;
+        timestamp: number;
+      }) => void)
+    | undefined;
 
-  onUploadComplete?: (event: { requestId: string; timestamp: number }) => void;
+  onUploadComplete?: ((event: { requestId: string; timestamp: number }) => void) | undefined;
 }

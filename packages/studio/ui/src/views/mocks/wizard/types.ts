@@ -28,7 +28,7 @@ export interface MockDraft {
 }
 
 /** What is wrong with each field of one draft. */
-export type DraftErrors = Partial<Record<DeclarationField, string>>;
+export type DraftErrors = { [Field in DeclarationField]?: string | undefined };
 
 /** Studio's plan for the drafts, and the declarations it answers. */
 export type PlanState =

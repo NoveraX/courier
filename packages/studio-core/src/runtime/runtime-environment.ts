@@ -43,8 +43,8 @@ export function timersCanUnref(): boolean {
 
 /** The `studio` block of courier.config, as far as the address goes. */
 export interface ConfiguredStudioAddress {
-  host?: string;
-  port?: number;
+  host?: string | undefined;
+  port?: number | undefined;
 }
 
 /**

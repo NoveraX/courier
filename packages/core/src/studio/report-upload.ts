@@ -4,9 +4,9 @@ import { studioHooks } from "./singleton";
 /** The endpoint an upload is for, as Studio names its row. */
 export interface UploadCall {
   requestId: string;
-  source?: string;
-  group?: string;
-  method?: string;
+  source?: string | undefined;
+  group?: string | undefined;
+  method?: string | undefined;
 }
 
 /**

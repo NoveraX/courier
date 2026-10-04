@@ -14,7 +14,7 @@ export function createLifetimeSignal(
   requestSignal: AbortSignal,
   shutdownSignal: AbortSignal,
   maxLifetimeMs?: number,
-): { signal: AbortSignal; ttlSignal?: AbortSignal } {
+): { signal: AbortSignal; ttlSignal?: AbortSignal | undefined } {
   const signals: AbortSignal[] = [requestSignal, shutdownSignal];
   const ttl = maxLifetimeMs ?? LIMITS.SSE_MAX_LIFETIME_MS;
 

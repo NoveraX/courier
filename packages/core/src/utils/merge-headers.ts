@@ -81,7 +81,7 @@ export const mergeHeaders = (
  */
 export const filterResponseHeaders = (
   headers?: HeadersInput,
-  options?: { streamed?: boolean; named?: readonly string[] },
+  options?: { streamed?: boolean; named?: readonly string[] | undefined },
 ): Headers => {
   const named = (options?.named ?? [])
     .map((name) => name.toLowerCase())

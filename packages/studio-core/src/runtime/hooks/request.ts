@@ -52,7 +52,7 @@ export function wireRequestHooks(
         headers: e.headers,
         requestHeaders: e.requestHeaders,
         timing: e.timing,
-        proxyTiming: e.proxyTiming,
+        ...(e.proxyTiming && { proxyTiming: e.proxyTiming }),
       }),
     );
   };
@@ -64,7 +64,11 @@ export function wireRequestHooks(
         type: "request:error",
         timestamp: e.timestamp,
         requestId: e.id,
-        error: e.error,
+        error: {
+          type: e.error.type,
+          message: e.error.message,
+          ...(e.error.status !== undefined && { status: e.error.status }),
+        },
         ...(e.status !== undefined && { status: e.status }),
         ...(e.headers && { headers: e.headers }),
         ...(e.data !== undefined && { data: e.data }),

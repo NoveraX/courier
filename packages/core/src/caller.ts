@@ -17,18 +17,18 @@ import { createDirectHTTPExecutor } from "./transport/direct/http";
 import { directStreamingFactories } from "./transport/direct-streaming";
 
 export type CallerDefaults = {
-  timeout?: number;
-  headers?: Record<string, string>;
-  context?: RequestContext;
-  onError?: (error: HTTPError) => void | Promise<void>;
-  onSuccess?: (data: unknown) => void | Promise<void>;
+  timeout?: number | undefined;
+  headers?: Record<string, string> | undefined;
+  context?: RequestContext | undefined;
+  onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
+  onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
   /**
    * How the sockets of this caller's channels and push subscriptions behave:
    * the token sent on connecting and when the server asks for a fresh one,
    * the reconnect backoff, how long the server may stay silent, the queue
    * limits, sub-protocols and the largest message sent.
    */
-  ws?: CallerWSOptions;
+  ws?: CallerWSOptions | undefined;
 };
 
 /**

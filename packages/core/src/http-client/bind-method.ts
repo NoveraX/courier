@@ -23,17 +23,17 @@ import type {
 import type { WebBody } from "./web-types";
 
 export type BindMethodDeps = {
-  context?: Context;
+  context: Context | undefined;
   prefixUrl: string;
   pendingRequests: { [key: string]: AbortController };
   deduplicate: boolean;
-  pathOptions?: PathOptions;
-  searchParamsSerializer?: SearchParamsSerializer;
-  defaultQueryParams?: Record<string, unknown>;
+  pathOptions: PathOptions | undefined;
+  searchParamsSerializer: SearchParamsSerializer | undefined;
+  defaultQueryParams: Record<string, unknown> | undefined;
   defaultBody: Record<string, unknown>;
-  bodySerializer?: (data: Record<string, unknown>) => WebBody;
+  bodySerializer: ((data: Record<string, unknown>) => WebBody) | undefined;
   responseType: ResponseType;
-  responseParser?: (response: Response) => Promise<unknown>;
+  responseParser: ((response: Response) => Promise<unknown>) | undefined;
   fetchRequest: (method: string, url: string, options: Partial<FetchOptions>) => Promise<Response>;
 };
 

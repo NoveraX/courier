@@ -29,5 +29,5 @@ export function probeEndpoint(fn: unknown): ProbeResult {
   const method: unknown = Reflect.get(fn, "method");
   const path: unknown = Reflect.get(fn, "path");
   if (typeof method !== "string") return {};
-  return { method, path: typeof path === "string" && path !== "" ? path : undefined };
+  return { method, ...(typeof path === "string" && path !== "" && { path }) };
 }

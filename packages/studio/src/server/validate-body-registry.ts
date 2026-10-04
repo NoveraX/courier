@@ -13,7 +13,7 @@ import { isObject, isString, reject } from "./validate-body";
 
 interface NameBody {
   name: string;
-  configPath?: string;
+  configPath?: string | undefined;
 }
 
 export function validateNameBody(body: unknown, res: JsonResponse): NameBody | null {

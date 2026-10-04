@@ -37,14 +37,14 @@ export interface ValidateOptions {
    * each endpoint's response schema, the `variables` against its variables
    * schema, or both.
    */
-  direction?: "response" | "variables" | "both";
+  direction?: "response" | "variables" | "both" | undefined;
   /**
    * Request variables to check against each endpoint's variables schema,
    * keyed `group/method` as the mock data is — the variables a recorded
    * fixture or a mock's request history holds, for instance. An endpoint
    * with no entry here has its variables reported as skipped.
    */
-  variables?: Map<string, unknown>;
+  variables?: Map<string, unknown> | undefined;
 }
 
 /**

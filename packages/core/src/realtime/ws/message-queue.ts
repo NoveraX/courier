@@ -2,9 +2,9 @@ import { LIMITS } from "../../adapter/limits";
 
 export interface MessageQueueConfig {
   /** Max messages to buffer (default 100) */
-  maxCount?: number;
+  maxCount?: number | undefined;
   /** Max total bytes to buffer (default 1MB) */
-  maxBytes?: number;
+  maxBytes?: number | undefined;
 }
 
 export interface MessageQueue {

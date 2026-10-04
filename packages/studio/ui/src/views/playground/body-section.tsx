@@ -14,7 +14,7 @@ interface BodySectionProps {
   formAllowed: boolean;
   variables: string;
   formFields: FormBodyField[];
-  schemaHint?: string;
+  schemaHint?: string | undefined;
   onKindChange: (kind: BodyKind) => void;
   onVariablesChange: (value: string) => void;
   onFormFieldsChange: (fields: FormBodyField[]) => void;

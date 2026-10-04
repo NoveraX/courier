@@ -9,7 +9,7 @@ interface JsonTreeNodeProps {
   value: unknown;
   depth: number;
   defaultExpanded?: boolean;
-  onSelect?: (path: string[]) => void;
+  onSelect?: ((path: string[]) => void) | undefined;
   path: string[];
 }
 
@@ -87,7 +87,7 @@ function ExpandedChildren({
 }: {
   value: unknown;
   depth: number;
-  onSelect?: (path: string[]) => void;
+  onSelect?: ((path: string[]) => void) | undefined;
   path: string[];
 }): React.ReactElement {
   const entries: ReadonlyArray<readonly [string, unknown]> = isArray(value)

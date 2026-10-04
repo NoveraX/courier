@@ -7,10 +7,10 @@ import { MiniSparkline } from "./mini-sparkline";
 interface MetricCardProps {
   label: string;
   value: string;
-  valueColor?: string;
+  valueColor?: string | undefined;
   sparkline?: SparklinePoint[];
   sparklineColor?: string;
-  subtitle?: string;
+  subtitle?: string | undefined;
   className?: string;
 }
 

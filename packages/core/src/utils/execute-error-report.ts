@@ -13,13 +13,13 @@ export interface FailureReport {
   requestId: string;
   dt: Partial<StudioHooks>;
   /** The request's timings so far; absent when Studio is not attached. */
-  timing?: TimingState;
+  timing?: TimingState | undefined;
   /** How many middleware wrapped the call. */
-  middlewareCount?: number;
+  middlewareCount?: number | undefined;
   /** The call's signal, so a cancellation with a reason of its own is told apart. */
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
   /** The call's context, carrying a proxied call's incoming request. */
-  context?: Context;
+  context?: Context | undefined;
 }
 
 /**

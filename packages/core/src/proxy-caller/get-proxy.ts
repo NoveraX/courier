@@ -12,15 +12,15 @@ export type GetProxyCtx = {
   variables: unknown;
   serverOptions: Record<string, unknown>;
   credentials: WebCredentials;
-  defaultHeaders?: Record<string, string>;
+  defaultHeaders?: Record<string, string> | undefined;
   /** The rest of the browser request's init — signal, cache, next, mode, … */
   init: Record<string, unknown>;
-  timeout?: number;
+  timeout?: number | undefined;
   onDownloadProgress?: unknown;
   stream: boolean;
   fetchCtx: {
-    onSuccess?: (data: unknown) => void | Promise<void>;
-    onError?: (error: HTTPError) => void | Promise<void>;
+    onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
+    onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
   };
 };
 

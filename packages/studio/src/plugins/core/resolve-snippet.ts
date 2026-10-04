@@ -9,13 +9,13 @@ export interface SnippetRequest {
   /** The framework the snippet is for; it names the runtime. */
   framework: string;
   /** The plugin's options. */
-  options?: StudioPluginOptions;
+  options?: StudioPluginOptions | undefined;
   /** Whether the bundler builds for development; see {@link isInjectionEnabled}. */
   development: boolean;
   /** The specifier the snippet imports the runtime from; see {@link generateConnectSnippet}. */
-  runtime?: string;
+  runtime?: string | undefined;
   /** Where the search for the config starts; see {@link loadStudioUrl}. */
-  projectRoot?: string;
+  projectRoot?: string | undefined;
 }
 
 /**

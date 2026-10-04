@@ -25,7 +25,7 @@ interface FilterSelectProps {
   options: FilterOption[];
   selected: string[];
   onChange: (selected: string[]) => void;
-  searchable?: boolean;
+  searchable?: boolean | undefined;
 }
 
 export function FilterSelect({

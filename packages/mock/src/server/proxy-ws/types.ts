@@ -23,7 +23,7 @@ export interface ProxyWSConfig {
   /** Every socket's subscriptions, by topic, which a channel broadcasts to */
   connections: WSConnectionRegistry;
   /** Told of each subscription as it opens and ends — Studio's mock logs */
-  hooks?: RequestHooks;
+  hooks?: RequestHooks | undefined;
 }
 
 /** One subscription a socket holds */

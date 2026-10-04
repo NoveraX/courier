@@ -9,7 +9,7 @@ import { assertDirectlyReachable } from "./assert-reachable";
 import { streamRequest } from "./stream-request";
 
 export interface DirectSSEDefaults {
-  headers?: Record<string, string>;
+  headers?: Record<string, string> | undefined;
 }
 
 function headersToRecord(h: Headers): Record<string, string> {

@@ -18,8 +18,8 @@ interface PanelContentProps {
   source: string;
   group: string;
   method: string;
-  onNavigateToTimeline?: (requestId: string) => void;
-  onOpenPlayground?: (source: string, group: string, method: string) => void;
+  onNavigateToTimeline?: ((requestId: string) => void) | undefined;
+  onOpenPlayground?: ((source: string, group: string, method: string) => void) | undefined;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────

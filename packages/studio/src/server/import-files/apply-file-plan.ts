@@ -23,7 +23,7 @@ export interface ApplyReport {
   removed: string[];
   kept: FilePlan["kept"];
   /** Project-relative directory holding the files replaced and removed; absent when there were none. */
-  backupDir?: string;
+  backupDir?: string | undefined;
   /** Emptied directories that could not be removed. */
   pruneFailures: PruneFailure[];
 }

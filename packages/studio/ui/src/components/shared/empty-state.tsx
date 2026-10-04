@@ -7,10 +7,12 @@ interface EmptyStateProps {
   icon: LucideIcon;
   heading: string;
   description: string;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+  action?:
+    | {
+        label: string;
+        onClick: () => void;
+      }
+    | undefined;
   className?: string;
   /** Shown between the description and the action: a snippet, say. */
   children?: React.ReactNode;

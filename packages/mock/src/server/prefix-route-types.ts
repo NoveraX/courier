@@ -26,25 +26,25 @@ export interface MappedEndpoint {
   /** Relative path within the group (e.g. "", ":petId", "browse", "categories") */
   path: string;
   /** HTTP method for this endpoint (e.g. "GET", "POST") */
-  httpMethod?: string;
+  httpMethod?: string | undefined;
   /** Transport mode — "http" (default), "sse", or "ws" */
-  transport?: Transport;
+  transport?: Transport | undefined;
   /** True for WS bidirectional channel endpoints (have a `receive` schema) */
-  isChannel?: boolean;
+  isChannel?: boolean | undefined;
   /** For a WS endpoint: what the proxy's WebSocket route checks a subscription against */
-  channel?: ChannelShape;
+  channel?: ChannelShape | undefined;
 }
 
 /** What the proxy's WebSocket route checks a subscription to a channel against */
 export interface ChannelShape {
   /** The subscription's variables */
-  variables?: StandardSchemaV1;
+  variables?: StandardSchemaV1 | undefined;
   /** Each message the caller sends */
-  receive?: StandardSchemaV1;
+  receive?: StandardSchemaV1 | undefined;
   /** Whether the caller may send on it: it declared what it receives */
   acceptsMessages: boolean;
   /** Reads the key the channel's subscribers share a topic by, from `.topic()` */
-  topicKey?: (variables: unknown) => unknown;
+  topicKey?: ((variables: unknown) => unknown) | undefined;
 }
 
 /** Mapping from URL path prefix to group name + endpoint resolver */

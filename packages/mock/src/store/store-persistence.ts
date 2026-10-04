@@ -16,7 +16,7 @@ export interface StorePersistOptions {
    * every one it holds. A collection the server no longer serves is then
    * left behind rather than brought back.
    */
-  collections?: readonly string[];
+  collections?: readonly string[] | undefined;
 }
 
 /** A store kept in a file. */

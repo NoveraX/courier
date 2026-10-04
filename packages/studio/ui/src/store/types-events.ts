@@ -65,17 +65,17 @@ export interface MiddlewareEntry {
   requestId: string;
   name: string;
   index: number;
-  totalCount?: number;
+  totalCount?: number | undefined;
   startedAt: number;
-  duration?: number;
+  duration?: number | undefined;
   status: "running" | "completed" | "error";
-  error?: string;
+  error?: string | undefined;
   /** Declared phase: "before" | "after" | "wrap" */
-  phase?: string;
+  phase?: string | undefined;
   /** Time spent before calling next() (ms) */
-  beforeDuration?: number;
+  beforeDuration?: number | undefined;
   /** Time spent after next() returned (ms) */
-  afterDuration?: number;
+  afterDuration?: number | undefined;
   /** Header names added by this middleware */
-  headersAdded?: string[];
+  headersAdded?: string[] | undefined;
 }

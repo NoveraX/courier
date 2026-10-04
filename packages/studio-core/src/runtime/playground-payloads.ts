@@ -13,7 +13,7 @@ export interface PlaygroundExecutePayload {
   /** Whether the call is made in this process or through the app's proxy route */
   mode: "direct" | "proxy";
   variables?: unknown;
-  headers?: Record<string, string>;
+  headers?: Record<string, string> | undefined;
   /** A form to send as the body, in place of the variables */
   form?: PlaygroundFormField[];
 }

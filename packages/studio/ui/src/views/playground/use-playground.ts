@@ -37,9 +37,9 @@ function buildVariablesStub(endpoint: CatalogEndpoint | null, indent: number): s
 // ── Hook ───────────────────────────────────────────────────────────────────
 
 export interface PlaygroundInitParams {
-  source?: string;
-  group?: string;
-  method?: string;
+  source?: string | undefined;
+  group?: string | undefined;
+  method?: string | undefined;
 }
 
 export function usePlayground(init?: PlaygroundInitParams): PlaygroundState {

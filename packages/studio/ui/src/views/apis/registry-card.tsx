@@ -30,7 +30,7 @@ import type { EnrichedSource } from "./use-registry";
 
 interface RegistryCardProps {
   source: EnrichedSource;
-  status?: SourceStatusInfo;
+  status?: SourceStatusInfo | undefined;
   onCheckUpdates: () => void;
   onManage: () => void;
   onRemove: () => void;

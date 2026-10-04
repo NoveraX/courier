@@ -19,8 +19,8 @@ export async function sendFetch(
     stream: boolean;
     /** Whether the call asked for `.raw`. */
     raw: boolean;
-    onSuccess?: (data: unknown) => void | Promise<void>;
-    onError?: (error: HTTPError) => void | Promise<void>;
+    onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
+    onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
   },
 ): Promise<unknown> {
   const fetchOptions = withUploadInstrumentation(options);

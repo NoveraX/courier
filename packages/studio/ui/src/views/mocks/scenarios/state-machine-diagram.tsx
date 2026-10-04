@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import type { StateTransition } from "@/store/mock-slice";
 
 interface StateMachineDiagramProps {
-  initialState?: string;
+  initialState?: string | undefined;
   transitions: StateTransition[];
 }
 

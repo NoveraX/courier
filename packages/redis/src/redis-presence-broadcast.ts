@@ -41,7 +41,7 @@ export interface DiffBroadcast {
 
 export function createDiffBroadcast(input: {
   redis: Redis;
-  subscriber?: Redis;
+  subscriber?: Redis | undefined;
   prefix: string;
   origin: string;
   deliver: (topic: string, diff: PresenceDiff) => void;

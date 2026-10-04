@@ -10,13 +10,13 @@ export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "re
 /** Backoff configuration for auto-reconnection */
 export interface BackoffConfig {
   /** Initial delay in ms (default 1000) */
-  initialMs?: number;
+  initialMs?: number | undefined;
   /** Maximum delay cap in ms (default 30000) */
-  maxMs?: number;
+  maxMs?: number | undefined;
   /** Multiplier per attempt (default 2) */
-  factor?: number;
+  factor?: number | undefined;
   /** Add randomized jitter to prevent thundering herd (default true) */
-  jitter?: boolean;
+  jitter?: boolean | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -26,13 +26,13 @@ export interface BackoffConfig {
 /** A single Server-Sent Event */
 export interface SSEEvent<TData = unknown> {
   /** Event ID — used for Last-Event-ID on reconnect */
-  id?: string;
+  id?: string | undefined;
   /** Named event type (default: "message"). Names starting with `courier:` are reserved. */
-  event?: string;
+  event?: string | undefined;
   /** Event payload */
   data: TData;
   /** Client reconnection delay hint in ms */
-  retry?: number;
+  retry?: number | undefined;
 }
 
 /** Server-side context passed to SSE endpoint handlers */
@@ -42,7 +42,7 @@ export interface SSEContext<TVariables = unknown> {
   /** Fires when the client disconnects */
   signal: AbortSignal;
   /** Last-Event-ID from reconnecting client (for resume) */
-  lastEventId?: string;
+  lastEventId?: string | undefined;
   /** Request headers (for auth extraction in middleware) */
   headers: Headers;
 }

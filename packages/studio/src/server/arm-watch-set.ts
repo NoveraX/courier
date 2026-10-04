@@ -38,7 +38,7 @@ export interface ArmWatchSetOptions {
   /** The project root, symlinks resolved. */
   projectRoot: string;
   /** Told how many paths are watched after each arming. */
-  watcherStatus?: Pick<WatcherStatus, "setApiPathCount">;
+  watcherStatus?: Pick<WatcherStatus, "setApiPathCount"> | undefined;
 }
 
 /**

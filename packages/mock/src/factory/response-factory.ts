@@ -3,7 +3,7 @@ export interface FactoryConfig<TResponse> {
   /** Default values used as base for every build */
   defaults: TResponse | (() => TResponse);
   /** Named trait overrides for common variations */
-  traits?: Record<string, Partial<TResponse> | ((base: TResponse) => TResponse)>;
+  traits?: Record<string, Partial<TResponse> | ((base: TResponse) => TResponse)> | undefined;
 }
 
 /** Factory for generating type-safe response data */

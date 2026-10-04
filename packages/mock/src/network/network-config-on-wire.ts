@@ -36,7 +36,7 @@ export function networkConfigOnWire(state: NetworkState): Record<string, unknown
 
 function latencyOnWire(
   latency: number | LatencyProfile | undefined,
-): number | { min: number; max: number; jitter?: number } {
+): number | { min: number; max: number; jitter?: number | undefined } {
   if (latency === undefined) return 0;
   if (typeof latency !== "string") return latency;
   return LATENCY_PROFILES[latency] ?? 0;

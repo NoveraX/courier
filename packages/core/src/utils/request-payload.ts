@@ -1,6 +1,11 @@
 import type { CallOptions } from "../http-client/types";
 
-export type RequestPayloadInput = Partial<RequestPayload> | undefined;
+/** A call as its entry point read it: any field may be missing until it is parsed. */
+export type RequestPayloadFields = {
+  [Key in keyof RequestPayload]?: RequestPayload[Key] | undefined;
+};
+
+export type RequestPayloadInput = RequestPayloadFields | undefined;
 
 export type RequestPayload = {
   source: string;

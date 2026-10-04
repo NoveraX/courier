@@ -19,7 +19,7 @@ export type {
 /** Options for a topic registry. */
 export interface TopicRegistryOptions {
   /** Limits on what is held for each unconfirmed subscription */
-  messageQueue?: MessageQueueConfig;
+  messageQueue?: MessageQueueConfig | undefined;
   /** Told of messages that were held and will never go out */
   onDrop?: (topic: string, count: number) => void;
 }

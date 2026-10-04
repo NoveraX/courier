@@ -11,14 +11,14 @@ export interface ConfigJitiOptions {
    * the project's own files expect. Off to load an installed package as it is:
    * an alias of its scope would send its imports to project sources.
    */
-  aliases?: boolean;
+  aliases?: boolean | undefined;
   /**
    * Where to reuse each module's transform while its bytes are unchanged.
    * Without one, every module is transformed on every load. Aliases take no
    * part in it: they change where an import resolves, never the code a
    * module's own bytes transform to.
    */
-  transformCache?: TransformCache;
+  transformCache?: TransformCache | undefined;
 }
 
 type CreateJiti = (id: string, options?: JitiOptions) => Jiti;

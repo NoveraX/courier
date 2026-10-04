@@ -22,7 +22,7 @@ export type ActionState<TData = unknown> = {
 /** Configuration for createAction */
 export type ActionDefaults = {
   /** Forward incoming request headers to the API via next/headers (default: true) */
-  headers?: boolean;
+  headers?: boolean | undefined;
 };
 
 async function getRequestHeaders(): Promise<Headers | undefined> {

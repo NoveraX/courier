@@ -34,7 +34,7 @@ export interface InventoryEndpoint {
   path: string;
   status: EndpointStatus;
   /** Only set for "active" endpoints — safe means fingerprint matches */
-  modificationStatus?: ModificationStatus;
+  modificationStatus?: ModificationStatus | undefined;
 }
 
 export interface InventoryGroup {
@@ -66,7 +66,7 @@ export interface FileChange {
 
 export interface AddResult {
   files: FileChange[];
-  sourceFileUpdate?: { path: string; content: string };
+  sourceFileUpdate?: { path: string; content: string } | undefined;
   newFingerprints: Record<string, string>;
 }
 

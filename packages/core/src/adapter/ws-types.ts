@@ -22,84 +22,88 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * a later `registerSources` in the same process cannot change what it
    * serves.
    */
-  sources?: Sources;
+  sources?: Sources | undefined;
   /** Optional pub/sub adapter for horizontal scaling (e.g. Redis) */
-  pubsub?: PubSubAdapter;
+  pubsub?: PubSubAdapter | undefined;
   /** Heartbeat interval in ms (default 25000) */
-  heartbeatIntervalMs?: number;
+  heartbeatIntervalMs?: number | undefined;
   /** Pong timeout in ms (default 10000) */
-  heartbeatTimeoutMs?: number;
+  heartbeatTimeoutMs?: number | undefined;
   /** Max buffered bytes before dropping messages (default 1MB) */
-  maxBufferedAmount?: number;
+  maxBufferedAmount?: number | undefined;
   /**
    * Origins of other pages that may open a socket, as `HandlerConfig`'s
    * `allowedOrigins` rules them: unset, the application's own pages, and in
    * development other local ports. A refused origin is closed with 4403.
    */
-  allowedOrigins?: string[];
+  allowedOrigins?: string[] | undefined;
   /**
    * The host names this server is reached by, as `HandlerConfig`'s
    * `allowedHosts` rules them. A socket opened on any other host is closed
    * with 4421.
    */
-  allowedHosts?: string[];
+  allowedHosts?: string[] | undefined;
   /**
    * Max subscriptions per connection (default 100). Its subscribe,
    * unsubscribe and auth frames are counted apart from other messages, up to
    * twice this a second; one past that is refused with a 4429 error.
    */
-  maxSubscriptionsPerConnection?: number;
+  maxSubscriptionsPerConnection?: number | undefined;
   /** Max inbound message size in bytes (default 65536 = 64KB) */
-  maxMessageSize?: number;
+  maxMessageSize?: number | undefined;
   /** Middleware execution timeout in ms (default 30000) */
-  middlewareTimeoutMs?: number;
+  middlewareTimeoutMs?: number | undefined;
   /** Max inbound messages per second per connection — token bucket (default 100) */
-  maxMessagesPerSecond?: number;
+  maxMessagesPerSecond?: number | undefined;
   /** Max concurrent connections from a single IP address (default 50) */
-  maxConnectionsPerIP?: number;
+  maxConnectionsPerIP?: number | undefined;
   /**
    * Names the address a connection is counted against. A `Request` carries no
    * peer address, so without this the cap falls back to forwarding headers —
    * which the caller writes. Supply this wherever the runtime knows the real
    * address, and the cap becomes a guarantee instead of a default.
    */
-  clientIp?: ClientIPResolver;
+  clientIp?: ClientIPResolver | undefined;
   /** Per-subscription authorization — throw or return false to reject */
-  authorize?(info: {
-    connectionId: string;
-    meta: ConnectionMeta<TConnect>;
-    source: string;
-    group: string | undefined;
-    method: string;
-    topic: string;
-    variables: unknown;
-  }): boolean | Promise<boolean>;
+  authorize?:
+    | ((info: {
+        connectionId: string;
+        meta: ConnectionMeta<TConnect>;
+        source: string;
+        group: string | undefined;
+        method: string;
+        topic: string;
+        variables: unknown;
+      }) => boolean | Promise<boolean>)
+    | undefined;
   /**
    * Called after upgrade, before subscriptions. Return the connection's
    * metadata — an object — or nothing, or throw to refuse the connection: it
    * is closed with 4401 "Connection rejected", and what was thrown is logged,
    * never sent. What it returns types `meta` in the hooks written after it.
    */
-  onConnect?(info: { connectionId: string; request: Request }): TConnect;
+  onConnect?: ((info: { connectionId: string; request: Request }) => TConnect) | undefined;
   /** Called after socket close + topic cleanup */
-  onDisconnect?(info: {
-    connectionId: string;
-    meta: ConnectionMeta<TConnect>;
-    code: number;
-  }): void | Promise<void>;
+  onDisconnect?:
+    | ((info: {
+        connectionId: string;
+        meta: ConnectionMeta<TConnect>;
+        code: number;
+      }) => void | Promise<void>)
+    | undefined;
   /**
    * Called on connection-level error, with the Error the socket reported —
    * such as the RangeError of a frame over the size limit.
    */
-  onError?(info: { connectionId: string; meta: ConnectionMeta<TConnect>; error: Error }): void;
+  onError?:
+    | ((info: { connectionId: string; meta: ConnectionMeta<TConnect>; error: Error }) => void)
+    | undefined;
   /** Called when an outbound message is dropped due to buffer overflow */
-  onMessageDrop?(info: {
-    connectionId: string;
-    topic: string | undefined;
-    bufferedAmount: number;
-  }): void;
+  onMessageDrop?:
+    | ((info: { connectionId: string; topic: string | undefined; bufferedAmount: number }) => void)
+    | undefined;
   /** Max consecutive message drops before force-closing a slow connection (default 50, 0 = disabled) */
-  maxConsecutiveDrops?: number;
+  maxConsecutiveDrops?: number | undefined;
   /**
    * Checks a token the client sent on its open connection, as
    * `sendAuthRequired` asks it to: return the connection's new metadata, or
@@ -107,20 +111,24 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
    * is not set — leaves the deadline `sendAuthRequired` set, so the
    * connection is closed at it.
    */
-  onTokenRefresh?(info: {
-    connectionId: string;
-    token: string;
-    meta: ConnectionMeta<TConnect>;
-  }): ConnectionMeta<TConnect> | Promise<ConnectionMeta<TConnect>>;
+  onTokenRefresh?:
+    | ((info: {
+        connectionId: string;
+        token: string;
+        meta: ConnectionMeta<TConnect>;
+      }) => ConnectionMeta<TConnect> | Promise<ConnectionMeta<TConnect>>)
+    | undefined;
   /** Per-message authorization — return false or throw to reject with 4403 */
-  authorizeMessage?(info: {
-    connectionId: string;
-    meta: ConnectionMeta<TConnect>;
-    topic: string;
-    payload: unknown;
-  }): boolean | Promise<boolean>;
+  authorizeMessage?:
+    | ((info: {
+        connectionId: string;
+        meta: ConnectionMeta<TConnect>;
+        topic: string;
+        payload: unknown;
+      }) => boolean | Promise<boolean>)
+    | undefined;
   /** Timeout in ms for token refresh after sending auth_required (default 30000) */
-  authRequiredTimeoutMs?: number;
+  authRequiredTimeoutMs?: number | undefined;
 }
 
 /** Active subscription entry tracked per connection */

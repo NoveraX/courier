@@ -22,10 +22,10 @@ export interface WSUpgradeOptions {
   mappings: PrefixMapping[] | undefined;
   history: MockHistoryEntry[];
   getScenarioState: () => string;
-  allowedOrigins?: readonly string[];
-  maxPayload?: number;
+  allowedOrigins?: readonly string[] | undefined;
+  maxPayload?: number | undefined;
   /** Told of each channel subscription as it opens and ends — Studio's mock logs */
-  hooks?: RequestHooks;
+  hooks?: RequestHooks | undefined;
 }
 
 /**

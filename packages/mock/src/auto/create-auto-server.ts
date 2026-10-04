@@ -18,19 +18,19 @@ export interface AutoMockServerConfig {
   /** API source definition — routes are auto-generated from this */
   source: Record<string, unknown>;
   /** Port to listen on (default: 7001) */
-  port?: number;
+  port?: number | undefined;
   /** Fail when `port` is taken instead of moving to the next free one (default: false) */
-  strictPort?: boolean;
+  strictPort?: boolean | undefined;
   /** Hostname (default: "localhost") */
-  hostname?: string;
+  hostname?: string | undefined;
   /** Enable CORS (default: true) */
-  cors?: MockServerOptions["cors"];
+  cors?: MockServerOptions["cors"] | undefined;
   /** Enable admin API (default: true) */
-  admin?: boolean;
+  admin?: boolean | undefined;
   /** Request logging level (default: "normal") */
-  log?: MockServerOptions["log"];
+  log?: MockServerOptions["log"] | undefined;
   /** Seed configuration */
-  seed?: SeedConfig;
+  seed?: SeedConfig | undefined;
   /**
    * Override specific endpoints after auto-generation.
    * Handlers are registered in the base layer — they persist across all scenario switches.
@@ -38,18 +38,18 @@ export interface AutoMockServerConfig {
    * @param mock  Base-layer mock builder
    * @param store Mock store (for store-aware overrides)
    */
-  overrides?: (mock: UntypedMockFn, store: MockStore) => void;
+  overrides?: ((mock: UntypedMockFn, store: MockStore) => void) | undefined;
   /** Additional named scenarios (merged with built-in presets) */
-  scenarios?: Record<string, AnyMockScenario>;
+  scenarios?: Record<string, AnyMockScenario> | undefined;
   /** Default network simulation (latency, errorRate, faultTypes) */
-  network?: NetworkConfig;
+  network?: NetworkConfig | undefined;
   /**
    * Keep the store in a file, so its records survive a restart: each
    * collection the source serves takes the file's records for it when the
    * server starts, in place of its seeds. One the file has no records for
    * keeps them, and one the source no longer serves is not brought back.
    */
-  persist?: { file: string };
+  persist?: { file: string } | undefined;
 }
 
 /**

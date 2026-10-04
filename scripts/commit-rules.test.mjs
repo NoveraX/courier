@@ -11,7 +11,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
 const { TYPE_EMOJI, bodyNoLabelLines, headerMaxCharacters, isGitWritten, subjectTypeEmoji } =
@@ -20,7 +20,16 @@ const { TYPE_EMOJI, bodyNoLabelLines, headerMaxCharacters, isGitWritten, subject
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CLI = require.resolve("@commitlint/cli/cli.js");
 const CLI_TIMEOUT_MS = 20_000;
+const CONFIG = join(ROOT, "commitlint.config.cjs");
 const SCRATCH = mkdtempSync(join(tmpdir(), "commit-rules-"));
+
+beforeAll(() => {
+  /* `--edit` reads the message file of the git work tree it runs in. The
+     scratch is a work tree of its own, so the test does not depend on the
+     repository being one: a copy without .git, or a source archive, runs it. */
+  const init = spawnSync("git", ["init", "-q", SCRATCH], { encoding: "utf8" });
+  if (init.status !== 0) throw new Error(`git init failed: ${init.stderr}`);
+});
 
 afterAll(() => {
   rmSync(SCRATCH, { recursive: true, force: true });
@@ -38,8 +47,8 @@ function lint(message) {
 function lintMessageFile(contents) {
   const file = join(SCRATCH, "COMMIT_EDITMSG");
   writeFileSync(file, contents);
-  const args = [CLI, "-g", "commitlint.config.cjs", "--edit", file];
-  const result = spawnSync(process.execPath, args, { cwd: ROOT, encoding: "utf8" });
+  const args = [CLI, "-g", CONFIG, "--edit", file];
+  const result = spawnSync(process.execPath, args, { cwd: SCRATCH, encoding: "utf8" });
   return { status: result.status, output: `${result.stdout}${result.stderr}` };
 }
 

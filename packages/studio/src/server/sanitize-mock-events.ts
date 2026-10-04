@@ -16,8 +16,7 @@
  *     (mock manager + UI reducers) where the schema is known.
  *
  * If you add a new wire field to a `MockCommand` / lifecycle request, add a
- * guard here AND a test in `sanitize-mock-events.test.ts`. Same
- * whitelist class as `sanitize-source-map.ts`.
+ * guard here AND a test in `sanitize-mock-events.test.ts`.
  */
 
 import { isPlainObject } from "./is-plain-object";

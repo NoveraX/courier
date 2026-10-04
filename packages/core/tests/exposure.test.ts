@@ -85,6 +85,22 @@ describe("isExposedToWire", () => {
   });
 });
 
+describe("isExposedToWire on a config written without types", () => {
+  it("shuts off what a flag set to anything but true is set on", () => {
+    expect(isExposedToWire({ options: { expose: "false" } }, undefined)).toBe(false);
+    expect(isExposedToWire({ options: { expose: 0 } }, undefined)).toBe(false);
+    const groups = { admin: { options: { expose: "no" } } };
+    expect(isExposedToWire({ options: { groups } }, "admin")).toBe(false);
+  });
+
+  it("reads a group only by its own name, whatever the request names", () => {
+    const closed = { options: { expose: false, groups: {} } };
+
+    expect(isExposedToWire(closed, "constructor")).toBe(false);
+    expect(isExposedToWire(closed, "__proto__")).toBe(false);
+  });
+});
+
 describe("the proxy refuses what was not exposed", () => {
   it("serves a group the config opened", async () => {
     const { status } = await fromBrowser(

@@ -1,11 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { WelcomeView } from "@/views/welcome";
-
-function validateWelcomeSearch(search: Record<string, unknown>): { framework?: string } {
-  const fw = search.framework;
-  return { framework: typeof fw === "string" ? fw : undefined };
-}
+import { validateWelcomeSearch } from "@/views/welcome/welcome-search";
 
 export const Route = createFileRoute("/")({
   component: WelcomeView,

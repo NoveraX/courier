@@ -83,7 +83,7 @@ export function AppearanceSection({ form }: AppearanceSectionProps): React.React
             } catch {
               /* noop */
             }
-            navigate({ to: "/" });
+            navigate({ to: "/", search: { setup: true } });
           }}
         >
           Restart setup

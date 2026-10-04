@@ -25,6 +25,7 @@ export function StatusBar(): React.ReactNode {
 
   const connected = connectionStatus === "connected";
   const reconnecting = connectionStatus === "reconnecting";
+  const connecting = connectionStatus === "connecting";
 
   const errors = requests.filter((r) => r.status === "error").length;
   const pending = requests.filter((r) => r.status === "pending").length;
@@ -42,7 +43,8 @@ export function StatusBar(): React.ReactNode {
           "flex h-full items-center gap-1.5 px-2.5",
           connected && "bg-accent-brand/8 text-accent-brand",
           reconnecting && "bg-warning-muted text-warning-foreground",
-          !connected && !reconnecting && "text-destructive-foreground",
+          connecting && "text-muted-foreground",
+          !connected && !reconnecting && !connecting && "text-destructive-foreground",
         )}
       >
         <div
@@ -50,7 +52,8 @@ export function StatusBar(): React.ReactNode {
             "size-1.5 rounded-full",
             connected && "bg-accent-brand",
             reconnecting && "bg-warning animate-pulse-dot",
-            !connected && !reconnecting && "bg-destructive-foreground",
+            connecting && "bg-muted-foreground animate-pulse-dot",
+            !connected && !reconnecting && !connecting && "bg-destructive-foreground",
           )}
         />
         <span className="font-medium">
@@ -58,7 +61,9 @@ export function StatusBar(): React.ReactNode {
             ? `${runtimeCount} ${runtimeCount === 1 ? "runtime" : "runtimes"} · ${sourceCount} ${sourceCount === 1 ? "source" : "sources"}`
             : reconnecting
               ? "reconnecting..."
-              : "disconnected"}
+              : connecting
+                ? "connecting..."
+                : "disconnected"}
         </span>
         {connected && elapsed && <span className="opacity-60">{elapsed}</span>}
       </div>

@@ -45,7 +45,10 @@ describe("apisPageState", () => {
   });
 
   it("shows the skeleton until Studio tells how the config loads", () => {
-    expect(apisPageState({ connected: true, status: null, sourceCount: 0 }).kind).toBe("loading");
+    expect(apisPageState({ connected: true, status: null, sourceCount: 0 })).toEqual({
+      kind: "loading",
+      importBlocked: "Waiting for Studio",
+    });
     expect(
       apisPageState({
         connected: true,

@@ -49,7 +49,9 @@ export function sourceAvailability({
   sourceCount,
 }: SourceAvailabilityInput): SourceAvailability {
   if (!connected) return { kind: "connecting", blocked: "Studio is not connected" };
-  if (status === null || status.state === "starting") {
+  /* No status yet is this page's wait, not Studio loading the config. */
+  if (status === null) return { kind: "loading", blocked: "Waiting for Studio" };
+  if (status.state === "starting") {
     return { kind: "loading", blocked: "Studio is still loading courier.config" };
   }
   const configFile = configFileName(status);

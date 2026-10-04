@@ -57,7 +57,9 @@ export interface ApisPageInput {
  */
 export function apisPageState({ connected, status, sourceCount }: ApisPageInput): ApisPageState {
   if (!connected) return { kind: "connecting", importBlocked: "Studio is not connected" };
-  if (status === null || status.state === "starting") {
+  /* No status yet is this page's wait, not Studio loading the config. */
+  if (status === null) return { kind: "loading", importBlocked: "Waiting for Studio" };
+  if (status.state === "starting") {
     return { kind: "loading", importBlocked: "Studio is still loading courier.config" };
   }
   const file = configFileName(status);

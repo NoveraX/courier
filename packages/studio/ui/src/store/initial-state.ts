@@ -31,7 +31,7 @@ export type InitialState = Pick<
 export function createInitialState(savedTheme: StudioState["theme"]): InitialState {
   return {
     theme: savedTheme,
-    connectionStatus: "disconnected",
+    connectionStatus: "connecting",
     reconnectAttempt: 0,
     bindingSnapshot: { rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] },
     lastBindingError: null,

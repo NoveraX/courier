@@ -56,10 +56,11 @@ export function WSComposePanel({
           className="h-20"
         />
 
-        {/* Send button */}
         <div className="absolute right-4.5 bottom-3.5">
           <button
             type="button"
+            aria-label="Send message"
+            aria-keyshortcuts={isMac ? "Meta+Enter" : "Control+Enter"}
             disabled={!canSend}
             onClick={handleSend}
             className={cn(
@@ -69,8 +70,10 @@ export function WSComposePanel({
                 : "bg-muted/60 text-muted-foreground/40",
             )}
           >
-            <SendHorizontal className="size-3" strokeWidth={2} />
-            <span className="text-[10px] font-medium opacity-70">{isMac ? "⌘↵" : "⌃↵"}</span>
+            <SendHorizontal className="size-3" strokeWidth={2} aria-hidden="true" />
+            <span aria-hidden="true" className="text-[10px] font-medium opacity-70">
+              {isMac ? "⌘↵" : "⌃↵"}
+            </span>
           </button>
         </div>
       </div>

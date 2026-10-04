@@ -32,12 +32,20 @@ describe("sources for new mocks", () => {
       kind: "connecting",
       blocked: "Studio is not connected",
     });
-    for (const status of [null, { state: "starting", revision: 0 } as const]) {
-      expect(sourceAvailability({ connected: true, status, sourceCount: 2 })).toEqual({
-        kind: "loading",
-        blocked: "Studio is still loading courier.config",
-      });
-    }
+    expect(
+      sourceAvailability({
+        connected: true,
+        status: { state: "starting", revision: 0 },
+        sourceCount: 2,
+      }),
+    ).toEqual({ kind: "loading", blocked: "Studio is still loading courier.config" });
+  });
+
+  it("wait for Studio's word on the config, which a page that just connected has not had", () => {
+    expect(sourceAvailability({ connected: true, status: null, sourceCount: 2 })).toEqual({
+      kind: "loading",
+      blocked: "Waiting for Studio",
+    });
   });
 
   it("are not offered while the config fails to load, even with sources loaded before", () => {

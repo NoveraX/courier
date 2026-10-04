@@ -4,12 +4,14 @@ import type { AddressInfo } from "node:net";
 import type { ConnectResult } from "@noverax/courier";
 import { ConfigurationError, createHandler, createLogger, createWSHandler } from "@noverax/courier";
 import { announceHosting } from "@noverax/courier/announce";
+import { discoverAppOrigin } from "@noverax/courier/internal";
 import { attachWebSocketUpgrade } from "@noverax/courier/node";
 import type * as Ws from "ws";
 import type { WebSocketServer } from "ws";
 
 import { httpHandlerOptions, wsFrameLimit, wsHandlerOptions } from "./handler-options";
 import { createRequestListener } from "./http-handlers";
+import { listenUrl } from "./listen-url";
 import { createReadiness } from "./readiness";
 import { createShutdown } from "./shutdown";
 import { setupSignalHandlers } from "./signal-handlers";
@@ -73,7 +75,7 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
   const { ready, markListening, markFailed } = createReadiness();
 
   const result: CourierServer = {
-    url: `http://${host}:${port}`,
+    url: listenUrl(host, port),
     ready,
     stop: wrappedStop,
     sseConnections: handler.sseConnections,
@@ -119,7 +121,10 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
 
   httpServer.listen(port, host, () => {
     const addr = httpServer.address() as AddressInfo;
-    result.url = `http://${host}:${addr.port}`;
+    result.url = listenUrl(host, addr.port);
+    /* The app's origin, unless config or the environment named one, so Studio's
+       Playground reaches this server's proxy at a relative proxyPath too. */
+    discoverAppOrigin(result.url);
     log.info(`Listening on ${result.url}`);
     announceHosting({
       transports: ["http", "sse", "ws"],

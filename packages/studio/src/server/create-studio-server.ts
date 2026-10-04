@@ -149,7 +149,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   startup.start();
 
   const close = async () => {
-    startup.close();
+    await startup.close();
     await project.finishEdits(EDIT_FINISH_BUDGET_MS);
     await mockManager.stop();
     project.stop();

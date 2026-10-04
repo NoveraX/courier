@@ -32,8 +32,12 @@ export interface StudioStartup {
   start(): void;
   /** Handed the config the first load read, or `null` when that load failed. */
   configRead(config: CourierConfig | null): void;
-  /** Never listen from now on, and stop holding the process open. */
-  close(): void;
+  /**
+   * Never listen from now on, stop holding the process open, and wait for a
+   * listen still under way to settle, so the server closed next is one that
+   * listens rather than one about to.
+   */
+  close(): Promise<void>;
 }
 
 /**
@@ -81,6 +85,7 @@ export function createStudioStartup(
       port: port(),
       host: host(),
       onReady: (url) => {
+        if (closed) return;
         options.onReady?.(url);
         announce();
       },
@@ -112,9 +117,10 @@ export function createStudioStartup(
       if (address === null) listen();
       else queueMicrotask(announce);
     },
-    close() {
+    async close() {
       closed = true;
       release();
+      await address?.settled();
     },
   };
 }

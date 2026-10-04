@@ -23,6 +23,7 @@
   },
   "homepage": "https://courier.noverax.cloud",
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "@biomejs/biome": "^2.5.14",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
@@ -48,6 +49,7 @@
     "lint-staged": "^17.5.1",
     "next": "^16.3.5",
     "oxc-transform-react": "0.145.0",
+    "publint": "^0.3.25",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "semantic-release": "^25.0.9",
@@ -76,6 +78,7 @@
     "check:any": "node scripts/check-implicit-any.mjs",
     "check:docs": "node scripts/check-doc-samples.mjs",
     "check:packages": "node scripts/check-packages.mjs",
+    "check:publish": "node scripts/check-publish.mjs",
     "check:names:test": "vitest run scripts/check-name-conflicts.test.mjs",
     "release": "HUSKY=0 semantic-release",
     "prepare": "husky"

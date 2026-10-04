@@ -94,6 +94,11 @@ jobs:
       - name: Check package contents
         run: npm run check:packages
 
+      # Each manifest linted against what it ships (publint), and each export's
+      # JavaScript and types resolved as Node and bundlers resolve them (attw).
+      - name: Lint packages as published
+        run: npm run check:publish
+
       # The example a newcomer runs first, run the way its README says: a
       # backend, the proxy in front of it, a page's caller and server code.
       - name: Run the example

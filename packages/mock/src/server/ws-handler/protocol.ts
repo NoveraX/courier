@@ -17,9 +17,9 @@ export function sendError(ws: NodeWebSocket, failure: StreamFailure, topic?: str
  * Tell the client the subscription to `topic` ended — failed with `failure`,
  * or finished — then close the socket once that frame is on the wire.
  *
- * A mock channel has a socket of its own, so its end is the socket's. It
- * used to send an error the client could not match to its channel and close
- * with 1011, which the client retried — and the failure repeated — forever.
+ * A mock channel has a socket of its own, so its end is the socket's. The
+ * frame names the topic, so the client matches it to its channel rather than
+ * retrying a bare 1011 close — and repeating the failure — forever.
  */
 export function endSubscriptionAndClose(
   ws: NodeWebSocket,

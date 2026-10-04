@@ -88,8 +88,8 @@ function makeCreateHandler(store: MockStore, groupName: string, route: RouteInfo
       throw new MockHttpError(409, `${groupName} with id ${given} already exists`);
     }
     /* The fields the body leaves out are generated from the schema, so the
-       record answered — and stored — is a whole one: a partial body used to
-       be stored as it was, and failed the endpoint's own response schema. */
+       record answered — and stored — is a whole one that passes the
+       endpoint's own response schema, not the partial body as it came. */
     const generated = itemSchema ? (generateRecords(itemSchema, 1, col.count() + 1)[0] ?? {}) : {};
     const { [col.idField]: generatedId, ...defaults } = generated;
     const { [col.idField]: _given, ...fields } = vars;
@@ -112,8 +112,8 @@ function makeUpdateHandler(store: MockStore, groupName: string, route: RouteInfo
 
 /**
  * PUT replaces the record, as a real API does: fields the body leaves out
- * are gone. It used to merge like PATCH, so a client relying on PUT to clear
- * a field passed against the mock and failed in production.
+ * are gone, not merged in like PATCH, so a client relying on PUT to clear a
+ * field behaves against the mock as it does in production.
  */
 function makeUpsertHandler(store: MockStore, groupName: string, route: RouteInfo): Handler {
   return (ctx) => {

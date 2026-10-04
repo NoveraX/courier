@@ -16,9 +16,9 @@ const MORE = new Set(["hasMore", "has_more", "hasNext", "has_next", "hasNextPage
  * List records in the shape the endpoint declares.
  *
  * A list endpoint answering a pagination wrapper — `{ items, total, page }`,
- * the commonest shape in real APIs — got a bare array, which its own
- * response schema refused. The wrapper's array field now holds the requested
- * page, and the count and page fields it declares describe that page.
+ * the commonest shape in real APIs — gets the wrapper, which its own response
+ * schema accepts, not a bare array: its array field holds the requested page,
+ * and the count and page fields it declares describe that page.
  *
  * @param route - The list route, with its response schema
  * @param rows - The records to list, read on each call — a collection's, or none

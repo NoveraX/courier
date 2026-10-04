@@ -8,6 +8,7 @@
  * nothing to show.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import type * as Sonner from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useStudioStore } from "@/store";
@@ -17,6 +18,8 @@ import { openShell } from "./shell-harness";
 vi.mock("@/socket", () => ({
   getSocket: () => ({ emit: vi.fn(), on: vi.fn(), off: vi.fn(), connect: vi.fn() }),
 }));
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock("sonner", async (actual) => ({ ...(await actual<typeof Sonner>()), toast }));
 
 const NOW = Date.now();
 const REQUESTS = [
@@ -155,5 +158,6 @@ describe("the Timeline", () => {
     });
 
     expect(rows()).toEqual(["pinned"]);
+    expect(toast.success).toHaveBeenCalledWith("Cleared · pinned kept");
   });
 });

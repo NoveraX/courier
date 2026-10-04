@@ -1,4 +1,5 @@
 import { Download, History, Pin, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
 
 import { exportShownRequests } from "@/features/sessions/export-requests";
 import { useClearRequests } from "@/hooks/use-clear-requests";
@@ -92,7 +93,10 @@ export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
       <button
         type="button"
         title="Clear the requests"
-        onClick={clear}
+        onClick={() => {
+          clear();
+          toast.success(preserve ? "Cleared · pinned kept" : "Cleared");
+        }}
         className={cn(TOOL, "border-line text-fg-muted hover:text-fg")}
       >
         <Trash2 aria-hidden="true" className="size-3.25" />

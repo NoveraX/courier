@@ -23,6 +23,7 @@
  */
 
 import { ConfigurationError } from "../errors";
+import { isRecord } from "../utils/is-record";
 import type { ProxyPath } from "./proxy-path";
 
 /** Discriminator for the three supported transports. */
@@ -162,9 +163,9 @@ function joinOriginWithPath(
 }
 
 function readGlobalLocation(): ResolveOrigin | undefined {
-  const loc = (globalThis as { location?: { protocol?: string; host?: string } }).location;
-  if (!loc || typeof loc.protocol !== "string" || typeof loc.host !== "string" || loc.host === "") {
-    return undefined;
-  }
-  return { protocol: loc.protocol, host: loc.host };
+  const loc: unknown = Reflect.get(globalThis, "location");
+  if (!isRecord(loc)) return undefined;
+  const { protocol, host } = loc;
+  if (typeof protocol !== "string" || typeof host !== "string" || host === "") return undefined;
+  return { protocol, host };
 }

@@ -1,4 +1,5 @@
 import { ConfigurationError } from "../errors/configuration-error";
+import { isRecord } from "../utils/is-record";
 import { deriveSourceName, getSourceName, setSourceName } from "./api";
 
 /**
@@ -46,8 +47,13 @@ export function stampSourceKeys(sources: Readonly<Record<string, unknown>>): voi
 }
 
 function wasChosen(source: unknown, name: string): boolean {
-  const baseURL = (source as { options?: { baseURL?: string } } | null)?.options?.baseURL;
-  return deriveSourceName(baseURL) !== name;
+  return deriveSourceName(baseURLOf(source)) !== name;
+}
+
+function baseURLOf(source: unknown): string | undefined {
+  if (!isRecord(source) || !isRecord(source.options)) return undefined;
+  const { baseURL } = source.options;
+  return typeof baseURL === "string" ? baseURL : undefined;
 }
 
 /**

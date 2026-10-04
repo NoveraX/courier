@@ -8,7 +8,7 @@
  * property name.
  */
 export function endpointPath(endpoint: unknown, method: string): string {
-  if (typeof endpoint !== "object" || endpoint === null) return method;
-  const { path } = endpoint as { path?: unknown };
+  if (typeof endpoint !== "object" || endpoint === null || !("path" in endpoint)) return method;
+  const { path } = endpoint;
   return typeof path === "string" && path.length > 0 ? path : method;
 }

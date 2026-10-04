@@ -2,6 +2,7 @@ import { isBodilessStatus } from "../http-client/response";
 import type { UploadProgress } from "../http-client/types";
 import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
+import { isRecord } from "./is-record";
 
 const log = createLogger("Upload");
 
@@ -109,8 +110,8 @@ function toResponse(xhr: XMLHttpRequest): Response {
 }
 
 function warnAboutIgnoredOptions(init: XhrRequestInit): void {
-  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
-    ?.env;
+  const runtime: unknown = Reflect.get(globalThis, "process");
+  const env = isRecord(runtime) && isRecord(runtime.env) ? runtime.env : undefined;
   if (env?.NODE_ENV === "production") return;
   const ignored = FETCH_ONLY.filter((option) => init[option] !== undefined);
   if (ignored.length > 0) {

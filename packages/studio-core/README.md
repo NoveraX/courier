@@ -1,14 +1,28 @@
 <div align="center">
   <br />
+  <a href="https://courier.noverax.cloud">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+    </picture>
+  </a>
 
-  # @noverax/courier-studio-core
+  <h1>@noverax/courier-studio-core</h1>
 
-  **Instrumentation core for Courier Studio — `attachRuntime`, EventBus, event types, and Socket.IO connector.**
+  <p><strong>Instrumentation core for Courier Studio — `attachRuntime`, EventBus, event types, and Socket.IO connector.</strong></p>
 
-  <br />
+  <p>
+    <a href="https://www.npmjs.com/package/@noverax/courier-studio-core"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-studio-core?style=flat-square&label=npm&labelColor=0e1116&color=6d28d9" /></a>
+    <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-6d28d9?style=flat-square&labelColor=0e1116" /></a>
+  </p>
 
-  <a href="https://www.npmjs.com/package/@noverax/courier-studio-core"><img src="https://img.shields.io/npm/v/@noverax/courier-studio-core?color=7c3aed&style=flat-square" alt="npm" /></a>
-
+  <p>
+    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/NoveraX/courier#readme">Courier</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/NoveraX/courier/tree/master/packages/studio-core">Source</a>
+  </p>
   <br />
 </div>
 
@@ -86,4 +100,10 @@ The app origin registry (`setAppOrigin`, `getAppOrigin`, `detectAppOrigin`) live
 
 ## License
 
-[MIT](../../LICENSE)
+[MIT](https://github.com/NoveraX/courier/blob/master/LICENSE)
+
+<br />
+
+<div align="center">
+  <sub>Part of <a href="https://github.com/NoveraX/courier">Courier</a> · built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

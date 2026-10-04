@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Courier — README architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=block">
+<style>
+  :root {
+    --ground: #f7f8fa; --dots: rgba(14, 17, 22, .07);
+    --card: #ffffff; --raised: #fbfbfd; --border: #e1e4ea; --hairline: #eceef2;
+    --text: #0e1116; --muted: #5d6877; --faint: #98a1ad;
+    --accent: #6d28d9; --accent-soft: #f1ecfd; --accent-line: #b9a3ef;
+    --fn: #0b6aa2; --str: #0a7a52;
+    --shadow: 0 24px 60px -24px rgba(23, 30, 45, .18), 0 6px 16px -6px rgba(23, 30, 45, .08);
+  }
+  :root[data-theme="dark"] {
+    --ground: #08090c; --dots: rgba(230, 234, 240, .05);
+    --card: #0e1116; --raised: #12161c; --border: #1f252e; --hairline: #181d24;
+    --text: #e6eaf0; --muted: #8b95a3; --faint: #59626f;
+    --accent: #a78bfa; --accent-soft: rgba(167, 139, 250, .12); --accent-line: rgba(167, 139, 250, .55);
+    --fn: #7dd3fc; --str: #86efac;
+    --shadow: 0 24px 60px -24px rgba(0, 0, 0, .7), 0 6px 16px -6px rgba(0, 0, 0, .45);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1200px; height: 640px; background: var(--ground); overflow: hidden; }
+  body {
+    position: relative;
+    background-image: radial-gradient(var(--dots) 1.1px, transparent 1.2px);
+    background-size: 20px 20px;
+    font-family: "IBM Plex Sans", system-ui, sans-serif; color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .label { position: absolute; top: 56px; font: 600 12px/1 "IBM Plex Sans", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .card { position: absolute; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 18px 20px; }
+  .card h3 { margin: 0 0 8px; font: 600 16.5px/1.2 "IBM Plex Sans", sans-serif; letter-spacing: -.005em; }
+  .code { font: 400 13.5px/1.5 "JetBrains Mono", monospace; color: var(--text); font-variant-ligatures: none; }
+  .code .fn { color: var(--fn); } .code .str { color: var(--str); }
+  .note { margin-top: 8px; font: 400 13.5px/1.45 "IBM Plex Sans", sans-serif; color: var(--muted); }
+  .core { background: var(--raised); border-color: var(--accent-line); }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { width: 26px; height: 22px; }
+  .brand b { font: 600 18px/1 "IBM Plex Sans", sans-serif; letter-spacing: -.01em; }
+  .sub { margin: 8px 0 16px; font: 400 13px/1 "JetBrains Mono", monospace; color: var(--muted); }
+  .rows { display: grid; gap: 11px; }
+  .row { display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: start; font: 400 14px/1.35 "IBM Plex Sans", sans-serif; }
+  .tick { width: 16px; height: 16px; border-radius: 5px; background: var(--accent-soft); position: relative; top: 1px; }
+  .tick::after { content: ""; position: absolute; left: 5px; top: 3px; width: 4px; height: 7px; border: solid var(--accent); border-width: 0 1.6px 1.6px 0; transform: rotate(45deg); }
+  .strip { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 24px; align-items: start; }
+  .divider { background: var(--hairline); height: 100%; }
+  svg.wires { position: absolute; inset: 0; pointer-events: none; }
+  .wire { stroke: var(--accent-line); stroke-width: 1.5; fill: none; }
+  .wire.dash { stroke-dasharray: 4 5; }
+  .head { fill: var(--accent); }
+</style>
+</head>
+<body>
+  <div class="label" style="left: 48px">Your code</div>
+  <div class="label" style="left: 452px">Courier</div>
+  <div class="label" style="left: 800px">Your backend</div>
+
+  <div class="card" style="left: 48px; top: 86px; width: 350px; height: 124px">
+    <h3>Server code</h3>
+    <div class="code"><span class="fn">createCaller</span>(api)</div>
+    <div class="note">Calls the backend directly, with no extra hop.</div>
+  </div>
+  <div class="card" style="left: 48px; top: 228px; width: 350px; height: 124px">
+    <h3>Browser</h3>
+    <div class="code"><span class="fn">createProxyCaller</span>(<span class="str">"api"</span>, { boundary })</div>
+    <div class="note">Ships endpoint names only: no address, paths or keys.</div>
+  </div>
+  <div class="card" style="left: 48px; top: 370px; width: 350px; height: 124px">
+    <h3>Realtime</h3>
+    <div class="code">.<span class="fn">subscribe</span>() · .<span class="fn">channel</span>()</div>
+    <div class="note">SSE and WebSocket, typed both ways, with clean ends.</div>
+  </div>
+
+  <div class="card core" style="left: 452px; top: 86px; width: 296px; height: 408px">
+    <div class="brand">
+      <svg viewBox="0 0 212 180" aria-hidden="true"><path fill="currentColor" d="M212 0H90a90 90 0 0 0 0 180h122l-52-50H90a40 40 0 0 1 0-80h70Z"/></svg>
+      <b>Courier</b>
+    </div>
+    <div class="sub">one definition · api/sources.ts</div>
+    <div class="rows" style="gap: 10px">
+      <div class="row"><span class="tick"></span><span>Types inferred end to end, no codegen</span></div>
+      <div class="row"><span class="tick"></span><span>Validation with any Standard Schema</span></div>
+      <div class="row"><span class="tick"></span><span>Middleware — retry, auth, cache, logging</span></div>
+      <div class="row"><span class="tick"></span><span>A proxy route that refuses every endpoint the boundary does not name</span></div>
+      <div class="row"><span class="tick"></span><span>Streams that complete, fail or reconnect as the server says</span></div>
+      <div class="row"><span class="tick"></span><span>Adapters for Next.js, Nuxt, Hono, Express, Fastify, NestJS and more</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="left: 800px; top: 86px; width: 352px; height: 198px">
+    <h3>Any REST API</h3>
+    <div class="note">FastAPI, Rails, Go, Laravel, Express — or a service you do not own. Courier needs nothing on its side.</div>
+    <div class="code" style="margin-top: 14px; color: var(--muted)">GET /users/42 → 200 OK</div>
+  </div>
+  <div class="card" style="left: 800px; top: 296px; width: 352px; height: 198px">
+    <h3>Streams</h3>
+    <div class="note">Server-Sent Events and WebSocket channels, served by Courier's server adapters or your own.</div>
+    <div class="code" style="margin-top: 14px; color: var(--muted)">event: message · courier:complete</div>
+  </div>
+
+  <div class="card" style="left: 48px; top: 528px; width: 1104px; height: 92px">
+    <div class="strip">
+      <div><h3>Courier Studio</h3><div class="note" style="margin-top: 4px">Every call your app makes, live — with a playground, OpenAPI import and the mock servers.</div></div>
+      <div class="divider"></div>
+      <div><h3>Mock servers</h3><div class="note" style="margin-top: 4px">The same definition, served before the backend exists; records kept across restarts.</div></div>
+    </div>
+  </div>
+
+  <svg class="wires" viewBox="0 0 1200 640" aria-hidden="true">
+    <defs>
+      <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path class="head" d="M0 0 8 4 0 8Z"/></marker>
+    </defs>
+    <path class="wire" marker-end="url(#arrow)" d="M398 148 H450"/>
+    <path class="wire" marker-end="url(#arrow)" d="M398 290 H450"/>
+    <path class="wire" marker-end="url(#arrow)" d="M398 432 H450"/>
+    <path class="wire" marker-end="url(#arrow)" d="M748 185 H798"/>
+    <path class="wire" marker-end="url(#arrow)" d="M748 395 H798"/>
+    <path class="wire dash" d="M600 494 V528"/>
+  </svg>
+<script>
+  document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") ?? "dark";
+</script>
+</body>
+</html>

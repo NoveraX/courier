@@ -1,14 +1,28 @@
 <div align="center">
   <br />
+  <a href="https://courier.noverax.cloud">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+    </picture>
+  </a>
 
-  # @noverax/courier-studio
+  <h1>@noverax/courier-studio</h1>
 
-  **Visual debugging studio for Courier — inspect requests, explore endpoints, and monitor your API in real time.**
+  <p><strong>Visual debugging studio for Courier — inspect requests, explore endpoints, and monitor your API in real time.</strong></p>
 
-  <br />
+  <p>
+    <a href="https://www.npmjs.com/package/@noverax/courier-studio"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-studio?style=flat-square&label=npm&labelColor=0e1116&color=6d28d9" /></a>
+    <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-6d28d9?style=flat-square&labelColor=0e1116" /></a>
+  </p>
 
-  <a href="https://www.npmjs.com/package/@noverax/courier-studio"><img src="https://img.shields.io/npm/v/@noverax/courier-studio?color=7c3aed&style=flat-square" alt="npm" /></a>
-
+  <p>
+    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/NoveraX/courier#readme">Courier</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/NoveraX/courier/tree/master/packages/studio">Source</a>
+  </p>
   <br />
 </div>
 
@@ -379,4 +393,10 @@ Starts Studio and returns at once with `url`, `token` — the project's token, w
 
 ## License
 
-[MIT](../../LICENSE)
+[MIT](https://github.com/NoveraX/courier/blob/master/LICENSE)
+
+<br />
+
+<div align="center">
+  <sub>Part of <a href="https://github.com/NoveraX/courier">Courier</a> · built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

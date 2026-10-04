@@ -2,7 +2,7 @@
  * Build scenario metadata for Studio UI from raw scenario objects.
  */
 
-import type { RouteInfo } from "../auto/route-analyzer";
+import type { RouteInfo } from "../auto/route-types";
 import { introspectScenario } from "../auto/scenario-introspect";
 import type { AnyMockScenario } from "../types";
 import type { ChildScenarioMeta } from "./types";

@@ -1,7 +1,7 @@
 import type { MockRequestContext } from "../types";
 import { generateRecords } from "./data-generator";
 import { generateValue } from "./data-generator/value";
-import type { RouteInfo } from "./route-analyzer";
+import type { RouteInfo } from "./route-types";
 import { analyzeField, extractShape, unwrapArraySchema } from "./schema-introspect";
 
 /** How many items a made-up list has. */

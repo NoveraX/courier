@@ -10,9 +10,9 @@ import type { Hono } from "hono";
 import type { NetworkState } from "../network/state";
 import type { MockStore } from "../store";
 import type { AnyMockScenario, MockHistoryEntry, NetworkConfig, UntypedMockFn } from "../types";
-import type { PrefixMapping } from "./prefix-routes";
+import type { PrefixMapping } from "./prefix-route-types";
 import type { MockLogMode } from "./request-logger";
-import type { RequestHooks } from "./route-generator";
+import type { RequestHooks } from "./route-types";
 
 /** Configuration for the mock HTTP server */
 export interface MockServerOptions {

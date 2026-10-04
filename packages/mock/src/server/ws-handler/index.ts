@@ -5,7 +5,7 @@ import { logger } from "@noverax/courier";
 import type { WebSocketServer as WSServerType } from "ws";
 import type { MockRegistry } from "../../registry";
 import type { MockHistoryEntry } from "../../types";
-import type { PrefixMapping } from "../prefix-routes";
+import type { PrefixMapping } from "../prefix-route-types";
 import { acceptProxySocket, PROXY_WS_PATH } from "../proxy-ws";
 import type { RequestHooks } from "../route-types";
 import { activateConnection } from "./connection-handler";

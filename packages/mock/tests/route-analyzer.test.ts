@@ -1,8 +1,8 @@
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import type { CrudOperation, RouteInfo } from "../src/auto/route-analyzer";
 import { analyzeRoutes, getSourceGroupNames } from "../src/auto/route-analyzer";
+import type { CrudOperation, RouteInfo } from "../src/auto/route-types";
 
 const { endpoint } = courier();
 

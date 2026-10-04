@@ -23,7 +23,7 @@ import {
   type MockServer,
   type MockServerOptions,
 } from "../src/server/create-mock-server";
-import type { PrefixMapping } from "../src/server/prefix-routes";
+import type { PrefixMapping } from "../src/server/prefix-route-types";
 
 // ---------------------------------------------------------------------------
 // Helpers

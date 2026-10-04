@@ -1,7 +1,7 @@
 import { createLogger } from "@noverax/courier";
 import { isThenable } from "../scenario/is-thenable";
 import type { AnyMockScenario } from "../types";
-import type { RouteInfo } from "./route-analyzer";
+import type { RouteInfo } from "./route-types";
 import type { ScenarioEndpointEntry, StateTransition } from "./scenario-recorder";
 import { createScenarioRecorder } from "./scenario-recorder";
 

@@ -1,12 +1,7 @@
 /**
- * Shared types for the route generator and its helpers.
- *
- * Extracted from `route-generator.ts` so that the request lifecycle helpers
- * (`route-network`, `route-response`) can import the `RouteConfig` and
- * `RequestHooks` shapes without pulling in the entire request handler module.
- *
- * The original `route-generator.ts` re-exports these types so external imports
- * (e.g. `create-mock-server.ts`) keep working unchanged.
+ * The shapes the route generator and its request lifecycle helpers share, in
+ * a module of their own so a helper can name them without the request
+ * handler module.
  */
 
 import type { NetworkState } from "../network/state";

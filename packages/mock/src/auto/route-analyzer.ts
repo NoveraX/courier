@@ -13,9 +13,6 @@ import { detectOperation } from "./operation-detect";
 import type { RouteInfo } from "./route-types";
 import { prop } from "./schema-introspect/prop";
 
-// Re-export types so external imports keep working unchanged.
-export type { CrudOperation, RouteInfo } from "./route-types";
-
 /**
  * Analyze all endpoints in an API source and extract route information.
  * Handles both grouped endpoints (source.options.groups) and top-level endpoints.

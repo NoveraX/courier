@@ -1,7 +1,7 @@
 import type { MockStore } from "../store";
 import type { UntypedMockFn } from "../types";
 import { createHandler } from "./auto-handlers";
-import type { RouteInfo } from "./route-analyzer";
+import type { RouteInfo } from "./route-types";
 
 /**
  * Register auto-CRUD handlers directly via the given mock function.

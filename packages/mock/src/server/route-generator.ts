@@ -20,8 +20,6 @@ import { buildResponse, handlerFailure, pushHistory } from "./route-response";
 import type { RouteConfig } from "./route-types";
 import { handleSSEMock } from "./sse-handler";
 
-export type { RequestHooks, RouteConfig } from "./route-types";
-
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /** How a route wants a request answered */

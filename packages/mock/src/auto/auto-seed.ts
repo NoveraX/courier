@@ -1,7 +1,7 @@
 import { pathShape } from "../server/path-shape";
 import type { MockStore } from "../store";
 import { generateRecords } from "./data-generator";
-import type { RouteInfo } from "./route-analyzer";
+import type { RouteInfo } from "./route-types";
 import { extractShape } from "./schema-introspect";
 import { itemSchemaOf, seedSources } from "./seed-sources";
 

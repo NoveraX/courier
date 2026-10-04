@@ -2,7 +2,7 @@ import type { MockStore } from "../store";
 import type { AnyMockScenario, UntypedMockFn } from "../types";
 import { createHandler } from "./auto-handlers";
 import { makeListHandler } from "./auto-list-handler";
-import type { RouteInfo } from "./route-analyzer";
+import type { RouteInfo } from "./route-types";
 
 /**
  * Build standard preset scenarios from analyzed routes.

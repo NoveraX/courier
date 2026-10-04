@@ -12,7 +12,7 @@
 import type { Server } from "node:http";
 import type { MockRegistry } from "../registry";
 import type { MockHistoryEntry } from "../types";
-import type { PrefixMapping } from "./prefix-routes";
+import type { PrefixMapping } from "./prefix-route-types";
 import type { RequestHooks } from "./route-types";
 import { createMockWSHandler, type MockWSHandler } from "./ws-handler";
 

@@ -1,7 +1,7 @@
 import { logger } from "@noverax/courier";
 
 import { matchPath } from "../match-path";
-import type { PrefixMapping } from "../prefix-routes";
+import type { PrefixMapping } from "../prefix-route-types";
 import { parseQueryParams } from "../route-helpers";
 
 /** Resolved (group, method) pair from a WS upgrade URL */

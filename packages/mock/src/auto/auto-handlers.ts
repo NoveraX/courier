@@ -14,7 +14,7 @@ import {
   typedLike,
   unusedId,
 } from "./record-ids";
-import type { RouteInfo } from "./route-analyzer";
+import type { RouteInfo } from "./route-types";
 import { unwrapArraySchema } from "./schema-introspect";
 
 /**

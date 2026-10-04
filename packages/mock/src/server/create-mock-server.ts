@@ -26,7 +26,7 @@ import { registerAdminRoutes } from "./admin-api";
 import { registerRequestRoutes } from "./api-routes";
 import { applyMiddleware } from "./app-middleware";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
-import type { RequestHooks } from "./route-generator";
+import type { RequestHooks } from "./route-types";
 import { createScenarioControls } from "./scenario-controls";
 import { createServerLifecycle } from "./server-lifecycle";
 import { createStreamStopper } from "./stream-stopper";

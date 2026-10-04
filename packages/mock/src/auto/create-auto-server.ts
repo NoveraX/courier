@@ -13,9 +13,6 @@ import { buildPresetScenarios } from "./preset-scenarios";
 import { analyzeRoutes, getSourceGroupNames } from "./route-analyzer";
 import { seedOptionsOf } from "./seed-options";
 
-// Re-export SeedConfig so external imports keep working unchanged.
-export type { SeedConfig } from "./prefix-mappings";
-
 /** Configuration for the auto-generated mock server */
 export interface AutoMockServerConfig {
   /** API source definition — routes are auto-generated from this */

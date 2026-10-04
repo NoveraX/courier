@@ -33,6 +33,7 @@ export type {
   HttpFetchEndEvent,
   HttpFetchErrorEvent,
   HttpFetchStartEvent,
+  HttpVersion,
   MiddlewareEnterEvent,
   MiddlewareErrorEvent,
   MiddlewareExitEvent,

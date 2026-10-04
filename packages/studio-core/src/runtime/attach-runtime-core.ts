@@ -10,6 +10,7 @@ import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-host
 import type { RuntimeHandle } from "./attach-runtime-types";
 import { connectRuntimeSocket } from "./connect-runtime-socket";
 import { wireHooks, wireHttpHooks } from "./hooks";
+import type { HttpVersions } from "./http-versions/http-version";
 import {
   type ConfiguredStudioAddress,
   detectBrowser,
@@ -54,6 +55,7 @@ export type ServerConfigLoader = () => Promise<ServerRuntimeSetup | undefined>;
 export async function attachRuntimeUsing(
   loadServerConfig: ServerConfigLoader | undefined,
   id?: string,
+  observeVersions?: () => HttpVersions,
 ): Promise<RuntimeHandle> {
   const isBrowser = detectBrowser();
   const runtimeId = id ?? detectDefaultRuntimeId(isBrowser);
@@ -67,7 +69,7 @@ export async function attachRuntimeUsing(
   const inFlight = attaching.get(runtimeId);
   if (inFlight) return inFlight;
   const loader = isBrowser ? undefined : loadServerConfig;
-  const attach = attachFresh(runtimeId, isBrowser, loader).finally(() =>
+  const attach = attachFresh(runtimeId, isBrowser, loader, observeVersions).finally(() =>
     attaching.delete(runtimeId),
   );
   attaching.set(runtimeId, attach);
@@ -78,6 +80,7 @@ async function attachFresh(
   runtimeId: string,
   isBrowser: boolean,
   loadServerConfig: ServerConfigLoader | undefined,
+  observeVersions: (() => HttpVersions) | undefined,
 ): Promise<RuntimeHandle> {
   // ── Production-relevant: source registry + appOrigin ──
 
@@ -87,6 +90,7 @@ async function attachFresh(
   let unsubscribeAnnouncements: (() => void) | null = null;
   let socketDisposer: (() => void) | null = null;
   let flushAnnouncements: (() => void) | undefined;
+  let versions: HttpVersions | undefined;
   const pending: BufferedAnnouncement[] = [];
 
   const handle: InternalHandle = {
@@ -95,6 +99,7 @@ async function attachFresh(
     detach() {
       if (detached) return;
       detached = true;
+      versions?.dispose();
       unsubscribeAnnouncements?.();
       socketDisposer?.();
       handles.delete(runtimeId);
@@ -128,7 +133,8 @@ async function attachFresh(
     const bus = new EventBus();
     const resolveSourceName = createSourceNameResolver(getSources);
     wireHooks(bus, runtimeId, resolveSourceName);
-    wireHttpHooks(bus, runtimeId, resolveSourceName);
+    versions = observeVersions?.();
+    wireHttpHooks(bus, runtimeId, resolveSourceName, versions);
 
     const studioUrl = resolveStudioUrl(setup?.studio);
     const input = { runtimeId, kind: handle.kind, studioUrl, bus, readToken: setup?.readToken };

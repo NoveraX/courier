@@ -9,11 +9,16 @@ export interface HttpFetchStartEvent extends StudioEvent {
   method: string;
 }
 
+/** The HTTP version a request went over, as a protocol's name for it. */
+export type HttpVersion = "HTTP/1.0" | "HTTP/1.1" | "HTTP/2" | "HTTP/3";
+
 export interface HttpFetchEndEvent extends StudioEvent {
   type: "http:fetch:end";
   requestId: string;
   status: number;
   duration: number;
+  /** The version the request went over, when the runtime could tell. */
+  httpVersion?: HttpVersion;
 }
 
 export interface HttpFetchErrorEvent extends StudioEvent {

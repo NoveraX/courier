@@ -6,6 +6,7 @@ import type {
   HttpFetchErrorEvent,
   HttpFetchStartEvent,
 } from "../../events";
+import type { HttpVersions } from "../http-versions/http-version";
 
 /** Create an event with session envelope */
 const createEvent = <TEvent extends AnyStudioEvent>(
@@ -14,8 +15,15 @@ const createEvent = <TEvent extends AnyStudioEvent>(
 ): TEvent => ({ ...partial, sessionId }) as TEvent;
 
 /** Wire fetch lifecycle hooks to the bus */
-export function wireFetchHooks(bus: EventBus, sessionId: string): void {
+export function wireFetchHooks(
+  bus: EventBus,
+  sessionId: string,
+  versions?: HttpVersions | undefined,
+): void {
+  /* The URL each request in flight went to, to tell the version it went over once it answers. */
+  const urls = new Map<string, string>();
   studioHooks.onHttpFetchStart = (e) => {
+    urls.set(e.requestId, e.url);
     bus.emit(
       createEvent<HttpFetchStartEvent>(sessionId, {
         id: e.requestId,
@@ -29,6 +37,9 @@ export function wireFetchHooks(bus: EventBus, sessionId: string): void {
   };
 
   studioHooks.onHttpFetchEnd = (e) => {
+    const url = urls.get(e.requestId);
+    urls.delete(e.requestId);
+    const httpVersion = url === undefined ? undefined : versions?.versionOf(url);
     bus.emit(
       createEvent<HttpFetchEndEvent>(sessionId, {
         id: e.requestId,
@@ -37,11 +48,13 @@ export function wireFetchHooks(bus: EventBus, sessionId: string): void {
         requestId: e.requestId,
         status: e.status,
         duration: e.duration,
+        ...(httpVersion && { httpVersion }),
       }),
     );
   };
 
   studioHooks.onHttpFetchError = (e) => {
+    urls.delete(e.requestId);
     bus.emit(
       createEvent<HttpFetchErrorEvent>(sessionId, {
         id: e.requestId,

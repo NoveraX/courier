@@ -18,4 +18,15 @@ describe("a schema inferred from an example value", () => {
     expect(inferSchemaFromValue("Body", true).type).toBe("boolean");
     expect(inferSchemaFromValue("Body", "text").type).toBe("string");
   });
+
+  it("types a nested object by its own fields, and a list by its first element", () => {
+    const body = inferSchemaFromValue("Body", {
+      details: { id: "x", amount: 1 },
+      items: [{ id: "a", price: 1 }],
+    });
+
+    expect(body.properties?.details?.shape?.properties?.amount?.type).toBe("number");
+    expect(body.properties?.items?.items?.type).toBe("object");
+    expect(body.properties?.items?.items?.properties?.price?.type).toBe("number");
+  });
 });

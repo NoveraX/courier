@@ -107,13 +107,35 @@ afterEach(() => {
 });
 
 describe("createProjectState", () => {
-  it("sends the imports lists anew when a route changed the imports state, and nothing while Studio starts", async () => {
+  it("sends the imports lists anew when a route changed the imports state", async () => {
     const { state } = await versionedProject();
     const emit = vi.spyOn(io.of("/ui"), "emit");
 
     state.importsChanged();
 
     expect(emit.mock.calls.map(([event]) => event)).toEqual(["registry:updated", "scan:sources"]);
+  });
+
+  it("sends nothing while Studio starts: the first load sends the lists itself", async () => {
+    writeFileSync(join(root, "courier.config.ts"), VERSIONED);
+    writeFileSync(join(root, "version.ts"), versionModule(1));
+    const uiNamespace = io.of("/ui");
+    const emit = vi.spyOn(uiNamespace, "emit");
+    const starting = createProjectState({
+      projectRoot: root,
+      bindingTable: new BindingTable(),
+      uiNamespace,
+      watcherStatus: createWatcherStatus(uiNamespace),
+      mocks: { mockRegistry: createMockRegistry(), mockManager: { setMocksFile: vi.fn() } },
+    });
+    project = starting;
+
+    starting.importsChanged();
+    const sentWhileStarting = emit.mock.calls.map(([event]) => event);
+    await starting.fresh(10_000);
+
+    expect(sentWhileStarting).not.toContain("registry:updated");
+    expect(sentWhileStarting).not.toContain("scan:sources");
   });
 
   it("keeps a failure to send the imports lists from the route that changed them, and says so", async () => {

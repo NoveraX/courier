@@ -11,7 +11,7 @@ import type { AddressInfo } from "node:net";
 import { registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { Server, type Socket } from "socket.io";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, onTestFinished } from "vitest";
 import { z } from "zod";
 
 import { connectRuntimeSocket } from "../src/runtime/connect-runtime-socket";
@@ -160,6 +160,26 @@ describe("a WebSocket channel opened from the Playground", () => {
       { text: "welcome" },
       { echo: { text: "hi" } },
     ]);
+  });
+
+  it("delivers what the channel sends on join while Studio watches the channel too", async () => {
+    const { studioHooks } = await import("@noverax/courier/internal");
+    const recorded: unknown[] = [];
+    studioHooks.onStreamOpen = () => {};
+    studioHooks.onStreamMessage = (event) => {
+      recorded.push(event.dataPreview);
+    };
+    onTestFinished(() => {
+      delete studioHooks.onStreamOpen;
+      delete studioHooks.onStreamMessage;
+    });
+
+    execute("ws-watched", "live", "chat", "ws");
+    await until(() => framesOf("ws-watched").length >= 1, "the welcome");
+    runtime?.emit("playground:cancel", { rid: "ws-watched" });
+
+    expect(framesOf("ws-watched")[0]?.payload.chunk?.data).toEqual({ text: "welcome" });
+    expect(recorded).toEqual(['{"text":"welcome"}']);
   });
 
   it("delivers a message written while the channel was still opening", async () => {

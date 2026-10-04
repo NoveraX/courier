@@ -383,6 +383,33 @@ describe("executeDirectWSChannel — studio instrumentation", () => {
     cleanup();
   });
 
+  it("leaves what onJoin sends for the caller's first listener, and records it once", async () => {
+    const onStreamMessage = vi.fn();
+    onTestFinished(installHooks({ onStreamOpen: vi.fn(), onStreamMessage }));
+    const sources = makeChannelSources(() => ({
+      onJoin: (ctx) => ctx.send({ text: "welcome" }),
+      onMessage: (ctx, message) => ctx.send({ echo: message }),
+    }));
+    const channel = await executeDirectWSChannel(sources as any, {
+      source: "api",
+      group: "chat",
+      method: "room",
+    });
+    const received: unknown[] = [];
+
+    channel.on("data", (d) => received.push(d));
+    await channel.send({ text: "hi" });
+
+    expect(received).toEqual([{ text: "welcome" }, { echo: { text: "hi" } }]);
+    expect(
+      onStreamMessage.mock.calls.map((call) => [call[0].eventType, call[0].dataPreview]),
+    ).toEqual([
+      ["data", '{"text":"welcome"}'],
+      ["message", '{"text":"hi"}'],
+      ["data", '{"echo":{"text":"hi"}}'],
+    ]);
+  });
+
   it("records a message before the answer its handler sends at once", async () => {
     const onStreamMessage = vi.fn();
     onTestFinished(installHooks({ onStreamOpen: vi.fn(), onStreamMessage }));

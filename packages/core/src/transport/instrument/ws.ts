@@ -1,4 +1,5 @@
 import type { RealtimeError } from "../../realtime/errors";
+import { observeData } from "../../realtime/observe-data";
 import type { ConnectionStatus, SSESubscription, WSChannel } from "../../realtime/types";
 import { beginStream, type StreamMeta } from "./core";
 import { instrumentSSE } from "./sse";
@@ -30,9 +31,10 @@ type InstrumentedChannel = Omit<WSChannel<never, unknown>, "send"> & {
  * before.
  *
  * A channel whose `send` settles — the in-process one does — keeps doing so
- * through the wrapper, which hands back whatever the channel returned:
- * dropping it turned a refused message into an unhandled rejection that
- * ended the process. Data-listener exceptions are out of scope here.
+ * through the wrapper, which hands back whatever the channel returned, so a
+ * refused message reaches the caller as a rejection it can handle rather
+ * than an unhandled one that ends the process. Data-listener exceptions are
+ * out of scope here.
  *
  * Reconnect cycles (`connecting`/`reconnecting`) do NOT trigger close —
  * the lifecycle spans the entire WSChannel lifetime, not individual sockets.
@@ -60,8 +62,10 @@ export function instrumentWSChannel<TChannel extends InstrumentedChannel>(
     unsubError();
   };
 
-  // Inbound (server→client) frames are tagged "data"
-  const unsubData = inner.on("data", (data) => {
+  /* Inbound (server→client) frames are tagged "data". Watched rather than
+     listened to, so what a holding channel sent on join stays for the
+     caller's own first listener. */
+  const unsubData = observeData(inner, (data) => {
     instr.emitMessage(data, "data");
   });
 

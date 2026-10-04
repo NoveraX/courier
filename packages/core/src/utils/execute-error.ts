@@ -8,6 +8,7 @@ import { answerCallerLeft, callerLeft } from "./caller-left";
 import { type FailureReport, reportRequestError } from "./execute-error-report";
 import { buildResponse, type InternalResponse } from "./execute-response";
 import { injectTimingHeaders } from "./execute-studio";
+import { isRecord } from "./is-record";
 
 const log = createLogger("Proxy");
 
@@ -33,7 +34,8 @@ function withoutUpstreamDetail(
   if (!fromWire || error.status !== 0) return result;
 
   /* The log may name the upstream: it is the server's own record. */
-  const { message } = (error.data as { message?: string } | undefined) ?? {};
+  const { data } = error;
+  const message = isRecord(data) && typeof data.message === "string" ? data.message : undefined;
   log.warn(`Upstream request failed${message ? `: ${message}` : ""}`, error.cause ?? error);
 
   if (isTimeoutFailure(error)) {

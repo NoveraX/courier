@@ -2,6 +2,7 @@ import { endpointPath } from "../../define/address";
 import { type AnyProbe, recordWireCall } from "../../define/probe";
 import { RealtimeValidationError } from "../../realtime/errors";
 import { extractParamNames } from "../../utils/helpers";
+import { isRecord } from "../../utils/is-record";
 import { changesRoute } from "../../utils/url";
 
 /** Where one call to a remote stream or channel goes, relative to its group. */
@@ -49,9 +50,16 @@ export function addressCall(endpoint: unknown, method: string, variables: unknow
 /** The closure addressing a remote endpoint, or nothing for one served here. */
 function remoteProbe(endpoint: unknown): AnyProbe | undefined {
   if (typeof endpoint !== "object" || endpoint === null) return undefined;
-  const { probe, served } = endpoint as { probe?: unknown; served?: unknown };
-  if (served === true || typeof probe !== "function") return undefined;
-  return probe as AnyProbe;
+  const probe = "probe" in endpoint ? endpoint.probe : undefined;
+  const served = "served" in endpoint ? endpoint.served : undefined;
+  if (served === true || !isProbe(probe)) return undefined;
+  return probe;
+}
+
+/* What a closure takes cannot be read where it is held: it is run against
+   a recorder, which takes any call. */
+function isProbe(value: unknown): value is AnyProbe {
+  return typeof value === "function";
 }
 
 function fillParams(path: string, variables: Record<string, unknown> | undefined): CallAddress {
@@ -81,6 +89,5 @@ function fillParams(path: string, variables: Record<string, unknown> | undefined
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
-  return value as Record<string, unknown>;
+  return isRecord(value) ? value : undefined;
 }

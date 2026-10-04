@@ -6,11 +6,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 
-import { isValidJsonc, stripComments, toggleComment } from "./jsonc-helpers";
+import { isValidJsonc, parseJsonc, toggleComment } from "./jsonc-helpers";
 import { highlightJsonc } from "./jsonc-highlight";
-
-// Re-export for existing consumers (request-panel, ws-compose-panel, playground-utils)
-export { stripComments };
 
 interface JsonEditorProps {
   value: string;
@@ -83,12 +80,10 @@ export function JsonEditor({
     [value, onChange, onSubmit],
   );
 
+  /* Text that is not JSON has nothing to lay out, and stays as it is. */
   const handlePrettify = useCallback(() => {
-    try {
-      onChange(JSON.stringify(JSON.parse(stripComments(value)), null, jsonIndent));
-    } catch {
-      /* skip — invalid JSON */
-    }
+    const parsed = parseJsonc(value);
+    if (parsed.ok) onChange(JSON.stringify(parsed.value, null, jsonIndent));
   }, [value, onChange, jsonIndent]);
 
   return (

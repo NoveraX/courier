@@ -9,14 +9,31 @@ export function stripComments(text: string): string {
   return text.replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1");
 }
 
+/** What JSONC text holds, or `{ ok: false }` when it does not parse. */
+export type JsoncResult = { ok: true; value: unknown } | { ok: false };
+
+/**
+ * Read JSONC text: comments and trailing commas stripped, then parsed.
+ *
+ * @param text - The editor's text
+ * @returns The value it holds, or `{ ok: false }` when it is not JSON
+ * @example
+ * ```ts
+ * parseJsonc('{ "a": 1, } // note'); // → { ok: true, value: { a: 1 } }
+ * ```
+ */
+export function parseJsonc(text: string): JsoncResult {
+  try {
+    return { ok: true, value: JSON.parse(stripComments(text)) };
+  } catch {
+    /* The parse error is the answer: the caller treats the text as invalid. */
+    return { ok: false };
+  }
+}
+
 /** Validate JSONC by stripping comments first then attempting `JSON.parse`. */
 export function isValidJsonc(str: string): boolean {
-  try {
-    JSON.parse(stripComments(str));
-    return true;
-  } catch {
-    return false;
-  }
+  return parseJsonc(str).ok;
 }
 
 interface ToggleCommentResult {

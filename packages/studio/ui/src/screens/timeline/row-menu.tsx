@@ -59,7 +59,7 @@ export function RowMenu({ children }: RowMenuProps): React.ReactNode {
 
 function Items({ request }: { request: RequestEntry }): React.ReactNode {
   const togglePin = useStudioStore((s) => s.togglePin);
-  const { run: replay } = useReplay()(request);
+  const replay = useReplay()(request);
   const name = endpointName(request);
   const json = () => requestAsJson(request);
   return (
@@ -83,8 +83,8 @@ function Items({ request }: { request: RequestEntry }): React.ReactNode {
       <Item icon={Download} onSelect={() => downloadFile(json(), `${name}-${request.id}.json`)}>
         Download JSON
       </Item>
-      <Item icon={RotateCcw} disabled={!replay} onSelect={() => replay?.()}>
-        Replay request
+      <Item icon={RotateCcw} disabled={!replay.run} onSelect={() => replay.run?.()}>
+        {replay.label}
       </Item>
       <ContextMenu.Separator className="mx-0.5 my-1 h-px bg-line" />
       <Item icon={request.pinned ? PinOff : Pin} onSelect={() => togglePin(request.id)}>

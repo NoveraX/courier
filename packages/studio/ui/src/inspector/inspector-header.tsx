@@ -1,4 +1,4 @@
-import { Copy, Pin, RotateCcw, Terminal, X } from "lucide-react";
+import { Copy, Pin, RotateCcw, Square, Terminal, X } from "lucide-react";
 
 import { methodChip } from "@/design/method-color";
 import { endpointParts, httpMethodOf } from "@/features/requests/request-parts";
@@ -22,6 +22,8 @@ const ACTION =
 interface InspectorHeaderProps {
   request: RequestEntry;
   replay: Replay;
+  /** Stops a stream this page reconnected, while it is open. */
+  stop: (() => void) | undefined;
   onClose: () => void;
 }
 
@@ -40,6 +42,7 @@ interface InspectorHeaderProps {
 export function InspectorHeader({
   request,
   replay,
+  stop,
   onClose,
 }: InspectorHeaderProps): React.ReactNode {
   const togglePin = useStudioStore((s) => s.togglePin);
@@ -89,9 +92,15 @@ export function InspectorHeader({
           >
             <Pin aria-hidden="true" className="size-3.25" />
           </button>
+          {stop && (
+            <button type="button" title="Stop the stream" onClick={stop} className={ACTION}>
+              <Square aria-hidden="true" className="size-3" />
+            </button>
+          )}
           <button
             type="button"
-            title={replay.refusal ?? "Replay request"}
+            title={replay.title}
+            aria-label={replay.label}
             disabled={!replay.run}
             onClick={replay.run}
             className={ACTION}

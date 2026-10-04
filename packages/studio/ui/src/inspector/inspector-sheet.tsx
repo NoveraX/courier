@@ -16,6 +16,7 @@ import { TabBar } from "./tab-bar";
 import type { PayloadControls, SnippetControls } from "./tab-content";
 import { TabContent } from "./tab-content";
 import { useReplay } from "./use-replay";
+import { useStopStream } from "./use-stop-stream";
 
 interface InspectorSheetProps {
   request: RequestEntry;
@@ -93,6 +94,7 @@ function Head({ request, current, onTab, onClose, opening }: HeadProps): React.R
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const p95 = useStudioStore((s) => endpointLatency(s.requests, request)?.p95 ?? null);
   const replay = useReplay();
+  const stopStream = useStopStream();
   return (
     <motion.div
       initial={opening ? false : { opacity: 0 }}
@@ -101,7 +103,12 @@ function Head({ request, current, onTab, onClose, opening }: HeadProps): React.R
       className="flex shrink-0 flex-col gap-3.5 border-b border-line pt-4 pr-3.5 pl-4.5"
     >
       <Reveal step={0} play={opening}>
-        <InspectorHeader request={request} replay={replay(request)} onClose={onClose} />
+        <InspectorHeader
+          request={request}
+          replay={replay(request)}
+          stop={stopStream(request)}
+          onClose={onClose}
+        />
       </Reveal>
       <Reveal step={1} play={opening}>
         <StatCellGrid cells={statCellsOf(request, { now, slowMs, p95 })} />

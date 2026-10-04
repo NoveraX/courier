@@ -4,7 +4,8 @@
  * The request inspector over the new shell: the request its address
  * names, on the tab it names or the one that fits — a failure's, a
  * stream's messages — its tabs kept in the address, Esc closing it,
- * credentials hidden until asked, and its pin and replay.
+ * credentials hidden until asked, its pin and replay, and a stream's
+ * reconnect and stop.
  */
 import { playgroundRequestId } from "@noverax/courier-studio-core";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
@@ -149,7 +150,7 @@ describe("the request inspector", () => {
     expect(panel.getByText(/Nothing was found at this URL/)).toBeTruthy();
   });
 
-  it("opens a stream on its messages, and offers no replay of it", async () => {
+  it("opens a stream on its messages", async () => {
     await openShell("/next/timeline?req=stream");
     const panel = within(inspector());
 
@@ -158,9 +159,27 @@ describe("the request inspector", () => {
     );
     expect(panel.getByText("join")).toBeTruthy();
     expect(panel.getByText("welcome")).toBeTruthy();
-    expect(
-      panel.getByTitle("A stream cannot be replayed from Studio").hasAttribute("disabled"),
-    ).toBe(true);
+  });
+
+  it("reconnects a stream on the runtime that opened it, and stops it from here", async () => {
+    const router = await openShell("/next/timeline?req=stream");
+    const panel = within(inspector());
+    expect(panel.queryByTitle("Stop the stream")).toBeNull();
+
+    fireEvent.click(panel.getByTitle("Reconnect · the messages it sent are not sent again"));
+    const [, sent] = socket.emit.mock.calls.find(([event]) => event === "playground:exec") ?? [];
+    const rid = typeof sent === "object" && sent !== null && "rid" in sent ? String(sent.rid) : "";
+    const reopened = requestEntry({
+      id: playgroundRequestId(rid),
+      transport: "ws",
+      streamStatus: "streaming",
+    });
+    await act(async () => useStudioStore.setState({ requests: [ok, failed, stream, reopened] }));
+    await settle(() => fireEvent.click(within(inspector()).getByTitle("Stop the stream")));
+
+    expect(sent).toMatchObject({ transport: "ws", runtimeId: stream.sessionId, mode: "direct" });
+    expect(router.state.location.search).toMatchObject({ req: reopened.id });
+    expect(socket.emit).toHaveBeenCalledWith("playground:exec:cancel", { rid });
   });
 
   it("hides a credential header's value until asked", async () => {
@@ -196,7 +215,9 @@ describe("the request inspector", () => {
         group: "users",
         method: "list",
         mode: "direct",
+        transport: "http",
         variables: { page: 2 },
+        runtimeId: ok.sessionId,
       }),
     );
   });
@@ -232,7 +253,7 @@ describe("the request inspector", () => {
     useStudioStore.setState({ shownSession: { id: "s1", name: "Saved" } });
 
     await openShell("/next/timeline?req=ok");
-    const button = within(inspector()).getByTitle("Go back to the live requests to replay one");
+    const button = within(inspector()).getByTitle("Go back to the live requests to run it again");
 
     expect(button.hasAttribute("disabled")).toBe(true);
   });

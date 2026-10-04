@@ -11,9 +11,9 @@ import type { GeneratorSettings } from "./types";
 /**
  * Declare a schema on a reference cycle lazily, whatever its shape.
  *
- * Only objects used to be deferred, so a union or a list that names itself —
- * an expression tree, say — read its own constant before it existed and the
- * module threw on import.
+ * A union or a list that names itself — an expression tree, say — is
+ * deferred as an object is, so it never reads its own constant before it
+ * exists and the module does not throw on import.
  *
  * @param lines - Output the declaration is appended to
  * @param name - Schema name, without the `Schema` suffix

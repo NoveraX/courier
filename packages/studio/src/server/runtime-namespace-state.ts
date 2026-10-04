@@ -88,10 +88,9 @@ export function registerRuntime(entry: RuntimeRegistryEntry): "claimed" | "dupli
 
 /**
  * Release one socket of a runtime id; answers whether it was the last. While
- * others remain, calls move to the oldest of them and the runtime stays.
- * The first of two processes sharing an id to disconnect used to remove the
- * entry and the bindings of the one still running, orphaning its sources
- * until it restarted.
+ * others remain, calls move to the oldest of them and the runtime stays, so
+ * the first of two processes sharing an id to disconnect does not remove the
+ * entry and the bindings of the one still running.
  */
 export function releaseRuntimeSocket(runtimeId: string, socket: Socket): "last" | "remaining" {
   const remaining = (runtimeSockets.get(runtimeId) ?? []).filter((s) => s !== socket);

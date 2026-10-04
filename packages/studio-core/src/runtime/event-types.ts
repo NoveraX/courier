@@ -2,10 +2,9 @@
  * Every event type a runtime reports about the requests it serves.
  *
  * Studio validates incoming events against this list before letting them into
- * its UI store, so a compromised runtime cannot inject arbitrary shapes. That
- * list used to be written out a second time on the Studio side, where it fell
- * behind and dropped every request event there was; both ends read this one
- * now, and a test asserts it still covers what the hooks emit.
+ * its UI store, so a compromised runtime cannot inject arbitrary shapes. Both
+ * ends read this one list, so the two cannot fall out of step, and a test
+ * asserts it covers what the hooks emit.
  */
 
 /** Emitted by `wireHooks` and `wireHttpHooks` onto the runtime event bus. */

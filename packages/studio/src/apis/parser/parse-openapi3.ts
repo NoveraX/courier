@@ -66,7 +66,7 @@ function groupEndpointsByTag(spec: SpecNode): {
 
   for (const [path, methods] of Object.entries(nodeAt(spec, "paths") ?? {})) {
     /* A path item may be null in YAML, or a reference this file cannot
-       resolve; either used to take the whole import down. */
+       resolve; either is skipped rather than taking the whole import down. */
     if (!isNode(methods)) {
       skipped.push({ method: "ALL", path, reason: "path item is empty" });
       continue;

@@ -1,9 +1,6 @@
 /**
- * Shared formatting helpers used by audit hint rule modules.
- *
- * Extracted from `rules-hints.ts` so each category file can import the
- * single source of truth for the `EndpointStats → AuditEndpoint` projection
- * without re-defining it.
+ * Formatting helpers the audit hint rule modules share, such as the
+ * `EndpointStats → AuditEndpoint` projection.
  */
 
 import type { RequestEntry } from "../../store/types-request";

@@ -100,7 +100,7 @@ const main = defineCommand({
         log.info(`Courier Server ready at ${url}`);
       },
       /* The server has logged why; the exit status is what a supervisor or a
-         deploy script reads, and it used to say 0. */
+         deploy script reads, so it must not say 0. */
       onServerError: () => {
         process.exitCode = 1;
       },

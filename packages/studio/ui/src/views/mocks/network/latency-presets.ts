@@ -1,9 +1,6 @@
 /**
- * Static option tables and form defaults for the latency simulator.
- *
- * Extracted from `latency-controls.tsx` so the React component file holds
- * only the wiring code while these constants live alongside the chaos preset
- * tables. Keeps the data easy to tweak without diffing JSX noise.
+ * Static option tables and form defaults for the latency simulator, beside
+ * the chaos preset tables.
  */
 
 import { Clock, Gauge } from "lucide-react";

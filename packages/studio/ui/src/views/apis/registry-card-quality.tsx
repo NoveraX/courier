@@ -1,8 +1,5 @@
 /**
  * Quality pill (R / V / S) rendered in RegistryCard footer rows.
- *
- * Extracted from the card layout so colours and sizing rules can evolve
- * independently of the surrounding component.
  */
 
 import type { ComponentType } from "react";

@@ -97,8 +97,8 @@ export function responseToExtract(ep: ParsedEndpoint): ParsedSchema | null {
  * its path and query parameters, and the fields of a body written inline
  * beside them.
  *
- * The body used to be left out, so an endpoint whose parameters were named
- * this way could no longer be called with the body it requires.
+ * The body's fields are part of it, so an endpoint whose parameters are named
+ * this way is still called with the body it requires.
  *
  * @param ep - The endpoint
  * @returns The variables' schema, or `null` when they are written where they are used

@@ -1,8 +1,6 @@
 /**
- * Type definitions describing a framework setup walkthrough.
- *
- * Extracted from `frameworks.ts` so per-framework data modules can import
- * types without pulling in the entire FRAMEWORKS list.
+ * The shape of a framework setup walkthrough, which each per-framework data
+ * module names without the whole FRAMEWORKS list.
  */
 
 import type { LucideIcon } from "lucide-react";

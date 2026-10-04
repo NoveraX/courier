@@ -14,13 +14,10 @@
  *  - `untrackWSStream(requestId)` — called when the WS channel closes; drops
  *    every subscription registered under that `requestId`
  *
- * The legacy `playground-ws-send.ts` module also kept an in-process
- * `playgroundChannelRegistry` Map for the callback-based playground WS
- * outbound dispatch. That registry died with the legacy callback wire —
- * outbound playground WS now flows through `playground-responder.ts` via
- * the rid-keyed `playground:write` event, with the `WSChannel` reference
- * stored in the responder's per-request `inFlight` map. There is no longer
- * a global playground channel registry.
+ * A Playground channel is not tracked here: what the Playground writes to one
+ * goes through `playground-responder.ts` on the rid-keyed `playground:write`
+ * event, to the `WSChannel` the responder keeps in its per-request
+ * `inFlight` map.
  */
 
 const CONNECTION_MAP_KEY = Symbol.for("courier.studio.playground-ws-connection-map");

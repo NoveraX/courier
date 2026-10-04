@@ -14,11 +14,10 @@ import type { ParsedSchema } from "./types";
  *
  * A reference stays a reference and a list of references a list of them;
  * anything else is converted where it stands. OpenAPI 3.1's type arrays are
- * read here too: `["array", "null"]` used to be taken for a type name, which
- * left the response untyped, and `["object", "null"]` lost the `null`. An
- * `allOf` is merged with the components it references; converted without
- * the specification, it kept only its own properties, and the validator
- * then stripped every inherited one off the answer.
+ * read here too, so `["array", "null"]` types the response and
+ * `["object", "null"]` keeps its `null`. An `allOf` is merged with the
+ * components it references, so the validator keeps every inherited property
+ * of the answer, not only the schema's own.
  *
  * @param raw - The body's schema as written in the specification
  * @param spec - The whole specification, for resolving references

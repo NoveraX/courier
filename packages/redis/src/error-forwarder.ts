@@ -12,10 +12,9 @@ export interface ErrorForwarder {
  * Pass a Redis client's errors to an adapter's error handlers through one
  * listener, which `stop()` removes.
  *
- * Adapters used to add a listener per `onError` call and never remove it on
- * disconnect: a shut-down adapter still called its handlers, and an app that
- * built adapters per tenant or on reconnect piled listeners up until Node
- * warned of a leak.
+ * One listener, removed on disconnect, so a shut-down adapter calls no
+ * handler and an app that builds adapters per tenant or on reconnect does not
+ * pile listeners up until Node warns of a leak.
  *
  * @param redis - The client whose errors to forward
  * @param handlers - The adapter's error handlers, read at each error

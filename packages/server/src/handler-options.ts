@@ -84,11 +84,11 @@ export function wsHandlerOptions(config: CourierServerOptions): WSHandlerConfig 
  * The largest WebSocket frame the server reads at all; `ws` closes the
  * connection with 1009 on a bigger one, before buffering it.
  *
- * It used to equal the message limit, so every message over 64 KB closed the
- * socket and ended each subscription on it — the core's refusal of a single
- * oversized message, a `4413` error on a connection that stays open, could
- * never be reached. Left out, the limit now sits well above `maxMessageSize`:
- * 1 MB, or twice `maxMessageSize` when that is larger.
+ * Left out, the limit sits well above `maxMessageSize` — 1 MB, or twice
+ * `maxMessageSize` when that is larger — so an oversized message reaches the
+ * core, which refuses that one message with a `4413` error on a connection
+ * that stays open, rather than closing the socket and each subscription on
+ * it.
  *
  * @param config - The server's options
  * @returns The frame limit in bytes

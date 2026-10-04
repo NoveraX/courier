@@ -10,10 +10,8 @@ export function StatusBar({ entry }: { entry: PlaygroundHistoryEntry }): React.R
   const isStream = entry.transport === "sse" || entry.transport === "ws";
   const isStreaming = entry.streamStatus === "streaming";
   const isComplete = entry.streamStatus === "complete";
-  // Derive the live event count from the accumulated chunks array — the
-  // rid-keyed wire populates `entry.chunks` per SSE event / WS message,
-  // so the length is the same number the legacy wire used to stamp as
-  // `streamEventCount` via the event channel.
+  // The live event count: the rid-keyed wire adds one chunk per SSE event
+  // or WS message, and counts the ones it let go.
   const streamEventCount = (entry.chunks?.length ?? 0) + (entry.chunksDropped ?? 0);
 
   return (

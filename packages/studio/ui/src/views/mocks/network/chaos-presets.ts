@@ -1,9 +1,6 @@
 /**
- * Static preset / form-default tables for the chaos engineering controls.
- *
- * Extracted from `chaos-controls.tsx` so the React component file holds only
- * the presentational + handler code while these constants live next to other
- * mock-network configuration data and stay easy to tweak in isolation.
+ * Static preset / form-default tables for the chaos engineering controls,
+ * beside the other mock-network configuration data.
  */
 
 import { Flame, SlidersHorizontal } from "lucide-react";

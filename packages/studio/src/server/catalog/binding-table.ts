@@ -52,9 +52,9 @@ interface ExpectedKey {
  * In-memory routing table that maps each `(source, transport)` pair declared
  * in `courier.config.ts` to the runtime that announced ownership of it.
  *
- * Replaces the first-writer-wins layer merge in the legacy `CatalogStore` —
- * here, two runtimes claiming the same pair surface as a `conflict` status
- * (and an error when Studio asks to resolve a routing decision against them).
+ * Two runtimes claiming the same pair surface as a `conflict` status — not
+ * whichever claimed it first — and an error when Studio asks to resolve a
+ * routing decision against them.
  */
 export class BindingTable {
   private expected: ExpectedKey[] = [];

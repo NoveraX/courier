@@ -1,15 +1,7 @@
 /**
- * Shared payload type for the mock socket event stream.
- *
- * Extracted from `handle-mock-events.ts` so the dispatcher and the per-domain
- * handler files (`handle-mock-server-events.ts`,
- * `handle-mock-request-events.ts`) can share a single import without
- * pulling on the dispatcher itself.
- */
-
-/**
- * Untyped event payload from the socket. Each handler narrows the
- * required fields via `as` casts at the read site — the runtime contract
- * is owned by the studio server side and validated there.
+ * Untyped event payload from the mock socket event stream, shared by the
+ * dispatcher and the per-domain handler files. Each handler reads the fields
+ * it needs through the payload readers, which keep only values of the
+ * expected type; the Studio server validated the frame's shape before.
  */
 export type MockEvent = Record<string, unknown>;

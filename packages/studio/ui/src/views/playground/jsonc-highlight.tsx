@@ -1,9 +1,6 @@
 /**
- * Tiny JSONC syntax highlighter used by the playground JSON editor overlay.
- *
- * Extracted from `json-editor.tsx` so the regex tables and the match-merging
- * logic live in their own module. Pure: returns React nodes that the editor
- * paints behind a transparent textarea.
+ * JSONC syntax highlighter for the playground JSON editor overlay. Pure:
+ * returns React nodes that the editor paints behind a transparent textarea.
  */
 
 const JSONC_PATTERNS: [RegExp, string][] = [

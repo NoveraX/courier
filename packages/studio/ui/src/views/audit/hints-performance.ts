@@ -1,10 +1,8 @@
 /**
- * Performance audit hints — caching, proxy overhead, validation cost.
- *
- * Extracted from `rules-hints.ts` so each category lives in its own module.
- * Each rule scans the per-endpoint stats and emits at most a single audit
- * item describing the affected endpoints with attached detail strings
- * (overhead percentages, etc.).
+ * Performance audit hints — caching, proxy overhead, validation cost. Each
+ * rule scans the per-endpoint stats and emits at most a single audit item
+ * describing the affected endpoints with attached detail strings (overhead
+ * percentages, etc.).
  */
 
 import { CACHE_SUGGESTION } from "./code-suggestions";

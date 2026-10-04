@@ -13,11 +13,11 @@ import type { ParsedSchema, ParsedSchemaProperty } from "./types";
 /**
  * Convert a property, keeping every alternative it allows.
  *
- * A property that may take one of several forms used to keep only the first
- * reference among them. Stripe's expandable fields — `anyOf: [string, Product,
- * DeletedProduct]` — became `Product`, which rejects the id string Stripe
- * returns unless asked to expand; and OpenAI's `anyOf: [X, {type: "null"}]`
- * lost the `null` the API actually sends.
+ * A property that may take one of several forms keeps all of them, not the
+ * first reference among them: Stripe's expandable fields — `anyOf: [string,
+ * Product, DeletedProduct]` — accept the id string Stripe returns unless asked
+ * to expand, and OpenAI's `anyOf: [X, {type: "null"}]` keeps the `null` the
+ * API actually sends.
  *
  * @param name - Property name, used to name the schemas nested in it
  * @param raw - The property's schema as written in the specification

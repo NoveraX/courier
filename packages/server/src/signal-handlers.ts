@@ -11,13 +11,12 @@ const stops = new Set<() => Promise<void>>();
  * Stop the server on SIGTERM or SIGINT, then end the process — unless
  * something else in it handles the signal too.
  *
- * The process used to end the moment the server's own drain finished, which
- * cut short an embedding host's handler for the same signal: its flush or
- * its database close never completed. A host that listens for the signal has
- * taken the decision to end the process from Node, and now keeps it. With no
+ * A host that listens for the signal has taken the decision to end the
+ * process from Node, and keeps it: ending the process when the server's own
+ * drain finishes would cut short the host's flush or database close. With no
  * one else listening the server does what Node would have done at once, only
  * after draining. Every server in the process shares one listener, so the
- * first to finish no longer ends the process under the others either.
+ * first to finish does not end the process under the others either.
  *
  * Once a server starts stopping it stops listening, so a second signal gets
  * whatever else handles it — with nothing else, Node's immediate exit.

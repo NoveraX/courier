@@ -53,10 +53,10 @@ export function startPush(
     throw error;
   }
 
-  /* A generator waiting on an event that never came kept its timers and
-     upstream subscriptions after the client left: cancelling only set a flag
-     read after the next yield. The wait now ends when the subscription does,
-     and the handler's signal fires. */
+  /* The wait ends when the subscription does, and the handler's signal
+     fires, so a generator waiting on an event that never comes does not keep
+     its timers and upstream subscriptions after the client left — a flag
+     read after the next yield would never be read. */
   const iterate = async (): Promise<void> => {
     try {
       for await (const yielded of abortableEvents(generator, ended.signal)) {

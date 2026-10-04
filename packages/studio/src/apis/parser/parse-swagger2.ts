@@ -2,9 +2,10 @@
  * Swagger 2.0 specification parser.
  * Converts to OpenAPI 3.x-like structure, then delegates to parseOpenApi3.
  *
- * The conversion has to carry everything a reference can point at. Dropping
- * the shared `parameters` section left every `#/parameters/...` pointing at
- * nothing, which is how Kubernetes' specification used to end the import.
+ * The conversion carries everything a reference can point at, the shared
+ * `parameters` section included: without it every `#/parameters/...` would
+ * point at nothing and end the import of a specification such as
+ * Kubernetes'.
  */
 
 import { isOperationKey } from "./http-methods";

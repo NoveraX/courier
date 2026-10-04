@@ -91,9 +91,9 @@ export function createAction<TSources extends Sources, TKey extends string & key
         ? { headers: (await getRequestHeaders()) ?? undefined }
         : undefined;
 
-    /* `.raw` and `.with({ ... })` compile here as on any caller, and used to
-       be dropped: `.raw` returned the bare body, and a per-call header or
-       timeout never reached the request. */
+    /* `.raw` and `.with({ ... })` compile here as on any caller, and are
+       honoured: `.raw` returns the whole answer, and a per-call header or
+       timeout reaches the request. */
     return executeRequest(
       sources,
       {

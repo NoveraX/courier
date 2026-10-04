@@ -50,9 +50,6 @@
       "default": "./lib/runtime/load-config.js"
     }
   },
-  "browser": {
-    "./lib/runtime/load-config.js": false
-  },
   "files": [
     "lib",
     "README.md",

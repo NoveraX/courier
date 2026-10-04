@@ -124,6 +124,24 @@ describe("a mock's fingerprint", () => {
     expect(after.get("pets")).toBe(before.get("pets"));
   });
 
+  it("stays when a directory is made beside a module its import reaches", () => {
+    const text = mocksText(HEAD, "export default defineMocks({", USERS, "});");
+    const before = fingerprints(text);
+    mkdirSync(join(root, "src/api"));
+    writeFileSync(join(root, "src/api/index.ts"), "export const pets = {};\n");
+    mkdirSync(join(root, "src/base"));
+
+    expect(fingerprints(text).get("users")).toBe(before.get("users"));
+  });
+
+  it("changes when a module is made where the loader now takes it", () => {
+    const text = mocksText(HEAD, "export default defineMocks({", USERS, "});");
+    const before = fingerprints(text);
+    writeFileSync(join(root, "src/api.js"), "export const api = {};\n");
+
+    expect(fingerprints(text).get("users")).not.toBe(before.get("users"));
+  });
+
   it("follows a declaration beside it that it uses", () => {
     const text = (count: number) =>
       mocksText(

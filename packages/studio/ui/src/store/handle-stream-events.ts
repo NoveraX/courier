@@ -1,4 +1,5 @@
 import { num, optStr, str } from "./event-helpers";
+import { readStringRecord } from "./payload";
 import type { RequestEntry, StreamEventRecord } from "./types";
 
 type EventPayload = Record<string, unknown>;
@@ -17,8 +18,8 @@ function appendCapped<T>(prev: T[] | undefined, item: T, max: number): T[] {
 
 /** Header bags a stream opening carries; an empty bag is left out so the UI shows "no headers". */
 function openingHeaders(event: EventPayload): Pick<RequestEntry, "requestHeaders" | "headers"> {
-  const requestHeaders = nonEmpty(event.requestHeaders as Record<string, string> | undefined);
-  const headers = nonEmpty(event.responseHeaders as Record<string, string> | undefined);
+  const requestHeaders = nonEmpty(readStringRecord(event.requestHeaders));
+  const headers = nonEmpty(readStringRecord(event.responseHeaders));
   return { ...(requestHeaders && { requestHeaders }), ...(headers && { headers }) };
 }
 

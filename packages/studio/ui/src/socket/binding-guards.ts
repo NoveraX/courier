@@ -15,8 +15,8 @@
 import type { BindingErrorPayload, BindingSnapshot, BindingTransport } from "@/store/types-ui";
 import { isPlainObject } from "./is-plain-object";
 
-const VALID_TRANSPORTS: ReadonlyArray<BindingTransport> = ["http", "sse", "ws"];
-const VALID_STATUSES = ["bound", "orphan", "conflict"] as const;
+const VALID_TRANSPORTS: ReadonlySet<unknown> = new Set<BindingTransport>(["http", "sse", "ws"]);
+const VALID_STATUSES: ReadonlySet<unknown> = new Set(["bound", "orphan", "conflict"]);
 
 export function isBindingSnapshot(data: unknown): data is BindingSnapshot {
   if (!isPlainObject(data)) return false;
@@ -44,9 +44,9 @@ function isBindingStatusRow(row: unknown): boolean {
   const r = row;
   if (typeof r.sourceName !== "string" || r.sourceName.length === 0) return false;
   if (typeof r.transport !== "string") return false;
-  if (!(VALID_TRANSPORTS as ReadonlyArray<string>).includes(r.transport)) return false;
+  if (!VALID_TRANSPORTS.has(r.transport)) return false;
   if (typeof r.status !== "string") return false;
-  if (!(VALID_STATUSES as ReadonlyArray<string>).includes(r.status)) return false;
+  if (!VALID_STATUSES.has(r.status)) return false;
   if (r.runtimeId !== undefined && typeof r.runtimeId !== "string") return false;
   if (r.appOrigin !== undefined && typeof r.appOrigin !== "string") return false;
   if (r.conflicting !== undefined) {
@@ -66,7 +66,7 @@ export function isBindingErrorPayload(data: unknown): data is BindingErrorPayloa
   const details = d.details;
   if (typeof details.sourceName !== "string" || details.sourceName.length === 0) return false;
   if (typeof details.transport !== "string") return false;
-  if (!(VALID_TRANSPORTS as ReadonlyArray<string>).includes(details.transport)) return false;
+  if (!VALID_TRANSPORTS.has(details.transport)) return false;
   if (!Array.isArray(details.runtimeIds)) return false;
   for (const id of details.runtimeIds) {
     if (typeof id !== "string") return false;

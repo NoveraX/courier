@@ -1,4 +1,6 @@
+import { isPlainObject } from "@/socket/is-plain-object";
 import { num, optNum, str } from "./event-helpers";
+import { readList } from "./payload";
 import type { MiddlewareEntry, RequestEntry } from "./types";
 
 type EventPayload = Record<string, unknown>;
@@ -29,9 +31,10 @@ export function withMiddlewareExit(r: RequestEntry, event: EventPayload): Reques
             phase: typeof event.phase === "string" ? event.phase : m.phase,
             beforeDuration: optNum(event.beforeDuration),
             afterDuration: optNum(event.afterDuration),
-            headersAdded: Array.isArray(event.headersAdded)
-              ? (event.headersAdded as string[])
-              : undefined,
+            headersAdded: readList(
+              event.headersAdded,
+              (name): name is string => typeof name === "string",
+            ),
           }
         : m,
     ),
@@ -50,7 +53,7 @@ export function withMiddlewareError(r: RequestEntry, event: EventPayload): Reque
             error:
               typeof event.error === "string"
                 ? event.error
-                : str((event.error as Record<string, unknown> | undefined)?.message),
+                : str(isPlainObject(event.error) ? event.error.message : undefined),
           }
         : m,
     ),

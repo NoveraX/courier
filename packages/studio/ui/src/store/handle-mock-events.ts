@@ -11,6 +11,7 @@
  *   and chaos experiment events.
  */
 
+import { str } from "./event-helpers";
 import {
   handleExperimentEvent,
   handleNetworkConfig,
@@ -26,12 +27,12 @@ import {
 import type { MockEvent } from "./mock-event-types";
 import { mockServerOf } from "./mock-server-of";
 import { useMockStore } from "./mock-slice";
-import type { MockCollectionEntry, MockScenarioEntry } from "./mock-slice-types";
+import { isMockCollectionEntry, isMockScenarioEntry, readList, readMockRoutes } from "./payload";
 
 /** Route mock:* events to the mock Zustand store */
 export function handleMockEvent(event: MockEvent): void {
   const store = useMockStore.getState();
-  const serverId = event.serverId as string;
+  const serverId = str(event.serverId);
 
   switch (event.type) {
     case "mock:server:connect":
@@ -44,16 +45,19 @@ export function handleMockEvent(event: MockEvent): void {
       else store.updateServer(serverId, { status: "disconnected" });
       break;
     case "mock:route:list":
-      store.setServerRoutes(serverId, (event.routes as never[]) ?? []);
+      store.setServerRoutes(serverId, readMockRoutes(event.routes) ?? []);
       break;
     case "mock:store:snapshot":
-      store.setServerCollections(serverId, (event.collections as MockCollectionEntry[]) ?? []);
+      store.setServerCollections(
+        serverId,
+        readList(event.collections, isMockCollectionEntry) ?? [],
+      );
       break;
     case "mock:store:change":
       handleStoreChange(serverId, event);
       break;
     case "mock:scenario:list":
-      store.setServerScenarios(serverId, (event.scenarios as MockScenarioEntry[]) ?? []);
+      store.setServerScenarios(serverId, readList(event.scenarios, isMockScenarioEntry) ?? []);
       break;
     case "mock:scenario:active":
       handleScenarioActive(serverId, event);

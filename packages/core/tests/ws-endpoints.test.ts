@@ -51,6 +51,16 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
 // ---------------------------------------------------------------------------
 
 describe("startPush", () => {
+  it("throws on, naming the endpoint, when the implementation returns nothing to iterate", () => {
+    const { ctx, sent } = createMockCtx();
+    const handler = async () => "not a generator";
+
+    expect(() => startPush(ctx, 'api.chat.feed#{"room":"a"}', handler, {})).toThrow(
+      /"api\.chat\.feed" returned a promise, where a stream's returns what it yields/,
+    );
+    expect(sent).toEqual([]);
+  });
+
   it("iterates async generator and sends data messages", async () => {
     const { ctx, sent } = createMockCtx();
     const handler = async function* () {
@@ -216,7 +226,7 @@ describe("startPush", () => {
 describe("startChannel", () => {
   it("calls onJoin when channel starts", async () => {
     const onJoin = vi.fn();
-    const factory = () => ({ onJoin });
+    const factory = () => ({ onJoin, onMessage: vi.fn() });
     const { ctx } = createMockCtx();
 
     await startChannel(ctx, "api.chat.room", factory, { roomId: "r1" });
@@ -229,7 +239,7 @@ describe("startChannel", () => {
 
   it("provides send function that sends data messages", async () => {
     const onJoin = vi.fn();
-    const factory = () => ({ onJoin });
+    const factory = () => ({ onJoin, onMessage: vi.fn() });
     const { ctx, sent } = createMockCtx();
 
     await startChannel(ctx, "api.chat.room", factory, {});
@@ -245,7 +255,7 @@ describe("startChannel", () => {
 
   it("close with a code ends the subscription with it as the reason", async () => {
     const onJoin = vi.fn();
-    const factory = () => ({ onJoin });
+    const factory = () => ({ onJoin, onMessage: vi.fn() });
     const { ctx, sent } = createMockCtx();
 
     await startChannel(ctx, "topic", factory, {}, "sub-1");
@@ -264,7 +274,7 @@ describe("startChannel", () => {
 
   it("close without a code ends the subscription as finished", async () => {
     const onJoin = vi.fn();
-    const factory = () => ({ onJoin });
+    const factory = () => ({ onJoin, onMessage: vi.fn() });
     const { ctx, sent } = createMockCtx();
 
     await startChannel(ctx, "topic", factory, {});
@@ -278,7 +288,7 @@ describe("startChannel", () => {
 
   it("provides broadcast function that uses registry", async () => {
     const onJoin = vi.fn();
-    const factory = () => ({ onJoin });
+    const factory = () => ({ onJoin, onMessage: vi.fn() });
     const { ctx } = createMockCtx();
 
     await startChannel(ctx, "topic", factory, {});
@@ -295,7 +305,7 @@ describe("startChannel", () => {
 
   it("calls onLeave during cleanup", async () => {
     const onLeave = vi.fn();
-    const factory = () => ({ onJoin: vi.fn(), onLeave });
+    const factory = () => ({ onJoin: vi.fn(), onMessage: vi.fn(), onLeave });
     const { ctx, subscriptions } = createMockCtx();
 
     await startChannel(ctx, "topic", factory, {});
@@ -308,7 +318,7 @@ describe("startChannel", () => {
   });
 
   it("registers subscription in topicManager", async () => {
-    const factory = () => ({ onJoin: vi.fn() });
+    const factory = () => ({ onJoin: vi.fn(), onMessage: vi.fn() });
     const { ctx } = createMockCtx();
 
     await startChannel(ctx, "api.chat.room", factory, {});
@@ -319,7 +329,7 @@ describe("startChannel", () => {
   it("publishes to the other replicas via broadcast", async () => {
     const publishToTopic = vi.fn(async () => undefined);
     const onJoin = vi.fn();
-    const factory = () => ({ onJoin });
+    const factory = () => ({ onJoin, onMessage: vi.fn() });
     const { ctx } = createMockCtx({ bridge: { publishToTopic } as never });
 
     await startChannel(ctx, "topic", factory, {});
@@ -335,6 +345,7 @@ describe("startChannel", () => {
       onJoin: () => {
         throw new Error("Auth failed");
       },
+      onMessage: vi.fn(),
     });
     const { ctx, sent } = createMockCtx();
 
@@ -345,6 +356,16 @@ describe("startChannel", () => {
     // No error frame is sent locally — the outer handleSubscribe catch owns
     // the client-facing error so closeSubscriptionEntry runs exactly once.
     expect(sent.find((m) => m.type === "error")).toBeUndefined();
+  });
+
+  it("throws on, naming the channel, when the factory returns no onMessage", async () => {
+    const factory = () => ({ onJoin: vi.fn() });
+    const { ctx, sent } = createMockCtx();
+
+    await expect(startChannel(ctx, "api.chat.room", factory, {})).rejects.toThrow(
+      /"api\.chat\.room" returned an object, where a channel's returns its handlers/,
+    );
+    expect(sent).toEqual([]);
   });
 
   it("throws on when the factory throws, for the subscribe flow to refuse once", async () => {
@@ -360,6 +381,7 @@ describe("startChannel", () => {
   it("catches onLeave errors during cleanup without throwing", async () => {
     const factory = () => ({
       onJoin: vi.fn(),
+      onMessage: vi.fn(),
       onLeave: () => {
         throw new Error("Cleanup boom");
       },

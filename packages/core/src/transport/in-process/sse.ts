@@ -1,5 +1,7 @@
 import type { Sources } from "../../define/types";
-import type { SSEContext, SSEEvent, SSEHandler, SSESubscription } from "../../realtime/types";
+import { eventsOf, sseEventOf } from "../../realtime/implementation";
+import { streamLabel } from "../../realtime/stream-label";
+import type { SSEContext, SSEEvent, SSESubscription } from "../../realtime/types";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
@@ -105,9 +107,11 @@ export async function executeDirectSSE(
   // merged in, allowedHeaders whitelist applied, etc).
   instr?.updateMeta({ responseHeaders: headersToRecord(headers) });
 
-  const sseHandler = endpoint as SSEHandler<unknown, unknown>;
-  const generator = sseHandler(sseCtx);
-  const events = abortableEvents(generator, composedSignal);
+  const label = streamLabel(payload);
+  const events = abortableEvents(
+    sseEvents(eventsOf(endpoint, sseCtx, label), label),
+    composedSignal,
+  );
   const subscription = wrapEventsAsSubscription(
     schema.response ? checkedEvents(events, schema.response) : events,
     ownAC,
@@ -139,4 +143,11 @@ function wrapEventsAsSubscription(
       return () => {};
     },
   };
+}
+
+async function* sseEvents(
+  values: AsyncIterable<unknown>,
+  label: string,
+): AsyncGenerator<SSEEvent<unknown>, void, unknown> {
+  for await (const value of values) yield sseEventOf(value, label);
 }

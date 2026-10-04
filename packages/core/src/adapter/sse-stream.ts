@@ -1,7 +1,9 @@
 import { createLogger } from "../logger";
 import { checkResponse } from "../realtime/check-response";
 import { describeFailure } from "../realtime/describe-failure";
-import type { SSEContext, SSEHandler } from "../realtime/types";
+import { sseEventOf } from "../realtime/implementation";
+import { streamLabel } from "../realtime/stream-label";
+import type { SSEContext } from "../realtime/types";
 import { abortableEvents } from "../utils/abortable-events";
 import { anySignal } from "../utils/any-signal";
 import { SSE_HEARTBEAT } from "./format-sse";
@@ -26,7 +28,7 @@ const SSE_ENCODER = new TextEncoder();
  * Registers with the SSE connection registry for lifecycle tracking.
  */
 export function createSSEStream(
-  handler: SSEHandler<unknown, unknown>,
+  handler: (ctx: SSEContext) => AsyncIterable<unknown>,
   ctx: SSEContext,
   opts: SSEStreamOptions,
 ): ReadableStream<Uint8Array> {
@@ -92,7 +94,9 @@ export function createSSEStream(
         try {
           const generator = handler({ ...ctx, signal: combinedSignal });
           const { responseSchema } = opts;
-          for await (const yielded of abortableEvents(generator, combinedSignal)) {
+          const label = streamLabel(opts);
+          for await (const value of abortableEvents(generator, combinedSignal)) {
+            const yielded = sseEventOf(value, label);
             const event = responseSchema
               ? { ...yielded, data: await checkResponse(responseSchema, yielded.data) }
               : yielded;

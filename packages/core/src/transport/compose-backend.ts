@@ -1,5 +1,6 @@
 import type { ExecuteBackend } from "../client/types";
 import { ConfigurationError } from "../errors/configuration-error";
+import { isChannelSchema } from "../realtime/is-channel-schema";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import type { HTTPExecutor, SSEFactory, WSChannelFactory, WSPushFactory } from "./types";
 
@@ -71,8 +72,7 @@ export function composeBackend(
       }
 
       if (schema?.transport === "ws") {
-        const isBidirectional = schema.bidirectional === true || !!schema.receive;
-        if (isBidirectional) {
+        if (isChannelSchema(schema)) {
           if (!wsChannel) {
             throw new ConfigurationError(
               "STREAM_TRANSPORT_NOT_CONFIGURED",

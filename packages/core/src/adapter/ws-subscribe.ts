@@ -1,5 +1,6 @@
 import { createLogger } from "../logger";
 import { describeFailure } from "../realtime/describe-failure";
+import { isChannelSchema } from "../realtime/is-channel-schema";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { authorizeSubscription } from "./ws-authorize-subscription";
@@ -125,7 +126,7 @@ async function openSubscription(
     if (!resolved.served) {
       const target = { api: resolved.api, group: resolved.group ?? "", method: resolved.method };
       startRelay(ctx, subscribedTopic, target, variables);
-    } else if (resolved.schema.bidirectional === true || resolved.schema.receive) {
+    } else if (isChannelSchema(resolved.schema)) {
       await startChannel(
         ctx,
         subscribedTopic,

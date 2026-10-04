@@ -3,7 +3,9 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { createLogger } from "../../logger";
 import { checkResponseNow } from "../../realtime/check-response-now";
 import { describeFailure } from "../../realtime/describe-failure";
+import { channelHandlersOf } from "../../realtime/implementation";
 import type { ChannelHandlers, WSChannelContext } from "../../realtime/types";
+import { unqualifyTopic } from "../../realtime/ws/topic-key";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
@@ -42,13 +44,12 @@ export async function startChannel(
   subscribeId?: string,
   responseSchema?: StandardSchemaV1,
 ): Promise<void> {
-  const factory = endpoint as (v: unknown) => ChannelHandlers;
   const outbound = (data: unknown): unknown =>
     responseSchema ? checkResponseNow(responseSchema, data) : data;
 
   let handlers: ChannelHandlers;
   try {
-    handlers = factory(variables);
+    handlers = channelHandlersOf(endpoint, variables, unqualifyTopic(topic).baseTopic);
   } catch (error) {
     // Thrown on so the subscribe flow refuses the subscription once.
     log.warn("Channel handler init failed", error);

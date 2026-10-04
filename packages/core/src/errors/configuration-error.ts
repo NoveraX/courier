@@ -130,6 +130,13 @@ export type ConfigurationErrorCode =
   | "ENDPOINT_NOT_IN_BOUNDARY"
   /** An endpoint declared as a stream or a channel was called by a client with no transport for it. */
   | "STREAM_TRANSPORT_NOT_CONFIGURED"
+  /**
+   * A stream's or a channel's implementation returned what its transport
+   * cannot read. An SSE stream's and a WS push's return what they yield, as
+   * an async generator function does, and an SSE stream yields events,
+   * `{ data }`; a channel's returns its handlers, `{ onMessage }`.
+   */
+  | "STREAM_IMPLEMENTATION_INVALID"
   /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */
   | "READS_ON_CHANGING_VERB"
   /** An endpoint's `idempotencyKey` is not `header:<name>`. */

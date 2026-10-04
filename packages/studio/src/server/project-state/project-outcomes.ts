@@ -69,6 +69,7 @@ export function createProjectOutcomes(
     const previous = store.snapshot();
     if (!bound(loaded)) return;
     warnUnread(loaded);
+    sayRecovered(previous, loaded);
     runMocks(loaded);
     const next: ProjectSnapshot = {
       revision: previous.revision + 1,
@@ -128,6 +129,14 @@ export function createProjectOutcomes(
   }
 
   return { applied, failed };
+}
+
+/* A failure is reported each time it happens; that it is over is said once,
+   so the terminal does not end on a problem that is gone. */
+function sayRecovered(previous: ProjectSnapshot, { configFile }: LoadedCourierConfig): void {
+  const { failure, running } = previous;
+  if (failure === null || (failure.code === "CONFIG_NOT_FOUND" && running === null)) return;
+  log.info(`${basename(configFile)} loads again`);
 }
 
 /* A key Courier does not read is most likely misspelt, and was ignored in silence. */

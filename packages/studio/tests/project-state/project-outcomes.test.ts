@@ -15,11 +15,16 @@ import type { StudioServer } from "../../src/server/types";
 let root: string;
 let studio: StudioServer | undefined;
 let warned: string[];
+let told: string[];
 
 beforeEach(() => {
   warned = [];
+  told = [];
   vi.spyOn(console, "warn").mockImplementation((...args: unknown[]) => {
     warned.push(args.map(String).join(" "));
+  });
+  vi.spyOn(console, "info").mockImplementation((...args: unknown[]) => {
+    told.push(args.map(String).join(" "));
   });
   root = realpathSync(mkdtempSync(join(tmpdir(), "courier-load-failure-")));
 });
@@ -78,6 +83,22 @@ async function started(): Promise<string> {
   });
   return url;
 }
+
+describe("a courier.config fixed after it failed", () => {
+  it("is said to load again, once", async () => {
+    const config = join(root, "courier.config.ts");
+    writeFileSync(config, "export default { sources: { a: 1 b: 2 } };\n");
+    await started();
+
+    writeFileSync(config, "export default { sources: {} };\n");
+    await vi.waitFor(() => expect(told.join("\n")).toContain("courier.config.ts loads again"), {
+      timeout: 5_000,
+      interval: 50,
+    });
+
+    expect(told.filter((line) => line.includes("loads again"))).toHaveLength(1);
+  });
+});
 
 describe("a courier.config with a key Courier does not read", () => {
   it("names the key, as a misspelling is", async () => {

@@ -41,6 +41,13 @@ async function startUpstream(): Promise<void> {
       });
       return;
     }
+    /* Streams until the client leaves: a stream that only closes would be
+       reconnected to, as SSE is. */
+    if (req.method === "GET" && req.url === "/feeds/ticks") {
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      res.write(`data: ${JSON.stringify({ n: 1 })}\n\ndata: ${JSON.stringify({ n: 2 })}\n\n`);
+      return;
+    }
     if (req.method === "POST" && req.url === "/users") {
       res.writeHead(201, { "content-type": "application/json", "x-upstream": "yes" });
       res.end(JSON.stringify({ id: 3, name: "zed" }));
@@ -55,7 +62,7 @@ async function startUpstream(): Promise<void> {
 }
 
 function registerTestSources(): void {
-  const { endpoint, channel } = courier();
+  const { endpoint, channel, stream } = courier();
   const later = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
   const live = defineGroup({
     prefix: "live",
@@ -78,7 +85,21 @@ function registerTestSources(): void {
         yield { tick: 1 };
         yield { tick: 2 };
       }),
+      feed: stream.response<{ n: number }>().implement(async function* () {
+        yield { data: { n: 1 } };
+        yield { data: { n: 2 } };
+      }),
+      forever: stream.response<{ n: number }>().implement(async function* (ctx) {
+        for (let n = 1; !ctx.signal.aborted; n++) {
+          yield { data: { n } };
+          await later(20);
+        }
+      }),
     },
+  });
+  const feeds = defineGroup({
+    prefix: "feeds",
+    endpoints: { ticks: stream.response<{ n: number }>().get("ticks") },
   });
   const users = defineGroup({
     prefix: "users",
@@ -94,7 +115,9 @@ function registerTestSources(): void {
     prefix: "files",
     endpoints: { upload: endpoint.post("").variables<FormData>().response<unknown>() },
   });
-  registerSources({ api: defineApi({ baseURL: upstreamUrl, groups: { live, users, files } }) });
+  registerSources({
+    api: defineApi({ baseURL: upstreamUrl, groups: { live, users, files, feeds } }),
+  });
 }
 
 beforeAll(async () => {
@@ -433,5 +456,105 @@ describe("a form sent from the Playground", () => {
       status: 201,
       data: { named: true },
     });
+  });
+});
+
+/* Studio's stream hooks, as an attached runtime has them, for one test. */
+async function watchStreams(): Promise<{ opened: Set<string>; closed: Set<string> }> {
+  const { studioHooks } = await import("@noverax/courier/internal");
+  const opened = new Set<string>();
+  const closed = new Set<string>();
+  studioHooks.onStreamOpen = (event) => {
+    opened.add(event.requestId);
+  };
+  studioHooks.onStreamClose = (event) => {
+    closed.add(event.requestId);
+  };
+  onTestFinished(() => {
+    delete studioHooks.onStreamOpen;
+    delete studioHooks.onStreamClose;
+  });
+  return { opened, closed };
+}
+
+function ended(rid: string): boolean {
+  return framesOf(rid).some((frame) => frame.event === "playground:end");
+}
+
+describe("the stream a Playground run opens", () => {
+  it("is shown under the run's own id when this process serves it", async () => {
+    const { opened } = await watchStreams();
+
+    execute("feed-here", "live", "feed", "sse");
+    execute("ticker-here", "live", "ticker", "ws");
+    execute("chat-here", "live", "chat", "ws");
+    await until(() => ended("feed-here") && ended("ticker-here"), "the streams to end");
+    await until(() => opened.has(playgroundRequestId("chat-here")), "the channel");
+    runtime?.emit("playground:cancel", { rid: "chat-here" });
+
+    expect(opened).toEqual(
+      new Set(["feed-here", "ticker-here", "chat-here"].map((rid) => playgroundRequestId(rid))),
+    );
+  });
+
+  it("is opened as a client, under the run's own id, when its upstream serves it", async () => {
+    const { opened } = await watchStreams();
+
+    const chunks = () => framesOf("feed-remote").filter((f) => f.event === "playground:chunk");
+
+    execute("feed-remote", "feeds", "ticks", "sse");
+    await until(() => chunks().length === 2, "both events");
+    runtime?.emit("playground:cancel", { rid: "feed-remote" });
+
+    expect(chunks().map((frame) => frame.payload.chunk?.event)).toMatchObject([
+      { data: { n: 1 } },
+      { data: { n: 2 } },
+    ]);
+    expect(opened).toEqual(new Set([playgroundRequestId("feed-remote")]));
+  });
+
+  it("is shown under the run's own id when it goes through the app's proxy route", async () => {
+    const { setAppOrigin } = await import("@noverax/courier");
+    const { opened } = await watchStreams();
+    const { url, proxied } = await startProxy();
+    setAppOrigin(url);
+    onTestFinished(() => setAppOrigin(undefined));
+
+    runtime?.emit("playground:execute", {
+      rid: "feed-proxy",
+      source: "api",
+      group: "live",
+      method: "feed",
+      transport: "sse",
+      mode: "proxy",
+      variables: {},
+    });
+    await until(() => ended("feed-proxy"), "the stream to end");
+
+    expect(proxied).toEqual(["GET /api/sse?_s=api&_m=feed&_g=live"]);
+    expect(opened).toEqual(new Set([playgroundRequestId("feed-proxy")]));
+  });
+
+  it("stops at once where the app's proxy serves it, when the run is cancelled", async () => {
+    const { setAppOrigin } = await import("@noverax/courier");
+    const { opened, closed } = await watchStreams();
+    const { url } = await startProxy();
+    setAppOrigin(url);
+    onTestFinished(() => setAppOrigin(undefined));
+    const id = playgroundRequestId("forever-proxy");
+
+    runtime?.emit("playground:execute", {
+      rid: "forever-proxy",
+      source: "api",
+      group: "live",
+      method: "forever",
+      transport: "sse",
+      mode: "proxy",
+      variables: {},
+    });
+    await until(() => opened.has(id), "the stream to open");
+    runtime?.emit("playground:cancel", { rid: "forever-proxy" });
+
+    await until(() => closed.has(id), "the stream to close");
   });
 });

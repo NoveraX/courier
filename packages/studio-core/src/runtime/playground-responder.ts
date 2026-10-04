@@ -6,15 +6,17 @@
  * emits one of three events to that runtime's `/runtime` socket:
  *
  *  - `playground:execute { rid, source, group, method, transport, ... }`
- *    starts a new request. The responder dispatches to the canonical local
- *    executor (`executeRequest` for HTTP, `executeDirectSSE` for SSE,
- *    `executeDirectWSPush` or `executeDirectWSChannel` for a WS push or
- *    channel) and streams results back through
+ *    starts a new request. The responder runs it as the app would:
+ *    `executeRequest` for HTTP; a stream through the app's proxy route in
+ *    proxy mode, here when this process serves it, or as a client of the
+ *    upstream that serves it — each shown in Studio under
+ *    `playgroundRequestId(rid)` — and streams results back through
  *    `playground:chunk` / `playground:end` / `playground:error`, all keyed
  *    by the same `rid`.
  *
  *  - `playground:cancel { rid }` aborts an in-flight request. The responder
- *    looks up the AbortController stored under that rid and aborts.
+ *    looks up the AbortController stored under that rid and aborts, and a
+ *    stream the app's proxy serves in this process is stopped there too.
  *
  *  - `playground:write { rid, data }` writes a message into a live WS channel
  *    opened by an earlier `playground:execute { transport: "ws" }`. Looks up
@@ -27,13 +29,10 @@
  */
 
 import type { Sources } from "@noverax/courier/define";
-import { executeRequest } from "@noverax/courier/internal";
-import {
-  executeDirectSSE,
-  executeDirectWSChannel,
-  executeDirectWSPush,
-  wsEndpointKind,
-} from "@noverax/courier/internal-streams";
+import { abortPlayground, executeRequest } from "@noverax/courier/internal";
+import { wsEndpointKind } from "@noverax/courier/internal-streams";
+
+import { playgroundRequestId } from "../lib/playground-request-id";
 import { dispatchHttp } from "./dispatch-http";
 import {
   type PlaygroundExecutePayload,
@@ -41,13 +40,13 @@ import {
   sanitizeRid,
   sanitizeWrite,
 } from "./playground-payloads";
-import { openChannelThroughProxy, openStreamThroughProxy } from "./proxy-openers";
 import {
   dispatchSSE,
   dispatchWS,
   dispatchWSPush,
   type PlaygroundChannel,
 } from "./responder-dispatch";
+import { streamOpenersFor } from "./stream-openers";
 
 /** Minimal Socket.IO socket surface the responder needs. */
 export interface ResponderSocket {
@@ -91,6 +90,9 @@ export function setupPlaygroundResponder(
     const entry = inFlight.get(payload.rid);
     if (!entry) return;
     entry.ac.abort();
+    /* A stream the app's proxy serves in this process stops at once there,
+       rather than after its socket notices the client left. */
+    abortPlayground(playgroundRequestId(payload.rid));
     inFlight.delete(payload.rid);
   };
 
@@ -132,18 +134,17 @@ async function runExecute(
   }
 
   try {
-    const viaProxy = payload.mode === "proxy";
     if (payload.transport === "http") {
       await dispatchHttp(socket, payload, sources, executeRequest);
-    } else if (payload.transport === "sse") {
-      const open = viaProxy ? openStreamThroughProxy : executeDirectSSE;
-      await dispatchSSE(socket, payload, sources, ac.signal, open);
+      return;
+    }
+    const open = streamOpenersFor(sources, payload);
+    if (payload.transport === "sse") {
+      await dispatchSSE(socket, payload, sources, ac.signal, open.sse);
     } else if (wsEndpointKind(sources, payload) === "push") {
-      const open = viaProxy ? openStreamThroughProxy : executeDirectWSPush;
-      await dispatchWSPush(socket, payload, sources, ac.signal, open);
+      await dispatchWSPush(socket, payload, sources, ac.signal, open.push);
     } else {
-      const open = viaProxy ? openChannelThroughProxy : executeDirectWSChannel;
-      await dispatchWS(socket, payload, sources, ac.signal, open, (channel) => {
+      await dispatchWS(socket, payload, sources, ac.signal, open.channel, (channel) => {
         entry.channel = channel;
         for (const data of entry.pending.splice(0)) write(socket, payload.rid, channel, data);
       });

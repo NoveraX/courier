@@ -2,8 +2,9 @@ import type { MockServer, MockServerOptions } from "../server/create-mock-server
 import { createMockServer } from "../server/create-mock-server";
 import type { MockStore } from "../store";
 import type { AnyMockScenario, NetworkConfig, UntypedMockFn } from "../types";
-import { buildAutoHandlers, seedAllCollections } from "./auto-scenario";
+import { seedAllCollections } from "./auto-seed";
 import { withBasePath } from "./base-path-mappings";
+import { buildAutoHandlers } from "./build-auto-handlers";
 import { checkedMock, withCheckedMock } from "./checked-mock-targets";
 import { composeScenarios } from "./compose-scenarios";
 import type { SeedConfig } from "./prefix-mappings";

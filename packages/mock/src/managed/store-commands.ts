@@ -2,7 +2,7 @@
  * Handle store-related commands from the Studio parent process.
  */
 
-import { seedAllCollections } from "../auto/auto-scenario";
+import { seedAllCollections } from "../auto/auto-seed";
 import type { MockServer } from "../server/mock-server-types";
 import { CommandInputError, countIn, idIn, nameIn, objectIn } from "./command-input";
 import type { ServedMock } from "./types";

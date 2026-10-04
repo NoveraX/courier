@@ -1,8 +1,9 @@
 import { auditBindings } from "./audit-bindings";
 import { auditMocksObject } from "./audit-object";
 import { openAudit } from "./audit-scope";
-import { auditStatements, splitStatements } from "./audit-statements";
+import { auditStatements } from "./audit-statements";
 import { rejectPlan } from "./reject-plan";
+import { splitStatements } from "./split-statements";
 import type { PlannedInsertion } from "./types";
 
 /**

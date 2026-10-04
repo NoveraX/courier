@@ -2,7 +2,7 @@ import type { ObjectExpression, Span } from "oxc-parser";
 import { Visitor } from "oxc-parser";
 import { closingRun } from "./closing-run";
 import type { ParsedSource } from "./parse-source";
-import { trailingCommaAfter } from "./skip-trivia";
+import { trailingCommaAfter } from "./trailing-comma-after";
 
 /**
  * Whether a file ends its multi-line object and array literals with a comma,

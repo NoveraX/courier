@@ -1,4 +1,5 @@
-import { countLineTerminators, lineTerminatorLength } from "./line-terminator";
+import { countLineTerminators } from "./count-line-terminators";
+import { lineTerminatorLength } from "./line-terminator-length";
 
 /**
  * The 1-based line number of `offset`, for messages that point at the file.

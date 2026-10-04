@@ -1,6 +1,5 @@
 import type { Comment, Program } from "oxc-parser";
 import { parseSync } from "oxc-parser";
-import { lineNumberAt } from "./line-number-at";
 import type { CommentEnds } from "./skip-trivia";
 
 /** The first problem oxc reported in a text. */
@@ -49,21 +48,4 @@ export function parseSource(fileName: string, text: string): ParsedSource {
     commentEnds: new Map(result.comments.map((comment) => [comment.start, comment.end])),
     problem,
   };
-}
-
-/**
- * Describe a parse problem with the line it is on.
- *
- * @param parsed - A parsed source with a problem
- * @param problem - The problem
- * @returns The message, with its line when oxc gave one
- *
- * @example
- * ```ts
- * describeProblem(parsed, parsed.problem); // → "Expected `}` but found `EOF` (line 3)"
- * ```
- */
-export function describeProblem(parsed: ParsedSource, problem: ParseProblem): string {
-  if (problem.offset === null) return problem.message;
-  return `${problem.message} (line ${lineNumberAt(parsed.text, problem.offset)})`;
 }

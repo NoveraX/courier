@@ -1,5 +1,5 @@
-import type { MockImports } from "./mock-imports";
 import type { ModuleBindings } from "./module-bindings";
+import type { MockImports } from "./read-mock-imports";
 
 /** How a mocks file can call a function of the mock package. */
 export type CalleeResolution =

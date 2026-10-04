@@ -1,10 +1,11 @@
 import { MocksEditRefusal } from "../mocks-edit-refusal";
+import { describeProblem } from "./describe-problem";
 import type { LocatedMocks } from "./locate-mocks-object";
 import { locateMocksObject } from "./locate-mocks-object";
-import type { MockImports } from "./mock-imports";
-import { readMockImports } from "./mock-imports";
 import type { ParsedSource } from "./parse-source";
-import { describeProblem, parseSource } from "./parse-source";
+import { parseSource } from "./parse-source";
+import type { MockImports } from "./read-mock-imports";
+import { readMockImports } from "./read-mock-imports";
 import type { PlannedInsertion } from "./types";
 
 /** Both texts of an edit, read the same way, for the audit to compare. */

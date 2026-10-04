@@ -1,4 +1,4 @@
-import { lineTerminatorLength } from "./line-terminator";
+import { lineTerminatorLength } from "./line-terminator-length";
 import { WHITESPACE } from "./whitespace";
 
 /** The whitespace right before a closing brace, which decides how a list is laid out. */

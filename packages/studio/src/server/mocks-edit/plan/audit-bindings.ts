@@ -1,7 +1,7 @@
 import type { AuditScope } from "./audit-scope";
-import type { SplitStatements } from "./audit-statements";
 import { findConfigLocals } from "./find-config-locals";
 import { collectModuleBindings } from "./module-bindings";
+import type { SplitStatements } from "./split-statements";
 
 /**
  * Hold the names an edit imports to the plan. oxc does not report a name

@@ -2,8 +2,8 @@ import { dirname } from "node:path";
 import { readPathAliases } from "@noverax/courier-studio-core/config";
 
 import { extractConfigDeps } from "../extract-config-deps";
-import { sha256Hex } from "../file-hash";
 import { resolveConfigImport } from "../resolve-config-import";
+import { sha256Hex } from "../sha256-hex";
 
 /**
  * A digest of what an import of the mocks file runs, by its specifier: the

@@ -1,7 +1,8 @@
 import type { Directive, ImportDeclaration, Statement } from "oxc-parser";
 import type { TextEdit } from "../types";
+import { countLineTerminators } from "./count-line-terminators";
 import { insertion } from "./insertion";
-import { countLineTerminators, lineTerminatorLength } from "./line-terminator";
+import { lineTerminatorLength } from "./line-terminator-length";
 import type { ParsedSource } from "./parse-source";
 import { separatorBefore } from "./separator-before";
 import { siteAboveFirstStatement } from "./site-above-first-statement";

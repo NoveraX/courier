@@ -1,6 +1,6 @@
 import { type LoadedCourierConfig, loadCourierConfig } from "./config-loader";
 import { ConfigLoaderError } from "./config-loader-errors";
-import { type ExclusiveTransaction, exclusiveContext } from "./exclusive-reload";
+import { type ExclusiveTransaction, exclusiveContext } from "./exclusive-context";
 import { type EditMark, insideEdit } from "./project-state/inside-edit";
 import type { ReloadQueue } from "./reload-queue";
 import type { WatchSet } from "./watch-set";

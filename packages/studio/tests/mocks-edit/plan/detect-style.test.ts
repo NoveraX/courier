@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_STYLE, detectStyle } from "../../../src/server/mocks-edit/plan/detect-style";
 import { locateMocksObject } from "../../../src/server/mocks-edit/plan/locate-mocks-object";
-import { readMockImports } from "../../../src/server/mocks-edit/plan/mock-imports";
 import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
+import { readMockImports } from "../../../src/server/mocks-edit/plan/read-mock-imports";
 import type { FileStyle } from "../../../src/server/mocks-edit/plan/types";
 
 function styleOf(text: string, fileName = "x.ts"): FileStyle {

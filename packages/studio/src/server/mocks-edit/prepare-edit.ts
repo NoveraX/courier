@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
 import type { LoadedCourierConfig } from "../config-loader";
-import { sha256Hex } from "../file-hash";
+import { sha256Hex } from "../sha256-hex";
 import { checkConfigNotShadowed } from "./check-config-not-shadowed";
 import { checkLoadedState } from "./check-loaded-state";
 import { checkNoHiddenKeys } from "./check-no-hidden-keys";

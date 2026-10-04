@@ -1,4 +1,4 @@
-import { lineTerminatorLength } from "./line-terminator";
+import { lineTerminatorLength } from "./line-terminator-length";
 
 /**
  * Where the line holding `offset` starts: right after the last line

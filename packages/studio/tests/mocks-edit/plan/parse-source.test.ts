@@ -4,8 +4,7 @@
  * the planner makes depends on it.
  */
 import { describe, expect, it } from "vitest";
-
-import { describeProblem, parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
+import { parseSource } from "../../../src/server/mocks-edit/plan/parse-source";
 
 describe("parseSource", () => {
   it("reports spans as UTF-16 offsets past astral and non-ASCII characters", () => {
@@ -47,18 +46,6 @@ describe("parseSource", () => {
   it("reads JavaScript in .mjs files, where a type annotation is an error", () => {
     expect(parseSource("courier.mocks.mjs", "const a = (x: number) => x;").problem?.message).toBe(
       "Expected `,` or `)` but found `:`",
-    );
-  });
-
-  it("reports the first error with the line it points at", () => {
-    const parsed = parseSource(
-      "courier.mocks.ts",
-      "const a = 1;\nexport default {\n  a: 1\n  b: 2\n};\n",
-    );
-
-    expect(parsed.problem).not.toBeNull();
-    expect(parsed.problem === null ? null : describeProblem(parsed, parsed.problem)).toBe(
-      "Expected `,` or `}` but found `Identifier` (line 4)",
     );
   });
 });

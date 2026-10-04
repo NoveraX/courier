@@ -1,7 +1,7 @@
 import { createLogger } from "@noverax/courier";
 import type { LoadedCourierConfig } from "../config-loader";
 import { describeError } from "../describe-error";
-import type { ExclusiveContext } from "../exclusive-reload";
+import type { ExclusiveContext } from "../exclusive-context";
 import { describeEntry } from "../mock-manager/describe-entry";
 import type { PreparedEdit } from "./prepare-edit";
 import { rejectionOf } from "./rejection-of";

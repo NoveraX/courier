@@ -1,6 +1,6 @@
 import { createLogger } from "@noverax/courier";
-import { sha256Hex } from "../file-hash";
 import { readWatchedBytes } from "../read-watched-bytes";
+import { sha256Hex } from "../sha256-hex";
 import { fingerprintMocks } from "./fingerprint-mocks";
 
 const log = createLogger("Studio");

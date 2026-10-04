@@ -1,4 +1,4 @@
-import type { ImportDeclaration, ImportDeclarationSpecifier } from "oxc-parser";
+import type { ImportDeclaration } from "oxc-parser";
 
 /**
  * Whether an import declaration brings in runtime values: not `import type`,
@@ -16,21 +16,4 @@ import type { ImportDeclaration, ImportDeclarationSpecifier } from "oxc-parser";
  */
 export function isValueImport(declaration: ImportDeclaration): boolean {
   return declaration.importKind !== "type" && declaration.phase === null;
-}
-
-/**
- * Whether one specifier of a value import is itself a value: not written
- * `import { type x }`.
- *
- * @param specifier - A specifier of a value import
- * @returns Whether it binds a runtime value
- *
- * @example
- * ```ts
- * // import { type A, b } from "a";
- * declaration.specifiers.map(isValueSpecifier); // → [false, true]
- * ```
- */
-export function isValueSpecifier(specifier: ImportDeclarationSpecifier): boolean {
-  return specifier.type !== "ImportSpecifier" || specifier.importKind !== "type";
 }

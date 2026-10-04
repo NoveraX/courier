@@ -37,14 +37,10 @@ import { createConfigJiti } from "./config-jiti";
 import type { TransformCache } from "./transform-cache";
 
 export { type ConfigJitiOptions, createConfigJiti } from "./config-jiti";
-export {
-  findMocksFile,
-  type LoadedCourierMocks,
-  loadCourierMocksFile,
-  MOCKS_BASENAMES,
-  readMocksExport,
-} from "./load-mocks";
+export { findMocksFile, MOCKS_BASENAMES } from "./find-mocks-file";
+export { type LoadedCourierMocks, loadCourierMocksFile } from "./load-courier-mocks-file";
 export { type PathAliases, readPathAliases } from "./path-aliases";
+export { readMocksExport } from "./read-mocks-export";
 export {
   createTransformCache,
   type TransformCache,

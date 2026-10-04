@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { auditMocksObject } from "../../../src/server/mocks-edit/plan/audit-object";
 import { openAudit } from "../../../src/server/mocks-edit/plan/audit-scope";
-import { splitStatements } from "../../../src/server/mocks-edit/plan/audit-statements";
+import { splitStatements } from "../../../src/server/mocks-edit/plan/split-statements";
 import type { PlannedInsertion } from "../../../src/server/mocks-edit/plan/types";
 
 const HEADER = `import { defineMockServer } from "@noverax/courier-mock";\nimport c from "./courier.config";\n`;

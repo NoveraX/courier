@@ -1,4 +1,4 @@
-import { lineTerminatorLength } from "./line-terminator";
+import { lineTerminatorLength } from "./line-terminator-length";
 
 const BLANK = /^\s*$/;
 

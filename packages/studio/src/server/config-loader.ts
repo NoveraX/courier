@@ -16,17 +16,13 @@ import { type AnySource, stampSourceKeys } from "@noverax/courier/define";
 import type { TransformCache } from "@noverax/courier-studio-core/config";
 import { findConfigFileAt } from "@noverax/courier-studio-core/config";
 import { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
-import type { LoadedCourierMocks } from "./courier-mocks-file";
-import {
-  findCourierMocks,
-  type LocatedCourierMocks,
-  locateCourierMocks,
-  readCourierMocks,
-} from "./courier-mocks-file";
 import type { EvaluatedCourierFiles } from "./evaluate-courier-files";
 import { evaluateCourierFiles } from "./evaluate-courier-files";
+import { findCourierMocks } from "./find-courier-mocks";
 import { hashStillOnDisk } from "./hash-still-on-disk";
+import { type LocatedCourierMocks, locateCourierMocks } from "./locate-courier-mocks";
 import { messageOf } from "./message-of";
+import { type LoadedCourierMocks, readCourierMocks } from "./read-courier-mocks";
 import { readEntryNames } from "./read-entry-names";
 import type { ProjectInputs } from "./read-project-inputs";
 import { readProjectInputs } from "./read-project-inputs";
@@ -188,4 +184,4 @@ function stampConfigSourceKeys(
 
 export type { ConfigLoaderErrorCode } from "./config-loader-errors";
 export { ConfigLoaderError, ConfigNotFoundError } from "./config-loader-errors";
-export type { LoadedCourierMocks } from "./courier-mocks-file";
+export type { LoadedCourierMocks } from "./read-courier-mocks";

@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { hashFile, sha256Hex } from "../src/server/file-hash";
+import { hashFile } from "../src/server/hash-file";
 import { NotRegularFileError } from "../src/server/not-regular-file-error";
 import { makeFedFifo, stopFifoWriters } from "./helpers/make-fed-fifo";
 
@@ -25,26 +25,13 @@ function thrownBy(operation: () => unknown): unknown {
 }
 
 beforeEach(() => {
-  dir = realpathSync(mkdtempSync(join(tmpdir(), "courier-file-hash-")));
+  dir = realpathSync(mkdtempSync(join(tmpdir(), "courier-hash-file-")));
   path = join(dir, "courier.mocks.ts");
 });
 
 afterEach(() => {
   stopFifoWriters();
   rmSync(dir, { recursive: true, force: true });
-});
-
-describe("sha256Hex", () => {
-  it("hashes a string as its UTF-8 bytes", () => {
-    expect(sha256Hex("abc")).toBe(ABC_DIGEST);
-    expect(sha256Hex("é")).toBe(sha256Hex(Buffer.from([0xc3, 0xa9])));
-  });
-
-  it("hashes no bytes as the digest of the empty input", () => {
-    expect(sha256Hex(Buffer.alloc(0))).toBe(
-      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    );
-  });
 });
 
 describe("hashFile", () => {

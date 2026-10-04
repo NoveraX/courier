@@ -1,4 +1,4 @@
-import { lineTerminatorLength } from "./plan/line-terminator";
+import { lineTerminatorLength } from "./plan/line-terminator-length";
 
 /** Where one line of a text sits, in UTF-16 offsets. */
 export interface LineSpan {

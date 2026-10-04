@@ -6,31 +6,34 @@ interface FrameworkGridProps {
   onSelect: (id: string) => void;
   /** The app attached, when one is: what Studio sees running. */
   attached: string | undefined;
+  /** The packages that tell the project's framework, when they do. */
+  detected: string | undefined;
 }
 
 /**
  * The frameworks Studio sets up, as tiles: the name, and what the setup
- * hooks into.
+ * hooks into. The heading names the app attached, or else the packages the
+ * project's framework was told from.
  *
- * @param props - The framework picked, what picks one, and the app attached
+ * @param props - The framework picked, what picks one, the app attached and what was detected
  * @returns The grid, under its heading
  * @example
  * ```tsx
- * <FrameworkGrid selected="nextjs" onSelect={select} attached={undefined} />
+ * <FrameworkGrid selected="react" onSelect={select} attached={undefined} detected="vite · react" />
  * ```
  */
 export function FrameworkGrid({
   selected,
   onSelect,
   attached,
+  detected,
 }: FrameworkGridProps): React.ReactNode {
+  const note = attached ? `attached: ${attached}` : detected && `detected: ${detected}`;
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-baseline gap-2.5">
         <span className="font-semibold">Framework</span>
-        {attached && (
-          <span className="font-mono text-badge text-fg-subtle">attached: {attached}</span>
-        )}
+        {note && <span className="font-mono text-badge text-fg-subtle">{note}</span>}
       </div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-1.5">
         {FRAMEWORKS.map((framework) => {

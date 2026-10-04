@@ -60,7 +60,11 @@ function attach(): void {
   useStudioStore.setState({
     connected: true,
     connectionStatus: "connected",
-    studioInfo: { version: "1.2.3", startedAt: 1_700, project: { name: "acme-shop" } },
+    studioInfo: {
+      version: "1.2.3",
+      startedAt: 1_700,
+      project: { name: "acme-shop", dependencies: [] },
+    },
     bindingSnapshot: {
       rows: [
         {

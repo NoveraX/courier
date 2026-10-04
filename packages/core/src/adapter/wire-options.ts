@@ -16,6 +16,7 @@
  * process, already decides the destination, and keeps the full option set.
  */
 
+import { isRecord } from "../utils/is-record";
 import { reviveWithoutPrototypeKeys } from "../utils/safe-json";
 import { LIMITS } from "./limits";
 
@@ -53,11 +54,9 @@ const ALLOWED_KEYS: ReadonlySet<string> = new Set([...BOOLEAN_KEYS, "timeout"]);
 export function parseWireOptions(raw: unknown): WireOptionsResult {
   if (raw === undefined || raw === null) return { ok: true, options: undefined };
 
-  if (typeof raw !== "object" || Array.isArray(raw)) {
-    return { ok: false, reason: "options must be an object" };
-  }
+  if (!isRecord(raw)) return { ok: false, reason: "options must be an object" };
 
-  const entries = Object.entries(raw as Record<string, unknown>);
+  const entries = Object.entries(raw);
   const rejected = entries.map(([key]) => key).filter((key) => !ALLOWED_KEYS.has(key));
   if (rejected.length > 0) {
     return {
@@ -68,14 +67,14 @@ export function parseWireOptions(raw: unknown): WireOptionsResult {
 
   const options: WireOptions = {};
   for (const key of BOOLEAN_KEYS) {
-    const value = (raw as Record<string, unknown>)[key];
+    const value = raw[key];
     if (value === undefined) continue;
     if (typeof value !== "boolean")
       return { ok: false, reason: `options.${key} must be a boolean` };
     options[key] = value;
   }
 
-  const timeout = (raw as Record<string, unknown>).timeout;
+  const { timeout } = raw;
   if (timeout !== undefined) {
     if (typeof timeout !== "number" || !Number.isFinite(timeout) || timeout <= 0) {
       return { ok: false, reason: "options.timeout must be a positive number of milliseconds" };

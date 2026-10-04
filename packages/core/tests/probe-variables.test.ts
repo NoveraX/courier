@@ -78,4 +78,21 @@ describe("the shape recorded from a closure", () => {
 
     expect(detail.path).toBe("items/:id/detail/:ids");
   });
+
+  it("refuses a closure that calls the wire twice, as it describes one request", () => {
+    expect(() =>
+      endpoint.via((http) => {
+        http.get("first");
+        return http.post("second");
+      }),
+    ).toThrow(expect.objectContaining({ code: "ENDPOINT_EXTRA_WIRE_CALL" }));
+  });
+
+  it("refuses a method the wire does not have, which addresses no verb", () => {
+    const fetching = (http: { fetch(path: string): unknown }) => http.fetch("items");
+
+    expect(() => endpoint.via(fetching as never)).toThrow(
+      expect.objectContaining({ code: "ENDPOINT_UNKNOWN_WIRE_METHOD" }),
+    );
+  });
 });

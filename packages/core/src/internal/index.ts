@@ -3,7 +3,8 @@
  *
  * **Internal subpath.** The framework adapters, React, the mock server and
  * Studio reach the client proxy, the transports, the request executor and
- * Studio's hooks through it. It is not part of the public API: it changes
+ * Studio's hooks through it, and the command-line tools the style of their
+ * terminal output. It is not part of the public API: it changes
  * with those packages, with no semver guarantee for anyone else. An
  * application uses the root entry and the documented subpaths.
  *
@@ -21,6 +22,7 @@ export {
   type ExecuteBackend,
   shapeOfClient,
 } from "../client";
+export { readLogFormat } from "../logger/log-format";
 export { mergeProxyPath, type ResolveOrigin, resolveProxyPath } from "../proxy-caller";
 export { type ConnectionState, createConnectionState } from "../realtime/connection-state";
 export { describeFailure, type StreamFailure } from "../realtime/describe-failure";
@@ -29,6 +31,27 @@ export { decodeMessage, encodeMessage, type WSMessage } from "../realtime/ws/ws-
 export { buildDirectWSUrl } from "../realtime/ws-address";
 export { getSourcesGeneration, onSourcesChange } from "../sources";
 export { STUDIO_REQUEST_HEADER, type StudioHooks, studioHooks } from "../studio";
+export {
+  type Banner,
+  type BannerRow,
+  type ColorLevel,
+  colorLevel,
+  createTerminalStyle,
+  type DeclaredOption,
+  formatBanner,
+  formatHelp,
+  formatLink,
+  type Glyphs,
+  glyphsFor,
+  type Help,
+  type HelpOption,
+  helpOptions,
+  type OutputStream,
+  type Paint,
+  styleFor,
+  supportsUnicode,
+  type TerminalStyle,
+} from "../terminal";
 export {
   createDirectHTTPExecutor,
   createProxyHTTPExecutor,

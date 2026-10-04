@@ -61,8 +61,8 @@ describe("syncDirectory", () => {
 
     expect(thrownBy(() => syncDirectory(dir))).toBe(NOTHING_THROWN);
     expect(debug).toHaveBeenCalledWith(
-      "%s",
-      expect.stringContaining(`[Studio] Could not flush ${dir} after changing a name in it`),
+      expect.any(String),
+      expect.stringContaining(`Could not flush ${dir} after changing a name in it`),
       flushError,
     );
   });

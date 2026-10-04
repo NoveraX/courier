@@ -266,15 +266,27 @@ log.info("Invoice sent")
 log.warn("Payment provider slow to answer", error) // the error prints with its stack and cause chain
 ```
 
-On a server, `debug` and `info` go to **stdout** and `warn` and `error` to **stderr**, one line each, prefixed with `[Courier]`, the process id, the time, the level and the context. An error passed as the second argument is printed after the line the way the runtime's console prints errors — stack, `cause` chain, an AggregateError's errors, properties such as `code` — and the root of a chain too deep for the console to show is printed on its own.
+On a server, `debug` and `info` go to **stdout** and `warn` and `error` to **stderr**, one line each: the time, the level, and `courier:` with the context in kebab case — `createLogger("Billing")` logs as `courier:billing` — then the message, the messages of every scope starting in one column. An error passed as the second argument is printed under the line the way the runtime's console prints errors — stack, `cause` chain, an AggregateError's errors, properties such as `code` — and the root of a chain too deep for the console to show is printed on its own.
+
+```text
+16:03:59 ● courier:billing        Invoice sent
+16:04:02 ▲ courier:billing        Payment provider slow to answer
+```
+
+On a terminal the level is a symbol in its colour — `●` info, `▲` warn, `✕` error, `·` debug, with the debug line dimmed — and a request line such as `GET /users → 404 (3ms)` has its status coloured by class. Warnings, errors and statuses use the terminal's own sixteen colours, so they follow its theme, light or dark; only the info symbol is in Courier's violet, and the message keeps the terminal's foreground. A log file or a pipe gets plain text with the level as a word — `16:04:02 WARN  courier:billing …` — and `COURIER_LOG_FORMAT=json` writes one JSON object per line for a log pipeline:
+
+```json
+{"time":"2026-10-04T13:04:02.120Z","level":"warn","scope":"billing","pid":4120,"message":"Payment provider slow to answer","error":{"name":"TypeError","message":"fetch failed","stack":"…","cause":{"name":"Error","message":"connect ECONNREFUSED 10.0.0.7:443","code":"ECONNREFUSED"}}}
+```
 
 | Variable | Values | Default |
 |---|---|---|
 | `COURIER_LOG_LEVEL` | `debug`, `info`, `warn`, `error`, `silent` | `info` |
+| `COURIER_LOG_FORMAT` | `text`, or `json` for one JSON object per line | `text` |
 | `NO_COLOR` | any non-empty value turns colour off | colour on a terminal only |
 | `FORCE_COLOR` | `1`, `2`, `3` or `true` turns colour on, also into a pipe | — |
 
-`COURIER_LOG_LEVEL` is read on every line, so setting it in your entry module takes effect. A log file or a pipe gets plain text. In a browser the lines go to the devtools console, whose own level filter applies.
+`COURIER_LOG_LEVEL` and `COURIER_LOG_FORMAT` are read on every line, so setting them in your entry module takes effect. In a browser the lines go to the devtools console, whose own level filter applies.
 
 <br />
 

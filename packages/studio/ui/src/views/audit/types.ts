@@ -19,8 +19,6 @@ export interface AuditItem {
   suggestion?: string;
   /** Courier code snippet for the fix */
   codeSuggestion?: string;
-  /** Single endpoint (ungrouped legacy) */
-  endpoint?: string;
   /** Grouped affected endpoints */
   endpoints?: AuditEndpoint[];
   /** Request IDs related to this item (for deep links) */

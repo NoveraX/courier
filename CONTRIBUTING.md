@@ -24,7 +24,7 @@ in the same order.
 
 ```bash
 npm run build
-npx biome check packages/
+npx biome check .
 npm run check:names
 npx tsc --noEmit
 npx turbo run typecheck --filter=@noverax/courier-studio-ui
@@ -32,6 +32,7 @@ npm run check:any
 npm run test:coverage
 npm run check:exports
 npm run check:docs
+npm run check:packages
 ```
 
 Three of them are easy to skip by accident and worth understanding:
@@ -135,6 +136,11 @@ tagged, the release checks that its npm token is accepted.
 Describe what changes for a user of the library, not only what moved in the
 code. If it fixes a reported issue, link it. If it changes public API, say so
 explicitly — the export surface is checked.
+
+The title becomes the squash-merge commit's header, so it follows the commit
+convention too, and CI checks it. Dependabot's pull requests are titled
+`fix(deps): Bump …` or `chore(deps): Bump …`; retitle one to the convention
+— `fix(deps): 🐛 bump zod from 4.6.5 to 4.7.0` — before merging it.
 
 ## Reporting a security issue
 

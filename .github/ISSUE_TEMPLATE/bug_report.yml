@@ -1,0 +1,39 @@
+name: Bug report
+description: Something does not work as the documentation says.
+labels: [bug]
+body:
+  - type: input
+    id: package
+    attributes:
+      label: Package and version
+      description: The package the bug is in, and its version — `npm ls @noverax/courier` shows it.
+      placeholder: "@noverax/courier 0.1.0"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: The error, the status, the wrong value — as it was printed.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Smallest reproduction
+      description: An endpoint definition and the call that fails, or a link to a repository.
+      render: ts
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Node, the framework and its version, and the browser if the call runs in one.
+      placeholder: "Node 24.2, Next.js 16.1, Chrome 140"

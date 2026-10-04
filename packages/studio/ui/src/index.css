@@ -93,8 +93,8 @@
   --shadow-xl: 0 20px 40px -8px oklch(0 0 0 / 0.24), 0 8px 16px -8px oklch(0 0 0 / 0.16);
 
   /* ── Typography ── */
-  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* ── Animations ── */
   --animate-accordion-down: accordion-down 0.2s ease-out;

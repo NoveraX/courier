@@ -1,6 +1,6 @@
+import { requestFromSaved } from "@/features/sessions/saved-request";
 import type { ShownSession } from "@/store/store-types";
 import type { RequestEntry } from "@/store/types";
-import { requestFromSaved } from "@/views/settings/saved-request";
 
 import { isPlainObject } from "./is-plain-object";
 

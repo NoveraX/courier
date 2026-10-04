@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { requestFromSaved, savedRequestOf } from "@/features/sessions/saved-request";
 import { apiClient, post } from "@/lib/api-client";
 import { useStudioStore } from "@/store";
 import { isRecord } from "@/store/event-helpers";
 import type { ExportFormat, RequestEntry } from "@/store/types";
-import { requestFromSaved, savedRequestOf } from "./saved-request";
 import { type SessionSummary, sessionSummariesOf } from "./session-summary";
 
 // ── Session history hook ─────────────────────────────────────────────────────

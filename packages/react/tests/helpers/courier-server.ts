@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { createHandler, createWSHandler, type ProxyPath, registerSources } from "@noverax/courier";
-import { clearWSConnectionPool } from "@noverax/courier/internal";
+import { clearWSConnectionPool } from "@noverax/courier/internal-streams";
 import {
   attachWebSocketUpgrade,
   sendWebResponse,

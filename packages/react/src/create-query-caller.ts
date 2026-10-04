@@ -4,8 +4,7 @@ import { getSourceName } from "@noverax/courier/define";
 import {
   createClientRoot,
   createDirectHTTPExecutor,
-  createDirectSSEFactory,
-  createDirectWSChannelFactory,
+  directStreamingFactories,
   shapeOfClient,
 } from "@noverax/courier/internal";
 
@@ -64,17 +63,15 @@ export function createQueryCaller<TApi extends DefinedApi>(
 ): QueryCallerClient<TApi> {
   const sourceName = getSourceName(api) ?? "_";
   const httpExecutor = createDirectHTTPExecutor(api, defaults);
-  const sseFactory = createDirectSSEFactory(api, { headers: defaults?.headers });
-  const wsChannelFactory = createDirectWSChannelFactory(api, { ws: defaults?.ws });
+  /* Their client code is loaded on the first subscription or channel, so an
+     application that opens none does not carry it. */
+  const streaming = directStreamingFactories(api, { headers: defaults?.headers, ws: defaults?.ws });
 
   const subscribeFn: SubscribeFn = (group, method, variables) =>
-    sseFactory(group, method, variables, {});
+    streaming.sse(group, method, variables, {});
 
-  // Direct dot-notation maps `.useChannel(...)` to the bidirectional WS factory.
-  // No runtime cast needed — `createDirectWSChannelFactory` returns `WSChannel`
-  // which matches `ChannelFn`'s return type at compile time.
   const channelFn: ChannelFn = (group, method, variables) =>
-    wsChannelFactory(group, method, variables, {});
+    streaming.wsChannel(group, method, variables, {});
 
   return createClientRoot(
     shapeOfClient({ source: api }),

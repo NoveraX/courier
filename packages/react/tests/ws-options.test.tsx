@@ -12,7 +12,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { createWSHandler, registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
-import { clearWSConnectionPool } from "@noverax/courier/internal";
+import { clearWSConnectionPool } from "@noverax/courier/internal-streams";
 import { attachWebSocketUpgrade, type UpgradeServer } from "@noverax/courier/node";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";

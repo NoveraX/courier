@@ -109,4 +109,19 @@ describe("Courier's own plumbing", () => {
   it("is reached through the internal entry", () => {
     expect(PLUMBING.filter((name) => !(name in internal))).toEqual([]);
   });
+
+  it("offers the stream and channel factories that load their clients on the first call", () => {
+    const eager = [
+      "createDirectSSEFactory",
+      "createDirectWSChannelFactory",
+      "createProxySSEFactory",
+      "createProxyWSChannelFactory",
+      "clearWSConnectionPool",
+    ];
+
+    expect(Object.keys(internal).filter((name) => eager.includes(name))).toEqual([]);
+    expect(
+      ["directStreamingFactories", "proxyStreamingFactories"].filter((name) => !(name in internal)),
+    ).toEqual([]);
+  });
 });

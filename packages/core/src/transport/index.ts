@@ -8,6 +8,7 @@ export {
   type DirectSSEDefaults,
   type DirectWSDefaults,
 } from "./direct";
+export { directStreamingFactories } from "./direct-streaming";
 export {
   createProxyHTTPExecutor,
   createProxySSEFactory,
@@ -16,4 +17,5 @@ export {
   type ProxySSEDefaults,
   type ProxyWSDefaults,
 } from "./proxy";
+export { proxyStreamingFactories } from "./proxy-streaming";
 export type { HTTPExecutor, SSEFactory, WSChannelFactory, WSPushFactory } from "./types";

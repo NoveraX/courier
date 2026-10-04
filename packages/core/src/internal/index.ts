@@ -6,6 +6,10 @@
  * Studio's hooks through it. It is not part of the public API: it changes
  * with those packages, with no semver guarantee for anyone else. An
  * application uses the root entry and the documented subpaths.
+ *
+ * Its stream and channel factories load their clients on the first stream
+ * or channel: nothing here imports those clients, so a package built on
+ * this entry carries them only when it opens one.
  */
 
 export { isOriginAccepted, isOriginAllowed } from "../adapter/origin-policy";
@@ -18,7 +22,6 @@ export {
   shapeOfClient,
 } from "../client";
 export { mergeProxyPath, type ResolveOrigin, resolveProxyPath } from "../proxy-caller";
-export { clearWSConnectionPool } from "../realtime/caller-ws";
 export { type ConnectionState, createConnectionState } from "../realtime/connection-state";
 export { describeFailure, type StreamFailure } from "../realtime/describe-failure";
 export { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
@@ -28,17 +31,15 @@ export { getSourcesGeneration, onSourcesChange } from "../sources";
 export { type StudioHooks, studioHooks } from "../studio";
 export {
   createDirectHTTPExecutor,
-  createDirectSSEFactory,
-  createDirectWSChannelFactory,
   createProxyHTTPExecutor,
-  createProxySSEFactory,
-  createProxyWSChannelFactory,
   type DirectHTTPDefaults,
   type DirectSSEDefaults,
   type DirectWSDefaults,
+  directStreamingFactories,
   type HTTPExecutor,
   type ProxySSEDefaults,
   type ProxyWSDefaults,
+  proxyStreamingFactories,
   type SSEFactory,
   type StreamingFactories,
   type WSChannelFactory,

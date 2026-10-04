@@ -3,7 +3,7 @@
  */
 
 import { isConfigurationError } from "@noverax/courier";
-import { clearWSConnectionPool } from "@noverax/courier/internal";
+import { clearWSConnectionPool } from "@noverax/courier/internal-streams";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";

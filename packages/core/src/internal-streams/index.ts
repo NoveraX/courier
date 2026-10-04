@@ -13,6 +13,11 @@
  * adapters from `@noverax/courier-{next,hono,express,fastify,nestjs}`.
  */
 
+/* The WebSocket connections clients share are pooled in this process; the
+   pool is emptied by Courier's own suites between tests, here rather than in
+   the entry browser code builds on, which would carry the WebSocket client
+   with it. */
+export { clearWSConnectionPool } from "../realtime/caller-ws";
 export { executeDirectSSE } from "../transport/in-process/sse";
 export type {
   ExecuteDirectSSEPayload,
@@ -25,7 +30,6 @@ export type {
 export { executeDirectWSChannel } from "../transport/in-process/ws-channel";
 export { wsEndpointKind } from "../transport/in-process/ws-endpoint-kind";
 export { executeDirectWSPush } from "../transport/in-process/ws-push";
-
 export type {
   PlaygroundWSRegistry,
   PlaygroundWSSubscriber,

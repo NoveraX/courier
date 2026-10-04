@@ -19,6 +19,7 @@ import {
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type * as FingerprintsModule from "../../src/server/mock-fingerprints";
 import type * as ReplaceModule from "../../src/server/mocks-edit/replace-mocks-file";
 
 const writes = vi.hoisted(() => ({ failNext: null as unknown }));
@@ -32,6 +33,15 @@ vi.mock("../../src/server/mocks-edit/replace-mocks-file", async (importOriginal)
       if (failure) throw failure;
       actual.replaceMocksFile(...args);
     },
+  };
+});
+
+/* Every running mock restarts, as when Studio cannot tell the file's mocks apart. */
+vi.mock("../../src/server/mock-fingerprints", async (importOriginal) => {
+  const actual = await importOriginal<typeof FingerprintsModule>();
+  return {
+    ...actual,
+    restartedByEdit: ({ running }: { running: readonly string[] }) => [...running],
   };
 });
 
@@ -175,6 +185,22 @@ describe("applyMocksEdit", () => {
     });
     expect(tx.apply).toHaveBeenCalledTimes(1);
     expect(tx.acknowledge).toHaveBeenCalledWith([join(root, "courier.mocks.ts")]);
+  });
+
+  it("tells once more which running mocks the applied edit restarts", async () => {
+    writeFileSync(join(root, "courier.mocks.ts"), EXISTING);
+    const { ctx } = await harness((real) => real());
+    const running: MocksEditContext = {
+      ...ctx,
+      mockSummaries: () => [{ key: "first", alive: true, port: 7001, portDeclared: false }],
+    };
+
+    const result = await applyMocksEdit(running, await confirmed(running));
+
+    expect(result).toMatchObject({
+      status: "applied",
+      warnings: ["Running mocks restart to pick up the edit: first."],
+    });
   });
 
   it("takes back an edit whose files do not load, restoring the exact bytes and mode, and applies nothing", async () => {

@@ -2,6 +2,7 @@ import type { LoadedCourierConfig } from "../config-loader";
 import { portProblem } from "../mock-manager/port-problem";
 import type { MockSummary } from "../mock-manager/types";
 import { isRecord } from "./is-record";
+import { restartWarning } from "./restart-warning";
 import type { MockDeclaration } from "./types";
 
 /** What an edit is about to change besides adding the mocks. */
@@ -31,9 +32,7 @@ export interface WarningInput {
 export async function editWarnings(input: WarningInput): Promise<string[]> {
   const warnings: string[] = [];
   if (input.creates) warnings.push(`Studio creates ${input.target}.`);
-  if (input.restarting.length > 0) {
-    warnings.push(`Running mocks restart to pick up the edit: ${input.restarting.join(", ")}.`);
-  }
+  warnings.push(...restartWarning(input.restarting));
   for (const request of input.requests) warnings.push(...(await requestWarnings(request, input)));
   return warnings;
 }

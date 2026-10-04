@@ -10,6 +10,7 @@
  */
 
 import { isFieldRecord } from "./body-kind";
+import { isRecord } from "./is-record";
 import { reviveWithoutPrototypeKeys } from "./safe-json";
 
 /** Query parameter that carries the variables of a GET proxy call. */
@@ -62,8 +63,6 @@ export function parseWireVariables(raw: string | null): WireVariablesResult {
     /* The reason travels back to the caller, so nothing is swallowed here. */
     return { ok: false, reason: "variables are not valid JSON" };
   }
-  if (typeof decoded !== "object" || decoded === null || Array.isArray(decoded)) {
-    return { ok: false, reason: "variables must be a JSON object" };
-  }
-  return { ok: true, variables: decoded as Record<string, unknown> };
+  if (!isRecord(decoded)) return { ok: false, reason: "variables must be a JSON object" };
+  return { ok: true, variables: decoded };
 }

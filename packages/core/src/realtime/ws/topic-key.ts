@@ -11,6 +11,8 @@
  * than the subscribe frame that carried it.
  */
 
+import { isRecord } from "../../utils/is-record";
+
 /** The variables as they travel: what JSON keeps of them, `undefined` when nothing. */
 function wireForm(value: unknown): unknown {
   if (value === undefined) return undefined;
@@ -24,12 +26,11 @@ function wireForm(value: unknown): unknown {
  * value — `{ a: "x,b:y" }` never reads like `{ a: "x", b: "y" }`.
  */
 function stableStringify(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  const record = value as Record<string, unknown>;
-  const fields = Object.keys(record)
+  if (!isRecord(value)) return JSON.stringify(value);
+  const fields = Object.keys(value)
     .sort()
-    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`);
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`);
   return `{${fields.join(",")}}`;
 }
 

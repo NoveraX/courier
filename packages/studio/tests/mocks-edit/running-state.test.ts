@@ -20,6 +20,7 @@ const loaded: LoadedCourierConfig = {
   contentHash: null,
   deps: [],
   depHashes: new Map(),
+  evaluated: new Map<string, string>(),
   mocks: { file: null, entries: {}, contentHash: null, error: null },
 };
 

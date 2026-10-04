@@ -16,15 +16,15 @@
  * save made while the load ran — before anything watched that file — is
  * reloaded as soon as it ends.
  *
- * The comparison is with the bytes the dependency walk read, not the ones
- * evaluated after it. A file nothing watched when the load started — on the
- * first load, or a module a reload is first to import — that is saved and
- * then restored to the bytes the walk read, both while the load runs, can
- * leave Studio running the version in between until that file changes
- * again. A file already watched is covered by its notifications, which is
- * also why a save whose notification is still waiting when a load reads it
- * is loaded once more: the notification may stand for a version the load
- * evaluated in place of the bytes its walk read.
+ * A module the loader transpiled — the config, the mocks file and what
+ * they import — is also compared with the text the load evaluated from it,
+ * so one evaluated from other bytes than the walk read is reloaded once
+ * more, even when a second save restored the bytes the walk read before
+ * anything watched it. A change reported for files that each hold, by the
+ * time it is taken, exactly the text Studio runs reloads nothing: an editor
+ * saving a file unchanged, or an edit undone before the reload ran. A file
+ * Node runs itself — JSON, a native JavaScript module — and a `tsconfig`
+ * are compared with the bytes the walk read alone, and always reload.
  *
  * A load that runs past the timeout is given up, so a config that awaits
  * something that never comes does not hold every reload and edit behind it
@@ -53,6 +53,7 @@ import { inputsOnDisk } from "./inputs-on-disk";
 import { CONFIG_LOAD_TIMEOUT_MS } from "./project-state/budgets";
 import type { ProjectInputs } from "./read-project-inputs";
 import { createReloadQueue } from "./reload-queue";
+import { runsWhatChangedHolds } from "./runs-what-changed-holds";
 import { createWatchSet, type WatchDegradation } from "./watch-set";
 import type { WatcherStatus } from "./watcher-status";
 
@@ -218,6 +219,7 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
 
   async function reload(changed: string[]): Promise<void> {
     if (stopped) return;
+    if (latest === deps.current() && runsWhatChangedHolds(deps.current(), changed)) return;
     deps.watcherStatus?.emitChange("api", changed);
     await load();
   }

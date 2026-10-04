@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { CONFIG_BASENAMES, MOCKS_BASENAMES } from "@noverax/courier-studio-core/config";
 import type { LoadedCourierConfig } from "./config-loader";
 import { ConfigNotFoundError } from "./config-loader-errors";
+import { evaluatedOtherBytes } from "./evaluated-on-disk";
 import { UNREADABLE } from "./file-content-hash";
 import type { ProjectInputs } from "./read-project-inputs";
 import type { WatchSet } from "./watch-set";
@@ -43,8 +44,9 @@ export interface ArmWatchSetOptions {
 /**
  * Arm a watch set from the outcome of each load, comparing each file the
  * load read with what it holds once it is watched, so a save that landed
- * while the load ran is reloaded — unless a second save restored the bytes
- * the load read before anything watched the file (see `startConfigWatcher`).
+ * while the load ran is reloaded; a module the load evaluated from other
+ * bytes than it read is reloaded once more, even when a second save
+ * restored the bytes it read (see `startConfigWatcher`).
  *
  * @param watchSet - The set to re-arm; nothing is watched until the first outcome
  * @param options - The project root and the watcher status
@@ -84,11 +86,12 @@ export function armWatchSet(
   };
 }
 
-/* An entry whose hash came out unknown was evaluated from bytes other than
-   the ones the load read, which the file may hold again by now; nothing
-   would then differ, so it is armed to reload once. Only one the load did
-   read: a file that could not be read is not evaluated, and forcing it would
-   reload for good. */
+/* A file evaluated from other bytes than the load read — a save landed
+   between the read and the evaluation — may hold the read bytes again by
+   now, when nothing would differ, so it is armed to reload once: the config
+   or the mocks file, whose hash came out unknown, and any module the loader
+   evaluated another text of. Only one the load did read: a file that could
+   not be read is not evaluated, and forcing it would reload for good. */
 function expectedAfter(loaded: LoadedCourierConfig): ProjectInputs {
   const expected = new Map(loaded.depHashes);
   const unknown = [
@@ -98,9 +101,13 @@ function expectedAfter(loaded: LoadedCourierConfig): ProjectInputs {
   for (const file of unknown) {
     if (file !== null && wasRead(loaded.depHashes.get(file))) expected.set(file, RELOAD_ONCE);
   }
+  for (const [file, text] of loaded.evaluated) {
+    const read = loaded.depHashes.get(file);
+    if (wasRead(read) && evaluatedOtherBytes(file, read, text)) expected.set(file, RELOAD_ONCE);
+  }
   return expected;
 }
 
-function wasRead(hash: string | null | undefined): boolean {
+function wasRead(hash: string | null | undefined): hash is string {
   return typeof hash === "string" && hash !== UNREADABLE;
 }

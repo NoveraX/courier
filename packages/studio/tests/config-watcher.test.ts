@@ -8,6 +8,7 @@ import {
   renameSync,
   rmSync,
   unlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -759,7 +760,7 @@ describe("startConfigWatcher — a save during a reload", () => {
     expect(applied.map(baseURLOf)).toEqual(["v1.example.com", "v2.example.com", "v3.example.com"]);
   });
 
-  it("a save whose notification still waits when a load reads it is loaded once more, as the notification may stand for a version in between", async () => {
+  it("a save whose notification still waits when a load reads it loads nothing more, since Studio runs what the file holds", async () => {
     const { root, deep } = makeProject();
     const { watcher, applied } = start(root);
     await watcher.settled();
@@ -772,11 +773,7 @@ describe("startConfigWatcher — a save during a reload", () => {
     await sleep(1500);
     await watcher.settled();
 
-    expect(applied.map(baseURLOf)).toEqual([
-      "v1.example.com",
-      "saved.example.com",
-      "saved.example.com",
-    ]);
+    expect(applied.map(baseURLOf)).toEqual(["v1.example.com", "saved.example.com"]);
   });
 
   it("a watched module changed and restored while a load evaluates ends loaded as it is on disk", async () => {
@@ -1119,5 +1116,70 @@ describe("startConfigWatcher — tsconfig paths", () => {
     await until(() => applied.length > 1, 3000);
 
     expect(baseURLOf(applied.at(-1))).toBe("src2.example.com");
+  });
+});
+
+describe("what a load evaluated", () => {
+  it("a module rewritten between the walk and its evaluation on the first load, and restored, ends loaded as it is on disk", async () => {
+    const { root, config, deep } = makeProject();
+    const original = 'export const host = "v1.example.com"\n';
+    const marker = `__courierWatcherSwap${process.pid}_${++slowModules}`;
+    const between =
+      'import { writeFileSync } from "node:fs"\n' +
+      `writeFileSync(${JSON.stringify(deep)}, ${JSON.stringify(original)})\n` +
+      'export const host = "between.example.com"\n';
+    /* Evaluated before the module it rewrites, once: the walk has read that
+       module by then, and nothing watches it yet. */
+    writeFileSync(
+      join(root, "src", "swap.ts"),
+      'import { writeFileSync } from "node:fs"\n' +
+        `if (!Reflect.get(globalThis, "${marker}")) {\n` +
+        `  Reflect.set(globalThis, "${marker}", true)\n` +
+        `  writeFileSync(${JSON.stringify(deep)}, ${JSON.stringify(between)})\n` +
+        "}\n" +
+        "export const swapped = true\n",
+    );
+    writeFileSync(
+      config,
+      'import "./src/swap"\nimport { api } from "./src/api"\nexport default { sources: { demo: api } }\n',
+    );
+
+    const { watcher, applied, current } = start(root);
+    await until(() => applied.length >= 2);
+    await watcher.settled();
+
+    expect(applied.map(baseURLOf)).toEqual(["between.example.com", "v1.example.com"]);
+    expect(baseURLOf(current())).toBe("v1.example.com");
+  });
+
+  it("a module saved with the very text Studio runs loads nothing more", async () => {
+    const { root, deep } = makeProject();
+    const status = fakeStatus();
+    const { watcher, applied } = start(root, status);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+
+    writeFileSync(deep, 'export const host = "v1.example.com"\n');
+    const later = new Date(Date.now() + 2000);
+    utimesSync(deep, later, later);
+    await sleep(1500);
+    await watcher.settled();
+
+    expect(applied.map(baseURLOf)).toEqual(["v1.example.com"]);
+    expect(status.emitChange).not.toHaveBeenCalled();
+  });
+
+  it("a module whose save is undone before the reload ran loads nothing more", async () => {
+    const { root, deep } = makeProject();
+    const { watcher, applied } = start(root);
+    await watcher.settled();
+    await sleep(SETTLE_MS);
+
+    writeFileSync(deep, 'export const host = "draft.example.com"\n');
+    writeFileSync(deep, 'export const host = "v1.example.com"\n');
+    await sleep(1500);
+    await watcher.settled();
+
+    expect(applied.map(baseURLOf)).toEqual(["v1.example.com"]);
   });
 });

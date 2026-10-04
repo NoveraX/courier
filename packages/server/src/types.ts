@@ -61,7 +61,12 @@ export interface CourierServerOptions<
    * ending the process to the application's handler.
    */
   signals?: boolean | undefined;
-  /** Callback fired when server starts listening */
+  /**
+   * Called once the server listens, with the URL a client dials. Without it
+   * the server logs `Listening on <url>`; given, the callback announces the
+   * address in that line's place, so it is said once — `courier-server`
+   * prints its banner here.
+   */
   onReady?: ((url: string) => void) | undefined;
   /**
    * Called when the server itself fails — a port already in use, a socket

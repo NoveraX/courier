@@ -21,12 +21,9 @@
  *    the channel under the same rid and calls `channel.send(data)`; a message
  *    written while the channel is still opening is sent once it has opened.
  *
- * The responder is registry-agnostic: callers pass a `getSources()`
- * accessor so the same responder works regardless of which source
- * registry the runtime populates (the announce-driven
- * `runtime-source-registry` for `attachRuntime`-attached adapters,
- * or the core global registry for the in-process auto-registration
- * path populated by `attachRuntime()` from `courier.config.ts`).
+ * Callers pass a `getSources()` accessor, read on each run: the runtime
+ * hands it core's registry, which `attachRuntime()` fills from
+ * `courier.config.ts` and the app's own `registerSources` updates.
  */
 
 import type { Sources } from "@noverax/courier/define";

@@ -3,6 +3,7 @@ import { defineConfig } from "vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { thirdPartyLicenses } from "../../../scripts/third-party-licenses";
 
 /* Paths resolve from this directory, not from wherever the build is run. */
 const uiDir = import.meta.dirname;
@@ -20,6 +21,9 @@ export default defineConfig({
        same pass that strips types and transforms JSX. */
     react({ compiler: true }),
     tailwindcss(),
+    /* The bundle carries other packages' code and the Geist fonts; their
+       licences ship beside it. */
+    thirdPartyLicenses("Courier Studio's interface"),
   ],
   resolve: {
     alias: {

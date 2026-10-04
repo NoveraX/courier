@@ -38,15 +38,20 @@ const GHOSTS = [
  * ```
  */
 export function CaptureIdle(): React.ReactNode {
+  const startedAt = useStudioStore((s) => s.studioInfo?.startedAt);
   const snapshot = useStudioStore((s) => s.bindingSnapshot);
   const config = useStudioStore((s) => s.configStatus);
   const watched = useStudioStore((s) => s.watcherApiPaths);
+  const watchedSince = useStudioStore((s) => s.watcherSince ?? undefined);
   const lines = captureLog({
     host: window.location.host,
+    startedAt,
     config,
     watched,
+    watchedSince,
     apps: attachedApps(snapshot),
     attachedSince: snapshot.activeSince,
+    idleSince: snapshot.idleSince,
   });
   return (
     <div className="flex flex-col">

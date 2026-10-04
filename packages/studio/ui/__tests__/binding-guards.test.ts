@@ -100,6 +100,15 @@ describe("isBindingSnapshot", () => {
     expect(isBindingSnapshot(polluted)).toBe(false);
   });
 
+  it("takes when the runtimes began, or when the last one left, only as finite times", () => {
+    const empty = { rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] };
+
+    expect(isBindingSnapshot({ ...empty, idleSince: 4_000 })).toBe(true);
+    expect(isBindingSnapshot({ ...empty, idleSince: Number.NaN })).toBe(false);
+    expect(isBindingSnapshot({ ...empty, idleSince: "4000" })).toBe(false);
+    expect(isBindingSnapshot({ ...empty, activeSince: Number.POSITIVE_INFINITY })).toBe(false);
+  });
+
   it("rejects non-finite counts", () => {
     expect(isBindingSnapshot({ rows: [], runtimeCount: Number.NaN, sourceCount: 0 })).toBe(false);
     expect(

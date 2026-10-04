@@ -30,7 +30,7 @@ export function createProjectActions(set: StudioSet): ProjectActions {
     setRegistrySources: (sources) => set({ registrySources: sources }),
     setConfigStatus: (status) => set({ configStatus: status }),
     setMocksFileStatus: (status) => set({ mocksFileStatus: status }),
-    setWatcherStatus: (apiPaths) => set({ watcherApiPaths: apiPaths }),
+    setWatcherStatus: (apiPaths, since) => set({ watcherApiPaths: apiPaths, watcherSince: since }),
     setWatcherChange: (change) => set({ watcherLastChange: change }),
   };
 }

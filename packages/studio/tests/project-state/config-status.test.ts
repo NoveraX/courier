@@ -108,6 +108,7 @@ describe("configStatusOf", () => {
       state: "missing",
       revision: 3,
       configFile: "config/courier.config.ts",
+      missingAt: 3_000,
       lastGoodAt: 1_000,
     });
   });
@@ -119,6 +120,7 @@ describe("configStatusOf", () => {
       state: "missing",
       revision: 1,
       configFile: null,
+      missingAt: 3_000,
       lastGoodAt: null,
     });
   });

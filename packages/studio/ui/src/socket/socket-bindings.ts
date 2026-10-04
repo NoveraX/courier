@@ -69,8 +69,13 @@ export function buildBindings(s: Socket, store: typeof useStudioStore.getState):
         showDuplicateRuntimeToast(data.runtimeId);
     },
     onWatcherStatus: (data) => {
-      if (isPlainObject(data) && typeof data.apiPaths === "number") {
-        store().setWatcherStatus(data.apiPaths);
+      if (
+        isPlainObject(data) &&
+        typeof data.apiPaths === "number" &&
+        typeof data.since === "number" &&
+        Number.isFinite(data.since)
+      ) {
+        store().setWatcherStatus(data.apiPaths, data.since);
       }
     },
     onWatcherChange: (data) => {

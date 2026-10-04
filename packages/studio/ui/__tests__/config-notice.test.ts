@@ -29,11 +29,18 @@ describe("configNotice", () => {
         state: "missing",
         revision: 3,
         configFile: "courier.config.ts",
+        missingAt: 1,
         lastGoodAt: 0,
       }),
     ).toMatchObject({ label: "config deleted", failed: false });
     expect(
-      configNotice({ state: "missing", revision: 1, configFile: null, lastGoodAt: null }),
+      configNotice({
+        state: "missing",
+        revision: 1,
+        configFile: null,
+        missingAt: 1,
+        lastGoodAt: null,
+      }),
     ).toBeNull();
     expect(
       configNotice({ state: "loaded", revision: 1, configFile: "courier.config.ts", loadedAt: 1 }),

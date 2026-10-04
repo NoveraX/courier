@@ -34,6 +34,7 @@ export function isConfigStatusPayload(data: unknown): data is ConfigStatusPayloa
       return (
         isOutcomeRevision(data.revision) &&
         isFileOrNull(data.configFile) &&
+        isTime(data.missingAt) &&
         isTimeOrNull(data.lastGoodAt)
       );
     default:

@@ -4,7 +4,7 @@ import { isPlainObject } from "./is-plain-object";
 
 /**
  * Whether a `studio:info` payload is one the UI understands: a non-empty
- * version and project name.
+ * version and project name, and a start time.
  *
  * @param data - The payload as Socket.IO delivered it
  * @returns Whether it is a well-formed `StudioInfo`
@@ -17,7 +17,11 @@ import { isPlainObject } from "./is-plain-object";
  */
 export function isStudioInfo(data: unknown): data is StudioInfo {
   if (!isPlainObject(data) || !isPlainObject(data.project)) return false;
-  return isFilled(data.version) && isFilled(data.project.name);
+  return isFilled(data.version) && isTime(data.startedAt) && isFilled(data.project.name);
+}
+
+function isTime(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
 function isFilled(value: unknown): value is string {

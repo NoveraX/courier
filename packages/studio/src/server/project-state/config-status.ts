@@ -9,8 +9,8 @@ import type { ProjectSnapshot } from "./types";
  * - `loaded` — the latest load succeeded; `configFile` is what Studio runs.
  * - `failed` — the latest load failed; Studio keeps running what it loaded at
  *   `lastGoodAt`, or nothing when that is `null`.
- * - `missing` — there is no config; as for `failed`, Studio keeps running
- *   what it loaded last.
+ * - `missing` — there is no config, as Studio found at `missingAt`; as for
+ *   `failed`, Studio keeps running what it loaded last.
  *
  * In `failed` and `missing`, `configFile` is the file Studio runs, and
  * `null` when it runs none. After a delete it names the file that is gone;
@@ -30,7 +30,13 @@ export type ConfigStatusPayload =
       failedAt: number;
       lastGoodAt: number | null;
     }
-  | { state: "missing"; revision: number; configFile: string | null; lastGoodAt: number | null };
+  | {
+      state: "missing";
+      revision: number;
+      configFile: string | null;
+      missingAt: number;
+      lastGoodAt: number | null;
+    };
 
 const STARTING: ConfigStatusPayload = { state: "starting", revision: 0 };
 
@@ -51,7 +57,13 @@ export function configStatusOf(snapshot: ProjectSnapshot, root: string): ConfigS
   const { revision, running, loadedAt, failure } = snapshot;
   const runs = running ? relativeFile(root, running.configFile) : null;
   if (failure?.code === "CONFIG_NOT_FOUND") {
-    return { state: "missing", revision, configFile: runs, lastGoodAt: loadedAt };
+    return {
+      state: "missing",
+      revision,
+      configFile: runs,
+      missingAt: failure.at,
+      lastGoodAt: loadedAt,
+    };
   }
   if (failure) {
     return {

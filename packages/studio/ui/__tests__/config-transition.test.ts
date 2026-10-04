@@ -34,7 +34,7 @@ function missing(
   lastGoodAt: number | null,
   configFile = lastGoodAt === null ? null : "courier.config.ts",
 ): ConfigStatusPayload {
-  return { state: "missing", revision, configFile, lastGoodAt };
+  return { state: "missing", revision, configFile, missingAt: 2_000, lastGoodAt };
 }
 
 const QUIET: ConfigReloadContext = { lastChange: null, announceReloads: true, mocks: null };

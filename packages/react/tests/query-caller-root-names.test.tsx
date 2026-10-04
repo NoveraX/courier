@@ -9,10 +9,10 @@ import { renderHook, waitFor } from "@testing-library/react";
  * Groups named like the hooks the runtime reads — `then`, `toJSON`,
  * `valueOf` — at the root of a query client.
  *
- * The query clients answered those names as absent before looking at the
- * source, so a group of that name, which the types offered and a generator
- * emits from an ordinary tag, had no hooks at all. Core's client reaches
- * such a group while staying something `await` does not take for a promise.
+ * The query clients look at the source before answering those names as
+ * absent, so a group of that name — which the types offer, and a generator
+ * emits from an ordinary tag — has its hooks, as core's client reaches such
+ * a group while staying something `await` does not take for a promise.
  */
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

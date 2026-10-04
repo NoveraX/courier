@@ -2,7 +2,7 @@
  * What Studio is told of a request the upstream refused: the size of the
  * error body it showed, and — for a call the proxy received — how its time
  * split between the proxy and the upstream, as for a call that succeeded.
- * Without them a failed row read "0 B" and its proxy leg "0µs".
+ * Without them a failed row reads "0 B" and its proxy leg "0µs".
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

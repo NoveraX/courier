@@ -1,9 +1,9 @@
 /**
  * An auto create given only some fields answers a whole record.
  *
- * A non-empty body was stored exactly as given, so `create({ name })`
- * answered `{ name, id }` and a typed client rejected it for every field
- * the schema requires and the body left out.
+ * The fields the body leaves out are filled from the schema, so
+ * `create({ name })` answers a record a typed client accepts, not
+ * `{ name, id }` missing every other field the schema requires.
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

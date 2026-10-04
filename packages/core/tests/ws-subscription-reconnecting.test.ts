@@ -1,29 +1,13 @@
 /**
- * Regression coverage for the executeWSChannel/executeWSPush "reconnecting"
- * status forwarding fix.
+ * The "reconnecting" status of a WebSocket channel or push subscription.
  *
- * # The bug
- *
- * Before the fix, both `executeWSChannel` and `executeWSPush` filtered the
- * underlying WSConnection's status events to forward only `connected` and
- * `disconnected`. When the very first connect attempt failed (e.g. the
- * server was not reachable yet, closing with 1006), the underlying
- * connection transitioned `connecting → reconnecting → connecting → …`
- * forever. The channel-level state observable by callers stayed pinned at
- * `"connecting"` because `reconnecting` was being dropped on the floor.
- *
- * The Studio Playground proxy executor's first-attempt watchdog
- * (`playground-ws-executor.ts:executeProxyWS`) listens for the
- * `reconnecting` transition to detect "the upgrade never succeeded once" and
- * surface a clean error to the UI instead of letting the playground entry
- * hang indefinitely. With the bug, the watchdog never fired and the user
- * saw `CONNECTING` forever — exactly the symptom the user reported.
- *
- * # What this test guards
- *
- * The forward path: a failed first connect on the underlying WSConnection
- * propagates `reconnecting` through the channel/push state container so
- * external `on("status", …)` listeners observe it.
+ * When the very first connect fails — the server not reachable yet, closing
+ * with 1006 — the underlying connection cycles `connecting → reconnecting →
+ * connecting → …`. `executeWSChannel` and `executeWSPush` forward each of
+ * those transitions, `reconnecting` included, to the state their callers
+ * observe through `on("status", …)`: the Studio Playground's first-attempt
+ * watchdog listens for it to tell an upgrade that never succeeded once, and
+ * shows an error rather than leaving the entry at "connecting" for good.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

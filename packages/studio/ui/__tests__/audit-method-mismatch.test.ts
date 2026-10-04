@@ -1,7 +1,7 @@
 /**
- * The audit's HTTP method rule. It warned of every read sent over another
- * verb than GET, telling to use GET, while such a read is one `.reads()`
- * declared on purpose: a search sent as POST.
+ * The audit's HTTP method rule. A read sent over another verb than GET is
+ * one `.reads()` declared on purpose — a search sent as POST — so the rule
+ * does not tell it to use GET.
  */
 import { describe, expect, it } from "vitest";
 

@@ -2,8 +2,8 @@
  * The public types infer what an API declares, and nothing is `any`: a
  * caller's answers, a test client's mocks and a proxy caller's methods all
  * keep their types, and a call the API does not declare does not compile.
- * The type parameters of these entry points were bounded with `any`, which
- * let a shape that is not an API through.
+ * The type parameters of these entry points are not bounded with `any`,
+ * which would let a shape that is not an API through.
  */
 import { describe, expectTypeOf, it } from "vitest";
 

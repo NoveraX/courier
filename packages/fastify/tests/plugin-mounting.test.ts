@@ -1,11 +1,11 @@
 /**
  * `prefix` is Fastify's own encapsulation option: it already scopes every
- * route a plugin registers. Applying it a second time put the proxy at
- * `/api/request/api/request/*`, so the documented registration answered 404
- * to every request — which no test saw, because none of them registered the
- * plugin the way the documentation does and then asked it for anything.
- * It also took `/` and `/*`: with no prefix, every path the app did not
- * route itself answered 400 with a Courier error body instead of 404.
+ * route a plugin registers, so the plugin does not apply it a second time —
+ * which would put the proxy at `/api/request/api/request/*` and answer 404
+ * to the documented registration. The tests register the plugin the way
+ * the documentation does and then ask it for something. With no prefix, the
+ * plugin takes only the path a caller looks at by default, never `/` and
+ * `/*`: every path the app does not route itself keeps its own 404.
  */
 
 import { registerSources } from "@noverax/courier";

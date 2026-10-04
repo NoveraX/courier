@@ -4,8 +4,8 @@
 /**
  * The Playground names the proxy path a call goes to. A source that declares
  * none is called at the default path, as a proxy caller calls it, and the
- * badge shows that path: it said "not configured" in amber while the call
- * went through. Only a WebSocket, which has no default, is not configured.
+ * badge shows that path, not "not configured" in amber while the call goes
+ * through. Only a WebSocket, which has no default, is not configured.
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

@@ -1,9 +1,9 @@
 /**
  * A streamed answer whose client stops reading, or leaves.
  *
- * The proxy stops the upstream body when the client goes, and stopping it a
- * second time from the response side then failed with the abort that had
- * already ended it. Every client cancel of a streamed call was logged as a
+ * The proxy stops the upstream body when the client goes, so stopping it a
+ * second time from the response side meets the abort that already ended
+ * it. That is no failure: a client cancelling a streamed call logs no
  * warning with a full stack.
  */
 import { createServer, type Server } from "node:http";

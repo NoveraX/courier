@@ -1,11 +1,10 @@
 /**
  * Headers given to `.with()` at more than one level.
  *
- * Each `.with()` replaced the options of the one before, headers included,
- * so a token set on the client was dropped the moment a group added a
- * request id of its own. Once they were merged, a stream still lost them
- * all: its factory spread the merged headers as a plain object, and a
- * `Headers` has no own properties to spread.
+ * Each `.with()` merges into the options of the one before, headers
+ * included, so a token set on the client stays when a group adds a request
+ * id of its own — on a stream too, whose factory reads the merged `Headers`
+ * rather than spreading it: a `Headers` has no own properties to spread.
  */
 import type { ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

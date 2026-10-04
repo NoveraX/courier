@@ -1,11 +1,10 @@
 /**
  * `.raw` on a direct call, which hands back the upstream's own headers.
  *
- * The allowlist that decides what a proxy passes back to a browser was
- * applied to direct calls too, so a server-side caller reading `.raw` for its
- * pagination headers got an ETag and nothing else — no content type, no
- * `Link`, no `X-Total-Count`, no cookies — and a HEAD, which carries nothing
- * but headers, came back empty.
+ * The allowlist that decides what a proxy passes back to a browser is not
+ * applied to direct calls, so a server-side caller reading `.raw` gets every
+ * header the upstream sent — content type, `Link`, `X-Total-Count`, cookies —
+ * and a HEAD, which carries nothing but headers, comes back with them.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

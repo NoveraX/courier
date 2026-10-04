@@ -1,10 +1,10 @@
 /**
  * Creating the Hono handlers before sources are registered.
  *
- * The factories read the registry as they were created, to announce what
- * they host, and threw SOURCES_NOT_REGISTERED at mount: routes declared at
- * module top level, with `attachRuntime()` awaited later in the entry, never
- * started. The handlers now read the registry when they serve a request.
+ * The handlers read the registry when they serve a request, not when they
+ * are created: read at mount, it throws SOURCES_NOT_REGISTERED, and routes
+ * declared at module top level — with `attachRuntime()` awaited later in the
+ * entry — would never start.
  */
 import { registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

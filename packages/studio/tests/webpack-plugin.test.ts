@@ -2,9 +2,9 @@
  * The Studio webpack plugin, against a compiler holding webpack's normalized
  * entries, and through a real webpack build.
  *
- * It decided by `NODE_ENV` alone, which `webpack --mode production` does not
- * set, so a production bundle carried the connection and dialled a Studio
- * that was not there on every page load.
+ * `webpack --mode production` does not set `NODE_ENV`, so the plugin does not
+ * decide by it alone: a production bundle carries no connection to dial a
+ * Studio that is not there on every page load.
  */
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";

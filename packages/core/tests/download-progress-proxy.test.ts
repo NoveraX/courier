@@ -1,10 +1,10 @@
 /**
  * Download progress through the proxy.
  *
- * The proxy re-serves an answer as a stream of its own, and it said nothing
- * about the length: every progress event carried a total of 0 and a percent
- * of 0, so a progress bar never moved and never finished. A streamed answer
- * dropped the upstream's length as well.
+ * The proxy re-serves an answer as a stream of its own, and says how long
+ * it is — the upstream's length, for a streamed answer too — so progress
+ * events carry a total and end at 100%, rather than a total and a percent
+ * of 0 that never move.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

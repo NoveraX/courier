@@ -1,10 +1,10 @@
 /**
  * SSE, WebSocket and the in-process streams share one middleware runner.
  *
- * Before they did, each read only the middleware declared on the source, so an
- * endpoint's own guard was skipped on exactly the long-lived transports where
- * it matters — while the same endpoint over HTTP ran it. The cases below pin
- * both halves of the chain and the order between them.
+ * Each runs the source's middleware and then the endpoint's own, as HTTP
+ * does, so an endpoint's guard holds on exactly the long-lived transports
+ * where it matters. The cases below pin both halves of the chain and the
+ * order between them.
  */
 import { describe, expect, it, vi } from "vitest";
 

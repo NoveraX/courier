@@ -2,9 +2,9 @@
  * Builder decorators written before the response method, on an auto server.
  *
  * `delay`, `withHeaders`, `withStatus`, `withLatency` and `transitionTo`
- * edited the auto-CRUD handler itself when they came first: the response
- * method then pushed a copy without them, so `.delay(400).resolves(x)` did
- * not delay, and the auto-CRUD route kept the delay for good.
+ * apply to the response they come before, and leave the auto-CRUD handler
+ * under the override as it was: `.delay(400).resolves(x)` delays its answer,
+ * and the auto-CRUD route keeps no delay of its own.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, describe, expect, it } from "vitest";

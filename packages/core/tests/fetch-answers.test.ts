@@ -1,10 +1,10 @@
 /**
  * The standalone fetch client's reading of an answer.
  *
- * A HEAD request answered 404, 401 or 500 resolved as though the resource
- * were there, and a write answered 200 or 201 with no body threw a
- * SyntaxError — a success reported as a failure, and not one isHTTPError
- * recognises. The endpoint client had long read both correctly.
+ * A HEAD request answered 404, 401 or 500 rejects with an HTTPError rather
+ * than resolving as though the resource were there, and a success answered
+ * 200 or 201 with no body reads as `null` rather than throwing a
+ * SyntaxError — as the endpoint client reads both.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 

@@ -1,5 +1,5 @@
 /**
- * Regression test for the SSE client's deferred connection loop start.
+ * The SSE client's deferred connection loop start.
  *
  * # The invariant
  *
@@ -15,12 +15,11 @@
  * the function would never return — the loop runs forever — and the
  * caller would never get a chance to register listeners.
  *
- * # The realistic regression
+ * # What breaks it
  *
- * Someone refactors `subscribeSSE` in `sse-client.ts`
- * to add an `await` before `runConnectionLoop(...)` thinking it makes
- * error handling cleaner. The function suddenly never returns. Every
- * SSE consumer hangs. The build still passes.
+ * An `await` added before `runConnectionLoop(...)` in `sse-client.ts` — to
+ * make error handling look cleaner — and the function never returns: every
+ * SSE consumer hangs, and the build still passes.
  *
  * This test catches that by stubbing `fetch` with a never-resolving
  * promise and asserting `subscribeSSE` returns within the same tick.
@@ -90,9 +89,8 @@ describe("subscribeSSE — sync return invariant", () => {
   });
 
   it("close() called immediately after subscribeSSE() prevents the loop from leaking", async () => {
-    // Yet another regression guard — if subscribeSSE blocked on the loop,
-    // close() would never run. This ensures the abort signal can shut down
-    // the loop from outside immediately.
+    // If subscribeSSE blocked on the loop, close() would never run: the
+    // abort signal must shut the loop down from outside at once.
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise(() => {})),

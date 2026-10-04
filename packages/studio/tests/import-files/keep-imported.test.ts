@@ -1,9 +1,9 @@
 /**
  * An apply never removes a file that a file staying in the import's folder
  * imports. Importing again without a group whose file the user edited asks
- * before removing that file; leaving it unticked kept it, but its schemas
- * went without a question, and the project stopped compiling on
- * "Cannot find module './schemas'".
+ * before removing that file, and a file the user keeps keeps what it
+ * imports — its schemas too — so the project still compiles rather than
+ * stopping on "Cannot find module './schemas'".
  */
 import {
   existsSync,

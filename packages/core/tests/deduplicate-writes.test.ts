@@ -2,9 +2,9 @@
  * Which calls `deduplicate` may cancel.
  *
  * It exists for reads: a search box sends a request per keystroke and only
- * the last answer matters. Applied to every call, it cancelled writes as
- * well — two different creates to one path lost the first with a 499,
- * although the server had usually received and applied it.
+ * the last answer matters. It leaves writes alone: applied to them, two
+ * different creates to one path would lose the first with a 499, although
+ * the server has usually received and applied it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

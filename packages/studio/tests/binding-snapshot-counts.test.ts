@@ -2,10 +2,11 @@
  * The runtimes and sources the status bar counts, as a running Studio
  * reports them.
  *
- * Only sources whose definition names a `proxyPath` were expected, and only
- * expected pairs were counted, so an app wired as the adapters' READMEs show
- * — no `proxyPath` — streamed traffic while the status bar read "0 runtimes
- * · 0 sources" and Welcome's "Verify connection" never completed.
+ * An app is counted as soon as it connects, and a source it hosts whether
+ * or not its definition names a `proxyPath`: an app wired as the adapters'
+ * READMEs show — no `proxyPath` — would otherwise stream traffic while the
+ * status bar read "0 runtimes · 0 sources" and Welcome's "Verify
+ * connection" never completed.
  */
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer as createNetServer } from "node:net";

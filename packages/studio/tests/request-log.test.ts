@@ -1,11 +1,10 @@
 /**
  * What Studio keeps of the requests it has seen.
  *
- * A Studio page that loaded after traffic, or reloaded, showed none of it:
- * the server passed each runtime event on and kept nothing. And a request
- * or stream still open when its runtime went away was never ended — the
- * runtime could no longer say how it ended, so the UI showed it pending
- * forever.
+ * The server keeps the runtime events it passes on, so a Studio page that
+ * loads after traffic, or reloads, is shown it. And a request or stream
+ * still open when its runtime goes away is ended by Studio — the runtime can
+ * no longer say how it ended — rather than shown pending for good.
  */
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer as createNetServer } from "node:net";

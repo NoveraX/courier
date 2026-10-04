@@ -1,8 +1,9 @@
 /**
  * What Studio writes down holds no credentials. The request log, the mocks'
  * logs, saved sessions and the Playground history are kept in the project's
- * `.courier/studio.db`, and a session is exported to be handed around; each
- * kept every `Authorization`, cookie and API key the project's requests sent.
+ * `.courier/studio.db`, and a session is exported to be handed around, so
+ * each keeps a credential header's name with its value replaced — never the
+ * `Authorization`, cookie or API key the project's requests sent.
  */
 import { describe, expect, it } from "vitest";
 

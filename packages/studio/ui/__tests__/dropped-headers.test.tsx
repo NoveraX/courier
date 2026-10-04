@@ -3,8 +3,8 @@
  */
 /**
  * The headers a proxy call sent but the server did not forward. They come
- * back as JSON, and a value that was not text reached the page as a React
- * child, which took the whole detail panel down.
+ * back as JSON, so only those sent as text are listed: any other value,
+ * rendered as a React child, would take the whole detail panel down.
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

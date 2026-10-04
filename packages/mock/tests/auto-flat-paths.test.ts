@@ -2,9 +2,10 @@
  * Top-level endpoints whose path starts with a slash are served where a
  * direct client calls them.
  *
- * The collection was the path's first segment, which is empty for
- * `"/orders"`, so the endpoint fell back to its own name and was mounted at
- * `/listOrders/orders`; the client, calling `/orders`, got 404.
+ * The collection is the path's first non-empty segment: the first segment of
+ * `"/orders"` is empty, and an endpoint falling back to its own name would
+ * be mounted at `/listOrders/orders`, where the client calling `/orders`
+ * gets 404.
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

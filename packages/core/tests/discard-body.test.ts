@@ -5,8 +5,8 @@
  * SvelteKit, Nuxt and React Router hand the handler a body that is already
  * being read from the socket, so Node no longer discards what the handler
  * leaves. Whatever the proxy refuses it must still take off the connection:
- * a browser reads the refusal only once its upload is done, and until then it
- * waited for the server's keep-alive timer to close the socket.
+ * a browser reads the refusal only once its upload is done, and until then
+ * it would wait for the server's keep-alive timer to close the socket.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

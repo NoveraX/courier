@@ -1,8 +1,8 @@
 /**
  * The Playground's `playground:exec` payload, as Studio reads it before
- * forwarding it to a runtime. A key that reaches `Object.prototype` was
- * refused only on the payload's top level, so one nested a level down went
- * through; header values were passed on whatever their type.
+ * forwarding it to a runtime: a key that reaches `Object.prototype` is
+ * refused at any depth, not only on the payload's top level, and a header
+ * value is passed on only as text.
  */
 import { describe, expect, it } from "vitest";
 

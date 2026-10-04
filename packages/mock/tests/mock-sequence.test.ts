@@ -2,11 +2,11 @@
  * `.sequence()` entries answered on the call they belong to, with the
  * status and delay each one declares.
  *
- * The mock client checked whether a handler was an error before running it,
- * while a sequence decides that as it runs, so each error entry was answered
- * one call late: its body as a success, then the next success as an error
- * with status 200. A `{ data, status, delay }` entry lost both its status
- * and its delay.
+ * A sequence decides whether an entry is an error as it runs, so the mock
+ * client tells after running a handler, not before — or each error entry
+ * would be answered one call late: its body as a success, then the next
+ * success as an error with status 200. A `{ data, status, delay }` entry
+ * keeps both its status and its delay.
  */
 import { HTTPError } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

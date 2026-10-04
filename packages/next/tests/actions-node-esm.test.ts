@@ -1,10 +1,10 @@
 /**
  * The request headers a server action forwards are read from next/headers,
  * imported where the action runs. Next ships no exports map, so Node's own
- * ESM loader finds that module by its file name alone: imported without the
- * extension, a server that did not bundle the package forwarded no headers
- * at all, and said so only at debug level. This reads the built package,
- * which is what such a server runs.
+ * ESM loader finds that module by its file name alone, so it is imported
+ * with its extension: without it, a server that does not bundle the package
+ * would forward no headers at all, and say so only at debug level. This
+ * reads the built package, which is what such a server runs.
  */
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";

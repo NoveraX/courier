@@ -1,8 +1,8 @@
 /**
- * A runtime socket speaks for one runtime. A second `runtime:hello` under
- * another id replaced the id the socket was known by, so its disconnect
- * released only the second: the first stayed registered and bound, its
- * sources routed to a socket that was gone.
+ * A runtime socket speaks for one runtime, so a second `runtime:hello` under
+ * another id is refused: had it replaced the id the socket was known by,
+ * the socket's disconnect would release only the second, leaving the first
+ * registered and bound, its sources routed to a socket that is gone.
  */
 import type { Namespace } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";

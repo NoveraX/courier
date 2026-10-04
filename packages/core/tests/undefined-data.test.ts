@@ -2,9 +2,9 @@
  * A successful answer whose data is `undefined`.
  *
  * A response parser or an after-middleware may well produce `undefined` for
- * a success. The executor took the missing value for a failure and threw
- * "Unknown error" — as an HTTPError 500 once wrapped — for a plain call and
- * for `.raw` alike.
+ * a success, and the call resolves to it — never taken for a failure and
+ * thrown as "Unknown error", an HTTPError 500 once wrapped, for a plain call
+ * or for `.raw`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

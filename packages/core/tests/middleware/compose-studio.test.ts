@@ -1,10 +1,10 @@
 /**
  * What Studio is told about each middleware of a request that failed.
  *
- * Every middleware a failure unwound through reported it as its own error,
- * so Studio marked the whole chain as failed when one middleware threw,
- * and flagged middleware on every request the upstream answered with an
- * error status, though none of them had failed.
+ * Only the middleware that threw reports the error; the ones the failure
+ * passes back through report that they exited. A request the upstream
+ * answers with an error status reports no middleware as failed, since none
+ * of them did.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

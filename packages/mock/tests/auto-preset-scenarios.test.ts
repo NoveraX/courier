@@ -1,10 +1,10 @@
 /**
  * The built-in scenarios keep each endpoint's declared response shape.
  *
- * `empty` answered every list endpoint with `[]` and `slow-network` with a
- * bare array of the whole collection, so a list declaring a pagination
- * wrapper broke its own schema and a typed client rejected it. And
- * `slow-network` slowed only the lists, though it says it slows every read.
+ * `empty` and `slow-network` answer a list declaring a pagination wrapper
+ * with that wrapper, not a bare array its own schema — and a typed client —
+ * refuses. And `slow-network` slows every read, as it says, not only the
+ * lists.
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

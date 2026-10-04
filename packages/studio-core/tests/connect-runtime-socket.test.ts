@@ -2,9 +2,10 @@
  * The events a runtime reports before its Studio socket is connected.
  *
  * `attachRuntime()` resolves before the socket connects, and a page fetches
- * its data as it loads, so the first requests an application made — the
- * ones a page load is made of — were dropped on the runtime's side and never
- * reached Studio. A real Socket.IO server stands in for Studio here.
+ * its data as it loads, so the runtime holds what it reports until the
+ * socket connects: the first requests an application makes — the ones a
+ * page load is made of — reach Studio too. A real Socket.IO server stands in
+ * for Studio here.
  */
 import { createServer, type Server as HttpServer } from "node:http";
 import type { AddressInfo } from "node:net";

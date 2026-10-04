@@ -1,9 +1,9 @@
 /**
- * A second Studio started on the project — by mistake, on a port already
- * taken — undid the first one's import write while it was being made, and
- * deleted the temporary files it was about to rename into place: the write
- * failed, or left a mix of restored and new files. What a Studio that still
- * runs is writing is its own to finish or undo.
+ * What a Studio that still runs is writing is its own to finish or undo. A
+ * second Studio started on the project — by mistake, on a port already
+ * taken — leaves that write, its journal and its temporary files alone:
+ * undone under it, the write would fail or leave a mix of restored and new
+ * files. A start after that process is gone undoes it.
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import {

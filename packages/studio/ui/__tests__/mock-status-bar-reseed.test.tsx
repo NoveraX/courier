@@ -2,9 +2,10 @@
  * @vitest-environment jsdom
  */
 /**
- * The status bar's re-seed restores the seeding the mock declares. It used
- * to send a count of 20, which the mock applied to every collection, so a
- * mock declared with `seed: { count: 6, pets: 25 }` came back with 20 of each.
+ * The status bar's re-seed restores the seeding the mock declares, not a
+ * count of 20 the mock would apply to every collection: a mock declared with
+ * `seed: { count: 6, pets: 25 }` comes back as declared, not with 20 of
+ * each.
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

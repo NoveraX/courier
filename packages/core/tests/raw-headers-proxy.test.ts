@@ -1,6 +1,7 @@
 /**
- * `.raw` over the proxy. The headers crossed the wire as `{}`, so `.get()`
- * threw and every rate-limit, ETag and pagination header was lost.
+ * `.raw` over the proxy: the headers arrive as `Headers`, not as the `{}` a
+ * `Headers` serializes to, so `.get()` works and the rate-limit, ETag and
+ * pagination headers are there to read.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";

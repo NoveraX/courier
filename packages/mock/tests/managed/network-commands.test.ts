@@ -2,8 +2,9 @@
  * @vitest-environment node
  *
  * What a managed mock tells Studio of its network once a command changed
- * it. A latency given by name went out as the name, while the page reads a
- * number or a range: it showed a mock slowed to 3G as one with no latency.
+ * it. The page reads a number or a range, so a latency given by name goes
+ * out as the range it stands for: sent as the name, a mock slowed to 3G
+ * would show as one with no latency.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

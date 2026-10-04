@@ -1,13 +1,13 @@
 /**
  * What one SSE stream writes, and when it refuses to.
  *
- * Generator events and broadcasts were numbered by two counters that both
- * started at 1, so a client's ids went backwards and `Last-Event-ID` resumed
- * from the wrong place; numbered from one counter, a broadcast into a stream
- * whose endpoint names its ids still moved the client's resume point to a
- * number the endpoint knew nothing of. A broadcast was queued for a client
- * that had stopped reading, reported as delivered, while memory grew without
- * bound.
+ * The generator's events are numbered in one sequence a broadcast leaves
+ * alone, so a client's ids never go backwards and `Last-Event-ID` resumes
+ * from the right place — and a broadcast into a stream whose endpoint names
+ * its own ids never moves the client's resume point to a number the endpoint
+ * knows nothing of. A client that stops reading has broadcasts refused once
+ * its buffer is full, rather than queued and reported delivered while memory
+ * grows without bound.
  */
 import { describe, expect, it, vi } from "vitest";
 

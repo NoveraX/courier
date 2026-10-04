@@ -1,10 +1,10 @@
 /**
  * The client type `createProxyCaller` infers from an API's type.
  *
- * A source's own endpoints were read with a string index signature added,
- * so a flat or a mixed proxy client had a member of every name: a typo, or
- * any name at all on a source defined with no endpoints yet, compiled and
- * failed only when the request reached the server.
+ * A source's endpoints are read without a string index signature, so a flat
+ * or a mixed proxy client has a member only for each endpoint it declares: a
+ * typo, or any name on a source defined with no endpoints yet, fails to
+ * compile rather than once the request reaches the server.
  */
 import { describe, expect, expectTypeOf, it } from "vitest";
 

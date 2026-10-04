@@ -1,11 +1,11 @@
 /**
  * Counting WebSocket connections per caller behind Hono.
  *
- * A Web `Request` carries no peer address, and the Hono adapter handed the
- * WebSocket handler nothing else, so every caller without forwarding headers
- * was counted as "0.0.0.0". The per-address cap — 50 by default — then
- * capped the whole server: the fifty-first connection from anyone was closed
- * with 4429, and one client could lock every other user out.
+ * A Web `Request` carries no peer address, so the Hono adapter hands the
+ * WebSocket handler the peer's own address: counted as one "0.0.0.0",
+ * every caller without forwarding headers would share the per-address cap —
+ * 50 by default — and one client could lock every other user out, the
+ * fifty-first connection from anyone closed with 4429.
  */
 import type { AddressInfo } from "node:net";
 import { serve, upgradeWebSocket } from "@hono/node-server";

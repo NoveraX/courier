@@ -1,8 +1,8 @@
 /**
  * A JSON body declared under a media type of its own — a JSON Patch, a merge
- * patch, JSON:API — is sent with that media type. It was sent as
- * `application/json`, and an API that tells a merge patch from a JSON Patch
- * by the media type — Kubernetes among them — answered 415.
+ * patch, JSON:API — is sent with that media type, not as
+ * `application/json`: an API that tells a merge patch from a JSON Patch by
+ * the media type — Kubernetes among them — answers that with 415.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

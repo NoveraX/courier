@@ -1,9 +1,10 @@
 /**
  * Replaying recordings: each call answers what was recorded for it.
  *
- * `replayFixtures` resolved every recording as data, so a recorded 404 came
- * back as a success carrying the error body, and it answered an endpoint's
- * recordings in the order they were made whatever the call's variables.
+ * A recorded 404 rejects with its status and body rather than resolving as
+ * a success carrying the error body, and a call is answered with the
+ * recording made for its variables, not with an endpoint's recordings in
+ * the order they were made.
  */
 import { HTTPError } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

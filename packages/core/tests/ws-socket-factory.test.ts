@@ -1,9 +1,9 @@
 /**
  * The socket the WebSocket client drives, from wherever it comes.
  *
- * The client's socket type named the DOM library's events, so a project typed
- * for Node alone failed to compile against it, and a `ws` socket — whose
- * events carry their own `target` — was refused as a `socketFactory`.
+ * The client's socket type names no DOM library event, so a project typed
+ * for Node alone compiles against it, and a `ws` socket — whose events carry
+ * their own `target` — is accepted as a `socketFactory`.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket as WsSocket } from "ws";

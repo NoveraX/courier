@@ -1,9 +1,9 @@
 /**
- * Query parameters go out in the style their specification declares. The
- * client writes a query in OpenAPI's default style, `form` exploded, so
- * Stripe's `deepObject` parameters went out as `gte=…` instead of
- * `created[gte]=…`, and `expand=…` instead of `expand[0]=…`; a Swagger 2.0
- * list, joined with commas unless it says otherwise, went out repeated.
+ * Query parameters go out in the style their specification declares, not
+ * only in OpenAPI's default style, `form` exploded: Stripe's `deepObject`
+ * parameters go out as `created[gte]=…`, not `gte=…`, and as `expand[0]=…`,
+ * not `expand=…`; a Swagger 2.0 list is joined with commas unless it says
+ * otherwise, not repeated.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

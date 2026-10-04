@@ -1,10 +1,9 @@
 /**
  * The ZSET and HASH make presence state shared, so any replica can list a
- * topic and see what the others wrote. Notifications were not: the diff
- * emitter dispatched to handlers registered on one instance, so a replica
- * learned only about the joins and leaves it had handled itself — and a
- * presence UI on the deployment this package exists for missed everything
- * that happened elsewhere.
+ * topic and see what the others wrote. Notifications are shared too: a diff
+ * raised on one replica reaches the handlers registered on another, so a
+ * presence UI on the deployment this package exists for hears of the joins
+ * and leaves another replica handled, not only its own.
  */
 import type { PresenceDiff } from "@noverax/courier/realtime";
 import { describe, expect, it, vi } from "vitest";

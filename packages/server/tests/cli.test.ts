@@ -1,11 +1,11 @@
 /**
  * The `courier-server` command, run as a user runs it.
  *
- * It imported `--config` itself: relative to its own install directory, so
- * every relative path failed, and without a TypeScript loader, so a config
- * importing its modules without extensions could not load. It exited 0 when
- * its port was taken, took `3001abc` as a port, had no `--version`, and gave
- * no way to allow a browser app's origin.
+ * It loads `--config` relative to the working directory, not its own install
+ * directory, with a TypeScript loader, so a config importing its modules
+ * without extensions loads. It exits 1 when its port is taken, refuses
+ * `3001abc` as a port, prints its version, and admits the browser origins it
+ * is told to allow.
  */
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

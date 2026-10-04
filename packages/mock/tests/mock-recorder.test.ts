@@ -216,9 +216,10 @@ describe("the HAR a recorder writes", () => {
 });
 
 /**
- * `sanitize` rewrote each answer's body only: the variables a call was made
- * with — a password, a token — its URL's query and the answer's cookies went
- * into the recording as they were.
+ * `sanitize` rewrites more than each answer's body: the variables a call was
+ * made with — a password, a token — and its URL's query go through it too,
+ * and the credential headers are dropped, so none of them reach the
+ * recording as they were.
  */
 describe("what a recording keeps of a call's credentials", () => {
   const redact = (data: unknown) =>

@@ -1,7 +1,8 @@
 /**
  * What Studio's Timeline records for a channel that ends, against a real
- * server: a join the server refuses and a connection it refuses were both
- * recorded as complete, like a channel the server closed without a reason.
+ * server: a join the server refuses and a connection it refuses are failed,
+ * with why, and only a channel the server closes without a reason is
+ * complete.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { courier } from "../src/define/courier";

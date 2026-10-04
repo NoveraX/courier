@@ -1,8 +1,9 @@
 /**
  * The Studio Nuxt module, against the Nuxt instance it is installed into.
  *
- * It registered no plugin, and the file it generated was a syntax error, so a
- * Nuxt app never connected to Studio.
+ * It hands Vite, Nuxt's default builder, the Studio Vite plugin, registers a
+ * client plugin that parses under the other builders, and does nothing
+ * outside `nuxt dev`.
  */
 import { tmpdir } from "node:os";
 import { parseSync } from "oxc-parser";

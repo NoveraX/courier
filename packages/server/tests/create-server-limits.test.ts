@@ -1,7 +1,7 @@
 /**
- * The request body limits a standalone server applies. Every framework
- * adapter lets them be set; the standalone server passed neither on, so an
- * upload over 10 MB was always refused with 413.
+ * The request body limits a standalone server applies, set as every
+ * framework adapter lets them be, so an upload over 10 MB is accepted when
+ * the limit is raised rather than refused with 413 whatever it says.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -91,8 +91,9 @@ describe("maxUploadBytes", () => {
 
 /**
  * A browser reads the answer only once its upload is done or the socket
- * closes. A refusal that left the rest of the body on the connection reached
- * it when the keep-alive timer closed the socket, about 6 s later.
+ * closes, so a refusal takes the rest of the body off the connection: left
+ * there, it would reach the browser only when the keep-alive timer closed
+ * the socket, about 6 s later.
  */
 describe("a body refused before it is read", () => {
   const port = (url: string) => Number(new URL(url).port);

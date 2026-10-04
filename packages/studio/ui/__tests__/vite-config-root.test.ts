@@ -1,7 +1,8 @@
 /**
- * The Studio UI builds the same wherever the build is started. Its paths
- * resolved from the working directory, so a build run from the repository
- * root read no routes, failed, and left a `src/` directory behind there.
+ * The Studio UI builds the same wherever the build is started: its paths
+ * resolve from its own directory, not the working directory, from which a
+ * build run at the repository root would read no routes, fail, and leave a
+ * `src/` directory behind there.
  */
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";

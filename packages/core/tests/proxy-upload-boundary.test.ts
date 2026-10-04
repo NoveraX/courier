@@ -2,9 +2,10 @@
  * A file upload to an ungrouped endpoint, through a proxy with a boundary.
  *
  * The browser client names the group in every multipart body, as an empty
- * field when there is none. Read as a group called "", it matched nothing in
- * the boundary, and the upload was refused as "method not found" — while the
- * same call as JSON, or to a grouped endpoint, went through.
+ * field when there is none. That field means no group, not a group called
+ * "" that matches nothing in the boundary, so the upload goes through as the
+ * same call does as JSON or to a grouped endpoint, rather than being refused
+ * as "method not found".
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

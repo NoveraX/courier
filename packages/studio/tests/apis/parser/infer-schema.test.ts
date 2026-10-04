@@ -1,7 +1,7 @@
 /**
  * The schema of a body a Postman collection gives only by example. A null
- * is typed as a null field is, `any`, where at the top level it was typed as
- * an object.
+ * is typed as a null field is, `any`, at the top level too, not as an
+ * object.
  */
 import { describe, expect, it } from "vitest";
 

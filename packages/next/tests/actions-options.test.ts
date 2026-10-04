@@ -2,8 +2,9 @@
  * Per-call options on a server action caller, through the real request path.
  *
  * `.raw` and `.with({ ... })` compile on `createAction()` as on any caller,
- * and were dropped: `.raw` returned the bare body, so `result.status` read
- * `undefined`, and a per-call header or timeout never reached the request.
+ * and take effect as they do there: `.raw` resolves with the status, so
+ * `result.status` is not `undefined`, and a per-call header or timeout
+ * reaches the request.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, describe, expect, it, vi } from "vitest";

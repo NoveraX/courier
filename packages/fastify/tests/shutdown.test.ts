@@ -2,9 +2,8 @@
  * Closing a Fastify host while Courier streams are open.
  *
  * `app.close()` waits for every open connection, and an SSE stream does not
- * end on its own: the close hung for as long as the stream's lifetime cap,
- * 30 minutes by default, and nothing could drain it because the handlers
- * kept their stream registry to themselves.
+ * end on its own, so the handlers' streams can be drained rather than
+ * holding the close for the stream's lifetime cap, 30 minutes by default.
  */
 import { registerSources } from "@noverax/courier";
 import { courier, defineApi } from "@noverax/courier/define";

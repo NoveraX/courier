@@ -1,7 +1,7 @@
 /**
  * Trend arrows and sparklines read forward in time. The store lists requests
  * newest first; read as it stands, a recovery (failures, then successes)
- * showed a falling success rate and a rising error count.
+ * would show a falling success rate and a rising error count.
  */
 import { describe, expect, it } from "vitest";
 

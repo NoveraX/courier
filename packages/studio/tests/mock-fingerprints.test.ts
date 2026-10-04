@@ -1,7 +1,7 @@
 /**
  * Each mock's fingerprint changes with its own declaration and what that
  * uses, and stays when only another mock's does — so adding a mock, as the
- * wizard does, no longer restarts the mocks already running.
+ * wizard does, leaves the mocks already running as they are.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

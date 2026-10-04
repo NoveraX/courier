@@ -3,9 +3,9 @@
  */
 /**
  * A burst of traffic reaches the UI as thousands of socket events within a
- * second. The store has to take them in batches: one store update per event
- * re-rendered every subscriber thousands of times and left the page so busy
- * that it fell tens of seconds behind and lost its socket.
+ * second, so the store takes them in batches: one store update per event
+ * would re-render every subscriber thousands of times and leave the page so
+ * busy that it fell tens of seconds behind and lost its socket.
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";

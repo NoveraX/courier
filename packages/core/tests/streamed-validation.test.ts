@@ -1,10 +1,12 @@
 /**
  * `stream: true` on an endpoint with a response schema.
  *
- * The schema was once run on the unread stream, so every valid answer failed
- * with a 422 that blamed the upstream's payload. Skipping it instead let a
- * browser opt out of the schema: a proxy call that asked for a stream got the
- * upstream's raw body, every field the schema strips included.
+ * The schema cannot run on an unread stream — every valid answer would fail
+ * with a 422 blaming the upstream's payload — and skipping it would let a
+ * browser opt out of the schema, getting the upstream's raw body with every
+ * field the schema strips. So a proxy call that asks for a stream of such an
+ * endpoint is refused, while a server-side call passes through: the schema
+ * describes the value, not the bytes.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

@@ -1,7 +1,7 @@
 /**
- * The cache middleware's Studio events name the request they belong to, so
- * Studio can show which request was served from the cache. They named the
- * endpoint instead, which no request carries.
+ * The cache middleware's Studio events name the request they belong to —
+ * not the endpoint, which no request carries — so Studio can show which
+ * request was served from the cache.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

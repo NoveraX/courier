@@ -4,8 +4,8 @@
 /**
  * The Playground history is kept by Studio, for the project: a page that
  * connects is shown the calls made before — in another browser, before
- * Studio restarted — and each call it makes is sent back. It was kept in one
- * browser's storage, and nowhere else.
+ * Studio restarted — and each call it makes is sent back, rather than kept
+ * in one browser's storage and nowhere else.
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";

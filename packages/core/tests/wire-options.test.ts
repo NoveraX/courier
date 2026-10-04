@@ -34,8 +34,9 @@ describe("parseWireOptions — what a proxy client may set", () => {
 });
 
 /**
- * Each of these fields reached the server's own `fetch` before the boundary
- * existed. They are refused by name so a probe cannot tell itself it worked.
+ * Each of these fields would reach the server's own `fetch` without the
+ * boundary. They are refused by name so a probe cannot tell itself it
+ * worked.
  */
 describe("parseWireOptions — refuses what reaches the outbound request", () => {
   it("refuses prefixUrl, which chose the destination host", () => {

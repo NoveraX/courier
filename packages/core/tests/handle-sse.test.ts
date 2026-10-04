@@ -337,9 +337,8 @@ describe("handleSSE — studio hooks", () => {
     // signal. Without abort registry → never exits → test hangs.
     const sources = createSSESource(async function* (ctx) {
       yield { data: "first" };
-      // Sleep on a non-signal-aware promise: simulates the loopback abort
-      // bug where ctx.signal never fires. The ONLY thing that can break this
-      // out is a synchronous force-abort via the registry.
+      // Wait on the stream's own signal. Nothing in the request ends it, so
+      // only a synchronous force-abort through the registry breaks it out.
       await new Promise((resolve) => {
         ctx.signal.addEventListener("abort", resolve, { once: true });
       });

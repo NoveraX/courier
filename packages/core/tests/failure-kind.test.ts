@@ -2,8 +2,8 @@
  * What kind of failure Studio is told a request ended in.
  *
  * A cancellation — the caller aborting its call, or a proxied call whose
- * browser left — was reported as an "unknown" failure, so Studio showed it
- * as a red error and counted it against the endpoint.
+ * browser left — is reported as aborted, not as an "unknown" failure that
+ * Studio would show as a red error and count against the endpoint.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

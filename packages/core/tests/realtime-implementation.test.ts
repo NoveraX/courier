@@ -1,9 +1,10 @@
 /**
  * What a stream's or a channel's implementation must return, checked where
- * it is run. Each was cast to the shape its transport reads and called: a
- * push run as a channel opened, delivered nothing and failed on the first
- * message with `handlers.onMessage is not a function`, and an implementation
- * returning anything else failed as deep inside the transport.
+ * it is run rather than cast to the shape its transport reads: a push opened
+ * as a channel is refused, rather than opening, delivering nothing and
+ * failing on the first message with `handlers.onMessage is not a function`,
+ * and an implementation that returns anything else is refused by name rather
+ * than failing deep inside the transport.
  */
 import { describe, expect, it, vi } from "vitest";
 

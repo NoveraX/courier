@@ -1,8 +1,8 @@
 /**
- * The WebSocket options a standalone server passes to its handler. Only the
- * heartbeat, pub/sub and connection hooks reached it, so per-address limits,
- * message limits and authorization could not be configured at all: 51
- * clients behind one address were refused for good.
+ * The WebSocket options a standalone server passes to its handler: the
+ * per-address limits, the message limits and authorization reach it with
+ * the heartbeat, pub/sub and connection hooks, so 51 clients behind one
+ * address can be admitted by raising the cap.
  */
 import { courier, defineApi } from "@noverax/courier/define";
 import { afterEach, describe, expect, it } from "vitest";

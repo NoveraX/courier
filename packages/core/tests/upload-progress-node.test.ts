@@ -1,11 +1,10 @@
 /**
  * Upload progress where there is no XMLHttpRequest — Node, Deno, Bun.
  *
- * The body was encoded into memory to learn its size, then reported chunk by
- * chunk as it was queued rather than as it was sent. The events ran ahead of
- * the network, kept coming after the upload was cancelled — up to 100% of a
- * body the server never received — and, sent as a one-shot stream, the body
- * could not follow a 307 that an upload without progress followed.
+ * Progress follows the body as it is sent, not as it is queued: nothing is
+ * reported once the upload is cancelled or has failed — never 100% of a body
+ * the server did not receive — and the body still follows a 307, as an
+ * upload without progress does.
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";

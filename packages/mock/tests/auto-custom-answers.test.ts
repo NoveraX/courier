@@ -1,9 +1,9 @@
 /**
  * An endpoint that is none of its collection's operations — an inventory, a
  * login, a logout — is answered too: with a value its response schema
- * describes, whatever its type, or with nothing when it has no schema. A
- * schema that was not an object, and no schema at all, answered 404 "No
- * mock", as the Petstore's getInventory, loginUser and logoutUser did.
+ * describes, whatever its type, or with nothing when it has no schema —
+ * never 404 "No mock", as the Petstore's getInventory, loginUser and
+ * logoutUser would be answered otherwise.
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

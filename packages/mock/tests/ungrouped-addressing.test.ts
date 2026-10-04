@@ -123,8 +123,9 @@ describe("a name two groups both claim", () => {
 
 /**
  * An endpoint declared outside any group is mocked under the collection its
- * path starts with. Named under another, the mock registered a second
- * handler, and a call naming no group — matching two — was answered 404.
+ * path starts with, and only there: registered a second time under another
+ * name, a call naming no group would match two handlers and be answered
+ * 404.
  */
 describe("a mock of an ungrouped endpoint under another collection", () => {
   it("is refused, naming the collection it belongs to", () => {

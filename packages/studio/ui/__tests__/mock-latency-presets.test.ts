@@ -1,7 +1,7 @@
 /**
  * The latency Studio shows and sends for a network profile is the latency
- * the mock itself gives it. Studio's 3G was 300–600 ms while the mock's was
- * 300–900 ms, and a recorded scenario turned 3G into 2000 ms.
+ * the mock itself gives it — 300–900 ms for 3G — not a range of Studio's
+ * own.
  */
 import { describe, expect, it } from "vitest";
 

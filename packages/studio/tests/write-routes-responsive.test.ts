@@ -1,9 +1,9 @@
 /**
- * Studio keeps answering while it writes a large import. Every file was
- * flushed to disk one after the other, and every folder after it, on the
- * thread that serves everything else: a write of a few hundred groups held
- * the whole server for seconds — no API answer, no socket message — and one
- * past Socket.IO's ping window would have dropped every runtime and UI.
+ * Studio keeps answering while it writes a large import. Flushed to disk one
+ * file and one folder after another on the thread that serves everything
+ * else, a write of a few hundred groups would hold the whole server for
+ * seconds — no API answer, no socket message — and one past Socket.IO's ping
+ * window would drop every runtime and UI.
  */
 import { existsSync, mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

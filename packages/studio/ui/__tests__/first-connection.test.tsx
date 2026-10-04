@@ -1,9 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * A page that opens is connecting, not disconnected: it said "Connection
- * lost" and "disconnected" until its first connection settled. And the WS
- * compose button says what it does, not only its keyboard shortcut.
+ * A page that opens is connecting, not disconnected: it says neither
+ * "Connection lost" nor "disconnected" before its first connection settles.
+ * And the WS compose button says what it does, not only its keyboard
+ * shortcut.
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

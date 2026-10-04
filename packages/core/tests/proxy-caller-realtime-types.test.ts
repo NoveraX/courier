@@ -2,10 +2,11 @@
  * `createProxyCaller` for an API with streams or channels.
  *
  * The type argument names each endpoint's transport, but only a runtime value
- * tells the client which endpoints to open as a stream. Without `source` or
- * `boundary`, a call typed as a subscription went out as a plain HTTP request
- * and every member of the declared type was undefined — with no error at
- * compile time or at startup.
+ * tells the client which endpoints to open as a stream, so the options
+ * argument is required for an API with one: without `source` or `boundary`,
+ * a call typed as a subscription would go out as a plain HTTP request, every
+ * member of the declared type undefined, with no error at compile time or at
+ * startup.
  */
 import { describe, expect, expectTypeOf, it } from "vitest";
 

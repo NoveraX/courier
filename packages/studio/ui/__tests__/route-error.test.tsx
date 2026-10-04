@@ -1,8 +1,9 @@
 /**
  * @vitest-environment jsdom
  *
- * A view that threw while rendering took the whole page down to a blank
- * screen: Studio had no error boundary.
+ * A view that throws while rendering is caught by an error boundary, which
+ * shows what failed and renders the view again on request, rather than the
+ * whole page going down to a blank screen.
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

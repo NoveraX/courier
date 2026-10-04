@@ -1,10 +1,11 @@
 /**
  * SSE streams that must end without their generator's help.
  *
- * A generator waiting on an event that never came held its stream open, so
- * shutdown never finished — under Docker or Kubernetes a SIGTERM hung until
- * SIGKILL. A client that stopped reading had every broadcast queued for it,
- * each reported delivered, while memory grew without bound.
+ * A generator waiting on an event that never comes does not hold its stream
+ * open through shutdown, which would then never finish — under Docker or
+ * Kubernetes, a SIGTERM hanging until SIGKILL. A client that stops reading
+ * does not have every broadcast queued for it and reported delivered while
+ * memory grows without bound.
  */
 import { afterEach, describe, expect, it } from "vitest";
 

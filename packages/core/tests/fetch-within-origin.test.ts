@@ -1,10 +1,12 @@
 /**
  * Upstream redirects, as the proxy meets them.
  *
- * The proxy's request followed every redirect, as `fetch` does by default,
- * and `fetch` drops only `Authorization` and `Cookie` when a redirect leaves
- * the origin. A key a server-side middleware added went wherever the upstream
- * pointed — an open redirect on the upstream handed it to any host.
+ * `fetch` follows every redirect by default and drops only `Authorization`
+ * and `Cookie` when one leaves the origin, so the proxy's request follows a
+ * redirect only within the upstream's origin, unless the source asks for
+ * every one: a key a server-side middleware adds would otherwise go wherever
+ * the upstream points — an open redirect on the upstream handing it to any
+ * host.
  */
 import {
   createServer,

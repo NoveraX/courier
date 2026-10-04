@@ -1,8 +1,8 @@
 /**
  * The media type of a proxy request, which RFC 9110 makes case-insensitive.
  *
- * `Application/JSON` and `Multipart/Form-Data` were answered 415 as though
- * the proxy did not accept JSON or uploads at all.
+ * `Application/JSON` and `Multipart/Form-Data` are read as JSON and as an
+ * upload, not answered 415 as though the proxy accepted neither.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

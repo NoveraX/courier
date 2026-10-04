@@ -1,7 +1,7 @@
 /**
  * The Playground history as Studio keeps it for the project, and as a page
- * reads it back: it was lost with the page, so a call made a moment before
- * was gone, answer and all.
+ * reads it back, so a call made a moment before outlives the page, answer
+ * and all.
  */
 import { describe, expect, it } from "vitest";
 

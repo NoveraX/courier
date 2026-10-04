@@ -3,12 +3,13 @@
  *
  * Several processes may attach under one runtime id — the defaults
  * "server" and "browser" are shared by every app that names none — and the
- * newest of them serves the playground. When that one went away mid-request
- * while an older one stayed, its requests were never ended: a stream spun
- * forever, and an HTTP request failed only after its 30 s timeout.
+ * newest of them serves the playground. When that one goes away
+ * mid-request while an older one stays, its requests are ended at once —
+ * not a stream spinning for good, or an HTTP request failing only after its
+ * 30 s timeout.
  *
- * A rid is chosen by the UI. A second UI sending a rid already in flight
- * took the first one's stream over, which then stopped without an end.
+ * A rid is chosen by the UI, so a second UI sending a rid already in flight
+ * does not take the first one's stream over and leave it without an end.
  */
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

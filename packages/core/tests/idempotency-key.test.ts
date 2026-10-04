@@ -1,8 +1,7 @@
 /**
  * An endpoint's `idempotencyKey`: the header each call sends a key of its
  * own in, the same on every attempt a retry makes, so an upstream that
- * deduplicates by it applies the write once. The option was typed and
- * documented, and nothing read it.
+ * deduplicates by it applies the write once.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

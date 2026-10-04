@@ -1,9 +1,10 @@
 /**
  * How the mock server ends an SSE stream.
  *
- * A mock stream ended with no word on how, so a Courier client reconnected
- * and replayed it forever; a generator that threw rejected with nobody
- * listening; and a string payload went out raw, which the client dropped.
+ * A mock stream ends with an event that says how — finished or failed —
+ * so a Courier client does not reconnect and replay it forever; a generator
+ * that throws is logged and reported, not left to reject with nobody
+ * listening; and every event field stays on one line.
  */
 
 import { SSE_CONTROL_EVENTS } from "@noverax/courier/internal";

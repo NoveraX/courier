@@ -1,7 +1,7 @@
 /**
  * Mock events whose fields have another shape than the store's types: each
- * was cast unread, so the page listed a port of text, or routes without the
- * counts its views compute with.
+ * is read rather than cast, so the page never lists a port of text, or
+ * routes without the counts its views compute with.
  */
 import { afterEach, describe, expect, it } from "vitest";
 

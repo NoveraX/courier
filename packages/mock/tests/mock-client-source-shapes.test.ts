@@ -2,10 +2,10 @@
  * The mock client for every shape of source `defineApi` makes: grouped,
  * flat and mixed.
  *
- * Its type required groups, so `createMockClient<typeof flatApi>()` did not
- * compile, and a mixed source's client left out the top-level endpoints —
- * though both worked at runtime, as `createCaller` does for the same
- * sources. This file is checked by the package's `tsc` run as well as run.
+ * Its type takes each of them, as `createCaller` does for the same sources:
+ * `createMockClient<typeof flatApi>()` compiles, and a mixed source's client
+ * has its top-level endpoints. This file is checked by the package's `tsc`
+ * run as well as run.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { describe, expect, expectTypeOf, it } from "vitest";

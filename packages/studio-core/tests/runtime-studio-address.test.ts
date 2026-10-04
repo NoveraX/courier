@@ -1,9 +1,10 @@
 /**
  * Where a server runtime dials Studio.
  *
- * `studio.host` and `studio.port` in courier.config move Studio itself and the
- * browser, but a server runtime ignored them: it loaded the config for its
- * sources and still dialled the default address, where nothing listened.
+ * `studio.host` and `studio.port` in courier.config move Studio itself, the
+ * browser and a server runtime alike: one that loads the config for its
+ * sources dials the address it names, not the default one, where nothing
+ * listens.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

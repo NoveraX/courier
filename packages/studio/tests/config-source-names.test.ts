@@ -3,10 +3,11 @@
  *
  * A runtime that calls an API directly reports the name its own copy of the
  * definition carries. In a browser, and in a server that imports the module
- * the config imports, that copy was never registered, so its name is the one
- * derived from the baseURL host. Every direct row then read "localhost", the
- * Explorer showed that phantom source beside the real ones, and each endpoint
- * was counted twice.
+ * the config imports, no registry saw that copy, so its name is the one
+ * derived from the baseURL host. Studio names the call after the config
+ * source that declares the endpoint instead: otherwise every direct row
+ * reads "localhost", the Explorer shows that phantom source beside the real
+ * ones, and each endpoint is counted twice.
  *
  * A real Studio server runs a project here, a runtime attaches to it without
  * a registry of its own, and its calls reach a real upstream.

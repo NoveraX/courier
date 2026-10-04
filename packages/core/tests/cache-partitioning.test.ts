@@ -1,11 +1,11 @@
 /**
  * What the cache may and may not hand to the next caller.
  *
- * The previous key was `source:group:method:variables` over a store shared by
- * the whole process, so an authenticated response was served to whoever asked
- * next — including the `Set-Cookie` that came with it. Every existing test
- * built its context with an empty `new Headers()` and never varied the caller,
- * which is why none of them saw it.
+ * The store is shared by the whole process, so its key tells callers apart:
+ * keyed by `source:group:method:variables` alone, an authenticated response
+ * would be served to whoever asked next — with the `Set-Cookie` that came
+ * with it. The tests vary the caller for that reason: a context built with
+ * an empty `new Headers()` for every call never shows the difference.
  */
 import { describe, expect, it } from "vitest";
 

@@ -1,8 +1,8 @@
 /**
  * An answer with an address the API keeps private. Gitea describes a user's
  * `email` as `format: email`, yet answers a repository with its owner's
- * `email: ""` when the owner hides it; every validator checked the address,
- * and the whole answer was refused.
+ * `email: ""` when the owner hides it, so a generated client reads such an
+ * answer rather than refusing the whole of it over the empty address.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

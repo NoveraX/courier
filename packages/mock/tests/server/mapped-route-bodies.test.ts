@@ -1,8 +1,8 @@
 /**
  * What the mapped REST routes of a mock built from a source read from a
- * request: a body that is not JSON was read as `{}` and the mock answered
- * as though the call had sent nothing, and the name-addressed GET route kept
- * every query value a string where the mapped routes typed numbers.
+ * request: a body that is not JSON is answered 400, not read as `{}` and
+ * answered as though the call had sent nothing, and the name-addressed GET
+ * route types query values as the mapped routes do.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

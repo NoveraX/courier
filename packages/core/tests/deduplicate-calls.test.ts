@@ -1,10 +1,10 @@
 /**
  * `deduplicate: true`, as a caller meets it.
  *
- * Every call built a fresh HTTP client with an empty in-flight table, so the
- * option cancelled nothing in any mode. Where it runs now: a browser, for a
- * direct call and for a proxy client. Where it must not: a server, where
- * requests from different users share a key and would cancel each other.
+ * The calls of a client share one in-flight table; a fresh one per call
+ * would cancel nothing. Where the option runs: a browser, for a direct call
+ * and for a proxy client. Where it must not: a server, where requests from
+ * different users share a key and would cancel each other.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

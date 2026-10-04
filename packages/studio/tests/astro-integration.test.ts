@@ -1,8 +1,8 @@
 /**
  * The Studio Astro integration, against the context of Astro's config hook.
  *
- * It asked for an injection stage Astro does not have, so nothing was ever
- * injected.
+ * It adds the Studio Vite plugin under `astro dev`, rather than asking for an
+ * injection stage Astro does not have, and leaves builds alone.
  */
 import { describe, expect, it, vi } from "vitest";
 

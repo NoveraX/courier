@@ -1,9 +1,10 @@
 /**
  * A generated client keeps the fields an answer has beyond its
- * specification, whichever validator checks it: zod and valibot stripped
- * them while ArkType and no validation kept them, so the validator chosen
- * changed the data an app got. With types generated, the slots keep the
- * declared types, so a misspelt variable is still a type error.
+ * specification, whichever validator checks it, so the validator chosen
+ * never changes the data an app gets — zod and valibot strip such fields
+ * by default, where ArkType and no validation keep them. With types
+ * generated, the slots keep the declared types, so a misspelt variable is
+ * still a type error.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

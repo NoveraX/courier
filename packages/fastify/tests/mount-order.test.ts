@@ -1,9 +1,10 @@
 /**
  * Registering the Fastify plugin and routes before sources are registered.
  *
- * The plugin and the handler factories read the registry as they were
- * created, to announce what they host, and threw SOURCES_NOT_REGISTERED when
- * the app was wired before `attachRuntime()` or `registerSources()` had run.
+ * The plugin and the handlers read the registry when they serve a request,
+ * not when they are created: read at registration, it throws
+ * SOURCES_NOT_REGISTERED for an app wired before `attachRuntime()` or
+ * `registerSources()` has run.
  */
 import Fastify from "fastify";
 import { describe, expect, it } from "vitest";

@@ -1,11 +1,11 @@
 /**
  * A server action caller over the sources map `registerSources` takes.
  *
- * `createAction` accepted only grouped APIs, so the map the README tells you
- * to pass — the one handed to `registerSources` — stopped `next build` at
- * "Failed to type check" as soon as it also held a flat `defineApi({
- * endpoints })` source. The typed client it returned was the grouped one
- * too, with no way to call a flat endpoint.
+ * `createAction` takes the map the README tells you to pass — the one
+ * handed to `registerSources` — whether its sources are grouped or a flat
+ * `defineApi({ endpoints })`, without stopping `next build` at "Failed to
+ * type check", and the typed client it returns calls a flat endpoint as
+ * well as a grouped one.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";

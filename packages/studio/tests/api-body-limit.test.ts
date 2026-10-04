@@ -1,8 +1,8 @@
 /**
  * A specification Studio parses can be sent back to it: generate, write,
- * update and manage all take the parsed specification in their body. Parse
- * read specifications up to 64 MB while those routes took bodies up to
- * 5 MB, so a large real API parsed and could then never be written.
+ * update and manage all take the parsed specification in their body, so they
+ * take a body as large as what parse reads: a large real API that parses
+ * can then be written.
  */
 import { mkdtempSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

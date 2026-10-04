@@ -2,9 +2,9 @@
  * What a channel sends and broadcasts is held to its `.response()` schema,
  * end to end on a real `ws` server and in-process.
  *
- * A push channel's values were checked, but `ctx.send` and `ctx.broadcast`
- * of a channel the caller can send on put anything on the wire, and the
- * client read it typed as the schema promised.
+ * `ctx.send` and `ctx.broadcast` of a channel the caller can send on are
+ * checked as a push channel's values are, so nothing reaches the wire that
+ * the client would read typed as the schema promised while it is not.
  */
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { afterEach, describe, expect, it, vi } from "vitest";

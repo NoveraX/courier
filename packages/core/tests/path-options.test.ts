@@ -2,9 +2,9 @@
  * Path parameters a server derives from its own context.
  *
  * `pathOptions` exists for values the caller must not choose — the tenant a
- * session belongs to, read from its cookie. A variable of the same name used
- * to replace it, so a browser naming another tenant reached that tenant's
- * data with the server's credentials.
+ * session belongs to, read from its cookie — so a variable of the same name
+ * never replaces it: a browser naming another tenant would reach that
+ * tenant's data with the server's credentials.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

@@ -2,11 +2,11 @@
  * A mock that answers anew replaces the earlier one's answer and its
  * decorations; one that only decorates keeps the earlier answer.
  *
- * The builder started every chain from a copy of the handler already
- * registered, so a later plain `resolves()` inherited `once()`, `inState()`,
- * `delay()` and even a stream transport. And the server's base-layer `mock`
- * looked at the scenario layer too, so a mock written while a scenario was
- * active copied the scenario's answer into the base layer for good.
+ * A chain does not start from a copy of the handler already registered, so
+ * a later plain `resolves()` inherits no `once()`, `inState()`, `delay()` or
+ * stream transport. And the server's base-layer `mock` looks at the base
+ * layer alone, so a mock written while a scenario is active never copies
+ * the scenario's answer into it.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, describe, expect, it } from "vitest";

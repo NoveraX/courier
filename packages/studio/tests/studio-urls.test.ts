@@ -1,9 +1,10 @@
 /**
  * The addresses Studio's banner prints.
  *
- * It printed the first network address the machine had whatever Studio was
- * bound to — under the default `localhost`, an address nothing listened on —
- * and printed wildcard and IPv6 hosts as they were written.
+ * It lists the addresses Studio listens on — none on the network for the
+ * default `localhost`, where nothing listens on the machine's network
+ * address — and lists the addresses a wildcard bind reaches rather than the
+ * wildcard as written.
  */
 import type { NetworkInterfaceInfo } from "node:os";
 import { describe, expect, it } from "vitest";

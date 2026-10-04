@@ -2,9 +2,10 @@
  * An endpoint whose variables are all optional — the paginated list, the most
  * common shape an API has.
  *
- * Its call signature makes the argument optional, and the call it invites
- * sent `undefined` to the schema, which rejected it before any request went
- * out. The workaround, passing `{}`, was nowhere in the types.
+ * Its call signature makes the argument optional, so the call it invites —
+ * with no argument — validates as an empty object, defaults applied, rather
+ * than sending `undefined` to a schema that rejects it before any request
+ * goes out.
  */
 import * as v from "valibot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

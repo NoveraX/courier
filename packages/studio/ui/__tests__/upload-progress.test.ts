@@ -3,8 +3,8 @@
  *
  * The browser reports an upload's progress before the proxy announces the
  * call, and the proxy announces it twice: when it arrives and once it has read
- * it. Upload events were ignored, and the second announcement added a second
- * row that stayed pending for good.
+ * it. The row appears with the first progress, and stays one row through
+ * both announcements, rather than a second row left pending for good.
  */
 import { describe, expect, it } from "vitest";
 

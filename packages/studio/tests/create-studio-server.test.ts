@@ -1,13 +1,12 @@
 /**
  * Starting Studio, and who it then answers.
  *
- * A held port was reported as "Studio already running" whoever held it,
- * onReady never fired and close() rejected; a config that was missing or
- * broken at start switched hot reload off for the whole session. With port 0
- * Studio reported `:0` and refused its own UI; its sockets took any page on
- * any site; and every start appended to the project's .gitignore. The mock
- * workers it starts read the transforms it keeps in the project's
- * node_modules.
+ * A port someone else holds is said to be held — never reported ready, and
+ * close() still resolves; a config created after Studio started is picked
+ * up without a restart. With port 0 Studio reports the port it listens on
+ * and answers its own UI there; its sockets refuse a page on another site;
+ * and a start leaves the project's .gitignore alone. The mock workers it
+ * starts read the transforms it keeps in the project's node_modules.
  */
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";

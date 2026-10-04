@@ -287,8 +287,9 @@ describe("subscribeSSE", () => {
 });
 
 /**
- * A stream its reader ended went on reporting the status it had — connected —
- * so an indicator bound to it showed a live stream that was gone.
+ * A stream its reader ends reports itself disconnected, not the status it
+ * had — connected — so an indicator bound to it never shows a live stream
+ * that is gone.
  */
 describe("a stream its reader ended", () => {
   afterEach(() => {

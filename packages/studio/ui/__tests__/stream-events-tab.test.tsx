@@ -4,9 +4,10 @@
 /**
  * The message box of a WebSocket channel opened in the Playground.
  *
- * It was offered only once the channel had sent something, so a channel that
- * answers messages and says nothing first could never be written to, and the
- * entry sat at "Waiting for events..." for good.
+ * It is offered once the channel is open, not once it has sent something:
+ * a channel that answers messages and says nothing first could otherwise
+ * never be written to, its entry sitting at "Waiting for events..." for
+ * good.
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";

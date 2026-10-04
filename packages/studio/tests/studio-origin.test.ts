@@ -1,9 +1,11 @@
 /**
  * Who may talk to Studio, over its API and its sockets.
  *
- * Studio answered its own UI only at the literal bind host or `localhost`, so
- * the page opened at `127.0.0.1` or at a network address had every write
- * refused; and its sockets answered any page at all.
+ * Studio answers its own UI at whatever local address the page was opened,
+ * not only at the literal bind host or `localhost` — a page opened at
+ * `127.0.0.1` or at a network address would have every write refused — and
+ * its sockets admit a runtime from this machine, never a page on another
+ * site or on a domain rebound to it.
  */
 import { describe, expect, it } from "vitest";
 

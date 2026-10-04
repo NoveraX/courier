@@ -1,9 +1,9 @@
 /**
  * What Studio is told about an upload's variables.
  *
- * Events travel to Studio as JSON, and JSON has no FormData: an upload's
- * payload arrived there as `{}`, so the panel that should list the files and
- * their sizes showed nothing at all.
+ * Events travel to Studio as JSON, and JSON has no FormData, so an upload's
+ * payload is described for the panel that lists its files and their sizes,
+ * rather than arriving there as `{}`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

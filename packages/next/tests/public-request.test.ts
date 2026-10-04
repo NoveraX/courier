@@ -1,8 +1,9 @@
 /**
  * Next.js builds a route handler's `request.url` from the host it was started
  * with — `http://localhost:<port>` — whatever `Host` the browser sent. The
- * proxy compared the page's `Origin` with that URL, so in production every
- * POST from the app's own pages was refused with 403.
+ * proxy compares the page's `Origin` with the address the browser used
+ * instead: compared with that URL, every POST from the app's own pages
+ * would be refused with 403 in production.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

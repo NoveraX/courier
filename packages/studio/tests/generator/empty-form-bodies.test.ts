@@ -1,8 +1,8 @@
 /**
  * An operation whose form admits no field at all sends no body, and is
- * called without one. Stripe declares such a form on 298 operations, every
- * GET among them; it was generated as a `body` map each call had to pass,
- * and zod, valibot and ArkType refused a call that left it out.
+ * called without one — not with a `body` map each call has to pass, which
+ * zod, valibot and ArkType refuse when it is left out. Stripe declares such
+ * a form on 298 operations, every GET among them.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

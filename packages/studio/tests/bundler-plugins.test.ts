@@ -1,14 +1,15 @@
 /**
  * The Studio esbuild and Rollup plugins, driven through the real bundlers.
  *
- * The esbuild plugin failed the user's build outright: its virtual module had
- * no directory to resolve the runtime from. The Rollup plugin added nothing
- * whenever @rollup/plugin-commonjs was in the chain, which loads every entry
- * while resolving it — before Rollup has marked it as an entry.
+ * The esbuild plugin's virtual module has a directory to resolve the
+ * runtime from, so the user's build succeeds. The Rollup plugin bundles the
+ * connection with @rollup/plugin-commonjs in the chain, which loads every
+ * entry while resolving it — before Rollup has marked it as an entry.
  *
- * Both decided by `NODE_ENV` alone, which neither bundler sets, so a minified
- * esbuild build and a one-off `rollup -c` shipped the connection, which then
- * dialled a Studio that was not there on every page load.
+ * Neither bundler sets `NODE_ENV`, so neither plugin decides by it alone: a
+ * minified esbuild build and a one-off `rollup -c` are left unconnected,
+ * rather than shipping a connection that dials a Studio that is not there
+ * on every page load.
  */
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

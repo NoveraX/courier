@@ -21,8 +21,8 @@ export interface ExecuteDirectSSEPayload {
   group?: string | undefined;
   /** Endpoint method name */
   method: string;
-  /** Untyped variables — validated against the endpoint's variables schema */
-  variables?: Record<string, unknown> | undefined;
+  /** Untyped variables — validated against the endpoint's variables schema, and passed on as given when it has none */
+  variables?: unknown;
   /** User-supplied request headers (e.g. Authorization) — flowed into middleware */
   headers?: Record<string, string> | undefined;
 }
@@ -48,7 +48,8 @@ export interface ExecuteDirectWSPushPayload {
   source: string;
   group?: string | undefined;
   method: string;
-  variables?: Record<string, unknown> | undefined;
+  /** Untyped variables, as for an SSE stream */
+  variables?: unknown;
   headers?: Record<string, string> | undefined;
 }
 
@@ -57,7 +58,8 @@ export interface ExecuteDirectWSChannelPayload {
   source: string;
   group?: string | undefined;
   method: string;
-  variables?: Record<string, unknown> | undefined;
+  /** Untyped variables, as for an SSE stream */
+  variables?: unknown;
   headers?: Record<string, string> | undefined;
 }
 

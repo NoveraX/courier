@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { ConfigurationError } from "../src/errors/configuration-error";
 import { ConnectionError } from "../src/realtime/errors";
 import type { ConnectionStatus, SSEEvent, SSESubscription, WSChannel } from "../src/realtime/types";
 import { lazySSEFactory, lazyWSChannelFactory } from "../src/transport/lazy-streams";
@@ -80,7 +81,7 @@ describe("a stream opened while its client loads", () => {
     sub.close();
 
     expect(events).toEqual([1, 2]);
-    expect(statuses).toEqual(["disconnected"]);
+    expect(statuses).toEqual(["connected", "disconnected"]);
   });
 
   it("closes the loaded stream when it was closed before the client arrived", async () => {
@@ -106,6 +107,15 @@ describe("a stream opened while its client loads", () => {
 
     await expect(sub[Symbol.asyncIterator]().next()).rejects.toBeInstanceOf(ConnectionError);
     expect(sub.status).toBe("disconnected");
+  });
+
+  it("fails with what the loaded factory threw, not as a client that did not load", async () => {
+    const refused = new ConfigurationError("WS_PATH_NOT_CONFIGURED", "no ws path");
+    const sub = lazySSEFactory(async () => () => {
+      throw refused;
+    })("live", "ticks", undefined, {});
+
+    await expect(sub[Symbol.asyncIterator]().next()).rejects.toBe(refused);
   });
 });
 
@@ -138,6 +148,17 @@ describe("a channel opened while its client loads", () => {
     await Promise.resolve();
 
     expect([accepted, real.sent, real.closed]).toEqual([false, [], true]);
+  });
+
+  it("tells a status the channel reached before it was followed", async () => {
+    const real = channel();
+    const statuses: ConnectionStatus[] = [];
+
+    const ch = lazyWSChannelFactory(async () => () => real)("chat", "room", undefined, {});
+    ch.on("status", (status) => statuses.push(status));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(statuses).toEqual(["connected"]);
   });
 
   it("reports a client that cannot be loaded on its error event", async () => {

@@ -118,8 +118,8 @@ export function withFetchStart(r: RequestEntry, event: EventPayload): RequestEnt
   };
 }
 
-/** The HTTP version the fetch's answer came over, when the runtime could tell. */
-export function withFetchEnd(r: RequestEntry, event: EventPayload): RequestEntry {
+/** The HTTP version a fetch's answer came over — a success's or a failure's — when the runtime could tell. */
+export function withHttpVersion(r: RequestEntry, event: EventPayload): RequestEntry {
   const httpVersion = httpVersionOf(event.httpVersion);
   return httpVersion ? { ...r, httpVersion } : r;
 }

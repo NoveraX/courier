@@ -54,7 +54,11 @@ export function wireFetchHooks(
   };
 
   studioHooks.onHttpFetchError = (e) => {
+    const url = urls.get(e.requestId);
     urls.delete(e.requestId);
+    /* Only an answer came over a version; a fetch that never reached the upstream did not. */
+    const httpVersion =
+      e.status === undefined || url === undefined ? undefined : versions?.versionOf(url);
     bus.emit(
       createEvent<HttpFetchErrorEvent>(sessionId, {
         id: e.requestId,
@@ -62,6 +66,8 @@ export function wireFetchHooks(
         timestamp: e.timestamp,
         requestId: e.requestId,
         message: e.message,
+        ...(e.status !== undefined && { status: e.status }),
+        ...(httpVersion && { httpVersion }),
       }),
     );
   };

@@ -125,14 +125,15 @@ export async function connectRuntimeSocket(
   /* Every announcement this runtime has ever made, kept rather than consumed.
      Studio drops a runtime's claims when its socket disconnects, so whatever
      was announced over the dead connection has to be stated again over the new
-     one. Draining destructively left nothing to restate: the runtime came back,
-     said hello, and sat there bound to nothing. */
+     one. Drained destructively, nothing would be left to restate: the runtime
+     would come back, say hello, and sit there bound to nothing. */
   const announced: BufferedAnnouncement[] = [];
 
   /* Adapters announce as they are constructed, which is whenever the
      application happens to wire its routes — before this socket opens for
-     some, after it for others. Draining only on connect left the later ones
-     queued forever, so Studio never learned about those transports. */
+     some, after it for others. Drained only on connect, the later ones would
+     stay queued for good, and Studio would never learn about those
+     transports. */
   const drain = (): void => {
     if (!socket.connected) return;
     while (pending.length > 0) {

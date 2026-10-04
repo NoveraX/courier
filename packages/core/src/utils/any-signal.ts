@@ -3,8 +3,9 @@
  * signal's reason.
  *
  * `AbortSignal.any` does exactly this, and the Next.js Edge runtime does not
- * provide it: every SSE stream there answered 500 and every call with a
- * timeout failed as unreachable. Where the platform has it, it is used —
+ * provide it: relying on it, every SSE stream there would answer 500 and
+ * every call with a timeout fail as unreachable. Where the platform has it,
+ * it is used —
  * it also lets a combined signal be collected with its sources — and
  * elsewhere the signals are combined by hand, their listeners removed once
  * the combined signal has aborted.

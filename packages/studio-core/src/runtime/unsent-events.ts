@@ -26,9 +26,9 @@ export interface UnsentEvents {
  * Keep the events a runtime reports while it cannot send them.
  *
  * `attachRuntime()` resolves before its socket connects, and a page fetches
- * its data as it loads, so the first requests an application made were
- * dropped and never reached Studio. So were the ones made while Studio
- * restarted. None of them was ever sent, so sending them late cannot repeat
+ * its data as it loads, so the first requests an application makes would
+ * otherwise never reach Studio — nor would the ones made while Studio
+ * restarts. None of them was ever sent, so sending them late cannot repeat
  * one.
  *
  * @returns The store of unsent events

@@ -70,8 +70,8 @@ export async function startChannel(
     },
     broadcast: (t, data) => broadcastToTopic(ctx, t, outbound(data)),
     close: (code, reason) => {
-      /* Used to send an error frame and nothing else: the subscription
-         went on, and the client only logged "closed". */
+      /* The subscription ends as well: an error frame alone would leave it
+         running, and the client would only log "closed". */
       if (ended.signal.aborted) return;
       const failed = code !== undefined && code !== 1000;
       const failure = failed ? { code, message: reason ?? "Channel closed" } : undefined;

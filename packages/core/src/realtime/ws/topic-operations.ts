@@ -72,8 +72,8 @@ export function requestSubscription(
 
 /**
  * Send a fire-and-forget message to a topic. Until the server confirms the
- * topic's subscription the message is held: sent at once, it reached a
- * server still validating and authorizing the subscribe, and was refused as
+ * topic's subscription the message is held: sent at once, it would reach a
+ * server still validating and authorizing the subscribe, and be refused as
  * "Not subscribed". Otherwise it is queued while (re)connecting.
  *
  * @returns Whether the message went out or waits to; a message dropped —
@@ -102,8 +102,8 @@ export function sendToTopic(ctx: TopicOpsContext, topic: string, payload: unknow
 
 /**
  * Why a message may not go out: larger than the server accepts. Sent, it
- * reached a server whose frame limit closed the whole socket over it, or was
- * refused there after crossing the network.
+ * would reach a server whose frame limit closes the whole socket over it, or
+ * be refused there after crossing the network.
  */
 function oversized(ctx: TopicOpsContext, frame: string): RealtimeError | undefined {
   if (frame.length <= ctx.maxMessageSize) return undefined;

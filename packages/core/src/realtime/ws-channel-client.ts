@@ -102,7 +102,7 @@ export function executeWSChannel<TSend, TReceive>(
         return false;
       }
       /* The subscribe goes out a microtask after the channel is made; sent
-         before it, a message reached the server first and was refused. */
+         before it, a message would reach the server first and be refused. */
       if (!stop) {
         early.push(data);
         return true;

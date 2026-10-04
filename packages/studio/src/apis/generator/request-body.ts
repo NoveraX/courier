@@ -71,7 +71,7 @@ export function sharesParameterName(ep: ParsedEndpoint, fields: readonly string[
 /**
  * The media type a JSON body is sent as, when the operation names one of its
  * own: a JSON Patch, a merge patch, JSON:API. Sent as `application/json`, it
- * was refused by an API that tells them apart by the media type.
+ * would be refused by an API that tells them apart by the media type.
  *
  * @param ep - The endpoint
  * @returns The declared media type, parameters included, or `null` for plain JSON and every other body

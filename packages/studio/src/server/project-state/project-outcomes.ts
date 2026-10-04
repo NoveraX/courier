@@ -139,7 +139,8 @@ function sayRecovered(previous: ProjectSnapshot, { configFile }: LoadedCourierCo
   log.info(`${basename(configFile)} loads again`);
 }
 
-/* A key Courier does not read is most likely misspelt, and was ignored in silence. */
+/* A key Courier does not read is most likely misspelt; ignored in silence, it
+   would leave the setting it means at its default. */
 function warnUnread({ config, configFile }: LoadedCourierConfig): void {
   const unread = unknownConfigKeys(config);
   if (unread.length === 0) return;

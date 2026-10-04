@@ -31,8 +31,8 @@ interface WebpackConfigFields {
  *
  * The server side attaches on its own, from `instrumentation.ts`. Under
  * webpack the wrapper keeps `ws`, which the server's Studio socket runs on,
- * out of the Node server bundle: bundled, it failed on every frame of 48
- * bytes or more, and the server runtime never reached Studio.
+ * out of the Node server bundle: bundled, it fails on every frame of 48
+ * bytes or more, and the server runtime would never reach Studio.
  *
  * @param pluginOptions - `enabled` forces injection on or off; by default it is
  *   on in `next dev` unless `NODE_ENV` is `"production"`.

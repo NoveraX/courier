@@ -68,8 +68,9 @@ export function formatSSEEvent<TData>(event: SSEEvent<TData>, seq?: number): str
   if (event.retry !== undefined) lines.push(`retry: ${event.retry}`);
 
   /* Always JSON, strings included: the client reads every event as JSON,
-     so a string written raw was dropped ("hello") or came back as another
-     type ("42" as a number). JSON also keeps the payload on one line. */
+     so a string written raw would be dropped ("hello") or come back as
+     another type ("42" as a number). JSON also keeps the payload on one
+     line. */
   lines.push(`data: ${JSON.stringify(event.data ?? null)}`);
 
   return `${lines.join("\n")}\n\n`;

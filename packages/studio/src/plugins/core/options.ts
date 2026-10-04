@@ -7,9 +7,10 @@ import type { StudioPluginOptions } from "./types";
  * connected: the bundler's own mode says which build that is — webpack's
  * `mode`, esbuild's minification, Rollup's watch mode, a dev server — and a
  * `NODE_ENV` of `"production"` rules it out whatever the bundler says.
- * Reading `NODE_ENV` alone let `webpack --mode production`, `rollup -c` and a
- * minified esbuild build, none of which sets it, ship the connection to
- * production, where it dialled a Studio that is not there on every page load.
+ * Read alone, `NODE_ENV` would let `webpack --mode production`, `rollup -c`
+ * and a minified esbuild build, none of which sets it, ship the connection
+ * to production, where it would dial a Studio that is not there on every
+ * page load.
  *
  * @param options - The plugin's options.
  * @param development - Whether the bundler builds for development.

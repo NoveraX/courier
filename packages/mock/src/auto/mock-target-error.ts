@@ -6,8 +6,8 @@ export type MockTargetErrorCode = "COLLECTION_MISMATCH";
 /**
  * A mock named under another collection than the one its endpoint is filed
  * under. An endpoint declared outside any group is filed under the
- * collection its path starts with; a mock under another name registered a
- * second handler, and a call naming no group then matched two and was
+ * collection its path starts with; a mock under another name would register
+ * a second handler, and a call naming no group would match two and be
  * answered 404.
  *
  * @example

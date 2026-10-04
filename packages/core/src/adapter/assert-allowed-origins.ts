@@ -4,8 +4,8 @@ const WEB_SCHEMES = new Set(["http:", "https:"]);
 
 /**
  * Refuse, when a handler is created, an `allowedOrigins` entry that no page's
- * `Origin` can ever equal. Such an entry matched nothing: the page it was
- * written for was refused, and nothing said why.
+ * `Origin` can ever equal. Such an entry would match nothing: the page it is
+ * written for would be refused, and nothing would say why.
  *
  * An entry is an origin as a browser sends it — `https://app.example.com`,
  * no path and no trailing slash, the scheme's default port left out — or a

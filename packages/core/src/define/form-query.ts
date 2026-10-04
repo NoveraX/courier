@@ -6,7 +6,7 @@ import { type FormFieldEncoding, formBody } from "./form-body";
  *
  * The client writes a query in OpenAPI's default style, `form` exploded: an
  * object's properties become names of their own, so Stripe's
- * `created: { gte }` went out as `gte=…`. Written by `formQuery` with the
+ * `created: { gte }` would go out as `gte=…`. Written by `formQuery` with the
  * parameter's `deepObject` style it goes out as `created[gte]=…`, and
  * `expand: ["tax"]` as `expand[0]=tax`. A field left `undefined` or `null`
  * is not sent, as the client leaves either out of a query.

@@ -2,12 +2,9 @@ import type { PrefixMapping } from "../server/prefix-route-types";
 import type { RouteInfo } from "./route-types";
 
 /**
- * Prefix-mapping construction and seed-config parsing.
- *
- * Extracted from `create-auto-server.ts` because both helpers operate purely
- * on declarative inputs (analyzed routes, source options, user seed config)
- * with no dependency on the running server. Keeping them out of the main
- * factory makes the orchestration in `createAutoMockServer` easier to follow.
+ * Prefix-mapping construction and seed-config parsing: both work on
+ * declarative inputs alone — analyzed routes, source options, the user's seed
+ * config — with no dependency on the running server.
  */
 
 /** Seed data configuration */

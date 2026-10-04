@@ -18,20 +18,19 @@ export type { OnRegister } from "./builder-target";
  * Two modes of operation:
  * - **With existing handler** (an auto-CRUD route, say): the first method
  *   called pushes a copy of it — its response and decorations — and every
- *   method then works on the copy, in any order. Decorators used to edit the
- *   existing handler itself, so one written before the response method
- *   (`.delay(400).resolves(x)`) was lost from the new handler and stamped
- *   onto the auto-CRUD one for good.
+ *   method then works on the copy, in any order, so a decorator written
+ *   before the response method (`.delay(400).resolves(x)`) stays on the new
+ *   handler and never edits the auto-CRUD one.
  *   A chain that only decorates (`.withHeaders(h)`) keeps the existing
  *   response. A chain that answers anew — `resolves`, `returns`, `rejects`,
  *   `sequence`, `stream`, `emits`, `channel` — replaces the response and
  *   drops the existing handler's decorations, keeping only those written in
- *   the chain itself: a plain `resolves(b)` after `once().resolves(a)` used
- *   to be a one-off too, and one after `emits()` answered as a stream.
+ *   the chain itself: a plain `resolves(b)` after `once().resolves(a)` is no
+ *   one-off, and one after `emits()` does not answer as a stream.
  * - **Without existing**: a new handler is registered immediately.
  *
  * A status set with `withStatus` holds whatever response method comes after
- * it; `resolves`/`returns` used to reset it to 200.
+ * it; `resolves`/`returns` leave it as it is.
  *
  * @param onRegister Pushes a new handler onto its stack
  * @param existing   The endpoint's latest handler in the builder's layer, if any
@@ -63,9 +62,9 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
 
     returns(fn) {
       /* `returns` takes a function of the request; static data goes to
-         `resolves`. Mixing them up used to survive until the endpoint was
-         called and then answer 500 with "handler.fn is not a function",
-         which names nothing the caller can act on. */
+         `resolves`. Refused here, not when the endpoint is called with a 500
+         saying "handler.fn is not a function", which names nothing the caller
+         can act on. */
       if (typeof fn !== "function") {
         throw new TypeError(
           `returns() expects a function of the request context, received ${describeValue(fn)}. ` +

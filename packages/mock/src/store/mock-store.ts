@@ -31,8 +31,8 @@ export function createMockStore(): MockStore {
     ): Collection<TItem> {
       const existing = collections.get(name);
       /* The auto server creates every collection before the app's overrides
-         run, so a config given later used to be dropped in silence — and a
-         key other than `id` was impossible. */
+         run, so a config given later is applied to the collection there, not
+         dropped in silence — which is how a key other than `id` is set. */
       if (existing) {
         if (config) existing.configure(config);
         return existing as Collection<TItem>;

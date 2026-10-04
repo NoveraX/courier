@@ -19,10 +19,9 @@ export interface StreamOutcome {
  * Called from handleMockRequest when handler.transport === "sse".
  *
  * The stream ends as a Courier server's does, with an event saying how:
- * finished, or failed with what the client may read. A mock stream used to
- * end with neither, so the client reconnected and replayed it forever; and a
- * generator that threw rejected with nobody listening, which could take the
- * mock server down.
+ * finished, or failed with what the client may read — so the client does not
+ * reconnect and replay it forever, and a generator that throws does not
+ * reject with nobody listening and take the mock server down.
  *
  * @param c        The request's Hono context
  * @param handler  The stream's handler

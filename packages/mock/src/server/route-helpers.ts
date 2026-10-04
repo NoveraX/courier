@@ -72,9 +72,9 @@ export function resolveMethod(methods: string[], exact: string[], pattern: RegEx
  * Parse a path or query value: a number when it is one written the way a
  * number is written, the string otherwise.
  *
- * Any value `Number()` accepted used to become a number, so `"007"` became
- * `7`, `""` became `0` and `"1e3"` became `1000` — a zip code or a
- * zero-padded id lost what it was.
+ * Only a value written as a number is read as one: `Number()` turns `"007"`
+ * into `7`, `""` into `0` and `"1e3"` into `1000`, and a zip code or a
+ * zero-padded id would lose what it was.
  */
 export function parseId(raw: string): string | number {
   const num = Number(raw);

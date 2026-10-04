@@ -8,9 +8,9 @@ export const DEFAULT_HISTORY_LIMIT = 1000;
  *
  * It is a plain array — `server.history` reads as one — whose `push` drops
  * the oldest entries once it holds a quarter more than the limit, so each
- * push costs the same on average. It used to keep every request, with its
- * variables and response data, for as long as the process ran: a working
- * day at a few requests a second held well over 100 MB.
+ * push costs the same on average; a history that kept every request, with
+ * its variables and response data, would hold well over 100 MB after a
+ * working day at a few requests a second.
  *
  * @param limit - Entries to keep (default 1000)
  * @returns An empty, bounded history

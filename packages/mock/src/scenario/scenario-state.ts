@@ -19,10 +19,9 @@ export interface ScenarioState {
  * The state machine behind `inState` and `transitionTo`.
  *
  * A request picks its handler by the state it arrives in, then waits out its
- * latency before its transition is applied. Applied then without a check, a
- * transition overwrote a scenario applied meanwhile, or moved the state on
- * from one it was no longer in. A transition now holds only when neither
- * happened.
+ * latency before its transition is applied. A transition holds only when no
+ * scenario was applied meanwhile and the state is still the one it moves
+ * on from.
  *
  * @param initial - The state before any transition
  * @returns The state, with its transitions

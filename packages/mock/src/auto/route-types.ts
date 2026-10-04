@@ -3,10 +3,9 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { ChannelShape } from "../server/prefix-route-types";
 
 /**
- * Type definitions for route analysis.
- *
- * Extracted from `route-analyzer.ts` so that types can be imported by helper
- * modules (probe, operation detection) without pulling in the analyzer logic.
+ * The shapes route analysis works with, in a module of their own so its
+ * helpers — probing, operation detection — can name them without the
+ * analyzer.
  */
 
 /** Analyzed route information from a source endpoint */

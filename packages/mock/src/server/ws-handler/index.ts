@@ -45,8 +45,8 @@ export interface MockWSHandler {
   handleUpgrade(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void>;
   /**
    * Close every open channel — each hears `onLeave` — and resolve once they
-   * are closed. Stopping the server used to leave them open and still served,
-   * holding the process open.
+   * are closed, so a stopped server neither serves them nor holds the
+   * process open.
    */
   close(): Promise<void>;
 }

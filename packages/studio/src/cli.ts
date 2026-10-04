@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
 import { defineCommand, runMain } from "citty";
+import { closeOnFatal } from "./close-on-fatal";
 import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
@@ -100,6 +101,7 @@ const main = defineCommand({
       },
     });
     closeOnSignals(server);
+    closeOnFatal(() => server.close());
   },
 });
 

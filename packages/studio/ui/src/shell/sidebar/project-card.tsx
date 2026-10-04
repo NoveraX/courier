@@ -5,12 +5,28 @@ import { Dot } from "@/design/dot";
 import type { AttachedApp } from "@/features/runtimes/attached-apps";
 import { attachedApps } from "@/features/runtimes/attached-apps";
 import { useStudioStore } from "@/store";
+import type { ConnectionStatus } from "@/store/types-ui";
 
-function summaryOf(apps: readonly AttachedApp[], connected: boolean): string {
+interface CardState {
+  /** The apps attached, as Studio last told — none while it cannot say. */
+  apps: AttachedApp[];
+  summary: string;
+  dot: "ok" | "muted" | "err";
+}
+
+/* What the card says: the connection first, since a Studio that cannot be
+   reached cannot vouch for the apps it last listed. */
+function cardState(apps: AttachedApp[], status: ConnectionStatus): CardState {
+  if (status === "connecting") return { apps: [], summary: "connecting…", dot: "muted" };
+  if (status !== "connected") return { apps: [], summary: "Studio unreachable", dot: "err" };
   const [first] = apps;
-  if (!first) return connected ? "no app attached" : "Studio unreachable";
+  if (!first) return { apps, summary: "no app attached", dot: "muted" };
   const more = apps.length > 1 ? ` +${apps.length - 1}` : "";
-  return `${first.id}${first.origin ? ` · ${first.origin}` : ""}${more}`;
+  return {
+    apps,
+    summary: `${first.id}${first.origin ? ` · ${first.origin}` : ""}${more}`,
+    dot: "ok",
+  };
 }
 
 function AppRow({ app }: { app: AttachedApp }): React.ReactNode {
@@ -30,7 +46,8 @@ function AppRow({ app }: { app: AttachedApp }): React.ReactNode {
 
 /**
  * The project Studio runs, by name, and the apps attached to it: the first
- * on the card, all of them in the list it opens.
+ * on the card, all of them in the list it opens — or, while Studio connects
+ * or cannot be reached, that instead.
  *
  * @returns The card
  * @example
@@ -40,9 +57,9 @@ function AppRow({ app }: { app: AttachedApp }): React.ReactNode {
  */
 export function ProjectCard(): React.ReactNode {
   const name = useStudioStore((s) => s.studioInfo?.project.name ?? "Project");
-  const connected = useStudioStore((s) => s.connected);
-  const apps = attachedApps(useStudioStore((s) => s.bindingSnapshot));
-  const dot = apps.length > 0 ? "ok" : connected ? "muted" : "err";
+  const status = useStudioStore((s) => s.connectionStatus);
+  const snapshot = useStudioStore((s) => s.bindingSnapshot);
+  const { apps, summary, dot } = cardState(attachedApps(snapshot), status);
   return (
     <Popover.Root>
       <Popover.Trigger className="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-card border border-line bg-panel px-2.5 text-left text-fg transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand">
@@ -53,7 +70,7 @@ export function ProjectCard(): React.ReactNode {
         <span className="flex min-w-0 flex-1 flex-col gap-px">
           <span className="truncate text-control leading-[1.2] font-strong">{name}</span>
           <span className="truncate font-mono text-micro leading-[1.2] text-fg-subtle">
-            {summaryOf(apps, connected)}
+            {summary}
           </span>
         </span>
         <ChevronsUpDown aria-hidden="true" className="size-3.25 shrink-0 text-fg-subtle" />
@@ -70,7 +87,9 @@ export function ProjectCard(): React.ReactNode {
           </div>
           {apps.length === 0 ? (
             <p className="px-2 pb-2 text-small text-fg-muted">
-              Start your dev server with the Studio plugin, and it attaches here.
+              {dot === "err"
+                ? "Studio cannot be reached; the apps attached show here once it is back."
+                : "Start your dev server with the Studio plugin, and it attaches here."}
             </p>
           ) : (
             <ul>

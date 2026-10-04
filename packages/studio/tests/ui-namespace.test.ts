@@ -81,7 +81,7 @@ describe("setupUiNamespace", () => {
     });
     await vi.waitFor(() => expect(events).toContain("watcher:status"), { timeout: 5000 });
 
-    expect(events).toEqual(["binding:snapshot", "watcher:status"]);
+    expect(events).toEqual(["studio:info", "binding:snapshot", "watcher:status"]);
     const logged = warn.mock.calls.map((call) => call.join(" "));
     expect(
       logged.some((line) => line.includes("Failed to send the project to a UI that connected")),

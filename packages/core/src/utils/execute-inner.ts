@@ -1,3 +1,4 @@
+import { isHTTPError } from "../errors/http-error";
 import type { HttpClient } from "../http-client/index";
 import type { BoundMethodOptions, GroupOptions } from "../http-client/types";
 import type { MiddlewareResponse } from "../middleware/types";
@@ -55,6 +56,7 @@ export async function executeInner(deps: InnerExecuteDeps): Promise<InnerResult>
     deps.dt.onHttpFetchError?.({
       requestId: deps.requestId,
       message: fetchError instanceof Error ? fetchError.message : String(fetchError),
+      ...(isHTTPError(fetchError) && fetchError.status > 0 && { status: fetchError.status }),
       timestamp: Date.now(),
     });
     throw fetchError;

@@ -188,7 +188,8 @@ export interface HttpFetchHooks {
     | ((event: { requestId: string; status: number; duration: number; timestamp: number }) => void)
     | undefined;
 
+  /** A fetch that failed: `status` is the code the upstream answered with, when it answered at all. */
   onHttpFetchError?:
-    | ((event: { requestId: string; message: string; timestamp: number }) => void)
+    | ((event: { requestId: string; message: string; status?: number; timestamp: number }) => void)
     | undefined;
 }

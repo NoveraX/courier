@@ -130,7 +130,7 @@ export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRec
 
   let thrown: unknown;
   try {
-    (probe as (wire: unknown, variables: unknown) => unknown)(recorder, variables);
+    Reflect.apply(probe, undefined, [recorder, variables]);
   } catch (error) {
     // Real variables may be absent, so a closure may still fail after the
     // addressing call has been recorded. Kept in case it was not.

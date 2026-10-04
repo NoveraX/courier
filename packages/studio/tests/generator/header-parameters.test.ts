@@ -1,8 +1,7 @@
 /**
  * An operation's header parameters — a digest, an idempotency key, a
- * precondition — used to be dropped: the generated client had no way to send
- * them, so an operation that requires one could not be called at all. They
- * are now variables of the call, validated with the rest and sent as headers.
+ * precondition — are variables of the call, validated with the rest and sent
+ * as headers, so an operation that requires one can be called.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

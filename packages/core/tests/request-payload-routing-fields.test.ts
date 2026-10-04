@@ -2,10 +2,10 @@
  * A multipart proxy call names its endpoint in the URL, and its body holds
  * the call's options and the caller's own fields.
  *
- * The endpoint used to travel as fields of the same body, after the caller's.
- * A form that follows the Laravel and Rails convention of `_method=PUT` was
- * routed to a method called "PUT"; a field named `_source` or `_group`
- * re-routed the call, and one named `_options` was read as the call's options.
+ * The caller's fields never route the call: a form that follows the Laravel
+ * and Rails convention of `_method=PUT` is not routed to a method called
+ * "PUT", a field named `_source` or `_group` does not re-route it, and one
+ * named `_options` is not read as the call's options.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

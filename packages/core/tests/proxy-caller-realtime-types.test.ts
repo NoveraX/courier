@@ -58,8 +58,8 @@ describe("the options argument", () => {
 });
 
 /**
- * Handed the API itself as `source`, the client takes its type from it; it
- * used to come out untyped unless the type was also named.
+ * Handed the API itself as `source`, the client takes its type from it,
+ * without the type also being named.
  */
 describe("a client given the API as its source", () => {
   it("is typed from it without a type argument", () => {

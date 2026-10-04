@@ -1,9 +1,10 @@
 /**
  * An SSE stream served through express, after its client disconnects.
  *
- * The stream used to go on until the lifetime cap — 30 minutes by default —
- * holding its generator, its upstream subscription and its connection slot,
- * and `onSSEDisconnect` then reported "max_lifetime" instead of a disconnect.
+ * The stream ends with its client — not at the lifetime cap, 30 minutes by
+ * default, holding its generator, its upstream subscription and its
+ * connection slot — and `onSSEDisconnect` reports a disconnect, not
+ * "max_lifetime".
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

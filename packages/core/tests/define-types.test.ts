@@ -156,7 +156,7 @@ describe("TypedClient type inference", () => {
   });
 
   it(".with({ stream: true }) resolves to the unread body, or the response around it with .raw", () => {
-    /* Checked by the compiler; a streamed call used to keep the parsed body's type. */
+    /* Checked by the compiler: a streamed call is typed as the stream, not the parsed body. */
     const typeOnly = (client: Client) => {
       expectTypeOf(client.with({ stream: true }).users.getAll).returns.toEqualTypeOf<
         Promise<ReadableStream<Uint8Array>>

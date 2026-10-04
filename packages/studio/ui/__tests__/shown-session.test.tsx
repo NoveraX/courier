@@ -5,8 +5,7 @@
  * A page that loaded a saved session shows it again after a reload: Studio
  * keeps the session shown, and sends it to a page that connects, after the
  * live requests. Going back to live tells Studio, which sends the live
- * requests again. A loaded session used to be the page's alone, and a
- * reload replaced it with the live requests.
+ * requests again.
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";

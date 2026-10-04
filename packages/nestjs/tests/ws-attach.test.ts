@@ -1,9 +1,9 @@
 /**
  * The message limit of `courierWSAttach` on a NestJS application's server.
  *
- * The `ws` frame limit used to equal `maxMessageSize`, so a message over it
- * closed the whole socket with 1009 and ended every subscription on it,
- * before the handler could refuse the one message with a 4413.
+ * The `ws` frame limit sits above `maxMessageSize`, so a message over it
+ * reaches the handler, which refuses the one message with a 4413, rather
+ * than closing the whole socket with 1009 and every subscription on it.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

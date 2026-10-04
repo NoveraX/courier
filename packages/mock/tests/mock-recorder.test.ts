@@ -2,11 +2,10 @@
  * The recorder against real backends: a plain REST API, and a Courier proxy
  * serving one.
  *
- * It used to POST an envelope with no source to `/api/request` whatever the
- * target was, so a REST API answered 404, a Courier server answered 400
- * "method not found", and that failure was recorded as the fixture. Its
- * `mode` was never read, and a failed call threw a plain Error without the
- * status or the body.
+ * It calls each target as that target is called — an endpoint's own method
+ * and path on a REST API, the proxy envelope with its source on a Courier
+ * server — so no refusal is recorded as the fixture; it honours its `mode`;
+ * and a failed call rejects with the status and the body.
  */
 import type { Server } from "node:http";
 import { createServer } from "node:http";

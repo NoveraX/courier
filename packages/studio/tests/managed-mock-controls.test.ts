@@ -2,10 +2,9 @@
  * A managed mock driven by the controls in Studio's Mocks view: the real
  * worker, sent the commands the Network view and the status bar send.
  *
- * Each control changes only what it names. Picking a latency preset or
- * setting a per-route override used to merge `undefined` over every other
- * setting, so an active chaos preset stopped failing requests while the
- * Network view still showed it on.
+ * Each control changes only what it names: picking a latency preset or
+ * setting a per-route override leaves every other setting as it is, so an
+ * active chaos preset goes on failing requests as the Network view shows.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";

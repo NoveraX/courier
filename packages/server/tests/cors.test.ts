@@ -119,8 +119,8 @@ describe("handleCors — the request itself", () => {
   });
 
   /**
-   * Only the preflight used to carry this, so a configured caller passed the
-   * check and then could not read the answer.
+   * The answer carries it as the preflight does, so a configured caller that
+   * passed the check can read the answer.
    */
   it("grants a configured origin permission on the answer, not only the preflight", () => {
     const res = createMockRes();

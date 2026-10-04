@@ -1,8 +1,8 @@
 /**
  * An `allowedOrigins` entry a browser can never send — a trailing slash, a
- * path, the scheme's default port, no scheme — matched nothing, so the page
- * it was written for was refused and nothing said why. Such entries are now
- * refused when the handler is created, naming the form a browser sends.
+ * path, the scheme's default port, no scheme — would match nothing and
+ * refuse the page it was written for without a word, so it is refused when
+ * the handler is created, naming the form a browser sends.
  */
 import { describe, expect, it } from "vitest";
 

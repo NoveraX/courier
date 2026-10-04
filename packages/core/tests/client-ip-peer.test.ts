@@ -2,10 +2,10 @@
  * Which address a WebSocket connection is counted against, when a Node
  * adapter knows the socket's own address.
  *
- * Forwarding headers used to be read from any caller, so one forged
- * `X-Forwarded-For` switched the per-address cap off; and a direct caller
- * that sent none shared a single bucket with every other, so one client
- * holding its quota locked everyone else out.
+ * Forwarding headers are read only from a local or private peer, so a forged
+ * `X-Forwarded-For` does not switch the per-address cap off; and a direct
+ * caller that sends none is counted by its own address, not in one bucket
+ * that one client could fill for everyone.
  */
 import { describe, expect, it } from "vitest";
 

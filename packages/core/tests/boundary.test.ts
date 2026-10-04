@@ -245,9 +245,9 @@ describe("defineBoundary — in-process calls are untouched", () => {
 });
 
 /**
- * Forgetting to expose an endpoint used to surface as a type error deep in
- * user code — a stream fell through to the HTTP executor and failed later as
- * "sub is not async iterable", naming neither the endpoint nor the reason.
+ * Forgetting to expose an endpoint is refused at the call, naming the
+ * endpoint and the reason — not a stream falling through to the HTTP executor
+ * and failing later as "sub is not async iterable".
  */
 describe("defineBoundary — a client says what it cannot call", () => {
   function clientFor(exposed: Record<string, string>) {

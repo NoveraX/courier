@@ -134,8 +134,8 @@ describe("deduplicate on a proxy client given the source", () => {
   });
 
   /**
-   * A boundary used to carry transports alone, so a client built from one
-   * could not tell a read from a write and cancelled both.
+   * A boundary carries whether each endpoint reads or writes, so a client
+   * built from one tells a read from a write and cancels only reads.
    */
   describe("given a boundary instead", () => {
     const boundaryClient = () =>

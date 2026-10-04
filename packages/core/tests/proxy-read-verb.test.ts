@@ -1,11 +1,10 @@
 /**
  * The verb a proxy client sends a call with.
  *
- * Every call went to the proxy as POST unless it asked for GET, and React's
- * hooks never ask, so a read's `.cache()` never reached a browser or a CDN:
- * neither keeps the answer to a POST. A read now goes as GET, its variables
- * in the address, unless its variables are sensitive, it carries a body, or
- * the address would be too long.
+ * A read goes as GET, its variables in the address, unless its variables are
+ * sensitive, it carries a body, or the address would be too long — whether or
+ * not the caller asked, as React's hooks never do — so a read's `.cache()`
+ * reaches a browser and a CDN, neither of which keeps the answer to a POST.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

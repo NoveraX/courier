@@ -4,8 +4,8 @@
  *
  * A request Studio cannot read is answered 400 with the reason, never 500,
  * and a `.courier/sessions` that is a link is refused like any folder Studio
- * keeps in `.courier`: it used to list, read, write and delete JSON files
- * wherever the link pointed.
+ * keeps in `.courier`, so no JSON file is listed, read, written or deleted
+ * wherever the link points.
  */
 import {
   mkdirSync,

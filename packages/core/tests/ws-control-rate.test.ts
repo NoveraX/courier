@@ -1,10 +1,10 @@
 /**
- * Subscribe, unsubscribe and auth frames against a flood. They were exempt
- * from the per-connection rate limit, with no limit of their own, so one
- * socket could send them without end — each an auth check, a schema read or
- * a registry change on the server. They are now counted apart from the
- * other messages, up to twice `maxSubscriptionsPerConnection` a second: a
- * client that renews every subscription at once is never refused.
+ * Subscribe, unsubscribe and auth frames against a flood. Each is an auth
+ * check, a schema read or a registry change on the server, so they are
+ * counted — apart from the other messages, up to twice
+ * `maxSubscriptionsPerConnection` a second: a client that renews every
+ * subscription at once is never refused, and one socket cannot send them
+ * without end.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";

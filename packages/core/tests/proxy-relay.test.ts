@@ -1,8 +1,7 @@
 /**
  * A proxy relays a stream or a channel another server serves: a browser
  * reaches a third party's stream through its own server, which opens it with
- * the source's credentials. The proxy used to refuse both with 400,
- * "describes where to connect rather than serving the stream".
+ * the source's credentials.
  */
 import {
   createServer,

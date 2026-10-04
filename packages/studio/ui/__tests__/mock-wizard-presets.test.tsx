@@ -1,7 +1,7 @@
 /**
  * The Configure step lists the scenarios every mock serves. Each line says
- * what the scenario does: slow-network delays the read endpoints only, and
- * the step used to say it slows every endpoint.
+ * what the scenario does: slow-network delays the read endpoints only, not
+ * every endpoint.
  */
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";

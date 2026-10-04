@@ -1,15 +1,15 @@
 /**
  * The Studio Vite plugin, driven through a real Vite dev server.
  *
- * It used to inject an inline `<script type="module">` from
- * `transformIndexHtml`. Vite does not rewrite imports in a tag added that way,
- * so the browser was handed the bare `@noverax/courier-studio-core/runtime`
- * and refused to load it; frameworks that render their own HTML — SvelteKit,
- * React Router, SolidStart — never ran the hook at all.
+ * It does not inject an inline `<script type="module">` from
+ * `transformIndexHtml`: Vite does not rewrite imports in a tag added that way,
+ * so the browser would be handed the bare
+ * `@noverax/courier-studio-core/runtime`, and frameworks that render their own
+ * HTML — SvelteKit, React Router, SolidStart — never run that hook.
  *
- * It read courier.config from the working directory, so `vite apps/web`, run
- * from above the app, sent the browser to the default Studio address instead
- * of the one the app's config names.
+ * It reads courier.config from Vite's root, not the working directory, so
+ * `vite apps/web`, run from above the app, sends the browser to the Studio
+ * address the app's config names.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

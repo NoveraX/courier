@@ -2,10 +2,9 @@
  * Which timeout a call runs under.
  *
  * A timeout given for one call is the most specific, then the endpoint's
- * own `.timeout()`, then the caller's default. The default used to be
- * written into every call's options, where it counted as given for that
- * call, so a client-wide 100 ms cut short an endpoint declared to take two
- * seconds.
+ * own `.timeout()`, then the caller's default — which never counts as given
+ * for the call, so a client-wide 100 ms does not cut short an endpoint
+ * declared to take two seconds.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

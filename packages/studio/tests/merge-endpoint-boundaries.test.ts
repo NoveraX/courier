@@ -1,10 +1,8 @@
 /**
  * Where an endpoint of a file on disk ends, when a new import is merged into
- * it. Counting brackets line by line, a chain written over several lines was
- * cut at the first line whose brackets balanced — its variables, answer and
- * `.reads()` silently gone — and a bracket in a comment or a string moved
- * where an endpoint ended, writing endpoints twice. The endpoints are now
- * read from the file's syntax.
+ * it: read from the file's syntax, so a chain written over several lines
+ * keeps its variables, answer and `.reads()`, and a bracket in a comment or a
+ * string does not move where an endpoint ends.
  */
 import { describe, expect, it } from "vitest";
 

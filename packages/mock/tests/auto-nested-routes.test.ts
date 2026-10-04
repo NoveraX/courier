@@ -2,10 +2,10 @@
  * Routes whose path mixes parameters with fixed segments, served by the auto
  * mock at the path they declare.
  *
- * Only the collection root and a single `:id` segment used to be served: a
- * path with a fixed segment after the parameter answered "Route not found",
- * a POST on one was classified as a create, and a lookup such as
- * `by-email/:email` read an `id` no such request carries.
+ * A path with a fixed segment after the parameter is served, not answered
+ * "Route not found"; a POST on one is not taken for a create; and a lookup
+ * such as `by-email/:email` reads the parameter it names, not an `id` no
+ * such request carries.
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

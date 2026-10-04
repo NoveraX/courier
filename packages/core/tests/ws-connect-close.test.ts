@@ -1,11 +1,10 @@
 /**
  * A WebSocket client that leaves while `onConnect` is still running.
  *
- * The socket's close listener used to be attached only once `onConnect`
- * resolved, so a close during it was missed: the connection stayed in the
- * registry, its heartbeat timer ran for good, `onDisconnect` never ran and the
- * address kept the slot. A handful of clients giving up during a slow token
- * lookup locked their address out for the life of the process.
+ * A close during `onConnect` is heard: the connection leaves the registry,
+ * its heartbeat timer stops, `onDisconnect` runs and the address gets its
+ * slot back, so clients giving up during a slow token lookup do not lock
+ * their address out for the life of the process.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 

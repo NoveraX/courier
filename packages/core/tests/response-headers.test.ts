@@ -1,11 +1,9 @@
 /**
- * What of an upstream response reaches the browser.
- *
- * A streamed answer used to hand over the upstream's headers untouched, so
- * anything it attached — an internal trace id, a backend secret — was
- * disclosed. A buffered one was filtered against the *request*-direction
- * allowlist, which dropped `etag` and `cache-control` while keeping nothing
- * useful. Both directions are pinned here.
+ * What of an upstream response reaches the browser: a streamed answer's
+ * headers are filtered as a buffered one's are, so nothing the upstream
+ * attached — an internal trace id, a backend secret — is disclosed, and the
+ * response-direction allowlist keeps `etag` and `cache-control`. Both
+ * directions are pinned here.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

@@ -4,11 +4,9 @@
 /**
  * The Explorer shows the API the config declares, as the APIs page lists
  * it, before and after traffic: every source, group and endpoint with its
- * declared path, method and transport, and the middleware that ran.
- *
- * It used to build its graph from traffic alone: "No API sources" until the
- * first call, then only the endpoints called, with paths guessed from URLs
- * (`/faults/404` as `/faults/:id`), and no middleware anywhere.
+ * declared path, method and transport, and the middleware that ran — not a
+ * graph built from traffic alone, empty until the first call, with paths
+ * guessed from URLs (`/faults/404` as `/faults/:id`).
  */
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";

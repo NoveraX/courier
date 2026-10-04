@@ -1,8 +1,7 @@
 /**
  * A body that is a list, a scalar or a map, which the operation does not
- * require — OpenAPI's default — used to be generated as a variable every
- * call had to pass. It may now be left out, and a call without it sends no
- * body; a body the operation requires is still demanded.
+ * require — OpenAPI's default — may be left out, and a call without it sends
+ * no body; a body the operation requires is demanded.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

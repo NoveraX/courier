@@ -61,9 +61,9 @@ describe("cache directives", () => {
   });
 
   /**
-   * The decision used to read the forwarded set, so a credential the allowlist
-   * does not carry upstream was invisible to it — and the answer went out
-   * marked cacheable by every CDN in between.
+   * The decision reads the request's own headers, not the forwarded set, so a
+   * credential the allowlist does not carry upstream still makes the answer
+   * private rather than cacheable by every CDN in between.
    */
   it("keeps a response private when the credential never reached the upstream", () => {
     const headers = headersOf(

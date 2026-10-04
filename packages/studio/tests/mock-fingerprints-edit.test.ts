@@ -1,7 +1,7 @@
 /**
  * The wizard names the running mocks an edit restarts: those whose
  * declaration, or what it uses, the edit changes — none when it only adds a
- * mock. It used to name every running mock.
+ * mock, not every running mock.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

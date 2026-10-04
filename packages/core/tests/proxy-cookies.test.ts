@@ -1,13 +1,11 @@
 /**
  * Which cookies cross the proxy, over real HTTP.
  *
- * The proxy used to hand every upstream the browser's whole Cookie header
- * and every page the upstream's Set-Cookie. A source that points at a third
- * party then received the application's own session, and could set cookies
- * on the application's origin. Now neither crosses unless the source, a
- * base its endpoints extend, or the endpoint itself names it: `cookie` for
- * the browser's cookies going up, `set-cookie` for the upstream's coming
- * back.
+ * Neither crosses unless the source, a base its endpoints extend, or the
+ * endpoint itself names it — `cookie` for the browser's cookies going up,
+ * `set-cookie` for the upstream's coming back — so a source that points at
+ * a third party receives no session of the application's and sets no cookie
+ * on its origin.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

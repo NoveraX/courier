@@ -1,7 +1,7 @@
 /**
  * The Timeline's search finds a request by the dotted name its row shows —
- * `api.users.create` — and by any part of it. Each field used to be matched
- * on its own, so only a single word ("create") found anything.
+ * `api.users.create` — and by any part of it, not only by a single word
+ * ("create") matched against one field.
  */
 import { describe, expect, it } from "vitest";
 

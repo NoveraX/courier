@@ -3,7 +3,7 @@
  */
 /**
  * A request the cache middleware answered is shown as served from the
- * cache; it used to look like any other 200, fetch time 0µs.
+ * cache, not as any other 200 with a fetch time of 0µs.
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

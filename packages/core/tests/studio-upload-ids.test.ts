@@ -2,10 +2,9 @@
  * The Studio row an upload is shown in.
  *
  * A caller measures its upload's progress before the proxy has seen the call,
- * and reported it under an id of its own that no other event of the call
- * carried, so Studio could not tell which request was uploading. The proxy
- * now adopts the id the caller sends, and a direct call reports its progress
- * under the id its `request:start` carries.
+ * so the proxy adopts the id the caller sends, and Studio shows the progress
+ * on the request's own row; a direct call reports its progress under the id
+ * its `request:start` carries.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

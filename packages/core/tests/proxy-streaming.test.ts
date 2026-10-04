@@ -1,8 +1,8 @@
 /**
  * What a proxy client refuses where a stream or a channel is called. Their
- * client code loads on the first call, and a proxy path that could not be
- * resolved used to reach the caller only after it had loaded, as a client
- * that "could not be loaded".
+ * client code loads on the first call, and a proxy path that cannot be
+ * resolved is refused at the call, before it loads — not afterwards, as a
+ * client that "could not be loaded".
  */
 import { describe, expect, it } from "vitest";
 import { defineApi } from "../src/define/api";

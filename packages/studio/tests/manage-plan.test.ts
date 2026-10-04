@@ -1,8 +1,8 @@
 /**
- * Managing an import's endpoints names only endpoints its files hold. An
- * endpoint to remove that the files do not hold was answered 200 with a
- * plan that changed nothing, and applied as such, while one to add that the
- * spec does not generate was refused: both are now refused with 400.
+ * Managing an import's endpoints names only endpoints its files hold: an
+ * endpoint to remove that the files do not hold, and one to add that the
+ * spec does not generate, are both refused with 400, not planned as a change
+ * that changes nothing.
  */
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

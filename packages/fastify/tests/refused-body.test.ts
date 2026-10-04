@@ -2,9 +2,9 @@
  * A proxy request refused before its body is read, sent the way a browser
  * sends it: the whole body first, the response read only afterwards.
  *
- * The refusal used to wait on the body nobody read until Fastify's
- * keep-alive timer closed the socket, 72 seconds by default, so every
- * over-limit upload from a browser took 73 seconds to fail.
+ * The refusal does not wait on the body nobody reads until Fastify's
+ * keep-alive timer closes the socket, 72 seconds by default: an over-limit
+ * upload from a browser fails at once.
  */
 import { once } from "node:events";
 import { type AddressInfo, connect } from "node:net";

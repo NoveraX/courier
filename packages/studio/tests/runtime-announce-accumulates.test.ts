@@ -1,8 +1,7 @@
 /**
  * Adapters announce one transport at a time — `courierHandler` announces http,
- * `courierSSEHandler` sse, `courierWSAttach` ws. Each announce used to detach
- * everything the runtime had claimed before re-attaching, so only the last one
- * survived and Studio showed every other transport as orphaned.
+ * `courierSSEHandler` sse, `courierWSAttach` ws. Each announce adds to what the
+ * runtime claimed, so every transport stays bound, not only the last one.
  */
 
 import type { Namespace } from "socket.io";

@@ -2,9 +2,9 @@
  * What a client reads, and the server keeps, when `onConnect` or
  * `onSSEConnect` throws — end to end on real servers.
  *
- * The thrown error stays on the server, where it is logged: it may carry a
- * connection string or a token, so the client reads a fixed reason instead.
- * `onSSEConnect`'s error used to be dropped without a trace.
+ * The thrown error stays on the server, where it is logged — `onSSEConnect`'s
+ * as well as `onConnect`'s: it may carry a connection string or a token, so
+ * the client reads a fixed reason instead.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

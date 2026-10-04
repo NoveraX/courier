@@ -1,11 +1,9 @@
 /**
  * What Studio learns about a proxied upload, and when, over real HTTP.
  *
- * The endpoint used to sit at the end of a multipart body, so the proxy knew
- * which call an upload was for only once all of it had arrived: Studio showed
- * nothing while a large upload was on its way, and nothing at all for one the
- * proxy refused with 413. A call now names its endpoint in its URL and is
- * announced as it arrives.
+ * A call names its endpoint in its URL, not at the end of a multipart body,
+ * so it is announced as it arrives: Studio shows a large upload while it is
+ * on its way, and one the proxy refuses with 413.
  */
 import { createServer, request as httpRequest, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

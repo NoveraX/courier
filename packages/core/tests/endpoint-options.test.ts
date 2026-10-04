@@ -243,3 +243,12 @@ describe("policies an endpoint declares", () => {
     expect(seen).toEqual(["inherits"]);
   });
 });
+
+describe("a base's configuration", () => {
+  it("names no id: it was documented for tooling, and nothing read it", () => {
+    // @ts-expect-error — a base takes middleware, headers and defaults, not an id
+    const base = courier({ id: "vendor" });
+
+    expect(Object.keys(base)).toEqual(["endpoint", "stream", "channel", "extend"]);
+  });
+});

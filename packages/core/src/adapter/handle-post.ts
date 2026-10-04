@@ -49,7 +49,7 @@ export function createPostHandler(
       return errorResponse(400, "Missing required params: _s, _m");
     }
 
-    const call = announceProxyCall(dt, "POST", routing, studioRequestIdOf(request));
+    const call = announceProxyCall(dt, "POST", routing, studioRequestIdOf(request.headers));
     const read = await readEnvelope(request, config);
     if (!read.ok) {
       call.refused(read.status, read.message);

@@ -1,7 +1,11 @@
 import { HTTPError } from "../errors";
 import { studioHooks } from "../studio";
 import { reportingUploads, uploadProgressOf } from "../studio/report-upload";
-import { newStudioRequestId, STUDIO_REQUEST_HEADER } from "../studio/studio-request-id";
+import {
+  newStudioRequestId,
+  STUDIO_REQUEST_HEADER,
+  studioRequestIdOf,
+} from "../studio/studio-request-id";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { isRecord } from "../utils/is-record";
@@ -71,14 +75,16 @@ function emitClientTiming(response: Response, t0: number, tHeaders: number): voi
  *
  * The progress is measured here, before the proxy has seen the call, so the
  * call carries the Studio request id it is reported under and the proxy
- * adopts it: Studio then shows one row for the upload and the call.
+ * adopts it: Studio then shows one row for the upload and the call. An id
+ * the caller named already is kept, so a caller that looks for its call by
+ * that id — Studio's Playground — finds the upload too.
  */
 function withUploadInstrumentation(options: Record<string, unknown>): Record<string, unknown> {
   const onUploadProgress = uploadProgressOf(options);
   if (!onUploadProgress || !studioHooks.onUploadProgress) return options;
 
-  const requestId = newStudioRequestId();
   const headers = headersOf(options.headers);
+  const requestId = studioRequestIdOf(headers) ?? newStudioRequestId();
   headers.set(STUDIO_REQUEST_HEADER, requestId);
   const routing = options.searchParams;
   const named = (key: string): string | undefined => {

@@ -47,7 +47,7 @@ export function createGetHandler(
     const routing = readRouting(url);
     if (!routing) return errorResponse(400, "Missing required params: _s, _m");
 
-    const call = announceProxyCall(dt, "GET", routing, studioRequestIdOf(request));
+    const call = announceProxyCall(dt, "GET", routing, studioRequestIdOf(request.headers));
     const decoded = parseWireVariables(url.searchParams.get(WIRE_VARIABLES_KEY));
     if (!decoded.ok) return refuse(call, decoded.reason);
     const accepted = parseWireOptionsJson(url.searchParams.get("_o"));

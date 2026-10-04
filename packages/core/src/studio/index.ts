@@ -6,3 +6,4 @@ export {
   registerPlaygroundAbort,
 } from "./playground-abort-registry";
 export { generateRequestId, studioHooks } from "./singleton";
+export { STUDIO_REQUEST_HEADER } from "./studio-request-id";

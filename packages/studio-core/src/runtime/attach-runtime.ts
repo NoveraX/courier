@@ -49,6 +49,7 @@
 
 import { attachRuntimeUsing } from "./attach-runtime-core";
 import type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
+import { observeNodeHttpVersions } from "./http-versions/node-http-versions";
 import { registerFromConfig } from "./register-from-config";
 
 /**
@@ -64,7 +65,7 @@ import { registerFromConfig } from "./register-from-config";
  *   immediately.
  */
 export function attachRuntime(id?: string): Promise<RuntimeHandle> {
-  return attachRuntimeUsing(registerFromConfig, id);
+  return attachRuntimeUsing(registerFromConfig, id, observeNodeHttpVersions);
 }
 
 export { _resetRuntimeHandlesForTests } from "./attach-runtime-core";

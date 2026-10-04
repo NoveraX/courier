@@ -16,6 +16,7 @@ export type {
   HttpFetchEndEvent,
   HttpFetchErrorEvent,
   HttpFetchStartEvent,
+  HttpVersion,
 } from "./http";
 export type {
   MiddlewareEnterEvent,

@@ -16,6 +16,7 @@
  */
 
 import type { EventBus } from "../../event-bus";
+import type { HttpVersions } from "../http-versions/http-version";
 import { wireCacheHooks } from "./http-cache";
 import { wireFetchHooks } from "./http-fetch";
 import { wireDedupUploadHooks } from "./http-misc";
@@ -37,13 +38,14 @@ export function wireHooks(
   wireStreamHooks(bus, sessionId, resolveSourceName);
 }
 
-/** Wire HTTP, proxy, cache, dedup, and upload hooks to the bus. */
+/** Wire HTTP, proxy, cache, dedup, and upload hooks to the bus, each answer told with the HTTP version it came over when known. */
 export function wireHttpHooks(
   bus: EventBus,
   sessionId: string,
   resolveSourceName: (name: string) => string,
+  versions?: HttpVersions | undefined,
 ): void {
-  wireFetchHooks(bus, sessionId);
+  wireFetchHooks(bus, sessionId, versions);
   wireProxyHooks(bus, sessionId, resolveSourceName);
   wireCacheHooks(bus, sessionId);
   wireDedupUploadHooks(bus, sessionId);

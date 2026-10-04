@@ -1,5 +1,6 @@
 import { attachRuntimeUsing } from "./attach-runtime-core";
 import type { RuntimeHandle } from "./attach-runtime-types";
+import { observeBrowserHttpVersions } from "./http-versions/browser-http-versions";
 
 /**
  * Connect this browser bundle to a Studio dev server — the build of
@@ -13,5 +14,5 @@ import type { RuntimeHandle } from "./attach-runtime-types";
  * @returns The runtime's handle.
  */
 export function attachRuntime(id?: string): Promise<RuntimeHandle> {
-  return attachRuntimeUsing(undefined, id);
+  return attachRuntimeUsing(undefined, id, observeBrowserHttpVersions);
 }

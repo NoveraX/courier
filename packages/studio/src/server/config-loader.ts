@@ -22,6 +22,7 @@ import { findCourierMocks } from "./find-courier-mocks";
 import { hashStillOnDisk } from "./hash-still-on-disk";
 import { type LocatedCourierMocks, locateCourierMocks } from "./locate-courier-mocks";
 import { messageOf } from "./message-of";
+import { observedTransforms } from "./observed-transforms";
 import { type LoadedCourierMocks, readCourierMocks } from "./read-courier-mocks";
 import { readEntryNames } from "./read-entry-names";
 import type { ProjectInputs } from "./read-project-inputs";
@@ -56,6 +57,14 @@ export interface LoadedCourierConfig {
   depHashes: ProjectInputs;
   /** The mocks Studio runs, from `courier.mocks.*` beside the config. */
   mocks: LoadedCourierMocks;
+  /**
+   * Each module the load evaluated as the loader read it — the config, the
+   * mocks file and every module transpiled for them — with the hash of the
+   * text it evaluated: what tells a save that landed between the read of
+   * `depHashes` and the evaluation, and whether a file saved since still
+   * holds what Studio runs. A module Node runs itself is not in it.
+   */
+  evaluated: ReadonlyMap<string, string>;
 }
 
 /** How `loadCourierConfig` transforms the project's modules. */
@@ -101,7 +110,8 @@ export interface LoadCourierConfigOptions {
  * carried by every `ConfigLoaderError` thrown after that read. The mocks
  * file's hash is that one read's, so a save that lands at any moment of the
  * load leaves a file whose bytes differ from the ones recorded, unless a
- * second save restores them.
+ * second save restores them; what each transpiled module held when it was
+ * evaluated is returned too (`evaluated`), which tells even that apart.
  *
  * @param projectRoot - The directory holding `courier.config.*`
  * @param options - Where transforms are reused (default: Studio's cache for
@@ -128,9 +138,10 @@ export async function loadCourierConfig(
   onInputs?.(depHashes);
   const mocks = locateCourierMocks(foundMocks, depHashes);
 
+  const observed = observedTransforms(transformCache);
   let evaluated: EvaluatedCourierFiles;
   try {
-    evaluated = await evaluateCourierFiles(configFile, loadable(mocks), transformCache);
+    evaluated = await evaluateCourierFiles(configFile, loadable(mocks), observed.cache);
   } catch (err) {
     throw new ConfigLoaderError(
       "CONFIG_INVALID",
@@ -149,6 +160,7 @@ export async function loadCourierConfig(
     deps: [...depHashes.keys()],
     depHashes,
     mocks: readCourierMocks(mocks, evaluated),
+    evaluated: observed.evaluated,
   };
 }
 

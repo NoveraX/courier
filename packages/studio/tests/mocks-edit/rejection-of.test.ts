@@ -23,6 +23,7 @@ function loaded(
     contentHash: null,
     deps: [],
     depHashes: new Map(),
+    evaluated: new Map<string, string>(),
     mocks: { file: FILE, entries, contentHash: null, error: null },
   };
 }

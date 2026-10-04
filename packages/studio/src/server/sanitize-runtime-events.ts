@@ -69,6 +69,20 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0;
 }
 
+/**
+ * Whether a value is a runtime id as a runtime's hello may name one.
+ *
+ * @param value - The value to check
+ * @returns `true` for a well-formed runtime id
+ * @example
+ * ```ts
+ * isRuntimeId("next-server"); // → true
+ * ```
+ */
+export function isRuntimeId(value: unknown): value is string {
+  return typeof value === "string" && RUNTIME_ID_PATTERN.test(value);
+}
+
 function isRuntimeKind(value: unknown): value is "browser" | "server" {
   return value === "browser" || value === "server";
 }
@@ -85,9 +99,7 @@ function isBindingTransport(value: unknown): value is BindingTransport {
  */
 export function sanitizeRuntimeHello(raw: unknown): SanitizedRuntimeHello | undefined {
   if (!isPlainObject(raw)) return undefined;
-  if (!isNonEmptyString(raw.runtimeId) || !RUNTIME_ID_PATTERN.test(raw.runtimeId)) {
-    return undefined;
-  }
+  if (!isRuntimeId(raw.runtimeId)) return undefined;
   if (!isRuntimeKind(raw.kind)) return undefined;
   const result: SanitizedRuntimeHello = { runtimeId: raw.runtimeId, kind: raw.kind };
   if (typeof raw.listenOrigin === "string" && isSafeHttpOrigin(raw.listenOrigin)) {

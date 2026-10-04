@@ -18,6 +18,7 @@ import type { BindingTransport } from "./catalog/binding-table";
 import { hasDangerousKeys } from "./has-dangerous-keys";
 import { isPlainObject } from "./is-plain-object";
 import { type PlaygroundFormField, sanitizeForm } from "./playground-form";
+import { isRuntimeId } from "./sanitize-runtime-events";
 
 export interface PlaygroundExecPayload {
   rid: string;
@@ -31,6 +32,8 @@ export interface PlaygroundExecPayload {
   headers?: Record<string, string>;
   /** A form to send as the body, in place of the variables */
   form?: PlaygroundFormField[];
+  /** The runtime that made the request a replay runs again, which runs it if it can. */
+  runtimeId?: string;
 }
 
 export function sanitizeExec(raw: unknown): PlaygroundExecPayload | null {
@@ -58,6 +61,7 @@ export function sanitizeExec(raw: unknown): PlaygroundExecPayload | null {
     mode: raw.mode === "proxy" ? "proxy" : "direct",
     variables: raw.variables,
     ...(headers && { headers }),
+    ...(isRuntimeId(raw.runtimeId) && { runtimeId: raw.runtimeId }),
   };
 }
 

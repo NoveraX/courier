@@ -123,7 +123,9 @@ export function createRuntimePlaygroundRouter(
     };
     if (payload.transport === "http") armTimeout(payload.rid, entry);
     inFlight.set(payload.rid, entry);
-    socket.emit("playground:execute", payload);
+    /* Which runtime runs the call is Studio's to decide; the runtime is sent the call only. */
+    const { runtimeId: _preferred, ...call } = payload;
+    socket.emit("playground:execute", call);
   };
 
   /* The entry the UI socket sent under a rid, if it is still in flight. */

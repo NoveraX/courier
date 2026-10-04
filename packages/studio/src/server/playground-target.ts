@@ -12,10 +12,12 @@ export type PlaygroundTarget = { runtimeId: string; socket: Socket } | { refusal
  * its source on its transport and presented this project's Studio token. A
  * runtime without the token may be any process on the machine, and a call
  * hands it the headers typed into it, so it is never sent one; nor does its
- * claim stand in the way of the runtime that has the token.
+ * claim stand in the way of the runtime that has the token. A replay names
+ * the runtime that made the request, which runs it again while it is there
+ * and holds the token — an app that only calls an API hosts nothing.
  *
  * @param bindingTable - Which runtimes claim which sources
- * @param payload - The call's source and transport
+ * @param payload - The call's source and transport, and the runtime a replay prefers
  * @returns The runtime and its socket, or why no runtime can take the call
  *
  * @example
@@ -26,8 +28,10 @@ export type PlaygroundTarget = { runtimeId: string; socket: Socket } | { refusal
  */
 export function playgroundTarget(
   bindingTable: BindingTable,
-  payload: { source: string; transport: "http" | "sse" | "ws" },
+  payload: { source: string; transport: "http" | "sse" | "ws"; runtimeId?: string | undefined },
 ): PlaygroundTarget {
+  const preferred = payload.runtimeId === undefined ? undefined : reachable(payload.runtimeId);
+  if (preferred) return preferred;
   const { source, transport } = payload;
   const claimants = bindingTable.claimantsOf(source, transport);
   if (claimants.length === 0) {
@@ -50,6 +54,13 @@ export function playgroundTarget(
   }
   if (!chosen.socket.connected) return { refusal: `Runtime ${chosen.id} is not reachable` };
   return { runtimeId: chosen.id, socket: chosen.socket };
+}
+
+/* The runtime a replay names, when it can take a Playground call now. */
+function reachable(runtimeId: string): { runtimeId: string; socket: Socket } | undefined {
+  const entry = getRuntimeEntry(runtimeId);
+  if (!entry || !isTrustedRuntime(entry.socket) || !entry.socket.connected) return undefined;
+  return { runtimeId, socket: entry.socket };
 }
 
 function untrusted(runtimeIds: readonly string[], source: string): string {

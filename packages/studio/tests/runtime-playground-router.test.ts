@@ -95,6 +95,59 @@ describe("createRuntimePlaygroundRouter", () => {
     expect(router._inFlightSize()).toBe(1);
   });
 
+  it("runs a replay on the runtime that made the request, though another hosts the source", () => {
+    const { runtimeSock, ui, router } = setupRouter();
+    const caller = makeRuntimeSocket("rt-sock-2", FIXED_TOKEN_VALUE);
+    admitRuntimeSocket(caller as never, FIXED_TOKEN);
+    registerRuntime({
+      runtimeId: "script",
+      kind: "server",
+      socket: caller as never,
+      transports: [],
+      sourceNames: [],
+    });
+
+    router.dispatch(ui as never, {
+      rid: "r-replay",
+      source: "api",
+      group: "feed",
+      method: "ticks",
+      transport: "sse",
+      runtimeId: "script",
+    });
+
+    expect(runtimeSock.emit).not.toHaveBeenCalled();
+    expect(caller.emit).toHaveBeenCalledWith(
+      "playground:execute",
+      expect.objectContaining({ rid: "r-replay", transport: "sse" }),
+    );
+    expect(caller.emit.mock.calls[0]?.[1]).not.toHaveProperty("runtimeId");
+  });
+
+  it("runs a replay where the source is hosted when the runtime it names is gone or untrusted", () => {
+    const { runtimeSock, ui, router } = setupRouter();
+    const stranger = makeRuntimeSocket("rt-sock-3");
+    registerRuntime({
+      runtimeId: "stranger",
+      kind: "server",
+      socket: stranger as never,
+      transports: [],
+      sourceNames: [],
+    });
+    const call = { source: "api", group: "users", method: "list", transport: "http" };
+
+    router.dispatch(ui as never, { ...call, rid: "r-gone", runtimeId: "gone" });
+    router.dispatch(ui as never, { ...call, rid: "r-stranger", runtimeId: "stranger" });
+    router.dispatch(ui as never, { ...call, rid: "r-malformed", runtimeId: "not an id!" });
+
+    expect(stranger.emit).not.toHaveBeenCalled();
+    expect(runtimeSock.emit.mock.calls.map((c) => c[1].rid)).toEqual([
+      "r-gone",
+      "r-stranger",
+      "r-malformed",
+    ]);
+  });
+
   it("emits playground:error to UI when binding is orphan", () => {
     const bindingTable = new BindingTable();
     const ui = makeUiSocket("ui-1");

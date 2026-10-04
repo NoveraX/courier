@@ -8,6 +8,7 @@ export type EventType =
   | "request:error"
   | "http:fetch:start"
   | "http:fetch:end"
+  | "http:fetch:error"
   | "middleware:enter"
   | "middleware:exit"
   | "middleware:error"

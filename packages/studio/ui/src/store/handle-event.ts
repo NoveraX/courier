@@ -8,8 +8,8 @@ import {
 import { withProxyParse, withRepeatedStart } from "./handle-proxy-events";
 import {
   requestFromStart,
-  withFetchEnd,
   withFetchStart,
+  withHttpVersion,
   withProxyClientTiming,
   withRequestEnd,
   withRequestError,
@@ -89,7 +89,8 @@ const ENTRY_CHANGES: ReadonlyMap<string, EntryChange> = new Map<string, EntryCha
   ["middleware:exit", withMiddlewareExit],
   ["middleware:error", withMiddlewareError],
   ["http:fetch:start", withFetchStart],
-  ["http:fetch:end", withFetchEnd],
+  ["http:fetch:end", withHttpVersion],
+  ["http:fetch:error", withHttpVersion],
   ["proxy:client-timing", withProxyClientTiming],
   ["stream:message", withStreamMessage],
   ["stream:close", withStreamClose],

@@ -25,4 +25,8 @@ export interface HttpFetchErrorEvent extends StudioEvent {
   type: "http:fetch:error";
   requestId: string;
   message: string;
+  /** The code the upstream answered with, when the failure is an answer. */
+  status?: number;
+  /** The version that answer came over, when the runtime could tell. */
+  httpVersion?: HttpVersion;
 }

@@ -46,6 +46,18 @@ describe("the HTTP version of a request", () => {
     expect(request?.httpVersion).toBeUndefined();
   });
 
+  it("is kept from an answer that failed the request", () => {
+    useStudioStore
+      .getState()
+      .handleEvents([
+        event("request:start", { source: "api", group: "users", method: "list", mode: "direct" }),
+        event("http:fetch:start", { url: "https://api.example.com/users", method: "GET" }),
+        event("http:fetch:error", { message: "HTTP 404", status: 404, httpVersion: "HTTP/1.1" }),
+      ]);
+
+    expect(useStudioStore.getState().requests[0]?.httpVersion).toBe("HTTP/1.1");
+  });
+
   it("comes back with a saved session", () => {
     answered("HTTP/3");
     const [request] = useStudioStore.getState().requests;

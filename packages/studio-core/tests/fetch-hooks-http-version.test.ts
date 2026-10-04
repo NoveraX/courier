@@ -16,7 +16,7 @@ afterEach(() => {
   delete studioHooks.onHttpFetchError;
 });
 
-function fetched(url: string, version: "HTTP/2" | undefined): AnyStudioEvent[] {
+function wired(url: string, version: "HTTP/2" | undefined): AnyStudioEvent[] {
   const bus = new EventBus();
   const events: AnyStudioEvent[] = [];
   bus.on((event) => events.push(event));
@@ -25,6 +25,11 @@ function fetched(url: string, version: "HTTP/2" | undefined): AnyStudioEvent[] {
     dispose: () => {},
   });
   studioHooks.onHttpFetchStart?.({ requestId: "r1", timestamp: 1, url, method: "GET" });
+  return events;
+}
+
+function fetched(url: string, version: "HTTP/2" | undefined): AnyStudioEvent[] {
+  const events = wired(url, version);
   studioHooks.onHttpFetchEnd?.({ requestId: "r1", timestamp: 2, status: 200, duration: 1 });
   return events;
 }
@@ -45,5 +50,31 @@ describe("a fetch's answer", () => {
 
     expect(end).toBeDefined();
     expect(end).not.toHaveProperty("httpVersion");
+  });
+});
+
+describe("a fetch's failure", () => {
+  it("carries the HTTP version of the answer that failed it", () => {
+    const events = wired("https://api.example.com/users", "HTTP/2");
+    studioHooks.onHttpFetchError?.({
+      requestId: "r1",
+      timestamp: 2,
+      message: "HTTP 404",
+      status: 404,
+    });
+
+    expect(events.find((e) => e.type === "http:fetch:error")).toMatchObject({
+      status: 404,
+      httpVersion: "HTTP/2",
+    });
+  });
+
+  it("carries none when no answer came", () => {
+    const events = wired("https://api.example.com/users", "HTTP/2");
+    studioHooks.onHttpFetchError?.({ requestId: "r1", timestamp: 2, message: "fetch failed" });
+
+    const failure = events.find((e) => e.type === "http:fetch:error");
+    expect(failure).toBeDefined();
+    expect(failure).not.toHaveProperty("httpVersion");
   });
 });

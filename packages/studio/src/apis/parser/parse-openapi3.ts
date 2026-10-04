@@ -108,7 +108,9 @@ function groupEndpointsByTag(spec: SpecNode): {
       );
       const tags = declaredTags.length > 0 ? declaredTags : ["default"];
       const [tag = "default"] = tags;
-      const endpoint = parseOpenApi3Operation(path, method, op, spec);
+      const endpoint = parseOpenApi3Operation(path, method, op, spec, (reason) =>
+        skipped.push({ method: method.toUpperCase(), path, reason }),
+      );
       endpoint.tags = tags;
 
       if (!endpointsByTag.has(tag)) endpointsByTag.set(tag, []);

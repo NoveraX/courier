@@ -11,10 +11,10 @@ const TOKEN_REJECTED = { code: 4401, message: "Token rejected" } as const;
 /**
  * Handle an incoming "auth" message — client is refreshing its token.
  * Calls `config.onTokenRefresh` to validate the new token and update connection metadata.
- * An accepted token lifts the deadline `sendAuthRequired` set, which used to
- * close the connection at the timeout even after the client had answered.
- * A rejected one is answered with a 4401 error, and the deadline stands — as
- * is every token on a handler with no `onTokenRefresh` to check it.
+ * An accepted token lifts the deadline `sendAuthRequired` set, so a client
+ * that answered is not closed at the timeout. A rejected one is answered with
+ * a 4401 error, and the deadline stands — as is every token on a handler with
+ * no `onTokenRefresh` to check it.
  */
 export async function handleTokenRefresh(ctx: WSSocketContext, msg: WSMessage): Promise<void> {
   const token = typeof msg.payload === "string" ? msg.payload : undefined;

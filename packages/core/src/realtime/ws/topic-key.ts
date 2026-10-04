@@ -5,10 +5,9 @@
  * A key set to `undefined` (which JSON leaves out) or a `Date` (which JSON
  * turns into a string) reads the same on either side.
  *
- * The key used to be a 32-bit hash of that JSON, and two sets of variables
- * that hashed alike shared one topic: a subscriber could pick variables its
- * own authorization allowed and receive another room's broadcasts. The
- * canonical JSON itself tells every set of variables apart, and is no longer
+ * The canonical JSON itself is the key, not a hash of it: it tells every set
+ * of variables apart, so no subscriber can pick variables its own
+ * authorization allows that collide with another room's, and it is no longer
  * than the subscribe frame that carried it.
  */
 

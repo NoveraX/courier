@@ -28,10 +28,10 @@ export class SSEResponseError extends Error {
  * The event stream a successful response carries, or why it carries none.
  *
  * A route that answers 200 with something else — an SPA's `index.html`
- * fallback, a JSON endpoint — used to be parsed as events anyway. Nothing
- * came of it, the connection counted as one that delivered, and the client
- * reconnected forever without a word. As `EventSource` does, such a response
- * now fails the subscription: asking again would get the same answer.
+ * fallback, a JSON endpoint — fails the subscription, as `EventSource` does:
+ * asking again would get the same answer, and parsed as events it would
+ * count as a connection that delivered while the client reconnected forever
+ * without a word.
  *
  * @param response - A response whose status is 2xx
  * @returns Its body, or the failure to end the subscription with
@@ -55,9 +55,8 @@ export function eventStreamOf(response: Response): ReadableStream<Uint8Array> | 
 
 /**
  * What the server said when it refused: its JSON `message`, or the status
- * text, and the schema's `issues` when it refused invalid variables — which
- * used to be dropped, so an SSE refusal arrived with none where a WebSocket
- * or an HTTP one listed them.
+ * text, and the schema's `issues` when it refused invalid variables, so an
+ * SSE refusal lists them as a WebSocket or an HTTP one does.
  *
  * @param response - A response whose status is not 2xx
  * @returns The refusal, with how long the server asked the client to wait

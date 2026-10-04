@@ -58,7 +58,8 @@ export function dispatchIncomingMessage(ctx: MessageDispatchContext, msg: WSMess
  * The server subscribed the connection under another topic than the one
  * asked for — a default or a transform in its variables schema changed what
  * the topic is qualified from. Everything about the subscription comes on
- * that topic, and used to be dropped as unknown.
+ * that topic, which is taken as the subscription's rather than dropped as
+ * unknown.
  */
 function followRename(ctx: MessageDispatchContext, msg: WSMessage): void {
   const serverTopic = msg.payload;
@@ -88,8 +89,8 @@ function confirmSubscription(ctx: MessageDispatchContext, msg: WSMessage): void 
 }
 
 /**
- * An error about a topic reaches its subscribers, which used to learn of
- * nothing: the client only logged it. Any other error is the connection's.
+ * An error about a topic reaches its subscribers, not only the client's log.
+ * Any other error is the connection's.
  */
 function routeError(ctx: MessageDispatchContext, msg: WSMessage): void {
   const error = failureOf(msg) ?? fromErrorCode(INTERNAL_ERROR, "Unknown server error");

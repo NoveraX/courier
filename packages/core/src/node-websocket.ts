@@ -22,10 +22,10 @@ const DEFAULT_WS_FRAME_LIMIT = 1_048_576;
  * messages up to `maxMessageSize`; `ws` closes the connection with 1009 on a
  * bigger one, before buffering it.
  *
- * It used to equal the message limit, so a message over it closed the socket
- * and ended every subscription on it — the handler's refusal of the one
- * message, a 4413 error on a connection that stays open, was never reached.
- * It now sits well above: 1 MiB, or twice `maxMessageSize` when that is larger.
+ * It sits well above the message limit — 1 MiB, or twice `maxMessageSize`
+ * when that is larger — so a message over that limit reaches the handler,
+ * which refuses the one message with a 4413 error on a connection that stays
+ * open, rather than closing the socket and every subscription on it.
  *
  * @param maxMessageSize - The handler's message limit, in bytes (default 64 KB)
  * @returns The frame limit in bytes
@@ -80,9 +80,9 @@ export interface WebSocketUpgradeOptions {
 /**
  * Answer WebSocket upgrades on a Node HTTP server.
  *
- * Every upgrade on the server used to be taken, whatever its path. An
- * application with a WebSocket of its own then had two handlers accept the
- * same socket, and `ws` threw out of the process on the first connection.
+ * Only upgrades to `path` are taken: an application with a WebSocket of its
+ * own would otherwise have two handlers accept the same socket, and `ws`
+ * throws out of the process on the first connection.
  *
  * Detaching also closes every connection the handler accepted, with 1012 —
  * "service restart", which a Courier client answers by reconnecting later.

@@ -88,10 +88,10 @@ export async function readProxyAnswer(
  * A failure to reach the proxy, as the error a caller can recognise.
  *
  * Offline, a server that is not up, a DNS failure — the commonest failure a
- * browser sees — used to escape as a bare TypeError that `isHTTPError`
- * rejects and `onError` never saw. It is an HTTPError with status 0 and the
- * original as its cause, as in direct mode. A cancellation stays as it was,
- * whatever reason the caller gave for it.
+ * browser sees — is an HTTPError with status 0 and the original as its cause,
+ * as in direct mode, rather than a bare TypeError that `isHTTPError` rejects
+ * and `onError` never sees. A cancellation stays as it was, whatever reason
+ * the caller gave for it.
  *
  * @param error - Whatever the request rejected with
  * @param signal - The call's signal, whose reason a cancellation rejects with

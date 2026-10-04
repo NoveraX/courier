@@ -7,15 +7,14 @@ const pendingBySource = new WeakMap<object, Record<string, AbortController>>();
  * The HTTP client one call runs on.
  *
  * It is built per call, because a call's context decides its headers and
- * path options — but a fresh client meant a fresh, empty in-flight table,
- * so `deduplicate` never cancelled anything. The table now lives as long as
- * the source.
+ * path options, while its in-flight table lives as long as the source: a
+ * fresh, empty table per call would let `deduplicate` cancel nothing.
  *
  * Deduplication only runs in a browser, for a call that did not come off the
  * wire. On a server, requests from different users reach the same endpoint
  * under the same key, and one user's request would cancel another's. It only
  * runs for a read: a write that a newer one superseded has usually been
- * applied by the server, and cancelling it told its caller it had not.
+ * applied by the server, and cancelling it would tell its caller it had not.
  *
  * @param dataSource - The source the call belongs to
  * @param context - The call's context, when it has one

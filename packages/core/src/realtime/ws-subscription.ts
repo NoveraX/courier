@@ -10,8 +10,8 @@ import type { WSConnectionConfig } from "./ws/ws-types";
  * Execute a WS push-only subscription — returns SSESubscription (async iterable).
  * Used for a channel that only pushes.
  *
- * Reads through the same bounded queue as an SSE subscription: every event
- * used to be kept for the subscription's life. Iteration ends when the
+ * Reads through the same bounded queue as an SSE subscription, so its
+ * events are not kept for the subscription's life. Iteration ends when the
  * server finishes the subscription, rejects with the `RealtimeError` it
  * failed or was refused with, and leaving the loop early unsubscribes.
  */

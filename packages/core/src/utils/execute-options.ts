@@ -24,8 +24,8 @@ export function resolveMiddlewareChain(
  * Apply the endpoint's timeout unless the call named one of its own.
  *
  * A value passed at the call site is the most specific and wins, then the
- * endpoint's own, then the caller's default — which used to be written into
- * the call's options and so beat the endpoint's.
+ * endpoint's own, then the caller's default, which is kept apart from the
+ * call's options so it never beats the endpoint's.
  *
  * @param baseOptions - The call's options
  * @param endpointOptions - The endpoint's resolved options
@@ -50,10 +50,9 @@ export function withEndpointTimeout<T extends Partial<BoundMethodOptions>>(
 /**
  * Stop the upstream call when the caller of the proxy goes away.
  *
- * A proxied request used to run to completion after its client had left —
- * a closed tab, a cancelled query — so a busy page held upstream connections
- * nobody was waiting for. The incoming request's signal now joins whatever
- * signal the call already carries.
+ * The incoming request's signal joins whatever signal the call already
+ * carries, so a client that leaves — a closed tab, a cancelled query — does
+ * not leave a busy page holding upstream connections nobody waits for.
  *
  * @param baseOptions - Options for the upstream call
  * @param request - The request that reached the proxy, when there is one

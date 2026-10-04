@@ -65,8 +65,8 @@ export function createPubSubBridge(
 ): PubSubBridge {
   const channels = createPubSubChannels(pubsub);
 
-  /* A failed publish used to reject with no one awaiting it; it is logged,
-     and the local delivery it went with stands. */
+  /* A failed publish is logged rather than left to reject with no one
+     awaiting it, and the local delivery it went with stands. */
   async function publish(channel: string, data: unknown): Promise<void> {
     try {
       await pubsub.publish(channel, data);

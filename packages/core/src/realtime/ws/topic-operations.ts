@@ -31,9 +31,9 @@ export interface TopicOpsContext {
  * first subscriber and of its end when the last one leaves; a topic added
  * while not connected is subscribed when the connection opens.
  *
- * Every subscriber used to send its own `subscribe`, and every one that left
- * an `unsubscribe` — so of two components on the same feed, the first to
- * unmount silenced the other.
+ * One `subscribe` and one `unsubscribe` go for all of a topic's
+ * subscribers, so of two components on the same feed, the first to unmount
+ * does not silence the other.
  */
 export function subscribeToTopic(
   ctx: TopicOpsContext,

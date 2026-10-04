@@ -149,8 +149,8 @@ function handleClose(ctx: LifecycleContext, ev: SocketClosure): void {
 
 /**
  * The server closed the socket over one message larger than it reads. That
- * message is gone and the rest may go on, so the connection reconnects —
- * it used to end every subscription on it — and each subscription hears
+ * message is gone and the rest may go on, so the connection reconnects
+ * rather than ending every subscription on it, and each subscription hears
  * why its socket closed under it.
  */
 function tellOfOversizedMessage(ctx: LifecycleContext, ev: SocketClosure): void {

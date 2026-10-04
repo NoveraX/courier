@@ -42,12 +42,11 @@ function poolKey(url: string, config: object | undefined): string {
 /**
  * Take the shared connection for a URL and options, opening it when there is none.
  *
- * The connection used to stay open after the last subscription on it had
- * ended — heartbeats and all, counted against the server's per-address cap,
- * and keeping a Node process from exiting. Now the last release closes it
- * once it has sat idle for `LIMITS.WS_IDLE_CLOSE_MS`, so a subscription
- * opened straight after another closed, as when a component remounts,
- * reuses it.
+ * The last release closes the connection once it has sat idle for
+ * `LIMITS.WS_IDLE_CLOSE_MS`, so it neither stays open with no subscription —
+ * heartbeats and all, counted against the server's per-address cap, and
+ * keeping a Node process from exiting — nor closes under a subscription
+ * opened straight after another closed, as when a component remounts.
  *
  * @param url - The WebSocket URL
  * @param config - Options of the connection; the same object shares its socket

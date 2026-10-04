@@ -85,7 +85,7 @@ export const buildResponse = (
      made the request — and filtering its `.raw` took away the pagination
      headers, the content type and the cookies it was reading. */
   /* A success may carry `undefined` — a response parser or an
-     after-middleware can produce it — and it used to be thrown as an
+     after-middleware can produce it — and is a success all the same, not an
      "Unknown error". */
   return response.rawData
     ? { status: response.status, headers: response.headers, data: response.data }

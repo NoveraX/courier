@@ -4,10 +4,10 @@ import type { SSERegistryEntry } from "./sse-registry";
 /**
  * The notice a stream gets when its server is going away.
  *
- * It is a control event, not one of the endpoint's: it used to be sent as an
- * event named `shutdown`, which the client handed the app as though the
- * endpoint had sent it, numbered so that a reconnecting client resumed from
- * the notice instead of the last event the stream sent.
+ * It is a control event, not one of the endpoint's: named `courier:shutdown`
+ * so the client does not hand it to the app as though the endpoint had sent
+ * it, and left unnumbered so a reconnecting client resumes from the last
+ * event the stream sent, not from the notice.
  *
  * @param retryMs - How long the client waits before it reconnects
  * @returns The notice, as it goes on the wire

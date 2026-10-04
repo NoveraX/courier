@@ -39,10 +39,11 @@ export interface SSEConnectionCtx<TData> {
  * failed the stream, refused it for good, or `maxAttempts` attempts in a row
  * delivered nothing — or the caller closed it.
  *
- * A stream the server ended used to look like a dropped connection, so a
- * finished stream was reconnected and replayed from the start, forever, and
- * a failure or refusal ended the loop as though the stream had finished.
- * A connection that delivers anything resets the count and the backoff.
+ * A stream the server ended is told apart from a dropped connection, so a
+ * finished stream is not reconnected and replayed from the start, and a
+ * failure or refusal does not end the loop as though the stream had
+ * finished. A connection that delivers anything resets the count and the
+ * backoff.
  */
 export async function runConnectionLoop<TData>(ctx: SSEConnectionCtx<TData>): Promise<void> {
   let failures = 0;

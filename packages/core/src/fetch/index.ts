@@ -72,8 +72,8 @@ async function request<TResponse>(
   });
 
   const type = options?.responseType ?? "json";
-  /* Checked before HEAD returns: a HEAD answered 404 or 401 used to resolve
-     as though the resource were there. */
+  /* Checked before HEAD returns, so a HEAD answered 404 or 401 does not
+     resolve as though the resource were there. */
   if (!response.ok) {
     const data = method === "head" ? null : await readErrorBody(response, type);
     throw new HTTPError({ status: response.status, headers: response.headers, data });

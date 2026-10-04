@@ -139,10 +139,9 @@ function isStorable(response: MiddlewareResponse): boolean {
 /**
  * An answer nobody else holds.
  *
- * The stored answer used to be handed out as it was, so the first caller to
- * edit its result edited every later caller's. Undefined when the data holds
- * something the structured clone algorithm refuses; such an answer is not
- * shared at all.
+ * Each caller gets a copy of the stored answer, so one that edits its result
+ * edits no later caller's. Undefined when the data holds something the
+ * structured clone algorithm refuses; such an answer is not shared at all.
  */
 function copyOf(response: MiddlewareResponse): MiddlewareResponse | undefined {
   try {

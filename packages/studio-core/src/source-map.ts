@@ -34,9 +34,8 @@ export function extractSourceMap(sources: Sources, appOrigin?: string): SourceMa
       for (const [groupName, group] of Object.entries(
         options.groups as Record<string, Record<string, unknown>>,
       )) {
-        const groupOptions = (group as { options?: { prefix?: string } }).options;
         groups[groupName] = {
-          prefix: groupOptions?.prefix ?? "",
+          prefix: prefixOf(group.options),
           endpoints: extractEndpoints(group, mwNames),
         };
       }
@@ -116,4 +115,10 @@ function normalizeHttpMethod(method: string | undefined): string | undefined {
     options: "OPTIONS",
   };
   return map[method] ?? method.toUpperCase();
+}
+
+/* A group's prefix, from options a config written without types may shape freely. */
+function prefixOf(options: unknown): string {
+  if (typeof options !== "object" || options === null || !("prefix" in options)) return "";
+  return typeof options.prefix === "string" ? options.prefix : "";
 }

@@ -147,12 +147,24 @@ function computeExpectedPairs(config: CourierConfig): ExpectedKey[] {
   const out: ExpectedKey[] = [];
   for (const [key, source] of Object.entries(config.sources)) {
     const sourceName = getSourceName(source) ?? key;
-    const proxyPath = (source as { options?: { proxyPath?: Record<string, unknown> } }).options
-      ?.proxyPath;
-    if (!proxyPath || typeof proxyPath !== "object") continue;
+    const proxyPath = proxyPathOf(source);
+    if (!proxyPath) continue;
     for (const transport of ["http", "sse", "ws"] as const) {
       if (proxyPath[transport]) out.push({ sourceName, transport });
     }
   }
   return out;
+}
+
+/* What a source's `proxyPath` declares, read field by field: a config written
+   without types may give it any shape. */
+function proxyPathOf(source: unknown): Record<string, unknown> | undefined {
+  if (typeof source !== "object" || source === null || !("options" in source)) return undefined;
+  const { options } = source;
+  if (typeof options !== "object" || options === null || !("proxyPath" in options))
+    return undefined;
+  const { proxyPath } = options;
+  return typeof proxyPath === "object" && proxyPath !== null
+    ? Object.fromEntries(Object.entries(proxyPath))
+    : undefined;
 }

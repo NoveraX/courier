@@ -3,7 +3,10 @@ import type { ServerState } from "./types";
 
 /** The port a raw definition names, whether or not the rest of it can be read. */
 export function declaredPortOf(definition: unknown): number | undefined {
-  const port = (definition as { port?: unknown } | null)?.port;
+  const port =
+    typeof definition === "object" && definition !== null && "port" in definition
+      ? definition.port
+      : undefined;
   return typeof port === "number" && port > 0 ? port : undefined;
 }
 

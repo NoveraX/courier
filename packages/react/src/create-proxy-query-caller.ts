@@ -130,6 +130,21 @@ function readDefaultsSourceProxyPath(
      `useChannel` each name their transport, so nothing is detected here. */
   if (defaults?.boundary?.proxyPath) return defaults.boundary.proxyPath;
 
-  const apiSource = defaults?.source as { options?: { proxyPath?: ProxyPath } } | undefined;
-  return apiSource?.options?.proxyPath;
+  return proxyPathOf(defaults?.source);
+}
+
+/* The paths the source declares; any other shape declares none. */
+function proxyPathOf(source: unknown): ProxyPath | undefined {
+  if (typeof source !== "object" || source === null || !("options" in source)) return undefined;
+  const { options } = source;
+  if (typeof options !== "object" || options === null || !("proxyPath" in options))
+    return undefined;
+  const { proxyPath } = options;
+  if (typeof proxyPath !== "object" || proxyPath === null) return undefined;
+  const declared: ProxyPath = {};
+  for (const key of ["http", "sse", "ws"] as const) {
+    const value: unknown = Reflect.get(proxyPath, key);
+    if (typeof value === "string") declared[key] = value;
+  }
+  return declared;
 }

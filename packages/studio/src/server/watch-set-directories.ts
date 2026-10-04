@@ -60,7 +60,7 @@ export function groupByDirectory(paths: readonly string[]): TrackedByDirectory {
 }
 
 function classify(err: unknown, path: string): WatchDegradation {
-  const code = (err as { code?: string }).code;
+  const code = typeof err === "object" && err !== null && "code" in err ? err.code : undefined;
   const message = messageOf(err);
   if (code === "ENOSPC") return { kind: "limit", path, message };
   if (code === "EPERM" || code === "EACCES") return { kind: "permission", path, message };

@@ -38,7 +38,7 @@ function entryList(entries: unknown): string[] {
 function entryOf(entry: unknown): string[] {
   if (typeof entry === "string") return [entry];
   if (typeof entry === "object" && entry !== null && "in" in entry) {
-    const source = (entry as { in: unknown }).in;
+    const source = entry.in;
     if (typeof source === "string") return [source];
   }
   return [];

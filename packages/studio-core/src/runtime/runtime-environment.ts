@@ -37,7 +37,8 @@ export function detectDefaultRuntimeId(isBrowser: boolean): string {
 export function timersCanUnref(): boolean {
   const timer = setTimeout(() => {}, 0);
   clearTimeout(timer);
-  return typeof (timer as { unref?: unknown }).unref === "function";
+  const unref: unknown = typeof timer === "object" ? Reflect.get(timer, "unref") : undefined;
+  return typeof unref === "function";
 }
 
 /** The `studio` block of courier.config, as far as the address goes. */

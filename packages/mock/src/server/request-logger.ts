@@ -10,14 +10,20 @@ const log = createLogger("MockServer");
 export type MockLogMode = "silent" | "normal" | "verbose";
 
 /**
- * Create a Hono middleware that logs one line per request: status, method,
- * path and duration.
+ * Create a Hono middleware that logs one line per request — method, path,
+ * status and duration, `GET /users → 404 (3ms)`, the shape of the log
+ * middleware's lines.
  *
- * The line is plain text; the logger colours its prefix where the terminal
- * shows colour, and a log file or pipe gets no escape codes.
+ * The line is plain text; where the terminal shows colour the logger tints
+ * its status by class and lines up the paths, and a log file or pipe gets
+ * no escape codes.
  *
  * @param mode - Which requests to log
  * @returns The middleware
+ * @example
+ * ```ts
+ * app.use("*", createRequestLogger("normal"));
+ * ```
  */
 export function createRequestLogger(mode: MockLogMode): MiddlewareHandler {
   if (mode === "silent") {
@@ -30,6 +36,6 @@ export function createRequestLogger(mode: MockLogMode): MiddlewareHandler {
     const path = new URL(c.req.url).pathname;
     if (mode === "normal" && path.startsWith("/__admin")) return;
     const duration = Math.round(performance.now() - start);
-    log.info(`${c.res.status} ${c.req.method} ${path} ${duration}ms`);
+    log.info(`${c.req.method} ${path} → ${c.res.status} (${duration}ms)`);
   };
 }

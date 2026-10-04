@@ -108,6 +108,26 @@ describe("the shell", () => {
     expect(screen.getByText("vite-browser · localhost:5173")).toBeTruthy();
   });
 
+  it("says the page connects while it first does, not that Studio cannot be reached", async () => {
+    useStudioStore.setState({ connected: false, connectionStatus: "connecting" });
+
+    await open();
+
+    expect(screen.getByText("connecting…", { selector: "aside *" })).toBeTruthy();
+    expect(screen.queryByText("Studio unreachable")).toBeNull();
+  });
+
+  it("stops vouching for the apps it last listed once Studio cannot be reached", async () => {
+    attach();
+    await open();
+    expect(screen.getByText("vite-browser · localhost:5173")).toBeTruthy();
+
+    act(() => useStudioStore.setState({ connected: false, connectionStatus: "reconnecting" }));
+
+    expect(screen.getByText("Studio unreachable")).toBeTruthy();
+    expect(screen.queryByText("vite-browser · localhost:5173")).toBeNull();
+  });
+
   it("says Studio waits for an app until one attaches, then counts runtimes and sources", async () => {
     await open();
     const footer = screen.getByRole("contentinfo");

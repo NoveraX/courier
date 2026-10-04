@@ -476,3 +476,31 @@ describe("loadCourierConfig on an ES module config, as it evaluates TypeScript",
     expect(baseURLOf(loaded)).toBe("function");
   });
 });
+
+describe("a courier.config.cjs written as an ES module", () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = realpathSync(mkdtempSync(join(tmpdir(), "courier-esm-cjs-")));
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("is transpiled without Node warning of an ES module it could not load", async () => {
+    const warnings: string[] = [];
+    const onWarning = (warning: Error) => warnings.push(warning.message);
+    process.on("warning", onWarning);
+    try {
+      writeFileSync(join(root, "courier.config.cjs"), esm(configOf("https://esm.example")));
+
+      const loaded = await loadCourierConfig(root);
+
+      expect(baseURLOf(loaded)).toBe("https://esm.example");
+      expect(warnings.filter((message) => message.includes("ES module"))).toEqual([]);
+    } finally {
+      process.off("warning", onWarning);
+    }
+  });
+});

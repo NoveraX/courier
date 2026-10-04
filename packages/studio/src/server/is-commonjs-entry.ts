@@ -12,10 +12,15 @@ const ESM_SYNTAX =
 /**
  * Whether the runtime's loader hands a `courier.config.*` or `courier.mocks.*`
  * file to Node to run as CommonJS before it would transpile it: a `.cjs`
- * file, or a `.js` file outside a `"type": "module"` package that has no ES
+ * file, or a `.js` file outside a `"type": "module"` package, that has no ES
  * module syntax. Every other file — TypeScript, `.mjs`, a `.js` file in a
- * `"type": "module"` package or one with ES module syntax — is an ES module
+ * `"type": "module"` package, or one with ES module syntax — is an ES module
  * to the loader.
+ *
+ * A file with ES module syntax cannot run as CommonJS, so it is not handed to
+ * Node: Node would refuse it, and for a `.cjs` file warn twice of an ES module
+ * it could not load, with advice that does not apply, before the loader
+ * transpiled it anyway.
  *
  * @param file - The file's absolute path
  * @param source - The file's text
@@ -23,12 +28,12 @@ const ESM_SYNTAX =
  * @example
  * ```ts
  * isCommonJsEntry("/app/courier.config.cjs", "module.exports = {};\n"); // → true
- * isCommonJsEntry("/app/courier.config.js", "export default {};\n"); // → false
+ * isCommonJsEntry("/app/courier.config.cjs", "export default {};\n"); // → false
  * ```
  */
 export function isCommonJsEntry(file: string, source: string): boolean {
   const extension = extname(file);
-  if (extension === ".cjs") return true;
-  if (extension !== ".js") return false;
-  return packageTypeOf(file) !== "module" && !ESM_SYNTAX.test(source);
+  if (extension !== ".cjs" && extension !== ".js") return false;
+  if (ESM_SYNTAX.test(source)) return false;
+  return extension === ".cjs" || packageTypeOf(file) !== "module";
 }

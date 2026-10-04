@@ -36,13 +36,18 @@ async function open(url = "/next"): Promise<void> {
     path: "/",
     component: () => <p>Home</p>,
   });
+  const view = createRoute({
+    getParentRoute: () => shell,
+    path: "view",
+    component: () => <p>A view</p>,
+  });
   const timeline = createRoute({
     getParentRoute: () => root,
     path: "timeline",
     component: () => <p>Timeline</p>,
   });
   const router = createRouter({
-    routeTree: root.addChildren([shell.addChildren([home]), timeline]),
+    routeTree: root.addChildren([shell.addChildren([home, view]), timeline]),
     history: createMemoryHistory({ initialEntries: [url] }),
   });
   await act(() => router.load());
@@ -116,13 +121,33 @@ describe("the shell", () => {
       reconnectAttempt: 3,
     });
 
-    await open();
+    await open("/next/view");
 
     expect(screen.getByRole("alert").textContent).toContain("Studio cannot be reached.");
     expect(screen.getByText("attempt 3")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Studio cannot be reached" }).textContent).toContain(
       "OFFLINE",
     );
+  });
+
+  it("records only while an app is attached, and says OFFLINE on a view until one is", async () => {
+    await open("/next/view");
+    const idle = screen.getByRole("button", { name: "Pause recording · no app is attached yet" });
+    expect(idle.textContent).toBe("OFFLINE");
+
+    act(() => attach());
+
+    expect(screen.getByRole("button", { name: "Pause recording" }).textContent).toBe("REC");
+  });
+
+  it("leaves the recording button off the setup page until an app attaches", async () => {
+    await open();
+    expect(screen.queryByText("OFFLINE")).toBeNull();
+    expect(screen.queryByText("REC")).toBeNull();
+
+    act(() => attach());
+
+    expect(screen.getByRole("button", { name: "Pause recording" }).textContent).toBe("REC");
   });
 
   it("draws its overlays on the shell's type, though they render outside the shell", async () => {

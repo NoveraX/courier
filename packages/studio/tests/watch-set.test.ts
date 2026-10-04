@@ -313,6 +313,16 @@ describe("createWatchSet", () => {
     expect(set.status()).toMatchObject({ pathCount: 1, directoryCount: 1 });
   });
 
+  it("reports no refused watch for a path in a directory that does not exist yet", async () => {
+    const onDegraded = vi.fn();
+    const set = start({ paths: [join(root, "later", "a.ts")], onChange: () => {}, onDegraded });
+
+    await sleep(SETTLE_MS);
+
+    expect(set.status()).toMatchObject({ directoryCount: 0, degraded: null });
+    expect(onDegraded).not.toHaveBeenCalled();
+  });
+
   it("update() reports at once, and once, a path whose bytes differ from the ones a load read", async () => {
     const file = join(root, "deep.ts");
     writeFileSync(file, "export const v = 1;\n");

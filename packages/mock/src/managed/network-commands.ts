@@ -3,6 +3,7 @@
  */
 
 import { networkCommandPatch } from "../network/command-patch";
+import { networkConfigOnWire } from "../network/network-config-on-wire";
 import { recordPresets } from "../network/record-presets";
 import type { MockServer } from "../server/create-mock-server";
 import { send } from "./worker-ipc";
@@ -107,26 +108,8 @@ function emitPresetTransition(prev: string, next: string, offValue: string): voi
 }
 
 function emitNetworkState(server: MockServer): void {
-  const state = server.networkState;
-  const cfg = state.getGlobalConfig();
   send({
     type: "event",
-    event: {
-      type: "mock:network:config",
-      config: {
-        latency: cfg?.latency ?? 0,
-        errorRate: cfg?.errorRate ?? 0,
-        faultWeights: cfg?.faultWeights ?? [],
-        bandwidth: cfg?.bandwidth ?? 0,
-        distribution: cfg?.distribution ?? "uniform",
-        routeOverrides: cfg?.routeOverrides ?? [],
-        stopConditions: cfg?.stopConditions ?? null,
-        startedAt: state.startedAt,
-        latencyPreset: state.latencyPreset,
-        latencyStartedAt: state.latencyStartedAt,
-        chaosPreset: state.chaosPreset,
-        chaosStartedAt: state.chaosStartedAt,
-      },
-    },
+    event: { type: "mock:network:config", config: networkConfigOnWire(server.networkState) },
   });
 }

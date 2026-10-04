@@ -20,8 +20,16 @@ export default defineConfig({
          instead and reports nothing; the only glob that covers both also
          sweeps in the docs site and any untracked app in the working tree,
          which is the worse trade. */
-      include: ["packages/*/src/**/*.ts"],
-      exclude: ["packages/*/src/index.ts", "packages/*/src/**/types.ts"],
+      include: ["packages/*/src/**/*.{ts,tsx}", "packages/studio/ui/src/**/*.{ts,tsx}"],
+      exclude: [
+        "packages/*/src/index.ts",
+        "packages/*/src/**/types.ts",
+        "packages/studio/ui/src/routeTree.gen.ts",
+      ],
+      /* Just below what the suite covers today, so a change that drops
+         coverage fails CI instead of passing unnoticed. Raise them as it
+         grows. */
+      thresholds: { lines: 79, statements: 76, functions: 72, branches: 67 },
     },
   },
 });

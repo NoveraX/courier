@@ -58,11 +58,6 @@ export type ProxyCallerDefaults = {
   ws?: CallerWSOptions;
 };
 
-export type FetchCallbacks = {
-  onSuccess?: (data: unknown) => void | Promise<void>;
-  onError?: (error: HTTPError) => void | Promise<void>;
-};
-
 /**
  * The proxy transport's call: a source and a call's options, as the transport
  * hands them on, then an endpoint's key and its variables.

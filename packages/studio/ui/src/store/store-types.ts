@@ -1,6 +1,7 @@
 import type { ScannedSource, SourceSummary } from "@/views/apis/types";
 import type { ConfigStatusPayload } from "./config-status";
 import type { MocksFileStatus } from "./mocks-file-status";
+import type { StudioInfo } from "./studio-info";
 import type {
   BindingErrorPayload,
   BindingSnapshot,
@@ -23,6 +24,9 @@ export interface ShownSession {
 export interface StudioState {
   // UI
   theme: Theme;
+
+  /** Studio's version and the project's name, as Studio last told them; `null` until it does. */
+  studioInfo: StudioInfo | null;
 
   // Connection
   connectionStatus: ConnectionStatus;
@@ -80,6 +84,7 @@ export interface StudioState {
   setTheme: (theme: Theme) => void;
 
   // Actions — Connection
+  setStudioInfo: (info: StudioInfo) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   setReconnectAttempt: (attempt: number) => void;
 

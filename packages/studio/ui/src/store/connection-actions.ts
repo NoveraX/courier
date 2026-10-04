@@ -4,12 +4,16 @@ import type { BindingSnapshot } from "./types-ui";
 
 type ConnectionActions = Pick<
   StudioState,
-  "setConnectionStatus" | "setReconnectAttempt" | "setBindingSnapshot" | "setBindingError"
+  | "setStudioInfo"
+  | "setConnectionStatus"
+  | "setReconnectAttempt"
+  | "setBindingSnapshot"
+  | "setBindingError"
 >;
 
 /**
- * The Studio store's actions for its connection to Studio and the runtimes
- * bound to it.
+ * The Studio store's actions for its connection to Studio — what Studio
+ * tells of itself, and the runtimes bound to it.
  *
  * The binding snapshot is Studio's own account of the runtimes. The session
  * timer (`sessionStartedAt`) is Studio's too: from the first runtime's
@@ -31,6 +35,7 @@ type ConnectionActions = Pick<
  */
 export function createConnectionActions(set: StudioSet): ConnectionActions {
   return {
+    setStudioInfo: (info) => set({ studioInfo: info }),
     setConnectionStatus: (status) => {
       set({ connectionStatus: status, connected: status === "connected" });
       if (status === "connected") set({ reconnectAttempt: 0 });

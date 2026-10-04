@@ -5,6 +5,7 @@ import type { StudioState } from "./store-types";
 export type InitialState = Pick<
   StudioState,
   | "theme"
+  | "studioInfo"
   | "connectionStatus"
   | "reconnectAttempt"
   | "bindingSnapshot"
@@ -31,6 +32,7 @@ export type InitialState = Pick<
 export function createInitialState(savedTheme: StudioState["theme"]): InitialState {
   return {
     theme: savedTheme,
+    studioInfo: null,
     connectionStatus: "connecting",
     reconnectAttempt: 0,
     bindingSnapshot: { rows: [], runtimeCount: 0, sourceCount: 0, runtimes: [] },

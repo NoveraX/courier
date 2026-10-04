@@ -14,6 +14,7 @@ import {
 } from "./playground-guards";
 import { bindReadOnly } from "./read-only-bindings";
 import { readWatcherChange } from "./read-watcher-change";
+import { isStudioInfo } from "./studio-info-guard";
 
 export interface Bindings {
   onConnect: () => void;
@@ -21,6 +22,7 @@ export interface Bindings {
   onReconnectAttempt: (attempt: number) => void;
   onReconnect: () => void;
   onConnectError: () => void;
+  onStudioInfo: (data: unknown) => void;
   onBindingSnapshot: (data: unknown) => void;
   onBindingError: (data: unknown) => void;
   onRuntimeDuplicate: (data: unknown) => void;
@@ -50,6 +52,9 @@ export function buildBindings(s: Socket, store: typeof useStudioStore.getState):
     },
     onReconnect: () => store().setConnectionStatus("connected"),
     onConnectError: () => store().setConnectionStatus("disconnected"),
+    onStudioInfo: (data) => {
+      if (isStudioInfo(data)) store().setStudioInfo(data);
+    },
     onBindingSnapshot: (data) => {
       if (!isBindingSnapshot(data)) return;
       store().setBindingSnapshot(data);
@@ -96,6 +101,7 @@ export function buildBindings(s: Socket, store: typeof useStudioStore.getState):
   s.io.on("reconnect_attempt", b.onReconnectAttempt);
   s.io.on("reconnect", b.onReconnect);
   s.on("connect_error", b.onConnectError);
+  s.on("studio:info", b.onStudioInfo);
   s.on("binding:snapshot", b.onBindingSnapshot);
   s.on("binding:error", b.onBindingError);
   s.on("runtime:duplicate", b.onRuntimeDuplicate);
@@ -114,6 +120,7 @@ export function unbind(s: Socket, b: Bindings): void {
   s.io.off("reconnect_attempt", b.onReconnectAttempt);
   s.io.off("reconnect", b.onReconnect);
   s.off("connect_error", b.onConnectError);
+  s.off("studio:info", b.onStudioInfo);
   s.off("binding:snapshot", b.onBindingSnapshot);
   s.off("binding:error", b.onBindingError);
   s.off("runtime:duplicate", b.onRuntimeDuplicate);

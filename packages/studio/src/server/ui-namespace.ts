@@ -1,11 +1,12 @@
 /**
  * Socket.IO `/ui` namespace handler — manages Studio UI connections.
  *
- * Owns the UI side of every Studio↔runtime conversation: on connect the
- * binding-table snapshot and the project Studio runs (its imports, its
- * sources and how the config loads), then mock-server lifecycle, watcher
- * status, and the rid-keyed playground request flows. Routing to the
- * runtimes flows through the `/runtime` `BindingTable` + `runtimeRegistry`.
+ * Owns the UI side of every Studio↔runtime conversation: on connect Studio's
+ * version and the project's name, the binding-table snapshot and the project
+ * Studio runs (its imports, its sources and how the config loads), then
+ * mock-server lifecycle, watcher status, and the rid-keyed playground
+ * request flows. Routing to the runtimes flows through the `/runtime`
+ * `BindingTable` + `runtimeRegistry`.
  */
 
 import { logger } from "@noverax/courier";
@@ -24,6 +25,7 @@ import type { MockLog } from "./storage/mock-log";
 import type { PlaygroundHistory } from "./storage/playground-history";
 import type { SessionStore } from "./storage/session-rows";
 import type { StudioView } from "./storage/studio-view";
+import { studioInfo } from "./studio-info";
 import type { StudioToken } from "./studio-token";
 import { bindPlaygroundHistory } from "./ui-playground-history";
 import { guardUiWrites } from "./ui-token-guard";
@@ -73,9 +75,13 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
     deps;
   const { sessions, view, mockLog, playgroundHistory } = deps;
   const { project, projectRoot, token } = deps;
+  /* Read once: the version cannot change while Studio runs, and a renamed
+     package shows after a restart. */
+  const info = studioInfo(projectRoot);
 
   uiNamespace.on("connection", (socket) => {
     guardUiWrites(socket, token);
+    socket.emit("studio:info", info);
     // Send current binding-table snapshot so a UI client that joins after a
     // runtime has already announced gets the live state without waiting for
     // the next `runtime:announce`. This is the source of truth for the

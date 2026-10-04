@@ -1,21 +1,24 @@
 /**
- * Tests for `clearStudioServerState` — the symmetric counterpart to
- * `CatalogStore.clear()` (catalog-store) for the globalThis-pinned Maps
- * owned by the `/runtime` namespace.
- *
- * Per-runtime cleanup happens via the `/runtime` disconnect handler. This
- * function is the per-shutdown drain that `createStudioServer.close()` calls so a fresh
- * server spun up in the same process starts from clean state.
+ * `clearStudioServerState` drains the globalThis-pinned state the `/runtime`
+ * namespace owns, so a Studio started again in the same process — as
+ * `createStudioServer().close()` leaves it — starts from nothing. A runtime
+ * that leaves is released by the namespace's disconnect handler instead.
  */
 
+import type { Socket } from "socket.io";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   clearStudioServerState,
-  nextSessionVersion,
+  registerRuntime,
   runtimeRegistry,
-  sessionVersionRegistry,
+  runtimesActiveSince,
 } from "../src/server/runtime-namespace-state";
+
+function attach(runtimeId: string): void {
+  const socket = { id: runtimeId, connected: true } as unknown as Socket;
+  registerRuntime({ runtimeId, kind: "server", socket, transports: [], sourceNames: [] });
+}
 
 describe("clearStudioServerState", () => {
   beforeEach(() => {
@@ -26,68 +29,22 @@ describe("clearStudioServerState", () => {
     clearStudioServerState();
   });
 
-  it("removes every entry from sessionVersionRegistry", () => {
-    nextSessionVersion("session-x");
-    nextSessionVersion("session-y");
-    nextSessionVersion("session-x");
-
-    expect(sessionVersionRegistry.size).toBe(2);
-
-    clearStudioServerState();
-
-    expect(sessionVersionRegistry.size).toBe(0);
-  });
-
-  it("removes every entry from runtimeRegistry", () => {
-    const fakeSocket = { id: "s-1" } as any;
-    runtimeRegistry.set("rt-1", {
-      runtimeId: "rt-1",
-      kind: "server",
-      socket: fakeSocket,
-      transports: [],
-      sourceNames: [],
-    });
+  it("forgets every runtime, and when they began to be", () => {
+    attach("rt-1");
+    attach("rt-2");
 
     clearStudioServerState();
 
     expect(runtimeRegistry.size).toBe(0);
+    expect(runtimesActiveSince()).toBeUndefined();
   });
 
-  it("clears every map in a single call", () => {
-    nextSessionVersion("session-x");
-    const fakeSocket = { id: "s-1" } as any;
-    runtimeRegistry.set("rt-1", {
-      runtimeId: "rt-1",
-      kind: "server",
-      socket: fakeSocket,
-      transports: [],
-      sourceNames: [],
-    });
-
-    clearStudioServerState();
-
-    expect(sessionVersionRegistry.size).toBe(0);
-    expect(runtimeRegistry.size).toBe(0);
-  });
-
-  it("is safe to call repeatedly on already-empty maps", () => {
+  it("is safe to call on state already empty", () => {
     expect(() => {
-      clearStudioServerState();
       clearStudioServerState();
       clearStudioServerState();
     }).not.toThrow();
 
-    expect(sessionVersionRegistry.size).toBe(0);
     expect(runtimeRegistry.size).toBe(0);
-  });
-
-  it("nextSessionVersion resumes from 1 after clear (registry was wiped)", () => {
-    nextSessionVersion("session-x");
-    nextSessionVersion("session-x");
-    nextSessionVersion("session-x");
-
-    clearStudioServerState();
-
-    expect(nextSessionVersion("session-x")).toBe(1);
   });
 });

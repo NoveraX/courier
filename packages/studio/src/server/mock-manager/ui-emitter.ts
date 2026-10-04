@@ -60,5 +60,3 @@ function serverStateData(state: ServerState): Record<string, unknown> {
     chaosStartedAt: state.chaosStartedAt ?? null,
   };
 }
-
-export type UiEmitter = ReturnType<typeof createUiEmitter>;

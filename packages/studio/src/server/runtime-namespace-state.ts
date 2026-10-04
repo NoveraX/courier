@@ -1,16 +1,14 @@
 /**
  * Module-level state for the Studio `/runtime` namespace, pinned to globalThis
  * so Turbopack / webpack module duplication during HMR does not reset the Maps
- * (which would orphan a connected runtime against a fresh `BindingTable`, or
- * let a reconnecting app reuse a previous session version).
+ * (which would orphan a connected runtime against a fresh `BindingTable`).
  *
  * The runtime registry stores one entry per attached runtime — the live Socket
  * plus the latest `(transports, sourceNames)` pair the runtime announced — so
  * the disconnect handler in `runtime-namespace.ts` can detach the runtime from
- * `BindingTable` symmetrically without re-reading the wire payload.
- *
- * Session-version generation also lives here because the `/runtime`
- * namespace is the single owner of all studio-server runtime state.
+ * `BindingTable` symmetrically without re-reading the wire payload. When the
+ * attached runtimes began to be lives here too: the `/runtime` namespace is
+ * the single owner of all studio-server runtime state.
  */
 
 import type { Socket } from "socket.io";
@@ -18,7 +16,6 @@ import type { BindingTransport } from "./catalog/binding-table";
 import { isTrustedRuntime } from "./runtime-trust";
 
 const RUNTIME_REGISTRY_KEY = Symbol.for("courier.studio.runtime-registry");
-const SESSION_VERSION_REGISTRY_KEY = Symbol.for("courier.studio.session-version-registry");
 const ACTIVE_PERIOD_KEY = Symbol.for("courier.studio.runtimes-active-period");
 
 /** Snapshot of the latest `runtime:announce` payload for a connected runtime */
@@ -39,19 +36,10 @@ const g = globalThis as Record<symbol, unknown>;
 if (!g[RUNTIME_REGISTRY_KEY]) {
   g[RUNTIME_REGISTRY_KEY] = new Map<string, RuntimeRegistryEntry>();
 }
-if (!g[SESSION_VERSION_REGISTRY_KEY]) g[SESSION_VERSION_REGISTRY_KEY] = new Map<string, number>();
 if (!g[ACTIVE_PERIOD_KEY]) g[ACTIVE_PERIOD_KEY] = { since: undefined };
 
 /** Map of runtimeId → registry entry. Owned by the `/runtime` namespace. */
 export const runtimeRegistry = g[RUNTIME_REGISTRY_KEY] as Map<string, RuntimeRegistryEntry>;
-
-/**
- * Highest `sessionVersion` ever observed for a given sessionId. Survives the
- * disconnect window so a reconnecting app that reuses its sessionId gets a
- * strictly greater generation number — never a duplicate. Cleared on socket
- * disconnect to bound memory.
- */
-export const sessionVersionRegistry = g[SESSION_VERSION_REGISTRY_KEY] as Map<string, number>;
 
 /* When the first runtime of the runtimes attached now arrived; unset while none is. */
 const activePeriod = g[ACTIVE_PERIOD_KEY] as { since: number | undefined };
@@ -65,13 +53,6 @@ const activePeriod = g[ACTIVE_PERIOD_KEY] as { since: number | undefined };
  */
 export function runtimesActiveSince(): number | undefined {
   return activePeriod.since;
-}
-
-/** Compute the next sessionVersion for a given sessionId. */
-export function nextSessionVersion(sessionId: string): number {
-  const next = (sessionVersionRegistry.get(sessionId) ?? 0) + 1;
-  sessionVersionRegistry.set(sessionId, next);
-  return next;
 }
 
 /**
@@ -172,6 +153,5 @@ export function getRuntimeEntry(runtimeId: string): RuntimeRegistryEntry | undef
 export function clearStudioServerState(): void {
   runtimeRegistry.clear();
   runtimeSockets.clear();
-  sessionVersionRegistry.clear();
   activePeriod.since = undefined;
 }

@@ -1,4 +1,4 @@
-import { ConnectionError, type RealtimeError } from "../realtime/errors";
+import { ConnectionError, RealtimeError } from "../realtime/errors";
 import type { ConnectionStatus, SSEEvent, SSESubscription, WSChannel } from "../realtime/types";
 import { Listeners } from "./listeners";
 import type { SSEFactory, WSChannelFactory } from "./types";
@@ -31,7 +31,9 @@ export function lazySSEFactory(load: () => Promise<SSEFactory>, check?: Check): 
   const factory = once(load);
   return (group, method, variables, options) => {
     check?.(group, method, variables);
-    return lazySubscription(factory().then((create) => create(group, method, variables, options)));
+    return lazySubscription(
+      opened(factory(), (create) => create(group, method, variables, options)),
+    );
   };
 }
 
@@ -54,7 +56,7 @@ export function lazyWSChannelFactory(
   const factory = once(load);
   return (group, method, variables, options) => {
     check?.(group, method, variables);
-    return lazyChannel(factory().then((create) => create(group, method, variables, options)));
+    return lazyChannel(opened(factory(), (create) => create(group, method, variables, options)));
   };
 }
 
@@ -66,8 +68,15 @@ function once<T>(load: () => Promise<T>): () => Promise<T> {
   };
 }
 
-function loadFailure(error: unknown): RealtimeError {
-  return new ConnectionError(`The realtime client could not be loaded: ${String(error)}`);
+/* Only a client that failed to load is reported as one; what the loaded
+   factory throws is passed on as it is. */
+function opened<TFactory, TOpened>(
+  loading: Promise<TFactory>,
+  open: (factory: TFactory) => TOpened,
+): Promise<TOpened> {
+  return loading.then(open, (error: unknown) => {
+    throw new ConnectionError(`The realtime client could not be loaded: ${String(error)}`);
+  });
 }
 
 /**
@@ -86,24 +95,26 @@ export function lazySubscription(
 ): SSESubscription<unknown> {
   const listeners = new Listeners<{ status: ConnectionStatus }>();
   let real: SSESubscription<unknown> | undefined;
-  let failed: RealtimeError | undefined;
+  let failure: { error: unknown } | undefined;
   let closed = false;
   const loaded = opening.then(
     (sub) => {
       real = sub;
       sub.on("status", (status) => listeners.emit("status", status));
+      /* A status it reached before it was followed is said once. */
       if (closed) sub.close();
+      else if (sub.status !== "connecting") listeners.emit("status", sub.status);
       return sub;
     },
     (error: unknown) => {
-      failed = loadFailure(error);
+      failure = { error };
       listeners.emit("status", "disconnected");
       return undefined;
     },
   );
   async function* events(): AsyncGenerator<SSEEvent<unknown>, void, unknown> {
     const sub = await loaded;
-    if (!sub) throw failed;
+    if (!sub) throw failure?.error;
     if (closed) return;
     yield* sub;
   }
@@ -114,7 +125,7 @@ export function lazySubscription(
       real?.close();
     },
     get status(): ConnectionStatus {
-      return real?.status ?? (closed || failed ? "disconnected" : "connecting");
+      return real?.status ?? (closed || failure ? "disconnected" : "connecting");
     },
     get dropped(): number {
       return real?.dropped ?? 0;
@@ -152,13 +163,19 @@ export function lazyChannel(
       channel.on("data", (data) => listeners.emit("data", data));
       channel.on("status", (status) => listeners.emit("status", status));
       channel.on("error", (error) => listeners.emit("error", error));
-      if (closed) channel.close();
-      else for (const message of waiting.splice(0)) channel.send(message);
+      if (closed) {
+        channel.close();
+        return;
+      }
+      /* A status it reached before it was followed is said once. */
+      if (channel.status !== "connecting") listeners.emit("status", channel.status);
+      for (const message of waiting.splice(0)) channel.send(message);
     },
     (error: unknown) => {
       failed = true;
       waiting.length = 0;
-      listeners.emit("error", loadFailure(error));
+      const reason = error instanceof RealtimeError ? error : new ConnectionError(String(error));
+      listeners.emit("error", reason);
       listeners.emit("status", "disconnected");
     },
   );

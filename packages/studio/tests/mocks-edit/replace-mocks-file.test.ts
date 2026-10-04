@@ -92,17 +92,28 @@ afterEach(() => {
 });
 
 describe("replaceMocksFile", () => {
-  it("replaces the content exactly and keeps the file's mode 0o664 under umask 022", () => {
+  it("replaces the content exactly, leaving nothing behind", () => {
     writeFileSync(path, "export default {};\n");
-    chmodSync(path, 0o664);
     const content =
       "export default defineMocks({\r\n  shop: defineMockServer({ source: api }),\r\n});\n";
 
     replaceMocksFile(path, content, { mode: 0o664, expectedHash: sha256("export default {};\n") });
 
     expect(readFileSync(path, "utf8")).toBe(content);
-    expect(modeOf(path)).toBe(0o664);
     expect(readdirSync(dir)).toEqual(["courier.mocks.ts"]);
+  });
+
+  /* Windows keeps no POSIX permission bits to keep. */
+  it.skipIf(IS_WINDOWS)("keeps the file's mode 0o664 under umask 022", () => {
+    writeFileSync(path, "export default {};\n");
+    chmodSync(path, 0o664);
+
+    replaceMocksFile(path, "export default {};\n// edited\n", {
+      mode: 0o664,
+      expectedHash: sha256("export default {};\n"),
+    });
+
+    expect(modeOf(path)).toBe(0o664);
   });
 
   it("writes Buffer content byte for byte, byte-order mark included", () => {

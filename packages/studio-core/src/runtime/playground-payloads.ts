@@ -57,10 +57,7 @@ export function sanitizeExecute(raw: unknown): PlaygroundExecutePayload | null {
     transport: r.transport,
     mode: r.mode === "proxy" ? "proxy" : "direct",
     variables: r.variables,
-    headers:
-      r.headers && typeof r.headers === "object"
-        ? (r.headers as Record<string, string>)
-        : undefined,
+    headers: headersOf(r.headers),
   };
 }
 
@@ -95,6 +92,18 @@ export function sanitizeWrite(raw: unknown): PlaygroundWritePayload | null {
   if (typeof raw.rid !== "string" || raw.rid.length === 0) return null;
   if (hasDangerousKeys(raw.data)) return null;
   return { rid: raw.rid, data: raw.data };
+}
+
+/* Header values arrive as text: a value of another type is not a header, and
+   an array — which `new Headers()` reads as name and value pairs — is not a
+   map of them. */
+function headersOf(raw: unknown): Record<string, string> | undefined {
+  if (!isPlainObject(raw)) return undefined;
+  const headers: Record<string, string> = {};
+  for (const [name, value] of Object.entries(raw)) {
+    if (typeof value === "string") headers[name] = value;
+  }
+  return headers;
 }
 
 function isPlainObject(raw: unknown): raw is Record<string, unknown> {

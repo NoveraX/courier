@@ -112,6 +112,31 @@ export interface FieldEncoding {
   explode?: boolean;
 }
 
+/**
+ * What a value may hold beyond its type, from JSON Schema's validation
+ * keywords. A request's schemas check them; an answer's do not, since a
+ * validator that refuses what the API really sends is worse than none.
+ */
+export interface SchemaConstraints {
+  /** A whole number: the specification types it `integer`. */
+  integer?: true;
+  minLength?: number;
+  maxLength?: number;
+  /**
+   * A regular expression the string matches somewhere in it, as JavaScript
+   * compiles it: with the `u` flag when it compiles so, else without.
+   */
+  pattern?: { source: string; unicode: boolean };
+  minimum?: number;
+  maximum?: number;
+  exclusiveMinimum?: number;
+  exclusiveMaximum?: number;
+  /** A whole number the value is a multiple of. */
+  multipleOf?: number;
+  minItems?: number;
+  maxItems?: number;
+}
+
 export interface ParsedParameter {
   name: string;
   in: "path" | "query" | "header" | "cookie";
@@ -137,6 +162,8 @@ export interface ParsedParameter {
    * type name and a list of values cannot describe.
    */
   schema?: ParsedSchema;
+  /** What its value may hold beyond its type. */
+  constraints?: SchemaConstraints;
 }
 
 export interface ParsedSchema {
@@ -169,6 +196,8 @@ export interface ParsedSchema {
   description?: string;
   /** Value type of a map, from `additionalProperties`. */
   valueType?: ParsedSchema;
+  /** What a primitive or a list may hold beyond its type. */
+  constraints?: SchemaConstraints;
 }
 
 export interface ParsedSchemaProperty {
@@ -200,6 +229,8 @@ export interface ParsedSchemaProperty {
    */
   direction?: "read" | "write";
   requiredInDirection?: boolean;
+  /** What a primitive or a list may hold beyond its type. */
+  constraints?: SchemaConstraints;
 }
 
 export type SpecFormat =

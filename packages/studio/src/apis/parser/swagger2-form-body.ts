@@ -52,13 +52,30 @@ export function withFormBody(
   };
 }
 
+/* What a Swagger 2.0 parameter allows, written on the parameter itself where
+   OpenAPI 3 writes it in a schema. */
+const VALIDATION_KEYWORDS = [
+  "minLength",
+  "maxLength",
+  "pattern",
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "multipleOf",
+  "minItems",
+  "maxItems",
+] as const;
+
 function fieldSchema(field: SpecNode): SpecNode {
   const file = field.type === "file";
+  const validation = VALIDATION_KEYWORDS.filter((key) => field[key] !== undefined);
   return {
     type: file ? "string" : (field.type ?? "string"),
     ...(file ? { format: "binary" } : field.format ? { format: field.format } : {}),
     ...(field.enum ? { enum: field.enum } : {}),
     ...(field.items ? { items: field.items } : {}),
     ...(field.description ? { description: field.description } : {}),
+    ...Object.fromEntries(validation.map((key) => [key, field[key]])),
   };
 }

@@ -5,6 +5,7 @@
 import { convertAllOf } from "./convert-all-of";
 import { convertObjectSchema } from "./convert-object-schema";
 import { acceptsNull, orNull, stripNull } from "./nullable-schema";
+import { readConstraints } from "./read-constraints";
 import { referencedSchema } from "./referenced-schema";
 import { asNode, fieldOf, listAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedSchema } from "./types";
@@ -97,10 +98,14 @@ export function convertSchema(name: string, raw: SpecNode, spec?: SpecNode): Par
     const items = schema.items
       ? convertSchema(`${name}Item`, asNode(schema.items), spec)
       : undefined;
-    return { name, type: "array", items, description };
+    const constraints = readConstraints(schema, type);
+    return { name, type: "array", items, description, ...(constraints && { constraints }) };
   }
   if (type === "object" || schema.properties) return convertObjectSchema(name, schema, spec);
-  if (isPrimitiveType(type)) return { name, type, description };
+  if (isPrimitiveType(type)) {
+    const constraints = readConstraints(schema, type);
+    return { name, type, description, ...(constraints && { constraints }) };
+  }
   return { name, type: "any", description };
 }
 

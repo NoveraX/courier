@@ -8,9 +8,9 @@ import { jsdocText } from "./jsdoc-text";
 import { typeStyleFor } from "./schema-types";
 import { schemaToValidation } from "./schema-utils";
 import type { GeneratorSettings } from "./types";
-import { primitiveToArkType } from "./validation-arktype";
-import { primitiveToValibot } from "./validation-valibot";
-import { primitiveToZod } from "./validation-zod";
+import { schemaToArkType } from "./validation-arktype";
+import { schemaToValibot } from "./validation-valibot";
+import { schemaToZod } from "./validation-zod";
 
 export function generateRefSchema(
   lines: string[],
@@ -86,13 +86,13 @@ function appendPrimitiveValidation(
   options: GeneratorSettings,
 ): void {
   if (options.validation === "zod") {
-    lines.push(`export const ${name}Schema = ${primitiveToZod(schema.type)};`);
+    lines.push(`export const ${name}Schema = ${schemaToZod(schema)};`);
     lines.push(`export type ${name} = z.infer<typeof ${name}Schema>;`);
   } else if (options.validation === "valibot") {
-    lines.push(`export const ${name}Schema = ${primitiveToValibot(schema.type)};`);
+    lines.push(`export const ${name}Schema = ${schemaToValibot(schema)};`);
     lines.push(`export type ${name} = v.InferOutput<typeof ${name}Schema>;`);
   } else if (options.validation === "arktype") {
-    lines.push(`export const ${name}Schema = type(${primitiveToArkType(schema.type)});`);
+    lines.push(`export const ${name}Schema = ${schemaToArkType(schema)};`);
     lines.push(`export type ${name} = typeof ${name}Schema.infer;`);
   }
 }

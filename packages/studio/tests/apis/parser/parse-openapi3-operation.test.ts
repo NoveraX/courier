@@ -168,3 +168,89 @@ describe.each(VALIDATORS)("a query parameter named with a hyphen (%s)", (validat
     ).toEqual([]);
   });
 });
+
+describe("a parameter whose schema refers to a component", () => {
+  function parameters(schemas: object, parameter: object) {
+    const parsed = parseSpec(
+      JSON.stringify({
+        openapi: "3.0.3",
+        info: { title: "Shop", version: "1" },
+        servers: [{ url: "https://api.example.com" }],
+        components: { schemas },
+        paths: {
+          "/items": {
+            get: {
+              operationId: "listItems",
+              parameters: [parameter],
+              responses: { "204": { description: "done" } },
+            },
+          },
+        },
+      }),
+    );
+    return parsed.groups.flatMap((group) => group.endpoints)[0]?.parameters ?? [];
+  }
+
+  it("reads the values, format and constraints of a component holding a scalar", () => {
+    const [order, page] = [
+      parameters(
+        { Order: { type: "string", enum: ["asc", "desc"] } },
+        { name: "order", in: "query", schema: { $ref: "#/components/schemas/Order" } },
+      ),
+      parameters(
+        { Page: { type: "integer", minimum: 1 } },
+        { name: "page", in: "query", schema: { $ref: "#/components/schemas/Page" } },
+      ),
+    ].map(([param]) => param);
+
+    expect(order).toMatchObject({ type: "string", enum: ["asc", "desc"] });
+    expect(page).toMatchObject({ type: "integer", constraints: { integer: true, minimum: 1 } });
+  });
+
+  it("keeps a component with a structure as a reference", () => {
+    const [range] = parameters(
+      { Range: { type: "object", properties: { gte: { type: "integer" } } } },
+      { name: "created", in: "query", schema: { $ref: "#/components/schemas/Range" } },
+    );
+
+    expect(range?.schema).toMatchObject({ type: "ref", refName: "Range" });
+  });
+});
+
+describe("a Swagger 2.0 form field", () => {
+  it("keeps the constraints written on the parameter itself", () => {
+    const parsed = parseSpec(
+      JSON.stringify({
+        swagger: "2.0",
+        info: { title: "Shop", version: "1" },
+        host: "api.example.com",
+        paths: {
+          "/notes": {
+            post: {
+              operationId: "addNote",
+              consumes: ["application/x-www-form-urlencoded"],
+              parameters: [
+                { name: "text", in: "formData", type: "string", maxLength: 140, pattern: "^\\S" },
+                {
+                  name: "tags",
+                  in: "formData",
+                  type: "array",
+                  items: { type: "string" },
+                  maxItems: 3,
+                },
+              ],
+              responses: { "204": { description: "done" } },
+            },
+          },
+        },
+      }),
+    );
+    const body = parsed.groups.flatMap((group) => group.endpoints)[0]?.requestBody;
+
+    expect(body?.properties?.text?.constraints).toEqual({
+      maxLength: 140,
+      pattern: { source: "^\\S", unicode: true },
+    });
+    expect(body?.properties?.tags?.constraints).toEqual({ maxItems: 3 });
+  });
+});

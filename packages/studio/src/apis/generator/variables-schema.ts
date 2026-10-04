@@ -1,8 +1,15 @@
-import type { ParsedEndpoint } from "../parser/types";
-import { declaredSchema } from "./declared-schema";
+import type { ParsedEndpoint, ParsedParameter, ParsedSchema } from "../parser/types";
+import { emitsSchemas } from "./build-endpoint-helpers";
+import { constantsDeclared, declaredSchema } from "./declared-schema";
 import { type EndpointContext, schemaConstant } from "./endpoint-context";
+import {
+  extendSchemaWithParams,
+  objectWithBody,
+  optionalSchema,
+  parametersSchema,
+} from "./parameter-schemas";
+import { parametersNeedChecks } from "./parameters-need-checks";
 import { bodyKey, requestBodyKind } from "./request-body";
-import { extendSchemaWithParams, objectWithBody, optionalSchema } from "./schema-utils";
 import { variableParameters } from "./variable-parameters";
 
 /**
@@ -27,6 +34,7 @@ export function variablesSchema(
   paramsType: string | undefined,
 ): string | null {
   const kind = requestBodyKind(ep, context.spec);
+  if (kind === "none") return checkedParameters(ep, context);
   if (kind !== "fields" && kind !== "value" && kind !== "nested") return null;
   const body = bodySchema(ep, context);
   if (!body) return inlineFieldsSchema(ep, kind, paramsType, context);
@@ -37,12 +45,25 @@ export function variablesSchema(
   /* A list, a scalar or a map the operation does not require may be left out. */
   const optional = kind !== "fields" && ep.requestBodyOptional === true;
   if (params.length === 0 && !optional) return body;
+  /* A parameter's schema may name others, whose constants the file imports. */
+  if (!constantsDeclared(params.flatMap(parameterSchemas), context)) return null;
   context.uses.validator = true;
   if (params.length === 0) return optionalSchema(body, context.options);
   if (kind !== "fields") {
     return objectWithBody(body, params, bodyKey(ep), context.options, optional);
   }
   return extendSchemaWithParams(body, params, context.options, extendable(ep, context));
+}
+
+/* Parameters alone are typed rather than validated, unless one is
+   constrained beyond what its type can say: only a schema checks that. */
+function checkedParameters(ep: ParsedEndpoint, context: EndpointContext): string | null {
+  const params = variableParameters(ep);
+  if (!emitsSchemas(context.options)) return null;
+  if (!parametersNeedChecks(params, context.spec.schemas)) return null;
+  if (!constantsDeclared(params.flatMap(parameterSchemas), context)) return null;
+  context.uses.validator = true;
+  return parametersSchema(params, context.options);
 }
 
 /* Fields written inline are extracted as a type of their own, with the
@@ -73,4 +94,8 @@ function extendable(ep: ParsedEndpoint, context: EndpointContext): boolean {
   return (
     ref !== undefined && !context.lazy.has(ref) && context.spec.schemas[ref]?.type === "object"
   );
+}
+
+function parameterSchemas(param: ParsedParameter): Array<ParsedSchema | undefined> {
+  return [param.schema, param.items];
 }

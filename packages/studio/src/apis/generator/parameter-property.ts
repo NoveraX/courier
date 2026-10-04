@@ -30,5 +30,6 @@ export function parameterProperty(param: ParsedParameter): ParsedSchemaProperty 
        string carries. */
     ...(param.type === "array" && { items: param.items ?? { name: "", type: "string" } }),
     ...(param.schema && { shape: param.schema }),
+    ...(param.constraints && { constraints: param.constraints }),
   };
 }

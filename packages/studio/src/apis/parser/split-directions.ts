@@ -1,17 +1,29 @@
+import { ownValue } from "../own-value";
 import { endpointVariant, variant } from "./direction-variant";
+import { schemaTraits, withTrait } from "./schema-traits";
+import { schemaUsage } from "./schema-usage";
 import type { ParsedSchema, ParsedSpec } from "./types";
 
 /**
- * Split each schema whose request and answer differ into the two. A readOnly
- * field is one the server sends and a writeOnly one the client sends, so one
- * type serving both would have to leave each optional: the id an answer
- * always carries, the password a request always needs. A schema holding such
- * a field, itself or through a schema it refers to, is read as the answer
- * — its writeOnly fields gone, its readOnly ones as required as declared —
- * and one a request sends gains an input twin, `UserInput`, the other way
- * round. Request bodies and parameters refer to the twins.
+ * Type what a request sends apart from what an answer carries.
  *
- * @param spec - The parsed specification, its properties carrying their direction
+ * A readOnly field is one the server sends and a writeOnly one the client
+ * sends, so one type serving both would have to leave each optional: the id
+ * an answer always carries, the password a request always needs. A schema
+ * holding such a field, itself or through a schema it refers to, is read as
+ * the answer — its writeOnly fields gone, its readOnly ones as required as
+ * declared — and one a request sends gains an input twin, `UserInput`, the
+ * other way round.
+ *
+ * Constraints — lengths, bounds, patterns — are checked on what a request
+ * sends and never on what an answer carries: a validator that refuses what
+ * the API really sends is worse than none. A schema only answers carry
+ * loses them, one only requests send keeps them where it is, and one both
+ * send and carry — itself or through a schema it refers to — is split as a
+ * directed one is: the answer without them, the input twin with them.
+ * Request bodies and parameters refer to the twins.
+ *
+ * @param spec - The parsed specification, its properties carrying their direction and constraints
  * @returns The specification with its answers and requests typed apart
  *
  * @example
@@ -20,15 +32,27 @@ import type { ParsedSchema, ParsedSpec } from "./types";
  * ```
  */
 export function splitDirections(spec: ParsedSpec): ParsedSpec {
-  /* A body or an answer written inline is split even where no named schema is. */
-  const directed = directedSchemas(spec.schemas);
-  const inputs = inputNames(spec, directed);
+  const traits = new Map(
+    Object.entries(spec.schemas).map(([name, schema]) => [name, schemaTraits(schema)]),
+  );
+  const directed = withTrait(traits, (own) => own.directed);
+  const constrained = withTrait(traits, (own) => own.constrained);
+  const { sent, answered } = schemaUsage(spec);
+  const split = new Set(
+    [...sent].filter((name) => directed.has(name) || (constrained.has(name) && answered.has(name))),
+  );
+  const inputs = inputNames(spec.schemas, split);
   const schemas: Record<string, ParsedSchema> = {};
   for (const [name, schema] of Object.entries(spec.schemas)) {
-    schemas[name] = directed.has(name) ? variant(schema, "read", inputs) : schema;
+    if (!directed.has(name) && !constrained.has(name)) {
+      schemas[name] = schema;
+      continue;
+    }
+    const sentOnly = sent.has(name) && !answered.has(name) && !split.has(name);
+    schemas[name] = variant(schema, sentOnly ? "write" : "read", inputs);
   }
   for (const [name, input] of inputs) {
-    const source = spec.schemas[name];
+    const source = ownValue(spec.schemas, name);
     if (source) schemas[input] = { ...variant(source, "write", inputs), name: input };
   }
   const groups = spec.groups.map((group) => ({
@@ -38,68 +62,18 @@ export function splitDirections(spec: ParsedSpec): ParsedSpec {
   return { ...spec, schemas, groups };
 }
 
-/* The schemas with a directed field, themselves or through a reference. */
-function directedSchemas(schemas: Readonly<Record<string, ParsedSchema>>): Set<string> {
-  const directed = new Set<string>();
-  const refers = new Map<string, Set<string>>();
-  for (const [name, schema] of Object.entries(schemas)) {
-    const refs = new Set<string>();
-    if (walk(schema, refs)) directed.add(name);
-    refers.set(name, refs);
-  }
-  for (let grown = true; grown; ) {
-    grown = false;
-    for (const [name, refs] of refers) {
-      if (directed.has(name) || ![...refs].some((ref) => directed.has(ref))) continue;
-      directed.add(name);
-      grown = true;
-    }
-  }
-  return directed;
-}
-
-/* The input twin's name of each directed schema a request sends. */
-function inputNames(spec: ParsedSpec, directed: ReadonlySet<string>): Map<string, string> {
-  const sent = new Set<string>();
-  const queue: string[] = [];
-  const visit = (schema: ParsedSchema): void => {
-    const refs = new Set<string>();
-    walk(schema, refs);
-    for (const ref of refs) if (!sent.has(ref) && sent.add(ref)) queue.push(ref);
-  };
-  for (const ep of spec.groups.flatMap((group) => group.endpoints)) {
-    if (ep.requestBody) visit(ep.requestBody);
-    for (const param of ep.parameters)
-      for (const part of [param.schema, param.items]) if (part) visit(part);
-  }
-  for (let name = queue.pop(); name !== undefined; name = queue.pop()) {
-    const schema = spec.schemas[name];
-    if (schema) visit(schema);
-  }
-  const taken = new Set(Object.keys(spec.schemas));
+/* The input twin's name of each schema split, clear of every name taken. */
+function inputNames(
+  schemas: Readonly<Record<string, ParsedSchema>>,
+  split: ReadonlySet<string>,
+): Map<string, string> {
+  const taken = new Set(Object.keys(schemas));
   const names = new Map<string, string>();
-  for (const name of [...sent].filter((ref) => directed.has(ref)).sort()) {
+  for (const name of [...split].sort()) {
     let input = `${name}Input`;
     for (let n = 2; taken.has(input); n += 1) input = `${name}Input${n}`;
     taken.add(input);
     names.set(name, input);
   }
   return names;
-}
-
-/* Whether the schema has a directed field, not following references; the
-   references it makes are gathered on the way. */
-function walk(schema: ParsedSchema, refs: Set<string>): boolean {
-  if (schema.refName) refs.add(schema.refName);
-  let directed = false;
-  for (const prop of Object.values(schema.properties ?? {})) {
-    if (prop.direction !== undefined) directed = true;
-    if (prop.refName) refs.add(prop.refName);
-    for (const part of [prop.items, prop.shape, prop.valueType])
-      if (part && walk(part, refs)) directed = true;
-  }
-  for (const part of [schema.items, schema.valueType, ...(schema.variants ?? [])]) {
-    if (part && walk(part, refs)) directed = true;
-  }
-  return directed;
 }

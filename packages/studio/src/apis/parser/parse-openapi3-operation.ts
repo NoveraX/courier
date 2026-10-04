@@ -6,6 +6,7 @@ import { collectionEncoding, declaredEncoding, isDefaultEncoding } from "./field
 import type { SupportedHttpMethod } from "./http-methods";
 import { parseRequestBody } from "./parse-request-body";
 import { parseResponse } from "./parse-response";
+import { readConstraints } from "./read-constraints";
 import { enumValues } from "./schema-conversion";
 import { asNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import type { ParsedEndpoint, ParsedParameter } from "./types";
@@ -82,8 +83,10 @@ function parseParameters(
 
     /* Swagger 2.0 writes the shape on the parameter itself; OpenAPI 3 puts
        it in a schema. */
-    const shape = normalizeTypeArray(nodeAt(resolved, "schema") ?? resolved);
+    const declared = normalizeTypeArray(nodeAt(resolved, "schema") ?? resolved);
+    const shape = scalarComponent(declared, spec) ?? declared;
     const format = textAt(shape, "format");
+    const constraints = readConstraints(shape, textAt(shape, "type") ?? "string");
     parameters.push({
       name,
       in: place,
@@ -96,6 +99,7 @@ function parseParameters(
       ...(format && { format }),
       ...(shape.items ? { items: convertSchemaInline(asNode(shape.items), spec) } : {}),
       ...(isStructured(shape) && { schema: convertSchemaInline(shape, spec) }),
+      ...(constraints && { constraints }),
       ...queryEncoding(resolved),
     });
   }
@@ -123,6 +127,22 @@ function placeOf(value: unknown): ParsedParameter["in"] | undefined {
 /** Whether a parameter's schema is more than a type name and its values. */
 function isStructured(shape: SpecNode): boolean {
   return Boolean(
-    shape.oneOf || shape.anyOf || shape.allOf || shape.properties || shape.type === "object",
+    shape.$ref ||
+      shape.oneOf ||
+      shape.anyOf ||
+      shape.allOf ||
+      shape.properties ||
+      shape.type === "object",
   );
+}
+
+/* The component a parameter's schema refers to, when it holds a scalar or a
+   list of values — a sort order, a direction: the parameter reads its type,
+   values and constraints. Read as the bare reference, it was a plain string.
+   A component with a structure stays a reference. */
+function scalarComponent(shape: SpecNode, spec: SpecNode): SpecNode | undefined {
+  const ref = textAt(shape, "$ref");
+  if (ref === undefined) return undefined;
+  const target = normalizeTypeArray(resolveRef(spec, ref));
+  return isStructured(target) ? undefined : target;
 }

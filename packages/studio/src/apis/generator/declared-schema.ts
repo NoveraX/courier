@@ -39,8 +39,27 @@ function hasFields(schema: ParsedSchema): boolean {
 }
 
 function namesDeclared(schema: ParsedSchema, context: EndpointContext): boolean {
+  return constantsDeclared([schema], context);
+}
+
+/**
+ * Whether the file can import a constant for every named schema the given
+ * ones refer to, at any depth — recording each as used when it can.
+ *
+ * @param schemas - The schemas whose references the code written names
+ * @param context - The file being written
+ * @returns Whether every one is declared beside the file
+ * @example
+ * ```ts
+ * constantsDeclared([created.schema], context); // → true, and `RangeSchema` is imported
+ * ```
+ */
+export function constantsDeclared(
+  schemas: readonly (ParsedSchema | null | undefined)[],
+  context: EndpointContext,
+): boolean {
   const names = new Set<string>();
-  collectRefsDeep(schema, names);
+  for (const schema of schemas) collectRefsDeep(schema, names);
   if (![...names].every((name) => hasSchemaConstant(context, name))) return false;
   for (const name of names) schemaConstant(context, name);
   return true;

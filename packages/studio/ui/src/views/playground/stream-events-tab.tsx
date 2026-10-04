@@ -15,14 +15,27 @@ import { WSComposePanel } from "./ws-compose-panel";
  * ends, whether or not it has sent anything: many answer messages and say
  * nothing first. The runtime holds a message written while the channel is
  * still opening and sends it once it has opened.
+ *
+ * A stream or channel that failed says why, above whatever it delivered
+ * first: its variables refused, its subscription refused, the server's error.
  */
 export function StreamEventsTab({ entry }: { entry: PlaygroundHistoryEntry }): React.ReactElement {
   const chunks = entry.chunks ?? [];
   const isActive = entry.streamStatus === "streaming" || entry.streamStatus === "connecting";
+  const failure =
+    entry.streamStatus === "error" && typeof entry.response === "string" ? entry.response : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-auto">
+        {failure ? (
+          <p
+            role="alert"
+            className="mx-3 mt-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-body-xs whitespace-pre-wrap text-destructive-foreground"
+          >
+            {failure}
+          </p>
+        ) : null}
         {entry.chunksDropped ? (
           <p className="px-3 pt-2 text-body-xs text-muted-foreground/60">
             {entry.chunksDropped} earlier {entry.chunksDropped === 1 ? "event is" : "events are"}{" "}

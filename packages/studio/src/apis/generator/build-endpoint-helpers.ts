@@ -64,7 +64,7 @@ export function buildEndpointChain(chain: EndpointChain): string {
   if (chain.closure) text += `.via(${chain.closure})`;
 
   /* An answer whose type is not written is still an answer: left out, the
-     call resolved to `void` although it returned what the API sent. */
+     call would resolve to `void` although it returns what the API sent. */
   if (chain.responseSchema) {
     text += `.response${typeArgument(chain.responseType)}(${chain.responseSchema})`;
   } else if (chain.responseType !== null) {

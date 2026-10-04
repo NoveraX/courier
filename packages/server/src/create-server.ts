@@ -20,8 +20,8 @@ import type { CourierServer, CourierServerOptions } from "./types";
 const log = createLogger("Server");
 
 const DEFAULT_PORT = 3001;
-/* "localhost" bound whichever loopback the system resolves first — on macOS
-   the IPv6 one alone — and a client asking for 127.0.0.1 was refused. A
+/* "localhost" binds whichever loopback the system resolves first — on macOS
+   the IPv6 one alone — and a client asking for 127.0.0.1 would be refused. A
    client given "localhost" tries both addresses, so it reaches this one. */
 const DEFAULT_HOST = "127.0.0.1";
 

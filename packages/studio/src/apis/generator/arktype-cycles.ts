@@ -24,10 +24,10 @@ import { type LazyTargets, schemaToArkType } from "./validation-arktype";
  * building a type: the branch's own `true`, `false` and `null`, and the
  * literal members of the union around it, to drop those another branch
  * covers. Until the file has finished running, the schema a lazy branch
- * names may not exist yet. Answering no for everything dropped the branch's
- * own booleans for good, so a list of booleans in a JSON value was refused;
- * those literals are kept, and anything else is claimed by no lazy branch
- * until its schema exists.
+ * names may not exist yet. Answering no for everything would drop the
+ * branch's own booleans for good, refusing a list of booleans in a JSON
+ * value; those literals are kept, and anything else is claimed by no lazy
+ * branch until its schema exists.
  */
 export const ARKTYPE_CYCLE_HELPER = `/* Set by the last line of this file. */
 let declared = false;

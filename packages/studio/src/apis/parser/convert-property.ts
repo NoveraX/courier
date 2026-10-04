@@ -42,7 +42,7 @@ export function convertProperty(
   /* One type serves the request and the answer. A readOnly property is
      produced by the server: demanded, a request body could not be built. A
      writeOnly one is sent by the client and never answered: demanded, every
-     answer was refused for lacking it. Optional, either may still be there;
+     answer would be refused for lacking it. Optional, either may still be there;
      the direction is kept for the request and answer types split from it. */
   const base = {
     required: required && direction === undefined,

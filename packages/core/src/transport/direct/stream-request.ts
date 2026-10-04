@@ -19,8 +19,8 @@ export interface StreamRequest {
 /**
  * The request that opens a stream another server serves.
  *
- * The source's `headers` reached every HTTP call and no stream, so a stream
- * of an API that takes a key there was refused with 401.
+ * It carries the source's `headers`, as every HTTP call does, so a stream of
+ * an API that takes a key there is not refused with 401.
  *
  * @param api - The source
  * @param group - The stream's group, empty for none

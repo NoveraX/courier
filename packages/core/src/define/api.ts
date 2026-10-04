@@ -5,6 +5,7 @@ import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-res
 import type { ProxyBoundary } from "./boundary-types";
 import type { BoundaryOf, WithBoundary } from "./exposed-api";
 import type {
+  AnyDefinedApi,
   DefinedApi,
   DefinedFlatApi,
   DefinedMixedApi,
@@ -40,6 +41,23 @@ export function deriveSourceName(baseURL?: string): string {
 export function getSourceName(source: unknown): string | undefined {
   if (!source || typeof source !== "object") return undefined;
   return (source as Record<symbol, unknown>)[SOURCE_NAME_KEY] as string | undefined;
+}
+
+/**
+ * Whether a value is an API `defineApi` made — what a registry hands back
+ * typed only as a source: every one carries the name it is registered or
+ * defined under.
+ *
+ * @param value - The value to check
+ * @returns `true` for a defined API
+ * @example
+ * ```ts
+ * const source = getSources()?.[name];
+ * if (isDefinedApi(source)) openStreams(source);
+ * ```
+ */
+export function isDefinedApi(value: unknown): value is AnyDefinedApi {
+  return getSourceName(value) !== undefined;
 }
 
 /**

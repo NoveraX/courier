@@ -22,6 +22,7 @@ export {
   type ExecuteBackend,
   shapeOfClient,
 } from "../client";
+export { isDefinedApi } from "../define/api";
 export { readLogFormat } from "../logger/log-format";
 export { mergeProxyPath, type ResolveOrigin, resolveProxyPath } from "../proxy-caller";
 export { type ConnectionState, createConnectionState } from "../realtime/connection-state";

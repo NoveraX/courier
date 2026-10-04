@@ -69,7 +69,8 @@ describe("writeTempBeside", () => {
     expect(readFileSync(tmp, "utf8")).toBe("export default {};\n");
   });
 
-  it("gives the file the exact mode asked for, whatever the umask", () => {
+  /* Windows keeps no POSIX permission bits, and no umask shapes them. */
+  it.skipIf(IS_WINDOWS)("gives the file the exact mode asked for, whatever the umask", () => {
     process.umask(0o077);
 
     const tmp = writeTempBeside(path, "x", 0o664, PREFIX);
@@ -77,11 +78,14 @@ describe("writeTempBeside", () => {
     expect(statSync(tmp).mode & 0o7777).toBe(0o664);
   });
 
-  it("gives the file the mode the umask leaves when no mode is asked for", () => {
-    const tmp = writeTempBeside(path, "x", null, PREFIX);
+  it.skipIf(IS_WINDOWS)(
+    "gives the file the mode the umask leaves when no mode is asked for",
+    () => {
+      const tmp = writeTempBeside(path, "x", null, PREFIX);
 
-    expect(statSync(tmp).mode & 0o7777).toBe(0o644);
-  });
+      expect(statSync(tmp).mode & 0o7777).toBe(0o644);
+    },
+  );
 
   it("removes the file and rethrows when the content cannot be flushed", () => {
     const flushError = Object.assign(new Error("EIO: injected"), { code: "EIO" });

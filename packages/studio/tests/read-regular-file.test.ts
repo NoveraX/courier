@@ -48,12 +48,20 @@ afterEach(() => {
 describe("readRegularFile", () => {
   it("returns the bytes and the stats of the file it read", () => {
     writeFileSync(path, "export default {};\n");
-    chmodSync(path, 0o640);
 
     const file = readRegularFile(path);
 
     expect(file?.bytes.toString("utf8")).toBe("export default {};\n");
     expect(file?.stats.ino).toBe(statSync(path).ino);
+  });
+
+  /* Windows keeps no POSIX permission bits to read back. */
+  it.skipIf(IS_WINDOWS)("returns the permission bits of the file it read", () => {
+    writeFileSync(path, "export default {};\n");
+    chmodSync(path, 0o640);
+
+    const file = readRegularFile(path);
+
     expect((file?.stats.mode ?? 0) & 0o7777).toBe(0o640);
   });
 

@@ -77,17 +77,18 @@ afterEach(() => {
 });
 
 describe("writeNewMocksFile", () => {
-  it("creates the file with its content and the mode umask 022 gives a new file, leaving nothing behind", () => {
+  it("creates the file with its content, leaving nothing behind", () => {
     const leftover = writeNewMocksFile(path, CONTENT);
 
     expect(leftover).toBeNull();
     expect(readFileSync(path, "utf8")).toBe(CONTENT);
-    expect(modeOf(path)).toBe(0o644);
     expect(statSync(path).nlink).toBe(1);
     expect(readdirSync(dir)).toEqual(["courier.mocks.ts"]);
   });
 
-  it.each([
+  /* Windows keeps no POSIX permission bits, and no umask shapes them. */
+  it.skipIf(IS_WINDOWS).each([
+    ["022", 0o022, 0o644],
     ["002", 0o002, 0o664],
     ["077", 0o077, 0o600],
   ])("creates the file with the mode umask %s leaves", (_label, umask, mode) => {

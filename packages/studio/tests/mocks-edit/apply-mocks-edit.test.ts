@@ -56,6 +56,7 @@ import { ACT_BUDGET_MS, CONFIG_LOAD_TIMEOUT_MS } from "../../src/server/project-
 import type { ProjectState } from "../../src/server/project-state/types";
 
 const CACHE = join(__dirname, "../../../../node_modules/.cache/courier-studio-tests");
+const IS_WINDOWS = process.platform === "win32";
 const EXISTING =
   'import { defineMocks, defineMockServer } from "@noverax/courier-mock";\n' +
   'import courierConfig from "./courier.config";\n\n' +
@@ -203,10 +204,9 @@ describe("applyMocksEdit", () => {
     });
   });
 
-  it("takes back an edit whose files do not load, restoring the exact bytes and mode, and applies nothing", async () => {
+  it("takes back an edit whose files do not load, restoring the exact bytes, and applies nothing", async () => {
     const file = join(root, "courier.mocks.ts");
     writeFileSync(file, EXISTING);
-    chmodSync(file, 0o664);
     const { ctx, tx } = await harness(async () => {
       throw new Error("Unexpected token");
     });
@@ -223,9 +223,23 @@ describe("applyMocksEdit", () => {
       "second: defineMockServer({ source: courierConfig.sources.api })",
     );
     expect(readFileSync(file, "utf8")).toBe(EXISTING);
-    expect(statSync(file).mode & 0o777).toBe(0o664);
     expect(tx.apply).not.toHaveBeenCalled();
     expect(tx.acknowledge).toHaveBeenCalledTimes(2);
+  });
+
+  /* Windows keeps no POSIX permission bits to restore. */
+  it.skipIf(IS_WINDOWS)("restores the file's mode when it takes an edit back", async () => {
+    const file = join(root, "courier.mocks.ts");
+    writeFileSync(file, EXISTING);
+    chmodSync(file, 0o664);
+    const { ctx } = await harness(async () => {
+      throw new Error("Unexpected token");
+    });
+
+    const result = await applyMocksEdit(ctx, await confirmed(ctx));
+
+    expect(result).toMatchObject({ status: "rolledBack" });
+    expect(statSync(file).mode & 0o777).toBe(0o664);
   });
 
   it("takes back a load that is not the edit — the requested mock missing", async () => {

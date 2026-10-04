@@ -8,8 +8,9 @@
  * there while reporting nothing.
  */
 
-import { type FSWatcher, watch } from "node:fs";
+import { existsSync, type FSWatcher, watch } from "node:fs";
 import { basename, dirname } from "node:path";
+import { errnoCode } from "./errno-code";
 import { messageOf } from "./message-of";
 
 /** Why the platform refused a native watch. */
@@ -72,12 +73,16 @@ export function createDirectoryWatchers(options: DirectoryWatchersOptions): Dire
   const watchers = new Map<string, FSWatcher>();
   let names: TrackedByDirectory = new Map();
 
+  /* A directory that is not there — not created yet, or removed — is no
+     refusal: its paths are polled, and the next sync arms it once it
+     exists. */
   const arm = (directory: string): void => {
+    if (!existsSync(directory)) return;
     let watcher: FSWatcher;
     try {
       watcher = watch(directory, { persistent: true });
     } catch (err) {
-      onRefused(classify(err, directory));
+      if (errnoCode(err) !== "ENOENT") onRefused(classify(err, directory));
       return;
     }
     /* Without this listener a negative libuv status arrives as an unhandled
@@ -85,7 +90,7 @@ export function createDirectoryWatchers(options: DirectoryWatchersOptions): Dire
     watcher.on("error", (err) => {
       watchers.delete(directory);
       watcher.close();
-      onRefused(classify(err, directory));
+      if (existsSync(directory)) onRefused(classify(err, directory));
     });
     watcher.on("change", (_event, filename) => {
       if (filename === null || filename === undefined) {

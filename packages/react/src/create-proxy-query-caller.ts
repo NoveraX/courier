@@ -3,9 +3,8 @@ import type { BrowserApi, DefinedApi } from "@noverax/courier/define";
 import {
   createClientRoot,
   createProxyHTTPExecutor,
-  createProxySSEFactory,
-  createProxyWSChannelFactory,
   mergeProxyPath,
+  proxyStreamingFactories,
   shapeOfClient,
 } from "@noverax/courier/internal";
 
@@ -91,28 +90,21 @@ export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDef
   };
 
   const httpExecutor = createProxyHTTPExecutor(source, effectiveDefaults);
-  const sseFactory = createProxySSEFactory(source, {
-    proxyPath: mergedProxyPath,
-    headers: defaults?.headers,
-  });
-
-  // WS channel factory is constructed unconditionally — `resolveProxyPath`
-  // is invoked lazily on the first `useChannel` subscribe and surfaces a
-  // clear `ConfigurationError` ("WS_PATH_NOT_CONFIGURED") if the user
-  // calls `useChannel` without `proxyPath.ws` set.
-  // ⚠️ defaults.headers is intentionally NOT forwarded to the WS factory.
-  // Browser WebSocket cannot send custom HTTP headers in the upgrade
-  // handshake. See `ProxyWSDefaults` for supported auth alternatives.
-  const wsChannelFactory = createProxyWSChannelFactory(source, {
-    proxyPath: mergedProxyPath,
-    ws: defaults?.ws,
+  /* Their client code is loaded on the first subscription or channel, so an
+     application that opens none does not carry it. A missing `proxyPath.ws`
+     is reported on the first `useChannel`. defaults.headers is not given to
+     the WS factory: a browser WebSocket cannot send headers on its upgrade
+     (see `ProxyWSDefaults` for what authenticates it). */
+  const streaming = proxyStreamingFactories(source, {
+    sse: { proxyPath: mergedProxyPath, headers: defaults?.headers },
+    ws: { proxyPath: mergedProxyPath, ws: defaults?.ws },
   });
 
   const subscribeFn: SubscribeFn = (group, method, variables) =>
-    sseFactory(group, method, variables, {});
+    streaming.sse(group, method, variables, {});
 
   const channelFn: ChannelFn = (group, method, variables) =>
-    wsChannelFactory(group, method, variables, {});
+    streaming.wsChannel(group, method, variables, {});
 
   /* A group named like a hook the runtime reads, such as `then`, is reached
      only when the caller was given what the source declares. */

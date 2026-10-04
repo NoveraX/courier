@@ -1,0 +1,77 @@
+/**
+ * What a bundle of the query callers loads before any stream or channel is
+ * opened. The callers built their SSE and WebSocket factories at once from
+ * an entry that imported both clients, so every application loaded them
+ * with its first page, whether or not it ever opened a stream.
+ */
+import { resolve } from "node:path";
+import { build, type Metafile } from "esbuild";
+import { describe, expect, it } from "vitest";
+
+const SRC = resolve(import.meta.dirname, "../src");
+/* Code only the SSE client and the WebSocket client run. */
+const SSE_CLIENT = '"Last-Event-ID"';
+const WS_CLIENT = "new WebSocket(";
+
+/* The chunks a page loads with the entry: it and what it imports statically. */
+function loadedWith(entry: string, outputs: Metafile["outputs"]): Set<string> {
+  const loaded = new Set<string>();
+  const visit = (path: string): void => {
+    const output = outputs[path];
+    if (!output || loaded.has(path)) return;
+    loaded.add(path);
+    for (const imported of output.imports) {
+      if (imported.kind === "import-statement") visit(imported.path);
+    }
+  };
+  visit(entry);
+  return loaded;
+}
+
+async function bundleOf(caller: string): Promise<{ atOnce: string; all: string }> {
+  const { outputFiles, metafile } = await build({
+    stdin: {
+      contents: `export { ${caller} } from "${SRC}/index.ts";`,
+      resolveDir: SRC,
+      loader: "ts",
+    },
+    bundle: true,
+    splitting: true,
+    format: "esm",
+    platform: "browser",
+    outdir: resolve(SRC, "../out"),
+    write: false,
+    metafile: true,
+    /* Courier's packages resolved as an application resolves them: built. */
+    tsconfigRaw: {},
+    external: ["react", "react-dom", "@tanstack/react-query"],
+    logLevel: "silent",
+  });
+  const entry = Object.keys(metafile.outputs).find((path) => path.endsWith("stdin.js")) ?? "";
+  const loaded = loadedWith(entry, metafile.outputs);
+  const texts = outputFiles.map((file) => ({
+    loaded: [...loaded].some((path) => file.path.endsWith(path.replace(/^.*out\//, "out/"))),
+    text: file.text,
+  }));
+  return {
+    atOnce: texts
+      .filter((file) => file.loaded)
+      .map((file) => file.text)
+      .join("\n"),
+    all: texts.map((file) => file.text).join("\n"),
+  };
+}
+
+describe("a bundle of a query caller", () => {
+  it.each(["createProxyQueryCaller", "createQueryCaller"])(
+    "loads the stream and channel clients of %s only when one opens",
+    async (caller) => {
+      const { atOnce, all } = await bundleOf(caller);
+
+      expect(atOnce).not.toBe("");
+      expect([atOnce.includes(SSE_CLIENT), atOnce.includes(WS_CLIENT)]).toEqual([false, false]);
+      expect([all.includes(SSE_CLIENT), all.includes(WS_CLIENT)]).toEqual([true, true]);
+    },
+    30_000,
+  );
+});

@@ -121,7 +121,7 @@ const server = await createCourierServer({
 
   // Lifecycle
   signals: true,                     // handle SIGTERM/SIGINT (default: true)
-  onReady: (url) => console.log(`Ready: ${url}`),
+  onReady: (url) => console.log(`Ready: ${url}`), // announces the address in place of the server's "Listening on" line
 })
 ```
 

@@ -1,10 +1,11 @@
 /**
  * The address a standalone server reports — to `onReady`, in its log, to
- * Studio and as the app's origin — is one a client can dial.
+ * Studio and as the app's origin — is one a client can dial, and it is
+ * announced once: in the server's log, or by `onReady` in its place.
  */
 import { getAppOrigin, setAppOrigin } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createCourierServer } from "../src/create-server";
 import { listenUrl } from "../src/listen-url";
@@ -24,6 +25,7 @@ afterEach(async () => {
   await server?.stop();
   server = undefined;
   setAppOrigin(undefined);
+  vi.restoreAllMocks();
 });
 
 function start(host: string): Promise<string> {
@@ -71,5 +73,33 @@ describe("a standalone server that listens", () => {
     await start("127.0.0.1");
 
     expect(getAppOrigin()).toBe("http://app.test:3000");
+  });
+});
+
+describe("announcing the address", () => {
+  /** The log lines, among the console calls, that announce the address. */
+  function announced(calls: readonly (readonly unknown[])[]): string[] {
+    return calls.map((call) => String(call[1])).filter((line) => line.includes("Listening on"));
+  }
+
+  it("is the server's own log line when no onReady is given", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    server = createCourierServer({ sources, port: 0, host: "127.0.0.1", signals: false });
+    await server.ready;
+
+    expect(info).toHaveBeenCalled();
+    expect(announced(info.mock.calls)).toEqual([
+      expect.stringContaining(`Listening on ${server.url}`),
+    ]);
+  });
+
+  it("is left to onReady when one is given, so the address is not said twice", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+
+    const url = await start("127.0.0.1");
+
+    expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    expect(announced(info.mock.calls)).toEqual([]);
   });
 });

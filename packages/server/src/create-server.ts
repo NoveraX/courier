@@ -125,7 +125,6 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
     /* The app's origin, unless config or the environment named one, so Studio's
        Playground reaches this server's proxy at a relative proxyPath too. */
     discoverAppOrigin(result.url);
-    log.info(`Listening on ${result.url}`);
     announceHosting({
       transports: ["http", "sse", "ws"],
       sources: Object.values(sources),
@@ -133,7 +132,10 @@ export function createCourierServer(config: CourierServerOptions): CourierServer
       framework: "standalone",
     });
     markListening(result.url);
-    onReady?.(result.url);
+    /* A caller told of the address announces it — the command's banner, an
+       app's own line — so it is said once, not twice. */
+    if (onReady === undefined) log.info(`Listening on ${result.url}`);
+    else onReady(result.url);
   });
 
   async function wrappedStop(): Promise<void> {

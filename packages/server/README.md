@@ -66,6 +66,8 @@ const server = createCourierServer({
 // await server.stop() → graceful shutdown
 ```
 
+Without `onReady` the server logs `Listening on <url>` once it listens; with it, the callback announces the address in that line's place, so it is said once.
+
 ### CLI
 
 ```bash

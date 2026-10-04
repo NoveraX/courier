@@ -13,15 +13,15 @@ describe("readTsconfigLinks", () => {
     expect(links).toEqual({ extends: ["./tsconfig.base.json"], declaresPaths: true });
   });
 
-  it("reads an extends array in the order written, an entry that is no string as null", () => {
+  it("reads an extends array in the order written, skipping an entry that is no string", () => {
     const links = readTsconfigLinks('{ "extends": ["./a.json", 1, "@acme/tsconfig"] }');
 
-    expect(links).toEqual({ extends: ["./a.json", null, "@acme/tsconfig"], declaresPaths: false });
+    expect(links).toEqual({ extends: ["./a.json", "@acme/tsconfig"], declaresPaths: false });
   });
 
-  it("reads an extends that is neither a string nor an array as one entry that is no string", () => {
-    expect(readTsconfigLinks('{ "extends": 5 }').extends).toEqual([null]);
-    expect(readTsconfigLinks('{ "extends": { "path": "./a.json" } }').extends).toEqual([null]);
+  it("follows no extends that is neither a string nor an array", () => {
+    expect(readTsconfigLinks('{ "extends": 5 }').extends).toEqual([]);
+    expect(readTsconfigLinks('{ "extends": { "path": "./a.json" } }').extends).toEqual([]);
     expect(readTsconfigLinks('{ "extends": null }').extends).toEqual([]);
   });
 
@@ -54,14 +54,16 @@ describe("readTsconfigLinks", () => {
     );
   });
 
-  it("counts paths set to any truthy value, as the reader does, and no falsy one", () => {
+  it("counts paths as declared only when they are an object, as the reader does", () => {
     const declares = (paths: string) =>
       readTsconfigLinks(`{ compilerOptions: { paths: ${paths} } }`).declaresPaths;
 
-    expect(["[]", "'./src/*'", "1", "true", "Infinity", "-1", "+Infinity"].map(declares)).toEqual(
-      Array(7).fill(true),
+    expect(["{}", "{ '@/*': ['./src/*'] }", "{ '@/*': './src/*' }"].map(declares)).toEqual(
+      Array(3).fill(true),
     );
-    expect(["0", "''", "false", "NaN", "-0", "-NaN"].map(declares)).toEqual(Array(6).fill(false));
+    expect(["[]", "'./src/*'", "1", "true", "Infinity", "0", "null"].map(declares)).toEqual(
+      Array(7).fill(false),
+    );
   });
 
   it("reads nothing from a text that is no object", () => {

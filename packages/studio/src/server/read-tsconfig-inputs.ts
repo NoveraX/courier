@@ -74,10 +74,8 @@ function consult(file: string, inputs: Map<string, string | null>, visited: Set<
   if (text === null) return false;
   const links = readTsconfigLinks(text);
   if (links.declaresPaths) return true;
-  /* A later entry of an `extends` array overrides an earlier one. The reader
-     fails at an entry that is no string, so the search ends there too. */
+  /* A later entry of an `extends` array overrides an earlier one. */
   for (const specifier of [...links.extends].reverse()) {
-    if (specifier === null) return true;
     const parent = resolveTsconfigExtends(specifier, dirname(path));
     for (const absent of parent.absent) recordAbsent(inputs, absent);
     if (parent.file !== null && consult(parent.file, inputs, visited)) return true;

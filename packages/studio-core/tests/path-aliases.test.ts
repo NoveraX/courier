@@ -1,3 +1,4 @@
+import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -215,6 +216,41 @@ describe("readPathAliases", () => {
     expect(() => readPathAliases(root)).not.toThrow();
     expect(readPathAliases(root).loader).toEqual({});
   });
+
+  it("ignores a mapping whose targets are not a list of paths, and keeps the others", () => {
+    tsconfig({ compilerOptions: { paths: { "@/*": "./src/*", "~/*": ["./lib/*"] } } });
+
+    const aliases = readPathAliases(root);
+
+    expect(aliases.candidatesFor("@/x")).toEqual([]);
+    expect(aliases.candidatesFor("~/x")).toEqual([join(root, "lib/x")]);
+  });
+
+  it("follows no extends that is not a path, and survives it", () => {
+    tsconfig({ extends: 5 });
+
+    expect(() => readPathAliases(root)).not.toThrow();
+    expect(readPathAliases(root).loader).toEqual({});
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "is not held up by a pipe where its tsconfig should be",
+    () => {
+      const fifo = join(root, "tsconfig.json");
+      execFileSync("mkfifo", [fifo]);
+      /* A writer that would let a read of the pipe finish after a while. */
+      const writer = spawn("sh", ["-c", `sleep 2; echo '{}' > '${fifo}'`], { stdio: "ignore" });
+      try {
+        const started = Date.now();
+        const aliases = readPathAliases(root);
+
+        expect(Date.now() - started).toBeLessThan(1000);
+        expect(aliases.loader).toEqual({});
+      } finally {
+        writer.kill();
+      }
+    },
+  );
 
   it("reads a tsconfig containing comments and trailing commas", () => {
     write(

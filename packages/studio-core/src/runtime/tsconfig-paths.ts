@@ -15,11 +15,12 @@
  * accepts. Refusing them would drop a real project's aliases without a word.
  */
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { parseJSON5 } from "confbox";
+
+import { readTsconfigFile } from "./read-tsconfig-file";
 
 const log = createLogger("Studio");
 
@@ -31,21 +32,11 @@ export interface TsconfigPaths {
   paths: Readonly<Record<string, readonly string[]>>;
 }
 
-interface RawTsconfig {
-  extends?: string | string[];
-  compilerOptions?: {
-    baseUrl?: string;
-    paths?: Record<string, string[]>;
-  };
-}
-
 /**
  * Read the path mapping that applies to files in `directory`: the one of the
- * nearest `tsconfig.json` at or above it, as TypeScript finds it.
- *
- * Only the directory's own `tsconfig.json` used to be read, so a config file
- * kept below the project root — `deploy/server.config.ts` — lost every alias
- * the project declares and failed to load.
+ * nearest `tsconfig.json` at or above it, as TypeScript finds it, so a config
+ * file kept below the project root — `deploy/server.config.ts` — keeps every
+ * alias the project declares.
  *
  * @param directory - Directory of the file whose imports are resolved
  * @returns The mapping, or `null` when no tsconfig declares one
@@ -75,39 +66,26 @@ function findPaths(file: string, visited: Set<string>): TsconfigPaths | null {
   if (visited.has(path)) return null;
   visited.add(path);
 
-  const config = readTsconfig(path);
+  const config = readTsconfigFile(path);
   if (!config) return null;
 
-  const options = config.compilerOptions;
-  if (options?.paths) {
-    const dir = dirname(path);
-    return { baseUrl: resolve(dir, options.baseUrl ?? "."), paths: options.paths };
+  if (config.paths) {
+    return { baseUrl: resolve(dirname(path), config.baseUrl ?? "."), paths: config.paths };
   }
 
   /* A later entry in an `extends` array overrides an earlier one. */
-  const inherited = typeof config.extends === "string" ? [config.extends] : (config.extends ?? []);
-  for (const specifier of [...inherited].reverse()) {
+  for (const specifier of [...config.extends].reverse()) {
     const parent = resolveExtends(specifier, dirname(path));
-    const found = parent && findPaths(parent, visited);
+    if (!parent) {
+      log.warn(
+        `${path} extends "${specifier}", which cannot be found, so its path aliases are not read`,
+      );
+      continue;
+    }
+    const found = findPaths(parent, visited);
     if (found) return found;
   }
   return null;
-}
-
-function readTsconfig(path: string): RawTsconfig | null {
-  let text: string;
-  try {
-    text = readFileSync(path, "utf-8");
-  } catch {
-    /* Absent or unreadable is the same answer as declaring nothing. */
-    return null;
-  }
-  try {
-    return parseJSON5(text) as RawTsconfig;
-  } catch (err) {
-    log.warn(`Could not parse ${path}, so its path aliases are ignored`, err);
-    return null;
-  }
 }
 
 /**
@@ -128,11 +106,18 @@ function resolveExtends(specifier: string, fromDir: string): string | null {
 
   const requireFrom = createRequire(resolve(fromDir, "tsconfig.json"));
   for (const target of [specifier, `${specifier}/tsconfig.json`]) {
-    try {
-      return requireFrom.resolve(target);
-    } catch {
-      /* Try the package's conventional filename before giving up. */
-    }
+    /* A package names its config, or ships the conventional one. */
+    const found = resolveFrom(requireFrom, target);
+    if (found) return found;
   }
   return null;
+}
+
+function resolveFrom(requireFrom: NodeJS.Require, target: string): string | null {
+  try {
+    return requireFrom.resolve(target);
+  } catch (err) {
+    log.debug(`"${target}" does not resolve to a tsconfig`, err);
+    return null;
+  }
 }

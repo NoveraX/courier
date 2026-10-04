@@ -8,6 +8,7 @@ import { loadCliConfig } from "./load-cli-config";
 import { parseByteLimit } from "./parse-byte-limit";
 import { parsePort } from "./parse-port";
 import { serverVersion } from "./server-version";
+import { stopOnFatal } from "./stop-on-fatal";
 
 const log = createLogger("CLI");
 
@@ -81,7 +82,7 @@ const main = defineCommand({
     if (maxUploadBytes instanceof Error) fail(maxUploadBytes.message);
 
     const { createCourierServer } = await import("./create-server");
-    createCourierServer({
+    const server = createCourierServer({
       sources: config.sources as Sources,
       port,
       host: args.host ?? block.host ?? DEFAULT_HOST,
@@ -98,6 +99,7 @@ const main = defineCommand({
         process.exitCode = 1;
       },
     });
+    stopOnFatal(() => server.stop());
   },
 });
 

@@ -71,3 +71,42 @@ describe("a server URL with variables", () => {
     );
   });
 });
+
+const answers = { responses: { "200": { description: "ok" } } };
+
+function document(paths: Record<string, unknown>, components: Record<string, unknown> = {}) {
+  return JSON.stringify({
+    openapi: "3.1.0",
+    info: { title: "t", version: "1" },
+    paths,
+    components,
+  });
+}
+
+describe("a path item written as a reference", () => {
+  it("is followed to the path item this document declares", () => {
+    const parsed = parseSpec(
+      document(
+        { "/x": { $ref: "#/components/pathItems/X" } },
+        { pathItems: { X: { get: { operationId: "getX", ...answers } } } },
+      ),
+    );
+
+    expect(parsed.groups.flatMap((group) => group.endpoints.map((e) => e.name))).toEqual(["getX"]);
+    expect(parsed.skipped).toEqual([]);
+  });
+
+  it("is left out, and said so, when this document does not declare it", () => {
+    const parsed = parseSpec(
+      document({
+        "/x": { $ref: "#/components/pathItems/Missing" },
+        "/y": { $ref: "./other.yaml#/Y" },
+      }),
+    );
+
+    expect(parsed.skipped.map(({ path, reason }) => [path, reason])).toEqual([
+      ["/x", "path item references #/components/pathItems/Missing, which is not in this document"],
+      ["/y", "path item references ./other.yaml#/Y, which is not in this document"],
+    ]);
+  });
+});

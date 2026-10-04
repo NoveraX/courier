@@ -12,6 +12,7 @@ import type { ParsedEndpoint, ParsedSpec, SkippedOperation } from "./types";
 import {
   convertSchema,
   parseSecuritySchemes,
+  resolveRef,
   specText,
   stripHtml,
   stripHtmlPreserveNewlines,
@@ -71,15 +72,12 @@ function groupEndpointsByTag(spec: SpecNode): {
       continue;
     }
 
-    /* A path item written as a reference points into another document, which
-       a single-file parse cannot follow — say so rather than lose it. */
-    const pathRef = textAt(methods, "$ref");
-    if (pathRef !== undefined) {
-      skipped.push({
-        method: "ALL",
-        path,
-        reason: `path item references ${pathRef}, which is not in this document`,
-      });
+    /* A path item written as a reference is followed within this document,
+       to `components.pathItems` say; one into another document a single-file
+       parse cannot follow, so it says so rather than lose it. */
+    const item = pathItemOf(spec, methods);
+    if (typeof item === "string") {
+      skipped.push({ method: "ALL", path, reason: item });
       continue;
     }
 
@@ -87,9 +85,9 @@ function groupEndpointsByTag(spec: SpecNode): {
        under it — Kubernetes and Asana declare their path parameters there,
        and ignoring them left 191 of Asana's 249 endpoints with a placeholder
        no caller could fill. */
-    const shared = listAt(methods, "parameters");
+    const shared = listAt(item, "parameters");
 
-    for (const [method, operation] of Object.entries(methods)) {
+    for (const [method, operation] of Object.entries(item)) {
       if (!isOperationKey(method)) continue;
       if (!isNode(operation)) continue;
       if (!isSupportedMethod(method)) {
@@ -118,6 +116,19 @@ function groupEndpointsByTag(spec: SpecNode): {
     }
   }
   return { endpointsByTag, skipped };
+}
+
+/* The path item a reference names, its own fields beside the reference
+   kept; or why it cannot be read. */
+function pathItemOf(spec: SpecNode, item: SpecNode): SpecNode | string {
+  const ref = textAt(item, "$ref");
+  if (ref === undefined) return item;
+  const target = ref.startsWith("#/") ? resolveRef(spec, ref) : {};
+  if (Object.keys(target).length === 0 || textAt(target, "$ref") !== undefined) {
+    return `path item references ${ref}, which is not in this document`;
+  }
+  const { $ref: _ref, ...own } = item;
+  return { ...target, ...own };
 }
 
 function parseTagDescriptions(spec: SpecNode): Map<string, string> {

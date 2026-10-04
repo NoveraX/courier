@@ -146,7 +146,7 @@ describe("createProjectState", () => {
 
     expect(() => state.importsChanged()).not.toThrow();
     expect(console.warn).toHaveBeenCalledWith(
-      "%s",
+      expect.any(String),
       expect.stringContaining("could not send the imports lists"),
       expect.objectContaining({ message: "socket gone" }),
     );

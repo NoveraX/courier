@@ -2,11 +2,12 @@
  * What Courier's terminal logger prints, and where.
  *
  * Warnings and errors go to stderr and the rest to stdout, through the
- * console, so a cause prints with its stack and `cause` chain — and the root
- * of a chain too deep for the console to show is printed on its own. A `%`
- * in a message stays literal. Colour follows the terminal, NO_COLOR and
- * FORCE_COLOR. COURIER_LOG_LEVEL sets the lowest level printed, `info` by
- * default.
+ * console, so a cause prints under its line with its stack and `cause`
+ * chain — and the root of a chain too deep for the console to show is
+ * printed on its own. A `%` in a message stays literal. Colour follows the
+ * terminal, NO_COLOR and FORCE_COLOR, and never paints the message itself.
+ * COURIER_LOG_LEVEL sets the lowest level printed, `info` by default, and
+ * COURIER_LOG_FORMAT=json writes one JSON object per line.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -52,6 +53,8 @@ beforeEach(() => {
   vi.stubEnv("FORCE_COLOR", undefined);
   vi.stubEnv("NO_COLOR", undefined);
   vi.stubEnv("TERM", undefined);
+  vi.stubEnv("COLORTERM", undefined);
+  vi.stubEnv("COURIER_LOG_FORMAT", undefined);
 });
 
 afterEach(() => {
@@ -205,9 +208,15 @@ describe("the message", () => {
     createLogger("SSE").warn('bad data {"pct": 100%c %s}', cause);
 
     const [format, line, ...rest] = firstCall("warn");
-    expect(format).toBe("%s");
+    expect(format).toBe("%s\n%O");
     expect(String(line)).toContain('{"pct": 100%c %s}');
     expect(rest).toEqual([cause]);
+  });
+
+  it("puts the cause on a line of its own", () => {
+    createLogger("Proxy").warn("Upstream request failed", new Error("refused"));
+
+    expect(String(firstCall("warn")[0])).toMatch(/^%s\n/);
   });
 });
 
@@ -248,6 +257,15 @@ describe("colour", () => {
     restore();
 
     expect(String(firstCall("error")[1])).toContain(ESC);
+  });
+
+  it("leaves the message in the terminal's own colour, so a light theme shows it", () => {
+    const restore = setTty(process.stdout, true, 24);
+
+    createLogger("Test").info("Server stopped");
+    restore();
+
+    expect(String(firstCall("info")[1]).endsWith("  Server stopped")).toBe(true);
   });
 });
 
@@ -301,13 +319,79 @@ describe("COURIER_LOG_LEVEL", () => {
 });
 
 describe("the prefix", () => {
-  it("leaves out the process id where there is no process", () => {
+  it("names the level in words and the scope in kebab case where there is no colour", () => {
+    createLogger("MockServer").warn("slow");
+
+    expect(String(firstCall("warn")[1])).toMatch(
+      /^\d\d:\d\d:\d\d WARN {2}courier:mock-server +slow$/,
+    );
+  });
+
+  it("marks the level with a symbol in its colour on a terminal", () => {
+    const restore = setTty(process.stderr, true, 24);
+
+    createLogger("Proxy").warn("slow");
+    restore();
+
+    expect(String(firstCall("warn")[1])).toContain("\x1b[33m▲\x1b[39m");
+  });
+
+  it("starts each further line of a message under its first", () => {
+    createLogger("Studio").info("first\nsecond");
+
+    const [first = "", second = ""] = String(firstCall("info")[1]).split("\n");
+    expect(second.trimStart()).toBe("second");
+    expect(second.length - "second".length).toBe(first.indexOf("first"));
+  });
+});
+
+describe("COURIER_LOG_FORMAT", () => {
+  it("json writes one JSON object per line, with the error behind it", () => {
+    vi.stubEnv("COURIER_LOG_FORMAT", "json");
+    const refused = Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" });
+
+    createLogger("HttpClient").warn("Upstream request failed", refused);
+
+    const [format, line, ...rest] = firstCall("warn");
+    expect(format).toBe("%s");
+    expect(rest).toEqual([]);
+    expect(JSON.parse(String(line))).toMatchObject({
+      level: "warn",
+      scope: "http-client",
+      pid: process.pid,
+      message: "Upstream request failed",
+      error: { name: "Error", message: "connect ECONNREFUSED", code: "ECONNREFUSED" },
+    });
+  });
+
+  it("json leaves out the process id where there is no process", () => {
+    vi.stubEnv("COURIER_LOG_FORMAT", "json");
     const pid = Object.getOwnPropertyDescriptor(process, "pid");
     Object.defineProperty(process, "pid", { value: undefined, configurable: true });
 
     createLogger("Worker").info("no pid");
     if (pid) Object.defineProperty(process, "pid", pid);
 
-    expect(String(firstCall("info")[1])).not.toContain("undefined");
+    expect(JSON.parse(String(firstCall("info")[1]))).not.toHaveProperty("pid");
+  });
+
+  it("reports a value it does not know once, and keeps text", () => {
+    vi.stubEnv("COURIER_LOG_FORMAT", "yaml-unknown");
+
+    createLogger("Test").info("first");
+    createLogger("Test").info("second");
+
+    const reports = printed("warn").filter((call) => String(call[1]).includes("yaml-unknown"));
+    expect(reports).toHaveLength(1);
+    expect(String(firstCall("info")[1])).toMatch(/INFO +courier:test +first$/);
+  });
+
+  it("is not reported when the level leaves warnings out", () => {
+    vi.stubEnv("COURIER_LOG_FORMAT", "xml-unknown");
+    vi.stubEnv("COURIER_LOG_LEVEL", "error");
+
+    createLogger("Test").error("shown");
+
+    expect(printed("warn")).toHaveLength(0);
   });
 });

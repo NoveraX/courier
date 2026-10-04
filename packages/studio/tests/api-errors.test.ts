@@ -113,7 +113,7 @@ describe("a failure inside an API route", () => {
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({ error: "Studio could not handle the request." });
     expect(console.error).toHaveBeenCalledWith(
-      "%s",
+      expect.any(String),
       expect.stringContaining("A Studio API request failed"),
       failure,
     );

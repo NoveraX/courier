@@ -23,12 +23,14 @@ export interface ScopedLogger {
  * Scoped logger — binds a context name so every call includes it.
  *
  * On a server, `debug` and `info` go to stdout and `warn` and `error` to
- * stderr, each line prefixed with `[Courier]`, the process id and the time.
- * A cause passed as the second argument is printed after the line with its
+ * stderr, each line led by the time, the level and `courier:` with the
+ * context in kebab case — `HttpClient` logs as `courier:http-client`. A
+ * cause passed as the second argument is printed under the line with its
  * stack and `cause` chain. `COURIER_LOG_LEVEL` — `debug`, `info` (default),
- * `warn`, `error` or `silent` — sets the lowest level printed; colour
- * follows the terminal, `NO_COLOR` and `FORCE_COLOR`. In a browser the lines
- * go to the devtools console, whose level filter applies instead.
+ * `warn`, `error` or `silent` — sets the lowest level printed, and
+ * `COURIER_LOG_FORMAT=json` writes one JSON object per line; colour follows
+ * the terminal, `NO_COLOR` and `FORCE_COLOR`. In a browser the lines go to
+ * the devtools console, whose level filter applies instead.
  *
  * @param context - The name every line is prefixed with
  * @returns A logger for that context

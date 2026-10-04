@@ -1,29 +1,17 @@
+import type { TerminalStyle } from "../terminal/terminal-style";
+import { scopeName } from "./scope-name";
+import { tintRequest } from "./tint-request";
 import type { LogLevel } from "./types";
 
-const RESET = "\x1b[0m";
-const BOLD = "\x1b[1m";
-const DIM = "\x1b[2m";
+/* Wide enough for every scope Courier logs under, `webpack-plugin` aside,
+   so the messages of one process line up. */
+const SCOPE_WIDTH = 13;
+const BRAND = "courier:";
 
-function fg(r: number, g: number, b: number): string {
-  return `\x1b[38;2;${r};${g};${b}m`;
-}
-
-const BRAND = fg(139, 92, 246);
-const WHITE = fg(229, 231, 235);
-const DARK = fg(63, 63, 70);
-const PURPLE = fg(167, 139, 250);
-
-const LEVEL_COLORS: Record<LogLevel, string> = {
-  debug: fg(113, 113, 122),
-  info: fg(52, 211, 153),
-  warn: fg(251, 191, 36),
-  error: fg(248, 113, 113),
-};
-
-const LEVEL_LABELS: Record<LogLevel, string> = {
+const LABELS: Record<LogLevel, string> = {
   debug: "DEBUG",
-  info: " INFO",
-  warn: " WARN",
+  info: "INFO ",
+  warn: "WARN ",
   error: "ERROR",
 };
 
@@ -34,27 +22,56 @@ function clock(): string {
     .join(":");
 }
 
+/* The lines after a message's first start under it, not at the margin. */
+function hang(message: string, indent: number): string {
+  return message.includes("\n") ? message.replaceAll("\n", `\n${" ".repeat(indent)}`) : message;
+}
+
+function mark(level: LogLevel, { bold, brand, red, yellow, glyphs }: TerminalStyle): string {
+  if (level === "info") return bold(brand(glyphs.info));
+  if (level === "warn") return bold(yellow(glyphs.warn));
+  if (level === "error") return bold(red(glyphs.error));
+  return glyphs.debug;
+}
+
 /**
- * One terminal log line: `[Courier] PID - HH:MM:SS  LEVEL  [Context] message`.
+ * One terminal log line: the time, the level, `courier:` and the scope, and
+ * the message.
  *
- * The PID is left out where there is no process to name — a Web Worker, or an
- * edge runtime without Node compatibility.
+ * Where the stream shows colour, the level is a symbol in its colour — `●`
+ * info, `▲` warn, `✕` error, `·` debug, the whole debug line dimmed — and a
+ * request line has its status tinted; the message keeps the terminal's own
+ * foreground, so it reads on a light theme as on a dark one. Without colour
+ * — a pipe, a log file — the level is a word, for a reader and for grep:
+ *
+ *   19:03:59 ▲ courier:proxy          Upstream request failed
+ *   19:03:59 WARN  courier:proxy          Upstream request failed
  *
  * @param level - The line's level
  * @param context - What wrote it
- * @param message - The text, kept verbatim
- * @param colored - Whether to add escape codes
+ * @param message - The text; a second line starts under the first
+ * @param style - The style of the stream it is written to
  * @returns The line, without a trailing newline
+ * @example
+ * ```ts
+ * formatLine("info", "MockServer", "GET /users → 200 (4ms)", styleFor(process.stdout));
+ * ```
  */
 export function formatLine(
   level: LogLevel,
   context: string,
   message: string,
-  colored: boolean,
+  style: TerminalStyle,
 ): string {
-  const paint = (code: string, text: string): string => (colored ? `${code}${text}${RESET}` : text);
-  const pid = globalThis.process?.pid;
-  const origin = pid === undefined ? "" : `${paint(WHITE, String(pid))}  ${paint(DARK, "-")} `;
-  const label = paint(`${LEVEL_COLORS[level]}${BOLD}`, LEVEL_LABELS[level]);
-  return `${paint(BRAND, "[Courier]")} ${origin}${paint(DIM, clock())}   ${label}  ${paint(PURPLE, `[${context}]`)} ${paint(WHITE, message)}`;
+  const time = clock();
+  const scope = scopeName(context).padEnd(SCOPE_WIDTH);
+  if (style.level === 0) {
+    const head = `${time} ${LABELS[level]} ${BRAND}${scope}  `;
+    return `${head}${hang(message, head.length)}`;
+  }
+  const body = hang(message, time.length + 3 + BRAND.length + scope.length + 2);
+  if (level === "debug")
+    return style.dim(`${time} ${mark(level, style)} ${BRAND}${scope}  ${body}`);
+  const text = level === "info" ? tintRequest(body, style) : body;
+  return `${style.dim(time)} ${mark(level, style)} ${style.dim(BRAND)}${scope}  ${text}`;
 }

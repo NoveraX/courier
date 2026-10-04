@@ -241,10 +241,8 @@ describe("replaceMocksFile", () => {
     expect(error).toBe(renameError);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn).toHaveBeenCalledWith(
-      "%s",
-      expect.stringContaining(
-        `[Studio] Could not remove ${tmp}, left by a write that failed; delete it.`,
-      ),
+      expect.any(String),
+      expect.stringContaining(`Could not remove ${tmp}, left by a write that failed; delete it.`),
       unlinkError,
     );
     expect(readdirSync(dir).sort()).toEqual([basename(tmp), "courier.mocks.ts"].sort());

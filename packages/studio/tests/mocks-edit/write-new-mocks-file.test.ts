@@ -150,9 +150,9 @@ describe("writeNewMocksFile", () => {
     expect(readFileSync(path, "utf8")).toBe(CONTENT);
     expect(statSync(path).nlink).toBe(2);
     expect(warn).toHaveBeenCalledWith(
-      "%s",
+      expect.any(String),
       expect.stringContaining(
-        `[Studio] Created ${path}, but ${tmp} is still a second name for it; delete ${tmp}.`,
+        `Created ${path}, but ${tmp} is still a second name for it; delete ${tmp}.`,
       ),
       unlinkError,
     );

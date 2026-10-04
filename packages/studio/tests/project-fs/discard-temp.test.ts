@@ -42,10 +42,8 @@ describe("discardTemp", () => {
 
     expect(discardTemp(tmp)).toBe(false);
     expect(warn).toHaveBeenCalledWith(
-      "%s",
-      expect.stringContaining(
-        `[Studio] Could not remove ${tmp}, left by a write that failed; delete it.`,
-      ),
+      expect.any(String),
+      expect.stringContaining(`Could not remove ${tmp}, left by a write that failed; delete it.`),
       unlinkError,
     );
     expect(readdirSync(dir)).toEqual([".courier.mocks.4242-0a1b2c3d.tmp"]);

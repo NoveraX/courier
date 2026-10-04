@@ -129,9 +129,9 @@ describe("usesNodeResolution", () => {
 
     expect(usesNodeResolution(root)).toBe(false);
     expect(console.debug).toHaveBeenCalledWith(
-      "%s",
+      expect.any(String),
       expect.stringContaining(
-        `[Studio] Could not read ${join(root, "tsconfig.json")}, so the module options it sets are not known`,
+        `Could not read ${join(root, "tsconfig.json")}, so the module options it sets are not known`,
       ),
       expect.any(SyntaxError),
     );

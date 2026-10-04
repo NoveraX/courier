@@ -39,9 +39,9 @@ describe("readTsconfig", () => {
 
     expect(readTsconfig(file)).toBeNull();
     expect(console.debug).toHaveBeenCalledWith(
-      "%s",
+      expect.any(String),
       expect.stringContaining(
-        `[Studio] Could not read ${file}, so the module options it sets are not known`,
+        `Could not read ${file}, so the module options it sets are not known`,
       ),
       expect.any(SyntaxError),
     );
@@ -53,8 +53,8 @@ describe("readTsconfig", () => {
 
     expect(readTsconfig(file)).toBeNull();
     expect(console.debug).toHaveBeenCalledWith(
-      "%s",
-      expect.stringContaining(`[Studio] Could not read ${file}`),
+      expect.any(String),
+      expect.stringContaining(`Could not read ${file}`),
       expect.objectContaining({ code: "ENOENT" }),
     );
   });

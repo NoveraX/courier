@@ -188,6 +188,23 @@ describe("createWatchSet", () => {
     expect(await c.waitFor(second)).toBe(true);
   });
 
+  it("tells a save of a linked file once, though the link and its target are both watched", async () => {
+    /* The target's directory tells of a save at once, the link's poll up to
+       half a second later. */
+    const target = join(root, "courier.config.ts");
+    const link = join(root, "linked.config.ts");
+    writeFileSync(target, "1");
+    symlinkSync(target, link);
+    const reports: string[][] = [];
+    start({ paths: [link, target], onChange: (changed) => reports.push(changed), debounceMs: 20 });
+    await sleep(SETTLE_MS);
+
+    writeFileSync(target, "2");
+    await sleep(1_200);
+
+    expect(reports).toHaveLength(1);
+  });
+
   it("stops reporting a path that update() dropped", async () => {
     const first = join(root, "a.ts");
     const second = join(root, "b.ts");

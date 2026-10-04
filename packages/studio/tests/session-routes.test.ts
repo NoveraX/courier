@@ -1,6 +1,7 @@
 /**
  * Saved sessions, over Studio's own API: saved from the requests the UI
- * captured, listed, loaded, exported and deleted.
+ * captured, listed, loaded, exported and deleted — and the requests a page
+ * holds, exported without being saved.
  *
  * A request Studio cannot read is answered 400 with the reason, never 500,
  * and a `.courier/sessions` that is a link is refused like any folder Studio
@@ -141,8 +142,48 @@ describe("a saved session", () => {
   });
 });
 
+describe("the requests a page holds", () => {
+  it("are exported in every format, and saved nowhere", async () => {
+    for (const format of ["json", "postman"]) {
+      expect((await call("export-live", { requests: REQUESTS, format })).status).toBe(200);
+    }
+
+    const har = await call("export-live", { requests: REQUESTS, format: "har" });
+
+    expect(har.status).toBe(200);
+    expect(field(field(har.body, "log"), "entries")).toHaveLength(2);
+    expect((await call("list", {})).body).toEqual([]);
+  });
+
+  it("are exported with their credentials left out", async () => {
+    const [first] = REQUESTS;
+    const signed = [{ ...first, requestHeaders: { authorization: "Bearer s3cr3t-value" } }];
+
+    const har = await call("export-live", { requests: signed, format: "har" });
+
+    expect(har.status).toBe(200);
+    expect(JSON.stringify(har.body)).toContain("authorization");
+    expect(JSON.stringify(har.body)).not.toContain("s3cr3t-value");
+  });
+
+  it("are exported for a page without the token, since nothing changes", async () => {
+    const response = await fetch(`${url}/api/sessions/export-live`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: url },
+      body: JSON.stringify({ requests: REQUESTS, format: "har" }),
+    });
+
+    expect(response.status).toBe(200);
+  });
+
+  it("are refused 400 without requests, or in a format Studio does not export", async () => {
+    expect((await call("export-live", { requests: REQUESTS, format: "csv" })).status).toBe(400);
+    expect((await call("export-live", { format: "har" })).status).toBe(400);
+  });
+});
+
 describe("a session request Studio cannot read", () => {
-  it.each(["save", "load", "delete", "export"])(
+  it.each(["save", "load", "delete", "export", "export-live"])(
     "is answered 400 by %s without a JSON body",
     async (route) => {
       expect((await call(route, undefined)).status).toBe(400);

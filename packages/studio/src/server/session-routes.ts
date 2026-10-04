@@ -7,11 +7,18 @@
  * POST /api/sessions/load          — load a saved session by id; the pages show it from then on
  * POST /api/sessions/delete        — delete a saved session by id
  * POST /api/sessions/export        — export session (har/json/postman)
+ * POST /api/sessions/export-live   — export the requests a page holds, unsaved (har/json/postman)
  */
 
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteApp } from "./route-types";
-import { readExportBody, readIdBody, readSaveBody, type SessionRefusal } from "./session-body";
+import {
+  readExportBody,
+  readIdBody,
+  readLiveExportBody,
+  readSaveBody,
+  type SessionRefusal,
+} from "./session-body";
 import { buildSession } from "./session-builder";
 import { exportAsHar, exportAsJson, exportAsPostman } from "./session-export";
 import type { SessionStore } from "./storage/session-rows";
@@ -42,7 +49,8 @@ function answer(res: JsonResponse, fallback: string, run: () => unknown): void {
 }
 
 /**
- * Mount the routes that save, list, load, delete and export sessions.
+ * Mount the routes that save, list, load, delete and export sessions, and
+ * the one that exports the requests a page holds without saving them.
  *
  * @param app - The Studio server's Express app
  * @param deps - The sessions, and what the pages show
@@ -93,5 +101,12 @@ export function registerSessionRoutes(app: RouteApp, { sessions, view }: Session
       const session = sessions.load(read.id);
       return session === null ? null : EXPORTERS[read.format](session);
     });
+  });
+
+  /* Built as a save builds a session — credentials left out — and kept nowhere. */
+  app.post("/api/sessions/export-live", (req, res) => {
+    const read = readLiveExportBody(req.body);
+    if ("error" in read) return refuse(res, read);
+    answer(res, "Failed to export the requests", () => EXPORTERS[read.format](buildSession(read)));
   });
 }

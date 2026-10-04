@@ -125,6 +125,20 @@ describe("the shell", () => {
     );
   });
 
+  it("draws its overlays on the shell's type, though they render outside the shell", async () => {
+    await open();
+
+    fireEvent.click(screen.getByRole("button", { name: /no app attached/ }));
+    const apps = await screen.findByText("Attached apps");
+    expect(apps.closest("[data-shell]")).not.toBeNull();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    fireEvent.keyDown(window, { key: "k", metaKey: true });
+
+    const palette = await screen.findByRole("dialog", { name: "Search Studio" });
+    expect(palette.hasAttribute("data-shell")).toBe(true);
+  });
+
   it("opens the palette with ⌘K, with every view and the actions", async () => {
     await open();
 

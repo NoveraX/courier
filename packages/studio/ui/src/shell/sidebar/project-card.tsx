@@ -51,8 +51,8 @@ export function ProjectCard(): React.ReactNode {
           <Dot tone={dot} className="absolute -right-0.5 -bottom-0.5 size-2 ring-2 ring-panel" />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-px">
-          <span className="truncate text-control leading-tight font-strong">{name}</span>
-          <span className="truncate font-mono text-micro leading-tight text-fg-subtle">
+          <span className="truncate text-control leading-[1.2] font-strong">{name}</span>
+          <span className="truncate font-mono text-micro leading-[1.2] text-fg-subtle">
             {summaryOf(apps, connected)}
           </span>
         </span>
@@ -60,6 +60,7 @@ export function ProjectCard(): React.ReactNode {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
+          data-shell=""
           align="start"
           sideOffset={6}
           className="z-50 w-(--radix-popover-trigger-width) min-w-56 animate-pop-in rounded-card border border-line bg-panel p-1 shadow-overlay"

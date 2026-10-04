@@ -1,9 +1,21 @@
 /*
- * Element defaults inside Studio's shell: code in the mono face without
- * ligatures or tracking, and selections in the brand colour.
+ * Element defaults inside Studio's shell: the type every screen is drawn
+ * on — line height `normal`, as the design leaves it — code in the mono
+ * face without ligatures or tracking, and selections in the brand colour.
+ * Overlays portaled out of the shell carry `data-shell` too.
  */
 
 @layer base {
+  [data-shell] {
+    font-family: var(--font-sans);
+    font-size: var(--text-ui);
+    line-height: normal;
+    letter-spacing: var(--tracking-ui);
+    color: var(--color-fg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   [data-shell] code,
   [data-shell] pre {
     font-family: var(--font-mono);

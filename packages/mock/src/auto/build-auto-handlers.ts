@@ -1,42 +1,7 @@
 import type { MockStore } from "../store";
-import type { AnyMockScenario, UntypedMockFn } from "../types";
+import type { UntypedMockFn } from "../types";
 import { createHandler } from "./auto-handlers";
 import type { RouteInfo } from "./route-analyzer";
-
-// Re-export the seed API and its options type so external imports keep working.
-export type { AutoScenarioOptions } from "./auto-seed";
-export { seedAllCollections } from "./auto-seed";
-
-/** Auto-scenario with late-bound store */
-export interface AutoMockScenario extends AnyMockScenario {
-  /** Bind the store after server creation */
-  bindStore(store: MockStore): void;
-}
-
-/**
- * Build a CRUD scenario from analyzed routes.
- * Handlers work with pre-seeded store (no lazy init).
- */
-export function buildAutoScenario(routes: RouteInfo[]): AutoMockScenario {
-  let boundStore: MockStore | undefined;
-
-  const routesByGroup = groupRoutesByName(routes);
-
-  return {
-    name: "auto-generated",
-
-    bindStore(store: MockStore) {
-      boundStore = store;
-    },
-
-    apply(mock: UntypedMockFn) {
-      if (!boundStore) {
-        throw new Error("[courier-mock] Auto-scenario store not bound.");
-      }
-      registerHandlers(routesByGroup, boundStore, mock);
-    },
-  };
-}
 
 /**
  * Register auto-CRUD handlers directly via the given mock function.

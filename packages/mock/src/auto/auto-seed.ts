@@ -6,12 +6,9 @@ import { extractShape } from "./schema-introspect";
 import { itemSchemaOf, seedSources } from "./seed-sources";
 
 /**
- * Eager seed-time helpers for the auto layer.
- *
- * Extracted from `auto-scenario.ts` because seeding has a clear, isolated
- * responsibility: populate each group's collection from the schema its
- * endpoints answer with (see `seedSources`). Keeping it separate from
- * request-time handler logic makes both halves easier to read and test.
+ * Eager seed-time helpers for the auto layer: populate each group's
+ * collection from the schema its endpoints answer with (see `seedSources`),
+ * before any request is handled.
  */
 
 /** Options for auto-generated scenario */

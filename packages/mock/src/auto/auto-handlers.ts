@@ -20,8 +20,6 @@ import { unwrapArraySchema } from "./schema-introspect";
 /**
  * Per-operation handler factories for the auto-CRUD scenario.
  *
- * Extracted from `auto-scenario.ts` so the dispatch switch — by far the
- * largest piece of behaviour in the auto layer — lives in its own file.
  * Each branch returns a `MockRequestContext` handler bound to a single
  * group/operation pair, or `undefined` if the route should not produce
  * an automatic handler (e.g. SSE/WS).

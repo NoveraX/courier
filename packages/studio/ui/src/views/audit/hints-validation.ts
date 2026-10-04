@@ -1,19 +1,27 @@
 /**
  * Validation-related audit hints (security category).
  *
- * Extracted from `rules-hints.ts` so each category lives in its own module.
  * Reports endpoints missing variables / response schemas, plus catalog
  * endpoints that have no schema at all (filtered to those that were never
  * called so we don't double-report alongside warnings).
+ *
+ * A schema counts when a call reported it or the catalog declares it: a
+ * stream's or a channel's calls report none, though it validates. An
+ * endpoint is told to validate its variables only when its calls sent some.
  */
 
-import type { Catalog } from "../../store/types-ui";
+import type { Catalog, CatalogEndpoint } from "../../store/types-ui";
 import { RESPONSE_SCHEMA_SUGGESTION, VARIABLES_SCHEMA_SUGGESTION } from "./code-suggestions";
 import { formatEndpoint } from "./hints-utils";
 import type { AuditEndpoint, AuditItem, EndpointStats } from "./types";
 
-export function noResponseValidation(stats: Map<string, EndpointStats>): AuditItem[] {
-  const matched = [...stats.values()].filter((s) => !s.hasResponseValidation);
+export function noResponseValidation(
+  stats: Map<string, EndpointStats>,
+  catalog: Catalog,
+): AuditItem[] {
+  const matched = [...stats.values()].filter(
+    (s) => !(s.hasResponseValidation || declared(catalog, s)?.hasResponseSchema),
+  );
   if (matched.length === 0) return [];
   return [
     {
@@ -29,8 +37,14 @@ export function noResponseValidation(stats: Map<string, EndpointStats>): AuditIt
   ];
 }
 
-export function noVariablesValidation(stats: Map<string, EndpointStats>): AuditItem[] {
-  const matched = [...stats.values()].filter((s) => !s.hasVariablesValidation);
+export function noVariablesValidation(
+  stats: Map<string, EndpointStats>,
+  catalog: Catalog,
+): AuditItem[] {
+  const matched = [...stats.values()].filter(
+    (s) =>
+      s.sentVariables && !(s.hasVariablesValidation || declared(catalog, s)?.hasVariablesSchema),
+  );
   if (matched.length === 0) return [];
   return [
     {
@@ -77,4 +91,8 @@ export function missingAllSchemas(
       endpoints: matched,
     },
   ];
+}
+
+function declared(catalog: Catalog, s: EndpointStats): CatalogEndpoint | undefined {
+  return catalog[s.source]?.groups[s.group]?.endpoints[s.method];
 }

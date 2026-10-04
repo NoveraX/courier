@@ -54,6 +54,8 @@ export interface EndpointStats {
   avgSize: number;
   hasVariablesValidation: boolean;
   hasResponseValidation: boolean;
+  /** Whether any call sent variables, which a schema could have checked */
+  sentVariables: boolean;
   modes: Set<string>;
   statusCodes: number[];
   /** Avg middleware time as fraction of total (0-1) */

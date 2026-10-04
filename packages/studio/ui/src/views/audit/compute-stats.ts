@@ -25,6 +25,7 @@ function createEmptyStats(r: RequestEntry, key: string): EndpointStats {
     avgSize: 0,
     hasVariablesValidation: false,
     hasResponseValidation: false,
+    sentVariables: false,
     modes: new Set(),
     statusCodes: [],
     middlewareOverhead: 0,
@@ -55,6 +56,7 @@ export function computeEndpointStats(requests: RequestEntry[]): Map<string, Endp
     if (r.httpMethod) s.httpMethods.add(r.httpMethod.toUpperCase());
     if (r.hasValidation.variables) s.hasVariablesValidation = true;
     if (r.hasValidation.response) s.hasResponseValidation = true;
+    if (carriesVariables(r.variables)) s.sentVariables = true;
     if (r.size != null) s.sizes.push(r.size);
     if (r.statusCode != null) s.statusCodes.push(r.statusCode);
     if (r.cache) s.cached = true;
@@ -114,4 +116,11 @@ function computeOverheads(s: EndpointStats, reqs: RequestEntry[]): void {
   s.middlewareOverhead = mwCount > 0 ? mwSum / mwCount : 0;
   s.validationOverhead = valCount > 0 ? valSum / valCount : 0;
   s.proxyOverhead = proxyCount > 0 ? proxySum / proxyCount : 0;
+}
+
+/* A call that took no variables sent nothing a schema could have checked. */
+function carriesVariables(variables: unknown): boolean {
+  if (variables === undefined || variables === null) return false;
+  if (typeof variables !== "object") return true;
+  return Array.isArray(variables) ? variables.length > 0 : Object.keys(variables).length > 0;
 }

@@ -1,9 +1,9 @@
 /**
  * What the Remix handler tells an attached Studio.
  *
- * It announced nothing, so Studio never learned that the application served
- * its sources: the binding stayed orphaned, and the Playground could not run
- * an endpoint in the process that serves it.
+ * It names the sources it serves on its first request, so Studio binds them
+ * to the application and the Playground can run an endpoint in the process
+ * that serves it, rather than leaving the binding orphaned.
  */
 import { registerSources } from "@noverax/courier";
 import { type BufferedAnnouncement, consumeAnnouncements } from "@noverax/courier/announce";

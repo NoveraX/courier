@@ -1,12 +1,13 @@
 /**
  * `courierWSHandler` and the `@fastify/websocket` server it runs on.
  *
- * Without the plugin, Fastify called the handler as an ordinary route with
- * a request and a reply, and it answered 500 "Cannot read properties of
- * undefined (reading 'host')". With it, frames are buffered by the plugin's
- * `ws` server, whose default limit is 100 MiB, before `maxMessageSize` is
- * consulted — the Express and Nest adapters refuse a larger frame before
- * reading it.
+ * Without the plugin, Fastify calls the handler as an ordinary route with a
+ * request and a reply, so the handler answers with an error that names the
+ * missing plugin — not a 500 "Cannot read properties of undefined (reading
+ * 'host')". With it, frames are buffered by the plugin's `ws` server, whose
+ * default limit is 100 MiB, before `maxMessageSize` is consulted — the
+ * Express and Nest adapters refuse a larger frame before reading it — so the
+ * handler warns when that limit is far above any message it takes.
  */
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

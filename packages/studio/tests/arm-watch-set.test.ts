@@ -1,8 +1,8 @@
 /**
  * "Watching N" in Studio's status bar. A config that failed to load arms a
  * watch on every name a config or a mocks file could have, so that creating
- * one is noticed — and those names counted as files watched, most of them
- * files that do not exist.
+ * one is noticed, but only the files there are count as watched — not every
+ * name, most of them files that do not exist.
  */
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

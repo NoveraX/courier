@@ -1,8 +1,8 @@
 /**
  * A schema whose fields travel one way only — readOnly ones the server sends,
  * writeOnly ones the client sends — is split into the answer it is read as
- * and the input a request sends. One type serving both left the id every
- * answer carries and the password every request needs optional.
+ * and the input a request sends: one type serving both would leave the id
+ * every answer carries and the password every request needs optional.
  */
 import { describe, expect, it } from "vitest";
 

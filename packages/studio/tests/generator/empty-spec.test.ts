@@ -1,8 +1,8 @@
 /**
  * A specification with no endpoint to generate — no paths, or only paths
- * the import cannot follow. Its source called defineApi with neither groups
- * nor endpoints (TS2769), or took an endpoint builder it never used
- * (TS6133 under noUnusedLocals).
+ * the import cannot follow. Its source still compiles: it does not call
+ * defineApi with no groups and no endpoints (TS2769), nor take an endpoint
+ * builder it never uses (TS6133 under noUnusedLocals).
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

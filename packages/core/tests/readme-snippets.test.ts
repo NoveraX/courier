@@ -3,8 +3,9 @@
  * them: the API from the Quick Start, then the Testing and the Building Server
  * Adapters snippets beside it, against the published types.
  *
- * The Testing snippet mocked `users.getAll` — which answers `User[]` — with
- * strings such as `"once"`, so a test copied from it failed to compile.
+ * A snippet that does not compile — a mock of `users.getAll`, which answers
+ * `User[]`, given strings such as `"once"` — fails here, before a reader
+ * copies it.
  */
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";

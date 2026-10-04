@@ -3,8 +3,8 @@
  *
  * A Courier proxy answers a call that asks for the raw response with the
  * response around the data — its status and headers — and the proxy client
- * resolves to that. The mock server answered the bare data, so `.raw`
- * resolved to the data with no status or headers.
+ * resolves to that. The mock server answers it the same way, so `.raw`
+ * resolves to the status and headers too, not to the bare data.
  */
 import { createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

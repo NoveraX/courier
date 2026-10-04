@@ -2,8 +2,9 @@
  * A source whose baseURL has a path is answered under that path too.
  *
  * A client pointed at the mock with only the host of `https://api.example/api/v3`
- * swapped calls `/api/v3/users`, which the mock answered with "Route not
- * found": it served the groups at their prefixes alone.
+ * swapped calls `/api/v3/users`, so the mock serves the groups under the path
+ * as well as at their prefixes alone, rather than answering "Route not
+ * found".
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

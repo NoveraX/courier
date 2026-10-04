@@ -1,6 +1,7 @@
 /**
- * A counter animating down to 0 passes values just below it; rounded, those
- * gave -0, which the Mocks view printed as "Records -0".
+ * A counter animating down to 0 passes values just below it, which show as
+ * 0: rounded alone, they give -0, and the Mocks view would print
+ * "Records -0".
  */
 import { describe, expect, it } from "vitest";
 

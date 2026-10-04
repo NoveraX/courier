@@ -1,8 +1,8 @@
 /**
  * Generated files are application code, and a project that emits
  * declarations can compile them: every type their exports carry is one the
- * packages export, so TypeScript can name it in a `.d.ts`. It could not name
- * the builder types, and declaration emit failed on every generated file.
+ * packages export, so TypeScript can name it in a `.d.ts` — the builder types
+ * among them, without which declaration emit fails on every generated file.
  */
 import { join } from "node:path";
 import type ts from "typescript";

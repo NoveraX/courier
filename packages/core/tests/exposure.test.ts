@@ -2,9 +2,9 @@
  * Which endpoints a browser may reach by name.
  *
  * The proxy addresses endpoints by name and resolves them in the registry the
- * application declared, so a page could reach an endpoint written for a cron
- * job — and reach it with the server's credentials. Measured before this
- * existed: guessing `_g=admin&_m=exportPayouts` returned the data.
+ * application declared, so without a gate a page could reach an endpoint
+ * written for a cron job — with the server's credentials — by guessing its
+ * name, such as `_g=admin&_m=exportPayouts`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

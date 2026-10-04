@@ -1,10 +1,11 @@
 /**
  * The client address a proxied call tells its upstream.
  *
- * The proxy copied `X-Forwarded-For`, `X-Real-IP`, `Forwarded` and
- * `X-Client-IP` from the caller's request, so any page could write the address
- * the upstream's rate limits and allowlists believed, and the proxy never
- * added the address it actually saw.
+ * The proxy names the address it saw rather than copying `X-Forwarded-For`,
+ * `X-Real-IP`, `Forwarded` and `X-Client-IP` from the caller's request, where
+ * any page could write the address the upstream's rate limits and allowlists
+ * believe; a reverse proxy's chain is kept, with the address it connected
+ * from appended.
  */
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

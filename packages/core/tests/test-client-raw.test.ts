@@ -2,8 +2,8 @@
  * `.raw` on the test client.
  *
  * The test client is typed as the real one, where `.raw` resolves to
- * `{ status, headers, data }`, but it resolved to the bare data — code that
- * read `response.status` under test read `undefined`.
+ * `{ status, headers, data }`, and resolves to that too, so code that reads
+ * `response.status` under test does not read `undefined`.
  */
 import { describe, expect, it } from "vitest";
 

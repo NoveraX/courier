@@ -315,6 +315,44 @@ describe("an HTTP call run from the Playground in proxy mode", () => {
 
     expect(String(framesOf("proxy-no-origin")[0]?.payload.chunk?.error)).toContain("appOrigin");
   });
+
+  it("needs no app origin for a source whose proxy path is absolute", async () => {
+    const { getSources, setAppOrigin } = await import("@noverax/courier");
+    setAppOrigin(undefined);
+    const { url, proxied } = await startProxy();
+    const registered = getSources() ?? {};
+    const api = Reflect.get(registered, "api");
+    const { endpoint } = courier();
+    const pinned = defineApi({
+      baseURL: upstreamUrl,
+      proxyPath: { http: `${url}/api/request` },
+      groups: {
+        users: defineGroup({
+          prefix: "users",
+          endpoints: { create: endpoint.post("").response<unknown>() },
+        }),
+      },
+    });
+    registerSources({ api, pinned });
+    onTestFinished(() => registerSources({ api }));
+
+    runtime?.emit("playground:execute", {
+      rid: "proxy-absolute",
+      source: "pinned",
+      group: "users",
+      method: "create",
+      transport: "http",
+      mode: "proxy",
+      variables: { name: "zed" },
+    });
+    await until(
+      () => framesOf("proxy-absolute").some((f) => f.event === "playground:end"),
+      "the answer",
+    );
+
+    expect(proxied).toEqual(["POST /api/request?_s=pinned&_g=users&_m=create"]);
+    expect(framesOf("proxy-absolute")[0]?.payload.chunk).toMatchObject({ status: 201 });
+  });
 });
 
 describe("the request a Playground run makes", () => {

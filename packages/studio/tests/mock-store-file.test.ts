@@ -30,7 +30,7 @@ describe("mockStoreFile", () => {
     const file = mockStoreFile(project, "usersMock");
 
     expect(dirname(file ?? "")).toBe(join(project, ".courier", "mocks"));
-    expect(basename(file ?? "")).toMatch(/^usersMock-[0-9a-f]{8}\.json$/);
+    expect(basename(file ?? "")).toMatch(/^usersMock-[0-9a-f]{8}\.sqlite$/);
   });
 
   it("writes a key with safe characters only, and tells two keys that read alike apart", () => {
@@ -39,8 +39,8 @@ describe("mockStoreFile", () => {
     const a = basename(mockStoreFile(project, "users/mock*") ?? "");
     const b = basename(mockStoreFile(project, "users:mock?") ?? "");
 
-    expect(a).toMatch(/^users_mock_-[0-9a-f]{8}\.json$/);
-    expect(b).toMatch(/^users_mock_-[0-9a-f]{8}\.json$/);
+    expect(a).toMatch(/^users_mock_-[0-9a-f]{8}\.sqlite$/);
+    expect(b).toMatch(/^users_mock_-[0-9a-f]{8}\.sqlite$/);
     expect(a).not.toBe(b);
   });
 

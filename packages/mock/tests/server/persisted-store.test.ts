@@ -8,13 +8,13 @@
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { createAutoMockServer } from "../../src/auto/create-auto-server";
 import { createMockServer } from "../../src/server";
-import { readStoreFile } from "../../src/store/store-file";
 
 const { endpoint } = courier();
 const Todo = z.object({ id: z.number(), title: z.string() });
@@ -31,7 +31,7 @@ afterEach(async () => {
 function storeFile(): string {
   const dir = mkdtempSync(join(tmpdir(), "courier-persisted-store-"));
   dirs.push(dir);
-  return join(dir, "mocks", "shop.json");
+  return join(dir, "mocks", "shop.sqlite");
 }
 
 function api(groups: { todos?: boolean; notes?: boolean }) {
@@ -68,6 +68,16 @@ async function serve(source: ReturnType<typeof api>, file: string) {
   });
   const { url } = await server.start();
   return { server, url };
+}
+
+/** How many records the file keeps in a collection, read through a connection of the test's own. */
+function storedCount(path: string, collection: string): unknown {
+  const db = new DatabaseSync(path);
+  try {
+    return db.prepare("SELECT count(*) AS n FROM records WHERE collection = ?").get(collection)?.n;
+  } finally {
+    db.close();
+  }
 }
 
 const post = (body: unknown) => ({
@@ -114,7 +124,7 @@ describe("a mock server that keeps its store in a file", () => {
     server.resetStore();
     await server.saveStore();
 
-    expect(readStoreFile(file)?.todos).toHaveLength(2);
+    expect(storedCount(file, "todos")).toBe(2);
   });
 
   it("built without a source, restores every collection the file holds", async () => {

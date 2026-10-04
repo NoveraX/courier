@@ -163,13 +163,13 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     ...lifecycle,
 
     start: async () => {
-      persistence?.restore();
+      await persistence?.restore();
       return lifecycle.start();
     },
 
     stop: async () => {
       await lifecycle.stop();
-      await persistence?.flush();
+      await persistence?.close();
     },
   };
 

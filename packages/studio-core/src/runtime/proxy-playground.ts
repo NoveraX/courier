@@ -59,7 +59,8 @@ export function callThroughProxy(
   return Reflect.apply(endpoint, owner, [call.variables]);
 }
 
-type Transport = keyof ProxyPath;
+/** A transport a proxy path names a route for. */
+export type Transport = keyof ProxyPath;
 
 /* What a single call needs of the paths: the one its endpoint is reached by. */
 function transportOf(definition: unknown, call: PlaygroundCall): Transport {
@@ -69,10 +70,21 @@ function transportOf(definition: unknown, call: PlaygroundCall): Transport {
   return kind === "channel" ? "ws" : "http";
 }
 
-/* A proxy client in this process has no page to resolve a relative path
-   against; the app's origin stands in for it, and is asked for only then.
-   A channel without a path is left to the client, which says it needs one. */
-function proxyPathFor(definition: unknown, transport: Transport): ProxyPath {
+/**
+ * The path a proxy client in this process reaches a source's transport by.
+ * It has no page to resolve a relative path against, so the app's origin
+ * stands in for one, asked for only then; a channel without a path is left
+ * to the client, which says it needs one.
+ *
+ * @param definition - The source as registered
+ * @param transport - The transport the call goes over
+ * @returns The proxy path, with only that transport's entry
+ * @example
+ * ```ts
+ * proxyPathFor(sources.api, "sse"); // → { sse: "http://localhost:3000/api/sse" }
+ * ```
+ */
+export function proxyPathFor(definition: unknown, transport: Transport): ProxyPath {
   const declared = proxyPathOf(definition);
   const path = declared?.[transport];
   if (transport === "ws" && path === undefined) return {};

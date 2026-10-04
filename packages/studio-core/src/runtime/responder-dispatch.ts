@@ -6,6 +6,8 @@
  */
 
 import type { Sources } from "@noverax/courier/define";
+
+import { playgroundRequestId } from "../lib/playground-request-id";
 import type { PlaygroundExecutePayload } from "./playground-payloads";
 import type { ResponderSocket } from "./playground-responder";
 
@@ -20,10 +22,16 @@ export interface StreamCall {
 }
 
 /** Opens a stream: in this process, or through the app's proxy route. */
+/** What a run opens a stream with: when to stop, and the row Studio shows it under. */
+export interface OpenOptions {
+  signal: AbortSignal;
+  requestId: string;
+}
+
 export type StreamOpener = (
   sources: Sources,
   call: StreamCall,
-  options: { signal: AbortSignal },
+  options: OpenOptions,
 ) => Promise<AsyncIterable<unknown>>;
 
 /** A channel the Playground reads from and writes to, wherever it is served. */
@@ -39,7 +47,7 @@ export interface PlaygroundChannel {
 export type ChannelOpener = (
   sources: Sources,
   call: StreamCall,
-  options: { signal: AbortSignal },
+  options: OpenOptions,
 ) => Promise<PlaygroundChannel>;
 
 /**
@@ -103,7 +111,8 @@ async function dispatchStream(
   chunkOf: (event: unknown) => Record<string, unknown>,
 ): Promise<void> {
   const startedAt = performance.now();
-  const subscription = await exec(sources, callOf(payload), { signal });
+  const requestId = playgroundRequestId(payload.rid);
+  const subscription = await exec(sources, callOf(payload), { signal, requestId });
 
   let count = 0;
   try {
@@ -138,7 +147,8 @@ export async function dispatchWS(
   onChannelOpen?: (channel: PlaygroundChannel) => void,
 ): Promise<void> {
   const startedAt = performance.now();
-  const channel = await exec(sources, callOf(payload), { signal });
+  const requestId = playgroundRequestId(payload.rid);
+  const channel = await exec(sources, callOf(payload), { signal, requestId });
   onChannelOpen?.(channel);
   const unsubOpen = announceConnected(channel, () =>
     socket.emit("playground:chunk", { rid: payload.rid, chunk: { kind: "ws-open" } }),

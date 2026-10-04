@@ -12,17 +12,17 @@ import type { WithVariables } from "./types-helpers";
 
 export type CourierSubscriptionOptions<TResponse, TVariables> = WithVariables<TVariables> & {
   /** Disable the subscription (default: true) */
-  enabled?: boolean;
+  enabled?: boolean | undefined;
   /** Data to show immediately while the connection is being established */
-  optimisticData?: TResponse;
+  optimisticData?: TResponse | undefined;
   /**
    * How many of the stream's latest events `events` keeps: 100 unless set.
    * `Infinity` keeps every event, and the list then grows for as long as the
    * stream runs.
    */
-  maxEvents?: number;
+  maxEvents?: number | undefined;
   /** Called on each incoming SSE event */
-  onData?: (event: SSEEvent<TResponse>) => void;
+  onData?: ((event: SSEEvent<TResponse>) => void) | undefined;
   /**
    * Called when the stream fails or is refused (a `RealtimeError` whose
    * `code` tells why: 4401 auth, 4403 forbidden, 4422 invalid variables,
@@ -30,9 +30,9 @@ export type CourierSubscriptionOptions<TResponse, TVariables> = WithVariables<TV
    * or when the stream cannot be opened at all (a `ConfigurationError`,
    * such as a malformed proxy path)
    */
-  onError?: (error: Error) => void;
+  onError?: ((error: Error) => void) | undefined;
   /** Called on connection status changes */
-  onStatusChange?: (status: ConnectionStatus) => void;
+  onStatusChange?: ((status: ConnectionStatus) => void) | undefined;
 };
 
 /**
@@ -65,18 +65,18 @@ export type ChannelError = RealtimeError | ConfigurationError;
 
 export type CourierChannelOptions<TReceive, TVariables> = WithVariables<TVariables> & {
   /** Disable the channel (default: true) */
-  enabled?: boolean;
+  enabled?: boolean | undefined;
   /** Called on each incoming message from the server */
-  onData?: (message: TReceive) => void;
+  onData?: ((message: TReceive) => void) | undefined;
   /**
    * Called when the server refuses a message, a handler fails, or the
    * channel ends with a reason — with the `RealtimeError`, whose `code`
    * tells them apart (4403 forbidden, 4422 invalid, …) — or when the channel
    * cannot be opened at all, with the `ConfigurationError` that says why
    */
-  onError?: (error: ChannelError) => void;
+  onError?: ((error: ChannelError) => void) | undefined;
   /** Called on connection status changes */
-  onStatusChange?: (status: ConnectionStatus) => void;
+  onStatusChange?: ((status: ConnectionStatus) => void) | undefined;
 };
 
 /**

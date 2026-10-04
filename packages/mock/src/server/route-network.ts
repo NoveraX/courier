@@ -8,7 +8,7 @@
  */
 
 import { resolveLatency } from "../network/latency";
-import type { LatencyDistribution, LatencyProfile, NetworkConfig } from "../types";
+import type { LatencyDistribution, LatencyProfile, NetworkConfig, ResolvedHandler } from "../types";
 import type { RouteConfig } from "./route-types";
 
 /** Resolve effective NetworkConfig — dynamic state (with per-route) > static config */
@@ -23,7 +23,7 @@ export function resolveNetConfig(
 
 /** Resolve delay from handler-level or effective network config */
 export function resolveDelay(
-  handler: { delayMs?: number; latency?: LatencyProfile },
+  handler: Pick<ResolvedHandler, "delayMs" | "latency">,
   network?: NetworkConfig,
 ): number | undefined {
   const distribution = network?.distribution ?? "uniform";

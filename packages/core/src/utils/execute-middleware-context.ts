@@ -12,17 +12,17 @@ export interface MiddlewareContextInput {
   variables: unknown;
   /** Headers the caller passed explicitly, if any. */
   baseHeaders?: unknown;
-  context?: Context;
+  context?: Context | undefined;
   dataSource: Record<string, unknown>;
   requestId: string;
-  transport?: "http" | "sse" | "ws";
-  endpointAllowedHeaders?: readonly string[];
+  transport?: "http" | "sse" | "ws" | undefined;
+  endpointAllowedHeaders?: readonly string[] | undefined;
   /** Whether the endpoint reads or writes, from its schema. */
-  kind?: "query" | "mutation";
+  kind?: "query" | "mutation" | undefined;
   /** Fires when the caller stops waiting for the call. */
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
   /** The header the endpoint sends a key in, one per call, for the upstream to deduplicate by. */
-  idempotencyHeader?: string;
+  idempotencyHeader?: string | undefined;
 }
 
 /**

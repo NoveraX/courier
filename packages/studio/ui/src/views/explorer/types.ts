@@ -37,7 +37,7 @@ export interface EndpointNodeData {
   fullPath: string;
   httpMethod: string;
   endpointType: "query" | "mutation" | "untyped";
-  transport?: "sse" | "ws";
+  transport?: "sse" | "ws" | undefined;
   hasVariablesSchema: boolean;
   hasResponseSchema: boolean;
   middleware: string[];
@@ -52,11 +52,11 @@ export type ExplorerMetricMode = "latency" | "errors" | "traffic" | "size";
 export type HealthLevel = "healthy" | "degraded" | "critical" | "inactive";
 
 export interface ExplorerSearchParams {
-  layout?: ExplorerLayout;
-  search?: string;
-  selected?: string;
-  metricMode?: ExplorerMetricMode;
-  minimap?: boolean;
+  layout?: ExplorerLayout | undefined;
+  search?: string | undefined;
+  selected?: string | undefined;
+  metricMode?: ExplorerMetricMode | undefined;
+  minimap?: boolean | undefined;
 }
 
 // ── Heatmap types ───────────────────────────────────────────────────────────

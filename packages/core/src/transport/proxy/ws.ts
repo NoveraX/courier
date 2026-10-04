@@ -16,7 +16,7 @@ export interface ProxyWSDefaults {
    * construction time so it can be created in SSR contexts; resolution
    * happens lazily on each `connect{Channel,Push}` call.
    */
-  proxyPath?: ProxyPath;
+  proxyPath?: ProxyPath | undefined;
   /**
    * Optional explicit origin (`{ protocol, host }`) used when resolving
    * relative `proxyPath.ws` values. Required in Node contexts where
@@ -24,7 +24,7 @@ export interface ProxyWSDefaults {
    * executor running inside the user-app process. Browser callers can
    * leave this undefined; `resolveProxyPath` falls back to `location`.
    */
-  origin?: ResolveOrigin;
+  origin?: ResolveOrigin | undefined;
   /**
    * Pre-allocated requestId from Studio Playground. When set, the factory
    * appends `?_playground_rid=<id>` to the resolved WS URL so the server
@@ -43,9 +43,9 @@ export interface ProxyWSDefaults {
    * extracts it from `request.url` and stores it on the connection
    * context.
    */
-  playgroundRequestId?: string;
+  playgroundRequestId?: string | undefined;
   /** Options of the socket the channels share, from the caller's `ws` */
-  ws?: CallerWSOptions;
+  ws?: CallerWSOptions | undefined;
   // ⚠️ No `headers` field on purpose. Browser WebSocket (`new WebSocket(...)`)
   // does NOT support arbitrary HTTP headers in the upgrade handshake — only
   // sub-protocols. Adding a `headers` field here would be silently dropped

@@ -6,11 +6,11 @@ import { executeRequest } from "../../utils/execute";
 import type { HTTPExecutor } from "../types";
 
 export interface DirectHTTPDefaults {
-  timeout?: number;
-  headers?: Record<string, string>;
-  context?: RequestContext;
-  onError?: (error: HTTPError) => void | Promise<void>;
-  onSuccess?: (data: unknown) => void | Promise<void>;
+  timeout?: number | undefined;
+  headers?: Record<string, string> | undefined;
+  context?: RequestContext | undefined;
+  onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
+  onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
 }
 
 /**

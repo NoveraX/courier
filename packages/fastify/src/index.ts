@@ -18,8 +18,8 @@ export type CourierPluginOptions = {
    * scoped by the `prefix` passed to `register`. The plugin must not apply it
    * a second time — doing so put the proxy at `/api/request/api/request/*`.
    */
-  prefix?: string;
-  config?: HandlerConfig;
+  prefix?: string | undefined;
+  config?: HandlerConfig | undefined;
 };
 
 /**

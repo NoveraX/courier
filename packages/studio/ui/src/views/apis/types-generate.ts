@@ -137,8 +137,8 @@ export type SourceStatus = "up-to-date" | "updates-available" | "checking" | "er
 export interface SourceStatusInfo {
   status: SourceStatus;
   /** Why the check failed, or why the import could not be checked. */
-  error?: string;
-  newSpec?: ParsedSpec;
+  error?: string | undefined;
+  newSpec?: ParsedSpec | undefined;
 }
 
 // ── Import wizard state ─────────────────────────────────────────────────────

@@ -9,9 +9,9 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 
 export interface HeartbeatConfig {
   /** Interval between pings in ms (default 25000) */
-  intervalMs?: number;
+  intervalMs?: number | undefined;
   /** Time to wait for pong before considering connection dead (default 10000) */
-  timeoutMs?: number;
+  timeoutMs?: number | undefined;
 }
 
 export interface Heartbeat {

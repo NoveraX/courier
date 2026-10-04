@@ -75,7 +75,7 @@ function serverFailure(
 export type ErrorHandlerCtx = FailureReport & {
   rawData: boolean;
   /** Header names the endpoint and its source carry across the proxy. */
-  namedHeaders?: readonly string[];
+  namedHeaders?: readonly string[] | undefined;
 };
 
 export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknown {

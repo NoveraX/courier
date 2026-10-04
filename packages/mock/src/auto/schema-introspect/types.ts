@@ -51,21 +51,21 @@ export interface ValueConstraints {
 export interface FieldMeta extends ValueConstraints {
   type: FieldType;
   /** Enum string values (z.enum / v.picklist) */
-  enumValues?: Array<string | number>;
+  enumValues?: Array<string | number> | undefined;
   /** Inner field for optional/nullable/array wrappers */
-  innerField?: FieldMeta;
+  innerField?: FieldMeta | undefined;
   /** Raw object shape (field name → raw schema) */
-  shape?: Record<string, unknown>;
+  shape?: Record<string, unknown> | undefined;
   /** Literal constant value */
   literalValue?: unknown;
   /** Union variant field metas */
-  variants?: FieldMeta[];
+  variants?: FieldMeta[] | undefined;
   /** Discriminated union key name */
-  discriminator?: string;
+  discriminator?: string | undefined;
   /** Tuple item field metas (ordered) */
-  items?: FieldMeta[];
+  items?: FieldMeta[] | undefined;
   /** Record value field meta */
-  valueField?: FieldMeta;
+  valueField?: FieldMeta | undefined;
   /** Schema-declared default value */
   defaultValue?: unknown;
 }

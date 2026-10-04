@@ -45,7 +45,7 @@ export function CardMenu({
           Manage endpoints
         </DropdownMenuItem>
         {isUrl && (
-          <DropdownMenuItem onClick={onCheckUpdates} disabled={isChecking}>
+          <DropdownMenuItem onClick={onCheckUpdates} disabled={isChecking === true}>
             <RefreshCw className="size-3.5" />
             Check updates
           </DropdownMenuItem>

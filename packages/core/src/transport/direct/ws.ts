@@ -11,7 +11,7 @@ import { channelAddress } from "./channel-address";
 /** What a direct caller says about the sockets its channels open. */
 export interface DirectWSDefaults {
   /** Options of the socket the channels share, from the caller's `ws` */
-  ws?: CallerWSOptions;
+  ws?: CallerWSOptions | undefined;
 }
 
 /**

@@ -18,7 +18,7 @@ export interface LazyTarget {
   /** ArkType expression for the values the target can hold, such as `object`. */
   base: string;
   /** TypeScript type the target produces, when one is written. */
-  typeName?: string;
+  typeName?: string | undefined;
 }
 
 /** Schemas that must be named lazily, by name. */

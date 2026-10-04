@@ -9,31 +9,31 @@ export interface StudioServerOptions {
    * First port handed to a managed mock that names none. Left out, it is
    * `studio.mockBasePort` in the project's courier.config, then 7001.
    */
-  mockBasePort?: number;
+  mockBasePort?: number | undefined;
   /** Server port. Left out, it is `studio.port` in courier.config, then 6280. */
-  port?: number;
+  port?: number | undefined;
   /** Server host. Left out, it is `studio.host` in courier.config, then "localhost". */
-  host?: string;
+  host?: string | undefined;
   /** Project root directory — all file paths resolve relative to this (default: process.cwd()) */
-  projectRoot?: string;
+  projectRoot?: string | undefined;
   /**
    * Called once Studio listens, with the URL a browser opens. Given both
    * `port` and `host`, Studio listens at once and serves the project as
    * starting until its first load has an outcome; given less, it listens
    * once that load has an outcome, since the config may name the address.
    */
-  onReady?: (url: string) => void;
+  onReady?: ((url: string) => void) | undefined;
   /**
    * Called once Studio listens and its first load of the project has an
    * outcome, with where it listens and the `studio` block it started with.
    */
-  onStarted?: (started: StudioStarted) => void;
+  onStarted?: ((started: StudioStarted) => void) | undefined;
   /**
    * Called when the server cannot listen — the port is in use, or the host
    * cannot be bound. Without it the failure is logged. Either way the
    * returned handle's `close()` still releases what was started.
    */
-  onError?: (error: Error) => void;
+  onError?: ((error: Error) => void) | undefined;
   /**
    * Origins that may act as the Studio UI besides Studio's own page:
    * cross-origin embeds, remote development. The UI's own development
@@ -41,7 +41,7 @@ export interface StudioServerOptions {
    * called, which Studio takes as its page. Pages served from this machine
    * may connect as runtimes regardless.
    */
-  extraCorsOrigins?: readonly string[];
+  extraCorsOrigins?: readonly string[] | undefined;
 }
 
 /** Where Studio listens, and what the project asked of it when it started. */

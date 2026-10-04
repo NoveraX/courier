@@ -78,7 +78,7 @@ function ActionButton({
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  onClick?: () => void;
+  onClick?: (() => void) | undefined;
 }): React.ReactElement {
   return (
     <button

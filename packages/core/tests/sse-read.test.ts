@@ -112,8 +112,10 @@ function resumingServer(first: string): Promise<string> {
   });
 }
 
-async function readAll(url: string): Promise<{ id?: string; event?: string; data: unknown }[]> {
-  const seen: { id?: string; event?: string; data: unknown }[] = [];
+async function readAll(
+  url: string,
+): Promise<{ id?: string | undefined; event?: string | undefined; data: unknown }[]> {
+  const seen: { id?: string | undefined; event?: string | undefined; data: unknown }[] = [];
   const subscription = subscribeSSE<unknown>(url, { backoff: { initialMs: 10, jitter: false } });
   for await (const event of subscription) seen.push(event);
   return seen;

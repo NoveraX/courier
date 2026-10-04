@@ -32,16 +32,16 @@ export type CallOptions<TRaw extends boolean = false> = Omit<
   SimpleOptions,
   "onUploadProgress" | "method"
 > & {
-  rawData?: TRaw;
-  forwardVariables?: boolean;
-  stream?: boolean;
+  rawData?: TRaw | undefined;
+  forwardVariables?: boolean | undefined;
+  stream?: boolean | undefined;
   /**
    * The verb the call goes to the proxy with. A read goes as GET, so its
    * answer can be cached, and a write as POST; "POST" keeps a read's
    * variables out of the address.
    */
-  method?: "GET" | "POST";
-  onUploadProgress?: (progress: UploadProgress) => void;
+  method?: "GET" | "POST" | undefined;
+  onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
 };
 
 export type HttpResponse<TData = unknown> = {
@@ -55,31 +55,35 @@ export type MethodParameters<TMethod extends HttpMethod> = TMethod extends "head
   : [url?: string, variables?: unknown, options?: MethodOptions<TMethod>];
 
 /** Core fetch options — extends standard RequestInit with convenience properties */
-export type FetchOptions = Omit<RequestInit, "method"> & {
+export type FetchOptions = Omit<RequestInit, "method" | "body" | "signal"> & {
+  /** What the request sends; absent, nothing unless `json` is given. */
+  body?: WebBody | null | undefined;
+  /** Aborts the request when it fires. */
+  signal?: AbortSignal | null | undefined;
   /** JSON body — automatically serialized and sets Content-Type header */
   json?: unknown;
   /** URL search parameters appended to the request URL */
-  searchParams?: string | URLSearchParams | Record<string, string>;
+  searchParams?: string | URLSearchParams | Record<string, string> | undefined;
   /** Request timeout in milliseconds — aborts if exceeded */
-  timeout?: number;
+  timeout?: number | undefined;
   /** URL prefix prepended to the request path */
-  prefixUrl?: string;
+  prefixUrl?: string | undefined;
   /** Required by `fetch` when `body` is a ReadableStream */
-  duplex?: "half";
+  duplex?: "half" | undefined;
   /** Called as the answer's body is read */
-  onDownloadProgress?: (progress: DownloadProgress) => void;
+  onDownloadProgress?: ((progress: DownloadProgress) => void) | undefined;
   /** Called as the request's body is sent */
-  onUploadProgress?: (progress: UploadProgress) => void;
+  onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
   /**
    * How this call's successful answer is read — text, a blob, bytes, a form —
    * when it is not what the source reads every answer as. An error answer is
    * read as the source reads it, since it explains the error in its own form.
    */
-  responseType?: ResponseType;
+  responseType?: ResponseType | undefined;
 };
 
 export type OptionsWithSearchParams = Omit<FetchOptions, "searchParams"> & {
-  searchParams?: Record<string, unknown>;
+  searchParams?: Record<string, unknown> | undefined;
 };
 
 export type SimpleOptions = Omit<OptionsWithSearchParams, "body" | "json" | "searchParams">;
@@ -102,15 +106,15 @@ export type SearchParamsSerializer = {
 export type BaseOptions = MergeOptions &
   Omit<FetchOptions, "body" | "json" | "prefixUrl" | "searchParams"> & {
     /** Base URL for all requests (e.g. "https://api.example.com/v1") */
-    baseURL?: string;
+    baseURL?: string | undefined;
     /** Response body parsing strategy — defaults to "json" */
-    responseType?: ResponseType;
+    responseType?: ResponseType | undefined;
     /** Custom response parser replacing the built-in one (receives raw Response) */
-    responseParser?: (response: Response) => Promise<unknown>;
+    responseParser?: ((response: Response) => Promise<unknown>) | undefined;
     /** Defaults under an object body, or query values on a read or DELETE; a list or raw body is sent alone */
-    defaultBody?: Record<string, unknown>;
+    defaultBody?: Record<string, unknown> | undefined;
     /** Default query params merged into every request URL */
-    defaultQueryParams?: Record<string, unknown>;
+    defaultQueryParams?: Record<string, unknown> | undefined;
     /**
      * Headers carried across the proxy for every endpoint of this source, both
      * ways: forwarded from the caller to the upstream, and passed back from
@@ -119,13 +123,13 @@ export type BaseOptions = MergeOptions &
      * upstream, `"set-cookie"` passes the upstream's back. The body's own
      * description is never taken from this list.
      */
-    allowedHeaders?: string[];
+    allowedHeaders?: string[] | undefined;
     /**
      * Whether the browser may call this source through the proxy — defaults
      * to true. Set false for a source only server code should reach, and
      * re-open individual groups with their own `expose`.
      */
-    expose?: boolean;
+    expose?: boolean | undefined;
     /**
      * The endpoints a browser may call, named one by one, from
      * `defineBoundary`. The proxy refuses every other endpoint of this source
@@ -133,15 +137,15 @@ export type BaseOptions = MergeOptions &
      * `defineApi` checks it against the API, and a proxy client typed from
      * the API reaches only the endpoints it names.
      */
-    boundary?: ProxyBoundary;
+    boundary?: ProxyBoundary | undefined;
     /** Custom serializer for variables that are an object, replacing JSON.stringify (e.g. for XML) */
-    bodySerializer?: (data: Record<string, unknown>) => WebBody;
+    bodySerializer?: ((data: Record<string, unknown>) => WebBody) | undefined;
     /** Custom search params serializer with stringify/parse methods */
-    searchParamsSerializer?: SearchParamsSerializer;
+    searchParamsSerializer?: SearchParamsSerializer | undefined;
     /** Cancel an in-flight read when the same endpoint is read again — defaults to false */
-    deduplicate?: boolean;
+    deduplicate?: boolean | undefined;
     /** Middleware pipeline applied to every request in order */
-    middleware?: Middleware[];
+    middleware?: Middleware[] | undefined;
     /**
      * Proxy endpoint paths for HTTP / SSE / WS transports. Carried as
      * deployment metadata on the source so Studio and `createProxyCaller`
@@ -150,22 +154,22 @@ export type BaseOptions = MergeOptions &
      * origin) or an absolute URL. See `ProxyPath` for the per-transport
      * defaults and the rationale for the WS field having no default.
      */
-    proxyPath?: ProxyPath;
+    proxyPath?: ProxyPath | undefined;
   };
 
 export type MergeOptions = {
   /** Dynamic path parameters resolved at request time (e.g. from cookies or headers) */
-  pathOptions?: PathOptions;
+  pathOptions?: PathOptions | undefined;
 };
 
 export type GroupOptions = MergeOptions & {
   /** URL prefix prepended to all endpoint paths in this group (e.g. "users" → "/users/:path") */
-  prefix?: string;
+  prefix?: string | undefined;
   /**
    * Whether the browser may call this group through the proxy. Overrides the
    * source's own setting; unset means the source decides.
    */
-  expose?: boolean;
+  expose?: boolean | undefined;
 };
 
 export type PathOptions = (request?: Request) => PathOptionsResult | Promise<PathOptionsResult>;
@@ -178,9 +182,9 @@ type PathOptionsResult = Record<string, boolean | number | string | null | undef
  * (cookie propagation, header forwarding, etc.).
  */
 export type RequestContext = {
-  req?: Request;
-  res?: Response;
-  headers?: Headers;
+  req?: Request | undefined;
+  res?: Response | undefined;
+  headers?: Headers | undefined;
 };
 
 /**
@@ -191,17 +195,17 @@ export type RequestContext = {
  */
 export type Context = RequestContext & {
   /** HTTP method of the proxy request (set by apiRoute) */
-  proxyMethod?: "GET" | "POST";
+  proxyMethod?: "GET" | "POST" | undefined;
   /** Override mode for studio events (e.g. playground replay preserving original mode) */
-  mode?: "direct" | "proxy";
+  mode?: "direct" | "proxy" | undefined;
   /** High-resolution timestamp when the proxy adapter received the request (performance.now()) */
-  proxyReceiveAt?: number;
+  proxyReceiveAt?: number | undefined;
   /**
    * The id Studio was told the call arrived under — the proxy announces a
    * call before reading its body. The call carries on under it, and a
    * refusal before it runs ends it with `request:error`.
    */
-  studioRequestId?: string;
+  studioRequestId?: string | undefined;
   /** A direct caller's default timeout, for a call and an endpoint that name none */
-  defaultTimeout?: number;
+  defaultTimeout?: number | undefined;
 };

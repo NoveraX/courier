@@ -19,7 +19,7 @@ export interface SSEConnectionInfo {
 /** Formatted SSE event for server-initiated broadcast */
 export interface SSEBroadcastEvent {
   /** Event type (maps to SSE `event:` field) */
-  event?: string;
+  event?: string | undefined;
   /** Payload (serialized to JSON if not a string) */
   data: unknown;
   /**
@@ -27,9 +27,9 @@ export interface SSEBroadcastEvent {
    * client reconnecting after it resumes from the last event the stream's
    * generator sent.
    */
-  id?: string;
+  id?: string | undefined;
   /** Optional reconnection interval hint in ms */
-  retry?: number;
+  retry?: number | undefined;
 }
 
 /** Result of a broadcast operation — maps connectionId to delivery success */
@@ -76,31 +76,37 @@ export interface SSEConnectionRegistry {
 /** SSE lifecycle hooks for connection tracking */
 export interface SSELifecycleConfig<TConnect extends ConnectResult = ConnectResult> {
   /** Max concurrent SSE connections. Returns 503 when exceeded. */
-  maxSSEConnections?: number;
+  maxSSEConnections?: number | undefined;
   /**
    * Called when an SSE stream opens. Return the stream's metadata — an
    * object — or nothing, or throw to refuse the stream: it is answered 403
    * "Connection rejected", and what was thrown is logged, never sent. What it
    * returns types `meta` in the hooks written after it.
    */
-  onSSEConnect?(info: {
-    connectionId: string;
-    request: Request;
-    source: string;
-    group: string | undefined;
-    method: string;
-  }): TConnect;
+  onSSEConnect?:
+    | ((info: {
+        connectionId: string;
+        request: Request;
+        source: string;
+        group: string | undefined;
+        method: string;
+      }) => TConnect)
+    | undefined;
   /** Called when an SSE stream closes */
-  onSSEDisconnect?(info: {
-    connectionId: string;
-    meta: ConnectionMeta<TConnect>;
-    reason: SSECloseReason;
-    eventCount: number;
-    totalBytes: number;
-    duration: number;
-  }): void | Promise<void>;
+  onSSEDisconnect?:
+    | ((info: {
+        connectionId: string;
+        meta: ConnectionMeta<TConnect>;
+        reason: SSECloseReason;
+        eventCount: number;
+        totalBytes: number;
+        duration: number;
+      }) => void | Promise<void>)
+    | undefined;
   /** Called on SSE connection-level error */
-  onSSEError?(info: { connectionId: string; meta: ConnectionMeta<TConnect>; error: unknown }): void;
+  onSSEError?:
+    | ((info: { connectionId: string; meta: ConnectionMeta<TConnect>; error: unknown }) => void)
+    | undefined;
 }
 
 /** Reason why an SSE connection was closed */
@@ -128,11 +134,11 @@ export interface SSEStreamOptions {
   dt: StudioHooks;
   t0: number;
   /** Separate TTL signal to detect max_lifetime reason (undefined = no TTL) */
-  ttlSignal?: AbortSignal;
+  ttlSignal?: AbortSignal | undefined;
   /** The endpoint's response schema, which every event's data is held to */
-  responseSchema?: StandardSchemaV1;
-  onDisconnect?: SSELifecycleConfig["onSSEDisconnect"];
-  onError?: SSELifecycleConfig["onSSEError"];
+  responseSchema?: StandardSchemaV1 | undefined;
+  onDisconnect?: SSELifecycleConfig["onSSEDisconnect"] | undefined;
+  onError?: SSELifecycleConfig["onSSEError"] | undefined;
   /**
    * Studio Playground requestId extracted from the `x-courier-playground-rid`
    * request header. When set, the stream registers its `forceAbort.abort`
@@ -141,11 +147,11 @@ export interface SSEStreamOptions {
    * fetch abort does NOT propagate to `request.signal` synchronously).
    * Undefined for production traffic — registry is a no-op.
    */
-  playgroundRid?: string;
+  playgroundRid?: string | undefined;
   /**
    * Injected `registerPlaygroundAbort` from `../studio` — accepted as a
    * dependency to keep `createSSEStream` decoupled from the singleton import
    * (testability + tree-shaking when Studio is not used).
    */
-  registerPlaygroundAbort?: (requestId: string, abort: () => void) => () => void;
+  registerPlaygroundAbort?: ((requestId: string, abort: () => void) => () => void) | undefined;
 }

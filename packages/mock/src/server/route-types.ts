@@ -43,7 +43,7 @@ export interface RouteConfig {
   markScenario: () => ScenarioMark;
   /** A matched request's transition; see `createScenarioState`. */
   transitionScenario: (from: ScenarioMark, to: string) => void;
-  network?: NetworkConfig;
+  network?: NetworkConfig | undefined;
   /** Dynamic network state — takes precedence over static `network` */
   networkState?: NetworkState;
   hooks?: RequestHooks;

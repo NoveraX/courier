@@ -16,7 +16,7 @@ const REJECTED = { code: 4403, message: "Subscription rejected" };
 export async function authorizeSubscription(
   ctx: WSSocketContext,
   msg: WSMessage,
-  resolved: { source: string; group?: string; method: string },
+  resolved: { source: string; group?: string | undefined; method: string },
   topic: string,
   variables: unknown,
 ): Promise<boolean> {

@@ -14,7 +14,7 @@ import type {
 
 /** Scanned source enriched with registry metadata (if imported) */
 export interface EnrichedSource extends ScannedSource {
-  registry?: SourceSummary;
+  registry?: SourceSummary | undefined;
 }
 
 interface UseRegistryReturn {

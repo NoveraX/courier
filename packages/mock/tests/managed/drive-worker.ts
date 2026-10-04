@@ -87,5 +87,5 @@ export async function startWorker(worker: DrivenWorker): Promise<string> {
 export async function stopWorker(worker: DrivenWorker): Promise<void> {
   worker.deliver({ type: "stop" });
   await worker.next((m): m is Extract<ChildMessage, { type: "stopped" }> => m.type === "stopped");
-  process.send = undefined;
+  Reflect.deleteProperty(process, "send");
 }

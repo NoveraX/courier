@@ -69,7 +69,7 @@ export function closeSubscriptionEntry(
 export function openSubscriptionEntry(
   ctx: WSSocketContext,
   topic: string,
-  endpoint: { source: string; group?: string; method: string },
+  endpoint: { source: string; group?: string | undefined; method: string },
 ): string {
   const requestId = ctx.playgroundRequestId ?? generateRequestId();
   ctx.subscriptionIds.set(topic, { requestId, seq: { value: 0 }, t0: performance.now() });

@@ -3,7 +3,7 @@ export type MiddlewareContext = {
   /** Source name (e.g., "api") */
   source: string;
   /** Group name (e.g., "users") */
-  group?: string;
+  group?: string | undefined;
   /** Endpoint method name (e.g., "getAll") */
   method: string;
   /** Request variables (body/params) — can be modified by middleware */
@@ -11,7 +11,7 @@ export type MiddlewareContext = {
   /** Request headers — can be modified by middleware */
   headers: Headers;
   /** Transport type — "http" for standard requests, "sse"/"ws" for realtime */
-  transport?: "http" | "sse" | "ws";
+  transport?: "http" | "sse" | "ws" | undefined;
   /**
    * The request as it arrived, before `allowedHeaders` narrowed it.
    *
@@ -19,17 +19,17 @@ export type MiddlewareContext = {
    * forward is absent from it. Anything deciding who is asking — a cache
    * partition, an audit line — has to read the request itself.
    */
-  request?: Request;
+  request?: Request | undefined;
   /** Whether the endpoint reads or writes, when its schema says. */
-  kind?: "query" | "mutation";
+  kind?: "query" | "mutation" | undefined;
   /**
    * Fires when whoever made the call stops waiting for it: the signal given
    * to the call, or the incoming request's when a proxy runs it. Middleware
    * that waits — between retries, in a queue — should stop when it fires.
    */
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
   /** Internal: Studio request ID for event correlation */
-  _requestId?: string;
+  _requestId?: string | undefined;
 };
 
 /** Response returned from the middleware chain / endpoint execution */

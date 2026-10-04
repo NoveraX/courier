@@ -51,7 +51,7 @@ export function wireStreamHooks(
         seq: e.seq,
         eventType: e.eventType,
         dataSize: e.dataSize,
-        dataPreview: e.dataPreview,
+        ...(e.dataPreview !== undefined && { dataPreview: e.dataPreview }),
       }),
     );
   };

@@ -1,9 +1,9 @@
 /** URL search params shape for /middleware */
 export interface MiddlewareSearchParams {
-  mode?: string;
-  selectedRequestId?: string;
-  sortBy?: string;
-  sortDir?: string;
+  mode?: string | undefined;
+  selectedRequestId?: string | undefined;
+  sortBy?: string | undefined;
+  sortDir?: string | undefined;
 }
 
 export function validateMiddlewareSearch(raw: Record<string, unknown>): MiddlewareSearchParams {

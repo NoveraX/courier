@@ -2,10 +2,10 @@ import { sameId } from "./same-id";
 
 /** Pagination and sorting options */
 export interface QueryOptions<TItem> {
-  take?: number;
-  skip?: number;
-  cursor?: TItem;
-  orderBy?: Partial<Record<keyof TItem, "asc" | "desc">>;
+  take?: number | undefined;
+  skip?: number | undefined;
+  cursor?: TItem | undefined;
+  orderBy?: Partial<Record<keyof TItem, "asc" | "desc">> | undefined;
 }
 
 /** Paginated result with metadata */

@@ -63,7 +63,7 @@ export interface WebSocketUpgradeOptions {
    * Largest frame accepted, in bytes; `ws` refuses a larger one before
    * buffering it, closing the connection with 1009. Default `wsFrameLimit()`.
    */
-  maxPayload?: number;
+  maxPayload?: number | undefined;
   /** Builds the `ws` server, the first time an upgrade arrives. */
   createServer: (options: {
     noServer: true;
@@ -72,9 +72,9 @@ export interface WebSocketUpgradeOptions {
   /** Receives each accepted connection. */
   onSocket: (socket: WebSocketLike, request: Request) => void;
   /** Sees each upgrade request Courier answers, before it is accepted. */
-  onRequest?: (request: IncomingMessage) => void;
+  onRequest?: ((request: IncomingMessage) => void) | undefined;
   /** While this returns false — a server shutting down — upgrades get a 503. */
-  isAccepting?: () => boolean;
+  isAccepting?: (() => boolean) | undefined;
 }
 
 /**

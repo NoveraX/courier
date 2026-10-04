@@ -134,7 +134,7 @@ All framework packages and integrations are optional. The core `@noverax/courier
 
 - **Node.js 22** or later for every package; Studio needs 22.13, for the SQLite built into Node. In the browser, the core needs only `fetch`.
 - **ES modules.** The packages are published as ES modules only. A CommonJS project loads them with `require()` on Node.js 22.12 or later, which loads an ES module synchronously; with TypeScript, set `"module": "nodenext"`, under which it allows that `require`.
-- **TypeScript 6.0** or later, with `strict` on. The published declarations compile with `skipLibCheck` off in a project typed for Node.js alone, without the DOM library; in one resolving modules as a bundler does; in a browser project; and in a CommonJS one.
+- **TypeScript 6.0** or later, with `strict` on. The published declarations compile with `skipLibCheck` off in a project typed for Node.js alone, without the DOM library; in one resolving modules as a bundler does; in a browser project; and in a CommonJS one. They compile with `exactOptionalPropertyTypes` on too, and there an option you may leave out also takes `undefined`, so a setting that may be missing is passed as it is.
 
 ## TypeScript configuration
 

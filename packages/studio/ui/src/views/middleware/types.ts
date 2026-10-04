@@ -7,12 +7,12 @@ export interface MiddlewareStep {
   status: "completed" | "running" | "error";
   /** Determined from declared phase or inferred from timing */
   phase: "request" | "response" | "wrap";
-  error?: string;
-  headersAdded?: string[];
+  error?: string | undefined;
+  headersAdded?: string[] | undefined;
   /** Time spent before calling next() (ms) */
-  beforeDuration?: number;
+  beforeDuration?: number | undefined;
   /** Time spent after next() returned (ms) */
-  afterDuration?: number;
+  afterDuration?: number | undefined;
 }
 
 // ── Aggregate stats (across all requests) ──────────────────────────────────

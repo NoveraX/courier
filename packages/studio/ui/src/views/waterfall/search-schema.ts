@@ -1,10 +1,10 @@
 /** URL search params shape for /waterfall */
 export interface WaterfallSearchParams {
-  sortBy?: string;
-  groupBy?: string;
-  mode?: string;
-  search?: string;
-  selected?: string;
+  sortBy?: string | undefined;
+  groupBy?: string | undefined;
+  mode?: string | undefined;
+  search?: string | undefined;
+  selected?: string | undefined;
 }
 
 export function validateWaterfallSearch(raw: Record<string, unknown>): WaterfallSearchParams {

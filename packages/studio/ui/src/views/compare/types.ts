@@ -4,8 +4,8 @@ export type CompareTab = "payload" | "response" | "headers" | "timing";
 
 export interface DiffLine {
   type: "equal" | "added" | "removed";
-  left?: string;
-  right?: string;
+  left?: string | undefined;
+  right?: string | undefined;
   lineNum: {
     left?: number;
     right?: number;
@@ -14,8 +14,8 @@ export interface DiffLine {
 
 export interface HeaderDiff {
   key: string;
-  left?: string;
-  right?: string;
+  left?: string | undefined;
+  right?: string | undefined;
   status: "equal" | "added" | "removed" | "changed";
 }
 

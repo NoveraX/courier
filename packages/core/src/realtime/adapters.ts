@@ -65,7 +65,7 @@ export interface StoredEvent {
   /** Unique, monotonically ordered event ID (e.g. Redis Stream ID or counter) */
   id: string;
   /** SSE event type (optional named event) */
-  event?: string;
+  event?: string | undefined;
   /** Serialized event payload */
   data: unknown;
   /** Unix ms timestamp when the event was stored */

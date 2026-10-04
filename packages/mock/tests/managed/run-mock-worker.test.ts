@@ -27,7 +27,7 @@ let holder: Server | undefined;
 afterEach(async () => {
   await new Promise<void>((resolve) => (holder ? holder.close(() => resolve()) : resolve()));
   holder = undefined;
-  process.send = undefined;
+  Reflect.deleteProperty(process, "send");
   vi.restoreAllMocks();
 });
 

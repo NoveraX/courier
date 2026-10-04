@@ -81,7 +81,7 @@ export interface LoadCourierConfigOptions {
    * passes `process.cwd()` so the walk-up finds configs located at the
    * workspace root from a nested package cwd (common in monorepos).
    */
-  cwd?: string;
+  cwd?: string | undefined;
   /**
    * When true, skip the walk-up and require the config file to exist at
    * exactly `cwd`. The dev-server uses this because it was told the
@@ -92,13 +92,13 @@ export interface LoadCourierConfigOptions {
    *
    * Defaults to false (walk up).
    */
-  requireAtCwd?: boolean;
+  requireAtCwd?: boolean | undefined;
   /**
    * Where to reuse each module's transform while its bytes are unchanged. A
    * caller that keeps one across loads transforms only the modules whose
    * bytes changed; without one, every module is transformed on every load.
    */
-  transformCache?: TransformCache;
+  transformCache?: TransformCache | undefined;
 }
 
 /**

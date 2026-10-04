@@ -20,7 +20,7 @@ describe("RouteError", () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const reset = vi.fn();
 
-    render(<RouteError error={new Error("timeline broke")} reset={reset} info={undefined} />);
+    render(<RouteError error={new Error("timeline broke")} reset={reset} />);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
     expect(screen.getByText("This view failed")).toBeTruthy();

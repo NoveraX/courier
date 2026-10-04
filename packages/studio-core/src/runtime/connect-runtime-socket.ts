@@ -43,19 +43,19 @@ interface ConnectInput {
    * Server-side runtimes always pass a bus; the browser path opens the
    * socket without one.
    */
-  bus?: EventBus;
+  bus?: EventBus | undefined;
   /**
    * Canonical HTTP(S) origin this runtime listens on, when known.
    * Sent on `runtime:hello` so Studio can stamp it onto bound rows in the
    * binding-table snapshot for the playground "resolved URL" badge.
    */
-  listenOrigin?: string;
+  listenOrigin?: string | undefined;
   /**
    * Reads this project's Studio token, which a server runtime presents on
    * each connection so Studio sends it Playground calls. A browser runtime
    * has none.
    */
-  readToken?: () => string | undefined;
+  readToken?: (() => string | undefined) | undefined;
 }
 
 /** Hook that lets `attachRuntime` install the real socket disposer once ready. */

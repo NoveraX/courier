@@ -4,7 +4,7 @@ import type { QueryBuilder } from "./query-builder";
 /** Configuration for a collection */
 export interface CollectionConfig {
   /** Field used as primary key (default: "id") */
-  idField?: string;
+  idField?: string | undefined;
 }
 
 export type QueryFn<TItem> = (q: QueryBuilder<TItem>) => QueryBuilder<TItem>;

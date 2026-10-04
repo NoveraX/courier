@@ -47,7 +47,7 @@ function describeFailure(error: unknown): Failure {
  */
 export function logMiddleware(options?: {
   /** Receives each line, and the error of a failed request (default: Courier's logger) */
-  logger?: (message: string, error?: unknown) => void;
+  logger?: ((message: string, error?: unknown) => void) | undefined;
 }): Middleware {
   const custom = options?.logger;
 

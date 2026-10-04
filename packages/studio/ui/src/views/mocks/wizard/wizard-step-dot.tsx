@@ -5,7 +5,7 @@ interface WizardStepDotProps {
   index: number;
   active: boolean;
   completed: boolean;
-  onClick?: () => void;
+  onClick?: (() => void) | undefined;
 }
 
 /**

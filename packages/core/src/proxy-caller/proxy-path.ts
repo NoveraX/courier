@@ -24,7 +24,7 @@ export type ProxyPath = {
    *   for cross-origin BFF or CDN-fronted proxies.
    * - Omitted → defaults to `"/api/request"` at resolution time.
    */
-  http?: string;
+  http?: string | undefined;
 
   /**
    * SSE proxy endpoint path or absolute URL.
@@ -33,7 +33,7 @@ export type ProxyPath = {
    * - Absolute URL (`"https://realtime.example.com/sse"`) → used as-is.
    * - Omitted → defaults to `"/api/sse"` at resolution time.
    */
-  sse?: string;
+  sse?: string | undefined;
 
   /**
    * WS proxy endpoint URL.
@@ -50,7 +50,7 @@ export type ProxyPath = {
    *   throws `ConfigurationError("WS_PATH_NOT_CONFIGURED", ...)` — silent
    *   `localhost` defaults caused production-only breakage in earlier versions.
    */
-  ws?: string;
+  ws?: string | undefined;
 };
 
 /**

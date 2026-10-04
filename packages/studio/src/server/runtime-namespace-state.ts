@@ -26,9 +26,9 @@ export interface RuntimeRegistryEntry {
   transports: ReadonlyArray<BindingTransport>;
   sourceNames: ReadonlyArray<string>;
   /** Latest `listenOrigin` from `runtime:announce`, if the adapter supplied one */
-  listenOrigin?: string;
+  listenOrigin?: string | undefined;
   /** Latest `framework` brand from `runtime:announce`, if the adapter supplied one */
-  framework?: string;
+  framework?: string | undefined;
 }
 
 const g = globalThis as Record<symbol, unknown>;
@@ -110,7 +110,7 @@ export function updateRuntimeClaim(
   runtimeId: string,
   transports: ReadonlyArray<BindingTransport>,
   sourceNames: ReadonlyArray<string>,
-  extras: { listenOrigin?: string; framework?: string } = {},
+  extras: { listenOrigin?: string | undefined; framework?: string | undefined } = {},
 ): RuntimeRegistryEntry | undefined {
   const existing = runtimeRegistry.get(runtimeId);
   if (!existing) return undefined;

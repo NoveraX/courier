@@ -20,7 +20,7 @@ interface DataTableToolbarProps {
   search: string;
   onSearch: (v: string) => void;
   onBulkDelete: () => void;
-  onAdd?: () => void;
+  onAdd?: (() => void) | undefined;
 }
 
 export function DataTableToolbar({

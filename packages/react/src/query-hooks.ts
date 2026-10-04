@@ -88,7 +88,7 @@ export function createQueryHooks(
       await queryClient.prefetchQuery({
         queryKey: keyOf(method, variables),
         queryFn: ({ signal }) => call.fetch(method, variables, requestOptions, signal),
-        staleTime: typeof staleTime === "number" ? staleTime : undefined,
+        ...(typeof staleTime === "number" && { staleTime }),
       });
     },
 

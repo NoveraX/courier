@@ -6,7 +6,7 @@ import type { WSConnection, WSConnectionConfig } from "./ws/ws-types";
 interface PooledConnection {
   connection: WSConnection;
   users: number;
-  idleTimer?: ReturnType<typeof setTimeout>;
+  idleTimer?: ReturnType<typeof setTimeout> | undefined;
 }
 
 /** A pooled connection taken by one subscription, released when it ends. */

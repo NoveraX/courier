@@ -23,12 +23,12 @@ export interface BuilderState {
   /** Middleware the endpoint added itself with `.use()`. */
   readonly middleware: readonly Middleware[];
   readonly allowedHeaders: readonly string[];
-  readonly timeout?: number;
-  readonly retry?: RetryOptions;
-  readonly cache?: CacheConfig;
+  readonly timeout?: number | undefined;
+  readonly retry?: RetryOptions | undefined;
+  readonly cache?: CacheConfig | undefined;
   readonly meta: Readonly<Record<string, unknown>>;
   /** What a served channel's subscribers share a topic by, from `.topic()`. */
-  readonly topicKey?: TopicKeyReader;
+  readonly topicKey?: TopicKeyReader | undefined;
 }
 
 /** Start a builder state for a head. */

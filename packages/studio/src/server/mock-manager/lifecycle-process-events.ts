@@ -23,7 +23,7 @@ export interface ProcessEventsContext {
   emit: (type: string, payload: Record<string, unknown>) => void;
   updateAndEmit: (serverId: string, patch: Partial<ServerState>) => void;
   /** Keeps the requests each mock answered, for the pages that connect later. */
-  mockLog?: MockLog;
+  mockLog?: MockLog | undefined;
 }
 
 export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEvents {

@@ -392,11 +392,11 @@ export interface ChannelAddressed<
 
 /** Configuration shared by every endpoint built from a base. */
 export interface CourierBaseConfig {
-  middleware?: readonly Middleware[];
-  allowedHeaders?: readonly string[];
-  timeout?: number;
-  retry?: RetryOptions;
-  meta?: Record<string, unknown>;
+  middleware?: readonly Middleware[] | undefined;
+  allowedHeaders?: readonly string[] | undefined;
+  timeout?: number | undefined;
+  retry?: RetryOptions | undefined;
+  meta?: Record<string, unknown> | undefined;
 }
 
 /**

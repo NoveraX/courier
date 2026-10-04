@@ -3,18 +3,18 @@ import type { RequestStatus, TimelineFilters } from "@/store/types";
 
 /** URL search params shape for /timeline */
 export interface TimelineSearchParams {
-  search?: string;
-  status?: string;
-  mode?: string;
-  type?: string;
-  httpMethod?: string;
-  source?: string;
-  group?: string;
-  minDuration?: number;
-  filters?: boolean;
+  search?: string | undefined;
+  status?: string | undefined;
+  mode?: string | undefined;
+  type?: string | undefined;
+  httpMethod?: string | undefined;
+  source?: string | undefined;
+  group?: string | undefined;
+  minDuration?: number | undefined;
+  filters?: boolean | undefined;
   /** Global detail panel params (read by GlobalDetailPanel on any page) */
-  selectedReq?: string;
-  detailTab?: string;
+  selectedReq?: string | undefined;
+  detailTab?: string | undefined;
 }
 
 /** Parse raw URL search into typed params */

@@ -3,10 +3,10 @@ import { DetailRow as Row, DetailSection as Section } from "./detail-panel/detai
 import { formatDuration, formatSize } from "./formatters";
 
 interface StreamTimingData {
-  duration?: number;
-  eventCount?: number;
-  totalBytes?: number;
-  transport?: string;
+  duration?: number | undefined;
+  eventCount?: number | undefined;
+  totalBytes?: number | undefined;
+  transport?: string | undefined;
 }
 
 /** Stream timing summary — reused in detail panel and playground */

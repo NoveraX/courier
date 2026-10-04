@@ -12,7 +12,7 @@ export type InternalResponse = {
   data?: unknown;
   throw?: unknown;
   /** Header names the endpoint and its source carry across the proxy. */
-  namedHeaders?: readonly string[];
+  namedHeaders?: readonly string[] | undefined;
 };
 
 /**

@@ -5,7 +5,7 @@ export interface AngularStudioOptions {
    * A browser bundle sees neither courier.config nor `COURIER_STUDIO_URL`, so
    * a non-default address has to be named here.
    */
-  studioUrl?: string;
+  studioUrl?: string | undefined;
 }
 
 const STUDIO_URL_KEY = Symbol.for("courier.studio.url");

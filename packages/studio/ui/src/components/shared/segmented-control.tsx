@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export interface SegmentOption<TValue extends string = string> {
   value: TValue;
   label: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }> | undefined;
   /** Extra content rendered after label (e.g. count badge) */
   extra?: React.ReactNode;
 }

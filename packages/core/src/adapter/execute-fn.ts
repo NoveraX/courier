@@ -1,4 +1,4 @@
-import type { RequestPayload } from "../utils/request-payload";
+import type { RequestPayloadFields } from "../utils/request-payload";
 
 /**
  * Runs a proxied call once its entry point has read it.
@@ -8,7 +8,7 @@ import type { RequestPayload } from "../utils/request-payload";
  */
 export type ExecuteFn = (
   request: Request,
-  payload: Partial<RequestPayload>,
+  payload: RequestPayloadFields,
   proxyMethod: "GET" | "POST",
   proxyReceiveAt: number,
   requestId: string | undefined,

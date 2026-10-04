@@ -9,7 +9,7 @@ const log = createLogger("Studio");
 /** The shape of `lookup` that `http.request` accepts. */
 export type LookupCallback = (
   hostname: string,
-  options: { all?: boolean },
+  options: { all?: boolean | undefined },
   callback: (error: Error | null, address: string | LookupAddress[], family?: number) => void,
 ) => void;
 

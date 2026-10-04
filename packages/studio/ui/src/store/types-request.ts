@@ -12,50 +12,52 @@ export interface RequestEntry {
   source: string;
   group: string | undefined;
   method: string;
-  httpMethod?: string;
+  httpMethod?: string | undefined;
   variables: unknown;
   validatedVariables?: unknown;
   sentBody?: unknown;
   mode: "direct" | "proxy";
-  type?: "query" | "mutation";
+  type?: "query" | "mutation" | undefined;
   status: RequestStatus;
-  statusCode?: number;
-  timing?: RequestTiming;
-  proxyTiming?: ProxyTiming;
-  size?: number;
+  statusCode?: number | undefined;
+  timing?: RequestTiming | undefined;
+  proxyTiming?: ProxyTiming | undefined;
+  size?: number | undefined;
   data?: unknown;
-  rawResponse?: string;
+  rawResponse?: string | undefined;
   validatedResponse?: unknown;
-  requestHeaders?: Record<string, string>;
-  headers?: Record<string, string>;
-  middlewareHeaders?: Record<string, string[]>;
-  error?: {
-    type: string;
-    status?: number;
-    message: string;
-    validationIssues?: ValidationIssue[];
-  };
+  requestHeaders?: Record<string, string> | undefined;
+  headers?: Record<string, string> | undefined;
+  middlewareHeaders?: Record<string, string[]> | undefined;
+  error?:
+    | {
+        type: string;
+        status?: number | undefined;
+        message: string;
+        validationIssues?: ValidationIssue[] | undefined;
+      }
+    | undefined;
   middlewareCount: number;
   middlewareEntries: MiddlewareEntry[];
   hasValidation: { variables: boolean; response: boolean };
   /** How each validation that ran ended; a target left out was not validated */
-  validated?: Partial<Record<ValidationTarget, "passed" | "failed">>;
+  validated?: Partial<Record<ValidationTarget, "passed" | "failed">> | undefined;
   startedAt: number;
-  url?: string;
-  pinned?: boolean;
+  url?: string | undefined;
+  pinned?: boolean | undefined;
   sessionId: string;
   /** What the cache middleware did: answered from a stored response (`age` ms old), or missed. */
-  cache?: { hit: boolean; age?: number };
+  cache?: { hit: boolean; age?: number } | undefined;
   /** How much of the request's body has been sent, while a caller watches its upload */
-  upload?: UploadState;
+  upload?: UploadState | undefined;
   // Stream (SSE/WS) fields
-  transport?: "http" | "sse" | "ws";
-  streamStatus?: "streaming" | "complete" | "error";
-  streamEventCount?: number;
-  streamTotalBytes?: number;
-  streamDuration?: number;
+  transport?: "http" | "sse" | "ws" | undefined;
+  streamStatus?: "streaming" | "complete" | "error" | undefined;
+  streamEventCount?: number | undefined;
+  streamTotalBytes?: number | undefined;
+  streamDuration?: number | undefined;
   /** Captured stream events with metadata (capped to last 200) */
-  streamEvents?: StreamEventRecord[];
+  streamEvents?: StreamEventRecord[] | undefined;
 }
 
 /** A captured stream event in the request timeline */

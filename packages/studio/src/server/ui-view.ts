@@ -14,7 +14,7 @@ import type { StudioView } from "./storage/studio-view";
 export interface ViewDeps {
   sessions: SessionStore;
   view: StudioView;
-  requestLog?: RequestLog;
+  requestLog?: RequestLog | undefined;
 }
 
 /**

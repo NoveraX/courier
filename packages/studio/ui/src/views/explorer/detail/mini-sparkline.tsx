@@ -5,7 +5,7 @@ import type { SparklinePoint } from "../use-endpoint-metrics";
 
 interface MiniSparklineProps {
   data: SparklinePoint[];
-  color?: string;
+  color?: string | undefined;
   width?: number;
   height?: number;
 }

@@ -24,9 +24,9 @@ export type CourierImportAuth =
  * the specification writes it (`/pets/{id}`), or its operationId is listed.
  */
 export interface CourierImportSelector {
-  tags?: string[];
-  paths?: string[];
-  operationIds?: string[];
+  tags?: string[] | undefined;
+  paths?: string[] | undefined;
+  operationIds?: string[] | undefined;
 }
 
 /** Discriminator for how a spec was imported */
@@ -52,24 +52,24 @@ export interface CourierImportBase {
    */
   outputDir: string;
   /** Source name for the generated `defineApi` call (default: import key) */
-  sourceName?: string;
-  validation?: CourierImportValidation;
-  groupBy?: CourierImportGroupBy;
-  generateTypes?: boolean;
-  generateSchemas?: boolean;
-  generateClient?: CourierImportGenerateClient;
-  addAuthMiddleware?: boolean;
-  includeComments?: boolean;
+  sourceName?: string | undefined;
+  validation?: CourierImportValidation | undefined;
+  groupBy?: CourierImportGroupBy | undefined;
+  generateTypes?: boolean | undefined;
+  generateSchemas?: boolean | undefined;
+  generateClient?: CourierImportGenerateClient | undefined;
+  addAuthMiddleware?: boolean | undefined;
+  includeComments?: boolean | undefined;
   /** Only the endpoints it names are generated; applied after `transform`. */
-  include?: CourierImportSelector;
+  include?: CourierImportSelector | undefined;
   /** The endpoints it names are left out; applied after `include`. */
-  exclude?: CourierImportSelector;
+  exclude?: CourierImportSelector | undefined;
   /**
    * Run on a copy of the parsed specification before anything is generated
    * from it. It returns the specification to generate from, or changes the
    * copy in place and returns nothing.
    */
-  transform?: (spec: unknown) => unknown | Promise<unknown>;
+  transform?: ((spec: unknown) => unknown | Promise<unknown>) | undefined;
 }
 
 /**
@@ -82,13 +82,13 @@ export interface CourierUrlImport extends CourierImportBase {
   /** HTTP(S) URL Studio fetches at import + re-sync time */
   from: string;
   /** Sent with every fetch of `from`, to its own origin only: a redirect elsewhere goes without it */
-  auth?: CourierImportAuth;
+  auth?: CourierImportAuth | undefined;
   /**
    * The only specification the import is generated from: its hash, as
    * Studio records it in `.courier/imports-state.json` under `specHash`.
    * A specification with another hash is refused.
    */
-  pinHash?: string;
+  pinHash?: string | undefined;
 }
 
 /**
@@ -117,16 +117,16 @@ export interface CourierStudioConfig {
    * Studio HTTP/Socket.IO port, a whole number from 1 to 65535 — default
    * 6280. Studio reads it when it starts; `--port` overrides it.
    */
-  port?: number;
+  port?: number | undefined;
   /** Bind host — default "localhost". Studio reads it when it starts; `--host` overrides it. */
-  host?: string;
+  host?: string | undefined;
   /**
    * Where the ports Studio assigns to mocks that declare none begin, a whole
    * number from 1 to 65535 — default 7001. Studio reads it when it starts.
    */
-  mockBasePort?: number;
+  mockBasePort?: number | undefined;
   /** Open the Studio UI in the default browser on startup — default false */
-  open?: boolean;
+  open?: boolean | undefined;
   /**
    * Hosts on a private network that Studio may fetch an API specification
    * from, beyond this machine.
@@ -157,21 +157,21 @@ export interface CourierStudioConfig {
    * one computed in a dependency Node loads natively (`.mjs`, `.cjs`, or `.js`
    * in an ES module package) as of the last time Node evaluated it.
    */
-  allowedSpecHosts?: readonly string[];
+  allowedSpecHosts?: readonly string[] | undefined;
 }
 
 /** What the `courier-server` command reads when its flags say nothing. */
 export interface CourierServerConfig {
   /** Port to listen on — default 3001; `--port` overrides it */
-  port?: number;
+  port?: number | undefined;
   /** Host to bind — default "127.0.0.1"; `--host` overrides it */
-  host?: string;
+  host?: string | undefined;
   /**
    * Origins of the browser apps that call the server. Left out, the server
    * answers only its own origin, and loopback ones outside production;
    * `--allowed-origins` overrides it.
    */
-  allowedOrigins?: readonly string[];
+  allowedOrigins?: readonly string[] | undefined;
   /**
    * Host names the server is reached by. A request or a socket addressed to
    * any other host is refused with 421 — or closed with 4421 — as a
@@ -179,17 +179,17 @@ export interface CourierServerConfig {
    * served; left out, production serves every name and development nothing
    * else. `--allowed-hosts` overrides it.
    */
-  allowedHosts?: readonly string[];
+  allowedHosts?: readonly string[] | undefined;
   /**
    * Largest JSON envelope the proxy reads, in bytes — default 1 MB. A larger
    * one is refused with 413 before it is read.
    */
-  maxBodyBytes?: number;
+  maxBodyBytes?: number | undefined;
   /**
    * Largest `multipart/form-data` upload the proxy reads, in bytes — default
    * 10 MB. A larger one is refused with 413 before it is read.
    */
-  maxUploadBytes?: number;
+  maxUploadBytes?: number | undefined;
 }
 
 /**
@@ -223,7 +223,7 @@ export interface CourierRuntimeConfig {
    * value depends on your runtime (custom port, Docker, HTTPS, reverse
    * proxy, etc.) and a wrong guess would silently route to nowhere.
    */
-  appOrigin?: string;
+  appOrigin?: string | undefined;
 }
 
 /**
@@ -245,8 +245,8 @@ export interface CourierConfig<
   /** Map of named API sources */
   sources: TSources;
   /** OpenAPI/GraphQL/etc. import declarations */
-  imports?: Record<string, CourierImportEntry>;
-  studio?: CourierStudioConfig;
-  server?: CourierServerConfig;
-  runtime?: CourierRuntimeConfig;
+  imports?: Record<string, CourierImportEntry> | undefined;
+  studio?: CourierStudioConfig | undefined;
+  server?: CourierServerConfig | undefined;
+  runtime?: CourierRuntimeConfig | undefined;
 }

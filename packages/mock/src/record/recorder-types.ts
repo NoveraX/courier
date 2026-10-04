@@ -23,26 +23,26 @@ export interface RecorderConfig<TSource extends AnyDefinedApi> {
    * Where the calls go, in place of the source's `baseURL` — a staging host,
    * say. Each call keeps its endpoint's method and path.
    */
-  targetUrl?: string;
+  targetUrl?: string | undefined;
   /**
    * Record through a Courier proxy — a `createCourierServer`, or an app with
    * Courier's handler mounted — instead of calling the API directly: the
    * proxy route's URL, and the name the source is registered under there.
    */
-  proxy?: { url: string; source: string };
+  proxy?: { url: string; source: string } | undefined;
   /** Recording mode (default: "record") */
-  mode?: RecordMode;
+  mode?: RecordMode | undefined;
   /** Recordings to answer from in `replay` and `record-missing` modes */
-  fixtures?: readonly Fixture[];
+  fixtures?: readonly Fixture[] | undefined;
   /** Filter which endpoints to record; a call to any other is refused */
-  filter?: (group: string, method: string) => boolean;
+  filter?: ((group: string, method: string) => boolean) | undefined;
   /**
    * Rewrites what is recorded — each call's variables and each answer's
    * body — never what the call returns. Replay passes a call's variables
    * through it before looking for their recording, so a recording made with
    * it is found for the call it stands for.
    */
-  sanitize?: Sanitizer;
+  sanitize?: Sanitizer | undefined;
 }
 
 /** Rewrites a recorded value; `part` says which one it is handed. */

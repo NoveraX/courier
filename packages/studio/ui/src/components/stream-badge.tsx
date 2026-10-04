@@ -15,6 +15,8 @@ export function StreamBadge(): React.ReactElement | null {
   );
 }
 
-function selectActiveStreamCount(state: { requests: Array<{ streamStatus?: string }> }): number {
+function selectActiveStreamCount(state: {
+  requests: Array<{ streamStatus?: string | undefined }>;
+}): number {
   return state.requests.filter((r) => r.streamStatus === "streaming").length;
 }

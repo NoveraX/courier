@@ -34,25 +34,25 @@ export type MockChannelFn<TResponse = unknown, TVariables = unknown> = (
 export interface ResolvedHandler {
   fn: MockHandlerFn;
   status: number;
-  headers?: Record<string, string>;
-  delayMs?: number;
-  latency?: LatencyProfile;
+  headers?: Record<string, string> | undefined;
+  delayMs?: number | undefined;
+  latency?: LatencyProfile | undefined;
   isError: boolean;
-  remaining?: number;
-  requiredState?: string;
-  newState?: string;
+  remaining?: number | undefined;
+  requiredState?: string | undefined;
+  newState?: string | undefined;
   /** Transport type — undefined means standard HTTP */
-  transport?: "sse" | "ws";
+  transport?: "sse" | "ws" | undefined;
   /** SSE stream generator (set by .stream() / .emits()) */
-  streamFn?: MockStreamFn;
+  streamFn?: MockStreamFn | undefined;
   /** WS channel handler factory (set by .channel()) */
-  channelFn?: MockChannelFn;
+  channelFn?: MockChannelFn | undefined;
   /**
    * Set by `.sequence()`: gives each call its answer. The registry takes the
    * step as it resolves the call, so the step's status, error flag and delay
    * replace the handler's for that call alone.
    */
-  nextStep?: () => SequenceStep;
+  nextStep?: (() => SequenceStep) | undefined;
 }
 
 /** The answer one entry of a response sequence gives the call that takes it */
@@ -60,9 +60,9 @@ export interface SequenceStep {
   data: unknown;
   isError: boolean;
   /** The entry's own status; unset, the handler's status applies */
-  status?: number;
+  status?: number | undefined;
   /** The entry's own delay in ms; unset, the handler's delay applies */
-  delayMs?: number;
+  delayMs?: number | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ export type LatencyProfile =
   | "4g"
   | "wifi"
   | "fiber"
-  | { min: number; max: number; jitter?: number };
+  | { min: number; max: number; jitter?: number | undefined };
 
 /** Weighted fault entry — weight is 0–100, normalized at selection time */
 export interface FaultWeight {
@@ -88,10 +88,10 @@ export interface RouteNetworkOverride {
   /** "group:endpoint" key */
   routeId: string;
   enabled: boolean;
-  latency?: { min: number; max: number; jitter?: number };
+  latency?: { min: number; max: number; jitter?: number | undefined } | undefined;
   /** The share of this route's requests that fail, from 0 (none) to 1 (every one) */
-  errorRate?: number;
-  faultTypes?: string[];
+  errorRate?: number | undefined;
+  faultTypes?: string[] | undefined;
 }
 
 /** Latency distribution model */
@@ -109,36 +109,36 @@ export interface StopCondition {
 
 /** Network simulation configuration */
 export interface NetworkConfig {
-  latency?: number | LatencyProfile;
+  latency?: number | LatencyProfile | undefined;
   /** The share of requests that fail, from 0 (none) to 1 (every one); a failure takes one of `faultTypes` */
-  errorRate?: number;
+  errorRate?: number | undefined;
   /**
    * How long a `timeout` fault takes to fail, in ms. The mock server holds the
    * request this long (30 000 unless set), or until the client gives up, and
    * then answers 408, so a shorter client timeout fires first. The mock
    * client waits this long before it throws, and throws at once when unset.
    */
-  timeout?: number;
+  timeout?: number | undefined;
   /**
    * The faults a failing request is given (default: 500 and 503). A status
    * fails with that status. `timeout` fails after `timeout` ms. `reset` drops
    * the connection on the mock server, so the client gets no answer at all;
    * the mock client throws a 502 for it.
    */
-  faultTypes?: Array<"500" | "502" | "503" | "timeout" | "reset">;
+  faultTypes?: Array<"500" | "502" | "503" | "timeout" | "reset"> | undefined;
   /** Weighted fault distribution — overrides faultTypes when present */
-  faultWeights?: FaultWeight[];
+  faultWeights?: FaultWeight[] | undefined;
   /** Per-route overrides — checked before global config */
-  routeOverrides?: RouteNetworkOverride[];
+  routeOverrides?: RouteNetworkOverride[] | undefined;
   /** Latency distribution model (default: "uniform") */
-  distribution?: LatencyDistribution;
+  distribution?: LatencyDistribution | undefined;
   /**
    * Bandwidth in kilobits per second: an answer waits as long as its JSON body
    * takes to send at this rate, on top of the latency. 0 or unset is unlimited.
    */
-  bandwidth?: number;
+  bandwidth?: number | undefined;
   /** Stop conditions for auto-halting */
-  stopConditions?: StopCondition;
+  stopConditions?: StopCondition | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -150,15 +150,17 @@ export interface MockHistoryEntry {
   group: string;
   method: string;
   variables?: unknown;
-  result?: { status: number; data: unknown; headers?: Record<string, string> };
-  error?: Error;
+  result?:
+    | { status: number; data: unknown; headers?: Record<string, string> | undefined }
+    | undefined;
+  error?: Error | undefined;
   duration: number;
   timestamp: number;
   mocked: boolean;
   /** Whether this was a stream (SSE) request */
-  stream?: boolean;
+  stream?: boolean | undefined;
   /** Whether this was a channel (WS) request */
-  channel?: boolean;
+  channel?: boolean | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -189,9 +191,9 @@ export type UntypedMockFn = <TResponse = unknown, TVariables = unknown>(
 export interface AnyMockScenario {
   name: string;
   /** Short description shown in Studio Scenarios panel */
-  description?: string;
+  description?: string | undefined;
   /** Tags for categorization in Studio (e.g. ["error", "latency", "auth"]) */
-  tags?: string[];
+  tags?: string[] | undefined;
   /**
    * Initial scenario state when this scenario is applied.
    * Defaults to "Started" if omitted.
@@ -202,7 +204,7 @@ export interface AnyMockScenario {
    * { name: "auth-flow", initialState: "unauthorized", apply(mock) { ... } }
    * ```
    */
-  initialState?: string;
+  initialState?: string | undefined;
   /**
    * Sets the scenario's mocks up. The server calls it with a `mock` that takes
    * every address; `defineScenario` narrows that to the source's endpoints.
@@ -244,7 +246,7 @@ export interface MockScenario<in TSource extends AnySource = AnySource> extends 
  */
 export type SequenceEntry<TResponse> =
   | TResponse
-  | { data: TResponse; status?: number; delay?: number }
+  | { data: TResponse; status?: number | undefined; delay?: number | undefined }
   | { error: true; status: number; data?: unknown };
 
 /** Fluent builder for configuring endpoint mocks */

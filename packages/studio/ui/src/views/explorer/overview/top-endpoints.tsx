@@ -100,7 +100,7 @@ function EndpointRow({
   entry: TopEndpointEntry;
   format: (n: number) => string;
   maxValue: number;
-  onSelect?: () => void;
+  onSelect?: (() => void) | undefined;
 }): React.ReactElement {
   const barWidth = maxValue > 0 ? (entry.value / maxValue) * 100 : 0;
 

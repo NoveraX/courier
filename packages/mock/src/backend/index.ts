@@ -13,7 +13,7 @@ export interface BackendDeps {
   getScenarioState: () => string;
   markScenario: () => ScenarioMark;
   transitionScenario: (from: ScenarioMark, to: string) => void;
-  network?: NetworkConfig;
+  network?: NetworkConfig | undefined;
 }
 
 /** Create the ExecuteBackend that powers mock client's dot-notation proxy */

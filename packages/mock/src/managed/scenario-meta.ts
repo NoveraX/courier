@@ -16,8 +16,8 @@ export function buildScenarioMeta(
     const { endpoints, stateTransitions, hasStateMachine, error } = result;
     return {
       name,
-      description: scenario.description,
-      tags: scenario.tags,
+      ...(scenario.description !== undefined && { description: scenario.description }),
+      ...(scenario.tags && { tags: scenario.tags }),
       endpointCount: endpoints.length,
       isActive: false,
       hasStateMachine,

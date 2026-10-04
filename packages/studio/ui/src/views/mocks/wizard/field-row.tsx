@@ -3,7 +3,7 @@ interface FieldRowProps {
   id: string;
   label: string;
   hint?: string;
-  error?: string;
+  error?: string | undefined;
   children: React.ReactNode;
 }
 

@@ -8,7 +8,7 @@ interface SearchInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   /** Optional right-side text (e.g. "5/24" match count) */
-  badge?: string;
+  badge?: string | undefined;
   /** Debounce delay in ms (0 = no debounce) */
   debounce?: number;
   className?: string;

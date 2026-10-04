@@ -10,6 +10,6 @@ export const FLAT_GROUP = SINGLE_GROUP;
  * @param options - The import's generation options
  * @returns Whether it is flat
  */
-export function isFlatImport(options: { groupBy?: string }): boolean {
+export function isFlatImport(options: { groupBy?: string | undefined }): boolean {
   return options.groupBy === "single";
 }

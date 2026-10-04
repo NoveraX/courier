@@ -35,7 +35,7 @@ function ErrorCard({
 }: {
   type: string;
   message: string;
-  status?: number;
+  status?: number | undefined;
   critical: boolean;
 }): React.ReactElement {
   const Icon = critical ? ShieldAlert : XCircle;

@@ -31,22 +31,22 @@ export interface SavedSessionApp {
 export interface SavedRequest {
   id: string;
   source: string;
-  group?: string;
+  group?: string | undefined;
   method: string;
-  httpMethod?: string;
+  httpMethod?: string | undefined;
   variables: unknown;
   mode: "direct" | "proxy";
-  type?: "query" | "mutation";
+  type?: "query" | "mutation" | undefined;
   status: string;
-  statusCode?: number;
-  timing?: Record<string, number>;
-  size?: number;
+  statusCode?: number | undefined;
+  timing?: Record<string, number> | undefined;
+  size?: number | undefined;
   data?: unknown;
-  requestHeaders?: Record<string, string>;
-  responseHeaders?: Record<string, string>;
-  error?: { type: string; status?: number; message: string };
+  requestHeaders?: Record<string, string> | undefined;
+  responseHeaders?: Record<string, string> | undefined;
+  error?: { type: string; status?: number; message: string } | undefined;
   startedAt: number;
-  url?: string;
+  url?: string | undefined;
   sessionId: string;
 }
 

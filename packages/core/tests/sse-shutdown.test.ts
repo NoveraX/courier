@@ -41,7 +41,7 @@ describe("a stream open while its server shuts down", () => {
       server.handleSSE(new Request(url, init)),
     );
     const url = buildProxySSEUrl("http://localhost/api/sse", "api", "live", "feed");
-    const seen: { id?: string; event?: string; data: unknown }[] = [];
+    const seen: { id?: string | undefined; event?: string | undefined; data: unknown }[] = [];
     const subscription = subscribeSSE<{ n: number }>(url);
     const reading = (async () => {
       for await (const event of subscription) seen.push(event);

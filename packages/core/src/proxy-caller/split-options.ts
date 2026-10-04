@@ -41,9 +41,9 @@ export interface ProxyCallOptions {
 }
 
 export interface ProxyCallDefaults {
-  headers?: Record<string, string>;
+  headers?: Record<string, string> | undefined;
   credentials: WebCredentials;
-  timeout?: number;
+  timeout?: number | undefined;
 }
 
 /**

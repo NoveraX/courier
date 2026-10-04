@@ -4,7 +4,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 
 interface ApisEmptyStateProps {
   /** Opens the import wizard; left out while Import is refused. */
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; onClick: () => void } | undefined;
 }
 
 /**

@@ -121,7 +121,7 @@ async function post(
     method: "POST",
     headers: { "content-type": "application/json", origin: url, ...tokenHeader(studio) },
     body: JSON.stringify(body),
-    signal,
+    signal: signal ?? null,
   });
   const payload: unknown = await response.json();
   return { status: response.status, body: payload };

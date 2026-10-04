@@ -18,7 +18,7 @@ export interface DescribedRoute {
   hits: number;
   avgLatency: number;
   /** Field names and types of the response, when the source gives a schema. */
-  responseSchema?: Record<string, string>;
+  responseSchema?: Record<string, string> | undefined;
   /** A generated response, when the source gives a schema. */
   exampleResponse?: unknown;
 }

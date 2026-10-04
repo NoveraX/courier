@@ -4,7 +4,7 @@ import { CopyButton } from "@/components/shared/copy-button";
 
 interface HeadersSectionProps {
   title: string;
-  headers?: Record<string, string>;
+  headers?: Record<string, string> | undefined;
   warning?: string;
 }
 
@@ -71,7 +71,7 @@ export function DroppedHeadersSection({
   forwarded,
 }: {
   sent: string;
-  forwarded?: Record<string, string>;
+  forwarded?: Record<string, string> | undefined;
 }): React.ReactElement | null {
   if (!forwarded) return null;
   let parsed: unknown;

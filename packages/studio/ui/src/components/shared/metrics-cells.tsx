@@ -45,8 +45,8 @@ export function MetricsPill({
   statusCode,
   duration,
 }: {
-  statusCode?: number;
-  duration?: number;
+  statusCode?: number | undefined;
+  duration?: number | undefined;
 }): React.ReactElement | null {
   if (!statusCode && duration == null) return null;
 

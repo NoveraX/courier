@@ -44,7 +44,7 @@ const VALID_TYPES: ReadonlySet<string> = new Set<WSMessageType>([
 ]);
 
 export interface WSMessage {
-  id?: string;
+  id?: string | undefined;
   type: WSMessageType;
   source?: string;
   topic?: string;

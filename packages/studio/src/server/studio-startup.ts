@@ -10,12 +10,12 @@ const DEFAULT_MOCK_BASE_PORT = 7001;
 
 /** What the caller pins, and whom Studio tells as it starts. */
 export interface StudioStartupOptions {
-  port?: number;
-  host?: string;
-  mockBasePort?: number;
-  onReady?: (url: string) => void;
-  onStarted?: (started: StudioStarted) => void;
-  onError?: (error: Error) => void;
+  port?: number | undefined;
+  host?: string | undefined;
+  mockBasePort?: number | undefined;
+  onReady?: ((url: string) => void) | undefined;
+  onStarted?: ((started: StudioStarted) => void) | undefined;
+  onError?: ((error: Error) => void) | undefined;
 }
 
 /** Studio's address and start, as far as they are known yet. */

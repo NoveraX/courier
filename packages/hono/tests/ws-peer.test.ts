@@ -8,7 +8,7 @@
  * fifty-first connection from anyone closed with 4429.
  */
 import type { AddressInfo } from "node:net";
-import { serve, upgradeWebSocket } from "@hono/node-server";
+import { serve, upgradeWebSocket, type WebSocketServerLike } from "@hono/node-server";
 import { registerSources } from "@noverax/courier";
 import { defineApi } from "@noverax/courier/define";
 import { Hono } from "hono";
@@ -38,7 +38,12 @@ async function listen(maxConnectionsPerIP: number): Promise<number> {
     upgradeWebSocket((c) => ws(c)),
   );
   const wss = new WebSocketServer({ noServer: true });
-  const server = serve({ fetch: app.fetch, port: 0, hostname: "::", websocket: { server: wss } });
+  const server = serve({
+    fetch: app.fetch,
+    port: 0,
+    hostname: "::",
+    websocket: { server: asHonoServer(wss) },
+  });
   await new Promise<void>((resolve) => server.once("listening", () => resolve()));
   close = () =>
     new Promise<void>((resolve) => {
@@ -88,3 +93,13 @@ describe("the per-address WebSocket cap behind Hono", () => {
     expect(outcomes.filter((outcome) => outcome === "close:4429")).toHaveLength(1);
   });
 });
+
+/* The server `@hono/node-server` documents passing. Its `WebSocketServerLike`
+   writes optional members without `| undefined` and `ws` writes them with it,
+   so under exact optional property types the two declarations do not meet,
+   from `options.noServer` down to `send`'s options. The directive fails the
+   check once they do. */
+function asHonoServer(wss: WebSocketServer): WebSocketServerLike {
+  // @ts-expect-error — the declarations differ only in `| undefined`
+  return wss;
+}

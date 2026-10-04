@@ -3,19 +3,19 @@ import type { WebBody } from "../http-client/web-types";
 export type ResponseType = "json" | "text" | "blob" | "arrayBuffer" | "formData";
 
 export type FetchClientOptions = {
-  baseURL?: string;
-  headers?: Record<string, string>;
-  timeout?: number;
+  baseURL?: string | undefined;
+  headers?: Record<string, string> | undefined;
+  timeout?: number | undefined;
 };
 
 export type RequestOptions = {
   json?: unknown;
-  body?: WebBody;
-  searchParams?: Record<string, string> | URLSearchParams | string;
-  headers?: Record<string, string> | Headers;
-  timeout?: number;
-  signal?: AbortSignal;
-  responseType?: ResponseType;
+  body?: WebBody | undefined;
+  searchParams?: Record<string, string> | URLSearchParams | string | undefined;
+  headers?: Record<string, string> | Headers | undefined;
+  timeout?: number | undefined;
+  signal?: AbortSignal | undefined;
+  responseType?: ResponseType | undefined;
 };
 
 type RequestFn = <TResponse = unknown>(url: string, options?: RequestOptions) => Promise<TResponse>;

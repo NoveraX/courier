@@ -34,11 +34,11 @@ export function authMiddleware(options: {
   /** Function to get the current auth token */
   getToken: () => string | Promise<string>;
   /** Optional function returning a new token, called when a request is refused with 401 */
-  refreshToken?: () => string | Promise<string>;
+  refreshToken?: (() => string | Promise<string>) | undefined;
   /** Header name (default: "Authorization") */
-  header?: string;
+  header?: string | undefined;
   /** Auth scheme prefix (default: "Bearer") */
-  scheme?: string;
+  scheme?: string | undefined;
 }): Middleware {
   const { getToken, refreshToken, header = "Authorization", scheme = "Bearer" } = options;
   const refresh = refreshToken ? sharedRefresh(refreshToken) : undefined;

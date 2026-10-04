@@ -35,9 +35,9 @@ export interface ParsedSecurityScheme {
   name: string;
   type: "bearer" | "apiKey" | "basic" | "oauth2" | "unknown";
   /** Header/query param name for apiKey type */
-  paramName?: string;
+  paramName?: string | undefined;
   /** Where the key is sent for apiKey type */
-  in?: "header" | "query" | "cookie";
+  in?: "header" | "query" | "cookie" | undefined;
 }
 
 export interface ParsedGroup {
@@ -64,7 +64,7 @@ export interface ParsedEndpoint {
    * `baseURL`, e.g. "https://auth.example.com" for a collection's login
    * request. `fullPath` is then a path on that host.
    */
-  origin?: string;
+  origin?: string | undefined;
   /** OpenAPI summary / description */
   description: string;
   /** Is this secured (has security scheme) */
@@ -76,19 +76,19 @@ export interface ParsedEndpoint {
    * so a call may send none. Read for a body that is not a set of fields: a
    * list, a scalar, a map, bytes.
    */
-  requestBodyOptional?: true;
+  requestBodyOptional?: true | undefined;
   /**
    * Media type the request body is sent as, e.g. `application/json`,
    * `application/x-www-form-urlencoded` or `multipart/form-data`; absent
    * when there is no body.
    */
-  requestBodyMediaType?: string;
+  requestBodyMediaType?: string | undefined;
   /**
    * How each field of a url-encoded body is written, by field name, as the
    * specification's `encoding` declares it; absent when it declares none,
    * and every field is written as OpenAPI's defaults say.
    */
-  requestBodyEncoding?: Record<string, FieldEncoding>;
+  requestBodyEncoding?: Record<string, FieldEncoding> | undefined;
   /** Path + query parameters */
   parameters: ParsedParameter[];
   /** Response schema (from 200/201 response) */
@@ -98,7 +98,7 @@ export interface ParsedEndpoint {
    * or `application/pdf` — the one `responseSchema` describes, or the first
    * declared when none carries a schema; absent when the response has no body.
    */
-  responseMediaType?: string;
+  responseMediaType?: string | undefined;
   /** Tags from spec */
   tags: string[];
 }
@@ -108,8 +108,8 @@ export interface ParsedEndpoint {
  * OpenAPI's `style` and `explode`.
  */
 export interface FieldEncoding {
-  style?: "form" | "spaceDelimited" | "pipeDelimited" | "deepObject";
-  explode?: boolean;
+  style?: "form" | "spaceDelimited" | "pipeDelimited" | "deepObject" | undefined;
+  explode?: boolean | undefined;
 }
 
 /**
@@ -119,22 +119,22 @@ export interface FieldEncoding {
  */
 export interface SchemaConstraints {
   /** A whole number: the specification types it `integer`. */
-  integer?: true;
-  minLength?: number;
-  maxLength?: number;
+  integer?: true | undefined;
+  minLength?: number | undefined;
+  maxLength?: number | undefined;
   /**
    * A regular expression the string matches somewhere in it, as JavaScript
    * compiles it: with the `u` flag when it compiles so, else without.
    */
-  pattern?: { source: string; unicode: boolean };
-  minimum?: number;
-  maximum?: number;
-  exclusiveMinimum?: number;
-  exclusiveMaximum?: number;
+  pattern?: { source: string; unicode: boolean } | undefined;
+  minimum?: number | undefined;
+  maximum?: number | undefined;
+  exclusiveMinimum?: number | undefined;
+  exclusiveMaximum?: number | undefined;
   /** A whole number the value is a multiple of. */
-  multipleOf?: number;
-  minItems?: number;
-  maxItems?: number;
+  multipleOf?: number | undefined;
+  minItems?: number | undefined;
+  maxItems?: number | undefined;
 }
 
 export interface ParsedParameter {
@@ -144,26 +144,26 @@ export interface ParsedParameter {
   type: string;
   description: string;
   /** Allowed values, when the specification lists them. */
-  enum?: (string | number | boolean)[];
+  enum?: (string | number | boolean)[] | undefined;
   /** Element type of an array-valued parameter. */
-  items?: ParsedSchema;
+  items?: ParsedSchema | undefined;
   /** `date-time`, `uuid`, and the rest. */
-  format?: string;
+  format?: string | undefined;
   /**
    * How a query parameter is written, when not in OpenAPI's default style,
    * `form` exploded: Stripe's `created[gte]` and `expand[0]` are
    * `deepObject`, and a Swagger 2.0 list is joined with commas unless it
    * says otherwise.
    */
-  encoding?: FieldEncoding;
+  encoding?: FieldEncoding | undefined;
   /**
    * The parameter's own schema, when it is an object or one of several
    * forms — Stripe's `created` is a timestamp or a range of them — which a
    * type name and a list of values cannot describe.
    */
-  schema?: ParsedSchema;
+  schema?: ParsedSchema | undefined;
   /** What its value may hold beyond its type. */
-  constraints?: SchemaConstraints;
+  constraints?: SchemaConstraints | undefined;
 }
 
 export interface ParsedSchema {
@@ -186,29 +186,29 @@ export interface ParsedSchema {
    * Keeping only the first silently narrowed 28 GitHub request bodies and 14
    * Stripe responses to one of their shapes.
    */
-  variants?: ParsedSchema[];
-  properties?: Record<string, ParsedSchemaProperty>;
-  items?: ParsedSchema;
-  enum?: (string | number | boolean)[];
-  required?: string[];
+  variants?: ParsedSchema[] | undefined;
+  properties?: Record<string, ParsedSchemaProperty> | undefined;
+  items?: ParsedSchema | undefined;
+  enum?: (string | number | boolean)[] | undefined;
+  required?: string[] | undefined;
   /** Reference name for $ref schemas */
-  refName?: string;
-  description?: string;
+  refName?: string | undefined;
+  description?: string | undefined;
   /** Value type of a map, from `additionalProperties`. */
-  valueType?: ParsedSchema;
+  valueType?: ParsedSchema | undefined;
   /** What a primitive or a list may hold beyond its type. */
-  constraints?: SchemaConstraints;
+  constraints?: SchemaConstraints | undefined;
 }
 
 export interface ParsedSchemaProperty {
   type: string;
-  format?: string;
+  format?: string | undefined;
   required: boolean;
-  description?: string;
-  enum?: (string | number | boolean)[];
-  items?: ParsedSchema;
-  refName?: string;
-  nullable?: boolean;
+  description?: string | undefined;
+  enum?: (string | number | boolean)[] | undefined;
+  items?: ParsedSchema | undefined;
+  refName?: string | undefined;
+  nullable?: boolean | undefined;
   /**
    * The property's own schema, when a primitive, a reference or a list
    * cannot describe it: an inline object, or one of several alternatives.
@@ -216,9 +216,9 @@ export interface ParsedSchemaProperty {
    * Without it an inline object flattened to `Record<string, unknown>`, and a
    * property allowing several forms kept only the first reference among them.
    */
-  shape?: ParsedSchema;
+  shape?: ParsedSchema | undefined;
   /** Value type of a map, from `additionalProperties`. */
-  valueType?: ParsedSchema;
+  valueType?: ParsedSchema | undefined;
   /**
    * The one direction the property travels in, when the specification says:
    * `read` for a readOnly field only the server sends, `write` for a
@@ -227,10 +227,10 @@ export interface ParsedSchemaProperty {
    * whether it is required where it travels, for the request and answer
    * types the schema is split into.
    */
-  direction?: "read" | "write";
-  requiredInDirection?: boolean;
+  direction?: "read" | "write" | undefined;
+  requiredInDirection?: boolean | undefined;
   /** What a primitive or a list may hold beyond its type. */
-  constraints?: SchemaConstraints;
+  constraints?: SchemaConstraints | undefined;
 }
 
 export type SpecFormat =

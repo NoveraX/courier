@@ -16,7 +16,7 @@ interface AdminConfig {
   setActiveScenario: (name: string | null) => void;
   applyScenario: (scenario: AnyMockScenario) => void;
   /** Re-seed all collections after reset — provided by createAutoMockServer */
-  reseed?: () => void;
+  reseed?: (() => void) | undefined;
 }
 
 /**

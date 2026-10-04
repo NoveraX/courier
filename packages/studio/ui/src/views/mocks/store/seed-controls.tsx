@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 interface SeedControlsProps {
   seedCount: number;
   onSeedCountChange: (v: number) => void;
-  onSeedAll?: () => void;
+  onSeedAll?: (() => void) | undefined;
 }
 
 export function SeedControls({

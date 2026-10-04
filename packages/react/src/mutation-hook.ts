@@ -36,12 +36,13 @@ export function createMutationHook(call: GroupCall): MutationHook {
     useMutation(method: string, options?: MutationHookOptions) {
       const qc = useQueryClient();
       const { requestOptions, invalidate, onSuccess, ...mutationOptions } = options ?? {};
+      const succeeded = invalidate ? withInvalidation(qc, invalidate, onSuccess) : onSuccess;
 
       return useMutation<unknown, Error, unknown>({
         mutationFn: (variables: unknown) =>
           call.send(method, variables ?? undefined, requestOptions),
         ...mutationOptions,
-        onSuccess: invalidate ? withInvalidation(qc, invalidate, onSuccess) : onSuccess,
+        ...(succeeded && { onSuccess: succeeded }),
       });
     },
   } as MutationHook;

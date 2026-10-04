@@ -39,11 +39,11 @@ export interface CacheOptions {
   /** How responses are partitioned between callers. */
   scope: CacheScope;
   /** Time-to-live in milliseconds (default: 60000) */
-  ttl?: number;
+  ttl?: number | undefined;
   /** Entries retained before the oldest are dropped (default: 1000) */
-  maxEntries?: number;
+  maxEntries?: number | undefined;
   /** Custom storage (default: in-memory, per middleware instance) */
-  storage?: CacheStore;
+  storage?: CacheStore | undefined;
 }
 
 const DEFAULT_TTL_MS = 60_000;

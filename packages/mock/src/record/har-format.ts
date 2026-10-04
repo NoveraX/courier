@@ -74,9 +74,9 @@ export function createHarEntry(params: {
       method: params.httpMethod,
       url: params.url,
       headers: toHarHeaders(params.requestHeaders),
-      postData: params.requestBody
-        ? { mimeType: "application/json", text: params.requestBody }
-        : undefined,
+      ...(params.requestBody && {
+        postData: { mimeType: "application/json", text: params.requestBody },
+      }),
     },
     response: {
       status: params.status,

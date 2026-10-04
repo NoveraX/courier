@@ -8,7 +8,11 @@ import type { WSSocketContext } from "./ws-context";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
 
 /** Parse "source.group.method" or "source.group.method#key" topic format */
-export function parseTopic(topic: string): { source?: string; group?: string; method: string } {
+export function parseTopic(topic: string): {
+  source?: string | undefined;
+  group?: string | undefined;
+  method: string;
+} {
   const { baseTopic } = unqualifyTopic(topic);
   const [first, second, third] = baseTopic.split(".");
   if (third !== undefined) return { source: first, group: second, method: third };
@@ -26,11 +30,11 @@ export function resolveSubscribeTopic(
 ):
   | {
       source: string;
-      group?: string;
+      group?: string | undefined;
       method: string;
       endpoint: unknown;
       schema: SchemaMetadata;
-      topicKey?: TopicKeyReader;
+      topicKey?: TopicKeyReader | undefined;
       /** The source it belongs to */
       api: object;
       /** Served by this process; otherwise another server serves it, and this one relays it */

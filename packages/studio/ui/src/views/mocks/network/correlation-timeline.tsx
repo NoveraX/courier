@@ -17,7 +17,7 @@ import type { TimelinePoint } from "./network-utils";
 interface CorrelationTimelineProps {
   timeline: TimelinePoint[];
   /** Timestamps when fault mode changed — shown as vertical reference lines */
-  eventTimestamps?: number[];
+  eventTimestamps?: number[] | undefined;
 }
 
 export function CorrelationTimeline({

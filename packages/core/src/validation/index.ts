@@ -7,9 +7,9 @@ export const ENDPOINT_SCHEMA: unique symbol = Symbol.for("courier.endpoint.schem
 /** Cache configuration for proxy GET responses */
 export interface CacheConfig {
   /** Cache duration in seconds (maps to s-maxage) */
-  revalidate?: number;
+  revalidate?: number | undefined;
   /** Tags for Next.js revalidateTag() invalidation */
-  tags?: string[];
+  tags?: string[] | undefined;
 }
 
 /** Transport mode for an endpoint */

@@ -16,30 +16,30 @@ export type OperationKind =
 /** Sample data used when this endpoint is served by a generated mock. */
 export interface MockOptions {
   example?: unknown;
-  status?: number;
-  delay?: number;
+  status?: number | undefined;
+  delay?: number | undefined;
 }
 
 /** Options every endpoint accepts, whatever its kind. */
 export interface CommonEndpointOptions {
-  mock?: MockOptions;
-  tags?: readonly string[];
+  mock?: MockOptions | undefined;
+  tags?: readonly string[] | undefined;
   /** Reason the endpoint is discouraged, surfaced by tooling. */
-  deprecated?: string;
+  deprecated?: string | undefined;
   /** Overrides the operation inferred from the wire shape. */
-  operation?: OperationKind;
+  operation?: OperationKind | undefined;
   /**
    * When false, the middleware of the base this endpoint was built from —
    * `courier({ middleware })` and every `extend()` — is not applied here. The
    * endpoint's own `.use()` still is, wherever in the chain it was named, and
    * so is the source's `defineApi({ middleware })`.
    */
-  inherit?: boolean;
+  inherit?: boolean | undefined;
 }
 
 export interface HttpEndpointOptions extends CommonEndpointOptions {
   /** Where the idempotency key is read from, for example `header:idempotency-key`. */
-  idempotencyKey?: string;
+  idempotencyKey?: string | undefined;
   /**
    * Keep a read's variables out of the address it is sent to.
    *
@@ -49,7 +49,7 @@ export interface HttpEndpointOptions extends CommonEndpointOptions {
    * as an email address or a search someone typed, sets this and is sent as
    * POST; the proxy refuses it over GET.
    */
-  sensitiveVariables?: boolean;
+  sensitiveVariables?: boolean | undefined;
 }
 
 /**
@@ -102,18 +102,18 @@ export type CacheArg<TKind extends "query" | "mutation"> = TKind extends "query"
  */
 export interface RetryOptions {
   /** How many times a failed attempt is made again (default: 3) */
-  limit?: number;
+  limit?: number | undefined;
   /** The wait before the first retry, in ms (default: 300) */
-  delay?: number;
+  delay?: number | undefined;
   /** How the wait grows between retries (default: "exponential", doubling it) */
-  backoff?: "fixed" | "exponential";
+  backoff?: "fixed" | "exponential" | undefined;
   /**
    * Which answers deserve another attempt: their statuses, 0 standing for a
    * request that got no answer, or a test of the answer (default: 0 and 5xx).
    */
-  retryOn?: readonly number[] | ((response: MiddlewareResponse) => boolean);
+  retryOn?: readonly number[] | ((response: MiddlewareResponse) => boolean) | undefined;
   /** Retry an endpoint that writes as well as one that reads (default: false) */
-  mutations?: boolean;
+  mutations?: boolean | undefined;
 }
 
 /** Everything the runtime needs about an endpoint, flattened at definition. */

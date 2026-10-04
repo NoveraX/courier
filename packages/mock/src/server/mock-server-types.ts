@@ -18,39 +18,39 @@ import type { RequestHooks } from "./route-types";
 /** Configuration for the mock HTTP server */
 export interface MockServerOptions {
   /** Port to listen on (default: 7001) */
-  port?: number;
+  port?: number | undefined;
   /**
    * Fail to start when `port` is taken, instead of moving to the next free
    * one (default: false). For a port something else was told to call.
    */
-  strictPort?: boolean;
+  strictPort?: boolean | undefined;
   /** Hostname (default: "localhost") */
-  hostname?: string;
+  hostname?: string | undefined;
   /** Enable CORS (default: true) */
-  cors?: boolean | { origin: string | string[] };
+  cors?: boolean | { origin: string | string[] } | undefined;
   /** Enable admin API at /__admin/ (default: true) */
-  admin?: boolean;
+  admin?: boolean | undefined;
   /** Requests the history keeps, newest first to go last (default: 1000) */
-  historyLimit?: number;
+  historyLimit?: number | undefined;
   /** Request logging level (default: "normal") */
-  log?: MockLogMode | boolean;
+  log?: MockLogMode | boolean | undefined;
   /** Default network simulation */
-  network?: NetworkConfig;
+  network?: NetworkConfig | undefined;
   /** Initial scenario */
-  scenario?: AnyMockScenario;
+  scenario?: AnyMockScenario | undefined;
   /** Named scenarios available via admin API */
-  scenarios?: Record<string, AnyMockScenario>;
+  scenarios?: Record<string, AnyMockScenario> | undefined;
   /** Prefix mappings for REST-style routes (GET /products → products.getAll) */
-  mappings?: PrefixMapping[];
+  mappings?: PrefixMapping[] | undefined;
   /** Re-seed all collections after reset — provided by createAutoMockServer */
-  reseed?: () => void;
+  reseed?: (() => void) | undefined;
   /**
    * Keep the store in a file, so its records survive a restart: taken from
    * the file when the server starts, and written back shortly after each
    * request that answers and when it stops. Left out, the store lives in
    * memory only.
    */
-  persist?: StorePersistOptions;
+  persist?: StorePersistOptions | undefined;
   /**
    * WebSocket upgrade configuration.
    *
@@ -59,10 +59,12 @@ export interface MockServerOptions {
    *   HTTP 403.
    * - `maxPayload` — maximum WebSocket frame size in bytes (default 1 MiB).
    */
-  ws?: {
-    allowedOrigins?: readonly string[];
-    maxPayload?: number;
-  };
+  ws?:
+    | {
+        allowedOrigins?: readonly string[] | undefined;
+        maxPayload?: number | undefined;
+      }
+    | undefined;
 }
 
 /** Mock HTTP server instance */

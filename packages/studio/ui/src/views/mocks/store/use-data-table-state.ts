@@ -26,9 +26,9 @@ const ROW_HEIGHT = 36;
 export interface DataTableStateOptions {
   collection: MockCollectionEntry;
   scrollRef: React.RefObject<HTMLDivElement | null>;
-  onAddRecord?: (defaults: Record<string, unknown>) => void;
-  onDeleteRecords?: (ids: string[]) => void;
-  onUpdateField?: (recordId: string, field: string, value: unknown) => void;
+  onAddRecord?: ((defaults: Record<string, unknown>) => void) | undefined;
+  onDeleteRecords?: ((ids: string[]) => void) | undefined;
+  onUpdateField?: ((recordId: string, field: string, value: unknown) => void) | undefined;
 }
 
 export interface DataTableState {

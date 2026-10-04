@@ -5,7 +5,7 @@
 export interface SnippetInput {
   url: string;
   method: string;
-  headers?: Record<string, string>;
+  headers?: Record<string, string> | undefined;
   body?: unknown;
 }
 

@@ -32,14 +32,14 @@ export interface TransformCacheOptions {
    * `findTransformCacheDirectory` finds it. Without one, or with `null`,
    * transforms are kept in memory only.
    */
-  directory?: string | null;
+  directory?: string | null | undefined;
   /**
    * Characters of transformed code kept in memory across all files; the file
    * used least recently is dropped first once they are exceeded. `0` keeps
    * none, for a process that loads each module once. Defaults to 128 Mi
    * characters.
    */
-  maxMemoryChars?: number;
+  maxMemoryChars?: number | undefined;
   /**
    * Whether the `directory` is only read: nothing in it is created, written,
    * pruned or marked as used, so a transform computed on a miss stays in
@@ -47,7 +47,7 @@ export interface TransformCacheOptions {
    * just kept there, as a mock worker loads the modules Studio loaded: its
    * own entries would only duplicate that process's. Defaults to `false`.
    */
-  readOnly?: boolean;
+  readOnly?: boolean | undefined;
 }
 
 interface MemoEntry {

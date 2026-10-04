@@ -35,19 +35,19 @@ export interface ImportDeclaration {
    * lists an API — on the APIs page, in the Explorer and the Playground —
    * only once `sources` declares it.
    */
-  source?: { importLine: string; entry: string };
+  source?: { importLine: string; entry: string } | undefined;
   /**
    * The entry under `imports`, which Studio reads to keep the edits made to
    * the generated endpoints when the import is written again, to regenerate
    * the code, and, for a URL import, to check its specification for updates.
    */
-  importEntry?: string;
+  importEntry?: string | undefined;
   /**
    * How many of the specification's endpoints the write left out. The
    * `imports` entry cannot keep that selection, so regenerating from it, as
    * an update does, generates them too. Set only with `importEntry`.
    */
-  leftOut?: number;
+  leftOut?: number | undefined;
 }
 
 /** What writing an import's files did. */
@@ -59,11 +59,11 @@ export interface WriteResult {
   /** Files left as they were, and why. */
   kept: Array<{ path: string; reason: string }>;
   /** Project-relative directory holding the files replaced and removed. */
-  backupDir?: string;
+  backupDir?: string | undefined;
   /** Folders the write emptied that Studio could not remove, and why. */
   pruneFailures: Array<{ path: string; code: string }>;
   /** Files Studio wrote before the import's directory moved, left where they are. */
   leftBehind: string[];
   /** What the config must still declare for the import written; absent once it declares all of it. */
-  declaration?: ImportDeclaration;
+  declaration?: ImportDeclaration | undefined;
 }

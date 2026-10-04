@@ -66,8 +66,8 @@ export interface ExperimentEvent {
   type: "started" | "stopped" | "auto-halted";
   mode: string;
   errorRate: number;
-  peakErrorRate?: number;
-  peakP99?: number;
-  durationMs?: number;
-  reason?: string;
+  peakErrorRate?: number | undefined;
+  peakP99?: number | undefined;
+  durationMs?: number | undefined;
+  reason?: string | undefined;
 }

@@ -19,24 +19,24 @@ export type ProxyCallerDefaults = {
    * });
    * ```
    */
-  proxyPath?: ProxyPath;
+  proxyPath?: ProxyPath | undefined;
   /**
    * The API's definition, the `defineApi()` result, for code on the server.
    * In a browser bundle pass `boundary` instead: the definition would ship
    * with the page.
    */
-  source?: Record<string, unknown>;
+  source?: Record<string, unknown> | undefined;
   /**
    * The endpoints this client may call, from `defineBoundary`. Pass this
    * instead of `source` to keep the API's definition out of the bundle —
    * a boundary carries the transports and nothing about the server.
    */
-  boundary?: ProxyBoundary;
+  boundary?: ProxyBoundary | undefined;
   /**
    * How long the browser waits for the proxy, in ms. Not sent to the server,
    * where the endpoint's own `.timeout()` bounds the upstream call.
    */
-  timeout?: number;
+  timeout?: number | undefined;
   /**
    * Cancel a call still in flight when the same endpoint is called again; the
    * cancelled call rejects with an `HTTPError` of status 499. Only a read is
@@ -44,18 +44,18 @@ export type ProxyCallerDefaults = {
    * is left to complete. Defaults to the source's own `deduplicate` when
    * `source` is given.
    */
-  deduplicate?: boolean;
-  credentials?: WebCredentials;
-  headers?: Record<string, string>;
-  onError?: (error: HTTPError) => void | Promise<void>;
-  onSuccess?: (data: unknown) => void | Promise<void>;
+  deduplicate?: boolean | undefined;
+  credentials?: WebCredentials | undefined;
+  headers?: Record<string, string> | undefined;
+  onError?: ((error: HTTPError) => void | Promise<void>) | undefined;
+  onSuccess?: ((data: unknown) => void | Promise<void>) | undefined;
   /**
    * How the sockets of this client's channels and push subscriptions behave:
    * the token sent on connecting and when the server asks for a fresh one,
    * the reconnect backoff, how long the server may stay silent, the queue
    * limits, sub-protocols and the largest message sent.
    */
-  ws?: CallerWSOptions;
+  ws?: CallerWSOptions | undefined;
 };
 
 /**

@@ -51,7 +51,7 @@ function FeedRow({
   onSelect,
 }: {
   entry: ActivityEntry;
-  onSelect?: () => void;
+  onSelect?: (() => void) | undefined;
 }): React.ReactElement {
   const timestampFormat = useStudioStore((s) => s.settings.timestampFormat);
   const now = useNow();

@@ -15,7 +15,7 @@ export { GeneralTab } from "./route-general-tab";
 export { HandlerTab } from "./route-handler-tab";
 
 interface SchemaTabProps {
-  schema?: Record<string, string>;
+  schema?: Record<string, string> | undefined;
 }
 
 export function SchemaTab({ schema }: SchemaTabProps): React.ReactElement {

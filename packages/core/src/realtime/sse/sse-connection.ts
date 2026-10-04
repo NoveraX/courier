@@ -14,13 +14,13 @@ const RETRYABLE = new Set([408, 429]);
 
 /** Resolved configuration passed to the connection loop */
 export interface SSEConnectionConfig {
-  headers?: Record<string, string>;
-  backoff?: BackoffConfig;
+  headers?: Record<string, string> | undefined;
+  backoff?: BackoffConfig | undefined;
   heartbeatTimeout: number;
   maxAttempts: number;
   parse: (raw: string) => unknown;
   /** Optional callback fired once per successful fetch (used by studio instrumentation) */
-  onResponse?: (response: Response) => void;
+  onResponse?: ((response: Response) => void) | undefined;
 }
 
 /** Mutable context shared between connection loop and stream consumer */

@@ -456,13 +456,15 @@ describe("mock ws-handler — real HTTP upgrade", () => {
 
   it("returns 404 for paths not matched by any prefix mapping", async () => {
     const ws = new WebSocket(wsUrlFor(baseUrl, "/not-a-route"));
-    const result = await new Promise<{ rejected: boolean; status?: number }>((resolve) => {
-      ws.on("unexpected-response", (_req, res) =>
-        resolve({ rejected: true, status: res.statusCode }),
-      );
-      ws.on("error", () => resolve({ rejected: true }));
-      ws.on("open", () => resolve({ rejected: false }));
-    });
+    const result = await new Promise<{ rejected: boolean; status?: number | undefined }>(
+      (resolve) => {
+        ws.on("unexpected-response", (_req, res) =>
+          resolve({ rejected: true, status: res.statusCode }),
+        );
+        ws.on("error", () => resolve({ rejected: true }));
+        ws.on("open", () => resolve({ rejected: false }));
+      },
+    );
     expect(result.rejected).toBe(true);
     if (result.status !== undefined) expect(result.status).toBe(404);
     ws.close();
@@ -606,13 +608,15 @@ describe("mock ws-handler — origin allowlist", () => {
       headers: { Origin: "https://attacker.example" },
     });
 
-    const result = await new Promise<{ status?: number; rejected: boolean }>((resolve) => {
-      ws.on("unexpected-response", (_req, res) =>
-        resolve({ status: res.statusCode, rejected: true }),
-      );
-      ws.on("error", () => resolve({ rejected: true }));
-      ws.on("open", () => resolve({ rejected: false }));
-    });
+    const result = await new Promise<{ status?: number | undefined; rejected: boolean }>(
+      (resolve) => {
+        ws.on("unexpected-response", (_req, res) =>
+          resolve({ status: res.statusCode, rejected: true }),
+        );
+        ws.on("error", () => resolve({ rejected: true }));
+        ws.on("open", () => resolve({ rejected: false }));
+      },
+    );
 
     expect(result.rejected).toBe(true);
     if (result.status !== undefined) expect(result.status).toBe(403);

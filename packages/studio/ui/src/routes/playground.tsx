@@ -3,9 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PlaygroundView } from "@/views/playground";
 
 interface PlaygroundSearch {
-  source?: string;
-  group?: string;
-  method?: string;
+  source?: string | undefined;
+  group?: string | undefined;
+  method?: string | undefined;
 }
 
 export const Route = createFileRoute("/playground")({

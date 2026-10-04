@@ -11,12 +11,12 @@ export interface RedisPresenceConfig {
    * reports only what this replica did itself, and a presence UI misses every
    * join and leave that happened elsewhere.
    */
-  subscriber?: Redis;
+  subscriber?: Redis | undefined;
   /**
    * Identifier stamped on this replica's diffs so it ignores their echo.
    * Generated when omitted.
    */
-  origin?: string;
+  origin?: string | undefined;
   /**
    * Redis instance for ZADD / HSET / ZRANGEBYSCORE commands.
    *
@@ -31,7 +31,7 @@ export interface RedisPresenceConfig {
    * Two keys per topic: `{prefix}score:{topic}` (ZSET) and `{prefix}meta:{topic}` (HASH).
    * @default "presence:"
    */
-  prefix?: string;
+  prefix?: string | undefined;
 }
 
 /** Configuration for {@link createRedisPubSub} */
@@ -52,13 +52,13 @@ export interface RedisPubSubConfig {
    * Custom origin ID for echo prevention.
    * Defaults to `crypto.randomUUID()`.
    */
-  origin?: string;
+  origin?: string | undefined;
   /**
    * Channel key prefix (e.g. `"courier:"`).
    * Applied to all topic names: `prefix + topic`.
    * @default ""
    */
-  prefix?: string;
+  prefix?: string | undefined;
 }
 
 /** Configuration for {@link createRedisStream} */
@@ -70,11 +70,11 @@ export interface RedisStreamConfig {
    * Applied to all topic names: `prefix + topic`.
    * @default ""
    */
-  prefix?: string;
+  prefix?: string | undefined;
   /**
    * Default MAXLEN for auto-trim on append.
    * Set to `0` to disable auto-trim.
    * @default 1000
    */
-  maxLen?: number;
+  maxLen?: number | undefined;
 }

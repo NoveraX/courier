@@ -1,11 +1,11 @@
 import { resolveLatency } from "../network/latency";
-import type { NetworkConfig } from "../types";
+import type { NetworkConfig, ResolvedHandler } from "../types";
 
 export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /** Resolve handler delay from handler config, latency profile, or network config */
 export function resolveHandlerDelay(
-  handler: { delayMs?: number; latency?: Parameters<typeof resolveLatency>[0] },
+  handler: Pick<ResolvedHandler, "delayMs" | "latency">,
   network?: NetworkConfig,
 ): number | undefined {
   return (

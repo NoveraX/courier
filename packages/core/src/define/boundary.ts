@@ -38,12 +38,12 @@ export interface BoundaryConfig<TExposure extends Exposure> {
   /** Every endpoint the browser may call, with its shape. Absent means refused. */
   expose: TExposure;
   /** Where the app serves its proxy routes, so the client needs nothing else. */
-  proxyPath?: ProxyPath;
+  proxyPath?: ProxyPath | undefined;
   /**
    * The reads whose variables stay out of the address: sent as POST, as the
    * definition's `sensitiveVariables` asks. The proxy refuses them over GET.
    */
-  sensitive?: readonly ReadPath<TExposure>[];
+  sensitive?: readonly ReadPath<TExposure>[] | undefined;
 }
 
 /** How each declared shape reaches the wire. */

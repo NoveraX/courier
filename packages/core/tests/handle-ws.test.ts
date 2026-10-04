@@ -31,7 +31,7 @@ function setupWSHandler(sources: Sources, options?: WSHandlerConfig) {
 
 type MockSocket = WebSocketLike & {
   _sent: WSMessage[];
-  _closed: { code?: number; reason?: string } | null;
+  _closed: { code?: number | undefined; reason?: string | undefined } | null;
   _emit: (type: string, data?: unknown) => void;
 };
 
@@ -39,7 +39,7 @@ function createMockSocket(): MockSocket {
   const listeners = new Map<string, Array<(event: unknown) => void>>();
   const sent: WSMessage[] = [];
   let readyState = 1;
-  let closed: { code?: number; reason?: string } | null = null;
+  let closed: { code?: number | undefined; reason?: string | undefined } | null = null;
 
   return {
     get readyState() {

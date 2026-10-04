@@ -12,7 +12,7 @@ interface PortFieldProps {
   id: string;
   draft: MockDraft;
   hint: string;
-  error?: string;
+  error?: string | undefined;
   onChange: (patch: Pick<MockDraft, "portMode"> | Pick<MockDraft, "portText">) => void;
 }
 

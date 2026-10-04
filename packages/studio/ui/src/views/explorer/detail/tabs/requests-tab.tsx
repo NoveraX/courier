@@ -7,7 +7,7 @@ import { HealthIndicator } from "../../shared/health-indicator";
 interface RequestsTabProps {
   /** The endpoint's latest calls, newest first, listed in that order */
   requests: RequestEntry[];
-  onNavigateToTimeline?: (requestId: string) => void;
+  onNavigateToTimeline?: ((requestId: string) => void) | undefined;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────

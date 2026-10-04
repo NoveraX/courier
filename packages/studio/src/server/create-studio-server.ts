@@ -3,18 +3,15 @@
  */
 
 import { createServer } from "node:http";
-import { STUDIO_DEFAULT_PORT } from "@noverax/courier/config";
 import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config";
 import express from "express";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
-import { listenStudio } from "./listen-studio";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { EDIT_FINISH_BUDGET_MS } from "./mocks-edit/edit-timing";
 import { createProjectState } from "./project-state/create-project-state";
-import { createRequestLog } from "./request-log";
 import { resolvedRoot } from "./resolved-root";
 import { registerRestApi } from "./rest-api";
 import { setupRuntimeNamespace } from "./runtime-namespace";
@@ -24,37 +21,48 @@ import { securityHeaders } from "./security-headers";
 import { serveStudioUi } from "./serve-ui";
 import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
-import { createMockLog } from "./storage/mock-log";
-import { createPlaygroundHistory } from "./storage/playground-history";
-import { createSessionStore } from "./storage/session-rows";
-import { openStudioDb } from "./storage/studio-db";
-import { createStudioView } from "./storage/studio-view";
+import { openStudioStores } from "./storage/studio-stores";
 import { createStudioOriginPolicy } from "./studio-origin";
+import { createStudioStartup } from "./studio-startup";
 import { studioToken } from "./studio-token";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
 
-/** Where mock-server port allocation starts when nothing says otherwise. */
-const DEFAULT_MOCK_BASE_PORT = 7001;
-
+/**
+ * Start Courier Studio for a project: load and watch the project, serve the
+ * UI and its API, take events from runtimes, and run the project's mocks.
+ *
+ * It returns at once. Studio listens where the options pin it, else where
+ * the `studio` block of the project's courier.config says, else at the
+ * defaults. Pinned to a host and a port, it listens at once; otherwise once
+ * its first load of the project has an outcome, so the config is evaluated
+ * only once at start. `onReady` is told when it listens, `onStarted` once it
+ * listens and that first load has an outcome, and `onError` when it cannot
+ * listen.
+ *
+ * @param options - Where to listen, the project root, and whom to tell
+ * @returns The server's URL and token, and how to close it
+ * @example
+ * ```ts
+ * const studio = createStudioServer({
+ *   projectRoot,
+ *   onStarted: ({ url }) => console.log(`Studio at ${url}`),
+ *   onError: (error) => console.error(error.message),
+ * });
+ * await studio.close();
+ * ```
+ */
 export function createStudioServer(options: StudioServerOptions = {}): StudioServer {
-  const {
-    port = STUDIO_DEFAULT_PORT,
-    host = "localhost",
-    projectRoot = process.cwd(),
-    mockBasePort = DEFAULT_MOCK_BASE_PORT,
-    onReady,
-    onError,
-    extraCorsOrigins = [],
-  } = options;
+  const { projectRoot = process.cwd(), extraCorsOrigins = [], ...startupOptions } = options;
 
   const app = express();
   /* Nothing a caller needs, and it names what to probe for. */
   app.disable("x-powered-by");
   app.use(securityHeaders);
   const httpServer = createServer(app);
+  const startup = createStudioStartup(httpServer, startupOptions);
   const policy = createStudioOriginPolicy({
-    bindHost: host,
+    bindHost: startup.host,
     /* The UI's own dev server proxies to Studio under its own host, which Studio takes as its page. */
     extraOrigins: extraCorsOrigins,
   });
@@ -68,13 +76,9 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const nameSource = createConfigSourceNamer(() => project.snapshot().running?.config);
   /* The loader resolves links; every path shown is relative to the same root. */
   const root = resolvedRoot(projectRoot);
-  const storage = openStudioDb(root);
+  const stores = openStudioStores(root);
+  const { requestLog, sessions, view, mockLog, playgroundHistory } = stores;
   const token = studioToken(root);
-  const requestLog = createRequestLog(storage.db);
-  const sessions = createSessionStore(storage.db);
-  const view = createStudioView(storage.db);
-  const mockLog = createMockLog(storage.db);
-  const playgroundHistory = createPlaygroundHistory(storage.db);
   setupRuntimeNamespace(runtimeNamespace, {
     bindingTable,
     uiNamespace,
@@ -92,7 +96,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const mockManager = createLifecycleCoordinator({
     mockRegistry,
     uiNamespace,
-    basePort: mockBasePort,
+    basePort: startup.mockBasePort,
     watcherStatus,
     /* The directory Studio's own loads use, looked up as they look it up. */
     transformCacheDirectory: () => findTransformCacheDirectory(projectRoot),
@@ -107,6 +111,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     uiNamespace,
     watcherStatus,
     mocks: { mockRegistry, mockManager },
+    onStartup: startup.configRead,
   });
 
   setupUiNamespace({
@@ -131,9 +136,9 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     apis: { project, projectRoot: root },
     mocksEdit: {
       projectRoot,
-      mockBasePort,
+      mockBasePort: startup.mockBasePort,
       project,
-      studioPort: () => address.port(),
+      studioPort: startup.port,
       mockSummaries: mockManager.summarizeServers,
     },
     sessions: { sessions, view },
@@ -141,18 +146,17 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   });
   serveStudioUi(app);
 
-  const address = listenStudio(httpServer, { port, host, onReady, onError });
+  startup.start();
 
   const close = async () => {
+    startup.close();
     await project.finishEdits(EDIT_FINISH_BUDGET_MS);
     await mockManager.stop();
     project.stop();
     playgroundRouter.dispose();
     clearStudioServerState();
     io.close();
-    requestLog.close();
-    mockLog.close();
-    storage.close();
+    stores.close();
     if (!httpServer.listening) return;
     return new Promise<void>((resolve, reject) => {
       httpServer.close((err) => (err ? reject(err) : resolve()));
@@ -161,7 +165,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   return {
     get url() {
-      return address.url();
+      return startup.url();
     },
     token: token.value,
     close,

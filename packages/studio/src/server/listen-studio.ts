@@ -28,7 +28,8 @@ export interface StudioAddress {
  * The address is known for certain only once listening: with port 0 the
  * system picks it, and the requested one would name an address nothing
  * answers at. A port another process holds is reported as that, and any
- * listen error reaches `onError` rather than the process.
+ * listen error — a port Node refuses at once included — reaches `onError`
+ * rather than the caller or the process.
  *
  * Bound to `localhost`, Studio listens on both loopback addresses,
  * `127.0.0.1` and `::1`. Bound to the name, it listened on whichever the
@@ -58,7 +59,7 @@ export function listenStudio(httpServer: Server, options: ListenOptions): Studio
   httpServer.once("error", (err: NodeJS.ErrnoException) => fail(err, host));
 
   const loopback = host.toLowerCase() === "localhost";
-  httpServer.listen(port, loopback ? "127.0.0.1" : host, () => {
+  const listened = (): void => {
     const address = httpServer.address();
     const bound = typeof address === "object" && address !== null ? address.port : port;
     const ready = (): void => {
@@ -66,12 +67,23 @@ export function listenStudio(httpServer: Server, options: ListenOptions): Studio
       url = formatStudioUrl(host, bound);
       onReady?.(url);
     };
-    if (!loopback) return ready();
+    if (!loopback) {
+      ready();
+      return;
+    }
     listenLoopbackCompanion(httpServer, bound, "::1").then(ready, (err: Error) => {
       httpServer.close();
       fail(err, "::1");
     });
-  });
+  };
+  try {
+    httpServer.listen(port, loopback ? "127.0.0.1" : host, listened);
+  } catch (err) {
+    /* A port out of range is thrown at once rather than emitted; it is told
+       as an emitted error is, once the caller has its handle. */
+    const error = err instanceof Error ? err : new Error(String(err));
+    process.nextTick(() => fail(error, host));
+  }
 
   return { url: () => url, port: () => listeningOn };
 }

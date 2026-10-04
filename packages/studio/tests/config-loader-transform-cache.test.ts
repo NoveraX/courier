@@ -1,9 +1,8 @@
 /**
  * How Studio's loads of a project reuse the transforms of its modules: a
  * module is transformed once while its bytes stay the same and again once
- * they change, the address read before Studio binds shares its transforms
- * with the full load that follows, and the next Studio process finds them in
- * the project's node_modules.
+ * they change, and the next Studio process finds them in the project's
+ * node_modules.
  */
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,8 +11,6 @@ import { createTransformCache, type TransformCache } from "@noverax/courier-stud
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { type LoadedCourierConfig, loadCourierConfig } from "../src/server/config-loader";
-import { readStudioAddress } from "../src/server/studio-address";
-import { studioTransformCache } from "../src/server/studio-transform-cache";
 
 const roots: string[] = [];
 
@@ -52,7 +49,7 @@ function makeProject({
   );
   writeFileSync(
     project.config,
-    'import { api } from "./src/api";\nexport default { sources: { api }, studio: { port: 7777 } };\n',
+    'import { api } from "./src/api";\nexport default { sources: { api } };\n',
   );
   writeFileSync(project.mocks, mocks);
   return project;
@@ -78,25 +75,8 @@ function counting(inner: TransformCache): {
   return { cache, asked, computed };
 }
 
-/** Records the file of every transform `cache` computes, where its callers already hold it. */
-function recordComputes(cache: TransformCache): string[] {
-  const computed: string[] = [];
-  const transform = cache.transform.bind(cache);
-  vi.spyOn(cache, "transform").mockImplementation((options, compute) =>
-    transform(options, (miss) => {
-      computed.push(miss.filename ?? "");
-      return compute(miss);
-    }),
-  );
-  return computed;
-}
-
 function baseURLOf(loaded: LoadedCourierConfig): unknown {
   return (loaded.config.sources.api as { baseURL?: unknown }).baseURL;
-}
-
-function repeated(files: string[]): string[] {
-  return files.filter((file, index) => files.indexOf(file) !== index);
 }
 
 describe("loadCourierConfig through a transform cache", () => {
@@ -139,22 +119,6 @@ describe("loadCourierConfig through a transform cache", () => {
     expect(String(loaded.mocks.error)).toMatch(/missing/);
     expect(asked.filter((file) => file === project.config)).toHaveLength(1);
     expect(computed.filter((file) => file === project.config)).toHaveLength(1);
-  });
-
-  it("the address read before binding and the first full load transform each module once", async () => {
-    const project = makeProject();
-    const computed = recordComputes(studioTransformCache(project.root));
-
-    const address = await readStudioAddress(project.root);
-    const byAddressRead = [...computed];
-    await loadCourierConfig(project.root);
-
-    expect(address.port).toBe(7777);
-    expect(byAddressRead).toEqual(
-      expect.arrayContaining([project.config, project.api, project.host]),
-    );
-    expect(computed).toContain(project.mocks);
-    expect(repeated(computed)).toEqual([]);
   });
 });
 

@@ -64,7 +64,7 @@ const unused: ProjectState = {
 
 const ctx = (): MocksEditContext => ({
   projectRoot: root,
-  mockBasePort: 7001,
+  mockBasePort: () => 7001,
   project: unused,
   studioPort: () => null,
   mockSummaries: () => [],

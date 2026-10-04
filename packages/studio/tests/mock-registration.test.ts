@@ -34,7 +34,7 @@ function registration(basePort = 7001, reserved: number[] = [], alive: string[] 
   };
   const ops = createMockRegistration({
     servers,
-    basePort,
+    basePort: () => basePort,
     reservedPorts: () => reserved,
     isAlive: (serverId) => alive.includes(serverId),
     updateAndEmit,
@@ -58,6 +58,27 @@ describe("the port a managed mock starts on", () => {
     ops.registerDeclared("apiMock", here, description());
 
     expect(servers.get("apiMock")).toMatchObject({ configuredPort: 7500, portDeclared: false });
+  });
+
+  it("is allocated from the base as it is at the first assignment, and counts up from there", () => {
+    let base = 7001;
+    const servers = new Map<string, ServerState>();
+    const ops = createMockRegistration({
+      servers,
+      basePort: () => base,
+      reservedPorts: () => [],
+      isAlive: () => false,
+      updateAndEmit: vi.fn(),
+      emitServerState: vi.fn(),
+    });
+    base = 7600;
+
+    ops.registerDeclared("first", here, description());
+    base = 7700;
+    ops.registerDeclared("second", here, description());
+
+    expect(servers.get("first")?.configuredPort).toBe(7600);
+    expect(servers.get("second")?.configuredPort).toBe(7601);
   });
 
   it("is allocated from the base for a real definition that names none", () => {

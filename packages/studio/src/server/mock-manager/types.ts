@@ -52,7 +52,8 @@ export interface ServerState {
 export interface CoordinatorConfig {
   mockRegistry: MockRegistry;
   uiNamespace: Namespace;
-  basePort: number;
+  /** Where the ports assigned to mocks that name none begin; read at the first assignment. */
+  basePort: () => number;
   watcherStatus?: WatcherStatus;
   /** Where Studio keeps the transforms of the project's modules now, told to each worker it starts. */
   transformCacheDirectory: () => string | null;

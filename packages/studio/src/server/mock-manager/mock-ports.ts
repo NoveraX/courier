@@ -17,7 +17,12 @@ export function declaredPorts(entries: readonly MockEntry[]): number[] {
 
 export interface PortAssignerContext {
   servers: Map<string, ServerState>;
-  basePort: number;
+  /**
+   * Where assigned ports begin, read at the first assignment: Studio learns
+   * it from the project's config, after the mock manager exists and before
+   * any mock is registered.
+   */
+  basePort: () => number;
   /**
    * Every port the config declares, registered yet or not. Mocks are described
    * one at a time, so without them a mock with no port could be handed one a
@@ -44,7 +49,7 @@ export type PortAssignment = Pick<ServerState, "configuredPort" | "portDeclared"
 export function createPortAssigner(
   ctx: PortAssignerContext,
 ): (declared: number | undefined, current?: ServerState) => PortAssignment {
-  let nextPort = ctx.basePort;
+  let nextPort: number | null = null;
 
   function allocateNextPort(): number {
     const usedPorts = new Set<number>(ctx.reservedPorts());
@@ -52,8 +57,10 @@ export function createPortAssigner(
       usedPorts.add(s.configuredPort);
       if (s.actualPort) usedPorts.add(s.actualPort);
     }
-    while (usedPorts.has(nextPort)) nextPort++;
-    return nextPort++;
+    let port = nextPort ?? ctx.basePort();
+    while (usedPorts.has(port)) port++;
+    nextPort = port + 1;
+    return port;
   }
 
   return (declared, current) => {

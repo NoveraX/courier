@@ -25,7 +25,7 @@ export async function readyOutcome(
     target: target.relative,
     restarting: restartingMocks(ctx, prepared),
     creates: plan.creates,
-    mockBasePort: ctx.mockBasePort,
+    mockBasePort: ctx.mockBasePort(),
   });
   return {
     status: "ready",

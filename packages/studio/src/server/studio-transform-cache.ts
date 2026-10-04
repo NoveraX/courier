@@ -16,21 +16,19 @@ const caches = new Map<string, TransformCache>();
  * process for each directory transforms are kept in, created at its first
  * use.
  *
- * Every load of the config and its mocks file — the address read before
- * Studio binds, the first full load and every reload — passes through it,
- * so a module is transformed once while its bytes stay the same, and a
- * module kept on disk by an earlier process is not transformed at all. The
- * directory is looked up again on each call, so a directory that turns
- * untrusted, or appears, is taken into account at the next load.
+ * Every load of the config and its mocks file — the first, every reload,
+ * and each one an edit makes — passes through it, so a module is
+ * transformed once while its bytes stay the same, and a module kept on disk
+ * by an earlier process is not transformed at all. The directory is looked
+ * up again on each call, so a directory that turns untrusted, or appears,
+ * is taken into account at the next load.
  *
  * @param projectRoot - The directory holding `courier.config.*`
  * @returns The cache for the directory `findTransformCacheDirectory` finds
  *   for the project, or the process's memory-only cache when it finds none
  * @example
  * ```ts
- * const loaded = await loadCourierConfig({
- *   cwd: projectRoot,
- *   requireAtCwd: true,
+ * const loaded = await loadCourierConfig(projectRoot, {
  *   transformCache: studioTransformCache(projectRoot),
  * });
  * ```

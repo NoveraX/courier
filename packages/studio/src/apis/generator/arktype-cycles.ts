@@ -32,11 +32,17 @@ import { type LazyTargets, schemaToArkType } from "./validation-arktype";
 export const ARKTYPE_CYCLE_HELPER = `/* Set by the last line of this file. */
 let declared = false;
 
-/** Refer to a schema on the same reference cycle, read only while validating. */
-function lazy(base: ark.Type, resolve: () => (value: unknown) => unknown) {
+/**
+ * Refer to a schema on the same reference cycle, read only while validating.
+ * The schema is taken as \`unknown\`: typed as a function, the compiler would
+ * work out what it returns through the whole cycle, past its depth limit.
+ */
+function lazy(base: ark.Type, resolve: () => unknown) {
   return base.narrow((value, ctx) => {
     if (!declared) return typeof value === "boolean" || value === null;
-    const result = resolve()(value);
+    const schema = resolve();
+    if (typeof schema !== "function") return false;
+    const result: unknown = Reflect.apply(schema, undefined, [value]);
     if (!(result instanceof type.errors)) return true;
     for (const error of result) {
       ctx.reject({ expected: error.expected, actual: error.actual, relativePath: [...error.path] });

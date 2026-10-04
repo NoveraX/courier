@@ -37,7 +37,7 @@ The API specifications Studio imported, by key. Studio writes an entry when it i
 | `pinHash` | `string` | `url` only: the one specification the import is generated from, by the hash Studio records; another is refused |
 | `outputDir` | `string` | The directory that holds the import's own directory, `<outputDir>/<source-name>/` |
 | `sourceName` | `string` | The source's name in the generated `defineApi` call — default: the key |
-| `validation` | `"zod"` \| `"valibot"` \| `"arktype"` \| `"none"` | The schema library the generated code uses |
+| `validation` | `"zod"` \| `"valibot"` \| `"arktype"` \| `"none"` | The schema library the generated code uses. With ArkType, a reference cycle of more than about 40 schemas — Stripe's core objects form one of 83 — goes past TypeScript's depth limit where an endpoint answers with one of them (TS2321); Zod and Valibot type such a specification |
 | `groupBy` | `"tag"` \| `"path"` \| `"single"` | How endpoints are grouped |
 | `generateTypes`, `generateSchemas` | `boolean` | Whether types and schemas are written |
 | `generateClient` | `"direct"` \| `"proxy"` \| `"both"` \| `"none"` | Which callers are generated |

@@ -12,7 +12,9 @@
       "packages/*/tests/**",
       "packages/studio/ui/src/**",
       "packages/studio/ui/__tests__/**",
-      "scripts/**"
+      "scripts/**",
+      "examples/*/src/**",
+      "examples/*/courier.config.ts"
     ]
   },
   "formatter": {

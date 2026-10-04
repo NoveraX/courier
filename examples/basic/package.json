@@ -1,0 +1,22 @@
+{
+  "name": "courier-example-basic",
+  "version": "0.0.0",
+  "private": true,
+  "description": "One API definition, called from server code directly and from a page through Courier's proxy",
+  "type": "module",
+  "scripts": {
+    "demo": "tsx src/demo.ts",
+    "upstream": "tsx src/upstream.ts",
+    "server": "tsx src/dev.ts",
+    "studio": "courier-studio"
+  },
+  "dependencies": {
+    "@noverax/courier": "*",
+    "@noverax/courier-server": "*",
+    "@noverax/courier-studio-core": "*"
+  },
+  "devDependencies": {
+    "@noverax/courier-studio": "*",
+    "tsx": "^4.23.15"
+  }
+}

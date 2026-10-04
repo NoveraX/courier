@@ -94,6 +94,11 @@ jobs:
       - name: Check package contents
         run: npm run check:packages
 
+      # The example a newcomer runs first, run the way its README says: a
+      # backend, the proxy in front of it, a page's caller and server code.
+      - name: Run the example
+        run: npm run demo --workspace examples/basic
+
   # The commit-msg hook runs only where it is installed and can be skipped, so
   # the same rules run here. A pull request is checked from its merge base; a
   # push, from the last release tag, so a cancelled or skipped run leaves

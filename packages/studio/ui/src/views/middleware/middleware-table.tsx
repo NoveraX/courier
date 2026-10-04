@@ -1,4 +1,3 @@
-import { formatDuration } from "@/components/shared/formatters";
 import {
   Table,
   TableBody,
@@ -7,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { durationBg, durationColor } from "./constants";
 import type { AggregateMiddleware } from "./types";

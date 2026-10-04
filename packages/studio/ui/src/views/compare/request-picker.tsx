@@ -1,7 +1,6 @@
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { useState } from "react";
 import { STATUS_CONFIG } from "@/components/shared/detail-panel/constants";
-import { formatDuration, formatRelativeTime } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNow } from "@/hooks/use-tick";
+import { formatDuration, formatRelativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types-request";
 

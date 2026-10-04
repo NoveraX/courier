@@ -1,4 +1,4 @@
-import { formatSize } from "@/components/shared/formatters";
+import { formatSize } from "@/lib/formatters";
 import type { UploadState } from "@/store/types";
 
 /**

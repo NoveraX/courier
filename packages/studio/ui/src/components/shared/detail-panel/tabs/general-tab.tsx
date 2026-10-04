@@ -1,8 +1,8 @@
 import { CopyButton } from "@/components/shared/copy-button";
-import { formatDuration, formatSize, formatTimestamp } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { Badge } from "@/components/ui/badge";
 import { useNow } from "@/hooks/use-tick";
+import { formatDuration, formatSize, formatTimestamp } from "@/lib/formatters";
 import { describeUpload } from "@/lib/upload-progress";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";

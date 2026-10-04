@@ -2,7 +2,7 @@ import { Activity, AlertTriangle, Clock, Layers } from "lucide-react";
 import { Line, LineChart } from "recharts";
 
 import { AnimatedCounter } from "@/components/shared/animated-counter";
-import { formatDuration } from "@/components/shared/formatters";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 import type { AggregateMiddleware, SparklinePoint } from "./types";

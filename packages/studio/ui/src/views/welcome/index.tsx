@@ -11,11 +11,11 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 
 import { restartTour } from "@/components/onboarding/tour-provider";
+import { FRAMEWORKS } from "@/features/welcome/frameworks";
+import { isWelcomeCompleted, markWelcomeCompleted } from "@/features/welcome/welcome-storage";
 import { useStudioStore } from "@/store";
 import { FrameworkPicker } from "./framework-picker";
-import { FRAMEWORKS } from "./frameworks";
 import { SetupSteps } from "./setup-steps";
-import { isWelcomeCompleted, markWelcomeCompleted } from "./welcome-storage";
 
 export function WelcomeView(): React.ReactNode {
   const navigate = useNavigate();

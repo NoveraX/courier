@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { formatDuration, formatRelativeTime } from "@/components/shared/formatters";
 import { useNow } from "@/hooks/use-tick";
+import { formatDuration, formatRelativeTime } from "@/lib/formatters";
 
 import type { ExportFormat } from "@/store/types";
 import { ConfirmDialog } from "./confirm-dialog";

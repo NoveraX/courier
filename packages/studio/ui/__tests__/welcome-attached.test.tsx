@@ -17,10 +17,10 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { WELCOME_STORAGE_KEY } from "@/features/welcome/frameworks";
+import { validateWelcomeSearch } from "@/features/welcome/welcome-search";
 import { useStudioStore } from "@/store";
 import { WelcomeView } from "@/views/welcome";
-import { WELCOME_STORAGE_KEY } from "@/views/welcome/frameworks";
-import { validateWelcomeSearch } from "@/views/welcome/welcome-search";
 
 async function open(url: string) {
   const root = createRootRoute({

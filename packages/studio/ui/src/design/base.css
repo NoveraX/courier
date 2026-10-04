@@ -1,0 +1,17 @@
+/*
+ * Element defaults inside Studio's shell: code in the mono face without
+ * ligatures or tracking, and selections in the brand colour.
+ */
+
+@layer base {
+  [data-shell] code,
+  [data-shell] pre {
+    font-family: var(--font-mono);
+    font-variant-ligatures: none;
+    letter-spacing: 0;
+  }
+
+  [data-shell] ::selection {
+    background: color-mix(in srgb, var(--color-brand) 30%, transparent);
+  }
+}

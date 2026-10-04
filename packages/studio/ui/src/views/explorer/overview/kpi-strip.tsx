@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { Activity, FolderTree, HeartPulse, Server, Zap } from "lucide-react";
 import { Line, LineChart } from "recharts";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
-import { formatNumber } from "@/components/shared/formatters";
+import { formatNumber } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { OverviewKPI, SparklinePoint } from "./compute-overview";
 

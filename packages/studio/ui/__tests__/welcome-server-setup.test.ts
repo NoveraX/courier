@@ -19,8 +19,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build, type Rollup } from "vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FRAMEWORKS } from "../src/views/welcome/frameworks";
-import type { FrameworkConfig } from "../src/views/welcome/frameworks-types";
+import { FRAMEWORKS } from "../src/features/welcome/frameworks";
+import type { FrameworkConfig } from "../src/features/welcome/frameworks-types";
 
 const WORKSPACE_MODULES = resolve(import.meta.dirname, "../../../../node_modules");
 

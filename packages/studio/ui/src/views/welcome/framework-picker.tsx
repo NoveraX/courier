@@ -1,3 +1,5 @@
+import type { FrameworkConfig } from "@/features/welcome/frameworks";
+import { FRAMEWORKS } from "@/features/welcome/frameworks";
 import { cn } from "@/lib/utils";
 import {
   AngularLogo,
@@ -10,8 +12,6 @@ import {
   SvelteLogo,
   VueLogo,
 } from "./framework-logos";
-import type { FrameworkConfig } from "./frameworks";
-import { FRAMEWORKS } from "./frameworks";
 
 const LOGO_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   nextjs: NextjsLogo,

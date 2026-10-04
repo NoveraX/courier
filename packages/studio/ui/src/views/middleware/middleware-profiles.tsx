@@ -1,7 +1,7 @@
 import { AlertCircle } from "lucide-react";
 import { motion } from "motion/react";
-import { formatDuration } from "@/components/shared/formatters";
 import { STAGGER_ITEM_VARIANTS, StaggerList } from "@/components/shared/stagger-list";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { durationBg, durationColor } from "./constants";
 import type { AggregateMiddleware } from "./types";

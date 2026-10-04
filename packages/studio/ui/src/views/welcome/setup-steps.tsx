@@ -2,7 +2,7 @@
  * SetupSteps + ProgressHeader sub-components.
  */
 
-import type { FrameworkConfig } from "./frameworks";
+import type { FrameworkConfig } from "@/features/welcome/frameworks";
 
 import { StepCard } from "./step-card";
 

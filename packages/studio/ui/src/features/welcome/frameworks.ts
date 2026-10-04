@@ -16,10 +16,10 @@ import type { FrameworkConfig } from "./frameworks-types";
 export type { CodeVariant, FrameworkConfig, SetupStep } from "./frameworks-types";
 
 export const FRAMEWORKS: FrameworkConfig[] = [
-  NEXTJS,
-  NUXT,
   REACT,
   VUE,
+  NEXTJS,
+  NUXT,
   SVELTEKIT,
   REMIX,
   ASTRO,

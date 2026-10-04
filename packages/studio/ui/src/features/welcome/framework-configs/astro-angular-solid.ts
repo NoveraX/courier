@@ -1,5 +1,5 @@
 /**
- * Astro, Angular, and Solid Start setup walkthroughs.
+ * Astro, Angular, and SolidStart setup walkthroughs.
  *
  * Grouped together because none have unique build pipelines large enough
  * to justify their own file.
@@ -13,6 +13,7 @@ import { EXPLORE_STEP, installStep, VERIFY_STEP } from "./shared";
 export const ASTRO: FrameworkConfig = {
   id: "astro",
   name: "Astro",
+  tag: "integration",
   description: "Content-driven framework with SSR",
   steps: [
     installStep({ withRuntime: true }),
@@ -57,6 +58,7 @@ export const onRequest = defineMiddleware((_context, next) => next());`,
 export const ANGULAR: FrameworkConfig = {
   id: "angular",
   name: "Angular",
+  tag: "cli",
   description: "Full-featured platform by Google",
   steps: [
     installStep(),
@@ -85,14 +87,15 @@ bootstrapApplication(AppComponent, appConfig);`,
 
 export const SOLID: FrameworkConfig = {
   id: "solid",
-  name: "Solid Start",
+  name: "SolidStart",
+  tag: "vite · ssr",
   description: "Solid.js meta-framework",
   steps: [
     installStep({ withRuntime: true }),
     {
       id: "instrument-client",
-      title: "Add Vite plugin",
-      description: "Solid Start runs on Vite — the plugin connects the browser in dev mode.",
+      title: "Add the Vite plugin",
+      description: "SolidStart runs on Vite — the plugin connects the browser in dev mode.",
       icon: Cable,
       actionLabel: "Copy snippet",
       filePath: "vite.config.ts",
@@ -109,7 +112,7 @@ export default defineConfig({
       id: "instrument-server",
       title: "Add server instrumentation",
       description:
-        "Tracks proxy-mode requests on the Solid Start server. Add it to the top of the file.",
+        "Tracks proxy-mode requests on the SolidStart server. Add it to the top of the file.",
       icon: Server,
       actionLabel: "Copy snippet",
       filePath: "src/entry-server.tsx",

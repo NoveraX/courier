@@ -1,5 +1,5 @@
 import { ArrowRight, Globe, Monitor, Server } from "lucide-react";
-import { formatDuration } from "@/components/shared/formatters";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
 import type { ProxyTiming } from "@/store/types-events";

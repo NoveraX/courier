@@ -1,5 +1,5 @@
-import { formatDuration } from "@/components/shared/formatters";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { formatDiffPercent } from "./helpers";
 import type { TimingComparison } from "./types";

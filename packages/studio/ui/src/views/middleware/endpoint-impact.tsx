@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
-import { formatDuration } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { STAGGER_ITEM_VARIANTS, StaggerList } from "@/components/shared/stagger-list";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 import type { EndpointImpact } from "./types";

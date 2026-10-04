@@ -1,5 +1,5 @@
-import { formatDuration } from "@/components/shared/formatters";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 import type { PhaseValue } from "./timing-types";

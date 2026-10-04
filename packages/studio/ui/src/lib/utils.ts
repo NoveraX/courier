@@ -2,9 +2,10 @@ import type { ClassValue } from "clsx";
 import { clsx } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
-/* The type scale's own `text-*` utilities (index.css) set the font size.
-   Unregistered, tailwind-merge would take them for text colours, drop the
-   colour they are combined with, and keep a `text-xs` that overrides them. */
+/* The type scales' own `text-*` utilities (index.css, design/tokens.css) set
+   the font size, and the design's `font-*` weights a weight. Unregistered,
+   tailwind-merge would take a size for a text colour and a weight for a
+   font family, and drop the class it is combined with. */
 const twMerge = extendTailwindMerge({
   extend: {
     classGroups: {
@@ -21,9 +22,24 @@ const twMerge = extendTailwindMerge({
             "body-sm",
             "body-xs",
             "caption",
+            "micro",
+            "meta",
+            "badge",
+            "label",
+            "small",
+            "control",
+            "ui",
+            "item",
+            "title",
+            "lead",
+            "prompt",
+            "metric",
+            "wordmark",
+            "hero",
           ],
         },
       ],
+      "font-weight": [{ font: ["strong", "wordmark"] }],
     },
   },
 });

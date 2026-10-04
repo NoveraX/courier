@@ -1,11 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { Activity, ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { formatTimestamp } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { MetricsPill, statusDotClass } from "@/components/shared/metrics-cells";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { useNow } from "@/hooks/use-tick";
+import { formatTimestamp } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { MockRequestLog } from "@/store/mock-slice";

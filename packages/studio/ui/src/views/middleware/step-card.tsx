@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
-import { formatDuration } from "@/components/shared/formatters";
 import { Badge } from "@/components/ui/badge";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { durationBg, durationColor, PHASE_COLORS, STATUS_ICONS } from "./constants";
 import { isSlowStep } from "./helpers";

@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
-import { formatDuration } from "@/components/shared/formatters";
 import { Badge } from "@/components/ui/badge";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 import type { GroupedRows } from "./types";

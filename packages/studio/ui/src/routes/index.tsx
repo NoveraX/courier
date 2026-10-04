@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-
+import { validateWelcomeSearch } from "@/features/welcome/welcome-search";
 import { WelcomeView } from "@/views/welcome";
-import { validateWelcomeSearch } from "@/views/welcome/welcome-search";
 
 export const Route = createFileRoute("/")({
   component: WelcomeView,

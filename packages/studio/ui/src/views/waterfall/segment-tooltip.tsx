@@ -1,6 +1,6 @@
-import { formatDuration, formatPercent } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { Badge } from "@/components/ui/badge";
+import { formatDuration, formatPercent } from "@/lib/formatters";
 import { SEGMENT_CONFIG } from "./constants";
 import type { WaterfallRow, WaterfallSegment } from "./types";
 

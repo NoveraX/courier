@@ -1,6 +1,6 @@
+import { formatDuration, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { DetailRow as Row, DetailSection as Section } from "./detail-panel/detail-rows";
-import { formatDuration, formatSize } from "./formatters";
 
 interface StreamTimingData {
   duration?: number | undefined;

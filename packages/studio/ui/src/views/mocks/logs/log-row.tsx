@@ -1,7 +1,7 @@
-import { formatTimestamp } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { MetricsPill, statusDotClass } from "@/components/shared/metrics-cells";
 import { useNow } from "@/hooks/use-tick";
+import { formatTimestamp } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 

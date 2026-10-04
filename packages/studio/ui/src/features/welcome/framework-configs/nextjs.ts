@@ -12,6 +12,7 @@ import { EXPLORE_STEP, installStep, VERIFY_STEP } from "./shared";
 export const NEXTJS: FrameworkConfig = {
   id: "nextjs",
   name: "Next.js",
+  tag: "app router",
   description: "App Router v14+ (Turbopack & webpack)",
   steps: [
     installStep({ withRuntime: true }),

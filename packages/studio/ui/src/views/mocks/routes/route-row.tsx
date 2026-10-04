@@ -1,10 +1,10 @@
 import { motion } from "motion/react";
 import { AnimatedCounter } from "@/components/shared/animated-counter";
-import { formatDuration } from "@/components/shared/formatters";
 import { MethodBadge } from "@/components/shared/method-badge";
 import { STAGGER_ITEM_VARIANTS } from "@/components/shared/stagger-list";
 import { Badge } from "@/components/ui/badge";
 import { TableCell } from "@/components/ui/table";
+import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 import type { MockRouteEntry } from "@/store/mock-slice";

@@ -1,8 +1,8 @@
 import { ExternalLink } from "lucide-react";
 import { STATUS_CONFIG } from "@/components/shared/detail-panel";
-import { formatDuration, formatSize } from "@/components/shared/formatters";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { useRequestDetail } from "@/hooks/use-request-detail";
+import { formatDuration, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
 

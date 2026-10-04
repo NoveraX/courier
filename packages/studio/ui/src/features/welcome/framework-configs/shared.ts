@@ -11,8 +11,8 @@ import type { SetupStep } from "../frameworks-types";
 
 export const VERIFY_STEP: SetupStep = {
   id: "connect",
-  title: "Verify connection",
-  description: "Start your dev server — this step completes automatically when a session connects.",
+  title: "Start your dev server",
+  description: "This step completes on its own once a runtime connects.",
   icon: Zap,
   actionLabel: "Waiting for connection…",
   autoComplete: true,
@@ -20,8 +20,8 @@ export const VERIFY_STEP: SetupStep = {
 
 export const EXPLORE_STEP: SetupStep = {
   id: "explore",
-  title: "Start exploring",
-  description: "You're all set! Dive into Timeline, Playground, Audit and more.",
+  title: "Open the Timeline",
+  description: "Inspect, replay and audit what Studio captured.",
   icon: Compass,
   actionLabel: "Go to Timeline",
 };
@@ -49,10 +49,10 @@ export function installStep({ withRuntime = false }: { withRuntime?: boolean } =
   const devCommand = `npm install -D ${STUDIO_PACKAGE}`;
   return {
     id: "install",
-    title: "Install packages",
+    title: withRuntime ? "Install the packages" : "Install the package",
     description: withRuntime
       ? "Add Studio as a dev dependency, and the runtime your server imports as a dependency."
-      : "Add the Studio package to your project.",
+      : "Add Studio as a dev dependency.",
     icon: Package,
     actionLabel: "Copy command",
     code: withRuntime ? `npm install ${RUNTIME_PACKAGE}\n${devCommand}` : devCommand,

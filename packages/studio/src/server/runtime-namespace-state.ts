@@ -19,6 +19,7 @@ import { isTrustedRuntime } from "./runtime-trust";
 
 const RUNTIME_REGISTRY_KEY = Symbol.for("courier.studio.runtime-registry");
 const SESSION_VERSION_REGISTRY_KEY = Symbol.for("courier.studio.session-version-registry");
+const ACTIVE_PERIOD_KEY = Symbol.for("courier.studio.runtimes-active-period");
 
 /** Snapshot of the latest `runtime:announce` payload for a connected runtime */
 export interface RuntimeRegistryEntry {
@@ -39,6 +40,7 @@ if (!g[RUNTIME_REGISTRY_KEY]) {
   g[RUNTIME_REGISTRY_KEY] = new Map<string, RuntimeRegistryEntry>();
 }
 if (!g[SESSION_VERSION_REGISTRY_KEY]) g[SESSION_VERSION_REGISTRY_KEY] = new Map<string, number>();
+if (!g[ACTIVE_PERIOD_KEY]) g[ACTIVE_PERIOD_KEY] = { since: undefined };
 
 /** Map of runtimeId → registry entry. Owned by the `/runtime` namespace. */
 export const runtimeRegistry = g[RUNTIME_REGISTRY_KEY] as Map<string, RuntimeRegistryEntry>;
@@ -50,6 +52,20 @@ export const runtimeRegistry = g[RUNTIME_REGISTRY_KEY] as Map<string, RuntimeReg
  * disconnect to bound memory.
  */
 export const sessionVersionRegistry = g[SESSION_VERSION_REGISTRY_KEY] as Map<string, number>;
+
+/* When the first runtime of the runtimes attached now arrived; unset while none is. */
+const activePeriod = g[ACTIVE_PERIOD_KEY] as { since: number | undefined };
+
+/**
+ * When the runtimes attached now began to be: the first one's arrival, kept
+ * while any of them stays, so the session's running time survives a runtime
+ * that leaves and comes back while another stays — and a page that reloads.
+ *
+ * @returns The time, or `undefined` while no runtime is attached
+ */
+export function runtimesActiveSince(): number | undefined {
+  return activePeriod.since;
+}
 
 /** Compute the next sessionVersion for a given sessionId. */
 export function nextSessionVersion(sessionId: string): number {
@@ -84,6 +100,7 @@ export function registerRuntime(entry: RuntimeRegistryEntry): "claimed" | "dupli
   ) {
     return "duplicate";
   }
+  if (runtimeRegistry.size === 0) activePeriod.since = Date.now();
   runtimeRegistry.set(entry.runtimeId, entry);
   return "claimed";
 }
@@ -133,6 +150,7 @@ export function unregisterRuntime(runtimeId: string): RuntimeRegistryEntry | und
   const existing = runtimeRegistry.get(runtimeId);
   if (!existing) return undefined;
   runtimeRegistry.delete(runtimeId);
+  if (runtimeRegistry.size === 0) activePeriod.since = undefined;
   return existing;
 }
 
@@ -155,4 +173,5 @@ export function clearStudioServerState(): void {
   runtimeRegistry.clear();
   runtimeSockets.clear();
   sessionVersionRegistry.clear();
+  activePeriod.since = undefined;
 }

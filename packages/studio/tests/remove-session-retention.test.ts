@@ -52,8 +52,12 @@ function freshStore() {
   return get;
 }
 
+/* Studio keeps when the attached runtimes arrived; these all came at one time. */
+const ACTIVE_SINCE = 1_791_100_000_000;
+
 function snapshot(runtimes: string[], sources: string[]): BindingSnapshot {
   return {
+    ...(runtimes.length > 0 && { activeSince: ACTIVE_SINCE }),
     rows: runtimes.flatMap((runtimeId) =>
       sources.map((sourceName) => ({
         sourceName,
@@ -167,17 +171,16 @@ describe("binding snapshot transitions — request retention", () => {
     expect(get().requests[0]?.id).toBe("r1");
   });
 
-  it("starts the session timer when the first runtime arrives", () => {
+  it("runs the session timer from when Studio saw the first runtime arrive", () => {
     const get = freshStore();
     expect(get().sessionStartedAt).toBeNull();
 
     get().setBindingSnapshot(snapshot(["rt_a"], ["api"]));
-    expect(get().sessionStartedAt).not.toBeNull();
+    expect(get().sessionStartedAt).toBe(ACTIVE_SINCE);
 
-    const startedAt = get().sessionStartedAt;
     // A second snapshot with more runtimes does not reset the timer
     get().setBindingSnapshot(snapshot(["rt_a", "rt_b"], ["api", "users"]));
-    expect(get().sessionStartedAt).toBe(startedAt);
+    expect(get().sessionStartedAt).toBe(ACTIVE_SINCE);
 
     // Dropping all runtimes clears the timer
     get().setBindingSnapshot(snapshot([], []));

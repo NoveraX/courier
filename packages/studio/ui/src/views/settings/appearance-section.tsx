@@ -6,6 +6,7 @@ import { Controller } from "react-hook-form";
 import { restartTour } from "@/components/onboarding/tour-provider";
 import { SegmentedControl, type SegmentOption } from "@/components/shared/segmented-control";
 import { Button } from "@/components/ui/button";
+import { browserStorage } from "@/lib/browser-storage";
 import type { DensityMode, Settings, Theme } from "@/store/types";
 import { WELCOME_STORAGE_KEY } from "@/views/welcome/frameworks";
 import { SettingRow } from "./setting-row";
@@ -78,11 +79,7 @@ export function AppearanceSection({ form }: AppearanceSectionProps): React.React
           variant="outline"
           size="sm"
           onClick={() => {
-            try {
-              localStorage.removeItem(WELCOME_STORAGE_KEY);
-            } catch {
-              /* noop */
-            }
+            browserStorage.remove(WELCOME_STORAGE_KEY);
             navigate({ to: "/", search: { setup: true } });
           }}
         >

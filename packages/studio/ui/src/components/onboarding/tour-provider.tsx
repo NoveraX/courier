@@ -3,24 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { TourOverlay } from "./tour-overlay";
 import type { TourStep } from "./tour-steps";
-import { TOUR_STEPS, TOUR_STORAGE_KEY } from "./tour-steps";
+import { TOUR_STEPS } from "./tour-steps";
 import { TourTooltip } from "./tour-tooltip";
-
-function markTourCompleted(): void {
-  try {
-    localStorage.setItem(TOUR_STORAGE_KEY, "true");
-  } catch {
-    /* noop */
-  }
-}
 
 /** Dispatch this event to start/restart the tour from anywhere. */
 export function restartTour(): void {
-  try {
-    localStorage.removeItem(TOUR_STORAGE_KEY);
-  } catch {
-    /* noop */
-  }
   window.dispatchEvent(new CustomEvent("courier:restart-tour"));
 }
 
@@ -84,7 +71,6 @@ export function TourProvider(): React.ReactNode {
   const finish = useCallback(() => {
     setActive(false);
     setVisible(false);
-    markTourCompleted();
   }, []);
 
   const next = useCallback(() => {

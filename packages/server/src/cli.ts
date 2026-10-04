@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createLogger } from "@noverax/courier";
+import { unknownConfigKeys } from "@noverax/courier-studio-core/config";
 import { defineCommand, runMain } from "citty";
 import { listOption } from "./list-option";
 import { loadCliConfig } from "./load-cli-config";
@@ -59,6 +60,12 @@ const main = defineCommand({
     );
     if ("problem" in loaded) fail(loaded.problem);
     const { config, configFile } = loaded;
+    const unread = unknownConfigKeys(config);
+    if (unread.length > 0) {
+      log.warn(
+        `${configFile} has keys Courier does not read: ${unread.join(", ")}; check their spelling`,
+      );
+    }
     const block = config.server ?? {};
 
     const port =

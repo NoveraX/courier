@@ -212,6 +212,12 @@ describe("courier-server", () => {
     expect(result.stdout + result.stderr).toContain("server.maxUploadBytes");
   });
 
+  it("names a key of its config it does not read", () => {
+    const result = run(project('{ prot: 3001, maxUploadBytes: "10mb" }'));
+
+    expect(result.stdout + result.stderr).toContain("has keys Courier does not read: server.prot");
+  });
+
   it("prints its version", () => {
     const result = run(project(), "--version");
 

@@ -16,7 +16,6 @@ import {
   detectDefaultRuntimeId,
   resolveStudioUrl,
 } from "./runtime-environment";
-import { installSourceRegistry } from "./runtime-source-registry";
 import { createSourceNameResolver } from "./source-resolution";
 
 const log = createLogger("Runtime");
@@ -83,12 +82,6 @@ async function attachFresh(
   // ── Production-relevant: source registry + appOrigin ──
 
   const setup = await loadServerConfig?.();
-
-  // Install the announce-driven runtime source registry BEFORE consuming
-  // the announcements, so past announcements replay into both the wire
-  // pending buffer and the global registry that the playground responder
-  // reads from.
-  installSourceRegistry();
 
   let detached = false;
   let unsubscribeAnnouncements: (() => void) | null = null;

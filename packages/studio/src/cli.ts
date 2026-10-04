@@ -10,7 +10,6 @@ import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
 import { parsePort } from "./server/parse-port";
 import { quietSqliteWarning } from "./server/storage/quiet-sqlite-warning";
-import { readStudioAddress } from "./server/studio-address";
 import { studioUrls, tokenLink, withToken } from "./server/studio-urls";
 import { studioVersion } from "./server/studio-version";
 
@@ -50,7 +49,7 @@ const main = defineCommand({
         "Open a browser on start (falls back to studio.open); --no-open to keep it closed",
     },
   },
-  async run({ args }) {
+  run({ args }) {
     /* Studio takes no command: an unknown word is refused rather than
        ignored, so `courier-studio init` does not start the server. */
     if (args._.length > 0) fail(`Unknown command "${args._[0]}". Run courier-studio --help.`);
@@ -60,24 +59,15 @@ const main = defineCommand({
       fail(`Project root ${projectRoot} is not a directory. Check --cwd.`);
     }
 
-    /* `studio.port` and `studio.host` are documented, typed, and read by every
-       client that dials Studio, so the server reads them too and moves with
-       the clients. */
-    const configured = await readStudioAddress(projectRoot);
-
-    const port =
-      args.port !== undefined
-        ? parsePort(args.port, "--port")
-        : configured.port !== undefined
-          ? parsePort(String(configured.port), "studio.port in courier.config")
-          : STUDIO_DEFAULT_PORT;
+    /* A flag pins the address; what it leaves out comes from `studio.port`
+       and `studio.host` in the config, which every client that dials Studio
+       reads too, so the server moves with its clients. */
+    const port = args.port === undefined ? undefined : parsePort(args.port, "--port");
     if (port instanceof Error) fail(port.message);
-    const host = args.host ?? configured.host ?? STUDIO_DEFAULT_HOST;
 
     const server = createStudioServer({
-      port,
-      host,
-      ...(configured.mockBasePort === undefined ? {} : { mockBasePort: configured.mockBasePort }),
+      ...(port === undefined ? {} : { port }),
+      ...(args.host === undefined ? {} : { host: args.host }),
       projectRoot,
       /* Without this a second `courier studio` printed one line and then sat
          in the foreground looking frozen, having started nothing. */
@@ -86,10 +76,10 @@ const main = defineCommand({
         await server.close();
         process.exitCode = 1;
       },
-      onReady: async (url) => {
-        printBanner(studioVersion(), withToken(studioUrls(host, port), server.token));
+      onStarted: async ({ url, host, port: listening, studio }) => {
+        printBanner(studioVersion(), withToken(studioUrls(host, listening), server.token));
 
-        if (args.open ?? configured.open) {
+        if (args.open ?? studio.open) {
           try {
             const { default: openBrowser } = await import("open");
             await openBrowser(tokenLink(url, server.token));

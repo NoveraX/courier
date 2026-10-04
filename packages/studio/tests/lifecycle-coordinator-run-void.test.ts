@@ -69,7 +69,7 @@ const mockRegistry = {
 
 const config = {
   mockRegistry,
-  basePort: 7001,
+  basePort: () => 7001,
   uiNamespace: { sockets: new Map(), emit: vi.fn() } as never,
 } as unknown as CoordinatorConfig;
 

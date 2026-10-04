@@ -24,27 +24,36 @@ export interface StudioOriginPolicy {
 }
 
 /**
- * Build the policy for a Studio bound to `bindHost`.
+ * Build the policy for a Studio bound to the host `bindHost` returns.
  *
  * Studio's own page is recognised by its origin naming the very host the
  * request was sent to, as long as that host cannot have been rebound: an IP
  * address, a loopback name, or the host Studio was told to bind. A page from
  * a rebound domain names that domain and is refused.
  *
- * @param options - `bindHost` as configured; `extraOrigins` accepted as the UI.
+ * The host is read as each request is judged: Studio can learn it from the
+ * project's config, which it reads after the policy is built and before it
+ * listens.
+ *
+ * @param options - `bindHost` returning the host as configured; `extraOrigins` accepted as the UI.
  * @returns The policy.
+ * @example
+ * ```ts
+ * const policy = createStudioOriginPolicy({ bindHost: () => "localhost", extraOrigins: [] });
+ * policy.isUiCaller("http://localhost:6280", "localhost:6280"); // → true
+ * ```
  */
 export function createStudioOriginPolicy(options: {
-  bindHost: string;
+  bindHost: () => string;
   extraOrigins: readonly string[];
 }): StudioOriginPolicy {
   const extra = new Set(options.extraOrigins.map((origin) => origin.toLowerCase()));
-  const bindHost = unbracket(options.bindHost.toLowerCase());
 
   /* A Host that names an address or this machine, or the host Studio bound: nothing DNS could rebind. */
   const isFixedHost = (host: string): boolean => {
     const hostname = unbracket(host.toLowerCase().replace(/:\d+$/, ""));
-    return isIpLiteral(hostname) || isLoopbackHostname(hostname) || hostname === bindHost;
+    if (isIpLiteral(hostname) || isLoopbackHostname(hostname)) return true;
+    return hostname === unbracket(options.bindHost().toLowerCase());
   };
 
   const isOwnPage = (origin: string, host: string | undefined): boolean =>

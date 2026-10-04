@@ -1,4 +1,5 @@
 import { createLogger } from "@noverax/courier";
+import type { CourierConfig } from "@noverax/courier/config";
 import type { Namespace } from "socket.io";
 import type { MocksConsumers } from "../apply-loaded-mocks";
 import type { BindingTable } from "../catalog/binding-table";
@@ -24,6 +25,13 @@ export interface ProjectStateDeps {
   mocks: MocksConsumers;
   /** How long the first load and each reload may take (default: `CONFIG_LOAD_TIMEOUT_MS`). */
   loadTimeoutMs?: number;
+  /**
+   * Handed the config the first load read — `null` when that load failed —
+   * once, before its outcome is applied: what Studio reads from the project
+   * only when it starts, its address and where mock ports begin, is taken
+   * from it before the first mocks are assigned ports.
+   */
+  onStartup?: (config: CourierConfig | null) => void;
 }
 
 const STARTING: ProjectSnapshot = {
@@ -74,12 +82,25 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     store,
   );
 
+  let startup = deps.onStartup;
+  function started(config: CourierConfig | null): void {
+    const handler = startup;
+    startup = undefined;
+    handler?.(config);
+  }
+
   const engine = startConfigWatcher({
     projectRoot,
     watcherStatus: deps.watcherStatus,
     current: () => current.running,
-    onApplied: outcomes.applied,
-    onFailed: outcomes.failed,
+    onApplied: (loaded) => {
+      started(loaded.config);
+      outcomes.applied(loaded);
+    },
+    onFailed: (error) => {
+      started(null);
+      outcomes.failed(error);
+    },
     loadTimeoutMs: deps.loadTimeoutMs ?? CONFIG_LOAD_TIMEOUT_MS,
   });
 

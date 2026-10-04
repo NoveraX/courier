@@ -113,13 +113,16 @@ export type CourierImportEntry = CourierUrlImport | CourierFileImport | CourierR
 
 /** Studio dev-server configuration */
 export interface CourierStudioConfig {
-  /** Studio HTTP/Socket.IO port — default 6280 */
+  /**
+   * Studio HTTP/Socket.IO port, a whole number from 1 to 65535 — default
+   * 6280. Studio reads it when it starts; `--port` overrides it.
+   */
   port?: number;
-  /** Bind host — default "localhost" */
+  /** Bind host — default "localhost". Studio reads it when it starts; `--host` overrides it. */
   host?: string;
   /**
-   * Where the ports Studio assigns to mocks that declare none begin — default
-   * 7001. `courier-studio` reads it when it starts.
+   * Where the ports Studio assigns to mocks that declare none begin, a whole
+   * number from 1 to 65535 — default 7001. Studio reads it when it starts.
    */
   mockBasePort?: number;
   /** Open the Studio UI in the default browser on startup — default false */

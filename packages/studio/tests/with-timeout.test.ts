@@ -1,7 +1,7 @@
 /**
  * Waiting for work under a timeout: the work's own outcome when it settles
- * in time, what `expired` returns when it does not, and a timer that keeps
- * the process alive only when asked to.
+ * in time, what `expired` returns when it does not, and a timer that does
+ * not keep the process alive.
  */
 import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
@@ -17,11 +17,11 @@ const WITH_TIMEOUT = pathToFileURL(join(__dirname, "../src/server/with-timeout.t
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /* A process whose only pending work is a promise that never settles, waited for under a timeout. */
-function waitForever(keepAlive: boolean) {
+function waitForever() {
   const script =
     `import { withTimeout } from ${JSON.stringify(WITH_TIMEOUT)};\n` +
     "const started = Date.now();\n" +
-    `withTimeout(new Promise(() => {}), 300, () => new Error("timed out"), { keepAlive: ${keepAlive} })` +
+    'withTimeout(new Promise(() => {}), 300, () => new Error("timed out"))' +
     ".catch((error) => console.log(`${error.message} after ${Date.now() - started} ms`));\n";
   return spawnSync(process.execPath, ["--import", TSX, "--input-type=module", "-e", script], {
     encoding: "utf8",
@@ -64,16 +64,9 @@ describe("withTimeout", () => {
   });
 
   it("does not keep a process with nothing else to do alive", () => {
-    const result = waitForever(false);
+    const result = waitForever();
 
     expect(result.status).toBe(0);
     expect(result.stdout).toBe("");
-  });
-
-  it("keeps the process alive until the time runs out when asked to", () => {
-    const result = waitForever(true);
-
-    expect(result.status).toBe(0);
-    expect(result.stdout).toMatch(/^timed out after \d+ ms\n$/);
   });
 });

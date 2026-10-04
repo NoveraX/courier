@@ -99,7 +99,7 @@ function studio() {
   const registry = createMockRegistry();
   const coordinator = createLifecycleCoordinator({
     mockRegistry: registry,
-    basePort: 7001,
+    basePort: () => 7001,
     /* The pages with the token, which see each event whole. */
     uiNamespace: {
       emit,

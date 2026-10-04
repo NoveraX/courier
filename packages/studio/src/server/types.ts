@@ -2,17 +2,32 @@
  * Studio server types.
  */
 
+import type { CourierStudioConfig } from "@noverax/courier/config";
+
 export interface StudioServerOptions {
-  /** First port handed to a managed mock that named none (default 7001) */
+  /**
+   * First port handed to a managed mock that names none. Left out, it is
+   * `studio.mockBasePort` in the project's courier.config, then 7001.
+   */
   mockBasePort?: number;
-  /** Server port (default: the shared Studio default, 6280) */
+  /** Server port. Left out, it is `studio.port` in courier.config, then 6280. */
   port?: number;
-  /** Server host (default: "localhost") */
+  /** Server host. Left out, it is `studio.host` in courier.config, then "localhost". */
   host?: string;
   /** Project root directory — all file paths resolve relative to this (default: process.cwd()) */
   projectRoot?: string;
-  /** Called when server is ready */
+  /**
+   * Called once Studio listens, with the URL a browser opens. Given both
+   * `port` and `host`, Studio listens at once and serves the project as
+   * starting until its first load has an outcome; given less, it listens
+   * once that load has an outcome, since the config may name the address.
+   */
   onReady?: (url: string) => void;
+  /**
+   * Called once Studio listens and its first load of the project has an
+   * outcome, with where it listens and the `studio` block it started with.
+   */
+  onStarted?: (started: StudioStarted) => void;
   /**
    * Called when the server cannot listen — the port is in use, or the host
    * cannot be bound. Without it the failure is logged. Either way the
@@ -29,11 +44,27 @@ export interface StudioServerOptions {
   extraCorsOrigins?: readonly string[];
 }
 
+/** Where Studio listens, and what the project asked of it when it started. */
+export interface StudioStarted {
+  /** The URL a browser opens to reach Studio. */
+  url: string;
+  /** The host Studio is bound to. */
+  host: string;
+  /** The port Studio listens on. */
+  port: number;
+  /**
+   * The `studio` block of the config Studio started with: empty when the
+   * config has none, or its first load failed. Studio reads its address and
+   * `mockBasePort` from it only when it starts.
+   */
+  studio: Readonly<CourierStudioConfig>;
+}
+
 export interface StudioServer {
   /**
    * The URL a browser opens to reach Studio. A wildcard host reads as
-   * `localhost`; with `port: 0` it carries the real port once `onReady` has
-   * fired.
+   * `localhost`. It is exact once `onReady` has fired: with `port: 0` it then
+   * carries the real port, and an address the config names is known.
    */
   readonly url: string;
   /**

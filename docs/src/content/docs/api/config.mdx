@@ -50,14 +50,14 @@ See [Import an API](/docs/studio/import-api).
 
 ## studio
 
-What `courier-studio` reads when it starts.
+What Studio reads: `port`, `host`, `mockBasePort` and `open` when it starts, and `allowedSpecHosts` whenever a fetch would reach a private host. A value Studio cannot use — a port that is not a whole number from 1 to 65535, an empty host, an `open` that is not `true` or `false` — fails the config, and its error names the field.
 
 | Field | Default | |
 | --- | --- | --- |
-| `port` | `6280` | The port Studio serves on |
-| `host` | `"localhost"` | The address it binds |
+| `port` | `6280` | The port Studio serves on; `--port` overrides it |
+| `host` | `"localhost"` | The address it binds; `--host` overrides it |
 | `mockBasePort` | `7001` | Where the ports Studio assigns to mocks that name none begin |
-| `open` | `false` | Open Studio in the browser when it starts |
+| `open` | `false` | Open Studio in the browser when it starts; `--open` and `--no-open` override it |
 | `allowedSpecHosts` | — | Hosts on a private network Studio may fetch a specification from, such as `["gitlab.internal", "10.0.0.7:8080"]`. This machine needs no entry |
 
 ## server

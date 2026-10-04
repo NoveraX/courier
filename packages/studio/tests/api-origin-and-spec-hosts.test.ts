@@ -29,7 +29,7 @@ vi.mock("node:dns", async (importOriginal) => {
 
 function call(origin: string | undefined) {
   const guard = createOriginGuard(
-    createStudioOriginPolicy({ bindHost: "localhost", extraOrigins: [] }),
+    createStudioOriginPolicy({ bindHost: () => "localhost", extraOrigins: [] }),
   );
   const next = vi.fn();
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };

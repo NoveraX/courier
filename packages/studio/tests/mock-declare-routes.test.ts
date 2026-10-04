@@ -85,7 +85,7 @@ function project(overrides: Partial<ProjectState> = {}): ProjectState {
 function context(overrides: Partial<MocksEditContext> = {}): MocksEditContext {
   return {
     projectRoot: "/nonexistent-project",
-    mockBasePort: 7001,
+    mockBasePort: () => 7001,
     project: project(),
     studioPort: () => 6280,
     mockSummaries: () => [],

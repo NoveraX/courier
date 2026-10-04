@@ -121,3 +121,21 @@ describe("Studio on localhost", () => {
     await expect(start(port)).rejects.toThrow(`Port ${port}`);
   });
 });
+
+describe("Studio given a port Node refuses at once", () => {
+  it("reports it to onError once the caller holds the server, rather than throwing", async () => {
+    const errors: Array<{ error: Error; held: boolean }> = [];
+
+    studio = createStudioServer({
+      port: 70_000,
+      host: "127.0.0.1",
+      projectRoot: root,
+      onError: (error) => errors.push({ error, held: studio !== undefined }),
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]?.held).toBe(true);
+    expect(errors[0]?.error.message).toContain("70000");
+  });
+});

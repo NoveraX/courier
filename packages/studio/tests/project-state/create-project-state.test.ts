@@ -9,9 +9,9 @@
 import { mkdtempSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { CourierConfig } from "@noverax/courier/config";
 import { Server } from "socket.io";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
 import type * as LastModifiedAtModule from "../../src/server/last-modified-at";
 import type {
   FreshSnapshot,
@@ -208,6 +208,68 @@ describe("createProjectState", () => {
     await expect(edit).rejects.toMatchObject({ code: "CONFIG_WATCHER_STOPPED" });
     await project.fresh(6000);
     expect(transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("the config Studio starts with", () => {
+  function startedProject(
+    onStartup: (config: CourierConfig | null) => void,
+    loadTimeoutMs?: number,
+  ): ProjectState {
+    const uiNamespace = io.of("/ui");
+    const created = createProjectState({
+      projectRoot: root,
+      bindingTable: new BindingTable(),
+      uiNamespace,
+      watcherStatus: createWatcherStatus(uiNamespace),
+      mocks: { mockRegistry: createMockRegistry(), mockManager: { setMocksFile: vi.fn() } },
+      onStartup,
+      ...(loadTimeoutMs === undefined ? {} : { loadTimeoutMs }),
+    });
+    project = created;
+    return created;
+  }
+
+  it("is handed to onStartup once, before the first outcome is applied", async () => {
+    const config = join(root, "courier.config.ts");
+    writeFileSync(config, "export default { sources: {}, studio: { port: 7123 } };\n");
+    const seen: Array<{ port: unknown; starting: boolean | undefined }> = [];
+    const state = startedProject((loaded) => {
+      seen.push({ port: loaded?.studio?.port, starting: project?.snapshot().starting });
+    });
+    await state.fresh(10_000);
+
+    writeFileSync(config, "export default { sources: {}, studio: { port: 7124 } };\n");
+    await until(() => state.snapshot().running?.config.studio?.port === 7124);
+
+    expect(state.snapshot().running?.config.studio?.port).toBe(7124);
+    expect(seen).toEqual([{ port: 7123, starting: true }]);
+  });
+
+  it("is null when the first load fails, handed over before the failure is applied", async () => {
+    writeFileSync(
+      join(root, "courier.config.ts"),
+      'import "./missing";\nexport default { sources: {} };\n',
+    );
+    const seen: Array<{ config: unknown; starting: boolean | undefined }> = [];
+    const state = startedProject((config) => {
+      seen.push({ config, starting: project?.snapshot().starting });
+    });
+
+    await until(() => !state.snapshot().starting);
+
+    expect(seen).toEqual([{ config: null, starting: true }]);
+  });
+
+  it("is null once a first load that never finishes is given up", async () => {
+    writeFileSync(join(root, "courier.config.ts"), HANGS);
+    const onStartup = vi.fn();
+    const state = startedProject(onStartup, 300);
+
+    await until(() => !state.snapshot().starting);
+
+    expect(onStartup).toHaveBeenCalledOnce();
+    expect(onStartup).toHaveBeenCalledWith(null);
   });
 });
 

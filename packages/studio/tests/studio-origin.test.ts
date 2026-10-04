@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import { createStudioOriginPolicy } from "../src/server/studio-origin";
 
 const policy = createStudioOriginPolicy({
-  bindHost: "localhost",
+  bindHost: () => "localhost",
   extraOrigins: ["http://localhost:4382"],
 });
 
@@ -37,9 +37,19 @@ describe("the Studio UI", () => {
   });
 
   it("is the host Studio was told to bind, by name", () => {
-    const named = createStudioOriginPolicy({ bindHost: "studio.lan", extraOrigins: [] });
+    const named = createStudioOriginPolicy({ bindHost: () => "studio.lan", extraOrigins: [] });
 
     expect(named.isUiCaller("http://studio.lan:6280", "studio.lan:6280")).toBe(true);
+  });
+
+  it("is the host Studio binds when the request comes, though it learned it after the policy was built", () => {
+    let bound = "localhost";
+    const learning = createStudioOriginPolicy({ bindHost: () => bound, extraOrigins: [] });
+    expect(learning.isUiCaller("http://studio.lan:6280", "studio.lan:6280")).toBe(false);
+
+    bound = "studio.lan";
+
+    expect(learning.isUiCaller("http://studio.lan:6280", "studio.lan:6280")).toBe(true);
   });
 
   it("is an origin listed as one", () => {

@@ -18,7 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server";
 import { loadCourierConfig } from "../src/server/config-loader";
-import type { StudioServer } from "../src/server/types";
+import type { StudioServer, StudioStarted } from "../src/server/types";
 
 const cleanups: Array<() => Promise<void> | void> = [];
 
@@ -130,6 +130,57 @@ function started(root: string, port = 0): Promise<{ url: string; server: StudioS
     });
   });
 }
+
+describe("Studio's address, when no option pins it", () => {
+  it("is the one courier.config's studio block names, read by the only load of the config at start", async () => {
+    const root = project();
+    const port = await freePort();
+    const key = `__courierStartupEvaluations${process.pid}`;
+    writeFileSync(
+      join(root, "courier.config.ts"),
+      "const counts = globalThis as Record<string, number | undefined>;\n" +
+        `counts.${key} = (counts.${key} ?? 0) + 1;\n` +
+        `export default { sources: {}, studio: { host: "127.0.0.1", port: ${port} } };\n`,
+    );
+    let server: StudioServer | undefined;
+
+    const started = await new Promise<StudioStarted>((resolve, reject) => {
+      server = start({ projectRoot: root, onStarted: resolve, onError: reject });
+    });
+
+    expect(started).toEqual({
+      url: `http://127.0.0.1:${port}`,
+      host: "127.0.0.1",
+      port,
+      studio: { host: "127.0.0.1", port },
+    });
+    expect(server?.url).toBe(`http://127.0.0.1:${port}`);
+    expect(Reflect.get(globalThis, key)).toBe(1);
+    expect((await fetch(`${started.url}/api/health`)).ok).toBe(true);
+  });
+
+  it("is the default host with the pinned port when the config does not load", async () => {
+    const root = project();
+    const port = await freePort();
+    writeFileSync(
+      join(root, "courier.config.ts"),
+      'import "./missing";\nexport default { sources: {} };\n',
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    cleanups.push(() => warn.mockRestore());
+
+    const started = await new Promise<StudioStarted>((resolve, reject) => {
+      start({ projectRoot: root, port, onStarted: resolve, onError: reject });
+    });
+
+    expect(started).toMatchObject({
+      url: `http://localhost:${port}`,
+      host: "localhost",
+      port,
+      studio: {},
+    });
+  });
+});
 
 describe("Studio on a port the system picked", () => {
   it("reports the port it listens on, and answers its own UI there", async () => {

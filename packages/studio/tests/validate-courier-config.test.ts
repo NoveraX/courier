@@ -197,8 +197,39 @@ describe("validateCourierConfig on imports", () => {
       'courier.config.studio.allowedSpecHosts[0] is "gitlab.internal.": leave out the trailing dot',
     ],
     ["studio", "courier.config.studio is a string, not an object"],
+    [
+      { port: "6280" },
+      'courier.config.studio.port is "6280", not a port: a whole number from 1 to 65535',
+    ],
+    [{ port: 0 }, "courier.config.studio.port is 0, not a port: a whole number from 1 to 65535"],
+    [
+      { port: 65536 },
+      "courier.config.studio.port is 65536, not a port: a whole number from 1 to 65535",
+    ],
+    [
+      { port: 6280.5 },
+      "courier.config.studio.port is 6280.5, not a port: a whole number from 1 to 65535",
+    ],
+    [
+      { mockBasePort: Number.NaN },
+      "courier.config.studio.mockBasePort is NaN, not a port: a whole number from 1 to 65535",
+    ],
+    [
+      { mockBasePort: [7001] },
+      "courier.config.studio.mockBasePort is an array, not a port: a whole number from 1 to 65535",
+    ],
+    [{ host: "" }, 'courier.config.studio.host is "", not a host name or address'],
+    [{ host: 127001 }, "courier.config.studio.host is 127001, not a host name or address"],
+    [{ open: "yes" }, 'courier.config.studio.open is "yes", not true or false'],
   ])("refuses a studio block with %j", (studio, message) => {
     expect(rejectionOf({ sources: {}, studio })).toMatchObject({ message });
+  });
+
+  it("accepts the address fields Studio reads when they hold what it can use", () => {
+    const studio = { host: "0.0.0.0", port: 6290, mockBasePort: 7101, open: true };
+
+    expect(rejectionOf({ sources: {}, studio })).toBeNull();
+    expect(rejectionOf({ sources: {}, studio: { port: 1, mockBasePort: 65535 } })).toBeNull();
   });
 
   it("accepts hosts, hosts with a port and IPv6 addresses in allowedSpecHosts", () => {

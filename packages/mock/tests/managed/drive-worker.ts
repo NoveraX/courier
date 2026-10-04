@@ -47,7 +47,11 @@ export function driveWorker(definition: unknown): DrivenWorker {
       const found = sent.find(match);
       if (found) return Promise.resolve(found);
       return new Promise((resolve) => {
-        waiting.add((message) => (match(message) ? (resolve(message), true) : false));
+        waiting.add((message) => {
+          if (!match(message)) return false;
+          resolve(message);
+          return true;
+        });
       });
     },
     command(command) {

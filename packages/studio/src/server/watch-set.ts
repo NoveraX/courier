@@ -21,6 +21,7 @@
 import { unwatchFile, watchFile } from "node:fs";
 import { resolve } from "node:path";
 import { type FileSignature, signatureOf } from "./file-signature";
+import { pathAliases } from "./watch-set-aliases";
 import {
   createDirectoryWatchers,
   groupByDirectory,
@@ -118,8 +119,21 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
   const { onChange, onDegraded, debounceMs = DEFAULT_DEBOUNCE_MS } = options;
 
   let tracked: string[] = [];
+  let aliases: ReadonlyMap<string, readonly string[]> = new Map();
   const polled = new Set<string>();
-  const ledger = createChangeLedger({ debounceMs, onChange });
+  /* A link and its target are one file: a save is told once, by whichever
+     of the two told of it first. */
+  const ledger = createChangeLedger({
+    debounceMs,
+    onChange: (changed) => {
+      for (const path of changed) {
+        for (const alias of aliases.get(path) ?? []) {
+          if (!changed.includes(alias)) ledger.acknowledge(alias);
+        }
+      }
+      onChange(changed);
+    },
+  });
   const sweeper = createWatchSetSweep({
     debounceMs,
     unreported: () => ledger.unreported(tracked),
@@ -173,6 +187,7 @@ export function createWatchSet(options: WatchSetOptions): WatchSet {
   function update(paths: readonly string[], expected?: ReadonlyMap<string, string | null>): void {
     if (stopped) return;
     tracked = [...new Set(paths.map((p) => resolve(p)))];
+    aliases = pathAliases(tracked);
     const wanted = new Map([...(expected ?? [])].map(([path, hash]) => [resolve(path), hash]));
 
     for (const path of polled) if (!tracked.includes(path)) release(path);

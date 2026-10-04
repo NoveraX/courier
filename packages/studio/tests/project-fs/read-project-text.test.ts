@@ -1,7 +1,8 @@
 /**
  * Reading a file a request names in the project says what is wrong with the
- * path as the request named it: a folder given as the spec file was reported
- * by its absolute path on the machine Studio runs on.
+ * path as the request named it — a folder given as the spec file is named
+ * as the request gave it, not by its absolute path on the machine Studio
+ * runs on.
  */
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

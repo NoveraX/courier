@@ -1,9 +1,10 @@
 /**
  * Studio's sockets carry what an app really sends: a response of a few
- * megabytes, variables of a few megabytes typed into the playground. Any
- * message over Socket.IO's default of 1 MB closed the connection that sent
- * it, without a word in either log: the runtime's request never completed in
- * the Timeline, and the UI lost its socket.
+ * megabytes, variables of a few megabytes typed into the playground. Held to
+ * Socket.IO's default of 1 MB, any larger message would close the
+ * connection that sent it, without a word in either log: the runtime's
+ * request would never complete in the Timeline, and the UI would lose its
+ * socket.
  */
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

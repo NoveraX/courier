@@ -1,9 +1,9 @@
 /**
  * A type extracted from an endpoint never takes a name something else has:
  * a schema the specification declares, or the type another group extracts.
- * Otherwise the specification's schema replaced it, and the endpoint was
- * typed and validated as that schema; or the barrel exported the name once,
- * leaving the other group's type out of reach.
+ * Otherwise the specification's schema would replace it, and the endpoint
+ * be typed and validated as that schema; or the barrel would export the
+ * name once, leaving the other group's type out of reach.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

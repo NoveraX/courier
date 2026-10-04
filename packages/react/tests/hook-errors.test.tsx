@@ -9,13 +9,12 @@ import { renderHook, waitFor } from "@testing-library/react";
 /**
  * What a hook's `error` holds, and what its type says it holds.
  *
- * Every hook typed its error as `HTTPError`, but not everything that fails
- * a call is one: a response that fails its schema is a `ValidationError`,
- * a call cancelled through the caller's own signal rejects with that
- * signal's reason, and a misconfigured proxy path is a `ConfigurationError`.
- * Code that trusted the type read `error.status` and found `undefined`.
- * The hooks now type it as `Error`, as TanStack Query does, and the guards
- * narrow it.
+ * Not everything that fails a call is an `HTTPError`: a response that fails
+ * its schema is a `ValidationError`, a call cancelled through the caller's
+ * own signal rejects with that signal's reason, and a misconfigured proxy
+ * path is a `ConfigurationError`. So the hooks type the error as `Error`, as
+ * TanStack Query does, and the guards narrow it — typed as `HTTPError`, code
+ * that trusts the type reads `error.status` and finds `undefined`.
  */
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it } from "vitest";

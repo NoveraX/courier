@@ -1,10 +1,10 @@
 /**
  * How the Studio UI records a request that failed.
  *
- * A failed row kept only the error's kind and message: its Timing, Headers
- * and Response tabs were empty, the Waterfall drew it at 0µs, a proxy row
- * showed no status although the browser received one, and a refused schema
- * was shown as a plain error that had lost its issues.
+ * A failed row keeps more than the error's kind and message: its Timing,
+ * Headers and Response tabs are filled, the Waterfall draws it at its real
+ * duration, a proxy row shows the status the browser received, and a
+ * refused schema is shown with its issues.
  */
 import { describe, expect, it } from "vitest";
 

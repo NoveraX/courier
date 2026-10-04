@@ -2,9 +2,9 @@
  * Two processes attached under one runtime id — two services left on the
  * default "server", cluster workers, two instances of one app.
  *
- * The first to disconnect removed the registry entry and the bindings of the
- * one still running, so its sources went orphan and the Playground answered
- * "No runtime hosts <source>" until it restarted.
+ * The first to disconnect leaves the registry entry and the bindings of the
+ * one still running in place; removing them would orphan its sources, the
+ * Playground answering "No runtime hosts <source>" until it restarted.
  */
 import type { Namespace } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";

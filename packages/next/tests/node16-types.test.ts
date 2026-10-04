@@ -2,9 +2,9 @@
  * The route factories' types under `node16` module resolution.
  *
  * Next.js has no `exports` map, so an ES module resolved the Node way must
- * name `next/server.js`; the bare `next/server` does not resolve there. A
- * consumer on `node16` or `nodenext` got TS2307 from the published
- * declarations, and with `skipLibCheck` every `NextRequest` silently became
+ * name `next/server.js`; the bare `next/server` does not resolve there, and a
+ * consumer on `node16` or `nodenext` would get TS2307 from the published
+ * declarations — or, with `skipLibCheck`, every `NextRequest` silently
  * `any`. The published declarations are what such a consumer reads, so a
  * consumer on `node16` type-checks against the built package.
  */

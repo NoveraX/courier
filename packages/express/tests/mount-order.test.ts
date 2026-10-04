@@ -1,9 +1,9 @@
 /**
  * Creating the Express handlers before sources are registered.
  *
- * The factories read the registry as they were created, to announce what
- * they host, and threw SOURCES_NOT_REGISTERED at mount when the routes were
- * wired before `attachRuntime()` or `registerSources()` had run.
+ * The handlers read the registry when they serve a request, not when they
+ * are created: read at mount, it throws SOURCES_NOT_REGISTERED for routes
+ * wired before `attachRuntime()` or `registerSources()` has run.
  */
 import { createServer } from "node:http";
 import { describe, expect, it } from "vitest";

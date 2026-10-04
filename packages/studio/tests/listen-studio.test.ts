@@ -1,9 +1,9 @@
 /**
  * Studio on its default host, `localhost`, answers on both loopback
- * addresses. Bound to the name, it listened on whichever address the
- * resolver gave first — `::1` on macOS — so a client that dialled
- * `127.0.0.1`, as a container forward or a tool does, was refused, while
- * the mock servers Studio starts listen on `127.0.0.1`.
+ * addresses. Bound to the name, it would listen on whichever address the
+ * resolver gives first — `::1` on macOS — and refuse a client that dials
+ * `127.0.0.1`, as a container forward or a tool does, and as the mock
+ * servers Studio starts listen.
  */
 
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";

@@ -1,8 +1,8 @@
 /**
- * What the package entry offers. The realtime hooks each group names —
- * `q.chat.useChannel(...)` — ran on hooks exported beside them that took an
- * internal factory first, and option types the entry did not export, so the
- * two described the same options twice and drifted.
+ * What the package entry offers: the callers whose groups name the realtime
+ * hooks — `q.chat.useChannel(...)` — and not the untyped hooks they run on,
+ * which take an internal factory first; exported beside them, the two would
+ * describe the same options twice and drift.
  */
 import { describe, expect, it } from "vitest";
 import * as react from "../src/index";

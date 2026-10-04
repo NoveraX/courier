@@ -1,8 +1,8 @@
 /**
  * A courier.config that does not load is said in the terminal in one line,
- * as the UI says it, with the file named relative to the project. The
- * terminal got the whole error instead: its stack, and every file the load
- * had read, by absolute path, with its hash — 34 lines for one typo.
+ * as the UI says it, with the file named relative to the project — not the
+ * whole error, its stack and every file the load read, by absolute path,
+ * with its hash: 34 lines for one typo.
  */
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

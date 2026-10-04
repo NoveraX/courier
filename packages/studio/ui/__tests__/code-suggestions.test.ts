@@ -2,12 +2,12 @@
  * Studio's advice on the traffic it saw: code that compiles as it is
  * copied, and hints that look at what they claim to.
  *
- * The suggestions imported `cache`, `retry` and `auth`, which Courier does
- * not export, and called `.response()` where a builder has none. "No
- * caching detected" was raised for any endpoint called three times,
- * cached or not. "All requests use direct mode" was raised for servers,
- * which have no secrets to keep from a browser, and suggested handing the
- * whole API definition to the browser.
+ * A suggestion imports only what Courier exports and calls only what a
+ * builder has. "No caching detected" names the reads called often that the
+ * cache never saw, not every endpoint called three times. "All requests use
+ * direct mode" is not raised for a server, which has no secrets to keep
+ * from a browser, and suggests a proxy caller that imports the API as a
+ * type rather than handing the whole definition to the browser.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

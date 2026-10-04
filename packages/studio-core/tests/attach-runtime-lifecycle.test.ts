@@ -1,10 +1,10 @@
 /**
  * Attaching and detaching a runtime, as scripts and test suites do.
  *
- * Two calls made while the first still loaded the config each opened a
- * socket under the same id, and only one could be closed; a detach() made
- * before the socket existed found nothing to close and left it connected;
- * and a process that attached never exited while Studio was not running.
+ * Calls made while the first still loads the config share its attach, not
+ * one socket each under the same id with only one to close; a detach() made
+ * before the socket exists closes it once it opens; and a process that
+ * attached exits when its work is done, with no Studio running.
  */
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";

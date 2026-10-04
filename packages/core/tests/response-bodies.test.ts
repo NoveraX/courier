@@ -1,10 +1,11 @@
 /**
  * Answers whose body is not the JSON the source expects.
  *
- * A 2xx body that would not parse reached a direct caller as an HTTPError
- * of status 502, from a gateway that was never there. An error answer whose
- * body was text or HTML lost that body, replaced by `{ message: "HTTP 404" }`
- * — and with it the upstream's own explanation of what went wrong.
+ * A 2xx body that does not parse reaches a direct caller with the
+ * upstream's own status, not as a 502 from a gateway that is not there. An
+ * error answer whose body is text or HTML keeps that body as the error's
+ * data — the upstream's own explanation of what went wrong — rather than a
+ * stand-in `{ message: "HTTP 404" }`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

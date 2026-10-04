@@ -1,8 +1,8 @@
 /**
  * The audit's N+1 rule, given requests as the store holds them: newest
- * first. It walked them in that order, so every detail call came before its
- * list call and none was found — the rule never fired on real traffic — and
- * the time window it meant to stop at was never reached.
+ * first. It walks them oldest first, so a list call comes before its detail
+ * calls and the rule fires on real traffic, stopping where its time window
+ * closes.
  */
 import { describe, expect, it } from "vitest";
 

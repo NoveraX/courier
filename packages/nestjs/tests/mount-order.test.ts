@@ -1,9 +1,10 @@
 /**
  * Creating the NestJS middleware before sources are registered.
  *
- * The factories read the registry as they were created, to announce what
- * they host, and threw SOURCES_NOT_REGISTERED when `AppModule.configure`
- * ran before `attachRuntime()` or `registerSources()` had.
+ * The middleware reads the registry when it serves a request, not when it
+ * is created: read then, it throws SOURCES_NOT_REGISTERED whenever
+ * `AppModule.configure` runs before `attachRuntime()` or
+ * `registerSources()`.
  */
 import { createServer } from "node:http";
 import { describe, expect, it } from "vitest";

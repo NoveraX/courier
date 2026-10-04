@@ -3,9 +3,9 @@
  */
 /**
  * The settings a page kept come back field by field. What the browser kept
- * may come from an older Studio or be edited by hand, and was spread over the
- * defaults unchecked: a removed theme or a count written as text reached the
- * store.
+ * may come from an older Studio or be edited by hand, so it is not spread
+ * over the defaults unchecked: a removed theme or a count written as text
+ * never reaches the store.
  */
 import { afterEach, describe, expect, it } from "vitest";
 

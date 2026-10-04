@@ -1,9 +1,9 @@
 /**
- * A mock Studio runs for a source it generated answers every endpoint of it,
- * as a Petstore import showed it did not: a map, a string and an empty
- * answer came back 404 "No mock", since the generator wrote their types
- * without a schema to make one up from, and the mock answered nothing
- * without one. Run as Studio runs it, in its worker.
+ * A mock Studio runs for a source it generated answers every endpoint of it
+ * — a map, a string and an empty answer among them, as a Petstore import
+ * has them — rather than 404 "No mock" for each endpoint whose type the
+ * generator wrote without a schema to make an answer up from. Run as Studio
+ * runs it, in its worker.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";

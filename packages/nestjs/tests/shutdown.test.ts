@@ -2,10 +2,9 @@
  * Shutting a NestJS host down while Courier streams are open.
  *
  * `app.close()` waits for every open connection, and an SSE stream does not
- * end on its own: the close hung for as long as the stream's lifetime cap,
- * 30 minutes by default, and nothing could drain it because the middleware
- * kept its stream registry to itself. Detaching the WebSocket handler left
- * every accepted client connected the same way.
+ * end on its own, so the middleware's streams can be drained rather than
+ * holding the close for the stream's lifetime cap, 30 minutes by default.
+ * Detaching the WebSocket handler closes every client it accepted.
  *
  * Nest runs its middleware on the Express instance it creates, which is what
  * serves the middleware here.

@@ -1,7 +1,7 @@
 /**
- * The keys of a courier.config that Courier does not read. A misspelt key
- * — `studo:`, `server: { prot }` — was ignored in silence, and the setting
- * it meant kept its default.
+ * The keys of a courier.config that Courier does not read, named so that a
+ * misspelt key — `studo:`, `server: { prot }` — is not ignored in silence,
+ * the setting it meant keeping its default.
  */
 import { describe, expect, it } from "vitest";
 

@@ -1,7 +1,7 @@
 /**
  * The latency a scenario's summary gives an endpoint slowed by a named
- * profile: 3G was summarised as 2000 ms while the mock answers it in 300 to
- * 900 ms.
+ * profile is the range the mock answers it in — 300 to 900 ms for 3G — not
+ * a figure of its own.
  */
 import { describe, expect, it } from "vitest";
 

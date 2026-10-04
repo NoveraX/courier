@@ -1,8 +1,8 @@
 /**
- * Which sources a server answers for. The server wrote its sources into the
- * process-wide registry and its handlers read them back from there, so a
- * second server — or the host's own `registerSources` — replaced what the
- * first one served: it refused its own source and answered the other's.
+ * Which sources a server answers for: its own, held by its handlers rather
+ * than read back from the process-wide registry, so a second server — or
+ * the host's own `registerSources` — never replaces what the first one
+ * serves.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

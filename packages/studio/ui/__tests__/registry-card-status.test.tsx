@@ -3,8 +3,8 @@
  */
 /**
  * An imported API's card says what its update check found, and why when it
- * found nothing: a failed check showed a bare "Error", and an import with no
- * URL to check showed "Up to date".
+ * found nothing: a failed check says why it failed, not a bare "Error", and
+ * an import with no URL says it was not checked, not "Up to date".
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";

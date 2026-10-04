@@ -2,9 +2,9 @@
  * What a failed request tells the browser about the server's own side.
  *
  * A transport-level failure carries the operating system's words, and those
- * name the host the server was dialling. Sending them to a browser discloses
- * the upstream the proxy exists to keep behind it — and does so on the first
- * DNS hiccup, which is why no test of upstream *status codes* ever saw it.
+ * name the host the server was dialling. Sending them to a browser would
+ * disclose the upstream the proxy exists to keep behind it — on the first
+ * DNS hiccup, which a test of upstream *status codes* never meets.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

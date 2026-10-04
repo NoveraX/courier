@@ -2,11 +2,11 @@
  * The Studio socket on a platform whose timers are plain numbers — every
  * browser, Deno, and edge workers.
  *
- * The socket was opened with `autoUnref` everywhere so that it would never
- * keep a Node process alive. socket.io-client then calls `.unref()` on its
- * own timers, which exists only on Node's: in a browser the handshake threw
- * `this._pingTimeoutTimer.unref is not a function`, the socket never opened,
- * and no browser runtime ever reached Studio.
+ * `autoUnref` keeps the socket from holding a Node process alive, and
+ * socket.io-client then calls `.unref()` on its own timers, which exists
+ * only on Node's. So it is asked for only where timers can be unref'd:
+ * elsewhere the handshake would throw `this._pingTimeoutTimer.unref is not
+ * a function`, and no browser runtime would reach Studio.
  */
 import { createServer, type Server as HttpServer } from "node:http";
 import type { AddressInfo } from "node:net";

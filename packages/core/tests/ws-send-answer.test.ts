@@ -1,8 +1,8 @@
 /**
  * What a message sent on a WebSocket connection answers: whether it went out
- * or waits to. Sent on a connection that had given up or been closed, it
- * vanished — no frame, no queue, no warning — and nothing could tell a sent
- * message from a lost one.
+ * or waits to. One that can do neither — the connection closed, its queue or
+ * the socket's buffer full — answers false with a warning, so a lost message
+ * never passes for a sent one.
  */
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from "vitest";
 

@@ -3,9 +3,9 @@
  * running Courier's handler, read by Courier's own client and by a bare
  * socket that shows the frames.
  *
- * A topic was qualified by a 32-bit hash of its variables, so two rooms whose
- * names hashed alike were one topic: a subscriber allowed into its own room
- * received every broadcast of the other.
+ * A topic is qualified by its variables themselves, not by a short hash
+ * that two rooms' names can share: a subscriber allowed into its own room
+ * never receives the broadcasts of another.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket } from "ws";

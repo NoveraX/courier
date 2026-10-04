@@ -4,9 +4,10 @@
 /**
  * Settings' session history against a running Studio: saving the requests
  * on screen, listing what was saved, and loading a saved session back into
- * the Timeline. Save sent a name without the requests and was refused, the
- * refusal escaped as an uncaught error, the list read a field Studio does
- * not send and was always empty, and Load only said it had loaded.
+ * the Timeline: Save sends the requests with the name, the list shows what
+ * Studio saved, Load fills the Timeline and pauses recording, and a session
+ * that cannot be loaded says why rather than failing as an uncaught
+ * error.
  */
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer as createNetServer } from "node:net";

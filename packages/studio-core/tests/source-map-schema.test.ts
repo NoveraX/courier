@@ -1,7 +1,8 @@
 /**
  * The sample variables the Playground starts a call with pass the schema: a
- * number at least its lower bound, a string at least its minimum length. A
- * sample of `0` for `z.number().min(100)` was refused on the first send.
+ * number at least its lower bound, a string at least its minimum length — so
+ * `z.number().min(100)` starts at 100, not at a `0` the first send would
+ * have refused.
  */
 import * as v from "valibot";
 import { describe, expect, it } from "vitest";

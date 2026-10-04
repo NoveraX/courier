@@ -1,8 +1,7 @@
 /**
- * What the root entry offers. The proxy transport's own call function, typed
- * and then cast to an untyped one on its only use, and the types it was typed
- * with were exported beside the API, undocumented, while the reference
- * described them as the engine of the clients' inference.
+ * What the root entry offers: the API, and not the proxy transport's own call
+ * function or the types it is typed with, which are Courier's plumbing
+ * rather than something an application calls.
  */
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { BaseOptions, SearchParamsSerializer } from "../src";
@@ -33,8 +32,8 @@ describe("the root entry", () => {
 
 /**
  * The options a source and the cache middleware take are typed by names the
- * entries did not export, so a shared options object or a custom cache store
- * had to spell its type out by hand.
+ * entries export, so a shared options object or a custom cache store names
+ * its type rather than spelling it out by hand.
  */
 describe("the option types", () => {
   it("are named where the options are", () => {
@@ -53,10 +52,10 @@ describe("the option types", () => {
 });
 
 /**
- * A WebSocket connection promised request and response: a message sent with
- * an id, answered by a frame carrying it back. No Courier server answers so —
- * a channel replies with `send`, which carries no id — so every request waited
- * out its timeout and failed. The connection subscribes and sends.
+ * A WebSocket connection subscribes and sends. It offers no request and
+ * response — a message sent with an id, answered by a frame carrying it
+ * back — since no Courier server answers so: a channel replies with `send`,
+ * which carries no id, and every such request would wait out its timeout.
  */
 describe("the realtime entry", () => {
   it("offers no request a server never answers", () => {

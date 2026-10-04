@@ -1,10 +1,10 @@
 /**
  * Registering a source under a key.
  *
- * Studio refused a source registered under a key other than the name its
- * author gave `defineApi`, but `registerSources` — behind the standalone
- * server and attachRuntime — renamed it silently: the server then answered
- * only the key, and a client calling by the name got 400.
+ * `registerSources` — behind the standalone server and attachRuntime —
+ * refuses a key other than the name the author gave `defineApi`, as Studio
+ * does, rather than renaming the source: the server would then answer only
+ * the key, and a client calling by the name would get 400.
  */
 import { describe, expect, it } from "vitest";
 

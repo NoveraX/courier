@@ -1,8 +1,9 @@
 /**
  * What the startup banner writes.
  *
- * Its title row was two columns wider than the box, and it reset the terminal
- * and wrote colour codes into pipes and log files, ignoring NO_COLOR.
+ * Every row stays inside the box, and neither a terminal reset nor colour
+ * codes go into a pipe or a log file; colour follows the terminal, then
+ * NO_COLOR, then FORCE_COLOR.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

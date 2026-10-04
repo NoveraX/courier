@@ -1,7 +1,7 @@
 /**
  * `studio.port` and `studio.host` are documented, typed, and read by every
- * client that dials Studio. The server ignored them, so configuring the
- * documented field moved the clients and left the server where it was.
+ * client that dials Studio — and by the server, so configuring them moves
+ * the server with its clients.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

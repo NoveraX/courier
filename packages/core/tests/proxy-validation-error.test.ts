@@ -1,10 +1,10 @@
 /**
  * A call that fails validation, through the proxy as directly.
  *
- * The proxy answers 422 with the issues, and the proxy client threw that on
- * as a plain HTTPError: `isValidationError` told a failed validation apart
- * in direct mode and not through the proxy, and code that read `issues`
- * worked in one mode only.
+ * The proxy answers 422 with the issues, and the proxy client rejects with
+ * the ValidationError a direct call rejects with, not a plain HTTPError, so
+ * `isValidationError` and code that reads `issues` work in both modes. An
+ * upstream's own 422 stays an HTTPError carrying its body.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";

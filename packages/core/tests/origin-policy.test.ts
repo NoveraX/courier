@@ -58,8 +58,8 @@ describe("isOriginAllowed", () => {
 });
 
 /**
- * The production branch had no test at all, and it refused every same-origin
- * browser request — which is what made SSE unusable once deployed.
+ * In production the policy admits a same-origin browser request: refusing
+ * it leaves SSE unusable once deployed.
  */
 describe("isOriginAllowed — production", () => {
   beforeEach(() => {
@@ -110,8 +110,9 @@ describe("isOriginAllowed — development", () => {
 });
 
 /**
- * The previous rule allowed any request that omitted Origin and carried a
- * `_playground_rid` query parameter. The sigil no longer decides anything.
+ * A request that omits Origin is not let through for carrying a
+ * `_playground_rid` query parameter: anyone can add the sigil, so it decides
+ * nothing.
  */
 describe("isOriginAllowed — the playground sigil is not a credential", () => {
   beforeEach(() => {
@@ -132,8 +133,8 @@ describe("isOriginAllowed — the playground sigil is not a credential", () => {
 });
 
 /**
- * POST, SSE and WebSocket all checked this and GET did not, so a third-party
- * page could drive every readable endpoint with the user's cookies.
+ * GET is checked as POST, SSE and WebSocket are: unchecked, it would let a
+ * third-party page drive every readable endpoint with the user's cookies.
  */
 describe("the GET proxy applies the same rule", () => {
   const hooks = () => ({ onProxyOriginReject: vi.fn(), onProxyReceive: vi.fn() });

@@ -1,10 +1,11 @@
 /**
  * The auto-CRUD routes over HTTP, held to what a real REST API does.
  *
- * A create after any delete repeated an existing id, and the new record hid
- * behind the old one; records keyed "1" or "007" answered 404 on every by-id
- * route; PUT merged like PATCH; and a list endpoint declaring a pagination
- * wrapper answered a bare array its own schema refused.
+ * A create after a delete never repeats an existing id, so a new record
+ * never hides behind an old one; records keyed "1" or "007" are found by
+ * every by-id route; PUT replaces where PATCH merges; and a list endpoint
+ * declaring a pagination wrapper answers that wrapper, not a bare array its
+ * own schema refuses.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, describe, expect, it } from "vitest";

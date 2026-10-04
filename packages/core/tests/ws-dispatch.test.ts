@@ -133,9 +133,10 @@ describe("handleSubscribe", () => {
 
   /**
    * The client qualifies a topic with a hash of its own variables and sends
-   * both. They were never checked against each other, so a caller could pass
-   * validation with variables of its own while subscribing under someone
-   * else's qualifier — and receive what was published for them.
+   * both, so the server subscribes under the qualifier the variables produce,
+   * not the one sent: a caller could otherwise pass validation with
+   * variables of its own while subscribing under someone else's qualifier,
+   * and receive what is published for them.
    */
   it("subscribes under the qualifier its own variables produce, not the one it sent", async () => {
     const endpoint = createEndpoint("ws");

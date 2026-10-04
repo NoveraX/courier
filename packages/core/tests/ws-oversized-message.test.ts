@@ -1,10 +1,10 @@
 /**
  * A message too large for the server, end to end on a real `ws` server.
  *
- * The client sent it anyway; `ws` closed the whole socket with 1009 before
- * Courier could refuse the one message with its 4413, and the client took
- * 1009 for a reason never to reconnect — every channel and push subscription
- * sharing the socket ended with it.
+ * The client refuses it with a 4413 on its channel rather than sending it,
+ * and the server refuses one that arrives with a 4413 on a socket that stays
+ * open. A socket `ws` closes with 1009 is reconnected, its channels told
+ * why, so the subscriptions sharing it go on.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

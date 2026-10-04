@@ -1,10 +1,11 @@
 /**
  * Upload and download progress.
  *
- * `onDownloadProgress` was offered on every call and never called, and
- * `onUploadProgress` worked only for a proxy call in a browser. An upload
- * over XMLHttpRequest that was cancelled never settled, and one answered 204
- * threw.
+ * `onDownloadProgress` reports the answer's body as it is read, and
+ * `onUploadProgress` the body as the network takes it, with or without
+ * XMLHttpRequest. An upload over XMLHttpRequest settles when it is
+ * cancelled, and one answered 204 resolves with no body instead of
+ * throwing.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 

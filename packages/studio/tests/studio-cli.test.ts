@@ -1,11 +1,11 @@
 /**
  * The `courier-studio` command, run as a user runs it.
  *
- * `--version` printed the usage and "No version specified"; a port written as
- * `3001abc` was read as 3001; a mistyped `--cwd` crashed with a raw ENOENT
- * stack; and `courier-studio init` ran its own work and then started the whole
- * server anyway. A config that awaits something that never comes must not
- * keep Studio from listening, nor end it in silence.
+ * `--version` prints its version; a port written as `3001abc` is refused,
+ * not read as 3001; a mistyped `--cwd` is named, without a stack; and a
+ * command it does not have is refused instead of starting the server. A
+ * config that awaits something that never comes does not keep Studio from
+ * listening, nor end it in silence.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";

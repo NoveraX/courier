@@ -1,14 +1,14 @@
 /**
  * `setupCourierStudio()` for Angular.
  *
- * A browser bundle sees neither courier.config nor `COURIER_STUDIO_URL`, and
- * the setup took no options, so an Angular app could reach a Studio on a
- * non-default address only by writing the global slot by hand.
+ * A browser bundle sees neither courier.config nor `COURIER_STUDIO_URL`, so
+ * the setup takes the Studio address as an option, rather than leaving an
+ * Angular app to write the global slot by hand.
  *
- * Its production check returned early ahead of the runtime's import, and
  * esbuild, which Angular builds with, drops an import only from a branch it
- * can see is dead: `ng build` still wrote the runtime and the Socket.IO
- * client out as chunks nothing loads.
+ * can see is dead, so the production check guards the runtime's import
+ * itself: an early return ahead of it would still have `ng build` write the
+ * runtime and the Socket.IO client out as chunks nothing loads.
  */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

@@ -2,11 +2,10 @@
  * WebSocket subscriptions end to end: a real `ws` server running Courier's
  * handler, read by Courier's own client.
  *
- * The server told the client nothing when it ended a subscription, and sent
- * its refusals as errors the client only logged: a channel whose join was
- * rejected stayed "connected", a push that failed or finished left the
- * reader waiting forever, and of two subscribers to one topic, the first to
- * leave silenced the other.
+ * The server tells the client when it ends a subscription, and why it
+ * refuses one: a channel whose join is rejected hears why and disconnects,
+ * a push that fails or finishes ends for its reader, and of two subscribers
+ * to one topic, the first to leave does not silence the other.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

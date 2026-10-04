@@ -1,6 +1,6 @@
 /**
  * The requests Studio's mocks answered outlive Studio, as the requests it
- * captured do: a mock's log was the page's alone, and a reload emptied it.
+ * captured do: a mock's log is not the page's alone, for a reload to empty.
  */
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

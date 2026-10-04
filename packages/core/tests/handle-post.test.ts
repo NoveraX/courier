@@ -315,7 +315,7 @@ describe("createPostHandler", () => {
       expect(error).not.toHaveBeenCalled();
     });
 
-    /** The GET path strips these from `_v`; the POST path kept them. */
+    /** The GET path strips these from `_v`, and the POST path strips them alike. */
     it("drops keys that reach Object.prototype, as the GET path does", async () => {
       const execute = createMockExecute();
       const handler = createPostHandler(execute, createHooks());

@@ -2,9 +2,10 @@
  * The proxy boundary, end to end: a request that arrived over the wire may not
  * decide where the server's own fetch goes, what it carries, or what it says.
  *
- * Each case here reproduces something that worked before the boundary existed.
- * A server-side caller is checked too, because the fix must narrow only the
- * untrusted path — narrowing both would be a different bug.
+ * Each case is a request that, without the boundary, would steer the
+ * server's own fetch. A server-side caller is checked too, because the
+ * boundary narrows only the untrusted path — narrowing both would break a
+ * caller the server trusts.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

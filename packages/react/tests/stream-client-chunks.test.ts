@@ -1,8 +1,7 @@
 /**
  * What a bundle of the query callers loads before any stream or channel is
- * opened. The callers built their SSE and WebSocket factories at once from
- * an entry that imported both clients, so every application loaded them
- * with its first page, whether or not it ever opened a stream.
+ * opened: the SSE and WebSocket clients load when a stream first opens, not
+ * with an application's first page, whether or not it ever opens one.
  */
 import { resolve } from "node:path";
 import { build, type Metafile } from "esbuild";

@@ -1,7 +1,7 @@
 /**
  * Studio's page drives the project — it writes files, starts mock servers,
- * sends requests on the developer's behalf — and any site could frame it and
- * lure a click onto it. Every answer now forbids framing, and says the type
+ * sends requests on the developer's behalf — so every answer forbids
+ * framing, which would let any site lure a click onto it, and says the type
  * of what it sends is the one it names.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

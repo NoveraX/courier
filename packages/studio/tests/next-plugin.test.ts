@@ -2,10 +2,10 @@
  * `withCourierStudio()` for Next.js, against the config and entries Next.js
  * hands it.
  *
- * Next.js 16 builds with Turbopack and refused to start at all once the
- * wrapper had added a webpack hook. Under webpack it gave the hook its entries
- * as plain lists and paths, which the wrapper did not recognise, so it added
- * nothing.
+ * Next.js 16 builds with Turbopack and refuses to start at all once a
+ * webpack hook is added, so the wrapper leaves the config alone there.
+ * Under webpack it reads the entries in the shapes Next.js 16 gives them —
+ * plain lists and paths — and connects both routers' client entries.
  */
 import { createRequire } from "node:module";
 import { dirname } from "node:path";

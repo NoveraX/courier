@@ -1,9 +1,9 @@
 /**
  * The middleware chain while Studio is not attached, as in production.
  *
- * Every request snapshotted and diffed the headers around each middleware
- * and read the clock several times per middleware, for Studio's timeline,
- * whether or not a Studio was there to be told.
+ * Snapshotting and diffing the headers around each middleware, and reading
+ * the clock several times per middleware, serve Studio's timeline alone, so
+ * a request does none of it when no Studio is there to be told.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 

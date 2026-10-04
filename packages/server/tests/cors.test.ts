@@ -89,7 +89,7 @@ describe("handleCors — preflight", () => {
     expect(JSON.parse(res._body)).toEqual({ success: false, message: "Origin not allowed" });
   });
 
-  /** Accepting every origin because none was configured is the bug, not the default. */
+  /** With no origins configured, a foreign one is refused rather than every origin accepted. */
   it("refuses a foreign origin when nothing is configured", () => {
     const res = createMockRes();
 

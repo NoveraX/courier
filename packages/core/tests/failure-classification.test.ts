@@ -1,14 +1,13 @@
 /**
  * What a failed call rejects with.
  *
- * Everything that went wrong around fetch was reported as a network
- * failure. A timeout was an HTTPError of status 0 saying "Network request
- * failed", with the DOMException's legacy code "23"; through the proxy it
- * was a 502 saying the upstream could not be reached. A caller's own
- * cancellation reason was replaced unless it was an AbortError — and one
- * that landed while the answer was read came back as a body that could not
- * be parsed — and the caller's own mistakes — a middleware that threw, a
- * BigInt in the body — came back dressed as HTTP failures.
+ * Not everything that goes wrong around fetch is a network failure. A
+ * timeout says it timed out — through the proxy, a 504 with a code that says
+ * so, not a 502 claiming the upstream could not be reached. A caller's own
+ * cancellation rejects with the reason it gave, whatever it is, even when it
+ * lands while the answer is read; and the caller's own mistakes — a
+ * middleware that throws, a BigInt in the body — reject as themselves, not
+ * dressed as HTTP failures.
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";

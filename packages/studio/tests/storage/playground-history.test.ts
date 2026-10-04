@@ -1,7 +1,7 @@
 /**
  * Studio keeps the Playground history a page sends it, for the project: the
- * next page that connects, and a Studio that restarts, are shown it. It was
- * kept in one browser's storage only.
+ * next page that connects, and a Studio that restarts, are shown it — not
+ * only the browser that made the calls.
  */
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

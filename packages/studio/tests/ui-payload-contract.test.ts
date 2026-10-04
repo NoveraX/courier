@@ -1,9 +1,9 @@
 /**
  * What a running Studio sends the UI, put through the guards the UI applies
- * before it shows anything. Each side had tests of its own — the server's
- * payloads by shape, the guards against fixtures — and none fed one to the
- * other, so a field renamed on one side reached the other as a payload the
- * UI dropped without a word.
+ * before it shows anything. Each side has tests of its own — the server's
+ * payloads by shape, the guards against fixtures — and this one feeds one to
+ * the other, so a field renamed on one side cannot reach the other as a
+ * payload the UI drops without a word.
  */
 import { createCaller, createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

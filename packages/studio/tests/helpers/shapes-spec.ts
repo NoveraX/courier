@@ -1,6 +1,6 @@
 /**
- * A specification carrying the shapes that broke on real APIs: Stripe's
- * expandable fields (an id string or the expanded object), OpenAI's
+ * A specification carrying the shapes real APIs use that are hardest to
+ * generate: Stripe's expandable fields (an id string or the expanded object), OpenAI's
  * `{ type: "null" }` alternatives, a map with typed values, objects that
  * refer to each other through those fields, and a union on a cycle beside an
  * enum it overlaps.

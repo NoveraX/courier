@@ -1,8 +1,8 @@
 /**
- * Stopping a mock server — as Studio does on every restart — closed every
- * connection at once, so a request in the middle of its latency got no
- * answer. It is answered now, while an event stream, which never finishes on
- * its own, is ended at once rather than held until the grace runs out.
+ * Stopping a mock server — as Studio does on every restart — answers a
+ * request in the middle of its latency rather than closing its connection,
+ * while an event stream, which never finishes on its own, is ended at once
+ * rather than held until the grace runs out.
  */
 import { afterEach, describe, expect, it } from "vitest";
 

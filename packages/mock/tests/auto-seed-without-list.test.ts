@@ -1,10 +1,10 @@
 /**
  * Collections of groups that declare no list endpoint are seeded too.
  *
- * Seeding took its schema from a group's list endpoint only, so a group
- * without one — the Petstore's `pet`, `store` and `user` — started empty
- * whatever `seed` asked for: `GET /pet/1` answered 404 and Studio showed 0
- * records, while `findByStatus` answered freshly generated pets.
+ * Seeding takes its schema from the record a group's endpoints answer
+ * with, not from its list endpoint only, so a group without one — the
+ * Petstore's `pet`, `store` and `user` — starts with what `seed` asks for:
+ * `GET /pet/1` answers a seeded pet and Studio counts the records.
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

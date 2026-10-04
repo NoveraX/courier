@@ -1,10 +1,11 @@
 /**
  * `.with()` options on a proxy call.
  *
- * The proxy client sent every option to the server, which accepts four and
- * answered the rest with a 400 — so a per-call token in `headers`, or the
- * `cache` and `next` a Next.js page sets, worked through `createCaller` and
- * failed in the browser.
+ * The server accepts four options and answers any other with a 400, so the
+ * proxy client sends it only those: a per-call token in `headers` goes to
+ * the proxy, which forwards what it allows, and the `cache` and `next` a
+ * Next.js page sets apply to the browser's own request — in the browser as
+ * through `createCaller`.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

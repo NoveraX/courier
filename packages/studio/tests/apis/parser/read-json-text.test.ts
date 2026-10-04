@@ -1,7 +1,7 @@
 /**
  * A raw Postman body read as Postman sends it: JSON, with the comments and
- * trailing commas Postman strips before sending. Such a body was taken for
- * one that is not JSON, and its endpoint was generated with no variables.
+ * trailing commas Postman strips before sending — not taken for a body that
+ * is not JSON, whose endpoint would be generated with no variables.
  */
 import { describe, expect, it } from "vitest";
 

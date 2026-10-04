@@ -3,9 +3,9 @@
  * it: a network failure or timeout is an HTTPError with status 0, and a
  * cancellation the caller asked for is rethrown as fetch rejected it.
  *
- * Direct mode reported both as a 502 from a gateway that was never there;
- * the proxy client let a network failure escape as a bare TypeError that
- * `isHTTPError` rejects and `onError` never saw.
+ * Direct mode and the proxy client fail alike: never a 502 from a gateway
+ * that is not there, and never a bare TypeError that `isHTTPError` rejects
+ * and `onError` does not see.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 

@@ -1,6 +1,6 @@
 /**
- * Regression test: a runtime leaving the binding table must NOT wipe the
- * requests it produced.
+ * A runtime leaving the binding table does not wipe the requests it
+ * produced.
  *
  * Scenario:
  * 1. Browser opens direct SSE/WS — emits stream:open with sessionId=A
@@ -11,8 +11,8 @@
  * The Studio dev server can have several cooperating runtimes (browser
  * direct + server proxy) and HMR/Turbopack rebuilds blip them constantly;
  * losing one side's request history on a lifecycle blip would be surprising
- * and asymmetric. The store must keep the request log intact across binding
- * transitions; only an explicit `clearRequests()` should wipe it.
+ * and asymmetric. The store keeps the request log intact across binding
+ * transitions; only an explicit `clearRequests()` wipes it.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createActions } from "../ui/src/store/actions";

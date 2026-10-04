@@ -1,7 +1,7 @@
 /**
- * A transition takes effect once its request has waited out its latency.
- * Applied then without a check, it overwrote a scenario applied meanwhile,
- * and moved the state on from one it was no longer in.
+ * A transition takes effect once its request has waited out its latency, so
+ * it is checked then: applied unchecked, it would overwrite a scenario
+ * applied meanwhile, and move the state on from one it has already left.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { describe, expect, it } from "vitest";

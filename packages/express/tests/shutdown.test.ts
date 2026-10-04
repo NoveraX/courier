@@ -2,10 +2,11 @@
  * Shutting an Express host down while Courier streams are open.
  *
  * `server.close()` waits for every connection to end, and an SSE stream does
- * not end on its own: the host's close hung for as long as the stream's
- * lifetime cap, 30 minutes by default, and nothing could drain it because the
- * handler kept its stream registry to itself. Detaching the WebSocket handler
- * left every accepted client connected the same way.
+ * not end on its own, so the handler's streams can be drained: each client
+ * is told to come back later and the server closes, rather than hanging for
+ * the stream's lifetime cap, 30 minutes by default. Detaching the WebSocket
+ * handler closes the connections it accepted, telling clients the server is
+ * going away.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

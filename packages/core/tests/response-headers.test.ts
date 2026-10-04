@@ -150,9 +150,10 @@ describe("buildResponse — a buffered answer", () => {
 
 /**
  * A streamed answer keeps the upstream's content type, and a proxy URL can be
- * opened as a page. An upstream that answered with HTML — a user's file, an
- * SVG, an error page — ran its script on the application's origin, where it
- * could read the user's cookies.
+ * opened as a page, so the answer is sandboxed and never sniffed: an
+ * upstream that answers with HTML — a user's file, an SVG, an error page —
+ * would otherwise run its script on the application's origin, where it can
+ * read the user's cookies.
  */
 describe("a streamed proxy answer opened as a page", () => {
   let upstream: Server | undefined;

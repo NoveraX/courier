@@ -25,7 +25,7 @@ const servers: Server[] = [];
 /**
  * The public surface of an h3 1.x event, which is what Nitro 2 passes a
  * route. Its deprecated `req` and `res` are the Node objects, not a Web
- * `Request` — the difference that broke the adapter.
+ * `Request` — the difference the adapter has to read past.
  */
 class NodeEvent {
   readonly __is_event__ = true;

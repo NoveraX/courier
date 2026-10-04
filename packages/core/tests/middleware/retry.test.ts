@@ -332,9 +332,9 @@ describe("a retry policy declared on the builder", () => {
 });
 
 /**
- * The endpoint's policy and the middleware spoke two vocabularies: `backoff`
- * was a strategy on one and a delay in ms on the other, and a policy on an
- * endpoint could not set its delay at all. Both now take the same options.
+ * The endpoint's policy and the middleware take the same options, each with
+ * one meaning: `backoff` is the strategy and `delay` the wait in ms on both,
+ * so an endpoint's policy sets its delay as the middleware does.
  */
 describe("one vocabulary for a policy and the middleware", () => {
   it("retries the statuses a middleware lists, and no others", async () => {

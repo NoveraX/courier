@@ -2,9 +2,10 @@
  * The Web request a Node adapter builds, and what its signal says about the
  * client.
  *
- * The signal never fired, so an SSE stream behind express, fastify or nestjs
- * never learned its client had left: the generator, the upstream subscription
- * and the connection slot lived on until the lifetime cap.
+ * The signal fires when the client leaves, so an SSE stream behind express,
+ * fastify or nestjs learns of it: otherwise the generator, the upstream
+ * subscription and the connection slot would live on until the lifetime
+ * cap.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

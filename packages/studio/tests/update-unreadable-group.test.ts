@@ -1,8 +1,9 @@
 /**
  * An update that meets a group file Studio cannot read as code — the user
  * saved it mid-edit — leaves the file as it is unless the user allows it to
- * be replaced. Merging such a file line by line wrote endpoints twice, kept
- * one the spec dropped and left the broken line in, with no question asked.
+ * be replaced: merged line by line, such a file would get endpoints written
+ * twice, keep one the spec dropped and keep the broken line, with no
+ * question asked.
  */
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

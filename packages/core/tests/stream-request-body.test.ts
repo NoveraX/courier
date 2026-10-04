@@ -2,9 +2,8 @@
  * A ReadableStream as a request body.
  *
  * Fetch refuses a streamed body unless the request says `duplex: "half"`,
- * and the client never said it: every such call failed with an HTTPError of
- * status 0 before a byte was sent — while the same call with upload
- * progress, which buffered the stream, went through.
+ * so the client says so: without it, every such call would fail with an
+ * HTTPError of status 0 before a byte was sent.
  */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 

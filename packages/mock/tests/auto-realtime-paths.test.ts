@@ -1,10 +1,10 @@
 /**
  * Streams and channels served at the path they declare.
  *
- * The auto mock served every SSE and WS endpoint at its name, while a
- * direct client builds its URL from the declared path: `stream.get("stream")`
- * named `ticker` was requested at `/live/stream` and answered 404, and a
- * channel connecting to `ws-room` was refused at the upgrade.
+ * A direct client builds its URL from the declared path, so the auto mock
+ * serves each SSE and WS endpoint there, not at its name: a
+ * `stream.get("stream")` named `ticker` is requested at `/live/stream`, and a
+ * channel connects to `ws-room`.
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

@@ -1,9 +1,9 @@
 /**
  * Studio's working directory in a project, and the project's own files.
  *
- * Studio kept `.courier/` out of git by appending to the project's .gitignore
- * on every start — through the programmatic API too — and crashed when the
- * project root was mistyped. The directory now ignores itself.
+ * `.courier/` keeps itself out of git, ignoring itself from the moment
+ * Studio creates it, rather than Studio appending to the project's own
+ * .gitignore on every start.
  */
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";

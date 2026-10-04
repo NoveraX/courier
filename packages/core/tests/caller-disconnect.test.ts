@@ -57,8 +57,8 @@ describe("a caller that leaves before the upstream answers", () => {
   });
 
   /**
-   * A browser that cancels is not a server failure. It was logged as one, at
-   * ERROR with a stack, once per cancelled upload or query.
+   * A browser that cancels is not a server failure, so it is not logged as
+   * one — at ERROR with a stack, once per cancelled upload or query.
    */
   it.each([
     ["with the platform's abort error", undefined],

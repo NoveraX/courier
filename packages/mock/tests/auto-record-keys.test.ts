@@ -1,9 +1,10 @@
 /**
  * Collections keyed by a field other than `id`.
  *
- * Seeding forced every collection's key to `id`, so records with a `petId`
- * and no `id` could never be read by id, and a key set in `overrides` was
- * put back to `id` by every reset and reseed.
+ * A collection keyed by its route's parameter keeps that key, so records
+ * with a `petId` and no `id` are read and deleted by it, and a key set in
+ * `overrides` survives every reset and reseed rather than going back to
+ * `id`.
  */
 import { createCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

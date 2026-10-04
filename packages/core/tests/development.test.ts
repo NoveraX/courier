@@ -2,9 +2,9 @@
  * The library where there is no `process` at all — a browser loading it as
  * native ESM without a bundler, a Worker without Node compatibility.
  *
- * `defineApi` read `process.env.NODE_ENV` unguarded and threw a
- * ReferenceError there, so an application could not define a single API.
- * The proxy's origin check read it the same way.
+ * `defineApi` and the proxy's origin check read `process.env.NODE_ENV` only
+ * where `process` exists: read unguarded, it throws a ReferenceError there,
+ * and an application could not define a single API.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 

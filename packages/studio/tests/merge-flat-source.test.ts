@@ -31,8 +31,8 @@ export const api = defineApi({
 `;
 
 /**
- * A flat source is a source like any other. It was overwritten outright, so
- * every edit to it was lost without a word.
+ * A flat source is merged like any other, not overwritten outright with
+ * every edit to it lost without a word.
  */
 describe("a source with its endpoints inline", () => {
   it("merges rather than overwrites", () => {

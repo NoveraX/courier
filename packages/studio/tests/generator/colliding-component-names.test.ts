@@ -1,9 +1,9 @@
 /**
  * Component schemas whose names normalise to one identifier — `OrderItem`,
- * `order-item`, `order_item`. Their declarations were numbered apart, but a
- * reference normalised the name on its own, so every reference named the
- * first: `order-item`'s answers were typed and validated as `OrderItem`, and
- * refused for lacking its fields.
+ * `order-item`, `order_item`. Their declarations are numbered apart, and a
+ * reference names the declaration of the schema it points at, not the
+ * first one the normalised name gives: `order-item`'s answers are typed and
+ * validated as its own, not refused for lacking the fields of `OrderItem`.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

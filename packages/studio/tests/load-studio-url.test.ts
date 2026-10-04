@@ -1,9 +1,10 @@
 /**
  * How the build plugins learn Studio's address from courier.config.
  *
- * Every failure was logged at debug as "No courier.config found": a config
- * that existed and would not load sent the browser to the default address
- * with nothing on screen to say why.
+ * A project with no config falls back quietly, and a config that exists and
+ * will not load is warned of, not logged at debug as "No courier.config
+ * found" — which would send the browser to the default address with nothing
+ * on screen to say why.
  */
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

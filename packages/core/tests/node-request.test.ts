@@ -2,7 +2,8 @@
  * A body parser mounted across the whole application consumes the request
  * before the proxy route runs. The platform then says only that the body is
  * "disturbed or locked", which tells the developer nothing about the
- * middleware that did it — and the documented Express setup did exactly this.
+ * middleware that did it, so the cause is named, with what to do about it —
+ * and a body the host read and kept is used in place of the spent stream.
  */
 
 import type { IncomingMessage } from "node:http";

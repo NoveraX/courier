@@ -289,9 +289,9 @@ describe("defineBoundary — a client says what it cannot call", () => {
 });
 
 /**
- * The docs promised that the server refuses what a boundary does not name,
- * but showed it given to the client only, and nothing public attached it to
- * the server's source. An app wired as documented served every endpoint.
+ * The server refuses what a boundary does not name once the boundary is
+ * attached to the server's source as the docs show — given to the client
+ * alone, it would leave an app wired as documented serving every endpoint.
  */
 describe("defineBoundary — the server's half, wired as documented", () => {
   const upstreamHits: string[] = [];

@@ -1,8 +1,8 @@
 /**
- * The readers the page takes socket events' fields through. The store's
- * handlers cast each field to its type unread, so a value of another shape
- * — a port sent as text, a route without its counts — reached the views as
- * if it had the declared one.
+ * The readers the page takes socket events' fields through, rather than
+ * casting each field to its type unread: a value of another shape — a port
+ * sent as text, a route without its counts — never reaches the views as if
+ * it had the declared one.
  */
 import { describe, expect, it } from "vitest";
 

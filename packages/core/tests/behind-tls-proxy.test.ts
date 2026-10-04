@@ -1,9 +1,10 @@
 /**
  * A Node app behind a proxy that terminates TLS, as it runs in production.
  *
- * The socket is plain HTTP, so the request looked addressed to `http://…`
- * while the browser's `Origin` said `https://…`: every POST and WebSocket
- * from the app's own pages was refused with 403 "Origin not allowed".
+ * The socket is plain HTTP, so the request looks addressed to `http://…`
+ * while the browser's `Origin` says `https://…`. The app's own pages are
+ * still admitted — not refused with 403 "Origin not allowed" on every POST
+ * and WebSocket — and another site's page still is not.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

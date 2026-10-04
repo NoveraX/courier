@@ -1,11 +1,11 @@
 /**
  * Studio validates incoming runtime events against `RUNTIME_EVENT_TYPES` and
- * drops anything it does not recognise. When that list was maintained apart
- * from the hooks, it fell behind and silently discarded every request event a
- * runtime sent — Timeline, Waterfall, Analytics and the Playground catalogue
- * all sat empty while the application was plainly serving traffic.
+ * drops anything it does not recognise. A list kept apart from the hooks
+ * falls behind, and an event it misses is discarded in silence — the
+ * Timeline, Waterfall, Analytics and the Playground catalogue sitting empty
+ * while the application plainly serves traffic.
  *
- * This reads what the hooks actually emit, so the two cannot drift again.
+ * This reads what the hooks actually emit, so the two cannot drift.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";

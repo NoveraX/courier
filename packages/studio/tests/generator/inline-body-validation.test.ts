@@ -1,8 +1,8 @@
 /**
  * An endpoint whose body's fields are written in the operation itself has
- * its variables extracted as a type, with a schema beside it. The schema was
- * never used: a call with such a body went out unchecked while one with a
- * named body was validated, and the schema was dead code in every client.
+ * its variables extracted as a type, with a schema beside it — and the
+ * schema validates the call, as a named body's does, rather than sitting
+ * unused in every client while the call goes out unchecked.
  */
 
 import { isValidationError } from "@noverax/courier";

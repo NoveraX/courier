@@ -2,9 +2,10 @@
  * A channel's `.topic()`: what its subscribers share a topic by, end to end
  * on a real `ws` server, in-process, and at the type level.
  *
- * A topic was always qualified by every one of a subscriber's variables, so
- * a per-subscriber field such as a nickname split one room into as many
- * topics as it had members, and `ctx.broadcast(ctx.topic, …)` reached no one.
+ * `.topic()` names the variables a topic is qualified by, so a
+ * per-subscriber field such as a nickname does not split one room into as
+ * many topics as it has members, and `ctx.broadcast(ctx.topic, …)` reaches
+ * the room.
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";

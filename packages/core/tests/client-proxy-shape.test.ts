@@ -1,10 +1,10 @@
 /**
  * The client object itself, as code that inspects it sees it.
  *
- * It was invisible to reflection — `Object.keys`, `in` and spread all said it
- * was empty — handed out a new function on every read, so a React dependency
- * array saw a change on every render, and read `bind` or `call` on an
- * endpoint as the name of a method to request.
+ * Reflection sees what it holds — `Object.keys`, `in` and spread list its
+ * groups and endpoints; a read gives the same member every time, so a React
+ * dependency array sees no change between renders; and `bind` or `call` on
+ * an endpoint bind and call it, rather than name a method to request.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

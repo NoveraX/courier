@@ -2,11 +2,11 @@
  * Groups and endpoints whose names the runtime reads as hooks.
  *
  * `then`, `toJSON` and `valueOf` are read by the runtime itself — `await`,
- * `JSON.stringify`, coercion. The client answered those names before looking
- * at the source, so a group or an endpoint called by one of them, which the
- * types offered and a generator emits from an ordinary tag or operationId,
- * was unreachable. The client's own accessors, `raw` and `with`, are refused
- * as names when the source is defined instead.
+ * `JSON.stringify`, coercion. The client looks at the source before it
+ * answers those names, so a group or an endpoint called by one of them —
+ * which the types offer, and a generator emits from an ordinary tag or
+ * operationId — is reachable. The client's own accessors, `raw` and `with`,
+ * are refused as names when the source is defined instead.
  */
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";

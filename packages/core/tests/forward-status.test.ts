@@ -1,9 +1,8 @@
 /**
- * Tests for `forwardConnectionStatus` — the exhaustive helper that drives
- * status propagation in `executeWSPush` and `executeWSChannel`. Centralizing
- * the switch fixes the regression class where one call site forgot to
- * forward `"reconnecting"` and the Studio Playground watchdog hung in
- * `"connecting"` forever.
+ * `forwardConnectionStatus` — the exhaustive switch that drives status
+ * propagation in `executeWSPush` and `executeWSChannel`. One switch for both
+ * means neither call site can forget a status: a dropped `"reconnecting"`
+ * leaves the Studio Playground watchdog waiting at `"connecting"` for good.
  */
 
 import { describe, expect, it } from "vitest";

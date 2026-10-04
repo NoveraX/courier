@@ -1,11 +1,11 @@
 /**
  * How many runtimes and sources Studio says are connected.
  *
- * The counts were taken from the binding rows alone, and a row exists only
- * for a source whose `defineApi` declares a `proxyPath` — which no README
- * setup does. With a server and a browser attached and requests streaming
- * in, the status bar read "0 runtimes · 0 sources" and the Playground said
- * "No app connected".
+ * A binding row exists only for a source whose `defineApi` declares a
+ * `proxyPath` — which no README setup does — so the counts are not taken
+ * from the rows alone: with a server and a browser attached and requests
+ * streaming in, the status bar would read "0 runtimes · 0 sources" and the
+ * Playground say "No app connected".
  *
  * A real Studio server runs a README-style project here, and this process
  * attaches to it as the application's server does.

@@ -1,11 +1,12 @@
 /**
  * Who Studio's sockets admit, request by request.
  *
- * A page on a domain rebound to 127.0.0.1 could join the UI namespace over
- * Engine.IO polling: the handshake is a same-origin GET, which a browser
- * sends without an Origin, and only the handshake was checked. The POSTs
- * that followed named the page's origin, and nobody read it. From there it
- * watched every captured request and drove the playground.
+ * Engine.IO polling opens with a same-origin GET, which a browser sends
+ * without an Origin, so each request of a session is checked, not only the
+ * handshake: the POSTs that follow name the page's origin, and a page on a
+ * domain rebound to 127.0.0.1 cannot join the UI namespace — where it would
+ * watch every captured request and drive the playground — or upgrade the
+ * session it opened.
  */
 
 import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";

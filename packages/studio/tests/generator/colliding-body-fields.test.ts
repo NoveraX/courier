@@ -3,11 +3,11 @@
  * parameters. Gitea blocks an issue with `POST /repos/{owner}/{repo}/issues/
  * {index}/blocks`, whose body names the blocking issue by its own `owner`,
  * `repo` and `index`; creating an organisation under a user sends the
- * organisation's `username` beside the user's in the path. Merged into one
- * variables object, the parameter took each shared field's place: the field
- * was never sent, and a type asking a field to be a number and a string at
- * once kept the client from compiling. Such a body is passed under a key of
- * its own.
+ * organisation's `username` beside the user's in the path. Such a body is
+ * passed under a key of its own: merged into one variables object, the
+ * parameter would take each shared field's place, the field would never be
+ * sent, and a type asking a field to be a number and a string at once would
+ * keep the client from compiling.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

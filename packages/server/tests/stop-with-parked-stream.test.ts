@@ -1,7 +1,7 @@
 /**
  * Stopping the server while an SSE generator waits on an event that never
- * comes. The response never ended, so `stop()` never returned and a SIGTERM
- * under Docker or Kubernetes hung until SIGKILL.
+ * comes: the response is ended, so `stop()` returns, rather than a SIGTERM
+ * under Docker or Kubernetes hanging until SIGKILL.
  */
 import { courier } from "@noverax/courier/define";
 import { describe, expect, it } from "vitest";

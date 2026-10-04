@@ -1,10 +1,10 @@
 /**
  * Error names in a minified bundle.
  *
- * Each error took its name from its class, and a minifier renames classes:
- * in a production build `HTTPError` came out as `R` and `ConfigurationError`
- * as `z`, so logs said nothing and a `name === "ConfigurationError"` check
- * never matched.
+ * A minifier renames classes, so an error does not take its name from its
+ * class: in a production build `HTTPError` would come out as `R` and
+ * `ConfigurationError` as `z`, logs would say nothing, and a
+ * `name === "ConfigurationError"` check would never match.
  */
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

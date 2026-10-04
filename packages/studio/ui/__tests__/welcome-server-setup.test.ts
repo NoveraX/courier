@@ -3,15 +3,15 @@
  * production the way the framework builds its server, then started the way it
  * is deployed: with only the packages the guide installs as dependencies.
  *
- * The guides installed the runtime with `npm install -D` while their server
- * snippets imported it, so a production install, which leaves dev
- * dependencies out, could not start: React Router's server stopped at
- * "Cannot find package '@noverax/courier-studio-core'".
+ * A guide whose server snippet imports the runtime installs it as a
+ * dependency, not with `npm install -D`: a production install leaves dev
+ * dependencies out, and React Router's server would stop at "Cannot find
+ * package '@noverax/courier-studio-core'".
  *
- * The snippets that connect only in development imported the runtime at the
- * top of the file, which a production build keeps: Nuxt copied the runtime,
- * the Socket.IO client and a TypeScript loader into `.output` for a plugin
- * that never runs there.
+ * A snippet that connects only in development imports the runtime where it
+ * connects, not at the top of the file, which a production build keeps:
+ * Nuxt would copy the runtime, the Socket.IO client and a TypeScript loader
+ * into `.output` for a plugin that never runs there.
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";

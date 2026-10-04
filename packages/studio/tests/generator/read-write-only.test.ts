@@ -1,9 +1,10 @@
 /**
  * One schema describes both what is sent and what comes back. A readOnly
- * field is only answered and a writeOnly one only sent, so a required
- * writeOnly `password` made every answer of the schema fail validation — the
- * server never sends it back — and a required readOnly `id` made a request
- * body impossible to build.
+ * field is only answered and a writeOnly one only sent, so a body is sent
+ * without the field the server assigns and an answer is read without the
+ * one it never returns: required either way, a writeOnly `password` would
+ * fail every answer and a readOnly `id` would make a body impossible to
+ * build.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

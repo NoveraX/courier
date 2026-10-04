@@ -2,11 +2,12 @@
  * Where the mock server listens, who may drive its admin API, and how it
  * stops.
  *
- * `localhost` meant every interface, so anyone on the network — and, with the
- * open CORS, any page the developer had open — could read the store, wipe it
- * or switch endpoints to 500. `stop()` left WebSocket channels open and
- * served. A reset kept reporting the scenario it had just dropped, the
- * scenario-state reset route was unreachable, and the history grew forever.
+ * `localhost` means the loopback, not every interface, and the admin API
+ * refuses a page on another site: otherwise anyone on the network, or any
+ * page the developer has open, could read the store, wipe it or switch
+ * endpoints to 500. `stop()` closes WebSocket channels, each hearing
+ * `onLeave`. A reset reports no active scenario, the scenario-state reset
+ * route is reachable, and the history keeps only the most recent entries.
  */
 import type { AddressInfo } from "node:net";
 import { createServer, type Server } from "node:net";

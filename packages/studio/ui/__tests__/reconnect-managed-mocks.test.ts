@@ -1,8 +1,9 @@
 /**
  * @vitest-environment jsdom
  *
- * On connecting, Studio sends each mock it runs. The page kept the mocks it
- * had before a reconnect, so a mock Studio stopped meanwhile stayed listed.
+ * On connecting, Studio sends each mock it runs, and the page lists those
+ * rather than the mocks it had before the reconnect, so a mock Studio
+ * stopped meanwhile leaves the list.
  */
 import type { Socket } from "socket.io-client";
 import { afterEach, describe, expect, it } from "vitest";

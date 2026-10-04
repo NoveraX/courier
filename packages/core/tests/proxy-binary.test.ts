@@ -1,12 +1,12 @@
 /**
  * Binary bodies, and bodiless answers, through the proxy.
  *
- * The proxy answered every call with JSON. An ArrayBuffer or a Blob the
- * source downloaded serializes to `{}`, so a binary download resolved to an
- * empty object where direct mode resolved to the bytes. A 204 read with
- * `.raw` resolved to `null` rather than the `{ status, headers, data }` it
- * is in direct mode. And a binary variable, serialized the same way, reached
- * the upstream as "[object Object]".
+ * An ArrayBuffer or a Blob the source downloads serializes to `{}` in JSON,
+ * so the proxy answers it as bytes, marked by its content type: a binary
+ * download resolves to the bytes, as in direct mode. A 204 read with `.raw`
+ * resolves to the `{ status, headers, data }` it is in direct mode, not to
+ * `null`. And a binary variable, which JSON would carry as
+ * "[object Object]", is refused before anything is sent.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

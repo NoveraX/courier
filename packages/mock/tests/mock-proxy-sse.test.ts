@@ -2,8 +2,8 @@
  * A proxy client's stream against the mock server.
  *
  * A proxy-mode subscription opens `GET /api/sse?_s=…&_g=…&_m=…&_v=…`, the
- * route a Courier proxy serves streams on. The mock server had no such
- * route and answered 404, so no proxy client could stream from a mock.
+ * route a Courier proxy serves streams on, and the mock server serves it
+ * too, so a proxy client streams from a mock rather than meeting a 404.
  */
 import { createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

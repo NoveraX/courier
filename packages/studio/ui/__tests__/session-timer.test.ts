@@ -2,10 +2,10 @@
  * @vitest-environment jsdom
  *
  * The status bar's session time is the one Studio keeps for the runtimes
- * attached now. A page kept its own copy in the browser, cleared only when
- * that page saw the last runtime leave, so a page opened after Studio or the
- * page had closed counted from a session long over — 285 hours, seconds
- * after Studio started.
+ * attached now, not a copy the page keeps in the browser: cleared only when
+ * that page saw the last runtime leave, a copy would have a page opened
+ * after Studio or the page had closed count from a session long over — 285
+ * hours, seconds after Studio started.
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

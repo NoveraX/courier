@@ -2,10 +2,11 @@
  * A caller's `ws` options reach the socket its channels share, end to end on
  * a real `ws` server.
  *
- * `getAuthToken`, the backoff, the heartbeat and the queue limits were
- * options of the connection alone, which no public caller could pass: a
- * server's `auth_required` went unanswered — "no getAuthToken configured" —
- * and the connection was closed, however the application meant to refresh.
+ * `getAuthToken`, the backoff, the heartbeat and the queue limits are
+ * options of the connection, passed through the caller: without them a
+ * server's `auth_required` would go unanswered — "no getAuthToken
+ * configured" — and the connection close, however the application means to
+ * refresh.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

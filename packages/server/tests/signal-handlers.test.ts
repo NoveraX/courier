@@ -1,8 +1,8 @@
 /**
  * The server's SIGTERM/SIGINT handling, in a real process receiving a real
- * signal. The server ended the process as soon as its own drain finished,
- * cutting short whatever an embedding host was still doing in its own
- * signal handler.
+ * signal. The server ends the process once drained only when nothing else
+ * handles the signal, so an embedding host's own handler finishes its
+ * cleanup rather than being cut short.
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

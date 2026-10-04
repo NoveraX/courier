@@ -3,9 +3,10 @@
  *
  * `NestFactory.create(AppModule)` mounts Express's JSON and URL-encoded
  * parsers across the whole application before any middleware runs, and a
- * route cannot opt out. Every JSON call then reached the proxy with its
- * stream already spent and answered 500 REQUEST_BODY_ALREADY_READ; turning
- * the parser off fixed the proxy and emptied every `@Body()` in the app.
+ * route cannot opt out. The proxy reads the body those parsers left, so a
+ * JSON call is served rather than answered 500 REQUEST_BODY_ALREADY_READ —
+ * and the parser stays on, since turning it off empties every `@Body()` in
+ * the app.
  *
  * The parsers here are the ones Nest registers, with the options it passes.
  */

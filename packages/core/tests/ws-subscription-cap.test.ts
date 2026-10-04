@@ -1,11 +1,11 @@
 /**
  * `maxSubscriptionsPerConnection` against a burst.
  *
- * The cap was read when a subscribe arrived, and the subscription was
- * counted only once validation, middleware and authorization had run —
- * several awaits later. Every frame of a burst saw the count as it was
- * before the burst, so one socket could open 500 subscriptions under a cap
- * of 5, each with a live handler behind it.
+ * A subscription takes its place the moment its frame arrives, before
+ * validation, middleware and authorization run — several awaits later.
+ * Counted only once those had run, every frame of a burst would see the
+ * count as it stood before the burst, and one socket could open 500
+ * subscriptions under a cap of 5, each with a live handler behind it.
  */
 import { afterEach, describe, expect, it } from "vitest";
 

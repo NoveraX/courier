@@ -1,9 +1,8 @@
 /**
  * The type written beside a zod or valibot schema for an endpoint's
- * variables — a named body extended with its parameters — wrote an optional
- * parameter as `notify?: boolean`, where the validator infers
- * `boolean | undefined`. Under `exactOptionalPropertyTypes` the two did not
- * match, and a project with the option set did not compile the client.
+ * variables — a named body extended with its parameters — matches what the
+ * validator infers, `boolean | undefined` for an optional parameter, so a
+ * project with `exactOptionalPropertyTypes` set compiles the client.
  */
 import { afterAll, describe, expect, it } from "vitest";
 

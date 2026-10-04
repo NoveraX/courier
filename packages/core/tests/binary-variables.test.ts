@@ -2,9 +2,10 @@
  * Binary data inside a proxy call's variables.
  *
  * The proxy envelope is JSON, and JSON has no binary type: a Blob, an
- * ArrayBuffer or a stream becomes `{}` on the way. A closure that sent
- * `v.body` upstream then sent the text `[object Object]`, and the call
- * resolved as if the bytes had arrived.
+ * ArrayBuffer or a stream would become `{}` on the way, and a closure that
+ * sends `v.body` upstream would send the text `[object Object]` while the
+ * call resolved as if the bytes had arrived. Such a call is refused before
+ * anything is sent, naming where the binary value sits.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

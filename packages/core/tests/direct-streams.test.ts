@@ -1,9 +1,9 @@
 /**
  * A direct caller opens a stream another server serves as its source
- * declares it: with the source's `headers`, which reached every HTTP call
- * and no stream, so a stream of an API that takes its key there answered
- * 401; with data that is not JSON kept as its text, where it was skipped;
- * and never at a route above the one it declares.
+ * declares it: with the source's `headers`, as every HTTP call carries them,
+ * so a stream of an API that takes its key there is not answered 401; with
+ * data that is not JSON kept as its text rather than skipped; and never at a
+ * route above the one it declares.
  */
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

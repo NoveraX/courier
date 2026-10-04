@@ -2,10 +2,10 @@
  * Pages on the origins `allowedOrigins` lists, calling the proxy from a
  * browser.
  *
- * The origin check admitted them, but the handler answered the browser's
- * preflight with 405 and put no `Access-Control-Allow-Origin` on any answer,
- * so the browser refused every call before or after it ran: the option could
- * not be used without CORS middleware no doc mentioned.
+ * The handler answers the browser's preflight for a listed origin and puts
+ * `Access-Control-Allow-Origin` on each answer to it: without them the
+ * browser refuses every call before or after it runs, and the option could
+ * not be used without CORS middleware of the application's own.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

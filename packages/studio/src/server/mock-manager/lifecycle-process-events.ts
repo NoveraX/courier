@@ -9,6 +9,7 @@
 
 import { createLogger } from "@noverax/courier";
 import type { MockLog } from "../storage/mock-log";
+import { applyWorkerEvent } from "./apply-worker-event";
 import type { ProcessManagerEvents } from "./process-manager";
 import type { ServerState } from "./types";
 
@@ -80,39 +81,16 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
       updateAndEmit(serverId, { status: "crashed", lastError: reason, ...GONE });
     },
 
+    /* Every event the worker sends names its type; the page is sent each one
+       as it came, and Studio keeps what it changed for pages that connect
+       later. */
     onEvent(serverId, event) {
-      emit(event.type as string, { ...event, serverId });
+      const { type } = event;
+      if (typeof type !== "string") return;
+      emit(type, { ...event, serverId });
       ctx.mockLog?.record({ ...event, serverId });
-
       const state = servers.get(serverId);
-      if (!state) return;
-
-      if (event.type === "mock:store:snapshot") {
-        state.collections = (event.collections as ServerState["collections"]) ?? state.collections;
-      }
-
-      // Keep activeScenario in sync so sendSnapshot() reflects the current state.
-      if (event.type === "mock:scenario:active") {
-        state.activeScenario = (event.scenario as string) ?? state.activeScenario;
-        if (Array.isArray(event.scenarios)) {
-          state.scenarios = event.scenarios as ServerState["scenarios"];
-        }
-        if (Array.isArray(event.routes)) {
-          state.routes = event.routes as ServerState["routes"];
-        }
-      }
-
-      // Keep network presets in sync so sendSnapshot() restores them on UI reconnect.
-      if (event.type === "mock:network:config") {
-        const cfg = event.config as Record<string, unknown> | undefined;
-        if (cfg) {
-          state.latencyPreset = cfg.latencyPreset as string | undefined;
-          state.latencyStartedAt = cfg.latencyStartedAt as number | null | undefined;
-          state.chaosPreset = cfg.chaosPreset as string | undefined;
-          state.chaosStartedAt = cfg.chaosStartedAt as number | null | undefined;
-          state.networkConfig = cfg;
-        }
-      }
+      if (state) applyWorkerEvent(state, event);
     },
   };
 }

@@ -16,7 +16,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NoveraX/courier.git",
+    "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/studio-core"
   },
   "homepage": "https://courier.noverax.cloud",

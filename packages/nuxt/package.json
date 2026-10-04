@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-nuxt",
   "version": "0.0.0",
-  "description": "Nuxt adapter for @noverax/courier \u2014 h3/Nitro event handler",
+  "description": "Nuxt adapter for @noverax/courier — h3/Nitro event handler",
   "keywords": [
     "courier",
     "typescript",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NoveraX/courier.git",
+    "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/nuxt"
   },
   "homepage": "https://courier.noverax.cloud",

@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-next",
   "version": "0.0.0",
-  "description": "Next.js adapter for @noverax/courier \u2014 API route handler and Server Actions",
+  "description": "Next.js adapter for @noverax/courier — API route handler and Server Actions",
   "keywords": [
     "courier",
     "typescript",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NoveraX/courier.git",
+    "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/next"
   },
   "homepage": "https://courier.noverax.cloud",

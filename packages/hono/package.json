@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-hono",
   "version": "0.0.0",
-  "description": "Hono adapter for @noverax/courier \u2014 Web Standard proxy handler",
+  "description": "Hono adapter for @noverax/courier — Web Standard proxy handler",
   "keywords": [
     "courier",
     "typescript",
@@ -15,7 +15,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NoveraX/courier.git",
+    "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/hono"
   },
   "homepage": "https://courier.noverax.cloud",

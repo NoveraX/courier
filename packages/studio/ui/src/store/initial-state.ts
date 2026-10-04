@@ -12,6 +12,7 @@ export type InitialState = Pick<
   | "lastBindingError"
   | "requests"
   | "paused"
+  | "heldRequests"
   | "shownSession"
   | "auditExpandedIds"
   | "playgroundHistory"
@@ -40,6 +41,7 @@ export function createInitialState(savedTheme: StudioState["theme"]): InitialSta
     lastBindingError: null,
     requests: [],
     paused: false,
+    heldRequests: [],
     shownSession: null,
     auditExpandedIds: new Set<string>(),
     playgroundHistory: [],

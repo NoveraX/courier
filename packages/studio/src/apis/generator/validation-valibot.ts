@@ -4,13 +4,14 @@
 
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
 import { jsLiteral, objectKey, type SpecValue } from "./literals";
+import { withValibotChecks } from "./valibot-checks";
 
 export function schemaToValibot(schema: ParsedSchema): string {
   if (schema.type === "ref" && schema.refName) return `${schema.refName}Schema`;
 
   if (schema.type === "array") {
     const items = schema.items ? schemaToValibot(schema.items) : "v.unknown()";
-    return `v.array(${items})`;
+    return withValibotChecks(`v.array(${items})`, schema.constraints);
   }
 
   if (schema.type === "enum" && schema.enum) return valibotEnum(schema.enum);
@@ -42,7 +43,7 @@ export function schemaToValibot(schema: ParsedSchema): string {
     return `v.looseObject({\n${propLines.join(",\n")},\n})`;
   }
 
-  return primitiveToValibot(schema.type);
+  return withValibotChecks(primitiveToValibot(schema.type), schema.constraints);
 }
 
 export function propToValibot(prop: ParsedSchemaProperty): string {
@@ -50,11 +51,13 @@ export function propToValibot(prop: ParsedSchemaProperty): string {
   /* Without this the members were thrown away and the property became a plain
      string, which then failed the `satisfies` assertion written beside it. */
   if (prop.enum) return valibotEnum(prop.enum);
-  if (prop.type === "array" && prop.items) return `v.array(${schemaToValibot(prop.items)})`;
+  if (prop.type === "array" && prop.items) {
+    return withValibotChecks(`v.array(${schemaToValibot(prop.items)})`, prop.constraints);
+  }
   if (prop.shape) return schemaToValibot(prop.shape);
   if (prop.valueType) return `v.record(v.string(), ${schemaToValibot(prop.valueType)})`;
   if (prop.type === "object") return "v.record(v.string(), v.unknown())";
-  return primitiveToValibot(prop.type, prop.format);
+  return withValibotChecks(primitiveToValibot(prop.type, prop.format), prop.constraints);
 }
 
 export function primitiveToValibot(type: string, format?: string): string {

@@ -4,6 +4,7 @@
 
 import { componentIdentifier } from "./component-identifier";
 import { acceptsNull, orNull, stripNull } from "./nullable-schema";
+import { readConstraints } from "./read-constraints";
 import { componentSchemaName } from "./ref-utils";
 import { convertSchema, normalizeTypeArray, schemaTypeOf } from "./schema-conversion";
 import { asNode, type SpecNode, textAt } from "./spec-node";
@@ -41,9 +42,12 @@ export function convertSchemaInline(raw: SpecNode, spec: SpecNode): ParsedSchema
   if (schema.allOf || schema.oneOf || schema.anyOf) return convertSchema("Inline", schema, spec);
   const type = textAt(schema, "type");
   if (type === "array" && schema.items) {
-    return { name: "Array", type: "array", items: convertSchemaInline(asNode(schema.items), spec) };
+    const items = convertSchemaInline(asNode(schema.items), spec);
+    const constraints = readConstraints(schema, type);
+    return { name: "Array", type: "array", items, ...(constraints && { constraints }) };
   }
   if (type === "object" || schema.properties) return convertSchema("Inline", schema, spec);
   const known = schemaTypeOf(type);
-  return { name: known, type: known };
+  const constraints = readConstraints(schema, known);
+  return { name: known, type: known, ...(constraints && { constraints }) };
 }

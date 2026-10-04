@@ -5,6 +5,7 @@
 import { componentIdentifier } from "./component-identifier";
 import { expandPointer } from "./pointer-refs";
 import { isComposite, soleMember, withoutNull } from "./property-forms";
+import { readConstraints } from "./read-constraints";
 import { componentSchemaName } from "./ref-utils";
 import { convertSchema, enumValues, normalizeTypeArray } from "./schema-conversion";
 import { asNode, fieldOf, isNode, listAt, type SpecNode, textAt } from "./spec-node";
@@ -73,12 +74,12 @@ export function convertProperty(
   }
 
   const constant = node.const === undefined ? undefined : [node.const];
+  const declared = textAt(node, "type");
+  const constraints = component === undefined ? readConstraints(node, declared) : undefined;
   return {
     ...base,
-    type:
-      component !== undefined
-        ? "ref"
-        : (textAt(node, "type") ?? (constant ? typeof node.const : "any")),
+    ...(constraints && { constraints }),
+    type: component !== undefined ? "ref" : (declared ?? (constant ? typeof node.const : "any")),
     format: textAt(node, "format"),
     enum:
       node.enum !== undefined ? enumValues(listAt(node, "enum")) : constant && enumValues(constant),

@@ -204,3 +204,104 @@ describe("a body or answer written inline", () => {
     ]);
   });
 });
+
+describe("a schema's constraints", () => {
+  const PET = {
+    type: "object",
+    required: ["name"],
+    properties: {
+      name: { type: "string", maxLength: 10 },
+      age: { type: "integer", minimum: 0 },
+    },
+  };
+  const parsed = spec(
+    {
+      Pet: PET,
+      Owner: { type: "object", properties: { pet: ref("Pet") } },
+      Adoption: { type: "object", properties: { pet: ref("Pet") } },
+      NewToy: { type: "object", properties: { label: { type: "string", minLength: 1 } } },
+      Stats: { type: "object", properties: { count: { type: "integer", maximum: 5 } } },
+    },
+    {
+      "/pets": {
+        post: {
+          operationId: "createPet",
+          parameters: [{ name: "limit", in: "query", schema: { type: "integer", maximum: 100 } }],
+          requestBody: json(ref("Pet")),
+          responses: { "201": { description: "ok", ...json(ref("Pet")) } },
+        },
+      },
+      "/owners": {
+        put: {
+          operationId: "putOwner",
+          requestBody: json(ref("Owner")),
+          responses: { "200": { description: "ok", ...json(ref("Owner")) } },
+        },
+      },
+      "/adoptions": {
+        post: {
+          operationId: "adopt",
+          requestBody: json(ref("Adoption")),
+          responses: { "204": { description: "done" } },
+        },
+      },
+      "/toys": {
+        post: {
+          operationId: "addToy",
+          requestBody: json(ref("NewToy")),
+          responses: {
+            "200": {
+              description: "ok",
+              ...json({ type: "object", properties: { id: { type: "string", maxLength: 3 } } }),
+            },
+          },
+        },
+      },
+      "/stats": {
+        get: {
+          operationId: "stats",
+          responses: { "200": { description: "ok", ...json(ref("Stats")) } },
+        },
+      },
+    },
+  );
+
+  it("are kept on the input a request sends and dropped from the answer, for a schema both use", () => {
+    expect(parsed.schemas.PetInput?.properties?.name?.constraints).toEqual({ maxLength: 10 });
+    expect(parsed.schemas.PetInput?.properties?.age?.constraints).toEqual({
+      integer: true,
+      minimum: 0,
+    });
+    expect(parsed.schemas.Pet?.properties?.name?.constraints).toBeUndefined();
+    expect(parsed.schemas.Pet?.properties?.age?.constraints).toBeUndefined();
+    expect(endpoint(parsed, "createPet")?.requestBody?.refName).toBe("PetInput");
+    expect(endpoint(parsed, "createPet")?.responseSchema?.refName).toBe("Pet");
+  });
+
+  it("split a schema that refers to one with them, sending the input it refers to", () => {
+    expect(parsed.schemas.OwnerInput?.properties?.pet?.refName).toBe("PetInput");
+    expect(parsed.schemas.Owner?.properties?.pet?.refName).toBe("Pet");
+  });
+
+  it("stay where they are for a schema only requests send, which refers to inputs", () => {
+    expect(parsed.schemas.NewToy?.properties?.label?.constraints).toEqual({ minLength: 1 });
+    expect(parsed.schemas.NewToyInput).toBeUndefined();
+    expect(parsed.schemas.Adoption?.properties?.pet?.refName).toBe("PetInput");
+    expect(parsed.schemas.AdoptionInput).toBeUndefined();
+  });
+
+  it("are dropped from a schema only answers carry, and from an answer written inline", () => {
+    expect(parsed.schemas.Stats?.properties?.count?.constraints).toBeUndefined();
+    expect(parsed.schemas.StatsInput).toBeUndefined();
+    expect(endpoint(parsed, "addToy")?.responseSchema?.properties?.id?.constraints).toBeUndefined();
+  });
+
+  it("are kept on a parameter", () => {
+    const [limit] = endpoint(parsed, "createPet")?.parameters ?? [];
+    expect(limit?.constraints).toEqual({ integer: true, maximum: 100 });
+  });
+
+  it("are split once: splitting again changes nothing", () => {
+    expect(splitDirections(parsed)).toEqual(parsed);
+  });
+});

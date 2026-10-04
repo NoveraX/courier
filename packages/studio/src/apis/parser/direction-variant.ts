@@ -4,8 +4,9 @@ type Direction = "read" | "write";
 
 /**
  * A schema as it travels one way: the fields travelling the other way gone,
- * each directed field as required as declared for its way, and — for a
- * request — every reference to a split schema turned to its input twin.
+ * each directed field as required as declared for its way, its constraints
+ * kept for a request and dropped for an answer, and — for a request — every
+ * reference to a split schema turned to its input twin.
  *
  * @param schema - The schema, its properties carrying their direction
  * @param to - The way it travels: `read` for an answer, `write` for a request
@@ -22,13 +23,15 @@ export function variant(
   to: Direction,
   inputs: ReadonlyMap<string, string>,
 ): ParsedSchema {
+  const { constraints, ...rest } = schema;
   return {
-    ...schema,
-    ...(schema.refName && { refName: renamed(schema.refName, to, inputs) }),
-    ...(schema.properties && fieldsVariant(schema.properties, schema.required, to, inputs)),
-    ...(schema.items && { items: variant(schema.items, to, inputs) }),
-    ...(schema.valueType && { valueType: variant(schema.valueType, to, inputs) }),
-    ...(schema.variants && { variants: schema.variants.map((part) => variant(part, to, inputs)) }),
+    ...rest,
+    ...(to === "write" && constraints && { constraints }),
+    ...(rest.refName && { refName: renamed(rest.refName, to, inputs) }),
+    ...(rest.properties && fieldsVariant(rest.properties, rest.required, to, inputs)),
+    ...(rest.items && { items: variant(rest.items, to, inputs) }),
+    ...(rest.valueType && { valueType: variant(rest.valueType, to, inputs) }),
+    ...(rest.variants && { variants: rest.variants.map((part) => variant(part, to, inputs)) }),
   };
 }
 
@@ -54,9 +57,10 @@ function propertyVariant(
   to: Direction,
   inputs: ReadonlyMap<string, string>,
 ): ParsedSchemaProperty {
-  const { direction, requiredInDirection, ...rest } = prop;
+  const { direction, requiredInDirection, constraints, ...rest } = prop;
   return {
     ...rest,
+    ...(to === "write" && constraints && { constraints }),
     required: direction === to ? requiredInDirection === true : rest.required,
     ...(rest.refName && { refName: renamed(rest.refName, to, inputs) }),
     ...(rest.items && { items: variant(rest.items, to, inputs) }),

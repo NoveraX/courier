@@ -5,6 +5,7 @@
  */
 
 import type { ParsedSchema, ParsedSchemaProperty } from "../parser/types";
+import { arkExpressionOf, withArkChecks } from "./arktype-checks";
 import { arkExpression, enumerated } from "./arktype-expression";
 import { jsLiteral } from "./literals";
 
@@ -40,7 +41,7 @@ export function schemaToArkType(schema: ParsedSchema, lazy?: LazyTargets): strin
 
   if (schema.type === "array") {
     const items = schema.items ? schemaToArkType(schema.items, lazy) : arkType("unknown");
-    return `${items}.array()`;
+    return withArkChecks(`${items}.array()`, schema.constraints);
   }
 
   if (schema.type === "enum" && schema.enum) return enumerated(schema.enum, false);
@@ -61,7 +62,11 @@ export function schemaToArkType(schema: ParsedSchema, lazy?: LazyTargets): strin
     return objectOf(propLines);
   }
 
-  return arkType(arkExpression(schema.type));
+  const { constraints } = schema;
+  return withArkChecks(
+    arkType(arkExpressionOf(arkExpression(schema.type), constraints)),
+    constraints,
+  );
 }
 
 export function propToArkType(prop: ParsedSchemaProperty, lazy?: LazyTargets): string {
@@ -69,9 +74,19 @@ export function propToArkType(prop: ParsedSchemaProperty, lazy?: LazyTargets): s
     return enumerated(prop.enum, prop.nullable === true);
   }
 
-  /* A primitive is one ArkType string, so null joins the text. */
+  /* A primitive is one ArkType string, so null joins the text — unless it is
+     checked, when the checks are chained onto its type and null joins that. */
   const text = propText(prop);
-  if (text !== undefined) return arkType(prop.nullable ? `${text} | null` : text);
+  if (text !== undefined && !prop.constraints) {
+    return arkType(prop.nullable ? `${text} | null` : text);
+  }
+  if (text !== undefined) {
+    const checked = withArkChecks(
+      arkType(arkExpressionOf(text, prop.constraints)),
+      prop.constraints,
+    );
+    return prop.nullable ? `${checked}.or("null")` : checked;
+  }
 
   const value = propStructure(prop, lazy);
   return prop.nullable ? unionOf([value, arkType("null")]) : value;
@@ -94,7 +109,7 @@ function propStructure(prop: ParsedSchemaProperty, lazy?: LazyTargets): string {
   if (prop.shape) return schemaToArkType(prop.shape, lazy);
   if (prop.valueType) return mapOf(prop.valueType, lazy);
   const items = prop.items ? schemaToArkType(prop.items, lazy) : arkType("unknown");
-  return `${items}.array()`;
+  return withArkChecks(`${items}.array()`, prop.constraints);
 }
 
 function objectOf(propLines: string[]): string {

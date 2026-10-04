@@ -23,12 +23,7 @@
  * guessing names is trying to learn.
  */
 
-/** The shape this reads; every level is optional. */
-interface ExposableOptions {
-  expose?: boolean;
-  boundary?: { endpoints?: Record<string, unknown> };
-  groups?: Record<string, { options?: { expose?: boolean } }>;
-}
+import { isRecord } from "../utils/is-record";
 
 /**
  * Decide whether a named endpoint may be served to a caller off the wire.
@@ -47,21 +42,45 @@ export function isExposedToWire(
   group: string | undefined,
   method?: string,
 ): boolean {
-  const options = (dataSource as { options?: ExposableOptions } | undefined)?.options;
+  const options =
+    isRecord(dataSource) && isRecord(dataSource.options) ? dataSource.options : undefined;
   if (!options) return true;
 
   /* A declared boundary is the whole answer: it lists what may be called, so
      anything it does not name is refused however the coarser flags read. */
-  const listed = options.boundary?.endpoints;
+  const listed = boundaryEndpointsOf(options);
   if (listed && method !== undefined) {
     const path = group === undefined ? method : `${group}.${method}`;
     return Object.hasOwn(listed, path);
   }
 
   if (group !== undefined) {
-    const groupExpose = options.groups?.[group]?.options?.expose;
+    const groupExpose = groupExposeOf(options, group);
     if (groupExpose !== undefined) return groupExpose;
   }
 
-  return options.expose ?? true;
+  return exposeFlag(options.expose) ?? true;
+}
+
+/* A flag set to anything but `true` shuts off what it is set on, so one
+   misspelt in a JavaScript config — `expose: "false"`, `expose: 0` — fails
+   closed rather than open. */
+function exposeFlag(value: unknown): boolean | undefined {
+  return value === undefined ? undefined : value === true;
+}
+
+/* Every level of what this reads is optional, and only its own keys count:
+   the group comes from the request, so `constructor` names no group. */
+function boundaryEndpointsOf(
+  options: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  const { boundary } = options;
+  return isRecord(boundary) && isRecord(boundary.endpoints) ? boundary.endpoints : undefined;
+}
+
+function groupExposeOf(options: Record<string, unknown>, group: string): boolean | undefined {
+  const { groups } = options;
+  if (!isRecord(groups) || !Object.hasOwn(groups, group)) return undefined;
+  const entry = groups[group];
+  return isRecord(entry) && isRecord(entry.options) ? exposeFlag(entry.options.expose) : undefined;
 }

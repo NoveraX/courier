@@ -87,7 +87,12 @@ function troubledTraffic(): RequestEntry[] {
       method: "report",
       timing: { total: 6_000, middleware: 0, fetch: 6_000, validation: 0 },
     }),
-    request(7, { method: "create", httpMethod: "POST", type: "mutation" }),
+    request(7, {
+      method: "create",
+      httpMethod: "POST",
+      type: "mutation",
+      variables: { sku: "a-1" },
+    }),
     request(8, { method: "export", url: "https://api.example.com/export?token=secret" }),
   ];
 }

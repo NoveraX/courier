@@ -23,6 +23,7 @@ function stats(type: "query" | "mutation", method: string): EndpointStats {
     avgSize: 10,
     hasVariablesValidation: true,
     hasResponseValidation: true,
+    sentVariables: true,
     modes: new Set(["direct"]),
     statusCodes: [200],
     middlewareOverhead: 0,

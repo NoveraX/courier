@@ -47,8 +47,8 @@ export function collectPasses(stats: Map<string, EndpointStats>): AuditItem[] {
 export function collectHints(stats: Map<string, EndpointStats>, catalog: Catalog): AuditItem[] {
   return [
     ...noCachingDetected(stats),
-    ...noResponseValidation(stats),
-    ...noVariablesValidation(stats),
+    ...noResponseValidation(stats, catalog),
+    ...noVariablesValidation(stats, catalog),
     ...missingAllSchemas(stats, catalog),
     ...proxyLatencyOverhead(stats),
     ...validationOverhead(stats),

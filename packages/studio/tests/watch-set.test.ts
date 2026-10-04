@@ -313,6 +313,19 @@ describe("createWatchSet", () => {
     expect(set.status()).toMatchObject({ pathCount: 1, directoryCount: 1 });
   });
 
+  it("compares each tracked file, and one directory for all the absent paths in it", () => {
+    /* An import of `./api.js` that runs `api.ts` tracks ten absent paths
+       beside it; each was looked up on its own timer before. */
+    const present = join(root, "api.ts");
+    writeFileSync(present, "1");
+    const absent = [".js", ".js.js", ".js.mjs", ".js.cjs", ".js.tsx", ".js.mts"].map((ext) =>
+      join(root, `api${ext}`),
+    );
+    const set = start({ paths: [present, ...absent], onChange: () => {} });
+
+    expect(set.status()).toMatchObject({ pathCount: 7, directoryCount: 1, comparedCount: 2 });
+  });
+
   it("reports no refused watch for a path in a directory that does not exist yet", async () => {
     const onDegraded = vi.fn();
     const set = start({ paths: [join(root, "later", "a.ts")], onChange: () => {}, onDegraded });

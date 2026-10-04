@@ -3,104 +3,110 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/public/logos/courier-mark-light.svg" />
     <source media="(prefers-color-scheme: light)" srcset="docs/public/logos/courier-mark-dark.svg" />
-    <img alt="Courier" src="docs/public/logos/courier-mark-dark.svg" height="44" />
+    <img alt="Courier" src="docs/public/logos/courier-mark-dark.svg" height="52" />
   </picture>
 
-  <h1>courier</h1>
+  <h1>Courier</h1>
+
+  <p><strong>One API definition. Typed calls from every side of your app.</strong></p>
+
+  <p>
+    Call any REST backend with end-to-end types — from server code, through a proxy that keeps<br />
+    your keys on the server, and over SSE and WebSockets. A mock server and a dev Studio come with it.
+  </p>
+
+  <p>
+    <a href="https://www.npmjs.com/package/@noverax/courier"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier?style=flat-square&label=npm&labelColor=0e1116&color=6d28d9" /></a>
+    <a href="https://github.com/NoveraX/courier/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/NoveraX/courier/ci.yml?branch=master&style=flat-square&label=ci&labelColor=0e1116" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-6d28d9?style=flat-square&labelColor=0e1116" /></a>
+    <a href="./LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-6d28d9?style=flat-square&labelColor=0e1116" /></a>
+  </p>
+
+  <p>
+    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    &nbsp;·&nbsp;
+    <a href="#quick-start">Quick start</a>
+    &nbsp;·&nbsp;
+    <a href="examples/basic">Example</a>
+    &nbsp;·&nbsp;
+    <a href="#courier-studio">Studio</a>
+    &nbsp;·&nbsp;
+    <a href="#packages">Packages</a>
+  </p>
 
   <br />
-  <br />
 
-  <p><strong>Type-safe API client for any framework. Define once, call anywhere.</strong></p>
-  <p>End-to-end type safety from API definition to UI — no codegen, no schema files, no custom backend.</p>
-
-  <br />
-
-  <a href="https://www.npmjs.com/package/@noverax/courier"><img src="https://img.shields.io/npm/v/@noverax/courier?color=7c3aed&label=npm&style=flat-square" alt="npm version" /></a>
-  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white&style=flat-square" alt="TypeScript" /></a>
-  <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-22c55e?style=flat-square" alt="License: MIT" /></a>
-  <a href="https://bundlephobia.com/package/@noverax/courier"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/courier?color=f59e0b&label=size&style=flat-square" alt="Bundle Size" /></a>
-
-  <br />
-  <br />
-
-  <code>Next.js</code> &nbsp; <code>Nuxt</code> &nbsp; <code>React</code> &nbsp; <code>Vue</code> &nbsp; <code>Hono</code> &nbsp; <code>Express</code> &nbsp; <code>Fastify</code> &nbsp; <code>NestJS</code> &nbsp; <code>Node.js</code> &nbsp; <code>Bun</code> &nbsp; <code>Deno</code>
-
-  <br />
-  <br />
-
-  <a href="https://courier.noverax.cloud">Documentation</a> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="https://courier.noverax.cloud/docs/examples/basic">Examples</a> &nbsp;&nbsp;|&nbsp;&nbsp; <a href="https://github.com/NoveraX/courier">GitHub</a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/hero-dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset=".github/assets/hero-light.png" />
+    <img alt="An editor completing caller.users. with every endpoint the API defines, each typed from the definition" src=".github/assets/hero-light.png" width="880" />
+  </picture>
 </div>
-
-<br />
-
----
 
 <br />
 
 ## Why Courier
 
-Most HTTP clients stop at "send a request, get a response." You still write boilerplate for every endpoint, duplicate types between client and server, and glue together validation, caching, and error handling yourself.
+Most HTTP clients stop at “send a request, get a response”. You still write the same boilerplate for every endpoint, copy types between client and server, and wire validation, retries and errors together yourself.
 
-Courier takes a different approach. You **define your API once** as plain TypeScript functions — and get autocomplete, type inference, runtime validation, middleware, and framework adapters out of the box. It works with **any REST backend** (Express, FastAPI, Rails, Go, Laravel — anything that speaks HTTP).
-
-<br />
-
-### Key Capabilities
-
-- 🔒 **End-to-end type safety** — response types, variables, endpoint names — all inferred. Zero codegen.
-- 🌍 **Framework agnostic** — core runs on any runtime with `fetch`. Adapters for Next.js, Nuxt, Hono, Express, Fastify, NestJS.
-- 🔀 **Two transport modes** — **Direct** — call backends from anywhere. **Proxy** — hide secrets, bypass CORS, carry the cookies you name.
-- 🧩 **Middleware chain** — retry, auth, logging, rate-limiting, caching — composable, type-safe, or write your own.
-- 🛡️ **Runtime validation** — plug in Zod, Valibot, ArkType, or any Standard Schema library. Validate on both sides.
-- ⚡ **React Query built-in** — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery` — fully typed, zero config.
-- 🚀 **Server Actions** — call your API from a Next.js Server Action with `createAction`, typed end to end and ready for `useActionState`.
-- 📤 **Upload progress** — real network-level tracking via XHR. Works on HTTP/1.1 and HTTP/2.
-- 📡 **Streaming & SSE** — first-class stream response support with typed error handling.
-- 🧪 **Testing utilities** — in-memory test client with mock builder, request history, and delay simulation.
+Courier starts from the other end. You **define your API once**, as plain TypeScript, and every call made from it is typed: endpoint names, variables and answers. It works with **any backend that speaks HTTP** — FastAPI, Rails, Go, Laravel, a service you do not own — and asks nothing of it.
 
 <br />
 
----
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>End-to-end types</h4>
+      Endpoint names, variables and answers are inferred from one definition. No codegen, no schema files.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Direct and proxy</h4>
+      Server code calls your backend itself. The browser goes through your server, which keeps keys, paths and cookies there.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Realtime</h4>
+      SSE streams and WebSocket channels, typed both ways, that complete, fail or reconnect as the server says.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Runtime validation</h4>
+      Zod, Valibot, ArkType or any Standard Schema — on the variables you send and the answers you get.
+    </td>
+    <td valign="top">
+      <h4>Middleware</h4>
+      Retry, auth with token refresh, caching and logging, composed in order — or a middleware of your own.
+    </td>
+    <td valign="top">
+      <h4>React Query</h4>
+      <code>useQuery</code>, <code>useMutation</code>, <code>useSuspenseQuery</code>, <code>useInfiniteQuery</code> and <code>useSubscription</code>, typed, with no setup.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Server Actions</h4>
+      <code>createAction</code> calls your API from a Next.js Server Action, typed and ready for <code>useActionState</code>.
+    </td>
+    <td valign="top">
+      <h4>Studio and mocks</h4>
+      Every call, live; a playground; OpenAPI import; mock servers that keep their records in SQLite.
+    </td>
+    <td valign="top">
+      <h4>Testing</h4>
+      An in-memory client with a mock builder and request history, plus contract tests and fixtures.
+    </td>
+  </tr>
+</table>
 
 <br />
 
-## Install
+## Quick start
 
 ```bash
 npm install @noverax/courier
 ```
 
-<details>
-<summary><strong>Framework-specific packages</strong></summary>
-<br />
-
-```bash
-# React Query integration
-npm install @noverax/courier-react @tanstack/react-query
-
-# Next.js (API routes + Server Actions)
-npm install @noverax/courier-next
-
-# Server adapters — install only what you use
-npm install @noverax/courier-express    # Express
-npm install @noverax/courier-fastify    # Fastify
-npm install @noverax/courier-hono       # Hono
-npm install @noverax/courier-nestjs     # NestJS
-npm install @noverax/courier-nuxt       # Nuxt / Nitro / h3
-```
-
-</details>
-
-<br />
-
----
-
-<br />
-
-## Define Your API
-
-This is shared across all frameworks. Define once — use everywhere.
+**1 — Define the API.** Shared by every framework: define once, use everywhere.
 
 ```ts
 // api/boundary.ts — the endpoints the browser may call through your server
@@ -142,23 +148,68 @@ export const api = defineApi({
 export const sources = { api }
 ```
 
-Server code imports `api` and calls every endpoint. Browser code imports the API only as a type and passes `boundary` instead, so your backend's address, its paths and your middleware never ship with the page — and the proxy refuses every endpoint the boundary does not name.
+**2 — Call it from the server.** Any runtime with `fetch`: Node.js, Bun, Deno, Cloudflare Workers.
+
+```ts
+import { createCaller } from "@noverax/courier"
+import { api } from "./api/sources"
+
+const caller = createCaller(api)
+
+// Works in Node.js, Bun, Deno, Cloudflare Workers — anywhere with fetch
+const users = await caller.users.getAll()
+const user = await caller.users.getById({ id: "1" })
+```
+
+**3 — Call it from the browser,** through one route on your server.
+
+Server code imports `api` and calls every endpoint. Browser code imports the API only as a type and passes `boundary` instead, so your backend's address, its paths and your middleware never ship with the page — and the proxy refuses every endpoint the boundary does not name. The [framework guides](#frameworks) below show the route and the caller for each framework.
 
 A runnable version — a backend, the proxy in front of it, a page's caller and server code — is in [`examples/basic`](examples/basic): `npm run demo --workspace examples/basic` from the repository root.
 
 <br />
 
----
+## How it fits together
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/architecture-dark.png" />
+  <source media="(prefers-color-scheme: light)" srcset=".github/assets/architecture-light.png" />
+  <img alt="Server code, the browser and realtime clients call through Courier — types, validation, middleware, the proxy route and streams — to any REST backend; Studio and the mock servers work from the same definition" src=".github/assets/architecture-light.png" />
+</picture>
+
+**Direct mode** — code that holds the API definition, usually on your server, calls your backend itself: no extra hop, full type safety.
+
+**Proxy mode** — the browser sends requests through your server, which hides API keys, bypasses CORS, and carries the session cookies a source or an endpoint names: `allowedHeaders: ["cookie", "set-cookie"]` on a backend of your own, or `.headers(["set-cookie"])` on just its sign-in.
+
+Both modes share the same API definition, the same middleware chain, and the same type inference.
 
 <br />
 
-## Framework Guides
+## Frameworks
+
+<table>
+  <tr>
+    <td align="center" width="96"><a href="#nextjs"><img src="https://api.iconify.design/logos/nextjs-icon.svg" height="28" alt="" /><br /><sub>Next.js</sub></a></td>
+    <td align="center" width="96"><a href="#nuxt"><img src="https://api.iconify.design/logos/nuxt-icon.svg" height="28" alt="" /><br /><sub>Nuxt</sub></a></td>
+    <td align="center" width="96"><a href="#react"><img src="https://api.iconify.design/logos/react.svg" height="28" alt="" /><br /><sub>React</sub></a></td>
+    <td align="center" width="96"><a href="#vue"><img src="https://api.iconify.design/logos/vue.svg" height="28" alt="" /><br /><sub>Vue</sub></a></td>
+    <td align="center" width="96"><a href="#svelte"><img src="https://api.iconify.design/logos/svelte-icon.svg" height="28" alt="" /><br /><sub>Svelte</sub></a></td>
+    <td align="center" width="96"><a href="#server-adapters"><img src="https://api.iconify.design/logos/hono.svg" height="28" alt="" /><br /><sub>Hono</sub></a></td>
+    <td align="center" width="96"><a href="#server-adapters"><img src="https://api.iconify.design/logos/express.svg" height="28" alt="" /><br /><sub>Express</sub></a></td>
+    <td align="center" width="96"><a href="#server-adapters"><img src="https://api.iconify.design/logos/fastify-icon.svg" height="28" alt="" /><br /><sub>Fastify</sub></a></td>
+    <td align="center" width="96"><a href="#server-adapters"><img src="https://api.iconify.design/logos/nestjs.svg" height="28" alt="" /><br /><sub>NestJS</sub></a></td>
+  </tr>
+</table>
+
+Astro, Remix and React Router, SolidStart and SvelteKit have adapters too — see [Packages](#packages).
 
 <br />
 
-### <img src="https://api.iconify.design/logos/nextjs-icon.svg" height="20" align="center" />&nbsp;&nbsp;Next.js
+<a id="nextjs"></a>
+<details>
+<summary><img src="https://api.iconify.design/logos/nextjs-icon.svg" height="16" align="center" />&nbsp;&nbsp;<strong>Next.js</strong> — proxy route, React Query hooks, Server Components and Server Actions</summary>
 
-Full-stack setup with proxy route, React Query hooks, Server Components, and Server Actions.
+<br />
 
 **1. Proxy route** — single route handles all endpoints:
 
@@ -284,11 +335,13 @@ export function CreateUserForm() {
 }
 ```
 
+</details>
+
+<a id="nuxt"></a>
+<details>
+<summary><img src="https://api.iconify.design/logos/nuxt-icon.svg" height="16" align="center" />&nbsp;&nbsp;<strong>Nuxt</strong> — Nitro route, a composable, server-side calls</summary>
+
 <br />
-
----
-
-### <img src="https://api.iconify.design/logos/nuxt-icon.svg" height="20" align="center" />&nbsp;&nbsp;Nuxt
 
 **1. Server route** — Nitro/h3 event handler:
 
@@ -352,11 +405,13 @@ export default defineEventHandler(async () => {
 })
 ```
 
+</details>
+
+<a id="react"></a>
+<details>
+<summary><img src="https://api.iconify.design/logos/react.svg" height="16" align="center" />&nbsp;&nbsp;<strong>React</strong> — Vite, CRA or any bundler, with React Query</summary>
+
 <br />
-
----
-
-### <img src="https://api.iconify.design/logos/react.svg" height="20" align="center" />&nbsp;&nbsp;React (Vite / CRA / any bundler)
 
 Works with any React setup. Pair with Express, Hono, or Fastify on the server side.
 
@@ -400,11 +455,13 @@ export default function App() {
 }
 ```
 
+</details>
+
+<a id="vue"></a>
+<details>
+<summary><img src="https://api.iconify.design/logos/vue.svg" height="16" align="center" />&nbsp;&nbsp;<strong>Vue</strong> — the core caller with <code>ref</code>, <code>reactive</code> or any composable</summary>
+
 <br />
-
----
-
-### <img src="https://api.iconify.design/logos/vue.svg" height="20" align="center" />&nbsp;&nbsp;Vue
 
 The core caller is framework-agnostic — use it with `ref`, `reactive`, or any Vue composable.
 
@@ -447,11 +504,13 @@ async function createUser(name: string, email: string) {
 
 > **Tip:** For Vue + TanStack Query, use `@tanstack/vue-query` with `caller.users.getAll()` as your `queryFn`.
 
+</details>
+
+<a id="svelte"></a>
+<details>
+<summary><img src="https://api.iconify.design/logos/svelte-icon.svg" height="16" align="center" />&nbsp;&nbsp;<strong>Svelte</strong> — the core caller in a component</summary>
+
 <br />
-
----
-
-### <img src="https://api.iconify.design/logos/svelte-icon.svg" height="20" align="center" />&nbsp;&nbsp;Svelte
 
 ```ts
 // lib/caller.ts
@@ -481,15 +540,15 @@ export const caller = createProxyCaller<typeof api>("api", { boundary })
 {/each}
 ```
 
+</details>
+
+<a id="server-adapters"></a>
+<details>
+<summary><strong>Server adapters</strong> — Hono, Express, Fastify, NestJS</summary>
+
 <br />
-
----
-
-### Server Adapters
 
 Each adapter exposes a single handler that plugs into your server framework. All of them take the same config as `createHandler`, so each is given the same `sources` object the same way: `{ sources }`. Left out, they read the sources `registerSources()` or `attachRuntime()` registered.
-
-<br />
 
 #### <img src="https://api.iconify.design/logos/hono.svg" height="16" align="center" />&nbsp;&nbsp;Hono
 
@@ -548,32 +607,11 @@ export class AppModule implements NestModule {
 }
 ```
 
-<br />
-
-#### Universal (Node.js / Bun / Deno)
-
-The core caller works in any JavaScript runtime — no framework required.
-
-```ts
-import { createCaller } from "@noverax/courier"
-import { api } from "./api/sources"
-
-const caller = createCaller(api)
-
-// Works in Node.js, Bun, Deno, Cloudflare Workers — anywhere with fetch
-const users = await caller.users.getAll()
-const user = await caller.users.getById({ id: "1" })
-```
+</details>
 
 <br />
 
----
-
-<br />
-
-## Advanced Features
-
-### Middleware
+## Middleware
 
 Composable middleware chain with built-in utilities.
 
@@ -599,7 +637,7 @@ const api = defineApi({
 })
 ```
 
-### Runtime Validation
+## Runtime validation
 
 Works with any [Standard Schema](https://github.com/standard-schema/standard-schema) library — Zod, Valibot, ArkType.
 
@@ -621,7 +659,7 @@ const users = defineGroup({
 })
 ```
 
-### Testing
+## Testing
 
 In-memory test client with mock builder — no network, no setup.
 
@@ -652,65 +690,40 @@ mock("users", "getAll").resolves([]).once()          // the next call only
 
 <br />
 
----
+## Courier Studio
 
-<br />
+A development server for the project's API: every call your app makes, live, with its timing and middleware; a playground for any endpoint, direct or through the proxy; OpenAPI and Postman import that writes the definition for you; and the mock servers from `courier.mocks.ts`, which keep their records across restarts.
 
-## Architecture
-
-```
-  Server code                  Browser
-  createCaller(api)            createProxyCaller("api", { boundary })
-          │                                       │
-          │                           GET or POST /api/request
-          │                                       │
-          │                             ┌─────────▼────────┐
-          │                             │  Server adapter  │  Next.js, Nuxt, Hono,
-          │                             │  (proxy route)   │  Express, Fastify…
-          │                             └─────────┬────────┘
-          │                                       │
-          └───────────────────┬───────────────────┘
-                              │
-                    ┌─────────▼────────┐
-                    │  executeRequest  │  middleware chain,
-                    │  (core engine)   │  schema validation
-                    └─────────┬────────┘
-                              │ fetch()
-                    ┌─────────▼────────┐
-                    │   Your backend   │  Express, FastAPI, Rails, Go…
-                    └──────────────────┘
+```bash
+npm install --save-dev @noverax/courier-studio
+npx courier-studio
 ```
 
-**Direct mode** — code that holds the API definition, usually on your server, calls your backend itself: no extra hop, full type safety.
-
-**Proxy mode** — the browser sends requests through your server, which hides API keys, bypasses CORS, and carries the session cookies a source or an endpoint names: `allowedHeaders: ["cookie", "set-cookie"]` on a backend of your own, or `.headers(["set-cookie"])` on just its sign-in.
-
-Both modes share the same API definition, the same middleware chain, and the same type inference.
-
-<br />
-
----
+See [`@noverax/courier-studio`](./packages/studio) for setup and [How Studio loads the project](https://courier.noverax.cloud/docs/studio/project-loading).
 
 <br />
 
 ## Comparison
 
-| Feature | fetch | axios | tRPC | **Courier** |
+| | fetch | axios | tRPC | **Courier** |
 | --- | :---: | :---: | :---: | :---: |
-| End-to-end type safety | - | - | Yes | **Yes** |
-| No custom backend required | Yes | Yes | - | **Yes** |
-| Framework agnostic | Yes | Yes | Yes | **Yes** |
-| React Query integration | - | - | Yes | **Yes** |
-| Server Components | Manual | Manual | Yes | **First-class** |
-| Server Actions | - | - | Experimental | **Built-in** |
-| Middleware chain | - | Interceptors | Middleware | **Composable** |
-| Runtime validation | - | - | Any validator | **Any Standard Schema** |
-| Upload progress | - | Yes | - | **Built-in** |
-| Path parameters | Manual | Manual | - | **Built-in** |
-| Streaming & SSE | Manual | Manual | Yes | **First-class** |
-| In-memory mock client | - | - | - | **Built-in** |
+| End-to-end type safety | — | — | ✓ | **✓** |
+| No custom backend required | ✓ | ✓ | — | **✓** |
+| Framework agnostic | ✓ | ✓ | ✓ | **✓** |
+| React Query integration | — | — | ✓ | **✓** |
+| Server Components | Manual | Manual | ✓ | **First-class** |
+| Server Actions | — | — | Experimental | **Built-in** |
+| Middleware chain | — | Interceptors | Middleware | **Composable** |
+| Runtime validation | — | — | Any validator | **Any Standard Schema** |
+| Upload progress | — | ✓ | — | **Built-in** |
+| Path parameters | Manual | Manual | — | **Built-in** |
+| Streaming & SSE | Manual | Manual | ✓ | **First-class** |
+| In-memory mock client | — | — | — | **Built-in** |
 
-### Closer alternatives
+<details>
+<summary><strong>Closer alternatives</strong> — oRPC, ts-rest, openapi-fetch, Hey API, ofetch</summary>
+
+<br />
 
 - **[oRPC](https://orpc.unnoq.com)** types each call from an oRPC router or contract that your server implements, and adds OpenAPI generation, event-iterator streams, Server Actions and TanStack Query. Courier types calls to a backend it does not own: FastAPI, Rails, Go or a third-party API.
 - **[ts-rest](https://ts-rest.com)** shares one REST contract between client and server, typed or validated with any Standard Schema library. Courier keeps one definition too, and builds on it: proxy mode, SSE and WebSocket channels, a mock server and Studio.
@@ -718,51 +731,53 @@ Both modes share the same API definition, the same middleware chain, and the sam
 - **[Hey API](https://heyapi.dev)** generates an SDK from an OpenAPI spec, with plugins for Zod, Valibot and ArkType schemas and TanStack Query hooks. Courier's definition is code you own and edit, with middleware, validation and streams in it.
 - **[ofetch](https://github.com/unjs/ofetch)** is a better `fetch` — retries, interceptors, automatic JSON parsing — typed by a generic on each call. Courier types every endpoint from its definition.
 
-<br />
-
----
+</details>
 
 <br />
 
 ## Packages
 
-| Package | Description | |
+**Core and clients**
+
+| Package | | |
 | --- | --- | --- |
-| [`@noverax/courier`](./packages/core) | Core — caller factories, HTTP client, middleware, validation, testing | [![npm](https://img.shields.io/npm/v/@noverax/courier?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier) |
-| [`@noverax/courier-react`](./packages/react) | React hooks — `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, `useSubscription`, `useComputedQuery`, `useChannel` | [![npm](https://img.shields.io/npm/v/@noverax/courier-react?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-react) |
-| [`@noverax/courier-next`](./packages/next) | Next.js — `apiRoute` handler + `createAction` for Server Actions | [![npm](https://img.shields.io/npm/v/@noverax/courier-next?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-next) |
-| [`@noverax/courier-express`](./packages/express) | Express middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-express?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-express) |
-| [`@noverax/courier-fastify`](./packages/fastify) | Fastify plugin adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-fastify?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-fastify) |
-| [`@noverax/courier-hono`](./packages/hono) | Hono Web Standard adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-hono?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-hono) |
-| [`@noverax/courier-nestjs`](./packages/nestjs) | NestJS middleware adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-nestjs?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-nestjs) |
-| [`@noverax/courier-nuxt`](./packages/nuxt) | Nuxt / Nitro / h3 event handler adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-nuxt?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-nuxt) |
-| [`@noverax/courier-astro`](./packages/astro) | Astro API endpoint adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-astro?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-astro) |
-| [`@noverax/courier-remix`](./packages/remix) | Remix / React Router loader and action adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-remix?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-remix) |
-| [`@noverax/courier-solid`](./packages/solid) | SolidStart adapter and Solid primitives | [![npm](https://img.shields.io/npm/v/@noverax/courier-solid?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-solid) |
-| [`@noverax/courier-sveltekit`](./packages/sveltekit) | SvelteKit endpoint adapter | [![npm](https://img.shields.io/npm/v/@noverax/courier-sveltekit?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-sveltekit) |
-| [`@noverax/courier-server`](./packages/server) | Standalone HTTP + SSE + WebSocket server | [![npm](https://img.shields.io/npm/v/@noverax/courier-server?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-server) |
-| [`@noverax/courier-mock`](./packages/mock) | Mock servers Studio runs from `courier.mocks.ts`, test utilities, contract testing and fixtures | [![npm](https://img.shields.io/npm/v/@noverax/courier-mock?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-mock) |
-| [`@noverax/courier-redis`](./packages/redis) | Redis pub/sub adapter for scaling WebSocket across replicas | [![npm](https://img.shields.io/npm/v/@noverax/courier-redis?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-redis) |
-| [`@noverax/courier-studio`](./packages/studio) | Studio dev server — request inspector, playground and mock servers | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-studio) |
-| [`@noverax/courier-studio-core`](./packages/studio-core) | Studio runtime — `attachRuntime` for your instrumentation | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio-core?color=7c3aed&style=flat-square&label=)](https://www.npmjs.com/package/@noverax/courier-studio-core) |
+| [`@noverax/courier`](./packages/core) | Caller factories, HTTP client, middleware, validation, realtime, testing | [![npm](https://img.shields.io/npm/v/@noverax/courier?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier) |
+| [`@noverax/courier-react`](./packages/react) | `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, `useSubscription`, `useComputedQuery`, `useChannel` | [![npm](https://img.shields.io/npm/v/@noverax/courier-react?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-react) |
+| [`@noverax/courier-next`](./packages/next) | `apiRoute` handler and `createAction` for Server Actions | [![npm](https://img.shields.io/npm/v/@noverax/courier-next?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-next) |
 
-<br />
+**Server adapters**
 
----
+| Package | | |
+| --- | --- | --- |
+| [`@noverax/courier-express`](./packages/express) | Express middleware | [![npm](https://img.shields.io/npm/v/@noverax/courier-express?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-express) |
+| [`@noverax/courier-fastify`](./packages/fastify) | Fastify plugin | [![npm](https://img.shields.io/npm/v/@noverax/courier-fastify?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-fastify) |
+| [`@noverax/courier-hono`](./packages/hono) | Hono handler, Web Standard | [![npm](https://img.shields.io/npm/v/@noverax/courier-hono?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-hono) |
+| [`@noverax/courier-nestjs`](./packages/nestjs) | NestJS middleware | [![npm](https://img.shields.io/npm/v/@noverax/courier-nestjs?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-nestjs) |
+| [`@noverax/courier-nuxt`](./packages/nuxt) | Nuxt, Nitro and h3 event handler | [![npm](https://img.shields.io/npm/v/@noverax/courier-nuxt?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-nuxt) |
+| [`@noverax/courier-astro`](./packages/astro) | Astro API endpoint | [![npm](https://img.shields.io/npm/v/@noverax/courier-astro?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-astro) |
+| [`@noverax/courier-remix`](./packages/remix) | Remix and React Router loaders and actions | [![npm](https://img.shields.io/npm/v/@noverax/courier-remix?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-remix) |
+| [`@noverax/courier-solid`](./packages/solid) | SolidStart adapter and Solid primitives | [![npm](https://img.shields.io/npm/v/@noverax/courier-solid?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-solid) |
+| [`@noverax/courier-sveltekit`](./packages/sveltekit) | SvelteKit endpoint | [![npm](https://img.shields.io/npm/v/@noverax/courier-sveltekit?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-sveltekit) |
+| [`@noverax/courier-server`](./packages/server) | Standalone HTTP, SSE and WebSocket server | [![npm](https://img.shields.io/npm/v/@noverax/courier-server?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-server) |
+| [`@noverax/courier-redis`](./packages/redis) | Redis pub/sub for WebSocket across replicas | [![npm](https://img.shields.io/npm/v/@noverax/courier-redis?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-redis) |
+
+**Development**
+
+| Package | | |
+| --- | --- | --- |
+| [`@noverax/courier-studio`](./packages/studio) | Studio — request inspector, playground, OpenAPI import, mock servers | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-studio) |
+| [`@noverax/courier-studio-core`](./packages/studio-core) | Studio runtime — `attachRuntime` for your instrumentation | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio-core?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-studio-core) |
+| [`@noverax/courier-mock`](./packages/mock) | Mock servers, test utilities, contract testing and fixtures | [![npm](https://img.shields.io/npm/v/@noverax/courier-mock?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-mock) |
 
 <br />
 
 ## Documentation
 
-Full documentation with interactive examples at **[courier.noverax.cloud](https://courier.noverax.cloud)**.
-
-<br />
+Guides, the API reference and examples live at **[courier.noverax.cloud](https://courier.noverax.cloud)**.
 
 ## Contributing
 
-Contributions are welcome. Please open an issue first to discuss what you would like to change.
-
-<br />
+Contributions are welcome. Please open an issue first to discuss what you would like to change, and read [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## License
 
@@ -771,5 +786,11 @@ Contributions are welcome. Please open an issue first to discuss what you would 
 <br />
 
 <div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/logos/courier-mark-light.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="docs/public/logos/courier-mark-dark.svg" />
+    <img alt="Courier" src="docs/public/logos/courier-mark-dark.svg" height="20" />
+  </picture>
+  <br />
   <sub>Built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
 </div>

@@ -1,15 +1,28 @@
 <div align="center">
   <br />
+  <a href="https://courier.noverax.cloud">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+    </picture>
+  </a>
 
-  # @noverax/courier-react
+  <h1>@noverax/courier-react</h1>
 
-  **React integration for Courier — query hooks, streams and channels, query keys, zero boilerplate.**
+  <p><strong>React integration for Courier — query hooks, streams and channels, query keys, zero boilerplate.</strong></p>
 
-  <br />
+  <p>
+    <a href="https://www.npmjs.com/package/@noverax/courier-react"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-react?style=flat-square&label=npm&labelColor=0e1116&color=6d28d9" /></a>
+    <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-6d28d9?style=flat-square&labelColor=0e1116" /></a>
+  </p>
 
-  <a href="https://www.npmjs.com/package/@noverax/courier-react"><img src="https://img.shields.io/npm/v/@noverax/courier-react?color=7c3aed&style=flat-square" alt="npm" /></a>
-  <a href="https://bundlephobia.com/package/@noverax/courier-react"><img src="https://img.shields.io/bundlephobia/minzip/@noverax/courier-react?color=f59e0b&label=size&style=flat-square" alt="size" /></a>
-
+  <p>
+    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/NoveraX/courier#readme">Courier</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/NoveraX/courier/tree/master/packages/react">Source</a>
+  </p>
   <br />
 </div>
 
@@ -309,4 +322,10 @@ import { QueryClient, QueryClientProvider } from "@noverax/courier-react"
 
 ## License
 
-[MIT](../../LICENSE)
+[MIT](https://github.com/NoveraX/courier/blob/master/LICENSE)
+
+<br />
+
+<div align="center">
+  <sub>Part of <a href="https://github.com/NoveraX/courier">Courier</a> · built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

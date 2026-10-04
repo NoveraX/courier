@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { createLogger } from "@noverax/courier";
-import type { Sources } from "@noverax/courier/define";
 import { defineCommand, runMain } from "citty";
 import { listOption } from "./list-option";
 import { loadCliConfig } from "./load-cli-config";
@@ -83,7 +82,7 @@ const main = defineCommand({
 
     const { createCourierServer } = await import("./create-server");
     const server = createCourierServer({
-      sources: config.sources as Sources,
+      sources: config.sources,
       port,
       host: args.host ?? block.host ?? DEFAULT_HOST,
       maxBodyBytes,

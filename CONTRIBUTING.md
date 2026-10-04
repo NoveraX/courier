@@ -33,9 +33,10 @@ npm run test:coverage
 npm run check:exports
 npm run check:docs
 npm run check:packages
+npm run check:publish
 ```
 
-Three of them are easy to skip by accident and worth understanding:
+Four of them are easy to skip by accident and worth understanding:
 
 - `npx tsc --noEmit` typechecks the **whole workspace as one program**, tests
   included. A per-package `typecheck` can pass while this fails, because the
@@ -47,6 +48,10 @@ Three of them are easy to skip by accident and worth understanding:
   READMEs against the built packages. A sample may leave out the reader's own
   code; what it takes from the packages has to compile, so a changed
   signature fails here until the pages that show it change too.
+- `npm run check:publish` lints each package as `npm pack` would ship it:
+  publint reads the manifest against the packed files, and attw resolves
+  every export's JavaScript and types as Node and bundlers do. Any message
+  fails it, a suggestion included.
 
 ## Working in the code
 

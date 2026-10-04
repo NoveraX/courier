@@ -31,6 +31,10 @@ export interface LoadedCourierMocks {
  *
  * @param projectRoot - The directory Studio found `courier.config.*` in
  * @returns The path as found in the root, or `null` when the project declares no mocks
+ * @example
+ * ```ts
+ * findMocksFile("/app"); // → "/app/courier.mocks.ts", or null
+ * ```
  */
 export function findMocksFile(projectRoot: string): string | null {
   for (const basename of MOCKS_BASENAMES) {

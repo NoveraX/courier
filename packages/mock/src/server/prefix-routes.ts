@@ -26,12 +26,6 @@ import {
   resolveMethod,
 } from "./route-helpers";
 
-export type {
-  EndpointOperation,
-  MappedEndpoint,
-  PrefixMapping,
-} from "./prefix-route-types";
-
 /**
  * Register catch-all routes that map real HTTP paths to mock endpoints.
  *

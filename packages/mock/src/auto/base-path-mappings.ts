@@ -1,4 +1,4 @@
-import type { PrefixMapping } from "../server/prefix-routes";
+import type { PrefixMapping } from "../server/prefix-route-types";
 import { prop } from "./schema-introspect/prop";
 
 const TRAILING_SLASHES = /\/+$/;

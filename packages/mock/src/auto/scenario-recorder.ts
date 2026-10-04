@@ -1,6 +1,6 @@
 import { LATENCY_PROFILES } from "../network/latency";
 import type { EnhancedMockBuilder } from "../types";
-import type { RouteInfo } from "./route-analyzer";
+import type { RouteInfo } from "./route-types";
 
 /** Serializable endpoint entry collected by scenario introspection */
 export interface ScenarioEndpointEntry {

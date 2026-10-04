@@ -1,6 +1,6 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { generateRecords } from "../auto/data-generator";
-import type { RouteInfo } from "../auto/route-analyzer";
+import type { RouteInfo } from "../auto/route-types";
 import { analyzeField, extractShape, unwrapArraySchema } from "../auto/schema-introspect";
 import type { MockServer } from "../server/mock-server-types";
 

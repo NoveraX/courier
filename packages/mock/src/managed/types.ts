@@ -1,6 +1,6 @@
 import type { AnySource } from "@noverax/courier/define";
 import type { AutoScenarioOptions } from "../auto/auto-seed";
-import type { RouteInfo } from "../auto/route-analyzer";
+import type { RouteInfo } from "../auto/route-types";
 import type { MockServer } from "../server/mock-server-types";
 import type { MockStore } from "../store";
 import type { TypedMockFn } from "../typed-mock-fn";

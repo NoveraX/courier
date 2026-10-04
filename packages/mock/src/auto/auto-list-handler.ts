@@ -1,7 +1,7 @@
 import { isRecord } from "../is-record";
 import type { MockRequestContext } from "../types";
 import { generateRecords } from "./data-generator";
-import type { RouteInfo } from "./route-analyzer";
+import type { RouteInfo } from "./route-types";
 import { extractShape, unwrapArraySchema } from "./schema-introspect";
 
 type Handler = (ctx: MockRequestContext) => unknown;

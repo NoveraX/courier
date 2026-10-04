@@ -1,5 +1,5 @@
-import type { PrefixMapping } from "../server/prefix-routes";
-import type { RouteInfo } from "./route-analyzer";
+import type { PrefixMapping } from "../server/prefix-route-types";
+import type { RouteInfo } from "./route-types";
 
 /**
  * Prefix-mapping construction and seed-config parsing.

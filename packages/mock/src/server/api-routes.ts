@@ -12,7 +12,7 @@
 
 import type { Hono, Context as HonoContext } from "hono";
 
-import type { PrefixMapping } from "./prefix-routes";
+import type { PrefixMapping } from "./prefix-route-types";
 import { registerPrefixRoutes } from "./prefix-routes";
 import { readJsonBody } from "./read-json-body";
 import { readProxyCall } from "./read-proxy-call";

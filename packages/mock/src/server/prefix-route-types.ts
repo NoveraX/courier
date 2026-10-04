@@ -1,11 +1,6 @@
 /**
- * Shared types for prefix route registration.
- *
- * Extracted from `prefix-routes.ts` so that helpers (`route-helpers`,
- * `prefix-static-routes`) can import the `MappedEndpoint`, `PrefixMapping`,
- * and `PrefixRouteConfig` shapes without pulling in the full Hono route
- * registration module. The original `prefix-routes.ts` re-exports these types
- * so that external imports keep working unchanged.
+ * The shapes prefix route registration works with, in a module of their own
+ * so a helper can name them without the Hono route registration module.
  */
 
 import type { Transport } from "@noverax/courier";

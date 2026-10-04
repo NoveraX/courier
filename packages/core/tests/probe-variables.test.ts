@@ -66,3 +66,16 @@ describe("probing a closure that reads its variables", () => {
     expect(() => endpoint.via((() => undefined) as never)).toThrow(/made no wire call/);
   });
 });
+
+describe("the shape recorded from a closure", () => {
+  const { endpoint } = courier();
+
+  it("names a variable a path is built from by its placeholder", () => {
+    const detail = endpoint
+      .variables<{ id: string; ids: string[] }>()
+      .via((http, vars) => http.get(`items/${vars.id}/detail/${vars.ids.join(",")}`))
+      .reads();
+
+    expect(detail.path).toBe("items/:id/detail/:ids");
+  });
+});

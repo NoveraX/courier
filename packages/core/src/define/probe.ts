@@ -60,21 +60,25 @@ const CHANNEL_METHOD: HttpMethod = "get";
  * A stand-in for the variables a closure will receive at request time.
  *
  * Probing has no real ones, so this answers every read with another stand-in.
- * Because each is callable and reads as an empty string, a closure may walk
- * into its variables, call methods on them or interpolate them and still reach
- * the call that addresses the endpoint. `then` is left absent so the stand-in
- * is never mistaken for a promise.
+ * Each is callable, so a closure may walk into its variables or call methods
+ * on them and still reach the call that addresses the endpoint; a call
+ * answers with the stand-in it was made on. Read as text, a stand-in is the
+ * placeholder of the variable it stands for, so a path written as
+ * `items/${vars.id}/detail` is recorded as `items/:id/detail`; read as a
+ * number it is 0. `then` is left absent so it is never taken for a promise.
  */
-function standIn(): unknown {
+function standIn(name = "", owner?: unknown): unknown {
   const proxy: unknown = new Proxy(() => proxy, {
     get: (_target, property) => {
-      if (property === Symbol.toPrimitive) return () => "";
+      if (property === Symbol.toPrimitive) {
+        return (hint: string) => (hint === "number" ? 0 : name && `:${name}`);
+      }
       if (property === "then") return undefined;
       if (property === Symbol.iterator) return function* (): Generator<unknown> {};
-      return proxy;
+      return typeof property === "string" ? standIn(property, proxy) : proxy;
     },
     has: () => true,
-    apply: () => proxy,
+    apply: () => owner ?? proxy,
   });
   return proxy;
 }

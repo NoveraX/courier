@@ -127,7 +127,7 @@ A page on an allowed origin may send the headers its preflight asks for; which o
 
 ### Logs
 
-Info lines go to stdout, warnings and errors to stderr, with the error's stack and cause chain. `COURIER_LOG_LEVEL` sets the lowest level printed — `debug`, `info` (default), `warn`, `error` or `silent`. Colour appears on a terminal only; `NO_COLOR` turns it off and `FORCE_COLOR=1` on. See [Logging](../core/README.md#logging).
+Info lines go to stdout, warnings and errors to stderr, with the error's stack and cause chain. `COURIER_LOG_LEVEL` sets the lowest level printed — `debug`, `info` (default), `warn`, `error` or `silent` — and `COURIER_LOG_FORMAT=json` writes one JSON object per line, for a log pipeline. Colour appears on a terminal only; `NO_COLOR` turns it off and `FORCE_COLOR=1` on. Started in a terminal, `courier-server` prints a banner with its version, address, config and sources; anywhere else — a container, a pipe — it logs one `Courier Server v… ready at …` line instead. See [Logging](../core/README.md#logging).
 
 <br />
 

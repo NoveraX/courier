@@ -4,8 +4,8 @@
  * It loads `--config` relative to the working directory, not its own install
  * directory, with a TypeScript loader, so a config importing its modules
  * without extensions loads. It exits 1 when its port is taken, refuses
- * `3001abc` as a port, prints its version, and admits the browser origins it
- * is told to allow.
+ * `3001abc` as a port, prints its version and its help — plain text into a
+ * pipe — and admits the browser origins it is told to allow.
  */
 import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -230,5 +230,29 @@ describe("courier-server", () => {
 
     expect(result.status).toBe(1);
     expect(result.stdout + result.stderr).toContain('Invalid --port: "3001abc"');
+  });
+
+  it("prints its help as plain text into a pipe, each option with the value it takes", () => {
+    /* Neither NO_COLOR nor the TEST and CI a test runner sets: a pipe alone
+       must keep colour out. A variable set to undefined is not passed on. */
+    const env = {
+      ...process.env,
+      NO_COLOR: undefined,
+      FORCE_COLOR: undefined,
+      TEST: undefined,
+      CI: undefined,
+    };
+    const result = spawnSync(process.execPath, ["--import", TSX, CLI, "--help"], {
+      cwd: project(),
+      encoding: "utf8",
+      timeout: 20_000,
+      env,
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).not.toContain("\x1b[");
+    expect(result.stdout).toContain(`Courier Server v${manifest.version}`);
+    expect(result.stdout).toMatch(/--allowed-origins <origins> +Comma-separated origins/);
+    expect(result.stdout).toMatch(/-h, --help +Show this help/);
   });
 });

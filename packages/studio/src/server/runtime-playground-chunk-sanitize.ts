@@ -16,6 +16,7 @@ export type SanitizedChunk =
     }
   | { kind: "sse-event"; event: unknown }
   | { kind: "ws-message"; data: unknown }
+  | { kind: "ws-open" }
   | { kind: "upload-progress"; loaded: number; total: number; percentage: number };
 
 export interface SanitizedChunkPayload {
@@ -53,6 +54,7 @@ function sanitizeChunkInner(raw: unknown): SanitizedChunk | null {
     if (!("data" in raw)) return null;
     return { kind: "ws-message", data: raw.data };
   }
+  if (raw.kind === "ws-open") return { kind: "ws-open" };
   if (raw.kind === "upload-progress") {
     const { loaded, total, percentage } = raw;
     if (!isCount(loaded) || !isCount(total) || !isCount(percentage)) return null;

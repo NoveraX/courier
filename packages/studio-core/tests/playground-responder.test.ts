@@ -131,6 +131,13 @@ function framesOf(rid: string): Frame[] {
   return frames.filter((frame) => frame.payload.rid === rid);
 }
 
+/* What a channel delivered, without the frame that says it connected. */
+function messagesOf(rid: string): unknown[] {
+  return framesOf(rid)
+    .filter((frame) => frame.payload.chunk?.kind === "ws-message")
+    .map((frame) => frame.payload.chunk?.data);
+}
+
 async function until(check: () => boolean, what: string): Promise<void> {
   const deadline = Date.now() + 3_000;
   while (!check()) {
@@ -180,15 +187,12 @@ function execute(
 describe("a WebSocket channel opened from the Playground", () => {
   it("delivers what the channel sends on join, then the answer to a message", async () => {
     execute("ws-chat", "live", "chat", "ws");
-    await until(() => framesOf("ws-chat").length >= 1, "the welcome");
+    await until(() => messagesOf("ws-chat").length >= 1, "the welcome");
     runtime?.emit("playground:write", { rid: "ws-chat", data: { text: "hi" } });
-    await until(() => framesOf("ws-chat").length >= 2, "the echo");
+    await until(() => messagesOf("ws-chat").length >= 2, "the echo");
     runtime?.emit("playground:cancel", { rid: "ws-chat" });
 
-    expect(framesOf("ws-chat").map((frame) => frame.payload.chunk?.data)).toEqual([
-      { text: "welcome" },
-      { echo: { text: "hi" } },
-    ]);
+    expect(messagesOf("ws-chat")).toEqual([{ text: "welcome" }, { echo: { text: "hi" } }]);
   });
 
   it("delivers what the channel sends on join while Studio watches the channel too", async () => {
@@ -204,20 +208,29 @@ describe("a WebSocket channel opened from the Playground", () => {
     });
 
     execute("ws-watched", "live", "chat", "ws");
-    await until(() => framesOf("ws-watched").length >= 1, "the welcome");
+    await until(() => messagesOf("ws-watched").length >= 1, "the welcome");
     runtime?.emit("playground:cancel", { rid: "ws-watched" });
 
-    expect(framesOf("ws-watched")[0]?.payload.chunk?.data).toEqual({ text: "welcome" });
+    expect(messagesOf("ws-watched")).toEqual([{ text: "welcome" }]);
     expect(recorded).toEqual(['{"text":"welcome"}']);
   });
 
   it("delivers a message written while the channel was still opening", async () => {
     execute("ws-slow", "live", "slow", "ws");
     runtime?.emit("playground:write", { rid: "ws-slow", data: { text: "early" } });
-    await until(() => framesOf("ws-slow").length >= 1, "the echo");
+    await until(() => messagesOf("ws-slow").length >= 1, "the echo");
     runtime?.emit("playground:cancel", { rid: "ws-slow" });
 
-    expect(framesOf("ws-slow")[0]?.payload.chunk?.data).toEqual({ echo: { text: "early" } });
+    expect(messagesOf("ws-slow")).toEqual([{ echo: { text: "early" } }]);
+  });
+
+  it("says it connected, though it sends nothing on join", async () => {
+    execute("ws-quiet", "live", "slow", "ws");
+    await until(() => framesOf("ws-quiet").length >= 1, "the connection");
+    runtime?.emit("playground:cancel", { rid: "ws-quiet" });
+
+    expect(framesOf("ws-quiet")[0]?.payload.chunk).toEqual({ kind: "ws-open" });
+    expect(messagesOf("ws-quiet")).toEqual([]);
   });
 });
 

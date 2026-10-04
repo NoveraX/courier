@@ -5,6 +5,7 @@ import type { ExclusiveContext } from "../exclusive-reload";
 import { describeEntry } from "../mock-manager/describe-entry";
 import type { PreparedEdit } from "./prepare-edit";
 import { rejectionOf } from "./rejection-of";
+import { restartWarning } from "./restart-warning";
 import type { DeclareApplyResult } from "./types";
 import { undoEdit } from "./undo-edit";
 import type { Written } from "./write-planned";
@@ -19,12 +20,14 @@ const log = createLogger("Studio");
  * @param tx - The edit's hold on the reload chain
  * @param prepared - The edit that was written
  * @param written - The write, with a temporary file it could not remove
+ * @param restarting - The running mocks the edit restarts, told again once it is applied
  * @returns What happened
  */
 export async function verifyAndApply(
   tx: ExclusiveContext,
   prepared: PreparedEdit,
   written: Written,
+  restarting: readonly string[],
 ): Promise<DeclareApplyResult> {
   const { root, target, input } = prepared;
   let loaded: LoadedCourierConfig;
@@ -47,7 +50,7 @@ export async function verifyAndApply(
   }
   const keys = input.requests.map((request) => request.key);
   log.info(`Studio added ${keys.join(", ")} to ${target.relative}`);
-  const warnings = await describeProblems(loaded, keys);
+  const warnings = [...restartWarning(restarting), ...(await describeProblems(loaded, keys))];
   if (written.leftover) warnings.push(leftoverWarning(written.leftover, target.relative));
   return { status: "applied", target: target.relative, keys, warnings };
 }

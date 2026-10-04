@@ -6,6 +6,7 @@ import { hashMocksFile } from "./hash-mocks-file";
 import type { MocksEditContext } from "./mocks-edit-context";
 import { prepareEdit } from "./prepare-edit";
 import { readyOutcome } from "./ready-outcome";
+import { restartingMocks } from "./restarting-mocks";
 import { staleAfterSave } from "./stale-after-save";
 import type { DeclareApplyResult } from "./types";
 import type { DeclareBody } from "./validate-declare-body";
@@ -41,12 +42,14 @@ export async function editAlone(
   if (prepared.status !== "prepared") return prepared;
   if (prepared.planDigest !== body.planDigest)
     return { status: "stale", plan: await readyOutcome(ctx, prepared) };
+  /* Read before the write, while the mocks it restarts still run. */
+  const restarting = restartingMocks(ctx, prepared);
   const written = writePlanned(prepared);
   if (written === "changed") return staleAfterSave(ctx, tx, body.mocks);
   if ("status" in written) return written;
   /* Written synchronously just above, so no watcher callback has run yet. */
   tx.acknowledge([prepared.target.path]);
-  return verifyAndApply(tx, prepared, written);
+  return verifyAndApply(tx, prepared, written, restarting);
 }
 
 /* A file that became a link, something other than a file, or unreadable

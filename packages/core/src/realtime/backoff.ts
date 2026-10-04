@@ -19,8 +19,13 @@ const DEFAULTS = {
  * calculateBackoff(0) // ~1000ms
  * calculateBackoff(3) // ~8000ms (capped at maxMs)
  */
-export function calculateBackoff(attempt: number, config?: BackoffConfig): number {
-  const { initialMs, maxMs, factor, jitter } = { ...DEFAULTS, ...config };
+export function calculateBackoff(attempt: number, config: BackoffConfig = {}): number {
+  /* Field by field: a setting given as undefined keeps its default rather
+     than turning every delay into NaN, which a timer runs at once. */
+  const initialMs = config.initialMs ?? DEFAULTS.initialMs;
+  const maxMs = config.maxMs ?? DEFAULTS.maxMs;
+  const factor = config.factor ?? DEFAULTS.factor;
+  const jitter = config.jitter ?? DEFAULTS.jitter;
   const exponential = Math.min(initialMs * factor ** attempt, maxMs);
 
   if (!jitter) return exponential;

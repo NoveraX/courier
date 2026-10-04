@@ -39,6 +39,17 @@ describe("calculateBackoff", () => {
     expect(max).toBeGreaterThan(min);
   });
 
+  it("keeps the default of a setting given as undefined", () => {
+    const delay = calculateBackoff(2, {
+      initialMs: undefined,
+      maxMs: undefined,
+      factor: undefined,
+      jitter: false,
+    });
+
+    expect(delay).toBe(4000);
+  });
+
   it("returns integer values with jitter", () => {
     const results = Array.from({ length: 50 }, () => calculateBackoff(3));
     for (const r of results) {

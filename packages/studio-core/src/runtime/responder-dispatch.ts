@@ -14,7 +14,8 @@ export interface StreamCall {
   source: string;
   group: string;
   method: string;
-  variables: Record<string, unknown>;
+  /** As the Playground sent them; the endpoint's schema checks them */
+  variables: unknown;
   headers: Record<string, string>;
 }
 
@@ -41,34 +42,74 @@ export type ChannelOpener = (
   options: { signal: AbortSignal },
 ) => Promise<PlaygroundChannel>;
 
-export async function dispatchSSE(
+/**
+ * Run an SSE stream and send Studio each event, whole, then how it ended.
+ *
+ * @param socket - The runtime's socket to Studio
+ * @param payload - The Playground's request
+ * @param sources - The sources the stream is looked up in
+ * @param signal - Ends the stream when the Playground cancels it
+ * @param exec - Opens the stream, in this process or through the app's proxy route
+ * @example
+ * ```ts
+ * await dispatchSSE(socket, payload, sources, ac.signal, executeDirectSSE);
+ * ```
+ */
+export function dispatchSSE(
   socket: ResponderSocket,
   payload: PlaygroundExecutePayload,
   sources: Sources,
   signal: AbortSignal,
   exec: StreamOpener,
 ): Promise<void> {
+  return dispatchStream(socket, payload, { sources, signal, exec }, (event) => ({
+    kind: "sse-event",
+    event,
+  }));
+}
+
+/**
+ * Run a WS push and send Studio the data of each event it sends, as a
+ * channel's messages are sent, then how it ended. A push only sends, so it
+ * is read as a stream and nothing is written to it.
+ *
+ * @param socket - The runtime's socket to Studio
+ * @param payload - The Playground's request
+ * @param sources - The sources the push is looked up in
+ * @param signal - Ends the subscription when the Playground cancels it
+ * @param exec - Subscribes, in this process or through the app's proxy route
+ * @example
+ * ```ts
+ * await dispatchWSPush(socket, payload, sources, ac.signal, executeDirectWSPush);
+ * ```
+ */
+export function dispatchWSPush(
+  socket: ResponderSocket,
+  payload: PlaygroundExecutePayload,
+  sources: Sources,
+  signal: AbortSignal,
+  exec: StreamOpener,
+): Promise<void> {
+  return dispatchStream(socket, payload, { sources, signal, exec }, (event) => ({
+    kind: "ws-message",
+    data: typeof event === "object" && event !== null && "data" in event ? event.data : event,
+  }));
+}
+
+async function dispatchStream(
+  socket: ResponderSocket,
+  payload: PlaygroundExecutePayload,
+  { sources, signal, exec }: { sources: Sources; signal: AbortSignal; exec: StreamOpener },
+  chunkOf: (event: unknown) => Record<string, unknown>,
+): Promise<void> {
   const startedAt = performance.now();
-  const subscription = await exec(
-    sources,
-    {
-      source: payload.source,
-      group: payload.group,
-      method: payload.method,
-      variables: (payload.variables as Record<string, unknown>) ?? {},
-      headers: payload.headers ?? {},
-    },
-    { signal },
-  );
+  const subscription = await exec(sources, callOf(payload), { signal });
 
   let count = 0;
   try {
     for await (const event of subscription) {
       count++;
-      socket.emit("playground:chunk", {
-        rid: payload.rid,
-        chunk: { kind: "sse-event", event },
-      });
+      socket.emit("playground:chunk", { rid: payload.rid, chunk: chunkOf(event) });
     }
   } finally {
     socket.emit("playground:end", {
@@ -76,6 +117,16 @@ export async function dispatchSSE(
       summary: { durationMs: performance.now() - startedAt, count },
     });
   }
+}
+
+function callOf(payload: PlaygroundExecutePayload): StreamCall {
+  return {
+    source: payload.source,
+    group: payload.group,
+    method: payload.method,
+    variables: payload.variables ?? {},
+    headers: payload.headers ?? {},
+  };
 }
 
 export async function dispatchWS(
@@ -87,17 +138,7 @@ export async function dispatchWS(
   onChannelOpen?: (channel: PlaygroundChannel) => void,
 ): Promise<void> {
   const startedAt = performance.now();
-  const channel = await exec(
-    sources,
-    {
-      source: payload.source,
-      group: payload.group,
-      method: payload.method,
-      variables: (payload.variables as Record<string, unknown>) ?? {},
-      headers: payload.headers ?? {},
-    },
-    { signal },
-  );
+  const channel = await exec(sources, callOf(payload), { signal });
   onChannelOpen?.(channel);
 
   const unsubData = channel.on("data", (data: unknown) => {

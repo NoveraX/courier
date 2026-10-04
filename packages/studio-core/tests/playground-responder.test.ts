@@ -73,6 +73,10 @@ function registerTestSources(): void {
           onJoin: () => later(100),
           onMessage: (ctx, message) => ctx.send({ echo: message }),
         })),
+      ticker: channel.response<{ tick: number }>().implement(async function* () {
+        yield { tick: 1 };
+        yield { tick: 2 };
+      }),
     },
   });
   const users = defineGroup({
@@ -165,6 +169,22 @@ describe("a WebSocket channel opened from the Playground", () => {
     runtime?.emit("playground:cancel", { rid: "ws-slow" });
 
     expect(framesOf("ws-slow")[0]?.payload.chunk?.data).toEqual({ echo: { text: "early" } });
+  });
+});
+
+describe("a WebSocket push opened from the Playground", () => {
+  it("delivers what it pushes, then ends", async () => {
+    execute("ws-push", "live", "ticker", "ws");
+    await until(
+      () => framesOf("ws-push").some((frame) => frame.event !== "playground:chunk"),
+      "the end",
+    );
+
+    expect(framesOf("ws-push").map((frame) => [frame.event, frame.payload.chunk?.data])).toEqual([
+      ["playground:chunk", { tick: 1 }],
+      ["playground:chunk", { tick: 2 }],
+      ["playground:end", undefined],
+    ]);
   });
 });
 

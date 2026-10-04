@@ -8,7 +8,8 @@
  *  - `playground:execute { rid, source, group, method, transport, ... }`
  *    starts a new request. The responder dispatches to the canonical local
  *    executor (`executeRequest` for HTTP, `executeDirectSSE` for SSE,
- *    `executeDirectWSChannel` for WS) and streams results back through
+ *    `executeDirectWSPush` or `executeDirectWSChannel` for a WS push or
+ *    channel) and streams results back through
  *    `playground:chunk` / `playground:end` / `playground:error`, all keyed
  *    by the same `rid`.
  *
@@ -30,7 +31,12 @@
 
 import type { Sources } from "@noverax/courier/define";
 import { executeRequest } from "@noverax/courier/internal";
-import { executeDirectSSE, executeDirectWSChannel } from "@noverax/courier/internal-streams";
+import {
+  executeDirectSSE,
+  executeDirectWSChannel,
+  executeDirectWSPush,
+  wsEndpointKind,
+} from "@noverax/courier/internal-streams";
 import { dispatchHttp } from "./dispatch-http";
 import {
   type PlaygroundExecutePayload,
@@ -39,7 +45,12 @@ import {
   sanitizeWrite,
 } from "./playground-payloads";
 import { openChannelThroughProxy, openStreamThroughProxy } from "./proxy-openers";
-import { dispatchSSE, dispatchWS, type PlaygroundChannel } from "./responder-dispatch";
+import {
+  dispatchSSE,
+  dispatchWS,
+  dispatchWSPush,
+  type PlaygroundChannel,
+} from "./responder-dispatch";
 
 /** Minimal Socket.IO socket surface the responder needs. */
 export interface ResponderSocket {
@@ -130,6 +141,9 @@ async function runExecute(
     } else if (payload.transport === "sse") {
       const open = viaProxy ? openStreamThroughProxy : executeDirectSSE;
       await dispatchSSE(socket, payload, sources, ac.signal, open);
+    } else if (wsEndpointKind(sources, payload) === "push") {
+      const open = viaProxy ? openStreamThroughProxy : executeDirectWSPush;
+      await dispatchWSPush(socket, payload, sources, ac.signal, open);
     } else {
       const open = viaProxy ? openChannelThroughProxy : executeDirectWSChannel;
       await dispatchWS(socket, payload, sources, ac.signal, open, (channel) => {

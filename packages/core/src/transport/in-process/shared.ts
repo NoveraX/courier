@@ -105,7 +105,7 @@ function kindMismatch(expected: StreamKind, schema: InProcessStreamSchema): stri
  * What the schema outputs is what the handler receives, whatever its shape.
  */
 export async function validateStreamVariables(
-  raw: Record<string, unknown> | undefined,
+  raw: unknown,
   schema: InProcessStreamSchema,
 ): Promise<unknown> {
   if (!schema.variables) return raw;

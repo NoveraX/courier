@@ -23,6 +23,7 @@ export type {
   InProcessWSChannel,
 } from "../transport/in-process/types";
 export { executeDirectWSChannel } from "../transport/in-process/ws-channel";
+export { wsEndpointKind } from "../transport/in-process/ws-endpoint-kind";
 export { executeDirectWSPush } from "../transport/in-process/ws-push";
 
 export type {

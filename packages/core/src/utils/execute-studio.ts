@@ -55,6 +55,42 @@ export function emitRequestStart(dCtx: StudioContext, start: RequestStart): void
   });
 }
 
+/** How a proxied call's time split between the proxy's own work and the upstream. */
+export interface ProxySplit {
+  clientToProxy: number;
+  proxyToBackend: number;
+  backendToProxy: number;
+  proxyToClient: number;
+}
+
+/**
+ * How a call the proxy received spent its time: the proxy's own work around
+ * the fetch, and the fetch itself. The browser measures the legs to and from
+ * the proxy, so they are left at 0 here.
+ *
+ * @param context - The call's context; only a proxied one has a receive time
+ * @param timing - The call's timings
+ * @param total - How long the call ran
+ * @returns The split, or `undefined` for a call the proxy did not receive
+ * @example
+ * ```ts
+ * proxyTimingOf(context, timing, performance.now() - timing.t0);
+ * ```
+ */
+export function proxyTimingOf(
+  context: Context | undefined,
+  timing: TimingState,
+  total: number,
+): ProxySplit | undefined {
+  if (context?.proxyReceiveAt == null) return undefined;
+  return {
+    clientToProxy: 0,
+    proxyToBackend: total - timing.tFetch,
+    backendToProxy: timing.tFetch,
+    proxyToClient: 0,
+  };
+}
+
 /** Emit onRequestEnd event with timing data + optional proxy timing */
 export function emitRequestEnd(
   dCtx: StudioContext,
@@ -73,16 +109,7 @@ export function emitRequestEnd(
       : 0;
   const tValidation = timing.tVarValidation + timing.tRespValidation;
 
-  const proxyReceiveAt = context?.proxyReceiveAt;
-  const proxyTiming =
-    proxyReceiveAt != null
-      ? {
-          clientToProxy: 0,
-          proxyToBackend: tTotal - timing.tFetch,
-          backendToProxy: timing.tFetch,
-          proxyToClient: 0,
-        }
-      : undefined;
+  const proxyTiming = proxyTimingOf(context, timing, tTotal);
 
   dCtx.dt.onRequestEnd?.({
     id: dCtx.requestId,

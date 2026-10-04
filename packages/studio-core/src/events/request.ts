@@ -58,8 +58,12 @@ export interface RequestErrorEvent extends StudioEvent {
   headers?: Record<string, string>;
   /** The upstream's error body, when it answered. */
   data?: unknown;
+  /** How large the upstream's error body was, when it answered. */
+  size?: number;
   /** How long the request took before it failed. */
   timing?: RequestTiming;
+  /** How a proxied call's time split, as for one that succeeded. */
+  proxyTiming?: ProxyTiming;
 }
 
 export interface ProxyClientTimingEvent extends StudioEvent {

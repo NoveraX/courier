@@ -68,7 +68,9 @@ export function wireRequestHooks(
         ...(e.status !== undefined && { status: e.status }),
         ...(e.headers && { headers: e.headers }),
         ...(e.data !== undefined && { data: e.data }),
+        ...(e.size !== undefined && { size: e.size }),
         ...(e.timing && { timing: e.timing }),
+        ...(e.proxyTiming && { proxyTiming: e.proxyTiming }),
       }),
     );
   };

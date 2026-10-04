@@ -10,7 +10,7 @@
  *
  * An unexpected field is refused rather than dropped. Dropping it silently
  * would let a probe keep running against a server that looks like it accepted
- * the request, and would leave nothing for a regression test to assert.
+ * the request, and would leave nothing a test could assert.
  *
  * A server-side caller does not come through here. It runs in the same
  * process, already decides the destination, and keeps the full option set.

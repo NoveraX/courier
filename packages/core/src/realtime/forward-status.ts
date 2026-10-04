@@ -11,10 +11,10 @@ import type { ConnectionStatus } from "./types";
  * Playground proxy executor's first-attempt watchdog rely on to detect connect
  * failures instead of hanging forever in `"connecting"`.
  *
- * Hand-rolling the switch in each call site is how we previously regressed
- * `"reconnecting"` forwarding. Centralizing it here means a future case added
- * to {@link ConnectionStatus} will fail the `status satisfies never`
- * exhaustiveness check at compile time.
+ * A switch hand-rolled at each call site can forget a status — `"reconnecting"`
+ * is the easy one to drop. With one switch here, a case added to
+ * {@link ConnectionStatus} fails the `status satisfies never` exhaustiveness
+ * check at compile time.
  */
 export function forwardConnectionStatus(state: ConnectionState, status: ConnectionStatus): void {
   switch (status) {

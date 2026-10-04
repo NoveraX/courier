@@ -7,9 +7,9 @@
 /**
  * Per-group endpoint listing derived from generated files on disk.
  *
- * Replaces the AST-scanner-driven `ScannedGroup[]` shape used previously —
- * inventory only needs the endpoint names + group identity, since spec data
- * is the canonical source for `httpMethod` / `path` of active endpoints.
+ * The inventory needs only the endpoint names and the group's identity: the
+ * spec is the canonical source of each active endpoint's `httpMethod` and
+ * `path`.
  */
 export interface DiskGroupListing {
   name: string;

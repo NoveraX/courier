@@ -15,6 +15,9 @@ const SESSION_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 const EXPORT_FORMATS = ["har", "json", "postman"] as const;
 
+/** A format Studio exports requests in. */
+export type ExportFormat = (typeof EXPORT_FORMATS)[number];
+
 /** A request a session route refuses, and the status to answer it with. */
 export interface SessionRefusal {
   error: string;
@@ -92,6 +95,11 @@ export function readIdBody(body: unknown): { id: string } | SessionRefusal {
   return isSessionId(body.id) ? { id: body.id } : refuse("id must be a session id.");
 }
 
+function formatOf(body: unknown): ExportFormat | SessionRefusal {
+  const format = isObject(body) ? EXPORT_FORMATS.find((known) => known === body.format) : undefined;
+  return format ?? refuse("format must be har, json or postman.");
+}
+
 /**
  * Read the session id and the format an export names.
  *
@@ -100,10 +108,30 @@ export function readIdBody(body: unknown): { id: string } | SessionRefusal {
  */
 export function readExportBody(
   body: unknown,
-): { id: string; format: (typeof EXPORT_FORMATS)[number] } | SessionRefusal {
+): { id: string; format: ExportFormat } | SessionRefusal {
   const read = readIdBody(body);
   if ("error" in read) return read;
-  const format = isObject(body) ? EXPORT_FORMATS.find((known) => known === body.format) : undefined;
-  if (format === undefined) return refuse("format must be har, json or postman.");
-  return { id: read.id, format };
+  const format = formatOf(body);
+  return typeof format === "string" ? { id: read.id, format } : format;
+}
+
+/**
+ * Read an export of the requests a page holds, unsaved: the requests and
+ * the apps they came from, as a save takes them, and the format.
+ *
+ * @param body - The request body, as parsed
+ * @returns What to export and how, or the refusal
+ * @example
+ * ```ts
+ * const read = readLiveExportBody(req.body);
+ * if (!("error" in read)) res.json(exportAsHar(buildSession(read)));
+ * ```
+ */
+export function readLiveExportBody(
+  body: unknown,
+): (SaveRequest & { format: ExportFormat }) | SessionRefusal {
+  const read = readSaveBody(body);
+  if ("error" in read) return read;
+  const format = formatOf(body);
+  return typeof format === "string" ? { ...read, format } : format;
 }

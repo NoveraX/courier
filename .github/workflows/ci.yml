@@ -70,7 +70,14 @@ jobs:
         run: npm run check:any
 
       - name: Test
+        if: matrix.node-version != 24
         run: npm test
+
+      # The same suite, measured: coverage below the thresholds in
+      # vitest.config.ts fails the job.
+      - name: Test with coverage
+        if: matrix.node-version == 24
+        run: npm run test:coverage
 
       # The only gate that reads the declarations the packages publish; every
       # other one resolves sibling packages through their sources.

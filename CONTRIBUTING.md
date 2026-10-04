@@ -29,7 +29,7 @@ npm run check:names
 npx tsc --noEmit
 npx turbo run typecheck --filter=@noverax/courier-studio-ui
 npm run check:any
-npm test
+npm run test:coverage
 npm run check:exports
 npm run check:docs
 ```

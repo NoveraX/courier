@@ -1,6 +1,10 @@
 /**
  * WelcomeView entry point — drives framework selection, step progression,
  * and the completion handoff to the timeline view.
+ *
+ * A project whose app is attached already is set up: the page hands over to
+ * the Timeline unless the setup was asked for — from Settings, or by picking
+ * a framework.
  */
 
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -15,7 +19,7 @@ import { isWelcomeCompleted, markWelcomeCompleted } from "./welcome-storage";
 
 export function WelcomeView(): React.ReactNode {
   const navigate = useNavigate();
-  const { framework: frameworkId } = useSearch({ from: "/" });
+  const { framework: frameworkId, setup } = useSearch({ from: "/" });
   const connected = useStudioStore((s) => s.connected);
   const runtimeCount = useStudioStore((s) => s.bindingSnapshot.runtimeCount);
 
@@ -38,14 +42,14 @@ export function WelcomeView(): React.ReactNode {
 
   const selectFramework = useCallback(
     (id: string) => {
-      navigate({ to: "/", search: { framework: id } });
+      navigate({ to: "/", search: { framework: id, ...(setup && { setup: true }) } });
     },
-    [navigate],
+    [navigate, setup],
   );
 
   const goBack = useCallback(() => {
-    navigate({ to: "/", search: {} });
-  }, [navigate]);
+    navigate({ to: "/", search: setup ? { setup: true } : {} });
+  }, [navigate, setup]);
 
   const handleAction = useCallback(
     (stepId: string) => {
@@ -71,6 +75,9 @@ export function WelcomeView(): React.ReactNode {
 
   if (isWelcomeCompleted()) {
     return <RedirectToTimeline />;
+  }
+  if (connected && runtimeCount > 0 && !frameworkId && !setup) {
+    return <RedirectToTimeline complete />;
   }
 
   return (
@@ -102,10 +109,12 @@ export function WelcomeView(): React.ReactNode {
   );
 }
 
-function RedirectToTimeline(): React.ReactNode {
+/* `complete` records the setup as done, so a later visit goes straight on. */
+function RedirectToTimeline({ complete = false }: { complete?: boolean }): React.ReactNode {
   const navigate = useNavigate();
   useEffect(() => {
+    if (complete) markWelcomeCompleted();
     navigate({ to: "/timeline" });
-  }, [navigate]);
+  }, [navigate, complete]);
   return null;
 }

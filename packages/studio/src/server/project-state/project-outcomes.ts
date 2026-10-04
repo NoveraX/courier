@@ -1,4 +1,6 @@
+import { basename } from "node:path";
 import { createLogger } from "@noverax/courier";
+import { unknownConfigKeys } from "@noverax/courier-studio-core/config";
 import type { Namespace } from "socket.io";
 import { applyLoadedMocks, type MocksConsumers } from "../apply-loaded-mocks";
 import { buildBindingSnapshot } from "../binding-snapshot";
@@ -66,6 +68,7 @@ export function createProjectOutcomes(
   function applied(loaded: LoadedCourierConfig): void {
     const previous = store.snapshot();
     if (!bound(loaded)) return;
+    warnUnread(loaded);
     runMocks(loaded);
     const next: ProjectSnapshot = {
       revision: previous.revision + 1,
@@ -125,6 +128,15 @@ export function createProjectOutcomes(
   }
 
   return { applied, failed };
+}
+
+/* A key Courier does not read is most likely misspelt, and was ignored in silence. */
+function warnUnread({ config, configFile }: LoadedCourierConfig): void {
+  const unread = unknownConfigKeys(config);
+  if (unread.length === 0) return;
+  log.warn(
+    `${basename(configFile)} has keys Courier does not read: ${unread.join(", ")}; check their spelling`,
+  );
 }
 
 /* A project without a config is normal at startup; one deleted while Studio

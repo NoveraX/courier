@@ -9,7 +9,7 @@ import { createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { decodeMessage, encodeMessage, type WSMessage } from "@noverax/courier/internal";
 import type { RealtimeError } from "@noverax/courier/realtime";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
 import { z } from "zod";
 
@@ -108,19 +108,23 @@ describe("a proxy caller pointed at the mock", () => {
     const alice = join(ws, "r1", "alice");
     const bob = join(ws, "r1", "bob");
     const carol = join(ws, "r2", "carol");
-    await settle();
+    await vi.waitFor(() =>
+      expect([alice, bob, carol].map((member) => member.data.length)).toEqual([1, 1, 1]),
+    );
 
     alice.ch.send({ text: "  hi  " });
-    await settle();
 
-    expect(alice.data).toEqual([
-      { from: "mock", text: "welcome alice" },
-      { from: "echo", text: "hi" },
-    ]);
-    expect(bob.data).toEqual([
-      { from: "mock", text: "welcome bob" },
-      { from: "alice", text: "hi" },
-    ]);
+    await vi.waitFor(() => {
+      expect(alice.data).toEqual([
+        { from: "mock", text: "welcome alice" },
+        { from: "echo", text: "hi" },
+      ]);
+      expect(bob.data).toEqual([
+        { from: "mock", text: "welcome bob" },
+        { from: "alice", text: "hi" },
+      ]);
+    });
+    await settle();
     expect(carol.data).toEqual([{ from: "mock", text: "welcome carol" }]);
     for (const member of [alice, bob, carol]) member.ch.close();
   });
@@ -137,11 +141,15 @@ describe("a proxy caller pointed at the mock", () => {
     const r2Data: Line[] = [];
     r1.on("error", (error) => r1Errors.push(error));
     r2.on("data", (line) => r2Data.push(line));
-    await settle();
+    await vi.waitFor(() => expect(opened).toHaveLength(2));
 
     r1.send({ text: "bye" });
     r2.send({ text: "still here" });
-    await settle();
+    await vi.waitFor(() => {
+      expect(r1Errors.map((error) => error.code)).toEqual([4000]);
+      expect(r2Data.at(-1)).toEqual({ from: "echo", text: "still here" });
+      expect(left).toEqual(["alice"]);
+    });
 
     const sockets = new Set(opened.map((line) => line.split("_")[0]));
     expect(opened).toHaveLength(2);
@@ -182,13 +190,14 @@ describe("the proxy's WebSocket protocol, frame by frame", () => {
         payload: { room: "r1", nick: "ada" },
       }),
     );
-    await settle();
 
-    expect(frames.slice(0, 3)).toEqual([
-      { type: "renamed", id: "1", topic: ROOM, payload: SERVED },
-      { type: "data", topic: SERVED, payload: { from: "mock", text: "welcome ada" } },
-      { type: "subscribed", id: "1", topic: SERVED },
-    ]);
+    await vi.waitFor(() =>
+      expect(frames.slice(0, 3)).toEqual([
+        { type: "renamed", id: "1", topic: ROOM, payload: SERVED },
+        { type: "data", topic: SERVED, payload: { from: "mock", text: "welcome ada" } },
+        { type: "subscribed", id: "1", topic: SERVED },
+      ]),
+    );
   });
 
   it("ends a subscription it cannot serve with the reason, and keeps the socket", async () => {
@@ -201,16 +210,20 @@ describe("the proxy's WebSocket protocol, frame by frame", () => {
     );
     socket.send(encodeMessage({ type: "subscribe", id: "3", topic: "lonely", payload: {} }));
     socket.send(encodeMessage({ type: "ping" }));
-    await settle();
 
-    const ends = frames.filter((frame) => frame.type === "complete");
-    const byId = ends.map((frame) => [frame.id, frame.error?.code, frame.error?.message]).sort();
-    expect(byId).toEqual([
-      ["1", 4422, "Invalid variables"],
-      ["2", 4404, 'No channel mock for "chat.lobby" in state "Started"'],
-      ["3", 4400, "Topic must include source name"],
-    ]);
-    expect(frames.filter((frame) => frame.type === "pong")).toHaveLength(1);
+    const ends = () =>
+      frames
+        .filter((frame) => frame.type === "complete")
+        .map((frame) => [frame.id, frame.error?.code, frame.error?.message])
+        .sort();
+    await vi.waitFor(() => {
+      expect(ends()).toEqual([
+        ["1", 4422, "Invalid variables"],
+        ["2", 4404, 'No channel mock for "chat.lobby" in state "Started"'],
+        ["3", 4400, "Topic must include source name"],
+      ]);
+      expect(frames.filter((frame) => frame.type === "pong")).toHaveLength(1);
+    });
     expect(socket.readyState).toBe(WebSocket.OPEN);
   });
 
@@ -228,16 +241,20 @@ describe("the proxy's WebSocket protocol, frame by frame", () => {
         payload: { room: "r1", nick: "ada" },
       }),
     );
-    await settle();
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === "subscribed")).toBe(true));
 
     socket.send(encodeMessage({ type: "message", id: "m1", topic: SERVED, payload: { text: 7 } }));
-    await settle();
 
-    const refusals = frames.filter((frame) => frame.type === "error");
-    expect(refusals.map((frame) => [frame.id, frame.error?.code, frame.error?.message])).toEqual([
-      ["m0", 4404, "Not subscribed"],
-      ["m1", 4422, "Invalid message payload"],
-    ]);
+    const refusals = () =>
+      frames
+        .filter((frame) => frame.type === "error")
+        .map((frame) => [frame.id, frame.error?.code, frame.error?.message]);
+    await vi.waitFor(() =>
+      expect(refusals()).toEqual([
+        ["m0", 4404, "Not subscribed"],
+        ["m1", 4422, "Invalid message payload"],
+      ]),
+    );
   });
 
   it("confirms an unsubscribe once the channel has left", async () => {
@@ -251,13 +268,14 @@ describe("the proxy's WebSocket protocol, frame by frame", () => {
         payload: { room: "r1", nick: "ada" },
       }),
     );
-    await settle();
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === "subscribed")).toBe(true));
 
     socket.send(encodeMessage({ type: "unsubscribe", id: "2", topic: SERVED }));
-    await settle();
 
-    expect(frames.at(-1)).toEqual({ type: "unsubscribed", id: "2", topic: SERVED });
-    expect(left).toEqual(["ada"]);
+    await vi.waitFor(() => {
+      expect(frames.at(-1)).toEqual({ type: "unsubscribed", id: "2", topic: SERVED });
+      expect(left).toEqual(["ada"]);
+    });
     expect(socket.readyState).toBe(WebSocket.OPEN);
   });
 });
@@ -277,15 +295,16 @@ describe("a mock server built without a source", () => {
     socket.send(
       encodeMessage({ type: "subscribe", id: "1", topic: "shop.chat.room", payload: {} }),
     );
-    await settle();
+    await vi.waitFor(() => expect(frames.some((frame) => frame.type === "subscribed")).toBe(true));
     socket.send(
       encodeMessage({ type: "message", topic: "shop.chat.room", payload: { any: "thing" } }),
     );
-    await settle();
 
-    expect(frames).toEqual([
-      { type: "subscribed", id: "1", topic: "shop.chat.room" },
-      { type: "data", topic: "shop.chat.room", payload: { any: "thing" } },
-    ]);
+    await vi.waitFor(() =>
+      expect(frames).toEqual([
+        { type: "subscribed", id: "1", topic: "shop.chat.room" },
+        { type: "data", topic: "shop.chat.room", payload: { any: "thing" } },
+      ]),
+    );
   });
 });

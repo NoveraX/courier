@@ -1,4 +1,4 @@
-import { loadSessionStartedAt, loadSettings } from "./constants";
+import { loadSettings } from "./constants";
 import type { StudioState } from "./store-types";
 
 /** The store's data, before any event or action: everything but its actions. */
@@ -43,7 +43,7 @@ export function createInitialState(savedTheme: StudioState["theme"]): InitialSta
     playgroundActiveResponse: null,
     connected: false,
     settings: loadSettings(),
-    sessionStartedAt: loadSessionStartedAt(),
+    sessionStartedAt: null,
     scanSources: [],
     registrySources: [],
     configStatus: null,

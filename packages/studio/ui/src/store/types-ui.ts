@@ -92,6 +92,8 @@ export interface BindingSnapshot {
   sourceCount: number;
   /** Each runtime connected, and whether it runs in a browser or on a server. */
   runtimes: Array<{ runtimeId: string; kind: "browser" | "server" }>;
+  /** When Studio saw the first of the runtimes attached now arrive; absent while none is. */
+  activeSince?: number;
 }
 
 export interface BindingErrorPayload {

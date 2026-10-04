@@ -18,7 +18,7 @@
  */
 
 import type { BindingStatus, BindingTable } from "./catalog/binding-table";
-import { getRuntimeEntry, runtimeRegistry } from "./runtime-namespace-state";
+import { getRuntimeEntry, runtimeRegistry, runtimesActiveSince } from "./runtime-namespace-state";
 
 export interface BindingSnapshotPayload {
   rows: BindingStatus[];
@@ -26,16 +26,20 @@ export interface BindingSnapshotPayload {
   sourceCount: number;
   /** Each runtime connected, and whether it runs in a browser or on a server. */
   runtimes: Array<{ runtimeId: string; kind: "browser" | "server" }>;
+  /** When the first of the runtimes attached now arrived; absent while none is. */
+  activeSince?: number;
 }
 
 /** Build a fresh `binding:snapshot` payload from the live binding table. */
 export function buildBindingSnapshot(bindingTable: BindingTable): BindingSnapshotPayload {
   const rows = enrichWithAppOrigin(bindingTable.getStatus());
+  const activeSince = runtimesActiveSince();
   return {
     rows,
     runtimeCount: runtimeRegistry.size,
     sourceCount: countServedSources(),
     runtimes: [...runtimeRegistry.values()].map(({ runtimeId, kind }) => ({ runtimeId, kind })),
+    ...(activeSince !== undefined && { activeSince }),
   };
 }
 

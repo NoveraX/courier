@@ -46,7 +46,6 @@ export const DEFAULT_SETTINGS: Settings = {
 // ── Safe localStorage reads (v2 prefix to avoid conflicts) ──────────────────
 
 export const SETTINGS_STORAGE_KEY = "courier-studio-v2-settings";
-export const SESSION_STARTED_KEY = "courier-studio-v2-session-started";
 
 export function loadSettings(): Settings {
   try {
@@ -61,19 +60,4 @@ export function loadSettings(): Settings {
 
 export function saveSettings(settings: Settings): void {
   localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-}
-
-export function loadSessionStartedAt(): number | null {
-  const raw = localStorage.getItem(SESSION_STARTED_KEY);
-  if (!raw) return null;
-  const val = Number(raw);
-  return Number.isFinite(val) ? val : null;
-}
-
-export function saveSessionStartedAt(value: number | null): void {
-  if (value === null) {
-    localStorage.removeItem(SESSION_STARTED_KEY);
-  } else {
-    localStorage.setItem(SESSION_STARTED_KEY, String(value));
-  }
 }

@@ -1,4 +1,3 @@
-import { saveSessionStartedAt } from "./constants";
 import type { StudioSet } from "./store-access";
 import type { StudioState } from "./store-types";
 import type { BindingSnapshot } from "./types-ui";
@@ -13,8 +12,10 @@ type ConnectionActions = Pick<
  * bound to it.
  *
  * The binding snapshot is Studio's own account of the runtimes. The session
- * timer (`sessionStartedAt`) runs from the first runtime's arrival until
- * the last one leaves; requests are NOT cleared on these transitions,
+ * timer (`sessionStartedAt`) is Studio's too: from the first runtime's
+ * arrival until the last one leaves, as Studio saw it, so a page that opens
+ * or reloads meanwhile shows the same time, and none counts from a session
+ * that ended while no page was open. Requests are NOT cleared on these transitions,
  * because the Studio dev server can have several cooperating runtimes
  * (browser direct + Next.js server proxy) that HMR/Turbopack rebuilds blip
  * constantly, and losing one side's request history on such a blip is
@@ -37,16 +38,7 @@ export function createConnectionActions(set: StudioSet): ConnectionActions {
     setReconnectAttempt: (attempt) => set({ reconnectAttempt: attempt }),
     setBindingSnapshot: (snapshot: BindingSnapshot) =>
       set((s) => {
-        const wasIdle = s.bindingSnapshot.runtimeCount === 0;
-        const isActive = snapshot.runtimeCount > 0;
-        let sessionStartedAt = s.sessionStartedAt;
-        if (wasIdle && isActive) {
-          sessionStartedAt = sessionStartedAt ?? Date.now();
-          if (!s.sessionStartedAt) saveSessionStartedAt(sessionStartedAt);
-        } else if (!isActive && s.sessionStartedAt) {
-          sessionStartedAt = null;
-          saveSessionStartedAt(null);
-        }
+        const sessionStartedAt = snapshot.runtimeCount > 0 ? (snapshot.activeSince ?? null) : null;
         // A binding error is cleared once its conflict row is gone from the
         // snapshot. The server emits binding:error only at the moment of
         // conflict, and the next clean snapshot is its "all good now"; kept,

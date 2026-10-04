@@ -323,6 +323,25 @@ describe("handleSSE — studio hooks", () => {
     cleanup();
   });
 
+  it("gives the stream an id of its own when x-courier-playground-rid is malformed", async () => {
+    const onStreamOpen = vi.fn();
+    const cleanup = installHooks({ onStreamOpen });
+    const sources = createSSESource(async function* () {
+      yield { data: "x" };
+    });
+    const { handleSSE } = setupHandler(sources);
+
+    const res = await handleSSE(
+      sseRequest("_s=testSource&_m=feed", { "x-courier-playground-rid": "not an id!" }),
+    );
+    await collectSSEText(res);
+
+    const rid = onStreamOpen.mock.calls[0]?.[0].requestId;
+    expect(rid).toBeTruthy();
+    expect(rid).not.toBe("not an id!");
+    cleanup();
+  });
+
   it("registers in playground abort registry when x-courier-playground-rid is set, and abortPlayground force-closes the stream", async () => {
     const { abortPlayground, playgroundAbortRegistrySize, clearPlaygroundAbortRegistry } =
       await import("../src/studio");

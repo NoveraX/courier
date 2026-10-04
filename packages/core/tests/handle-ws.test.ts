@@ -248,6 +248,20 @@ describe("createWSHandler", () => {
     clearPlaygroundAbortRegistry();
   });
 
+  it("does NOT register in playground abort registry when _playground_rid is malformed", async () => {
+    const { clearPlaygroundAbortRegistry, playgroundAbortRegistrySize } = await import(
+      "../src/studio"
+    );
+    clearPlaygroundAbortRegistry();
+    const sources = createWSSource(vi.fn());
+    const { handleSocket } = setupWSHandler(sources);
+
+    handleSocket(createMockSocket(), new Request("http://localhost/ws?_playground_rid=bad%20id"));
+
+    expect(playgroundAbortRegistrySize()).toBe(0);
+    clearPlaygroundAbortRegistry();
+  });
+
   it("does NOT register in playground abort registry when upgrade URL has no _playground_rid", async () => {
     const { playgroundAbortRegistrySize, clearPlaygroundAbortRegistry } = await import(
       "../src/studio"

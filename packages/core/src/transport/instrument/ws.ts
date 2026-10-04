@@ -122,11 +122,17 @@ export function instrumentWSChannel<TChannel extends InstrumentedChannel>(
  * Wrap a WS push subscription (server→client only, uses SSESubscription shape)
  * with browser-side studio instrumentation. Semantically identical to SSE
  * instrumentation — exposed as a separate function so call sites at the
- * direct/proxy boundaries can be grepped and instrumented uniformly.
+ * direct/proxy boundaries can be grepped and instrumented uniformly. A
+ * push Studio opened itself is shown under the id it names.
  */
 export function instrumentWSPush<TData>(
   subscription: SSESubscription<TData>,
   meta: StreamMeta,
+  externalRequestId?: string,
 ): SSESubscription<TData> {
-  return instrumentSSE(subscription, meta);
+  return instrumentSSE(
+    subscription,
+    meta,
+    externalRequestId === undefined ? undefined : beginStream(meta, externalRequestId),
+  );
 }

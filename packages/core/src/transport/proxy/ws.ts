@@ -5,6 +5,7 @@ import type { CallerWSOptions } from "../../realtime/ws/ws-types";
 import { buildWSTopic } from "../../realtime/ws-address";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";
+import { PLAYGROUND_RID_PARAM } from "../../studio/studio-request-id";
 import type { WSChannelFactory, WSPushFactory } from "../types";
 
 export interface ProxyWSDefaults {
@@ -69,7 +70,7 @@ function withPlaygroundRid(url: string, playgroundRequestId: string | undefined)
   // ws:// / wss:// URLs are valid inputs for `new URL(...)`, so we can use
   // it to safely merge query params without manual `?` / `&` juggling.
   const u = new URL(url);
-  u.searchParams.set("_playground_rid", playgroundRequestId);
+  u.searchParams.set(PLAYGROUND_RID_PARAM, playgroundRequestId);
   return u.toString();
 }
 

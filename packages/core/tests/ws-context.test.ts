@@ -112,17 +112,12 @@ describe("buildContext", () => {
     const topicManager = createServerTopicManager();
     const registry = createConnectionRegistry();
     registry.setTopicManager(topicManager);
-    // URL.searchParams.get returns "" for `?_playground_rid=` — we treat that
-    // as "not set" so the default generated id path is used.
+    // URL.searchParams.get returns "" for `?_playground_rid=`: no id, so the
+    // connection's streams get generated ones.
     const request = new Request("http://localhost/ws?_playground_rid=");
 
     const ctx = buildContext(ws, config, topicManager, registry, undefined, request);
-    // Empty string is technically a string, so the current implementation
-    // would use it. We document that as the actual behavior — empty rid
-    // would still correlate uniquely (everyone sharing the empty string),
-    // which is bad in theory but never happens in practice because the
-    // playground executor always passes a UUID.
-    expect(ctx.playgroundRequestId).toBe("");
+    expect(ctx.playgroundRequestId).toBeUndefined();
   });
 
   it("preserves the query param across other URL params", () => {

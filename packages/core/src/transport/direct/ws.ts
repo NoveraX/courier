@@ -7,6 +7,7 @@ import { instrumentWSChannel, instrumentWSPush } from "../instrument";
 import type { WSChannelFactory, WSPushFactory } from "../types";
 import { assertDirectlyReachable } from "./assert-reachable";
 import { channelAddress } from "./channel-address";
+import { studioRequestIdOption } from "./studio-request-option";
 
 /** What a direct caller says about the sockets its channels open. */
 export interface DirectWSDefaults {
@@ -34,16 +35,14 @@ export function createDirectWSChannelFactory(
 ): WSChannelFactory {
   const sourceName = getSourceName(api) ?? "_";
 
-  return function connectChannel(group, method, variables) {
+  return function connectChannel(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
     const { url, topic } = channelAddress(api, group, method, variables);
-    return instrumentWSChannel(executeWSChannel(url, topic, variables, defaults.ws), {
-      source: sourceName,
-      group,
-      method,
-      transport: "ws",
-      mode: "direct",
-    });
+    return instrumentWSChannel(
+      executeWSChannel(url, topic, variables, defaults.ws),
+      { source: sourceName, group, method, transport: "ws", mode: "direct" },
+      studioRequestIdOption(options),
+    );
   };
 }
 
@@ -63,15 +62,13 @@ export function createDirectWSPushFactory(
 ): WSPushFactory {
   const sourceName = getSourceName(api) ?? "_";
 
-  return function connectPush(group, method, variables) {
+  return function connectPush(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
     const { url, topic } = channelAddress(api, group, method, variables);
-    return instrumentWSPush(executeWSPush(url, topic, variables, defaults.ws), {
-      source: sourceName,
-      group,
-      method,
-      transport: "ws",
-      mode: "direct",
-    });
+    return instrumentWSPush(
+      executeWSPush(url, topic, variables, defaults.ws),
+      { source: sourceName, group, method, transport: "ws", mode: "direct" },
+      studioRequestIdOption(options),
+    );
   };
 }

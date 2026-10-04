@@ -68,6 +68,11 @@ describe("sanitizeChunk", () => {
     expect(result?.chunk).toEqual({ kind: "ws-message", data: "ping" });
   });
 
+  it("passes on that a channel connected, and nothing it carried besides", () => {
+    const result = sanitizeChunk({ rid: "r-1", chunk: { kind: "ws-open", extra: "x" } });
+    expect(result?.chunk).toEqual({ kind: "ws-open" });
+  });
+
   it("rejects unknown chunk kind", () => {
     expect(sanitizeChunk({ rid: "r-1", chunk: { kind: "unknown" } })).toBeNull();
   });

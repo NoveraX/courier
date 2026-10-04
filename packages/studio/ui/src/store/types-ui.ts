@@ -127,6 +127,8 @@ export type PlaygroundChunk =
     }
   | { kind: "sse-event"; event: unknown }
   | { kind: "ws-message"; data: unknown }
+  /** The channel connected; it delivers nothing to list */
+  | { kind: "ws-open" }
   | { kind: "upload-progress"; loaded: number; total: number; percentage: number };
 
 export interface PlaygroundEndSummary {

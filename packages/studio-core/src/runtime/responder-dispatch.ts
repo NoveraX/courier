@@ -140,6 +140,9 @@ export async function dispatchWS(
   const startedAt = performance.now();
   const channel = await exec(sources, callOf(payload), { signal });
   onChannelOpen?.(channel);
+  const unsubOpen = announceConnected(channel, () =>
+    socket.emit("playground:chunk", { rid: payload.rid, chunk: { kind: "ws-open" } }),
+  );
 
   const unsubData = channel.on("data", (data: unknown) => {
     socket.emit("playground:chunk", {
@@ -172,9 +175,23 @@ export async function dispatchWS(
   });
 
   unsubData();
+  unsubOpen();
   channel.close();
   socket.emit("playground:end", {
     rid: payload.rid,
     summary: { durationMs: performance.now() - startedAt },
   });
+}
+
+/* A channel that says nothing on join is open all the same: the Playground
+   is told once it connects, so it does not wait on the first message. */
+function announceConnected(channel: PlaygroundChannel, announce: () => void): () => void {
+  let announced = false;
+  const onStatus = (status: string): void => {
+    if (status !== "connected" || announced) return;
+    announced = true;
+    announce();
+  };
+  onStatus(channel.status);
+  return channel.on("status", onStatus);
 }

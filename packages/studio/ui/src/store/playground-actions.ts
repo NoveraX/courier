@@ -62,6 +62,12 @@ export function createPlaygroundActions(set: StudioSet): PlaygroundActions {
             const { loaded, total, percentage } = chunk;
             return { ...entry, upload: { loaded, total, percentage } };
           }
+          /* A channel that connected streams, whether or not it said anything yet. */
+          if (chunk.kind === "ws-open") {
+            return entry.streamStatus === "connecting"
+              ? { ...entry, streamStatus: "streaming" }
+              : entry;
+          }
           /* The last ones only: a long stream copied its whole list for
              every event, and grew without end. */
           const previous = entry.chunks ?? [];

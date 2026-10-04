@@ -1,9 +1,7 @@
 /**
- * Read-only preview card for a chaos preset (error rate + fault distribution).
- *
- * Extracted from `chaos-controls.tsx` — purely presentational, used when the
- * user has selected a non-custom preset and we want to show the resulting
- * configuration without exposing form controls.
+ * Read-only preview card for a chaos preset (error rate + fault distribution),
+ * shown for a preset other than Custom: the configuration it applies, with no
+ * form controls.
  */
 
 import type { FaultWeight } from "@/store/mock-slice";

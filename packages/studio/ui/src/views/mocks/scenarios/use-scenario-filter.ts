@@ -1,10 +1,7 @@
 /**
- * Search + type filter hook for the scenarios list.
- *
- * Extracted from `index.tsx` so the view component only orchestrates layout
- * and the active scenario plumbing. Owns the search string, the selected
- * type filter set, and returns the filtered scenarios memoized against the
- * inputs.
+ * Search + type filter hook for the scenarios list: owns the search string
+ * and the selected type filter set, and returns the filtered scenarios
+ * memoized against the inputs.
  */
 
 import { useCallback, useMemo, useState } from "react";

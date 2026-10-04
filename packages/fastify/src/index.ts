@@ -69,10 +69,9 @@ export const courierPlugin: FastifyPluginAsync<CourierPluginOptions> = async (
   };
 
   /* The proxy caller calls exactly one path, so that path is all the plugin
-     takes. It used to take `/` and `/*` as well — with no prefix, the default
-     the README showed, that was every path the app did not route itself, and
-     its 404s answered 400 with a Courier error body. Without a prefix it now
-     sits where the caller looks by default. */
+     takes: taking `/` and `/*` as well would, with no prefix, claim every
+     path the app does not route itself and answer its 404s with a Courier
+     400. Without a prefix it sits where the caller looks by default. */
   fastify.all(opts.prefix ? "/" : DEFAULT_PROXY_PATH, proxy);
 };
 

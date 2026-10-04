@@ -9,10 +9,10 @@ import { sendError } from "./send-error";
  * Answer a preflight, refuse a foreign origin, and — on a request that is
  * allowed to proceed — say so on the response itself.
  *
- * Only the preflight used to carry `Access-Control-Allow-Origin`, so a
- * configured cross-origin caller passed the check and then could not read the
- * answer: the browser saw a response with no permission on it. The matcher is
- * the core's, so `*.example.com` means here what it means everywhere else.
+ * The response carries `Access-Control-Allow-Origin` as the preflight does,
+ * so a configured cross-origin caller that passed the check can read the
+ * answer. The matcher is the core's, so `*.example.com` means here what it
+ * means everywhere else.
  *
  * @param req - The incoming request
  * @param res - The response being prepared

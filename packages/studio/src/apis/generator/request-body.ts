@@ -27,9 +27,8 @@ export type RequestBodyKind = "none" | "fields" | "value" | "nested" | "form" | 
 /**
  * The kind of body an endpoint sends.
  *
- * Every body used to be taken for JSON: a multipart upload was typed as an
- * object of strings no file fits in, and a body of bytes, or a list, was
- * dropped from the variables altogether.
+ * A body is not always JSON: a multipart upload takes files, and a body of
+ * bytes or a list is part of the variables too.
  *
  * @param ep - The endpoint
  * @param spec - The specification, for the schemas a body names

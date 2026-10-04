@@ -1,10 +1,7 @@
 /**
- * JSONC (JSON with comments) helpers shared by the playground editor.
- *
- * Extracted from `json-editor.tsx` so the React component file only deals
- * with rendering. The helpers here are pure functions and can be used by
- * other playground modules (request panel, ws compose panel) without
- * pulling the editor component into their bundles.
+ * JSONC (JSON with comments) helpers for the playground: pure functions the
+ * editor, the request panel and the WS compose panel use without the editor
+ * component.
  */
 
 /** Strip `//` line comments and trailing commas so the result parses as JSON. */

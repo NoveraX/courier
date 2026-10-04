@@ -1,16 +1,13 @@
 /**
  * Render a specification `enum` as a zod schema and as a TypeScript union.
  *
- * Two assumptions held here that real specifications break.
- *
  * `z.enum` accepts string members only, while an OpenAPI enum is not limited
  * to strings — a deletion marker is conventionally
- * `{ "type": "boolean", "enum": [true] }`, which both Stripe and OpenAI ship.
- * `z.enum([true])` does not type-check.
+ * `{ "type": "boolean", "enum": [true] }`, which both Stripe and OpenAI ship,
+ * and `z.enum([true])` does not type-check.
  *
- * A member was also embedded by wrapping it in quotes, so a value containing a
- * quote or a backslash produced a broken literal. Both forms are now written
- * by the same JSON encoder that has to read them back.
+ * Both forms are written by the JSON encoder, so a member containing a quote
+ * or a backslash makes a valid literal.
  */
 
 import { jsLiteral, type SpecValue } from "./literals";

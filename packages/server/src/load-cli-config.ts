@@ -13,10 +13,9 @@ export type CliConfig = LoadedCourierConfig | { problem: string };
  * Load the config the CLI was pointed at: the `--config` path resolved against
  * the working directory, or a `courier.config.*` in it.
  *
- * It goes through the loader the rest of Courier uses. The CLI used to
- * `import()` the path itself — resolved against its own install directory,
- * so every relative path failed, and read without a TypeScript loader, so a
- * config importing its modules without extensions could not load at all.
+ * It goes through the loader the rest of Courier uses, so a relative path
+ * resolves against the working directory, not the CLI's install directory,
+ * and a config importing its modules without extensions loads.
  *
  * @param cwd - The working directory.
  * @param file - The `--config` value, when given.

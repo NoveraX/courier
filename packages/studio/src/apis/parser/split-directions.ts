@@ -4,9 +4,9 @@ import type { ParsedSchema, ParsedSpec } from "./types";
 /**
  * Split each schema whose request and answer differ into the two. A readOnly
  * field is one the server sends and a writeOnly one the client sends, so one
- * type serving both had to leave each optional: the id an answer always
- * carries, the password a request always needs. A schema holding such a
- * field, itself or through a schema it refers to, is now read as the answer
+ * type serving both would have to leave each optional: the id an answer
+ * always carries, the password a request always needs. A schema holding such
+ * a field, itself or through a schema it refers to, is read as the answer
  * — its writeOnly fields gone, its readOnly ones as required as declared —
  * and one a request sends gains an input twin, `UserInput`, the other way
  * round. Request bodies and parameters refer to the twins.

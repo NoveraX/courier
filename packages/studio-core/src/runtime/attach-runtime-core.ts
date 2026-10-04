@@ -62,8 +62,8 @@ export async function attachRuntimeUsing(
   if (existing) return existing;
 
   /* A second call made while the first still loads the config shares its
-     attach. It used to pass the check above too, and open a second socket
-     under the same id that no handle could close. */
+     attach, rather than opening a second socket under the same id that no
+     handle could close. */
   const inFlight = attaching.get(runtimeId);
   if (inFlight) return inFlight;
   const loader = isBrowser ? undefined : loadServerConfig;

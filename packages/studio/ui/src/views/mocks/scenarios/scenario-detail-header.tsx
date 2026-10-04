@@ -1,10 +1,7 @@
 /**
- * Hero header + activate / deactivate CTA for the scenario detail panel.
- *
- * Extracted from `scenario-detail.tsx` so the parent component focuses on
- * data wiring + section composition instead of presentational chrome.
- * Contains the gradient banner, type icon, tags row, the "Active" pill, and
- * the activation buttons that emit the `mock:scenario:apply` socket command.
+ * Header of the scenario detail panel: the scenario's type, tags and whether
+ * it is active, and the buttons that activate or deactivate it with the
+ * `mock:scenario:apply` socket command.
  */
 
 import { RotateCcw, X, Zap } from "lucide-react";

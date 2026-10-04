@@ -34,8 +34,8 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
   const collectionAuth = authScheme(nodeAt(collection, "auth"));
   if (collectionAuth) securitySchemes.push(collectionAuth);
   const variables = collectionVariables(collection);
-  /* The base most requests share; the first request to name a host used to
-     decide it for all of them. */
+  /* The base most requests share, not whichever host the first request
+     names. */
   const baseURL = commonBase(
     requestsIn(listAt(collection, "item")).map((request) => requestBase(request.url, variables)),
   );

@@ -52,9 +52,8 @@ export interface ConfiguredStudioAddress {
  * `COURIER_STUDIO_URL`, then the `studio` block of courier.config, then the
  * default.
  *
- * A server runtime passes the block it loaded. It used to be ignored, so with
- * `studio.port` set, Studio and the browser moved to the configured port while
- * every server runtime kept dialling the default one and never connected.
+ * A server runtime passes the block it loaded, so with `studio.port` set it
+ * dials the port Studio and the browser moved to, not the default one.
  */
 export function resolveStudioUrl(configured?: ConfiguredStudioAddress): string {
   const slot = (globalThis as Record<symbol, unknown>)[STUDIO_URL_KEY];

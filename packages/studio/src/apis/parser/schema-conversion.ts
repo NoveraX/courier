@@ -67,8 +67,8 @@ export function normalizeTypeArray(schema: SpecNode): SpecNode {
  * Convert a schema, keeping `null` wherever it allows it.
  *
  * A component that says `nullable: true` — GitHub's `nullable-simple-user`,
- * referenced by every issue's assignee — lost it here, so each reference
- * rejected the `null` the API sends. It now becomes a union with `null`.
+ * referenced by every issue's assignee — becomes a union with `null`, so each
+ * reference accepts the `null` the API sends.
  *
  * @param name - Name of the schema, used to name the schemas nested in it
  * @param raw - The schema as written in the specification

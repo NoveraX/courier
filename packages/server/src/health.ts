@@ -3,9 +3,9 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 /**
  * Answer `/health` and `/readyz`.
  *
- * They are matched by path: the whole request target used to be compared, so
- * a probe that added a query string — a cache buster, a probe id — fell
- * through to the proxy and was refused with 400.
+ * They are matched by path, not by the whole request target, so a probe that
+ * adds a query string — a cache buster, a probe id — is answered here rather
+ * than refused by the proxy with 400.
  *
  * @param req - The incoming request
  * @param res - The response being prepared

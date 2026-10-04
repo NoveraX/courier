@@ -1,9 +1,6 @@
 /**
  * "General" tab of the mock route detail panel — overview, metrics, snippet.
- *
- * Extracted from `route-detail-tabs.tsx`. Owns the snippet format toggle
- * (cURL / fetch) and the quick-copy section. The metric color helper lives
- * in `route-detail-helpers.ts`.
+ * Owns the snippet format toggle (cURL / fetch) and the quick-copy section.
  */
 
 import { Code2, Play, Terminal } from "lucide-react";

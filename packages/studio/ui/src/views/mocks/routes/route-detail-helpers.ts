@@ -1,9 +1,6 @@
 /**
- * Tiny shared helpers for the mock route detail tabs.
- *
- * Extracted from `route-detail-tabs.tsx` so the per-tab modules can import a
- * single source of truth for the operation-name inference and the
- * latency-color logic.
+ * Helpers the mock route detail tabs share: the operation-name inference and
+ * the latency colour.
  */
 
 import type { MockRouteEntry } from "@/store/mock-slice";

@@ -1,9 +1,6 @@
 /**
- * "Handler" tab of the mock route detail panel.
- *
- * Extracted from `route-detail-tabs.tsx`. Shows whether the handler is
- * auto-generated or a custom override and renders an explanatory card with
- * the appropriate styling.
+ * "Handler" tab of the mock route detail panel: whether the handler is
+ * auto-generated or a custom override, with a card that explains which.
  */
 
 import { Code2 } from "lucide-react";

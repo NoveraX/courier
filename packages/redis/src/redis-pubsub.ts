@@ -27,8 +27,9 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
   const { publisher, subscriber, prefix = "" } = config;
   const origin = config.origin ?? crypto.randomUUID();
   const errorHandlers = new Set<(error: Error) => void>();
-  /* A set per topic, as the in-memory adapter keeps: a second subscriber
-     used to replace the first, and either one leaving unsubscribed both. */
+  /* A set per topic, as the in-memory adapter keeps, so a second subscriber
+     joins the first rather than replacing it, and one leaving leaves the
+     other subscribed. */
   const topicHandlers = new Map<string, Set<(message: unknown) => void>>();
   const pending = new Map<string, Promise<unknown>>();
   let connected = false;
@@ -74,8 +75,8 @@ export function createRedisPubSub(config: RedisPubSubConfig): PubSubAdapter {
     async connect() {
       await publisher.ping();
       await subscriber.ping();
-      /* Once: a second connect() used to attach the listeners again, and
-         every message then reached every subscriber twice. */
+      /* Once: a second connect() attaching the listeners again would deliver
+         every message to every subscriber twice. */
       if (!listening) {
         publisher.on("error", handleError);
         subscriber.on("error", handleError);

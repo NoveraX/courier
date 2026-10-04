@@ -51,8 +51,8 @@ const main = defineCommand({
     },
   },
   async run({ args }) {
-    /* Studio takes no command. An unknown word used to be ignored and the
-       server started anyway — `courier-studio init` did exactly that. */
+    /* Studio takes no command: an unknown word is refused rather than
+       ignored, so `courier-studio init` does not start the server. */
     if (args._.length > 0) fail(`Unknown command "${args._[0]}". Run courier-studio --help.`);
 
     const projectRoot = resolve(args.cwd ?? process.cwd());
@@ -61,8 +61,8 @@ const main = defineCommand({
     }
 
     /* `studio.port` and `studio.host` are documented, typed, and read by every
-       client that dials Studio. The server used to ignore them, so configuring
-       them moved the clients and left the server where it was. */
+       client that dials Studio, so the server reads them too and moves with
+       the clients. */
     const configured = await readStudioAddress(projectRoot);
 
     const port =

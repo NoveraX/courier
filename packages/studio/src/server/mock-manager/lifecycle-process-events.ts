@@ -87,12 +87,14 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
 
     /* Every event the worker sends names its type; the page is sent each one
        as it came, and Studio keeps what it changed for pages that connect
-       later. */
+       later. It is stamped once, so a page that reloads is shown each request
+       at the time a page was shown it live. */
     onEvent(serverId, event) {
       const { type } = event;
       if (typeof type !== "string") return;
-      emit(type, { ...event, serverId });
-      ctx.mockLog?.record({ ...event, serverId });
+      const shown = { ...event, serverId, timestamp: Date.now() };
+      emit(type, shown);
+      ctx.mockLog?.record(shown);
       const state = servers.get(serverId);
       if (state) applyWorkerEvent(state, event);
     },

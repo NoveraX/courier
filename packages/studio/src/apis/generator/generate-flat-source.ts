@@ -39,13 +39,16 @@ export function generateFlatSourceFile(
     ? sourceAuth(spec.securitySchemes, options.sourceName)
     : null;
 
+  /* With no endpoints there are no builders to take from courier(). */
+  const builders = endpoints.length > 0 ? [basesDeclaration(context), ""] : [];
   const lines = [
-    defineImport(context, "defineApi"),
+    endpoints.length > 0
+      ? defineImport(context, "defineApi")
+      : `import { defineApi } from "@noverax/courier/define";`,
     ...(auth ? [`import { authMiddleware } from "@noverax/courier/middleware";`] : []),
     ...endpointImports(context),
     "",
-    basesDeclaration(context),
-    "",
+    ...builders,
     `export const ${options.sourceName} = defineApi({`,
     `  baseURL: ${jsLiteral(spec.baseURL)},`,
     ...(auth ? [`  middleware: [${auth.middleware}],`] : []),

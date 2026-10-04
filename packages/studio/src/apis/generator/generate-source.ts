@@ -43,7 +43,8 @@ export function generateSourceFile(
   lines.push("", `export const ${options.sourceName} = defineApi({`);
   lines.push(`  baseURL: ${jsLiteral(spec.baseURL)},`);
   if (auth) lines.push(`  middleware: [${auth.middleware}],`);
-  if (groups.length > 0) lines.push(...groupEntries(groups, options));
+  /* A source with no groups still names them: defineApi takes groups or endpoints. */
+  lines.push(...groupEntries(groups, options));
   lines.push(`});`, "");
   if (auth) lines.push(...auth.helper);
 

@@ -100,9 +100,9 @@ export function handleExecuteError(error: unknown, ctx: ErrorHandlerCtx): unknow
   /* A direct caller gets its failure as it happened: a cancellation with the
      reason it gave, a network failure with status 0 and its cause, the
      upstream's own answer — a 2xx whose body would not parse keeps its 200 —
-     or what its own middleware threw. They used to arrive as a 502 from a
-     gateway that was never there, or as an HTTP 500 with no cause. A caller
-     that asked for a Response is answered with one, unless it cancelled. */
+     or what its own middleware threw — not a 502 from a gateway that is not
+     there, nor an HTTP 500 with no cause. A caller that asked for a Response
+     is answered with one, unless it cancelled. */
   if (!fromWire && (!answersWithResponse || isAbortError(error) || error instanceof HTTPError)) {
     reportRequestError(
       error,

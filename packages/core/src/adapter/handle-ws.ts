@@ -78,10 +78,10 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
   }
 
   async function initConnection(ws: WebSocketLike, ctx: WSSocketContext): Promise<void> {
-    /* The socket's own close listener is attached only once the connection
-       is activated, so a client that left while onConnect ran used to keep
-       its registry entry, a heartbeat timer and its per-address slot for
-       good — enough of them locked the address out. */
+    /* Heard from the start, not once the connection is activated: a client
+       that left while onConnect ran would otherwise keep its registry entry,
+       a heartbeat timer and its per-address slot for good — enough of them
+       lock the address out. */
     let closedWith: number | undefined;
     ws.addEventListener("close", (event) => {
       closedWith ??= event.code;

@@ -16,9 +16,9 @@ const INTERNAL_ERROR = 5000;
  * It ends as a real subscription does: iteration ends when the generator
  * returns, and rejects when it throws — with the generator's own
  * `RealtimeError`, or with code 5000 for any other error, as a client of a
- * real server reads it. A throw used to reject with nobody listening, which
- * failed the test run with an unhandled rejection. Leaving the loop early
- * closes the subscription, and events are buffered as a real one buffers them.
+ * real server reads it — never with nobody listening, which would fail the
+ * test run with an unhandled rejection. Leaving the loop early closes the
+ * subscription, and events are buffered as a real one buffers them.
  *
  * @param generatorFn - Factory that creates the async generator
  * @param delayMs - Optional delay before the stream starts producing events

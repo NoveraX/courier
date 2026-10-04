@@ -17,8 +17,8 @@ const INTERNAL_ERROR = 5000;
  *
  * Handler failures reach the channel as a real server's do: an `error`
  * event for a refused message or a failed `onMessage`, and an `error` event
- * then `disconnected` for a failed `onJoin` or a `ctx.close()` with a code.
- * They used to reject with nobody listening, which failed the test run with
+ * then `disconnected` for a failed `onJoin` or a `ctx.close()` with a code —
+ * not a rejection with nobody listening, which would fail the test run with
  * an unhandled rejection instead of showing what the app would see.
  *
  * @param handlers - Channel handlers (onJoin, onMessage, onLeave)

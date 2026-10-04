@@ -31,8 +31,8 @@ export type StreamAfter<TOptions, TStream extends boolean> = 0 extends 1 & TOpti
  *
  * The parsed body; with `.raw`, the whole response; with `stream: true`, the
  * unread body as a stream — on its own, or inside the response with `.raw`.
- * A streamed call used to be typed as the parsed body while resolving to an
- * envelope, so a working build read `undefined` at runtime.
+ * Typed as what it resolves to, so a build that passes does not read
+ * `undefined` at runtime.
  */
 export type EndpointResult<
   TResponse,

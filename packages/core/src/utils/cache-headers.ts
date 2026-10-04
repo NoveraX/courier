@@ -3,17 +3,16 @@ import type { SchemaMetadata } from "../validation";
 /**
  * Request headers that do not say who is asking.
  *
- * The decision used to run the other way, naming the credentials it knew —
- * and a caller authenticating with anything else, an `X-Api-Key` say, got a
- * response marked cacheable by every CDN between them and the server. Listing
- * what is safe instead means an unfamiliar header makes the answer private
- * rather than public.
+ * The list names what is safe rather than the credentials known, so an
+ * unfamiliar header makes the answer private rather than public: a caller
+ * authenticating with anything else, an `X-Api-Key` say, would otherwise get
+ * a response marked cacheable by every CDN between them and the server.
  *
  * The list covers what a browser sends on its own, and what the hops between
  * it and the server stamp on every request: reverse proxies, load balancers,
  * CDNs and hosting platforms describe the route and the network the request
  * came from, never the user. Next.js adds the four `x-forwarded-*` headers to
- * each request itself, so without them no response it served was ever
+ * each request itself, so without them no response it serves would ever be
  * offered to a shared cache. A header an edge adds to vouch for a user —
  * Cloudflare Access's `cf-access-jwt-assertion` — is left off on purpose.
  */

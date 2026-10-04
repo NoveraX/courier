@@ -61,10 +61,9 @@ export function setAppOrigin(origin: string | undefined): void {
  * Adopt the origin a framework adapter saw a request addressed to as the
  * app's origin, unless one is already set — config and environment win.
  *
- * Adapters call it on every request until one carries a host. They used to
- * give up after the first request whatever it carried, so a host-less probe
- * that arrived first left the origin unset for the life of the process, and
- * Studio Playground proxy mode failed with `APP_ORIGIN_NOT_CONFIGURED`.
+ * Adapters call it on every request until one carries a host, so a
+ * host-less probe that arrives first does not leave the origin unset for the
+ * life of the process, and Studio Playground proxy mode with it.
  *
  * @param origin - `scheme://host[:port]` the request was addressed to, if known
  * @example

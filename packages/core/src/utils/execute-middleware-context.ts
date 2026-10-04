@@ -68,7 +68,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
   ]);
   /* The caller's own headers go on top of the ones it forwards. A header it
      set — a service token for a backend the end user may not reach — is its
-     explicit choice, and the incoming request's copy used to replace it. */
+     explicit choice, which the incoming request's copy must not replace. */
   const newHeaders = filterHeaders(mergedNextHeaders, allowedHeaders);
   mergeHeaders(baseHeaders as HeadersInit | Record<string, string | undefined> | undefined).forEach(
     (value, name) => {

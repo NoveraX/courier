@@ -62,9 +62,8 @@ export function transportFailure(error: Error): HTTPError {
   );
 }
 
-/* Status 0 like any request that got no answer, but named for what it was;
-   it used to say "Network request failed" and carry the DOMException's
-   legacy code "23". */
+/* Status 0 like any request that got no answer, but named for what it was,
+   not "Network request failed" with the DOMException's legacy code "23". */
 function timeoutFailure(error: Error, timeout: number | undefined): HTTPError {
   const after = timeout === undefined ? "" : ` after ${timeout} ms`;
   return new HTTPError(

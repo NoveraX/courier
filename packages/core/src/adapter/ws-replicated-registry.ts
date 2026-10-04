@@ -7,10 +7,10 @@ import type { InternalConnectionRegistry } from "./ws-registry-types";
  * not only this one's. What concerns single connections — `count`, `list`,
  * `send`, `disconnect` — stays with this replica, which holds them.
  *
- * Only a channel handler's `ctx.broadcast` used to publish: an application
- * broadcasting after an HTTP mutation reached the clients of the replica
- * that took the request, and calling `pubsub.publish` as well skipped that
- * replica, because a replica ignores its own publishes.
+ * An application broadcasting after an HTTP mutation reaches every replica's
+ * clients through it, as a channel handler's `ctx.broadcast` does; calling
+ * `pubsub.publish` itself would skip the replica that took the request,
+ * because a replica ignores its own publishes.
  *
  * @param registry - This replica's connections
  * @param bridge - The replica's pub/sub bridge

@@ -1,10 +1,10 @@
 /**
  * A FormData body as a Blob, built without reading its files.
  *
- * Learning a multipart body's size used to mean encoding it into memory, so
- * uploading a 400 MB file with progress held the whole file — twice — before
- * the first byte went out. Composed from the entries themselves, the Blob
- * knows its size at once and reads each file only as it is sent.
+ * Composed from the entries themselves, the Blob knows its size at once and
+ * reads each file only as it is sent; encoding the body to learn its size
+ * would hold a 400 MB upload in memory — twice — before the first byte went
+ * out.
  */
 
 const CRLF = "\r\n";

@@ -137,8 +137,8 @@ export function createEventQueue<TData>(
     return {
       next,
       async return() {
-        /* Leaving a `for await` used to leave the connection open and
-           reconnecting until someone remembered to call close(). */
+        /* Leaving a `for await` ends the subscription, so the connection is
+           not left open and reconnecting until someone calls close(). */
         finish();
         head = tail = count = 0;
         onReturn?.();

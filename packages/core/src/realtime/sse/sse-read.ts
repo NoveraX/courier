@@ -17,9 +17,8 @@ export type ConnectionEnd = "complete" | "dropped" | RealtimeError;
  * Read one connection until it ends.
  *
  * The connection has its own abort: a server that falls silent for longer
- * than `heartbeatTimeout` is dropped and reconnected. The silence used to
- * abort the whole subscription, which then ended as though the server had
- * finished it.
+ * than `heartbeatTimeout` is dropped and reconnected, while the subscription
+ * goes on — it does not end as though the server had finished it.
  *
  * @returns How it ended — a failure, too, when the server answered with
  *   something other than an event stream

@@ -8,8 +8,8 @@ import { deriveSourceName, getSourceName, setSourceName } from "./api";
  *
  * `name` in `defineApi` is not a label: a browser client reads it off its own
  * copy of the definition, and the server resolves it against the key it was
- * registered under. Registration used to rename such a source silently, so
- * the server answered only the key and refused every call by the name.
+ * registered under. A key that contradicts the name would leave the server
+ * answering only the key and refusing every call by the name.
  *
  * A name `defineApi` derived by itself is not a choice, and the key replaces
  * it. That is decided by asking the function `defineApi` used, never a copy of

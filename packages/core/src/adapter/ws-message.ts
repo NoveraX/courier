@@ -51,8 +51,8 @@ export async function handleMessage(ctx: WSSocketContext, msg: WSMessage): Promi
   }
 
   /* The handler gets what the schema produced — its defaults and transforms
-     applied — as it does over an in-process channel and as a subscription's
-     variables are; it used to get the payload as it arrived. */
+     applied — not the payload as it arrived, as it does over an in-process
+     channel and as a subscription's variables are. */
   let payload = msg.payload;
   if (schema.receive) {
     try {
@@ -119,7 +119,7 @@ async function authorizeIncomingMessage(
 
 /**
  * Refuse one message on a subscription, which goes on. The error names the
- * topic so the client's channel hears of it; it used to be logged only.
+ * topic so the client's channel hears of it, rather than a log line alone.
  */
 function refuseMessage(ctx: WSSocketContext, msg: WSMessage, failure: StreamFailure): void {
   if (ctx.closed) return;

@@ -6,12 +6,11 @@ const CHUNK_BYTES = 64 * 1024;
 /**
  * Stream a body to fetch, reporting each chunk once fetch has taken it.
  *
- * A chunk used to be reported the moment it was queued, so the events ran
- * ahead of the network — the last one fired before the server had the bytes —
- * and they kept coming after the request was cancelled, up to 100% of a body
- * the server never received. Here the stream holds nothing in reserve: fetch
- * asks for the next chunk once it has written the previous one, and that is
- * when the previous one is counted. Nothing is reported once `signal` fires.
+ * The stream holds nothing in reserve: fetch asks for the next chunk once it
+ * has written the previous one, and that is when the previous one is
+ * counted. Counted as they are queued, the events would run ahead of the
+ * network and go on after a cancellation, up to 100% of a body the server
+ * never received. Nothing is reported once `signal` fires.
  *
  * @param source - The body
  * @param total - Its size in bytes, or 0 when unknown

@@ -41,15 +41,13 @@ export interface SSESender {
 /**
  * Create the writer for one stream.
  *
- * Events from the generator and events broadcast to the stream used to be
- * numbered by two counters that both started at 1, so the ids a client saw
- * went backwards and `Last-Event-ID` resumed from the wrong place. Only the
- * generator's events are numbered now: a broadcast the generator cannot
- * replay is no place to resume from, and in a stream whose endpoint names its
- * own ids a number would stand in for the one it last named. And a broadcast
- * queued every event for a client that had stopped reading, reporting each
- * one delivered while memory grew without bound. A broadcast that does not
- * fit is now dropped and reported as not delivered, and after
+ * Only the generator's events are numbered, by one counter, so the ids a
+ * client sees never go backwards and `Last-Event-ID` resumes from the right
+ * place: a broadcast the generator cannot replay is no place to resume from,
+ * and in a stream whose endpoint names its own ids a number would stand in
+ * for the one it last named. A broadcast that does not fit a client that has
+ * stopped reading is dropped and reported as not delivered, rather than
+ * queued while memory grows without bound, and after
  * `LIMITS.MAX_CONSECUTIVE_DROPS` in a row the stream is closed.
  *
  * @param controller - The stream's controller, over a byte-sized queue

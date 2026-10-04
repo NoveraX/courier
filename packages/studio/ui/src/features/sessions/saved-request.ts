@@ -1,4 +1,5 @@
 import { isRecord, optNum, optStr, str } from "@/store/event-helpers";
+import { httpVersionOf } from "@/store/http-version";
 import type { RequestEntry, RequestStatus, RequestTiming } from "@/store/types";
 
 const STATUSES: ReadonlySet<string> = new Set<RequestStatus>([
@@ -42,6 +43,7 @@ export function savedRequestOf(r: RequestEntry): Record<string, unknown> {
     error: r.error,
     startedAt: r.startedAt,
     url: r.url,
+    httpVersion: r.httpVersion,
     sessionId: r.sessionId,
   };
 }
@@ -84,6 +86,7 @@ export function requestFromSaved(raw: unknown): RequestEntry | undefined {
     headers: headersOf(raw.responseHeaders),
     error: errorOf(raw.error),
     url: optStr(raw.url),
+    httpVersion: httpVersionOf(raw.httpVersion),
     sessionId: str(raw.sessionId),
     middlewareCount: 0,
     middlewareEntries: [],

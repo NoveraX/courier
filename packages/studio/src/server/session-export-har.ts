@@ -48,6 +48,10 @@ interface HarQueryParam {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+/* What a request's version is written as when its runtime could not tell one,
+   rather than a version it may not have gone over. */
+const UNKNOWN_VERSION = "unknown";
+
 function headersToHar(headers?: Record<string, string>): HarHeader[] {
   if (!headers) return [];
   return Object.entries(headers).map(([name, value]) => ({ name, value }));
@@ -63,7 +67,7 @@ function requestToHarEntry(req: SavedRequest): HarEntry {
     request: {
       method: (req.httpMethod ?? "GET").toUpperCase(),
       url: req.url ?? `${req.source}.${req.group ?? ""}.${req.method}`,
-      httpVersion: "HTTP/1.1",
+      httpVersion: req.httpVersion ?? UNKNOWN_VERSION,
       headers: headersToHar(req.requestHeaders),
       queryString: [],
       bodySize: req.variables ? JSON.stringify(req.variables).length : 0,
@@ -74,7 +78,7 @@ function requestToHarEntry(req: SavedRequest): HarEntry {
     response: {
       status: req.statusCode ?? 0,
       statusText: statusText(req.statusCode),
-      httpVersion: "HTTP/1.1",
+      httpVersion: req.httpVersion ?? UNKNOWN_VERSION,
       headers: headersToHar(req.responseHeaders),
       content: {
         size: req.size ?? 0,

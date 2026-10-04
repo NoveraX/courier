@@ -1,5 +1,6 @@
 import { isPlainObject } from "@/socket/is-plain-object";
 import { num, optNum, optStr, str } from "./event-helpers";
+import { httpVersionOf } from "./http-version";
 import {
   isValidationIssue,
   readList,
@@ -115,6 +116,12 @@ export function withFetchStart(r: RequestEntry, event: EventPayload): RequestEnt
     url: optStr(event.url) ?? r.url,
     httpMethod: optStr(event.method) ?? r.httpMethod,
   };
+}
+
+/** The HTTP version the fetch's answer came over, when the runtime could tell. */
+export function withFetchEnd(r: RequestEntry, event: EventPayload): RequestEntry {
+  const httpVersion = httpVersionOf(event.httpVersion);
+  return httpVersion ? { ...r, httpVersion } : r;
 }
 
 /** The issues a failed validation reported, kept until the request's own failure arrives. */

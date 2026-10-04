@@ -155,6 +155,28 @@ describe("the requests a page holds", () => {
     expect((await call("list", {})).body).toEqual([]);
   });
 
+  it("are exported with the HTTP version each went over, or unknown when none was told", async () => {
+    const [first, second] = REQUESTS;
+    const told = [
+      { ...first, httpVersion: "HTTP/2" },
+      { ...second, httpVersion: "HTTP/9" },
+    ];
+
+    const har = await call("export-live", { requests: told, format: "har" });
+
+    const entries = field(field(har.body, "log"), "entries");
+    const versions = Array.isArray(entries)
+      ? entries.map((entry) => [
+          field(field(entry, "request"), "httpVersion"),
+          field(field(entry, "response"), "httpVersion"),
+        ])
+      : [];
+    expect(versions).toEqual([
+      ["HTTP/2", "HTTP/2"],
+      ["unknown", "unknown"],
+    ]);
+  });
+
   it("are exported with their credentials left out", async () => {
     const [first] = REQUESTS;
     const signed = [{ ...first, requestHeaders: { authorization: "Bearer s3cr3t-value" } }];

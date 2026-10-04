@@ -46,7 +46,7 @@ export function UrlBox({ request }: { request: RequestEntry }): React.ReactNode 
         </UrlChip>
         {!stream && <UrlChip icon={Tag}>{request.type ?? "query"}</UrlChip>}
         <UrlChip icon={RadioTower} tone={stream ? "text-brand" : undefined}>
-          {PROTOCOL[request.transport ?? "http"]}
+          {stream ? PROTOCOL[request.transport ?? "http"] : (request.httpVersion ?? PROTOCOL.http)}
         </UrlChip>
       </div>
     </div>

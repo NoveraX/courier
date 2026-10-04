@@ -7,6 +7,7 @@ import { describeUpload } from "@/lib/upload-progress";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
+import type { ValidationTarget } from "@/store/types-request";
 import { STATUS_CONFIG } from "../constants";
 import { DetailRow as Row, DetailSection as Section } from "../detail-rows";
 
@@ -76,14 +77,32 @@ export function GeneralTab({ request, hideSourceMode }: GeneralTabProps): React.
         {request.middlewareCount > 0 && <Row label="Middleware">{request.middlewareCount}</Row>}
         {request.cache && <Row label="Cache">{cacheOutcome(request.cache)}</Row>}
         {request.upload && <Row label="Upload">{describeUpload(request.upload)}</Row>}
-        {request.hasValidation.variables && <Row label="Variables Validated">Yes</Row>}
-        {request.hasValidation.response && <Row label="Response Validated">Yes</Row>}
+        <ValidationRow request={request} target="variables" label="Variables Validated" />
+        <ValidationRow request={request} target="response" label="Response Validated" />
       </Section>
     </div>
   );
 }
 
 // ── Value renderers ───────────────────────────────────────────────────────
+
+/* Whether the request was validated against a schema its endpoint declares:
+   one that failed before its answer was read never checked the response. */
+function ValidationRow({
+  request,
+  target,
+  label,
+}: {
+  request: RequestEntry;
+  target: ValidationTarget;
+  label: string;
+}): React.ReactElement | null {
+  if (!request.hasValidation[target]) return null;
+  const outcome = request.validated?.[target];
+  if (!outcome && request.status === "pending") return null;
+  const shown = outcome === "passed" ? "Passed" : outcome === "failed" ? "Failed" : "Not run";
+  return <Row label={label}>{shown}</Row>;
+}
 
 function cacheOutcome(cache: NonNullable<RequestEntry["cache"]>): string {
   if (!cache.hit) return "Not in cache, fetched";

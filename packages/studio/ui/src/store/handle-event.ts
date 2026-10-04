@@ -22,6 +22,7 @@ import {
   withStreamOpen,
 } from "./handle-stream-events";
 import { requestFromUpload, withUploadComplete, withUploadProgress } from "./handle-upload-events";
+import { withValidationOutcome } from "./handle-validation-events";
 import type { RequestDraft } from "./request-draft";
 import type { RequestEntry, StudioEvent } from "./types";
 import { validationIssuesOf } from "./validation-issues";
@@ -66,7 +67,10 @@ export function applyEvent(draft: RequestDraft, event: EventPayload): void {
       return;
     case "validation:fail": {
       const issues = validationIssuesOf(event.issues);
-      if (issues) draft.update(requestId, (r) => withValidationFail(r, issues));
+      draft.update(requestId, (r) => {
+        const failed = withValidationOutcome(r, event.target, "failed");
+        return issues ? withValidationFail(failed, issues) : failed;
+      });
       return;
     }
   }
@@ -92,4 +96,5 @@ const ENTRY_CHANGES: ReadonlyMap<string, EntryChange> = new Map<string, EntryCha
   ["cache:miss", withCacheMiss],
   ["upload:complete", withUploadComplete],
   ["proxy:parse", withProxyParse],
+  ["validation:pass", (r, event) => withValidationOutcome(r, event.target, "passed")],
 ]);

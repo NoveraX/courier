@@ -4,6 +4,9 @@ import type { MiddlewareEntry, ProxyTiming, RequestTiming, ValidationIssue } fro
 
 export type RequestStatus = "pending" | "success" | "error" | "aborted" | "validation_error";
 
+/** What a request validates against its endpoint's schemas. */
+export type ValidationTarget = "variables" | "response";
+
 export interface RequestEntry {
   id: string;
   source: string;
@@ -35,6 +38,8 @@ export interface RequestEntry {
   middlewareCount: number;
   middlewareEntries: MiddlewareEntry[];
   hasValidation: { variables: boolean; response: boolean };
+  /** How each validation that ran ended; a target left out was not validated */
+  validated?: Partial<Record<ValidationTarget, "passed" | "failed">>;
   startedAt: number;
   url?: string;
   pinned?: boolean;

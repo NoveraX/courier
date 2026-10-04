@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +18,7 @@ import { makeFedFifo, stopFifoWriters } from "./helpers/make-fed-fifo";
 let dir: string;
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), "courier-extract-deps-"));
+  dir = realpathSync(mkdtempSync(join(tmpdir(), "courier-extract-deps-")));
 });
 
 afterEach(() => {
@@ -51,8 +60,8 @@ describe("extractConfigDeps", () => {
   });
 
   it("follows two-level transitive imports", () => {
-    const inner = file("src/types.ts", `export type T = number;`);
-    const dep = file("src/api.ts", `import type { T } from "./types";\nexport const api: T = 1;`);
+    const inner = file("src/base.ts", `export const base = 1;`);
+    const dep = file("src/api.ts", `import { base } from "./base";\nexport const api = base;`);
     const entry = file(
       "courier.config.ts",
       `import { api } from "./src/api";\nexport default { sources: { api } };`,
@@ -236,10 +245,10 @@ describe("extractConfigDeps — tsconfig paths", () => {
 
   it("follows an alias transitively and through a directory index", () => {
     tsconfig({ "@/*": ["./src/*"] });
-    const inner = file("src/lib/types.ts", `export type T = number;`);
+    const inner = file("src/lib/base.ts", `export const base = 1;`);
     const dep = file(
       "src/lib/index.ts",
-      `import type { T } from "./types";\nexport const api: T = 1;`,
+      `import { base } from "./base";\nexport const api = base;`,
     );
     const entry = file(
       "courier.config.ts",
@@ -286,5 +295,47 @@ describe("extractConfigDeps — tsconfig paths", () => {
     );
 
     expect(walked(entry)).toEqual([entry]);
+  });
+
+  /* Erased before the config runs: a change to one of them changes nothing Studio loads. */
+  it("leaves out modules imported for their types alone, and keeps side-effect and mixed imports", () => {
+    file("src/types.ts", `export type T = number;`);
+    file("src/reexported.ts", `export type R = string;`);
+    const mixed = file("src/mixed.ts", `export type M = 1; export const m = 1;`);
+    const side = file("src/side.ts", `globalThis.x = 1;`);
+    const entry = file(
+      "courier.config.ts",
+      [
+        `import type { T } from "./src/types";`,
+        `export type { R } from "./src/reexported";`,
+        `import { type M, m } from "./src/mixed";`,
+        `import "./src/side";`,
+        `export default { sources: {}, m };`,
+      ].join("\n"),
+    );
+
+    expect(walked(entry)).toEqual([entry, mixed, side]);
+  });
+
+  it("follows an import of the directory itself, as '.' or '..'", () => {
+    const index = file("src/index.ts", `export const api = {};`);
+    const leaf = file("src/leaf.ts", `import { api } from ".";\nexport const leaf = api;`);
+    const entry = file(
+      "courier.config.ts",
+      `import { leaf } from "./src/leaf";\nexport default { leaf };`,
+    );
+
+    expect(walked(entry)).toEqual([entry, leaf, index]);
+  });
+
+  it("walks a module reached through a link and by its own path once, by its own path", () => {
+    const real = file("shared/api.ts", `export const api = {};`);
+    symlinkSync(join(dir, "shared"), join(dir, "linked"));
+    const entry = file(
+      "courier.config.ts",
+      `import { api } from "./linked/api";\nimport { api as again } from "./shared/api";\nexport default { api, again };`,
+    );
+
+    expect(walked(entry)).toEqual([entry, real]);
   });
 });

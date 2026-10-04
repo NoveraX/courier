@@ -1,6 +1,7 @@
 import { CourierError } from "@noverax/courier";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvalidImportError } from "../src/apis/layout";
+import { ConfigLoaderError } from "../src/server/config-loader-errors";
 import { PathOutsideProjectError } from "../src/server/project-fs/path-outside-project-error";
 import { ProjectUnavailableError } from "../src/server/project-state/project-unavailable-error";
 import { sendRouteFailure } from "../src/server/route-failure";
@@ -45,6 +46,12 @@ describe("sendRouteFailure", () => {
     const err = ProjectUnavailableError.starting();
 
     expect(answered(err).status).toBe(err.httpStatus);
+  });
+
+  it("answers an edit refused because Studio is stopping 503, as no failure of the request", () => {
+    const answer = answered(new ConfigLoaderError("CONFIG_WATCHER_STOPPED", "Studio is stopping"));
+
+    expect(answer).toMatchObject({ status: 503, body: { code: "CONFIG_WATCHER_STOPPED" } });
   });
 
   it("answers anything else 500 and logs it", () => {

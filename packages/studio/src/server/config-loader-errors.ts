@@ -25,6 +25,8 @@ export class ConfigLoaderError extends CourierError<ConfigLoaderErrorCode> {
    * noticed. Absent when the load failed before it read any.
    */
   readonly depHashes?: ProjectInputs;
+  /** What a route answers with when this ends a request: Studio stopping is no failure of it. */
+  readonly httpStatus?: number;
 
   constructor(
     code: ConfigLoaderErrorCode,
@@ -33,6 +35,7 @@ export class ConfigLoaderError extends CourierError<ConfigLoaderErrorCode> {
   ) {
     super(message, { code, ...options });
     if (depHashes !== undefined) this.depHashes = depHashes;
+    if (code === "CONFIG_WATCHER_STOPPED") this.httpStatus = 503;
   }
 }
 

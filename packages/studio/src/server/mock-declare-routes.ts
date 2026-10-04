@@ -10,6 +10,7 @@
 
 import type { IncomingMessage } from "node:http";
 import { createLogger } from "@noverax/courier";
+import { ConfigLoaderError } from "./config-loader-errors";
 import { describeError } from "./describe-error";
 import { applyMocksEdit } from "./mocks-edit/apply-mocks-edit";
 import { isLocalPeer } from "./mocks-edit/is-local-peer";
@@ -102,6 +103,9 @@ async function perform(
         : await applyMocksEdit(ctx, body);
     return { status: 200, body: result };
   } catch (err) {
+    if (err instanceof ConfigLoaderError && err.httpStatus !== undefined) {
+      return { status: err.httpStatus, body: { error: err.message, code: err.code } };
+    }
     log.error(`Studio could not ${mode} adding mocks`, err);
     const reason = describeError(err, resolvedRoot(ctx.projectRoot));
     return { status: 500, body: { error: `Studio could not ${mode} adding the mocks: ${reason}` } };

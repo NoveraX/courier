@@ -1,3 +1,6 @@
+import { motion } from "motion/react";
+
+import { INDICATOR_SPRING } from "@/design/motion";
 import type { InspectorTab, InspectorTabInfo } from "@/features/requests/inspector-tabs";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +12,7 @@ interface TabBarProps {
 
 /**
  * The inspector's tabs, the one shown underlined, with their counts and a
- * dot on the failure's.
+ * dot on the failure's. The underline moves across to the tab chosen.
  *
  * @param props - The tabs, the one shown, and what shows another
  * @returns The bar
@@ -20,7 +23,8 @@ interface TabBarProps {
  */
 export function TabBar({ tabs, current, onSelect }: TabBarProps): React.ReactNode {
   return (
-    <div
+    <motion.div
+      layoutScroll
       role="tablist"
       aria-label="Request"
       className="-mx-1.5 flex overflow-x-auto [scrollbar-width:none]"
@@ -46,16 +50,17 @@ export function TabBar({ tabs, current, onSelect }: TabBarProps): React.ReactNod
               </span>
             )}
             {tab.alert && <span aria-hidden="true" className="size-1.5 rounded-full bg-err" />}
-            <span
-              aria-hidden="true"
-              className={cn(
-                "absolute inset-x-1.5 -bottom-px h-0.5 rounded-t-[2px]",
-                on ? "bg-brand" : "bg-transparent",
-              )}
-            />
+            {on && (
+              <motion.span
+                layoutId="request-inspector-tab"
+                transition={INDICATOR_SPRING}
+                aria-hidden="true"
+                className="absolute inset-x-1.5 -bottom-px h-0.5 rounded-t-[2px] bg-brand"
+              />
+            )}
           </button>
         );
       })}
-    </div>
+    </motion.div>
   );
 }

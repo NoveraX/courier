@@ -7,7 +7,8 @@
  * credentials hidden until asked, and its pin and replay.
  */
 import { playgroundRequestId } from "@noverax/courier-studio-core";
-import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { MotionGlobalConfig } from "motion/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useStudioStore } from "@/store";
@@ -118,6 +119,25 @@ describe("the request inspector", () => {
     await settle(() => fireEvent.keyDown(window, { key: "Escape" }));
 
     expect(router.state.location.search).not.toHaveProperty("req");
+  });
+
+  it("leaves the way it came, still showing the request it closes until it has gone", async () => {
+    MotionGlobalConfig.skipAnimations = false;
+    try {
+      const router = await openShell("/next/timeline?req=ok");
+
+      await settle(() => fireEvent.keyDown(window, { key: "Escape" }));
+
+      expect(router.state.location.search).not.toHaveProperty("req");
+      expect(within(inspector()).getByRole("heading", { level: 2 }).textContent).toBe(
+        "api.users.list",
+      );
+      await waitFor(() =>
+        expect(screen.queryByRole("complementary", { name: "Request inspector" })).toBeNull(),
+      );
+    } finally {
+      MotionGlobalConfig.skipAnimations = true;
+    }
   });
 
   it("opens a failed request on its error, with what usually fixes it", async () => {

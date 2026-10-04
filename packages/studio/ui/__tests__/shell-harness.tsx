@@ -8,6 +8,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, render } from "@testing-library/react";
+import { MotionGlobalConfig } from "motion/react";
 
 import { validateInspectorSearch } from "@/features/requests/inspector-search";
 import { validateTimelineSearch } from "@/features/requests/timeline-search";
@@ -21,6 +22,10 @@ globalThis.ResizeObserver ??= class {
   disconnect(): void {}
 };
 Element.prototype.scrollIntoView ??= () => {};
+
+/* A test reads what the shell shows once it has settled, not mid-animation; one that is about
+   the motion itself turns it back on. */
+MotionGlobalConfig.skipAnimations = true;
 
 /* jsdom lays nothing out: the Timeline's list is given a window's height to draw its rows in. */
 Object.defineProperty(HTMLElement.prototype, "offsetHeight", {

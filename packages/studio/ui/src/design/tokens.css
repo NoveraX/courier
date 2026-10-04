@@ -83,7 +83,6 @@
 
   --animate-pulse-live: courier-pulse 1.6s ease-in-out infinite;
   --animate-pop-in: courier-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
-  --animate-sheet-in: courier-slide 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-ripple: courier-ripple 2s ease-out infinite;
   --animate-caret: courier-caret 1s step-end infinite;
 }
@@ -152,17 +151,6 @@
   }
 }
 
-@keyframes courier-slide {
-  from {
-    opacity: 0;
-    transform: translateX(16px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 @keyframes courier-ripple {
   0% {
     transform: scale(0.6);
@@ -189,7 +177,6 @@
   :root {
     --animate-pulse-live: none;
     --animate-pop-in: none;
-    --animate-sheet-in: none;
     --animate-ripple: none;
     --animate-caret: none;
   }

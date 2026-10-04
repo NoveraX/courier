@@ -6,7 +6,7 @@
  * milliseconds of the click on "Review change", and its apply button sits
  * about where that button was: the second click of a double click must not
  * write a change nobody has seen, nor close the dialog and lose the drafts
- * when it lands outside it.
+ * when it lands outside it. Escape leaves drafts alone the same way.
  */
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useSyncExternalStore } from "react";
@@ -140,6 +140,31 @@ describe("a click outside the dialog", () => {
     await clickOutside();
     act(() => session.dispatch({ type: "goTo", step: "configure" }));
     await clickOutside();
+
+    expect(close).not.toHaveBeenCalled();
+    expect(session.getState().drafts).toHaveLength(1);
+  });
+});
+
+describe("Escape", () => {
+  it("closes the dialog while it holds no drafts", async () => {
+    const close = vi.fn();
+    render(<Wizard session={wizardSession({ preview: vi.fn(), apply: vi.fn() })} close={close} />);
+    await afterOpening();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves the dialog and its drafts alone while it holds drafts not yet added", async () => {
+    const session = wizardSession({ preview: vi.fn(), apply: vi.fn() });
+    session.dispatch({ type: "toggleSource", source: "api", declaredKeys: [] });
+    const close = vi.fn();
+    render(<Wizard session={session} close={close} />);
+    await afterOpening();
+
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
 
     expect(close).not.toHaveBeenCalled();
     expect(session.getState().drafts).toHaveLength(1);

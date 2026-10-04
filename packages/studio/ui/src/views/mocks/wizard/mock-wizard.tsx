@@ -83,6 +83,9 @@ export function MockWizard({ wizard }: { wizard: MockWizardHandle }): React.Reac
         onInteractOutside={(event) => {
           if (holdsDrafts) event.preventDefault();
         }}
+        onEscapeKeyDown={(event) => {
+          if (holdsDrafts) event.preventDefault();
+        }}
       >
         <DialogHeader className="px-6 pt-5">
           <DialogTitle className="text-h2">Add mock server</DialogTitle>

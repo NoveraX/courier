@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-fastify",
   "version": "0.0.0",
-  "description": "Fastify adapter for @noverax/courier \u2014 proxy plugin handler",
+  "description": "Fastify adapter for @noverax/courier — proxy plugin handler",
   "keywords": [
     "courier",
     "typescript",
@@ -16,7 +16,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NoveraX/courier.git",
+    "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/fastify"
   },
   "homepage": "https://courier.noverax.cloud",

@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-remix",
   "version": "0.0.0",
-  "description": "Remix adapter for @noverax/courier \u2014 Web Standard proxy handler",
+  "description": "Remix adapter for @noverax/courier — Web Standard proxy handler",
   "keywords": [
     "courier",
     "typescript",
@@ -15,7 +15,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NoveraX/courier.git",
+    "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/remix"
   },
   "homepage": "https://courier.noverax.cloud",

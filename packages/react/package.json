@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-react",
   "version": "0.0.0",
-  "description": "React integration for @noverax/courier \u2014 hooks, query keys, SSE subscriptions, optimistic updates",
+  "description": "React integration for @noverax/courier — hooks, query keys, SSE subscriptions, optimistic updates",
   "keywords": [
     "courier",
     "typescript",
@@ -16,7 +16,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NoveraX/courier.git",
+    "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/react"
   },
   "homepage": "https://courier.noverax.cloud",

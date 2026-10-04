@@ -16,7 +16,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NoveraX/courier.git",
+    "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/studio"
   },
   "homepage": "https://courier.noverax.cloud",
@@ -28,7 +28,7 @@
     "node": ">=22.13"
   },
   "bin": {
-    "courier-studio": "./lib/cli.js"
+    "courier-studio": "lib/cli.js"
   },
   "main": "./lib/index.js",
   "module": "./lib/index.js",

@@ -1,7 +1,7 @@
 {
   "name": "@noverax/courier-redis",
   "version": "0.0.0",
-  "description": "Redis adapters for @noverax/courier realtime \u2014 Pub/Sub broadcast + Streams persistence",
+  "description": "Redis adapters for @noverax/courier realtime — Pub/Sub broadcast + Streams persistence",
   "keywords": [
     "courier",
     "typescript",
@@ -16,7 +16,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NoveraX/courier.git",
+    "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/redis"
   },
   "homepage": "https://courier.noverax.cloud",

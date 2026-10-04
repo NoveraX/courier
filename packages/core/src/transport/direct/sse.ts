@@ -7,6 +7,7 @@ import { beginStream, instrumentSSE } from "../instrument";
 import type { SSEFactory } from "../types";
 import { assertDirectlyReachable } from "./assert-reachable";
 import { streamRequest } from "./stream-request";
+import { studioRequestIdOption } from "./studio-request-option";
 
 export interface DirectSSEDefaults {
   headers?: Record<string, string> | undefined;
@@ -70,7 +71,7 @@ export function createDirectSSEFactory(
       mode: "direct" as const,
       requestHeaders,
     };
-    const instr = beginStream(meta);
+    const instr = beginStream(meta, studioRequestIdOption(options));
 
     const subscription = subscribeSSE(url, {
       headers: requestHeaders,

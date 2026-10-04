@@ -3,7 +3,7 @@ import { createLogger } from "../logger";
 import type { WebSocketLike } from "../realtime/adapters";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { encodeMessage } from "../realtime/ws/ws-protocol";
-import { generateRequestId, studioHooks } from "../studio";
+import { generateRequestId, PLAYGROUND_RID_PARAM, playgroundRidOf, studioHooks } from "../studio";
 import { LIMITS } from "./limits";
 import { servedSources } from "./served-sources";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
@@ -120,7 +120,9 @@ export function buildContext(
   // Studio requestId. Production browser connections never set this param.
   let playgroundRequestId: string | undefined;
   try {
-    playgroundRequestId = new URL(request.url).searchParams.get("_playground_rid") ?? undefined;
+    playgroundRequestId = playgroundRidOf(
+      new URL(request.url).searchParams.get(PLAYGROUND_RID_PARAM),
+    );
   } catch {
     // Malformed URL — silently ignore; production WS upgrades always have a
     // valid URL, and a corrupted one is the upstream proxy/handshake's bug.

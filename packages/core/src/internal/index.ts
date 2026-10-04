@@ -30,7 +30,13 @@ export { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 export { decodeMessage, encodeMessage, type WSMessage } from "../realtime/ws/ws-protocol";
 export { buildDirectWSUrl } from "../realtime/ws-address";
 export { getSourcesGeneration, onSourcesChange } from "../sources";
-export { STUDIO_REQUEST_HEADER, type StudioHooks, studioHooks } from "../studio";
+export {
+  abortPlayground,
+  PLAYGROUND_RID_HEADER,
+  STUDIO_REQUEST_HEADER,
+  type StudioHooks,
+  studioHooks,
+} from "../studio";
 export {
   type Banner,
   type BannerRow,

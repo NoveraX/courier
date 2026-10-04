@@ -2,7 +2,13 @@ import { createLogger } from "../logger";
 import { eventsOf } from "../realtime/implementation";
 import { streamLabel } from "../realtime/stream-label";
 import type { SSEContext } from "../realtime/types";
-import { generateRequestId, registerPlaygroundAbort, studioHooks } from "../studio";
+import {
+  generateRequestId,
+  PLAYGROUND_RID_HEADER,
+  playgroundRidOf,
+  registerPlaygroundAbort,
+  studioHooks,
+} from "../studio";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { connectionMetaOf } from "./connection-meta-of";
 import { SSE_HEADERS } from "./format-sse";
@@ -87,7 +93,7 @@ export function createSSEHandler(
     // Subscribe. Without this, the playground tab would silently receive
     // nothing — events would still flow through `studioHooks` but under a
     // server-generated id the UI cannot match.
-    const playgroundRid = request.headers.get("x-courier-playground-rid");
+    const playgroundRid = playgroundRidOf(request.headers.get(PLAYGROUND_RID_HEADER));
     const requestId = playgroundRid ?? (studioHooks.onStreamOpen ? generateRequestId() : "");
     const dt = studioHooks;
 

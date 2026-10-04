@@ -45,3 +45,32 @@ export function studioRequestIdOf(headers: Headers): string | undefined {
 export function newStudioRequestId(): string {
   return `up_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
+
+/**
+ * The header a stream Studio opens through the proxy — a replay, a
+ * Playground run — names its row in, so the proxy shows the stream under
+ * the id Studio follows rather than one of its own.
+ */
+export const PLAYGROUND_RID_HEADER = "x-courier-playground-rid";
+
+/**
+ * The query parameter a WebSocket Studio opens through the proxy names its
+ * row in: a WebSocket's upgrade carries no headers a browser could set.
+ */
+export const PLAYGROUND_RID_PARAM = "_playground_rid";
+
+/**
+ * The row a stream Studio opened asks to be shown under, when the id is
+ * well formed; a malformed one is ignored and the stream given an id of
+ * its own, as a call's `x-courier-rid` is.
+ *
+ * @param value - The header's or the parameter's value, if any
+ * @returns The id, or `undefined` when there is none or it is malformed
+ * @example
+ * ```ts
+ * playgroundRidOf(request.headers.get(PLAYGROUND_RID_HEADER));
+ * ```
+ */
+export function playgroundRidOf(value: string | null): string | undefined {
+  return value !== null && REQUEST_ID.test(value) ? value : undefined;
+}

@@ -271,7 +271,7 @@ describe("extractConfigDeps — tsconfig paths", () => {
     expect(walked(entry)).toEqual([entry]);
   });
 
-  it("walks on without aliases when the tsconfig's paths cannot be read, and says why once", () => {
+  it("walks on without an alias whose targets are not a list, and says why once", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     file("tsconfig.json", JSON.stringify({ compilerOptions: { paths: { "@/*": "./src/*" } } }));
     file("src/api.ts", `export const api = {};`);
@@ -284,7 +284,7 @@ describe("extractConfigDeps — tsconfig paths", () => {
 
     expect(walked(entry, mocks)).toEqual([entry, local, mocks]);
     expect(warn).toHaveBeenCalledOnce();
-    expect(String(warn.mock.calls[0]?.[1])).toContain(`tsconfig paths that apply to ${dir}`);
+    expect(warn.mock.calls[0]?.join(" ")).toContain('"paths" maps "@/*"');
   });
 
   it("still skips a bare specifier the tsconfig does not map", () => {

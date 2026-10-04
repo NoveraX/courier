@@ -1,10 +1,10 @@
 /**
  * A direct caller on streams and channels this process serves.
  *
- * `createCaller(api)` dialled the API's `baseURL` for an endpoint defined
- * with `.implement()` — the upstream's address, where nothing serves it — and
- * reconnected there for good, with no error: a stream's loop never started
- * and a channel stayed "reconnecting".
+ * `createCaller(api)` runs an endpoint defined with `.implement()` in this
+ * process, rather than dialling the API's `baseURL` — the upstream's address,
+ * where nothing serves it — and reconnecting there for good with no error, a
+ * stream's loop never started and a channel left "reconnecting".
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

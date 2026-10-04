@@ -1,8 +1,9 @@
 /**
- * How a generated zod schema is held to its declared type. Comparing each
- * schema with zod's whole `ZodType` made type-checking a large client cost
- * gigabytes — Stripe's took 3.7 GB and 15 seconds — so only what the schema
- * outputs is compared, which still refuses a schema and a type that disagree.
+ * How a generated zod schema is held to its declared type: only what the
+ * schema outputs is compared, which still refuses a schema and a type that
+ * disagree. Comparing each schema with zod's whole `ZodType` would make
+ * type-checking a large client cost gigabytes — 3.7 GB and 15 seconds for
+ * Stripe's.
  */
 import ts from "typescript";
 import { afterAll, describe, expect, it } from "vitest";

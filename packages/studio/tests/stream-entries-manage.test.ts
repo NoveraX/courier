@@ -2,8 +2,8 @@
  * A stream of events generated as `stream.get(…)` lands in a file generated
  * before streams, which names only `endpoint`: adding it, or merging an
  * update that brings it, names the stream builder too, in whichever way the
- * file names its builders. Written without it, the file referenced `stream`
- * it never declared.
+ * file names its builders, so the file never references a `stream` it does
+ * not declare.
  */
 import { parseSync } from "oxc-parser";
 import { describe, expect, it } from "vitest";

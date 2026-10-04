@@ -2,10 +2,10 @@
  * @vitest-environment jsdom
  */
 /**
- * A code block is highlighted by Shiki's core with the few grammars it shows.
- * It imported the whole of Shiki, and Studio shipped every grammar and theme
- * in one 10 MB chunk the first block waited for; and a block that could not
- * be highlighted stayed a placeholder.
+ * A code block is highlighted by Shiki's core with the few grammars it shows,
+ * never the whole of Shiki, which would ship every grammar and theme in one
+ * 10 MB chunk the first block waits for; and a block that cannot be
+ * highlighted is shown plain rather than left a placeholder.
  */
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

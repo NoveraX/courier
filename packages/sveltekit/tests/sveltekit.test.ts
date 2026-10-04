@@ -2,9 +2,10 @@
  * The SvelteKit adapter, served the way `adapter-node` serves it.
  *
  * SvelteKit's request signal fires only while the body is still uploading,
- * so a browser that cancelled a call afterwards left the proxy's upstream
- * request running to completion. `adapter-node` hands over the Node request
- * as `platform.req`, and its socket says when the client has gone.
+ * so it cannot tell that a browser cancelled a call afterwards. `adapter-node`
+ * hands over the Node request as `platform.req`, and its socket says when the
+ * client has gone, so the proxy stops the upstream request rather than
+ * letting it run to completion.
  */
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

@@ -1,7 +1,7 @@
 /**
- * A path's `:name` parameters come from the variables. An endpoint whose
- * variables left one out, or declared none, compiled — and every call failed
- * at run time with "Missing required path parameter".
+ * A path's `:name` parameters come from the variables, so an endpoint whose
+ * variables leave one out, or declare none, does not compile — rather than
+ * failing every call at run time with "Missing required path parameter".
  */
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";

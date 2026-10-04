@@ -2,8 +2,8 @@
  * The mock stands in for a Courier proxy's WebSocket route, `/api/ws`, as it
  * does for its HTTP and stream routes: a proxy caller pointed at the mock
  * with `proxyPath.ws` subscribes to its channels there, one socket carrying
- * every subscription by topic. The route answered 404, so a proxy caller's
- * channel could not be mocked at all.
+ * every subscription by topic, so a proxy caller's channel can be mocked
+ * rather than meeting a 404.
  */
 import { createProxyCaller } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

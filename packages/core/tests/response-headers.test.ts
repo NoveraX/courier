@@ -198,9 +198,9 @@ describe("a streamed proxy answer opened as a page", () => {
 });
 
 /**
- * `.headers([...])` is documented as the response headers an endpoint passes
- * to its caller, but it only widened what the caller may send upstream. A
- * total count, a `Location` or a `Link` never reached a proxy caller.
+ * `.headers([...])` names the response headers an endpoint passes to its
+ * caller, as documented — not only what the caller may send upstream — so a
+ * total count, a `Location` or a `Link` reaches a proxy caller.
  */
 describe("headers an endpoint names", () => {
   let upstream: Server | undefined;

@@ -1,8 +1,9 @@
 /**
  * A long reference cycle validated with ArkType, as Stripe's core objects
- * form one of 83 schemas. Each reference within the cycle took its target
- * typed as a function, so the compiler worked out what the target returns
- * around the whole cycle and stopped at its depth limit (TS2321).
+ * form one of 83 schemas. A reference within the cycle does not take its
+ * target typed as a function: the compiler would then work out what the
+ * target returns around the whole cycle and stop at its depth limit
+ * (TS2321).
  */
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

@@ -2,9 +2,10 @@
  * The route handlers on a platform without `AbortSignal.any`, which is what
  * a route with `export const runtime = "edge"` runs on.
  *
- * `sseRoute` promises to work in the Edge Runtime, and every stream there
- * answered 500 "AbortSignal.any is not a function"; a proxied call with a
- * timeout failed the same way and came back as 502 UPSTREAM_UNREACHABLE.
+ * `sseRoute` promises to work in the Edge Runtime, so a stream there, and a
+ * proxied call with a timeout, combine their signals without
+ * `AbortSignal.any` — calling it would answer 500 "AbortSignal.any is not a
+ * function", or 502 UPSTREAM_UNREACHABLE for the call.
  */
 import { registerSources } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";

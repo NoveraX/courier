@@ -1,8 +1,8 @@
 /**
  * A types file — written when no validator schemas are asked for — declares
  * every schema the endpoints name, whatever its shape: a union, a list, a
- * primitive, an alias of another schema. Written for objects and enums
- * alone, the endpoints imported names it never declared.
+ * primitive, an alias of another schema — not objects and enums alone, which
+ * would leave the endpoints importing names it never declares.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

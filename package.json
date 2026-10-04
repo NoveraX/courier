@@ -82,5 +82,9 @@
   },
   "lint-staged": {
     "{packages,scripts,examples}/**/*.{ts,tsx,mjs,css}": "biome check --write --no-errors-on-unmatched"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   }
 }

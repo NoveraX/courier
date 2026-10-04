@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 
 import { createLogger } from "@noverax/courier";
+import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
 import { unknownConfigKeys } from "@noverax/courier-studio-core/config";
-import { defineCommand, runMain } from "citty";
+import { type ArgsDef, defineCommand, runMain } from "citty";
 import { listOption } from "./list-option";
 import { loadCliConfig } from "./load-cli-config";
 import { parseByteLimit } from "./parse-byte-limit";
 import { parsePort } from "./parse-port";
+import { printReady } from "./print-ready";
 import { serverVersion } from "./server-version";
 import { stopOnFatal } from "./stop-on-fatal";
 
@@ -21,37 +23,54 @@ function fail(message: string, cause?: unknown): never {
   process.exit(1);
 }
 
-const main = defineCommand({
-  meta: {
-    name: "courier-server",
+const SUMMARY = "Standalone HTTP, SSE and WebSocket server for Courier";
+
+const ARGS = {
+  port: {
+    type: "string",
+    valueHint: "port",
+    description: `Server port (falls back to server.port, then ${DEFAULT_PORT})`,
+  },
+  host: {
+    type: "string",
+    valueHint: "host",
+    description: `Server host (falls back to server.host, then ${DEFAULT_HOST})`,
+  },
+  config: {
+    type: "string",
+    valueHint: "file",
+    description: "Config file, relative to the working directory (default: courier.config.* there)",
+  },
+  "allowed-origins": {
+    type: "string",
+    valueHint: "origins",
+    description:
+      "Comma-separated origins browser apps may call from (falls back to server.allowedOrigins)",
+  },
+  "allowed-hosts": {
+    type: "string",
+    valueHint: "hosts",
+    description:
+      "Comma-separated host names the server is reached by (falls back to server.allowedHosts)",
+  },
+} as const satisfies ArgsDef;
+
+/* citty's own help colours a pipe and a log file; this one follows the
+   terminal, as every line the server prints does. */
+async function printHelp(): Promise<void> {
+  const help = {
+    product: "Courier Server",
     version: serverVersion(),
-    description: "Standalone HTTP + WebSocket server for @noverax/courier",
-  },
-  args: {
-    port: {
-      type: "string",
-      description: `Server port (falls back to server.port, then ${DEFAULT_PORT})`,
-    },
-    host: {
-      type: "string",
-      description: `Server host (falls back to server.host, then ${DEFAULT_HOST})`,
-    },
-    config: {
-      type: "string",
-      description:
-        "Config file, relative to the working directory (default: courier.config.* there)",
-    },
-    "allowed-origins": {
-      type: "string",
-      description:
-        "Comma-separated origins browser apps may call from (falls back to server.allowedOrigins)",
-    },
-    "allowed-hosts": {
-      type: "string",
-      description:
-        "Comma-separated host names the server is reached by (falls back to server.allowedHosts)",
-    },
-  },
+    summary: SUMMARY,
+    command: "courier-server",
+    options: helpOptions(ARGS),
+  };
+  console.log(formatHelp(help, styleFor(process.stdout)));
+}
+
+const main = defineCommand({
+  meta: { name: "courier-server", version: serverVersion(), description: SUMMARY },
+  args: ARGS,
   async run({ args }) {
     if (args._.length > 0) fail(`Unknown command "${args._[0]}". Run courier-server --help.`);
 
@@ -96,9 +115,7 @@ const main = defineCommand({
       maxUploadBytes,
       allowedOrigins,
       allowedHosts,
-      onReady: (url) => {
-        log.info(`Courier Server ready at ${url}`);
-      },
+      onReady: (url) => printReady({ url, configFile, sources: Object.keys(config.sources) }),
       /* The server has logged why; the exit status is what a supervisor or a
          deploy script reads, so it must not say 0. */
       onServerError: () => {
@@ -109,4 +126,4 @@ const main = defineCommand({
   },
 });
 
-runMain(main);
+runMain(main, { showUsage: printHelp });

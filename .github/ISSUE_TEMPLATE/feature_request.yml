@@ -1,0 +1,20 @@
+name: Feature request
+description: Something Courier does not do yet.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do, and where Courier stops you.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: The API or the behaviour you have in mind, if you have one.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today instead

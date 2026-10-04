@@ -62,7 +62,7 @@ function toRequestEntry(log: MockRequestLog, serverUrl: string): RequestEntry {
     data: log.data,
     requestHeaders: log.requestHeaders,
     headers: log.responseHeaders,
-    error: hasError ? { type: "http", message: log.error! } : undefined,
+    error: log.error ? { type: "http", message: log.error } : undefined,
     middlewareCount: 0,
     middlewareEntries: [],
     hasValidation: { variables: false, response: false },

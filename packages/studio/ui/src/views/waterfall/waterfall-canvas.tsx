@@ -84,7 +84,7 @@ export function WaterfallCanvas({
     count: flatItems.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (i) =>
-      flatItems[i]!.type === "group-header" ? GROUP_HEADER_HEIGHT : MIN_BAR_HEIGHT,
+      flatItems[i]?.type === "group-header" ? GROUP_HEADER_HEIGHT : MIN_BAR_HEIGHT,
     overscan: VIRTUAL_OVERSCAN,
   });
 
@@ -167,17 +167,20 @@ export function WaterfallCanvas({
             className="sticky left-0 z-10 shrink-0 border-r border-border-subtle bg-background"
             style={{ width: labelWidth }}
           >
-            {virtualItems.map((vi) => (
-              <LabelRow
-                key={vi.key}
-                item={flatItems[vi.index]!}
-                top={vi.start}
-                height={vi.size}
-                selectedId={selectedId}
-                onSelect={onSelect}
-                onToggleGroup={toggleGroup}
-              />
-            ))}
+            {virtualItems.map((vi) => {
+              const item = flatItems[vi.index];
+              return item ? (
+                <LabelRow
+                  key={vi.key}
+                  item={item}
+                  top={vi.start}
+                  height={vi.size}
+                  selectedId={selectedId}
+                  onSelect={onSelect}
+                  onToggleGroup={toggleGroup}
+                />
+              ) : null;
+            })}
           </div>
 
           <WaterfallBars

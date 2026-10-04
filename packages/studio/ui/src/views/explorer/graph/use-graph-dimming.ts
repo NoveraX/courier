@@ -20,10 +20,8 @@ export function useGraphDimming(
     const ch = new Map<string, Set<string>>();
     const pa = new Map<string, Set<string>>();
     for (const e of edges) {
-      if (!ch.has(e.source)) ch.set(e.source, new Set());
-      if (!pa.has(e.target)) pa.set(e.target, new Set());
-      ch.get(e.source)!.add(e.target);
-      pa.get(e.target)!.add(e.source);
+      link(ch, e.source, e.target);
+      link(pa, e.target, e.source);
     }
     return { children: ch, parents: pa };
   }, [edges]);
@@ -33,8 +31,7 @@ export function useGraphDimming(
     (nodeId: string): Set<string> => {
       const result = new Set<string>();
       const queue = [nodeId];
-      while (queue.length > 0) {
-        const id = queue.shift()!;
+      for (let id = queue.shift(); id !== undefined; id = queue.shift()) {
         const pars = parents.get(id);
         if (!pars) continue;
         for (const p of pars) {
@@ -54,8 +51,7 @@ export function useGraphDimming(
     (nodeId: string): Set<string> => {
       const result = new Set<string>();
       const queue = [nodeId];
-      while (queue.length > 0) {
-        const id = queue.shift()!;
+      for (let id = queue.shift(); id !== undefined; id = queue.shift()) {
         const chs = children.get(id);
         if (!chs) continue;
         for (const c of chs) {
@@ -121,4 +117,11 @@ export function useGraphDimming(
   const onNodeMouseLeave = useCallback(() => applyOpacity(null), [applyOpacity]);
 
   return { onNodeMouseEnter, onNodeMouseLeave };
+}
+
+/* Add `to` to the set `links` keeps for `from`. */
+function link(links: Map<string, Set<string>>, from: string, to: string): void {
+  const set = links.get(from);
+  if (set) set.add(to);
+  else links.set(from, new Set([to]));
 }

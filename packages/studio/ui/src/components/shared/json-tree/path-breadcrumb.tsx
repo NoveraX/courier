@@ -7,8 +7,8 @@ interface PathBreadcrumbProps {
   className?: string;
 }
 
-export function PathBreadcrumb({ path, className }: PathBreadcrumbProps): React.ReactElement {
-  if (path.length === 0) return <></>;
+export function PathBreadcrumb({ path, className }: PathBreadcrumbProps): React.ReactNode {
+  if (path.length === 0) return null;
 
   const fullPath = path
     .map((segment) => (/^\d+$/.test(segment) ? `[${segment}]` : segment))

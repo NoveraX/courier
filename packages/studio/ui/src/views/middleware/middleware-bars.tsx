@@ -22,7 +22,7 @@ const BAR_COLORS = [
   "bg-rose-500",
   "bg-cyan-500",
   "bg-indigo-500",
-];
+] as const;
 
 // ── Component ──────────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ function Bar({
 }): React.ReactElement {
   const pct = maxDuration > 0 ? (mw.avgDuration / maxDuration) * 100 : 0;
   const share = totalDuration > 0 ? (mw.avgDuration / totalDuration) * 100 : 0;
-  const barColor = BAR_COLORS[index % BAR_COLORS.length]!;
+  const barColor = BAR_COLORS[index % BAR_COLORS.length] ?? BAR_COLORS[0];
 
   return (
     <div className="space-y-1">

@@ -35,7 +35,8 @@ function buildRow(ep: EndpointNodeData, reqs: RequestEntry[]): TimingRow {
   let sumValidation = 0;
 
   for (const r of reqs) {
-    const t = r.timing!;
+    const t = r.timing;
+    if (!t) continue;
     sumTotal += t.total;
     sumFetch += t.fetch;
     sumMiddleware += t.middleware;

@@ -39,8 +39,9 @@ export function EndpointsTable({ data, requests }: EndpointsTableProps): React.R
   }
 
   function handleRowClick(stat: EndpointStat): void {
-    if (stat.calls === 1) {
-      selectRequest(stat.requestIds[0]!);
+    const [only] = stat.requestIds;
+    if (stat.calls === 1 && only !== undefined) {
+      selectRequest(only);
     } else {
       setExpanded((prev) => (prev === stat.endpoint ? null : stat.endpoint));
     }

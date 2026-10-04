@@ -8,14 +8,14 @@ export function computeEndpointStats(requests: RequestEntry[]): EndpointStat[] {
   for (const r of requests) {
     if (r.status === "pending") continue;
     const label = [r.source, r.group, r.method].filter(Boolean).join(".");
-    if (!map.has(label)) map.set(label, []);
-    map.get(label)!.push(r);
+    const entries = map.get(label);
+    if (entries) entries.push(r);
+    else map.set(label, [r]);
   }
 
   return Array.from(map, ([endpoint, entries]) => {
     const durations = entries
-      .filter((r) => r.timing)
-      .map((r) => r.timing!.total)
+      .flatMap((r) => (r.timing ? [r.timing.total] : []))
       .sort((a, b) => a - b);
 
     const errors = entries.filter(
@@ -35,7 +35,7 @@ export function computeEndpointStats(requests: RequestEntry[]): EndpointStat[] {
       p99: percentile(durations, 99),
       avgSize: entries.length > 0 ? totalSize / entries.length : 0,
       errorRate: entries.length > 0 ? (errors / entries.length) * 100 : 0,
-      lastStatus: entries[entries.length - 1]!.status,
+      lastStatus: entries.at(-1)?.status ?? "pending",
       requestIds: entries.map((r) => r.id),
     };
   }).sort((a, b) => b.p95 - a.p95);

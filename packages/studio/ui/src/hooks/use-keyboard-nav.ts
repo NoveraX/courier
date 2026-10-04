@@ -16,7 +16,8 @@ export function useKeyboardNav<T extends { id: string }>(
       const next =
         e.key === "ArrowDown" ? Math.min(idx + 1, items.length - 1) : Math.max(idx - 1, 0);
 
-      onSelect(items[next]!);
+      const item = items[next];
+      if (item !== undefined) onSelect(item);
     },
     [items, selectedId, onSelect],
   );

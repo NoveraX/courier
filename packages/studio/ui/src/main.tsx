@@ -7,7 +7,10 @@ import "./index.css";
 
 loadFonts(document);
 
-createRoot(document.getElementById("root")!).render(
+const root = document.getElementById("root");
+if (!root) throw new Error("Studio's page has no #root element to render into");
+
+createRoot(root).render(
   <StrictMode>
     <RouterProvider router={router} />
   </StrictMode>,

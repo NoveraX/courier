@@ -52,7 +52,9 @@ function labeller(requests: RequestEntry[]): (event: EventPayload) => string {
 }
 
 function notifyFailed(failed: EventPayload[], labelOf: (event: EventPayload) => string): void {
-  const latest = labelOf(failed[failed.length - 1]!);
+  const last = failed.at(-1);
+  if (last === undefined) return;
+  const latest = labelOf(last);
   if (failed.length === 1) toast.error(`Request failed: ${latest}`);
   else toast.error(`${failed.length} requests failed, the latest ${latest}`);
 }

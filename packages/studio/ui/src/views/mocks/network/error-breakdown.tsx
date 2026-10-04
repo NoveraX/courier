@@ -13,9 +13,9 @@ interface FaultRow {
   bg: string;
 }
 
-export function ErrorBreakdown({ errors }: ErrorBreakdownProps): React.ReactElement {
+export function ErrorBreakdown({ errors }: ErrorBreakdownProps): React.ReactNode {
   const total = errors.total;
-  if (total === 0) return <></>;
+  if (total === 0) return null;
 
   const rows: FaultRow[] = [
     { label: "500 Internal", count: errors.by500, color: "bg-rose-400/70", bg: "text-rose-400" },

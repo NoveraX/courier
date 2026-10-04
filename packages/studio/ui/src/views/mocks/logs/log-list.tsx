@@ -45,7 +45,8 @@ export function LogList({ logs, selectedId, onSelect }: LogListProps): React.Rea
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
           {virtualizer.getVirtualItems().map((vi) => {
-            const log = logs[vi.index]!;
+            const log = logs[vi.index];
+            if (!log) return null;
             return (
               <div
                 key={log.id}

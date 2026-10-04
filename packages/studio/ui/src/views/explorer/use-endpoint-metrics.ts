@@ -86,10 +86,7 @@ function bucketSuccessRate(bucket: RequestEntry[]): number {
 // ── Utilities ───────────────────────────────────────────────────────────────
 
 function extractDurations(requests: RequestEntry[]): number[] {
-  return requests
-    .filter((r) => r.timing)
-    .map((r) => r.timing!.total)
-    .sort((a, b) => a - b);
+  return requests.flatMap((r) => (r.timing ? [r.timing.total] : [])).sort((a, b) => a - b);
 }
 
 function percentile(sorted: number[], p: number): number {

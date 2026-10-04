@@ -3,11 +3,9 @@ export type FieldType = "str" | "num" | "bool" | "obj" | "arr" | "null";
 
 /** Scan records for column keys (up to 50 for performance) */
 export function detectColumns(records: Record<string, unknown>[]): string[] {
-  if (records.length === 0) return [];
   const keys = new Set<string>();
-  const limit = Math.min(records.length, 50);
-  for (let i = 0; i < limit; i++) {
-    for (const k of Object.keys(records[i]!)) keys.add(k);
+  for (const record of records.slice(0, 50)) {
+    for (const k of Object.keys(record)) keys.add(k);
   }
   return Array.from(keys);
 }
@@ -18,8 +16,8 @@ export function detectColumnTypes(
   columns: string[],
 ): Record<string, FieldType> {
   const types: Record<string, FieldType> = {};
-  if (records.length === 0) return types;
-  const sample = records[0]!;
+  const sample = records[0];
+  if (sample === undefined) return types;
   for (const col of columns) {
     types[col] = detectType(sample[col]);
   }

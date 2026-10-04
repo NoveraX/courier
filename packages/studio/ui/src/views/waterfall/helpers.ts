@@ -75,11 +75,12 @@ export function groupRows(rows: WaterfallRow[], groupBy: WaterfallGroupBy): Grou
 export function computeTickInterval(zoom: ZoomState): number {
   const pxPerMs = zoom.scale / MS_PER_PX_BASE;
 
+  let chosen: number = TICK_INTERVALS[0];
   for (const interval of TICK_INTERVALS) {
-    if (interval * pxPerMs >= MIN_TICK_GAP_PX) return interval;
+    chosen = interval;
+    if (interval * pxPerMs >= MIN_TICK_GAP_PX) break;
   }
-
-  return TICK_INTERVALS[TICK_INTERVALS.length - 1]!;
+  return chosen;
 }
 
 // ── Conversion utilities ───────────────────────────────────────────────────

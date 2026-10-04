@@ -52,7 +52,8 @@ export function RequestList({
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
           {virtualizer.getVirtualItems().map((vi) => {
-            const request = requests[vi.index]!;
+            const request = requests[vi.index];
+            if (!request) return null;
             return (
               <div
                 key={request.id}
@@ -97,7 +98,8 @@ function useKeyboardNavById(
       const next =
         e.key === "ArrowDown" ? Math.min(idx + 1, requests.length - 1) : Math.max(idx - 1, 0);
 
-      onSelect(requests[next]!.id);
+      const request = requests[next];
+      if (request) onSelect(request.id);
     },
     [requests, selectedId, onSelect],
   );

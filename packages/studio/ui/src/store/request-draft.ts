@@ -50,14 +50,16 @@ export function createRequestDraft(requests: RequestEntry[]): RequestDraft {
   return {
     update(id, change) {
       const newAt = addedAt.get(id);
-      if (newAt !== undefined) {
-        added[newAt] = change(added[newAt]!);
+      const addedEntry = newAt === undefined ? undefined : added[newAt];
+      if (newAt !== undefined && addedEntry !== undefined) {
+        added[newAt] = change(addedEntry);
         return;
       }
       const at = indexOfKept(id);
-      if (at === undefined) return;
+      const keptEntry = at === undefined ? undefined : kept[at];
+      if (at === undefined || keptEntry === undefined) return;
       if (kept === requests) kept = requests.slice();
-      kept[at] = change(kept[at]!);
+      kept[at] = change(keptEntry);
       changed = true;
     },
     has: (id) => addedAt.has(id) || indexOfKept(id) !== undefined,
@@ -78,6 +80,6 @@ export function createRequestDraft(requests: RequestEntry[]): RequestDraft {
 /** Where each id sits; the newest entry wins when an id repeats. */
 function indexById(requests: RequestEntry[]): Map<string, number> {
   const at = new Map<string, number>();
-  for (let i = requests.length - 1; i >= 0; i--) at.set(requests[i]!.id, i);
+  for (const [i, request] of requests.entries()) if (!at.has(request.id)) at.set(request.id, i);
   return at;
 }

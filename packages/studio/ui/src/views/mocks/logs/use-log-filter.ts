@@ -79,8 +79,9 @@ function applyFilters(logs: MockRequestLog[], state: LogFilterState): MockReques
 
   if (state.statusRange.length > 0) {
     result = result.filter((l) => {
-      if (!l.status) return false;
-      return state.statusRange.some((range) => matchStatusRange(l.status!, range));
+      const { status } = l;
+      if (!status) return false;
+      return state.statusRange.some((range) => matchStatusRange(status, range));
     });
   }
 

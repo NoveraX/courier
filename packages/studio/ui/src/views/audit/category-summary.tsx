@@ -45,7 +45,6 @@ function CategoryCard({
   const cfg = CATEGORY_CONFIG[category];
   const Icon = cfg.icon;
   const worst = worstSeverity(items);
-  const worstCfg = worst ? SEVERITY_CONFIG[worst] : null;
 
   const severityCounts = countSeverities(items);
 
@@ -64,7 +63,7 @@ function CategoryCard({
           <Icon className="size-4 text-muted-foreground" />
           <span className="text-body-sm font-medium">{cfg.label}</span>
         </div>
-        {worstCfg && <div className={cn("size-2 rounded-full", getSeverityDotBg(worst!))} />}
+        {worst && <div className={cn("size-2 rounded-full", getSeverityDotBg(worst))} />}
       </div>
       <div className="flex items-center gap-1.5">
         {severityCounts.map(({ severity, count }) => (

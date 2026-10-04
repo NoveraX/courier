@@ -12,7 +12,7 @@ export function useScrollSpy(
     const container = containerRef.current;
     if (!container) return;
 
-    function handleScroll(): void {
+    const handleScroll = (): void => {
       const sections = SECTION_CONFIG.map((s) => ({
         id: s.id,
         el: document.getElementById(s.id),
@@ -21,14 +21,14 @@ export function useScrollSpy(
       for (const { id, el } of sections.reverse()) {
         if (!el) continue;
         const rect = el.getBoundingClientRect();
-        const containerRect = container!.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
         if (rect.top <= containerRect.top + 100) {
           onActiveChange(id);
           return;
         }
       }
       onActiveChange(SECTION_CONFIG[0].id);
-    }
+    };
 
     container.addEventListener("scroll", handleScroll, { passive: true });
     return () => container.removeEventListener("scroll", handleScroll);

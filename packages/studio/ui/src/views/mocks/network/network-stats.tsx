@@ -95,7 +95,7 @@ export function NetworkStats({ server }: NetworkStatsProps): React.ReactElement 
           <span className="text-caption text-muted-foreground/70">LATENCY DISTRIBUTION</span>
         </div>
         <LatencyHistogram
-          latencies={serverLogs.filter((l) => l.duration !== undefined).map((l) => l.duration!)}
+          latencies={serverLogs.flatMap((l) => (l.duration === undefined ? [] : [l.duration]))}
           p50={stats.latency.p50}
           p95={stats.latency.p95}
         />

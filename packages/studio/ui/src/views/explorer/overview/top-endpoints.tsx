@@ -34,7 +34,7 @@ export function TopEndpoints({
   onMetricChange,
   onSelectEndpoint,
 }: TopEndpointsProps): React.ReactElement {
-  const activeOption = METRIC_OPTIONS.find((o) => o.key === metric)!;
+  const activeFormat = METRIC_OPTIONS.find((o) => o.key === metric)?.format ?? formatNumber;
 
   return (
     <div className="space-y-3">
@@ -72,7 +72,7 @@ export function TopEndpoints({
               key={`${ep.source}.${ep.group}.${ep.method}`}
               rank={i + 1}
               entry={ep}
-              format={activeOption.format}
+              format={activeFormat}
               maxValue={endpoints[0]?.value ?? ep.value}
               onSelect={
                 onSelectEndpoint

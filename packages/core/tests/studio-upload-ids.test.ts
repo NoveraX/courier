@@ -93,6 +93,18 @@ describe("an upload through the proxy", () => {
     expect(completed).toEqual([id]);
   });
 
+  it("keeps the id the caller named, as Studio's Playground names its runs", async () => {
+    const client = createProxyCaller<ReturnType<typeof api>>("api", {
+      proxyPath: { http: proxyUrl },
+      headers: { "x-courier-rid": "pg_run-1234" },
+    });
+
+    await client.with({ onUploadProgress: () => {} }).upload(form());
+
+    expect(new Set(starts)).toEqual(new Set(["pg_run-1234"]));
+    expect(new Set(progress.map((p) => p.requestId))).toEqual(new Set(["pg_run-1234"]));
+  });
+
   it("leaves the proxy to name the call when the caller does not watch its upload", async () => {
     const client = createProxyCaller<ReturnType<typeof api>>("api", {
       proxyPath: { http: proxyUrl },

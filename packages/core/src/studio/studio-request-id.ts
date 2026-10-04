@@ -12,21 +12,21 @@ export const STUDIO_REQUEST_HEADER = "x-courier-rid";
 const REQUEST_ID = /^[A-Za-z0-9_-]{8,64}$/;
 
 /**
- * The Studio request id a proxied call arrived with, when it is well formed.
+ * The Studio request id a call names in its headers, when it is well formed.
  *
  * The header only names the row a call is shown in, and only while Studio
- * is attached; a malformed one is ignored and the proxy picks its own id.
+ * is attached; a malformed one is ignored and an id is picked instead.
  *
- * @param request - The proxied call
+ * @param headers - The call's headers
  * @returns The id, or `undefined` when the call named none or a malformed one
  * @example
  * ```ts
- * studioRequestIdOf(new Request(url, { headers: { "x-courier-rid": "up_lx3k2_9f2a1c" } }));
+ * studioRequestIdOf(new Headers({ "x-courier-rid": "up_lx3k2_9f2a1c" }));
  * // → "up_lx3k2_9f2a1c"
  * ```
  */
-export function studioRequestIdOf(request: Request): string | undefined {
-  const id = request.headers.get(STUDIO_REQUEST_HEADER);
+export function studioRequestIdOf(headers: Headers): string | undefined {
+  const id = headers.get(STUDIO_REQUEST_HEADER);
   return id !== null && REQUEST_ID.test(id) ? id : undefined;
 }
 

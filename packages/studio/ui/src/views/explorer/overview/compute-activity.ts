@@ -13,11 +13,22 @@ export interface ActivityEntry {
   timestamp: number;
 }
 
+/**
+ * The latest finished requests, newest first, as the Overview's feed lists
+ * them.
+ *
+ * @param requests - The captured requests, newest first as the store holds them
+ * @param limit - How many to list
+ * @returns The feed's entries, newest first
+ * @example
+ * ```ts
+ * const feed = computeActivityFeed(useStudioStore.getState().requests);
+ * ```
+ */
 export function computeActivityFeed(requests: RequestEntry[], limit = 50): ActivityEntry[] {
   return requests
     .filter((r) => r.status !== "pending")
-    .slice(-limit)
-    .reverse()
+    .slice(0, limit)
     .map((r) => ({
       id: r.id,
       source: r.source,

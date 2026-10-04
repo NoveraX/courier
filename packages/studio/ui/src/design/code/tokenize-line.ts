@@ -4,6 +4,7 @@ export type CodeTone =
   | "function"
   | "string"
   | "type"
+  | "number"
   | "plain"
   | "punctuation"
   | "space";
@@ -29,15 +30,20 @@ const KEYWORDS: ReadonlySet<string> = new Set([
   "return",
   "if",
   "new",
+  "for",
+  "of",
+  "curl",
+  "websocat",
 ]);
 
 const PIECES = /("(?:[^"\\]|\\.)*"|'[^']*'|`[^`]*`)|([A-Za-z_$][\w$]*)|(\s+)|([^\sA-Za-z_$"'`]+)/g;
 
 /**
  * Split a line of TypeScript or a shell command into pieces to colour:
- * strings, keywords, a name followed by `(` as a call, a capitalised name
- * as a type, the rest as plain names and punctuation. A light pass — the
- * snippets Studio shows are short and well formed.
+ * strings, keywords and a command's flags, a name followed by `(` as a
+ * call, a capitalised name as a type, the rest as plain names and
+ * punctuation. A light pass — the snippets Studio shows are short and well
+ * formed.
  *
  * @param line - One line of code
  * @returns Its pieces, in order
@@ -53,13 +59,15 @@ export function tokenizeLine(line: string): CodeToken[] {
     if (quoted) tokens.push({ text, tone: "string" });
     else if (name) {
       const next = line[(match.index ?? 0) + name.length];
-      const tone = KEYWORDS.has(name)
-        ? "keyword"
-        : next === "("
-          ? "function"
-          : /^[A-Z]/.test(name)
-            ? "type"
-            : "plain";
+      const flag = line[(match.index ?? 0) - 1] === "-";
+      const tone =
+        KEYWORDS.has(name) || flag
+          ? "keyword"
+          : next === "("
+            ? "function"
+            : /^[A-Z]/.test(name)
+              ? "type"
+              : "plain";
       tokens.push({ text, tone });
     } else if (space) tokens.push({ text, tone: "space" });
     else tokens.push({ text, tone: "punctuation" });

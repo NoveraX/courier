@@ -200,6 +200,9 @@ describe("the shell", () => {
     expect(options).toContain("TimelineInspect");
     expect(options).toContain("Get startedSetup");
     expect(options).toContain("Pause recording⌘ .");
+    expect(options).toContain("Show streamsSSE · WebSocket");
+    expect(options).toContain("Export the requestsas HAR⌘ E");
+    expect(options).toContain("Clear captured requests⌘ ⌫");
     expect(within(dialog).queryByText("Recent requests")).toBeNull();
     expect(within(dialog).getByText(/results$/).textContent).toMatch(/^\d+ results$/);
   });

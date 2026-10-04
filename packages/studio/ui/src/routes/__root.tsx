@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { ClassicShell } from "@/components/layout/classic-shell";
 import { NotFound } from "@/components/layout/not-found";
 import { useTickProvider } from "@/hooks/use-tick";
+import { ShellToaster } from "@/shell/shell-toaster";
 import { useSocketConnection } from "@/socket";
 
 /* `/next` and below bring their own shell; every other page is framed by the classic one. */
@@ -18,12 +19,16 @@ function RootComponent(): React.ReactNode {
   return (
     <>
       {inNewShell ? <Outlet /> : <ClassicShell />}
-      <Toaster
-        position="bottom-right"
-        richColors
-        closeButton
-        toastOptions={{ className: "text-body-sm" }}
-      />
+      {inNewShell ? (
+        <ShellToaster />
+      ) : (
+        <Toaster
+          position="bottom-right"
+          richColors
+          closeButton
+          toastOptions={{ className: "text-body-sm" }}
+        />
+      )}
     </>
   );
 }

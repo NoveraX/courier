@@ -30,6 +30,7 @@
   --color-warn-dim: rgb(232 181 115 / 0.12);
   --color-err: #f0806a;
   --color-err-dim: rgb(240 128 106 / 0.12);
+  --color-err-tint: rgb(240 128 106 / 0.045);
 
   --color-method-get: #7db9ff;
   --color-method-post: #9bd68c;
@@ -41,6 +42,7 @@
   --color-syntax-function: #7db9ff;
   --color-syntax-string: #9bd68c;
   --color-syntax-type: #6fd3c7;
+  --color-syntax-number: #e8b573;
   --color-syntax-plain: #e6e8eb;
 
   --shadow-overlay: 0 24px 80px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.08);
@@ -66,6 +68,8 @@
   --text-title: 14px;
   --text-lead: 14.5px;
   --text-prompt: 15px;
+  --text-heading: 15.5px;
+  --text-figure: 16px;
   --text-metric: 17px;
   --text-wordmark: 20px;
   --text-hero: 32px;
@@ -73,10 +77,13 @@
   --radius-chip: 4px;
   --radius-control: 7px;
   --radius-card: 8px;
+  --radius-panel: 10px;
   --radius-dialog: 12px;
+  --radius-sheet: 14px;
 
   --animate-pulse-live: courier-pulse 1.6s ease-in-out infinite;
   --animate-pop-in: courier-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-sheet-in: courier-slide 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-ripple: courier-ripple 2s ease-out infinite;
   --animate-caret: courier-caret 1s step-end infinite;
 }
@@ -106,6 +113,7 @@
   --color-warn-dim: rgb(163 80 10 / 0.1);
   --color-err: #c0392b;
   --color-err-dim: rgb(192 57 43 / 0.09);
+  --color-err-tint: rgb(192 57 43 / 0.04);
 
   --color-method-get: #1c63d6;
   --color-method-post: #1d7338;
@@ -117,6 +125,7 @@
   --color-syntax-function: #1c63d6;
   --color-syntax-string: #1d7338;
   --color-syntax-type: #0b6f68;
+  --color-syntax-number: #a3500a;
   --color-syntax-plain: #1e2227;
 
   --shadow-overlay: 0 24px 70px -16px rgb(24 26 32 / 0.28), 0 0 0 1px rgb(12 13 15 / 0.1);
@@ -136,6 +145,17 @@
   from {
     opacity: 0;
     transform: translateY(-6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes courier-slide {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
   }
   to {
     opacity: 1;
@@ -169,6 +189,7 @@
   :root {
     --animate-pulse-live: none;
     --animate-pop-in: none;
+    --animate-sheet-in: none;
     --animate-ripple: none;
     --animate-caret: none;
   }

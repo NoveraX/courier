@@ -85,6 +85,9 @@ describe("the properties", () => {
       mono: true,
     });
     expect(requestProperties(ok, {})[2]?.value).toBe("vite-browser");
+    expect(
+      requestProperties(requestEntry({ sessionId: "server" }), { runtimeKind: "server" })[2]?.value,
+    ).toBe("server");
   });
 });
 

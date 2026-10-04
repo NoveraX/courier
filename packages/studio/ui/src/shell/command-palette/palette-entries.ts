@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   CircleAlert,
+  Download,
   Pause,
   Play,
   RadioTower,
@@ -13,6 +14,7 @@ import {
 
 import { formatDuration } from "@/lib/formatters";
 import type { RequestEntry } from "@/store";
+import type { ExportFormat } from "@/store/types";
 import { SHELL_NAV } from "../nav";
 
 /** What an entry does when it is chosen. */
@@ -20,6 +22,8 @@ export type PaletteAction =
   | { kind: "go"; to: NonNullable<LinkProps["to"]> }
   | { kind: "open-request"; id: string }
   | { kind: "show-errors" }
+  | { kind: "show-streams" }
+  | { kind: "export" }
   | { kind: "toggle-recording" }
   | { kind: "toggle-theme" }
   | { kind: "clear-requests" };
@@ -83,20 +87,8 @@ function goToEntries(): PaletteEntry[] {
   return [setup, ...views];
 }
 
-/**
- * Everything the palette offers: the latest calls, every view, and the
- * actions that work from anywhere.
- *
- * @param requests - The captured requests, newest first
- * @param paused - Whether recording is paused
- * @returns The entries, grouped in order
- * @example
- * ```ts
- * paletteEntries(useStudioStore.getState().requests, false);
- * ```
- */
-export function paletteEntries(requests: readonly RequestEntry[], paused: boolean): PaletteEntry[] {
-  const actions: PaletteEntry[] = [
+function actionEntries(paused: boolean, exportFormat: ExportFormat): PaletteEntry[] {
+  return [
     {
       id: "action:recording",
       group: "Actions",
@@ -115,6 +107,14 @@ export function paletteEntries(requests: readonly RequestEntry[], paused: boolea
       action: { kind: "show-errors" },
     },
     {
+      id: "action:streams",
+      group: "Actions",
+      label: "Show streams",
+      meta: "SSE · WebSocket",
+      icon: RadioTower,
+      action: { kind: "show-streams" },
+    },
+    {
       id: "action:theme",
       group: "Actions",
       label: "Toggle theme",
@@ -124,13 +124,43 @@ export function paletteEntries(requests: readonly RequestEntry[], paused: boolea
       action: { kind: "toggle-theme" },
     },
     {
+      id: "action:export",
+      group: "Actions",
+      label: "Export the requests",
+      meta: `as ${exportFormat.toUpperCase()}`,
+      icon: Download,
+      hint: "⌘ E",
+      action: { kind: "export" },
+    },
+    {
       id: "action:clear",
       group: "Actions",
       label: "Clear captured requests",
       meta: "",
       icon: Trash2,
+      hint: "⌘ ⌫",
       action: { kind: "clear-requests" },
     },
   ];
-  return [...recentEntries(requests), ...goToEntries(), ...actions];
+}
+
+/**
+ * Everything the palette offers: the latest calls, every view, and the
+ * actions that work from anywhere.
+ *
+ * @param requests - The captured requests, newest first
+ * @param paused - Whether recording is paused
+ * @param exportFormat - The format an export downloads in
+ * @returns The entries, grouped in order
+ * @example
+ * ```ts
+ * paletteEntries(useStudioStore.getState().requests, false, "har");
+ * ```
+ */
+export function paletteEntries(
+  requests: readonly RequestEntry[],
+  paused: boolean,
+  exportFormat: ExportFormat,
+): PaletteEntry[] {
+  return [...recentEntries(requests), ...goToEntries(), ...actionEntries(paused, exportFormat)];
 }

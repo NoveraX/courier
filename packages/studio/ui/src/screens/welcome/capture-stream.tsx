@@ -38,7 +38,7 @@ function Row({ request, newest }: { request: RequestEntry; newest: boolean }): R
   return (
     <button
       type="button"
-      onClick={() => void navigate({ to: "/timeline", search: { selectedReq: request.id } })}
+      onClick={() => void navigate({ to: "/next/timeline", search: { req: request.id } })}
       className={cn(
         "relative grid h-8.25 w-full cursor-pointer grid-cols-[78px_50px_minmax(0,1fr)_34px_84px] items-center gap-2.5 border-b border-line px-3.5 text-left transition-colors duration-400 hover:bg-raised",
         newest ? "bg-brand-tint" : failed && "bg-err-dim",

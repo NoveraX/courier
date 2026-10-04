@@ -23,6 +23,12 @@ export interface HeldMessages {
    * @returns The held messages; none on every call after the first
    */
   release(): readonly unknown[];
+  /**
+   * What is held, oldest first, still held.
+   *
+   * @returns The held messages; none once they were released
+   */
+  peek(): readonly unknown[];
 }
 
 /**
@@ -38,6 +44,7 @@ export interface HeldMessages {
  * ```ts
  * const early = holdMessages("api.chat.room");
  * early.hold({ text: "welcome" }); // → true
+ * early.peek(); // → [{ text: "welcome" }]
  * early.release(); // → [{ text: "welcome" }]
  * early.hold({ text: "later" }); // → false
  * ```
@@ -65,6 +72,9 @@ export function holdMessages(topic: string): HeldMessages {
       const released = held ?? [];
       held = null;
       return released;
+    },
+    peek() {
+      return held ? [...held] : [];
     },
   };
 }

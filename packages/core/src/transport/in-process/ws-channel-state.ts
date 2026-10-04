@@ -1,5 +1,6 @@
 import { createLogger } from "../../logger";
 import { checkResponseNow } from "../../realtime/check-response-now";
+import { OBSERVE_DATA } from "../../realtime/observe-data";
 import type { ChannelHandlers, ConnectionStatus, WSChannelContext } from "../../realtime/types";
 import { holdMessages } from "./held-messages";
 import { notifyListeners } from "./notify-listeners";
@@ -45,12 +46,14 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     init;
 
   const dataListeners = new Set<(data: unknown) => void>();
+  const observers = new Set<(data: unknown) => void>();
   const statusListeners = new Set<(s: ConnectionStatus) => void>();
   let status: ConnectionStatus = "connecting";
   let closed = false;
   const early = holdMessages(topic);
 
   const emitData = (data: unknown): void => {
+    notifyListeners(observers, data, "data");
     if (!early.hold(data)) notifyListeners(dataListeners, data, "data");
   };
 
@@ -58,6 +61,13 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
   function addDataListener(fn: (data: unknown) => void): void {
     dataListeners.add(fn);
     for (const data of early.release()) notifyListeners([fn], data, "data");
+  }
+
+  /* An observer hears what is held too, and leaves it held for that listener. */
+  function addObserver(fn: (data: unknown) => void): () => void {
+    observers.add(fn);
+    for (const data of early.peek()) notifyListeners([fn], data, "data");
+    return () => observers.delete(fn);
   }
 
   const setStatus = (next: ConnectionStatus): void => {
@@ -117,6 +127,7 @@ export function createChannelState(init: ChannelStateInit): ChannelState {
     close() {
       void close();
     },
+    [OBSERVE_DATA]: addObserver,
     /* Ended for its caller once closed: `disconnected` is heard after
        `onLeave` has run, but nothing sent meanwhile reaches the handler. */
     get status() {

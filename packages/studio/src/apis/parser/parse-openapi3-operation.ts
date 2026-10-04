@@ -24,8 +24,9 @@ export function parseOpenApi3Operation(
   method: SupportedHttpMethod,
   op: SpecNode,
   spec: SpecNode,
+  onLeftOut: (reason: string) => void = () => {},
 ): ParsedEndpoint {
-  const parameters = parseParameters(op, spec);
+  const parameters = parseParameters(op, spec, onLeftOut);
   const body = parseRequestBody(op, spec);
   /* A HEAD answer never carries the body its GET would: a schema for it made
      every call fail validation on the null the client reads. */
@@ -51,7 +52,11 @@ export function parseOpenApi3Operation(
   };
 }
 
-function parseParameters(op: SpecNode, spec: SpecNode): ParsedParameter[] {
+function parseParameters(
+  op: SpecNode,
+  spec: SpecNode,
+  onLeftOut: (reason: string) => void,
+): ParsedParameter[] {
   const parameters: ParsedParameter[] = [];
   const seen = new Set<string>();
 
@@ -59,10 +64,12 @@ function parseParameters(op: SpecNode, spec: SpecNode): ParsedParameter[] {
     const ref = textAt(param, "$ref");
     const resolved = ref ? resolveRef(spec, ref) : asNode(param);
     /* A reference into another file, or one this specification never
-       defines, resolves to nothing — reading a name off it threw and took
-       the whole import down. */
+       defines, resolves to nothing: the parameter is left out, and said so. */
     const place = placeOf(resolved.in);
-    if (typeof resolved.name !== "string" || place === undefined) continue;
+    if (typeof resolved.name !== "string" || place === undefined) {
+      if (ref) onLeftOut(`parameter ${ref} is not in this document, so it is left out`);
+      continue;
+    }
 
     /* Only a path parameter is renamed, to be a placeholder the path can
        hold; a query parameter is sent under its own name, and renaming

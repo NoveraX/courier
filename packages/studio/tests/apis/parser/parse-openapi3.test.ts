@@ -110,3 +110,32 @@ describe("a path item written as a reference", () => {
     ]);
   });
 });
+
+describe("a parameter written as a reference this document does not declare", () => {
+  it("is left out of its operation, and said so", () => {
+    const parsed = parseSpec(
+      document({
+        "/a/{id}": {
+          get: {
+            operationId: "getA",
+            parameters: [
+              { name: "id", in: "path", required: true, schema: { type: "string" } },
+              { $ref: "#/components/parameters/Missing" },
+            ],
+            ...answers,
+          },
+        },
+      }),
+    );
+
+    expect(parsed.groups[0]?.endpoints[0]?.parameters.map((p) => p.name)).toEqual(["id"]);
+    expect(parsed.skipped).toEqual([
+      {
+        method: "GET",
+        path: "/a/{id}",
+        reason:
+          "parameter #/components/parameters/Missing is not in this document, so it is left out",
+      },
+    ]);
+  });
+});

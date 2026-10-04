@@ -708,6 +708,14 @@ Both modes share the same API definition, the same middleware chain, and the sam
 | Streaming & SSE | Manual | Manual | Yes | **First-class** |
 | In-memory mock client | - | - | - | **Built-in** |
 
+### Closer alternatives
+
+- **[oRPC](https://orpc.unnoq.com)** types each call from an oRPC router or contract that your server implements, and adds OpenAPI generation, event-iterator streams, Server Actions and TanStack Query. Courier types calls to a backend it does not own: FastAPI, Rails, Go or a third-party API.
+- **[ts-rest](https://ts-rest.com)** shares one REST contract between client and server, typed or validated with any Standard Schema library. Courier keeps one definition too, and builds on it: proxy mode, SSE and WebSocket channels, a mock server and Studio.
+- **[openapi-fetch](https://openapi-ts.dev/openapi-fetch/)** is a small fetch client typed from the types `openapi-typescript` generates from a spec, checked at build time only. Courier needs no spec and validates at runtime; Studio imports a spec when there is one.
+- **[Hey API](https://heyapi.dev)** generates an SDK from an OpenAPI spec, with plugins for Zod, Valibot and ArkType schemas and TanStack Query hooks. Courier's definition is code you own and edit, with middleware, validation and streams in it.
+- **[ofetch](https://github.com/unjs/ofetch)** is a better `fetch` — retries, interceptors, automatic JSON parsing — typed by a generic on each call. Courier types every endpoint from its definition.
+
 <br />
 
 ---

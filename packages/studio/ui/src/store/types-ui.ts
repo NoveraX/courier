@@ -8,7 +8,8 @@ export type Theme = "dark" | "light" | "system";
 
 // ── Connection state ────────────────────────────────────────────────────────
 
-export type ConnectionStatus = "connected" | "disconnected" | "reconnecting";
+/** `connecting` until the page's first connection to Studio settles. */
+export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "reconnecting";
 
 // ── Catalog (server-authoritative merged source map) ────────────────────────
 

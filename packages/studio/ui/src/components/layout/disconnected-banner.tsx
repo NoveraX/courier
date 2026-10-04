@@ -6,7 +6,8 @@ export function DisconnectedBanner(): React.ReactNode {
   const connectionStatus = useStudioStore((s) => s.connectionStatus);
   const reconnectAttempt = useStudioStore((s) => s.reconnectAttempt);
 
-  if (connectionStatus === "connected") return null;
+  /* The page's first connection is not a lost one; it settles in a moment. */
+  if (connectionStatus === "connected" || connectionStatus === "connecting") return null;
 
   const isReconnecting = connectionStatus === "reconnecting";
 

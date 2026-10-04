@@ -392,8 +392,6 @@ export interface ChannelAddressed<
 
 /** Configuration shared by every endpoint built from a base. */
 export interface CourierBaseConfig {
-  /** Identifier used by tooling to attribute endpoints to their source. */
-  id?: string;
   middleware?: readonly Middleware[];
   allowedHeaders?: readonly string[];
   timeout?: number;

@@ -133,11 +133,10 @@ describe("autoStart", () => {
   it("starts a mock once, and not again on a reload after the developer stopped it", async () => {
     const { coordinator, declare, last } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
-    expect(last("a")?.processStatus).toBe("running");
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
 
     coordinator.handleCommand("mock:managed:stop", { serverId: "a" });
-    await settle();
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("stopped"));
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
     await settle();
 
@@ -153,9 +152,8 @@ describe("autoStart", () => {
     expect(fake.spawned).toHaveLength(0);
 
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
 
-    expect(last("a")?.processStatus).toBe("running");
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
     await coordinator.stop();
   });
 });
@@ -164,31 +162,34 @@ describe("an edit", () => {
   it("restarts a running mock with the new definition", async () => {
     const { coordinator, declare, last } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
 
     declare({ a: defineMockServer({ source: api, autoStart: true, port: 7555 }) });
-    await settle();
 
-    expect(fake.spawned.map((s) => s.port)).toEqual([7001, 7555]);
-    expect(last("a")?.processStatus).toBe("running");
+    await vi.waitFor(() => {
+      expect(fake.spawned.map((s) => s.port)).toEqual([7001, 7555]);
+      expect(last("a")?.processStatus).toBe("running");
+    });
     await coordinator.stop();
   });
 
   it("that breaks a running mock's definition leaves it serving, and the fix restarts it", async () => {
     const { coordinator, declare, last } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
 
     declare({ a: { broken: true } });
-    await settle();
+    await vi.waitFor(() =>
+      expect(last("a")?.lastError).toMatch(/keeps serving its last working definition/),
+    );
     expect(last("a")).toMatchObject({ processStatus: "running" });
-    expect(last("a")?.lastError).toMatch(/keeps serving its last working definition/);
     expect(fake.children.has("a")).toBe(true);
 
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
-    expect(fake.spawned).toHaveLength(2);
-    expect(last("a")).toMatchObject({ processStatus: "running", lastError: null });
+    await vi.waitFor(() => {
+      expect(fake.spawned).toHaveLength(2);
+      expect(last("a")).toMatchObject({ processStatus: "running", lastError: null });
+    });
     await coordinator.stop();
   });
 });
@@ -197,15 +198,17 @@ describe("commands for one mock", () => {
   it("leave it stopped when a stop follows a restart", async () => {
     const { coordinator, declare, last } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
     fake.killDelay = 20;
 
     coordinator.handleCommand("mock:managed:restart", { serverId: "a" });
     coordinator.handleCommand("mock:managed:stop", { serverId: "a" });
     await settle(120);
 
-    expect(fake.children.has("a")).toBe(false);
-    expect(last("a")?.processStatus).toBe("stopped");
+    await vi.waitFor(() => {
+      expect(fake.children.has("a")).toBe(false);
+      expect(last("a")?.processStatus).toBe("stopped");
+    });
     await coordinator.stop();
   });
 
@@ -218,8 +221,10 @@ describe("commands for one mock", () => {
     coordinator.handleCommand("mock:managed:stop", { serverId: "a" });
     await settle();
 
-    expect(fake.children.has("a")).toBe(false);
-    expect(last("a")?.processStatus).toBe("stopped");
+    await vi.waitFor(() => {
+      expect(fake.children.has("a")).toBe(false);
+      expect(last("a")?.processStatus).toBe("stopped");
+    });
     await coordinator.stop();
   });
 
@@ -241,30 +246,34 @@ describe("a mock removed from the mocks file", () => {
   it("leaves the UI once it has stopped", async () => {
     const { coordinator, declare, emitted } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
+    await vi.waitFor(() =>
+      expect(emitted().some((e) => e.serverId === "a" && e.processStatus === "running")).toBe(true),
+    );
 
     declare({});
-    await settle();
 
-    const trail = emitted()
-      .filter((e) => e.serverId === "a")
-      .map((e) => (e.type === "mock:server:disconnect" ? "gone" : e.processStatus));
-    expect(trail.slice(-3)).toEqual(["stopping", "stopped", "gone"]);
+    const trail = () =>
+      emitted()
+        .filter((e) => e.serverId === "a")
+        .map((e) => (e.type === "mock:server:disconnect" ? "gone" : e.processStatus));
+    await vi.waitFor(() => expect(trail().slice(-3)).toEqual(["stopping", "stopped", "gone"]));
     await coordinator.stop();
   });
 
   it("comes back when it is declared again while it was stopping", async () => {
     const { coordinator, declare, last } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
     fake.killDelay = 20;
 
     declare({});
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
     await settle(120);
 
-    expect(last("a")?.processStatus).toBe("running");
-    expect(fake.children.has("a")).toBe(true);
+    await vi.waitFor(() => {
+      expect(last("a")?.processStatus).toBe("running");
+      expect(fake.children.has("a")).toBe(true);
+    });
     await coordinator.stop();
   });
 });
@@ -293,7 +302,7 @@ describe("after Studio closes", () => {
   it("lets no restart that was underway fork a worker", async () => {
     const { coordinator, declare } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
+    await vi.waitFor(() => expect(fake.children.has("a")).toBe(true));
     fake.killDelay = 20;
 
     coordinator.handleCommand("mock:managed:restart", { serverId: "a" });
@@ -319,48 +328,55 @@ describe("what the UI is told", () => {
   it("drops the port and address a stopped mock listened on", async () => {
     const { coordinator, declare, last } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true, port: 7444 }) });
-    await settle();
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
     coordinator.handleCommand("mock:managed:stop", { serverId: "a" });
-    await settle();
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("stopped"));
 
     declare({ a: defineMockServer({ source: api, port: 7445 }) });
-    await settle();
 
-    expect(last("a")).toMatchObject({ port: 7445, url: "" });
+    await vi.waitFor(() => expect(last("a")).toMatchObject({ port: 7445, url: "" }));
     await coordinator.stop();
   });
 
   it("tells each step of a restart once, and a restarting mock as restarting until it starts", async () => {
     const { coordinator, declare, emitted } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
+    await vi.waitFor(() =>
+      expect(emitted().some((e) => e.serverId === "a" && e.processStatus === "running")).toBe(true),
+    );
     const before = emitted().length;
 
     declare({ a: defineMockServer({ source: api, autoStart: true, port: 7556 }) });
-    await settle();
 
-    const steps = emitted()
-      .slice(before)
-      .filter((e) => e.serverId === "a" && e.type === "mock:server:connect")
-      .map((e) => e.processStatus);
-    expect(steps).toEqual(["running", "restarting", "starting", "running"]);
+    const steps = () =>
+      emitted()
+        .slice(before)
+        .filter((e) => e.serverId === "a" && e.type === "mock:server:connect")
+        .map((e) => e.processStatus);
+    await vi.waitFor(() => expect(steps().at(-1)).toBe("running"));
+    await settle();
+    expect(steps()).toEqual(["running", "restarting", "starting", "running"]);
     await coordinator.stop();
   });
 
   it("tells a stop once it has stopped, and once", async () => {
     const { coordinator, declare, emitted } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
+    await vi.waitFor(() =>
+      expect(emitted().some((e) => e.serverId === "a" && e.processStatus === "running")).toBe(true),
+    );
     const before = emitted().length;
 
     coordinator.handleCommand("mock:managed:stop", { serverId: "a" });
-    await settle();
 
-    const steps = emitted()
-      .slice(before)
-      .filter((e) => e.serverId === "a" && e.type === "mock:server:connect")
-      .map((e) => e.processStatus);
-    expect(steps).toEqual(["stopping", "stopped"]);
+    const steps = () =>
+      emitted()
+        .slice(before)
+        .filter((e) => e.serverId === "a" && e.type === "mock:server:connect")
+        .map((e) => e.processStatus);
+    await vi.waitFor(() => expect(steps().at(-1)).toBe("stopped"));
+    await settle();
+    expect(steps()).toEqual(["stopping", "stopped"]);
     await coordinator.stop();
   });
 
@@ -381,7 +397,7 @@ describe("a mocks file that fails to load", () => {
       a: defineMockServer({ source: api, autoStart: true }),
       b: defineMockServer({ source: api }),
     });
-    await settle();
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
 
     coordinator.setMocksFile({ file: MOCKS_FILE, error: "Unexpected token" });
     expect(last("a")).toMatchObject({ processStatus: "running" });
@@ -401,7 +417,7 @@ describe("a mocks file that fails to load", () => {
   it("leaves a reason of the mock's own in place when the file loads again", async () => {
     const { coordinator, declare, last } = studio();
     declare({ a: defineMockServer({ source: api, autoStart: true }) });
-    await settle();
+    await vi.waitFor(() => expect(last("a")?.processStatus).toBe("running"));
 
     coordinator.setMocksFile({ file: MOCKS_FILE, error: "Unexpected token" });
     fake.children.delete("a");
@@ -419,10 +435,9 @@ describe("a mocks file that fails to load", () => {
     declare({ a: defineMockServer({ source: api }) });
     await settle();
     coordinator.handleCommand("mock:managed:start", { serverId: "a" });
-    await settle();
 
+    await vi.waitFor(() => expect(fake.spawned.map((s) => s.mocksFile)).toEqual([MOCKS_FILE]));
     expect(last("a")?.filePath).toBe("courier.mocks.ts:a");
-    expect(fake.spawned.map((s) => s.mocksFile)).toEqual([MOCKS_FILE]);
     await coordinator.stop();
   });
 });
@@ -488,12 +503,13 @@ describe("what an edit of the mocks file is told", () => {
       a: defineMockServer({ source: api, autoStart: true, port: 7555 }),
       b: defineMockServer({ source: api }),
     });
-    await settle();
 
-    expect(coordinator.summarizeServers()).toEqual([
-      { key: "a", alive: true, port: 7555, portDeclared: true },
-      { key: "b", alive: false, port: 7001, portDeclared: false },
-    ]);
+    await vi.waitFor(() =>
+      expect(coordinator.summarizeServers()).toEqual([
+        { key: "a", alive: true, port: 7555, portDeclared: true },
+        { key: "b", alive: false, port: 7001, portDeclared: false },
+      ]),
+    );
     await coordinator.stop();
   });
 });
@@ -517,9 +533,8 @@ describe("a command", () => {
     await settle();
 
     coordinator.handleCommand("mock:managed:startAll", {});
-    await settle();
 
-    expect(fake.spawned.map((s) => s.serverId).sort()).toEqual(["a", "b"]);
+    await vi.waitFor(() => expect(fake.spawned.map((s) => s.serverId).sort()).toEqual(["a", "b"]));
     await coordinator.stop();
   });
 });

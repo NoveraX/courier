@@ -27,6 +27,10 @@
   "engines": {
     "node": ">=22.13"
   },
+  "sideEffects": [
+    "./lib/cli.js",
+    "./lib/mock-worker.js"
+  ],
   "bin": {
     "courier-studio": "lib/cli.js"
   },

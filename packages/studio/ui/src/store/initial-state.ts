@@ -26,6 +26,7 @@ export type InitialState = Pick<
   | "clientTick"
   | "droppedRequests"
   | "watcherApiPaths"
+  | "watcherSince"
   | "watcherLastChange"
 >;
 
@@ -53,6 +54,7 @@ export function createInitialState(savedTheme: StudioState["theme"]): InitialSta
     clientTick: 0,
     droppedRequests: 0,
     watcherApiPaths: 0,
+    watcherSince: null,
     watcherLastChange: null,
   };
 }

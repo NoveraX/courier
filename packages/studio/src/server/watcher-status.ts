@@ -8,7 +8,8 @@ import type { Namespace, Socket } from "socket.io";
 
 export interface WatcherSnapshot {
   apiPaths: number;
-  timestamp: number;
+  /** When Studio began to watch this many files: its start, or the latest change of the count. */
+  since: number;
 }
 
 /** What Studio tells the pages about the files it watches. */
@@ -21,9 +22,10 @@ export interface WatcherStatus {
 
 export function createWatcherStatus(uiNamespace: Namespace): WatcherStatus {
   let apiPaths = 0;
+  let since = Date.now();
 
   function buildSnapshot(): WatcherSnapshot {
-    return { apiPaths, timestamp: Date.now() };
+    return { apiPaths, since };
   }
 
   function emitStatus(): void {
@@ -33,6 +35,7 @@ export function createWatcherStatus(uiNamespace: Namespace): WatcherStatus {
   function setApiPathCount(count: number): void {
     if (count === apiPaths) return;
     apiPaths = count;
+    since = Date.now();
     emitStatus();
   }
 

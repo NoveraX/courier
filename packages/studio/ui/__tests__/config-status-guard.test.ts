@@ -33,13 +33,20 @@ describe("isConfigStatusPayload", () => {
 
   it("accepts a config that is missing, with and without a last good load", () => {
     expect(
-      isConfigStatusPayload({ state: "missing", revision: 1, configFile: null, lastGoodAt: null }),
+      isConfigStatusPayload({
+        state: "missing",
+        revision: 1,
+        configFile: null,
+        missingAt: 900,
+        lastGoodAt: null,
+      }),
     ).toBe(true);
     expect(
       isConfigStatusPayload({
         state: "missing",
         revision: 5,
         configFile: "courier.config.mjs",
+        missingAt: 2_000,
         lastGoodAt: 1_000,
       }),
     ).toBe(true);
@@ -92,12 +99,20 @@ describe("isConfigStatusPayload", () => {
     expect(isConfigStatusPayload({ ...FAILED, lastGoodAt: undefined })).toBe(false);
   });
 
-  it("rejects a missing status whose file or last good time is malformed", () => {
-    const missing = { state: "missing", revision: 1, configFile: null, lastGoodAt: null };
+  it("rejects a missing status whose file, or the time it went missing, or the last good time is malformed", () => {
+    const missing = {
+      state: "missing",
+      revision: 1,
+      configFile: null,
+      missingAt: 900,
+      lastGoodAt: null,
+    };
 
-    expect(isConfigStatusPayload({ state: "missing", revision: 1, configFile: null })).toBe(false);
+    expect(isConfigStatusPayload({ ...missing, lastGoodAt: undefined })).toBe(false);
     expect(isConfigStatusPayload({ ...missing, lastGoodAt: "1000" })).toBe(false);
-    expect(isConfigStatusPayload({ state: "missing", revision: 1, lastGoodAt: null })).toBe(false);
+    expect(isConfigStatusPayload({ ...missing, configFile: undefined })).toBe(false);
     expect(isConfigStatusPayload({ ...missing, configFile: 42 })).toBe(false);
+    expect(isConfigStatusPayload({ ...missing, missingAt: undefined })).toBe(false);
+    expect(isConfigStatusPayload({ ...missing, missingAt: Number.NaN })).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 /**
- * What a page is told of Studio when it connects: Studio's version, and the
- * project by its package's name — or its folder's, when the package names
- * none or cannot be read.
+ * What a page is told of Studio when it connects: Studio's version, when it
+ * started, and the project by its package's name — or its folder's, when the
+ * package names none or cannot be read.
  */
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -25,10 +25,14 @@ function project(packageJson?: string): string {
 }
 
 describe("studioInfo", () => {
-  it("names the project after its package, and carries Studio's version", () => {
+  it("names the project after its package, and carries Studio's version and start", () => {
     const root = project(JSON.stringify({ name: " acme-web " }));
 
-    expect(studioInfo(root, "1.2.3")).toEqual({ version: "1.2.3", project: { name: "acme-web" } });
+    expect(studioInfo(root, "1.2.3", 1_700)).toEqual({
+      version: "1.2.3",
+      startedAt: 1_700,
+      project: { name: "acme-web" },
+    });
   });
 
   it("names the project after its folder when the package names nothing usable", () => {
@@ -54,7 +58,13 @@ describe("studioInfo", () => {
     vi.unstubAllEnvs();
   });
 
-  it("carries the installed version when none is given", () => {
-    expect(studioInfo(project()).version).toMatch(/^\d+\.\d+\.\d+/);
+  it("carries the installed version and the moment it is built when neither is given", () => {
+    const before = Date.now();
+
+    const info = studioInfo(project());
+
+    expect(info.version).toMatch(/^\d+\.\d+\.\d+/);
+    expect(info.startedAt).toBeGreaterThanOrEqual(before);
+    expect(info.startedAt).toBeLessThanOrEqual(Date.now());
   });
 });

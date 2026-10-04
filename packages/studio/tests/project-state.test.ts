@@ -326,6 +326,7 @@ describe("a UI that connects", () => {
       state: "missing",
       revision: 1,
       configFile: null,
+      missingAt: expect.any(Number),
       lastGoodAt: null,
     });
     expect(importNames(payloads(u, "registry:updated").at(-1))).toEqual(["petstore"]);
@@ -427,6 +428,7 @@ describe("deleting courier.config", () => {
       state: "missing",
       revision: 2,
       configFile: "courier.config.ts",
+      missingAt: expect.any(Number),
       lastGoodAt: loadedAt,
     });
     expect(demoBaseURL(payloads(first, "scan:sources").at(-1))).toBe("https://v1.example");

@@ -8,8 +8,9 @@
  * - `loaded` — the latest load succeeded; `configFile` is what Studio runs.
  * - `failed` — the latest load failed; Studio keeps running what it loaded
  *   at `lastGoodAt`, or nothing when that is `null`.
- * - `missing` — there is no config; Studio keeps running what it loaded at
- *   `lastGoodAt`, or nothing when that is `null`.
+ * - `missing` — there is no config, as Studio found at `missingAt`; Studio
+ *   keeps running what it loaded at `lastGoodAt`, or nothing when that is
+ *   `null`.
  *
  * In `failed` and `missing`, `configFile` is the file Studio runs, and
  * `null` when it runs none. After a delete it names the file that is gone;
@@ -33,4 +34,10 @@ export type ConfigStatusPayload =
       failedAt: number;
       lastGoodAt: number | null;
     }
-  | { state: "missing"; revision: number; configFile: string | null; lastGoodAt: number | null };
+  | {
+      state: "missing";
+      revision: number;
+      configFile: string | null;
+      missingAt: number;
+      lastGoodAt: number | null;
+    };

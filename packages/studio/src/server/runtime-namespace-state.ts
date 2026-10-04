@@ -36,13 +36,17 @@ const g = globalThis as Record<symbol, unknown>;
 if (!g[RUNTIME_REGISTRY_KEY]) {
   g[RUNTIME_REGISTRY_KEY] = new Map<string, RuntimeRegistryEntry>();
 }
-if (!g[ACTIVE_PERIOD_KEY]) g[ACTIVE_PERIOD_KEY] = { since: undefined };
+if (!g[ACTIVE_PERIOD_KEY]) g[ACTIVE_PERIOD_KEY] = { since: undefined, idleSince: undefined };
 
 /** Map of runtimeId → registry entry. Owned by the `/runtime` namespace. */
 export const runtimeRegistry = g[RUNTIME_REGISTRY_KEY] as Map<string, RuntimeRegistryEntry>;
 
-/* When the first runtime of the runtimes attached now arrived; unset while none is. */
-const activePeriod = g[ACTIVE_PERIOD_KEY] as { since: number | undefined };
+/* When the first runtime of the runtimes attached now arrived, unset while none
+   is; and when the last one left, unset while one is or before any came. */
+const activePeriod = g[ACTIVE_PERIOD_KEY] as {
+  since: number | undefined;
+  idleSince?: number | undefined;
+};
 
 /**
  * When the runtimes attached now began to be: the first one's arrival, kept
@@ -53,6 +57,16 @@ const activePeriod = g[ACTIVE_PERIOD_KEY] as { since: number | undefined };
  */
 export function runtimesActiveSince(): number | undefined {
   return activePeriod.since;
+}
+
+/**
+ * When the last runtime left, while none is attached: how long Studio has
+ * waited for one again.
+ *
+ * @returns The time, or `undefined` while a runtime is attached or before any came
+ */
+export function runtimesIdleSince(): number | undefined {
+  return activePeriod.idleSince;
 }
 
 /**
@@ -81,7 +95,10 @@ export function registerRuntime(entry: RuntimeRegistryEntry): "claimed" | "dupli
   ) {
     return "duplicate";
   }
-  if (runtimeRegistry.size === 0) activePeriod.since = Date.now();
+  if (runtimeRegistry.size === 0) {
+    activePeriod.since = Date.now();
+    activePeriod.idleSince = undefined;
+  }
   runtimeRegistry.set(entry.runtimeId, entry);
   return "claimed";
 }
@@ -130,7 +147,10 @@ export function unregisterRuntime(runtimeId: string): RuntimeRegistryEntry | und
   const existing = runtimeRegistry.get(runtimeId);
   if (!existing) return undefined;
   runtimeRegistry.delete(runtimeId);
-  if (runtimeRegistry.size === 0) activePeriod.since = undefined;
+  if (runtimeRegistry.size === 0) {
+    activePeriod.since = undefined;
+    activePeriod.idleSince = Date.now();
+  }
   return existing;
 }
 
@@ -153,4 +173,5 @@ export function clearStudioServerState(): void {
   runtimeRegistry.clear();
   runtimeSockets.clear();
   activePeriod.since = undefined;
+  activePeriod.idleSince = undefined;
 }

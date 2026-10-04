@@ -95,6 +95,8 @@ export interface BindingSnapshot {
   runtimes: Array<{ runtimeId: string; kind: "browser" | "server" }>;
   /** When Studio saw the first of the runtimes attached now arrive; absent while none is. */
   activeSince?: number;
+  /** When the last runtime left; absent while one is attached, or before any came. */
+  idleSince?: number;
 }
 
 export interface BindingErrorPayload {

@@ -33,7 +33,7 @@ function missing(
   lastGoodAt: number | null,
   configFile = lastGoodAt === null ? null : "courier.config.ts",
 ): ConfigStatusPayload {
-  return { state: "missing", revision: 3, configFile, lastGoodAt };
+  return { state: "missing", revision: 3, configFile, missingAt: 2_000, lastGoodAt };
 }
 
 describe("apisPageState", () => {

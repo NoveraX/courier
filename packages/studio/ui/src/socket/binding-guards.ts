@@ -26,6 +26,7 @@ export function isBindingSnapshot(data: unknown): data is BindingSnapshot {
   if (typeof d.sourceCount !== "number" || !Number.isFinite(d.sourceCount)) return false;
   if (!Array.isArray(d.runtimes) || !d.runtimes.every(isRuntimeKindRow)) return false;
   if (d.activeSince !== undefined && !Number.isFinite(d.activeSince)) return false;
+  if (d.idleSince !== undefined && !Number.isFinite(d.idleSince)) return false;
   for (const row of d.rows) {
     if (!isBindingStatusRow(row)) return false;
   }

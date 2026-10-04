@@ -67,11 +67,18 @@ describe("sources for new mocks", () => {
   });
 
   it("are not offered without a config, and a deleted one is told apart", () => {
-    const never = { state: "missing", revision: 1, configFile: null, lastGoodAt: null } as const;
+    const never = {
+      state: "missing",
+      revision: 1,
+      configFile: null,
+      missingAt: 1,
+      lastGoodAt: null,
+    } as const;
     const deleted = {
       state: "missing",
       revision: 4,
       configFile: "courier.config.ts",
+      missingAt: 2,
       lastGoodAt: 1,
     } as const;
 

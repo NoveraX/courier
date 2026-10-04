@@ -54,4 +54,5 @@ export type {
   ValidationStartEvent,
 } from "./events";
 export { isSafeHttpOrigin } from "./lib/is-safe-http-origin";
+export { playgroundRequestId } from "./lib/playground-request-id";
 export { extractSourceMap } from "./source-map";

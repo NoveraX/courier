@@ -57,6 +57,8 @@ export interface CoordinatorConfig {
   watcherStatus?: WatcherStatus;
   /** Where Studio keeps the transforms of the project's modules now, told to each worker it starts. */
   transformCacheDirectory: () => string | null;
+  /** The file a mock's worker keeps its store in; `null` when Studio keeps none for it. */
+  storeFile: (mockKey: string) => string | null;
   /** Keeps the requests each mock answered, for the pages that connect later. */
   mockLog?: MockLog;
 }

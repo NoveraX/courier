@@ -90,6 +90,7 @@ export default defineMocks({
 - A `courier.mocks.ts` that does not load — a syntax error, an import that cannot be resolved, no default export — leaves the config and its sources working, and the mocks keep serving the definitions that loaded last. Studio's terminal logs why, and a banner above the Mocks view says so until the file loads again.
 - `overrides` and `scenarios` are checked against `source`: `mock` takes the source's group and endpoint names and each endpoint's response type. Write a scenario with `defineScenario<typeof api>(...)` to have it checked the same way; one without the type argument fits every mock. An endpoint declared outside any group is mocked under the collection its path starts with, `mock("users", "listUsers")`; the types cannot check that name, so a mock under another collection is refused with a `MockTargetError` that names the right one.
 - Editing `courier.mocks.ts`, or a module it imports, restarts a running mock whose declaration changed, or something that declaration uses — a declaration beside it, an import and every module that import reaches, a statement of the file that declares nothing. The other mocks keep running, with their records: adding a mock does not restart the ones already running. A mocks file whose mocks Studio cannot tell apart — its keys spread in or computed, or a CommonJS file — restarts every running mock on each edit. `autoStart` applies when Studio first reads the definition, or when an edit turns it on — not again after you stop the mock.
+- A mock keeps its records in the project, in `.courier/mocks/` — one JSON file per mock, written shortly after each request and when the mock stops, and read when it starts — so what an app created is still there after the mock restarts, an edit that changes it included, and after Studio restarts. A collection the file holds nothing for starts from its seeds, and one the mock no longer serves is dropped. **Reset store** empties the store and seeds it again, and that is kept too. `persist: false` starts the mock from its seeds each time.
 
 ### A proxy caller pointed at the mock
 
@@ -166,7 +167,7 @@ const { client: replayed } = createMockClient<typeof api>({ scenario: replayFixt
 |---|---|
 | `@noverax/courier-mock` | `defineMocks`, `defineMockServer`, `defineFactory`, `defineScenario`, `MockHttpError` |
 | `@noverax/courier-mock/testing` | `createMockClient`, `createMockStore`, `createRecorder`, `replayFixtures` |
-| `@noverax/courier-mock/server` | `createMockServer` — a standalone Hono-based mock server |
+| `@noverax/courier-mock/server` | `createMockServer` — a standalone Hono-based mock server; `persist: { file }` keeps its store in a JSON file across restarts |
 | `@noverax/courier-mock/contract` | Contract testing utilities |
 | `@noverax/courier-mock/managed` | `runMockWorker` — the process Studio starts for each mock it runs |
 

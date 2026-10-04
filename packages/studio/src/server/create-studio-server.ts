@@ -10,6 +10,7 @@ import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
+import { mockStoreFile } from "./mock-store-file";
 import { EDIT_FINISH_BUDGET_MS } from "./mocks-edit/edit-timing";
 import { createProjectState } from "./project-state/create-project-state";
 import { resolvedRoot } from "./resolved-root";
@@ -100,6 +101,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     watcherStatus,
     /* The directory Studio's own loads use, looked up as they look it up. */
     transformCacheDirectory: () => findTransformCacheDirectory(projectRoot),
+    storeFile: (mockKey) => mockStoreFile(root, mockKey),
     mockLog,
   });
 

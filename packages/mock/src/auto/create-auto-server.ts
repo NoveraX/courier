@@ -43,6 +43,13 @@ export interface AutoMockServerConfig {
   scenarios?: Record<string, AnyMockScenario>;
   /** Default network simulation (latency, errorRate, faultTypes) */
   network?: NetworkConfig;
+  /**
+   * Keep the store in a file, so its records survive a restart: each
+   * collection the source serves takes the file's records for it when the
+   * server starts, in place of its seeds. One the file has no records for
+   * keeps them, and one the source no longer serves is not brought back.
+   */
+  persist?: { file: string };
 }
 
 /**
@@ -108,6 +115,9 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
     mappings,
     scenarios: allScenarios,
     reseed,
+    ...(config.persist && {
+      persist: { file: config.persist.file, collections: [...new Set(routes.map((r) => r.group))] },
+    }),
   });
 
   storeRef = server.store;

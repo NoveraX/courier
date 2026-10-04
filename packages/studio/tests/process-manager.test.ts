@@ -69,7 +69,10 @@ function manager() {
   };
   return {
     events,
-    pm: createProcessManager(events, { transformCacheDirectory: () => transformCacheDirectory }),
+    pm: createProcessManager(events, {
+      transformCacheDirectory: () => transformCacheDirectory,
+      storeFile: () => null,
+    }),
   };
 }
 
@@ -114,6 +117,7 @@ describe("starting a managed mock", () => {
         mockKey: "apiMock",
         port: 7401,
         transformCacheDirectory: STUDIO_TRANSFORMS,
+        storeFile: null,
       },
       expect.any(Function),
     );

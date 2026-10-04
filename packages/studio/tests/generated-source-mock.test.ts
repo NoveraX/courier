@@ -119,7 +119,10 @@ async function started(): Promise<string> {
     onExited: vi.fn(),
     onEvent: vi.fn(),
   } satisfies ProcessManagerEvents;
-  const pm = createProcessManager(events, { transformCacheDirectory: () => null });
+  const pm = createProcessManager(events, {
+    transformCacheDirectory: () => null,
+    storeFile: () => null,
+  });
   cleanups.push(() => pm.dispose());
   const port = await freePort();
   pm.spawn({ serverId: "petMock", mocksFile: project(), mockKey: "petMock", port });

@@ -45,6 +45,11 @@ export interface ProcessManagerOptions {
    * link into another package with a `node_modules` of its own.
    */
   transformCacheDirectory: () => string | null;
+  /**
+   * The file a mock's worker keeps its store in, so its records outlive the
+   * worker; `null` when Studio keeps none for it.
+   */
+  storeFile: (mockKey: string) => string | null;
 }
 
 /**
@@ -52,8 +57,9 @@ export interface ProcessManagerOptions {
  *
  * Each worker is Studio's own entry, forked from the mocks file's directory
  * with the output in Studio's terminal. Its start message names the mock, the
- * port Studio chose, and where Studio keeps transforms at that moment, so the
- * worker reuses them instead of transforming the project's modules again.
+ * port Studio chose, where Studio keeps transforms at that moment, so the
+ * worker reuses them instead of transforming the project's modules again,
+ * and the file the worker keeps the mock's store in.
  *
  * @param events - What Studio does with what a worker reports
  * @param options - What every worker is told; see {@link ProcessManagerOptions}
@@ -62,13 +68,14 @@ export interface ProcessManagerOptions {
  * ```ts
  * const processManager = createProcessManager(events, {
  *   transformCacheDirectory: () => findTransformCacheDirectory(projectRoot),
+ *   storeFile: (mockKey) => mockStoreFile(projectRoot, mockKey),
  * });
  * processManager.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port: 7001 });
  * ```
  */
 export function createProcessManager(
   events: ProcessManagerEvents,
-  { transformCacheDirectory }: ProcessManagerOptions,
+  { transformCacheDirectory, storeFile }: ProcessManagerOptions,
 ): ProcessManager {
   const children = new Map<string, ChildProcess>();
   /** Workers Studio asked to stop; their exit is expected. */
@@ -119,6 +126,7 @@ export function createProcessManager(
       mockKey,
       port,
       transformCacheDirectory: transformCacheDirectory(),
+      storeFile: storeFile(mockKey),
     });
     return { pid: child.pid ?? 0 };
   }

@@ -9,6 +9,7 @@ import type { Hono } from "hono";
 
 import type { NetworkState } from "../network/state";
 import type { MockStore } from "../store";
+import type { StorePersistOptions } from "../store/store-persistence";
 import type { AnyMockScenario, MockHistoryEntry, NetworkConfig, UntypedMockFn } from "../types";
 import type { PrefixMapping } from "./prefix-route-types";
 import type { MockLogMode } from "./request-logger";
@@ -44,6 +45,13 @@ export interface MockServerOptions {
   /** Re-seed all collections after reset — provided by createAutoMockServer */
   reseed?: () => void;
   /**
+   * Keep the store in a file, so its records survive a restart: taken from
+   * the file when the server starts, and written back shortly after each
+   * request that answers and when it stops. Left out, the store lives in
+   * memory only.
+   */
+  persist?: StorePersistOptions;
+  /**
    * WebSocket upgrade configuration.
    *
    * - `allowedOrigins` — `undefined` (default) accepts any origin,
@@ -75,6 +83,12 @@ export interface MockServer {
    * empty. Handlers, scenarios, history and network settings are untouched.
    */
   resetStore(): void;
+  /**
+   * Write the store to its `persist` file now, rather than shortly after a
+   * request: for a change made outside one. Resolves at once for a server
+   * that keeps no file.
+   */
+  saveStore(): Promise<void>;
   /** Request history */
   history: MockHistoryEntry[];
   /** Apply a scenario (clears scenario layer, base layer untouched) */

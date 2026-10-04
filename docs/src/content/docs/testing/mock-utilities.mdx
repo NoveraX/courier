@@ -50,6 +50,6 @@ const { client: replayed } = createMockClient<typeof api>({ scenario: replayFixt
 |---|---|
 | `@noverax/courier-mock` | `defineMocks`, `defineMockServer`, `defineFactory`, `defineScenario`, `MockHttpError` |
 | `@noverax/courier-mock/testing` | `createMockClient`, `createMockStore`, `createRecorder`, `replayFixtures` |
-| `@noverax/courier-mock/server` | `createMockServer` — a standalone Hono-based mock server |
+| `@noverax/courier-mock/server` | `createMockServer` — a standalone Hono-based mock server; `persist: { file }` keeps its store in a JSON file across restarts |
 | `@noverax/courier-mock/contract` | Contract testing utilities |
 | `@noverax/courier-mock/managed` | `runMockWorker` — the process Studio starts for each mock it runs |

@@ -37,6 +37,8 @@ export function handleCommand(
   } else {
     sendStoreSnapshot(server);
   }
+  /* A command changes the store outside any request, which saves it otherwise. */
+  void server.saveStore();
 }
 
 function emitScenarioApplied(

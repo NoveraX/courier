@@ -86,6 +86,7 @@ function manager(transformCacheDirectory: string | null = null) {
   } satisfies ProcessManagerEvents;
   const pm = createProcessManager(events, {
     transformCacheDirectory: () => transformCacheDirectory,
+    storeFile: () => null,
   });
   cleanups.push(() => pm.dispose());
   return { events, pm };

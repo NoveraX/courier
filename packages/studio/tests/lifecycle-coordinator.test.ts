@@ -106,6 +106,7 @@ function studio() {
       to: (room: string) => ({ emit: room === TOKEN_PAGES ? emit : vi.fn() }),
     } as unknown as Namespace,
     transformCacheDirectory: () => STUDIO_TRANSFORMS,
+    storeFile: () => null,
   });
   coordinator.setMocksFile({ file: MOCKS_FILE, error: null });
   const emitted = (): Emitted[] =>

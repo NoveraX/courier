@@ -6,7 +6,6 @@ export const SUCCESS_RATE_GOOD = 95;
 export const SUCCESS_RATE_WARN = 80;
 export const RESPONSE_TIME_GOOD_MS = 200;
 export const RESPONSE_TIME_WARN_MS = 500;
-export const RESPONSE_TIME_BAD_MS = 1000;
 export const ERROR_RATE_WARN = 10;
 export const MAX_ENDPOINTS_SHOWN = 15;
 

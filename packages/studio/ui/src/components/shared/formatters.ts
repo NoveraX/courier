@@ -82,10 +82,6 @@ export function formatNumber(n: number): string {
   return `${(n / 1_000_000).toFixed(1)}M`;
 }
 
-export function formatStatusCode(code: number): string {
-  return code.toString();
-}
-
 export function formatPercent(value: number, total: number): string {
   if (total === 0) return "0%";
   return `${((value / total) * 100).toFixed(1)}%`;

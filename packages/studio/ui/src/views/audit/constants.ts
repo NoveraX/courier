@@ -91,4 +91,3 @@ export const P95_SLOW_MS = 1000;
 export const P95_TIMEOUT_MS = 5000;
 export const ERROR_RATE_HIGH = 0.2;
 export const LARGE_RESPONSE_BYTES = 1_048_576;
-export const MIDDLEWARE_OVERHEAD_WARN = 0.3;

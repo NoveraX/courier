@@ -110,22 +110,6 @@ export function previewUpdate(payload: { name: string; newSpec: ParsedSpec }): P
   return post("/api/apis/update/preview", payload);
 }
 
-/**
- * Regenerate an import as previewed.
- *
- * @param payload - The import, the new specification, and the plan quoted with the steps allowed
- * @returns What was written, removed and kept, and the files left in a previous folder
- * @throws {StudioRequestError} `PLAN_NOT_SEEN` without a quoted plan, `PLAN_STALE` when the files changed
- */
-export function applyUpdate(
-  payload: {
-    name: string;
-    newSpec: ParsedSpec;
-  } & PlanQuote,
-): Promise<AppliedFiles & { leftBehind: string[] }> {
-  return post("/api/apis/update/apply", payload);
-}
-
 // ── Manage ───────────────────────────────────────────────────────────────────
 
 /**

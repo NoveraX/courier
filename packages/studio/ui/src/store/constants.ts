@@ -1,3 +1,5 @@
+import { browserStorage } from "@/lib/browser-storage";
+
 import { storedSettings } from "./stored-settings";
 import type { Settings, TimelineFilters } from "./types";
 
@@ -43,21 +45,22 @@ export const DEFAULT_SETTINGS: Settings = {
   apisClient: "direct",
 };
 
-// ── Safe localStorage reads (v2 prefix to avoid conflicts) ──────────────────
+// ── Stored settings (v2 prefix to avoid conflicts) ──────────────────────────
 
 export const SETTINGS_STORAGE_KEY = "courier-studio-v2-settings";
 
 export function loadSettings(): Settings {
+  const raw = browserStorage.read(SETTINGS_STORAGE_KEY);
+  if (!raw) return DEFAULT_SETTINGS;
   try {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (!raw) return DEFAULT_SETTINGS;
-    const parsed: unknown = JSON.parse(raw);
-    return storedSettings(parsed, DEFAULT_SETTINGS);
-  } catch {
+    return storedSettings(JSON.parse(raw), DEFAULT_SETTINGS);
+  } catch (error) {
+    console.warn("Studio's stored settings are not JSON, so the defaults apply", error);
     return DEFAULT_SETTINGS;
   }
 }
 
+/* A browser that refuses storage keeps the settings for this page only. */
 export function saveSettings(settings: Settings): void {
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  browserStorage.write(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 }

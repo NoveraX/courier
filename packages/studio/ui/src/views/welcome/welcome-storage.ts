@@ -1,24 +1,17 @@
 /**
- * LocalStorage helpers for the welcome flow.
- *
- * Wraps `localStorage.getItem`/`setItem` in try/catch so SSR or restricted
- * environments don't crash the welcome view.
+ * Whether the welcome flow was completed, as the page's storage remembers it
+ * between visits. A browser that refuses storage remembers nothing, so the
+ * flow reads as not completed.
  */
+
+import { browserStorage } from "@/lib/browser-storage";
 
 import { WELCOME_STORAGE_KEY } from "./frameworks";
 
 export function isWelcomeCompleted(): boolean {
-  try {
-    return localStorage.getItem(WELCOME_STORAGE_KEY) === "true";
-  } catch {
-    return true;
-  }
+  return browserStorage.read(WELCOME_STORAGE_KEY) === "true";
 }
 
 export function markWelcomeCompleted(): void {
-  try {
-    localStorage.setItem(WELCOME_STORAGE_KEY, "true");
-  } catch {
-    /* noop */
-  }
+  browserStorage.write(WELCOME_STORAGE_KEY, "true");
 }

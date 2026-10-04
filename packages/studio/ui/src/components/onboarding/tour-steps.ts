@@ -102,5 +102,3 @@ export const TOUR_STEPS: TourStep[] = [
     placement: "bottom",
   },
 ];
-
-export const TOUR_STORAGE_KEY = "courier-studio-v2:tour-completed";

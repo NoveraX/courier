@@ -91,7 +91,7 @@ describe("useComputedQuery", () => {
 
     renderHook(
       () =>
-        useComputedQuery(queryFn, subscribeFn, ["key"], "group", {
+        useComputedQuery<unknown, unknown>(queryFn, subscribeFn, ["key"], "group", {
           subscriptionMethod: "stream",
           mapper: (_current, e) => e.data,
           enabled: false,
@@ -113,7 +113,7 @@ describe("useComputedQuery", () => {
 
     renderHook(
       () =>
-        useComputedQuery(queryFn, subscribeFn, ["key"], "chat", {
+        useComputedQuery<unknown, unknown>(queryFn, subscribeFn, ["key"], "chat", {
           variables: { userId: 1 },
           subscriptionMethod: "live",
           subscriptionVariables: { roomId: "abc" },

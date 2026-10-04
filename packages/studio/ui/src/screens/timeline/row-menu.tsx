@@ -59,7 +59,7 @@ export function RowMenu({ children }: RowMenuProps): React.ReactNode {
 
 function Items({ request }: { request: RequestEntry }): React.ReactNode {
   const togglePin = useStudioStore((s) => s.togglePin);
-  const replay = useReplay()(request);
+  const { run: replay } = useReplay()(request);
   const name = endpointName(request);
   const json = () => requestAsJson(request);
   return (

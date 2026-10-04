@@ -8,6 +8,7 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
+import type { Replay } from "./use-replay";
 
 const TRANSPORT_CHIP: Readonly<Record<"http" | "sse" | "ws", string>> = {
   http: "bg-fg-subtle/12 text-fg-subtle",
@@ -20,7 +21,7 @@ const ACTION =
 
 interface InspectorHeaderProps {
   request: RequestEntry;
-  onReplay: (() => void) | undefined;
+  replay: Replay;
   onClose: () => void;
 }
 
@@ -29,16 +30,16 @@ interface InspectorHeaderProps {
  * endpoint and URL — a click copies it — and its actions: pin it, replay
  * it when it can be, copy it as cURL, close the inspector.
  *
- * @param props - The request, what replays it, and what closes the inspector
+ * @param props - The request, its replay, and what closes the inspector
  * @returns The head
  * @example
  * ```tsx
- * <InspectorHeader request={request} onReplay={replay} onClose={close} />
+ * <InspectorHeader request={request} replay={replay} onClose={close} />
  * ```
  */
 export function InspectorHeader({
   request,
-  onReplay,
+  replay,
   onClose,
 }: InspectorHeaderProps): React.ReactNode {
   const togglePin = useStudioStore((s) => s.togglePin);
@@ -90,9 +91,9 @@ export function InspectorHeader({
           </button>
           <button
             type="button"
-            title={onReplay ? "Replay request" : "A stream cannot be replayed from Studio"}
-            disabled={!onReplay}
-            onClick={onReplay}
+            title={replay.refusal ?? "Replay request"}
+            disabled={!replay.run}
+            onClick={replay.run}
             className={ACTION}
           >
             <RotateCcw aria-hidden="true" className="size-3.25" />

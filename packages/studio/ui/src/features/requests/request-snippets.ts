@@ -42,7 +42,7 @@ function redactedHeaders(headers: RequestEntry["requestHeaders"]): {
   redacted: boolean;
 } {
   let redacted = false;
-  const entries = Object.entries(headers ?? {}).map(([name, value]) => {
+  const entries = Object.entries(headers ?? {}).map(([name, value]): [string, string] => {
     if (!isCredentialHeader(name)) return [name, value];
     redacted = true;
     return [name, REDACTED_VALUE];

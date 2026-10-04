@@ -6,6 +6,7 @@
  * stream's messages — its tabs kept in the address, Esc closing it,
  * credentials hidden until asked, and its pin and replay.
  */
+import { playgroundRequestId } from "@noverax/courier-studio-core";
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -177,5 +178,41 @@ describe("the request inspector", () => {
         variables: { page: 2 },
       }),
     );
+  });
+
+  it("opens a request held while recording pauses", async () => {
+    useStudioStore.setState({
+      paused: true,
+      heldRequests: [requestEntry({ id: "held", method: "held" })],
+    });
+
+    await openShell("/next/timeline?req=held");
+
+    expect(within(inspector()).getByRole("heading", { level: 2 }).textContent).toBe(
+      "api.users.held",
+    );
+  });
+
+  it("opens a replay held while recording pauses, once it arrives", async () => {
+    useStudioStore.setState({ paused: true });
+    const router = await openShell("/next/timeline?req=ok");
+
+    fireEvent.click(within(inspector()).getByTitle("Replay request"));
+    const [, sent] = socket.emit.mock.calls.find(([event]) => event === "playground:exec") ?? [];
+    const rid = typeof sent === "object" && sent !== null && "rid" in sent ? String(sent.rid) : "";
+    const replayed = requestEntry({ id: playgroundRequestId(rid) });
+    await act(async () => useStudioStore.setState({ heldRequests: [replayed] }));
+
+    expect(rid).not.toBe("");
+    expect(router.state.location.search).toMatchObject({ req: replayed.id });
+  });
+
+  it("replays nothing while a saved session shows, and says why", async () => {
+    useStudioStore.setState({ shownSession: { id: "s1", name: "Saved" } });
+
+    await openShell("/next/timeline?req=ok");
+    const button = within(inspector()).getByTitle("Go back to the live requests to replay one");
+
+    expect(button.hasAttribute("disabled")).toBe(true);
   });
 });

@@ -37,7 +37,10 @@ import { useReplay } from "./use-replay";
 export function RequestInspector(): React.ReactNode {
   const { requestId, tab, show, close } = useInspector();
   const request = useStudioStore((s) =>
-    requestId ? s.requests.find((r) => r.id === requestId) : undefined,
+    requestId
+      ? (s.requests.find((r) => r.id === requestId) ??
+        s.heldRequests.find((r) => r.id === requestId))
+      : undefined,
   );
   const [mode, setMode] = useState<PayloadMode>("tree");
   const [flavor, setFlavor] = useState<SnippetFlavor>("shell");
@@ -91,7 +94,7 @@ function Head({ request, current, onTab, onClose }: HeadProps): React.ReactNode 
   const replay = useReplay();
   return (
     <div className="flex shrink-0 flex-col gap-3.5 border-b border-line pt-4 pr-3.5 pl-4.5">
-      <InspectorHeader request={request} onReplay={replay(request)} onClose={onClose} />
+      <InspectorHeader request={request} replay={replay(request)} onClose={onClose} />
       <StatCellGrid cells={statCellsOf(request, { now, slowMs, p95 })} />
       <TabBar tabs={inspectorTabsOf(request)} current={current} onSelect={onTab} />
     </div>

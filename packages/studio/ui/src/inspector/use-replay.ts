@@ -13,26 +13,39 @@ import { useInspector } from "./use-inspector";
 /* How long a replay is followed: its request opens if it arrives in time. */
 const FOLLOW_MS = 30_000;
 
+/** A request's replay: what runs it, or why it cannot run. */
+export interface Replay {
+  run: (() => void) | undefined;
+  refusal: string | undefined;
+}
+
 /**
  * What replays a request: Studio has the app run its endpoint again, in the
  * same mode and with the same variables — the middleware sets the headers
  * afresh — and opens the new request in the inspector once it arrives, or
- * says why the app could not run it. A stream is not replayed: Studio
- * cannot open an app's own stream.
+ * says why the app could not run it — held, while recording pauses, until
+ * it resumes. A stream is not replayed: Studio cannot open an app's own
+ * stream; nor is a request of a saved session while it shows, since the
+ * live requests are left out meanwhile.
  *
- * @returns The replay, or `undefined` for a request that cannot be replayed
+ * @returns What makes a request's replay
  * @example
  * ```ts
- * const replay = useReplay();
- * const onReplay = replay(request);
+ * const { run, refusal } = useReplay()(request);
  * ```
  */
-export function useReplay(): (r: RequestEntry) => (() => void) | undefined {
+export function useReplay(): (r: RequestEntry) => Replay {
   const { open } = useInspector();
+  const sessionShown = useStudioStore((s) => s.shownSession !== null);
   return useCallback(
-    (r: RequestEntry) => {
-      if (isStreamRequest(r)) return undefined;
-      return () => {
+    (r: RequestEntry): Replay => {
+      if (isStreamRequest(r)) {
+        return { run: undefined, refusal: "A stream cannot be replayed from Studio" };
+      }
+      if (sessionShown) {
+        return { run: undefined, refusal: "Go back to the live requests to replay one" };
+      }
+      const run = () => {
         const rid = crypto.randomUUID();
         const requestId = playgroundRequestId(rid);
         const socket = getSocket();
@@ -48,7 +61,10 @@ export function useReplay(): (r: RequestEntry) => (() => void) | undefined {
           toast.error(`Could not replay ${name}: ${data.error.message}`);
         };
         const unsubscribe = useStudioStore.subscribe((state) => {
-          if (!state.requests.some((x) => x.id === requestId)) return;
+          const arrived = [state.requests, state.heldRequests].some((list) =>
+            list.some((x) => x.id === requestId),
+          );
+          if (!arrived) return;
           stop();
           open(requestId);
         });
@@ -66,7 +82,8 @@ export function useReplay(): (r: RequestEntry) => (() => void) | undefined {
         });
         toast.success(`Replaying ${name}`);
       };
+      return { run, refusal: undefined };
     },
-    [open],
+    [open, sessionShown],
   );
 }

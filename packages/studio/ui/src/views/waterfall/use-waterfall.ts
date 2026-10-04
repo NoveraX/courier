@@ -4,10 +4,27 @@ import { useCallback, useMemo } from "react";
 import type { RequestEntry, WaterfallGroupBy, WaterfallSortField } from "@/store";
 import { buildRows, compressTimeline, computeTimeSpan, groupRows, sortRows } from "./helpers";
 import type { WaterfallSearchParams } from "./search-schema";
-import type { ModeFilter } from "./types";
-import { useZoom } from "./use-zoom";
+import type { GroupedRows, ModeFilter, TimeGap, WaterfallRow } from "./types";
+import { useZoom, type ZoomActions } from "./use-zoom";
 
-export function useWaterfall(requests: RequestEntry[]) {
+/** The Waterfall's rows as sorted, grouped and filtered, with its zoom. */
+interface WaterfallView extends ZoomActions {
+  rows: WaterfallRow[];
+  groups: GroupedRows[];
+  gaps: TimeGap[];
+  timeSpan: number;
+  actualTimeSpan: number;
+  sortBy: WaterfallSortField;
+  groupBy: WaterfallGroupBy;
+  modeFilter: ModeFilter;
+  search: string;
+  setSortBy: (s: WaterfallSortField) => void;
+  setGroupBy: (g: WaterfallGroupBy) => void;
+  setModeFilter: (m: ModeFilter) => void;
+  setSearch: (s: string) => void;
+}
+
+export function useWaterfall(requests: RequestEntry[]): WaterfallView {
   const params = useSearch({ from: "/waterfall" }) as WaterfallSearchParams;
   const navigate = useNavigate({ from: "/waterfall" });
   const zoomState = useZoom();

@@ -11,7 +11,15 @@ export interface WatcherSnapshot {
   timestamp: number;
 }
 
-export function createWatcherStatus(uiNamespace: Namespace) {
+/** What Studio tells the pages about the files it watches. */
+export interface WatcherStatus {
+  setApiPathCount(count: number): void;
+  emitChange(source: "api" | "mock", files: string[]): void;
+  /** Send current state to a newly connected UI socket */
+  sendSnapshot(socket: Socket): void;
+}
+
+export function createWatcherStatus(uiNamespace: Namespace): WatcherStatus {
   let apiPaths = 0;
 
   function buildSnapshot(): WatcherSnapshot {
@@ -43,5 +51,3 @@ export function createWatcherStatus(uiNamespace: Namespace) {
 
   return { setApiPathCount, emitChange, sendSnapshot };
 }
-
-export type WatcherStatus = ReturnType<typeof createWatcherStatus>;

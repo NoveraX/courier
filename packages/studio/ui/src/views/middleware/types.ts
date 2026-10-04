@@ -69,4 +69,11 @@ export type OverheadLevel = "good" | "warning" | "critical";
 
 export type MiddlewareMode = "aggregate" | "chain";
 
+/** How a request's time splits on average: middleware, the fetch, and the rest. */
+export interface OverheadStats {
+  avgOverheadPercent: number;
+  avgFetchPercent: number;
+  avgOtherPercent: number;
+}
+
 export type SortDir = "asc" | "desc";

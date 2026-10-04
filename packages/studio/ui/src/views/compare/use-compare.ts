@@ -2,6 +2,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 
 import { useStudioStore } from "@/store";
+import type { RequestEntry } from "@/store/types";
 import {
   computeHeaderDiff,
   computeTextDiff,
@@ -11,9 +12,25 @@ import {
   serializeForDiff,
 } from "./helpers";
 import type { CompareSearchParams } from "./search-schema";
-import type { CompareTab } from "./types";
+import type { CompareTab, DiffLine, HeaderDiff, TimingComparison } from "./types";
 
-export function useCompare() {
+/** The two requests compared, their differences, and how to change them. */
+interface CompareView {
+  tab: CompareTab;
+  leftReq: RequestEntry | undefined;
+  rightReq: RequestEntry | undefined;
+  requests: RequestEntry[];
+  payloadDiff: DiffLine[] | null;
+  responseDiff: DiffLine[] | null;
+  headersDiff: HeaderDiff[] | null;
+  timingDiff: TimingComparison[] | null;
+  setTab: (t: CompareTab) => void;
+  setLeft: (id: string | undefined) => void;
+  setRight: (id: string | undefined) => void;
+  swap: () => void;
+}
+
+export function useCompare(): CompareView {
   const params = useSearch({ from: "/compare" }) as CompareSearchParams;
   const navigate = useNavigate({ from: "/compare" });
   const requests = useStudioStore((s) => s.requests);

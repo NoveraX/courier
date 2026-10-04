@@ -16,6 +16,14 @@ interface MocksFileContext {
   broadcast: (status: MocksFileStatus) => void;
 }
 
+/** The mocks file's status, the file mocks start from, and how to update both. */
+interface MocksFileState {
+  set(next: MocksFileStatus): void;
+  status(): MocksFileStatus;
+  /** The file mocks start from: the last one that loaded. */
+  path(): string | null;
+}
+
 /**
  * Track whether the mocks file loaded. While it does not, the mocks it
  * declared last stay registered, and each says why nothing newer applies;
@@ -24,7 +32,7 @@ interface MocksFileContext {
  * @param ctx - The coordinator's mock states and how to report them
  * @returns The status, the file mocks start from, and how to update both
  */
-export function createMocksFileState(ctx: MocksFileContext) {
+export function createMocksFileState(ctx: MocksFileContext): MocksFileState {
   let status: MocksFileStatus = { file: null, error: null };
   /* The file mocks start from: the last one that loaded. */
   let loaded: string | null = null;

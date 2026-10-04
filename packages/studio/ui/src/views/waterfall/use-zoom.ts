@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { MS_PER_PX_BASE, ZOOM_LIMITS, ZOOM_STEP } from "./constants";
 import type { ZoomState } from "./types";
 
-interface ZoomActions {
+export interface ZoomActions {
   zoom: ZoomState;
   zoomIn: () => void;
   zoomOut: () => void;

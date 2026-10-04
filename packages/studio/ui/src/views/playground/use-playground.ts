@@ -5,6 +5,7 @@ import { useStudioStore } from "@/store";
 import type { CatalogEndpoint, CatalogEntry } from "@/store/types-ui";
 import type { BodyKind } from "./body-section";
 import { emptyField, type FormBodyField } from "./form-body";
+import type { PlaygroundState } from "./playground-state";
 import { sendableCatalog } from "./sendable-catalog";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -41,7 +42,7 @@ export interface PlaygroundInitParams {
   method?: string;
 }
 
-export function usePlayground(init?: PlaygroundInitParams) {
+export function usePlayground(init?: PlaygroundInitParams): PlaygroundState {
   const catalog = useCatalog();
   const declared = useStudioStore((s) => s.scanSources);
   const bindingRows = useStudioStore((s) => s.bindingSnapshot.rows);

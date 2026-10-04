@@ -3,8 +3,17 @@ import type { Namespace, Socket } from "socket.io";
 import { emitLiveEvent, emitLiveEventTo } from "../live-events";
 import type { ServerState } from "./types";
 
+/** How the mock manager tells the pages about its mocks. */
+interface UiEmitter {
+  emit(type: string, data: Record<string, unknown>): void;
+  /** Tell every page a mock's state. */
+  emitServerState(state: ServerState): void;
+  /** Tell one page that connects a mock's state. */
+  sendServerState(socket: Socket, state: ServerState): void;
+}
+
 /** Create a helper that emits mock events to the UI namespace */
-export function createUiEmitter(uiNamespace: Namespace) {
+export function createUiEmitter(uiNamespace: Namespace): UiEmitter {
   const event = (type: string, data: Record<string, unknown>) => ({
     id: `managed_${Date.now().toString(36)}`,
     type,

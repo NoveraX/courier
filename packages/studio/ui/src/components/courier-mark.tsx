@@ -11,7 +11,7 @@ interface CourierMarkProps {
  * One closed path filled with `currentColor`, so it takes the colour of
  * whatever it sits in and needs no second file for the dark theme.
  */
-export function CourierMark({ className, size = 18 }: CourierMarkProps) {
+export function CourierMark({ className, size = 18 }: CourierMarkProps): React.ReactElement {
   return (
     <svg
       viewBox="0 0 212 180"

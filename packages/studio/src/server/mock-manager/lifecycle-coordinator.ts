@@ -19,7 +19,7 @@ import { createProcessEvents } from "./lifecycle-process-events";
 import { createServerOps } from "./lifecycle-server-ops";
 import { declaredPorts } from "./mock-ports";
 import { createMockRegistration } from "./mock-registration";
-import { createMocksFileState } from "./mocks-file-state";
+import { createMocksFileState, type MocksFileStatus } from "./mocks-file-state";
 import { patchChanges } from "./patch-changes";
 import { createProcessManager } from "./process-manager";
 import type { CoordinatorConfig, MockSummary, ServerState } from "./types";
@@ -35,7 +35,20 @@ function runVoid(label: string, promise: Promise<unknown>): void {
   void promise.catch((err: unknown) => log.warn(`${label} failed`, err));
 }
 
-export function createLifecycleCoordinator(config: CoordinatorConfig) {
+/** Studio's managed mocks, as the rest of Studio drives them. */
+export interface LifecycleCoordinator {
+  /** Stop every mock and start none again. */
+  stop(): Promise<void>;
+  handleCommand(command: string, data: Record<string, unknown>): void;
+  /** Run a store command on the mock it names; `undefined` when Studio has no mock by that name. */
+  forwardStoreCommand(command: SanitizedMockCommand): Promise<CommandReply> | undefined;
+  /** Send a page that connects every mock's state and the mocks file's status. */
+  sendSnapshot(socket: Socket): void;
+  summarizeServers(): MockSummary[];
+  setMocksFile(next: MocksFileStatus): void;
+}
+
+export function createLifecycleCoordinator(config: CoordinatorConfig): LifecycleCoordinator {
   const servers = new Map<string, ServerState>();
   const { emit, emitServerState, sendServerState } = createUiEmitter(config.uiNamespace);
   let closed = false;
@@ -148,5 +161,3 @@ export function createLifecycleCoordinator(config: CoordinatorConfig) {
     setMocksFile: mocksFile.set,
   };
 }
-
-export type LifecycleCoordinator = ReturnType<typeof createLifecycleCoordinator>;

@@ -34,7 +34,10 @@ export function memo<TValue>(): (name: string, make: () => TValue) => TValue {
 }
 
 /** Report the names a shape lists as the proxy's own, for `Object.keys`, `in` and spread. */
-export function listing(names: () => readonly string[], read: (name: string) => unknown) {
+export function listing(
+  names: () => readonly string[],
+  read: (name: string) => unknown,
+): Pick<ProxyHandler<object>, "ownKeys" | "has" | "getOwnPropertyDescriptor"> {
   return {
     ownKeys: (target: object) => [
       ...new Set([...names(), ...Reflect.ownKeys(target).filter((k) => typeof k !== "string")]),

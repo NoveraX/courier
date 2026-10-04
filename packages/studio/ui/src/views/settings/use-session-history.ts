@@ -9,6 +9,19 @@ import { type SessionSummary, sessionSummariesOf } from "./session-summary";
 
 // ── Session history hook ─────────────────────────────────────────────────────
 
+/** The sessions Studio keeps, and what can be done with them. */
+interface SessionHistory {
+  sessions: SessionSummary[];
+  loading: boolean;
+  /** Save the requests on screen; resolves to whether Studio kept them */
+  saveCurrentSession: (name: string) => Promise<boolean>;
+  loadSession: (id: string) => Promise<void>;
+  deleteSession: (id: string) => Promise<void>;
+  exportSession: (id: string, format: ExportFormat) => Promise<void>;
+  deleteAllSessions: () => Promise<void>;
+  refresh: () => Promise<void>;
+}
+
 /**
  * The sessions Studio keeps in `.courier/sessions/`, and what can be done
  * with them: save the requests on screen as one, load one back into the
@@ -22,7 +35,7 @@ import { type SessionSummary, sessionSummariesOf } from "./session-summary";
  * const saved = await history.saveCurrentSession("Debugging auth");
  * ```
  */
-export function useSessionHistory() {
+export function useSessionHistory(): SessionHistory {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
 

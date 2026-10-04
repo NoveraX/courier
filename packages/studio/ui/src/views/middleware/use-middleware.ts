@@ -2,6 +2,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 
 import { useStudioStore } from "@/store";
+import type { RequestEntry } from "@/store/types";
 import {
   computeEndpointImpact,
   executionSparkline,
@@ -15,9 +16,35 @@ import {
   filterWithMiddleware,
 } from "./helpers";
 import type { MiddlewareSearchParams } from "./search-schema";
-import type { MiddlewareMode } from "./types";
+import type {
+  AggregateMiddleware,
+  ChainEntry,
+  EndpointImpact,
+  MiddlewareMode,
+  OverheadStats,
+  SparklinePoint,
+} from "./types";
 
-export function useMiddleware() {
+/** The Middleware view's requests, what they add up to, and its selection. */
+interface MiddlewareView {
+  mode: MiddlewareMode;
+  /** The requests that ran through middleware */
+  requests: RequestEntry[];
+  aggregateStats: AggregateMiddleware[];
+  overheadStats: OverheadStats;
+  execSparkline: SparklinePoint[];
+  overheadSparkline: SparklinePoint[];
+  p95Sparkline: SparklinePoint[];
+  endpointImpact: EndpointImpact[];
+  selectedRequestId: string | undefined;
+  selectedRequest: RequestEntry | null;
+  selectedChain: ChainEntry | null;
+  setMode: (m: MiddlewareMode) => void;
+  setSelectedRequest: (id: string | undefined) => void;
+  totalRequests: number;
+}
+
+export function useMiddleware(): MiddlewareView {
   const requests = useStudioStore((s) => s.requests);
   const params = useSearch({ from: "/middleware" }) as MiddlewareSearchParams;
   const navigate = useNavigate({ from: "/middleware" });

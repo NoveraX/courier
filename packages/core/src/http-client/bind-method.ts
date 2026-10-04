@@ -37,12 +37,17 @@ export type BindMethodDeps = {
   fetchRequest: (method: string, url: string, options: Partial<FetchOptions>) => Promise<Response>;
 };
 
+/** A method bound to a client: called with a path and options, it resolves to the answer. */
+type BoundMethod = <TResponse>(
+  ...arguments_: MethodParameters<HttpMethod>
+) => Promise<HttpResponse<TResponse>>;
+
 export function bindMethod(
   deps: BindMethodDeps,
   method: HttpMethod,
   boundOptions?: BoundMethodOptions,
   groupOptions?: GroupOptions,
-) {
+): BoundMethod {
   const {
     variables: vars,
     headers: boundHeaders,
@@ -52,7 +57,7 @@ export function bindMethod(
   const { prefix = "", pathOptions } = groupOptions || {};
   const cleanedVars = stripUndefined(vars);
 
-  return async <TResponse>(...arguments_: MethodParameters<typeof method>) => {
+  return async <TResponse>(...arguments_: MethodParameters<HttpMethod>) => {
     const commonPathOptions = (await deps.pathOptions?.(deps.context?.req)) || {};
     const groupPathOptions = (await pathOptions?.(deps.context?.req)) || {};
     const generatedPathOptions = { ...commonPathOptions, ...groupPathOptions };

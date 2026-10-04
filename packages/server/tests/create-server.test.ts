@@ -1,30 +1,18 @@
+import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, describe, expect, it } from "vitest";
 import { createCourierServer } from "../src/create-server";
 import type { CourierServer, CourierServerOptions } from "../src/types";
 
-// --- Minimal source fixture ---
-
-function mockEndpoint() {
-  const fn = (_http: unknown, _vars: unknown) => ({ status: 200, data: { ok: true } });
-  Object.defineProperty(fn, Symbol.for("courier.endpoint.schema"), {
-    value: { type: "query" },
-  });
-  return fn;
-}
+const { endpoint } = courier();
 
 function createSources() {
   return {
-    api: {
-      options: {
-        baseURL: "http://localhost:9999",
-        groups: {
-          test: {
-            options: { prefix: "/test" },
-            hello: mockEndpoint(),
-          },
-        },
+    api: defineApi({
+      baseURL: "http://localhost:9999",
+      groups: {
+        test: defineGroup({ prefix: "/test", endpoints: { hello: endpoint.get("hello") } }),
       },
-    },
+    }),
   };
 }
 

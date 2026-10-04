@@ -1,7 +1,7 @@
 /**
- * The mock server's request log: one plain line per request — status,
- * method, path, duration — with no escape codes of its own, so a pipe or a
- * log file gets clean text and NO_COLOR is honoured.
+ * The mock server's request log: one plain line per request — method, path,
+ * status, duration — with no escape codes of its own, so a pipe or a log
+ * file gets clean text and NO_COLOR is honoured.
  */
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,7 +33,7 @@ describe("the request log", () => {
     await app("normal").request("/users");
 
     const line = String(info.mock.calls[0]?.[1]);
-    expect(line).toMatch(/404 GET \/users \d+ms$/);
+    expect(line).toMatch(/GET \/users → 404 \(\d+ms\)$/);
     expect(line).not.toContain("\x1b[");
   });
 

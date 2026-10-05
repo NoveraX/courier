@@ -1,8 +1,9 @@
-import type { LucideIcon } from "lucide-react"
 import { ArrowUpRight } from "lucide-react"
+import type { ReactNode } from "react"
 
 interface PageActionItemProps {
-  icon: LucideIcon
+  /** A Lucide icon, or a brand's mark: drawn in the tile's muted colour unless it has its own. */
+  icon: (props: { className?: string }) => ReactNode
   title: string
   /** What the action is for, under its title. */
   sub: string
@@ -24,8 +25,11 @@ interface PageActionItemProps {
 export function PageActionItem({ icon: Icon, title, sub, external }: PageActionItemProps) {
   return (
     <>
-      <span className="grid size-7 shrink-0 place-items-center rounded-[7px] border border-line bg-bg-subtle">
-        <Icon aria-hidden="true" className="size-3.5 text-fg-muted" />
+      <span
+        aria-hidden="true"
+        className="grid size-7 shrink-0 place-items-center rounded-[7px] border border-line bg-bg-subtle text-fg-muted"
+      >
+        <Icon className="size-3.5" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex items-center gap-1.5 text-nav">

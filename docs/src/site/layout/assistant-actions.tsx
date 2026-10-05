@@ -1,18 +1,25 @@
 "use client"
 
-import type { LucideIcon } from "lucide-react"
-import { Check, Copy, MessageSquare, Sparkles } from "lucide-react"
+import { Check, Copy } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { assistantLinks } from "@/site/content/assistant-links"
 import { copyText } from "@/site/copy-text"
 import { useFlash } from "@/site/use-flash"
+import { ChatGptMark } from "./chatgpt-mark"
+import { ClaudeMark } from "./claude-mark"
 import { SIDE_ACTION as ACTION } from "./side-action"
 
-function Body({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+function Body({
+  icon: Icon,
+  label,
+}: {
+  icon: (props: { className?: string }) => ReactNode
+  label: string
+}) {
   return (
     <>
-      <Icon aria-hidden="true" className="size-3.25 shrink-0" />
+      <Icon className="size-3.25 shrink-0" />
       {label}
     </>
   )
@@ -53,10 +60,10 @@ export function AssistantActions({
             <Body icon={copied ? Check : Copy} label={copied ? "Copied" : "Copy as Markdown"} />
           </button>
           <a href={links.chatgpt} target="_blank" rel="noopener noreferrer" className={ACTION}>
-            <Body icon={MessageSquare} label="Ask ChatGPT" />
+            <Body icon={ChatGptMark} label="Ask ChatGPT" />
           </a>
           <a href={links.claude} target="_blank" rel="noopener noreferrer" className={ACTION}>
-            <Body icon={Sparkles} label="Ask Claude" />
+            <Body icon={ClaudeMark} label="Ask Claude" />
           </a>
         </>
       )}

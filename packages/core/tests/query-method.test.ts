@@ -13,7 +13,7 @@ import { courier, defineApi } from "../src/define/index";
 import { createFetch } from "../src/fetch";
 import { createProxyCaller } from "../src/proxy-caller";
 import { _resetSourcesForTests, registerSources } from "../src/sources";
-import { isReadingMethod } from "../src/utils/helpers";
+import { isReadingMethod, sendsVariablesInQuery } from "../src/utils/helpers";
 import { type EchoServer, startEchoServer } from "./helpers/echo-server";
 import { sendJson, startUpstream, type Upstream } from "./helpers/middleware-upstream";
 import { type ProxyServer, startProxyServer } from "./helpers/proxy-server";
@@ -167,6 +167,24 @@ describe("isReadingMethod", () => {
   it("does not count a verb that writes", () => {
     expect(["post", "PUT", "patch", "del", "DELETE"].map(isReadingMethod)).toEqual([
       false,
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+});
+
+describe("sendsVariablesInQuery", () => {
+  it("sends a read's variables in the query string, and a QUERY's in its body", () => {
+    expect(["get", "HEAD", "options", "del", "DELETE"].map(sendsVariablesInQuery)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect(["query", "POST", "put", "patch"].map(sendsVariablesInQuery)).toEqual([
       false,
       false,
       false,

@@ -1,3 +1,5 @@
+import { sendsVariablesInQuery } from "@noverax/courier/internal";
+
 import { isCredentialHeader } from "@/features/requests/credential-headers";
 import type { HeaderGroup, HeaderRow } from "@/features/requests/header-groups";
 import type { InspectorTabInfo } from "@/features/requests/inspector-tabs";
@@ -8,7 +10,6 @@ import { mockLogCode, mockLogTone } from "./mock-log";
 import { wholeBodyFile } from "./whole-body-file";
 
 const NONE: ReadonlyMap<string, string> = new Map();
-const QUERY_STRING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "DELETE"]);
 /* Headers the transport adds on the way, which a replayed call sets itself. */
 const TRANSPORT_HEADERS = new Set([
   "host",
@@ -92,7 +93,7 @@ function curlOf(
   const method = log.httpMethod.toUpperCase();
   /* A mock reads these verbs' variables from the query string, which the
      path carries; any other sends them as its body. */
-  const body = QUERY_STRING_METHODS.has(method) ? undefined : log.variables;
+  const body = sendsVariablesInQuery(method) ? undefined : log.variables;
   const url = `${serverUrl}${log.path}`;
   if (body !== undefined && log.variablesCutFrom !== undefined) {
     const bodyFile = wholeBodyFile(log, "request");

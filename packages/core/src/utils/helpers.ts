@@ -71,6 +71,25 @@ export function isReadingMethod(method: string): boolean {
   return READING_METHODS.has(normalizeHttpMethod(method));
 }
 
+const QUERY_STRING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "DELETE"]);
+
+/**
+ * Whether a verb sends its variables in the query string rather than a
+ * body: GET, HEAD, OPTIONS and DELETE. Every other verb — a write, or a
+ * QUERY asking with a body — sends them as its body.
+ *
+ * @param method - The verb, as HTTP spells it or as the client does (`"del"`)
+ * @returns Whether its variables go in the query string
+ * @example
+ * ```ts
+ * sendsVariablesInQuery("del"); // → true
+ * sendsVariablesInQuery("QUERY"); // → false
+ * ```
+ */
+export function sendsVariablesInQuery(method: string): boolean {
+  return QUERY_STRING_METHODS.has(normalizeHttpMethod(method));
+}
+
 export const isHeaders = (variables: unknown): variables is Headers =>
   typeof Headers !== "undefined" && variables instanceof Headers;
 

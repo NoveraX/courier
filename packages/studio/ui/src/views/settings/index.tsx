@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { PageShell } from "@/components/shared/page-shell";
+import { useSessionHistory } from "@/settings/use-session-history";
 import type { Settings } from "@/store/types";
 import { ApisSection } from "./apis-section";
 import { AppearanceSection } from "./appearance-section";
@@ -16,7 +17,6 @@ import { SectionWrapper } from "./section-wrapper";
 import { SessionHistorySection } from "./session-history-section";
 import { UnsavedBanner } from "./unsaved-banner";
 import { useScrollSpy } from "./use-scroll-spy";
-import { useSessionHistory } from "./use-session-history";
 import { useSettingsForm } from "./use-settings-form";
 
 // ── Settings view ────────────────────────────────────────────────────────────

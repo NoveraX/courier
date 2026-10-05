@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { useSessionHistory } from "@/settings/use-session-history";
 import { SessionCard } from "./session-card";
-import type { useSessionHistory } from "./use-session-history";
 
 // ── Session history section ──────────────────────────────────────────────────
 

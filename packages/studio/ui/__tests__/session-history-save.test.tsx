@@ -17,11 +17,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
+import { useSessionHistory } from "@/settings/use-session-history";
 import { useStudioStore } from "@/store";
 import { createStudioServer } from "../../src/server/create-studio-server";
 import type { StudioServer } from "../../src/server/types";
 import { SessionHistorySection } from "../src/views/settings/session-history-section";
-import { useSessionHistory } from "../src/views/settings/use-session-history";
 import { trafficRequest } from "./playground-fixtures";
 
 let root: string;

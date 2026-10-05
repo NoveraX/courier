@@ -1,10 +1,12 @@
 import { overviewFigures } from "@/features/explorer/overview-model";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useNow } from "@/hooks/use-tick";
 import { useInspector } from "@/inspector/use-inspector";
 import { useStudioStore } from "@/store";
 import { configFileName } from "@/store/config-file-name";
 import { ActivityFeed } from "./activity-feed";
 import { ExplorerEmpty } from "./explorer-empty";
+import { ExplorerSkeleton } from "./explorer-skeleton";
 import { HealthMatrix } from "./health-matrix";
 import { OverviewFigures } from "./overview-figures";
 import { SourceCards } from "./source-cards";
@@ -25,6 +27,7 @@ import { useExplorerSearch } from "./use-explorer-search";
  */
 export function OverviewScreen(): React.ReactNode {
   const model = useExplorerModel();
+  const loading = useFirstLoad();
   const { set } = useExplorerSearch();
   const { open } = useInspector();
   const requests = useStudioStore((s) => s.requests);
@@ -34,7 +37,9 @@ export function OverviewScreen(): React.ReactNode {
     (s) => s.connected && s.bindingSnapshot.runtimeCount > 0 && !s.paused && !s.shownSession,
   );
   const now = useNow();
-  if (!model.endpoints.length) return <ExplorerEmpty />;
+  if (!model.endpoints.length) {
+    return loading.sources ? <ExplorerSkeleton view="overview" /> : <ExplorerEmpty />;
+  }
   return (
     <div className="min-h-0 flex-1 overflow-auto">
       <div className="mx-auto flex max-w-360 flex-col gap-3.5 px-6 pt-5 pb-10">

@@ -2,8 +2,10 @@ import { Download, History, Pin, SlidersHorizontal, Trash2 } from "lucide-react"
 import { toast } from "sonner";
 
 import { SearchField } from "@/design/search-field";
+import { Skeleton } from "@/design/skeleton";
 import { exportShownRequests } from "@/features/sessions/export-requests";
 import { useClearRequests } from "@/hooks/use-clear-requests";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 
@@ -33,6 +35,7 @@ interface TimelineToolbarProps {
 export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
   const { search, onSearch, filtersShown, onToggleFilters, activeFilters, shown } = props;
   const total = useStudioStore((s) => s.requests.length);
+  const loading = useFirstLoad();
   const pinned = useStudioStore((s) => s.requests.filter((r) => r.pinned).length);
   const preserve = useStudioStore((s) => s.settings.preserveLog);
   const togglePreserve = useStudioStore((s) => s.togglePreserveLog);
@@ -97,17 +100,21 @@ export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
           {pinned}
         </span>
       )}
-      <span className="text-control whitespace-nowrap text-fg-subtle tabular-nums">
-        {shown === total ? (
-          <>
-            <span className="font-strong text-fg">{total}</span> requests
-          </>
-        ) : (
-          <>
-            <span className="font-strong text-fg">{shown}</span> of {total} requests
-          </>
-        )}
-      </span>
+      {loading.requests ? (
+        <Skeleton className="h-3 w-20" />
+      ) : (
+        <span className="text-control whitespace-nowrap text-fg-subtle tabular-nums">
+          {shown === total ? (
+            <>
+              <span className="font-strong text-fg">{total}</span> requests
+            </>
+          ) : (
+            <>
+              <span className="font-strong text-fg">{shown}</span> of {total} requests
+            </>
+          )}
+        </span>
+      )}
       <button
         type="button"
         title={`Export the requests as ${format.toUpperCase()}`}

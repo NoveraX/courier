@@ -6,8 +6,10 @@ import { Segmented } from "@/design/segmented";
 import type { MockRoutesSearch, RouteKind } from "@/features/mocks/routes-view";
 import { filterRoutes, routeKeyOf, routeKindCounts } from "@/features/mocks/routes-view";
 import { inspectorOf } from "@/features/requests/inspector-of";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
+import { MocksSkeleton } from "./mocks-skeleton";
 import { ROUTE_COLUMNS } from "./route-columns";
 import { RouteRow } from "./route-row";
 import { useMockServer } from "./use-mock-server";
@@ -32,10 +34,12 @@ const KIND_LABELS: Readonly<Record<RouteKind, string>> = {
  */
 export function MockRoutesScreen(): React.ReactNode {
   const { server } = useMockServer();
+  const first = useFirstLoad();
+  const loading = first.requests || first.sources;
   const search: MockRoutesSearch = useSearch({ from: "/mocks/routes" });
   const navigate = useNavigate({ from: "/mocks/routes" });
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
-  if (!server) return null;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
   const kind = search.kind ?? "all";
   const set = (patch: MockRoutesSearch) =>
     void navigate({

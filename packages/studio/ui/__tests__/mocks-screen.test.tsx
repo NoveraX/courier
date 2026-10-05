@@ -49,6 +49,15 @@ afterEach(() => {
 
 describe("the Mocks pages", () => {
   it("offer to generate a first mock while there is none", async () => {
+    useStudioStore.setState({
+      connectionStatus: "connected",
+      configStatus: {
+        state: "loaded",
+        revision: 1,
+        configFile: "courier.config.ts",
+        loadedAt: Date.now(),
+      },
+    });
     await openShell("/mocks");
 
     expect(screen.getByText("No mock servers yet")).toBeTruthy();

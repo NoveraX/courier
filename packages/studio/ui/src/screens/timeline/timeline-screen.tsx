@@ -2,10 +2,12 @@ import { Activity } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { activeFilterCount, matchesFilter } from "@/features/requests/timeline-filter";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useStudioStore } from "@/store";
 import { FilterBar } from "./filter-bar";
 import { RequestTable } from "./request-table";
 import { ThroughputStrip } from "./throughput-strip";
+import { TimelineSkeleton } from "./timeline-skeleton";
 import { TimelineToolbar } from "./timeline-toolbar";
 import { useTimelineFilter } from "./use-timeline-filter";
 
@@ -25,6 +27,7 @@ export function TimelineScreen(): React.ReactNode {
   const [filtersShown, setFiltersShown] = useState(true);
   const requests = useStudioStore((s) => s.requests);
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
+  const loading = useFirstLoad();
   const shown = useMemo(
     () => requests.filter((r) => matchesFilter(r, filter, { slowMs })),
     [requests, filter, slowMs],
@@ -40,13 +43,19 @@ export function TimelineScreen(): React.ReactNode {
         shown={shown.length}
       />
       {filtersShown && <FilterBar filter={filter} onChange={setFilter} />}
-      <ThroughputStrip />
-      {requests.length === 0 ? (
-        <Waiting />
-      ) : shown.length === 0 ? (
-        <NoMatches onReset={reset} />
+      {loading.requests ? (
+        <TimelineSkeleton />
       ) : (
-        <RequestTable requests={shown} />
+        <>
+          <ThroughputStrip />
+          {requests.length === 0 ? (
+            <Waiting />
+          ) : shown.length === 0 ? (
+            <NoMatches onReset={reset} />
+          ) : (
+            <RequestTable requests={shown} />
+          )}
+        </>
       )}
     </div>
   );

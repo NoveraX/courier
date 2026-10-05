@@ -9,10 +9,12 @@ import { categoryTally, matchesFinding, severityCounts } from "@/features/audit/
 import { findingEndpoints } from "@/features/audit/finding-view";
 import type { AuditCategory } from "@/features/audit/types";
 import { inspectorOf } from "@/features/requests/inspector-of";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useNow } from "@/hooks/use-tick";
 import { useInspector } from "@/inspector/use-inspector";
 import { useStudioStore } from "@/store";
 import { AuditHeader } from "./audit-header";
+import { AuditSkeleton } from "./audit-skeleton";
 import { FindingCard } from "./finding-card";
 import { FindingsBar } from "./findings-bar";
 import { ScoreHero } from "./score-hero";
@@ -49,6 +51,7 @@ export function AuditScreen(): React.ReactNode {
   const { open } = useInspector();
   const requests = useStudioStore((s) => s.requests);
   const now = useNow();
+  const loading = useFirstLoad();
   const { items } = report.result;
   /* Until a finding is opened or closed, the first one shows open — once the report has one. */
   const [chosen, setChosen] = useState<string | null | undefined>(undefined);
@@ -68,8 +71,16 @@ export function AuditScreen(): React.ReactNode {
   };
   return (
     <div className="mx-auto flex w-full max-w-320 flex-col gap-4.5 px-6 pt-6 pb-12">
-      <AuditHeader report={report} newSince={newSince} now={now} onRerun={rerun} />
-      {report.requests === 0 ? (
+      <AuditHeader
+        report={report}
+        newSince={newSince}
+        now={now}
+        loading={loading.requests}
+        onRerun={rerun}
+      />
+      {loading.requests ? (
+        <AuditSkeleton />
+      ) : report.requests === 0 ? (
         <NoTraffic />
       ) : (
         <>

@@ -2,6 +2,8 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 
 import type { MockScenariosSearch } from "@/features/mocks/scenario-view";
 import { inspectorOf } from "@/features/requests/inspector-of";
+import { useFirstLoad } from "@/hooks/use-first-load";
+import { MocksSkeleton } from "./mocks-skeleton";
 import { ScenarioCard } from "./scenario-card";
 import { ScenarioDetail } from "./scenario-detail";
 import { useMockServer } from "./use-mock-server";
@@ -19,9 +21,11 @@ import { useMockServer } from "./use-mock-server";
  */
 export function MockScenariosScreen(): React.ReactNode {
   const { server } = useMockServer();
+  const first = useFirstLoad();
+  const loading = first.requests || first.sources;
   const search: MockScenariosSearch = useSearch({ from: "/mocks/scenarios" });
   const navigate = useNavigate({ from: "/mocks/scenarios" });
-  if (!server) return null;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
   if (server.scenarios.length === 0) {
     return (
       <p className="mx-auto max-w-120 p-10 text-center text-control text-fg-subtle">

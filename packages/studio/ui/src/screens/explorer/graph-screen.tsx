@@ -6,9 +6,11 @@ import type { HealthLevel } from "@/features/explorer/endpoint-metrics";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import { graphLayoutOf } from "@/features/explorer/graph-layout";
 import type { GraphNode } from "@/features/explorer/graph-types";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { ExplorerEmpty } from "./explorer-empty";
+import { ExplorerSkeleton } from "./explorer-skeleton";
 import { GraphFlow } from "./graph-flow";
 import { useExplorerModel } from "./use-explorer-model";
 import { useExplorerSearch } from "./use-explorer-search";
@@ -50,6 +52,7 @@ function Legend(): React.ReactNode {
  */
 export function GraphScreen(): React.ReactNode {
   const model = useExplorerModel();
+  const loading = useFirstLoad();
   const { q, metric, endpoint, set } = useExplorerSearch();
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const [hover, setHover] = useState<string | undefined>(undefined);
@@ -57,7 +60,9 @@ export function GraphScreen(): React.ReactNode {
     () => graphLayoutOf(model, { metric, slowMs, query: q, hover, selected: endpoint }),
     [model, metric, slowMs, q, hover, endpoint],
   );
-  if (!model.endpoints.length) return <ExplorerEmpty />;
+  if (!model.endpoints.length) {
+    return loading.sources ? <ExplorerSkeleton view="graph" /> : <ExplorerEmpty />;
+  }
   const open = (node: GraphNode) =>
     node.kind === "endpoint"
       ? set({ endpoint: node.key })

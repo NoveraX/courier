@@ -292,11 +292,35 @@ describe("the heatmap", () => {
 });
 
 describe("before any endpoint is known", () => {
-  it("says so on every tab", async () => {
-    useStudioStore.setState({ scanSources: [], requests: [] });
+  it("says so once Studio has loaded a config that declares none", async () => {
+    useStudioStore.setState({
+      scanSources: [],
+      requests: [],
+      connectionStatus: "connected",
+      configStatus: {
+        state: "loaded",
+        revision: 1,
+        configFile: "courier.config.ts",
+        loadedAt: NOW,
+      },
+    });
 
     await openShell("/explorer");
 
     expect(screen.getByText("No endpoints yet")).toBeTruthy();
+  });
+
+  it("shows the endpoints loading while Studio has not loaded the config", async () => {
+    useStudioStore.setState({
+      scanSources: [],
+      requests: [],
+      connectionStatus: "connected",
+      configStatus: { state: "starting", revision: 0 },
+    });
+
+    await openShell("/explorer");
+
+    expect(screen.getByRole("status").textContent).toBe("Loading the endpoints");
+    expect(screen.queryByText("No endpoints yet")).toBeNull();
   });
 });

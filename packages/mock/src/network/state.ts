@@ -15,8 +15,9 @@ export interface NetworkState {
   setConfig(config: NetworkConfig | undefined): void;
   /**
    * Track an answer for the stop conditions. An answer that brings the run
-   * across one halts it: every setting is cleared, as `setConfig(undefined)`
-   * clears them, and `onHalt` is told why.
+   * across one halts it: every setting it simulates is cleared, presets
+   * included, the stop conditions stay for the next run, and `onHalt` is
+   * told why.
    */
   trackRequest(duration: number, isError: boolean): void;
   /** Check if stop conditions have been met — returns reason or undefined */
@@ -63,9 +64,12 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
     if (!config?.stopConditions?.enabled || !startedAt) return undefined;
     return crossedStopCondition(config.stopConditions, startedAt, recentRequests, Date.now());
   };
+  /* A halt clears what the mock simulates and keeps what halts it, so the next run halts too. */
   const halt = (reason: string): void => {
     const ran = startedAt === null ? undefined : Date.now() - startedAt;
+    const stopConditions = config?.stopConditions;
     clear();
+    if (stopConditions) config = { stopConditions };
     recentRequests.length = 0;
     onHalt?.({ reason, durationMs: ran });
   };

@@ -83,7 +83,7 @@ function isHalt(message: ChildMessage): message is WorkerEvent {
 }
 
 describe("a managed mock whose run a stop condition halts", () => {
-  it("tells Studio why the run ended, and that its settings are cleared", async () => {
+  it("tells Studio why the run ended, then the settings left: none simulated, the limits kept", async () => {
     await worker.command({
       action: "mock:chaos:set",
       preset: "down",
@@ -105,9 +105,15 @@ describe("a managed mock whose run a stop condition halts", () => {
     const halt = await worker.next(isHalt);
 
     expect(halt.event).toMatchObject({ mode: "chaos", reason: "error rate 100% > 50%" });
-    expect(lastNetworkConfig(worker.sent)).toEqual({
-      autoHalted: true,
-      haltReason: "error rate 100% > 50%",
+    const configs = worker.sent.flatMap((m) =>
+      m.type === "event" && m.event.type === "mock:network:config" ? [m.event.config] : [],
+    );
+    expect(configs.at(-2)).toEqual({ autoHalted: true, haltReason: "error rate 100% > 50%" });
+    expect(configs.at(-1)).toMatchObject({
+      errorRate: 0,
+      faultWeights: [],
+      chaosPreset: "none",
+      stopConditions: { enabled: true, errorRateThreshold: 50 },
     });
     expect((await fetch(`${url}/users`)).status).toBe(200);
   });

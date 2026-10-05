@@ -87,10 +87,12 @@ describe("a run that crosses a stop condition", () => {
     expect(statuses).toEqual([500, 500, 500, 500, 500, 200]);
     expect(halted).toHaveBeenCalledOnce();
     expect(halted.mock.calls[0]?.[0]).toMatchObject({ reason: "error rate 100% > 50%" });
-    expect(server.networkState.getGlobalConfig()).toBeUndefined();
+    expect(server.networkState.getGlobalConfig()).toEqual({
+      stopConditions: { ...OFF, errorRateThreshold: 50 },
+    });
   });
 
-  it("clears every setting it ran under, presets included", () => {
+  it("clears what it simulated, presets included, and keeps what halts it", () => {
     const state = createNetworkState({
       errorRate: 0.5,
       latency: { min: 10, max: 20 },
@@ -101,7 +103,7 @@ describe("a run that crosses a stop condition", () => {
 
     for (let i = 0; i < 10; i++) state.trackRequest(250, false);
 
-    expect(state.getGlobalConfig()).toBeUndefined();
+    expect(state.getGlobalConfig()).toEqual({ stopConditions: { ...OFF, p99Threshold: 100 } });
     expect(state.startedAt).toBeNull();
     expect(state.latencyPreset).toBe("none");
     expect(state.chaosPreset).toBe("none");
@@ -121,7 +123,24 @@ describe("a run that crosses a stop condition", () => {
     vi.advanceTimersByTime(1);
 
     expect(halted).toHaveBeenCalledWith({ reason: "max duration (1min)", durationMs: 60_000 });
-    expect(state.getGlobalConfig()).toBeUndefined();
+    expect(state.getGlobalConfig()).toEqual({ stopConditions: { ...OFF, maxDurationMins: 1 } });
+  });
+
+  it("halts the next run by the same conditions", () => {
+    vi.useFakeTimers();
+    const state = createNetworkState({
+      errorRate: 0.5,
+      stopConditions: { ...OFF, maxDurationMins: 1 },
+    });
+    const halted = vi.fn();
+    state.onHalt = halted;
+    vi.advanceTimersByTime(60_000);
+
+    state.mergeConfig({ latency: { min: 100, max: 200 } });
+    vi.advanceTimersByTime(60_000);
+
+    expect(halted).toHaveBeenCalledTimes(2);
+    expect(state.getGlobalConfig()?.latency).toBeUndefined();
   });
 
   it("measures its longest length from when it started, though its limits change", () => {

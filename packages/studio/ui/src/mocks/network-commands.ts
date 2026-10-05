@@ -4,6 +4,7 @@ import { LATENCY_DEFAULTS } from "@/features/mocks/latency-config";
 import { routeOverridesOf } from "@/features/mocks/route-overrides";
 import { getSocket } from "@/socket";
 import type {
+  LatencyDistribution,
   LatencyPreset,
   MockServerInfo,
   NetworkConfig,
@@ -57,22 +58,22 @@ export function setChaos(
 
 /**
  * Delay the mock's answers by a range and jitter, or not at all. A preset
- * draws its delays log-normally, as the mock's own profiles do.
+ * draws its delays log-normally; a delay of one's own in the shape it names.
  *
  * @param server - The mock server
  * @param preset - The preset, `custom` or `none`
- * @param range - The range and jitter in ms, for a preset other than `none`
+ * @param range - The range and jitter in ms, and the shape of a delay of one's own
  * @example
  * ```ts
- * setLatency(server, "custom", { min: 400, max: 400, jitter: 120 });
+ * setLatency(server, "custom", { min: 280, max: 520, jitter: 0, distribution: "normal" });
  * ```
  */
 export function setLatency(
   server: MockServerInfo,
   preset: LatencyPreset,
-  range: { min: number; max: number; jitter: number },
+  range: { min: number; max: number; jitter: number; distribution?: LatencyDistribution },
 ): void {
-  const latency = preset === "none" ? 0 : { ...range, distribution: LATENCY_DEFAULTS.distribution };
+  const latency = preset === "none" ? 0 : { distribution: LATENCY_DEFAULTS.distribution, ...range };
   useMockStore.getState().updateServer(server.serverId, {
     latencyPreset: preset,
     latencyStartedAt: preset === "none" ? null : Date.now(),

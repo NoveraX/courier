@@ -18,11 +18,13 @@ const STOP_NUMBERS = [
   "maxDurationMins",
 ] as const;
 
-function readLatency(value: unknown): NetworkConfig["latency"] | undefined {
+/* The mock sends a range's shape beside it, as `distribution`; the page keeps it in the range. */
+function readLatency(value: unknown, shapeBeside: unknown): NetworkConfig["latency"] | undefined {
   if (typeof value === "number") return value;
   const range = readNumbers(value, ["min", "max"] as const);
   if (!range || !isPlainObject(value)) return undefined;
-  const { jitter, distribution } = value;
+  const { jitter } = value;
+  const distribution = value.distribution ?? shapeBeside;
   if (jitter !== undefined && typeof jitter !== "number") return undefined;
   const shape = distribution === undefined ? undefined : readOneOf(distribution, DISTRIBUTIONS);
   if (distribution !== undefined && shape === undefined) return undefined;
@@ -92,7 +94,7 @@ function readRouteOverrides(value: unknown): RouteOverride[] | undefined {
  */
 export function readNetworkConfig(value: unknown): NetworkConfig | undefined {
   if (!isPlainObject(value)) return undefined;
-  const latency = readLatency(value.latency);
+  const latency = readLatency(value.latency, value.distribution);
   const { errorRate, faultWeights, bandwidth, stopConditions, routeOverrides } = value;
   if (latency === undefined || typeof errorRate !== "number") return undefined;
   const weights = faultWeights === undefined ? undefined : readList(faultWeights, isFaultWeight);

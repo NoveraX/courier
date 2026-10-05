@@ -216,7 +216,7 @@ describe("latency", () => {
 
     await drag("Jitter", 250);
     expect(sent("mock:network:set").at(-1)).toMatchObject({
-      config: { latency: { min: 300, max: 300, jitter: 250 } },
+      config: { latency: { min: 50, max: 550, jitter: 0, distribution: "uniform" } },
       preset: "custom",
     });
     await drag("Base delay", 0);
@@ -227,6 +227,48 @@ describe("latency", () => {
     });
     expect(screen.getByText("passthrough")).toBeTruthy();
     expect(screen.getByRole("slider", { name: "Jitter" })).toHaveProperty("disabled", true);
+  });
+
+  it("keeps the jitter within the base, so no delay goes below zero", async () => {
+    serve({
+      latencyPreset: "custom",
+      networkConfig: { latency: { min: 50, max: 550, jitter: 0 }, errorRate: 0 },
+    });
+    await openShell("/mocks/network");
+
+    await drag("Base delay", 100);
+
+    expect(sent("mock:network:set").at(-1)).toMatchObject({
+      config: { latency: { min: 0, max: 200, jitter: 0 } },
+    });
+    expect(screen.getByRole("slider", { name: "Jitter" })).toHaveProperty("max", "100");
+  });
+
+  it("draws a delay of one's own in the shape picked, and offers no shape for a preset", async () => {
+    serve({
+      latencyPreset: "custom",
+      networkConfig: { latency: { min: 280, max: 520, jitter: 0 }, errorRate: 0 },
+    });
+    await openShell("/mocks/network");
+    const shapes = screen.getByRole("group", { name: "Delay shape" });
+
+    await settle(() => fireEvent.click(within(shapes).getByRole("button", { name: "Normal" })));
+
+    expect(sent("mock:network:set").at(-1)).toEqual({
+      action: "mock:network:set",
+      serverId: "api-mock",
+      config: { latency: { min: 280, max: 520, jitter: 0, distribution: "normal" } },
+      preset: "custom",
+    });
+    expect(screen.getByText("Most delays near the base, few at the edges.")).toBeTruthy();
+    await settle(() =>
+      fireEvent.click(
+        within(screen.getByRole("group", { name: "Latency preset" })).getByRole("button", {
+          name: "3G",
+        }),
+      ),
+    );
+    expect(screen.queryByRole("group", { name: "Delay shape" })).toBeNull();
   });
 
   it("caps how fast bodies are sent", async () => {

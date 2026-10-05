@@ -16,20 +16,20 @@ vi.mock("sonner", () => ({
 }));
 
 import type { Socket } from "socket.io-client";
-import type { ApisStore } from "../src/socket/apis-bindings";
-import { bindApis } from "../src/socket/apis-bindings";
-import { DEFAULT_SETTINGS } from "../src/store/constants";
-import type { ScannedSource } from "../src/views/apis/types";
-import type { DeclareClient } from "../src/views/mocks/wizard/declare-client";
-import { reviewCta } from "../src/views/mocks/wizard/review-cta";
-import { watchProject } from "../src/views/mocks/wizard/watch-project";
+import { reviewCta } from "../src/features/mocks/wizard/review-cta";
 import type {
   DeclarePreview,
   ManualOutcome,
   ReadyOutcome,
-} from "../src/views/mocks/wizard/wire-types";
-import type { WizardSession } from "../src/views/mocks/wizard/wizard-session";
-import { createWizardSession } from "../src/views/mocks/wizard/wizard-session";
+} from "../src/features/mocks/wizard/wire-types";
+import type { DeclareClient } from "../src/mocks/wizard/declare-client";
+import { watchProject } from "../src/mocks/wizard/watch-project";
+import type { WizardSession } from "../src/mocks/wizard/wizard-session";
+import { createWizardSession } from "../src/mocks/wizard/wizard-session";
+import type { ApisStore } from "../src/socket/apis-bindings";
+import { bindApis } from "../src/socket/apis-bindings";
+import { DEFAULT_SETTINGS } from "../src/store/constants";
+import type { ScannedSource } from "../src/views/apis/types";
 
 const READY: ReadyOutcome = {
   status: "ready",

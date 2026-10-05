@@ -1,8 +1,9 @@
 import { Outlet } from "@tanstack/react-router";
 
 import { mockBannerOf } from "@/features/mocks/mock-banner";
+import { useMockWizard } from "@/mocks/wizard/use-mock-wizard";
 import { useStudioStore } from "@/store";
-import { MockWizard, useMockWizard } from "@/views/mocks/wizard";
+import { MockWizard } from "@/views/mocks/wizard";
 import { MocksBanner } from "./mocks-banner";
 import { MocksBar } from "./mocks-bar";
 import { useMockServer } from "./use-mock-server";

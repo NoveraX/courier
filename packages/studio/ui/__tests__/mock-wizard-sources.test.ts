@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { sourceAvailability } from "../src/views/mocks/wizard/source-availability";
+import { sourceAvailability } from "../src/features/mocks/wizard/source-availability";
 
 const LOADED = {
   state: "loaded",

@@ -8,9 +8,9 @@
 import { describe, expect, it } from "vitest";
 
 import type * as Server from "../../src/server/mocks-edit/types";
-import { isDeclareApplyResult } from "../src/views/mocks/wizard/is-declare-apply-result";
-import { isDeclarePreview } from "../src/views/mocks/wizard/is-declare-preview";
-import type * as Wizard from "../src/views/mocks/wizard/wire-types";
+import { isDeclareApplyResult } from "../src/features/mocks/wizard/is-declare-apply-result";
+import { isDeclarePreview } from "../src/features/mocks/wizard/is-declare-preview";
+import type * as Wizard from "../src/features/mocks/wizard/wire-types";
 
 type Same<TLeft, TRight> = [TLeft] extends [TRight]
   ? [TRight] extends [TLeft]

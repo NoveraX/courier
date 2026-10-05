@@ -1,8 +1,8 @@
 import { Copy } from "lucide-react";
 import { CodeBlock } from "@/components/shared/code-block";
 import { Button } from "@/components/ui/button";
+import type { ManualOutcome } from "@/features/mocks/wizard/wire-types";
 import { copyToClipboard } from "@/lib/clipboard";
-import type { ManualOutcome } from "./wire-types";
 
 /** The mocks file a manual outcome names, or the one its snippet would create. */
 const DEFAULT_TARGET = "courier.mocks.ts";

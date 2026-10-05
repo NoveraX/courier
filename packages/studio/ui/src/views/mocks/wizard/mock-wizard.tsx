@@ -5,11 +5,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { MockWizardHandle } from "@/mocks/wizard/use-mock-wizard";
 import { ConfigureStep } from "./step-configure";
 import { DoneStep } from "./step-done";
 import { ReviewStep } from "./step-review";
 import { SourceStep } from "./step-source";
-import type { MockWizardHandle } from "./use-mock-wizard";
 import { WizardFooter } from "./wizard-footer";
 import { WizardStepDot } from "./wizard-step-dot";
 

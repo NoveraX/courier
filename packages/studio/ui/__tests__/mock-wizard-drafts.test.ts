@@ -4,10 +4,10 @@
  * the problems it shows on each field, and what it sends.
  */
 import { describe, expect, it } from "vitest";
-import { suggestMockKey } from "../src/views/mocks/wizard/suggest-mock-key";
-import { toDeclarations } from "../src/views/mocks/wizard/to-declarations";
-import type { MockDraft } from "../src/views/mocks/wizard/types";
-import { validateDrafts } from "../src/views/mocks/wizard/validate-drafts";
+import { suggestMockKey } from "../src/features/mocks/wizard/suggest-mock-key";
+import { toDeclarations } from "../src/features/mocks/wizard/to-declarations";
+import type { MockDraft } from "../src/features/mocks/wizard/types";
+import { validateDrafts } from "../src/features/mocks/wizard/validate-drafts";
 
 function draft(patch: Partial<MockDraft> = {}): MockDraft {
   return {

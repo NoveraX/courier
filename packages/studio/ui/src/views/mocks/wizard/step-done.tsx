@@ -1,8 +1,8 @@
 import { CheckCircle2, Loader2 } from "lucide-react";
+import type { MockWizardState } from "@/features/mocks/wizard/types";
+import { useMockArrival } from "@/mocks/wizard/use-mock-arrival";
 import { MockFailureNote } from "../shared/mock-failure-note";
 import { ProcessStatusBadge, ServerControls } from "../shared/server-controls";
-import type { MockWizardState } from "./types";
-import { useMockArrival } from "./use-mock-arrival";
 import { WarningList } from "./warning-list";
 
 type Applied = Extract<MockWizardState["apply"], { status: "applied" }>;

@@ -9,7 +9,7 @@ const post = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/api-client", () => ({ post }));
 
-import { declareClient } from "../src/views/mocks/wizard/declare-client";
+import { declareClient } from "../src/mocks/wizard/declare-client";
 
 const MOCKS = [{ key: "apiMock", source: "api", port: null, seedCount: 20, autoStart: true }];
 const READY = {

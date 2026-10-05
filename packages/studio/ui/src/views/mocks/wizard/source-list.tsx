@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
+import type { MockDraft } from "@/features/mocks/wizard/types";
 import { cn } from "@/lib/utils";
 import type { ScannedSource } from "@/views/apis/types";
-import type { MockDraft } from "./types";
 
 function endpointCountOf(source: ScannedSource): number {
   /* A source may declare its endpoints without a group at all. */

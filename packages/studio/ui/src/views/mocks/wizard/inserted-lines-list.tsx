@@ -1,4 +1,4 @@
-import type { InsertedLine } from "./wire-types";
+import type { InsertedLine } from "@/features/mocks/wizard/wire-types";
 
 /**
  * The lines Studio wrote into a file it could not take its edit back from,

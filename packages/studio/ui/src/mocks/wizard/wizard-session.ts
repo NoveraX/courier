@@ -1,9 +1,9 @@
+import { toDeclarations } from "@/features/mocks/wizard/to-declarations";
+import type { MockWizardState } from "@/features/mocks/wizard/types";
+import type { MockDeclaration } from "@/features/mocks/wizard/wire-types";
+import type { MockWizardAction } from "@/features/mocks/wizard/wizard-reducer";
+import { INITIAL_WIZARD_STATE, mockWizardReducer } from "@/features/mocks/wizard/wizard-reducer";
 import type { DeclareClient } from "./declare-client";
-import { toDeclarations } from "./to-declarations";
-import type { MockWizardState } from "./types";
-import type { MockDeclaration } from "./wire-types";
-import type { MockWizardAction } from "./wizard-reducer";
-import { INITIAL_WIZARD_STATE, mockWizardReducer } from "./wizard-reducer";
 
 /** The wizard's state, and what the user and the project do to it. */
 export interface WizardSession {

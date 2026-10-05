@@ -1,5 +1,5 @@
+import { sourceAvailability } from "@/features/mocks/wizard/source-availability";
 import { useStudioStore } from "@/store";
-import { sourceAvailability } from "./source-availability";
 
 /**
  * Why a mock cannot be added now — Studio is not connected, still loading

@@ -4,10 +4,9 @@
  * (`mock:server:connect`), and says so when one is late.
  */
 import { beforeEach, describe, expect, it } from "vitest";
-
+import { ARRIVAL_PATIENCE_MS, mockArrival } from "../src/features/mocks/wizard/mock-arrival";
 import { handleMockEvent } from "../src/store/handle-mock-events";
 import { useMockStore } from "../src/store/mock-slice";
-import { ARRIVAL_PATIENCE_MS, mockArrival } from "../src/views/mocks/wizard/mock-arrival";
 
 function connect(serverId: string, processStatus = "running"): void {
   handleMockEvent({

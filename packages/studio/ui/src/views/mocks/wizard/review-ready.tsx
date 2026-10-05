@@ -1,7 +1,7 @@
 import { AlertTriangle } from "lucide-react";
+import type { ReadyOutcome } from "@/features/mocks/wizard/wire-types";
 import { ConfigDiff } from "./config-diff";
 import { WarningList } from "./warning-list";
-import type { ReadyOutcome } from "./wire-types";
 
 interface ReviewReadyProps {
   outcome: ReadyOutcome;

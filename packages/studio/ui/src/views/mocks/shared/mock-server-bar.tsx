@@ -9,8 +9,9 @@ import {
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { openMockWizard } from "@/mocks/wizard/open-mock-wizard";
+import { useAddMockBlocked } from "@/mocks/wizard/use-add-mock-blocked";
 import { useAllServers, useMockStore, useServerCount } from "@/store/mock-slice";
-import { openMockWizard, useAddMockBlocked } from "../wizard";
 import { ProcessStatusBadge, ServerControls } from "./server-controls";
 
 /** Server selector + status + controls rendered inside TopBar on /mocks pages */

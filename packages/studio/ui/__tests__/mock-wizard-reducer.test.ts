@@ -6,16 +6,19 @@
  */
 import { describe, expect, it } from "vitest";
 
-import type { MockWizardState } from "../src/views/mocks/wizard/types";
+import type { MockWizardState } from "../src/features/mocks/wizard/types";
 import type {
   DeclareApplyResult,
   ManualOutcome,
   MockDeclaration,
   ReadyOutcome,
-} from "../src/views/mocks/wizard/wire-types";
-import type { MockWizardAction } from "../src/views/mocks/wizard/wizard-reducer";
+} from "../src/features/mocks/wizard/wire-types";
+import type { MockWizardAction } from "../src/features/mocks/wizard/wizard-reducer";
 
-import { INITIAL_WIZARD_STATE, mockWizardReducer } from "../src/views/mocks/wizard/wizard-reducer";
+import {
+  INITIAL_WIZARD_STATE,
+  mockWizardReducer,
+} from "../src/features/mocks/wizard/wizard-reducer";
 
 const MOCKS: MockDeclaration[] = [
   { key: "api", source: "api", port: null, seedCount: 20, autoStart: true },

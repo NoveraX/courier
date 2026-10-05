@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useTimeReached } from "./use-time-reached";
+import { useTimeReached } from "@/mocks/wizard/use-time-reached";
 
 interface ApplyButtonProps {
   label: string;

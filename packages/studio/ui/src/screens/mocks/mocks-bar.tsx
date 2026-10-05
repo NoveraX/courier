@@ -3,8 +3,9 @@ import type { LucideIcon } from "lucide-react";
 import { Activity, Database, Globe, LayoutDashboard, Network, Sparkles, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { openMockWizard } from "@/mocks/wizard/open-mock-wizard";
+import { useAddMockBlocked } from "@/mocks/wizard/use-add-mock-blocked";
 import type { MockServerInfo } from "@/store/mock-slice";
-import { openMockWizard, useAddMockBlocked } from "@/views/mocks/wizard";
 import { ServerPill } from "./server-pill";
 
 /** The Mocks tabs; a tab not yet on the new shell opens its current page. */

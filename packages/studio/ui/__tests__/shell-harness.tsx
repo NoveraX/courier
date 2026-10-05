@@ -10,6 +10,7 @@ import {
 import { act, render } from "@testing-library/react";
 import { MotionGlobalConfig } from "motion/react";
 
+import { validateAnalyticsSearch } from "@/features/analytics/analytics-search";
 import { validateExplorerSearch } from "@/features/explorer/explorer-search";
 import { validateMockStoreSearch } from "@/features/mocks/collection-view";
 import { validateMockLogsSearch } from "@/features/mocks/logs-view";
@@ -19,6 +20,7 @@ import { validatePlaygroundSearch } from "@/features/playground/playground-searc
 import { validateInspectorSearch } from "@/features/requests/inspector-search";
 import { validateTimelineSearch } from "@/features/requests/timeline-search";
 import { validateWaterfallSearch } from "@/features/waterfall/waterfall-search";
+import { AnalyticsScreen } from "@/screens/analytics/analytics-screen";
 import { ApisScreen } from "@/screens/apis/apis-screen";
 import { EndpointsScreen } from "@/screens/explorer/endpoints-screen";
 import { ExplorerLayout } from "@/screens/explorer/explorer-layout";
@@ -96,6 +98,12 @@ export async function openShell(url: string): Promise<AnyRouter> {
     component: WaterfallScreen,
     validateSearch: validateWaterfallSearch,
   });
+  const analytics = createRoute({
+    getParentRoute: () => shell,
+    path: "analytics",
+    component: AnalyticsScreen,
+    validateSearch: validateAnalyticsSearch,
+  });
   const explorer = createRoute({
     getParentRoute: () => shell,
     path: "explorer",
@@ -156,6 +164,7 @@ export async function openShell(url: string): Promise<AnyRouter> {
         home,
         timeline,
         waterfall,
+        analytics,
         explorer.addChildren(tabs),
         playground,
         apis,

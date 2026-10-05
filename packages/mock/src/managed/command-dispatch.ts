@@ -8,14 +8,14 @@ import { handleChaosCommand, handleNetworkCommand } from "./network-commands";
 import { buildScenarioMeta } from "./scenario-meta";
 import { handleStoreCommand } from "./store-commands";
 import type { ParentMessage, ServedMock } from "./types";
-import { send, sendStoreSnapshot } from "./worker-ipc";
+import { send } from "./worker-ipc";
 
 export function handleCommand(
   served: ServedMock,
   msg: Extract<ParentMessage, { type: "command" }>,
   buildUiRoutes: () => DescribedRoute[],
 ): void {
-  const { server, routes: analyzedRoutes } = served;
+  const { server, routes: analyzedRoutes, feed } = served;
   const action = msg.command.action;
 
   if (action === "mock:network:set") {
@@ -29,15 +29,22 @@ export function handleCommand(
     return;
   }
 
+  /* A page whose copy of the store fell out of step with it asks for it whole. */
+  if (action === "mock:store:resend") {
+    feed.resend();
+    send({ type: "command-result", requestId: msg.requestId, ok: true });
+    return;
+  }
+
   const result = handleStoreCommand(served, msg.command);
   send({ type: "command-result", requestId: msg.requestId, ...result });
 
   if (action === "mock:scenario:apply") {
     emitScenarioApplied(server, analyzedRoutes, result, buildUiRoutes);
-  } else {
-    sendStoreSnapshot(server);
   }
-  /* A command changes the store outside any request, which saves it otherwise. */
+  /* A command changes the store outside any request, which reports and
+     saves it otherwise: the page that sent it is shown the change at once. */
+  feed.flush();
   void server.saveStore();
 }
 

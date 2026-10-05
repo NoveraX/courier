@@ -66,6 +66,7 @@ function reconnectServer(
   event: MockEvent,
 ): void {
   const incomingScenarios = scenariosOf(event);
+  const incomingCollections = collectionsOf(event);
   const incomingRoutes = routesOf(event) ?? existing.routes;
   // Preserve client-side hits/avgLatency when server re-sends route list
   const mergedRoutes = mergeRouteStats(existing.routes, incomingRoutes);
@@ -86,7 +87,8 @@ function reconnectServer(
     activeScenario: optStr(event.activeScenario) ?? null,
     availableScenarios: namesOf(event.availableScenarios) ?? [],
     scenarios: incomingScenarios?.length ? incomingScenarios : existing.scenarios,
-    collections: collectionsOf(event) ?? existing.collections,
+    collections: incomingCollections ?? existing.collections,
+    storeSeq: incomingCollections ? num(event.storeSeq) : existing.storeSeq,
     routes: mergedRoutes,
     processStatus: readOneOf(event.processStatus, PROCESS_STATUSES) ?? existing.processStatus,
     ...buildNetworkPatch(event),
@@ -117,6 +119,7 @@ function registerNewServer(store: Store, serverId: string, event: MockEvent): vo
     origin: event.origin === "studio" ? "studio" : "external",
     filePath: optStr(event.filePath),
     collections: collectionsOf(event) ?? [],
+    storeSeq: num(event.storeSeq),
     routes: routesOf(event) ?? [],
     scenarios: scenariosOf(event) ?? [],
   });
@@ -130,18 +133,6 @@ export function handleServerConnect(serverId: string, event: MockEvent): void {
   } else {
     registerNewServer(store, serverId, event);
   }
-}
-
-export function handleStoreChange(serverId: string, event: MockEvent): void {
-  const store = useMockStore.getState();
-  const col = str(event.collection);
-  const count = num(event.count);
-  const server = mockServerOf(store.servers, serverId);
-  if (!server) return;
-  store.setServerCollections(
-    serverId,
-    server.collections.map((c) => (c.name === col ? { ...c, count } : c)),
-  );
 }
 
 export function handleScenarioActive(serverId: string, event: MockEvent): void {

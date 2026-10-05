@@ -62,6 +62,8 @@ export interface MockServerInfo {
   lastError?: string | undefined;
   /** Per-server data */
   collections: MockCollectionEntry[];
+  /** The number of the last report of the store applied to `collections`; 0 for the store the mock started with. */
+  storeSeq: number;
   routes: MockRouteEntry[];
   scenarios: MockScenarioEntry[];
 }
@@ -151,7 +153,12 @@ export interface MockSliceState {
   forgetManagedServers: () => void;
   updateServer: (serverId: string, patch: Partial<MockServerInfo>) => void;
   selectServer: (serverId: string | null) => void;
-  setServerCollections: (serverId: string, collections: MockCollectionEntry[]) => void;
+  /** The store as a report of it left it, and that report's number. */
+  setServerCollections: (
+    serverId: string,
+    collections: MockCollectionEntry[],
+    storeSeq: number,
+  ) => void;
   setServerRoutes: (serverId: string, routes: MockRouteEntry[]) => void;
   setServerScenarios: (serverId: string, scenarios: MockScenarioEntry[]) => void;
   addLog: (log: MockRequestLog) => void;

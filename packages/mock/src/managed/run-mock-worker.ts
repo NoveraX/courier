@@ -22,6 +22,7 @@ import { reportHalts } from "./network-commands";
 import { wireRequestHooks } from "./request-hooks";
 import { buildScenarioMeta } from "./scenario-meta";
 import { startFailure } from "./start-failure";
+import { createStoreFeed } from "./store-feed";
 import type { MockServerDefinition, ParentMessage, ServedMock } from "./types";
 import { send, sendError, watchParent } from "./worker-ipc";
 
@@ -84,7 +85,7 @@ export function runMockWorker(loadDefinition: MockDefinitionLoader): void {
         });
     } else if (msg.type === "stop" && !stopping) {
       stopping = true;
-      void stop(served?.server);
+      void stop(served);
     } else if (msg.type === "command") {
       answerCommand(served, msg);
     }
@@ -112,13 +113,15 @@ async function start(
     );
     return undefined;
   }
+  const server = createServer(definition, msg);
   const served: ServedMock = {
-    server: createServer(definition, msg),
+    server,
     routes: analyzeRoutes(definition.source),
     groupNames: getSourceGroupNames(definition.source),
     seed: seedOptionsOf(definition.seed),
+    feed: createStoreFeed(server.store),
   };
-  wireRequestHooks(served.server);
+  wireRequestHooks(served.server, served.feed);
   reportHalts(served.server);
   const info = await served.server.start();
   if (stopping()) return served;
@@ -133,11 +136,7 @@ async function start(
       served.server.activeScenario,
     ),
     network: networkConfigOnWire(served.server.networkState),
-    collections: served.server.store.list().map((name) => ({
-      name,
-      count: served.server.store.collection(name).count(),
-      records: served.server.store.collection(name).getAll(),
-    })),
+    collections: served.feed.start(),
   });
   return served;
 }
@@ -184,9 +183,11 @@ function uiRoutes({ server, routes, groupNames }: ServedMock): DescribedRoute[] 
 }
 
 /* Nothing is running while the config still loads, so a stop then ends the
-   process at once; the start in flight goes with it. */
-async function stop(server: MockServer | undefined): Promise<void> {
-  await server?.stop();
+   process at once; the start in flight goes with it. The requests a stop
+   lets finish change the store too, and Studio is told those changes. */
+async function stop(served: ServedMock | undefined): Promise<void> {
+  await served?.server.stop();
+  served?.feed.close();
   send({ type: "stopped" });
   process.exit(0);
 }

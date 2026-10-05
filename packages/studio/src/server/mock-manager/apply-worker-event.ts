@@ -1,18 +1,24 @@
+import { applyStoreReport, readStoreReport } from "@noverax/courier-studio-core";
+
 import { isPlainObject } from "../is-plain-object";
 import { isDescribedRoute } from "./is-described-route";
 import { isListOf } from "./is-list-of";
 import { isScenarioMeta } from "./is-scenario-meta";
 import type { ServerState } from "./types";
 
-type Collection = ServerState["collections"][number];
-
-function isCollection(value: unknown): value is Collection {
-  return (
-    isPlainObject(value) &&
-    typeof value.name === "string" &&
-    typeof value.count === "number" &&
-    Array.isArray(value.records)
-  );
+/* A report applies to the store as the one before it left it. One older than
+   the store Studio holds — sent before a mock started again — is passed
+   over; one that skips a report, or whose edits do not fit, leaves Studio's
+   copy out of step, and the mock is asked for its store whole. */
+function applyStoreChanges(state: ServerState, event: Record<string, unknown>): boolean {
+  const report = readStoreReport(event);
+  if (report === undefined) return true;
+  if (!report.whole && report.seq !== state.storeSeq + 1) return report.seq <= state.storeSeq;
+  const collections = applyStoreReport(state.collections, report);
+  if (collections === undefined) return false;
+  state.collections = collections;
+  state.storeSeq = report.seq;
+  return true;
 }
 
 function presetOf(value: unknown): string | undefined {
@@ -77,18 +83,19 @@ export function networkStateOf(config: Record<string, unknown>): NetworkState {
  *
  * @param state - What Studio holds of the mock; updated in place
  * @param event - The event, as the worker's message carried it
+ * @returns `false` when Studio's copy of the store fell out of step with the mock's, which then is to send it whole
  * @example
  * ```ts
  * applyWorkerEvent(state, { type: "mock:scenario:active", scenario: "empty", scenarios, routes });
  * ```
  */
-export function applyWorkerEvent(state: ServerState, event: Record<string, unknown>): void {
-  const { type, collections, config } = event;
-  if (type === "mock:store:snapshot") {
-    if (isListOf(collections, isCollection)) state.collections = collections;
-  } else if (type === "mock:scenario:active") {
+export function applyWorkerEvent(state: ServerState, event: Record<string, unknown>): boolean {
+  const { type, config } = event;
+  if (type === "mock:store:changes") return applyStoreChanges(state, event);
+  if (type === "mock:scenario:active") {
     applyScenario(state, event);
   } else if (type === "mock:network:config" && isPlainObject(config)) {
     Object.assign(state, networkStateOf(config));
   }
+  return true;
 }

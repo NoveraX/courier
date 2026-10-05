@@ -6,6 +6,7 @@ import type { MockStore } from "../store";
 import type { EndpointName, TypedMockFn } from "../typed-mock-fn";
 import type { MockScenario, NetworkConfig } from "../types";
 import type { DescribedRoute } from "./describe-route";
+import type { StoreFeed } from "./store-feed";
 
 /**
  * What `defineMocks` accepts under each key: a `defineMockServer()` result,
@@ -110,6 +111,8 @@ export interface ServedMock {
   groupNames: Set<string>;
   /** The seeding the mock declares, which a reset or a count-less re-seed restores */
   seed: AutoScenarioOptions;
+  /** Reports the store's changes to Studio */
+  feed: StoreFeed;
 }
 
 // ── IPC Protocol ─────────────────────────────────────────────────────────────

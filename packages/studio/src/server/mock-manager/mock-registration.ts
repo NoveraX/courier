@@ -65,6 +65,7 @@ export function createMockRegistration(ctx: RegistrationContext): MockRegistrati
       origin: "studio",
       routes: [],
       collections: [],
+      storeSeq: 0,
       scenarios: [],
       activeScenario: null,
       ...fields,

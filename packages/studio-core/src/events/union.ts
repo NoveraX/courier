@@ -17,8 +17,7 @@ import type {
   MockServerConnectEvent,
   MockServerDisconnectEvent,
   MockServerStatusEvent,
-  MockStoreChangeEvent,
-  MockStoreSnapshotEvent,
+  MockStoreChangesEvent,
 } from "./mock";
 import type {
   ProxyOriginRejectEvent,
@@ -77,8 +76,7 @@ export type AnyStudioEvent =
   | MockServerDisconnectEvent
   | MockServerStatusEvent
   | MockRouteListEvent
-  | MockStoreSnapshotEvent
-  | MockStoreChangeEvent
+  | MockStoreChangesEvent
   | MockScenarioActiveEvent
   | MockNetworkConfigEvent
   | MockRequestStartEvent

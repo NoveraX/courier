@@ -25,9 +25,7 @@ describe("sanitizeRuntimeEvent", () => {
     expect(
       sanitizeRuntimeEvent({ type: "mock:server:connect", serverId: "srv-1" }),
     ).toBeUndefined();
-    expect(
-      sanitizeRuntimeEvent({ type: "mock:store:snapshot", serverId: "srv-1" }),
-    ).toBeUndefined();
+    expect(sanitizeRuntimeEvent({ type: "mock:store:changes", serverId: "srv-1" })).toBeUndefined();
   });
 
   it("rejects an unknown event type", () => {

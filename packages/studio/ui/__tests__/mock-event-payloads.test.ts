@@ -34,7 +34,14 @@ describe("a mock event with fields of another shape", () => {
     connect({});
 
     handleMockEvent({ type: "mock:route:list", serverId: "api", routes: [{ group: "users" }] });
-    handleMockEvent({ type: "mock:store:snapshot", serverId: "api", collections: "users" });
+    handleMockEvent({
+      type: "mock:store:changes",
+      serverId: "api",
+      seq: 1,
+      whole: true,
+      collections: "users",
+      removed: [],
+    });
     handleMockEvent({ type: "mock:scenario:list", serverId: "api", scenarios: [{ name: 1 }] });
 
     const server = useMockStore.getState().servers.api;

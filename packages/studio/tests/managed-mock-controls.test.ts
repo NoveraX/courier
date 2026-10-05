@@ -101,17 +101,17 @@ async function startMock() {
     );
     return replies.map((reply) => reply.status);
   }
-  /** Send a store command and wait for the store snapshot it answers with. */
+  /** Send a store command and wait for the report of the store's changes it answers with. */
   async function storeCommand(
     action: string,
     payload: Record<string, unknown> = {},
   ): Promise<SentEvent> {
-    const snapshots = () =>
-      events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:store:snapshot");
-    const before = snapshots().length;
+    const reports = () =>
+      events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:store:changes");
+    const before = reports().length;
     pm.sendCommand("apiMock", { action, ...payload });
-    await vi.waitFor(() => expect(snapshots().length).toBeGreaterThan(before), { timeout: 5_000 });
-    return snapshots().at(-1)?.[1] ?? {};
+    await vi.waitFor(() => expect(reports().length).toBeGreaterThan(before), { timeout: 5_000 });
+    return reports().at(-1)?.[1] ?? {};
   }
   return { command, storeCommand, statuses, events, pm, url: `http://127.0.0.1:${port}` };
 }
@@ -234,9 +234,9 @@ describe("the Reset store control of a managed mock", () => {
         .length;
     const before = networkEvents();
 
-    const snapshot = await mock.storeCommand("mock:server:reset");
+    const report = await mock.storeCommand("mock:server:reset");
 
-    expect(snapshot.collections).toEqual(
+    expect(report.collections).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "users", count: 3 })]),
     );
     expect(await mock.statuses("/users", 3)).toEqual([503, 503, 503]);

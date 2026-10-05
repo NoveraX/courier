@@ -24,6 +24,8 @@ export type {
   MiddlewareExitEvent,
 } from "./middleware";
 export type {
+  MockCollectionEdits,
+  MockCollectionReport,
   MockCollectionSnapshot,
   MockHotReloadEvent,
   MockNetworkConfigEvent,
@@ -38,8 +40,8 @@ export type {
   MockServerConnectEvent,
   MockServerDisconnectEvent,
   MockServerStatusEvent,
-  MockStoreChangeEvent,
-  MockStoreSnapshotEvent,
+  MockStoreChangesEvent,
+  MockStoreReport,
 } from "./mock";
 export type {
   ProxyOriginRejectEvent,

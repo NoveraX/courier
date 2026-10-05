@@ -56,6 +56,7 @@ function serverStateData(state: ServerState): Record<string, unknown> {
       count: c.count,
       records: c.records ?? [],
     })),
+    storeSeq: state.storeSeq,
     routes: state.routes,
     managed: true,
     processStatus: state.status,

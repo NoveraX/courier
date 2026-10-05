@@ -36,7 +36,10 @@ function events() {
   const updateAndEmit = (serverId: string, patch: Partial<ServerState>) => {
     Object.assign(servers.get(serverId) as ServerState, patch);
   };
-  return { state, handlers: createProcessEvents({ servers, emit: vi.fn(), updateAndEmit }) };
+  return {
+    state,
+    handlers: createProcessEvents({ servers, emit: vi.fn(), updateAndEmit, resendStore: vi.fn() }),
+  };
 }
 
 describe("a managed mock that fails", () => {
@@ -178,23 +181,98 @@ function workerEvents() {
     status: "running",
     routes: [ROUTE],
     collections: [{ name: "users", count: 1, records: [{ id: 1 }] }],
+    storeSeq: 0,
     scenarios: [],
     activeScenario: null,
   } as unknown as ServerState;
   const servers = new Map([["apiMock", state]]);
-  const handlers = createProcessEvents({ servers, emit, updateAndEmit: vi.fn() });
-  return { state, emit, onEvent: handlers.onEvent };
+  const resendStore = vi.fn();
+  const handlers = createProcessEvents({ servers, emit, updateAndEmit: vi.fn(), resendStore });
+  return { state, emit, resendStore, onEvent: handlers.onEvent };
 }
 
+const ADD_ADA = {
+  name: "users",
+  count: 2,
+  edits: { removed: [], changed: [], added: [{ id: 2, name: "Ada" }] },
+};
+
 describe("what Studio keeps of a managed mock's events", () => {
-  it("keeps the store's collections, and not a list of another shape", () => {
+  it("applies each report of the store's changes, and not one of another shape", () => {
+    const { state, resendStore, onEvent } = workerEvents();
+    const report = { type: "mock:store:changes", whole: false, removed: [] };
+
+    onEvent("apiMock", { ...report, seq: 1, collections: [ADD_ADA] });
+    onEvent("apiMock", { ...report, seq: "2", collections: [] });
+
+    expect(state.collections).toEqual([
+      { name: "users", count: 2, records: [{ id: 1 }, { id: 2, name: "Ada" }] },
+    ]);
+    expect(state.storeSeq).toBe(1);
+    expect(resendStore).not.toHaveBeenCalled();
+  });
+
+  it("asks the mock for its store whole when a report skips one", () => {
+    const { state, resendStore, onEvent } = workerEvents();
+
+    onEvent("apiMock", {
+      type: "mock:store:changes",
+      seq: 2,
+      whole: false,
+      collections: [ADD_ADA],
+      removed: [],
+    });
+
+    expect(resendStore).toHaveBeenCalledWith("apiMock");
+    expect(state).toMatchObject({ storeSeq: 0, collections: [{ name: "users", count: 1 }] });
+  });
+
+  it("asks the mock for its store whole when a report's edits do not fit Studio's copy", () => {
+    const { state, resendStore, onEvent } = workerEvents();
+    const edits = { removed: [4], changed: [], added: [] };
+
+    onEvent("apiMock", {
+      type: "mock:store:changes",
+      seq: 1,
+      whole: false,
+      collections: [{ name: "users", count: 0, edits }],
+      removed: [],
+    });
+
+    expect(resendStore).toHaveBeenCalledWith("apiMock");
+    expect(state.storeSeq).toBe(0);
+  });
+
+  it("passes over a report older than the store Studio holds", () => {
+    const { state, resendStore, onEvent } = workerEvents();
+    state.storeSeq = 5;
+
+    onEvent("apiMock", {
+      type: "mock:store:changes",
+      seq: 3,
+      whole: false,
+      collections: [ADD_ADA],
+      removed: [],
+    });
+
+    expect(resendStore).not.toHaveBeenCalled();
+    expect(state).toMatchObject({ storeSeq: 5, collections: [{ name: "users", count: 1 }] });
+  });
+
+  it("takes a whole report, whatever its number, as the store", () => {
     const { state, onEvent } = workerEvents();
-    const users = { name: "users", count: 2, records: [{ id: 1 }, { id: 2 }] };
+    state.storeSeq = 5;
+    const posts = { name: "posts", count: 1, records: [{ id: 7 }] };
 
-    onEvent("apiMock", { type: "mock:store:snapshot", collections: [users] });
-    onEvent("apiMock", { type: "mock:store:snapshot", collections: [{ name: 1 }] });
+    onEvent("apiMock", {
+      type: "mock:store:changes",
+      seq: 1,
+      whole: true,
+      collections: [posts],
+      removed: [],
+    });
 
-    expect(state.collections).toEqual([users]);
+    expect(state).toMatchObject({ storeSeq: 1, collections: [posts] });
   });
 
   it("keeps the scenario applied with its scenarios and routes, each only of its shape", () => {
@@ -261,7 +339,13 @@ describe("the requests a managed mock answered", () => {
     const record = vi.fn();
     const servers = new Map<string, ServerState>();
     const mockLog = { record, events: () => [], forget: vi.fn(), close: () => undefined };
-    const { onEvent } = createProcessEvents({ servers, emit, updateAndEmit: vi.fn(), mockLog });
+    const { onEvent } = createProcessEvents({
+      servers,
+      emit,
+      updateAndEmit: vi.fn(),
+      mockLog,
+      resendStore: vi.fn(),
+    });
     const start = {
       type: "mock:request:start",
       requestId: "r1",

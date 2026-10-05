@@ -42,6 +42,7 @@ const RUNNING: MockServerInfo = {
   processStatus: "running",
   origin: "studio",
   collections: [],
+  storeSeq: 0,
   routes: [],
   scenarios: [],
 };

@@ -58,25 +58,47 @@ export interface MockRouteListEvent extends StudioEvent {
 
 // ── Mock Store ────────────────────────────────────────────────────────────────
 
+/** A collection of a mock's store, whole: its name, how many records it holds, and the records. */
 export interface MockCollectionSnapshot {
   name: string;
   count: number;
   records: unknown[];
 }
 
-export interface MockStoreSnapshotEvent extends StudioEvent {
-  type: "mock:store:snapshot";
-  serverId: string;
-  collections: MockCollectionSnapshot[];
+/** The edits that turn a collection as last reported into the collection as it is now. */
+export interface MockCollectionEdits {
+  /** The indexes, in the collection as last reported, of the records gone. */
+  removed: number[];
+  /** The records changed in place, each at its index once the removed are gone. */
+  changed: Array<{ index: number; record: unknown }>;
+  /** The records added after all the others. */
+  added: unknown[];
 }
 
-export interface MockStoreChangeEvent extends StudioEvent {
-  type: "mock:store:change";
+/** A collection that changed: whole, or as the edits to the one last reported. */
+export type MockCollectionReport =
+  | MockCollectionSnapshot
+  | { name: string; count: number; edits: MockCollectionEdits };
+
+/**
+ * What changed in a mock's store since it last reported. Reports are
+ * numbered, so whoever holds the store sees one it missed, and asks for the
+ * store whole instead of applying edits to records it does not have.
+ */
+export interface MockStoreReport {
+  /** One more than the report before; the store the mock started with is report 0. */
+  seq: number;
+  /** Whether it holds every collection whole, as a resend does: then no collection it leaves out remains. */
+  whole: boolean;
+  /** Each collection that changed. */
+  collections: MockCollectionReport[];
+  /** The names of the collections gone. */
+  removed: string[];
+}
+
+export interface MockStoreChangesEvent extends StudioEvent, MockStoreReport {
+  type: "mock:store:changes";
   serverId: string;
-  collection: string;
-  operation: "create" | "update" | "delete" | "seed" | "clear";
-  record?: unknown;
-  count: number;
 }
 
 // ── Mock Scenarios ────────────────────────────────────────────────────────────

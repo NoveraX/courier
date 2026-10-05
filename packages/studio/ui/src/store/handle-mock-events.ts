@@ -5,8 +5,9 @@
  * namespace probe. The actual handlers live in two sibling files split
  * by domain:
  *
- * - `handle-mock-server-events.ts` — server lifecycle, routes, store
- *   snapshots and scenario activation.
+ * - `handle-mock-server-events.ts` — server lifecycle, routes and
+ *   scenario activation.
+ * - `handle-store-changes.ts` — the reports of each mock's store.
  * - `handle-mock-request-events.ts` — request lifecycle, network config
  *   and chaos experiment events.
  */
@@ -19,18 +20,24 @@ import {
   handleRequestError,
   handleRequestStart,
 } from "./handle-mock-request-events";
-import {
-  handleScenarioActive,
-  handleServerConnect,
-  handleStoreChange,
-} from "./handle-mock-server-events";
+import { handleScenarioActive, handleServerConnect } from "./handle-mock-server-events";
+import { handleStoreChanges } from "./handle-store-changes";
 import type { MockEvent } from "./mock-event-types";
 import { mockServerOf } from "./mock-server-of";
 import { useMockStore } from "./mock-slice";
-import { isMockCollectionEntry, isMockScenarioEntry, readList, readMockRoutes } from "./payload";
+import { isMockScenarioEntry, readList, readMockRoutes } from "./payload";
 
-/** Route mock:* events to the mock Zustand store */
-export function handleMockEvent(event: MockEvent): void {
+/**
+ * Route a `mock:*` event to the mock store.
+ *
+ * @param event - The event
+ * @returns `false` when the page's copy of the mock's store fell out of step with it, and the mock is to send its store whole
+ * @example
+ * ```ts
+ * if (!handleMockEvent(event)) askForStore(str(event.serverId));
+ * ```
+ */
+export function handleMockEvent(event: MockEvent): boolean {
   const store = useMockStore.getState();
   const serverId = str(event.serverId);
 
@@ -47,15 +54,8 @@ export function handleMockEvent(event: MockEvent): void {
     case "mock:route:list":
       store.setServerRoutes(serverId, readMockRoutes(event.routes) ?? []);
       break;
-    case "mock:store:snapshot":
-      store.setServerCollections(
-        serverId,
-        readList(event.collections, isMockCollectionEntry) ?? [],
-      );
-      break;
-    case "mock:store:change":
-      handleStoreChange(serverId, event);
-      break;
+    case "mock:store:changes":
+      return handleStoreChanges(serverId, event);
     case "mock:scenario:list":
       store.setServerScenarios(serverId, readList(event.scenarios, isMockScenarioEntry) ?? []);
       break;
@@ -80,6 +80,7 @@ export function handleMockEvent(event: MockEvent): void {
     default:
       break;
   }
+  return true;
 }
 
 /** Check if an event type belongs to the mock namespace */

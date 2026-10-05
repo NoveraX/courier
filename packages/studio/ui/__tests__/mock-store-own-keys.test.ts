@@ -49,10 +49,12 @@ describe("a mock whose key names an inherited member", () => {
 
   it("changes nothing when an event names a mock that is not listed", () => {
     handleMockEvent({
-      type: "mock:store:change",
+      type: "mock:store:changes",
       serverId: "valueOf",
-      collection: "users",
-      count: 3,
+      seq: 1,
+      whole: true,
+      collections: [{ name: "users", count: 0, records: [] }],
+      removed: [],
     });
     handleMockEvent({
       type: "mock:scenario:active",

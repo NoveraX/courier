@@ -4,7 +4,7 @@
  * SQLite, built into Node: nothing to install or set up.
  */
 
-import { chmodSync, closeSync, lstatSync, openSync, renameSync } from "node:fs";
+import { chmodSync, closeSync, lstatSync, openSync, renameSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
@@ -13,12 +13,21 @@ import { createLogger } from "@noverax/courier";
 import { ensureCourierDir } from "../courier-dir";
 import { errnoCode } from "../errno-code";
 import { messageOf } from "../message-of";
+import { giveBackFreedRoom } from "../storage-space/compact-db";
 import { migrate } from "./migrate";
 
 const log = createLogger("Studio");
 
 /** The database's file, in `.courier` */
 export const DATABASE_FILE = "studio.db";
+
+/* The write-ahead log is cut back to this after each checkpoint, not left at its largest. */
+const WAL_LIMIT_BYTES = 16 * 1024 * 1024;
+
+/* A first compaction of a database this large is worth a line in the terminal. */
+const REPORTED_COMPACTION_BYTES = 8 * 1024 * 1024;
+
+const mb = (bytes: number): string => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 /** Studio's database, open */
 export interface StudioDb {
@@ -79,8 +88,15 @@ function openOnDisk(projectRoot: string): DatabaseSync | undefined {
 function prepared(path: string): DatabaseSync {
   const db = new (process.getBuiltinModule("node:sqlite").DatabaseSync)(path);
   try {
-    db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 2000;");
+    db.exec(
+      "PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 2000; " +
+        `PRAGMA journal_size_limit = ${WAL_LIMIT_BYTES};`,
+    );
     migrate(db);
+    const before = statSync(path).size;
+    if (giveBackFreedRoom(db) && before > REPORTED_COMPACTION_BYTES) {
+      log.info(`Compacted ${DATABASE_FILE} once, ${mb(before)} → ${mb(statSync(path).size)}`);
+    }
     return db;
   } catch (error) {
     closeQuietly(db);

@@ -1,18 +1,23 @@
 import { createRequestLog, type RequestLog } from "../request-log";
+import { trimFreedRoom } from "../storage-space/compact-db";
 import { createMockLog, type MockLog } from "./mock-log";
 import { createPlaygroundHistory, type PlaygroundHistory } from "./playground-history";
 import { createSessionStore, type SessionStore } from "./session-rows";
-import { openStudioDb } from "./studio-db";
+import { openStudioDb, type StudioDb } from "./studio-db";
 import { createStudioView, type StudioView } from "./studio-view";
 
 /** Everything Studio keeps in its database for a project, opened and closed together. */
+/* How often freed room is looked for, and given back once there is enough. */
+const TRIM_EVERY_MS = 60_000;
+
 export interface StudioStores {
   requestLog: RequestLog;
   sessions: SessionStore;
   view: StudioView;
   mockLog: MockLog;
   playgroundHistory: PlaygroundHistory;
-  /** Close the stores that hold statements open, then the database. */
+  /** The database they are kept in */
+  storage: StudioDb;
   close(): void;
 }
 
@@ -32,13 +37,18 @@ export function openStudioStores(root: string): StudioStores {
   const storage = openStudioDb(root);
   const requestLog = createRequestLog(storage.db);
   const mockLog = createMockLog(storage.db);
+  /* The logs let their oldest requests go as new ones come: the room they took goes back to the disk. */
+  const trim = setInterval(() => trimFreedRoom(storage.db), TRIM_EVERY_MS);
+  trim.unref();
   return {
     requestLog,
     sessions: createSessionStore(storage.db),
     view: createStudioView(storage.db),
     mockLog,
     playgroundHistory: createPlaygroundHistory(storage.db),
+    storage,
     close() {
+      clearInterval(trim);
       requestLog.close();
       mockLog.close();
       storage.close();

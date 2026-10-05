@@ -3,7 +3,15 @@
  * schema, brought up to date as it opens, refused when a newer Courier wrote
  * it, set aside when it holds no database, and written all or nothing.
  */
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -152,5 +160,41 @@ describe("a store file", () => {
     database.write({ added: [], removed: ["users"], upserts: [], deletes: [] });
 
     expect(database.read()).toEqual(new Map());
+  });
+});
+
+describe("a store file's size", () => {
+  it("goes back down once its records are deleted", async () => {
+    const file = join(folder(), "shop.sqlite");
+    const { database } = await opened(file);
+    const data = JSON.stringify({ note: "n".repeat(4096) });
+    const upserts = Array.from({ length: 2000 }, (_, row) => ({
+      collection: "orders",
+      row: row + 1,
+      position: row,
+      data,
+    }));
+    database.write({ added: ["orders"], removed: [], upserts, deletes: [] });
+    const full = statSync(file).size;
+
+    database.write({ added: [], removed: ["orders"], upserts: [], deletes: [] });
+
+    expect(full).toBeGreaterThan(8 * 1024 * 1024);
+    expect(statSync(file).size).toBeLessThan(full / 4);
+  });
+
+  it("is compacted, once, when a store made before opens", async () => {
+    const file = join(folder(), "old.sqlite");
+    const old = new DatabaseSync(file);
+    old.exec("CREATE TABLE filler (body TEXT)");
+    const insert = old.prepare("INSERT INTO filler (body) VALUES (?)");
+    for (let i = 0; i < 200; i++) insert.run("z".repeat(64 * 1024));
+    old.exec("DELETE FROM filler");
+    old.close();
+    const before = statSync(file).size;
+
+    await opened(file);
+
+    expect(statSync(file).size).toBeLessThan(before / 4);
   });
 });

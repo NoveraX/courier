@@ -97,9 +97,23 @@ function bind(db: DatabaseSync): StoreDatabase {
         db.exec("ROLLBACK");
         throw error;
       }
+      /* The room the deleted rows took goes back to the disk. */
+      if (removed.length + deletes.length > 0) db.exec("PRAGMA incremental_vacuum");
     },
     close: () => db.close(),
   };
+}
+
+/* SQLite's mode that gives freed pages back to the disk when asked. */
+const INCREMENTAL = 2;
+
+/* A store made before is set to give back the room its deleted rows took,
+   and compacted, once: a reset or a clear otherwise left the file at its
+   largest. */
+function giveBackFreedRoom(db: DatabaseSync): void {
+  if (Number(db.prepare("PRAGMA auto_vacuum").get()?.auto_vacuum) === INCREMENTAL) return;
+  db.exec("PRAGMA auto_vacuum = INCREMENTAL");
+  db.exec("VACUUM");
 }
 
 /* A damaged file is kept beside, under a name that says so, with its journal. */
@@ -131,6 +145,7 @@ function attempt(sqlite: typeof Sqlite, file: string): Attempt {
       db.close();
       return { kind: "damaged" };
     }
+    giveBackFreedRoom(db);
     return { kind: "opened", database: bind(db) };
   } catch (error) {
     db?.close();

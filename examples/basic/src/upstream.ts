@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { pathToFileURL } from "node:url";
 
 import type { User } from "./api";
@@ -17,6 +17,7 @@ const users: User[] = [
  */
 export function startUpstream(port = 4401): Promise<Server> {
   const server = createServer((req, res) => {
+    if (req.method === "GET" && req.url === "/live/ticks") return streamTicks(req, res);
     const send = ([status, body]: [number, unknown]): void => {
       res.writeHead(status, { "content-type": "application/json" });
       res.end(JSON.stringify(body));
@@ -27,6 +28,19 @@ export function startUpstream(port = 4401): Promise<Server> {
     });
   });
   return new Promise((resolve) => server.listen(port, "127.0.0.1", () => resolve(server)));
+}
+
+/* Server-sent events, as any backend sends them: a tick a second until the caller leaves. */
+function streamTicks(req: IncomingMessage, res: ServerResponse): void {
+  res.writeHead(200, { "content-type": "text/event-stream", "cache-control": "no-cache" });
+  let n = 0;
+  const tick = (): void => {
+    n += 1;
+    res.write(`data: ${JSON.stringify({ n, at: new Date().toISOString() })}\n\n`);
+  };
+  tick();
+  const timer = setInterval(tick, 1000);
+  req.on("close", () => clearInterval(timer));
 }
 
 async function answer(req: IncomingMessage): Promise<[number, unknown]> {

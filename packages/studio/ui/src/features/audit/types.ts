@@ -60,7 +60,7 @@ export interface EndpointStats {
   middlewareOverhead: number;
   /** Avg validation time as fraction of total (0-1) */
   validationOverhead: number;
-  /** Avg proxy overhead as fraction of total (0-1) */
+  /** The share of a proxied call's whole time spent on the trips to and from the proxy, on average (0-1) */
   proxyOverhead: number;
   /** HTTP methods used (GET, POST, etc.) */
   httpMethods: Set<string>;

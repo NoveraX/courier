@@ -9,7 +9,8 @@ import { CACHE_SUGGESTION } from "./code-suggestions";
 import { formatEndpoint } from "./hints-utils";
 import type { AuditItem, EndpointStats } from "./types";
 
-const PROXY_OVERHEAD_THRESHOLD = 0.5;
+/* Trips to and from the proxy longer than half the server's own time: a third of the whole call. */
+const PROXY_OVERHEAD_THRESHOLD = 1 / 3;
 const VALIDATION_OVERHEAD_THRESHOLD = 0.2;
 
 const FREQUENT_READS = 3;
@@ -55,11 +56,12 @@ export function proxyLatencyOverhead(stats: Map<string, EndpointStats>): AuditIt
       severity: "hint",
       category: "performance",
       title: "High proxy overhead",
-      description: "Proxy mode adds more than 50% latency overhead vs direct fetch.",
+      description:
+        "The trips to and from the proxy take more than a third of these calls' time — over half again what the server spends on them.",
       suggestion: "Use direct mode for endpoints that don't need server-side secrets.",
       endpoints: matched.map((s) => ({
         ...formatEndpoint(s),
-        detail: `${(s.proxyOverhead * 100).toFixed(0)}% overhead`,
+        detail: `${(s.proxyOverhead * 100).toFixed(0)}% in proxy trips`,
       })),
     },
   ];

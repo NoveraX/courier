@@ -8,7 +8,7 @@ import { useMemo, useState } from "react"
 import { CourierLogo } from "@/components/courier-logo"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
-import { docsNav, type NavItem, type NavSection } from "./nav-items"
+import { docsNav, type NavItem, type NavSection } from "@/site/content/docs-nav"
 
 function SidebarLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
   if (item.disabled) {

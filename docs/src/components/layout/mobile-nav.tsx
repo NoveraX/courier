@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
-import { docsNav, type NavItem, type NavSection } from "./nav-items"
+import { docsNav, type NavItem, type NavSection } from "@/site/content/docs-nav"
 
 function MobileLink({
   item,

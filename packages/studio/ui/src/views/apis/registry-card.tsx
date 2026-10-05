@@ -16,17 +16,16 @@ import {
   ShieldCheck,
   Zap,
 } from "lucide-react";
-
+import type { EnrichedSource } from "@/apis/use-registry";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { computeAnalysisStats, countScannedEndpoints } from "@/features/apis/helpers";
 import { cn } from "@/lib/utils";
-import { computeAnalysisStats, countScannedEndpoints } from "./helpers";
 import { IMPORT_ICON, STATUS_CONFIG } from "./registry-card-constants";
 import { CardMenu } from "./registry-card-menu";
 import { QualityPill } from "./registry-card-quality";
 import type { SourceStatusInfo } from "./types";
-import type { EnrichedSource } from "./use-registry";
 
 interface RegistryCardProps {
   source: EnrichedSource;

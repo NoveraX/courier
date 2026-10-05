@@ -1,7 +1,7 @@
 import { Eye, FileCode, ShieldAlert, ShieldCheck, Zap } from "lucide-react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { computeAnalysisStats, countScannedEndpoints } from "./helpers";
+import { computeAnalysisStats, countScannedEndpoints } from "@/features/apis/helpers";
 import type { ScannedSource } from "./types";
 
 interface ScannedCardProps {

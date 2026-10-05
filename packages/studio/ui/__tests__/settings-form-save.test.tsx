@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { DEFAULT_SETTINGS, useStudioStore } from "@/store";
 import { SETTINGS_STORAGE_KEY } from "@/store/constants";
-import { buildDefaultOptions } from "../src/views/apis/helpers";
+import { buildDefaultOptions } from "../src/features/apis/helpers";
 import { ApisSection } from "../src/views/settings/apis-section";
 import { UnsavedBanner } from "../src/views/settings/unsaved-banner";
 import { useSettingsForm } from "../src/views/settings/use-settings-form";

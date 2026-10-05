@@ -6,7 +6,7 @@
 import { Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { countSelectedEndpoints } from "./helpers";
+import { countSelectedEndpoints } from "@/features/apis/helpers";
 import type { ImportState } from "./types";
 import type { UseImportReturn } from "./use-import";
 

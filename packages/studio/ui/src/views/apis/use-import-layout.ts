@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { previewLayout } from "./client";
+import { previewLayout } from "@/apis/client";
 
 /** What the wizard shows about where an import's files go. */
 export interface ImportLayoutHint {

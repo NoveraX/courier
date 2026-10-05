@@ -10,9 +10,9 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { EnrichedSource } from "../src/apis/use-registry";
 import { RegistryCard } from "../src/views/apis/registry-card";
 import type { SourceStatusInfo } from "../src/views/apis/types";
-import type { EnrichedSource } from "../src/views/apis/use-registry";
 
 const SOURCE: EnrichedSource = {
   name: "pets",

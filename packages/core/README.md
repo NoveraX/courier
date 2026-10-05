@@ -273,7 +273,7 @@ On a server, `debug` and `info` go to **stdout** and `warn` and `error` to **std
 16:04:02 ▲ courier:billing        Payment provider slow to answer
 ```
 
-On a terminal the level is a symbol in its colour — `●` info, `▲` warn, `✕` error, `·` debug, with the debug line dimmed — and a request line such as `GET /users → 404 (3ms)` has its status coloured by class. Warnings, errors and statuses use the terminal's own sixteen colours, so they follow its theme, light or dark; only the info symbol is in Courier's violet, and the message keeps the terminal's foreground. A log file or a pipe gets plain text with the level as a word — `16:04:02 WARN  courier:billing …` — and `COURIER_LOG_FORMAT=json` writes one JSON object per line for a log pipeline:
+On a terminal the level is a symbol in its colour — `●` info, `▲` warn, `✕` error, `·` debug, with the debug line dimmed — and a request line such as `GET /users → 404 (3ms)` has its status coloured by class. Warnings, errors and statuses use the terminal's own sixteen colours, so they follow its theme, light or dark; only the info symbol is in Courier's blue, and the message keeps the terminal's foreground. A log file or a pipe gets plain text with the level as a word — `16:04:02 WARN  courier:billing …` — and `COURIER_LOG_FORMAT=json` writes one JSON object per line for a log pipeline:
 
 ```json
 {"time":"2026-10-04T13:04:02.120Z","level":"warn","scope":"billing","pid":4120,"message":"Payment provider slow to answer","error":{"name":"TypeError","message":"fetch failed","stack":"…","cause":{"name":"Error","message":"connect ECONNREFUSED 10.0.0.7:443","code":"ECONNREFUSED"}}}

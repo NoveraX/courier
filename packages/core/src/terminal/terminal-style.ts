@@ -11,7 +11,7 @@ export type Paint = (text: string) => string;
  *
  * The status colours are the terminal's own 16, so they follow its theme and
  * stay legible on a light background as on a dark one; only the brand colour
- * is fixed, in a violet that reads on both. Text without a colour keeps the
+ * is fixed, in a blue that reads on both. Text without a colour keeps the
  * terminal's foreground.
  */
 export interface TerminalStyle {
@@ -30,12 +30,13 @@ export interface TerminalStyle {
 
 const PLAIN: Paint = (text) => text;
 
-/* Violet 500 in each colour space: 24-bit, the nearest of the 256, and the
-   theme's magenta. */
+/* Courier's blue in each colour space: 24-bit, the nearest of the 256, and
+   the theme's blue. The 24-bit value is as legible on a light terminal as on
+   a dark one — about 4.4 : 1 against white and against GitHub's dark. */
 const BRAND: Record<Exclude<ColorLevel, 0>, string> = {
-  24: "38;2;139;92;246",
-  8: "38;5;99",
-  4: "35",
+  24: "38;2;46;116;234",
+  8: "38;5;33",
+  4: "34",
 };
 
 /* A style nested inside another closes with the same code as its parent —

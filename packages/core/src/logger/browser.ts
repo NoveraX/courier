@@ -13,11 +13,14 @@ const BADGE_STYLE = [
   "padding: 1px 6px; border-radius: 3px; font-size: 11px",
 ].join("; ");
 
+/* A warning or an error row has its own colour in each DevTools theme; a
+   fixed yellow or red on it was barely readable in the light theme, so
+   their context takes the row's colour and stands out by its weight. */
 const CONTEXT_STYLES: Record<LogLevel, string> = {
   debug: "color: #71717A; font-weight: 600",
   info: "color: #2E74EA; font-weight: 600",
-  warn: "color: #FBBF24; font-weight: 600",
-  error: "color: #F87171; font-weight: 600",
+  warn: "color: inherit; font-weight: 700",
+  error: "color: inherit; font-weight: 700",
 };
 
 const MSG_STYLE = "color: inherit; font-weight: 400";

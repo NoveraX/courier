@@ -1,7 +1,9 @@
 /**
  * The browser logger's console call: context and message are substitution
  * arguments, never part of the format string, so text from a server that
- * contains `%c`, `%s` or `%o` cannot consume the styles or the cause.
+ * contains `%c`, `%s` or `%o` cannot consume the styles or the cause; and a
+ * warning's or an error's context reads in the row's own colour, which each
+ * DevTools theme sets for it.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -30,5 +32,20 @@ describe("browserLogger", () => {
     const [format, ...args] = info.mock.calls[0] ?? [];
     const directives = String(format).match(/%[cs]/g) ?? [];
     expect(directives).toHaveLength(args.length);
+  });
+
+  it("writes a warning's and an error's context in the colour of the row, in either DevTools theme", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    browserLogger.warn("SSE", "slow");
+    browserLogger.error("SSE", "failed");
+
+    for (const call of [warn.mock.calls[0], error.mock.calls[0]]) {
+      expect(call).toBeDefined();
+      const contextStyle = String(call?.[3]);
+      expect(contextStyle).toContain("color: inherit");
+      expect(contextStyle).not.toMatch(/#[0-9a-f]{6}/i);
+    }
   });
 });

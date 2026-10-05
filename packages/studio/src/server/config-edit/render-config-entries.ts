@@ -116,7 +116,7 @@ export function objectEntry(
 function fieldsOf(entry: CourierImportEntry): Array<[string, string | boolean]> {
   const fields: Array<[string, string | boolean]> = [];
   for (const key of FIELDS) {
-    const value = key in entry ? Reflect.get(entry, key) : undefined;
+    const value: unknown = key in entry ? Reflect.get(entry, key) : undefined;
     if (typeof value === "string" || typeof value === "boolean") fields.push([key, value]);
   }
   return fields;

@@ -86,6 +86,27 @@ describe("extractSourceMap", () => {
     });
   });
 
+  it("keys a group inside a group by its path, at its groups' prefixes joined", () => {
+    const api = defineApi({
+      baseURL: "https://api.test.com",
+      groups: {
+        billing: defineGroup({
+          prefix: "billing",
+          endpoints: { summary: endpoint.get("summary") },
+          groups: {
+            invoices: defineGroup({ prefix: "invoices", endpoints: { list: endpoint.get("") } }),
+          },
+        }),
+      },
+    });
+
+    const { groups } = extractSourceMap({ api }).api ?? { groups: {} };
+
+    expect(Object.keys(groups)).toEqual(["billing", "billing.invoices"]);
+    expect(groups["billing.invoices"]?.prefix).toBe("billing/invoices");
+    expect(Object.keys(groups["billing.invoices"]?.endpoints ?? {})).toEqual(["list"]);
+  });
+
   it("handles multiple sources", () => {
     const api = defineApi({
       baseURL: "https://api.test.com",

@@ -1,4 +1,5 @@
 import type { Sources } from "@noverax/courier/define";
+import { eachGroup, groupOptionsOf } from "@noverax/courier/internal";
 import type { SourceMap } from "./events";
 import { extractSchemaFields } from "./schema-fields";
 import { isEndpoint, probeEndpoint } from "./source-map-probe";
@@ -30,16 +31,13 @@ export function extractSourceMap(sources: Sources, appOrigin?: string): SourceMa
     const groups: SourceMap[string]["groups"] = {};
     const mwNames = extractMiddlewareNames(options);
 
-    /* Extract grouped endpoints */
-    if (options && "groups" in options && options.groups) {
-      for (const [groupName, group] of Object.entries(
-        options.groups as Record<string, Record<string, unknown>>,
-      )) {
-        groups[groupName] = {
-          prefix: prefixOf(group.options),
-          endpoints: extractEndpoints(group, mwNames),
-        };
-      }
+    /* Extract grouped endpoints: every group, those inside others keyed by
+       their path and at their prefixes joined in turn. */
+    for (const placed of eachGroup(source)) {
+      groups[placed.path] = {
+        prefix: prefixOf(groupOptionsOf(placed.chain)),
+        endpoints: extractEndpoints(placed.group, mwNames),
+      };
     }
 
     /* Extract flat endpoints (top-level on source, supports mixed mode) */

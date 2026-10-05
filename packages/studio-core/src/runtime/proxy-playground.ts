@@ -1,6 +1,11 @@
 import { createProxyCaller, type ProxyPath, type UploadProgress } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
-import { getAppOriginParsed, resolveProxyPath } from "@noverax/courier/internal";
+import {
+  getAppOriginParsed,
+  groupChain,
+  groupNames,
+  resolveProxyPath,
+} from "@noverax/courier/internal";
 import { member } from "../member";
 
 /* A path on the app's own origin: one leading slash, not a protocol-relative URL. */
@@ -50,7 +55,7 @@ export function callThroughProxy(
   });
   const scoped = onUploadProgress ? withOptions(client, { onUploadProgress }) : client;
   const root = raw ? member(scoped, "raw") : scoped;
-  const owner = call.group ? member(root, call.group) : root;
+  const owner = groupNames(call.group).reduce(member, root);
   const endpoint = member(owner, call.method);
   if (typeof endpoint !== "function") {
     throw new Error(
@@ -63,9 +68,10 @@ export function callThroughProxy(
 /** A transport a proxy path names a route for. */
 export type Transport = keyof ProxyPath;
 
-/* What a single call needs of the paths: the one its endpoint is reached by. */
+/* What a single call needs of the paths: the one its endpoint is reached by,
+   found in its group — kept under `options.groups`, at any depth. */
 function transportOf(definition: unknown, call: PlaygroundCall): Transport {
-  const owner = call.group ? member(definition, call.group) : definition;
+  const owner = groupChain(definition, call.group)?.at(-1) ?? definition;
   const kind = member(member(owner, call.method), "kind");
   if (kind === "stream") return "sse";
   return kind === "channel" ? "ws" : "http";

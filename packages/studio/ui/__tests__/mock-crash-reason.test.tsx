@@ -16,10 +16,10 @@ vi.mock("socket.io-client", () => ({
 }));
 
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { mockFailureReason } from "@/features/mocks/mock-failure-reason";
 import { handleServerConnect } from "../src/store/handle-mock-server-events";
 import { useMockStore } from "../src/store/mock-slice";
 import { DashboardGrid } from "../src/views/mocks/dashboard/dashboard-grid";
-import { mockFailureReason } from "../src/views/mocks/shared/mock-failure-reason";
 import { DoneStep } from "../src/views/mocks/wizard/step-done";
 
 const PORT_TAKEN =

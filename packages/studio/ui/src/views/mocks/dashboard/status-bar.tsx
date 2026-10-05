@@ -12,10 +12,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { useElapsed } from "@/hooks/use-tick";
 import { ownValue } from "@/lib/own-value";
 import { cn } from "@/lib/utils";
+import { stopAllFaults } from "@/mocks/stop-all-faults";
 import { getSocket } from "@/socket";
 import type { LatencyPreset, MockServerInfo } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
-import { stopAllFaults } from "@/views/mocks/network/stop-all-faults";
 import { PRESET_VALUES } from "../network/latency-presets";
 import { ServerAddress } from "./server-address";
 

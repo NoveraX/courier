@@ -20,6 +20,8 @@ import { ExplorerLayout } from "@/screens/explorer/explorer-layout";
 import { GraphScreen } from "@/screens/explorer/graph-screen";
 import { HeatmapScreen } from "@/screens/explorer/heatmap-screen";
 import { OverviewScreen } from "@/screens/explorer/overview-screen";
+import { MocksDashboard } from "@/screens/mocks/mocks-dashboard";
+import { MocksLayout } from "@/screens/mocks/mocks-layout";
 import { PlaygroundScreen } from "@/screens/playground/playground-screen";
 import { TimelineScreen } from "@/screens/timeline/timeline-screen";
 import { WaterfallScreen } from "@/screens/waterfall/waterfall-screen";
@@ -53,8 +55,8 @@ Object.defineProperty(HTMLElement.prototype, "clientWidth", {
 
 /**
  * Render the new shell at an address, with the Timeline, the Waterfall, the
- * Explorer's tabs and the Playground under it and a page of its own at
- * `/next/`, as the app's routes have them.
+ * Explorer's tabs, the Playground and the Mocks dashboard under it and a
+ * page of its own at `/next/`, as the app's routes have them.
  *
  * @param url - The address
  * @returns The router, to read where it went
@@ -102,9 +104,22 @@ export async function openShell(url: string): Promise<AnyRouter> {
     component: PlaygroundScreen,
     validateSearch: validatePlaygroundSearch,
   });
+  const mocks = createRoute({ getParentRoute: () => shell, path: "mocks", component: MocksLayout });
+  const mocksDashboard = createRoute({
+    getParentRoute: () => mocks,
+    path: "/",
+    component: MocksDashboard,
+  });
   const router = createRouter({
     routeTree: root.addChildren([
-      shell.addChildren([home, timeline, waterfall, explorer.addChildren(tabs), playground]),
+      shell.addChildren([
+        home,
+        timeline,
+        waterfall,
+        explorer.addChildren(tabs),
+        playground,
+        mocks.addChildren([mocksDashboard]),
+      ]),
     ]),
     history: createMemoryHistory({ initialEntries: [url] }),
   });

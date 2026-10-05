@@ -1,12 +1,11 @@
 import { Server } from "lucide-react";
-
+import { CardSection } from "@/design/card-section";
 import { Dot } from "@/design/dot";
 import { TONE_FILL, TONE_TEXT } from "@/design/tone";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type { ExplorerModel, SourceNode } from "@/features/explorer/explorer-model";
 import { successRate } from "@/features/explorer/overview-model";
 import { cn } from "@/lib/utils";
-import { OverviewCard } from "./overview-card";
 
 function count(n: number, noun: string): React.ReactNode {
   return (
@@ -61,7 +60,7 @@ function SourceCard({ source }: { source: SourceNode }): React.ReactNode {
  */
 export function SourceCards({ model }: { model: ExplorerModel }): React.ReactNode {
   return (
-    <OverviewCard
+    <CardSection
       title="Sources"
       aside={
         <span className="inline-flex h-4.25 min-w-5 items-center justify-center rounded-full bg-raised px-1.5 text-meta text-fg-subtle tabular-nums">
@@ -74,6 +73,6 @@ export function SourceCards({ model }: { model: ExplorerModel }): React.ReactNod
           <SourceCard key={source.name} source={source} />
         ))}
       </div>
-    </OverviewCard>
+    </CardSection>
   );
 }

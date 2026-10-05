@@ -12,7 +12,13 @@ function scalar(value: unknown): ReactNode {
   return <span className="text-code-comment">{String(value)}</span>
 }
 
-function lines(value: unknown, depth: number): ReactNode {
+/* A response's headers hold their entries out of sight: shown as an object, they read `{}`. */
+function readable(value: unknown): unknown {
+  return value instanceof Headers ? Object.fromEntries(value) : value
+}
+
+function lines(shown: unknown, depth: number): ReactNode {
+  const value = readable(shown)
   const pad = INDENT.repeat(depth + 1)
   const close = INDENT.repeat(depth)
   if (Array.isArray(value)) {

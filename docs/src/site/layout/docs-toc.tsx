@@ -1,25 +1,11 @@
 "use client"
 
-import type { LucideIcon } from "lucide-react"
-import { ArrowUp, Check, Copy, MessageSquare, Sparkles, Text } from "lucide-react"
+import { ArrowUp, Text } from "lucide-react"
 import { cn } from "@/site/cn"
-import { assistantLinks } from "@/site/content/assistant-links"
-import { copyText } from "@/site/copy-text"
-import { useFlash } from "@/site/use-flash"
+import { AssistantActions } from "./assistant-actions"
+import { SIDE_ACTION } from "./side-action"
 import { useActiveHeading } from "./use-active-heading"
 import { useHeadings } from "./use-headings"
-
-const ACTION =
-  "flex cursor-pointer items-center gap-2 py-1.5 text-left text-control text-fg-subtle transition-colors hover:text-fg"
-
-function Action({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
-  return (
-    <>
-      <Icon aria-hidden="true" className="size-3.25 shrink-0" />
-      {children}
-    </>
-  )
-}
 
 /**
  * The page's outline beside it — each section, the one being read lit —
@@ -36,8 +22,6 @@ function Action({ icon: Icon, children }: { icon: LucideIcon; children: React.Re
 export function DocsToc({ title, markdown }: { title: string; markdown?: string | undefined }) {
   const headings = useHeadings()
   const active = useActiveHeading(headings)
-  const [copied, flash] = useFlash()
-  const links = markdown === undefined ? null : assistantLinks(title, markdown)
   return (
     <aside className="sticky top-14 hidden h-[calc(100vh-56px)] self-start overflow-y-auto py-10 min-[1240px]:block">
       {headings.length > 0 && (
@@ -62,32 +46,16 @@ export function DocsToc({ title, markdown }: { title: string; markdown?: string 
           ))}
         </nav>
       )}
-      <div className="flex flex-col gap-0.5 border-t border-line pt-4">
-        {markdown !== undefined && links && (
-          <>
-            <button
-              type="button"
-              className={ACTION}
-              onClick={async () => flash(await copyText(markdown))}
-            >
-              <Action icon={copied ? Check : Copy}>{copied ? "Copied" : "Copy as Markdown"}</Action>
-            </button>
-            <a href={links.chatgpt} target="_blank" rel="noopener noreferrer" className={ACTION}>
-              <Action icon={MessageSquare}>Ask ChatGPT</Action>
-            </a>
-            <a href={links.claude} target="_blank" rel="noopener noreferrer" className={ACTION}>
-              <Action icon={Sparkles}>Ask Claude</Action>
-            </a>
-          </>
-        )}
+      <AssistantActions title={title} markdown={markdown}>
         <button
           type="button"
-          className={ACTION}
+          className={SIDE_ACTION}
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
         >
-          <Action icon={ArrowUp}>Back to top</Action>
+          <ArrowUp aria-hidden="true" className="size-3.25 shrink-0" />
+          Back to top
         </button>
-      </div>
+      </AssistantActions>
     </aside>
   )
 }

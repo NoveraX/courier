@@ -16,6 +16,7 @@ export const TOKEN_HEADER = "x-courier-studio-token";
  */
 export const WRITING_ROUTES: ReadonlySet<string> = new Set([
   "/api/apis/write",
+  "/api/apis/declare/apply",
   "/api/apis/manage/apply",
   "/api/apis/update/apply",
   "/api/apis/imports/remove",

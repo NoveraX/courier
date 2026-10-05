@@ -1,8 +1,8 @@
 /**
  * Once Studio writes an import's files, the wizard says only that, and
- * shows what courier.config must still declare for the API to appear — the
- * import of the generated source, its entry under sources and the imports
- * entry — as Studio answered the write.
+ * offers to declare the API in courier.config: the lines Studio adds, for
+ * one click, then the API in Studio — or, when Studio cannot make the
+ * change, the lines to add by hand and why.
  */
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -12,9 +12,14 @@ vi.mock("@/design/code/code-lines", async () => {
   return { CodeLines: ({ code }: { code: string }) => createElement("pre", null, code) };
 });
 
+import type { UseConfigDeclare } from "@/apis/use-config-declare";
+import type { UseImportReturn } from "@/apis/use-import";
+import { type ConfigDeclare, readConfigDeclare } from "@/features/apis/config-declare";
 import { settleWrite } from "@/features/apis/settle-write";
 import type { ImportDeclaration, ImportState } from "@/features/apis/types";
+import type { DiffHunk } from "@/features/mocks/wizard/wire-types";
 import { DeclareStep } from "@/screens/apis/import/declare-step";
+import { ImportFooter } from "@/screens/apis/import/import-footer";
 
 const IMPORT_ENTRY = [
   '  "pets": {',
@@ -187,61 +192,167 @@ describe("the wizard once Studio wrote an import's files", () => {
   });
 });
 
-describe("the declare step", () => {
-  it("shows the source to import and list, and the imports entry, and says the API appears once declared", () => {
-    const declaration: ImportDeclaration = {
-      configFile: "courier.config.ts",
-      source: SOURCE,
-      importEntry: IMPORT_ENTRY,
-      leftOut: 0,
-    };
+const DECLARATION: ImportDeclaration = {
+  configFile: "courier.config.ts",
+  source: SOURCE,
+  importEntry: IMPORT_ENTRY,
+  leftOut: 0,
+};
 
-    const html = text(
-      renderToStaticMarkup(<DeclareStep sourceName="pets" declaration={declaration} />),
+const HUNKS: DiffHunk[] = [
+  {
+    lines: [
+      { kind: "context", text: 'import { api } from "./src/api";', oldLine: 1, newLine: 1 },
+      { kind: "add", text: SOURCE.importLine, oldLine: null, newLine: 2 },
+      { kind: "context", text: "", oldLine: 2, newLine: 3 },
+    ],
+  },
+];
+
+const READY: ConfigDeclare = {
+  status: "ready",
+  configFile: "courier.config.ts",
+  hunks: HUNKS,
+  baseHash: "base",
+  stale: false,
+};
+
+function declareOf(
+  answer: ConfigDeclare | null,
+  overrides: Partial<UseConfigDeclare> = {},
+): UseConfigDeclare {
+  return { answer, error: null, applying: false, apply: vi.fn(async () => {}), ...overrides };
+}
+
+function step(declare: UseConfigDeclare, declaration = DECLARATION): string {
+  return text(
+    renderToStaticMarkup(
+      <DeclareStep sourceName="pets" declaration={declaration} declare={declare} />,
+    ),
+  );
+}
+
+describe("the declare step", () => {
+  it("shows the lines Studio adds to the config, and that it changes nothing else", () => {
+    const html = step(declareOf(READY));
+
+    expect(html).toContain("Files written — add");
+    expect(html).toContain('aria-label="Change to courier.config.ts"');
+    expect(html).toContain(SOURCE.importLine);
+    expect(html).toContain("Studio adds these lines and changes nothing else in the file.");
+    expect(html).not.toContain("by hand");
+  });
+
+  it("says the config changed since Studio read it when the change is shown again", () => {
+    const html = step(declareOf({ ...READY, stale: true }));
+
+    expect(html).toContain("courier.config.ts changed since Studio read it");
+  });
+
+  it("says the API is in Studio once the change is made", () => {
+    const html = step(declareOf({ status: "applied", configFile: "courier.config.ts" }));
+
+    expect(html).toContain("is in Studio");
+    expect(html).toContain("Studio added it to courier.config.ts and loaded the config");
+  });
+
+  it("leaves the lines to add by hand, and why, when Studio cannot make the change", () => {
+    const reason = "courier.config.ts builds `sources` in a way Studio cannot add to.";
+
+    const html = step(
+      declareOf({ status: "manual", code: "LIST_SHAPE", reason, declaration: DECLARATION }),
     );
 
+    expect(html).toContain("in courier.config by hand");
+    expect(html).toContain(reason);
     expect(html).toContain(`<pre>${SOURCE.importLine}</pre>`);
     expect(html).toContain("<pre>pets,</pre>");
     expect(html).toContain(`<pre>${IMPORT_ENTRY}</pre>`);
-    expect(html).toContain("left courier.config.ts as it is");
-    expect(html).toContain("pets appears in Studio");
-    expect(html).toContain("once courier.config.ts declares it under sources");
-    expect(html).not.toContain("out in Select");
-    expect(html).not.toContain("cannot keep that selection");
   });
 
-  it("says the imports entry does not keep the endpoints left out in Select, which an update generates", () => {
-    const declaration: ImportDeclaration = {
-      configFile: "courier.config.ts",
-      source: SOURCE,
-      importEntry: IMPORT_ENTRY,
-      leftOut: 2,
-    };
+  it("says the imports entry does not keep the endpoints left out in Select", () => {
+    const html = step(declareOf(READY), { ...DECLARATION, leftOut: 2 });
 
-    const html = text(
-      renderToStaticMarkup(<DeclareStep sourceName="pets" declaration={declaration} />),
-    );
-
-    expect(html).toContain(`<pre>${IMPORT_ENTRY}</pre>`);
     expect(html).toContain(
       "You left 2 endpoints out in Select. The imports entry cannot keep that selection, so Manage lists those as endpoints you can add.",
     );
   });
 
-  it("shows only the imports entry while the config lists the source already", () => {
-    const declaration: ImportDeclaration = {
-      configFile: "courier.config.ts",
-      source: null,
-      importEntry: IMPORT_ENTRY,
-      leftOut: 0,
+  it("shows the lines from the write when asking Studio failed", () => {
+    const html = step(declareOf(null, { error: "Studio could not be reached." }));
+
+    expect(html).toContain("Studio could not be reached.");
+    expect(html).toContain(`<pre>${SOURCE.importLine}</pre>`);
+  });
+
+  it("says it is reading the config while the change is on its way", () => {
+    expect(step(declareOf(null))).toContain("Reading courier.config.ts…");
+  });
+});
+
+describe("Studio's answer about declaring an import", () => {
+  it("reads an apply that found the config saved meanwhile as the change against it now", () => {
+    const raw = {
+      status: "stale",
+      preview: { status: "ready", configFile: "courier.config.ts", hunks: HUNKS, baseHash: "new" },
     };
 
-    const html = text(
-      renderToStaticMarkup(<DeclareStep sourceName="pets" declaration={declaration} />),
+    expect(readConfigDeclare(raw)).toEqual({ ...READY, baseHash: "new", stale: true });
+  });
+
+  it("reads nothing from an answer it does not recognise", () => {
+    expect(readConfigDeclare({ status: "ready", configFile: "courier.config.ts" })).toBeNull();
+    expect(readConfigDeclare({ status: "applied" })).toBeNull();
+    expect(readConfigDeclare("applied")).toBeNull();
+  });
+});
+
+function wizardOn(state: ImportState): UseImportReturn {
+  const action = vi.fn(async () => {});
+  return {
+    state,
+    parsing: false,
+    error: null,
+    open: true,
+    openWizard: vi.fn(),
+    close: vi.fn(),
+    setSource: vi.fn(),
+    setContent: vi.fn(),
+    parse: action,
+    toggleEndpoint: vi.fn(),
+    toggleGroup: vi.fn(),
+    toggleAll: vi.fn(),
+    setOptions: vi.fn(),
+    preview: action,
+    write: action,
+    toggleConfirmed: vi.fn(),
+    goToStep: vi.fn(),
+  };
+}
+
+describe("the declare step's footer", () => {
+  const declared = wizardOn({ ...PREVIEWED, step: "declare", declaration: DECLARATION });
+
+  it("offers to add the import to the config while Studio offers the change", () => {
+    const html = renderToStaticMarkup(
+      <ImportFooter wizard={declared} declare={declareOf(READY)} />,
     );
 
-    expect(html).toContain(`<pre>${IMPORT_ENTRY}</pre>`);
-    expect(html).toContain("courier.config.ts lists pets under sources already");
-    expect(html).not.toContain(SOURCE.importLine);
+    expect(html).toContain("Add to courier.config.ts");
+    expect(html).toContain("Not now");
+  });
+
+  it("offers only Done once the change is made, or when it is left to the developer", () => {
+    for (const answer of [
+      { status: "applied", configFile: "courier.config.ts" },
+      { status: "manual", code: "LIST_SHAPE", reason: "", declaration: null },
+    ] satisfies ConfigDeclare[]) {
+      const html = renderToStaticMarkup(
+        <ImportFooter wizard={declared} declare={declareOf(answer)} />,
+      );
+
+      expect(html).toContain("Done");
+      expect(html).not.toContain("Add to");
+    }
   });
 });

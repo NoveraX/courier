@@ -1,0 +1,64 @@
+import { isDiffHunk } from "@/features/mocks/wizard/is-diff-hunk";
+import type { DiffHunk } from "@/features/mocks/wizard/wire-types";
+import { isPlainObject } from "@/socket/is-plain-object";
+import { readImportDeclaration } from "./read-import-declaration";
+import type { ImportDeclaration } from "./types";
+
+/** Where declaring an imported API in courier.config stands, as Studio answered. */
+export type ConfigDeclare =
+  /** The change Studio would make, ready to apply. */
+  | { status: "ready"; configFile: string; hunks: DiffHunk[]; baseHash: string; stale: boolean }
+  /** Left to the developer: why, and the lines to add when Studio could work them out. */
+  | { status: "manual"; code: string; reason: string; declaration: ImportDeclaration | null }
+  /** The config declares the API already. */
+  | { status: "declared" }
+  /** Studio declared it and runs it. */
+  | { status: "applied"; configFile: string };
+
+/**
+ * Read Studio's answer to a preview or an apply of declaring an import in
+ * courier.config. An apply that found the config saved since the preview
+ * reads as the preview it carries, marked `stale`.
+ *
+ * @param raw - The decoded answer
+ * @returns The answer, or `null` when it is not one
+ * @example
+ * ```ts
+ * readConfigDeclare({ status: "applied", configFile: "courier.config.ts" })?.status; // → "applied"
+ * ```
+ */
+export function readConfigDeclare(raw: unknown): ConfigDeclare | null {
+  if (!isPlainObject(raw)) return null;
+  switch (raw.status) {
+    case "ready":
+      return readReady(raw, false);
+    case "stale":
+      return isPlainObject(raw.preview) && raw.preview.status === "ready"
+        ? readReady(raw.preview, true)
+        : readConfigDeclare(raw.preview);
+    case "manual":
+      return typeof raw.code === "string" && typeof raw.reason === "string"
+        ? {
+            status: "manual",
+            code: raw.code,
+            reason: raw.reason,
+            declaration: readImportDeclaration(raw),
+          }
+        : null;
+    case "declared":
+      return { status: "declared" };
+    case "applied":
+      return typeof raw.configFile === "string"
+        ? { status: "applied", configFile: raw.configFile }
+        : null;
+    default:
+      return null;
+  }
+}
+
+function readReady(raw: Record<string, unknown>, stale: boolean): ConfigDeclare | null {
+  const { configFile, hunks, baseHash } = raw;
+  if (typeof configFile !== "string" || typeof baseHash !== "string") return null;
+  if (!Array.isArray(hunks) || !hunks.every(isDiffHunk)) return null;
+  return { status: "ready", configFile, hunks, baseHash, stale };
+}

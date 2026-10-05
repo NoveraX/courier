@@ -1,0 +1,162 @@
+import type { ObjectExpression } from "oxc-parser";
+import { applyEdits } from "../mocks-edit/plan/apply-edits";
+import { countLineTerminators } from "../mocks-edit/plan/count-line-terminators";
+import { detectStyle } from "../mocks-edit/plan/detect-style";
+import { planImportLines } from "../mocks-edit/plan/import-lines";
+import { insertion } from "../mocks-edit/plan/insertion";
+import { isPureInsertion } from "../mocks-edit/plan/is-pure-insertion";
+import {
+  type BracedList,
+  type ListSite,
+  planListInsertion,
+} from "../mocks-edit/plan/list-insertion";
+import { collectModuleBindings } from "../mocks-edit/plan/module-bindings";
+import { type ParsedSource, parseSource } from "../mocks-edit/plan/parse-source";
+import { quoteString } from "../mocks-edit/plan/quote-string";
+import type { FileStyle } from "../mocks-edit/plan/types";
+import type { TextEdit } from "../mocks-edit/types";
+import type { ConfigDeclarationInput, ConfigDeclarationPlan } from "./config-declaration-types";
+import { ConfigEditRefusal } from "./config-edit-refusal";
+import { findConfigList } from "./find-config-list";
+import { locateConfigObject } from "./locate-config-object";
+import { importEntry, objectEntry, type RenderEntry, sourceEntry } from "./render-config-entries";
+import { verifyConfigPlan } from "./verify-config-plan";
+
+/** Where a declaration goes in a config, and how the config is written. */
+interface Target {
+  input: ConfigDeclarationInput;
+  parsed: ParsedSource;
+  config: ObjectExpression;
+  style: FileStyle;
+  site: ListSite;
+}
+
+/**
+ * Plan the change that declares an import in the config: the import of the
+ * generated source after the config's last import, the source under
+ * `sources`, and the import's entry under `imports` — each appended to the
+ * object already there, or added to the config as a new key, written as the
+ * config around it is. The config only ever gains text, and the result is
+ * read back as a config before it is returned. No filesystem is involved.
+ *
+ * @param input - The config as read, and what to declare
+ * @returns The config as changed, and the insertions that change it
+ * @throws {ConfigEditRefusal} When Studio should leave the declaration to the developer
+ * @example
+ * ```ts
+ * const plan = planConfigDeclaration({
+ *   configName: "courier.config.ts",
+ *   text: 'import { api } from "./src/api";\nexport default { sources: { api } };\n',
+ *   name: "billing",
+ *   source: { binding: "billing", specifier: "./src/api/billing/source" },
+ * });
+ * plan.text; // → 'import { api } from "./src/api";\nimport { billing } from …'
+ * ```
+ */
+export function planConfigDeclaration(input: ConfigDeclarationInput): ConfigDeclarationPlan {
+  const target = targetOf(input);
+  const edits: TextEdit[] = [];
+  const added: RenderEntry[] = [];
+  const { source, importEntry: entry, name } = input;
+  if (source) {
+    edits.push(importLine(target, source.binding, source.specifier));
+    const render: RenderEntry = () => sourceEntry(name, source.binding, target.style);
+    edits.push(...addTo(target, "sources", render, added));
+  }
+  if (entry) edits.push(...addTo(target, "imports", importEntry(name, entry, target.style), added));
+  if (added.length > 0) {
+    const render = (indent: string, block: boolean) => added.map((r) => r(indent, block));
+    edits.push(...planListInsertion(listOf(target.config), target.site, render));
+  }
+  const merged = mergeInsertions(edits);
+  const text = applyEdits(input.text, merged);
+  if (!isPureInsertion(input.text, text, merged)) {
+    throw new ConfigEditRefusal(
+      "PLAN_REJECTED",
+      `Studio planned a change to ${input.configName} that was not only added lines, so it changed nothing.`,
+    );
+  }
+  verifyConfigPlan(text, input);
+  return { text, edits: merged };
+}
+
+function targetOf(input: ConfigDeclarationInput): Target {
+  const parsed = parseSource(input.configName, input.text);
+  if (parsed.problem !== null) {
+    const why = `${input.configName} does not parse (${parsed.problem.message})`;
+    throw new ConfigEditRefusal(
+      "CONFIG_UNREADABLE",
+      `${why}, so Studio cannot place anything in it.`,
+    );
+  }
+  const located = locateConfigObject(parsed.program);
+  if (located.kind === "other") {
+    throw new ConfigEditRefusal("CONFIG_SHAPE", `${input.configName} ${located.what}.`);
+  }
+  const style = detectStyle(parsed, located.object);
+  const code = parsed.text.trimEnd();
+  const singleLineFile = countLineTerminators(code, 0, code.length) === 0;
+  const site = {
+    text: parsed.text,
+    comments: parsed.comments,
+    commentEnds: parsed.commentEnds,
+    style,
+    singleLineFile,
+  };
+  return { input, parsed, config: located.object, style, site };
+}
+
+function importLine(target: Target, binding: string, specifier: string): TextEdit {
+  const { parsed, style, input } = target;
+  if (collectModuleBindings(parsed.program).has(binding)) {
+    throw new ConfigEditRefusal(
+      "NAME_IN_USE",
+      `${input.configName} already uses the name ${binding}, which the generated source is exported as.`,
+    );
+  }
+  const statement = `import { ${binding} } from ${quoteString(specifier, style.quote)}${style.semicolons ? ";" : ""}`;
+  const lines = planImportLines(parsed, [statement], style);
+  if (lines === null)
+    throw new ConfigEditRefusal("PLAN_REJECTED", "Studio planned no import line.");
+  return lines.edit;
+}
+
+/* An entry goes into the object the config declares under the key, or —
+   when the config has none — into a new key the caller adds once. An entry
+   the object writes out already is left as it is. */
+function addTo(
+  target: Target,
+  key: "sources" | "imports",
+  render: RenderEntry,
+  added: RenderEntry[],
+): TextEdit[] {
+  const { config, parsed, site, style, input } = target;
+  const list = findConfigList(config, key, parsed.program);
+  if (list.kind === "other") {
+    throw new ConfigEditRefusal("LIST_SHAPE", `${input.configName} ${list.what}.`);
+  }
+  if (list.kind === "absent") {
+    added.push(objectEntry(key, [render], style));
+    return [];
+  }
+  if (list.keys.has(input.name)) return [];
+  return planListInsertion(listOf(list.object), site, (indent, block) => [render(indent, block)]);
+}
+
+function listOf(object: ObjectExpression): BracedList {
+  return { open: object.start, close: object.end - 1, items: object.properties };
+}
+
+/* Insertions at one offset fold into one, in the order they were planned. */
+function mergeInsertions(edits: readonly TextEdit[]): TextEdit[] {
+  const merged: TextEdit[] = [];
+  for (const edit of [...edits].sort((a, b) => a.start - b.start)) {
+    const previous = merged.at(-1);
+    if (previous !== undefined && previous.start === edit.start) {
+      merged[merged.length - 1] = insertion(edit.start, previous.text + edit.text);
+    } else {
+      merged.push(edit);
+    }
+  }
+  return merged;
+}

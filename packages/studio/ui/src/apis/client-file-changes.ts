@@ -14,6 +14,15 @@ import type { FilePlanSummary, KeptReason } from "@/features/apis/types-file-pla
 import { post } from "@/lib/api-client";
 
 /** The plan a request applies, as the user saw it, and the pending steps they allowed. */
+/** An import as the wizard sends it: the spec, where it came from, and the options. */
+export interface ImportBody {
+  sourceName: string;
+  spec: ParsedSpec;
+  specUrl: string;
+  importType: string;
+  options: GenerateOptions;
+}
+
 export interface PlanQuote {
   planDigest?: string;
   confirm?: string[];
@@ -55,15 +64,7 @@ export interface RemovalConfigNotes {
  * @returns Studio's answer: what it wrote, and what courier.config must still declare
  * @throws {StudioRequestError} `NEEDS_CONFIRMATION`, `PLAN_STALE` or `TARGET_BLOCKED` with the plan, and nothing written
  */
-export function writeFiles(
-  payload: {
-    sourceName: string;
-    spec: ParsedSpec;
-    specUrl: string;
-    importType: string;
-    options: GenerateOptions;
-  } & PlanQuote,
-): Promise<unknown> {
+export function writeFiles(payload: ImportBody & PlanQuote): Promise<unknown> {
   return post("/api/apis/write", payload);
 }
 

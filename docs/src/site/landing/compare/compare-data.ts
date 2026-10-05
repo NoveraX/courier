@@ -2,9 +2,13 @@ import type { LucideIcon } from "lucide-react"
 import {
   BadgeCheck,
   CloudUpload,
+  DatabaseZap,
   FileCode,
+  FlaskConical,
   Layers,
+  Radio,
   RefreshCw,
+  ScanSearch,
   Server,
   ShieldCheck,
   Workflow,
@@ -113,16 +117,56 @@ export const COMPARE_ROWS: readonly CompareRow[] = [
     icon: CloudUpload,
     cells: [cell("no", "No"), cell("yes", "Yes"), cell("no", "No"), cell("yes", "Built-in")],
   },
+  {
+    need: "Typed streams & sockets",
+    icon: Radio,
+    cells: [
+      cell("no", "Manual"),
+      cell("no", "No"),
+      cell("yes", "Subscriptions"),
+      cell("yes", "SSE and WebSocket"),
+    ],
+  },
+  {
+    need: "Retries & caching",
+    icon: DatabaseZap,
+    cells: [
+      cell("no", "Manual"),
+      cell("part", "Plugins"),
+      cell("part", "Via React Query"),
+      cell("yes", "Built-in"),
+    ],
+  },
+  {
+    need: "Mock server from the API",
+    icon: FlaskConical,
+    cells: [
+      cell("no", "Separate tool"),
+      cell("no", "Separate tool"),
+      cell("no", "Separate tool"),
+      cell("yes", "From the definition"),
+    ],
+  },
+  {
+    need: "Devtools for every call",
+    icon: ScanSearch,
+    cells: [
+      cell("part", "Browser only"),
+      cell("part", "Browser only"),
+      cell("part", "Community tools"),
+      cell("yes", "Courier Studio"),
+    ],
+  },
 ]
 
 /**
  * How many needs a tool meets in full, of all of them.
  *
  * @param column - The tool's column, 0 to 3
- * @returns Its score, as "6 / 8"
+ * @returns Its score, as "7 / 12"
  * @example
  * ```ts
- * scoreOf(3) // "8 / 8"
+ * scoreOf(3) // "12 / 12"
  * ```
  */
 export function scoreOf(column: number): string {

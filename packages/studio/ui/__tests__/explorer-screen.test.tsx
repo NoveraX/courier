@@ -364,3 +364,23 @@ describe("before any endpoint is known", () => {
     expect(screen.queryByText("No endpoints yet")).toBeNull();
   });
 });
+
+describe("an API of a thousand endpoints", () => {
+  it("draws only the rows in view, however many endpoints the list holds", async () => {
+    const endpoints = Array.from({ length: 1_000 }, (_, i) => endpoint(`get${i}`));
+    useStudioStore.setState({
+      scanSources: [
+        source("big", [{ name: "items", prefix: "/items", filePath: "src/big.ts", endpoints }]),
+      ],
+      requests: [],
+    });
+
+    await openShell("/explorer/endpoints");
+    const list = region("Endpoints");
+    const drawn = within(list).getAllByRole("button", { name: /items\.get\d+\// });
+
+    expect(drawn.length).toBeGreaterThan(0);
+    expect(drawn.length).toBeLessThan(100);
+    expect(within(list).queryByRole("button", { name: /items\.get999\// })).toBeNull();
+  });
+});

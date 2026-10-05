@@ -15,7 +15,7 @@ import { exportAsJson } from "@/lib/export";
 import { clearMockLogs } from "@/mocks/clear-mock-logs";
 import { useStudioStore } from "@/store";
 import { useMockStore } from "@/store/mock-slice";
-import { MockLogRow } from "./mock-log-row";
+import { MockLogList } from "./mock-log-list";
 import { MocksSkeleton } from "./mocks-skeleton";
 import { useMockServer } from "./use-mock-server";
 
@@ -93,8 +93,8 @@ export function MockLogsScreen(): React.ReactNode {
     countTone: filter === "errors" ? "err" : "subtle",
   }));
   return (
-    <div className="flex min-h-full flex-col">
-      <div className="sticky top-0 z-2 flex flex-wrap items-center gap-2.5 border-b border-line bg-bg px-5 py-2.5">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center gap-2.5 border-b border-line bg-bg px-5 py-2.5">
         <Segmented
           label="Show"
           quiet="subtle"
@@ -134,17 +134,9 @@ export function MockLogsScreen(): React.ReactNode {
             : "No requests match"}
         </p>
       )}
-      <section aria-label="Requests" className="flex flex-col">
-        {shown.map((log) => (
-          <MockLogRow
-            key={log.id}
-            log={log}
-            selected={sheet.requestId === log.id}
-            slowMs={slowMs}
-            onOpen={() => sheet.open(log.id)}
-          />
-        ))}
-      </section>
+      {shown.length > 0 && (
+        <MockLogList logs={shown} selected={sheet.requestId} slowMs={slowMs} onOpen={sheet.open} />
+      )}
     </div>
   );
 }

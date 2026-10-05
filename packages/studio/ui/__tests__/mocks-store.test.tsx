@@ -147,3 +147,28 @@ describe("the Store tab", () => {
     ]);
   });
 });
+
+describe("a collection of tens of thousands of records", () => {
+  it("draws only the rows in view, and scrolls as far as every record", async () => {
+    const records = Array.from({ length: 10_000 }, (_, i) => ({ id: `u${i}`, name: `User ${i}` }));
+    useMockStore.setState({
+      servers: {
+        "api-mock": mockServer({
+          collections: [{ name: "users", count: records.length, records }],
+          routes: [ROUTE],
+        }),
+      },
+    });
+
+    await openShell("/mocks/store");
+    const table = screen.getByRole("region", { name: "Collection users" });
+    const drawn = within(table).getAllByRole("button", { name: /^Delete record / });
+
+    expect(drawn.length).toBeGreaterThan(0);
+    expect(drawn.length).toBeLessThan(100);
+    expect(within(table).getByText("User 0")).toBeTruthy();
+    expect(within(table).queryByText("User 9999")).toBeNull();
+    const body = drawn[0]?.parentElement?.parentElement;
+    expect(body?.style.height).toBe(`${10_000 * 38}px`);
+  });
+});

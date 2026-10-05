@@ -33,6 +33,11 @@ export const TIMEOUT_SUGGESTION = `import { courier } from "@noverax/courier/def
 
 const { endpoint } = courier();
 
+// Give up after 5 seconds instead of waiting on a slow upstream:
+export const monthlyReport = endpoint
+  .get("reports/monthly")
+  .timeout(5_000)
+  .response<{ total: number }>();
 `;
 
 export const RESPONSE_SCHEMA_SUGGESTION = `import { courier } from "@noverax/courier/define";

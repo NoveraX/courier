@@ -122,6 +122,29 @@ describe("the code Studio suggests for a fix", () => {
   }, 60_000);
 });
 
+/* The call each finding's fix turns on. */
+const RECOMMENDS: Readonly<Record<string, string>> = {
+  "err-high-error-rate": ".retry(",
+  "err-timeout": ".timeout(",
+  "err-sensitive-url": "authMiddleware(",
+  "sec-mutation-no-auth": "authMiddleware(",
+  "hint-no-caching": "cacheMiddleware(",
+  "hint-no-res-val": ".response(z.",
+  "hint-no-var-val": ".variables(z.",
+  "warn-unused-proxy": "createProxyCaller",
+};
+
+describe("the code Studio suggests for a fix", () => {
+  it("shows the call its finding recommends, not only the imports", () => {
+    const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set(["browser"]) }).items;
+
+    for (const [id, call] of Object.entries(RECOMMENDS)) {
+      const code = items.find((item) => item.id === id)?.codeSuggestion;
+      expect({ id, shows: code?.includes(call) }).toEqual({ id, shows: true });
+    }
+  });
+});
+
 describe("the caching hint", () => {
   it("names the reads called often that the cache never saw", () => {
     const items = runAudit(troubledTraffic(), {}, { browserSessions: new Set() }).items;

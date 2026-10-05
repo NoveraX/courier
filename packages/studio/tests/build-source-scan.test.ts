@@ -153,6 +153,32 @@ describe("the source catalogue", () => {
 });
 
 describe("an endpoint in the source catalogue", () => {
+  it("lists the fields an endpoint's variables schema declares, each with its type and whether it is required", async () => {
+    const config = [
+      `import { courier, defineApi, defineGroup } from "@noverax/courier/define";`,
+      `import { z } from "zod";`,
+      `const { endpoint } = courier();`,
+      `const orders = defineGroup({ prefix: "orders", endpoints: {`,
+      `  create: endpoint.post("").variables(z.object({ sku: z.string(), qty: z.number().optional() })),`,
+      `  list: endpoint.get("").response<unknown>(),`,
+      `} });`,
+      `export default { sources: { api: defineApi({ baseURL: "https://api.example", groups: { orders } }) } };`,
+    ].join("\n");
+    writeFileSync(join(root, "courier.config.ts"), config);
+    const loaded = await loadCourierConfig(root);
+
+    const { sources } = buildSourceScan(loaded, importsSnapshotOf(undefined, root), root);
+
+    const endpoints = sources[0]?.groups[0]?.endpoints ?? [];
+    expect(endpoints.find((e) => e.name === "create")?.analysis.variablesFields).toEqual([
+      { path: "sku", type: "string", required: true },
+      { path: "qty", type: "number", required: false },
+    ]);
+    expect(endpoints.find((e) => e.name === "list")?.analysis).not.toHaveProperty(
+      "variablesFields",
+    );
+  }, 30_000);
+
   it("says how a stream is carried and which middleware its source runs", async () => {
     const config = [
       `import { courier, defineApi, defineGroup } from "@noverax/courier/define";`,

@@ -1,4 +1,5 @@
 import type { ProxyPath } from "@noverax/courier";
+import type { SchemaField } from "@noverax/courier-studio-core";
 
 import type { ProxyTiming, RequestStatus, RequestTiming } from "./types";
 
@@ -22,6 +23,8 @@ export interface CatalogEndpoint {
   middleware?: string[];
   /** Default variables stub from schema introspection */
   variablesStub?: Record<string, unknown>;
+  /** The fields the variables schema declares, with their types and whether each is required */
+  variablesFields?: SchemaField[];
   origin: "scan" | "runtime" | "both";
   /** Transport mode — only present for SSE/WS endpoints */
   transport?: "sse" | "ws";

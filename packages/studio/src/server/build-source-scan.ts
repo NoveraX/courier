@@ -11,6 +11,7 @@
 
 import { join, relative } from "node:path";
 import type { ProxyPath } from "@noverax/courier";
+import type { SchemaField } from "@noverax/courier-studio-core";
 import { extractSourceMap } from "@noverax/courier-studio-core";
 import type { LoadedCourierConfig } from "./config-loader";
 import { findSourceDeclaration } from "./find-source-declaration";
@@ -31,6 +32,8 @@ export interface ScannedEndpointAnalysis {
   middleware?: string[];
   /** The variables its schema describes, with a placeholder for each field. */
   variablesStub?: Record<string, unknown>;
+  /** The fields its variables schema declares, with their types and whether each is required. */
+  variablesFields?: SchemaField[];
   /** A channel whose messages from the client have a schema. */
   hasReceiveSchema?: true;
 }
@@ -166,6 +169,7 @@ function describeEndpoint(name: string, endpoint: MapEndpoint): ScannedEndpoint 
       ...(endpoint.transport && { transport: endpoint.transport }),
       ...(endpoint.middleware?.length && { middleware: [...endpoint.middleware] }),
       ...(endpoint.variablesStub && { variablesStub: endpoint.variablesStub }),
+      ...(endpoint.variablesFields && { variablesFields: endpoint.variablesFields }),
       ...(endpoint.hasReceiveSchema && { hasReceiveSchema: true as const }),
     },
   };

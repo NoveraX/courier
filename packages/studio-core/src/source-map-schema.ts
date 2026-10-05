@@ -1,4 +1,5 @@
 import { createLogger } from "@noverax/courier";
+import { member } from "./member";
 
 const log = createLogger("Studio");
 
@@ -121,10 +122,4 @@ const ZOD_V3_TYPES: ReadonlyMap<string, string> = new Map([
 
 function zodV3Type(typeName: unknown): string | undefined {
   return typeof typeName === "string" ? ZOD_V3_TYPES.get(typeName) : undefined;
-}
-
-function member(value: unknown, key: string): unknown {
-  return typeof value === "object" && value !== null && key in value
-    ? Reflect.get(value, key)
-    : undefined;
 }

@@ -50,6 +50,8 @@ export interface SavedRequest {
   /** The HTTP version the request went over, when its runtime could tell. */
   httpVersion?: string | undefined;
   sessionId: string;
+  /** The runtime that made a proxied call, when it said so. */
+  callerRuntimeId?: string | undefined;
 }
 
 export interface SessionStats {

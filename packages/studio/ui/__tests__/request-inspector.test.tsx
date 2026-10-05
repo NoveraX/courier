@@ -118,6 +118,29 @@ describe("the request inspector", () => {
     expect(panel.getAllByText("HTTP")).toHaveLength(2);
   });
 
+  it("starts a proxied call's route at the page that made it, not at the proxy", async () => {
+    const proxied = requestEntry({
+      id: "proxied",
+      mode: "proxy",
+      sessionId: "next-server",
+      callerRuntimeId: "vite-browser",
+      proxyTiming: { clientToProxy: 4, proxyToBackend: 10, backendToProxy: 80, proxyToClient: 3 },
+    });
+    useStudioStore.setState({
+      requests: [proxied],
+      bindingSnapshot: {
+        ...useStudioStore.getState().bindingSnapshot,
+        runtimes: [{ runtimeId: "vite-browser", kind: "browser" }],
+      },
+    });
+
+    await openShell("/next/timeline?req=proxied&tab=timing");
+
+    const route = within(inspector()).getByText("Proxy route").closest("section");
+    expect(route?.textContent).toContain("Browser");
+    expect(route?.textContent).not.toContain("Server");
+  });
+
   it("keeps the tab shown in the address, and shows the answer as a tree", async () => {
     const router = await openShell("/next/timeline?req=ok");
 

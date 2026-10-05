@@ -65,6 +65,7 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     url: optionalString(raw.url),
     httpVersion: httpVersionOf(raw.httpVersion),
     sessionId: String(raw.sessionId ?? ""),
+    callerRuntimeId: optionalString(raw.callerRuntimeId),
   };
 }
 

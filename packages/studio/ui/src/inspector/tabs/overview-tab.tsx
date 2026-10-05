@@ -25,8 +25,9 @@ const CHECK_TONE = { ok: "ok", warn: "warn", err: "err", idle: "muted" } as cons
  * ```
  */
 export function OverviewTab({ request }: { request: RequestEntry }): React.ReactNode {
+  const runtimeId = request.callerRuntimeId ?? request.sessionId;
   const runtimeKind = useStudioStore(
-    (s) => s.bindingSnapshot.runtimes.find((r) => r.runtimeId === request.sessionId)?.kind,
+    (s) => s.bindingSnapshot.runtimes.find((r) => r.runtimeId === runtimeId)?.kind,
   );
   const sessionName = useStudioStore((s) => s.shownSession?.name);
   const properties = requestProperties(request, { runtimeKind, sessionName });

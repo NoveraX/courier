@@ -35,7 +35,7 @@ function callOf(r: RequestEntry, rid: string): Record<string, unknown> {
     transport: r.transport ?? "http",
     variables: r.variables ?? {},
     headers: {},
-    runtimeId: r.sessionId,
+    runtimeId: r.callerRuntimeId ?? r.sessionId,
   };
 }
 

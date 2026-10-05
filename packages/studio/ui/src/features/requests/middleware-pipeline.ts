@@ -41,8 +41,14 @@ export function middlewareSteps(r: Pick<RequestEntry, "middlewareEntries">): Pip
 
 /** One end of the proxy route. */
 export interface RouteNode {
-  kind: "browser" | "server" | "client" | "proxy" | "source";
+  kind: "browser" | "app" | "client" | "proxy" | "source";
   label: string;
+}
+
+/** The runtime that made a proxied call, as Studio knows it. */
+export interface RouteCaller {
+  id: string;
+  kind: "browser" | "server" | undefined;
 }
 
 /** A leg of the proxy route: the time out and the time back. */
@@ -52,29 +58,31 @@ export interface RouteLeg {
 }
 
 /**
- * The way a proxied request went: from the app to Courier's proxy and on to
- * the API, with the time each leg took either way.
+ * The way a proxied request went: from its caller to Courier's proxy and on
+ * to the API, with the time each leg took either way. The caller is the
+ * runtime that made the call — a page reads as Browser, a process by its
+ * runtime's name — and a caller Studio never heard from reads as Client.
  *
  * @param r - The request
- * @param runtimeKind - Whether the app runs in a browser or on a server, when known
+ * @param caller - The runtime that made the call, when it said so
  * @returns The three nodes and two legs, or `null` for a request not proxied or not timed
  * @example
  * ```ts
- * proxyRouteOf(request, "browser")?.nodes.map((n) => n.label); // ["Browser", "Courier proxy", "api"]
+ * proxyRouteOf(request, { id: "vite-browser", kind: "browser" })?.nodes.map((n) => n.label);
+ * // ["Browser", "Courier proxy", "api"]
  * ```
  */
 export function proxyRouteOf(
   r: Pick<RequestEntry, "mode" | "proxyTiming" | "source">,
-  runtimeKind: "browser" | "server" | undefined,
+  caller: RouteCaller | undefined,
 ): { nodes: [RouteNode, RouteNode, RouteNode]; legs: [RouteLeg, RouteLeg] } | null {
   const t = r.proxyTiming;
   if (r.mode !== "proxy" || !t) return null;
-  const app: RouteNode =
-    runtimeKind === "server"
-      ? { kind: "server", label: "Server" }
-      : runtimeKind === "browser"
-        ? { kind: "browser", label: "Browser" }
-        : { kind: "client", label: "Client" };
+  const app: RouteNode = !caller
+    ? { kind: "client", label: "Client" }
+    : caller.kind === "browser"
+      ? { kind: "browser", label: "Browser" }
+      : { kind: "app", label: caller.id };
   return {
     nodes: [app, { kind: "proxy", label: "Courier proxy" }, { kind: "source", label: r.source }],
     legs: [

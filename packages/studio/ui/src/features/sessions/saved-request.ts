@@ -45,6 +45,7 @@ export function savedRequestOf(r: RequestEntry): Record<string, unknown> {
     url: r.url,
     httpVersion: r.httpVersion,
     sessionId: r.sessionId,
+    callerRuntimeId: r.callerRuntimeId,
   };
 }
 
@@ -88,6 +89,7 @@ export function requestFromSaved(raw: unknown): RequestEntry | undefined {
     url: optStr(raw.url),
     httpVersion: httpVersionOf(raw.httpVersion),
     sessionId: str(raw.sessionId),
+    callerRuntimeId: optStr(raw.callerRuntimeId),
     middlewareCount: 0,
     middlewareEntries: [],
     hasValidation: { variables: false, response: false },

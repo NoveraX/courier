@@ -6,9 +6,9 @@
  */
 
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import type { FieldType, SortDir } from "@/features/mocks/data-table-utils";
 import { buttonProps } from "@/lib/button-props";
 import { cn } from "@/lib/utils";
-import type { FieldType, SortDir } from "./data-table-utils";
 
 const TYPE_COLOR: Record<FieldType, string> = {
   str: "text-emerald-400/60",

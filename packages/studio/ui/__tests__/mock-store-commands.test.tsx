@@ -25,7 +25,7 @@ vi.mock("@/socket", () => ({
   }),
 }));
 
-const { useStoreCrud } = await import("../src/views/mocks/store/use-store-crud");
+const { useStoreCrud } = await import("@/mocks/use-store-crud");
 
 function crud() {
   return renderHook(() => useStoreCrud()).result.current;

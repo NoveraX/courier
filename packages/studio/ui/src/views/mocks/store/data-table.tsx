@@ -9,12 +9,10 @@
  */
 
 import { useRef } from "react";
-
+import { recordKey } from "@/features/mocks/data-table-utils";
 import type { MockCollectionEntry } from "@/store/mock-slice";
-
 import { DataTableHeader, DataTableRow } from "./data-table-row";
 import { DataTableToolbar } from "./data-table-toolbar";
-import { recordKey } from "./data-table-utils";
 import { useDataTableState } from "./use-data-table-state";
 
 const COL_WIDTH = 140;

@@ -2,10 +2,10 @@ import { Database } from "lucide-react";
 import { useEffect } from "react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageShell } from "@/components/shared/page-shell";
+import { useStoreCrud } from "@/mocks/use-store-crud";
 import { useActiveServer } from "@/store/mock-slice";
 import { CollectionList } from "./collection-list";
 import { DataTable } from "./data-table";
-import { useStoreCrud } from "./use-store-crud";
 
 export function MockStoreView(): React.ReactElement {
   const server = useActiveServer();

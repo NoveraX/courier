@@ -8,18 +8,15 @@
 
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef, useState } from "react";
-
-import type { MockCollectionEntry } from "@/store/mock-slice";
-
-import type { FieldType, SortDir } from "./data-table-utils";
-
+import type { FieldType, SortDir } from "@/features/mocks/data-table-utils";
 import {
   buildDefaultRecord,
   detectColumns,
   detectColumnTypes,
   recordKey,
   sortRecords,
-} from "./data-table-utils";
+} from "@/features/mocks/data-table-utils";
+import type { MockCollectionEntry } from "@/store/mock-slice";
 
 const ROW_HEIGHT = 36;
 

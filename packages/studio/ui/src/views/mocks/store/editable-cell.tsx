@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import type { FieldType } from "@/features/mocks/data-table-utils";
+import { formatValue, parseValue } from "@/features/mocks/data-table-utils";
 import { buttonProps } from "@/lib/button-props";
 import { cn } from "@/lib/utils";
-import type { FieldType } from "./data-table-utils";
-import { formatValue, parseValue } from "./data-table-utils";
 
 interface EditableCellProps {
   value: unknown;

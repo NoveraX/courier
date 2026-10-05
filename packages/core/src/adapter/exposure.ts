@@ -16,20 +16,22 @@
  * `expose` lives on the source and on the group
  * rather than on each endpoint, so shutting a whole API off from the browser
  * is one line in the config and no change to any declaration. An endpoint that
- * needs its own answer gets it by living in its own group.
+ * needs its own answer gets it by living in its own group. Among groups
+ * inside groups, the nearest one that sets it decides.
  *
  * A refused call is answered exactly as an unknown name is. Saying "forbidden"
  * would confirm that the endpoint exists, which is the one thing a caller
  * guessing names is trying to learn.
  */
 
+import { groupChain } from "../define/group-tree";
 import { isRecord } from "../utils/is-record";
 
 /**
  * Decide whether a named endpoint may be served to a caller off the wire.
  *
  * @param dataSource - The source as it sits in the registry
- * @param group - Group name from the request, when it named one
+ * @param group - The group's path from the request, when it named one
  * @returns Whether the proxy may serve it
  *
  * @example
@@ -55,7 +57,7 @@ export function isExposedToWire(
   }
 
   if (group !== undefined) {
-    const groupExpose = groupExposeOf(options, group);
+    const groupExpose = groupExposeOf(dataSource, group);
     if (groupExpose !== undefined) return groupExpose;
   }
 
@@ -78,9 +80,12 @@ function boundaryEndpointsOf(
   return isRecord(boundary) && isRecord(boundary.endpoints) ? boundary.endpoints : undefined;
 }
 
-function groupExposeOf(options: Record<string, unknown>, group: string): boolean | undefined {
-  const { groups } = options;
-  if (!isRecord(groups) || !Object.hasOwn(groups, group)) return undefined;
-  const entry = groups[group];
-  return isRecord(entry) && isRecord(entry.options) ? exposeFlag(entry.options.expose) : undefined;
+/* The group the path names, then each group above it: the first that sets the flag decides. */
+function groupExposeOf(dataSource: unknown, group: string): boolean | undefined {
+  const chain = groupChain(dataSource, group) ?? [];
+  for (const entry of chain.toReversed()) {
+    const flag = exposeFlag(entry.options?.expose);
+    if (flag !== undefined) return flag;
+  }
+  return undefined;
 }

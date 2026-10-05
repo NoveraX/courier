@@ -33,6 +33,8 @@ export const users = defineGroup({
 })
 ```
 
+A group may hold groups of its own, under `groups`, to any depth: `caller.billing.invoices.list()` reaches `list` in the `invoices` group inside `billing`, at both groups' prefixes in turn. See [Groups inside groups](/docs/api/define-group#groups-inside-groups).
+
 ## courier
 
 `courier()` returns three heads and `extend`. Which head you start from declares what the endpoint is, not just what it returns:
@@ -306,7 +308,10 @@ When calling endpoints, use dot-notation to access groups and methods:
 caller.users.getAll()         // group: "users", method: "getAll"
 caller.users.getById(vars)    // group: "users", method: "getById"
 caller.posts.create(vars)     // group: "posts", method: "create"
+caller.billing.invoices.list() // group: "billing.invoices", method: "list"
 ```
+
+A group inside another is named by its path, its names joined with dots, wherever a group is named by a string: the proxy's `_g`, Studio, mocks, query keys and boundaries.
 
 ### Reserved names
 
@@ -319,6 +324,8 @@ Three names cannot be given to an endpoint or a group. Each is a type error and 
 | `with` | endpoints and groups | Every client answers it with `.with()`, in the same places. |
 
 A path of that name is fine: `getRaw: endpoint.get(":id/raw")` reaches it.
+
+No group or endpoint name may hold a dot, which separates the names of a group's path: one throws `ConfigurationError("DOTTED_NAME")` where it is defined.
 
 ### Names the runtime reads
 

@@ -1,23 +1,27 @@
 import type { TopicKeyReader } from "../define/options";
 import { unqualifyTopic } from "../realtime/ws/topic-key";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
+import { parseWSTopic } from "../realtime/ws-address";
 import { resolveEndpoint } from "../utils/execute-resolve";
 import type { SchemaMetadata } from "../validation";
 import { isExposedToWire } from "./exposure";
 import type { WSSocketContext } from "./ws-context";
 import { sendSubscriptionEnd } from "./ws-subscription-end";
 
-/** Parse "source.group.method" or "source.group.method#key" topic format */
+/**
+ * Parse "source.group.method" or "source.group.method#key" topic format —
+ * the group a path at any depth, `source.billing.invoices.watch` — or
+ * "source.method" for an endpoint the source holds itself.
+ */
 export function parseTopic(topic: string): {
   source?: string | undefined;
   group?: string | undefined;
   method: string;
 } {
   const { baseTopic } = unqualifyTopic(topic);
-  const [first, second, third] = baseTopic.split(".");
-  if (third !== undefined) return { source: first, group: second, method: third };
-  if (second !== undefined) return { source: first, group: undefined, method: second };
-  return { method: first ?? baseTopic };
+  const named = parseWSTopic(baseTopic);
+  if (!named) return { method: baseTopic };
+  return { source: named.source, group: named.group || undefined, method: named.method };
 }
 
 const REJECTED = { code: 4403, message: "Subscription rejected" };

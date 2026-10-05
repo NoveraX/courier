@@ -1,4 +1,5 @@
 import type { TypedClient } from "../client";
+import type { EndpointNamesAt, GroupAtPath, GroupPaths } from "../define/group-path-types";
 import type { AnyEndpoint, InferResponse, InferVariables } from "../define/marker";
 import type { DefinedApi } from "../define/types";
 import type { ChannelHandlers, SSEEvent } from "../realtime/types";
@@ -67,16 +68,16 @@ export type ApiGroups<TApi extends DefinedApi> = TApi["options"]["groups"];
 export type TestClient<TApi extends DefinedApi = DefinedApi> = {
   /** Typed client — same dot-notation API as createCaller / createProxyCaller */
   client: TypedClient<TApi>;
-  /** Mock a specific endpoint's response */
+  /** Mock a specific endpoint's response, its group named by its path: `"billing.invoices"` */
   mock: <
-    TGroup extends keyof ApiGroups<TApi> & string,
-    TMethod extends Exclude<keyof ApiGroups<TApi>[TGroup], "options"> & string,
+    TGroup extends GroupPaths<TApi>,
+    TMethod extends EndpointNamesAt<GroupAtPath<TApi, TGroup>>,
   >(
     group: TGroup,
     method: TMethod,
   ) => MockBuilder<
-    ExtractEndpointResponse<ApiGroups<TApi>[TGroup][TMethod]>,
-    ExtractEndpointVariables<ApiGroups<TApi>[TGroup][TMethod]>
+    ExtractEndpointResponse<GroupAtPath<TApi, TGroup>[TMethod]>,
+    ExtractEndpointVariables<GroupAtPath<TApi, TGroup>[TMethod]>
   >;
   /** Array of all recorded requests */
   history: HistoryEntry[];

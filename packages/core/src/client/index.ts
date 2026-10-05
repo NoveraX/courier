@@ -1,4 +1,5 @@
 export { buildClientProxy } from "./proxy";
+export { RUNTIME_HOOKS } from "./proxy-members";
 export { createClientRoot, type RootAccessors } from "./root";
 export { type ClientShape, shapeOfClient } from "./shape";
 export type {

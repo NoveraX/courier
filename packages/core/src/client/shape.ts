@@ -3,13 +3,14 @@
  */
 
 import type { ProxyBoundary } from "../define/boundary-types";
+import { subGroupsOf } from "../define/group-tree";
 import { sourceFromBoundary } from "../proxy-caller/from-boundary";
 
-/** What a source says a client may call. */
+/** What a source, or one of its groups, says a client may call there. */
 export interface ClientShape {
-  /** Each group, with the names of its methods. */
-  groups: ReadonlyMap<string, ReadonlySet<string>>;
-  /** Endpoints called at the root, without a group. */
+  /** Each group inside it, with its own shape: its endpoints, and the groups inside it. */
+  groups: ReadonlyMap<string, ClientShape>;
+  /** Endpoints called at this level. */
   endpoints: ReadonlySet<string>;
 }
 
@@ -21,22 +22,21 @@ export interface ClientShape {
  *
  * @example
  * ```ts
- * shapeOfSource(api)?.groups.get("users"); // → Set { "list", "getById" }
+ * shapeOfSource(api)?.groups.get("users")?.endpoints; // → Set { "list", "getById" }
+ * shapeOfSource(api)?.groups.get("billing")?.groups.get("invoices"); // → the shape of billing.invoices
  * ```
  */
 export function shapeOfSource(
   source: Record<string, unknown> | undefined,
 ): ClientShape | undefined {
-  if (!source) return undefined;
-  const groupRecord =
-    (source.options as { groups?: Record<string, Record<string, unknown>> } | undefined)?.groups ??
-    {};
+  return source ? shapeAt(source) : undefined;
+}
 
-  const groups = new Map<string, ReadonlySet<string>>();
-  for (const [name, group] of Object.entries(groupRecord)) {
-    groups.set(name, new Set(endpointNames(group)));
-  }
-  return { groups, endpoints: new Set(endpointNames(source)) };
+/* A source's or a group's shape, the groups inside it read the same way. */
+function shapeAt(holder: Record<string, unknown>): ClientShape {
+  const groups = new Map<string, ClientShape>();
+  for (const [name, group] of subGroupsOf(holder)) groups.set(name, shapeAt(group));
+  return { groups, endpoints: new Set(endpointNames(holder)) };
 }
 
 /**
@@ -49,7 +49,7 @@ export function shapeOfSource(
  *
  * @example
  * ```ts
- * shapeOfClient({ boundary })?.groups.get("users"); // → the methods it exposes
+ * shapeOfClient({ boundary })?.groups.get("users")?.endpoints; // → the methods it exposes
  * ```
  */
 export function shapeOfClient(given: {

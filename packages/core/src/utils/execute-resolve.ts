@@ -1,10 +1,12 @@
+import { groupChain, groupOptionsOf } from "../define/group-tree";
 import type { ResolvedEndpointOptions } from "../define/options";
 import type { GroupOptions } from "../http-client/types";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";
 import { getEndpoint } from "./execute-helpers";
 import { normalizeHttpMethod } from "./helpers";
 
-type ResolvedGroup = Record<string, unknown> & { options?: GroupOptions };
+/** The group an endpoint sits in, with the settings it takes from every group above it. */
+type ResolvedGroup = { options: GroupOptions };
 
 /** An endpoint found in a source, with what its descriptor says about it. */
 interface ResolvedEndpoint {
@@ -19,24 +21,32 @@ interface ResolvedEndpoint {
   httpMethod: string | undefined;
 }
 
+/**
+ * Find an endpoint in a source: among the source's own endpoints, or in the
+ * group its path names — `billing.invoices` — at any depth. A path that
+ * names a group finds that group's endpoints alone, never one of the
+ * source's own that happens to share the name.
+ *
+ * @param dataSource - The source
+ * @param group - The group's path; empty or absent for the source's own endpoints
+ * @param method - The endpoint's name
+ * @returns The endpoint and what its descriptor says, its group's settings merged down its path
+ * @example
+ * ```ts
+ * resolveEndpoint(api, "billing.invoices", "list").endpointGroup?.options.prefix; // → "billing/invoices"
+ * ```
+ */
 export function resolveEndpoint(
   dataSource: Record<string, unknown>,
   group: unknown,
   method: unknown,
 ): ResolvedEndpoint {
-  const endpointGroup: ResolvedGroup | undefined =
-    typeof group === "string" &&
-    dataSource.options &&
-    "groups" in (dataSource.options as Record<string, unknown>)
-      ? ((dataSource.options as Record<string, Record<string, unknown>>)?.groups?.[group] as
-          | ResolvedGroup
-          | undefined)
-      : undefined;
-
+  const grouped = typeof group === "string" && group !== "";
+  const chain = grouped ? groupChain(dataSource, group) : [];
+  const holder = chain === undefined ? undefined : (chain.at(-1) ?? dataSource);
   const endpoint =
-    typeof method === "string"
-      ? (endpointGroup && getEndpoint(endpointGroup, method)) || getEndpoint(dataSource, method)
-      : undefined;
+    holder !== undefined && typeof method === "string" ? getEndpoint(holder, method) : undefined;
+  const endpointGroup = chain?.length ? { options: groupOptionsOf(chain) } : undefined;
 
   return {
     endpoint: toCallable(endpoint),

@@ -13,6 +13,7 @@
  */
 
 import type { ProxyPath } from "../proxy-caller/proxy-path";
+import type { EndpointAtPath, GroupedEndpointPaths } from "./group-path-types";
 import type { AnyEndpoint, InferKind, InferSend } from "./marker";
 
 /** The groups an API declares, or never for one that declares none. */
@@ -28,13 +29,6 @@ export type EndpointsOf<TGroups> = {
 /** Endpoints declared on the source itself rather than inside a group. */
 type FlatOf<TApi> = Omit<TApi, "options">;
 
-/** `"group.method"` for every endpoint inside a group. */
-type GroupedPaths<TApi> = {
-  [G in keyof EndpointsOf<GroupsOf<TApi>> & string]: {
-    [M in keyof EndpointsOf<GroupsOf<TApi>>[G] & string]: `${G}.${M}`;
-  }[keyof EndpointsOf<GroupsOf<TApi>>[G] & string];
-}[keyof EndpointsOf<GroupsOf<TApi>> & string];
-
 /** `"method"` for every endpoint declared without a group. */
 type FlatPaths<TApi> = keyof FlatOf<TApi> & string;
 
@@ -43,21 +37,13 @@ type FlatPaths<TApi> = keyof FlatOf<TApi> & string;
  *
  * @example
  * ```ts
- * type Names = ExposablePath<typeof api>; // "posts.list" | "admin.purge" | …
+ * type Names = ExposablePath<typeof api>; // "posts.list" | "admin.purge" | "billing.invoices.list" | …
  * ```
  */
-export type ExposablePath<TApi> = GroupedPaths<TApi> | FlatPaths<TApi>;
+export type ExposablePath<TApi> = GroupedEndpointPaths<TApi> | FlatPaths<TApi>;
 
-/** The endpoint a path points at, or never when it points at nothing. */
-type EndpointAt<TApi, TPath extends string> = TPath extends `${infer G}.${infer M}`
-  ? G extends keyof EndpointsOf<GroupsOf<TApi>>
-    ? M extends keyof EndpointsOf<GroupsOf<TApi>>[G]
-      ? EndpointsOf<GroupsOf<TApi>>[G][M]
-      : never
-    : never
-  : TPath extends keyof FlatOf<TApi>
-    ? FlatOf<TApi>[TPath]
-    : never;
+/** The endpoint a path points at — in a group at any depth — or never when it points at nothing. */
+type EndpointAt<TApi, TPath extends string> = EndpointAtPath<TApi, TPath>;
 
 /**
  * What kind of endpoint a path names, read from the API's own type.

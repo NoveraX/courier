@@ -84,11 +84,9 @@ describe("parseTopic", () => {
     expect(result.method).toBe("");
   });
 
-  it("handles four-segment topic (only first three matter)", () => {
-    // "a.b.c.d".split(".") gives ["a", "b", "c", "d"]
-    // third = "c" is defined, so source=a, group=b, method=c
+  it("reads a four-segment topic as an endpoint of a group inside a group", () => {
     const result = parseTopic("a.b.c.d");
-    expect(result).toEqual({ source: "a", group: "b", method: "c" });
+    expect(result).toEqual({ source: "a", group: "b.c", method: "d" });
   });
 });
 

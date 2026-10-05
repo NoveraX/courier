@@ -21,16 +21,27 @@ export {
   type ClientShape,
   createClientRoot,
   type ExecuteBackend,
+  RUNTIME_HOOKS,
   shapeOfClient,
 } from "../client";
 export { isDefinedApi } from "../define/api";
+export {
+  eachGroup,
+  GROUP_PATH_SEPARATOR,
+  type GroupNode,
+  groupChain,
+  groupNames,
+  groupOptionsOf,
+  type PlacedGroup,
+  subGroupsOf,
+} from "../define/group-tree";
 export { readLogFormat } from "../logger/log-format";
 export { mergeProxyPath, type ResolveOrigin, resolveProxyPath } from "../proxy-caller";
 export { type ConnectionState, createConnectionState } from "../realtime/connection-state";
 export { describeFailure, type StreamFailure } from "../realtime/describe-failure";
 export { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
 export { decodeMessage, encodeMessage, type WSMessage } from "../realtime/ws/ws-protocol";
-export { buildDirectWSUrl } from "../realtime/ws-address";
+export { buildDirectWSUrl, parseWSTopic, type TopicEndpoint } from "../realtime/ws-address";
 export { getSourcesGeneration, onSourcesChange } from "../sources";
 export {
   abortPlayground,

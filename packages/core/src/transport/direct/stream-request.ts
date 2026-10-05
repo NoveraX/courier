@@ -6,11 +6,12 @@
 import { buildDirectSSEUrl } from "../../realtime/sse-address";
 import { layerHeaders } from "../../utils/layer-headers";
 import { addressCall } from "./address";
+import { placedEndpoint } from "./placed-endpoint";
 import { fieldOf, textOf } from "./read-definition";
 
 /** A stream's request: its URL, and the headers its source sends every call with */
 export interface StreamRequest {
-  /** The source's base, the group's prefix, then the address the endpoint declares */
+  /** The source's base, its groups' prefixes, then the address the endpoint declares */
   readonly url: string;
   /** What the source declares in `headers` — an API key, an `Authorization` */
   readonly sourceHeaders: Record<string, string>;
@@ -23,7 +24,7 @@ export interface StreamRequest {
  * an API that takes a key there is not refused with 401.
  *
  * @param api - The source
- * @param group - The stream's group, empty for none
+ * @param group - The stream's group's path, empty for none
  * @param method - The stream's name
  * @param variables - What it is called with; those its path does not take go in the query
  * @returns The request
@@ -41,16 +42,10 @@ export function streamRequest(
   variables: unknown,
 ): StreamRequest {
   const options = fieldOf(api, "options");
-  const groupDefinition = group ? fieldOf(fieldOf(options, "groups"), group) : api;
-  const prefix = textOf(fieldOf(groupDefinition, "options"), "prefix");
-  const address = addressCall(fieldOf(groupDefinition, method), method, variables);
+  const { definition, prefix } = placedEndpoint(api, group, method);
+  const address = addressCall(definition, method, variables);
   return {
-    url: buildDirectSSEUrl(
-      textOf(options, "baseURL"),
-      group ? prefix : "",
-      address.path,
-      address.variables,
-    ),
+    url: buildDirectSSEUrl(textOf(options, "baseURL"), prefix, address.path, address.variables),
     sourceHeaders: layerHeaders(fieldOf(options, "headers")),
   };
 }

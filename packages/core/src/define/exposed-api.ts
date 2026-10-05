@@ -10,19 +10,34 @@ import type {
   ProxyBoundary,
 } from "./boundary-types";
 
-/** The methods of group `G` among the paths. */
-type MethodsIn<TPaths extends string, G extends string> = TPaths extends `${G}.${infer M}`
-  ? M
+/** The paths inside group `G`, its name taken off: `invoices.list` of `billing.invoices.list`. */
+type PathsIn<TPaths extends string, G extends string> = TPaths extends `${G}.${infer TRest}`
+  ? TRest
   : never;
 
-/** Each group with only the endpoints the paths name; a group they name none of is gone. */
+/** The paths that name an endpoint of this level itself, not one in a group below it. */
+type OwnNamed<TPaths extends string> = TPaths extends `${string}.${string}` ? never : TPaths;
+
+/**
+ * Each group with only what the paths name in it — its endpoints, and its
+ * groups cut the same way; a group they name nothing in is gone.
+ */
 type ExposedGroups<TGroups, TPaths extends string> = {
-  [G in keyof TGroups & string as [MethodsIn<TPaths, G>] extends [never] ? never : G]: {
-    [K in keyof TGroups[G] as K extends "options" | MethodsIn<TPaths, G>
-      ? K
-      : never]: TGroups[G][K];
-  };
+  [G in keyof TGroups & string as [PathsIn<TPaths, G>] extends [never] ? never : G]: ExposedGroup<
+    TGroups[G],
+    PathsIn<TPaths, G>
+  >;
 };
+
+type ExposedGroup<TGroup, TPaths extends string> = {
+  [K in keyof TGroup as K extends "options" | OwnNamed<TPaths> ? K : never]: K extends "options"
+    ? ExposedOptions<TGroup[K], TPaths>
+    : TGroup[K];
+};
+
+type ExposedOptions<TOptions, TPaths extends string> = TOptions extends { groups: infer TGroups }
+  ? Omit<TOptions, "groups"> & { groups: ExposedGroups<TGroups, TPaths> }
+  : TOptions;
 
 /**
  * An API with only the endpoints the paths name: its groups keep those

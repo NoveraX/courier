@@ -29,6 +29,7 @@ const CLIENT_ACCESSORS: ReadonlyMap<string, string> = new Map([
  * @param owner - What holds them, for the message: "group" or "source"
  * @throws ConfigurationError `RESERVED_ENDPOINT_NAME` when one is named
  *   `options`, `raw` or `with`
+ * @throws ConfigurationError `DOTTED_NAME` when a name holds a dot
  *
  * @example
  * ```ts
@@ -38,6 +39,7 @@ const CLIENT_ACCESSORS: ReadonlyMap<string, string> = new Map([
  * ```
  */
 export function assertNoReservedName(endpoints: object, owner: "group" | "source"): void {
+  refuseDottedName(endpoints, "an endpoint");
   if (Object.hasOwn(endpoints, SETTINGS_KEY)) {
     throw new ConfigurationError(
       "RESERVED_ENDPOINT_NAME",
@@ -55,6 +57,7 @@ export function assertNoReservedName(endpoints: object, owner: "group" | "source
  *
  * @param groups - The groups a source is defined with
  * @throws ConfigurationError `RESERVED_ENDPOINT_NAME` when one is named `raw` or `with`
+ * @throws ConfigurationError `DOTTED_NAME` when a name holds a dot
  *
  * @example
  * ```ts
@@ -63,7 +66,19 @@ export function assertNoReservedName(endpoints: object, owner: "group" | "source
  * ```
  */
 export function assertNoReservedGroupName(groups: object): void {
+  refuseDottedName(groups, "a group");
   refuseClientAccessor(groups, "a group", (name) => `${name}Group`);
+}
+
+/* A dot separates the groups of a path, `billing.invoices.list`: a name
+   holding one would be read as two. */
+function refuseDottedName(record: object, what: string): void {
+  const dotted = Object.keys(record).find((name) => name.includes("."));
+  if (dotted === undefined) return;
+  throw new ConfigurationError(
+    "DOTTED_NAME",
+    `[courier] ${what} cannot be named "${dotted}": a dot separates the groups of a path, so the name would be read as "${dotted.split(".").join('" then "')}". Give it a name without one, for example "${dotted.replaceAll(".", "_")}".`,
+  );
 }
 
 function refuseClientAccessor(

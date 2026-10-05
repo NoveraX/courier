@@ -24,7 +24,7 @@ export const boundary = defineBoundary({
 })
 ```
 
-Anything absent is refused. `admin.exportPayouts` above is not named, so the server answers it exactly as it answers a name that does not exist.
+Anything absent is refused. `admin.exportPayouts` above is not named, so the server answers it exactly as it answers a name that does not exist. An endpoint of a group inside another is named by the whole path, `"billing.invoices.list"`, and the browser's client reaches only the groups that path passes through.
 
 A read goes to the proxy as GET, its variables in the address. A read whose definition declares `sensitiveVariables` goes as POST, and the proxy refuses it over GET; the browser cannot see the definition, so the boundary lists it:
 

@@ -25,7 +25,34 @@ export function toWSScheme(url: string): string {
   return url;
 }
 
-/** Build a WS topic string for multiplexed connections */
+/** Build a WS topic string for multiplexed connections: `source.group.method`, the group a path at any depth */
 export function buildWSTopic(source: string, group: string, method: string): string {
   return group ? `${source}.${group}.${method}` : `${source}.${method}`;
+}
+
+/** The endpoint a topic names, read back from what `buildWSTopic` wrote. */
+export interface TopicEndpoint {
+  source: string;
+  /** The group's path, `billing.invoices`; empty for an endpoint the source holds itself */
+  group: string;
+  method: string;
+}
+
+/**
+ * Read the endpoint a topic's base names: the source first, the endpoint
+ * last, and the group's path between them, however deep.
+ *
+ * @param base - The topic without its key: `shop.billing.invoices.watch`
+ * @returns The endpoint, or `undefined` when the topic names no source and endpoint
+ * @example
+ * ```ts
+ * parseWSTopic("shop.billing.invoices.watch"); // → { source: "shop", group: "billing.invoices", method: "watch" }
+ * parseWSTopic("shop.watch"); // → { source: "shop", group: "", method: "watch" }
+ * ```
+ */
+export function parseWSTopic(base: string): TopicEndpoint | undefined {
+  const [source, ...rest] = base.split(".");
+  const method = rest.pop();
+  if (!source || !method || rest.some((name) => name === "")) return undefined;
+  return { source, group: rest.join("."), method };
 }

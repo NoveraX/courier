@@ -13,6 +13,7 @@
  */
 
 import type { ProxyBoundary } from "../define/boundary-types";
+import { GROUP_PATH_SEPARATOR } from "../define/group-tree";
 import { ENDPOINT_SCHEMA } from "../validation";
 
 /** Recognised as an endpoint, and never invoked in proxy mode. */
@@ -32,35 +33,43 @@ const INERT = (): never => {
  * ```
  */
 export function sourceFromBoundary(boundary: ProxyBoundary): Record<string, unknown> {
-  /* A Map, not an object: a group named `valueOf` found Object's own method
-     already there, and its endpoints were written onto that. */
-  const groups = new Map<string, Record<string, unknown>>();
-  const flat: Record<string, unknown> = {};
-
+  const root = newLevel();
   const sensitive = new Set(boundary.sensitive);
   for (const [path, shape] of Object.entries(boundary.endpoints)) {
-    const separator = path.indexOf(".");
-    const endpoint = {
+    const names = path.split(GROUP_PATH_SEPARATOR);
+    const method = names.pop() ?? path;
+    const level = names.reduce(levelBelow, root);
+    level.endpoints[method] = {
       probe: INERT,
       [ENDPOINT_SCHEMA]: { ...shape },
       ...(sensitive.has(path) && { options: { sensitiveVariables: true } }),
     };
-
-    if (separator === -1) {
-      flat[path] = endpoint;
-      continue;
-    }
-
-    const group = path.slice(0, separator);
-    const method = path.slice(separator + 1);
-    const members = groups.get(group) ?? {};
-    members[method] = endpoint;
-    groups.set(group, members);
   }
+  return sourceOf(root);
+}
 
-  const grouped = Object.fromEntries(
-    [...groups].map(([name, endpoints]) => [name, { options: {}, ...endpoints }]),
+/* The endpoints at one level of the boundary, and the groups below it. A Map,
+   not an object: a group named `valueOf` found Object's own method already
+   there, and its endpoints were written onto that. */
+interface Level {
+  endpoints: Record<string, unknown>;
+  groups: Map<string, Level>;
+}
+
+function newLevel(): Level {
+  return { endpoints: {}, groups: new Map() };
+}
+
+function levelBelow(level: Level, name: string): Level {
+  const below = level.groups.get(name) ?? newLevel();
+  level.groups.set(name, below);
+  return below;
+}
+
+/* A level written as a source or a group writes it: its endpoints, and its groups under `options`. */
+function sourceOf(level: Level): Record<string, unknown> {
+  const groups = Object.fromEntries(
+    [...level.groups].map(([name, below]) => [name, sourceOf(below)]),
   );
-
-  return { ...flat, options: { groups: grouped } };
+  return { ...level.endpoints, options: { groups } };
 }

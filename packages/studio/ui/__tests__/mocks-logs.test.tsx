@@ -3,8 +3,9 @@
  *
  * The mock's log: what answered each request — chaos, the scenario on, an
  * override, the generated handler — the filters with their counts kept in
- * the address, the search, a request opened on what it was answered with,
- * Pause, and Clear, which Studio forgets too.
+ * the address, the search, a request opened in its sheet — what it was
+ * answered with, what it sent, its headers and a cURL — Pause, and Clear,
+ * which Studio forgets too.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -120,7 +121,10 @@ describe("a logged request", () => {
       logMatches(LOGS[1] ?? mockLog(), "ORDERS.create"),
       logMatches(LOGS[1] ?? mockLog(), "users"),
     ]).toEqual([true, false]);
-    expect(validateMockLogsSearch({ show: "all", q: "", log: "x", junk: 1 })).toEqual({ log: "x" });
+    expect(validateMockLogsSearch({ show: "chaos", q: "users", log: "x", junk: 1 })).toEqual({
+      show: "chaos",
+      q: "users",
+    });
   });
 });
 
@@ -152,15 +156,23 @@ describe("the Logs tab", () => {
     expect(rows()).toHaveLength(1);
   });
 
-  it("opens a request on what it was answered with and the variables it sent", async () => {
+  it("opens a request in its sheet: what answered it, what it sent, and a cURL to send it again", async () => {
     const router = await openShell("/mocks/logs");
 
     await settle(() => fireEvent.click(row("handler")));
 
-    expect(router.state.location.search).toMatchObject({ log: "auto" });
-    expect(row("handler").getAttribute("aria-expanded")).toBe("true");
-    expect(screen.getByText("Response")).toBeTruthy();
-    expect(screen.getByText("Variables")).toBeTruthy();
+    expect(router.state.location.search).toMatchObject({ mreq: "auto" });
+    expect(row("handler").getAttribute("aria-pressed")).toBe("true");
+    const sheet = within(screen.getByRole("complementary", { name: "Mock request" }));
+    expect(sheet.getByText("Answered by").parentElement?.textContent).toContain("handler");
+    await settle(() => fireEvent.click(sheet.getByRole("tab", { name: /^Request/ })));
+    expect(sheet.getByText(/limit/)).toBeTruthy();
+    await settle(() => fireEvent.click(sheet.getByRole("tab", { name: /^cURL/ })));
+    expect(sheet.getByText(/curl/)).toBeTruthy();
+
+    await settle(() => fireEvent.keyDown(window, { key: "Escape" }));
+
+    expect(router.state.location.search).not.toHaveProperty("mreq");
   });
 
   it("clears the mock's log here and in what Studio replays, every other mock's kept", async () => {

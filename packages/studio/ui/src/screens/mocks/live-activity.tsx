@@ -7,6 +7,7 @@ import { TONE_TEXT } from "@/design/tone";
 import { shortAgo } from "@/features/explorer/endpoint-key";
 import { mockLogCode, mockLogTone } from "@/features/mocks/mock-log";
 import { durationTone } from "@/features/requests/duration-tone";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { MockRequestLog } from "@/store/mock-slice";
@@ -20,20 +21,29 @@ interface LiveActivityProps {
   running: boolean;
   now: number;
   slowMs: number;
+  /** Opens a request's sheet. */
+  onOpen: (id: string) => void;
 }
 
 /**
  * The mock server's newest answers as they come: when, how each went, the
- * method and path, the status and how long it took.
+ * method and path, the status and how long it took — each opening its
+ * request's sheet.
  *
- * @param props - The server's logged requests, whether it runs, the time and the slow threshold
+ * @param props - The server's logged requests, whether it runs, the time, the slow threshold, and what opens a request
  * @returns The card
  * @example
  * ```tsx
- * <LiveActivity logs={logs} running now={now} slowMs={500} />
+ * <LiveActivity logs={logs} running now={now} slowMs={500} onOpen={open} />
  * ```
  */
-export function LiveActivity({ logs, running, now, slowMs }: LiveActivityProps): React.ReactNode {
+export function LiveActivity({
+  logs,
+  running,
+  now,
+  slowMs,
+  onOpen,
+}: LiveActivityProps): React.ReactNode {
   const latest = logs.slice(0, SHOWN);
   return (
     <CardSection
@@ -53,7 +63,7 @@ export function LiveActivity({ logs, running, now, slowMs }: LiveActivityProps):
           <Link
             from="/mocks"
             to="/mocks/logs"
-            search={(prev) => ({ req: prev.req, tab: prev.tab })}
+            search={(prev) => ({ ...inspectorOf(prev) })}
             className="flex h-6.5 items-center rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg"
           >
             All logs →
@@ -72,10 +82,12 @@ export function LiveActivity({ logs, running, now, slowMs }: LiveActivityProps):
         {latest.map((log, index) => {
           const tone = mockLogTone(log);
           return (
-            <div
+            <button
+              type="button"
               key={log.id}
+              onClick={() => onOpen(log.id)}
               className={cn(
-                "grid h-8 grid-cols-[64px_8px_44px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 font-mono text-label tabular-nums hover:bg-raised",
+                "grid h-8 w-full cursor-pointer grid-cols-[64px_8px_44px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label tabular-nums hover:bg-raised",
                 index === 0 && running && "bg-brand-tint",
               )}
             >
@@ -100,7 +112,7 @@ export function LiveActivity({ logs, running, now, slowMs }: LiveActivityProps):
               >
                 {log.duration === undefined ? "—" : formatDuration(log.duration)}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>

@@ -29,7 +29,7 @@ export function useInspector(): InspectorControl {
   const navigate = useNavigate();
   const open = useCallback(
     (requestId: string) =>
-      void navigate({ to: ".", search: (prev) => ({ ...prev, req: requestId }) }),
+      void navigate({ to: ".", search: (prev) => ({ ...prev, mreq: undefined, req: requestId }) }),
     [navigate],
   );
   const show = useCallback(

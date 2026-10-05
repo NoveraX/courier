@@ -8,6 +8,8 @@ import { Segmented } from "@/design/segmented";
 import type { LogFilter, MockLogsSearch } from "@/features/mocks/logs-view";
 import { filterCounts, LOG_FILTERS, logMatches, showsIn } from "@/features/mocks/logs-view";
 import { logsOf } from "@/features/mocks/mock-log";
+import { inspectorOf } from "@/features/requests/inspector-of";
+import { useMockInspector } from "@/inspector/use-mock-inspector";
 import { exportAsJson } from "@/lib/export";
 import { clearMockLogs } from "@/mocks/clear-mock-logs";
 import { useStudioStore } from "@/store";
@@ -47,7 +49,8 @@ function ToolButton({
  * The mock's log: every request it answered, newest first — all of them,
  * the failed ones, the ones chaos failed, or the ones a scenario or an
  * override answered — searchable, paused, exported or cleared, each
- * opening on what it was answered with.
+ * opening its sheet: the answer, what it was asked with, the headers and a
+ * cURL.
  *
  * @returns The Logs tab
  * @example
@@ -59,6 +62,7 @@ export function MockLogsScreen(): React.ReactNode {
   const { server } = useMockServer();
   const search: MockLogsSearch = useSearch({ from: "/mocks/logs" });
   const navigate = useNavigate({ from: "/mocks/logs" });
+  const sheet = useMockInspector();
   const allLogs = useMockStore((s) => s.logs);
   const paused = useMockStore((s) => s.logsPaused);
   const togglePaused = useMockStore((s) => s.toggleLogsPaused);
@@ -71,11 +75,9 @@ export function MockLogsScreen(): React.ReactNode {
   const update = (patch: MockLogsSearch): Promise<void> =>
     navigate({
       search: (prev) => ({
-        req: prev.req,
-        tab: prev.tab,
+        ...inspectorOf(prev),
         show: prev.show,
         q: prev.q,
-        log: prev.log,
         ...patch,
       }),
       replace: true,
@@ -94,7 +96,7 @@ export function MockLogsScreen(): React.ReactNode {
           quiet="subtle"
           options={options}
           value={show}
-          onChange={(next) => update({ show: next === "all" ? undefined : next, log: undefined })}
+          onChange={(next) => update({ show: next === "all" ? undefined : next })}
         />
         <SearchField
           label="Search the log"
@@ -133,9 +135,9 @@ export function MockLogsScreen(): React.ReactNode {
           <MockLogRow
             key={log.id}
             log={log}
-            open={search.log === log.id}
+            selected={sheet.requestId === log.id}
             slowMs={slowMs}
-            onToggle={() => update({ log: search.log === log.id ? undefined : log.id })}
+            onOpen={() => sheet.open(log.id)}
           />
         ))}
       </section>

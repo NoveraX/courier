@@ -78,7 +78,7 @@ describe("what the latest answers looked like", () => {
     ]);
   });
 
-  it("lays sixty cells oldest first, empty ones first, a dropped connection named as one", () => {
+  it("lays sixty cells oldest first, empty ones first, a dropped connection named as one, each naming its request", () => {
     const strip = statusStrip([
       mockLog({ id: "rst", status: 502, error: "Connection Reset (simulated)", path: "/orders" }),
       mockLog({ id: "ok" }),
@@ -86,8 +86,8 @@ describe("what the latest answers looked like", () => {
 
     expect(strip).toHaveLength(60);
     expect(strip[0]).toEqual({ tone: "empty", tip: "" });
-    expect(strip[58]).toEqual({ tone: "ok", tip: "200 · /api/users" });
-    expect(strip[59]).toEqual({ tone: "err", tip: "reset · /orders" });
+    expect(strip[58]).toEqual({ tone: "ok", tip: "200 · /api/users", id: "ok" });
+    expect(strip[59]).toEqual({ tone: "err", tip: "reset · /orders", id: "rst" });
   });
 
   it("counts only the faults chaos injected, not a handler's own errors", () => {

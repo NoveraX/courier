@@ -15,6 +15,7 @@ import type { MockFigure } from "@/features/mocks/dashboard-model";
 import { mockFigures } from "@/features/mocks/dashboard-model";
 import { logsOf } from "@/features/mocks/mock-log";
 import { useNow } from "@/hooks/use-tick";
+import { useMockInspector } from "@/inspector/use-mock-inspector";
 import { openMockWizard } from "@/mocks/wizard/open-mock-wizard";
 import { useAddMockBlocked } from "@/mocks/wizard/use-add-mock-blocked";
 import { useStudioStore } from "@/store";
@@ -74,6 +75,7 @@ export function MocksDashboard(): React.ReactNode {
   const allLogs = useMockStore((s) => s.logs);
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const now = useNow();
+  const sheet = useMockInspector();
   if (!server) return <NoServers />;
   const logs = logsOf(allLogs, server.serverId);
   const figures = mockFigures(server, logs, now, slowMs).map((figure) => ({
@@ -89,6 +91,7 @@ export function MocksDashboard(): React.ReactNode {
           running={server.processStatus === "running"}
           now={now}
           slowMs={slowMs}
+          onOpen={sheet.open}
         />
         <div className="flex flex-col gap-3.5">
           <TopRoutes routes={server.routes} />

@@ -51,6 +51,8 @@ export function latencyHistogram(logs: readonly MockRequestLog[], slowMs: number
 export interface StripCell {
   tone: "ok" | "warn" | "err" | "empty";
   tip: string;
+  /** The request it stands for; an empty slot stands for none. */
+  id?: string | undefined;
 }
 
 /**
@@ -61,7 +63,7 @@ export interface StripCell {
  * @returns Sixty cells
  * @example
  * ```ts
- * statusStrip(logs).at(-1); // { tone: "ok", tip: "200 · /users" }
+ * statusStrip(logs).at(-1); // { tone: "ok", tip: "200 · /users", id: "req-1" }
  * ```
  */
 export function statusStrip(logs: readonly MockRequestLog[]): StripCell[] {
@@ -72,7 +74,7 @@ export function statusStrip(logs: readonly MockRequestLog[]): StripCell[] {
   }));
   const cells = answered.map((log): StripCell => {
     const code = injectedFault(log) === "reset" ? "reset" : mockLogCode(log);
-    return { tone: mockLogTone(log), tip: `${code} · ${log.path}` };
+    return { tone: mockLogTone(log), tip: `${code} · ${log.path}`, id: log.id };
   });
   return [...empty, ...cells];
 }

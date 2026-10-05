@@ -7,6 +7,7 @@ import { logsOf } from "@/features/mocks/mock-log";
 import { networkLive } from "@/features/mocks/network-live";
 import { faultsByType, latencyHistogram, statusStrip } from "@/features/mocks/observed-model";
 import { useNow } from "@/hooks/use-tick";
+import { useMockInspector } from "@/inspector/use-mock-inspector";
 import { setChaos } from "@/mocks/network-commands";
 import { useStudioStore } from "@/store";
 import type { MockServerInfo } from "@/store/mock-slice";
@@ -44,6 +45,7 @@ function NetworkTab({ server }: { server: MockServerInfo }): React.ReactNode {
   const history = useMockStore((s) => s.experimentHistory);
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const now = useNow();
+  const sheet = useMockInspector();
   const logs = logsOf(allLogs, server.serverId);
   const disabled = server.processStatus !== "running";
   const mode = chaosModeOf(server.chaosPreset);
@@ -75,6 +77,7 @@ function NetworkTab({ server }: { server: MockServerInfo }): React.ReactNode {
             bins={latencyHistogram(logs, slowMs)}
             strip={statusStrip(logs)}
             faults={faultsByType(logs)}
+            onOpen={sheet.open}
           />
           <RouteOverridesPanel server={server} disabled={disabled} />
         </div>

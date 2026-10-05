@@ -9,15 +9,13 @@ export type LogFilter = (typeof LOG_FILTERS)[number];
 export interface MockLogsSearch {
   show?: Exclude<LogFilter, "all"> | undefined;
   q?: string | undefined;
-  /** The answer open, by its request id. */
-  log?: string | undefined;
 }
 
 /**
  * Read the Logs tab's parameters from its address.
  *
  * @param raw - The address's parameters
- * @returns Which answers, the search and the answer open, when they differ from the defaults
+ * @returns Which answers and the search, when they differ from the defaults
  * @example
  * ```ts
  * validateMockLogsSearch({ show: "chaos", q: "users" }); // { show: "chaos", q: "users" }
@@ -28,7 +26,6 @@ export function validateMockLogsSearch(raw: Record<string, unknown>): MockLogsSe
   const show = LOG_FILTERS.find((f) => f !== "all" && f === raw.show);
   if (show && show !== "all") search.show = show;
   if (typeof raw.q === "string" && raw.q) search.q = raw.q;
-  if (typeof raw.log === "string" && raw.log) search.log = raw.log;
   return search;
 }
 

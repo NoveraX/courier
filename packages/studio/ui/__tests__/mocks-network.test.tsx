@@ -116,6 +116,22 @@ describe("the network condition", () => {
   });
 });
 
+describe("the status timeline", () => {
+  it("opens the request a cell stands for in its sheet", async () => {
+    useMockStore.setState({
+      logs: [mockLog({ id: "failed", status: 503, error: "HTTP 503 (simulated)" })],
+    });
+    const router = await openShell("/mocks/network");
+
+    await settle(() =>
+      fireEvent.click(screen.getByRole("button", { name: "Open 503 · /api/users" })),
+    );
+
+    expect(router.state.location.search).toMatchObject({ mreq: "failed" });
+    expect(screen.getByRole("complementary", { name: "Mock request" })).toBeTruthy();
+  });
+});
+
 describe("chaos", () => {
   it("picks a mode, sending its rate as the share the mock reads", async () => {
     await openShell("/mocks/network");

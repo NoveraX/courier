@@ -8,6 +8,7 @@ import type { AuditSearch } from "@/features/audit/audit-search";
 import { categoryTally, matchesFinding, severityCounts } from "@/features/audit/finding-filter";
 import { findingEndpoints } from "@/features/audit/finding-view";
 import type { AuditCategory } from "@/features/audit/types";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import { useNow } from "@/hooks/use-tick";
 import { useInspector } from "@/inspector/use-inspector";
 import { useStudioStore } from "@/store";
@@ -53,7 +54,7 @@ export function AuditScreen(): React.ReactNode {
   const [chosen, setChosen] = useState<string | null | undefined>(undefined);
   const openId = chosen === undefined ? (items[0]?.id ?? null) : chosen;
   const update = (next: AuditSearch): void =>
-    void navigate({ search: (prev) => ({ req: prev.req, tab: prev.tab, ...next }), replace: true });
+    void navigate({ search: (prev) => ({ ...inspectorOf(prev), ...next }), replace: true });
   const choose = (cat: AuditCategory): void =>
     update({ ...search, cat: search.cat === cat ? undefined : cat });
   const byId = new Map(requests.map((r) => [r.id, r]));

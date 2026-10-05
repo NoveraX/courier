@@ -1,6 +1,6 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
-
+import { inspectorOf } from "@/features/requests/inspector-of";
 import type { TimelineFilter } from "@/features/requests/timeline-filter";
 import { OPEN_FILTER } from "@/features/requests/timeline-filter";
 import { filterFromSearch, searchFromFilter } from "@/features/requests/timeline-search";
@@ -30,7 +30,7 @@ export function useTimelineFilter(): TimelineFilterControl {
   const setFilter = useCallback(
     (next: TimelineFilter) =>
       void navigate({
-        search: (prev) => ({ req: prev.req, tab: prev.tab, ...searchFromFilter(next) }),
+        search: (prev) => ({ ...inspectorOf(prev), ...searchFromFilter(next) }),
         replace: true,
       }),
     [navigate],

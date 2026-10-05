@@ -125,6 +125,23 @@ describe("the Mocks pages", () => {
     ).toBeTruthy();
   });
 
+  it("open a newest answer in its sheet from the dashboard", async () => {
+    useMockStore.setState({
+      servers: { "api-mock": mockServer() },
+      activeServerId: "api-mock",
+      logs: [mockLog({ id: "newest", timestamp: Date.now(), data: [{ id: 7 }] })],
+    });
+    const router = await openShell("/mocks");
+
+    const activity = within(screen.getByRole("region", { name: "Live activity" }));
+    await act(async () => {
+      fireEvent.click(activity.getByText("/api/users"));
+    });
+
+    expect(router.state.location.search).toMatchObject({ mreq: "newest" });
+    expect(screen.getByRole("complementary", { name: "Mock request" })).toBeTruthy();
+  });
+
   it("switch between servers from the pill's menu", async () => {
     useMockStore.setState({
       servers: {

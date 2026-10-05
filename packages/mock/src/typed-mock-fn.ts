@@ -1,6 +1,8 @@
 import type {
   AnyEndpoint,
   AnySource,
+  GroupAtPath,
+  GroupPaths,
   InferResponse,
   InferVariables,
 } from "@noverax/courier/define";
@@ -30,16 +32,20 @@ export type ExtractVariables<TEndpoint> = TEndpoint extends AnyEndpoint
   ? InferVariables<TEndpoint>
   : unknown;
 
-/** Mocks an endpoint of a group, by the group's name and the endpoint's. */
+/**
+ * Mocks an endpoint of a group, by the group's path and the endpoint's name:
+ * `mock("users", "list")`, or `mock("billing.invoices", "list")` for a group
+ * inside another.
+ */
 export type GroupedMockFn<TSource> = <
-  TGroup extends keyof ApiGroups<TSource> & string,
-  TMethod extends EndpointKeys<ApiGroups<TSource>[TGroup]>,
+  TGroup extends GroupPaths<TSource>,
+  TMethod extends EndpointKeys<GroupAtPath<TSource, TGroup>>,
 >(
   group: TGroup,
   method: TMethod,
 ) => EnhancedMockBuilder<
-  ExtractResponse<ApiGroups<TSource>[TGroup][TMethod]>,
-  ExtractVariables<ApiGroups<TSource>[TGroup][TMethod]>
+  ExtractResponse<GroupAtPath<TSource, TGroup>[TMethod]>,
+  ExtractVariables<GroupAtPath<TSource, TGroup>[TMethod]>
 >;
 
 /**
@@ -76,7 +82,8 @@ export type TypedMockFn<TSource extends AnySource> =
 
 /**
  * An endpoint of a source by name, as a mock lists the endpoints it
- * answers: `group.method`, or the method alone for one outside any group.
+ * answers: `group.method` — `billing.invoices.list` for a group inside
+ * another — or the method alone for one outside any group.
  * Any string for a source whose endpoints are unknown to the type system.
  */
 export type EndpointName<TSource> =
@@ -84,7 +91,6 @@ export type EndpointName<TSource> =
     ? string
     :
         | {
-            [TGroup in keyof ApiGroups<TSource> &
-              string]: `${TGroup}.${EndpointKeys<ApiGroups<TSource>[TGroup]>}`;
-          }[keyof ApiGroups<TSource> & string]
+            [TGroup in GroupPaths<TSource>]: `${TGroup}.${EndpointKeys<GroupAtPath<TSource, TGroup>>}`;
+          }[GroupPaths<TSource>]
         | TopLevelKeys<TSource>;

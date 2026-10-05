@@ -15,6 +15,7 @@ const routes: RouteInfo[] = [
     group: "users",
     endpoint: "list",
     httpMethod: "GET",
+    prefix: "/users",
     path: "",
     fullPath: "/users",
     hasIdParam: false,

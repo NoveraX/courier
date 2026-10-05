@@ -33,6 +33,8 @@ const METHODS = new Set<string>([
  * @param endpoints The group's analyzed endpoints
  * @param group     Group name the handlers are registered under
  * @param config    Request entry point
+ * @param options   `every` gives every HTTP endpoint a route of its own, for a
+ *   group that declares no prefix and so has no catch-alls
  * @returns Nothing; the routes are added to `app`
  * @example
  * ```ts
@@ -46,9 +48,10 @@ export function registerDeclaredRoutes(
   endpoints: MappedEndpoint[],
   group: string,
   config: PrefixRouteConfig,
+  { every = false }: { every?: boolean } = {},
 ): void {
   const own = endpoints
-    .filter(needsOwnRoute)
+    .filter((ep) => (every ? isServedHttp(ep) : needsOwnRoute(ep)))
     .sort((a, b) => bySpecificity(a, b) || headFirst(a, b));
   for (const ep of own) {
     const method = (ep.httpMethod ?? "GET").toUpperCase();
@@ -70,10 +73,13 @@ export function registerDeclaredRoutes(
 }
 
 function needsOwnRoute(ep: MappedEndpoint): boolean {
+  return isServedHttp(ep) && !servedByCatchAll(ep);
+}
+
+/* An HTTP endpoint with a verb the mock serves. */
+function isServedHttp(ep: MappedEndpoint): boolean {
   if (ep.transport === "sse" || ep.transport === "ws") return false;
-  const method = (ep.httpMethod ?? "GET").toUpperCase();
-  if (!METHODS.has(method)) return false;
-  return !servedByCatchAll(ep);
+  return METHODS.has((ep.httpMethod ?? "GET").toUpperCase());
 }
 
 /* A HEAD endpoint's route comes before the GET at its path, which answers HEAD otherwise. */

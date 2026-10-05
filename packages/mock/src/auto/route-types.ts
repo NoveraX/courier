@@ -16,10 +16,21 @@ export interface RouteInfo {
   endpoint: string;
   /** HTTP method (e.g. "GET") */
   httpMethod: string;
+  /**
+   * The prefix `path` is relative to (e.g. "/products"): the group's, joined
+   * after every group's above it; for an endpoint without a group's prefix,
+   * the collection its declared path starts with
+   */
+  prefix: string;
   /** Relative path within group (e.g. "", ":id") */
   path: string;
   /** Full path including prefix (e.g. "/products/:id") */
   fullPath: string;
+  /**
+   * The endpoint's group declares no prefix: it is served at the path it
+   * declares alone, with no catch-all at its collection's prefix
+   */
+  exact?: true | undefined;
   /** Whether path contains an :id parameter */
   hasIdParam: boolean;
   /**

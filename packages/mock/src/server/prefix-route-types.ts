@@ -58,6 +58,11 @@ export interface PrefixMapping {
   methods: string[];
   /** Analyzed endpoints with operation + path info */
   endpoints?: MappedEndpoint[];
+  /**
+   * Its group declares no prefix: each endpoint is served at the path it
+   * declares alone, and no catch-all claims the prefix
+   */
+  exact?: true | undefined;
 }
 
 /** Route config needed by prefix routes — only the request handler entry point */

@@ -1,9 +1,10 @@
+import { parseWSTopic } from "@noverax/courier/internal";
 import { qualifyTopic, unqualifyTopic } from "@noverax/courier/realtime";
 
 /** The endpoint a proxy subscription's topic names. */
 export interface ProxyTopic {
   source: string;
-  /** Empty for a source that declares its endpoints without groups */
+  /** The group's path, `billing.invoices`; empty for an endpoint outside any group */
   group: string;
   method: string;
   /** The topic without its key: `source.group.method` */
@@ -11,8 +12,9 @@ export interface ProxyTopic {
 }
 
 /**
- * Read the endpoint a topic names: `source.group.method`, or `source.method`
- * for a source without groups, then `#` and the key its subscribers share.
+ * Read the endpoint a topic names: `source.group.method` — the group a path
+ * at any depth, `shop.billing.invoices.watch` — or `source.method` for an
+ * endpoint outside any group, then `#` and the key its subscribers share.
  *
  * @param topic - The topic a client subscribes to
  * @returns The endpoint, or `undefined` when the topic names no source
@@ -24,10 +26,8 @@ export interface ProxyTopic {
  */
 export function parseProxyTopic(topic: string): ProxyTopic | undefined {
   const { baseTopic: base } = unqualifyTopic(topic);
-  const [source, second, third, ...rest] = base.split(".");
-  if (!source || !second || rest.length > 0) return undefined;
-  if (third === undefined) return { source, group: "", method: second, base };
-  return third ? { source, group: second, method: third, base } : undefined;
+  const named = parseWSTopic(base);
+  return named && { ...named, base };
 }
 
 /**

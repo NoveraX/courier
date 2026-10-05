@@ -1,7 +1,7 @@
 import type { AnyDefinedApi } from "@noverax/courier/define";
+import { eachGroup } from "@noverax/courier/internal";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { prop } from "../auto/schema-introspect/prop";
 import { isRecord } from "../is-record";
 
 /** Symbol used by Courier core to attach schema metadata to endpoints */
@@ -149,18 +149,11 @@ interface SourceEndpoint {
 }
 
 /* An entry without schema metadata is not an endpoint — a helper a user
-   put beside them — and is left out. */
+   put beside them — and is left out. Groups inside groups are walked too,
+   each named by its path. */
 function* endpointsOf(source: AnyDefinedApi): Generator<SourceEndpoint> {
-  const groups = prop(source, "options", "groups");
-  const grouped: Array<[string, unknown]> = Object.entries(isObject(groups) ? groups : {});
-  for (const [group, members] of grouped) {
-    if (isObject(members)) yield* endpointsIn(group, members);
-  }
+  for (const placed of eachGroup(source)) yield* endpointsIn(placed.path, placed.group);
   yield* endpointsIn("", source);
-}
-
-function isObject(value: unknown): value is object {
-  return typeof value === "object" && value !== null;
 }
 
 function* endpointsIn(group: string, members: object): Generator<SourceEndpoint> {

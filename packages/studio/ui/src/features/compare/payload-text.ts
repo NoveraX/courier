@@ -6,9 +6,8 @@ function asText(value: unknown, indent: number): string {
 }
 
 /**
- * A call's response as text to diff: the validated response, else the
- * one received, else its raw text — or, for a call that got no body, the
- * error it ended with.
+ * A call's response as text to diff: the one received, a text as it
+ * came — or, for a call that got no body, the error it ended with.
  *
  * @param r - The call
  * @param indent - The spaces JSON is indented with, as Studio's settings set
@@ -19,15 +18,13 @@ function asText(value: unknown, indent: number): string {
  * ```
  */
 export function responseText(r: RequestEntry, indent: number): string {
-  const body = r.validatedResponse ?? r.data;
-  if (body !== undefined && body !== null) return asText(body, indent);
-  if (r.rawResponse) return r.rawResponse;
+  if (typeof r.data === "string") return r.data;
+  if (r.data !== undefined && r.data !== null) return asText(r.data, indent);
   return r.error ? asText(r.error, indent) : "";
 }
 
 /**
- * A call's variables as text to diff: the validated ones, else the ones
- * passed.
+ * A call's variables as text to diff, as it passed them.
  *
  * @param r - The call
  * @param indent - The spaces JSON is indented with
@@ -38,5 +35,5 @@ export function responseText(r: RequestEntry, indent: number): string {
  * ```
  */
 export function variablesText(r: RequestEntry, indent: number): string {
-  return asText(r.validatedVariables ?? r.variables, indent);
+  return asText(r.variables, indent);
 }

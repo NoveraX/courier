@@ -31,8 +31,8 @@ export function buildCurlSnippet(input: SnippetInput): string {
 
 /** Build a fetch() snippet */
 export function buildFetchSnippet(input: SnippetInput): string {
-  const { url, method, body } = input;
-  const headers = mergeContentType(input.headers, body, method);
+  const { url, method, body, bodyFile } = input;
+  const headers = mergeContentType(input.headers, bodyFile ?? body, method);
   const opts: string[] = [];
   if (method !== "GET") opts.push(`  method: "${method}",`);
 
@@ -43,13 +43,31 @@ export function buildFetchSnippet(input: SnippetInput): string {
     opts.push(`  headers: {\n${hdrStr}\n  },`);
   }
 
-  if (body && method !== "GET") {
+  if (bodyFile !== undefined && method !== "GET") {
+    opts.push("  body: JSON.stringify(wholeBody),");
+  } else if (body && method !== "GET") {
     const json = safeStringify(body, 2).replace(/\n/g, "\n  ");
     opts.push(`  body: JSON.stringify(${json}),`);
   }
 
-  if (opts.length === 0) return `const response = await fetch("${url}");`;
-  return `const response = await fetch("${url}", {\n${opts.join("\n")}\n});`;
+  const lead = bodyFile !== undefined && method !== "GET" ? `${wholeBodyNote(bodyFile)}\n` : "";
+  if (opts.length === 0) return `${lead}const response = await fetch("${url}");`;
+  return `${lead}const response = await fetch("${url}", {\n${opts.join("\n")}\n});`;
+}
+
+/**
+ * The line over a snippet whose body is too large to write out: where the
+ * whole body is, for the `wholeBody` the snippet sends.
+ *
+ * @param bodyFile - The file the whole body downloads as
+ * @returns The comment
+ * @example
+ * ```ts
+ * wholeBodyNote("api.orders.create-request.json"); // "// wholeBody: the whole body, as Download whole saves it in api.orders.create-request.json"
+ * ```
+ */
+export function wholeBodyNote(bodyFile: string): string {
+  return `// wholeBody: the whole body, as Download whole saves it in ${bodyFile}`;
 }
 
 /** Auto-add Content-Type: application/json when body is present */

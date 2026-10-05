@@ -69,8 +69,10 @@ export function responseView(r: RequestEntry): PayloadView {
   if (r.validated?.response === "passed") chips.push({ label: "schema ok", tone: "ok" });
   if (r.validated?.response === "failed") chips.push({ label: "schema mismatch", tone: "warn" });
   const issues = r.validated?.response === "failed" ? issuesOf(r) : NONE;
-  if (r.data !== undefined && r.data !== null) return { value: r.data, chips, issues };
-  if (r.rawResponse) return { text: r.rawResponse, chips, issues };
+  if (typeof r.data === "string") return { text: r.data, cutFrom: r.dataCutFrom, chips, issues };
+  if (r.data !== undefined && r.data !== null) {
+    return { value: r.data, cutFrom: r.dataCutFrom, chips, issues };
+  }
   const title = r.statusCode === 204 ? "204 No Content" : "No content";
   return { empty: { title, detail: "The server answered with an empty body." }, chips, issues };
 }
@@ -92,7 +94,7 @@ export function requestView(r: RequestEntry): PayloadView {
   if (r.validated?.variables === "failed")
     chips.push({ label: "refused by the schema", tone: "err" });
   const issues = r.validated?.variables === "failed" ? issuesOf(r) : NONE;
-  const value = r.variables ?? r.sentBody;
+  const value = r.variables;
   if (isEmpty(value)) {
     return {
       empty: { title: "No variables", detail: "The call was made without input." },
@@ -100,5 +102,5 @@ export function requestView(r: RequestEntry): PayloadView {
       issues,
     };
   }
-  return { value, chips, issues };
+  return { value, cutFrom: r.variablesCutFrom, chips, issues };
 }

@@ -37,7 +37,7 @@ export function CutNote({ bytes, onWhole, file }: CutNoteProps): React.ReactNode
           </>
         ) : (
           <>
-            The body is {size}, too large to write out: the cURL sends it from{" "}
+            The body is {size}, too large to write out: the snippet sends it from{" "}
             <code className="font-mono text-fg">{file}</code>, which Download whole saves.
           </>
         )}

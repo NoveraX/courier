@@ -16,9 +16,10 @@ export interface RequestEntry {
   group: string | undefined;
   method: string;
   httpMethod?: string | undefined;
+  /** The variables, or a part of them when they were too large for their event; see `variablesCutFrom`. */
   variables: unknown;
-  validatedVariables?: unknown;
-  sentBody?: unknown;
+  /** The size in bytes of the whole variables as JSON, when `variables` is a part of them. */
+  variablesCutFrom?: number | undefined;
   mode: "direct" | "proxy";
   type?: "query" | "mutation" | undefined;
   status: RequestStatus;
@@ -26,9 +27,10 @@ export interface RequestEntry {
   timing?: RequestTiming | undefined;
   proxyTiming?: ProxyTiming | undefined;
   size?: number | undefined;
+  /** The answer, or a part of it when it was too large for its event; see `dataCutFrom`. */
   data?: unknown;
-  rawResponse?: string | undefined;
-  validatedResponse?: unknown;
+  /** The size in bytes of the whole answer as JSON, when `data` is a part of it. */
+  dataCutFrom?: number | undefined;
   requestHeaders?: Record<string, string> | undefined;
   headers?: Record<string, string> | undefined;
   middlewareHeaders?: Record<string, string[]> | undefined;

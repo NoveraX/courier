@@ -3,8 +3,8 @@ import { toast } from "sonner";
 import type { BodyPart } from "@/features/mocks/whole-body-file";
 import { wholeBodyFile } from "@/features/mocks/whole-body-file";
 import { downloadFile } from "@/lib/export";
+import { askForBody } from "@/socket/ask-for-body";
 import type { MockRequestLog } from "@/store/mock-slice";
-import { sendMockCommand } from "./send-mock-command";
 
 /**
  * Download the whole body of a request the mock logged only a part of: the
@@ -19,15 +19,15 @@ import { sendMockCommand } from "./send-mock-command";
  * ```
  */
 export async function downloadWholeBody(log: MockRequestLog, part: BodyPart): Promise<void> {
-  const reply = await sendMockCommand({
-    action: "mock:request:body",
+  const answer = await askForBody({
+    event: "mock:body",
     serverId: log.serverId,
     requestId: log.id,
     part,
   });
-  if (!reply.ok || typeof reply.data !== "string") {
-    toast.error(`Could not download the whole ${part} body`, { description: reply.error });
+  if (!answer.ok) {
+    toast.error(`Could not download the whole ${part} body`, { description: answer.error });
     return;
   }
-  downloadFile(reply.data, wholeBodyFile(log, part));
+  downloadFile(answer.data, wholeBodyFile(log, part));
 }

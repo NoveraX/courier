@@ -5,8 +5,6 @@ import { isPlainObject } from "@/socket/is-plain-object";
 export interface MockCommandReply {
   ok: boolean;
   error?: string;
-  /** What the command answered with, such as a request's whole body. */
-  data?: unknown;
 }
 
 /** A command for one mock Studio runs: what to do, and the fields that action reads. */
@@ -47,7 +45,7 @@ export function sendMockCommand(command: MockCommand): Promise<MockCommandReply>
 /* Studio's answer, read as data: it arrives over the socket. */
 function replyOf(raw: unknown): MockCommandReply {
   if (!isPlainObject(raw) || typeof raw.ok !== "boolean") return NO_ANSWER;
-  if (raw.ok) return raw.data === undefined ? { ok: true } : { ok: true, data: raw.data };
+  if (raw.ok) return { ok: true };
   const error = typeof raw.error === "string" ? raw.error : "The mock did not run the command.";
   return { ok: false, error };
 }

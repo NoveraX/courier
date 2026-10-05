@@ -2,6 +2,7 @@
  * Session export — Postman collection format.
  */
 
+import { cutBodyNote } from "./cut-body-note";
 import { statusText } from "./session-export-utils";
 import type { SavedRequest, SavedSession } from "./session-types";
 
@@ -19,6 +20,7 @@ interface PostmanItem {
     url: string;
     header: Array<{ key: string; value: string }>;
     body?: { mode: string; raw: string; options: { raw: { language: string } } };
+    description?: string;
   };
   response: PostmanResponse[];
 }
@@ -54,10 +56,16 @@ function requestToPostmanItem(req: SavedRequest): PostmanItem {
             },
           }
         : {}),
+      ...(req.variablesCutFrom !== undefined && {
+        description: cutBodyNote(req.variablesCutFrom),
+      }),
     },
     response: [
       {
-        name: `${req.statusCode ?? 0} response`,
+        name:
+          req.dataCutFrom === undefined
+            ? `${req.statusCode ?? 0} response`
+            : `${req.statusCode ?? 0} response — ${cutBodyNote(req.dataCutFrom)}`,
         status: statusText(req.statusCode),
         code: req.statusCode ?? 0,
         header: req.responseHeaders

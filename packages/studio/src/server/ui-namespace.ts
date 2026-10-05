@@ -29,6 +29,7 @@ import type { StudioView } from "./storage/studio-view";
 import { type StudioInfo, studioInfo } from "./studio-info";
 import type { StudioToken } from "./studio-token";
 import type { StudioDemo } from "./types";
+import { bindBodies } from "./ui-bodies";
 import { bindPlaygroundHistory } from "./ui-playground-history";
 import { guardUiWrites, type VisitorPolicy } from "./ui-token-guard";
 import { bindView } from "./ui-view";
@@ -166,6 +167,9 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
       const unknownMock = { ok: false, error: `No mock is named "${command.serverId}".` };
       answer(ack, reply ? await reply : unknownMock);
     });
+
+    /* A request's whole body, which its event carried only a part of. */
+    bindBodies(socket, (command) => mockManager?.forwardStoreCommand(command));
 
     // Managed mock server lifecycle commands
     socket.on("mock:managed", (rawData: unknown) => {

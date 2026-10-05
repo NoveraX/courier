@@ -35,6 +35,8 @@ export interface SavedRequest {
   method: string;
   httpMethod?: string | undefined;
   variables: unknown;
+  /** The size in bytes of the whole variables, when `variables` is a part of them. */
+  variablesCutFrom?: number | undefined;
   mode: "direct" | "proxy";
   type?: "query" | "mutation" | undefined;
   status: string;
@@ -42,6 +44,8 @@ export interface SavedRequest {
   timing?: Record<string, number> | undefined;
   size?: number | undefined;
   data?: unknown;
+  /** The size in bytes of the whole answer, when `data` is a part of it. */
+  dataCutFrom?: number | undefined;
   requestHeaders?: Record<string, string> | undefined;
   responseHeaders?: Record<string, string> | undefined;
   error?: { type: string; status?: number; message: string } | undefined;

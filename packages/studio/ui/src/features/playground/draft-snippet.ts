@@ -41,7 +41,6 @@ export function draftSnippet(
     transport: endpoint.transport === "http" ? undefined : endpoint.transport,
     requestHeaders: values.headers,
     variables: values.variables,
-    sentBody: undefined,
     streamEvents: undefined,
   };
   return requestSnippet(draft, flavor, { redact: false }).code;

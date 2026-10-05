@@ -108,7 +108,7 @@ export function withFlag(
  */
 export function fieldsOf(shape: unknown): NodeField[] {
   if (typeof shape !== "object" || shape === null) return [];
-  return Object.entries(shape).map(([name, schema]) => ({ name, schema }));
+  return Object.entries(shape).map(([name, schema]: [string, unknown]) => ({ name, schema }));
 }
 
 /**

@@ -3,19 +3,19 @@
  *
  * Output format:
  *   [Courier] [Context] message
- *   with purple badge, colored context, and styled message
+ *   with a badge in Courier's blue, a coloured context, and a styled message
  */
 
 import type { Logger, LogLevel } from "./types";
 
 const BADGE_STYLE = [
-  "background: #7C3AED; color: #fff; font-weight: 700",
+  "background: #1C63D6; color: #fff; font-weight: 700",
   "padding: 1px 6px; border-radius: 3px; font-size: 11px",
 ].join("; ");
 
 const CONTEXT_STYLES: Record<LogLevel, string> = {
   debug: "color: #71717A; font-weight: 600",
-  info: "color: #A78BFA; font-weight: 600",
+  info: "color: #2E74EA; font-weight: 600",
   warn: "color: #FBBF24; font-weight: 600",
   error: "color: #F87171; font-weight: 600",
 };

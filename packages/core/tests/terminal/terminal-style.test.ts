@@ -1,6 +1,6 @@
 /**
  * The style a stream's colour level gives: nothing at all without colour;
- * otherwise the terminal's own 16 status colours, the brand violet in the
+ * otherwise the terminal's own 16 status colours, the brand blue in the
  * richest form the terminal shows, and nested styles that keep the outer
  * one after the inner closes.
  */
@@ -15,10 +15,10 @@ describe("createTerminalStyle", () => {
     expect(style.bold(style.brand(style.red("text")))).toBe("text");
   });
 
-  it("paints the brand violet in the richest form the terminal shows", () => {
-    expect(createTerminalStyle(24, true).brand("C")).toBe("\x1b[38;2;139;92;246mC\x1b[39m");
-    expect(createTerminalStyle(8, true).brand("C")).toBe("\x1b[38;5;99mC\x1b[39m");
-    expect(createTerminalStyle(4, true).brand("C")).toBe("\x1b[35mC\x1b[39m");
+  it("paints the brand blue in the richest form the terminal shows", () => {
+    expect(createTerminalStyle(24, true).brand("C")).toBe("\x1b[38;2;46;116;234mC\x1b[39m");
+    expect(createTerminalStyle(8, true).brand("C")).toBe("\x1b[38;5;33mC\x1b[39m");
+    expect(createTerminalStyle(4, true).brand("C")).toBe("\x1b[34mC\x1b[39m");
   });
 
   it("uses the terminal's own colours for status, at every level", () => {

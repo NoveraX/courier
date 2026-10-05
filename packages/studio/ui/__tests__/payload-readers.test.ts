@@ -101,7 +101,7 @@ describe("the payload readers", () => {
     };
 
     expect(readNetworkConfig(sent)).toEqual({
-      latency: { min: 300, max: 900, jitter: 150 },
+      latency: { min: 300, max: 900, jitter: 150, distribution: "uniform" },
       errorRate: 0.1,
       faultWeights: [{ type: "500", weight: 100 }],
       bandwidth: 0,
@@ -111,5 +111,17 @@ describe("the payload readers", () => {
     });
     expect(readNetworkConfig({ ...sent, latency: "3g" })).toBeUndefined();
     expect(readNetworkConfig({ ...sent, errorRate: "high" })).toBeUndefined();
+  });
+
+  it("keep the shape the mock sends beside its delays in the delays", () => {
+    const sent = { latency: { min: 300, max: 900 }, errorRate: 0, distribution: "log-normal" };
+
+    expect(readNetworkConfig(sent)?.latency).toEqual({
+      min: 300,
+      max: 900,
+      distribution: "log-normal",
+    });
+    expect(readNetworkConfig({ ...sent, latency: 0 })?.latency).toBe(0);
+    expect(readNetworkConfig({ ...sent, distribution: "spiky" })).toBeUndefined();
   });
 });

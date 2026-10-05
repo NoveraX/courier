@@ -1,5 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { useImport } from "@/apis/use-import";
 import { useRegistry } from "@/apis/use-registry";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
@@ -13,7 +14,6 @@ import { NoConfigState } from "./no-config-state";
 import { RegistryCard } from "./registry-card";
 import { RemoveImportDialog } from "./remove-import-dialog";
 import { ScannedCard } from "./scanned-card";
-import { useImport } from "./use-import";
 import { useManage } from "./use-manage";
 import { useRemoveImport } from "./use-remove-import";
 

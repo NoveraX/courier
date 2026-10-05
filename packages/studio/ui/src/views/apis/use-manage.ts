@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useState } from "react";
-
+import type { PlanConsent } from "@/features/apis/types-file-plan";
 import type {
   EndpointInventory,
   ManagePreviewResult,
@@ -12,7 +12,6 @@ import type {
   ParsedSpec,
   SourceSummary,
 } from "./types";
-import type { PlanConsent } from "./types-file-plan";
 import { useInventoryLoaders } from "./use-manage-loaders";
 import { useManagePlan } from "./use-manage-plan";
 import { type ManageSelection, useManageSelection } from "./use-manage-selection";

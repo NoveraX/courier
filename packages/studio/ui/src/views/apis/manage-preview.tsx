@@ -5,9 +5,9 @@
 import { AlertTriangle } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import type { PlanConsent } from "@/features/apis/types-file-plan";
 import { FilePlanView } from "./file-plan-view";
 import type { ManagePreviewResult } from "./types";
-import type { PlanConsent } from "./types-file-plan";
 
 interface ManagePreviewProps {
   preview: ManagePreviewResult;

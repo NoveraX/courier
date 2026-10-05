@@ -8,8 +8,8 @@ import { describe, expect, it } from "vitest";
 import { nextTheme } from "@/app-config";
 import { toggleComment } from "@/features/playground/jsonc-helpers";
 import type { RequestEntry } from "@/store/types";
+import { deriveSourceName } from "../src/features/apis/derive-source-name";
 import { computeHistogram } from "../src/views/analytics/compute-histogram";
-import { deriveSourceName } from "../src/views/apis/derive-source-name";
 import type { ParsedSpec } from "../src/views/apis/types";
 import { computeTextDiff } from "../src/views/compare/text-diff";
 

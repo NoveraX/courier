@@ -1,6 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import { pendingLabel } from "./file-plan-labels";
-import type { FilePlanSummary } from "./types-file-plan";
+import { pendingLabel } from "@/features/apis/file-plan-labels";
+import type { FilePlanSummary } from "@/features/apis/types-file-plan";
 
 interface PendingProps {
   pending: FilePlanSummary["pending"];

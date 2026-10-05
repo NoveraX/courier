@@ -4,9 +4,14 @@
  * answers a plan it will not apply unasked with 409 and the plan.
  */
 
+import type { FilePlanSummary, KeptReason } from "@/features/apis/types-file-plan";
 import { post } from "@/lib/api-client";
-import type { GenerateOptions, ManagePreviewResult, ParsedSpec, SpecDiff } from "./types";
-import type { FilePlanSummary, KeptReason } from "./types-file-plan";
+import type {
+  GenerateOptions,
+  ManagePreviewResult,
+  ParsedSpec,
+  SpecDiff,
+} from "@/views/apis/types";
 
 /** The plan a request applies, as the user saw it, and the pending steps they allowed. */
 export interface PlanQuote {

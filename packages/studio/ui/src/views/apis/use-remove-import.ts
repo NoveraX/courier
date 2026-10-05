@@ -1,15 +1,15 @@
 import { useCallback, useRef, useState } from "react";
-import { fileCount, unremovedNote } from "./applied-notes";
 import {
   type AppliedFiles,
   previewRemoval,
   type RemovalConfigNotes,
   removeImport,
-} from "./client-file-changes";
-import { consentBody, consentFor, toggleConfirmed } from "./plan-consent";
-import { readPlanRefusal } from "./plan-refusal";
-import { readFilePlan } from "./read-file-plan";
-import type { PlanConsent } from "./types-file-plan";
+} from "@/apis/client-file-changes";
+import { fileCount, unremovedNote } from "@/features/apis/applied-notes";
+import { consentBody, consentFor, toggleConfirmed } from "@/features/apis/plan-consent";
+import { readPlanRefusal } from "@/features/apis/plan-refusal";
+import { readFilePlan } from "@/features/apis/read-file-plan";
+import type { PlanConsent } from "@/features/apis/types-file-plan";
 
 /** The remove dialog: the import it is for, and what removing it does. */
 export interface UseRemoveImportReturn {

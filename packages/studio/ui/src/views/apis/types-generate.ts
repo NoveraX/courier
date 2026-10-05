@@ -8,7 +8,7 @@
 import type { ProxyPath } from "@noverax/courier";
 import type { SchemaField } from "@noverax/courier-studio-core";
 
-import type { PlanConsent } from "./types-file-plan";
+import type { PlanConsent } from "@/features/apis/types-file-plan";
 import type { ParsedSpec } from "./types-parsed-spec";
 
 // ── Generate options ────────────────────────────────────────────────────────

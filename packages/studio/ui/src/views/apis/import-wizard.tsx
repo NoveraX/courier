@@ -6,6 +6,7 @@
  * write is under way.
  */
 
+import type { UseImportReturn } from "@/apis/use-import";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DeclareStepView } from "./declare-step";
 import { ImportStepView } from "./import-step";
@@ -15,7 +16,6 @@ import { OptionsStepView } from "./options-step";
 import { PreviewStepView } from "./preview-step";
 import { SelectStepView } from "./select-step";
 import type { ImportStep } from "./types";
-import type { UseImportReturn } from "./use-import";
 
 interface ImportWizardProps {
   wizard: UseImportReturn;

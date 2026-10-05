@@ -6,8 +6,8 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { consentBody, consentFor, toggleConfirmed } from "../src/views/apis/plan-consent";
-import { readFilePlan } from "../src/views/apis/read-file-plan";
+import { consentBody, consentFor, toggleConfirmed } from "../src/features/apis/plan-consent";
+import { readFilePlan } from "../src/features/apis/read-file-plan";
 
 const PLAN = {
   digest: "plan-1",

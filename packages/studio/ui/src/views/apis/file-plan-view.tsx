@@ -1,7 +1,7 @@
+import { KEPT_LABEL, writeLabel } from "@/features/apis/file-plan-labels";
+import type { FilePlanSummary } from "@/features/apis/types-file-plan";
 import { FilePlanBlocked } from "./file-plan-blocked";
-import { KEPT_LABEL, writeLabel } from "./file-plan-labels";
 import { FilePlanPending } from "./file-plan-pending";
-import type { FilePlanSummary } from "./types-file-plan";
 
 interface FilePlanViewProps {
   plan: FilePlanSummary;

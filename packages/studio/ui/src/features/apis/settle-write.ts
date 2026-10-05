@@ -1,7 +1,7 @@
 import { isPlainObject } from "@/socket/is-plain-object";
+import type { ImportState } from "@/views/apis/types";
 import { appliedMessage } from "./applied-notes";
 import { readImportDeclaration } from "./read-import-declaration";
-import type { ImportState } from "./types";
 
 /** What the import wizard does once Studio wrote an import's files. */
 export interface WriteSettlement {

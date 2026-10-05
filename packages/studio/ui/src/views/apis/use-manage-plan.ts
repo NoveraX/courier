@@ -1,11 +1,11 @@
 import { useCallback, useState } from "react";
-import { appliedMessage, countsOf } from "./applied-notes";
-import { applyManage, previewManage } from "./client-file-changes";
-import { consentBody, consentFor, toggleConfirmed } from "./plan-consent";
-import { readPlanRefusal } from "./plan-refusal";
-import { readFilePlan } from "./read-file-plan";
+import { applyManage, previewManage } from "@/apis/client-file-changes";
+import { appliedMessage, countsOf } from "@/features/apis/applied-notes";
+import { consentBody, consentFor, toggleConfirmed } from "@/features/apis/plan-consent";
+import { readPlanRefusal } from "@/features/apis/plan-refusal";
+import { readFilePlan } from "@/features/apis/read-file-plan";
+import type { PlanConsent } from "@/features/apis/types-file-plan";
 import type { ManagePreviewResult, ManageStep, ParsedSpec } from "./types";
-import type { PlanConsent } from "./types-file-plan";
 import { serializeSets } from "./use-manage-helpers";
 
 /** What the manage dialog applies, and how it reports. */

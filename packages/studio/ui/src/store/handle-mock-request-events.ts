@@ -30,6 +30,7 @@ export function handleRequestStart(serverId: string, event: MockEvent): void {
     endpoint: str(event.endpoint),
     source: readOneOf(event.source, ROUTE_SOURCES),
     variables: event.variables,
+    variablesCutFrom: optNum(event.variablesCutFrom),
     requestHeaders: readStringRecord(event.requestHeaders),
   });
 }
@@ -50,6 +51,7 @@ export function handleRequestEnd(serverId: string, event: MockEvent): void {
     status,
     duration,
     data: event.data,
+    dataCutFrom: optNum(event.dataCutFrom),
     responseHeaders: readStringRecord(event.responseHeaders),
   };
   useMockStore.setState({ logs: updated });

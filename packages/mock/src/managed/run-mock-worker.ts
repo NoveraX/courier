@@ -8,6 +8,7 @@
  */
 
 import { dirname, resolve } from "node:path";
+import { createKeptBodies } from "@noverax/courier/internal";
 
 import { createAutoMockServer } from "../auto/create-auto-server";
 import { analyzeRoutes, getSourceGroupNames } from "../auto/route-analyzer";
@@ -120,8 +121,9 @@ async function start(
     groupNames: getSourceGroupNames(definition.source),
     seed: seedOptionsOf(definition.seed),
     feed: createStoreFeed(server.store),
+    bodies: createKeptBodies(),
   };
-  wireRequestHooks(served.server, served.feed);
+  wireRequestHooks(served);
   reportHalts(served.server);
   const info = await served.server.start();
   if (stopping()) return served;

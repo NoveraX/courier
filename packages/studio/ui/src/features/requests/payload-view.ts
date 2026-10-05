@@ -11,6 +11,8 @@ export interface PayloadChip {
 export interface PayloadView {
   /** The payload to show as JSON, when there is one. */
   value?: unknown;
+  /** The size in bytes of the whole payload, when `value` is a part of it. */
+  cutFrom?: number | undefined;
   /** The answer as text, when it is not JSON. */
   text?: string | undefined;
   /** What the tab says in place of a payload. */

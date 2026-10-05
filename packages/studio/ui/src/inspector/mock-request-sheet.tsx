@@ -1,24 +1,21 @@
 import { motion } from "motion/react";
 import { useState } from "react";
 
-import { CodeLines } from "@/design/code/code-lines";
 import { EASE_OUT, revealAfter, SWAP_DURATION } from "@/design/motion";
 import { Reveal } from "@/design/reveal";
 import { SheetFrame } from "@/design/sheet-frame";
 import { mockRequestCells } from "@/features/mocks/mock-request-cells";
 import type { MockRequestView } from "@/features/mocks/mock-request-view";
 import type { InspectorTab } from "@/features/requests/inspector-tabs";
-import { copyToClipboard } from "@/lib/clipboard";
+import { downloadWholeBody } from "@/mocks/download-whole-body";
 import type { MockRequestLog } from "@/store/mock-slice";
 import { MockRequestHeader } from "./mock-request-header";
 import { StatCellGrid } from "./stat-cell-grid";
 import { TabBar } from "./tab-bar";
-import { CodeToolbar } from "./tabs/code-toolbar";
+import { MockCurlTab } from "./tabs/mock-curl-tab";
 import { MockHeadersTab } from "./tabs/mock-headers-tab";
 import type { PayloadMode } from "./tabs/payload-tab";
 import { PayloadTab } from "./tabs/payload-tab";
-
-const CURL_MODES = [{ value: "curl", label: "cURL" }] as const;
 
 interface MockRequestSheetProps {
   log: MockRequestLog;
@@ -32,27 +29,32 @@ interface MockRequestSheetProps {
   onClose: () => void;
 }
 
-function Content({ view, tab }: { view: MockRequestView; tab: InspectorTab }): React.ReactNode {
+interface ContentProps {
+  log: MockRequestLog;
+  view: MockRequestView;
+  tab: InspectorTab;
+}
+
+function Content({ log, view, tab }: ContentProps): React.ReactNode {
   const [mode, setMode] = useState<PayloadMode>("tree");
   if (tab === "headers") return <MockHeadersTab groups={view.headers} />;
   if (tab === "snippets")
     return (
-      <div className="flex flex-col gap-3 px-4.5 pt-4.5 pb-7">
-        <CodeToolbar
-          label="Snippet"
-          modes={CURL_MODES}
-          mode="curl"
-          onMode={() => {}}
-          chips={view.redacted ? [{ label: "credentials redacted", tone: "muted" }] : []}
-          onCopy={() => void copyToClipboard(view.curl, "the snippet")}
-        />
-        <div className="overflow-hidden rounded-panel border border-line bg-inset">
-          <CodeLines variant="panel" code={view.curl} />
-        </div>
-      </div>
+      <MockCurlTab
+        view={view}
+        bodyBytes={log.variablesCutFrom}
+        onWhole={() => void downloadWholeBody(log, "request")}
+      />
     );
-  const payload = tab === "request" ? view.request : view.response;
-  return <PayloadTab view={payload} mode={mode} onMode={setMode} />;
+  const part = tab === "request" ? "request" : "response";
+  return (
+    <PayloadTab
+      view={view[part]}
+      mode={mode}
+      onMode={setMode}
+      onWhole={() => void downloadWholeBody(log, part)}
+    />
+  );
 }
 
 /**
@@ -109,7 +111,7 @@ export function MockRequestSheet(props: MockRequestSheetProps): React.ReactNode 
         transition={opening ? revealAfter(3) : { duration: SWAP_DURATION, ease: EASE_OUT }}
         className="min-h-0 flex-1 overflow-auto"
       >
-        <Content view={view} tab={tab} />
+        <Content log={log} view={view} tab={tab} />
       </motion.div>
     </SheetFrame>
   );

@@ -38,6 +38,13 @@ export {
   type StudioHooks,
   studioHooks,
 } from "../studio";
+export { CARRIED_BODY_BYTES, type CarriedBody, carriedBody } from "../studio/carried-body";
+export {
+  type BodyPart,
+  createKeptBodies,
+  KEPT_BODY_BYTES,
+  type KeptBodies,
+} from "../studio/kept-bodies";
 export {
   type Banner,
   type BannerRow,

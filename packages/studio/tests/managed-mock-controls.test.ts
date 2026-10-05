@@ -245,7 +245,7 @@ describe("the Reset store control of a managed mock", () => {
 });
 
 describe("the Store view's changes to a managed mock", () => {
-  it("are answered with whether the mock made them", async () => {
+  it("are answered with whether the mock made them, and what it made", async () => {
     const mock = await startMock();
 
     const created = await mock.pm.sendCommand("apiMock", {
@@ -260,7 +260,7 @@ describe("the Store view's changes to a managed mock", () => {
       data: { name: "Nobody" },
     });
 
-    expect(created).toEqual({ ok: true });
+    expect(created).toEqual({ ok: true, data: { id: 4, name: "Extra" } });
     expect(missing).toEqual({ ok: false, error: "users has no record with id 999" });
   }, 30_000);
 });

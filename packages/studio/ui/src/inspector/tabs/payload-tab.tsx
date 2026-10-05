@@ -9,6 +9,7 @@ import type { PayloadView } from "@/features/requests/payload-view";
 import { copyToClipboard } from "@/lib/clipboard";
 import { JsonTreeView } from "../json-tree-view";
 import { CodeEmpty, CodeToolbar } from "./code-toolbar";
+import { CutNote } from "./cut-note";
 
 /** How a payload shows: as a tree, or as the JSON text. */
 export type PayloadMode = "tree" | "raw";
@@ -22,6 +23,8 @@ interface PayloadTabProps {
   view: PayloadView;
   mode: PayloadMode;
   onMode: (mode: PayloadMode) => void;
+  /** Downloads the whole payload, when the view shows a part of it and the whole can be had. */
+  onWhole?: (() => void) | undefined;
 }
 
 /**
@@ -36,7 +39,7 @@ interface PayloadTabProps {
  * <PayloadTab view={responseView(request)} mode={mode} onMode={setMode} />
  * ```
  */
-export function PayloadTab({ view, mode, onMode }: PayloadTabProps): React.ReactNode {
+export function PayloadTab({ view, mode, onMode, onWhole }: PayloadTabProps): React.ReactNode {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const hasValue = view.value !== undefined;
   const text = hasValue ? JSON.stringify(view.value, null, 2) : view.text;
@@ -70,6 +73,7 @@ export function PayloadTab({ view, mode, onMode }: PayloadTabProps): React.React
           text === undefined ? undefined : () => void copyToClipboard(text, "to the clipboard")
         }
       />
+      {view.cutFrom !== undefined && <CutNote bytes={view.cutFrom} onWhole={onWhole} />}
       {view.empty && <CodeEmpty icon={Inbox} title={view.empty.title} detail={view.empty.detail} />}
       {hasValue && mode === "tree" && (
         <JsonTreeView

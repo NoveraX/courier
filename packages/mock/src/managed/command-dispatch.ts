@@ -3,6 +3,7 @@
  */
 
 import type { MockServer } from "../server/create-mock-server";
+import { answerBodyCommand } from "./body-command";
 import type { DescribedRoute } from "./describe-route";
 import { handleChaosCommand, handleNetworkCommand } from "./network-commands";
 import { buildScenarioMeta } from "./scenario-meta";
@@ -29,6 +30,11 @@ export function handleCommand(
     return;
   }
 
+  if (action === "mock:request:body") {
+    const result = answerBodyCommand(served.bodies, msg.command);
+    send({ type: "command-result", requestId: msg.requestId, ...result });
+    return;
+  }
   /* A page whose copy of the store fell out of step with it asks for it whole. */
   if (action === "mock:store:resend") {
     feed.resend();

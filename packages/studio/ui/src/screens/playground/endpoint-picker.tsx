@@ -2,7 +2,7 @@ import { Command } from "cmdk";
 import { Check, ChevronsUpDown, Search, Server } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useState } from "react";
-
+import { POP_MOTION } from "@/design/overlay-motion";
 import type { PlaygroundEndpoint } from "@/features/playground/endpoint-choices";
 import { choiceRows } from "@/features/playground/endpoint-choices";
 import { cn } from "@/lib/utils";
@@ -77,7 +77,10 @@ export function EndpointPicker({
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-50 w-[min(460px,calc(100vw-40px))] animate-pop-in overflow-hidden rounded-dialog bg-panel shadow-overlay"
+          className={cn(
+            "z-50 w-[min(460px,calc(100vw-40px))] overflow-hidden rounded-dialog bg-panel shadow-overlay",
+            POP_MOTION,
+          )}
         >
           <Command loop shouldFilter={false} label="Endpoints">
             <div className="flex h-10.5 items-center gap-2 border-b border-line px-3">

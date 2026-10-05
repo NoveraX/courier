@@ -94,6 +94,12 @@
 
   --animate-pulse-live: courier-pulse 1.6s ease-in-out infinite;
   --animate-pop-in: courier-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-pop-out: courier-pop-out 0.12s cubic-bezier(0.4, 0, 1, 1) both;
+  /* A dialog rises out of a soft blur over a scrim that fades in, and sinks back as it closes. */
+  --animate-dialog-in: courier-dialog-in 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-dialog-out: courier-dialog-out 0.16s cubic-bezier(0.4, 0, 1, 1) both;
+  --animate-scrim-in: courier-scrim-in 0.2s ease-out both;
+  --animate-scrim-out: courier-scrim-out 0.16s ease-in both;
   --animate-ripple: courier-ripple 2s ease-out infinite;
   --animate-caret: courier-caret 1s step-end infinite;
 }
@@ -168,6 +174,50 @@
   }
 }
 
+@keyframes courier-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+}
+
+@keyframes courier-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes courier-dialog-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+    filter: blur(3px);
+  }
+}
+
+@keyframes courier-scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes courier-scrim-out {
+  to {
+    opacity: 0;
+  }
+}
+
 @keyframes courier-ripple {
   0% {
     transform: scale(0.6);
@@ -194,6 +244,11 @@
   :root {
     --animate-pulse-live: none;
     --animate-pop-in: none;
+    --animate-pop-out: none;
+    --animate-dialog-in: none;
+    --animate-dialog-out: none;
+    --animate-scrim-in: none;
+    --animate-scrim-out: none;
     --animate-ripple: none;
     --animate-caret: none;
   }

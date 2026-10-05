@@ -1,9 +1,10 @@
 import type { LucideIcon } from "lucide-react";
 import { ChevronDown, Code, Copy, Link, Send, Terminal } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
-
+import { POP_MOTION } from "@/design/overlay-motion";
 import type { SnippetFlavor } from "@/features/requests/request-snippets";
 import { snippetLabels } from "@/features/requests/request-snippets";
+import { cn } from "@/lib/utils";
 
 /** What the call can be copied as: code of a flavour, or its URL alone. */
 export type CopyChoice = SnippetFlavor | "url";
@@ -48,7 +49,7 @@ export function CopyAsMenu({ transport, onCopy }: CopyAsMenuProps): React.ReactN
         <DropdownMenu.Content
           align="end"
           sideOffset={6}
-          className="z-50 w-47.5 animate-pop-in rounded-panel bg-panel p-1 shadow-overlay"
+          className={cn("z-50 w-47.5 rounded-panel bg-panel p-1 shadow-overlay", POP_MOTION)}
         >
           {choices.map((choice) => {
             const Icon = ICONS[choice];

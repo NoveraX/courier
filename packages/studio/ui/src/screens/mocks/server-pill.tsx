@@ -1,6 +1,6 @@
 import { ChevronsUpDown, Play, RotateCw, Square } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
-
+import { POP_MOTION } from "@/design/overlay-motion";
 import { cn } from "@/lib/utils";
 import { manageMock } from "@/mocks/manage-mock";
 import type { MockServerInfo } from "@/store/mock-slice";
@@ -62,7 +62,7 @@ export function ServerPill({
             <DropdownMenu.Content
               align="end"
               sideOffset={6}
-              className="z-50 min-w-52 animate-pop-in rounded-panel bg-panel p-1 shadow-overlay"
+              className={cn("z-50 min-w-52 rounded-panel bg-panel p-1 shadow-overlay", POP_MOTION)}
             >
               <DropdownMenu.RadioGroup
                 value={server.serverId}

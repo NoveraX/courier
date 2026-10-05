@@ -2,12 +2,13 @@ import type { LucideIcon } from "lucide-react";
 import { Code, Download, FileJson, Pin, PinOff, RotateCcw, Terminal } from "lucide-react";
 import { ContextMenu } from "radix-ui";
 import { useState } from "react";
-
+import { POP_MOTION } from "@/design/overlay-motion";
 import { endpointName } from "@/features/requests/request-parts";
 import { requestAsJson, requestSnippet } from "@/features/requests/request-snippets";
 import { useReplay } from "@/inspector/use-replay";
 import { copyToClipboard } from "@/lib/clipboard";
 import { downloadFile } from "@/lib/export";
+import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
 
@@ -46,7 +47,9 @@ export function RowMenu({ children }: RowMenuProps): React.ReactNode {
         {children}
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
-        <ContextMenu.Content className="z-50 w-55 animate-pop-in rounded-[9px] bg-panel p-1.25 shadow-overlay">
+        <ContextMenu.Content
+          className={cn("z-50 w-55 rounded-[9px] bg-panel p-1.25 shadow-overlay", POP_MOTION)}
+        >
           {request && <Items request={request} />}
         </ContextMenu.Content>
       </ContextMenu.Portal>

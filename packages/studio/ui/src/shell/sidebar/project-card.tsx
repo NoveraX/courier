@@ -2,8 +2,10 @@ import { ChevronsUpDown, Globe, Server } from "lucide-react";
 import { Popover } from "radix-ui";
 
 import { Dot } from "@/design/dot";
+import { POP_MOTION } from "@/design/overlay-motion";
 import type { AttachedApp } from "@/features/runtimes/attached-apps";
 import { attachedApps } from "@/features/runtimes/attached-apps";
+import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { ConnectionStatus } from "@/store/types-ui";
 
@@ -79,7 +81,10 @@ export function ProjectCard(): React.ReactNode {
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-50 w-(--radix-popover-trigger-width) min-w-56 animate-pop-in rounded-card border border-line bg-panel p-1 shadow-overlay"
+          className={cn(
+            "z-50 w-(--radix-popover-trigger-width) min-w-56 rounded-card border border-line bg-panel p-1 shadow-overlay",
+            POP_MOTION,
+          )}
         >
           <div className="px-2 pt-1.5 pb-1 text-label font-medium text-fg-subtle">
             Attached apps

@@ -2,8 +2,9 @@ import { motion } from "motion/react";
 import { useState } from "react";
 
 import { CodeLines } from "@/design/code/code-lines";
-import { EASE_OUT, revealAfter, SHEET_VARIANTS, SWAP_DURATION } from "@/design/motion";
+import { EASE_OUT, revealAfter, SWAP_DURATION } from "@/design/motion";
 import { Reveal } from "@/design/reveal";
+import { SheetFrame } from "@/design/sheet-frame";
 import { mockRequestCells } from "@/features/mocks/mock-request-cells";
 import type { MockRequestView } from "@/features/mocks/mock-request-view";
 import type { InspectorTab } from "@/features/requests/inspector-tabs";
@@ -71,17 +72,11 @@ export function MockRequestSheet(props: MockRequestSheetProps): React.ReactNode 
   const [opening, setOpening] = useState(true);
   const tab = view.tabs.some((t) => t.key === props.tab) ? (props.tab ?? "response") : "response";
   return (
-    <motion.aside
-      aria-label="Mock request"
-      variants={SHEET_VARIANTS}
-      initial="hidden"
-      animate="shown"
-      exit="gone"
-      onAnimationComplete={(definition) => {
-        if (definition === "shown") setOpening(false);
-      }}
-      style={{ originX: 1 }}
-      className="fixed top-2 right-2 bottom-8 z-40 flex w-[min(480px,calc(100vw-16px))] flex-col overflow-hidden rounded-sheet border border-line-strong bg-panel shadow-overlay"
+    <SheetFrame
+      label="Mock request"
+      width="w-[min(480px,calc(100vw-16px))]"
+      layer="inspector"
+      onShown={() => setOpening(false)}
     >
       <motion.div
         key={log.id}
@@ -116,6 +111,6 @@ export function MockRequestSheet(props: MockRequestSheetProps): React.ReactNode 
       >
         <Content view={view} tab={tab} />
       </motion.div>
-    </motion.aside>
+    </SheetFrame>
   );
 }

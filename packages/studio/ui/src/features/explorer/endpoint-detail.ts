@@ -1,4 +1,5 @@
-import type { RequestState } from "@/features/requests/request-state";
+import type { RecentCall } from "@/features/requests/recent-calls";
+import { recentCallsOf } from "@/features/requests/recent-calls";
 import { isFailedState, isStreamRequest, requestStateOf } from "@/features/requests/request-state";
 import type { RequestEntry } from "@/store/types";
 import type { EndpointNode } from "./explorer-model";
@@ -14,14 +15,6 @@ export interface LatencyBar {
   /** Its duration against the longest shown, 0–1. */
   share: number;
   failed: boolean;
-}
-
-/** One of an endpoint's recent calls. */
-export interface RecentCall {
-  request: RequestEntry;
-  state: RequestState;
-  /** Its duration against the longest of them, 0–1; a stream fills its bar. */
-  share: number;
 }
 
 /**
@@ -67,11 +60,5 @@ export function latencyBars(e: EndpointNode): LatencyBar[] {
  * ```
  */
 export function recentCalls(e: EndpointNode): RecentCall[] {
-  const recent = e.requests.slice(0, RECENT_CALLS);
-  const longest = Math.max(1, ...recent.map((r) => r.timing?.total ?? 0));
-  return recent.map((request) => ({
-    request,
-    state: requestStateOf(request),
-    share: isStreamRequest(request) ? 1 : (request.timing?.total ?? 0) / longest,
-  }));
+  return recentCallsOf(e.requests, RECENT_CALLS);
 }

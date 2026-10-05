@@ -11,6 +11,11 @@ Go — is defined once in [`src/api.ts`](src/api.ts) and called three ways:
   answers only the endpoints the boundary in
   [`src/boundary.ts`](src/boundary.ts) names.
 
+The API also has a `live` group: `live.ticks` streams the backend's own
+server-sent events, a tick a second, and `live.chat` is a chat your server
+keeps itself, since the backend has no sockets. A page reaches both through
+the proxy, as it reaches the rest.
+
 ## Run it
 
 From the repository root:
@@ -22,7 +27,8 @@ npm run demo --workspace examples/basic
 ```
 
 The demo starts the backend on port 4401 and the proxy on port 3001, makes
-each call, prints what came back, and stops both.
+each call, reads three ticks, says hello in the chat, prints what came back,
+and stops both.
 
 ## Run the pieces yourself
 
@@ -34,6 +40,7 @@ npm run server --workspace examples/basic     # the proxy, on :3001
 
 The server connects to Studio through `attachRuntime()` in
 [`src/dev.ts`](src/dev.ts): Studio's Timeline shows each request the proxy
-serves, and its Playground sends the `users` endpoints. In production the
-same proxy runs from [`courier.config.ts`](courier.config.ts) with
-`npx courier-server`.
+serves, and its Playground sends the `users` endpoints, subscribes to
+`live.ticks` and joins `live.chat`, through the proxy or directly. In
+production the same proxy runs from [`courier.config.ts`](courier.config.ts)
+with `npx courier-server`.

@@ -80,6 +80,27 @@ describe("the mocks' request logs", () => {
     expect(ids[0]).toBe("req_2");
   });
 
+  it("forget one mock's requests when its page clears them, for good", () => {
+    const root = project();
+    const first = run(root);
+    first.log.record(start("req_1"));
+    first.log.record({ ...start("req_2"), serverId: "shop" });
+    first.log.record(end("req_1"));
+    first.stop();
+    const second = run(root);
+
+    second.log.forget("petstore");
+    second.log.record(start("req_3"));
+    expect(second.log.events().map((event) => event.requestId)).toEqual(["req_2", "req_3"]);
+    second.stop();
+
+    expect(
+      run(root)
+        .log.events()
+        .map((event) => event.requestId),
+    ).toEqual(["req_2", "req_3"]);
+  });
+
   it("keep only a log's events, and no end of a request they never saw start", () => {
     const { log } = run(project());
 

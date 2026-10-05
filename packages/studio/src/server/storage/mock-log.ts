@@ -20,6 +20,8 @@ export interface MockLog {
   record(event: MockEvent): void;
   /** Every kept event, oldest first */
   events(): MockEvent[];
+  /** Forget every request one mock answered, as its page's Clear does. */
+  forget(serverId: string): void;
   /** Write what is kept to the database, and keep nothing more: the database is closing. */
   close(): void;
 }
@@ -41,12 +43,19 @@ export function createMockLog(db: DatabaseSync): MockLog {
   const drop = db.prepare("DELETE FROM mock_events WHERE request_id = ?");
   const selectAll = db.prepare("SELECT request_id, body FROM mock_events ORDER BY seq");
   const requests = new Set<string>();
+  /* The mock each kept request was answered by, so one mock's log can be forgotten alone. */
+  const owners = new Map<string, string>();
   let pending: Array<{ id: string; event: MockEvent }> = [];
   let dropped: string[] = [];
   let scheduled = false;
   let closed = false;
 
-  for (const row of selectAll.all()) requests.add(String(row.request_id));
+  for (const row of selectAll.all()) {
+    const id = String(row.request_id);
+    requests.add(id);
+    const owner = serverIdOf(typeof row.body === "string" ? JSON.parse(row.body) : undefined);
+    if (owner) owners.set(id, owner);
+  }
 
   function flush(): void {
     scheduled = false;
@@ -69,20 +78,30 @@ export function createMockLog(db: DatabaseSync): MockLog {
     if (!requests.has(id)) {
       if (event.type !== "mock:request:start") return;
       requests.add(id);
+      const owner = serverIdOf(event);
+      if (owner) owners.set(id, owner);
       if (requests.size > MAX_REQUESTS) forgetOldest();
     }
     pending.push({ id, event });
+    schedule();
+  }
+
+  function schedule(): void {
     if (scheduled) return;
     scheduled = true;
     setImmediate(flush);
   }
 
+  function forgetRequest(id: string): void {
+    requests.delete(id);
+    owners.delete(id);
+    pending = pending.filter((entry) => entry.id !== id);
+    dropped.push(id);
+  }
+
   function forgetOldest(): void {
     const oldest = requests.values().next().value;
-    if (oldest === undefined) return;
-    requests.delete(oldest);
-    pending = pending.filter((entry) => entry.id !== oldest);
-    dropped.push(oldest);
+    if (oldest !== undefined) forgetRequest(oldest);
   }
 
   return {
@@ -101,9 +120,18 @@ export function createMockLog(db: DatabaseSync): MockLog {
           : [];
       });
     },
+    forget(serverId) {
+      for (const [id, owner] of owners) if (owner === serverId) forgetRequest(id);
+      schedule();
+    },
     close() {
       flush();
       closed = true;
     },
   };
+}
+
+function serverIdOf(value: unknown): string | undefined {
+  if (typeof value !== "object" || value === null || !("serverId" in value)) return undefined;
+  return typeof value.serverId === "string" ? value.serverId : undefined;
 }

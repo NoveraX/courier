@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LoadedCourierConfig } from "../src/server/config-loader";
 import { type ConfigWatcher, startConfigWatcher } from "../src/server/config-watcher";
@@ -282,9 +282,9 @@ describe("startConfigWatcher — reload", () => {
     expect(baseURLOf(await nextReload(reloads))).toBe("added-edited.example.com");
   });
 
-  it("reports the tracked count and each change to the watcher status", async () => {
+  it("reports the tracked count and each change to the watcher status, relative to the project", async () => {
     const status = fakeStatus();
-    const { deep, initial } = await watchProject(status);
+    const { deep, initial, root } = await watchProject(status);
     expect(initial).toBeDefined();
     /* The files the load read; the names only watched for their creation are not counted. */
     expect(status.setApiPathCount).toHaveBeenCalledWith(initial?.deps.filter(existsSync).length);
@@ -293,7 +293,9 @@ describe("startConfigWatcher — reload", () => {
     /* Waiting for the first call alone would be hostage to a late notification
        about the fixture's own creation arriving ahead of the edit. */
     const reported = () =>
-      status.emitChange.mock.calls.some(([kind, paths]) => kind === "api" && paths.includes(deep));
+      status.emitChange.mock.calls.some(
+        ([kind, paths]) => kind === "api" && paths.includes(relative(root, deep)),
+      );
     for (let waited = 0; waited < 4000 && !reported(); waited += 50) {
       await sleep(50);
     }

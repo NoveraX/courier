@@ -43,6 +43,8 @@
  * past it, the reader is told Studio has not caught up.
  */
 
+import { relative } from "node:path";
+
 import { createLogger } from "@noverax/courier";
 import { armWatchSet } from "./arm-watch-set";
 import { createChainLoad } from "./chain-load";
@@ -222,7 +224,11 @@ export function startConfigWatcher(deps: ConfigWatcherDeps): ConfigWatcher {
   async function reload(changed: string[]): Promise<void> {
     if (stopped) return;
     if (latest === deps.current() && runsWhatChangedHolds(deps.current(), changed)) return;
-    deps.watcherStatus?.emitChange("api", changed);
+    /* The page shows these; the project root says where they are. */
+    deps.watcherStatus?.emitChange(
+      "api",
+      changed.map((file) => relative(deps.projectRoot, file) || "."),
+    );
     await load();
   }
 

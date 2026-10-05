@@ -62,6 +62,7 @@ beforeEach(() => {
     connectionStatus: "connected",
     requests: REQUESTS,
     heldRequests: [],
+    shownSession: null,
     studioInfo: { version: "2.4.0", startedAt: 1, project: { name: "acme-web", dependencies: [] } },
   });
 });
@@ -147,5 +148,19 @@ describe("Analytics", () => {
     expect(screen.getByText("No request completed in the last minute")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Endpoints" })).toBeNull();
     expect(screen.getByRole("button", { name: "Session" })).toBeTruthy();
+  });
+
+  it("reads a saved session against its end, so its last minute is not empty", async () => {
+    useStudioStore.setState({
+      shownSession: { id: "s1", name: "checkout" },
+      requests: [call(3_601_000, 120), call(3_630_000, 90), call(3_720_000, 60)],
+    });
+
+    await openShell("/next/analytics?range=1m");
+
+    expect(screen.getByText("acme-web · 2 completed requests · 1 endpoint")).toBeTruthy();
+    expect(
+      within(screen.getByRole("region", { name: "Requests over time" })).getByText("end"),
+    ).toBeTruthy();
   });
 });

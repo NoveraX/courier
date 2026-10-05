@@ -30,6 +30,8 @@ export interface AnalyticsModel {
   /** The endpoints, in the order the view sorts them. */
   endpoints: EndpointRow[];
   slowMs: number;
+  /** Whether a saved session shows, whose window ends where it ended rather than now. */
+  saved: boolean;
   /** Shows another view: a range, a sort. */
   change: (next: AnalyticsView) => void;
 }
@@ -77,6 +79,7 @@ export function useAnalytics(): AnalyticsModel {
     view,
     endpoints: sortEndpointRows(rows, view.sort, view.dir),
     slowMs,
+    saved,
     change,
   };
 }

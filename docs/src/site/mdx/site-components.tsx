@@ -5,6 +5,7 @@ import { CodeGroup } from "./code-group"
 import { ComparisonTable } from "./comparison-table"
 import { Fence } from "./fence"
 import { Heading } from "./heading"
+import { InlineCode } from "./inline-code"
 import { ModeBadge } from "./mode-badge"
 import { SiteLink } from "./site-link"
 
@@ -38,6 +39,7 @@ export const SITE_COMPONENTS: MDXComponents = {
   ),
   p: ({ children }) => <p className="my-3.5 text-body text-fg-muted">{children}</p>,
   a: SiteLink,
+  code: InlineCode,
   strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
   ul: ({ children }) => (
     <ul className="my-3.5 list-disc space-y-1.5 pl-5 text-body text-fg-muted marker:text-fg-subtle">

@@ -18,7 +18,7 @@ function objectOf(schema: object): SchemaNode {
   const properties = member(schema, "properties");
   if (typeof properties !== "object" || properties === null) return nodeOf("record");
   const required = new Set(listOf(member(schema, "required")));
-  const fields = Object.entries(properties).map(([name, field]) => ({
+  const fields = Object.entries(properties).map(([name, field]: [string, unknown]) => ({
     name,
     schema: field,
     optional: !required.has(name),

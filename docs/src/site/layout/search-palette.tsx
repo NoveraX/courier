@@ -7,7 +7,6 @@ import { useId, useState } from "react"
 import { cn } from "@/site/cn"
 import type { SearchEntry } from "@/site/content/search-index"
 import { searchDocs } from "@/site/content/search-index"
-import { sitePath } from "@/site/site-path"
 
 interface SearchPaletteProps {
   entries: readonly SearchEntry[]
@@ -35,7 +34,7 @@ export function SearchPalette({ entries, open, onOpenChange }: SearchPaletteProp
   const go = (entry: SearchEntry | undefined) => {
     if (!entry) return
     onOpenChange(false)
-    router.push(sitePath(entry.href))
+    router.push(entry.href)
   }
   const move = (by: number) =>
     setChosen((at) => (results.length === 0 ? 0 : (at + by + results.length) % results.length))
@@ -49,12 +48,8 @@ export function SearchPalette({ entries, open, onOpenChange }: SearchPaletteProp
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay
-          data-site=""
-          className="fixed inset-0 z-90 bg-(--site-scrim) backdrop-blur-xs"
-        />
+        <Dialog.Overlay className="fixed inset-0 z-90 bg-(--site-scrim) backdrop-blur-xs" />
         <Dialog.Content
-          data-site=""
           aria-describedby={undefined}
           className="fixed top-[13vh] left-1/2 z-91 w-[min(540px,calc(100vw-40px))] -translate-x-1/2 animate-site-in overflow-hidden rounded-panel border border-line-strong bg-panel shadow-dialog"
         >

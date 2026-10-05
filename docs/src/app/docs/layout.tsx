@@ -20,7 +20,7 @@ async function descriptions(): Promise<ReadonlyMap<string, string>> {
 export default async function DocsLayout({ children }: { children: ReactNode }) {
   const described = await descriptions()
   return (
-    <div data-site="" className="min-h-screen bg-bg">
+    <div className="min-h-screen bg-bg">
       <a
         href="#main-content"
         className="sr-only z-95 rounded-control bg-brand px-4 py-2 text-control text-bg focus:not-sr-only focus:fixed focus:top-3 focus:left-4"

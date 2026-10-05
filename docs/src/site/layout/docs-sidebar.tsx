@@ -6,7 +6,6 @@ import { useState } from "react"
 
 import { docsNav } from "@/site/content/docs-nav"
 import { filterNav } from "@/site/content/nav-filter"
-import { pagePath } from "@/site/site-path"
 import { SidebarSection } from "./sidebar-section"
 
 /**
@@ -22,7 +21,7 @@ import { SidebarSection } from "./sidebar-section"
  * ```
  */
 export function DocsSidebar({ version }: { version: string }) {
-  const current = pagePath(usePathname())
+  const current = usePathname()
   const [filter, setFilter] = useState("")
   const [folded, setFolded] = useState<ReadonlyMap<string, boolean>>(new Map())
   const sections = filterNav(docsNav, filter)

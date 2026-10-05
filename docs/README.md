@@ -1,104 +1,96 @@
-# @noverax/courier — Documentation
+# @noverax/courier — website
 
-Documentation site and interactive examples for `@noverax/courier`, built with Next.js and a live Express mock backend.
+The website of `@noverax/courier`: the landing page, the documentation with its live examples, the API reference and Courier Studio's page. It is a Next.js app, with a small Express backend the live examples call.
 
-## Architecture
+## Pages
 
-```
-Browser ──► Next.js :3000 (proxy) ──► Express :4000 (backend)
-                │
-                ├─ Proxy mode:   createProxyCaller → apiRoute → backend
-                └─ Direct mode:  createCaller → backend (no proxy hop)
-```
+| Route | What it is |
+|-------|------------|
+| `/` | The landing page |
+| `/docs/<section>/<page>` | The documentation, written in MDX under `src/content/docs` |
+| `/docs/examples/<name>` | Live examples, each calling the Express backend through Courier |
+| `/reference` | The API reference, read from the documentation's API pages |
+| `/studio` | Courier Studio's page |
+| `/llms.txt`, `/llms-full.txt` | Every page for language models: an index, and the whole documentation as Markdown |
 
-## Quick Start
+## Run it
 
 ```bash
-# from repo root
 cd docs
 npm install
 npm run dev
 ```
 
-This starts both servers concurrently:
+`npm run dev` starts both servers:
+
 - **Next.js** on [http://localhost:3000](http://localhost:3000)
-- **Express** on [http://localhost:4000](http://localhost:4000)
+- **Express** on [http://localhost:4000](http://localhost:4000), the backend the examples call
 
-## Examples
+```
+Browser ──► Next.js :3000 ──► Express :4000
+               │
+               ├─ proxy mode:  createProxyCaller → /api/request → backend
+               └─ direct mode: createCaller → backend, no proxy hop
+```
 
-### Getting Started
+## Live examples
 
-| Page | Route | Description |
-|------|-------|-------------|
-| Basic | `/basic` | Simple GET/POST with `useQuery` and `useMutation` |
-| CRUD | `/crud` | Full create, read, update, delete cycle |
+| Example | Route |
+|---------|-------|
+| Basic requests | `/docs/examples/basic` |
+| CRUD operations | `/docs/examples/crud` |
+| Request groups | `/docs/examples/groups` |
+| Path parameters | `/docs/examples/path-params` |
+| Encoding | `/docs/examples/encoding` |
+| File upload | `/docs/examples/upload` |
+| Direct mode | `/docs/examples/direct` |
+| Server Actions | `/docs/examples/actions` |
+| Middleware | `/docs/examples/middleware` |
+| Error handling | `/docs/examples/errors` |
+| Abort and deduplication | `/docs/examples/abort` |
+| Streaming | `/docs/examples/streaming` |
+| Raw data | `/docs/examples/raw-data` |
+| Request options | `/docs/examples/options` |
+| Typed singleton | `/docs/examples/singleton` |
 
-### Proxy Mode
-
-| Page | Route | Description |
-|------|-------|-------------|
-| Groups | `/groups` | `defineGroup` with prefix, `group:method` syntax |
-| Path Params | `/path-params` | Dynamic `:id`, `:postId` URL segments |
-| Encoding | `/encoding` | Custom `bodySerializer` and `searchParamsSerializer` |
-| Upload | `/upload` | FormData file upload with `onUploadProgress` |
-
-### Server-Side
-
-| Page | Route | Description |
-|------|-------|-------------|
-| Direct | `/direct` | RSC with `createCaller` (no proxy hop) |
-| Actions | `/actions` | Server Actions + direct mode with `revalidatePath` |
-
-### Advanced
-
-| Page | Route | Description |
-|------|-------|-------------|
-| Middleware | `/middleware` | Composable middleware chain for logging, auth, retry |
-| Errors | `/errors` | `HTTPError` class, `isHTTPError` guard, global handlers |
-| Abort | `/abort` | `AbortController`, manual cancel, request deduplication |
-| Streaming | `/streaming` | `stream: true` with SSE progressive rendering |
-| Raw Data | `/raw-data` | `rawData: true` — access status, headers, and data |
-| Options | `/options` | `timeout`, `retry`, `cache`, Next.js `revalidate` |
-| Singleton | `/singleton` | Module augmentation, typed singleton pattern |
-
-## Tech Stack
-
-- **Next.js 16** (App Router, React 19)
-- **Tailwind CSS v4** (CSS-first config)
-- **shadcn/ui** (OKLCH colors, React 19)
-- **Express 5** (mock backend)
-- **@tanstack/react-query** (data fetching)
-
-## Project Structure
+## Project structure
 
 ```
 docs/
-├── server/                    # Express 5 mock backend
-│   ├── index.ts               # App entry, listen on :4000
-│   ├── routes/                # Route handlers
-│   └── data.ts                # In-memory data store
-│
+├── server/              # the Express backend the examples call
 └── src/
-    ├── app/                   # Next.js pages (docs + examples)
-    │   └── api/request/       # courier apiRoute (proxy endpoint)
-    ├── api/                   # courier source definitions
-    ├── lib/                   # request instances, utils
-    └── components/            # UI components, layout, shared
+    ├── app/             # routes: the pages above, /api/request (the examples' proxy route)
+    ├── content/docs/    # the documentation, one MDX file per page
+    ├── api/             # the Courier sources the examples call
+    ├── lib/             # the examples' callers and metadata helpers
+    └── site/            # the site itself: tokens, layout, code, MDX components,
+                         # the landing page, the reference and the Studio page
 ```
 
-## Express Mock Endpoints
+## Backend endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
+| Method | Endpoint | What it does |
+|--------|----------|--------------|
 | GET | `/users` | List users (`?page`, `?limit`, `?search`) |
-| GET | `/users/:id` | Get user by ID |
-| POST | `/users` | Create user |
-| PUT | `/users/:id` | Update user |
-| PATCH | `/users/:id` | Partial update |
-| DELETE | `/users/:id` | Delete user |
-| GET | `/users/:id/posts/:postId` | Nested path params |
-| GET/POST | `/posts` | List / create posts |
-| POST | `/upload` | File upload (multer) |
-| GET | `/stream` | Streaming response (chunked) |
-| GET | `/slow` | 3s delayed response |
-| GET | `/error/:code` | Returns specific HTTP error |
+| GET | `/users/:id` | Get a user |
+| POST | `/users` | Create a user |
+| PUT | `/users/:id` | Replace a user |
+| PATCH | `/users/:id` | Update part of a user |
+| DELETE | `/users/:id` | Delete a user |
+| GET | `/users/:id/posts/:postId` | Nested path parameters |
+| GET | `/posts`, `/posts/:id` | List posts, get a post |
+| POST | `/posts` | Create a post |
+| POST | `/upload` | File upload |
+| ALL | `/echo` | Echo the request back |
+| GET | `/stream` | A streamed response |
+| GET | `/slow` | A response delayed by 3 s |
+| GET | `/error/:code` | Answer with the given HTTP error |
+| GET | `/health` | Health check |
+
+## Checks
+
+```bash
+npm run check   # biome and TypeScript
+```
+
+The site's tests run from the repository root in the `docs` Vitest project.

@@ -7,7 +7,6 @@ import { Dialog } from "radix-ui"
 
 import { cn } from "@/site/cn"
 import { docsNav } from "@/site/content/docs-nav"
-import { pagePath, sitePath } from "@/site/site-path"
 import { ThemeSwitch } from "./theme-switch"
 import { useHeadings } from "./use-headings"
 
@@ -28,18 +27,14 @@ interface MobileDrawerProps {
  * ```
  */
 export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
-  const current = pagePath(usePathname())
+  const current = usePathname()
   const headings = useHeadings()
   const close = () => onOpenChange(false)
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay
-          data-site=""
-          className="fixed inset-0 z-85 bg-(--site-scrim) backdrop-blur-[3px]"
-        />
+        <Dialog.Overlay className="fixed inset-0 z-85 bg-(--site-scrim) backdrop-blur-[3px]" />
         <Dialog.Content
-          data-site=""
           aria-describedby={undefined}
           className="fixed inset-y-0 left-0 z-86 w-[min(310px,84vw)] animate-site-in overflow-y-auto border-r border-line bg-bg-subtle px-4 pt-4.5 pb-10"
         >
@@ -81,7 +76,7 @@ export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
                 {items.map((item) => (
                   <Link
                     key={item.href}
-                    href={sitePath(item.href)}
+                    href={item.href}
                     onClick={close}
                     aria-current={item.href === current ? "page" : undefined}
                     className={cn(

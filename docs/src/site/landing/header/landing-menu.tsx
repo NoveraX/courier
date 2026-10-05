@@ -32,12 +32,8 @@ export function LandingMenu({ open, onOpenChange }: LandingMenuProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay
-          data-site=""
-          className="fixed inset-x-0 top-14 bottom-0 z-65 animate-fade bg-[rgb(4_5_6/0.5)] backdrop-blur-[6px]"
-        />
+        <Dialog.Overlay className="fixed inset-x-0 top-14 bottom-0 z-65 animate-fade bg-[rgb(4_5_6/0.5)] backdrop-blur-[6px]" />
         <Dialog.Content
-          data-site=""
           aria-describedby={undefined}
           className="fixed inset-x-0 top-14 z-66 max-h-[calc(100dvh-56px)] animate-drop overflow-y-auto border-b border-line bg-bg shadow-[0_30px_60px_-20px_rgb(0_0_0/0.5)]"
         >

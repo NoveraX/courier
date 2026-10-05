@@ -4,7 +4,6 @@ import Link from "next/link"
 import { CourierMark } from "@/site/courier-mark"
 import { GitHubMark } from "@/site/github-mark"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
-import { sitePath } from "@/site/site-path"
 import { StudioWordmark } from "./studio-wordmark"
 
 const NAV = [
@@ -42,7 +41,7 @@ export function StudioHeader() {
         </nav>
         <div className="flex-1" />
         <Link
-          href={sitePath("/")}
+          href={"/"}
           className="hidden h-7.5 shrink-0 items-center gap-1.75 rounded-full border border-brand/35 bg-brand-dim pr-2.75 pl-1.75 text-control font-[550] whitespace-nowrap text-brand hover:bg-brand/18 hover:text-brand min-[560px]:flex"
         >
           <span className="grid size-4.5 place-items-center rounded-full bg-brand text-bg">

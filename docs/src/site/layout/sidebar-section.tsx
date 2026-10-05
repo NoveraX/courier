@@ -4,7 +4,6 @@ import Link from "next/link"
 
 import { cn } from "@/site/cn"
 import type { NavSection } from "@/site/content/docs-nav"
-import { sitePath } from "@/site/site-path"
 
 interface SidebarSectionProps {
   section: NavSection
@@ -76,7 +75,7 @@ export function SidebarSection({ section, current, open, onToggle }: SidebarSect
               return (
                 <li key={item.href}>
                   <Link
-                    href={sitePath(item.href)}
+                    href={item.href}
                     tabIndex={open ? undefined : -1}
                     aria-current={on ? "page" : undefined}
                     className={cn(

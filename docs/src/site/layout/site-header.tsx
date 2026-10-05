@@ -3,7 +3,6 @@ import Link from "next/link"
 
 import { CourierMark } from "@/site/courier-mark"
 import { GitHubMark } from "@/site/github-mark"
-import { sitePath } from "@/site/site-path"
 import { ThemeSwitch } from "./theme-switch"
 
 interface SiteHeaderProps {
@@ -29,7 +28,7 @@ export function SiteHeader({ label, onSearch, onMenu }: SiteHeaderProps) {
   return (
     <header className="sticky top-0 z-70 border-b border-line bg-(--site-header) backdrop-blur-[14px] backdrop-saturate-150">
       <div className="mx-auto flex h-14 max-w-[1520px] items-center gap-6.5 px-6">
-        <Link href={sitePath("/")} className="flex items-center gap-2.25 text-fg">
+        <Link href={"/"} className="flex items-center gap-2.25 text-fg">
           <CourierMark width={19} />
           <span className="text-[14.5px] font-semibold tracking-[-0.02em]">courier</span>
         </Link>
@@ -56,7 +55,7 @@ export function SiteHeader({ label, onSearch, onMenu }: SiteHeaderProps) {
           </kbd>
         </button>
         <Link
-          href={sitePath("/reference")}
+          href={"/reference"}
           className="hidden text-nav text-fg-muted transition-colors hover:text-fg min-[560px]:inline"
         >
           API

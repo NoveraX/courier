@@ -1,8 +1,6 @@
 import Link from "next/link"
 import type { CSSProperties, ReactNode } from "react"
 
-import { sitePath } from "@/site/site-path"
-
 interface PageLinkProps {
   /** A section of this page (`#features`) or a page of the site (`/docs/quick-start`). */
   href: string
@@ -32,7 +30,7 @@ export function PageLink({ href, className, style, onClick, children }: PageLink
     )
   }
   return (
-    <Link href={sitePath(href)} className={className} style={style} onClick={onClick}>
+    <Link href={href} className={className} style={style} onClick={onClick}>
       {children}
     </Link>
   )

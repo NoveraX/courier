@@ -6,7 +6,6 @@ import Link from "next/link"
 import { cn } from "@/site/cn"
 import { copyText } from "@/site/copy-text"
 import { InlineText } from "@/site/mdx/inline-text"
-import { sitePath } from "@/site/site-path"
 import { useFlash } from "@/site/use-flash"
 import { CodeSectionPanel } from "./code-section-panel"
 import { KIND_LOOK } from "./kind-look"
@@ -79,7 +78,7 @@ export function ExportSection({ section }: { section: ReferenceSection }) {
         )}
       </div>
       <Link
-        href={sitePath(section.page)}
+        href={section.page}
         className="mt-4 inline-flex items-center gap-1.5 text-control text-brand hover:underline"
       >
         The full page

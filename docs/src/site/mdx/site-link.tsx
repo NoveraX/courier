@@ -1,8 +1,6 @@
 import Link from "next/link"
 import type { ComponentPropsWithoutRef } from "react"
 
-import { sitePath } from "@/site/site-path"
-
 const LINK =
   "text-brand underline-offset-3 hover:text-[color-mix(in_srgb,var(--color-brand)_75%,var(--color-fg))] hover:underline"
 
@@ -27,7 +25,7 @@ export function SiteLink({ href = "", children, ...props }: ComponentPropsWithou
   }
   if (href.startsWith("/")) {
     return (
-      <Link href={sitePath(href)} className={LINK} {...props}>
+      <Link href={href} className={LINK} {...props}>
         {children}
       </Link>
     )

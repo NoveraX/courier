@@ -29,12 +29,8 @@ export function MarkdownDialog({ name, markdown, open, onOpenChange }: MarkdownD
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay
-          data-site=""
-          className="fixed inset-0 z-92 bg-(--site-scrim) backdrop-blur-xs"
-        />
+        <Dialog.Overlay className="fixed inset-0 z-92 bg-(--site-scrim) backdrop-blur-xs" />
         <Dialog.Content
-          data-site=""
           aria-describedby={undefined}
           className="fixed top-1/2 left-1/2 z-93 flex max-h-[84vh] w-[min(760px,calc(100vw-48px))] -translate-x-1/2 -translate-y-1/2 animate-site-in flex-col overflow-hidden rounded-dialog border border-line-strong bg-panel shadow-dialog"
         >

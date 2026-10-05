@@ -1,7 +1,6 @@
 import Link from "next/link"
 
 import { cn } from "@/site/cn"
-import { sitePath } from "@/site/site-path"
 
 /**
  * The way to Courier Studio's own page, marked new: a pill in the accent.
@@ -16,7 +15,7 @@ import { sitePath } from "@/site/site-path"
 export function StudioPill({ size }: { size: "nav" | "bar" }) {
   return (
     <Link
-      href={sitePath("/studio")}
+      href={"/studio"}
       className={cn(
         "flex shrink-0 items-center rounded-full border border-brand/35 bg-brand/10 font-[550] whitespace-nowrap text-brand transition-colors hover:bg-brand/18 hover:text-brand",
         size === "nav"

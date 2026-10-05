@@ -34,7 +34,7 @@ const VISUALS = {
  */
 export function StudioLandingPage() {
   return (
-    <div data-site="" className="min-h-screen overflow-x-clip bg-bg">
+    <div className="min-h-screen overflow-x-clip bg-bg">
       <StudioHeader />
       <main id="main-content">
         <StudioHero />

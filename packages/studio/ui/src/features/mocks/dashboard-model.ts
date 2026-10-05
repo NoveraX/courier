@@ -27,6 +27,11 @@ const CHAOS_LABELS: Readonly<Record<MockServerInfo["chaosPreset"], string>> = {
   custom: "Custom",
 };
 
+/* The mock keeps the share of calls it fails as 0–1. */
+function faultPercent(server: MockServerInfo): number {
+  return Math.round((server.networkConfig?.errorRate ?? 0) * 100);
+}
+
 function delayOf(server: MockServerInfo): string {
   const latency = server.networkConfig?.latency;
   if (latency === undefined || latency === 0) return "no delay";
@@ -122,7 +127,7 @@ export function mockFigures(
       key: "chaos",
       label: "Chaos",
       value: CHAOS_LABELS[chaos],
-      sub: `${server.networkConfig?.errorRate ?? 0}% faults · ${delayOf(server)}`,
+      sub: `${faultPercent(server)}% faults · ${delayOf(server)}`,
       tone: chaos === "none" ? "normal" : "err",
       text: true,
     },

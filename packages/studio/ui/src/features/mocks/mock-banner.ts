@@ -42,7 +42,7 @@ function serverBanner(server: MockServerInfo): MockBanner | undefined {
     };
   }
   if (server.chaosPreset !== "none") {
-    const rate = server.networkConfig?.errorRate ?? 0;
+    const rate = Math.round((server.networkConfig?.errorRate ?? 0) * 100);
     return {
       tone: "err",
       title: `Chaos · ${CHAOS_LABELS[server.chaosPreset]}`,

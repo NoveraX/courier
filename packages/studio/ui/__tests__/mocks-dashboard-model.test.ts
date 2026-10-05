@@ -52,7 +52,7 @@ describe("the dashboard's figures", () => {
       routes: [route("/a", 3), route("/b", 1, "override")],
       requestsServed: 40,
       chaosPreset: "unstable",
-      networkConfig: { latency: { min: 100, max: 300 }, errorRate: 25 },
+      networkConfig: { latency: { min: 100, max: 300 }, errorRate: 0.25 },
       scenarios: [
         {
           name: "checkout-failure",
@@ -123,10 +123,14 @@ describe("the banner", () => {
     ).toMatchObject({ tone: "muted", action: undefined });
     expect(
       mockBannerOf(
-        mockServer({ chaosPreset: "down", networkConfig: { latency: 0, errorRate: 100 } }),
+        mockServer({ chaosPreset: "down", networkConfig: { latency: 0, errorRate: 1 } }),
         null,
       ),
-    ).toMatchObject({ title: "Chaos · Down", action: { kind: "stop-chaos" } });
+    ).toMatchObject({
+      title: "Chaos · Down",
+      detail: "100% of responses are faulted",
+      action: { kind: "stop-chaos" },
+    });
     expect(mockBannerOf(mockServer({ activeScenario: "empty" }), null)).toMatchObject({
       title: "Scenario · empty",
       action: { kind: "reset-scenario" },

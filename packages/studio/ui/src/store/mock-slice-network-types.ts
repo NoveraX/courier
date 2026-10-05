@@ -33,6 +33,7 @@ export interface NetworkConfig {
   latency:
     | number
     | { min: number; max: number; jitter?: number; distribution?: LatencyDistribution };
+  /** The share of calls the mock fails, 0–1. */
   errorRate: number;
   faultWeights?: FaultWeight[];
   /** Bandwidth cap in Kbps; 0 = unlimited */

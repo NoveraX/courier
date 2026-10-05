@@ -57,6 +57,7 @@ vi.mock("../src/server/mock-manager/process-manager", () => ({
             routes: [],
             collections: [],
             scenarios: [],
+            network: { latency: 0, errorRate: 0, latencyPreset: "none", chaosPreset: "none" },
           });
         }, 2);
         return { pid: 1 };

@@ -30,14 +30,40 @@ function applyScenario(state: ServerState, event: Record<string, unknown>): void
   if (isListOf(routes, isDescribedRoute)) state.routes = routes;
 }
 
-/* A mock that halted its experiment simulates nothing any more: the notice
-   it sends is not its settings. */
-function applyNetworkConfig(state: ServerState, config: Record<string, unknown>): void {
-  state.latencyPreset = presetOf(config.latencyPreset);
-  state.latencyStartedAt = startedAtOf(config.latencyStartedAt);
-  state.chaosPreset = presetOf(config.chaosPreset);
-  state.chaosStartedAt = startedAtOf(config.chaosStartedAt);
-  state.networkConfig = config.autoHalted === true ? undefined : config;
+type NetworkState = Pick<
+  ServerState,
+  "latencyPreset" | "latencyStartedAt" | "chaosPreset" | "chaosStartedAt" | "networkConfig"
+>;
+
+/** A mock that simulates nothing: no preset, no settings. */
+export const NO_NETWORK: NetworkState = {
+  latencyPreset: undefined,
+  latencyStartedAt: undefined,
+  chaosPreset: undefined,
+  chaosStartedAt: undefined,
+  networkConfig: undefined,
+};
+
+/**
+ * The network conditions a mock reported, as Studio keeps them: its presets,
+ * when each started, and its settings. A mock that halted its experiment
+ * simulates nothing any more: the notice it sends is not its settings.
+ *
+ * @param config - The conditions as the worker sent them
+ * @returns The fields of the mock's state they set
+ * @example
+ * ```ts
+ * Object.assign(state, networkStateOf({ latency: 0, errorRate: 0.4, chaosPreset: "unstable" }));
+ * ```
+ */
+export function networkStateOf(config: Record<string, unknown>): NetworkState {
+  return {
+    latencyPreset: presetOf(config.latencyPreset),
+    latencyStartedAt: startedAtOf(config.latencyStartedAt),
+    chaosPreset: presetOf(config.chaosPreset),
+    chaosStartedAt: startedAtOf(config.chaosStartedAt),
+    networkConfig: config.autoHalted === true ? undefined : config,
+  };
 }
 
 /**
@@ -63,6 +89,6 @@ export function applyWorkerEvent(state: ServerState, event: Record<string, unkno
   } else if (type === "mock:scenario:active") {
     applyScenario(state, event);
   } else if (type === "mock:network:config" && isPlainObject(config)) {
-    applyNetworkConfig(state, config);
+    Object.assign(state, networkStateOf(config));
   }
 }

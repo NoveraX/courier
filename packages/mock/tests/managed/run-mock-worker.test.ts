@@ -109,3 +109,31 @@ describe("a command that arrives before the mock runs", () => {
     });
   });
 });
+
+describe("a mock that starts", () => {
+  it("says what network conditions it starts with: the ones its definition declares", async () => {
+    const worker = driveWorker(
+      defineMockServer({ source: api, log: "silent", network: { latency: 200, errorRate: 0.1 } }),
+    );
+
+    worker.deliver({
+      type: "start",
+      mocksFile: "/app/courier.mocks.ts",
+      mockKey: "api",
+      port: 0,
+      transformCacheDirectory: null,
+      storeFile: null,
+    });
+    const ready = await worker.next(
+      (m): m is Extract<ChildMessage, { type: "ready" }> => m.type === "ready",
+    );
+    worker.deliver({ type: "stop" });
+
+    expect(ready.network).toMatchObject({
+      latency: 200,
+      errorRate: 0.1,
+      latencyPreset: "none",
+      chaosPreset: "none",
+    });
+  });
+});

@@ -167,6 +167,11 @@ export type ChildMessage =
       routes: DescribedRoute[];
       collections: Array<{ name: string; count: number; records: unknown[] }>;
       scenarios: ChildScenarioMeta[];
+      /**
+       * The network conditions the mock starts with: the ones its definition
+       * declares, or none. One that restarted keeps none set before.
+       */
+      network: Record<string, unknown>;
     }
   | { type: "error"; message: string; fatal: boolean }
   | { type: "stopped" }

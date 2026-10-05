@@ -1,7 +1,8 @@
 /**
  * The network conditions a mock client answers under: a route's own
- * override wins over the conditions every route has, and a delay is drawn
- * in the distribution the conditions name — as a mock server answers.
+ * override wins over the conditions every route has, a delay is drawn in
+ * the distribution the conditions name, and a fault fails a call with the
+ * body a mock server answers it with.
  */
 import { HTTPError } from "@noverax/courier";
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
@@ -65,6 +66,20 @@ describe("a mock client's route override", () => {
     expect(listed).toBe(false);
     await vi.advanceTimersByTimeAsync(1);
     expect(listed).toBe(true);
+  });
+});
+
+describe("a mock client's fault", () => {
+  it("fails a call with the status and body a mock server answers the same fault with", async () => {
+    const { client, mock } = createMockClient<typeof api>({
+      network: { errorRate: 1, faultTypes: ["503"] },
+    });
+    mock("users", "getAll").resolves([ADA]);
+
+    const failure = await client.users.getAll().catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(HTTPError);
+    expect(failure).toMatchObject({ status: 503, data: { error: "HTTP 503 (simulated)" } });
   });
 });
 

@@ -41,7 +41,8 @@ export function recordOutcome(
 }
 
 /**
- * The error an injected network fault fails the call with.
+ * The error an injected network fault fails the call with: its status, and
+ * the body a mock server answers the same fault with.
  *
  * @param call  The call
  * @param fault The fault the network config picked for it
@@ -53,7 +54,7 @@ export function recordOutcome(
  */
 export function networkFault(call: HttpCall, fault: string): HTTPError {
   const { status, message } = createFaultError(fault);
-  const error = new HTTPError({ status, headers: new Headers(), data: { message } });
+  const error = new HTTPError({ status, headers: new Headers(), data: { error: message } });
   recordOutcome(call, { mocked: true, error });
   return error;
 }

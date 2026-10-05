@@ -175,7 +175,7 @@ How each fault fails a call:
 
 | Fault | A mock server | A mock client |
 | --- | --- | --- |
-| `"500"`, `"502"`, `"503"` | answers that status at once, with `{ "error": "HTTP 503 (simulated)" }` | throws an `HTTPError` with that status, its data `{ message: "HTTP 503 (simulated)" }` |
+| `"500"`, `"502"`, `"503"` | answers that status at once, with `{ "error": "HTTP 503 (simulated)" }` | throws an `HTTPError` with that status and the same body as its data |
 | `"timeout"` | holds the call for `timeout`, or until the client gives up, then answers 408 | waits `timeout` if set, then throws a 408 |
 | `"reset"` | drops the connection without an answer, or answers 502 to a call made with `app.request()` | throws a 502 |
 

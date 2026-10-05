@@ -4,6 +4,8 @@ export interface ProbeResult {
   method?: string;
   /** Path template (e.g. ":id") */
   path?: string;
+  /** Whether the process that defines it serves it: a stream or a channel it implements. */
+  served?: true;
 }
 
 /**
@@ -19,15 +21,27 @@ export function isEndpoint(value: unknown): boolean {
 }
 
 /**
- * Recover an endpoint's HTTP method and path template.
+ * Recover an endpoint's HTTP method and path template, and whether the
+ * process that defines it serves it.
  *
- * A descriptor captured both when it was defined, so it answers directly
+ * A descriptor captured them when it was defined, so it answers directly
  * instead of running user code a second time.
+ *
+ * @param fn - The value a source or a group holds
+ * @returns Its method and path, and `served` when its process serves it
+ * @example
+ * ```ts
+ * probeEndpoint(api.live.chat); // → { method: "get", served: true }
+ * ```
  */
 export function probeEndpoint(fn: unknown): ProbeResult {
   if (typeof fn !== "object" || fn === null) return {};
   const method: unknown = Reflect.get(fn, "method");
   const path: unknown = Reflect.get(fn, "path");
   if (typeof method !== "string") return {};
-  return { method, ...(typeof path === "string" && path !== "" && { path }) };
+  return {
+    method,
+    ...(typeof path === "string" && path !== "" && { path }),
+    ...(Reflect.get(fn, "served") === true && { served: true as const }),
+  };
 }

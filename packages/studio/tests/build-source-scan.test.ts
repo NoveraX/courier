@@ -208,4 +208,30 @@ describe("an endpoint in the source catalogue", () => {
     });
     expect(endpoints.find((e) => e.name === "list")?.analysis).not.toHaveProperty("transport");
   }, 30_000);
+
+  it("marks a channel the app serves itself, and not a stream it calls", async () => {
+    const config = [
+      `import { courier, defineApi, defineGroup } from "@noverax/courier/define";`,
+      `const { stream, channel } = courier();`,
+      `const live = defineGroup({ prefix: "live", endpoints: {`,
+      `  ticks: stream.response<{ n: number }>().get("sse"),`,
+      `  chat: channel.send<{ text: string }>().response<{ text: string }>().implement(() => ({})),`,
+      `} });`,
+      `export default { sources: { api: defineApi({ baseURL: "https://api.example", groups: { live } }) } };`,
+    ].join("\n");
+    writeFileSync(join(root, "courier.config.ts"), config);
+    const loaded = await loadCourierConfig(root);
+
+    const { sources } = buildSourceScan(
+      loaded,
+      importsSnapshotOf(loaded.config.imports, root),
+      root,
+    );
+
+    const endpoints = sources[0]?.groups[0]?.endpoints ?? [];
+    expect(endpoints.find((e) => e.name === "chat")?.analysis).toMatchObject({ served: true });
+    const ticks = endpoints.find((e) => e.name === "ticks")?.analysis;
+    expect(ticks).toBeDefined();
+    expect(ticks).not.toHaveProperty("served");
+  }, 30_000);
 });

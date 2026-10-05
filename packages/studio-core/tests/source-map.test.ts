@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractSourceMap } from "../src/source-map";
 
-const { endpoint } = courier();
+const { endpoint, stream, channel } = courier();
 
 describe("extractSourceMap", () => {
   it("extracts source map from sources", () => {
@@ -222,5 +222,29 @@ describe("extractSourceMap", () => {
     const flat = result.api!.groups[""]!;
     expect(flat.prefix).toBe("");
     expect(Object.keys(flat.endpoints)).toEqual(["healthCheck"]);
+  });
+
+  it("marks a stream or a channel the app serves itself, and nothing it calls elsewhere", () => {
+    const api = defineApi({
+      baseURL: "https://api.test.com",
+      groups: {
+        live: defineGroup({
+          prefix: "live",
+          endpoints: {
+            ticks: stream.response<{ at: number }>().get("ticks"),
+            chat: channel
+              .send<{ text: string }>()
+              .response<{ text: string }>()
+              .implement(() => ({ onMessage: () => {} })),
+          },
+        }),
+      },
+    });
+
+    const endpoints = extractSourceMap({ api }).api?.groups.live?.endpoints;
+
+    expect(endpoints?.chat?.served).toBe(true);
+    expect(endpoints?.ticks).toBeDefined();
+    expect(endpoints?.ticks).not.toHaveProperty("served");
   });
 });

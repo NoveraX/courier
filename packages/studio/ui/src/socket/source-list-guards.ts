@@ -103,7 +103,8 @@ function isScannedEndpoint(item: unknown): item is ScannedEndpoint {
     (analysis.middleware === undefined || isListOf(analysis.middleware, isString)) &&
     (analysis.variablesStub === undefined || isPlainObject(analysis.variablesStub)) &&
     (analysis.variablesFields === undefined || isListOf(analysis.variablesFields, isSchemaField)) &&
-    (analysis.hasReceiveSchema === undefined || analysis.hasReceiveSchema === true)
+    (analysis.hasReceiveSchema === undefined || analysis.hasReceiveSchema === true) &&
+    (analysis.served === undefined || analysis.served === true)
   );
 }
 

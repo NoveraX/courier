@@ -94,7 +94,12 @@ export function RequestPane(props: RequestPaneProps): React.ReactNode {
           <div className="flex-1" />
           <CopyAsMenu transport={endpoint.transport} onCopy={onCopy} />
         </div>
-        <UrlBar label={endpoint.label} parts={url.parts} proxy={url.proxy} />
+        <UrlBar
+          label={endpoint.label}
+          parts={url.parts}
+          proxy={url.proxy}
+          served={endpoint.def.served === true}
+        />
         <div className="flex flex-wrap items-center gap-2">
           <Segmented label="Editor" options={tabs} value={tab} onChange={onTab} quiet="subtle" />
           {tab === "variables" && endpoint.transport === "http" && (

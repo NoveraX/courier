@@ -165,12 +165,8 @@ export function SSEConsumer({ channel }: { channel: string }) {
 }
 ```
 
-<Callout variant="info" title="Stream and rawData">
-In proxy mode, `stream: true` returns the `ReadableStream` directly as the data value. The `rawData` option has no additional effect since the stream replaces normal response parsing entirely.
-</Callout>
-
 ## Next steps
 
 - [Raw Data Mode](/docs/advanced/raw-data) — access status codes and headers alongside response data
-- [Options](/docs/advanced/options) — all per-request options including stream, rawData, and timeout
+- [Options](/docs/advanced/options) — all per-request options, stream and timeout among them
 - [Middleware](/docs/advanced/middleware) — intercept and transform requests with composable middleware

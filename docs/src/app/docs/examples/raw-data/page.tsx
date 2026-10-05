@@ -15,23 +15,17 @@ const response = await caller.users.raw.getAll()
 // response.headers → { "content-type": "application/json", ... }
 // response.data    → { data: [...], total: 3 }`
 
-const typeCode = `// TypeScript type changes based on .raw accessor
-type EndpointReturn<R, Raw extends boolean> = Promise<
-  Raw extends true
-    ? Partial<HttpResponse<R>>  // { status, headers, data }
-    : R                          // just the data
->
-
-// Usage with type safety:
+const typeCode = `// The .raw accessor changes what the call is typed to return
 const data = await caller.users.getAll()
-//    ^? { data: User[], total: number }
+//    ^? { data: User[]; total: number }
 
-const raw = await caller.users.raw.getAll()
-//    ^? { status?: number, headers?: Headers, data?: ... }`
+const response = await caller.users.raw.getAll()
+//    ^? HttpResponse<{ data: User[]; total: number }>
+//       { status: number; headers: Headers; data: … }`
 
 export const metadata = docsMetadata(
   "Raw Data Mode",
-  "Access full response metadata with rawData: true — status code, headers, and data in one object."
+  "Access full response metadata through .raw — status code, headers, and data in one object."
 )
 
 export default function RawDataExamplesPage() {
@@ -39,7 +33,7 @@ export default function RawDataExamplesPage() {
     <ExamplePage
       href="/docs/examples/raw-data"
       title="Raw Data Mode"
-      description="Access full response metadata with rawData: true — status code, headers, and data in one object."
+      description="Access full response metadata through .raw — status code, headers, and data in one object."
       mode="both"
     >
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -63,7 +57,7 @@ export default function RawDataExamplesPage() {
 
       <ExampleSection
         title="Type Safety"
-        description="TypeScript infers the return type based on the rawData flag."
+        description="TypeScript follows the accessor: .raw types the call as an HttpResponse."
         code={typeCode}
       >
         <p className="m-0 text-body text-fg-muted">

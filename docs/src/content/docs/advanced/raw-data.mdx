@@ -2,7 +2,7 @@ export const metadata = { title: "Raw Data Mode", description: "Access response 
 
 ## Overview
 
-By default, Courier returns only the parsed response body (JSON or text). When you need to inspect the HTTP status code or read response headers, enable raw data mode by passing `{ rawData: true }` in the call options.
+By default, Courier returns only the parsed response body (JSON or text). When you need to inspect the HTTP status code or read response headers, call the endpoint through the group's `.raw` accessor.
 
 Raw data mode changes the return type from `Promise<T>` to `Promise<HttpResponse<T>>`:
 
@@ -130,12 +130,12 @@ export default async function DashboardPage() {
 A direct call's `.raw` carries every header the upstream sent, cookies included. Through the proxy the browser receives the headers that describe the answer — `age`, `cache-control`, `content-disposition`, `content-language`, `etag`, `expires`, `last-modified`, `retry-after`, `vary`, the `x-ratelimit-*` trio and `x-request-id` — and the ones the source or the endpoint names, such as `X-Total-Count`. Cookies the upstream set arrive only where `set-cookie` is named.
 </Callout>
 
-<Callout variant="tip" title="Type inference with rawData">
+<Callout variant="tip" title="Type inference with .raw">
 When using the `.raw` namespace, TypeScript automatically infers the return type as `Promise<HttpResponse<T>>` instead of `Promise<T>`. The `data` field inside the response retains the original endpoint's response type.
 </Callout>
 
 ## Next steps
 
 - [Streaming](/docs/advanced/streaming) — receive responses as ReadableStreams for SSE and large downloads
-- [Options](/docs/advanced/options) — all per-request options including rawData, stream, and timeout
+- [Options](/docs/advanced/options) — all per-request options, stream and timeout among them
 - [Middleware](/docs/advanced/middleware) — intercept and transform requests with composable middleware

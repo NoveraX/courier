@@ -8,6 +8,7 @@ import { mockLogCode, mockLogTone } from "./mock-log";
 import { wholeBodyFile } from "./whole-body-file";
 
 const NONE: ReadonlyMap<string, string> = new Map();
+const QUERY_STRING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "DELETE"]);
 /* Headers the transport adds on the way, which a replayed call sets itself. */
 const TRANSPORT_HEADERS = new Set([
   "host",
@@ -89,7 +90,9 @@ function curlOf(
     kept.map(([name, value]) => [name, isCredentialHeader(name) ? "<redacted>" : value]),
   );
   const method = log.httpMethod.toUpperCase();
-  const body = method === "GET" || method === "HEAD" ? undefined : log.variables;
+  /* A mock reads these verbs' variables from the query string, which the
+     path carries; any other sends them as its body. */
+  const body = QUERY_STRING_METHODS.has(method) ? undefined : log.variables;
   const url = `${serverUrl}${log.path}`;
   if (body !== undefined && log.variablesCutFrom !== undefined) {
     const bodyFile = wholeBodyFile(log, "request");

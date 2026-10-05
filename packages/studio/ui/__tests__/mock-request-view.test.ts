@@ -92,4 +92,16 @@ describe("a mock request's sheet", () => {
     expect(view.curl).toContain(`-d '{"name":"Ada"}'`);
     expect(view.redacted).toBe(true);
   });
+
+  it("sends a read and a DELETE again with their variables in the query string the path keeps", () => {
+    for (const httpMethod of ["get", "delete"]) {
+      const view = mockRequestView(
+        mockLog({ httpMethod, path: "/api/users?page=2", variables: { page: 2 } }),
+        "http://localhost:7001",
+      );
+
+      expect(view.curl).toContain("'http://localhost:7001/api/users?page=2'");
+      expect(view.curl).not.toContain("-d ");
+    }
+  });
 });

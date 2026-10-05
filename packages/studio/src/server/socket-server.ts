@@ -7,6 +7,21 @@ import type { StudioOriginPolicy } from "./studio-origin";
 
 const log = createLogger("Studio");
 
+/** How Studio's sockets take what is sent to them, and send what they send. */
+export interface StudioSocketOptions {
+  /** The largest message a socket may send; {@link MAX_MESSAGE_BYTES} unless given. */
+  maxMessageBytes?: number | undefined;
+  /**
+   * Compress what goes over a WebSocket, as a page on the network wants:
+   * Studio's events are repetitive JSON, a tenth of their size compressed.
+   * Off unless given — a page on this machine gains nothing from it.
+   */
+  compress?: boolean | undefined;
+}
+
+/* Compressing a message this small costs more than it saves. */
+const COMPRESS_FROM_BYTES = 128;
+
 /** Studio's Socket.IO server and the two namespaces it serves. */
 export interface StudioSockets {
   io: SocketIOServer;
@@ -33,7 +48,7 @@ export interface StudioSockets {
  *
  * @param httpServer - The server Studio listens on.
  * @param policy - Who may connect as what.
- * @param maxMessageBytes - The largest message a socket may send.
+ * @param options - The largest message a socket may send, and whether WebSockets compress.
  * @returns The Socket.IO server and its namespaces.
  * @example
  * ```ts
@@ -43,7 +58,7 @@ export interface StudioSockets {
 export function createStudioSockets(
   httpServer: HttpServer,
   policy: StudioOriginPolicy,
-  maxMessageBytes: number = MAX_MESSAGE_BYTES,
+  { maxMessageBytes = MAX_MESSAGE_BYTES, compress = false }: StudioSocketOptions = {},
 ): StudioSockets {
   const io = new SocketIOServer(httpServer, {
     cors: {
@@ -51,6 +66,7 @@ export function createStudioSockets(
       methods: ["GET", "POST"],
     },
     maxHttpBufferSize: maxMessageBytes,
+    perMessageDeflate: compress && { threshold: COMPRESS_FROM_BYTES },
     serveClient: false,
   });
   /* The handshake, every polling request after it, and the upgrade to a WebSocket. */

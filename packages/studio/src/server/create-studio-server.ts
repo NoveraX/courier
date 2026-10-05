@@ -72,7 +72,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const { io, uiNamespace, runtimeNamespace } = createStudioSockets(
     httpServer,
     policy,
-    demo ? DEMO_MAX_MESSAGE_BYTES : undefined,
+    demo ? { maxMessageBytes: DEMO_MAX_MESSAGE_BYTES, compress: true } : {},
   );
 
   // ── Binding table + /runtime namespace (config-driven routing) ─────────────

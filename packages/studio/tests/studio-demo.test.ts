@@ -5,7 +5,9 @@
  * clears nothing every visitor sees, and keeps its Playground history to
  * its own page. The host, with the token, keeps every right.
  */
+import { randomBytes } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
@@ -260,5 +262,60 @@ describe("a message larger than the demo reads", () => {
     page.emit("playground:write", { rid: "r", data: "x".repeat(DEMO_MAX_MESSAGE_BYTES + 1) });
 
     expect(await closed).toBe("transport close");
+  });
+});
+
+/* The WebSocket extensions Studio agrees to when a client offers to compress. */
+function negotiatedExtensions(base: string): Promise<string | undefined> {
+  const { hostname, port } = new URL(base);
+  return new Promise((resolve, reject) => {
+    const upgrade = request({
+      hostname,
+      port,
+      path: "/socket.io/?EIO=4&transport=websocket",
+      headers: {
+        connection: "Upgrade",
+        upgrade: "websocket",
+        "sec-websocket-version": "13",
+        "sec-websocket-key": randomBytes(16).toString("base64"),
+        "sec-websocket-extensions": "permessage-deflate; client_max_window_bits",
+      },
+    });
+    upgrade.once("upgrade", (response, socket) => {
+      socket.destroy();
+      const extensions = response.headers["sec-websocket-extensions"];
+      resolve(typeof extensions === "string" ? extensions : undefined);
+    });
+    upgrade.once("response", (response) => reject(new Error(`no upgrade: ${response.statusCode}`)));
+    upgrade.once("error", reject);
+    upgrade.end();
+  });
+}
+
+describe("the demo's sockets", () => {
+  it("compress what they send, which a page on the network fetches", async () => {
+    expect(await negotiatedExtensions(url)).toContain("permessage-deflate");
+  });
+
+  it("send uncompressed outside a demo, to a page on this machine", async () => {
+    const plainRoot = mkdtempSync(join(tmpdir(), "courier-plain-"));
+    writeFileSync(join(plainRoot, "courier.config.ts"), "export default { sources: {} };\n");
+    let plain: StudioServer | undefined;
+    const plainUrl = await new Promise<string>((resolve, reject) => {
+      plain = createStudioServer({
+        port: 0,
+        host: "127.0.0.1",
+        projectRoot: plainRoot,
+        onReady: resolve,
+        onError: reject,
+      });
+    });
+
+    try {
+      expect(await negotiatedExtensions(plainUrl)).toBeUndefined();
+    } finally {
+      await plain?.close();
+      rmSync(plainRoot, { recursive: true, force: true });
+    }
   });
 });

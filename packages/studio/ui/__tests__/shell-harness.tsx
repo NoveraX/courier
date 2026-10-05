@@ -12,6 +12,7 @@ import { MotionGlobalConfig } from "motion/react";
 
 import { validateAnalyticsSearch } from "@/features/analytics/analytics-search";
 import { validateAuditSearch } from "@/features/audit/audit-search";
+import { validateCompareSearch } from "@/features/compare/compare-search";
 import { validateExplorerSearch } from "@/features/explorer/explorer-search";
 import { validateMockStoreSearch } from "@/features/mocks/collection-view";
 import { validateMockLogsSearch } from "@/features/mocks/logs-view";
@@ -24,6 +25,7 @@ import { validateWaterfallSearch } from "@/features/waterfall/waterfall-search";
 import { AnalyticsScreen } from "@/screens/analytics/analytics-screen";
 import { ApisScreen } from "@/screens/apis/apis-screen";
 import { AuditScreen } from "@/screens/audit/audit-screen";
+import { CompareScreen } from "@/screens/compare/compare-screen";
 import { EndpointsScreen } from "@/screens/explorer/endpoints-screen";
 import { ExplorerLayout } from "@/screens/explorer/explorer-layout";
 import { GraphScreen } from "@/screens/explorer/graph-screen";
@@ -112,6 +114,12 @@ export async function openShell(url: string): Promise<AnyRouter> {
     component: AuditScreen,
     validateSearch: validateAuditSearch,
   });
+  const compare = createRoute({
+    getParentRoute: () => shell,
+    path: "compare",
+    component: CompareScreen,
+    validateSearch: validateCompareSearch,
+  });
   const explorer = createRoute({
     getParentRoute: () => shell,
     path: "explorer",
@@ -174,6 +182,7 @@ export async function openShell(url: string): Promise<AnyRouter> {
         waterfall,
         analytics,
         audit,
+        compare,
         explorer.addChildren(tabs),
         playground,
         apis,

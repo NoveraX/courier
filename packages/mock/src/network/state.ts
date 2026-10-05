@@ -1,5 +1,5 @@
 import type { NetworkConfig } from "../types";
-import { findRouteOverride, isActive, mergeOverride } from "./config-shape";
+import { isActive, routeConfigOf } from "./config-shape";
 
 /** Mutable network simulation state — shared across request handlers */
 export interface NetworkState {
@@ -74,12 +74,8 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
     },
 
     getConfig(group, endpoint) {
-      if (!config) return undefined;
-      if (group && endpoint && config.routeOverrides?.length) {
-        const override = findRouteOverride(config.routeOverrides, group, endpoint);
-        if (override) return mergeOverride(config, override);
-      }
-      return config;
+      if (!config || !group || !endpoint) return config;
+      return routeConfigOf(config, group, endpoint);
     },
 
     getGlobalConfig() {

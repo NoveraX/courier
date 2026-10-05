@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { pickFault } from "../../src/network/failure";
 import { createNetworkState } from "../../src/network/state";
 
 describe("a route's own network override", () => {
@@ -23,5 +24,18 @@ describe("a route's own network override", () => {
       errorRate: 0.25,
       latency: { min: 10, max: 20 },
     });
+  });
+
+  it("fails with the faults it names, though the global config weighs others", () => {
+    const state = createNetworkState({
+      errorRate: 1,
+      faultWeights: [{ type: "503", weight: 100 }],
+      routeOverrides: [{ routeId: "users:list", enabled: true, faultTypes: ["timeout"] }],
+    });
+    const route = state.getConfig("users", "list");
+    const other = state.getConfig("users", "get");
+
+    expect(route && pickFault(route)).toBe("timeout");
+    expect(other && pickFault(other)).toBe("503");
   });
 });

@@ -1,4 +1,5 @@
 import type { ExecuteBackend } from "@noverax/courier/internal";
+import { routeConfigOf } from "../network/config-shape";
 import type { MockRegistry } from "../registry";
 import type { ScenarioMark } from "../scenario/scenario-state";
 import type { MockHistoryEntry, NetworkConfig } from "../types";
@@ -50,7 +51,7 @@ export function createMockBackend(deps: BackendDeps): ExecuteBackend {
       handler,
       index,
       history,
-      network: deps.network,
+      network: deps.network && routeConfigOf(deps.network, group, method),
       getScenarioState: deps.getScenarioState,
       mark,
       transitionScenario: deps.transitionScenario,

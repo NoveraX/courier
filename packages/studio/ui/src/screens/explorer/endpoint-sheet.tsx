@@ -100,8 +100,8 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
             View in Timeline
           </Link>
           <Link
-            to="/playground"
-            search={{ source: e.source, group: e.group || undefined, method: e.method }}
+            to="/next/playground"
+            search={{ endpoint: e.key }}
             className={cn(ACTION, "bg-fg font-semibold text-bg hover:bg-fg/90")}
           >
             <Play aria-hidden="true" className="size-3" />

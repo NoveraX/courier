@@ -7,6 +7,7 @@ export type CodeTone =
   | "number"
   | "plain"
   | "punctuation"
+  | "comment"
   | "space";
 
 /** A piece of a code line and its role. */

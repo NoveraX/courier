@@ -1,0 +1,71 @@
+import { Shuffle } from "lucide-react";
+
+import type { ProxyRoute } from "@/features/playground/proxy-route";
+import type { UrlPart } from "@/features/playground/request-url";
+import { cn } from "@/lib/utils";
+import { methodClassOf } from "@/screens/explorer/method-class";
+
+const PART_CLASS: Readonly<Record<UrlPart["kind"], string>> = {
+  origin: "text-fg-subtle",
+  path: "text-fg",
+  param: "rounded-[3px] bg-brand-dim text-brand",
+  missing: "rounded-[3px] bg-warn-dim text-warn",
+  query: "text-syntax-string",
+};
+
+interface UrlBarProps {
+  label: string;
+  parts: readonly UrlPart[];
+  /** In proxy mode, the route the call goes through — `null` when the source has none for it. */
+  proxy: ProxyRoute | null | undefined;
+}
+
+/**
+ * The URL the call goes to: its method, the source's origin, the path with
+ * each parameter filled from the variables — amber while one is missing —
+ * the query, and in proxy mode the route on the app it goes through.
+ *
+ * @param props - The method label, the URL's pieces and the proxy route
+ * @returns The bar
+ * @example
+ * ```tsx
+ * <UrlBar label="GET" parts={requestUrlParts(endpoint, variables)} proxy={undefined} />
+ * ```
+ */
+export function UrlBar({ label, parts, proxy }: UrlBarProps): React.ReactNode {
+  return (
+    <div className="flex h-8.5 min-w-0 items-center gap-2 overflow-hidden rounded-card border border-line bg-inset px-2.5 font-mono text-small whitespace-nowrap">
+      <span className={cn("shrink-0 text-meta font-semibold", methodClassOf(label))}>{label}</span>
+      <span className="min-w-0 flex-1 truncate">
+        {parts.map((part, index) => (
+          <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: the URL's pieces in order
+            key={index}
+            title={
+              part.kind === "missing" ? `Set ${part.text.slice(2)} in the variables` : undefined
+            }
+            className={PART_CLASS[part.kind]}
+          >
+            {part.text}
+          </span>
+        ))}
+      </span>
+      {proxy !== undefined && (
+        <span
+          title={
+            proxy
+              ? `Proxied calls go through ${proxy.display}${proxy.declared ? "" : " (Courier's default route)"}`
+              : "This source declares no proxy route for the transport; declare one in proxyPath"
+          }
+          className={cn(
+            "flex h-5.5 max-w-[45%] shrink-0 items-center gap-1.25 rounded-[5px] px-1.5 font-sans text-meta",
+            proxy ? "bg-syntax-type/12 text-syntax-type" : "bg-warn-dim text-warn",
+          )}
+        >
+          <Shuffle aria-hidden="true" className="size-2.75 shrink-0" />
+          <span className="truncate">{proxy ? `via ${proxy.display}` : "no proxy route"}</span>
+        </span>
+      )}
+    </div>
+  );
+}

@@ -249,7 +249,7 @@ describe("an endpoint's panel", () => {
     );
     expect(
       within(sheet).getByRole("link", { name: "Open in Playground" }).getAttribute("href"),
-    ).toBe("/playground?source=api&group=orders&method=create");
+    ).toBe("/next/playground?endpoint=api.orders.create");
   });
 });
 

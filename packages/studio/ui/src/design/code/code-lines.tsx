@@ -2,7 +2,8 @@ import { cn } from "@/lib/utils";
 import type { CodeToken, CodeTone } from "./tokenize-line";
 import { tokenizeLine } from "./tokenize-line";
 
-const TONES: Readonly<Record<CodeTone, string>> = {
+/** The colour each role of a piece of code is written in. */
+export const CODE_TONES: Readonly<Record<CodeTone, string>> = {
   keyword: "text-syntax-keyword",
   function: "text-syntax-function",
   string: "text-syntax-string",
@@ -10,6 +11,7 @@ const TONES: Readonly<Record<CodeTone, string>> = {
   number: "text-syntax-number",
   plain: "text-syntax-plain",
   punctuation: "text-fg-subtle",
+  comment: "text-fg-subtle italic",
   space: "",
 };
 
@@ -69,7 +71,7 @@ export function CodeLines({
           <span className="pr-4 whitespace-pre">
             {tokenize(line).map((token, at) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: tokens of a fixed line, in order
-              <span key={at} className={TONES[token.tone]}>
+              <span key={at} className={CODE_TONES[token.tone]}>
                 {token.text}
               </span>
             ))}

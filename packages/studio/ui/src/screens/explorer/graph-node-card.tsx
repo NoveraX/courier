@@ -59,9 +59,9 @@ export function GraphNodeCard(props: GraphNodeCardProps): React.ReactNode {
       onBlur={() => onHover(undefined)}
       aria-label={`${node.key} · ${LEVEL_META[node.level].label} · ${node.value.text}`}
       aria-pressed={node.kind === "endpoint" ? node.selected : undefined}
-      style={{ left: node.x, top: node.y, width: node.width, height: node.height }}
+      style={{ width: node.width, height: node.height }}
       className={cn(
-        "absolute flex cursor-pointer items-center gap-2.25 border bg-panel pr-2.5 text-left transition-[opacity,border-color,box-shadow] duration-150 hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand",
+        "relative flex cursor-pointer items-center gap-2.25 border bg-panel pr-2.5 text-left transition-[opacity,border-color,box-shadow] duration-150 hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand",
         SHAPE[node.kind],
         node.selected
           ? "border-brand shadow-[0_0_0_3px_var(--color-brand-dim)]"

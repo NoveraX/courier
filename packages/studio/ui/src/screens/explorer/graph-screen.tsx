@@ -9,7 +9,7 @@ import type { GraphNode } from "@/features/explorer/graph-types";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { ExplorerEmpty } from "./explorer-empty";
-import { GraphCanvas } from "./graph-canvas";
+import { GraphFlow } from "./graph-flow";
 import { useExplorerModel } from "./use-explorer-model";
 import { useExplorerSearch } from "./use-explorer-search";
 
@@ -37,9 +37,10 @@ function Legend(): React.ReactNode {
 
 /**
  * The Explorer's graph: every source, its groups and their endpoints, each
- * coloured by its health and showing the metric chosen. A search lights the
- * endpoints that match; hovering lights a node's branch; a source or a
- * group opens the Endpoints list narrowed to it, an endpoint its panel.
+ * coloured by its health and showing the metric chosen, on a canvas that
+ * pans and zooms. A search lights the endpoints that match; hovering lights
+ * a node's branch; a source or a group opens the Endpoints list narrowed to
+ * it, an endpoint its panel.
  *
  * @returns The Graph tab
  * @example
@@ -74,7 +75,7 @@ export function GraphScreen(): React.ReactNode {
         <div className="flex-1" />
         <Legend />
       </div>
-      <GraphCanvas layout={layout} onHover={setHover} onOpen={open} />
+      <GraphFlow layout={layout} onHover={setHover} onOpen={open} />
     </div>
   );
 }

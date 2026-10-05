@@ -13,6 +13,7 @@
   --animate-marquee: landing-marquee 44s linear infinite;
   --animate-marquee-reverse: landing-marquee-reverse 52s linear infinite;
   --animate-fill: landing-fill 5.2s linear forwards;
+  --animate-fill-y: landing-fill-y 5.2s linear forwards;
 }
 
 @keyframes landing-rise {
@@ -78,6 +79,15 @@
   }
   to {
     transform: scaleX(1);
+  }
+}
+
+@keyframes landing-fill-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
   }
 }
 

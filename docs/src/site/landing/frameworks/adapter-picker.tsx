@@ -1,15 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { cn } from "@/site/cn"
 import type { CodeToken } from "@/site/code/highlight-tokens"
 import { copyText } from "@/site/copy-text"
-import { BrandIcon } from "@/site/landing/brand-icon"
+import { PageLink } from "@/site/landing/page-link"
 import { useInView } from "@/site/landing/use-in-view"
 import { useReducedMotion } from "@/site/landing/use-reduced-motion"
 import { useTicker } from "@/site/landing/use-ticker"
 import { useFlash } from "@/site/use-flash"
 import { AdapterCode } from "./adapter-code"
+import { AdapterList } from "./adapter-list"
 import type { Adapter } from "./adapters"
 
 /** An adapter with its mark and its code highlighted. */
@@ -22,22 +22,32 @@ export interface ShownAdapter extends Adapter {
 const TURN = 52
 
 /**
- * The adapters beside one adapter's code: the list moves on by itself every
- * few seconds while it is on screen, until the reader picks one; the code
- * shows the mount, its length, and the command that installs it.
+ * The adapters beside one adapter's code. The list moves on by itself every
+ * few seconds while it is on screen — holding still while the pointer or
+ * the focus is on it — until the reader picks one. The code shows the
+ * mount, its length, the guide to its framework, and the command that
+ * installs it.
  *
- * @param props - The adapters
+ * @param props - The adapters shown, and how many official adapters there are in all
  * @returns The picker
  * @example
  * ```tsx
- * <AdapterPicker adapters={adapters} />
+ * <AdapterPicker adapters={adapters} total={10} />
  * ```
  */
-export function AdapterPicker({ adapters }: { adapters: readonly ShownAdapter[] }) {
-  const [ref, inView] = useInView<HTMLDivElement>(0.25)
+export function AdapterPicker({
+  adapters,
+  total,
+}: {
+  adapters: readonly ShownAdapter[]
+  total: number
+}) {
+  const [ref, inView] = useInView<HTMLElement>(0.25)
   const still = useReducedMotion()
   const [chosen, setChosen] = useState<number | null>(null)
-  const running = inView && !still && chosen === null
+  const [held, setHeld] = useState({ pointer: false, focus: false })
+  const moving = !still && chosen === null
+  const running = moving && inView && !held.pointer && !held.focus
   const tick = useTicker(running, 100)
   const turn = Math.floor(tick / TURN)
   const picked = chosen ?? turn % adapters.length
@@ -45,72 +55,45 @@ export function AdapterPicker({ adapters }: { adapters: readonly ShownAdapter[] 
   const [copied, flash] = useFlash()
   if (!adapter) return null
   return (
-    <div
+    <section
       ref={ref}
-      className="grid grid-cols-1 overflow-hidden rounded-[14px] border border-line bg-panel min-[900px]:grid-cols-[minmax(0,300px)_minmax(0,1fr)]"
+      aria-label="Framework adapters"
+      onPointerEnter={() => setHeld((h) => ({ ...h, pointer: true }))}
+      onPointerLeave={() => setHeld((h) => ({ ...h, pointer: false }))}
+      onFocus={() => setHeld((h) => ({ ...h, focus: true }))}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget))
+          setHeld((h) => ({ ...h, focus: false }))
+      }}
+      className="grid grid-cols-1 overflow-hidden rounded-[14px] border border-line bg-panel min-[900px]:grid-cols-[minmax(0,240px)_minmax(0,1fr)]"
     >
       <div className="flex min-w-0 flex-col border-b border-line bg-bg-subtle min-[900px]:border-r min-[900px]:border-b-0">
         <div className="hidden h-10.5 items-center border-b border-line px-4 font-mono text-micro tracking-[0.08em] text-fg-subtle min-[900px]:flex">
           ADAPTER
         </div>
-        <fieldset className="m-0 flex min-w-0 overflow-x-auto border-0 p-0 [scrollbar-width:none] min-[900px]:grid min-[900px]:grid-cols-2 min-[900px]:overflow-visible">
-          <legend className="sr-only">Adapters</legend>
-          {adapters.map((item, at) => {
-            const on = at === picked
-            return (
-              <button
-                key={item.label}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setChosen(at)}
-                className={cn(
-                  "relative flex h-12 shrink-0 cursor-pointer items-center gap-3 border-r border-line px-4 text-left whitespace-nowrap transition-colors duration-200 hover:bg-panel min-[900px]:h-14 min-[900px]:border-b min-[900px]:[&:nth-of-type(even)]:border-r-0",
-                  on ? "bg-panel" : "bg-transparent"
-                )}
-              >
-                <span
-                  className={cn(
-                    "absolute inset-y-0 left-0 w-0.5 transition-colors",
-                    on ? "bg-fg" : "bg-transparent"
-                  )}
-                />
-                <span
-                  className={cn(
-                    "text-fg transition-opacity duration-200",
-                    on ? "opacity-100" : "opacity-42"
-                  )}
-                >
-                  <BrandIcon path={item.icon} className="block size-4.5" />
-                </span>
-                <span
-                  className={cn(
-                    "min-w-0 flex-1 text-[14px] tracking-[-0.015em]",
-                    on ? "text-fg" : "text-fg-muted"
-                  )}
-                >
-                  {item.label}
-                </span>
-                {on && chosen === null && !still && (
-                  <span
-                    key={turn}
-                    aria-hidden="true"
-                    className="absolute inset-x-0 -bottom-px h-px origin-left animate-fill bg-fg-muted will-change-transform"
-                    style={{ animationPlayState: running ? "running" : "paused" }}
-                  />
-                )}
-              </button>
-            )
-          })}
-        </fieldset>
+        <AdapterList
+          adapters={adapters}
+          picked={picked}
+          turn={moving ? turn : null}
+          running={running}
+          total={total}
+          onPick={setChosen}
+        />
       </div>
       <section aria-label={`${adapter.label} adapter`} className="flex min-w-0 flex-col">
         <div className="flex h-10.5 min-w-0 items-center gap-3 border-b border-line px-4">
-          <span className="truncate font-mono text-label tracking-normal text-fg">
+          <span className="min-w-0 truncate font-mono text-label tracking-normal text-fg">
             {adapter.file}
           </span>
-          <span className="ml-auto shrink-0 font-mono text-[11px] tracking-normal text-fg-subtle">
+          <span className="shrink-0 font-mono text-[11px] tracking-normal text-fg-subtle">
             {adapter.lines.length} lines
           </span>
+          <PageLink
+            href={adapter.guide}
+            className="ml-auto shrink-0 text-[12.5px] whitespace-nowrap text-fg-muted transition-colors hover:text-fg"
+          >
+            {adapter.label} guide <span aria-hidden="true">→</span>
+          </PageLink>
         </div>
         <AdapterCode adapter={adapter} lines={adapter.lines} />
         <div className="flex min-h-11.5 min-w-0 items-center gap-3 border-t border-line py-2 pr-2 pl-4 font-mono text-label tracking-normal">
@@ -127,6 +110,6 @@ export function AdapterPicker({ adapters }: { adapters: readonly ShownAdapter[] 
           </button>
         </div>
       </section>
-    </div>
+    </section>
   )
 }

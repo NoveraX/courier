@@ -1,0 +1,35 @@
+export const metadata = { title: "Framework Adapters", description: "Every official server adapter: the package to install, where it mounts, and the guide that walks through it.", mode: "proxy" }
+
+Courier's proxy runs behind one route of your app. An official adapter mounts it in your framework: install its package and add that route. The handler takes no arguments, because it reads the sources the app registered, so moving to another framework changes only the import and the one call.
+
+## Full-stack frameworks
+
+The proxy lives in an API route of the app itself.
+
+| Framework | Package | Route | Guide |
+| --- | --- | --- | --- |
+| Next.js | `@noverax/courier-next` | `app/api/request/route.ts` | [Next.js](/docs/frameworks/nextjs) |
+| Nuxt | `@noverax/courier-nuxt` | `server/api/request.ts` | [Nuxt](/docs/frameworks/nuxt) |
+| SvelteKit | `@noverax/courier-sveltekit` | `src/routes/api/request/+server.ts` | [SvelteKit](/docs/frameworks/sveltekit) |
+| Astro | `@noverax/courier-astro` | `src/pages/api/request.ts` | [Astro](/docs/frameworks/astro) |
+| Remix & React Router | `@noverax/courier-remix` | `app/routes/api.request.ts` | [Remix & React Router](/docs/frameworks/remix) |
+| SolidStart | `@noverax/courier-solid` | `src/routes/api/request.ts` | [SolidStart](/docs/frameworks/solid-start) |
+
+## Server frameworks
+
+The proxy is one route of your server.
+
+| Framework | Package | Mounted with | Guide |
+| --- | --- | --- | --- |
+| Express | `@noverax/courier-express` | `app.all("/api/request", courierHandler())` | [Express](/docs/frameworks/express) |
+| Hono | `@noverax/courier-hono` | `app.all("/api/request", courierHandler())` | [Hono](/docs/frameworks/hono) |
+| Fastify | `@noverax/courier-fastify` | `app.register(courierPlugin, { prefix: "/api/request" })` | [Fastify](/docs/frameworks/fastify) |
+| NestJS | `@noverax/courier-nestjs` | `consumer.apply(courierMiddleware()).forRoutes("api/request")` | [NestJS](/docs/frameworks/nestjs) |
+
+## The client side
+
+The adapters serve the proxy. The typed caller the browser calls it with has guides of its own: [React](/docs/frameworks/react), with React Query, and [Vue](/docs/frameworks/vue).
+
+## Another framework
+
+A framework that hands its route a Web-standard `Request` and takes a `Response` back can mount Courier's own handler without an adapter: see [Server Handler](/docs/proxy-mode/api-route).

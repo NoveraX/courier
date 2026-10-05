@@ -1,7 +1,7 @@
 import type { MockServerInfo } from "@/store/mock-slice";
 import type { Delay } from "./latency-window";
 import { delayOf } from "./latency-window";
-import { routeOverridesOf, simulates } from "./route-overrides";
+import { hasOwnSettings, routeOverridesOf } from "./route-overrides";
 
 /** What a mock simulates, as the network condition sums it up. */
 export interface NetworkCondition {
@@ -11,13 +11,13 @@ export interface NetworkCondition {
   delay: Delay | null;
   /** Its cap on how fast bodies are sent, in Kbps; 0 for none */
   kbps: number;
-  /** How many routes an override of their own delays or fails */
+  /** How many routes are answered under an override of their own */
   routes: number;
 }
 
 /**
  * What a mock simulates: its failure rate, its delay and bandwidth cap,
- * and the routes an override of their own delays or fails.
+ * and the routes answered under an override of their own.
  *
  * @param server - The mock server
  * @returns What it simulates
@@ -34,7 +34,7 @@ export function networkConditionOf(
     rate: Math.round((config?.errorRate ?? 0) * 100),
     delay: delayOf(config?.latency),
     kbps: config?.bandwidth ?? 0,
-    routes: routeOverridesOf(server).filter(simulates).length,
+    routes: routeOverridesOf(server).filter(hasOwnSettings).length,
   };
 }
 

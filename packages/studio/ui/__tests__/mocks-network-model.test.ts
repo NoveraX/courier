@@ -14,7 +14,13 @@ import { injectedFault } from "@/features/mocks/mock-log";
 import { bandwidthLabel, networkConditionOf } from "@/features/mocks/network-condition";
 import { networkLive } from "@/features/mocks/network-live";
 import { faultsByType, latencyHistogram, statusStrip } from "@/features/mocks/observed-model";
-import { overrideRows, routeOverridesOf } from "@/features/mocks/route-overrides";
+import {
+  hasOwnSettings,
+  overrideRows,
+  routeOverridesOf,
+  withGlobalField,
+  withOwnField,
+} from "@/features/mocks/route-overrides";
 import type { ExperimentEvent, MockRequestLog } from "@/store/mock-slice";
 import { mockLog, mockServer } from "./mock-server-fixture";
 
@@ -219,8 +225,55 @@ describe("the route overrides", () => {
   });
 });
 
+describe("a route override's own settings", () => {
+  const off = { routeId: "users:list", enabled: false };
+
+  it("are set one at a time, each switching the override on and keeping the other", () => {
+    const delayed = withOwnField(off, "delay", 300);
+    const both = withOwnField(delayed, "rate", 50);
+
+    expect(delayed).toEqual({
+      routeId: "users:list",
+      enabled: true,
+      latency: { min: 300, max: 300, jitter: 0 },
+    });
+    expect(both).toEqual({ ...delayed, errorRate: 0.5 });
+  });
+
+  it("go back to the global ones one at a time, the last switching the override off", () => {
+    const both = withOwnField(withOwnField(off, "delay", 300), "rate", 50);
+    const rateOnly = withGlobalField(both, "delay");
+
+    expect(rateOnly).toEqual({ routeId: "users:list", enabled: true, errorRate: 0.5 });
+    expect(withGlobalField(rateOnly, "rate")).toEqual({ routeId: "users:list", enabled: false });
+  });
+
+  it("count a rate of 0 as the route's own: it never fails, whatever the global rate", () => {
+    const shielded = withOwnField(off, "rate", 0);
+    const server = mockServer({
+      routes: [
+        {
+          group: "users",
+          endpoint: "list",
+          httpMethod: "get",
+          path: "/users",
+          fullPath: "/api/users",
+          source: "auto",
+          hits: 0,
+          avgLatency: 0,
+        },
+      ],
+      routeOverrides: [shielded],
+    });
+
+    expect(hasOwnSettings(shielded)).toBe(true);
+    expect(hasOwnSettings({ ...shielded, enabled: false })).toBe(false);
+    expect(overrideRows(server)[0]).toMatchObject({ tag: "0%", tone: "brand" });
+  });
+});
+
 describe("what a mock simulates", () => {
-  it("sums up its rate, delay and bandwidth cap, and the routes whose override delays or fails them", () => {
+  it("sums up its rate, delay and bandwidth cap, and the routes answered under an override of their own", () => {
     const server = mockServer({
       networkConfig: {
         errorRate: 0.4,
@@ -238,7 +291,7 @@ describe("what a mock simulates", () => {
       rate: 40,
       delay: { base: 600, jitter: 450 },
       kbps: 512,
-      routes: 1,
+      routes: 2,
     });
   });
 

@@ -3,12 +3,14 @@ import { Fragment, useState } from "react";
 
 import { methodText } from "@/design/method-color";
 import { ToggleSwitch } from "@/design/toggle-switch";
+import { delayOf } from "@/features/mocks/latency-window";
 import type { OverrideRow } from "@/features/mocks/route-overrides";
-import { overrideRows } from "@/features/mocks/route-overrides";
+import { hasOwnSettings, overrideRows } from "@/features/mocks/route-overrides";
 import { cn } from "@/lib/utils";
 import { setRouteOverride } from "@/mocks/network-commands";
 import type { MockServerInfo } from "@/store/mock-slice";
 import { NetworkCard } from "./network-card";
+import type { GlobalSettings } from "./route-override-editor";
 import { RouteOverrideEditor } from "./route-override-editor";
 
 const TAG = {
@@ -76,10 +78,18 @@ function Row({
   );
 }
 
+function globalSettingsOf(server: MockServerInfo): GlobalSettings {
+  return {
+    delay: delayOf(server.networkConfig?.latency)?.base ?? 0,
+    rate: Math.round((server.networkConfig?.errorRate ?? 0) * 100),
+  };
+}
+
 /**
  * The mock's routes, each with a delay and failure rate of its own that
  * take priority over the global settings: switched on and off from its
- * row, set in the editor the row opens.
+ * row, set in the editor the row opens. A setting a route has none of its
+ * own for stays the global one.
  *
  * @param props - The mock server, and whether it can take a change
  * @returns The panel
@@ -97,6 +107,13 @@ export function RouteOverridesPanel({
 }): React.ReactNode {
   const [open, setOpen] = useState<string | null>(null);
   const rows = overrideRows(server);
+  const global = globalSettingsOf(server);
+  /* A route switched on with nothing of its own opens, so its settings can be set. */
+  const toggle = (row: OverrideRow, enabled: boolean): void => {
+    const override = { ...row.override, enabled };
+    setRouteOverride(server, override);
+    if (enabled && !hasOwnSettings(override)) setOpen(row.routeId);
+  };
   return (
     <NetworkCard
       icon={Split}
@@ -117,11 +134,12 @@ export function RouteOverridesPanel({
               open={open === row.routeId}
               disabled={disabled}
               onOpen={() => setOpen(open === row.routeId ? null : row.routeId)}
-              onToggle={(enabled) => setRouteOverride(server, { ...row.override, enabled })}
+              onToggle={(enabled) => toggle(row, enabled)}
             />
             {open === row.routeId && !disabled && (
               <RouteOverrideEditor
                 override={row.override}
+                global={global}
                 onCommit={(override) => setRouteOverride(server, override)}
               />
             )}

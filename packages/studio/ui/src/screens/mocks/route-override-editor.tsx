@@ -3,72 +3,127 @@ import { useState } from "react";
 
 import { RangeSlider } from "@/design/range-slider";
 import { delayOf } from "@/features/mocks/latency-window";
+import type { OverrideField } from "@/features/mocks/route-overrides";
+import { withGlobalField, withOwnField } from "@/features/mocks/route-overrides";
+import { cn } from "@/lib/utils";
 import type { RouteOverride } from "@/store/mock-slice";
+
+/** What a route takes for a setting it has none of its own for. */
+export interface GlobalSettings {
+  /** The global delay's base, in ms */
+  delay: number;
+  /** The global error rate, in percent */
+  rate: number;
+}
 
 interface RouteOverrideEditorProps {
   override: RouteOverride;
-  /** A slider let go, or the override cleared: the override to send. */
+  global: GlobalSettings;
+  /** A slider let go, a setting taken back, or the override cleared: the override to send. */
   onCommit: (override: RouteOverride) => void;
 }
 
+const FIELDS: readonly {
+  field: OverrideField;
+  label: string;
+  name: string;
+  max: number;
+  step: number;
+  tone?: "risk";
+  format: (value: number) => string;
+}[] = [
+  {
+    field: "delay",
+    label: "Delay",
+    name: "Route delay",
+    max: 2_000,
+    step: 10,
+    format: (v) => `+${v}ms`,
+  },
+  {
+    field: "rate",
+    label: "Error rate",
+    name: "Route error rate",
+    max: 100,
+    step: 5,
+    tone: "risk",
+    format: (v) => `${v}%`,
+  },
+];
+
+function ownValue(override: RouteOverride, field: OverrideField): number | undefined {
+  if (field === "delay") return override.latency && (delayOf(override.latency)?.base ?? 0);
+  return override.errorRate === undefined ? undefined : Math.round(override.errorRate * 100);
+}
+
 /**
- * A route override's delay and failure rate as sliders. Setting either
- * switches the override on; Reset clears it back to the global settings.
+ * A route override's delay and error rate, each the route's own or the
+ * global one. Moving a slider makes that setting the route's own and
+ * switches the override on; the other stays as it was. A setting's reset
+ * takes it back to the global one, and the last reset switches the
+ * override off.
  *
- * @param props - The route's override, and what follows a settled change
+ * @param props - The route's override, the global settings, and what follows a settled change
  * @returns The editor
  * @example
  * ```tsx
- * <RouteOverrideEditor override={row.override} onCommit={(o) => setRouteOverride(server, o)} />
+ * <RouteOverrideEditor override={row.override} global={{ delay: 600, rate: 40 }} onCommit={send} />
  * ```
  */
 export function RouteOverrideEditor({
   override,
+  global,
   onCommit,
 }: RouteOverrideEditorProps): React.ReactNode {
-  const [draft, setDraft] = useState<{ delay: number; rate: number } | null>(null);
-  const shown = draft ?? {
-    delay: delayOf(override.latency)?.base ?? 0,
-    rate: Math.round((override.errorRate ?? 0) * 100),
-  };
-  const send = (next: { delay: number; rate: number }): void => {
+  const [draft, setDraft] = useState<{ field: OverrideField; value: number } | null>(null);
+  const settle = (field: OverrideField, value: number): void => {
     setDraft(null);
-    onCommit({
-      ...override,
-      enabled: true,
-      latency: { min: next.delay, max: next.delay, jitter: 0 },
-      errorRate: next.rate / 100,
-    });
+    onCommit(withOwnField(override, field, value));
   };
-  const changed = shown.delay > 0 || shown.rate > 0;
+  const owned = FIELDS.some(({ field }) => ownValue(override, field) !== undefined);
   return (
     <div className="flex flex-col gap-3.5 border-b border-line bg-bg-subtle px-4.5 py-3.5 pl-[74px]">
-      <div className="grid grid-cols-[72px_minmax(0,1fr)_56px] items-center gap-3">
-        <span className="text-small text-fg-subtle">Delay</span>
-        <RangeSlider
-          label="Route delay"
-          value={shown.delay}
-          max={2_000}
-          step={10}
-          onChange={(delay) => setDraft({ ...shown, delay })}
-          onCommit={(delay) => send({ ...shown, delay })}
-        />
-        <span className="text-right font-mono text-small">+{shown.delay}ms</span>
-      </div>
-      <div className="grid grid-cols-[72px_minmax(0,1fr)_56px] items-center gap-3">
-        <span className="text-small text-fg-subtle">Error rate</span>
-        <RangeSlider
-          label="Route error rate"
-          tone="risk"
-          value={shown.rate}
-          max={100}
-          step={5}
-          onChange={(rate) => setDraft({ ...shown, rate })}
-          onCommit={(rate) => send({ ...shown, rate })}
-        />
-        <span className="text-right font-mono text-small">{shown.rate}%</span>
-      </div>
-      {changed && (
+      {FIELDS.map((f) => {
+        const own = draft?.field === f.field ? draft.value : ownValue(override, f.field);
+        const value = own ?? (f.field === "delay" ? global.delay : global.rate);
+        return (
+          <div
+            key={f.field}
+            className="grid grid-cols-[72px_minmax(0,1fr)_56px_24px] items-center gap-3"
+          >
+            <span className="text-small text-fg-subtle">{f.label}</span>
+            <RangeSlider
+              label={f.name}
+              tone={f.tone}
+              value={value}
+              max={f.max}
+              step={f.step}
+              onChange={(next) => setDraft({ field: f.field, value: next })}
+              onCommit={(next) => settle(f.field, next)}
+            />
+            <span
+              className={cn(
+                "text-right font-mono text-small",
+                own === undefined && "text-fg-subtle",
+              )}
+            >
+              {own === undefined ? "global" : f.format(own)}
+            </span>
+            {own !== undefined && (
+              <button
+                type="button"
+                aria-label={`Use the global ${f.label.toLowerCase()}`}
+                title={`Use the global ${f.label.toLowerCase()}`}
+                onClick={() => onCommit(withGlobalField(override, f.field))}
+                className="flex size-6 cursor-pointer items-center justify-center rounded-[6px] text-fg-subtle hover:bg-raised hover:text-fg"
+              >
+                <RotateCcw aria-hidden="true" className="size-3" />
+              </button>
+            )}
+          </div>
+        );
+      })}
+      {owned && (
         <button
           type="button"
           onClick={() => onCommit({ routeId: override.routeId, enabled: false })}

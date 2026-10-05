@@ -8,7 +8,7 @@ export interface OverrideRow {
   path: string;
   name: string;
   override: RouteOverride;
-  /** What the override does, short: `+300ms · 50%`, or `global` when it does nothing. */
+  /** What the override sets of its own, short: `+300ms · 50%`, `0%`, or `global` when it sets nothing. */
   tag: string;
   tone: "err" | "brand" | "subtle";
 }
@@ -35,27 +35,85 @@ export function routeOverridesOf(
   ];
 }
 
+/** A setting a route override can take over from the global ones. */
+export type OverrideField = "delay" | "rate";
+
 /**
- * Whether a route override changes how its route is answered: it is on,
- * and adds a delay or fails a share of the route's answers.
+ * Whether a route override is on and sets something of its own — a delay,
+ * an error rate or faults — rather than leaving its route to the global
+ * settings.
  *
  * @param override - The route's override
- * @returns Whether it simulates anything
+ * @returns Whether it overrides anything
  * @example
  * ```ts
- * simulates({ routeId: "users:list", enabled: true, errorRate: 0.5 }); // true
+ * hasOwnSettings({ routeId: "users:list", enabled: true, errorRate: 0 }); // true: the route never fails
  * ```
  */
-export function simulates(override: RouteOverride): boolean {
-  return override.enabled && (delayOf(override.latency) !== null || (override.errorRate ?? 0) > 0);
+export function hasOwnSettings(override: RouteOverride): boolean {
+  return override.enabled && ownsAnything(override);
+}
+
+function ownsAnything({ latency, errorRate, faultTypes }: RouteOverride): boolean {
+  return latency !== undefined || errorRate !== undefined || (faultTypes?.length ?? 0) > 0;
+}
+
+/**
+ * A route override with one setting of its own — a fixed delay in ms, or
+ * an error rate in percent — and the others as they were. Setting one
+ * switches the override on.
+ *
+ * @param override - The route's override
+ * @param field - The setting
+ * @param value - Its value: ms for the delay, percent for the rate
+ * @returns The override
+ * @example
+ * ```ts
+ * withOwnField({ routeId: "users:list", enabled: false }, "delay", 300);
+ * // → { routeId: "users:list", enabled: true, latency: { min: 300, max: 300, jitter: 0 } }
+ * ```
+ */
+export function withOwnField(
+  override: RouteOverride,
+  field: OverrideField,
+  value: number,
+): RouteOverride {
+  if (field === "delay") {
+    return { ...override, enabled: true, latency: { min: value, max: value, jitter: 0 } };
+  }
+  return { ...override, enabled: true, errorRate: value / 100 };
+}
+
+/**
+ * A route override that takes one setting back from the global ones. One
+ * left with nothing of its own is switched off.
+ *
+ * @param override - The route's override
+ * @param field - The setting
+ * @returns The override
+ * @example
+ * ```ts
+ * withGlobalField({ routeId: "users:list", enabled: true, errorRate: 0.5 }, "rate");
+ * // → { routeId: "users:list", enabled: false }
+ * ```
+ */
+export function withGlobalField(override: RouteOverride, field: OverrideField): RouteOverride {
+  const { latency, errorRate, ...rest } = override;
+  const kept: RouteOverride =
+    field === "delay"
+      ? { ...rest, ...(errorRate !== undefined && { errorRate }) }
+      : { ...rest, ...(latency !== undefined && { latency }) };
+  return { ...kept, enabled: override.enabled && ownsAnything(kept) };
 }
 
 function tagOf(override: RouteOverride): Pick<OverrideRow, "tag" | "tone"> {
-  const delay = delayOf(override.latency);
-  const rate = Math.round((override.errorRate ?? 0) * 100);
-  const parts = [delay ? `+${delayLabel(delay.base)}` : "", rate ? `${rate}%` : ""].filter(Boolean);
+  const { latency, errorRate } = override;
+  const parts = [
+    latency === undefined ? "" : `+${delayLabel(delayOf(latency)?.base ?? 0)}`,
+    errorRate === undefined ? "" : `${Math.round(errorRate * 100)}%`,
+  ].filter(Boolean);
   if (parts.length === 0) return { tag: "global", tone: "subtle" };
-  return { tag: parts.join(" · "), tone: rate ? "err" : "brand" };
+  return { tag: parts.join(" · "), tone: (errorRate ?? 0) > 0 ? "err" : "brand" };
 }
 
 /**

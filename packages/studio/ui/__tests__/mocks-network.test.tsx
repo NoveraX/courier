@@ -302,7 +302,7 @@ describe("latency", () => {
 });
 
 describe("a route's own override", () => {
-  it("sets its failure rate as a share, switching it on, and switches it off", async () => {
+  it("sets its failure rate as a share, alone, switching it on, and switches it off", async () => {
     await openShell("/mocks/network");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /users\.list/ })));
@@ -311,21 +311,57 @@ describe("a route's own override", () => {
     expect(sent("mock:network:set").at(-1)).toEqual({
       action: "mock:network:set",
       serverId: "api-mock",
-      config: {
-        routeOverrides: [
-          {
-            routeId: "users:list",
-            enabled: true,
-            latency: { min: 0, max: 0, jitter: 0 },
-            errorRate: 0.5,
-          },
-        ],
-      },
+      config: { routeOverrides: [{ routeId: "users:list", enabled: true, errorRate: 0.5 }] },
     });
     const toggle = screen.getByRole("switch", { name: "Override users.list" });
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     await settle(() => fireEvent.click(toggle));
     expect(sent("mock:network:set").at(-1)).toMatchObject({ config: { routeOverrides: [] } });
+  });
+
+  it("keeps the global setting it was given none of, and takes one back on its reset", async () => {
+    serve({ networkConfig: { latency: { min: 300, max: 900, jitter: 150 }, errorRate: 0.4 } });
+    await openShell("/mocks/network");
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /users\.list/ })));
+
+    /* Both rows' tags, and both settings of the open one, read global; the sliders rest at the global values. */
+    expect(screen.getAllByText("global")).toHaveLength(4);
+    expect(screen.getAllByDisplayValue("600")).toContain(
+      screen.getByRole("slider", { name: "Route delay" }),
+    );
+    expect(screen.getAllByDisplayValue("40")).toContain(
+      screen.getByRole("slider", { name: "Route error rate" }),
+    );
+    await drag("Route delay", 300);
+    expect(sent("mock:network:set").at(-1)).toMatchObject({
+      config: {
+        routeOverrides: [
+          { routeId: "users:list", enabled: true, latency: { min: 300, max: 300, jitter: 0 } },
+        ],
+      },
+    });
+    expect(sent("mock:network:set").at(-1)).not.toHaveProperty("config.routeOverrides.0.errorRate");
+    await drag("Route error rate", 0);
+    await settle(() =>
+      fireEvent.click(screen.getByRole("button", { name: "Use the global delay" })),
+    );
+
+    expect(sent("mock:network:set").at(-1)).toEqual({
+      action: "mock:network:set",
+      serverId: "api-mock",
+      config: { routeOverrides: [{ routeId: "users:list", enabled: true, errorRate: 0 }] },
+    });
+    expect(screen.getByRole("button", { name: /users\.list/ }).textContent).toContain("0%");
+  });
+
+  it("opens a route switched on with nothing of its own", async () => {
+    await openShell("/mocks/network");
+
+    await settle(() =>
+      fireEvent.click(screen.getByRole("switch", { name: "Override users.list" })),
+    );
+
+    expect(screen.getByRole("slider", { name: "Route delay" })).toBeTruthy();
   });
 
   it("keeps the overrides the mock already held when another route changes", async () => {

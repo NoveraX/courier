@@ -1,7 +1,7 @@
 import { AlertTriangle, CircleAlert } from "lucide-react";
+import type { ConfigNoticeState } from "@/features/apis/apis-page-state";
 import { formatClockTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import type { ConfigNoticeState } from "./apis-page-state";
 
 interface ConfigNoticeProps {
   notice: ConfigNoticeState;

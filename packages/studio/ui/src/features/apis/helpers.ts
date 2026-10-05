@@ -1,4 +1,4 @@
-import type { GenerateOptions, ParsedSpec, ScannedSource } from "./types";
+import type { GenerateOptions, ParsedSpec, ScannedSource } from "@/views/apis/types";
 
 // ── Endpoint counting ───────────────────────────────────────────────────────
 

@@ -13,7 +13,7 @@ vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
 import { post } from "@/lib/api-client";
 import { useStudioStore } from "@/store";
-import { useRegistry } from "../src/views/apis/use-registry";
+import { useRegistry } from "../src/apis/use-registry";
 
 const PETS = {
   name: "pets",

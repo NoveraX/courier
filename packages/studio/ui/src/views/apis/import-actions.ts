@@ -2,12 +2,12 @@
  * Async operations and selection reducers for the import wizard.
  */
 
+import { generateCode, parseSpecFromRaw, parseSpecFromUrl } from "@/apis/client";
+import { buildDefaultOptions, selectAllEndpoints } from "@/features/apis/helpers";
 import { ownValue } from "@/lib/own-value";
 import type { Settings } from "@/store/types-ui";
-import { generateCode, parseSpecFromRaw, parseSpecFromUrl } from "./client";
 import { writeFiles } from "./client-file-changes";
 import { deriveSourceName } from "./derive-source-name";
-import { buildDefaultOptions, selectAllEndpoints } from "./helpers";
 import { consentBody } from "./plan-consent";
 import type { GenerateOptions, ImportState, ParsedSpec } from "./types";
 

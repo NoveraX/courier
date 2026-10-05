@@ -6,10 +6,8 @@
  */
 
 import { describe, expect, it } from "vitest";
-
+import { apisPageState } from "../src/features/apis/apis-page-state";
 import type { ConfigStatusPayload } from "../src/store/config-status";
-
-import { apisPageState } from "../src/views/apis/apis-page-state";
 
 const LOADED: ConfigStatusPayload = {
   state: "loaded",

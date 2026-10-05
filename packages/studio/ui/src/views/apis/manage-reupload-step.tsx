@@ -4,11 +4,10 @@
 
 import { FileText, Upload } from "lucide-react";
 import { useState } from "react";
-
+import { parseSpecFromRaw } from "@/apis/client";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { parseSpecFromRaw } from "./client";
 import type { ParsedSpec } from "./types";
 
 type ReuploadSource = "file" | "raw";

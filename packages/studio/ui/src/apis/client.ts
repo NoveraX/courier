@@ -10,7 +10,7 @@ import type {
   GenerateOptions,
   ParsedSpec,
   SpecDiff,
-} from "./types";
+} from "@/views/apis/types";
 
 // ── Parse ───────────────────────────────────────────────────────────────────
 

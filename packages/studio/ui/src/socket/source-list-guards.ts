@@ -1,3 +1,4 @@
+import type { SchemaField } from "@noverax/courier-studio-core";
 import type {
   ScannedEndpoint,
   ScannedGroup,
@@ -101,7 +102,17 @@ function isScannedEndpoint(item: unknown): item is ScannedEndpoint {
     (analysis.transport === undefined || STREAM_TRANSPORTS.has(analysis.transport)) &&
     (analysis.middleware === undefined || isListOf(analysis.middleware, isString)) &&
     (analysis.variablesStub === undefined || isPlainObject(analysis.variablesStub)) &&
+    (analysis.variablesFields === undefined || isListOf(analysis.variablesFields, isSchemaField)) &&
     (analysis.hasReceiveSchema === undefined || analysis.hasReceiveSchema === true)
+  );
+}
+
+function isSchemaField(item: unknown): item is SchemaField {
+  return (
+    isPlainObject(item) &&
+    typeof item.path === "string" &&
+    typeof item.type === "string" &&
+    typeof item.required === "boolean"
   );
 }
 

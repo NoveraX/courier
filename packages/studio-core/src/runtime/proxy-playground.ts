@@ -1,6 +1,7 @@
 import { createProxyCaller, type ProxyPath, type UploadProgress } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import { getAppOriginParsed, resolveProxyPath } from "@noverax/courier/internal";
+import { member } from "../member";
 
 /* A path on the app's own origin: one leading slash, not a protocol-relative URL. */
 const RELATIVE_PATH = /^\/(?!\/)/;
@@ -108,12 +109,6 @@ function proxyPathOf(definition: unknown): ProxyPath | undefined {
 function withOptions(client: unknown, options: Record<string, unknown>): unknown {
   const scope = member(client, "with");
   return typeof scope === "function" ? Reflect.apply(scope, client, [options]) : client;
-}
-
-function member(value: unknown, key: string): unknown {
-  return (typeof value === "object" || typeof value === "function") && value !== null
-    ? Reflect.get(value, key)
-    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

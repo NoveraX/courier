@@ -1,5 +1,6 @@
 import type { Sources } from "@noverax/courier/define";
 import type { SourceMap } from "./events";
+import { extractSchemaFields } from "./schema-fields";
 import { isEndpoint, probeEndpoint } from "./source-map-probe";
 import { extractSchemaStub } from "./source-map-schema";
 
@@ -82,6 +83,7 @@ export function extractEndpoints(
     const httpMethod = normalizeHttpMethod(probed.method);
 
     const variablesStub = schema?.variables ? extractSchemaStub(schema.variables) : undefined;
+    const variablesFields = schema?.variables ? extractSchemaFields(schema.variables) : undefined;
 
     const transport = schema?.transport;
 
@@ -93,6 +95,7 @@ export function extractEndpoints(
       ...(probed.path && { path: probed.path }),
       ...(httpMethod && { httpMethod }),
       ...(variablesStub && { variablesStub }),
+      ...(variablesFields && { variablesFields }),
       ...(transport && transport !== "http" && { transport }),
       ...(transport === "ws" && schema?.receive ? { hasReceiveSchema: true } : {}),
     };

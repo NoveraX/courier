@@ -82,6 +82,7 @@ describe("extractSourceMap", () => {
       hasResponseSchema: true,
       httpMethod: "POST",
       variablesStub: { name: "" },
+      variablesFields: [{ path: "name", type: "string", required: true }],
     });
   });
 

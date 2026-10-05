@@ -17,15 +17,23 @@ function withTicks(analysis: Record<string, unknown>): unknown {
 }
 
 describe("a declared source from Studio", () => {
-  it("is shown with its transports, variable stubs and proxy routes", () => {
+  it("is shown with its transports, variable stubs and fields, and proxy routes", () => {
     expect(
       isScannedSource(withTicks({ variablesStub: { count: 0 }, hasReceiveSchema: true })),
+    ).toBe(true);
+    expect(
+      isScannedSource(
+        withTicks({ variablesFields: [{ path: "count", type: "number", required: true }] }),
+      ),
     ).toBe(true);
   });
 
   it("is left out when a field it carries has the wrong shape", () => {
     expect(isScannedSource(withTicks({ transport: "grpc" }))).toBe(false);
     expect(isScannedSource(withTicks({ variablesStub: "count" }))).toBe(false);
+    expect(
+      isScannedSource(withTicks({ variablesFields: [{ path: "count", type: "number" }] })),
+    ).toBe(false);
     expect(isScannedSource({ ...API, proxyPath: { http: 1 } })).toBe(false);
     expect(isScannedSource({ ...API, proxyPath: { ftp: "/files" } })).toBe(false);
   });

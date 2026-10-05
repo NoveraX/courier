@@ -6,6 +6,7 @@
  */
 
 import type { ProxyPath } from "@noverax/courier";
+import type { SchemaField } from "@noverax/courier-studio-core";
 
 import type { PlanConsent } from "./types-file-plan";
 import type { ParsedSpec } from "./types-parsed-spec";
@@ -64,6 +65,8 @@ export interface EndpointAnalysis {
   middleware?: string[];
   /** The variables its schema describes, with a placeholder for each field. */
   variablesStub?: Record<string, unknown>;
+  /** The fields its variables schema declares, with their types and whether each is required. */
+  variablesFields?: SchemaField[];
   /** A channel whose messages from the client have a schema. */
   hasReceiveSchema?: true;
 }

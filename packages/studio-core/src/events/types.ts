@@ -1,5 +1,7 @@
 import type { ProxyPath } from "@noverax/courier";
 
+import type { SchemaField } from "../schema-fields";
+
 /** All Studio event types */
 export type EventType =
   // Connection
@@ -101,6 +103,8 @@ export interface SourceMap {
             httpMethod?: string;
             /** Default variables stub generated from schema shape */
             variablesStub?: Record<string, unknown>;
+            /** The fields the variables schema declares, with their types and whether each is required */
+            variablesFields?: SchemaField[];
             /** Transport mode — only present for non-HTTP endpoints */
             transport?: "sse" | "ws";
             /** True when WS channel has a receive schema (bidirectional) */

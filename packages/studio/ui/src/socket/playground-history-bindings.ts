@@ -1,6 +1,7 @@
 import type { Socket } from "socket.io-client";
 import type { StoreApi } from "zustand";
 
+import { isDemoVisitor } from "@/features/demo/is-demo-visitor";
 import { keptPlaygroundHistory, readPlaygroundHistory } from "@/store/playground-history-storage";
 import type { StudioState } from "@/store/store-types";
 
@@ -10,7 +11,8 @@ const SAVE_DELAY_MS = 500;
 /**
  * Keep the Playground history in Studio, for the project: a page that
  * connects takes the history Studio kept, unless it already has one of its
- * own, which is newer; each change the page makes is sent back.
+ * own, which is newer; each change the page makes is sent back. A visitor
+ * of a public demo keeps its history in its page, and sends none.
  *
  * @param socket - The `/ui` socket
  * @param store - The Studio store
@@ -33,6 +35,7 @@ export function bindPlaygroundHistory(socket: Socket, store: StoreApi<StudioStat
   const unsubscribe = store.subscribe((state, previous) => {
     const history = state.playgroundHistory;
     if (history === previous.playgroundHistory || history === fromStudio) return;
+    if (isDemoVisitor(state.studioInfo)) return;
     clearTimeout(timer);
     timer = setTimeout(
       () => socket.emit("playground:history:save", keptPlaygroundHistory(history)),

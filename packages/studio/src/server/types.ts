@@ -42,6 +42,25 @@ export interface StudioServerOptions {
    * may connect as runtimes regardless.
    */
   extraCorsOrigins?: readonly string[] | undefined;
+  /**
+   * Serve Studio as a public demo of the project. A page without the token
+   * may then also send from the Playground and drive the mocks — start and
+   * stop them, set their latency and failures, apply scenarios, change their
+   * data — within limits that keep one visitor from crowding out the rest.
+   * It still writes no file and clears or switches nothing every page
+   * shows, and each page says it is a demo. The Playground calls the
+   * project's own sources only, so point them at servers visitors may call.
+   */
+  demo?: StudioDemo | undefined;
+}
+
+/** How Studio runs as a public demo. */
+export interface StudioDemo {
+  /**
+   * When whoever hosts the demo resets it — starts Studio again on a fresh
+   * copy of the project — in epoch milliseconds. Pages count down to it.
+   */
+  resetsAt?: number | undefined;
 }
 
 /** Where Studio listens, and what the project asked of it when it started. */

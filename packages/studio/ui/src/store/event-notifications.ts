@@ -1,5 +1,7 @@
 import { toast } from "sonner";
 
+import { isDemoVisitor } from "@/features/demo/is-demo-visitor";
+
 import type { StudioState } from "./store-types";
 import type { RequestEntry } from "./types";
 
@@ -11,7 +13,8 @@ type Getter = () => StudioState;
 /**
  * Toast the failures and slow requests among a batch of events the store
  * just took in. A burst that fails many requests at once is told in one
- * toast, not one per request.
+ * toast, not one per request. A visitor of a public demo is told of none:
+ * the traffic is every visitor's.
  *
  * @param events - The events of the batch, oldest first
  * @param get - Reads the store after the batch was applied
@@ -22,7 +25,9 @@ type Getter = () => StudioState;
  * ```
  */
 export function notifyOnEvents(events: EventPayload[], get: Getter): void {
-  const { settings, requests } = get();
+  const { settings, requests, studioInfo } = get();
+  /* A demo's traffic is every visitor's, not this one's to be told of. */
+  if (isDemoVisitor(studioInfo)) return;
   const failed = settings.toastOnError ? events.filter((e) => e.type === "request:error") : [];
   const slow = settings.toastOnSlowRequest
     ? events.filter((e) => e.type === "request:end" && totalOf(e) > settings.slowRequestThreshold)

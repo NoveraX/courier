@@ -35,18 +35,19 @@ export const TOKEN_REFUSAL =
  * 401 and `STUDIO_TOKEN_REQUIRED`; let everything else through.
  *
  * @param token - The project's token
+ * @param refusal - What the caller is told; a public demo tells its visitors why it writes nothing
  * @returns The middleware, mounted before the routes
  * @example
  * ```ts
  * app.use(tokenGuard(studioToken(root)));
  * ```
  */
-export function tokenGuard(token: StudioToken): RequestHandler {
+export function tokenGuard(token: StudioToken, refusal: string = TOKEN_REFUSAL): RequestHandler {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!WRITING_ROUTES.has(req.path) || token.matches(req.get(TOKEN_HEADER))) {
       next();
       return;
     }
-    res.status(401).json({ error: TOKEN_REFUSAL, code: "STUDIO_TOKEN_REQUIRED" });
+    res.status(401).json({ error: refusal, code: "STUDIO_TOKEN_REQUIRED" });
   };
 }

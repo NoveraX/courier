@@ -27,11 +27,13 @@ export interface StudioSockets {
  * opened a polling session, and its POSTs and its upgrade, which name the
  * page, were never read.
  *
- * A message may be as large as {@link MAX_MESSAGE_BYTES}; a connection that
- * breaks, over a larger one or anything else, is logged with the reason.
+ * A message may be as large as {@link MAX_MESSAGE_BYTES}, or the limit a
+ * public demo sets; a connection that breaks, over a larger one or anything
+ * else, is logged with the reason.
  *
  * @param httpServer - The server Studio listens on.
  * @param policy - Who may connect as what.
+ * @param maxMessageBytes - The largest message a socket may send.
  * @returns The Socket.IO server and its namespaces.
  * @example
  * ```ts
@@ -41,13 +43,14 @@ export interface StudioSockets {
 export function createStudioSockets(
   httpServer: HttpServer,
   policy: StudioOriginPolicy,
+  maxMessageBytes: number = MAX_MESSAGE_BYTES,
 ): StudioSockets {
   const io = new SocketIOServer(httpServer, {
     cors: {
       origin: (origin, callback) => callback(null, policy.isRuntimeCaller(origin, undefined)),
       methods: ["GET", "POST"],
     },
-    maxHttpBufferSize: MAX_MESSAGE_BYTES,
+    maxHttpBufferSize: maxMessageBytes,
     serveClient: false,
   });
   /* The handshake, every polling request after it, and the upgrade to a WebSocket. */
@@ -68,20 +71,20 @@ export function createStudioSockets(
     [uiNamespace, "The Studio UI"],
     [runtimeNamespace, "A runtime"],
   ] as const) {
-    namespace.on("connection", (socket) => reportBrokenConnection(socket, who));
+    namespace.on("connection", (socket) => reportBrokenConnection(socket, who, maxMessageBytes));
   }
 
   return { io, uiNamespace, runtimeNamespace };
 }
 
 /* A connection closed by a failure, not by either end, loses what was in flight: say so. */
-function reportBrokenConnection(socket: Socket, who: string): void {
+function reportBrokenConnection(socket: Socket, who: string, maxMessageBytes: number): void {
   socket.on("disconnect", (reason, description: unknown) => {
     if (reason !== "transport error" && reason !== "parse error") return;
     const cause = description === undefined ? reason : messageOf(description);
     log.warn(
       `${who} lost its connection to Studio (${cause}). A message is limited to ` +
-        `${MAX_MESSAGE_BYTES / 1024 / 1024} MB; what was in flight did not arrive.`,
+        `${maxMessageBytes / 1024 / 1024} MB; what was in flight did not arrive.`,
     );
   });
 }

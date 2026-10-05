@@ -3,6 +3,7 @@ import { basename, join } from "node:path";
 import { logger } from "@noverax/courier";
 
 import { studioVersion } from "./studio-version";
+import type { StudioDemo } from "./types";
 
 /** What a page is told of the Studio it talks to, as `studio:info` on connect. */
 export interface StudioInfo {
@@ -16,6 +17,8 @@ export interface StudioInfo {
     /** The packages it depends on, dev ones included, by name and sorted. */
     dependencies: string[];
   };
+  /** How Studio runs as a public demo; absent when it does not. */
+  demo?: StudioDemo;
 }
 
 interface Manifest {

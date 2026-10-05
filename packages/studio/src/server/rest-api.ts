@@ -6,6 +6,9 @@ import { apiNotFound } from "./api-not-found";
 import { type ApisRouteDeps, registerApisRoutes } from "./apis-routes";
 import { registerConfigDeclareRoutes } from "./config-declare-routes";
 import type { ConfigEditDeps } from "./config-edit/declare-alone";
+import type { DemoLimits } from "./demo/demo-limits";
+import { DEMO_WRITE_REFUSAL } from "./demo/demo-refusals";
+import { DEMO_MAX_BODY, demoRestGuard } from "./demo/demo-rest-guard";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
@@ -27,13 +30,16 @@ export interface RestApiDeps {
   sessions: SessionRouteDeps;
   /** The token a writing route asks for. */
   token: StudioToken;
+  /** The visitors' counts, when Studio serves a public demo. */
+  demo?: { limits: DemoLimits } | undefined;
 }
 
 /**
  * Mount Studio's REST API: compression, the origin guard, the token a
  * writing route asks for, JSON bodies, the health check, the API and session
  * routes, and JSON answers for a route Studio does not have and for the
- * errors the routes raise.
+ * errors the routes raise. A public demo also counts its visitors' requests,
+ * reads smaller bodies, and tells a visitor why it writes nothing.
  *
  * @param app - The Studio server's Express app
  * @param policy - Decides who counts as the Studio UI
@@ -47,14 +53,15 @@ export interface RestApiDeps {
 export function registerRestApi(
   app: ReturnType<typeof express>,
   policy: StudioOriginPolicy,
-  { apis, configEdit, mocksEdit, sessions, token }: RestApiDeps,
+  { apis, configEdit, mocksEdit, sessions, token, demo }: RestApiDeps,
 ): void {
   app.use(compression());
   /* Before anything reads a body: the API is for the Studio UI, not for every
      page the developer happens to have open. */
   app.use("/api", createOriginGuard(policy));
-  app.use(tokenGuard(token));
-  app.use("/api", express.json({ limit: MAX_MESSAGE_BYTES }));
+  if (demo) app.use("/api", demoRestGuard(token, demo.limits));
+  app.use(tokenGuard(token, demo ? DEMO_WRITE_REFUSAL : undefined));
+  app.use("/api", express.json({ limit: demo ? DEMO_MAX_BODY : MAX_MESSAGE_BYTES }));
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });

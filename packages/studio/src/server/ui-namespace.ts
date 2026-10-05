@@ -26,10 +26,11 @@ import type { MockLog } from "./storage/mock-log";
 import type { PlaygroundHistory } from "./storage/playground-history";
 import type { SessionStore } from "./storage/session-rows";
 import type { StudioView } from "./storage/studio-view";
-import { studioInfo } from "./studio-info";
+import { type StudioInfo, studioInfo } from "./studio-info";
 import type { StudioToken } from "./studio-token";
+import type { StudioDemo } from "./types";
 import { bindPlaygroundHistory } from "./ui-playground-history";
-import { guardUiWrites } from "./ui-token-guard";
+import { guardUiWrites, type VisitorPolicy } from "./ui-token-guard";
 import { bindView } from "./ui-view";
 import type { WatcherStatus } from "./watcher-status";
 
@@ -58,6 +59,10 @@ export interface SetupUiNamespaceDeps {
    * anything; one that presents none still receives everything it shows.
    */
   token: StudioToken;
+  /** What a page without the token may send; Studio's own rule, to read only, unless given. */
+  visitors?: VisitorPolicy | undefined;
+  /** How Studio runs as a public demo, which each page is told. */
+  demo?: StudioDemo | undefined;
 }
 
 /**
@@ -75,13 +80,13 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
   const { uiNamespace, bindingTable, mockManager, watcherStatus, playgroundRouter, requestLog } =
     deps;
   const { sessions, view, mockLog, playgroundHistory } = deps;
-  const { project, projectRoot, token } = deps;
+  const { project, projectRoot, token, visitors, demo } = deps;
   /* Read once: the version cannot change while Studio runs, and a renamed
      package shows after a restart. */
-  const info = studioInfo(projectRoot);
+  const info: StudioInfo = { ...studioInfo(projectRoot), ...(demo && { demo }) };
 
   uiNamespace.on("connection", (socket) => {
-    guardUiWrites(socket, token);
+    const trusted = guardUiWrites(socket, token, visitors);
     socket.emit("studio:info", info);
     // Send current binding-table snapshot so a UI client that joins after a
     // runtime has already announced gets the live state without waiting for
@@ -134,7 +139,9 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
 
     /* After the live requests: a page that loaded a saved session shows it again. */
     if (sessions && view) bindView(socket, { sessions, view, requestLog });
-    if (playgroundHistory) bindPlaygroundHistory(socket, playgroundHistory);
+    if (playgroundHistory) {
+      bindPlaygroundHistory(socket, playgroundHistory, { trusted, demo: demo !== undefined });
+    }
 
     // Rid-keyed playground wire — `attachRuntime` callers register a
     // `playground-responder` that speaks the `playground:execute` protocol.

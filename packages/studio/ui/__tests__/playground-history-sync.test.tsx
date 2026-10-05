@@ -59,7 +59,7 @@ async function connect(url: string): Promise<void> {
 }
 
 beforeEach(() => {
-  useStudioStore.setState({ playgroundHistory: [] });
+  useStudioStore.setState({ playgroundHistory: [], studioInfo: null });
 });
 
 afterEach(async () => {
@@ -87,6 +87,24 @@ describe("the Playground history", () => {
     useStudioStore.setState({ playgroundHistory: [call] });
 
     await vi.waitFor(() => expect(saved).toEqual([[call]]), { timeout: 2_000 });
+  });
+
+  it("stays in the page of a public demo's visitor, which sends none", async () => {
+    const { url, saved } = await studio([]);
+    useStudioStore.setState({
+      studioInfo: {
+        version: "1.0.0",
+        startedAt: 1,
+        project: { name: "demo-shop", dependencies: [] },
+        demo: {},
+      },
+    });
+    await connect(url);
+
+    useStudioStore.setState({ playgroundHistory: [{ ...KEPT, id: "e3", rid: "r3" }] });
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(saved).toEqual([]);
   });
 
   it("is the page's own after a reconnect, not the older one Studio kept", async () => {

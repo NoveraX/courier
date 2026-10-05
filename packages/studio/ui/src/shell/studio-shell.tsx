@@ -7,13 +7,15 @@ import { RequestInspector } from "@/inspector/request-inspector";
 import { CommandPalette } from "./command-palette/command-palette";
 import { useRunAction } from "./command-palette/use-run-action";
 import { ConnectionBanner } from "./connection-banner";
+import { DemoBanner } from "./demo-banner";
 import { Header } from "./header/header";
 import { Sidebar } from "./sidebar/sidebar";
 import { StatusBar } from "./status-bar/status-bar";
 
 /**
  * Studio's frame around every view: the sidebar, the header, a banner while
- * Studio cannot be reached, the view, the status bar, the request inspector
+ * Studio cannot be reached and one for a visitor of a public demo, the view,
+ * the status bar, the request inspector
  * over the view while a request is open, and the command palette — ⌘K
  * opens it, ⌘. pauses or resumes recording, ⇧⌘L changes the theme, ⌘E
  * exports the requests and ⌘⌫ clears them.
@@ -44,6 +46,7 @@ export function StudioShell(): React.ReactNode {
       <div className="row-start-1 flex min-h-0 min-w-0 flex-col">
         <Header onOpenPalette={() => setPaletteOpen(true)} />
         <ConnectionBanner />
+        <DemoBanner />
         <main className="min-h-0 flex-1 overflow-auto">
           <Outlet />
         </main>

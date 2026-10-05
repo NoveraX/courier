@@ -4,8 +4,8 @@ import { isPlainObject } from "./is-plain-object";
 
 /**
  * Whether a `studio:info` payload is one the UI understands: a non-empty
- * version and project name, a start time, and the project's dependencies
- * by name.
+ * version and project name, a start time, the project's dependencies by
+ * name, and — from a public demo — when it resets, if it says.
  *
  * @param data - The payload as Socket.IO delivered it
  * @returns Whether it is a well-formed `StudioInfo`
@@ -24,8 +24,15 @@ export function isStudioInfo(data: unknown): data is StudioInfo {
     isTime(data.startedAt) &&
     isFilled(name) &&
     Array.isArray(dependencies) &&
-    dependencies.every((dependency) => typeof dependency === "string")
+    dependencies.every((dependency) => typeof dependency === "string") &&
+    isDemo(data.demo)
   );
+}
+
+/* Absent outside a demo; a demo may leave out when it resets. */
+function isDemo(value: unknown): boolean {
+  if (value === undefined) return true;
+  return isPlainObject(value) && (value.resetsAt === undefined || isTime(value.resetsAt));
 }
 
 function isTime(value: unknown): value is number {

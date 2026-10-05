@@ -9,9 +9,9 @@ export interface SegmentedOption<TValue extends string> {
   icon?: LucideIcon | undefined;
   /** A dot before the label in the colour of what the option shows: a `bg-*` class. */
   swatch?: string | undefined;
-  /** A count after the label, coloured as an error's when it counts errors. */
+  /** A count after the label, coloured as an error's when it counts errors, a warning's when it counts changes. */
   count?: number | undefined;
-  countTone?: "err" | "subtle" | undefined;
+  countTone?: "err" | "warn" | "subtle" | undefined;
   /** A dot after the label: what the option shows was changed. */
   dot?: boolean | undefined;
 }
@@ -81,7 +81,11 @@ export function Segmented<TValue extends string>({
               <span
                 className={cn(
                   "text-meta font-medium tabular-nums",
-                  option.countTone === "err" ? "text-err" : "text-fg-subtle",
+                  option.countTone === "err"
+                    ? "text-err"
+                    : option.countTone === "warn"
+                      ? "text-warn"
+                      : "text-fg-subtle",
                 )}
               >
                 {option.count}

@@ -96,7 +96,7 @@ export interface HistoryEntryInput {
 }
 
 /** Append a normalized history entry to the route config history array */
-export function pushHistory(config: RouteConfig, entry: HistoryEntryInput): void {
+export function pushHistory(config: Pick<RouteConfig, "history">, entry: HistoryEntryInput): void {
   config.history.push({
     group: entry.group,
     method: entry.method,

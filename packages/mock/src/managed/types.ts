@@ -80,6 +80,10 @@ export interface MockServerDefinition<TSource extends AnySource = AnySource>
   admin?: boolean | undefined;
   /** Request logging (default: "normal") */
   log?: "silent" | "normal" | "verbose" | boolean | undefined;
+  /** The largest JSON body the mock reads, in bytes (default: 1 MB, as a Courier server); a larger one is answered with 413 */
+  maxBodyBytes?: number | undefined;
+  /** The largest form or upload the mock reads, in bytes (default: 10 MB, as a Courier server); a larger one is answered with 413 */
+  maxUploadBytes?: number | undefined;
   /**
    * Keep the mock's records in the project's `.courier/mocks/`, so they
    * survive a restart of the mock — an edit that changes it included — and

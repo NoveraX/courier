@@ -29,6 +29,7 @@ import { applyMiddleware } from "./app-middleware";
 import { generatedRoutes, routeKey } from "./generated-routes";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { persistedStore } from "./persisted-store";
+import { bodyLimitsOf } from "./read-request-body";
 import type { RequestHooks } from "./route-types";
 import { createScenarioControls } from "./scenario-controls";
 import { createServerLifecycle } from "./server-lifecycle";
@@ -84,6 +85,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     streamsStopping: streams.signal,
     elsewhere: config?.elsewhere,
     answersOwn: (group: string, method: string) => ownSource(group, method) !== "auto",
+    bodyLimits: bodyLimitsOf(config),
   };
 
   registerRequestRoutes(app, routeConfig, config?.mappings);

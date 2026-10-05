@@ -16,7 +16,7 @@ import type { Hono } from "hono";
 import { registerDeclaredRoutes } from "./declared-routes";
 import type { PrefixMapping, PrefixRouteConfig } from "./prefix-route-types";
 import { registerSSERoutes } from "./prefix-static-routes";
-import { readJsonBody } from "./read-json-body";
+import { bodyValue, readRequestBody } from "./read-request-body";
 import {
   buildIdVars,
   parseId,
@@ -78,26 +78,25 @@ export function registerPrefixRoutes(
 
     // POST /prefix → create endpoint
     app.post(`/${prefix}`, async (c) => {
-      const read = await readJsonBody(c);
-      if ("error" in read) return c.json({ error: read.error }, 400);
-      const body = read.value ?? {};
       const ep = resolveByOperation(eps, "create");
       const method =
         ep?.name ??
         resolveMethod(mapping.methods, ["create", "add", "insert"], /^(create|add|insert)/);
-      return config.handleRequest(c, mapping.group, method, body);
+      const read = await readRequestBody(c, config.bodyLimits);
+      if ("error" in read) return config.refuse(c, mapping.group, method, read);
+      return config.handleRequest(c, mapping.group, method, bodyValue(read) ?? {});
     });
 
     // PUT /prefix/:id → replace/upsert endpoint
     app.put(`/${prefix}/:id`, async (c) => {
       const id = parseId(c.req.param("id") ?? "");
-      const read = await readJsonBody(c);
-      if ("error" in read) return c.json({ error: read.error }, 400);
-      const body = read.value ?? {};
       const ep = resolveByOperation(eps, "replace");
       const method =
         ep?.name ??
         resolveMethod(mapping.methods, ["update", "replace", "put"], /^(update|replace|put)/);
+      const read = await readRequestBody(c, config.bodyLimits);
+      if ("error" in read) return config.refuse(c, mapping.group, method, read);
+      const body = bodyValue(read) ?? {};
       return config.handleRequest(c, mapping.group, method, {
         ...(body as object),
         ...buildIdVars(ep, id),
@@ -107,13 +106,13 @@ export function registerPrefixRoutes(
     // PATCH /prefix/:id → update endpoint
     app.patch(`/${prefix}/:id`, async (c) => {
       const id = parseId(c.req.param("id") ?? "");
-      const read = await readJsonBody(c);
-      if ("error" in read) return c.json({ error: read.error }, 400);
-      const body = read.value ?? {};
       const ep = resolveByOperation(eps, "update");
       const method =
         ep?.name ??
         resolveMethod(mapping.methods, ["patch", "update", "updateStatus"], /^(patch|update|edit)/);
+      const read = await readRequestBody(c, config.bodyLimits);
+      if ("error" in read) return config.refuse(c, mapping.group, method, read);
+      const body = bodyValue(read) ?? {};
       return config.handleRequest(c, mapping.group, method, {
         ...(body as object),
         ...buildIdVars(ep, id),

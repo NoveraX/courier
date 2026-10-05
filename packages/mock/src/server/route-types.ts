@@ -9,6 +9,7 @@ import type { MockRegistry } from "../registry";
 import type { ScenarioMark } from "../scenario/scenario-state";
 import type { MockHistoryEntry, NetworkConfig } from "../types";
 import type { Elsewhere } from "./elsewhere";
+import type { BodyLimits } from "./read-request-body";
 
 /** Hooks for emitting request lifecycle events (set by the worker Studio runs a mock in) */
 export interface RequestHooks {
@@ -54,4 +55,6 @@ export interface RouteConfig {
   elsewhere?: Elsewhere | undefined;
   /** Whether an override or a scenario answers an endpoint, which wins over its recordings */
   answersOwn?: ((group: string, method: string) => boolean) | undefined;
+  /** The most of a request body the mock reads: JSON, and a form or an upload */
+  bodyLimits?: BodyLimits | undefined;
 }

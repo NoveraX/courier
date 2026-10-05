@@ -4,6 +4,7 @@
  */
 
 import type { DatabaseSync, SQLOutputValue } from "node:sqlite";
+import { REPLAY_BYTES } from "./replay-bytes";
 import { withoutCredentials } from "./without-credentials";
 
 type RuntimeEvent = Record<string, unknown>;
@@ -31,7 +32,7 @@ export interface RequestRows {
   requests(): StoredRequest[];
   /** A request's first event */
   openingOf(id: string): RuntimeEvent | undefined;
-  /** Every kept event: a request's in the order they arrived, oldest request first */
+  /** The kept events a page is sent as it connects: the newest requests', each whole and in the order its events arrived, as many as fit the replay, oldest request first */
   events(): RuntimeEvent[];
   write(batch: RequestBatch): void;
 }
@@ -46,15 +47,22 @@ export interface RequestRows {
  * requestRows(db).write({ events: [{ id: "r1", event }], requests: [row], dropped: [] });
  * ```
  */
-export function requestRows(db: DatabaseSync): RequestRows {
+export function requestRows(db: DatabaseSync, replayBytes: number = REPLAY_BYTES): RequestRows {
   const listRequests = db.prepare(
     "SELECT id, position, open, events FROM requests ORDER BY position",
   );
   const firstEvent = db.prepare(
     "SELECT body FROM request_events WHERE request_id = ? ORDER BY seq LIMIT 1",
   );
+  /* The newest requests whose events fit the replay, each whole, oldest first. */
   const listEvents = db.prepare(
-    "SELECT e.body FROM request_events e JOIN requests r ON r.id = e.request_id ORDER BY r.position, e.seq",
+    "WITH sized AS (SELECT r.id, r.position, " +
+      "(SELECT COALESCE(SUM(LENGTH(body)), 0) FROM request_events WHERE request_id = r.id) AS bytes " +
+      "FROM requests r), " +
+      "kept AS (SELECT id, position, " +
+      "SUM(bytes) OVER (ORDER BY position DESC ROWS UNBOUNDED PRECEDING) AS upto FROM sized) " +
+      "SELECT e.body FROM request_events e JOIN kept k ON k.id = e.request_id " +
+      "WHERE k.upto <= ? ORDER BY k.position, e.seq",
   );
   const insertEvent = db.prepare("INSERT INTO request_events (request_id, body) VALUES (?, ?)");
   const upsertRequest = db.prepare(
@@ -74,7 +82,7 @@ export function requestRows(db: DatabaseSync): RequestRows {
       })),
     openingOf: (id) => eventOf(firstEvent.get(id)?.body),
     events: () =>
-      listEvents.all().flatMap((row): RuntimeEvent[] => {
+      listEvents.all(replayBytes).flatMap((row): RuntimeEvent[] => {
         const event = eventOf(row.body);
         return event ? [event] : [];
       }),

@@ -39,7 +39,7 @@ interface LoggedRequest {
 export interface RequestLog {
   /** Keep an event a runtime sent, once it has been passed to the UI. */
   record: (event: RuntimeEvent, owner: string) => void;
-  /** Every kept event, a request's events in the order they arrived, oldest request first. */
+  /** The kept events a page is sent as it connects: the newest requests', each whole and in the order its events arrived, as many as fit the replay, oldest request first. */
   events: () => RuntimeEvent[];
   /** End the requests a runtime socket left open; returns the events that end them, already kept. */
   endOpen: (owner: string) => RuntimeEvent[];
@@ -51,9 +51,11 @@ export interface RequestLog {
 
 /**
  * Open the request log kept in a database, ending the requests a previous
- * Studio left open.
+ * Studio left open. A page that connects is sent its newest requests, each
+ * whole, as many as fit `replayBytes`.
  *
  * @param db - Studio's database
+ * @param replayBytes - The most of the log a page is sent as it connects
  * @returns The log
  *
  * @example
@@ -63,8 +65,8 @@ export interface RequestLog {
  * uiSocket.emit("events:replay", log.events());
  * ```
  */
-export function createRequestLog(db: DatabaseSync): RequestLog {
-  const rows = requestRows(db);
+export function createRequestLog(db: DatabaseSync, replayBytes?: number): RequestLog {
+  const rows = requestRows(db, replayBytes);
   const requests = new Map<string, LoggedRequest>();
   let batch: RequestBatch = { events: [], requests: [], dropped: [] };
   const changed = new Set<string>();

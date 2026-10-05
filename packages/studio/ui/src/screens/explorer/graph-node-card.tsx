@@ -1,17 +1,36 @@
 import { Folder, Server } from "lucide-react";
 
 import { Dot } from "@/design/dot";
-import { TONE_FILL, TONE_TEXT } from "@/design/tone";
+import { TONE_TEXT } from "@/design/tone";
+import type { LevelTone } from "@/features/explorer/endpoint-metrics";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type { GraphNode } from "@/features/explorer/graph-types";
 import { cn } from "@/lib/utils";
+import { GraphNodeFigures } from "./graph-node-figures";
 import { methodClassOf } from "./method-class";
 
 const SHAPE: Readonly<Record<GraphNode["kind"], string>> = {
-  source: "rounded-dialog pl-2.5 shadow-[0_1px_0_rgb(0_0_0/0.04)]",
+  source: "rounded-dialog pl-2.5",
   group: "rounded-panel pl-2.5",
   endpoint: "rounded-[9px] pl-3",
 };
+
+/* A health's dot glows in its colour; a node with no traffic does not. */
+const GLOW: Readonly<Record<LevelTone, string>> = {
+  ok: "shadow-[0_0_0_3px_var(--color-ok-dim),0_0_8px_color-mix(in_srgb,var(--color-ok)_55%,transparent)]",
+  warn: "shadow-[0_0_0_3px_var(--color-warn-dim),0_0_8px_color-mix(in_srgb,var(--color-warn)_55%,transparent)]",
+  err: "shadow-[0_0_0_3px_var(--color-err-dim),0_0_8px_color-mix(in_srgb,var(--color-err)_55%,transparent)]",
+  muted: "",
+};
+
+/* A screen reader hears what hovering shows: the node, its address, its health and its figures. */
+function nameOf(node: GraphNode): string {
+  const figures = node.figures.map((f) => `${f.label} ${f.value}`).join(", ");
+  const address = node.detail === node.key ? [] : [node.detail];
+  return [node.key, ...address, LEVEL_META[node.level].label, figures || node.value.text].join(
+    " · ",
+  );
+}
 
 interface GraphNodeCardProps {
   node: GraphNode;
@@ -35,9 +54,10 @@ function Tile({ kind }: { kind: "source" | "group" }): React.ReactNode {
 
 /**
  * A node on the Explorer's graph: a source or a group with its icon, or an
- * endpoint with its method and path — each with its figure under the
- * colour metric, its health on its left edge and in its dot, which pulses
- * while it is active. Hovering or focusing it lights its branch.
+ * endpoint with its method and path — a raised card with its figure under
+ * the colour metric and its health in a glowing dot, which pulses while it
+ * is active. Hovering or focusing it lights its branch and shows its whole
+ * address and what its calls add up to over it.
  *
  * @param props - The node, and what hovering and opening it do
  * @returns The node's card
@@ -57,11 +77,11 @@ export function GraphNodeCard(props: GraphNodeCardProps): React.ReactNode {
       onMouseLeave={() => onHover(undefined)}
       onFocus={() => onHover(node.id)}
       onBlur={() => onHover(undefined)}
-      aria-label={`${node.key} · ${LEVEL_META[node.level].label} · ${node.value.text}`}
+      aria-label={nameOf(node)}
       aria-pressed={node.kind === "endpoint" ? node.selected : undefined}
       style={{ width: node.width, height: node.height }}
       className={cn(
-        "relative flex cursor-pointer items-center gap-2.25 border bg-panel pr-2.5 text-left transition-[opacity,border-color,box-shadow] duration-150 hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand",
+        "relative flex cursor-pointer items-center gap-2.25 border bg-panel pr-2.5 text-left shadow-node transition-[opacity,border-color,box-shadow] duration-150 hover:border-line-strong hover:shadow-node-lift focus-visible:outline-2 focus-visible:outline-brand",
         SHAPE[node.kind],
         node.selected
           ? "border-brand shadow-[0_0_0_3px_var(--color-brand-dim)]"
@@ -71,9 +91,6 @@ export function GraphNodeCard(props: GraphNodeCardProps): React.ReactNode {
         node.dim && "opacity-30",
       )}
     >
-      <span
-        className={cn("absolute top-2 bottom-2 -left-px w-0.5 rounded-[2px]", TONE_FILL[tone])}
-      />
       {node.kind !== "endpoint" && <Tile kind={node.kind} />}
       {node.method && (
         <span
@@ -106,7 +123,8 @@ export function GraphNodeCard(props: GraphNodeCardProps): React.ReactNode {
       >
         {node.value.text}
       </span>
-      <Dot tone={tone} pulse={node.active} className="size-1.75" />
+      <Dot tone={tone} pulse={node.active} className={cn("size-1.75", GLOW[tone])} />
+      {node.hovered && <GraphNodeFigures node={node} />}
     </button>
   );
 }

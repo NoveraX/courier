@@ -153,11 +153,51 @@ describe("the Explorer's graph", () => {
     expect(within(graph).getByText("Groups · 3")).toBeTruthy();
     expect(within(graph).getByText("Endpoints · 4")).toBeTruthy();
     expect(
-      within(graph).getByRole("button", { name: "api.orders.create · Critical · 900ms" }),
+      within(graph).getByRole("button", {
+        name: /^api\.orders\.create · POST \/orders · Critical · Calls [\d.]+\/m, p50 \S+, p95 900ms, Errors 50\.0%$/,
+      }),
     ).toBeTruthy();
     expect(
-      within(graph).getByRole("button", { name: "billing.invoices.get · No traffic · —" }),
+      within(graph).getByRole("button", {
+        name: "billing.invoices.get · GET /invoices/:id · No traffic · —",
+      }),
     ).toBeTruthy();
+  });
+
+  it("runs each call that ends along its endpoint's branch, coloured by how it went", async () => {
+    await openShell("/explorer");
+    const graph = region("Endpoint graph");
+    expect(graph.querySelectorAll("[data-pulse]")).toHaveLength(0);
+
+    await settle(() =>
+      useStudioStore.setState({
+        requests: [
+          call("c9", "orders", "create", {
+            httpMethod: "POST",
+            status: "error",
+            statusCode: 500,
+            startedAt: NOW,
+          }),
+          ...REQUESTS,
+        ],
+      }),
+    );
+
+    expect(graph.querySelectorAll('[data-pulse="err"]')).toHaveLength(1);
+    expect(within(graph).queryByText("Live call")).toBeNull();
+    expect(screen.getByText("Live call")).toBeTruthy();
+  });
+
+  it("shows a node's whole address and figures while it is hovered", async () => {
+    await openShell("/explorer");
+    const card = screen.getByRole("button", { name: /^api · https:\/\/api\.example\.com · / });
+
+    await settle(() => fireEvent.mouseEnter(card));
+
+    expect(within(card).getByText("https://api.example.com")).toBeTruthy();
+    expect(within(card).getByText("p95")).toBeTruthy();
+    await settle(() => fireEvent.mouseLeave(card));
+    expect(within(card).queryByText("p95")).toBeNull();
   });
 
   it("colours by another metric, kept in the address", async () => {

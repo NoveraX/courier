@@ -31,6 +31,9 @@ function node(index: number): GraphNode {
     dim: false,
     matched: false,
     selected: false,
+    hovered: false,
+    detail: `GET /users/n${index}`,
+    figures: [],
   };
 }
 
@@ -42,11 +45,10 @@ function layoutOf(count: number): GraphLayout {
         id: "g-e",
         path: "M 0 0 C 10 0 10 10 20 10",
         tone: "plain",
-        moving: false,
-        width: 1,
         opacity: 1,
       },
     ],
+    branches: new Map(),
     width: 804,
     height: 52 + count * 48 + 12,
     columns: [
@@ -102,7 +104,14 @@ describe("the graph as flow nodes", () => {
 
 describe("the graph's canvas", () => {
   it("zooms in and out and fits the graph in view", () => {
-    render(<GraphFlow layout={layoutOf(3)} onHover={vi.fn()} onOpen={vi.fn()} />);
+    render(
+      <GraphFlow
+        calls={{ pulses: [], onPulseDone: vi.fn() }}
+        layout={layoutOf(3)}
+        onHover={vi.fn()}
+        onOpen={vi.fn()}
+      />,
+    );
 
     for (const name of ["Zoom in", "Zoom out", "Fit the graph"])
       expect(screen.getByRole("button", { name })).toBeTruthy();
@@ -110,7 +119,14 @@ describe("the graph's canvas", () => {
   });
 
   it("shows where the view is on a graph larger than a screenful", () => {
-    render(<GraphFlow layout={layoutOf(30)} onHover={vi.fn()} onOpen={vi.fn()} />);
+    render(
+      <GraphFlow
+        calls={{ pulses: [], onPulseDone: vi.fn() }}
+        layout={layoutOf(30)}
+        onHover={vi.fn()}
+        onOpen={vi.fn()}
+      />,
+    );
 
     expect(document.querySelector(".react-flow__minimap")).not.toBeNull();
   });

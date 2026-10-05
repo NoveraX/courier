@@ -4,6 +4,7 @@ import type { GraphNode, GraphOptions } from "./graph-types";
 import { GRAPH } from "./graph-types";
 import { methodLabelOf } from "./method-label";
 import { metricValue } from "./metric-value";
+import { nodeFiguresOf } from "./node-figures";
 
 /**
  * An endpoint's node, centred on its row: its method and path, its figure,
@@ -44,6 +45,9 @@ export function endpointNodeOf(e: EndpointNode, centre: number, options: GraphOp
     dim: !(related(id, options.hover) && matched),
     matched: q !== "" && matched,
     selected: options.selected === e.key,
+    hovered: options.hover === id,
+    detail: `${methodLabelOf(e)} ${e.path}`,
+    figures: nodeFiguresOf(e.metrics, options.slowMs),
   };
 }
 
@@ -72,6 +76,7 @@ export function parentNodeOf(
           key: node.group.key,
           label: node.group.name,
           sub: undefined,
+          detail: node.group.key,
           metrics: node.group.metrics,
           level: node.group.level,
           active: false,
@@ -80,6 +85,7 @@ export function parentNodeOf(
           key: node.source.name,
           label: node.source.name,
           sub: node.source.baseURL.replace(/^https?:\/\//, ""),
+          detail: node.source.baseURL,
           metrics: node.source.metrics,
           level: node.source.level,
           active: node.source.metrics.active,
@@ -102,5 +108,8 @@ export function parentNodeOf(
     dim: !related(id, options.hover),
     matched: false,
     selected: false,
+    hovered: options.hover === id,
+    detail: base.detail,
+    figures: nodeFiguresOf(base.metrics, options.slowMs),
   };
 }

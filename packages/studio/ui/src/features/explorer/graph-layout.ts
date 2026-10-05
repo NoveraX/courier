@@ -1,7 +1,7 @@
 import type { ExplorerModel, SourceNode } from "./explorer-model";
-import { edgeOf } from "./graph-edges";
+import { branchOf, edgeOf } from "./graph-edges";
 import { endpointNodeOf, parentNodeOf } from "./graph-nodes";
-import type { GraphEdge, GraphLayout, GraphNode, GraphOptions } from "./graph-types";
+import type { GraphBranch, GraphEdge, GraphLayout, GraphNode, GraphOptions } from "./graph-types";
 import { GRAPH } from "./graph-types";
 
 function middle(values: readonly number[]): number {
@@ -13,12 +13,14 @@ function sourceGraph(
   source: SourceNode,
   firstRow: number,
   options: GraphOptions,
-): { nodes: GraphNode[]; edges: GraphEdge[]; rows: number } {
+): { nodes: GraphNode[]; edges: GraphEdge[]; branches: [string, GraphBranch][]; rows: number } {
   let row = firstRow;
   const centreOf = () => GRAPH.top + row++ * GRAPH.row;
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
   const children: { node: GraphNode; metrics: SourceNode["metrics"] }[] = [];
+  /* Each endpoint with the group it sits in, its branch drawn once the source is placed. */
+  const ends: { node: GraphNode; group: GraphNode | undefined }[] = [];
   for (const group of source.groups) {
     const leaves = group.endpoints.map((e) => ({
       e,
@@ -30,16 +32,19 @@ function sourceGraph(
       options,
     );
     nodes.push(groupNode, ...leaves.map((l) => l.node));
-    for (const leaf of leaves)
+    for (const leaf of leaves) {
       edges.push(edgeOf(groupNode, leaf.node, leaf.e.metrics, options.hover));
+      ends.push({ node: leaf.node, group: groupNode });
+    }
     children.push({ node: groupNode, metrics: group.metrics });
   }
   for (const e of source.loose) {
     const node = endpointNodeOf(e, centreOf(), options);
     nodes.push(node);
     children.push({ node, metrics: e.metrics });
+    ends.push({ node, group: undefined });
   }
-  if (!children.length) return { nodes: [], edges: [], rows: 0 };
+  if (!children.length) return { nodes: [], edges: [], branches: [], rows: 0 };
   const sourceNode = parentNodeOf(
     { kind: "source", source },
     middle(children.map((c) => c.node.y + c.node.height / 2)),
@@ -47,7 +52,11 @@ function sourceGraph(
   );
   for (const child of children)
     edges.push(edgeOf(sourceNode, child.node, child.metrics, options.hover));
-  return { nodes: [sourceNode, ...nodes], edges, rows: row - firstRow };
+  const branches = ends.map(({ node, group }): [string, GraphBranch] => [
+    node.key,
+    branchOf(sourceNode, group, node),
+  ]);
+  return { nodes: [sourceNode, ...nodes], edges, branches, rows: row - firstRow };
 }
 
 /**
@@ -67,16 +76,19 @@ function sourceGraph(
 export function graphLayoutOf(model: ExplorerModel, options: GraphOptions): GraphLayout {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
+  const branches = new Map<string, GraphBranch>();
   let rows = 0;
   for (const source of model.sources) {
     const part = sourceGraph(source, rows, options);
     nodes.push(...part.nodes);
     edges.push(...part.edges);
+    for (const [key, branch] of part.branches) branches.set(key, branch);
     rows += part.rows;
   }
   return {
     nodes,
     edges,
+    branches,
     width: GRAPH.x.endpoint + GRAPH.width.endpoint + 4,
     height: GRAPH.top + rows * GRAPH.row + 12,
     columns: [

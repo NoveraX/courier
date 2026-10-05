@@ -2,7 +2,7 @@ import { isPlainObject } from "@/socket/is-plain-object";
 import type { MockRouteEntry } from "../mock-slice-types";
 import { readStringRecord } from "./read-string-record";
 
-const SOURCES = ["auto", "override", "scenario"] as const;
+const SOURCES = ["auto", "override", "scenario", "upstream", "fixtures"] as const;
 
 /* A route that comes without its counts has served nothing yet. */
 function readRoute(value: unknown): MockRouteEntry | undefined {

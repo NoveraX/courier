@@ -11,7 +11,7 @@ import { useStudioStore } from "@/store";
  * @example
  * ```tsx
  * const blocked = useAddMockBlocked();
- * <Button disabled={blocked !== null} title={blocked ?? undefined} onClick={openMockWizard}>Add mock server</Button>
+ * <Button disabled={blocked !== null} title={blocked ?? undefined} onClick={openMockWizard}>Generate mocks</Button>
  * ```
  */
 export function useAddMockBlocked(): string | null {

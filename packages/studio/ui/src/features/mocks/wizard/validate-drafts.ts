@@ -98,6 +98,10 @@ export function validateDrafts(
       key: keyProblem(draft.key, earlier, declared),
       port: portProblem(draft, earlier),
       seedCount: seedCountProblem(draft),
+      endpoints:
+        draft.answers === "some" && draft.endpoints.length === 0
+          ? "pick at least one endpoint, or let the mock answer every one"
+          : undefined,
     });
     if (errors) problems.set(index, errors);
     remember(draft, earlier);

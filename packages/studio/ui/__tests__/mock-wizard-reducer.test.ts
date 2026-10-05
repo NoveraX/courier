@@ -100,6 +100,9 @@ describe("drafts", () => {
         portText: "",
         seedCountText: "20",
         autoStart: true,
+        answers: "all",
+        endpoints: [],
+        data: "generated",
       },
     ]);
     expect(run(picked, { type: "toggleSource", source: "api", declaredKeys: [] }).drafts).toEqual(

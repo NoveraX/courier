@@ -1,8 +1,12 @@
 import { FIELD_INPUT, FormField } from "@/design/form-field";
 import { Segmented } from "@/design/segmented";
 import { ToggleSwitch } from "@/design/toggle-switch";
+import type { ScannedSource } from "@/features/apis/types";
+import { answerableEndpoints } from "@/features/mocks/wizard/answerable-endpoints";
 import { fieldDescriptionIds } from "@/features/mocks/wizard/field-description-ids";
 import type { DraftErrors, MockDraft, PortMode } from "@/features/mocks/wizard/types";
+import { DraftAnswersField } from "./draft-answers-field";
+import { DraftDataField } from "./draft-data-field";
 
 const PORT_MODES: readonly { value: PortMode; label: string }[] = [
   { value: "auto", label: "Automatic" },
@@ -17,6 +21,8 @@ const PORT_HINTS = {
 interface DraftPanelProps {
   index: number;
   draft: MockDraft;
+  /** The source it mocks, as Studio scanned it: its endpoints and its server. */
+  source: ScannedSource | undefined;
   errors: DraftErrors | undefined;
   onEdit: (patch: Partial<Omit<MockDraft, "source">>) => void;
   onRemove: () => void;
@@ -37,6 +43,7 @@ interface DraftPanelProps {
 export function DraftPanel({
   index,
   draft,
+  source,
   errors,
   onEdit,
   onRemove,
@@ -127,6 +134,15 @@ export function DraftPanel({
             className={`${FIELD_INPUT} max-w-24`}
           />
         </FormField>
+        <DraftAnswersField
+          id={id}
+          draft={draft}
+          groups={answerableEndpoints(source)}
+          baseURL={source?.baseURL ?? ""}
+          error={errors?.endpoints}
+          onEdit={onEdit}
+        />
+        <DraftDataField id={id} draft={draft} baseURL={source?.baseURL ?? ""} onEdit={onEdit} />
         <FormField
           id={`${id}-start`}
           label="Start with Studio"

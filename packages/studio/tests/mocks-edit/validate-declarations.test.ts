@@ -339,3 +339,41 @@ describe("checking declarations against one another", () => {
     ).toEqual([]);
   });
 });
+
+describe("the endpoints a mock answers and its recordings file", () => {
+  it("takes endpoint names and a .har path inside the project", () => {
+    expect(
+      validateDeclarations(
+        [request({ endpoints: ["orders.refund", "health"], fixtures: "./fixtures/orders.har" })],
+        STATE,
+      ),
+    ).toEqual([]);
+  });
+
+  it("refuses no endpoints, a name that is not one, and a name given twice", () => {
+    const fields = (endpoints: string[]) =>
+      validateDeclarations([request({ endpoints })], STATE).map((e) => e.message);
+
+    expect(fields([])).toEqual(["a mock that answers some endpoints names at least one"]);
+    expect(fields(["orders.refund;"])).toEqual([
+      '"orders.refund;" is not an endpoint name, such as orders.refund',
+    ]);
+    expect(fields(["health", "health"])).toEqual(['"health" is named twice']);
+  });
+
+  it("refuses a recordings file outside the project, absolute, or not a .har", () => {
+    const outside =
+      "a recordings file must be a .har path relative to the mocks file, inside the project";
+    for (const fixtures of [
+      "../outside.har",
+      "/abs/x.har",
+      "C:/x.har",
+      "fixtures\\x.har",
+      "x.json",
+    ]) {
+      expect(validateDeclarations([request({ fixtures })], STATE).map((e) => e.message)).toEqual([
+        outside,
+      ]);
+    }
+  });
+});

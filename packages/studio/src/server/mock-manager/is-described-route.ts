@@ -2,7 +2,13 @@ import type { DescribedRoute } from "@noverax/courier-mock/managed";
 
 import { isPlainObject } from "../is-plain-object";
 
-const SOURCES: ReadonlySet<unknown> = new Set(["auto", "override", "scenario"]);
+const SOURCES: ReadonlySet<unknown> = new Set([
+  "auto",
+  "override",
+  "scenario",
+  "upstream",
+  "fixtures",
+]);
 
 function isFieldTypes(value: unknown): boolean {
   if (!isPlainObject(value)) return false;

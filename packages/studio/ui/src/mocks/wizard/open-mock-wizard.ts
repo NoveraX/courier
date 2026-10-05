@@ -7,7 +7,7 @@ import { wizardBus } from "./wizard-bus";
  *
  * @example
  * ```tsx
- * <Button onClick={openMockWizard}>Add mock server</Button>
+ * <Button onClick={openMockWizard}>Generate mocks</Button>
  * ```
  */
 export function openMockWizard(): void {

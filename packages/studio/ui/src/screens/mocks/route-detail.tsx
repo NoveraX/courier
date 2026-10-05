@@ -11,6 +11,10 @@ const ANSWERED_BY: Readonly<Record<MockRouteEntry["source"], (name: string) => s
     `Generated from the response schema of ${name}: records the mock keeps in its store.`,
   override: () => "An override in courier.mocks.ts answers this route.",
   scenario: () => "The scenario that is on answers this route.",
+  upstream: () =>
+    "The mock does not answer this route: each call goes to the source's own server, as your app calls it.",
+  fixtures: (name) =>
+    `Recordings of the source's own server answer ${name}: a call made for the first time goes to the server once and is saved.`,
 };
 
 function Heading({ children }: { children: React.ReactNode }): React.ReactNode {

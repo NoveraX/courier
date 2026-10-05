@@ -58,6 +58,9 @@ describe("the payload readers", () => {
     expect(readMockRoutes([withoutCounts])).toEqual([ROUTE]);
     expect(readMockRoutes([{ ...ROUTE, hits: "3" }])).toBeUndefined();
     expect(readMockRoutes([{ ...ROUTE, source: "magic" }])).toBeUndefined();
+    for (const source of ["upstream", "fixtures"]) {
+      expect(readMockRoutes([{ ...ROUTE, source }])).toEqual([{ ...ROUTE, source }]);
+    }
   });
 
   it("read one of the values allowed, and a timing with every phase", () => {

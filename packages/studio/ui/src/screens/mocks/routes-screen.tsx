@@ -4,7 +4,12 @@ import { SearchField } from "@/design/search-field";
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import type { MockRoutesSearch, RouteKind } from "@/features/mocks/routes-view";
-import { filterRoutes, routeKeyOf, routeKindCounts } from "@/features/mocks/routes-view";
+import {
+  filterRoutes,
+  ROUTE_KINDS,
+  routeKeyOf,
+  routeKindCounts,
+} from "@/features/mocks/routes-view";
 import { inspectorOf } from "@/features/requests/inspector-of";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
@@ -19,6 +24,8 @@ const KIND_LABELS: Readonly<Record<RouteKind, string>> = {
   auto: "Auto",
   override: "Override",
   scenario: "Scenario",
+  upstream: "Your server",
+  fixtures: "Recorded",
 };
 
 /**
@@ -47,9 +54,11 @@ export function MockRoutesScreen(): React.ReactNode {
       replace: true,
     });
   const counts = routeKindCounts(server.routes);
-  const kinds: SegmentedOption<RouteKind>[] = (
-    ["all", "auto", "override", "scenario"] as const
-  ).map((value) => ({
+  /* A mock that leaves nothing to its server, or replays nothing, has no use for those filters. */
+  const shownKinds = ROUTE_KINDS.filter(
+    (value) => (value !== "upstream" && value !== "fixtures") || counts[value] > 0,
+  );
+  const kinds: SegmentedOption<RouteKind>[] = shownKinds.map((value) => ({
     value,
     label: KIND_LABELS[value],
     count: counts[value],

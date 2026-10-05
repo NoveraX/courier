@@ -34,6 +34,21 @@ describe("entryFields", () => {
     );
   });
 
+  it("writes the endpoints it answers and its recordings file, in the file's quote", () => {
+    const ctx = { ...CTX, style: { ...DEFAULT_STYLE, quote: "'" as const } };
+
+    expect(
+      entryFields(
+        request("api", { endpoints: ["orders.refund", "health"], fixtures: "./fixtures/api.har" }),
+        ctx,
+      ),
+    ).toEqual([
+      { name: "source", value: "courierConfig.sources.api" },
+      { name: "endpoints", value: "['orders.refund', 'health']" },
+      { name: "fixtures", value: "'./fixtures/api.har'" },
+    ]);
+  });
+
   it("indexes a source whose key is not an identifier, in the file's quote", () => {
     const ctx = { ...CTX, style: { ...DEFAULT_STYLE, quote: "'" as const } };
 

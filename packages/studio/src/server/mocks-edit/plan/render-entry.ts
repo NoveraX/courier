@@ -67,6 +67,13 @@ export function entryFields(request: MockDeclaration, ctx: EntryContext): EntryF
     fields.push({ name: "seed", value: `{ count: ${request.seedCount} }` });
   }
   if (request.autoStart) fields.push({ name: "autoStart", value: "true" });
+  if (request.endpoints) {
+    const names = request.endpoints.map((name) => literal(name, ctx));
+    fields.push({ name: "endpoints", value: `[${names.join(", ")}]` });
+  }
+  if (request.fixtures !== undefined) {
+    fields.push({ name: "fixtures", value: literal(request.fixtures, ctx) });
+  }
   return fields;
 }
 

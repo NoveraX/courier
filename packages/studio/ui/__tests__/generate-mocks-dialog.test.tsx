@@ -169,6 +169,30 @@ describe("generating a mock", () => {
     expect(screen.getByText("Waiting for Studio to list it")).toBeTruthy();
   });
 
+  it("asks Studio for a mock that answers the endpoints picked, with recordings", async () => {
+    const preview = vi.fn<DeclareClient["preview"]>().mockResolvedValue(READY);
+    const session = wizardSession({ preview });
+    session.dispatch({ type: "toggleSource", source: "shop", declaredKeys: [] });
+    session.dispatch({ type: "goTo", step: "configure" });
+    render(<Wizard session={session} close={vi.fn()} />);
+    const panel = within(screen.getByRole("region", { name: "Mock of shop" }));
+
+    fireEvent.click(panel.getByRole("button", { name: "Some endpoints" }));
+    expect(panel.getByText(/The rest go to https:\/\/shop\.example/)).toBeTruthy();
+    fireEvent.click(panel.getByRole("checkbox", { name: "Answer users.list" }));
+    fireEvent.click(panel.getByRole("button", { name: "Recorded" }));
+    expect(panel.getByText(/saved to \.\/fixtures\/shop\.har/)).toBeTruthy();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Review change" })));
+
+    expect(preview).toHaveBeenCalledWith([
+      expect.objectContaining({
+        key: "shop",
+        endpoints: ["users.list"],
+        fixtures: "./fixtures/shop.har",
+      }),
+    ]);
+  });
+
   it("gives the code to add by hand when Studio cannot write the change", async () => {
     const session = wizardSession({
       preview: vi.fn<DeclareClient["preview"]>().mockResolvedValue(MANUAL),

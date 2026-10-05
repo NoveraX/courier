@@ -12,6 +12,15 @@ const KIND_TAG: Readonly<Record<MockRouteEntry["source"], string>> = {
   auto: "bg-raised text-fg-muted",
   override: "bg-warn-dim text-warn",
   scenario: "bg-syntax-keyword/12 text-syntax-keyword",
+  upstream: "bg-syntax-type/12 text-syntax-type",
+  fixtures: "bg-ok-dim text-ok",
+};
+const KIND_WORD: Readonly<Record<MockRouteEntry["source"], string>> = {
+  auto: "auto",
+  override: "override",
+  scenario: "scenario",
+  upstream: "your server",
+  fixtures: "recorded",
 };
 const AVG_TEXT = { normal: "text-fg", warn: "text-warn", err: "text-err" } as const;
 
@@ -78,7 +87,7 @@ export function RouteRow({
             KIND_TAG[route.source],
           )}
         >
-          {route.source}
+          {KIND_WORD[route.source]}
         </span>
         <span
           className={cn(

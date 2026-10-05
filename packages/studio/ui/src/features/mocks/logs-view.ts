@@ -51,6 +51,8 @@ export function logTag(log: Pick<MockRequestLog, "error" | "source">): LogTag {
   if (fault) return { tag: `chaos · ${fault}`, tone: "err" };
   if (log.source === "scenario") return { tag: "scenario", tone: "warn" };
   if (log.source === "override") return { tag: "override", tone: "keyword" };
+  if (log.source === "upstream") return { tag: "your server", tone: "subtle" };
+  if (log.source === "fixtures") return { tag: "recorded", tone: "keyword" };
   return { tag: "handler", tone: "subtle" };
 }
 

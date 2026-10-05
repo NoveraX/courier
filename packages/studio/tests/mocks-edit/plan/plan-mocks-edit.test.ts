@@ -1083,3 +1083,19 @@ describe("planMocksEdit for a config of named exports", () => {
     }
   });
 });
+
+describe("a mock that answers some endpoints, with recordings", () => {
+  it("writes the endpoints and the recordings file into the entry, and the audit accepts them", () => {
+    const partial = request("shop", {
+      endpoints: ["orders.refund"],
+      fixtures: "./fixtures/shop.har",
+    });
+
+    const plan = planMocksEdit(editOf("", [partial]));
+
+    expect(plan.text).toContain(
+      'shop: defineMockServer({\n    source: courierConfig.sources.shop,\n    endpoints: ["orders.refund"],\n    fixtures: "./fixtures/shop.har",\n  }),',
+    );
+    expect(parseErrors(plan.text)).toEqual([]);
+  });
+});

@@ -1,3 +1,4 @@
+import { CardSection } from "@/design/card-section";
 import { Dot } from "@/design/dot";
 import { shortAgo } from "@/features/explorer/endpoint-key";
 import { methodLabelOf } from "@/features/explorer/method-label";
@@ -14,7 +15,6 @@ import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
 import { EndpointName } from "./endpoint-name";
 import { methodClassOf } from "./method-class";
-import { OverviewCard } from "./overview-card";
 
 /* How many of the newest calls the feed lists. */
 const FEED_SIZE = 14;
@@ -94,7 +94,7 @@ export function ActivityFeed(props: ActivityFeedProps): React.ReactNode {
   const { requests, now, slowMs, live, onOpen } = props;
   const latest = requests.slice(0, FEED_SIZE);
   return (
-    <OverviewCard
+    <CardSection
       title="Activity"
       aside={
         live && (
@@ -119,6 +119,6 @@ export function ActivityFeed(props: ActivityFeedProps): React.ReactNode {
           />
         ))}
       </div>
-    </OverviewCard>
+    </CardSection>
   );
 }

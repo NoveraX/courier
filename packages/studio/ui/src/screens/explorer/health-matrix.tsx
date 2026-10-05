@@ -1,9 +1,9 @@
+import { CardSection } from "@/design/card-section";
 import { Dot } from "@/design/dot";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type { ExplorerModel, GroupNode } from "@/features/explorer/explorer-model";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { OverviewCard } from "./overview-card";
 
 function tipOf(group: GroupNode): string {
   const { calls, errorRate, p95 } = group.metrics;
@@ -32,7 +32,7 @@ interface HealthMatrixProps {
 export function HealthMatrix({ model, onGroup }: HealthMatrixProps): React.ReactNode {
   const sources = model.sources.filter((source) => source.groups.length > 0);
   return (
-    <OverviewCard
+    <CardSection
       title="Health matrix"
       aside={<span className="text-label text-fg-subtle">groups by source</span>}
     >
@@ -69,6 +69,6 @@ export function HealthMatrix({ model, onGroup }: HealthMatrixProps): React.React
           </div>
         ))}
       </div>
-    </OverviewCard>
+    </CardSection>
   );
 }

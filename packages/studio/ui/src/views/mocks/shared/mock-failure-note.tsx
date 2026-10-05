@@ -1,5 +1,5 @@
+import { mockFailureReason } from "@/features/mocks/mock-failure-reason";
 import type { ProcessStatus } from "@/store/mock-slice";
-import { mockFailureReason } from "./mock-failure-reason";
 
 /* A running mock with a problem kept its last good definition: the latest one could not be read. */
 const OUTCOME: Partial<Record<ProcessStatus, string>> = {

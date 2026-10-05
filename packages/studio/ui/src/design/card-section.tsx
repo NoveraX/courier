@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-interface OverviewCardProps {
+interface CardSectionProps {
   title: string;
   /** What follows the title: a note, a count, or controls pushed to the end. */
   aside?: React.ReactNode;
@@ -9,21 +9,22 @@ interface OverviewCardProps {
 }
 
 /**
- * One of the Overview's cards: a titled panel.
+ * A titled panel of a page: the Explorer's overview cards, the Mocks
+ * dashboard's.
  *
  * @param props - Its title, what follows it, and its content
  * @returns The card
  * @example
  * ```tsx
- * <OverviewCard title="Activity" aside={<LiveMark />}>{rows}</OverviewCard>
+ * <CardSection title="Activity" aside={<LiveMark />}>{rows}</CardSection>
  * ```
  */
-export function OverviewCard({
+export function CardSection({
   title,
   aside,
   className,
   children,
-}: OverviewCardProps): React.ReactNode {
+}: CardSectionProps): React.ReactNode {
   return (
     <section
       aria-label={title}

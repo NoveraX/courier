@@ -2,8 +2,8 @@ import { Square, Zap } from "lucide-react";
 import { useCallback } from "react";
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { useElapsed } from "@/hooks/use-tick";
+import { stopAllFaults } from "@/mocks/stop-all-faults";
 import type { MockServerInfo } from "@/store/mock-slice";
-import { stopAllFaults } from "./stop-all-faults";
 
 export type PanelMode = "global" | "per-route";
 

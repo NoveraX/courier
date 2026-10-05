@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import { CardSection } from "@/design/card-section";
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import type { Tone } from "@/design/tone";
@@ -12,7 +12,6 @@ import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { EndpointName } from "./endpoint-name";
 import { methodClassOf } from "./method-class";
-import { OverviewCard } from "./overview-card";
 
 const MODES: readonly SegmentedOption<TopMetric>[] = [
   { value: "latency", label: "Latency" },
@@ -52,7 +51,7 @@ export function TopEndpoints({ model, slowMs, onOpen }: TopEndpointsProps): Reac
   const [by, setBy] = useState<TopMetric>("latency");
   const top = topEndpoints(model, by);
   return (
-    <OverviewCard
+    <CardSection
       title="Top endpoints"
       aside={
         <>
@@ -97,6 +96,6 @@ export function TopEndpoints({ model, slowMs, onOpen }: TopEndpointsProps): Reac
           );
         })}
       </div>
-    </OverviewCard>
+    </CardSection>
   );
 }

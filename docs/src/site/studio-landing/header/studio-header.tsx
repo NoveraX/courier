@@ -5,6 +5,7 @@ import { CourierMark } from "@/site/courier-mark"
 import { GitHubMark } from "@/site/github-mark"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
 import { STUDIO_DEMO_URL } from "@/site/site-url"
+import { TopLink } from "@/site/top-link"
 import { StudioWordmark } from "./studio-wordmark"
 
 const NAV = [
@@ -30,9 +31,9 @@ export function StudioHeader() {
   return (
     <header className="sticky top-0 z-70 border-b border-line bg-(--site-header) backdrop-blur-[14px] backdrop-saturate-160">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-2.5 px-5 min-[560px]:gap-7">
-        <a href="#top" aria-label="Courier Studio" className="shrink-0 hover:text-fg">
+        <TopLink href="/studio" label="Courier Studio" className="shrink-0 hover:text-fg">
           <StudioWordmark />
-        </a>
+        </TopLink>
         <nav aria-label="Studio" className="hidden gap-5.5 text-nav min-[900px]:flex">
           {NAV.map(({ label, href }) => (
             <a key={href} href={href} className="text-fg-muted hover:text-brand">

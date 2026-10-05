@@ -1,4 +1,5 @@
 import { CourierMark } from "@/site/courier-mark"
+import { TopLink } from "@/site/top-link"
 import { FOOTER_COLUMNS } from "./footer-columns"
 import { InstallButton } from "./install-button"
 import { PageLink } from "./page-link"
@@ -22,10 +23,10 @@ export function LandingFooter({ version }: { version: string }) {
       <div className="mx-auto max-w-[1200px] px-5 pt-14">
         <div className="grid grid-cols-1 gap-10 min-[900px]:grid-cols-[minmax(0,320px)_minmax(0,1fr)] min-[900px]:gap-16">
           <div className="flex max-w-80 flex-col gap-4">
-            <a href="#top" className="flex items-center gap-2.25 text-fg hover:text-fg">
+            <TopLink href="/" className="flex items-center gap-2.25 text-fg hover:text-fg">
               <CourierMark width={19} />
               <span className="text-[15px] font-semibold tracking-[-0.02em]">courier</span>
-            </a>
+            </TopLink>
             <p className="m-0 text-nav leading-[1.6] text-fg-muted">
               Type-safe HTTP for any framework and any REST backend. One definition, every caller.
             </p>

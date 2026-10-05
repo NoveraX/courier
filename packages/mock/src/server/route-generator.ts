@@ -65,7 +65,7 @@ export async function handleMockRequest(
 
   const elsewhere = await answerElsewhere(
     c,
-    { requestId, group, method, variables, raw, start },
+    { requestId, group, method, variables, raw, start, network: netConfig },
     config,
   );
   if (elsewhere) return elsewhere;

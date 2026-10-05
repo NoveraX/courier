@@ -7,6 +7,8 @@ import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config
 import express from "express";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
+import { createDemoLimits } from "./demo/demo-limits";
+import { DEMO_MAX_MESSAGE_BYTES, demoVisitors } from "./demo/demo-visitors";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
@@ -54,7 +56,7 @@ import { createWatcherStatus } from "./watcher-status";
  * ```
  */
 export function createStudioServer(options: StudioServerOptions = {}): StudioServer {
-  const { projectRoot = process.cwd(), extraCorsOrigins = [], ...startupOptions } = options;
+  const { projectRoot = process.cwd(), extraCorsOrigins = [], demo, ...startupOptions } = options;
 
   const app = express();
   /* Nothing a caller needs, and it names what to probe for. */
@@ -67,12 +69,18 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     /* The UI's own dev server proxies to Studio under its own host, which Studio takes as its page. */
     extraOrigins: extraCorsOrigins,
   });
-  const { io, uiNamespace, runtimeNamespace } = createStudioSockets(httpServer, policy);
+  const { io, uiNamespace, runtimeNamespace } = createStudioSockets(
+    httpServer,
+    policy,
+    demo ? DEMO_MAX_MESSAGE_BYTES : undefined,
+  );
 
   // ── Binding table + /runtime namespace (config-driven routing) ─────────────
 
   const bindingTable = new BindingTable();
   const playgroundRouter = createRuntimePlaygroundRouter({ bindingTable, uiNamespace });
+  /* A public demo counts what its visitors send, on the sockets and the API alike. */
+  const demoLimits = demo ? createDemoLimits() : undefined;
   /* Read on each event, by which time the project below exists. */
   const nameSource = createConfigSourceNamer(() => project.snapshot().running?.config);
   /* The loader resolves links; every path shown is relative to the same root. */
@@ -130,6 +138,10 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     mockLog,
     playgroundHistory,
     token,
+    demo,
+    visitors:
+      demoLimits &&
+      demoVisitors({ callsInFlight: playgroundRouter.callsInFlight, limits: demoLimits }),
   });
 
   undoUnfinishedImportWrites(root);
@@ -146,6 +158,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     },
     sessions: { sessions, view },
     token,
+    demo: demoLimits && { limits: demoLimits },
   });
   serveStudioUi(app);
 

@@ -69,6 +69,11 @@ export interface RuntimePlaygroundRouter extends PlaygroundForwarders {
    * symmetric shutdown drain.
    */
   dispose(): void;
+  /**
+   * The Playground calls still in flight: the ones a page sent, or every
+   * page's when none is named.
+   */
+  callsInFlight(uiSocketId?: string): number;
   /** Test hook — exposes the in-flight map size */
   _inFlightSize(): number;
 }
@@ -165,6 +170,12 @@ export function createRuntimePlaygroundRouter(
     },
     dispose: () => {
       settleWhere(inFlight, () => true);
+    },
+    callsInFlight: (uiSocketId) => {
+      if (uiSocketId === undefined) return inFlight.size;
+      let sent = 0;
+      for (const entry of inFlight.values()) if (entry.uiSocketId === uiSocketId) sent++;
+      return sent;
     },
     _inFlightSize: () => inFlight.size,
   };

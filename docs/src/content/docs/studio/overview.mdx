@@ -128,6 +128,31 @@ Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin
 
 Studio keeps the latest 2000 requests your app makes in memory, so a Studio page that opens or reloads shows the ones made before it; clearing the Timeline clears them there too, except the pinned ones when **Preserve log** is on. A request or stream still open when its app stops, or loses its connection to Studio, is shown as failed: the app can no longer say how it ended.
 
+## Host a public demo
+
+Studio can show your project to people who do not have it: a demo of your API on a public address. Run it from code with `demo`:
+
+```ts
+import { createStudioServer } from "@noverax/courier-studio/server"
+
+createStudioServer({
+  host: "0.0.0.0",
+  port: 6280,
+  demo: { resetsAt: Date.now() + 60 * 60_000 },
+  extraCorsOrigins: ["https://demo.example.com"],
+})
+```
+
+A visitor — a page opened without the token — sees everything Studio shows, the credentials of live traffic redacted, and may also send from the Playground and drive the mocks: start and stop them, set their latency and failures, apply scenarios, change their data. Limits keep one visitor from crowding out the rest:
+
+- **Playground:** ten calls every ten seconds from one page and sixty from all of them, with four open at once from one page.
+- **Mocks:** twenty commands and five starts or stops every ten seconds from one page, a seed of up to 200 records, and a latency of up to ten seconds.
+- **Size:** nothing larger than 64 KB at a time.
+
+A visitor's clears stay in their own page, and their Playground history is their own. Studio still writes no file: importing an API, generating mocks and saving a session answer that the demo does not, and nothing every visitor sees is cleared. The page opened with the token keeps every right.
+
+The Playground calls the project's own sources only, through the runtime that serves them, so point those sources at servers anyone may call. `resetsAt` is when you start the demo again from a clean state; each page counts down to it. `extraCorsOrigins` names the address visitors open when Studio sits behind a proxy on a domain of its own. [`examples/demo-shop`](https://github.com/NoveraX/courier/tree/main/examples/demo-shop) is a complete demo: two backends, a server, traffic, two mocks, a reset every hour, and the container it runs in.
+
 ## Next steps
 
 - [Import an API](/docs/studio/import-api) — turn an OpenAPI, Swagger or Postman specification into typed API code

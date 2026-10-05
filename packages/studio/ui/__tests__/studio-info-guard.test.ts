@@ -36,4 +36,15 @@ describe("isStudioInfo", () => {
       expect(isStudioInfo(data)).toBe(false);
     }
   });
+
+  it("takes a public demo, with or without the time it resets", () => {
+    expect(isStudioInfo({ ...INFO, demo: {} })).toBe(true);
+    expect(isStudioInfo({ ...INFO, demo: { resetsAt: 1_800 } })).toBe(true);
+  });
+
+  it("refuses a demo it cannot read", () => {
+    for (const demo of [true, "yes", null, { resetsAt: "soon" }, { resetsAt: -1 }]) {
+      expect(isStudioInfo({ ...INFO, demo })).toBe(false);
+    }
+  });
 });

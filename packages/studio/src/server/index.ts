@@ -1,2 +1,2 @@
 export { createStudioServer } from "./create-studio-server";
-export type { StudioServer, StudioServerOptions } from "./types";
+export type { StudioDemo, StudioServer, StudioServerOptions } from "./types";

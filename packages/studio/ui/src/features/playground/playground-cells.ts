@@ -91,7 +91,7 @@ function streamCells(
     state === "connecting"
       ? { ...statusCell("pending", "Status", "Connecting…") }
       : statusCell(state, "Status", STATE_META[state].label);
-  const open = entry.duration ?? now - entry.timestamp;
+  const open = entry.duration ?? Math.max(0, now - entry.timestamp);
   const count = row
     ? Math.max(row.streamEventCount ?? 0, row.streamEvents?.length ?? 0)
     : (entry.chunks?.length ?? 0) + (entry.chunksDropped ?? 0);

@@ -3,7 +3,9 @@ import type { RequestEntry } from "@/store/types";
 import { requestStateOf } from "./request-state";
 
 /**
- * When a stream stopped, or now while it streams.
+ * When a stream stopped, or now while it streams — never before it opened:
+ * a page's clock ticks every few seconds, so it can be behind a stream
+ * that opened since.
  *
  * @param r - The stream
  * @param now - The time now
@@ -18,7 +20,7 @@ export function streamEnd(
   now: number,
 ): number {
   return requestStateOf(r) === "streaming" || r.streamDuration === undefined
-    ? now
+    ? Math.max(now, r.startedAt)
     : r.startedAt + r.streamDuration;
 }
 

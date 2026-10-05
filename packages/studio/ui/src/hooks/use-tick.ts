@@ -61,6 +61,24 @@ export function useNow(): number {
   return epoch >= 0 ? Date.now() : 0;
 }
 
+/**
+ * A fresh `Date.now()` every second while `active` — for what counts up as
+ * it is watched, such as a request in flight or a stream still open — and
+ * `null` otherwise, so an idle caller never re-renders on the tick.
+ *
+ * @param active - Whether the caller is counting
+ * @returns The time now, or `null` while inactive
+ * @example
+ * ```ts
+ * const now = useSecondNow(state === "streaming") ?? context.now;
+ * ```
+ */
+export function useSecondNow(active: boolean): number | null {
+  const tick = useStudioStore((s) => (active ? s.clientTick : -1));
+  // tick in the conditional prevents React Compiler from hoisting Date.now()
+  return tick >= 0 ? Date.now() : null;
+}
+
 // ── Formatters ────────────────────────────────────────────────────────────────
 
 function formatElapsed(ms: number): string {

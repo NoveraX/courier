@@ -4,6 +4,7 @@ import { methodText } from "@/design/method-color";
 import { TONE_FILL } from "@/design/tone";
 import { codeLabel, endpointParts, httpMethodOf, pathOf } from "@/features/requests/request-parts";
 import { isStreamRequest, requestStateOf, STATE_META } from "@/features/requests/request-state";
+import { useSecondNow } from "@/hooks/use-tick";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
@@ -38,8 +39,10 @@ export function RequestRow({
 }: RequestRowProps): React.ReactNode {
   const state = requestStateOf(r);
   const { prefix, name } = endpointParts(r);
-  const duration = durationOf(r, state, context);
   const pulse = state === "pending" || state === "streaming";
+  const counting = useSecondNow(pulse);
+  const rowContext = counting === null ? context : { ...context, now: counting };
+  const duration = durationOf(r, state, rowContext);
   const method = isStreamRequest(r) ? "GET" : httpMethodOf(r);
   const time =
     context.timestamps === "relative"

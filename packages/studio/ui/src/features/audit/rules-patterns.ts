@@ -187,12 +187,19 @@ function findTimeClusters(reqs: RequestEntry[], windowMs: number): RequestEntry[
   return clusters;
 }
 
+/* Variables arrive as JSON, so they hold no cycles; their keys are sorted at every depth. */
+function withSortedKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withSortedKeys);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([key, inner]: [string, unknown]) => [key, withSortedKeys(inner)]),
+  );
+}
+
 function stableStringify(value: unknown): string {
   if (value === null || value === undefined) return String(value);
   if (typeof value !== "object") return String(value);
-  try {
-    return JSON.stringify(value, Object.keys(value).sort());
-  } catch {
-    return String(value);
-  }
+  return JSON.stringify(withSortedKeys(value));
 }

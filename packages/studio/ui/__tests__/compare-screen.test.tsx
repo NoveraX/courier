@@ -121,6 +121,53 @@ describe("Compare", () => {
     expect(router.state.location.search).toMatchObject({ a: "failed", b: "other" });
   });
 
+  it("keeps the ready-made pair chosen and the tab shown when a call is picked by hand", async () => {
+    const router = await openShell("/compare");
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Headers/ })));
+
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Request B/ })));
+    const listed = screen
+      .getAllByRole("button")
+      .filter((b) => b.textContent?.includes("users.list"));
+    const other = listed.at(-1);
+    if (!other) throw new Error("The other call is not listed");
+    await settle(() => fireEvent.click(other));
+
+    expect(router.state.location.search).toMatchObject({
+      a: "ok",
+      b: "other",
+      show: "headers",
+      pair: "failure",
+    });
+    expect(
+      screen.getByRole("button", { name: "Success vs failure" }).getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
+  it("holds the pair it opened on still as newer traffic arrives", async () => {
+    const router = await openShell("/compare");
+    expect(router.state.location.search).toMatchObject({ a: "ok", b: "failed", pair: "failure" });
+
+    await settle(() =>
+      useStudioStore.setState({
+        requests: [
+          call("list-failed", 100, { method: "list", status: "error", statusCode: 500 }),
+          call("list-ok", 200, { method: "list" }),
+          OTHER,
+          FAILED,
+          OK,
+        ],
+      }),
+    );
+
+    expect(screen.getByRole("button", { name: "Request A: api.users.get" }).textContent).toContain(
+      "200",
+    );
+    expect(screen.getByRole("button", { name: "Request B: api.users.get" }).textContent).toContain(
+      "503",
+    );
+  });
+
   it("says when a call the link named is no longer held", async () => {
     await openShell("/compare?a=gone&b=ok");
 

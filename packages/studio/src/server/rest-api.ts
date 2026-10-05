@@ -14,6 +14,7 @@ import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
 import { createOriginGuard } from "./origin-guard";
 import { registerSessionRoutes, type SessionRouteDeps } from "./session-routes";
+import { registerStorageRoutes, type StorageRouteDeps } from "./storage-space/storage-routes";
 import type { StudioOriginPolicy } from "./studio-origin";
 import type { StudioToken } from "./studio-token";
 import { tokenGuard } from "./token-guard";
@@ -28,6 +29,8 @@ export interface RestApiDeps {
   mocksEdit: MocksEditContext;
   /** The saved sessions, and what the pages show. */
   sessions: SessionRouteDeps;
+  /** What Studio keeps, which the Storage settings size and clear. */
+  storage: StorageRouteDeps;
   /** The token a writing route asks for. */
   token: StudioToken;
   /** The visitors' counts, when Studio serves a public demo. */
@@ -53,7 +56,7 @@ export interface RestApiDeps {
 export function registerRestApi(
   app: ReturnType<typeof express>,
   policy: StudioOriginPolicy,
-  { apis, configEdit, mocksEdit, sessions, token, demo }: RestApiDeps,
+  { apis, configEdit, mocksEdit, sessions, storage, token, demo }: RestApiDeps,
 ): void {
   app.use(compression());
   /* Before anything reads a body: the API is for the Studio UI, not for every
@@ -69,6 +72,7 @@ export function registerRestApi(
 
   registerApisRoutes(app, apis);
   registerSessionRoutes(app, sessions);
+  registerStorageRoutes(app, storage);
   registerMockDeclareRoutes(app, mocksEdit);
   registerConfigDeclareRoutes(app, configEdit);
   app.use("/api", apiNotFound);

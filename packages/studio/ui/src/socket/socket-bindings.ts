@@ -14,6 +14,7 @@ import {
 } from "./playground-guards";
 import { bindReadOnly } from "./read-only-bindings";
 import { readWatcherChange } from "./read-watcher-change";
+import { bindStorageCleared } from "./storage-cleared-bindings";
 import { isStudioInfo } from "./studio-info-guard";
 
 export interface Bindings {
@@ -37,6 +38,8 @@ export interface Bindings {
   unbindEvents: () => void;
   /** Removes the listener for the changes Studio refused (`bindReadOnly`). */
   unbindReadOnly: () => void;
+  /** Removes the listener for what Settings → Storage cleared (`bindStorageCleared`). */
+  unbindStorage: () => void;
 }
 
 export function buildBindings(s: Socket, store: typeof useStudioStore.getState): Bindings {
@@ -99,6 +102,7 @@ export function buildBindings(s: Socket, store: typeof useStudioStore.getState):
     unbindApis: bindApis(s, store),
     unbindEvents: bindEvents(s, store),
     unbindReadOnly: bindReadOnly(s),
+    unbindStorage: bindStorageCleared(s, store),
   };
 
   s.on("connect", b.onConnect);
@@ -137,4 +141,5 @@ export function unbind(s: Socket, b: Bindings): void {
   b.unbindApis();
   b.unbindEvents();
   b.unbindReadOnly();
+  b.unbindStorage();
 }

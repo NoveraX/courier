@@ -18,6 +18,8 @@ export interface SessionStore {
   remove(id: string): boolean;
   /** Every session, newest first, without its requests */
   list(): SessionSummary[];
+  /** Delete every session; how many there were */
+  clear(): number;
 }
 
 /**
@@ -38,6 +40,7 @@ export function createSessionStore(db: DatabaseSync): SessionStore {
   const select = db.prepare("SELECT body FROM sessions WHERE id = ?");
   const remove = db.prepare("DELETE FROM sessions WHERE id = ?");
   const selectAll = db.prepare("SELECT body FROM sessions ORDER BY saved_at DESC");
+  const removeAll = db.prepare("DELETE FROM sessions");
 
   return {
     save(session) {
@@ -57,6 +60,9 @@ export function createSessionStore(db: DatabaseSync): SessionStore {
         const { id, name, savedAt, startedAt, duration, stats, apps } = session;
         return [{ id, name, savedAt, startedAt, duration, stats, appCount: apps.length }];
       });
+    },
+    clear() {
+      return Number(removeAll.run().changes);
     },
   };
 }

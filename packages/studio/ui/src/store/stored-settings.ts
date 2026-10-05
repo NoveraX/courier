@@ -25,6 +25,7 @@ const CHECKS: { [TKey in keyof Settings]: Check<Settings[TKey]> } = {
   toastOnError: isBoolean,
   toastOnSlowRequest: isBoolean,
   slowRequestThreshold: isCount,
+  storageWarnMb: isCount,
   toastOnFileChange: isBoolean,
   autoReconnect: isBoolean,
   reconnectDelay: isCount,

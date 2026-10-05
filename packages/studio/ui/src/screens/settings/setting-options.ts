@@ -45,6 +45,13 @@ export const SLOW_THRESHOLDS = numbers([
   [5000, "5s"],
 ]);
 
+export const STORAGE_WARNINGS = numbers([
+  [250, "250 MB"],
+  [500, "500 MB"],
+  [1000, "1 GB"],
+  [2000, "2 GB"],
+]);
+
 export const TIMESTAMPS: readonly SegmentedOption<TimestampFormat>[] = [
   { value: "relative", label: "2s ago" },
   { value: "absolute", label: "14:23:05" },

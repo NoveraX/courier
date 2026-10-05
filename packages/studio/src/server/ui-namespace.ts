@@ -64,6 +64,8 @@ export interface SetupUiNamespaceDeps {
   visitors?: VisitorPolicy | undefined;
   /** How Studio runs as a public demo, which each page is told. */
   demo?: StudioDemo | undefined;
+  /** The room Studio's database takes on disk, which each page is told as it connects. */
+  databaseSize?: (() => number) | undefined;
 }
 
 /**
@@ -81,7 +83,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
   const { uiNamespace, bindingTable, mockManager, watcherStatus, playgroundRouter, requestLog } =
     deps;
   const { sessions, view, mockLog, playgroundHistory } = deps;
-  const { project, projectRoot, token, visitors, demo } = deps;
+  const { project, projectRoot, token, visitors, demo, databaseSize } = deps;
   /* Read once: the version cannot change while Studio runs, and a renamed
      package shows after a restart. */
   const info: StudioInfo = { ...studioInfo(projectRoot), ...(demo && { demo }) };
@@ -126,6 +128,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
 
     // Send current watcher status (watching N files indicator)
     watcherStatus?.sendSnapshot(socket);
+    if (databaseSize) socket.emit("storage:size", { onDisk: databaseSize() });
 
     /* The requests captured before this UI connected, so a page that loads
        or reloads shows them. Clearing the log in one page forgets them here

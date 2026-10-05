@@ -25,6 +25,7 @@ import { serveStudioUi } from "./serve-ui";
 import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
 import { openStudioStores } from "./storage/studio-stores";
+import { wireStorage } from "./storage-space/storage-wiring";
 import { createStudioOriginPolicy } from "./studio-origin";
 import { createStudioStartup } from "./studio-startup";
 import { studioToken } from "./studio-token";
@@ -113,6 +114,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     mockLog,
   });
 
+  const storage = wireStorage({ stores, root, mocks: mockManager, uiNamespace });
+
   // ── The project Studio runs: loaded, watched and told from one place ──────
 
   const project = createProjectState({
@@ -142,6 +145,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     visitors:
       demoLimits &&
       demoVisitors({ callsInFlight: playgroundRouter.callsInFlight, limits: demoLimits }),
+    databaseSize: storage.databaseSize,
   });
 
   undoUnfinishedImportWrites(root);
@@ -157,6 +161,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
       mockSummaries: mockManager.summarizeServers,
     },
     sessions: { sessions, view },
+    storage: storage.routes,
     token,
     demo: demoLimits && { limits: demoLimits },
   });
@@ -172,6 +177,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     playgroundRouter.dispose();
     clearStudioServerState();
     io.close();
+    storage.stop();
     stores.close();
     if (!httpServer.listening) return;
     return new Promise<void>((resolve, reject) => {

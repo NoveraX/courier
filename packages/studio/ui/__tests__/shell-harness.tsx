@@ -19,6 +19,7 @@ import { validatePlaygroundSearch } from "@/features/playground/playground-searc
 import { validateInspectorSearch } from "@/features/requests/inspector-search";
 import { validateTimelineSearch } from "@/features/requests/timeline-search";
 import { validateWaterfallSearch } from "@/features/waterfall/waterfall-search";
+import { ApisScreen } from "@/screens/apis/apis-screen";
 import { EndpointsScreen } from "@/screens/explorer/endpoints-screen";
 import { ExplorerLayout } from "@/screens/explorer/explorer-layout";
 import { GraphScreen } from "@/screens/explorer/graph-screen";
@@ -113,6 +114,7 @@ export async function openShell(url: string): Promise<AnyRouter> {
     component: PlaygroundScreen,
     validateSearch: validatePlaygroundSearch,
   });
+  const apis = createRoute({ getParentRoute: () => shell, path: "apis", component: ApisScreen });
   const mocks = createRoute({ getParentRoute: () => shell, path: "mocks", component: MocksLayout });
   const mocksDashboard = createRoute({
     getParentRoute: () => mocks,
@@ -156,6 +158,7 @@ export async function openShell(url: string): Promise<AnyRouter> {
         waterfall,
         explorer.addChildren(tabs),
         playground,
+        apis,
         mocks.addChildren([
           mocksDashboard,
           mocksRoutes,

@@ -142,6 +142,8 @@ export interface SourceStatusInfo {
   /** Why the check failed, or why the import could not be checked. */
   error?: string | undefined;
   newSpec?: ParsedSpec | undefined;
+  /** When the check ended, in epoch ms, on this page. */
+  checkedAt?: number | undefined;
 }
 
 // ── Import wizard state ─────────────────────────────────────────────────────

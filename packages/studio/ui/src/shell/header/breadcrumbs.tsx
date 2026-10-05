@@ -1,10 +1,10 @@
 import { useRouterState } from "@tanstack/react-router";
 
-import { SHELL_NAV } from "../nav";
+import { SETTINGS_PAGE, SHELL_NAV } from "../nav";
 
 /**
- * Where the page sits: its group and its name — `Inspect / Timeline`, or
- * `Studio / Welcome` for the setup.
+ * Where the page sits: its group and its name — `Inspect / Timeline`,
+ * `System / Settings`, or `Studio / Welcome` for the setup.
  *
  * @param pathname - The page's path
  * @returns The two parts
@@ -14,6 +14,9 @@ import { SHELL_NAV } from "../nav";
  * ```
  */
 export function crumbsOf(pathname: string): [string, string] {
+  if (pathname === SETTINGS_PAGE.to || pathname.startsWith(`${SETTINGS_PAGE.to}/`)) {
+    return [SETTINGS_PAGE.group, SETTINGS_PAGE.label];
+  }
   for (const group of SHELL_NAV) {
     const item = group.items.find((i) => pathname === i.to || pathname.startsWith(`${i.to}/`));
     if (item) return [group.label, item.label];

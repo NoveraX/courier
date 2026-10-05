@@ -8,6 +8,11 @@ import { useFlash } from "@/site/use-flash"
 export const INSTALL_COMMAND = "npm i @noverax/courier"
 
 const LOOK = {
+  studio: {
+    button:
+      "h-11 max-w-full gap-3 rounded-[10px] bg-panel px-3.5 text-control text-fg-muted hover:text-fg max-[560px]:gap-2 max-[560px]:text-[11.5px]",
+    label: "min-w-10 text-right text-[11px] text-brand",
+  },
   hero: {
     button: "h-10.5 gap-3 rounded-[9px] bg-panel px-3.5 text-control text-fg-muted hover:text-fg",
     label: "min-w-8.5 text-right text-[11px] text-brand",
@@ -24,30 +29,36 @@ const LOOK = {
 } as const
 
 /**
- * The install command as a button: a click copies it, and the button says
+ * An install command as a button: a click copies it, and the button says
  * so for a moment.
  *
- * @param props - Where it sits, which sets its size
+ * @param props - Where it sits, which sets its size; and the command, Courier's by default
  * @returns The button
  * @example
  * ```tsx
  * <InstallButton look="hero" />
  * ```
  */
-export function InstallButton({ look }: { look: keyof typeof LOOK }) {
+export function InstallButton({
+  look,
+  command = INSTALL_COMMAND,
+}: {
+  look: keyof typeof LOOK
+  command?: string
+}) {
   const [copied, flash] = useFlash()
   const style = LOOK[look]
   return (
     <button
       type="button"
-      onClick={async () => flash(await copyText(INSTALL_COMMAND))}
+      onClick={async () => flash(await copyText(command))}
       className={cn(
         "flex cursor-pointer items-center border border-line text-left font-mono transition-colors hover:border-line-strong",
         style.button
       )}
     >
       <span className="text-fg-subtle">$</span>
-      <span className={cn(look === "menu" && "min-w-0 flex-1 truncate")}>{INSTALL_COMMAND}</span>
+      <span className={cn("min-w-0 truncate", look === "menu" && "flex-1")}>{command}</span>
       <span aria-live="polite" className={style.label}>
         {copied ? "copied" : "copy"}
       </span>

@@ -15,6 +15,8 @@
   --color-panel: #101114;
   --color-panel-subtle: #15171b;
   --color-raised: #1a1c21;
+  /* Wells sunk below a panel: a mock window's address bar, a code block in a card. */
+  --color-inset: #060708;
 
   --color-line: rgb(255 255 255 / 0.07);
   --color-line-strong: rgb(255 255 255 / 0.12);
@@ -124,6 +126,7 @@
   --color-panel: #ffffff;
   --color-panel-subtle: #f8f8f6;
   --color-raised: #ecece9;
+  --color-inset: #f1f1ee;
   --color-line: rgb(12 13 15 / 0.09);
   --color-line-strong: rgb(12 13 15 / 0.16);
   --color-fg: #0c0d0f;

@@ -4,8 +4,8 @@
  * Import API on the new shell, against Studio's answers: a spec read from
  * a URL, its endpoints picked, the generation configured with the
  * directory Studio will write to, the files previewed and written, then
- * what to declare; and a write Studio will not apply unasked, which shows
- * its plan and writes as allowed next.
+ * the API added to courier.config with one click; and a write Studio will
+ * not apply unasked, which shows its plan and writes as allowed next.
  */
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -78,6 +78,20 @@ const DECLARATION = {
   importEntry: '  "pets": {\n    importType: "url",\n  },',
 };
 
+const DECLARE_PREVIEW = {
+  status: "ready",
+  configFile: "courier.config.ts",
+  baseHash: "config-1",
+  hunks: [
+    {
+      lines: [
+        { kind: "context", text: 'import { api } from "./src/api";', oldLine: 1, newLine: 1 },
+        { kind: "add", text: DECLARATION.source.importLine, oldLine: null, newLine: 2 },
+      ],
+    },
+  ],
+};
+
 const PLAN = {
   digest: "plan-1",
   dir: "src/api/pets",
@@ -98,6 +112,9 @@ function answers(write: () => unknown): void {
       return { dir: "src/api/pets/", sourceFile: "src/api/pets/source.ts", sourceBinding: "pets" };
     if (url === "/api/apis/generate") return { files: FILES };
     if (url === "/api/apis/write") return write();
+    if (url === "/api/apis/declare/preview") return DECLARE_PREVIEW;
+    if (url === "/api/apis/declare/apply")
+      return { status: "applied", configFile: "courier.config.ts" };
     throw new Error(`unexpected request to ${url}`);
   });
 }
@@ -142,7 +159,7 @@ afterEach(() => {
 });
 
 describe("importing an API", () => {
-  it("reads the spec, picks endpoints, configures and previews the files, writes them, and says what to declare", async () => {
+  it("reads the spec, picks endpoints, configures and previews the files, writes them, and adds the API to the config", async () => {
     answers(() => ({
       written: FILES.map((f) => f.path),
       removed: [],
@@ -179,10 +196,19 @@ describe("importing an API", () => {
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Write 2 files" })));
 
     expect(
-      screen.getByRole("heading", { name: /Declare pets in courier\.config\.ts/ }),
+      screen.getByRole("heading", { name: /Files written — add pets to courier\.config\.ts/ }),
     ).toBeTruthy();
-    expect(document.body.textContent).toContain('import { pets } from "./src/api/pets/source";');
+    const change = within(screen.getByRole("region", { name: "Change to courier.config.ts" }));
+    expect(change.getByText('import { pets } from "./src/api/pets/source";')).toBeTruthy();
     expect(onWritten).toHaveBeenCalledTimes(1);
+    await settle(() =>
+      fireEvent.click(screen.getByRole("button", { name: "Add to courier.config.ts" })),
+    );
+    expect(vi.mocked(post).mock.calls.at(-1)).toEqual([
+      "/api/apis/declare/apply",
+      expect.objectContaining({ sourceName: "pets", baseHash: "config-1" }),
+    ]);
+    expect(screen.getByRole("heading", { name: /pets is in Studio/ })).toBeTruthy();
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Done" })));
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -223,7 +249,8 @@ describe("importing an API", () => {
       fireEvent.click(screen.getByRole("checkbox", { name: "Allow src/api/pets/index.ts" })),
     );
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Write as allowed" })));
-    expect(vi.mocked(post).mock.calls.at(-1)?.[1]).toMatchObject({
+    const writes = vi.mocked(post).mock.calls.filter(([url]) => url === "/api/apis/write");
+    expect(writes.at(-1)?.[1]).toMatchObject({
       planDigest: "plan-1",
       confirm: ["src/api/pets/index.ts"],
     });

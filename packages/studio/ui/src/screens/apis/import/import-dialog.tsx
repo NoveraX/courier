@@ -1,3 +1,4 @@
+import { type UseConfigDeclare, useConfigDeclare } from "@/apis/use-config-declare";
 import type { UseImportReturn } from "@/apis/use-import";
 import { DialogFrame } from "@/design/dialog-frame";
 import { StepBar } from "@/design/step-bar";
@@ -15,7 +16,13 @@ const STEPS = [
   { key: "preview", label: "Preview" },
 ] as const;
 
-function StepBody({ wizard }: { wizard: UseImportReturn }): React.ReactNode {
+function StepBody({
+  wizard,
+  declare,
+}: {
+  wizard: UseImportReturn;
+  declare: UseConfigDeclare;
+}): React.ReactNode {
   const { state, error } = wizard;
   if (state.step === "import")
     return (
@@ -50,7 +57,13 @@ function StepBody({ wizard }: { wizard: UseImportReturn }): React.ReactNode {
       />
     );
   if (state.step === "declare" && state.declaration)
-    return <DeclareStep sourceName={state.options.sourceName} declaration={state.declaration} />;
+    return (
+      <DeclareStep
+        sourceName={state.options.sourceName}
+        declaration={state.declaration}
+        declare={declare}
+      />
+    );
   return null;
 }
 
@@ -71,6 +84,7 @@ function StepBody({ wizard }: { wizard: UseImportReturn }): React.ReactNode {
  */
 export function ImportDialog({ wizard }: { wizard: UseImportReturn }): React.ReactNode {
   const { state } = wizard;
+  const declare = useConfigDeclare(state);
   const done = state.step === "declare";
   const current = done ? STEPS.length : STEPS.findIndex((step) => step.key === state.step);
   return (
@@ -89,9 +103,9 @@ export function ImportDialog({ wizard }: { wizard: UseImportReturn }): React.Rea
           onBack={wizard.goToStep}
         />
       }
-      footer={<ImportFooter wizard={wizard} />}
+      footer={<ImportFooter wizard={wizard} declare={declare} />}
     >
-      <StepBody wizard={wizard} />
+      <StepBody wizard={wizard} declare={declare} />
     </DialogFrame>
   );
 }

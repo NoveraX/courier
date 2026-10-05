@@ -136,6 +136,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   registerRestApi(app, policy, {
     apis: { project, projectRoot: root },
+    configEdit: { project, projectRoot: root },
     mocksEdit: {
       projectRoot,
       mockBasePort: startup.mockBasePort,

@@ -3,7 +3,7 @@
  */
 
 import { generateCode, parseSpecFromRaw, parseSpecFromUrl } from "@/apis/client";
-import { writeFiles } from "@/apis/client-file-changes";
+import { type ImportBody, writeFiles } from "@/apis/client-file-changes";
 import { deriveSourceName } from "@/features/apis/derive-source-name";
 import { buildDefaultOptions, selectAllEndpoints } from "@/features/apis/helpers";
 import { consentBody } from "@/features/apis/plan-consent";
@@ -57,15 +57,31 @@ export async function generatePreview(
  * @throws {StudioRequestError} When Studio will not apply the plan unasked, with the plan
  */
 export async function writeGeneratedFiles(state: ImportState): Promise<unknown> {
+  return writeFiles({ ...importBody(state), ...consentBody(state.consent) });
+}
+
+/**
+ * The import as the wizard sends it to Studio: the spec, where it came
+ * from, and the options with the endpoints picked. Writing it and declaring
+ * it in courier.config both send it.
+ *
+ * @param state - The wizard's state
+ * @returns The request body
+ * @throws {Error} While no spec is parsed
+ * @example
+ * ```ts
+ * await previewConfigDeclare(importBody(state));
+ * ```
+ */
+export function importBody(state: ImportState): ImportBody {
   if (!state.spec) throw new Error("No spec to write");
-  return writeFiles({
+  return {
     sourceName: state.options.sourceName,
     spec: state.spec,
     specUrl: state.source === "url" ? state.content : "",
     importType: state.source,
     options: { ...state.options, selectedEndpoints: state.selectedEndpoints },
-    ...consentBody(state.consent),
-  });
+  };
 }
 
 // ── Selection reducers ──────────────────────────────────────────────────────

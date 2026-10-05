@@ -4,6 +4,8 @@ import express from "express";
 import { apiErrors } from "./api-errors";
 import { apiNotFound } from "./api-not-found";
 import { type ApisRouteDeps, registerApisRoutes } from "./apis-routes";
+import { registerConfigDeclareRoutes } from "./config-declare-routes";
+import type { ConfigEditDeps } from "./config-edit/declare-alone";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
@@ -17,6 +19,8 @@ import { tokenGuard } from "./token-guard";
 export interface RestApiDeps {
   /** The project the API-import routes answer from. */
   apis: ApisRouteDeps;
+  /** The project the import wizard declares an import in, once its files are written. */
+  configEdit: ConfigEditDeps;
   /** The running Studio the mock wizard's edits read and change. */
   mocksEdit: MocksEditContext;
   /** The saved sessions, and what the pages show. */
@@ -37,13 +41,13 @@ export interface RestApiDeps {
  *
  * @example
  * ```ts
- * registerRestApi(app, policy, { apis: { project, projectRoot: root }, mocksEdit, sessions, token });
+ * registerRestApi(app, policy, { apis, configEdit, mocksEdit, sessions, token });
  * ```
  */
 export function registerRestApi(
   app: ReturnType<typeof express>,
   policy: StudioOriginPolicy,
-  { apis, mocksEdit, sessions, token }: RestApiDeps,
+  { apis, configEdit, mocksEdit, sessions, token }: RestApiDeps,
 ): void {
   app.use(compression());
   /* Before anything reads a body: the API is for the Studio UI, not for every
@@ -59,6 +63,7 @@ export function registerRestApi(
   registerApisRoutes(app, apis);
   registerSessionRoutes(app, sessions);
   registerMockDeclareRoutes(app, mocksEdit);
+  registerConfigDeclareRoutes(app, configEdit);
   app.use("/api", apiNotFound);
   app.use("/api", apiErrors);
 }

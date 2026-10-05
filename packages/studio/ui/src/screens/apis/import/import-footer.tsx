@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, Download, Loader2 } from "lucide-react";
+import { ArrowRight, Download, FilePlus2, Loader2 } from "lucide-react";
+import type { UseConfigDeclare } from "@/apis/use-config-declare";
 import type { UseImportReturn } from "@/apis/use-import";
 import { countSelectedEndpoints } from "@/features/apis/helpers";
 import type { ImportState, ImportStep } from "@/features/apis/types";
@@ -57,19 +58,52 @@ function Action({
   );
 }
 
+/* Adding the import to courier.config while Studio offers the change; Done otherwise. */
+function DeclareActions({
+  declare,
+  onClose,
+}: {
+  declare: UseConfigDeclare;
+  onClose: () => void;
+}): React.ReactNode {
+  if (declare.error !== null || declare.answer?.status !== "ready") {
+    return <Action label="Done" className={NEXT} onClick={onClose} />;
+  }
+  const file = declare.answer.configFile;
+  return (
+    <>
+      <Action label="Not now" className={OUTLINE} disabled={declare.applying} onClick={onClose} />
+      <Action
+        label={`Add to ${file.slice(file.lastIndexOf("/") + 1)}`}
+        icon={FilePlus2}
+        busy={declare.applying}
+        className={`${BUTTON} bg-brand text-bg hover:bg-brand/90`}
+        disabled={declare.applying}
+        onClick={() => void declare.apply()}
+      />
+    </>
+  );
+}
+
 /**
  * The import's footer: where it stands, Back, and the step's next move —
  * Parse spec, Continue, Generate preview, the write (or its retry once
- * Studio refused it), or Done.
+ * Studio refused it), then adding the import to courier.config, or Done.
  *
- * @param props - The import
+ * @param props - The import, and declaring it in courier.config
  * @returns The footer
  * @example
  * ```tsx
- * <ImportFooter wizard={wizard} />
+ * <ImportFooter wizard={wizard} declare={declare} />
  * ```
  */
-export function ImportFooter({ wizard }: { wizard: UseImportReturn }): React.ReactNode {
+export function ImportFooter({
+  wizard,
+  declare,
+}: {
+  wizard: UseImportReturn;
+  declare: UseConfigDeclare;
+}): React.ReactNode {
   const { state, parsing } = wizard;
   const back = BACK[state.step];
   return (
@@ -123,7 +157,7 @@ export function ImportFooter({ wizard }: { wizard: UseImportReturn }): React.Rea
           onClick={() => void wizard.write()}
         />
       )}
-      {state.step === "declare" && <Action label="Done" className={NEXT} onClick={wizard.close} />}
+      {state.step === "declare" && <DeclareActions declare={declare} onClose={wizard.close} />}
     </div>
   );
 }

@@ -1,76 +1,117 @@
-import { CheckCircle2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 
-import { CodeLines } from "@/design/code/code-lines";
+import type { UseConfigDeclare } from "@/apis/use-config-declare";
+import { ChangePreview } from "@/design/code/change-preview";
+import { leftOutNote } from "@/features/apis/left-out-note";
 import type { ImportDeclaration } from "@/features/apis/types";
+import { ManualDeclaration } from "./manual-declaration";
 
-function Part({ label, code }: { label: string; code: string }): React.ReactNode {
+function Heading({
+  tone,
+  children,
+}: {
+  tone: "ok" | "warn" | "busy";
+  children: React.ReactNode;
+}): React.ReactNode {
+  const Icon = tone === "ok" ? CheckCircle2 : tone === "warn" ? AlertTriangle : Loader2;
+  const color =
+    tone === "ok" ? "text-ok" : tone === "warn" ? "text-warn" : "animate-spin text-fg-subtle";
   return (
-    <div className="flex flex-col gap-1.5">
-      <p className="m-0 text-small text-fg-subtle">{label}</p>
-      <div className="overflow-auto rounded-[11px] border border-line bg-inset">
-        <CodeLines code={code} variant="panel" />
+    <h3 className="m-0 flex items-center gap-2 text-title font-semibold">
+      <Icon aria-hidden="true" className={`size-4 ${color}`} />
+      {children}
+    </h3>
+  );
+}
+
+function Note({ children }: { children: React.ReactNode }): React.ReactNode {
+  return <p className="m-0 text-small text-fg-muted">{children}</p>;
+}
+
+function Manual({
+  name,
+  reason,
+  declaration,
+}: {
+  name: string;
+  reason: string;
+  declaration: ImportDeclaration | null;
+}): React.ReactNode {
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div className="flex flex-col gap-1.5">
+        <Heading tone="warn">
+          Declare <span className="font-mono">{name}</span> in courier.config by hand
+        </Heading>
+        <Note>{reason}</Note>
       </div>
+      {declaration && <ManualDeclaration declaration={declaration} />}
     </div>
   );
 }
 
-function leftOutNote(leftOut: number): string {
-  const count = leftOut === 1 ? "1 endpoint" : `${leftOut} endpoints`;
-  return `You left ${count} out in Select. The imports entry cannot keep that selection, so Manage lists ${leftOut === 1 ? "that one" : "those"} as endpoints you can add.`;
-}
-
 /**
- * After the files are written: what to add to the config so the source
- * appears in Studio, and the import's own entry, which Manage and the
- * update check read.
+ * After the files are written: the change that declares the import in
+ * courier.config, for Studio to make with one click — the lines it adds and
+ * nothing else — then the API in Studio. When Studio cannot make the change,
+ * the lines to add by hand, and why.
  *
- * @param props - The source's name, and what to declare
+ * @param props - The source's name, what the config must still declare, and the change
  * @returns The step
  * @example
  * ```tsx
- * <DeclareStep sourceName="billing" declaration={declaration} />
+ * <DeclareStep sourceName="billing" declaration={declaration} declare={declare} />
  * ```
  */
 export function DeclareStep({
   sourceName,
   declaration,
+  declare,
 }: {
   sourceName: string;
   declaration: ImportDeclaration;
+  declare: UseConfigDeclare;
 }): React.ReactNode {
-  const { configFile, source, importEntry, leftOut } = declaration;
+  const { answer, error } = declare;
+  const name = <span className="font-mono">{sourceName}</span>;
+  if (error) return <Manual name={sourceName} reason={error} declaration={declaration} />;
+  if (answer === null) return <Heading tone="busy">Reading {declaration.configFile}…</Heading>;
+  if (answer.status === "manual") {
+    return (
+      <Manual
+        name={sourceName}
+        reason={answer.reason}
+        declaration={answer.declaration ?? declaration}
+      />
+    );
+  }
+  if (answer.status === "applied" || answer.status === "declared") {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <Heading tone="ok">{name} is in Studio</Heading>
+        <Note>
+          {answer.status === "applied"
+            ? `Studio added it to ${answer.configFile} and loaded the config: it is on this page, in the Explorer and in the Playground.`
+            : `${declaration.configFile} declares it already.`}
+        </Note>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-1.5">
-        <h3 className="m-0 flex items-center gap-2 text-title font-semibold">
-          <CheckCircle2 aria-hidden="true" className="size-4 text-ok" />
-          Declare <span className="font-mono">{sourceName}</span> in {configFile}
-        </h3>
-        <p className="m-0 text-small text-fg-muted">
-          Studio wrote the files and left {configFile} as it is.{" "}
-          {source
-            ? `${sourceName} appears in Studio — on this page, in the Explorer and in the Playground — once ${configFile} declares it under sources. Studio loads the config again when you save it.`
-            : `${configFile} lists ${sourceName} under sources already, but does not declare the import.`}
-        </p>
+        <Heading tone="ok">
+          Files written — add {name} to {answer.configFile}
+        </Heading>
+        <Note>
+          {answer.stale &&
+            `${answer.configFile} changed since Studio read it; this is the change against it now. `}
+          Studio lists an API — on this page, in the Explorer and in the Playground — once the
+          config declares it. Studio adds these lines and changes nothing else in the file.
+        </Note>
       </div>
-      {source && (
-        <>
-          <Part
-            label="Import the generated source at the top of the file:"
-            code={source.importLine}
-          />
-          <Part label="Add it to sources:" code={source.entry} />
-        </>
-      )}
-      {importEntry && (
-        <>
-          <Part
-            label="Declare the import under imports — Studio checks and manages an import only from its declaration, and generates the endpoints you add with the options written there:"
-            code={importEntry}
-          />
-          {leftOut > 0 && <p className="m-0 text-small text-fg-muted">{leftOutNote(leftOut)}</p>}
-        </>
-      )}
+      <ChangePreview target={answer.configFile} hunks={answer.hunks} />
+      {declaration.leftOut > 0 && <Note>{leftOutNote(declaration.leftOut)}</Note>}
     </div>
   );
 }

@@ -7,7 +7,7 @@ import type { DescribedRoute } from "./describe-route";
 import { handleChaosCommand, handleNetworkCommand } from "./network-commands";
 import { buildScenarioMeta } from "./scenario-meta";
 import { handleStoreCommand } from "./store-commands";
-import type { ChildScenarioMeta, ParentMessage, ServedMock } from "./types";
+import type { ParentMessage, ServedMock } from "./types";
 import { send, sendStoreSnapshot } from "./worker-ipc";
 
 export function handleCommand(
@@ -50,9 +50,7 @@ function emitScenarioApplied(
   const appliedName = appliedScenario(result.data);
   if (!appliedName) return;
 
-  const updated = buildScenarioMeta(server.scenarios, analyzedRoutes).map(
-    (s: ChildScenarioMeta) => ({ ...s, isActive: s.name === appliedName }),
-  );
+  const updated = buildScenarioMeta(server.scenarios, analyzedRoutes, appliedName);
   send({
     type: "event",
     event: {

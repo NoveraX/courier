@@ -104,6 +104,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
 
   if (config?.scenario) {
     applyScenarioInternal(config.scenario);
+    activeScenario = config.scenario.name;
   }
 
   const port = config?.port ?? 7001;
@@ -137,6 +138,10 @@ export function createMockServer(config?: MockServerOptions): MockServer {
 
     get scenarioState() {
       return scenario.get();
+    },
+
+    get activeScenario() {
+      return activeScenario;
     },
 
     /* Applied by name or by object alike, it becomes the one the admin API

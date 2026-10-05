@@ -85,8 +85,9 @@ export function registerAdminRoutes(app: Hono, config: AdminConfig): void {
     config.store.reset();
     config.reseed?.();
     config.setScenarioState("Started");
-    // The scenario layer is gone with the registry, so none is active.
-    config.setActiveScenario(null);
+    /* The scenario layer is gone with the registry: the server answers as
+       `happy-path` does, where it has one, else with no scenario at all. */
+    config.setActiveScenario(config.scenarios.has("happy-path") ? "happy-path" : null);
     return c.json({ reset: true });
   });
 

@@ -122,7 +122,11 @@ async function start(
     port: info.port,
     url: info.url,
     routes: uiRoutes(served),
-    scenarios: buildScenarioMeta(served.server.scenarios, served.routes),
+    scenarios: buildScenarioMeta(
+      served.server.scenarios,
+      served.routes,
+      served.server.activeScenario,
+    ),
     collections: served.server.store.list().map((name) => ({
       name,
       count: served.server.store.collection(name).count(),

@@ -1,7 +1,8 @@
 import { OctagonX } from "lucide-react";
 
 import { chaosModeOf } from "@/features/mocks/chaos-config";
-import { delayLabel, delayOf } from "@/features/mocks/latency-window";
+import { delayLabel } from "@/features/mocks/latency-window";
+import { bandwidthLabel, networkConditionOf } from "@/features/mocks/network-condition";
 import type { LiveFigure } from "@/features/mocks/network-live";
 import { cn } from "@/lib/utils";
 import { stopAllFaults } from "@/mocks/stop-all-faults";
@@ -13,26 +14,25 @@ const VALUE = { normal: "text-fg", err: "text-err", warn: "text-warn" } as const
 
 function conditionOf(server: MockServerInfo): { title: string; sub: string; active: boolean } {
   const look = CHAOS_LOOK[chaosModeOf(server.chaosPreset)];
-  const delay = delayOf(server.networkConfig?.latency);
-  const rate = Math.round((server.networkConfig?.errorRate ?? 0) * 100);
-  const active = rate > 0 || delay !== null;
+  const { rate, delay, kbps, routes } = networkConditionOf(server);
   const parts = [
     rate ? `${rate}% of responses faulted` : "",
     delay ? `${delayLabel(delay.base)} ± ${delayLabel(delay.jitter)} delay` : "",
-  ];
+    kbps ? `${bandwidthLabel(kbps)} cap` : "",
+    routes ? `${routes} ${routes === 1 ? "route" : "routes"} overridden` : "",
+  ].filter(Boolean);
   return {
     title: delay ? `${look.label} · +${delayLabel(delay.base)}` : look.label,
-    sub: active
-      ? parts.filter(Boolean).join(" · ")
-      : "Handlers respond normally with no added delay",
-    active,
+    sub: parts.length ? parts.join(" · ") : "Handlers respond normally with no added delay",
+    active: parts.length > 0,
   };
 }
 
 /**
- * The network condition the mock serves under — its chaos and its added
- * delay, drawn in the chaos mode's colour, with a Stop for both — and four
- * live figures with their sparklines.
+ * The network condition the mock serves under — its chaos, its added
+ * delay, its bandwidth cap and the routes overridden, drawn in the chaos
+ * mode's colour, with a Stop for all of them — and four live figures with
+ * their sparklines.
  *
  * @param props - The mock server, and its live figures
  * @returns The hero
@@ -76,7 +76,7 @@ export function NetworkHero({
         {active && (
           <button
             type="button"
-            onClick={() => stopAllFaults(server.serverId)}
+            onClick={() => stopAllFaults(server)}
             title="Stop all faults"
             className="flex h-7.5 shrink-0 cursor-pointer items-center gap-1.5 rounded-card border border-err/40 bg-panel px-2.75 text-small font-semibold whitespace-nowrap text-err hover:bg-err-dim"
           >

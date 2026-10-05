@@ -35,6 +35,21 @@ export function routeOverridesOf(
   ];
 }
 
+/**
+ * Whether a route override changes how its route is answered: it is on,
+ * and adds a delay or fails a share of the route's answers.
+ *
+ * @param override - The route's override
+ * @returns Whether it simulates anything
+ * @example
+ * ```ts
+ * simulates({ routeId: "users:list", enabled: true, errorRate: 0.5 }); // true
+ * ```
+ */
+export function simulates(override: RouteOverride): boolean {
+  return override.enabled && (delayOf(override.latency) !== null || (override.errorRate ?? 0) > 0);
+}
+
 function tagOf(override: RouteOverride): Pick<OverrideRow, "tag" | "tone"> {
   const delay = delayOf(override.latency);
   const rate = Math.round((override.errorRate ?? 0) * 100);

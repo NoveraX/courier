@@ -10,7 +10,8 @@ interface CodeProps {
 
 /**
  * A fenced code block from a page, as MDX hands it over: a `<pre>` whose
- * one child is the `<code>`, with the fence's `title` on the `<pre>` itself
+ * one child is the `<code>` — drawn by whatever component draws code, so
+ * only its props are read — with the fence's `title` on the `<pre>` itself
  * (rehype-mdx-code-props puts it there).
  *
  * @param props - The `<pre>`'s children and the fence's title
@@ -21,9 +22,7 @@ interface CodeProps {
  * ```
  */
 export function Fence({ children, title }: { children?: ReactNode; title?: unknown }) {
-  if (!isValidElement<CodeProps>(children) || children.type !== "code") {
-    return <pre>{children}</pre>
-  }
+  if (!isValidElement<CodeProps>(children)) return <pre>{children}</pre>
   const { children: text, className } = children.props
   if (typeof text !== "string") return <pre>{children}</pre>
   const language =

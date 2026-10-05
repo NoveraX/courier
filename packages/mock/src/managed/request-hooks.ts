@@ -5,6 +5,7 @@
  */
 
 import { carriedBody } from "@noverax/courier/internal";
+import { describedUploads } from "./described-uploads";
 import type { ServedMock } from "./types";
 import { send } from "./worker-ipc";
 import { trackWritesInFlight } from "./writes-in-flight";
@@ -21,7 +22,7 @@ export function wireRequestHooks({ server, feed, bodies }: ServedMock): void {
     requestHeaders,
   ) => {
     writes.start(id, httpMethod);
-    const sent = carriedBody(variables);
+    const sent = carriedBody(describedUploads(variables));
     bodies.keep(id, "request", sent);
     send({
       type: "event",

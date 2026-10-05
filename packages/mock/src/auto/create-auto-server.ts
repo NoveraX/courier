@@ -35,6 +35,10 @@ export interface AutoMockServerConfig {
   admin?: boolean | undefined;
   /** Request logging level (default: "normal") */
   log?: MockServerOptions["log"] | undefined;
+  /** The largest JSON body the mock reads, in bytes (default: 1 MB); see {@link MockServerOptions} */
+  maxBodyBytes?: number | undefined;
+  /** The largest form or upload the mock reads, in bytes (default: 10 MB); see {@link MockServerOptions} */
+  maxUploadBytes?: number | undefined;
   /** Seed configuration */
   seed?: SeedConfig | undefined;
   /**
@@ -135,6 +139,8 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
     admin: config.admin,
     log: config.log,
     network: config.network,
+    maxBodyBytes: config.maxBodyBytes,
+    maxUploadBytes: config.maxUploadBytes,
     mappings,
     scenarios: allScenarios,
     /* It starts as `happy-path`, the state with no scenario on top, so that

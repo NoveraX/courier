@@ -6,6 +6,7 @@
 import type { Transport } from "@noverax/courier";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Context as HonoContext } from "hono";
+import type { BodyLimits } from "./read-request-body";
 
 /** CRUD operation type for an endpoint */
 export type EndpointOperation =
@@ -67,4 +68,13 @@ export interface PrefixRouteConfig {
     method: string,
     variables: unknown,
   ) => Promise<Response>;
+  /** Refuse a request whose body could not be read, logged as any request is */
+  refuse: (
+    c: HonoContext,
+    group: string,
+    method: string,
+    refusal: { error: string; status: 400 | 413 },
+  ) => Response;
+  /** The most of a request body the mock reads: JSON, and a form or an upload */
+  bodyLimits?: BodyLimits | undefined;
 }

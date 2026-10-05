@@ -149,6 +149,22 @@ const api = createProxyCaller("api", {
 
 On `/api/ws` a subscription goes as it does on a Courier server. The variables are checked against the channel's schema, and a subscription that fails them ends with code 4422. Its topic is keyed as the channel's `.topic()` says, with a `renamed` frame first when that differs from the topic asked for, so subscribers who share a key share the channel's broadcasts. Each message is checked against what the channel `.send()`s, and one that fails is refused with 4422 while the subscription goes on. A channel that is not mocked ends with 4404, naming it and the scenario state. `ctx.close()` ends that one subscription and leaves the socket's others open. A mock built without a source checks nothing and keys each topic by its variables. Studio's mock logs show each subscription as it opens and ends.
 
+### Uploads and large bodies
+
+A mock reads a body as a Courier server does, at every path it serves: JSON, and a form — `multipart/form-data` or URL-encoded — whose fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order. A file's name is kept as it was sent, `../` and all: the mock writes no file. It reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
+
+```ts
+// courier.mocks.ts
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+import { api } from "./src/api"
+
+export default defineMocks({
+  api: defineMockServer({ source: api, maxUploadBytes: 50 * 1024 * 1024 }),
+})
+```
+
+A body over its limit is answered with 413 before it is all read, a form that does not parse with 400, and one whose client stopped sending it with 400; each is answered `{ error }`, saying why. Studio's mock log shows such a request refused, with its status and the reason, and a file a request sent by its name, type and size.
+
 ### Slow and failing answers
 
 `network` makes a mock answer as a slow or unreliable network would: it adds latency, caps bandwidth, and fails a share of calls with a 500, a 503, a timeout or a dropped connection, and its stop conditions end a run on their own. Studio's **Network** tab sets the same conditions on a running mock. See [Network conditions](https://courier.noverax.cloud/docs/studio/network-conditions).

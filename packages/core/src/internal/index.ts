@@ -14,6 +14,7 @@
  */
 
 export { isOriginAccepted, isOriginAllowed } from "../adapter/origin-policy";
+export { type BoundedBody, readBoundedBody } from "../adapter/read-body";
 export { discoverAppOrigin, getAppOriginParsed } from "../app-origin";
 export {
   buildClientProxy,

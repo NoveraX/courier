@@ -68,6 +68,16 @@ export interface MockServerOptions {
     | undefined;
   /** The calls the mock leaves to its source's own server, or answers with recordings of it */
   elsewhere?: Elsewhere | undefined;
+  /**
+   * The largest JSON body the mock reads, in bytes (default: 1 MB, as a
+   * Courier server). A larger one is answered with 413.
+   */
+  maxBodyBytes?: number | undefined;
+  /**
+   * The largest form or upload the mock reads, in bytes (default: 10 MB, as
+   * a Courier server). A larger one is answered with 413.
+   */
+  maxUploadBytes?: number | undefined;
 }
 
 /** What answers a route of a mock. */

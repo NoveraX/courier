@@ -161,6 +161,8 @@ function createServer(
     cors: definition.cors,
     admin: definition.admin,
     log: definition.log,
+    maxBodyBytes: definition.maxBodyBytes,
+    maxUploadBytes: definition.maxUploadBytes,
     seed: definition.seed,
     overrides: definition.overrides,
     scenarios: definition.scenarios,

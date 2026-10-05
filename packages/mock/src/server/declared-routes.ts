@@ -3,6 +3,7 @@ import type { Context, Hono } from "hono";
 import type { PathShape } from "./path-shape";
 import { pathShape } from "./path-shape";
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
+import { type BodyLimits, bodyValue, readRequestBody } from "./read-request-body";
 import { parsePathParams, parseQueryParams } from "./route-helpers";
 
 const METHODS = new Set<string>(["GET", "POST", "PUT", "PATCH", "DELETE"]);
@@ -50,10 +51,10 @@ export function registerDeclaredRoutes(
     const method = (ep.httpMethod ?? "GET").toUpperCase();
     const path = `/${prefix}/${ep.path.split("/").filter(Boolean).join("/")}`;
     app.on(method, path, async (c) => {
-      const input = await inputOf(c, method);
-      if (!input) return c.json({ error: "The request body is not a JSON object" }, 400);
+      const read = await inputOf(c, method, config.bodyLimits);
+      if ("error" in read) return config.refuse(c, group, ep.name, read);
       return config.handleRequest(c, group, ep.name, {
-        ...input,
+        ...read.input,
         ...parsePathParams(c.req.param()),
       });
     });
@@ -78,19 +79,21 @@ function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
   return rank(a).localeCompare(rank(b));
 }
 
-/** The query of a GET or DELETE, the JSON body of anything else; `undefined` for a body that is not JSON */
-async function inputOf(c: Context, method: string): Promise<Record<string, unknown> | undefined> {
-  if (WITHOUT_BODY.has(method)) return parseQueryParams(new URL(c.req.url).searchParams);
-  const text = await c.req.text();
-  if (!text.trim()) return {};
-  const body = parseJson(text);
-  return body && typeof body === "object" && !Array.isArray(body) ? { ...body } : undefined;
-}
-
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
+/** The query of a GET or DELETE; the JSON, form or upload of anything else, which holds an object */
+async function inputOf(
+  c: Context,
+  method: string,
+  limits: BodyLimits | undefined,
+): Promise<{ input: Record<string, unknown> } | { error: string; status: 400 | 413 }> {
+  if (WITHOUT_BODY.has(method)) {
+    return { input: parseQueryParams(new URL(c.req.url).searchParams) };
   }
+  const body = await readRequestBody(c, limits);
+  if ("error" in body) return body;
+  const value = bodyValue(body);
+  if (value === undefined) return { input: {} };
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return { input: { ...value } };
+  }
+  return { error: "The request body is not a JSON object", status: 400 };
 }

@@ -2,15 +2,15 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { checkAllUpdates, checkSourceUpdates } from "@/apis/client";
 import type { ApisPageState } from "@/features/apis/apis-page-state";
 import { apisPageState } from "@/features/apis/apis-page-state";
-import { ownValue } from "@/lib/own-value";
-import { useStudioStore } from "@/store";
 import type {
   ParsedSpec,
   ScannedSource,
   SourceStatus,
   SourceStatusInfo,
   SourceSummary,
-} from "@/views/apis/types";
+} from "@/features/apis/types";
+import { ownValue } from "@/lib/own-value";
+import { useStudioStore } from "@/store";
 
 /** Scanned source enriched with registry metadata (if imported) */
 export interface EnrichedSource extends ScannedSource {

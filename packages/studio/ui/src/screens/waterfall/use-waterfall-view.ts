@@ -22,8 +22,8 @@ export interface WaterfallViewControl {
  * ```
  */
 export function useWaterfallView(): WaterfallViewControl {
-  const search = useSearch({ from: "/next/waterfall" });
-  const navigate = useNavigate({ from: "/next/waterfall" });
+  const search = useSearch({ from: "/waterfall" });
+  const navigate = useNavigate({ from: "/waterfall" });
   const view = useMemo(() => viewFromSearch(search), [search]);
   const setView = useCallback(
     (patch: Partial<WaterfallView>) =>

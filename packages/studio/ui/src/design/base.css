@@ -1,12 +1,39 @@
 /*
- * Element defaults inside Studio's shell: the type every screen is drawn
- * on — line height `normal`, as the design leaves it — code in the mono
- * face without ligatures or tracking, and selections in the brand colour.
- * Overlays portaled out of the shell carry `data-shell` too.
+ * Element defaults for the page: the theme the browser draws its own
+ * controls and scrollbars in, the type every screen is drawn on — line
+ * height `normal`, as the design leaves it — on the page's ground, code in
+ * the mono face without ligatures or tracking, borders and outlines in the
+ * design's colours unless a class says otherwise, and selections in the
+ * brand colour. Overlays portaled to the body inherit all of it. Motion is
+ * cut short for a reader who asks for less.
  */
 
 @layer base {
-  [data-shell] {
+  :root {
+    color-scheme: dark;
+  }
+
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-line);
+    outline-color: color-mix(in srgb, var(--color-brand) 50%, transparent);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: var(--color-bg);
     font-family: var(--font-sans);
     font-size: var(--text-ui);
     line-height: normal;
@@ -16,14 +43,31 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  [data-shell] code,
-  [data-shell] pre {
+  code,
+  pre {
     font-family: var(--font-mono);
     font-variant-ligatures: none;
     letter-spacing: 0;
   }
 
-  [data-shell] ::selection {
+  ::selection {
     background: color-mix(in srgb, var(--color-brand) 30%, transparent);
+  }
+}
+
+/* A reader who asks for less motion gets it from every animation and
+   transition, whatever duration a class gave it — hence `!important`. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat every class's own duration */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat every class's own count */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat every class's own duration */
+    transition-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat a smooth scroll a class asked for */
+    scroll-behavior: auto !important;
   }
 }

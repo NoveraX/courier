@@ -104,7 +104,7 @@ describe("the network condition", () => {
       ],
     });
 
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     expect(within(condition()).getByText("Stable")).toBeTruthy();
     expect(
@@ -118,7 +118,7 @@ describe("the network condition", () => {
 
 describe("chaos", () => {
   it("picks a mode, sending its rate as the share the mock reads", async () => {
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     await settle(() => fireEvent.click(screen.getByRole("radio", { name: /Degraded/ })));
 
@@ -140,7 +140,7 @@ describe("chaos", () => {
   });
 
   it("turns a dragged rate or fault mix into a custom run", async () => {
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     await drag("Error rate", 25);
     expect(sent("mock:chaos:set").at(-1)).toMatchObject({
@@ -167,7 +167,7 @@ describe("chaos", () => {
 
 describe("latency", () => {
   it("picks a preset, and shows the window of delays it gives", async () => {
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     await settle(() =>
       fireEvent.click(
@@ -196,7 +196,7 @@ describe("latency", () => {
       latencyPreset: "custom",
       networkConfig: { latency: { min: 300, max: 300, jitter: 100 }, errorRate: 0 },
     });
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     await drag("Jitter", 250);
     expect(sent("mock:network:set").at(-1)).toMatchObject({
@@ -214,7 +214,7 @@ describe("latency", () => {
   });
 
   it("caps how fast bodies are sent", async () => {
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "512 Kbps" })));
 
@@ -226,7 +226,7 @@ describe("latency", () => {
 
 describe("a route's own override", () => {
   it("sets its failure rate as a share, switching it on, and switches it off", async () => {
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /users\.list/ })));
     await drag("Route error rate", 50);
@@ -258,7 +258,7 @@ describe("a route's own override", () => {
       latency: { min: 300, max: 300, jitter: 0 },
     };
     serve({ networkConfig: { latency: 0, errorRate: 0, routeOverrides: [held] } });
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     await settle(() =>
       fireEvent.click(screen.getByRole("switch", { name: "Override users.list" })),
@@ -272,7 +272,7 @@ describe("a route's own override", () => {
 
 describe("safety", () => {
   it("halts a run on its own once switched on", async () => {
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     await settle(() => fireEvent.click(screen.getByRole("switch", { name: "Auto-halt" })));
 
@@ -308,7 +308,7 @@ describe("safety", () => {
       ],
     });
 
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     const runs = within(screen.getByRole("region", { name: "Runs" }));
     expect(runs.getByText("ran 42s")).toBeTruthy();
@@ -322,7 +322,7 @@ describe("Stop and a stopped mock", () => {
       chaosPreset: "down",
       networkConfig: { latency: 0, errorRate: 1, faultWeights: PRESET_CONFIG.down.faultWeights },
     });
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     await settle(() => fireEvent.click(within(condition()).getByRole("button", { name: /Stop/ })));
 
@@ -336,7 +336,7 @@ describe("Stop and a stopped mock", () => {
 
   it("takes no change while the mock is stopped", async () => {
     serve({ processStatus: "stopped" });
-    await openShell("/next/mocks/network");
+    await openShell("/mocks/network");
 
     expect(screen.getByRole("radio", { name: /Down/ }).matches(":disabled")).toBe(true);
     expect(screen.getByRole("slider", { name: "Error rate" }).matches(":disabled")).toBe(true);

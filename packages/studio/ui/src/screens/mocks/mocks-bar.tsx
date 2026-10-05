@@ -10,12 +10,12 @@ import { ServerPill } from "./server-pill";
 
 /** The Mocks tabs; a tab not yet on the new shell opens its current page. */
 const TABS = [
-  { to: "/next/mocks", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/next/mocks/routes", label: "Routes", icon: Globe },
-  { to: "/next/mocks/store", label: "Store", icon: Database },
-  { to: "/next/mocks/scenarios", label: "Scenarios", icon: Network },
-  { to: "/next/mocks/network", label: "Network", icon: Zap },
-  { to: "/next/mocks/logs", label: "Logs", icon: Activity },
+  { to: "/mocks", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/mocks/routes", label: "Routes", icon: Globe },
+  { to: "/mocks/store", label: "Store", icon: Database },
+  { to: "/mocks/scenarios", label: "Scenarios", icon: Network },
+  { to: "/mocks/network", label: "Network", icon: Zap },
+  { to: "/mocks/logs", label: "Logs", icon: Activity },
 ] as const satisfies readonly { to: string; label: string; icon: LucideIcon }[];
 
 interface MocksBarProps {

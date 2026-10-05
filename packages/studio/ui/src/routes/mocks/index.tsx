@@ -1,9 +1,7 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-function MocksIndex(): React.ReactNode {
-  return <Navigate to="/mocks/dashboard" replace />;
-}
+import { MocksDashboard } from "@/screens/mocks/mocks-dashboard";
 
 export const Route = createFileRoute("/mocks/")({
-  component: MocksIndex,
+  component: MocksDashboard,
 });

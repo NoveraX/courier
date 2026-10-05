@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MockNetworkView } from "@/views/mocks/network";
+
+import { MockNetworkScreen } from "@/screens/mocks/network-screen";
 
 export const Route = createFileRoute("/mocks/network")({
-  component: MockNetworkView,
+  component: MockNetworkScreen,
 });

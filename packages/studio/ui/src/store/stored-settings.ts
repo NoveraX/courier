@@ -17,13 +17,11 @@ function oneOf<const TValue extends string | number>(...allowed: TValue[]): Chec
 /* A check for every field, so a field added to the settings needs one here. */
 const CHECKS: { [TKey in keyof Settings]: Check<Settings[TKey]> } = {
   theme: oneOf("dark", "light", "system"),
-  density: oneOf("comfortable", "compact"),
   maxRequests: isCount,
   preserveLog: isBoolean,
   ignorePatterns: isTextList,
   timestampFormat: oneOf("relative", "absolute"),
   jsonIndent: oneOf(2, 4),
-  showRequestPreview: isBoolean,
   toastOnError: isBoolean,
   toastOnSlowRequest: isBoolean,
   slowRequestThreshold: isCount,

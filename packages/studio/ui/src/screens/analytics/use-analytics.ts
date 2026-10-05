@@ -49,8 +49,8 @@ export interface AnalyticsModel {
  * ```
  */
 export function useAnalytics(): AnalyticsModel {
-  const search: AnalyticsSearch = useSearch({ from: "/next/analytics" });
-  const navigate = useNavigate({ from: "/next/analytics" });
+  const search: AnalyticsSearch = useSearch({ from: "/analytics" });
+  const navigate = useNavigate({ from: "/analytics" });
   const requests = useStudioStore((s) => s.requests);
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const saved = useStudioStore((s) => s.shownSession !== null);

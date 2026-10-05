@@ -2,6 +2,7 @@ import { LoaderCircle, Send } from "lucide-react";
 
 import { Kbd } from "@/design/kbd";
 import { entryPayloadView } from "@/features/playground/entry-view";
+import { notForwardedOf } from "@/features/playground/not-forwarded";
 import { responseView } from "@/features/requests/payload-view";
 import { requestStateOf } from "@/features/requests/request-state";
 import { HeadersTab } from "@/inspector/tabs/headers-tab";
@@ -32,6 +33,16 @@ function Waiting({ text }: { text: string }): React.ReactNode {
   );
 }
 
+function Failed({ reason }: { reason: string }): React.ReactNode {
+  return (
+    <Centered>
+      <span role="alert" className="max-w-120 text-control break-words text-err">
+        {reason}
+      </span>
+    </Centered>
+  );
+}
+
 interface ResponseContentProps {
   entry: PlaygroundHistoryEntry | null;
   row: RequestEntry | undefined;
@@ -49,6 +60,7 @@ interface ResponseContentProps {
  * counter while a call is in flight, then the answer — its body, headers
  * and timing, or a stream's messages with a composer for a WebSocket —
  * shown as the inspector shows a request, from the request the run made.
+ * Its headers add the ones the run wrote that a proxy did not pass on.
  *
  * @param props - The run, the request it made, the tab, the body's view mode, the time, the in-flight label and what cancels it
  * @returns The content
@@ -94,7 +106,11 @@ export function ResponseContent(props: ResponseContentProps): React.ReactNode {
     );
   }
   const reported = "Shown once the runtime reports the call.";
-  if (tab === "headers") return row ? <HeadersTab request={row} /> : <Waiting text={reported} />;
+  if (tab === "headers") {
+    if (!row) return <Waiting text={reported} />;
+    const forwarded = row.mode === "proxy" ? row.requestHeaders : undefined;
+    return <HeadersTab request={row} notForwarded={notForwardedOf(entry.headers, forwarded)} />;
+  }
   if (stream) {
     const live = row ? requestStateOf(row) === "streaming" : entry.streamStatus === "streaming";
     const failure =
@@ -102,7 +118,13 @@ export function ResponseContent(props: ResponseContentProps): React.ReactNode {
     return (
       <div className="flex min-h-full flex-col">
         <div className="flex-1">
-          {row ? <MessagesTab request={row} /> : <Waiting text={failure ?? "Connecting…"} />}
+          {row ? (
+            <MessagesTab request={row} />
+          ) : failure ? (
+            <Failed reason={failure} />
+          ) : (
+            <Waiting text="Connecting…" />
+          )}
         </div>
         {entry.transport === "ws" && live && <WsComposer rid={entry.rid} />}
       </div>

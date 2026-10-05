@@ -43,8 +43,8 @@ function NoTraffic(): React.ReactNode {
  */
 export function AuditScreen(): React.ReactNode {
   const { report, newSince, rerun } = useAuditReport();
-  const search: AuditSearch = useSearch({ from: "/next/audit" });
-  const navigate = useNavigate({ from: "/next/audit" });
+  const search: AuditSearch = useSearch({ from: "/audit" });
+  const navigate = useNavigate({ from: "/audit" });
   const { open } = useInspector();
   const requests = useStudioStore((s) => s.requests);
   const now = useNow();

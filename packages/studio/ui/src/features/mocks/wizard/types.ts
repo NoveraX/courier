@@ -9,9 +9,6 @@ import type {
   RolledBackOutcome,
 } from "./wire-types";
 
-/** Whether the wizard declares mocks for sources, or shows the standalone builder to come. */
-export type WizardMode = "sources" | "standalone";
-
 export type WizardStep = "source" | "configure" | "review" | "done";
 
 /** A port Studio assigns, or one typed and held exactly. */
@@ -69,7 +66,6 @@ export type ApplyState =
   | RollbackFailedOutcome;
 
 export interface MockWizardState {
-  mode: WizardMode;
   step: WizardStep;
   /** One per picked source, in the order picked. */
   drafts: readonly MockDraft[];

@@ -2,9 +2,9 @@ import { CircleCheck } from "lucide-react";
 
 import { methodText } from "@/design/method-color";
 import { countSelectedEndpoints } from "@/features/apis/helpers";
+import type { ParsedSpec } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
 import { cn } from "@/lib/utils";
-import type { ParsedSpec } from "@/views/apis/types";
 import { TickBox } from "./tick-box";
 
 const FORMAT: Readonly<Record<ParsedSpec["format"], string>> = {

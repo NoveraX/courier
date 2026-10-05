@@ -74,7 +74,7 @@ afterEach(() => {
 
 describe("Analytics", () => {
   it("names the project and counts the session's completed requests and endpoints", async () => {
-    await openShell("/next/analytics");
+    await openShell("/analytics");
 
     expect(screen.getByRole("heading", { name: "Analytics" })).toBeTruthy();
     expect(screen.getByText("acme-web · 12 completed requests · 3 endpoints")).toBeTruthy();
@@ -88,7 +88,7 @@ describe("Analytics", () => {
   });
 
   it("narrows every figure to the range chosen, and keeps it in the address", async () => {
-    const router = await openShell("/next/analytics");
+    const router = await openShell("/analytics");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "1 min" })));
 
@@ -98,7 +98,7 @@ describe("Analytics", () => {
   });
 
   it("sorts by the slowest p95 first, and turns a column around on a click of its head", async () => {
-    const router = await openShell("/next/analytics");
+    const router = await openShell("/analytics");
     const order = () =>
       endpoints()
         .getAllByRole("button")
@@ -114,7 +114,7 @@ describe("Analytics", () => {
   });
 
   it("opens an endpoint's newest calls, and links the Timeline searched for it to see the rest", async () => {
-    await openShell("/next/analytics");
+    await openShell("/analytics");
 
     await settle(() =>
       fireEvent.click(endpoints().getByRole("button", { name: /invoices\.list/ })),
@@ -128,12 +128,12 @@ describe("Analytics", () => {
     const more = within(calls as HTMLElement).getByRole("link", {
       name: "open Timeline to see all",
     });
-    expect(more.getAttribute("href")).toBe("/next/timeline?q=billing.invoices.list");
+    expect(more.getAttribute("href")).toBe("/timeline?q=billing.invoices.list");
     expect(calls?.textContent).toContain("+ 2 older calls");
   });
 
   it("opens the call of an endpoint called once in the inspector", async () => {
-    const router = await openShell("/next/analytics");
+    const router = await openShell("/analytics");
 
     await settle(() => fireEvent.click(endpoints().getByRole("button", { name: /api\.health/ })));
 
@@ -143,7 +143,7 @@ describe("Analytics", () => {
   it("says nothing completed in the range, and keeps the range to choose another", async () => {
     useStudioStore.setState({ requests: [call(240_000, 80)] });
 
-    await openShell("/next/analytics?range=1m");
+    await openShell("/analytics?range=1m");
 
     expect(screen.getByText("No request completed in the last minute")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Endpoints" })).toBeNull();
@@ -156,7 +156,7 @@ describe("Analytics", () => {
       requests: [call(3_601_000, 120), call(3_630_000, 90), call(3_720_000, 60)],
     });
 
-    await openShell("/next/analytics?range=1m");
+    await openShell("/analytics?range=1m");
 
     expect(screen.getByText("acme-web · 2 completed requests · 1 endpoint")).toBeTruthy();
     expect(

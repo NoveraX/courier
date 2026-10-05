@@ -1,9 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import { ClipboardPaste, Globe, Link2, Upload } from "lucide-react";
 import { useState } from "react";
-
+import type { ImportSource } from "@/features/apis/types";
 import { cn } from "@/lib/utils";
-import type { ImportSource } from "@/views/apis/types";
 import { SpecDropzone } from "./spec-dropzone";
 
 const SOURCES: readonly { value: ImportSource; label: string; sub: string; icon: LucideIcon }[] = [

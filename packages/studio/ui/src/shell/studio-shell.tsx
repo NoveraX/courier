@@ -20,7 +20,7 @@ import { StatusBar } from "./status-bar/status-bar";
  * @returns The shell, with the current view inside
  * @example
  * ```tsx
- * export const Route = createFileRoute("/next")({ component: StudioShell });
+ * createRootRoute({ component: StudioShell });
  * ```
  */
 export function StudioShell(): React.ReactNode {
@@ -38,10 +38,7 @@ export function StudioShell(): React.ReactNode {
   );
   useHotkeys(hotkeys);
   return (
-    <div
-      data-shell=""
-      className="grid h-screen grid-cols-[236px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_24px] overflow-hidden bg-bg max-[820px]:grid-cols-[minmax(0,1fr)]"
-    >
+    <div className="grid h-screen grid-cols-[236px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_24px] overflow-hidden bg-bg max-[820px]:grid-cols-[minmax(0,1fr)]">
       <Sidebar />
       <div className="row-start-1 flex min-h-0 min-w-0 flex-col">
         <Header onOpenPalette={() => setPaletteOpen(true)} />

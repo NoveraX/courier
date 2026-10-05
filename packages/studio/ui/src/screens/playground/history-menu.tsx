@@ -55,7 +55,6 @@ export function HistoryMenu({ now, labelOf, onPick }: HistoryMenuProps): React.R
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          data-shell=""
           align="end"
           sideOffset={6}
           className="z-50 w-90 animate-pop-in overflow-hidden rounded-dialog bg-panel shadow-overlay"

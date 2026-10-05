@@ -15,6 +15,10 @@ const ROW: Readonly<Record<DiffLine["kind"], string>> = {
   remove: "bg-err-dim text-err",
 };
 
+function countOf(hunks: readonly DiffHunk[], kind: DiffLine["kind"]): number {
+  return hunks.reduce((sum, hunk) => sum + hunk.lines.filter((l) => l.kind === kind).length, 0);
+}
+
 function folderOf(target: string): string {
   const cut = target.lastIndexOf("/");
   return cut < 0 ? "./" : `${target.slice(0, cut + 1)}`;
@@ -47,8 +51,9 @@ function DiffRow({ line }: { line: DiffLine }): React.ReactNode {
 
 /**
  * The exact change Studio will make, as the design previews generated
- * files: the file it writes on the left, every line it changes on the
- * right, between the lines around them.
+ * files: the file it writes on the left with how many lines the change adds
+ * and removes, every line it changes on the right, between the lines around
+ * them.
  *
  * @param props - The file and the change's pieces
  * @returns The preview
@@ -65,6 +70,8 @@ export function ChangePreview({
   hunks: readonly DiffHunk[];
 }): React.ReactNode {
   const name = target.slice(target.lastIndexOf("/") + 1);
+  const added = countOf(hunks, "add");
+  const removed = countOf(hunks, "remove");
   return (
     <div className="grid min-h-60 grid-cols-[190px_minmax(0,1fr)] gap-3">
       <div className="flex flex-col gap-px rounded-[11px] border border-line bg-inset p-2 font-mono text-small">
@@ -75,6 +82,8 @@ export function ChangePreview({
         <span className="flex h-7 items-center gap-1.75 rounded-[6px] bg-brand-dim pr-2 pl-5.5 text-fg">
           <FileCode2 aria-hidden="true" className="size-3 text-fg-subtle" />
           <span className="flex-1 truncate">{name}</span>
+          {added > 0 && <span className="text-micro text-ok">+{added}</span>}
+          {removed > 0 && <span className="text-micro text-err">−{removed}</span>}
         </span>
       </div>
       <section

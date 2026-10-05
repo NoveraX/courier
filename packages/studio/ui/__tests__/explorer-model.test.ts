@@ -148,6 +148,20 @@ describe("the tree", () => {
   it("names an endpoint outside any group by its source and method", () => {
     expect(endpointKey({ source: "api", group: "", method: "health" })).toBe("api.health");
   });
+
+  it("counts calls that carry no group, or an empty one, toward an endpoint outside any group", () => {
+    const flat = explorerModelOf(
+      CATALOG,
+      [call("", "health", { id: "h1" }), call("", "health", { id: "h2", group: "" })],
+      NOW,
+      500,
+    );
+
+    expect(flat.endpoints.find((e) => e.key === "api.health")?.requests.map((r) => r.id)).toEqual([
+      "h1",
+      "h2",
+    ]);
+  });
 });
 
 describe("a node's figure", () => {

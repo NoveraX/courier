@@ -43,7 +43,7 @@ export function EndpointCalls({ row, slowMs, onOpenCall }: EndpointCallsProps): 
         <p className="m-0 px-2.5 pt-1.5 text-label text-fg-subtle">
           + {older} older calls ·{" "}
           <Link
-            to="/next/timeline"
+            to="/timeline"
             search={{ q: row.key }}
             className="text-fg-muted underline-offset-2 hover:text-fg hover:underline"
           >

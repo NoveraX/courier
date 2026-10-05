@@ -52,15 +52,6 @@ export interface RouteOverride {
   faultTypes?: string[];
 }
 
-export interface SavedScenario {
-  id: string;
-  name: string;
-  createdAt: number;
-  chaosMode: string;
-  networkConfig: NetworkConfig;
-  networkPreset: NetworkPreset;
-}
-
 export interface ExperimentEvent {
   id: string;
   serverId: string;
@@ -68,8 +59,6 @@ export interface ExperimentEvent {
   type: "started" | "stopped" | "auto-halted";
   mode: string;
   errorRate: number;
-  peakErrorRate?: number | undefined;
-  peakP99?: number | undefined;
   durationMs?: number | undefined;
   reason?: string | undefined;
 }

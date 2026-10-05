@@ -107,25 +107,6 @@ describe("drafts", () => {
     );
   });
 
-  it("keeps the standalone mode, from which the wizard does not go on, and keeps the drafts across it", () => {
-    const picked = run(INITIAL_WIZARD_STATE, {
-      type: "toggleSource",
-      source: "api",
-      declaredKeys: [],
-    });
-    const standalone = run(picked, { type: "setMode", mode: "standalone" });
-
-    expect(standalone.mode).toBe("standalone");
-    expect(run(standalone, { type: "goTo", step: "configure" }).step).toBe("source");
-    const back = run(
-      standalone,
-      { type: "setMode", mode: "sources" },
-      { type: "goTo", step: "configure" },
-    );
-    expect(back.step).toBe("configure");
-    expect(back.drafts).toEqual(picked.drafts);
-  });
-
   it("goes back to picking sources once the last draft is removed, there being nothing left to configure", () => {
     const two = run(
       INITIAL_WIZARD_STATE,

@@ -133,6 +133,7 @@ describe("the search", () => {
   it("finds a request by its name, URL, code, method, state or transport", () => {
     const find = (search: string) => shown({ ...OPEN_FILTER, search });
 
+    expect(find("api.users.create")).toEqual(["failed"]);
     expect(find("users.create")).toEqual(["failed"]);
     expect(find("PAGE=2")).toHaveLength(6);
     expect(find("503")).toEqual(["failed"]);

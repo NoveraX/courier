@@ -8,7 +8,7 @@
 
 import type { StoreApi } from "zustand";
 import { mockServerOf } from "./mock-server-of";
-import type { RouteOverride, SavedScenario } from "./mock-slice-network-types";
+import type { RouteOverride } from "./mock-slice-network-types";
 import type {
   MockCollectionEntry,
   MockRequestLog,
@@ -111,10 +111,6 @@ export function createMockSliceActions(set: Setter, get: Getter): MockActions {
       }));
     },
 
-    clearLogs() {
-      set({ logs: [] });
-    },
-
     clearServerLogs(serverId: string) {
       set((state) => ({ logs: state.logs.filter((log) => log.serverId !== serverId) }));
     },
@@ -139,25 +135,6 @@ export function createMockSliceActions(set: Setter, get: Getter): MockActions {
       }));
     },
 
-    saveScenario(serverId: string, scenario: SavedScenario) {
-      set((state) =>
-        patchServer(state, serverId, (server) => ({
-          savedScenarios: [
-            ...(server.savedScenarios ?? []).filter((s) => s.id !== scenario.id),
-            scenario,
-          ],
-        })),
-      );
-    },
-
-    deleteScenario(serverId: string, scenarioId: string) {
-      set((state) =>
-        patchServer(state, serverId, (server) => ({
-          savedScenarios: (server.savedScenarios ?? []).filter((s) => s.id !== scenarioId),
-        })),
-      );
-    },
-
     setRouteOverride(serverId: string, override: RouteOverride) {
       set((state) =>
         patchServer(state, serverId, (server) => ({
@@ -167,10 +144,6 @@ export function createMockSliceActions(set: Setter, get: Getter): MockActions {
           ],
         })),
       );
-    },
-
-    clearRouteOverrides(serverId: string) {
-      set((state) => patchServer(state, serverId, { routeOverrides: [] }));
     },
   };
 }

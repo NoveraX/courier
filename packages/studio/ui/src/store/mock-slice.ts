@@ -23,7 +23,6 @@ export type {
   NetworkConfig,
   NetworkPreset,
   RouteOverride,
-  SavedScenario,
   StopCondition,
 } from "./mock-slice-network-types";
 export type {

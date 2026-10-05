@@ -21,6 +21,7 @@ vi.mock("@/socket", () => ({
 }));
 
 import { collectionView, validateMockStoreSearch } from "@/features/mocks/collection-view";
+import { buildDefaultRecord } from "@/features/mocks/data-table-utils";
 import { useStudioStore } from "@/store";
 import type { MockCollectionEntry, MockRouteEntry } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
@@ -85,11 +86,27 @@ describe("a collection's table", () => {
     ]);
     expect(validateMockStoreSearch({ collection: "" })).toEqual({});
   });
+
+  it("adds a record typed like the others — never null in a typed field — and without an id", () => {
+    const people = {
+      name: "people",
+      count: 2,
+      records: [
+        { id: 1, name: "Ada", admin: true, tags: ["a"], address: { city: "London" } },
+        { id: 2, name: "Grace", admin: false, tags: [], address: { city: "NYC" } },
+      ],
+    };
+    const { columns } = collectionView(people, []);
+
+    const record = buildDefaultRecord(Object.fromEntries(columns.map((c) => [c.field, c.type])));
+
+    expect(record).toEqual({ name: "", admin: false, tags: [], address: {} });
+  });
 });
 
 describe("the Store tab", () => {
   it("edits a cell in place and sends the change", async () => {
-    await openShell("/next/mocks/store");
+    await openShell("/mocks/store");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Ada" })));
     const input = screen.getByRole("textbox", { name: "Edit value" });
@@ -106,7 +123,7 @@ describe("the Store tab", () => {
   });
 
   it("adds a record, deletes one, and seeds every collection as the mock declares", async () => {
-    await openShell("/next/mocks/store?collection=users");
+    await openShell("/mocks/store?collection=users");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Add record" })));
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Delete record u2" })));

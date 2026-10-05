@@ -5,8 +5,8 @@
  * costs, a card a middleware opening the chain of a call it failed in, the
  * endpoints it weighs on opening their newest chain, the chain inspector
  * tracing a picked call — kept in the address apart from the inspector's
- * own — with a way into the inspector, and the page before any middleware
- * ran.
+ * own — with a way into the inspector and no fetch for a call a middleware
+ * stopped, and the page before any middleware ran.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -75,7 +75,7 @@ afterEach(() => {
 
 describe("the Middleware page", () => {
   it("says what the session's middleware costs, each middleware with its runs and failures", async () => {
-    await openShell("/next/middleware");
+    await openShell("/middleware");
 
     expect(screen.getByText("2 middleware · 3 requests traced")).toBeTruthy();
     const overhead = within(screen.getByRole("region", { name: "Overhead" }));
@@ -87,7 +87,7 @@ describe("the Middleware page", () => {
   });
 
   it("opens the chain of a call a middleware failed in from its card", async () => {
-    const router = await openShell("/next/middleware");
+    const router = await openShell("/middleware");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /^auth/ })));
 
@@ -96,7 +96,7 @@ describe("the Middleware page", () => {
   });
 
   it("opens an endpoint's newest chain from the impact table", async () => {
-    const router = await openShell("/next/middleware");
+    const router = await openShell("/middleware");
 
     const impact = within(screen.getByRole("region", { name: "Impact by endpoint" }));
     await settle(() => fireEvent.click(impact.getByRole("button", { name: /users\.list/ })));
@@ -105,7 +105,7 @@ describe("the Middleware page", () => {
   });
 
   it("traces a picked call in the chain inspector, and opens it in the inspector", async () => {
-    const router = await openShell("/next/middleware?view=chain");
+    const router = await openShell("/middleware?view=chain");
 
     const list = within(screen.getByRole("region", { name: "Requests" }));
     await settle(() => fireEvent.click(list.getAllByRole("button")[2] as HTMLElement));
@@ -119,10 +119,33 @@ describe("the Middleware page", () => {
     expect(router.state.location.search).toMatchObject({ req: "older", trace: "older" });
   });
 
+  it("draws no fetch in the chain of a call a middleware stopped, and says it failed", async () => {
+    const stopped = requestEntry({
+      id: "stopped",
+      status: "error",
+      statusCode: undefined,
+      url: undefined,
+      startedAt: Date.now(),
+      middlewareEntries: [run("auth", 0, { status: "error", error: "No token" })],
+      middlewareCount: 1,
+      timing: { total: 3, middleware: 3, fetch: 0, validation: 0 },
+    });
+    useStudioStore.setState({ requests: [stopped, ...CALLS] });
+
+    await openShell("/middleware?view=chain&trace=stopped");
+
+    const chain = within(screen.getByRole("region", { name: "Chain" }));
+    const steps = within(chain.getByRole("list", { name: "Pipeline" }));
+    expect(steps.getAllByRole("listitem").map((li) => li.textContent?.split(/wrap/)[0])).toEqual([
+      "auth",
+    ]);
+    expect(chain.getByText(/^Error/)).toBeTruthy();
+  });
+
   it("says no call ran through middleware yet", async () => {
     useStudioStore.setState({ requests: [requestEntry({ id: "plain" })] });
 
-    await openShell("/next/middleware");
+    await openShell("/middleware");
 
     expect(screen.getByText("No call has run through middleware yet")).toBeTruthy();
   });

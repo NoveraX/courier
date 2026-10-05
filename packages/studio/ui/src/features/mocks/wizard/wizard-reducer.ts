@@ -1,6 +1,6 @@
 import { DRAFT_LIMITS } from "./draft-limits";
 import { suggestMockKey } from "./suggest-mock-key";
-import type { MockDraft, MockWizardState, WizardMode } from "./types";
+import type { MockDraft, MockWizardState } from "./types";
 import { UNPLANNED } from "./unplanned";
 import type { DeclareApplyResult, DeclarePreview, MockDeclaration } from "./wire-types";
 import { withApplyResult } from "./with-apply-result";
@@ -8,7 +8,6 @@ import { withPreview } from "./with-preview";
 
 export type MockWizardAction =
   | { type: "open" }
-  | { type: "setMode"; mode: WizardMode }
   | { type: "toggleSource"; source: string; declaredKeys: readonly string[] }
   | { type: "editDraft"; index: number; patch: Partial<Omit<MockDraft, "source">> }
   | { type: "removeDraft"; index: number }
@@ -21,7 +20,6 @@ export type MockWizardAction =
   | { type: "applyFailed"; message: string };
 
 export const INITIAL_WIZARD_STATE: MockWizardState = {
-  mode: "sources",
   step: "source",
   drafts: [],
   serverErrors: new Map(),
@@ -66,7 +64,7 @@ function removed(state: MockWizardState, index: number): MockWizardState {
 }
 
 function wentTo(state: MockWizardState, step: "source" | "configure"): MockWizardState {
-  if (step === "configure" && (state.mode !== "sources" || state.drafts.length === 0)) return state;
+  if (step === "configure" && state.drafts.length === 0) return state;
   return { ...state, ...UNPLANNED, step };
 }
 
@@ -82,7 +80,7 @@ function requested(
   requestId: number,
   mocks: MockDeclaration[],
 ): MockWizardState {
-  if (state.mode !== "sources" || state.step === "source" || mocks.length === 0) return state;
+  if (state.step === "source" || mocks.length === 0) return state;
   const previousDigest = shownDigest(state);
   const plan = { status: "loading", requestId, mocks, previousDigest } as const;
   return { ...state, step: "review", plan, apply: { status: "idle" } };
@@ -127,8 +125,6 @@ function onPlan(state: MockWizardState, action: MockWizardAction): MockWizardSta
 
 function onDrafts(state: MockWizardState, action: MockWizardAction): MockWizardState {
   switch (action.type) {
-    case "setMode":
-      return state.step === "source" ? { ...state, ...UNPLANNED, mode: action.mode } : state;
     case "toggleSource":
       return state.step === "source" ? toggled(state, action.source, action.declaredKeys) : state;
     case "editDraft":

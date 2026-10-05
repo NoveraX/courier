@@ -1,5 +1,5 @@
+import type { ImportState } from "@/features/apis/types";
 import { isPlainObject } from "@/socket/is-plain-object";
-import type { ImportState } from "@/views/apis/types";
 import { appliedMessage } from "./applied-notes";
 import { readImportDeclaration } from "./read-import-declaration";
 

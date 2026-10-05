@@ -119,7 +119,7 @@ describe("a scenario's data", () => {
 
 describe("the Scenarios tab", () => {
   it("opens on the scenario that is on, with what it answers", async () => {
-    await openShell("/next/mocks/scenarios");
+    await openShell("/mocks/scenarios");
 
     const open = screen.getByRole("region", { name: "Scenario empty-states" });
     expect(within(open).getByText("4 requests answered since it was turned on")).toBeTruthy();
@@ -128,7 +128,7 @@ describe("the Scenarios tab", () => {
   });
 
   it("opens another scenario, kept in the address, and turns it on", async () => {
-    const router = await openShell("/next/mocks/scenarios");
+    const router = await openShell("/mocks/scenarios");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /checkout-failure/ })));
     expect(router.state.location.search).toMatchObject({ scenario: "checkout-failure" });
@@ -150,7 +150,7 @@ describe("the Scenarios tab", () => {
     acked.mockImplementation((_event, _command, ack) =>
       ack(null, { ok: false, error: "returns() expects a function of the request context" }),
     );
-    await openShell("/next/mocks/scenarios?scenario=checkout-failure");
+    await openShell("/mocks/scenarios?scenario=checkout-failure");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Activate" })));
 

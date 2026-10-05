@@ -82,7 +82,7 @@ function goToEntries(): PaletteEntry[] {
     label: "Get started",
     meta: "Setup",
     icon: Rocket,
-    action: { kind: "go", to: "/next" },
+    action: { kind: "go", to: "/" },
   };
   return [setup, ...views];
 }

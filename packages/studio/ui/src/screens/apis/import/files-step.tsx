@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
-
+import type { GeneratedFile } from "@/features/apis/types";
 import type { PlanConsent } from "@/features/apis/types-file-plan";
-import type { GeneratedFile } from "@/views/apis/types";
 import { FilePlanSections } from "../file-plan-sections";
 import { FilesPreview } from "../files-preview";
 

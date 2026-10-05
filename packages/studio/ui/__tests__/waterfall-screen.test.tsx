@@ -66,7 +66,7 @@ afterEach(cleanup);
 
 describe("the Waterfall", () => {
   it("draws each request with its figures and the count it shows of all", async () => {
-    await openShell("/next/waterfall");
+    await openShell("/waterfall");
 
     expect(["create", "proxied", "list"].every((id) => rowOf(id) !== null)).toBe(true);
     expect(screen.getByText("Peak concurrency")).toBeTruthy();
@@ -81,7 +81,7 @@ describe("the Waterfall", () => {
   });
 
   it("keeps its sort, grouping and mode in the address", async () => {
-    const router = await openShell("/next/waterfall?group=source&mode=proxy");
+    const router = await openShell("/waterfall?group=source&mode=proxy");
 
     expect(within(chart()).getByRole("button", { expanded: true }).textContent).toContain("api");
     expect(rowOf("proxied")).not.toBeNull();
@@ -93,7 +93,7 @@ describe("the Waterfall", () => {
   });
 
   it("opens a request in the inspector on a click, and closes it on another", async () => {
-    const router = await openShell("/next/waterfall");
+    const router = await openShell("/waterfall");
     const row = rowOf("list");
 
     await settle(() => row && fireEvent.click(row));
@@ -117,7 +117,7 @@ describe("the Waterfall", () => {
       ],
     });
 
-    await openShell("/next/waterfall");
+    await openShell("/waterfall");
 
     const headers = within(chart()).getAllByRole("button", { expanded: true });
     expect(headers.map((h) => h.textContent)).toEqual([
@@ -128,7 +128,7 @@ describe("the Waterfall", () => {
   });
 
   it("holds the requests in view while it does not follow, and takes the new ones once it does", async () => {
-    await openShell("/next/waterfall");
+    await openShell("/waterfall");
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /Follow/ })));
 
     await act(async () =>
@@ -143,7 +143,7 @@ describe("the Waterfall", () => {
   });
 
   it("zooms in and out from the toolbar, and back to auto on 0", async () => {
-    await openShell("/next/waterfall");
+    await openShell("/waterfall");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Zoom in" })));
     expect(screen.getByTitle("Reset to auto zoom · 0").textContent).toMatch(/×$/);
@@ -154,12 +154,12 @@ describe("the Waterfall", () => {
 
   it("says why it is empty: nothing captured yet, or nothing passing the search", async () => {
     useStudioStore.setState({ requests: [] });
-    await openShell("/next/waterfall");
+    await openShell("/waterfall");
     expect(screen.getByText("Waiting for requests")).toBeTruthy();
 
     cleanup();
     useStudioStore.setState({ requests: REQUESTS });
-    await openShell("/next/waterfall?q=nothing-like-it");
+    await openShell("/waterfall?q=nothing-like-it");
     expect(screen.getByText("No requests in view")).toBeTruthy();
   });
 });

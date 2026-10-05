@@ -4,8 +4,8 @@ import { useState } from "react";
 import { CodeLines } from "@/design/code/code-lines";
 import { tokenizeJsonLine } from "@/design/code/tokenize-json-line";
 import { tokenizeLine } from "@/design/code/tokenize-line";
+import type { GeneratedFile } from "@/features/apis/types";
 import { cn } from "@/lib/utils";
-import type { GeneratedFile } from "@/views/apis/types";
 
 function folderOf(paths: readonly string[]): string {
   const dirs = paths.map((path) => path.split("/").slice(0, -1));

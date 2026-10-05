@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import type { ScannedSource } from "@/features/apis/types";
 import { mergeDraftErrors } from "@/features/mocks/wizard/merge-draft-errors";
 import type { SourceAvailability } from "@/features/mocks/wizard/source-availability";
 import { sourceAvailability } from "@/features/mocks/wizard/source-availability";
@@ -7,7 +8,6 @@ import { validateDrafts } from "@/features/mocks/wizard/validate-drafts";
 import { useStudioStore } from "@/store";
 import type { MockServerInfo } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
-import type { ScannedSource } from "@/views/apis/types";
 import { declareClient } from "./declare-client";
 import { watchProject } from "./watch-project";
 import { wizardBus } from "./wizard-bus";

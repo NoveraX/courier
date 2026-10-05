@@ -92,7 +92,7 @@ describe("the routes' data", () => {
 
 describe("the Routes tab", () => {
   it("lists every route with its handler, average and hits", async () => {
-    await openShell("/next/mocks/routes");
+    await openShell("/mocks/routes");
 
     const list = screen.getByRole("region", { name: "Routes" });
     expect(within(list).getAllByRole("button")).toHaveLength(3);
@@ -100,7 +100,7 @@ describe("the Routes tab", () => {
   });
 
   it("opens a route for what answers it, its shape and a sample, kept in the address", async () => {
-    const router = await openShell("/next/mocks/routes");
+    const router = await openShell("/mocks/routes");
 
     await settle(() =>
       fireEvent.click(screen.getByRole("button", { name: /\/users\s*users\.list/ })),
@@ -113,7 +113,7 @@ describe("the Routes tab", () => {
   });
 
   it("narrows to a kind from the address", async () => {
-    await openShell("/next/mocks/routes?kind=scenario");
+    await openShell("/mocks/routes?kind=scenario");
 
     expect(
       within(screen.getByRole("region", { name: "Routes" })).getAllByRole("button"),

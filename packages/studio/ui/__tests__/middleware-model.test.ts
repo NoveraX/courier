@@ -128,6 +128,22 @@ describe("a call traced", () => {
     expect(trace.lanes[2]?.spans).toEqual([{ start: 0.04, width: 0.9 }]);
   });
 
+  it("has no fetch when a middleware stopped the call before it fetched, and one once it did", () => {
+    const stopped = call("s", [run("auth", 0, { status: "error", error: "no token" })], {
+      status: "error",
+      statusCode: undefined,
+      url: undefined,
+      timing: { total: 3, middleware: 3, fetch: 0, validation: 0 },
+    });
+
+    const trace = traceOf(stopped);
+    const reached = traceOf({ ...stopped, url: "http://upstream.test/faults", statusCode: 404 });
+
+    expect(trace.reachedFetch).toBe(false);
+    expect(trace.lanes.map((l) => l.name)).toEqual(["auth"]);
+    expect(reached.lanes.map((l) => l.name)).toEqual(["auth", "fetch"]);
+  });
+
   it("puts a run with no measured split on the side its phase says", () => {
     const r = call("u", [
       run("log", 0, { duration: 5, phase: "after" }),

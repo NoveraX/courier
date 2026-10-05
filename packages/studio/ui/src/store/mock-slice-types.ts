@@ -15,7 +15,6 @@ import type {
   NetworkConfig,
   NetworkPreset,
   RouteOverride,
-  SavedScenario,
   StopCondition,
 } from "./mock-slice-network-types";
 
@@ -47,8 +46,6 @@ export interface MockServerInfo {
   availableScenarios: string[];
   networkPreset: NetworkPreset;
   networkConfig: NetworkConfig | null;
-  /** UTC ms when current fault session was started; null when stable */
-  faultStartedAt?: number | null;
   /** Independent latency state */
   latencyPreset: LatencyPreset;
   latencyStartedAt?: number | null;
@@ -57,7 +54,6 @@ export interface MockServerInfo {
   chaosStartedAt?: number | null;
   stopConditions?: StopCondition;
   routeOverrides?: RouteOverride[];
-  savedScenarios?: SavedScenario[];
   /** Managed lifecycle */
   managed: boolean;
   processStatus: ProcessStatus;
@@ -158,14 +154,10 @@ export interface MockSliceState {
   setServerRoutes: (serverId: string, routes: MockRouteEntry[]) => void;
   setServerScenarios: (serverId: string, scenarios: MockScenarioEntry[]) => void;
   addLog: (log: MockRequestLog) => void;
-  clearLogs: () => void;
   /** Forget the requests one mock answered, every other mock's kept. */
   clearServerLogs: (serverId: string) => void;
   toggleLogsPaused: () => void;
   resetMockState: () => void;
   addExperimentEvent: (event: ExperimentEvent) => void;
-  saveScenario: (serverId: string, scenario: SavedScenario) => void;
-  deleteScenario: (serverId: string, scenarioId: string) => void;
   setRouteOverride: (serverId: string, override: RouteOverride) => void;
-  clearRouteOverrides: (serverId: string) => void;
 }

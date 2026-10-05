@@ -18,6 +18,7 @@ import {
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { WELCOME_STORAGE_KEY } from "@/features/welcome/frameworks";
 import { useSetupStore } from "@/features/welcome/setup-store";
 import { validateWelcomeSearch } from "@/features/welcome/welcome-search";
 import { WelcomeScreen } from "@/screens/welcome/welcome-screen";
@@ -25,20 +26,19 @@ import { useStudioStore } from "@/store";
 
 async function open(url: string) {
   const root = createRootRoute({ component: Outlet });
-  const next = createRoute({ getParentRoute: () => root, path: "next", component: Outlet });
   const welcome = createRoute({
-    getParentRoute: () => next,
+    getParentRoute: () => root,
     path: "/",
     component: WelcomeScreen,
     validateSearch: validateWelcomeSearch,
   });
   const timeline = createRoute({
-    getParentRoute: () => next,
+    getParentRoute: () => root,
     path: "timeline",
     component: () => <p>Timeline view</p>,
   });
   const router = createRouter({
-    routeTree: root.addChildren([next.addChildren([welcome, timeline])]),
+    routeTree: root.addChildren([welcome, timeline]),
     history: createMemoryHistory({ initialEntries: [url] }),
   });
   await act(() => router.load());
@@ -80,7 +80,7 @@ afterEach(cleanup);
 
 describe("the setup", () => {
   it("shows a framework's steps once it is picked", async () => {
-    await open("/next");
+    await open("/");
     expect(screen.getByText("Pick your framework above, and its steps appear here.")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /^React/ }));
@@ -98,7 +98,7 @@ describe("the setup", () => {
       },
     });
 
-    await open("/next");
+    await open("/");
 
     expect(screen.getByText("detected: vite · react")).toBeTruthy();
     expect(screen.getByRole("button", { name: /^React/ }).getAttribute("aria-pressed")).toBe(
@@ -115,7 +115,7 @@ describe("the setup", () => {
   });
 
   it("completes a step when its command is copied", async () => {
-    await open("/next?framework=react");
+    await open("/?framework=react");
 
     await act(async () => {
       fireEvent.click(screen.getAllByRole("button", { name: "Copy" })[0] as HTMLElement);
@@ -129,7 +129,7 @@ describe("the setup", () => {
   });
 
   it("completes the connect step when an app attaches, and opens the way to the Timeline", async () => {
-    await open("/next?setup=true&framework=react");
+    await open("/?setup=true&framework=react");
     const goTo = screen.getByRole("button", { name: /Go to Timeline/ });
     expect(goTo.hasAttribute("disabled")).toBe(true);
 
@@ -144,11 +144,12 @@ describe("the setup", () => {
   it("goes on to the Timeline for a project whose app is attached, unless the setup was asked for", async () => {
     attach();
 
-    const router = await open("/next");
-    expect(router.state.location.pathname).toBe("/next/timeline");
+    const router = await open("/");
+    expect(router.state.location.pathname).toBe("/timeline");
+    expect(localStorage.getItem(WELCOME_STORAGE_KEY)).toBe("true");
 
     cleanup();
-    const asked = await open("/next?setup=true");
-    expect(asked.state.location.pathname).toBe("/next");
+    const asked = await open("/?setup=true");
+    expect(asked.state.location.pathname).toBe("/");
   });
 });

@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { MiddlewareView } from "@/views/middleware";
-import { validateMiddlewareSearch } from "@/views/middleware/search-schema";
+import { validateMiddlewareSearch } from "@/features/middleware/middleware-search";
+import { MiddlewareScreen } from "@/screens/middleware/middleware-screen";
 
 export const Route = createFileRoute("/middleware")({
-  component: MiddlewareView,
+  component: MiddlewareScreen,
   validateSearch: validateMiddlewareSearch,
 });

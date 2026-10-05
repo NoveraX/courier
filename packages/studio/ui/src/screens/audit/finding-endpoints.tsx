@@ -61,7 +61,7 @@ export function FindingEndpoints({
             </span>
             <span className={cn("font-mono text-label whitespace-nowrap", tone)}>{e.detail}</span>
             {e.timelineQuery ? (
-              <Link to="/next/timeline" search={{ q: e.timelineQuery }} className={VIEW}>
+              <Link to="/timeline" search={{ q: e.timelineQuery }} className={VIEW}>
                 View calls
                 <ArrowUpRight aria-hidden="true" className="size-2.75" />
               </Link>

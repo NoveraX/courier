@@ -2,21 +2,19 @@
  * Once Studio writes an import's files, the wizard says only that, and
  * shows what courier.config must still declare for the API to appear — the
  * import of the generated source, its entry under sources and the imports
- * entry — as Studio answered the write. The APIs page's empty state says
- * what makes an API appear.
+ * entry — as Studio answered the write.
  */
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/components/shared/code-block", async () => {
+vi.mock("@/design/code/code-lines", async () => {
   const { createElement } = await import("react");
-  return { CodeBlock: ({ code }: { code: string }) => createElement("pre", null, code) };
+  return { CodeLines: ({ code }: { code: string }) => createElement("pre", null, code) };
 });
 
-import { settleWrite } from "../src/features/apis/settle-write";
-import { ApisEmptyState } from "../src/views/apis/apis-empty-state";
-import { DeclareStepView } from "../src/views/apis/declare-step";
-import type { ImportDeclaration, ImportState } from "../src/views/apis/types";
+import { settleWrite } from "@/features/apis/settle-write";
+import type { ImportDeclaration, ImportState } from "@/features/apis/types";
+import { DeclareStep } from "@/screens/apis/import/declare-step";
 
 const IMPORT_ENTRY = [
   '  "pets": {',
@@ -199,7 +197,7 @@ describe("the declare step", () => {
     };
 
     const html = text(
-      renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />),
+      renderToStaticMarkup(<DeclareStep sourceName="pets" declaration={declaration} />),
     );
 
     expect(html).toContain(`<pre>${SOURCE.importLine}</pre>`);
@@ -221,7 +219,7 @@ describe("the declare step", () => {
     };
 
     const html = text(
-      renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />),
+      renderToStaticMarkup(<DeclareStep sourceName="pets" declaration={declaration} />),
     );
 
     expect(html).toContain(`<pre>${IMPORT_ENTRY}</pre>`);
@@ -239,22 +237,11 @@ describe("the declare step", () => {
     };
 
     const html = text(
-      renderToStaticMarkup(<DeclareStepView sourceName="pets" declaration={declaration} />),
+      renderToStaticMarkup(<DeclareStep sourceName="pets" declaration={declaration} />),
     );
 
     expect(html).toContain(`<pre>${IMPORT_ENTRY}</pre>`);
     expect(html).toContain("courier.config.ts lists pets under sources already");
     expect(html).not.toContain(SOURCE.importLine);
-  });
-});
-
-describe("the APIs page with no sources", () => {
-  it("says Studio lists the APIs courier.config declares under sources, and nothing else", () => {
-    const html = text(renderToStaticMarkup(<ApisEmptyState />));
-
-    expect(html).toContain("No APIs yet");
-    expect(html).toContain("Studio lists the APIs courier.config declares under sources.");
-    expect(html).toContain("then declare it there");
-    expect(html).not.toContain("automatically");
   });
 });

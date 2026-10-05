@@ -3,9 +3,9 @@
  * `courier.config.ts` declares, and the runtime that hosts it.
  */
 
+import type { EndpointAnalysis, ScannedEndpoint, ScannedSource } from "@/features/apis/types";
 import type { RequestEntry } from "../src/store/types-request";
 import type { BindingSnapshot } from "../src/store/types-ui";
-import type { EndpointAnalysis, ScannedEndpoint, ScannedSource } from "../src/views/apis/types";
 
 function endpoint(name: string, analysis: Partial<EndpointAnalysis>): ScannedEndpoint {
   return {

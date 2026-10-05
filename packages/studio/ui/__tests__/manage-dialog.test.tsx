@@ -12,11 +12,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
+import { type UseManageReturn, useManage } from "@/apis/use-manage";
+import type { ParsedSpec, SourceSummary } from "@/features/apis/types";
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
-import { type UseManageReturn, useManage } from "../src/apis/use-manage";
-import { ManageDialog } from "../src/views/apis/manage-dialog";
-import type { ParsedSpec, SourceSummary } from "../src/views/apis/types";
+import { ManageDialog } from "@/screens/apis/manage/manage-dialog";
 
 const SPEC: ParsedSpec = {
   title: "Pets",
@@ -129,8 +129,8 @@ describe("the manage dialog", () => {
     await toPreview(async () => ({ plan: blocked }));
 
     expect(screen.queryByRole("checkbox")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Apply Changes/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Preview Again" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Apply changes/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Preview again" })).toBeTruthy();
   });
 
   it("can be neither applied again nor cancelled while an apply is under way", async () => {
@@ -141,8 +141,8 @@ describe("the manage dialog", () => {
       void manage.apply();
     });
 
-    const apply = screen.getByRole("button", { name: /Apply Changes/ });
+    const apply = screen.getByRole("button", { name: /Apply changes/ });
     expect(apply.hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Cancel" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Later" }).hasAttribute("disabled")).toBe(true);
   });
 });

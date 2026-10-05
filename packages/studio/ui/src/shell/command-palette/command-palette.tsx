@@ -70,7 +70,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/42 backdrop-blur-[3px]" />
         <Dialog.Content
-          data-shell=""
           aria-describedby={undefined}
           className="fixed top-[13vh] left-1/2 z-50 w-150 max-w-[calc(100vw-40px)] -translate-x-1/2 animate-pop-in overflow-hidden rounded-dialog bg-panel shadow-overlay"
         >

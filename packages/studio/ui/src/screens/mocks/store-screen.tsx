@@ -20,8 +20,8 @@ import { useMockServer } from "./use-mock-server";
  */
 export function MockStoreScreen(): React.ReactNode {
   const { server } = useMockServer();
-  const search: MockStoreSearch = useSearch({ from: "/next/mocks/store" });
-  const navigate = useNavigate({ from: "/next/mocks/store" });
+  const search: MockStoreSearch = useSearch({ from: "/mocks/store" });
+  const navigate = useNavigate({ from: "/mocks/store" });
   const crud = useStoreCrud();
   if (!server) return null;
   const open =

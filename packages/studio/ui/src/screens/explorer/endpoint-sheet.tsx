@@ -89,7 +89,7 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
         <EndpointFigures endpoint={e} slowMs={slowMs} />
         <div className="flex gap-2">
           <Link
-            to="/next/timeline"
+            to="/timeline"
             search={{ q: e.key }}
             className={cn(
               ACTION,
@@ -100,7 +100,7 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
             View in Timeline
           </Link>
           <Link
-            to="/next/playground"
+            to="/playground"
             search={{ endpoint: e.key }}
             className={cn(ACTION, "bg-fg font-semibold text-bg hover:bg-fg/90")}
           >

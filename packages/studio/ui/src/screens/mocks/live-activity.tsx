@@ -51,8 +51,8 @@ export function LiveActivity({ logs, running, now, slowMs }: LiveActivityProps):
           </span>
           <div className="flex-1" />
           <Link
-            from="/next/mocks"
-            to="/next/mocks/logs"
+            from="/mocks"
+            to="/mocks/logs"
             search={(prev) => ({ req: prev.req, tab: prev.tab })}
             className="flex h-6.5 items-center rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg"
           >

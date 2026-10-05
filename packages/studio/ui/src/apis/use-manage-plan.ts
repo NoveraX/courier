@@ -5,8 +5,8 @@ import { serializeSets } from "@/features/apis/manage-sets";
 import { consentBody, consentFor, toggleConfirmed } from "@/features/apis/plan-consent";
 import { readPlanRefusal } from "@/features/apis/plan-refusal";
 import { readFilePlan } from "@/features/apis/read-file-plan";
+import type { ManagePreviewResult, ManageStep, ParsedSpec } from "@/features/apis/types";
 import type { PlanConsent } from "@/features/apis/types-file-plan";
-import type { ManagePreviewResult, ManageStep, ParsedSpec } from "@/views/apis/types";
 
 /** What the manage dialog applies, and how it reports. */
 export interface ManagePlanInput {

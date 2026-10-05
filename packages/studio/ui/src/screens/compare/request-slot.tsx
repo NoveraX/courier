@@ -108,7 +108,6 @@ export function RequestSlot({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          data-shell=""
           align="start"
           sideOffset={6}
           className="z-50 max-h-85 w-(--radix-popover-trigger-width) overflow-auto rounded-dialog bg-panel p-1 shadow-overlay animate-pop-in"

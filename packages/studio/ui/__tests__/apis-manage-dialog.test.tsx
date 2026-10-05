@@ -14,12 +14,12 @@ vi.mock("sonner", () => ({
 }));
 vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
+import type { ParsedSpec, SourceSummary } from "@/features/apis/types";
 import { post } from "@/lib/api-client";
 import { type UseManageReturn, useManage } from "../src/apis/use-manage";
 import { type UseRemoveImportReturn, useRemoveImport } from "../src/apis/use-remove-import";
 import { ManageDialog } from "../src/screens/apis/manage/manage-dialog";
 import { RemoveImportDialog } from "../src/screens/apis/remove-import-dialog";
-import type { ParsedSpec, SourceSummary } from "../src/views/apis/types";
 
 const SPEC: ParsedSpec = {
   title: "Pets",

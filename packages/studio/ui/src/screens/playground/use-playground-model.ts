@@ -33,8 +33,8 @@ export function usePlaygroundModel(): PlaygroundModel {
     () => endpointChoicesOf(sendableCatalog(catalog, declared, rows)),
     [catalog, declared, rows],
   );
-  const { endpoint: key } = useSearch({ from: "/next/playground" });
-  const navigate = useNavigate({ from: "/next/playground" });
+  const { endpoint: key } = useSearch({ from: "/playground" });
+  const navigate = useNavigate({ from: "/playground" });
   const choose = useCallback(
     (next: PlaygroundEndpoint) =>
       void navigate({ search: (prev) => ({ req: prev.req, tab: prev.tab, endpoint: next.key }) }),

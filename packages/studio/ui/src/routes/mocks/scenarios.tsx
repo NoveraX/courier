@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MockScenariosView } from "@/views/mocks/scenarios";
+
+import { validateMockScenariosSearch } from "@/features/mocks/scenario-view";
+import { MockScenariosScreen } from "@/screens/mocks/scenarios-screen";
 
 export const Route = createFileRoute("/mocks/scenarios")({
-  component: MockScenariosView,
+  component: MockScenariosScreen,
+  validateSearch: validateMockScenariosSearch,
 });

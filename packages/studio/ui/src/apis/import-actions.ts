@@ -7,9 +7,9 @@ import { writeFiles } from "@/apis/client-file-changes";
 import { deriveSourceName } from "@/features/apis/derive-source-name";
 import { buildDefaultOptions, selectAllEndpoints } from "@/features/apis/helpers";
 import { consentBody } from "@/features/apis/plan-consent";
+import type { GenerateOptions, ImportState, ParsedSpec } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
 import type { Settings } from "@/store/types-ui";
-import type { GenerateOptions, ImportState, ParsedSpec } from "@/views/apis/types";
 
 // ── Spec parsing ────────────────────────────────────────────────────────────
 

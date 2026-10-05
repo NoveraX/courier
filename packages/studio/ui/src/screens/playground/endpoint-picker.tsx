@@ -75,7 +75,6 @@ export function EndpointPicker({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          data-shell=""
           align="start"
           sideOffset={6}
           className="z-50 w-[min(460px,calc(100vw-40px))] animate-pop-in overflow-hidden rounded-dialog bg-panel shadow-overlay"

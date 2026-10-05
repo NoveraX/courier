@@ -73,7 +73,7 @@ describe("the Audit page", () => {
   it("says what the report read, shows its score, and opens the first finding with its fix", async () => {
     const expected = runAudit(TRAFFIC, buildCatalog([], TRAFFIC), { browserSessions: new Set() });
 
-    await openShell("/next/audit");
+    await openShell("/audit");
 
     expect(screen.getByText(/^8 requests · 4 endpoints · analysed just now/)).toBeTruthy();
     const score = screen.getByRole("region", { name: "Score" });
@@ -89,7 +89,7 @@ describe("the Audit page", () => {
   });
 
   it("keeps the severity, the category and the search in the address", async () => {
-    const router = await openShell("/next/audit");
+    const router = await openShell("/audit");
 
     await settle(() =>
       fireEvent.click(
@@ -117,18 +117,18 @@ describe("the Audit page", () => {
   });
 
   it("links an endpoint's calls to the Timeline searched for it", async () => {
-    await openShell("/next/audit?sev=error");
+    await openShell("/audit?sev=error");
 
     const highErrorRate = screen.getByRole("button", { name: /High error rate/ });
     if (highErrorRate.getAttribute("aria-expanded") === "false")
       await settle(() => fireEvent.click(highErrorRate));
 
     const link = screen.getAllByRole("link", { name: /View calls/ })[0];
-    expect(link?.getAttribute("href")).toBe("/next/timeline?q=api.orders.flaky");
+    expect(link?.getAttribute("href")).toBe("/timeline?q=api.orders.flaky");
   });
 
   it("holds still while requests arrive, says how many came, and takes them in on Re-run", async () => {
-    await openShell("/next/audit");
+    await openShell("/audit");
 
     await settle(() =>
       useStudioStore.setState((s) => ({
@@ -144,7 +144,7 @@ describe("the Audit page", () => {
 
   it("reads the requests that arrive after it opened with none", async () => {
     useStudioStore.setState({ requests: [] });
-    await openShell("/next/audit");
+    await openShell("/audit");
     expect(screen.getByText("No requests to audit")).toBeTruthy();
 
     await settle(() => useStudioStore.setState({ requests: TRAFFIC }));

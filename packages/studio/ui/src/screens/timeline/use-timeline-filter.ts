@@ -24,8 +24,8 @@ export interface TimelineFilterControl {
  * ```
  */
 export function useTimelineFilter(): TimelineFilterControl {
-  const search = useSearch({ from: "/next/timeline" });
-  const navigate = useNavigate({ from: "/next/timeline" });
+  const search = useSearch({ from: "/timeline" });
+  const navigate = useNavigate({ from: "/timeline" });
   const filter = useMemo(() => filterFromSearch(search), [search]);
   const setFilter = useCallback(
     (next: TimelineFilter) =>

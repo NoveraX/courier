@@ -3,14 +3,14 @@
  * All requests go through the Vite dev server proxy → Express backend.
  */
 
-import { post } from "@/lib/api-client";
 import type {
   EndpointInventory,
   GeneratedFile,
   GenerateOptions,
   ParsedSpec,
   SpecDiff,
-} from "@/views/apis/types";
+} from "@/features/apis/types";
+import { post } from "@/lib/api-client";
 
 // ── Parse ───────────────────────────────────────────────────────────────────
 

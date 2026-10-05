@@ -1,4 +1,4 @@
-import type { ParsedSpec } from "@/views/apis/types";
+import type { ParsedSpec } from "@/features/apis/types";
 
 /**
  * Name an import after its spec: the spec's title, else the most telling

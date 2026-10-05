@@ -8,35 +8,21 @@
  * files it wrote, and closes on Done; a write the config fully declares
  * closes it at once. A write Studio will not apply unasked keeps the wizard
  * on the preview with the plan, and the next write quotes it with the steps
- * allowed. The page with no sources says where an API has to be declared.
+ * allowed.
  */
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  renderHook,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }));
 vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
-vi.mock("@/components/shared/code-block", async () => {
-  const { createElement } = await import("react");
-  return { CodeBlock: ({ code }: { code: string }) => createElement("pre", null, code) };
-});
 
-import { toast } from "sonner";
+import type { ParsedSpec } from "@/features/apis/types";
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
 import { useStudioStore } from "@/store";
 import { useImport } from "../src/apis/use-import";
-import { ApisView } from "../src/views/apis";
-import type { ParsedSpec } from "../src/views/apis/types";
 
 const SPEC_URL = "https://specs.example/pets.json";
 
@@ -270,41 +256,5 @@ describe("a write Studio will not apply unasked", () => {
 
     expect(result.current.state.consent).toBeNull();
     expect(result.current.error).toBe("sources names another API pets.");
-  });
-});
-
-describe("the APIs page", () => {
-  it("says Studio lists the APIs courier.config declares under sources while there are none", () => {
-    render(<ApisView />);
-
-    expect(
-      screen.getByText(/Studio lists the APIs courier\.config declares under sources\./),
-    ).toBeTruthy();
-    expect(screen.queryByText(/automatically/)).toBeNull();
-  });
-
-  it("shows the declare step after the write, with Done, and toasts only what was written", async () => {
-    studioAnswers(DECLARATION);
-    render(<ApisView />);
-
-    const [importButton] = screen.getAllByRole("button", { name: /Import API/ });
-    if (importButton === undefined) throw new Error("Import API is not shown");
-    fireEvent.click(importButton);
-    fireEvent.change(screen.getByPlaceholderText(/swagger\.json/), { target: { value: SPEC_URL } });
-    fireEvent.click(screen.getByRole("button", { name: /Parse Spec/ }));
-    fireEvent.click(await screen.findByRole("button", { name: /Configure \(1\)/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Generate Preview/ }));
-    fireEvent.click(await screen.findByRole("button", { name: /Write to Disk/ }));
-
-    expect(
-      await screen.findByRole("heading", { name: "Declare pets in courier.config.ts" }),
-    ).toBeTruthy();
-    expect(screen.getByText(DECLARATION.source.importLine)).toBeTruthy();
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith("pets: wrote 2 files");
-    expect(vi.mocked(toast.success)).not.toHaveBeenCalledWith("API imported successfully");
-
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
-
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });

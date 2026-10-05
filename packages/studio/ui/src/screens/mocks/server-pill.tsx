@@ -60,7 +60,6 @@ export function ServerPill({
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
             <DropdownMenu.Content
-              data-shell=""
               align="end"
               sideOffset={6}
               className="z-50 min-w-52 animate-pop-in rounded-panel bg-panel p-1 shadow-overlay"

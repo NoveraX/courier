@@ -13,10 +13,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
+import { type UseRemoveImportReturn, useRemoveImport } from "@/apis/use-remove-import";
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
-import { type UseRemoveImportReturn, useRemoveImport } from "../src/apis/use-remove-import";
-import { RemoveImportDialog } from "../src/views/apis/remove-import-dialog";
+import { RemoveImportDialog } from "@/screens/apis/remove-import-dialog";
 
 const PLAN = {
   digest: "plan-1",

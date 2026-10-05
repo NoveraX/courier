@@ -11,7 +11,6 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
@@ -19,6 +18,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { StudioShell } from "@/shell/studio-shell";
 import { useStudioStore } from "@/store";
+import { createInitialState } from "@/store/initial-state";
 
 /* jsdom has neither; the palette's list measures itself and scrolls its selection into view. */
 globalThis.ResizeObserver ??= class {
@@ -28,9 +28,8 @@ globalThis.ResizeObserver ??= class {
 };
 Element.prototype.scrollIntoView ??= () => {};
 
-async function open(url = "/next"): Promise<void> {
-  const root = createRootRoute({ component: Outlet });
-  const shell = createRoute({ getParentRoute: () => root, path: "next", component: StudioShell });
+async function open(url = "/"): Promise<void> {
+  const shell = createRootRoute({ component: StudioShell });
   const home = createRoute({
     getParentRoute: () => shell,
     path: "/",
@@ -42,12 +41,12 @@ async function open(url = "/next"): Promise<void> {
     component: () => <p>A view</p>,
   });
   const timeline = createRoute({
-    getParentRoute: () => root,
+    getParentRoute: () => shell,
     path: "timeline",
     component: () => <p>Timeline</p>,
   });
   const router = createRouter({
-    routeTree: root.addChildren([shell.addChildren([home, view]), timeline]),
+    routeTree: shell.addChildren([home, view, timeline]),
     history: createMemoryHistory({ initialEntries: [url] }),
   });
   await act(() => router.load());
@@ -145,7 +144,7 @@ describe("the shell", () => {
       reconnectAttempt: 3,
     });
 
-    await open("/next/view");
+    await open("/view");
 
     expect(screen.getByRole("alert").textContent).toContain("Studio cannot be reached.");
     expect(screen.getByText("attempt 3")).toBeTruthy();
@@ -154,8 +153,18 @@ describe("the shell", () => {
     );
   });
 
+  it("opens connecting, and says Studio cannot be reached once a connection that opened drops", async () => {
+    expect(createInitialState("dark").connectionStatus).toBe("connecting");
+    useStudioStore.setState({ connected: false, connectionStatus: "disconnected" });
+
+    await open("/view");
+
+    expect(screen.getByRole("alert").textContent).toContain("Studio cannot be reached.");
+    expect(screen.queryByText(/^attempt/)).toBeNull();
+  });
+
   it("records only while an app is attached, and says OFFLINE on a view until one is", async () => {
-    await open("/next/view");
+    await open("/view");
     const idle = screen.getByRole("button", { name: "Pause recording · no app is attached yet" });
     expect(idle.textContent).toBe("OFFLINE");
 
@@ -172,20 +181,6 @@ describe("the shell", () => {
     act(() => attach());
 
     expect(screen.getByRole("button", { name: "Pause recording" }).textContent).toBe("REC");
-  });
-
-  it("draws its overlays on the shell's type, though they render outside the shell", async () => {
-    await open();
-
-    fireEvent.click(screen.getByRole("button", { name: /no app attached/ }));
-    const apps = await screen.findByText("Attached apps");
-    expect(apps.closest("[data-shell]")).not.toBeNull();
-
-    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
-    fireEvent.keyDown(window, { key: "k", metaKey: true });
-
-    const palette = await screen.findByRole("dialog", { name: "Search Studio" });
-    expect(palette.hasAttribute("data-shell")).toBe(true);
   });
 
   it("opens the palette with ⌘K, with every view and the actions", async () => {

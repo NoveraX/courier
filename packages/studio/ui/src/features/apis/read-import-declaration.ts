@@ -1,5 +1,5 @@
+import type { ImportDeclaration } from "@/features/apis/types";
 import { isPlainObject } from "@/socket/is-plain-object";
-import type { ImportDeclaration } from "@/views/apis/types";
 
 function readSource(raw: unknown): ImportDeclaration["source"] {
   if (!isPlainObject(raw)) return null;

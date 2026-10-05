@@ -23,7 +23,7 @@ interface HeaderProps {
  * ```
  */
 export function Header({ onOpenPalette }: HeaderProps): React.ReactNode {
-  const onSetup = useRouterState({ select: (s) => s.location.pathname === "/next" });
+  const onSetup = useRouterState({ select: (s) => s.location.pathname === "/" });
   return (
     <header className="flex h-11.5 shrink-0 items-center gap-3.5 border-b border-line bg-bg pr-4 pl-5">
       <Breadcrumbs />

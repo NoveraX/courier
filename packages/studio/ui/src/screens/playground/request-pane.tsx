@@ -7,9 +7,9 @@ import type { FormBodyField } from "@/features/playground/form-body";
 import type { InputCheck } from "@/features/playground/input-check";
 import type { ProxyRoute } from "@/features/playground/proxy-route";
 import type { UrlPart } from "@/features/playground/request-url";
-import type { SnippetFlavor } from "@/features/requests/request-snippets";
 import { cn } from "@/lib/utils";
 import { CodeEditor } from "./code-editor";
+import type { CopyChoice } from "./copy-as-menu";
 import { CopyAsMenu } from "./copy-as-menu";
 import { FormEditor } from "./form-editor";
 import { SchemaTable } from "./schema-table";
@@ -55,7 +55,7 @@ interface RequestPaneProps {
   };
   check: InputCheck;
   onPrettify: () => void;
-  onCopy: (flavor: SnippetFlavor, label: string) => void;
+  onCopy: (choice: CopyChoice, label: string) => void;
 }
 
 /**

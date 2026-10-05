@@ -22,11 +22,11 @@ import { StepsCard } from "./steps-card";
  * @returns The screen
  * @example
  * ```tsx
- * export const Route = createFileRoute("/next/")({ component: WelcomeScreen });
+ * export const Route = createFileRoute("/")({ component: WelcomeScreen });
  * ```
  */
 export function WelcomeScreen(): React.ReactNode {
-  const { framework: fromLink, setup } = useSearch({ from: "/next/" });
+  const { framework: fromLink, setup } = useSearch({ from: "/" });
   const frameworkId = useSetupStore((s) => s.frameworkId);
   const copied = useSetupStore((s) => s.copied);
   const select = useSetupStore((s) => s.select);
@@ -41,7 +41,7 @@ export function WelcomeScreen(): React.ReactNode {
   }, [fromLink, detectedId, frameworkId, select]);
   if (!setup && (isWelcomeCompleted() || (attached && !fromLink))) {
     if (attached) markWelcomeCompleted();
-    return <Navigate to="/next/timeline" replace />;
+    return <Navigate to="/timeline" replace />;
   }
   const framework = FRAMEWORKS.find((f) => f.id === frameworkId) ?? null;
   const progress = framework ? setupProgress(framework, copied, attached, false) : null;

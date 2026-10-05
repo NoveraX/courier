@@ -4,7 +4,6 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  Outlet,
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, render } from "@testing-library/react";
@@ -75,16 +74,13 @@ Object.defineProperty(HTMLElement.prototype, "clientWidth", {
 /**
  * Render the new shell at an address, with the Timeline, the Waterfall, the
  * Explorer's tabs, the Playground and the Mocks tabs under it and a page of
- * its own at `/next/`, as the app's routes have them.
+ * its own at `/`, as the app's routes have them.
  *
  * @param url - The address
  * @returns The router, to read where it went
  */
 export async function openShell(url: string): Promise<AnyRouter> {
-  const root = createRootRoute({ component: Outlet });
-  const shell = createRoute({
-    getParentRoute: () => root,
-    path: "next",
+  const shell = createRootRoute({
     component: StudioShell,
     validateSearch: validateInspectorSearch,
   });
@@ -189,27 +185,25 @@ export async function openShell(url: string): Promise<AnyRouter> {
     validateSearch: validateMockLogsSearch,
   });
   const router = createRouter({
-    routeTree: root.addChildren([
-      shell.addChildren([
-        home,
-        timeline,
-        waterfall,
-        analytics,
-        audit,
-        compare,
-        middleware,
-        settings,
-        explorer.addChildren(tabs),
-        playground,
-        apis,
-        mocks.addChildren([
-          mocksDashboard,
-          mocksRoutes,
-          mocksStore,
-          mocksScenarios,
-          mocksNetwork,
-          mocksLogs,
-        ]),
+    routeTree: shell.addChildren([
+      home,
+      timeline,
+      waterfall,
+      analytics,
+      audit,
+      compare,
+      middleware,
+      settings,
+      explorer.addChildren(tabs),
+      playground,
+      apis,
+      mocks.addChildren([
+        mocksDashboard,
+        mocksRoutes,
+        mocksStore,
+        mocksScenarios,
+        mocksNetwork,
+        mocksLogs,
       ]),
     ]),
     history: createMemoryHistory({ initialEntries: [url] }),

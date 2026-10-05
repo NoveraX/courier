@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MockLayout } from "@/views/mocks/shared/mock-layout";
+
+import { MocksLayout } from "@/screens/mocks/mocks-layout";
 
 export const Route = createFileRoute("/mocks")({
-  component: MockLayout,
+  component: MocksLayout,
 });

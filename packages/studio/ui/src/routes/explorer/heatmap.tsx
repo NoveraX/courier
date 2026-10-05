@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { HeatmapPage } from "@/views/explorer/heatmap";
+
+import { HeatmapScreen } from "@/screens/explorer/heatmap-screen";
 
 export const Route = createFileRoute("/explorer/heatmap")({
-  component: HeatmapPage,
+  component: HeatmapScreen,
 });

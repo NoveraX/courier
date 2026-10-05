@@ -23,13 +23,11 @@ export const EMPTY_FILTERS: TimelineFilters = {
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: "dark",
-  density: "comfortable",
   maxRequests: 2000,
   preserveLog: false,
   ignorePatterns: [],
   timestampFormat: "relative",
   jsonIndent: 2,
-  showRequestPreview: true,
   toastOnError: true,
   toastOnSlowRequest: true,
   slowRequestThreshold: 500,

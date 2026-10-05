@@ -6,27 +6,31 @@ import { Dialog } from "radix-ui"
 
 import { cn } from "@/site/cn"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
+import type { ExportFilterState } from "./export-filter"
+import { ExportFilter } from "./export-filter"
 import { KIND_LOOK } from "./kind-look"
 import type { ListedExport } from "./reference-sidebar"
 
 interface ReferenceDrawerProps {
   exports: readonly ListedExport[]
+  filter: ExportFilterState
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 /**
- * The API reference on a narrow screen: the theme and every export, in a
- * sheet from the left that a link closes — and the way back to the docs.
+ * The API reference on a narrow screen: the theme, a filter over the
+ * exports and every export, in a sheet from the left that a link closes —
+ * and the way back to the docs.
  *
- * @param props - The exports, and whether the sheet is open
+ * @param props - The exports, their filter, and whether the sheet is open
  * @returns The sheet
  * @example
  * ```tsx
- * <ReferenceDrawer exports={listed} open={open} onOpenChange={setOpen} />
+ * <ReferenceDrawer exports={listed} filter={filter} open={open} onOpenChange={setOpen} />
  * ```
  */
-export function ReferenceDrawer({ exports, open, onOpenChange }: ReferenceDrawerProps) {
+export function ReferenceDrawer({ exports, filter, open, onOpenChange }: ReferenceDrawerProps) {
   const close = () => onOpenChange(false)
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -49,6 +53,7 @@ export function ReferenceDrawer({ exports, open, onOpenChange }: ReferenceDrawer
             <span className="text-control text-fg-muted">Theme</span>
             <ThemeSwitch size="drawer" />
           </div>
+          <ExportFilter {...filter} />
           {exports.map(({ id, name, kind }) => (
             <a
               key={id}

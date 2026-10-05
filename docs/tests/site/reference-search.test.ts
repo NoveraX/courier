@@ -1,6 +1,7 @@
 /**
- * Search on the API reference finds its exports, each leading to its own
- * section of the reference, ahead of the docs pages it also finds.
+ * Search, from the docs or the API reference, finds the reference's
+ * exports, each leading to its own section of it, ahead of the docs pages
+ * it also finds.
  */
 import { describe, expect, it } from "vitest"
 
@@ -12,19 +13,19 @@ const exports = [
   { id: "call-options", name: "CallOptions", desc: "The options one call takes." },
 ]
 
-describe("search on the API reference", () => {
+describe("search over the API reference", () => {
   it("leads each export to its own section of the reference", () => {
     expect(referenceSearchEntries(exports)).toEqual([
       {
         title: "createCaller",
         href: "/reference#create-caller",
-        group: "This page",
+        group: "API reference",
         description: "Direct mode.",
       },
       {
         title: "CallOptions",
         href: "/reference#call-options",
-        group: "This page",
+        group: "API reference",
         description: "The options one call takes.",
       },
     ])

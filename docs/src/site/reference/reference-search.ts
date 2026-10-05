@@ -18,7 +18,7 @@ export function referenceSearchEntries(
   return sections.map((section) => ({
     title: section.name,
     href: `/reference#${section.id}`,
-    group: "This page",
+    group: "API reference",
     description: section.desc,
   }))
 }

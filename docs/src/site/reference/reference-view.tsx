@@ -8,6 +8,7 @@ import type { BuilderVerb, EntryPoint } from "@/site/content/reference-modules"
 import type { SearchEntry } from "@/site/content/search-index"
 import { PageActions } from "@/site/layout/page-actions"
 import { SearchPalette } from "@/site/layout/search-palette"
+import { SiteHeader } from "@/site/layout/site-header"
 import { useSearchShortcut } from "@/site/layout/use-search-shortcut"
 import { SiteFooter } from "@/site/site-footer"
 import { BuilderTable } from "./builder-table"
@@ -15,7 +16,6 @@ import { EntryPointsTable } from "./entry-points-table"
 import { ExportSection } from "./export-section"
 import type { ReferenceSection } from "./reference-data"
 import { ReferenceDrawer } from "./reference-drawer"
-import { ReferenceHeader } from "./reference-header"
 import type { ListedExport } from "./reference-sidebar"
 import { ReferenceSidebar } from "./reference-sidebar"
 import { useSectionSpy } from "./use-section-spy"
@@ -24,7 +24,7 @@ const TITLE = "API reference"
 
 interface ReferenceViewProps {
   sections: readonly ReferenceSection[]
-  /** What search finds from here: the exports, then every docs page. */
+  /** What search finds: the exports, then every docs page, as from the docs. */
   searchable: readonly SearchEntry[]
   entryPoints: readonly EntryPoint[]
   verbs: readonly BuilderVerb[]
@@ -38,11 +38,11 @@ function matches(section: ReferenceSection, filter: string): boolean {
 }
 
 /**
- * The API reference: every export the docs describe, filtered from the
- * header, listed beside with the one being read lit, each with its module,
- * signature, fields and example — then the modules to import from and how
- * an endpoint begins. ⌘K, or Search on a phone, searches the exports and
- * every docs page.
+ * The API reference, under the header the docs share: every export the
+ * docs describe, listed beside with a filter over them and the one being
+ * read lit, each with its module, signature, fields and example — then the
+ * modules to import from and how an endpoint begins. ⌘K, or Search, finds
+ * the exports and every docs page.
  *
  * @param props - The exports, what search finds, the modules, the builder's starters, the version and the page as Markdown
  * @returns The page
@@ -69,20 +69,30 @@ export function ReferenceView({
     { id: "builder", name: "Endpoint builder", kind: "BUILDER" },
   ]
   const active = useSectionSpy(listed.map((entry) => entry.id))
+  const exportFilter = {
+    value: filter,
+    onChange: setFilter,
+    shown: shown.length,
+    total: sections.length,
+  }
   return (
     <div className="min-h-screen bg-bg">
-      <ReferenceHeader
-        filter={filter}
-        onFilter={setFilter}
-        shown={shown.length}
-        total={sections.length}
-        onMenu={() => setListing(true)}
-        onSearch={() => setSearching(true)}
-      />
+      <SiteHeader part="api" onSearch={() => setSearching(true)} onMenu={() => setListing(true)} />
       <SearchPalette entries={searchable} open={searching} onOpenChange={setSearching} />
-      <ReferenceDrawer exports={listed} open={listing} onOpenChange={setListing} />
-      <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-11 px-6 min-[1000px]:grid-cols-[220px_minmax(0,1fr)]">
-        <ReferenceSidebar exports={listed} active={active} title={TITLE} markdown={markdown} />
+      <ReferenceDrawer
+        exports={listed}
+        filter={exportFilter}
+        open={listing}
+        onOpenChange={setListing}
+      />
+      <div className="mx-auto grid max-w-[1520px] grid-cols-1 gap-10 px-6 min-[1000px]:grid-cols-[252px_minmax(0,1fr)]">
+        <ReferenceSidebar
+          exports={listed}
+          filter={exportFilter}
+          active={active}
+          title={TITLE}
+          markdown={markdown}
+        />
         <main id="main-content" className="min-w-0 max-w-[900px] pt-10 pb-30">
           <p className="m-0 mb-5 flex items-center gap-2 text-control text-fg-subtle">
             <BookMarked aria-hidden="true" className="size-3.25 text-brand" />

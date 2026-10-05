@@ -15,10 +15,11 @@ interface SearchPaletteProps {
 }
 
 /**
- * Search over every docs page, as ⌘K or the header's Search opens it:
- * typed words narrow the pages, ↑ ↓ move through them, ↵ opens one.
+ * Search over the docs and the API reference, as ⌘K or the header's
+ * Search opens it: typed words narrow the pages and exports, ↑ ↓ move
+ * through them, ↵ opens one.
  *
- * @param props - The pages, and whether the palette is open
+ * @param props - The pages and exports, and whether the palette is open
  * @returns The palette
  * @example
  * ```tsx
@@ -53,7 +54,7 @@ export function SearchPalette({ entries, open, onOpenChange }: SearchPaletteProp
           aria-describedby={undefined}
           className="fixed top-[13vh] left-1/2 z-91 w-[min(540px,calc(100vw-40px))] -translate-x-1/2 animate-site-in overflow-hidden rounded-panel border border-line-strong bg-panel shadow-dialog"
         >
-          <Dialog.Title className="sr-only">Search documentation</Dialog.Title>
+          <Dialog.Title className="sr-only">Search the docs and the API</Dialog.Title>
           <input
             role="combobox"
             aria-expanded="true"
@@ -70,13 +71,13 @@ export function SearchPalette({ entries, open, onOpenChange }: SearchPaletteProp
                 move(e.key === "ArrowDown" ? 1 : -1)
               } else if (e.key === "Enter") go(results[chosen])
             }}
-            placeholder="Search documentation…"
+            placeholder="Search the docs and the API…"
             className="h-12 w-full border-0 border-b border-line bg-transparent px-4 text-[15px] text-fg outline-none placeholder:text-fg-subtle"
           />
           <div
             id={`${id}-results`}
             role="listbox"
-            aria-label="Pages"
+            aria-label="Pages and exports"
             className="max-h-80 overflow-y-auto p-1.5"
           >
             {results.map((entry, at) => (

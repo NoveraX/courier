@@ -1,8 +1,8 @@
 import Link from "next/link"
 
 /**
- * The foot of a page: the licence, and the way home, to the docs and to
- * the repository.
+ * The foot of every docs and reference page: the licence, and the way
+ * home, to the docs, to the API reference and to the repository.
  *
  * @returns The footer
  * @example
@@ -13,7 +13,7 @@ import Link from "next/link"
 export function SiteFooter() {
   return (
     <footer className="border-t border-line">
-      <div className="mx-auto flex max-w-[1400px] flex-wrap justify-between gap-4 px-6 py-6.5 text-control text-fg-subtle">
+      <div className="mx-auto flex max-w-[1520px] flex-wrap justify-between gap-4 px-6 py-6.5 text-control text-fg-subtle">
         <span>© 2026 NoveraX · MIT</span>
         <span className="flex gap-5.5">
           <Link href={"/"} className="hover:text-fg">
@@ -21,6 +21,9 @@ export function SiteFooter() {
           </Link>
           <Link href={"/docs/introduction"} className="hover:text-fg">
             Docs
+          </Link>
+          <Link href={"/reference"} className="hover:text-fg">
+            API
           </Link>
           <a
             href="https://github.com/NoveraX/courier"

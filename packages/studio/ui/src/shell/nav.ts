@@ -56,7 +56,7 @@ export const SHELL_NAV: readonly ShellNavGroup[] = [
     label: "Quality",
     items: [
       { label: "Audit", to: "/next/audit", icon: Shield, badge: "audit-score" },
-      { label: "Middleware", to: "/middleware", icon: Workflow },
+      { label: "Middleware", to: "/next/middleware", icon: Workflow },
       { label: "Compare", to: "/next/compare", icon: GitCompare },
     ],
   },

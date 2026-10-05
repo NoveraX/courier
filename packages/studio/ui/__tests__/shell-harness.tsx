@@ -14,6 +14,7 @@ import { validateAnalyticsSearch } from "@/features/analytics/analytics-search";
 import { validateAuditSearch } from "@/features/audit/audit-search";
 import { validateCompareSearch } from "@/features/compare/compare-search";
 import { validateExplorerSearch } from "@/features/explorer/explorer-search";
+import { validateMiddlewareSearch } from "@/features/middleware/middleware-search";
 import { validateMockStoreSearch } from "@/features/mocks/collection-view";
 import { validateMockLogsSearch } from "@/features/mocks/logs-view";
 import { validateMockRoutesSearch } from "@/features/mocks/routes-view";
@@ -31,6 +32,7 @@ import { ExplorerLayout } from "@/screens/explorer/explorer-layout";
 import { GraphScreen } from "@/screens/explorer/graph-screen";
 import { HeatmapScreen } from "@/screens/explorer/heatmap-screen";
 import { OverviewScreen } from "@/screens/explorer/overview-screen";
+import { MiddlewareScreen } from "@/screens/middleware/middleware-screen";
 import { MockLogsScreen } from "@/screens/mocks/logs-screen";
 import { MocksDashboard } from "@/screens/mocks/mocks-dashboard";
 import { MocksLayout } from "@/screens/mocks/mocks-layout";
@@ -120,6 +122,12 @@ export async function openShell(url: string): Promise<AnyRouter> {
     component: CompareScreen,
     validateSearch: validateCompareSearch,
   });
+  const middleware = createRoute({
+    getParentRoute: () => shell,
+    path: "middleware",
+    component: MiddlewareScreen,
+    validateSearch: validateMiddlewareSearch,
+  });
   const explorer = createRoute({
     getParentRoute: () => shell,
     path: "explorer",
@@ -183,6 +191,7 @@ export async function openShell(url: string): Promise<AnyRouter> {
         analytics,
         audit,
         compare,
+        middleware,
         explorer.addChildren(tabs),
         playground,
         apis,

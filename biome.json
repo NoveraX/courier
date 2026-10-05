@@ -78,7 +78,7 @@
             "noLabelWithoutControl": {
               "level": "error",
               "options": {
-                "inputComponents": ["Checkbox", "Switch"]
+                "inputComponents": ["Checkbox", "Switch", "TickBox"]
               }
             }
           }

@@ -6,7 +6,6 @@ import { apiCardView, handWrittenRow } from "@/features/apis/api-card-view";
 import { countScannedEndpoints } from "@/features/apis/helpers";
 import { useNow } from "@/hooks/use-tick";
 import { cn } from "@/lib/utils";
-import { ImportWizard } from "@/views/apis/import-wizard";
 import { ManageDialog } from "@/views/apis/manage-dialog";
 import { RemoveImportDialog } from "@/views/apis/remove-import-dialog";
 import { useManage } from "@/views/apis/use-manage";
@@ -14,6 +13,7 @@ import { useRemoveImport } from "@/views/apis/use-remove-import";
 import { ApiCard } from "./api-card";
 import { ConfigNoticeBar, NoConfig, NoSources } from "./apis-states";
 import { HandWrittenTable } from "./hand-written-table";
+import { ImportDialog } from "./import/import-dialog";
 
 function Section({
   title,
@@ -138,7 +138,7 @@ export function ApisScreen(): React.ReactNode {
           </Section>
         )}
       </div>
-      <ImportWizard wizard={importWizard} />
+      <ImportDialog wizard={importWizard} />
       <ManageDialog manage={manageFlow} />
       <RemoveImportDialog removal={removal} />
     </>

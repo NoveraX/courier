@@ -48,7 +48,7 @@ export const SHELL_NAV: readonly ShellNavGroup[] = [
     items: [
       { label: "Explorer", to: "/next/explorer", icon: Network },
       { label: "Playground", to: "/next/playground", icon: Play },
-      { label: "APIs", to: "/apis", icon: Globe },
+      { label: "APIs", to: "/next/apis", icon: Globe },
       { label: "Mocks", to: "/next/mocks", icon: Server },
     ],
   },

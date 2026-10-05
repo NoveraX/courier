@@ -75,6 +75,7 @@ export function useRegistry(): UseRegistryReturn {
         [name]: {
           status: result.changed ? "updates-available" : "up-to-date",
           newSpec: result.newSpec,
+          checkedAt: Date.now(),
         },
       }));
     } catch (err) {
@@ -83,6 +84,7 @@ export function useRegistry(): UseRegistryReturn {
         [name]: {
           status: "error",
           error: err instanceof Error ? err.message : "Check failed",
+          checkedAt: Date.now(),
         },
       }));
     }
@@ -95,10 +97,12 @@ export function useRegistry(): UseRegistryReturn {
     try {
       const { results } = await checkAllUpdates();
       const next: Record<string, SourceStatusInfo> = {};
+      const checkedAt = Date.now();
       for (const [name, result] of Object.entries(results)) {
-        if (result.error) next[name] = { status: "error", error: result.error };
+        if (result.error) next[name] = { status: "error", error: result.error, checkedAt };
         else if (result.unchecked) next[name] = { status: "unchecked", error: result.unchecked };
-        else next[name] = { status: result.changed ? "updates-available" : "up-to-date" };
+        else
+          next[name] = { status: result.changed ? "updates-available" : "up-to-date", checkedAt };
       }
       setStatuses(next);
     } catch (err) {

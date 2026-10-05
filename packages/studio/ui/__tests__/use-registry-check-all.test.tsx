@@ -45,6 +45,7 @@ describe("checking every import for updates", () => {
     expect(result.current.statuses.pets).toEqual({
       status: "error",
       error: "The host did not answer.",
+      checkedAt: expect.any(Number),
     });
   });
 

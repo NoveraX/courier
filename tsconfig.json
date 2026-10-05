@@ -5,7 +5,8 @@
     "packages/*/tests/**/*",
     "scripts/**/*",
     "examples/*/src/**/*",
-    "examples/*/courier.config.ts"
+    "examples/*/courier.config.ts",
+    "examples/demo-shop/courier.mocks.ts"
   ],
   "compilerOptions": {
     "paths": {

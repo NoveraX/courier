@@ -14,7 +14,8 @@
       "packages/studio/ui/__tests__/**",
       "scripts/**",
       "examples/*/src/**",
-      "examples/*/courier.config.ts"
+      "examples/*/courier.config.ts",
+      "examples/demo-shop/courier.mocks.ts"
     ]
   },
   "formatter": {

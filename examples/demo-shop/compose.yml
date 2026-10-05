@@ -1,0 +1,20 @@
+# Courier Studio's live demo, as a host such as Dokploy runs it from this
+# repository. Only Studio's port is published; the shop's backends, its
+# server and the mocks stay inside the container. Point a domain at port
+# 6280 with HTTPS, and set DEMO_ORIGIN to the address visitors open.
+services:
+  studio-demo:
+    build:
+      context: ../..
+      dockerfile: examples/demo-shop/Dockerfile
+    restart: unless-stopped
+    environment:
+      DEMO_ORIGIN: https://demo.courier.noverax.cloud
+      DEMO_RESET_MINUTES: "60"
+    expose:
+      - "6280"
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true

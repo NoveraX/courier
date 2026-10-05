@@ -1,0 +1,123 @@
+import { useState } from "react";
+
+import { relativeTime } from "@/features/waterfall/time-ticks";
+import { RowMenu } from "@/request-list/row-menu";
+import { useStudioStore } from "@/store";
+import { GroupRow } from "./group-row";
+import { RequestBarRow } from "./request-bar-row";
+import type { SegmentTip } from "./segment-tip";
+import { SegmentTooltip } from "./segment-tooltip";
+import { StreamBarRow } from "./stream-bar-row";
+import type { WaterfallModel } from "./use-waterfall";
+import { WaterfallGrid, WaterfallRuler } from "./waterfall-ruler";
+
+export interface WaterfallChartProps {
+  ref: React.RefObject<HTMLElement | null>;
+  model: WaterfallModel;
+  /** The width the chart shows without scrolling. */
+  visiblePx: number;
+  selectedId: string | undefined;
+  onSelect: (id: string) => void;
+  onToggle: (key: string) => void;
+}
+
+/**
+ * The Waterfall's chart: a header with the time scale, then a row per
+ * request and stream, scrolling both ways with the labels kept in place,
+ * the time under the pointer marked, and each part of a bar named on hover.
+ *
+ * @param props - The model, the visible width, the selection and what changes it
+ * @returns The chart
+ * @example
+ * ```tsx
+ * <WaterfallChart ref={ref} model={model} visiblePx={width} selectedId={req} onSelect={open} onToggle={toggle} />
+ * ```
+ */
+export function WaterfallChart(props: WaterfallChartProps): React.ReactNode {
+  const { ref, model, visiblePx, selectedId, onSelect, onToggle } = props;
+  const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
+  const [cursorPx, setCursorPx] = useState<number | null>(null);
+  const [tip, setTip] = useState<SegmentTip | null>(null);
+  const { scale, labelPx, window } = model;
+  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const box = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(e.clientX - box.left + e.currentTarget.scrollLeft - labelPx);
+    setCursorPx(x >= 0 && x <= scale.trackPx ? x : null);
+  };
+  const at = cursorPx === null ? null : scale.fromPx(cursorPx);
+  const cursor =
+    at === null || cursorPx === null
+      ? null
+      : { x: cursorPx, label: at.idle ? "idle" : relativeTime(at.t, window.start) };
+  const lines = { ticks: model.ticks, gaps: model.gaps, labelPx, trackPx: scale.trackPx, cursor };
+  return (
+    <section
+      ref={ref}
+      aria-label="Waterfall"
+      onMouseMove={onMove}
+      onMouseLeave={() => {
+        setCursorPx(null);
+        setTip(null);
+      }}
+      className="relative min-h-0 flex-1 overflow-auto"
+    >
+      <div className="relative min-w-full" style={{ width: labelPx + scale.trackPx }}>
+        <WaterfallRuler {...lines} />
+        <WaterfallGrid {...lines} />
+        <RowMenu>
+          <div>
+            {model.rows.map((row) =>
+              row.kind === "group" ? (
+                <GroupRow
+                  key={row.key}
+                  row={row}
+                  width={Math.min(visiblePx, labelPx + scale.trackPx)}
+                  onToggle={onToggle}
+                />
+              ) : row.kind === "stream" ? (
+                <StreamBarRow
+                  key={row.request.id}
+                  request={row.request}
+                  window={window}
+                  scale={scale}
+                  labelPx={labelPx}
+                  now={model.now}
+                  selected={row.request.id === selectedId}
+                  onSelect={onSelect}
+                />
+              ) : (
+                <RequestBarRow
+                  key={row.item.request.id}
+                  item={row.item}
+                  indent={row.indent}
+                  scale={scale}
+                  labelPx={labelPx}
+                  slowMs={slowMs}
+                  selected={row.item.request.id === selectedId}
+                  onSelect={onSelect}
+                  onTip={setTip}
+                />
+              ),
+            )}
+          </div>
+        </RowMenu>
+        {model.rows.length === 0 && (
+          <div
+            style={{ width: Math.min(visiblePx, labelPx + scale.trackPx) }}
+            className="sticky left-0 flex flex-col items-center gap-2 px-5 py-18 text-center"
+          >
+            <span className="text-title font-semibold">
+              {model.total ? "No requests in view" : "Waiting for requests"}
+            </span>
+            <span className="text-ui text-fg-muted">
+              {model.total
+                ? "Adjust the search or mode filter."
+                : "Make API calls from your app to see them here as they happen."}
+            </span>
+          </div>
+        )}
+      </div>
+      {tip && <SegmentTooltip tip={tip} />}
+    </section>
+  );
+}

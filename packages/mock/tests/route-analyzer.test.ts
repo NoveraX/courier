@@ -147,22 +147,30 @@ describe("analyzeRoutes", () => {
   });
 });
 
-describe("analyzeRoutes — default prefix from group name", () => {
+describe("analyzeRoutes — a group without a prefix", () => {
   const apiNoPrefix = defineApi({
     baseURL: "http://localhost",
     groups: {
       status: defineGroup({
         endpoints: {
-          ping: endpoint.get(""),
+          ping: endpoint.get("ping"),
+          person: endpoint.get("people/:id"),
+          root: endpoint.get(""),
         },
       }),
     },
   });
 
-  it("uses /groupName when no prefix is specified", () => {
+  it("serves each endpoint at the path it declares, where a client calls it", () => {
     const routes = analyzeRoutes(apiNoPrefix);
-    const r = findRoute(routes, "status", "ping");
-    expect(r.fullPath).toBe("/status");
+    expect(findRoute(routes, "status", "ping").fullPath).toBe("/ping");
+    expect(findRoute(routes, "status", "person").fullPath).toBe("/people/:id");
+    expect(findRoute(routes, "status", "root").fullPath).toBe("/");
+  });
+
+  it("reads each endpoint's operation from the collection its path starts with", () => {
+    const routes = analyzeRoutes(apiNoPrefix);
+    expect(findRoute(routes, "status", "person")).toMatchObject({ operation: "get", exact: true });
   });
 });
 

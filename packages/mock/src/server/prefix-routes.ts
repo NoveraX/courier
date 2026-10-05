@@ -48,6 +48,13 @@ export function registerPrefixRoutes(
     const prefix = mapping.prefix.replace(/^\//, "");
     const eps = mapping.endpoints;
 
+    // A group without a prefix of its own: each endpoint at its own path, no catch-alls
+    if (mapping.exact) {
+      registerSSERoutes(app, prefix, eps ?? [], mapping.group, config);
+      registerDeclaredRoutes(app, prefix, eps ?? [], mapping.group, config, { every: true });
+      continue;
+    }
+
     // GET /prefix → list endpoint
     app.get(`/${prefix}`, (c) => {
       const variables = parseQueryParams(new URL(c.req.url).searchParams);

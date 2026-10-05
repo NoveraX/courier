@@ -1,5 +1,9 @@
-import { normalizeHttpMethod } from "@noverax/courier/internal";
-import { isRecord } from "../is-record";
+import {
+  eachGroup,
+  groupOptionsOf,
+  normalizeHttpMethod,
+  type PlacedGroup,
+} from "@noverax/courier/internal";
 import { recordParam } from "../server/path-shape";
 import { channelShape } from "./channel-shape";
 import {
@@ -11,25 +15,17 @@ import {
 } from "./endpoint-probe";
 import { detectOperation } from "./operation-detect";
 import type { RouteInfo } from "./route-types";
-import { prop } from "./schema-introspect/prop";
 
 /**
  * Analyze all endpoints in an API source and extract route information.
- * Handles both grouped endpoints (source.options.groups) and top-level endpoints.
+ * Handles grouped endpoints — groups inside groups too, each named by its
+ * path, `billing.invoices` — and top-level endpoints.
  *
  * @param source - The full source object from defineApi()
  */
 export function analyzeRoutes(source: Record<string, unknown>): RouteInfo[] {
   const routes: RouteInfo[] = [];
-  const groups = prop(source, "options", "groups");
-
-  // Grouped endpoints
-  if (isRecord(groups)) {
-    for (const [groupName, group] of Object.entries(groups)) {
-      if (groupName === "options") continue;
-      analyzeGroup(routes, groupName, group);
-    }
-  }
+  for (const placed of eachGroup(source)) analyzeGroup(routes, placed);
 
   // Top-level endpoints (functions at source root, not inside groups)
   for (const [name, fn] of Object.entries(source)) {
@@ -41,43 +37,68 @@ export function analyzeRoutes(source: Record<string, unknown>): RouteInfo[] {
 }
 
 /**
- * Get the set of declared group names from a source.
+ * Get the set of declared group paths from a source, every group inside
+ * another included: `billing`, `billing.invoices`.
  * Useful for distinguishing grouped vs top-level endpoints in UI display.
  */
 export function getSourceGroupNames(source: Record<string, unknown>): Set<string> {
-  const groups = prop(source, "options", "groups");
-  if (!isRecord(groups)) return new Set();
-  return new Set(Object.keys(groups).filter((k) => k !== "options"));
+  return new Set([...eachGroup(source)].map((placed) => placed.path));
 }
 
 const LEADING_SLASHES = /^\/+/;
 
-function analyzeTopLevelEndpoint(routes: RouteInfo[], name: string, fn: unknown): void {
-  const probed = probeEndpoint(fn);
+/* A declared path split at its first segment, the collection it names. */
+function rooted(declared: string, name: string): { collection: string; path: string } {
   // "/orders" and "orders" name the same path; its first segment is the collection
-  const rawPath = (probed.path ?? name).replace(LEADING_SLASHES, "");
+  const rawPath = declared.replace(LEADING_SLASHES, "");
   const collection = rawPath.split("/")[0]?.replace(/^:/, "") || name;
   // Normalize path relative to the derived group prefix so detectOperation
   // treats the collection root ("users") as "" (list), not a static sub-path.
-  const normalizedPath =
+  const path =
     rawPath === collection
       ? ""
       : rawPath.startsWith(`${collection}/`)
         ? rawPath.slice(collection.length + 1)
         : rawPath;
-  analyzeEndpoint(routes, collection, name, fn, `/${collection}`, {
-    ...probed,
-    path: normalizedPath,
-  });
+  return { collection, path };
 }
 
-function analyzeGroup(routes: RouteInfo[], groupName: string, group: unknown): void {
-  if (!isRecord(group)) return;
-  const declared = prop(group, "options", "prefix");
-  const prefix = normalizePrefix(typeof declared === "string" ? declared : `/${groupName}`);
-  for (const [endpointName, endpointFn] of Object.entries(group)) {
+function analyzeTopLevelEndpoint(routes: RouteInfo[], name: string, fn: unknown): void {
+  const probed = probeEndpoint(fn);
+  const { collection, path } = rooted(probed.path ?? name, name);
+  analyzeEndpoint(routes, collection, name, fn, `/${collection}`, { ...probed, path });
+}
+
+/**
+ * A group's endpoints at its prefix, joined after every group's above it.
+ * A group that declares no prefix is called at the paths its endpoints
+ * declare alone, so each is served there: its operation read from the
+ * collection its path starts with, and no catch-all claims the prefix.
+ */
+function analyzeGroup(routes: RouteInfo[], placed: PlacedGroup): void {
+  const base = normalizePrefix(groupOptionsOf(placed.chain).prefix ?? "");
+  const exact = typeof placed.group.options?.prefix !== "string";
+  for (const [endpointName, endpointFn] of Object.entries(placed.group)) {
     if (endpointName === "options" || !isEndpoint(endpointFn)) continue;
-    analyzeEndpoint(routes, groupName, endpointName, endpointFn, prefix);
+    if (!exact) {
+      analyzeEndpoint(routes, placed.path, endpointName, endpointFn, base);
+      continue;
+    }
+    const transport = extractSchema(endpointFn)?.transport;
+    const probed =
+      transport === "sse" || transport === "ws" ? undefined : probeEndpoint(endpointFn);
+    const at = probed ? rooted(probed.path ?? "", "") : undefined;
+    const prefix = at ? normalizePrefix(`${base}/${at.collection}`) : base;
+    const before = routes.length;
+    analyzeEndpoint(
+      routes,
+      placed.path,
+      endpointName,
+      endpointFn,
+      prefix,
+      at && { ...probed, path: at.path },
+    );
+    for (const route of routes.slice(before)) route.exact = true;
   }
 }
 
@@ -103,6 +124,7 @@ function analyzeEndpoint(
       group: groupName,
       endpoint: endpointName,
       httpMethod: "GET",
+      prefix,
       path,
       fullPath,
       hasIdParam: false,
@@ -120,13 +142,14 @@ function analyzeEndpoint(
   const probed = preProbed ?? probeEndpoint(endpointFn);
   const httpMethod = normalizeHttpMethod(probed.method ?? "GET");
   const path = (probed.path ?? "").split("/").filter(Boolean).join("/");
-  const fullPath = path ? `${prefix}/${path}`.replace(/\/+/g, "/") : prefix;
+  const fullPath = (path ? `${prefix}/${path}`.replace(/\/+/g, "/") : prefix) || "/";
   const idParam = recordParam(path);
 
   routes.push({
     group: groupName,
     endpoint: endpointName,
     httpMethod,
+    prefix,
     path,
     fullPath,
     hasIdParam: path.includes(":"),

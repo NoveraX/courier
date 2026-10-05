@@ -16,20 +16,18 @@ export interface SeedConfig {
 }
 
 /**
- * Build PrefixMappings from analyzed routes and source structure.
- * Includes httpMethod on each MappedEndpoint so static sub-paths
- * can be registered with the correct HTTP verb.
+ * Build PrefixMappings from analyzed routes: one for each group at each
+ * prefix its routes stand at. Includes httpMethod on each MappedEndpoint so
+ * static sub-paths can be registered with the correct HTTP verb.
+ *
+ * The mappings come most specific first — more segments, then a fixed one
+ * before a parameter — so a group inside another, `/billing/invoices`, is
+ * registered before its outer group's `/billing/:id` could take it.
  */
 export function buildPrefixMappings(
-  source: Record<string, unknown>,
+  _source: Record<string, unknown>,
   routes: RouteInfo[],
 ): PrefixMapping[] {
-  const opts = source.options as
-    | { groups?: Record<string, { options?: { prefix?: string } }> }
-    | undefined;
-  const groups = opts?.groups ?? {};
-  const groupNames = new Set(Object.keys(groups).filter((k) => k !== "options"));
-
   const mappings: PrefixMapping[] = [];
   const byGroup = new Map<string, PrefixMapping>();
 
@@ -43,29 +41,36 @@ export function buildPrefixMappings(
       isChannel: route.isChannel,
       ...(route.channel && { channel: route.channel }),
     };
-    const existing = byGroup.get(route.group);
+    const key = `${route.group}\u0000${route.prefix}`;
+    const existing = byGroup.get(key);
     if (existing) {
       existing.methods.push(route.endpoint);
       existing.endpoints?.push(ep);
       continue;
     }
 
-    const isGrouped = groupNames.has(route.group);
-    const prefix = isGrouped
-      ? (groups[route.group]?.options?.prefix ?? `/${route.group}`)
-      : `/${route.group}`;
-
     const mapping: PrefixMapping = {
-      prefix,
+      prefix: route.prefix,
       group: route.group,
       methods: [route.endpoint],
       endpoints: [ep],
+      ...(route.exact && { exact: true }),
     };
-    byGroup.set(route.group, mapping);
+    byGroup.set(key, mapping);
     mappings.push(mapping);
   }
 
-  return mappings;
+  return mappings.sort(byPrefixSpecificity);
+}
+
+/* More segments first, then position by position a fixed segment before a parameter. */
+function byPrefixSpecificity(a: PrefixMapping, b: PrefixMapping): number {
+  const segments = (prefix: string) => prefix.split("/").filter(Boolean);
+  const [left, right] = [segments(a.prefix), segments(b.prefix)];
+  if (left.length !== right.length) return right.length - left.length;
+  const rank = (parts: string[]) =>
+    parts.map((part) => (part.startsWith(":") ? "1" : "0")).join("");
+  return rank(left).localeCompare(rank(right));
 }
 
 /** Flatten user-supplied seed config into a `{ groupName: count }` map */

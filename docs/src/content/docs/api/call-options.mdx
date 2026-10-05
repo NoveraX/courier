@@ -1,0 +1,64 @@
+export const metadata = { title: "CallOptions", description: "The options one call takes with .with(): its timeout, headers and signal, upload and download progress, a stream instead of parsed data, and the verb sent to the proxy.", mode: "both" }
+
+## Import
+
+```ts
+import type { CallOptions, WithOptions } from "@noverax/courier"
+```
+
+## Signature
+
+A caller's `.with(options)` returns a caller whose every call carries them. It takes `WithOptions`, which is `CallOptions` without `rawData`: the status and headers of an answer come from the group's `.raw` accessor instead.
+
+```ts
+type CallOptions = Omit<RequestInit, "method" | "body" | "signal"> & {
+  signal?: AbortSignal | null
+  timeout?: number
+  stream?: boolean
+  forwardVariables?: boolean
+  method?: "GET" | "POST"
+  responseType?: "json" | "text" | "blob" | "arrayBuffer" | "formData"
+  onUploadProgress?: (progress: UploadProgress) => void
+  onDownloadProgress?: (progress: DownloadProgress) => void
+  rawData?: boolean
+}
+
+type WithOptions = Omit<CallOptions, "rawData">
+```
+
+## Properties
+
+- `signal` — aborts the call when it fires
+- `timeout` — milliseconds the call may take; a call's own wins over the source's
+- `headers` — added to the call's headers, name by name, whatever their case; `.with()` at the client, a group and an endpoint merges them all
+- `stream` — answers with the response's body as a stream, unread, instead of the parsed data
+- `forwardVariables` — whether the HTTP methods an endpoint calls send the call's variables by themselves, as the body of a write or the query of a read; `false` leaves them to the endpoint's own `.via()` code. Defaults to `true`
+- `method` — the verb the call goes to the proxy with: GET for a read and POST for a write by default; `"POST"` keeps a read's variables out of the address
+- `responseType` — how a successful answer is read, when not as the source reads every answer
+- `onUploadProgress` — called as the body is sent, with `percent` from 0 to 1, `transferredBytes` and `totalBytes`
+- `onDownloadProgress` — called as the answer is read, in the same terms
+- `RequestInit` — the rest of `fetch`'s own options, `cache`, `credentials`, `keepalive`, `mode`, `priority`, `redirect`, `referrer`, `referrerPolicy` and `integrity`, passed to it as they are
+
+## Basic Usage
+
+```ts title="app/reports.ts"
+import { caller } from "@/lib/caller"
+
+const controller = new AbortController()
+
+// A slow endpoint gets more time, and the user can cancel it
+const report = await caller.reports
+  .with({ timeout: 30_000, signal: controller.signal })
+  .generate({ type: "annual" })
+
+// An upload reports how far it got, from 0 to 1
+await caller.files
+  .with({ onUploadProgress: ({ percent }) => console.log(`${Math.round(percent * 100)}%`) })
+  .upload({ body: blob })
+```
+
+## Related
+
+- [Request options](/docs/advanced/options) — every option a source, a group and an endpoint take, and which wins
+- [Types](/docs/api/types) — `TypedClient`, `GroupClient` and the other types around a caller
+- [Raw data](/docs/advanced/raw-data) — the `.raw` accessor for the status and headers

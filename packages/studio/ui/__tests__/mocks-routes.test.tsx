@@ -81,7 +81,14 @@ afterEach(cleanup);
 
 describe("the routes' data", () => {
   it("counts each kind, narrows to one, and keeps only what differs in the address", () => {
-    expect(routeKindCounts(ROUTES)).toEqual({ all: 3, auto: 1, override: 1, scenario: 1 });
+    expect(routeKindCounts(ROUTES)).toEqual({
+      all: 3,
+      auto: 1,
+      override: 1,
+      scenario: 1,
+      upstream: 0,
+      fixtures: 0,
+    });
     expect(filterRoutes(ROUTES, "users.get", "all").map((r) => r.endpoint)).toEqual(["get"]);
     expect(filterRoutes(ROUTES, "", "scenario").map((r) => r.endpoint)).toEqual(["remove"]);
     expect(validateMockRoutesSearch({ kind: "all", q: "", open: "GET /users" })).toEqual({
@@ -118,5 +125,31 @@ describe("the Routes tab", () => {
     expect(
       within(screen.getByRole("region", { name: "Routes" })).getAllByRole("button"),
     ).toHaveLength(1);
+  });
+});
+
+describe("a mock that leaves some routes to the source's server, or replays recordings", () => {
+  it("tags each route by what answers it, and offers those filters only then", async () => {
+    useMockStore.setState({
+      servers: {
+        "api-mock": mockServer({
+          routes: [route("list", "/users", "upstream"), route("get", "/users/:id", "fixtures")],
+        }),
+      },
+    });
+    await openShell("/mocks/routes");
+
+    const list = screen.getByRole("region", { name: "Routes" });
+    expect(within(list).getByText("your server")).toBeTruthy();
+    expect(within(list).getByText("recorded")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Your server/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Recorded/ })).toBeTruthy();
+  });
+
+  it("offers no such filter for a mock that answers every route itself", async () => {
+    await openShell("/mocks/routes");
+
+    expect(screen.queryByRole("button", { name: /Your server/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Recorded/ })).toBeNull();
   });
 });

@@ -11,7 +11,8 @@ export type Checked<TValue> = { ok: true; value: TValue } | { ok: false; message
  *
  * @param value - The value to read.
  * @param where - The value's path in the request, such as `mocks[1]`; empty for the body itself.
- * @param fields - The fields it must have, and the only ones it may have.
+ * @param fields - The fields it must have.
+ * @param optional - The fields it may have besides; no others are accepted.
  * @returns The object, typed for reading its fields, or a message naming the first problem.
  * @example
  * readFields(JSON.parse('{"port":1,"x":2}'), "mocks[0]", ["port"]);
@@ -21,11 +22,12 @@ export function readFields(
   value: unknown,
   where: string,
   fields: readonly string[],
+  optional: readonly string[] = [],
 ): Checked<Readonly<Record<string, unknown>>> {
   const name = where === "" ? "the body" : where;
   if (!isPlainObject(value)) return { ok: false, message: `${name} must be a JSON object` };
   for (const key of Reflect.ownKeys(value)) {
-    if (typeof key === "symbol" || !fields.includes(key)) {
+    if (typeof key === "symbol" || !(fields.includes(key) || optional.includes(key))) {
       return { ok: false, message: `${name} has an unknown field "${String(key)}"` };
     }
   }

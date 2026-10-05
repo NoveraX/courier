@@ -27,6 +27,8 @@ export function mergeDraftErrors(
       key: typed.key ?? told.key,
       port: typed.port ?? told.port,
       seedCount: typed.seedCount ?? told.seedCount,
+      endpoints: typed.endpoints ?? told.endpoints,
+      fixtures: typed.fixtures ?? told.fixtures,
     });
   }
   return merged;

@@ -1,4 +1,5 @@
 import { DRAFT_LIMITS } from "./draft-limits";
+import { fixturesFileOf } from "./fixtures-file-of";
 import { parseWholeNumber } from "./parse-whole-number";
 import type { MockDraft } from "./types";
 import type { MockDeclaration } from "./wire-types";
@@ -9,7 +10,15 @@ function toDeclaration(draft: MockDraft): MockDeclaration | null {
   const port =
     draft.portMode === "auto" ? null : parseWholeNumber(draft.portText, minPort, maxPort);
   if (seedCount === null || (draft.portMode === "fixed" && port === null)) return null;
-  return { key: draft.key, source: draft.source, port, seedCount, autoStart: draft.autoStart };
+  return {
+    key: draft.key,
+    source: draft.source,
+    port,
+    seedCount,
+    autoStart: draft.autoStart,
+    ...(draft.answers === "some" && { endpoints: [...draft.endpoints] }),
+    ...(draft.data === "recorded" && { fixtures: fixturesFileOf(draft.key) }),
+  };
 }
 
 /**

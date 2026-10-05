@@ -1,7 +1,7 @@
 import type { MockRouteEntry } from "@/store/mock-slice";
 
-/** What answers a route: the generated handler, an override, or a scenario's. */
-export const ROUTE_KINDS = ["all", "auto", "override", "scenario"] as const;
+/** What answers a route: the generated handler, an override, a scenario's, the source's own server, or recordings of it. */
+export const ROUTE_KINDS = ["all", "auto", "override", "scenario", "upstream", "fixtures"] as const;
 export type RouteKind = (typeof ROUTE_KINDS)[number];
 
 /** The Routes tab's part of the address, each left out while it is the default. */
@@ -52,11 +52,18 @@ export function routeKeyOf(route: Pick<MockRouteEntry, "httpMethod" | "fullPath"
  * @returns The count per kind, all of them under `all`
  * @example
  * ```ts
- * routeKindCounts(routes); // { all: 16, auto: 11, override: 2, scenario: 3 }
+ * routeKindCounts(routes); // { all: 16, auto: 11, override: 2, scenario: 3, upstream: 0, fixtures: 0 }
  * ```
  */
 export function routeKindCounts(routes: readonly MockRouteEntry[]): Record<RouteKind, number> {
-  const counts = { all: routes.length, auto: 0, override: 0, scenario: 0 };
+  const counts = {
+    all: routes.length,
+    auto: 0,
+    override: 0,
+    scenario: 0,
+    upstream: 0,
+    fixtures: 0,
+  };
   for (const route of routes) counts[route.source] += 1;
   return counts;
 }

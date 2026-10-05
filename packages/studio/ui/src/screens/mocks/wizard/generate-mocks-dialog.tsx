@@ -26,6 +26,7 @@ function StepBody({ wizard }: { wizard: MockWizardHandle }): React.ReactNode {
       return (
         <ConfigureStep
           state={state}
+          sources={wizard.sources}
           errors={wizard.errors}
           onEdit={(index, patch) => session.dispatch({ type: "editDraft", index, patch })}
           onRemove={(index) => session.dispatch({ type: "removeDraft", index })}

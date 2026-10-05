@@ -17,6 +17,10 @@ export interface MockDeclaration {
   seedCount: number;
   /** Whether Studio starts it at launch. */
   autoStart: boolean;
+  /** The endpoints it answers, by name; absent, it answers every one. */
+  endpoints?: string[] | undefined;
+  /** The recordings file it answers with, relative to the mocks file; absent, it generates its answers. */
+  fixtures?: string | undefined;
 }
 
 /** One line of a diff, numbered in the file before and after the edit. */
@@ -81,7 +85,7 @@ export interface ManualReason {
 }
 
 /** The fields of a declaration Studio checks. */
-export type DeclarationField = "key" | "source" | "port" | "seedCount";
+export type DeclarationField = "key" | "source" | "port" | "seedCount" | "endpoints" | "fixtures";
 
 /** A field of one declaration that cannot be declared as asked. */
 export interface FieldError {

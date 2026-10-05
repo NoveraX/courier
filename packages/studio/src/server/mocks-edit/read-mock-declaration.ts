@@ -3,6 +3,8 @@ import { readFields } from "./read-fields";
 import type { MockDeclaration } from "./types";
 
 const DECLARATION_FIELDS = ["key", "source", "port", "seedCount", "autoStart"] as const;
+const OPTIONAL_FIELDS = ["endpoints", "fixtures"] as const;
+const MAX_ENDPOINTS = 500;
 
 function fail(message: string): { ok: false; message: string } {
   return { ok: false, message };
@@ -25,6 +27,20 @@ function readBoolean(value: unknown, path: string): Checked<boolean> {
   return typeof value === "boolean" ? { ok: true, value } : fail(`${path} must be a boolean`);
 }
 
+function readEndpoints(value: unknown, path: string): Checked<string[] | undefined> {
+  if (value === undefined) return { ok: true, value: undefined };
+  const names = Array.isArray(value) && value.length <= MAX_ENDPOINTS ? value : null;
+  if (names === null || !names.every((name): name is string => typeof name === "string")) {
+    return fail(`${path} must be an array of up to ${MAX_ENDPOINTS} endpoint names`);
+  }
+  return { ok: true, value: names };
+}
+
+function readFixtures(value: unknown, path: string): Checked<string | undefined> {
+  if (value === undefined || typeof value === "string") return { ok: true, value };
+  return fail(`${path} must be a string`);
+}
+
 /**
  * Reads one entry of a request's `mocks` array into a fresh declaration,
  * checking only its shape: exactly the five fields, each of its JSON type.
@@ -44,7 +60,7 @@ function readBoolean(value: unknown, path: string): Checked<boolean> {
  */
 export function readMockDeclaration(raw: unknown, index: number): Checked<MockDeclaration> {
   const where = `mocks[${index}]`;
-  const read = readFields(raw, where, DECLARATION_FIELDS);
+  const read = readFields(raw, where, DECLARATION_FIELDS, OPTIONAL_FIELDS);
   if (!read.ok) return read;
   const entry = read.value;
   const key = readString(entry.key, `${where}.key`);
@@ -57,12 +73,18 @@ export function readMockDeclaration(raw: unknown, index: number): Checked<MockDe
   if (!seedCount.ok) return seedCount;
   const autoStart = readBoolean(entry.autoStart, `${where}.autoStart`);
   if (!autoStart.ok) return autoStart;
+  const endpoints = readEndpoints(entry.endpoints, `${where}.endpoints`);
+  if (!endpoints.ok) return endpoints;
+  const fixtures = readFixtures(entry.fixtures, `${where}.fixtures`);
+  if (!fixtures.ok) return fixtures;
   const value = {
     key: key.value,
     source: source.value,
     port: port.value,
     seedCount: seedCount.value,
     autoStart: autoStart.value,
+    ...(endpoints.value && { endpoints: endpoints.value }),
+    ...(fixtures.value !== undefined && { fixtures: fixtures.value }),
   } satisfies MockDeclaration;
   return { ok: true, value };
 }

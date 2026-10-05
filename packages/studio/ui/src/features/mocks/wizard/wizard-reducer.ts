@@ -30,7 +30,17 @@ export const INITIAL_WIZARD_STATE: MockWizardState = {
 function draftFor(source: string, taken: readonly string[]): MockDraft {
   const key = suggestMockKey(source, taken);
   const seedCountText = String(DRAFT_LIMITS.defaultSeedCount);
-  return { source, key, portMode: "auto", portText: "", seedCountText, autoStart: true };
+  return {
+    source,
+    key,
+    portMode: "auto",
+    portText: "",
+    seedCountText,
+    autoStart: true,
+    answers: "all",
+    endpoints: [],
+    data: "generated",
+  };
 }
 
 function toggled(
@@ -154,7 +164,7 @@ function onDrafts(state: MockWizardState, action: MockWizardAction): MockWizardS
  * @example
  * ```ts
  * const next = mockWizardReducer(INITIAL_WIZARD_STATE, { type: "toggleSource", source: "api", declaredKeys: [] });
- * next.drafts; // → [{ source: "api", key: "api", portMode: "auto", portText: "", seedCountText: "20", autoStart: true }]
+ * next.drafts; // → [{ source: "api", key: "api", portMode: "auto", …, answers: "all", data: "generated" }]
  * ```
  */
 export function mockWizardReducer(

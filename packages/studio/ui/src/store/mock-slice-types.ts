@@ -72,7 +72,8 @@ export interface MockRouteEntry {
   httpMethod: string;
   path: string;
   fullPath: string;
-  source: "auto" | "override" | "scenario";
+  /** What answers it: the generated handler, an override, the scenario on, the source's own server, or recordings of it. */
+  source: "auto" | "override" | "scenario" | "upstream" | "fixtures";
   hits: number;
   /** Running average latency in ms — computed from request logs */
   avgLatency: number;

@@ -5,7 +5,14 @@ import type { DeclarePreview, FieldError, ManualReason } from "./wire-types";
 import { REFUSAL_CODES } from "./wire-types";
 
 const CODES: ReadonlySet<unknown> = new Set(REFUSAL_CODES);
-const FIELDS: ReadonlySet<unknown> = new Set(["key", "source", "port", "seedCount"]);
+const FIELDS: ReadonlySet<unknown> = new Set([
+  "key",
+  "source",
+  "port",
+  "seedCount",
+  "endpoints",
+  "fixtures",
+]);
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
 function isSha256(value: unknown): value is string {

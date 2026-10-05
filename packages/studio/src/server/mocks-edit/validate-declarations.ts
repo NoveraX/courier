@@ -36,7 +36,14 @@ interface Earlier {
   ports: Map<number, string>;
 }
 
-const FIELD_ORDER: readonly RuledField[] = ["source", "key", "port", "seedCount"];
+const FIELD_ORDER: readonly RuledField[] = [
+  "source",
+  "key",
+  "port",
+  "seedCount",
+  "endpoints",
+  "fixtures",
+];
 
 function sourceProblem({ source }: MockDeclaration, project: Project | null): string | null {
   if (project === null || project.sources.has(source)) return null;
@@ -94,6 +101,8 @@ function relationProblem(
     case "port":
       return portProblem(request, earlier, project);
     case "seedCount":
+    case "endpoints":
+    case "fixtures":
       return null;
   }
 }

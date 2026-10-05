@@ -14,6 +14,12 @@ export type WizardStep = "source" | "configure" | "review" | "done";
 /** A port Studio assigns, or one typed and held exactly. */
 export type PortMode = "auto" | "fixed";
 
+/** Whether a mock answers every endpoint of its source, or the ones picked. */
+export type AnswersMode = "all" | "some";
+
+/** Where a mock's answers come from: generated from the schemas, or recorded from the server. */
+export type DataMode = "generated" | "recorded";
+
 /** One mock as the user fills it in; numbers stay the text typed until they are sent. */
 export interface MockDraft {
   source: string;
@@ -22,6 +28,10 @@ export interface MockDraft {
   portText: string;
   seedCountText: string;
   autoStart: boolean;
+  answers: AnswersMode;
+  /** The endpoints picked while `answers` is `some`, by name. */
+  endpoints: string[];
+  data: DataMode;
 }
 
 /** What is wrong with each field of one draft. */

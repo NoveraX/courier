@@ -35,4 +35,31 @@ describe("reading one mock declaration", () => {
 
     expect(readMockDeclaration(entry, 0)).toEqual({ ok: true, value: entry });
   });
+
+  it("reads the endpoints a mock answers and its recordings file when the entry has them", () => {
+    const entry = {
+      key: "users",
+      source: "users",
+      port: null,
+      seedCount: 5,
+      autoStart: false,
+      endpoints: ["users.refund"],
+      fixtures: "./fixtures/users.har",
+    };
+
+    expect(readMockDeclaration(entry, 0)).toEqual({ ok: true, value: entry });
+  });
+
+  it("refuses endpoints that are not names, and a recordings file that is not text", () => {
+    const base = { key: "users", source: "users", port: null, seedCount: 5, autoStart: false };
+
+    expect(readMockDeclaration({ ...base, endpoints: [1] }, 2)).toEqual({
+      ok: false,
+      message: "mocks[2].endpoints must be an array of up to 500 endpoint names",
+    });
+    expect(readMockDeclaration({ ...base, fixtures: 7 }, 2)).toEqual({
+      ok: false,
+      message: "mocks[2].fixtures must be a string",
+    });
+  });
 });

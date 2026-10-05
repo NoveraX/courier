@@ -1,8 +1,11 @@
+import type { ScannedSource } from "@/features/apis/types";
 import type { DraftErrors, MockDraft, MockWizardState } from "@/features/mocks/wizard/types";
 import { DraftPanel } from "./draft-panel";
 
 interface ConfigureStepProps {
   state: MockWizardState;
+  /** The project's sources, whose endpoints and servers each mock is configured against. */
+  sources: readonly ScannedSource[];
   errors: ReadonlyMap<number, DraftErrors>;
   onEdit: (index: number, patch: Partial<Omit<MockDraft, "source">>) => void;
   onRemove: (index: number) => void;
@@ -21,6 +24,7 @@ interface ConfigureStepProps {
  */
 export function ConfigureStep({
   state,
+  sources,
   errors,
   onEdit,
   onRemove,
@@ -48,6 +52,7 @@ export function ConfigureStep({
           key={draft.source}
           index={index}
           draft={draft}
+          source={sources.find((source) => source.name === draft.source)}
           errors={errors.get(index)}
           onEdit={(patch) => onEdit(index, patch)}
           onRemove={() => onRemove(index)}

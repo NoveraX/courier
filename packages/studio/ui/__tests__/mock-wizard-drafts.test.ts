@@ -17,6 +17,9 @@ function draft(patch: Partial<MockDraft> = {}): MockDraft {
     portText: "",
     seedCountText: "20",
     autoStart: true,
+    answers: "all",
+    endpoints: [],
+    data: "generated",
     ...patch,
   };
 }
@@ -139,5 +142,36 @@ describe("what is sent", () => {
   it("sends nothing while a number typed is not one in range", () => {
     expect(toDeclarations([draft({ portMode: "fixed", portText: "" })])).toBeNull();
     expect(toDeclarations([draft({ seedCountText: "0" })])).toBeNull();
+  });
+});
+
+describe("a mock that answers some endpoints, with recordings", () => {
+  it("sends the endpoints picked and a recordings file named after the mock", () => {
+    const partial = draft({ answers: "some", endpoints: ["orders.refund"], data: "recorded" });
+
+    expect(toDeclarations([partial])).toEqual([
+      {
+        key: "api",
+        source: "api",
+        port: null,
+        seedCount: 20,
+        autoStart: true,
+        endpoints: ["orders.refund"],
+        fixtures: "./fixtures/api.har",
+      },
+    ]);
+  });
+
+  it("sends neither while the mock answers every endpoint with generated data", () => {
+    const [declaration] = toDeclarations([draft({ endpoints: ["orders.refund"] })]) ?? [];
+
+    expect(declaration).not.toHaveProperty("endpoints");
+    expect(declaration).not.toHaveProperty("fixtures");
+  });
+
+  it("asks for an endpoint while none is picked", () => {
+    expect(validateDrafts([draft({ answers: "some" })], PROJECT).get(0)).toEqual({
+      endpoints: "pick at least one endpoint, or let the mock answer every one",
+    });
   });
 });

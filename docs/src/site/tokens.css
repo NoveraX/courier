@@ -38,6 +38,12 @@
   --color-code-punctuation: #878d97;
   --color-code-plain: #e6e8eb;
 
+  /* The API reference colours an HTTP method, or an export's kind, by these. */
+  --color-verb-get: #5ed3a3;
+  --color-verb-post: #e8b573;
+  --color-verb-put: #8fb6f5;
+  --color-verb-del: #f0806a;
+
   --text-micro: 10.5px;
   --text-meta: 11.5px;
   --text-label: 12px;
@@ -128,6 +134,10 @@
   --color-code-comment: #6a7079;
   --color-code-punctuation: #5e646d;
   --color-code-plain: #1e2227;
+  --color-verb-get: #0f7a55;
+  --color-verb-post: #a3500a;
+  --color-verb-put: #2f56a8;
+  --color-verb-del: #c0392b;
   --site-dot: rgb(12 13 15 / 0.06);
   --site-header: rgb(251 251 250 / 0.8);
   --site-scrim: rgb(24 26 32 / 0.28);

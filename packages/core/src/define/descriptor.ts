@@ -1,4 +1,5 @@
 import type { HttpMethod } from "../http-client/types";
+import { isReadingMethod } from "../utils/helpers";
 import type { SchemaMetadata, Transport } from "../validation";
 import { ENDPOINT_SCHEMA } from "../validation";
 import type { BuilderState } from "./builder";
@@ -92,7 +93,5 @@ export function sealAt(
  */
 export function kindFor(head: EndpointKind, method: HttpMethod): EndpointKind {
   if (head !== "query" && head !== "mutation") return head;
-  return READING_METHODS.has(method) ? "query" : "mutation";
+  return isReadingMethod(method) ? "query" : "mutation";
 }
-
-const READING_METHODS: ReadonlySet<HttpMethod> = new Set<HttpMethod>(["get", "head", "options"]);

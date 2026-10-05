@@ -1,6 +1,6 @@
 import type { TerminalStyle } from "../terminal/terminal-style";
 
-const METHOD = /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS) /;
+const METHOD = /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|QUERY) /;
 const OUTCOME = / → (\d{3}|ERROR) \((\d+ms)\)$/;
 
 /* The status colours Studio uses: success, redirect, client error, server error. */

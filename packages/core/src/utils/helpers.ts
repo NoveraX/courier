@@ -52,6 +52,25 @@ export function toInternalMethod(method: string): string {
   return lower === "delete" ? "del" : lower;
 }
 
+const READING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "QUERY"]);
+
+/**
+ * Whether a verb only reads what it addresses, so a call made with it may be
+ * sent again and its answer kept: GET, HEAD, OPTIONS, and QUERY, which asks
+ * its question in a body.
+ *
+ * @param method - The verb, as HTTP spells it or as the client does (`"del"`)
+ * @returns Whether it reads
+ * @example
+ * ```ts
+ * isReadingMethod("query"); // → true
+ * isReadingMethod("POST"); // → false
+ * ```
+ */
+export function isReadingMethod(method: string): boolean {
+  return READING_METHODS.has(normalizeHttpMethod(method));
+}
+
 export const isHeaders = (variables: unknown): variables is Headers =>
   typeof Headers !== "undefined" && variables instanceof Headers;
 

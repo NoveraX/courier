@@ -146,6 +146,7 @@ export class HttpClient {
       del: bindMethod(deps, "del", options, groupOptions),
       head: bindMethod(deps, "head", options, groupOptions),
       options: bindMethod(deps, "options", options, groupOptions),
+      query: bindMethod(deps, "query", options, groupOptions),
     };
   }
 }

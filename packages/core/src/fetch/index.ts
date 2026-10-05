@@ -89,7 +89,7 @@ async function request<TResponse>(
  * Create a lightweight fetch client with baseURL, default headers, and JSON handling.
  *
  * @param defaults - Default options applied to every request
- * @returns Fetch client with `get`, `post`, `put`, `patch`, `del`, `head` methods
+ * @returns Fetch client with `get`, `post`, `put`, `patch`, `del`, `head` and `query` methods
  *
  * @example
  * ```ts
@@ -106,5 +106,6 @@ export function createFetch(defaults: FetchClientOptions = {}): FetchClient {
     patch: (url, options) => request("patch", url, defaults, options),
     del: (url, options) => request("del", url, defaults, options),
     head: (url, options) => request("head", url, defaults, options),
+    query: (url, options) => request("query", url, defaults, options),
   };
 }

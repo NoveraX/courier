@@ -29,6 +29,8 @@ export interface HttpWire {
   del(path?: string, variables?: unknown, options?: MethodOptions<"del">): WireCall;
   head(path?: string, options?: MethodOptions<"head">): WireCall;
   options(path?: string, variables?: unknown, options?: MethodOptions<"options">): WireCall;
+  /** Ask with a body, as a read: the variables are the question. */
+  query(path?: string, body?: unknown, options?: MethodOptions<"query">): WireCall;
 }
 
 /** Wire surface offered to a server-sent-events endpoint's closure. */
@@ -93,6 +95,7 @@ const WIRE_METHODS: ReadonlySet<string> = new Set<WireMethod>([
   "del",
   "head",
   "options",
+  "query",
   "connect",
 ]);
 

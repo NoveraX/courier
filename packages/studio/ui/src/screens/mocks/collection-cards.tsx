@@ -26,7 +26,9 @@ export function CollectionCards({
         <>
           <div className="flex-1" />
           <Link
-            to="/mocks/store"
+            from="/next/mocks"
+            to="/next/mocks/store"
+            search={(prev) => ({ req: prev.req, tab: prev.tab })}
             className="flex h-6.5 items-center rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg"
           >
             Open store →
@@ -43,7 +45,9 @@ export function CollectionCards({
         {collections.map((collection) => (
           <Link
             key={collection.name}
-            to="/mocks/store"
+            from="/next/mocks"
+            to="/next/mocks/store"
+            search={(prev) => ({ req: prev.req, tab: prev.tab, collection: collection.name })}
             className="flex items-center gap-2.5 rounded-panel border border-line bg-inset px-3 py-2.5 hover:border-line-strong"
           >
             <Table2 aria-hidden="true" className="size-3.5 text-syntax-type" />

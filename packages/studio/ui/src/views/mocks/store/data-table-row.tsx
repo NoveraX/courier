@@ -6,8 +6,8 @@
  */
 
 import { Checkbox } from "@/components/ui/checkbox";
+import type { FieldType, SortDir } from "@/features/mocks/data-table-utils";
 import { ColumnHeader, FrozenCells } from "./data-table-columns";
-import type { FieldType, SortDir } from "./data-table-utils";
 import { EditableCell } from "./editable-cell";
 
 interface DataTableHeaderProps {

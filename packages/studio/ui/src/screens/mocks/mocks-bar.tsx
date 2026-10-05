@@ -11,7 +11,7 @@ import { ServerPill } from "./server-pill";
 const TABS = [
   { to: "/next/mocks", label: "Dashboard", icon: LayoutDashboard },
   { to: "/next/mocks/routes", label: "Routes", icon: Globe },
-  { to: "/mocks/store", label: "Store", icon: Database },
+  { to: "/next/mocks/store", label: "Store", icon: Database },
   { to: "/mocks/scenarios", label: "Scenarios", icon: Network },
   { to: "/mocks/network", label: "Network", icon: Zap },
   { to: "/mocks/logs", label: "Logs", icon: Activity },

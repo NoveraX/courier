@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import type { MockCommand } from "../shared/send-mock-command";
-import { sendMockCommand } from "../shared/send-mock-command";
+import type { MockCommand } from "./send-mock-command";
+import { sendMockCommand } from "./send-mock-command";
 
 interface StoreCrudActions {
   activeCollection: string | null;
@@ -16,7 +16,8 @@ interface StoreCrudActions {
   deleteRecords: (serverId: string, collection: string, ids: string[]) => void;
   seedCollection: (serverId: string, collection: string, count: number) => void;
   clearCollection: (serverId: string, collection: string) => void;
-  seedAll: (serverId: string, count: number) => void;
+  /** Seed every collection again: `count` records each, or as many as the mock declares. */
+  seedAll: (serverId: string, count?: number) => void;
 }
 
 /**
@@ -64,8 +65,13 @@ export function useStoreCrud(): StoreCrudActions {
       ),
     seedAll: (serverId, count) =>
       void run(
-        { action: "mock:store:seed", serverId, collection: "*", count },
-        `Re-seeded all (${count})`,
+        {
+          action: "mock:store:seed",
+          serverId,
+          collection: "*",
+          ...(count !== undefined && { count }),
+        },
+        count === undefined ? "Re-seeded every collection" : `Re-seeded all (${count})`,
         "Could not re-seed the store",
       ),
   };

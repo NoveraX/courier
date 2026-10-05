@@ -3,6 +3,7 @@
  */
 
 import { diffSpecs, generateCode, parseSpec } from "../apis";
+import { resolveBaseURL } from "../apis/resolve-base-url";
 import { fetchSpec } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
 import { withImportExtension } from "./generated-import-extension";
@@ -58,7 +59,8 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
         allowlist,
         projectRootAt(deps.projectRoot),
       );
-      const spec = parseSpec(raw);
+      const parsed = parseSpec(raw);
+      const spec = body.source === "url" ? resolveBaseURL(parsed, body.content) : parsed;
       refuseUnsendable(spec);
       res.json(spec);
     } catch (err) {

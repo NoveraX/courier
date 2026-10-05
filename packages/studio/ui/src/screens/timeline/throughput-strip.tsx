@@ -1,5 +1,6 @@
 import { durationTone } from "@/features/requests/duration-tone";
 import { liveKpis, throughputBars } from "@/features/requests/throughput";
+import { shownNow } from "@/features/sessions/shown-now";
 import { useNow } from "@/hooks/use-tick";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,7 @@ const DURATION_TEXT = { normal: "text-fg", warn: "text-warn", err: "text-err" } 
 /**
  * The last minute over the Timeline: a bar a second — what failed on top —
  * and the requests a minute, the p95, the error rate and the streams open.
+ * A saved session's last minute is the minute before it ended.
  *
  * @returns The strip
  * @example
@@ -18,8 +20,10 @@ const DURATION_TEXT = { normal: "text-fg", warn: "text-warn", err: "text-err" } 
  * ```
  */
 export function ThroughputStrip(): React.ReactNode {
-  const now = useNow();
+  const clock = useNow();
   const requests = useStudioStore((s) => s.requests);
+  const saved = useStudioStore((s) => s.shownSession !== null);
+  const now = shownNow(requests, clock, saved);
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const bars = throughputBars(requests, now);
   const kpis = liveKpis(requests, now);
@@ -69,7 +73,7 @@ export function ThroughputStrip(): React.ReactNode {
         <div className="flex justify-between font-mono text-micro text-fg-subtle">
           <span>−60s</span>
           <span>−30s</span>
-          <span>now</span>
+          <span>{saved ? "end" : "now"}</span>
         </div>
       </div>
       <dl className="m-0 flex gap-5.5 pb-4">

@@ -161,3 +161,23 @@ describe("the Timeline", () => {
     expect(toast.success).toHaveBeenCalledWith("Cleared · pinned kept");
   });
 });
+
+describe("the Timeline's last minute", () => {
+  it("is the last minute of a saved session while one shows, not the minute before now", async () => {
+    const ended = NOW - 3_600_000;
+    useStudioStore.setState({
+      shownSession: { id: "s1", name: "checkout" },
+      requests: [
+        requestEntry({ id: "a", startedAt: ended - 1_000 }),
+        requestEntry({ id: "b", startedAt: ended - 20_000 }),
+        requestEntry({ id: "c", startedAt: ended - 90_000 }),
+      ],
+    });
+
+    await openShell("/next/timeline");
+
+    const perMinute = screen.getByText("Req / min").nextElementSibling;
+    expect(perMinute?.textContent).toBe("2");
+    expect(screen.getByText("end")).toBeTruthy();
+  });
+});

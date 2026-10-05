@@ -20,22 +20,25 @@ function Legend(): React.ReactNode {
 
 interface RequestsChartProps {
   series: RequestSeries;
-  /** How long the window is, ms; it ends now. */
+  /** How long the window is, ms. */
   span: number;
+  /** Whether the window ends where a saved session ended, rather than now. */
+  saved: boolean;
 }
 
 /**
  * Requests over time: thirty bars across the window, each its calls with
- * the failed ones on top, the newest bar — now — in full colour.
+ * the failed ones on top, the newest bar — now, or a saved session's end —
+ * in full colour.
  *
  * @param props - The bars, and the window's length
  * @returns The chart
  * @example
  * ```tsx
- * <RequestsChart series={requestSeries(win)} span={win.span} />
+ * <RequestsChart series={requestSeries(win)} span={win.span} saved={false} />
  * ```
  */
-export function RequestsChart({ series, span }: RequestsChartProps): React.ReactNode {
+export function RequestsChart({ series, span, saved }: RequestsChartProps): React.ReactNode {
   const { bars, max } = series;
   const total = bars.reduce((sum, bar) => sum + bar.ok + bar.failed, 0);
   const failed = bars.reduce((sum, bar) => sum + bar.failed, 0);
@@ -43,7 +46,7 @@ export function RequestsChart({ series, span }: RequestsChartProps): React.React
     <ChartPanel
       title="Requests over time"
       aside={<Legend />}
-      summary={`${total} requests over the last ${formatDuration(span)}, ${failed} of them failed; at most ${max} in one stretch.`}
+      summary={`${total} requests over ${formatDuration(span)}, ${failed} of them failed; at most ${max} in one stretch.`}
     >
       <div className="relative flex h-39 items-end gap-0.75 bg-[repeating-linear-gradient(0deg,var(--color-line)_0_1px,transparent_1px_39px)]">
         {bars.map((bar, i) => (
@@ -75,7 +78,7 @@ export function RequestsChart({ series, span }: RequestsChartProps): React.React
       <div className="mt-2 flex justify-between font-mono text-micro text-fg-subtle">
         <span>−{formatDuration(span)}</span>
         <span>−{formatDuration(span / 2)}</span>
-        <span>now</span>
+        <span>{saved ? "end" : "now"}</span>
       </div>
     </ChartPanel>
   );

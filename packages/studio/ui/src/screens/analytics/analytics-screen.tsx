@@ -104,7 +104,7 @@ export function AnalyticsScreen(): React.ReactNode {
               total={win.done.length}
               successRate={successRate(win.done) ?? 0}
             />
-            <RequestsChart series={model.series} span={win.span} />
+            <RequestsChart series={model.series} span={win.span} saved={model.saved} />
           </div>
           <EndpointsTable
             rows={endpoints}

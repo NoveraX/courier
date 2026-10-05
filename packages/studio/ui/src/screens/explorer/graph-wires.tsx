@@ -1,5 +1,7 @@
+import type { Pulse } from "@/features/explorer/call-pulses";
 import type { GraphEdge } from "@/features/explorer/graph-types";
 import { cn } from "@/lib/utils";
+import { GraphPulses } from "./graph-pulses";
 
 const EDGE_STROKE: Readonly<Record<GraphEdge["tone"], string>> = {
   err: "stroke-err",
@@ -9,24 +11,32 @@ const EDGE_STROKE: Readonly<Record<GraphEdge["tone"], string>> = {
 
 interface GraphWiresProps {
   edges: readonly GraphEdge[];
+  pulses: readonly Pulse[];
+  onPulseDone: (id: string) => void;
   width: number;
   height: number;
 }
 
 /**
  * The curves from every parent to every child on the Explorer's graph —
- * red where a child errs, blue while it is active, dashed and moving while
- * traffic flows, as wide as its calls a minute, faded off the hovered
- * branch — drawn under the nodes, in the graph's own coordinates.
+ * thin, red where a child errs, blue while it is active, faded off the
+ * hovered branch — and the calls running along them, drawn under the
+ * nodes, in the graph's own coordinates.
  *
- * @param props - The curves, and the size of the graph they span
- * @returns The curves
+ * @param props - The curves, the calls running, what one that ran calls, and the graph's size
+ * @returns The curves and the calls
  * @example
  * ```tsx
- * <GraphWires edges={layout.edges} width={layout.width} height={layout.height} />
+ * <GraphWires edges={layout.edges} pulses={pulses} onPulseDone={done} width={layout.width} height={layout.height} />
  * ```
  */
-export function GraphWires({ edges, width, height }: GraphWiresProps): React.ReactNode {
+export function GraphWires({
+  edges,
+  pulses,
+  onPulseDone,
+  width,
+  height,
+}: GraphWiresProps): React.ReactNode {
   return (
     <svg aria-hidden="true" width={width} height={height} className="overflow-visible">
       {edges.map((edge) => (
@@ -34,16 +44,13 @@ export function GraphWires({ edges, width, height }: GraphWiresProps): React.Rea
           key={edge.id}
           d={edge.path}
           fill="none"
-          strokeWidth={edge.width}
+          strokeWidth={1.25}
+          strokeLinecap="round"
           strokeOpacity={edge.opacity}
-          strokeDasharray={edge.moving ? "5 5" : undefined}
-          className={cn(
-            "transition-[stroke-opacity] duration-150",
-            EDGE_STROKE[edge.tone],
-            edge.moving && "animate-dash-flow",
-          )}
+          className={cn("transition-[stroke-opacity] duration-150", EDGE_STROKE[edge.tone])}
         />
       ))}
+      <GraphPulses pulses={pulses} onDone={onPulseDone} />
     </svg>
   );
 }

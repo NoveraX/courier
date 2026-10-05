@@ -17,6 +17,7 @@ import { graphLayoutOf } from "@/features/explorer/graph-layout";
 import { heatmapOf, heatStep } from "@/features/explorer/heatmap-model";
 import { methodLabelOf } from "@/features/explorer/method-label";
 import { metricValue } from "@/features/explorer/metric-value";
+import { nodeFiguresOf } from "@/features/explorer/node-figures";
 import { overviewFigures, topEndpoints } from "@/features/explorer/overview-model";
 import { axisMark, heatCellText, heatTotalText } from "@/screens/explorer/heat-format";
 import type { Catalog, CatalogEndpoint, RequestEntry } from "@/store/types";
@@ -333,5 +334,50 @@ describe("the heatmap's words", () => {
     ]).toEqual(["no calls", "812ms p95", "1 call"]);
     expect([heatTotalText(null, "errors"), heatTotalText(7.66, "errors")]).toEqual(["—", "7.7%"]);
     expect([axisMark(221_000), axisMark(55_000)]).toEqual(["−3m 41s", "−55s"]);
+  });
+});
+
+describe("a call's way across the graph", () => {
+  const options = {
+    metric: "latency",
+    slowMs: 500,
+    query: "",
+    hover: undefined,
+    selected: undefined,
+  } as const;
+
+  it("runs from its source's card into its group's, and on out of it to its endpoint's", () => {
+    const layout = graphLayoutOf(model, options);
+    const centre = (id: string) => {
+      const n = layout.nodes.find((node) => node.id === id);
+      if (!n) throw new Error(`no node ${id}`);
+      return { left: n.x, right: n.x + n.width, y: n.y + n.height / 2, width: n.width };
+    };
+    const [source, group, end] = ["s:api", "g:api.orders", "e:api.orders.create"].map(centre);
+    const branch = layout.branches.get("api.orders.create");
+
+    expect(branch?.path.startsWith(`M${source?.right} ${source?.y} `)).toBe(true);
+    expect(branch?.path).toContain(` M${group?.right} ${group?.y} `);
+    expect(branch?.path.endsWith(` ${end?.left} ${end?.y}`)).toBe(true);
+    expect(branch?.length).toBeLessThan((end?.left ?? 0) - (source?.right ?? 0));
+    expect([...layout.branches.keys()].sort()).toEqual(model.endpoints.map((e) => e.key).sort());
+  });
+});
+
+describe("a graph node's figures on hover", () => {
+  it("give its calls a minute, its median and p95, and the share that failed", () => {
+    const m = metricsOf(
+      [call("orders", "create"), call("orders", "create", { status: "error" })],
+      NOW,
+      NOW - 60_000,
+    );
+
+    expect(nodeFiguresOf(m, 500).map((f) => [f.label, f.tone])).toEqual([
+      ["Calls", "normal"],
+      ["p50", "ok"],
+      ["p95", "ok"],
+      ["Errors", "err"],
+    ]);
+    expect(nodeFiguresOf(metricsOf([], NOW, NOW), 500)).toEqual([]);
   });
 });

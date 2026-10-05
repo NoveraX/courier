@@ -12,6 +12,7 @@ import { useStudioStore } from "@/store";
 import { ExplorerEmpty } from "./explorer-empty";
 import { ExplorerSkeleton } from "./explorer-skeleton";
 import { GraphFlow } from "./graph-flow";
+import { useCallPulses } from "./use-call-pulses";
 import { useExplorerModel } from "./use-explorer-model";
 import { useExplorerSearch } from "./use-explorer-search";
 
@@ -30,8 +31,10 @@ function Legend(): React.ReactNode {
         </li>
       ))}
       <li className="flex items-center gap-1.5 text-label whitespace-nowrap text-fg-muted">
-        <span className="h-0 w-4.5 border-t-2 border-dashed border-brand" />
-        Live traffic
+        <span className="relative h-px w-4.5 bg-gradient-to-r from-transparent to-brand">
+          <span className="absolute top-1/2 right-0 size-1.5 -translate-y-1/2 rounded-full bg-brand shadow-[0_0_6px_var(--color-brand)]" />
+        </span>
+        Live call
       </li>
     </ul>
   );
@@ -40,9 +43,10 @@ function Legend(): React.ReactNode {
 /**
  * The Explorer's graph: every source, its groups and their endpoints, each
  * coloured by its health and showing the metric chosen, on a canvas that
- * pans and zooms. A search lights the endpoints that match; hovering lights
- * a node's branch; a source or a group opens the Endpoints list narrowed to
- * it, an endpoint its panel.
+ * pans and zooms, with each call running along its endpoint's branch as it
+ * ends. A search lights the endpoints that match; hovering lights a node's
+ * branch and shows its figures; a source or a group opens the Endpoints
+ * list narrowed to it, an endpoint its panel.
  *
  * @returns The Graph tab
  * @example
@@ -60,6 +64,7 @@ export function GraphScreen(): React.ReactNode {
     () => graphLayoutOf(model, { metric, slowMs, query: q, hover, selected: endpoint }),
     [model, metric, slowMs, q, hover, endpoint],
   );
+  const { pulses, done } = useCallPulses(layout.branches, slowMs);
   if (!model.endpoints.length) {
     return loading.sources ? <ExplorerSkeleton view="graph" /> : <ExplorerEmpty />;
   }
@@ -80,7 +85,12 @@ export function GraphScreen(): React.ReactNode {
         <div className="flex-1" />
         <Legend />
       </div>
-      <GraphFlow layout={layout} onHover={setHover} onOpen={open} />
+      <GraphFlow
+        layout={layout}
+        calls={{ pulses, onPulseDone: done }}
+        onHover={setHover}
+        onOpen={open}
+      />
     </div>
   );
 }

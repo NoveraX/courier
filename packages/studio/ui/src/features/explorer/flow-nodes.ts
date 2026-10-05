@@ -1,5 +1,6 @@
 import type { Node } from "@xyflow/react";
 
+import type { Pulse } from "./call-pulses";
 import type { GraphEdge, GraphLayout, GraphNode } from "./graph-types";
 
 /** What hovering and opening a card on the graph do. */
@@ -18,14 +19,25 @@ export type CardNode = Node<CardData, "card">;
 /** A column's heading. */
 export type HeadingNode = Node<{ label: string }, "heading">;
 /** The curves under every card. */
-export type WiresNode = Node<
-  { edges: readonly GraphEdge[]; width: number; height: number },
-  "wires"
->;
+/** The calls running on the graph, and what one that ran its way calls. */
+export interface RunningCalls {
+  pulses: readonly Pulse[];
+  onPulseDone: (id: string) => void;
+}
+
+export interface WiresData extends RunningCalls, Record<string, unknown> {
+  edges: readonly GraphEdge[];
+  width: number;
+  height: number;
+}
+
+export type WiresNode = Node<WiresData, "wires">;
 /** A node of the graph's flow. */
 export type FlowNode = CardNode | HeadingNode | WiresNode;
 
 const FIXED = { draggable: false, selectable: false, focusable: false } as const;
+
+const NO_CALLS: RunningCalls = { pulses: [], onPulseDone: () => {} };
 
 /**
  * The graph's layout as flow nodes, in the layout's own coordinates: the
@@ -34,18 +46,23 @@ const FIXED = { draggable: false, selectable: false, focusable: false } as const
  *
  * @param layout - The graph's layout
  * @param card - What hovering and opening a card do
+ * @param calls - The calls running along the curves, none unless given
  * @returns The nodes
  * @example
  * ```ts
  * flowNodesOf(layout, { onHover: setHover, onOpen: open }).length; // layout.nodes.length + 4
  * ```
  */
-export function flowNodesOf(layout: GraphLayout, card: CardActions): FlowNode[] {
+export function flowNodesOf(
+  layout: GraphLayout,
+  card: CardActions,
+  calls: RunningCalls = NO_CALLS,
+): FlowNode[] {
   const wires: WiresNode = {
     id: "wires",
     type: "wires",
     position: { x: 0, y: 0 },
-    data: { edges: layout.edges, width: layout.width, height: layout.height },
+    data: { edges: layout.edges, width: layout.width, height: layout.height, ...calls },
     zIndex: 0,
     style: { pointerEvents: "none" },
     ...FIXED,
@@ -68,7 +85,8 @@ export function flowNodesOf(layout: GraphLayout, card: CardActions): FlowNode[] 
       width: node.width,
       height: node.height,
       data: { node, ...card },
-      zIndex: 2,
+      /* The hovered card rises, so its figures show over the cards beside it. */
+      zIndex: node.hovered ? 3 : 2,
       /* The flow lets the pointer through a node it neither drags nor
          selects; the card is a button, hovered and clicked itself. */
       style: { pointerEvents: "all" },

@@ -46,6 +46,13 @@
   --color-syntax-plain: #e6e8eb;
 
   --shadow-overlay: 0 24px 80px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.08);
+  /* A graph node lifts off the canvas: a hairline of light on its top edge, a soft fall below. */
+  --shadow-node:
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.45),
+    0 8px 20px -10px rgb(0 0 0 / 0.7);
+  --shadow-node-lift:
+    inset 0 1px 0 rgb(255 255 255 / 0.06), 0 2px 4px rgb(0 0 0 / 0.5),
+    0 14px 32px -12px rgb(0 0 0 / 0.8);
 
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
@@ -89,7 +96,6 @@
   --animate-pop-in: courier-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-ripple: courier-ripple 2s ease-out infinite;
   --animate-caret: courier-caret 1s step-end infinite;
-  --animate-dash-flow: courier-dash-flow 0.8s linear infinite;
 }
 
 :root[data-theme="light"] {
@@ -133,6 +139,12 @@
   --color-syntax-plain: #1e2227;
 
   --shadow-overlay: 0 24px 70px -16px rgb(24 26 32 / 0.28), 0 0 0 1px rgb(12 13 15 / 0.1);
+  --shadow-node:
+    inset 0 1px 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(24 26 32 / 0.06),
+    0 8px 20px -12px rgb(24 26 32 / 0.18);
+  --shadow-node-lift:
+    inset 0 1px 0 rgb(255 255 255 / 0.9), 0 2px 4px rgb(24 26 32 / 0.08),
+    0 14px 30px -12px rgb(24 26 32 / 0.26);
 }
 
 @keyframes courier-pulse {
@@ -178,18 +190,11 @@
   }
 }
 
-@keyframes courier-dash-flow {
-  to {
-    stroke-dashoffset: -20;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   :root {
     --animate-pulse-live: none;
     --animate-pop-in: none;
     --animate-ripple: none;
     --animate-caret: none;
-    --animate-dash-flow: none;
   }
 }

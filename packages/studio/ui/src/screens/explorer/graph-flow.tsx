@@ -3,7 +3,13 @@ import "@xyflow/react/dist/base.css";
 import type { NodeProps } from "@xyflow/react";
 import { Background, BackgroundVariant, MiniMap, ReactFlow } from "@xyflow/react";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
-import type { CardNode, FlowNode, HeadingNode, WiresNode } from "@/features/explorer/flow-nodes";
+import type {
+  CardNode,
+  FlowNode,
+  HeadingNode,
+  RunningCalls,
+  WiresNode,
+} from "@/features/explorer/flow-nodes";
 import { flowNodesOf } from "@/features/explorer/flow-nodes";
 import type { GraphLayout, GraphNode } from "@/features/explorer/graph-types";
 import { GraphControls } from "./graph-controls";
@@ -22,7 +28,15 @@ function Heading({ data }: NodeProps<HeadingNode>): React.ReactNode {
 }
 
 function Wires({ data }: NodeProps<WiresNode>): React.ReactNode {
-  return <GraphWires edges={data.edges} width={data.width} height={data.height} />;
+  return (
+    <GraphWires
+      edges={data.edges}
+      pulses={data.pulses}
+      onPulseDone={data.onPulseDone}
+      width={data.width}
+      height={data.height}
+    />
+  );
 }
 
 const NODE_TYPES = { card: Card, heading: Heading, wires: Wires };
@@ -41,6 +55,8 @@ function minimapFill(node: FlowNode): string {
 
 interface GraphFlowProps {
   layout: GraphLayout;
+  /** The calls running along the curves. */
+  calls: RunningCalls;
   onHover: (id: string | undefined) => void;
   onOpen: (node: GraphNode) => void;
 }
@@ -49,17 +65,18 @@ interface GraphFlowProps {
  * The graph on a dotted ground that pans and zooms — dragged, scrolled with
  * a trackpad, pinched, or from the controls, which also fit it back in view
  * — with a minimap once it holds more than a screenful: column headings
- * over sources, groups and endpoints, the curves between them, a card a node.
+ * over sources, groups and endpoints, the curves between them with the
+ * calls running along them, a card a node.
  *
- * @param props - The layout, and what hovering and opening a node do
+ * @param props - The layout, the calls running, and what hovering and opening a node do
  * @returns The canvas
  * @example
  * ```tsx
  * <GraphFlow layout={layout} onHover={setHover} onOpen={open} />
  * ```
  */
-export function GraphFlow({ layout, onHover, onOpen }: GraphFlowProps): React.ReactNode {
-  const nodes = flowNodesOf(layout, { onHover, onOpen });
+export function GraphFlow({ layout, calls, onHover, onOpen }: GraphFlowProps): React.ReactNode {
+  const nodes = flowNodesOf(layout, { onHover, onOpen }, calls);
   return (
     <section
       aria-label="Endpoint graph"

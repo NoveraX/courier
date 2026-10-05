@@ -1,4 +1,4 @@
-import type { ChaosPreset, FaultWeight, StopCondition } from "@/store/mock-slice";
+import type { ChaosPreset, FaultWeight, MockServerInfo, StopCondition } from "@/store/mock-slice";
 
 /** How much of a mock's traffic fails on purpose: a preset, or a rate and mix of one's own. */
 export type ChaosMode = "stable" | "degraded" | "unstable" | "down" | "custom";
@@ -43,6 +43,24 @@ export const DEFAULT_STOP: StopCondition = {
   p99DurationSecs: 60,
   maxDurationMins: 0,
 };
+
+/**
+ * The thresholds that halt a mock's runs: the ones set on this page, else
+ * the ones the mock holds — declared with it, or set before the page
+ * loaded — else none, switched off.
+ *
+ * @param server - The mock server
+ * @returns Its thresholds
+ * @example
+ * ```ts
+ * stopConditionsOf(server).enabled; // true while auto-halt is on
+ * ```
+ */
+export function stopConditionsOf(
+  server: Pick<MockServerInfo, "stopConditions" | "networkConfig">,
+): StopCondition {
+  return server.stopConditions ?? server.networkConfig?.stopConditions ?? DEFAULT_STOP;
+}
 
 /** The custom rate and mix a form starts from. */
 export const FORM_DEFAULTS: ChaosFormValues = {

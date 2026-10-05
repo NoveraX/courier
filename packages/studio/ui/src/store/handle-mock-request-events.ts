@@ -100,8 +100,8 @@ export function handleNetworkConfig(serverId: string, event: MockEvent): void {
   const cfg = isPlainObject(event.config) ? event.config : undefined;
   const autoHalted = cfg?.autoHalted === true;
 
+  /* A halt ends every run; the mock logs it with its own experiment event, and sends the settings it kept next. */
   if (autoHalted) {
-    // Reset both latency and chaos presets after an auto-halt.
     store.updateServer(serverId, {
       latencyPreset: "none",
       latencyStartedAt: null,
@@ -109,15 +109,6 @@ export function handleNetworkConfig(serverId: string, event: MockEvent): void {
       chaosStartedAt: null,
       networkPreset: "none",
       networkConfig: null,
-    });
-    store.addExperimentEvent({
-      id: `halt_${Date.now().toString(36)}`,
-      serverId,
-      timestamp: Date.now(),
-      type: "auto-halted",
-      mode: "chaos",
-      errorRate: num(cfg?.errorRate),
-      reason: str(cfg?.haltReason, "stop condition met"),
     });
     return;
   }

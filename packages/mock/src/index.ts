@@ -19,6 +19,10 @@ export type {
 export { defineMockServer, defineMocks, isMockServerDefinition } from "./managed";
 // Scenarios
 export { defineScenario } from "./scenario";
+export {
+  ScenarioConfigError,
+  type ScenarioConfigErrorCode,
+} from "./scenario/scenario-record";
 // Errors (used in override handlers)
 export { isMockHttpError, MockHttpError } from "./server/errors";
 

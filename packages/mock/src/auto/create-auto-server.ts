@@ -1,3 +1,4 @@
+import { scenarioRecord } from "../scenario/scenario-record";
 import type { MockServer, MockServerOptions } from "../server/create-mock-server";
 import { createMockServer } from "../server/create-mock-server";
 import { generatedRoutes } from "../server/generated-routes";
@@ -98,7 +99,10 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   const presets = buildPresetScenarios(routes, getStore);
   const groupNames = getSourceGroupNames(config.source);
   const guard = (mock: UntypedMockFn) => checkedMock(routes, groupNames, mock);
-  const allScenarios = withCheckedMock(composeScenarios(presets, config.scenarios), guard);
+  const allScenarios = withCheckedMock(
+    composeScenarios(presets, scenarioRecord(config.scenarios)),
+    guard,
+  );
 
   // reseed closure — storeRef is shared with the getStore getter above
   const reseed = () => {

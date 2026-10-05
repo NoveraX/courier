@@ -19,6 +19,7 @@ import { Hono } from "hono";
 import { createHistory } from "../history";
 import { createNetworkState } from "../network/state";
 import { createMockRegistry } from "../registry";
+import { scenarioRecord } from "../scenario/scenario-record";
 import { createScenarioState } from "../scenario/scenario-state";
 import { createMockStore } from "../store";
 import type { AnyMockScenario } from "../types";
@@ -41,7 +42,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
   const store = createMockStore();
   const history = createHistory(config?.historyLimit);
   const callCounts = new Map<string, number>();
-  const scenariosRecord: Record<string, AnyMockScenario> = { ...config?.scenarios };
+  const scenariosRecord: Record<string, AnyMockScenario> = scenarioRecord(config?.scenarios);
   const networkState = createNetworkState(config?.network);
   const scenario = createScenarioState();
   let activeScenario: string | null = null;

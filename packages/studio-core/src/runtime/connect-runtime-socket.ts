@@ -19,11 +19,13 @@
  */
 
 import { createLogger, getSources } from "@noverax/courier";
+import type { KeptBodies } from "@noverax/courier/internal";
 import type { io as ioFn } from "socket.io-client";
 import type { EventBus } from "../event-bus";
 import type { BufferedAnnouncement } from "./announce-hosting";
 import { buildAnnouncePayload } from "./announce-payload";
 import type { RuntimeKind } from "./attach-runtime-types";
+import { answerBodyRequests } from "./body-responder";
 import { setupPlaygroundResponder } from "./playground-responder";
 import { timersCanUnref } from "./runtime-environment";
 import { keepUnsentEvents } from "./unsent-events";
@@ -56,6 +58,8 @@ interface ConnectInput {
    * has none.
    */
   readToken?: (() => string | undefined) | undefined;
+  /** The bodies this runtime keeps whole, of the requests whose events carry a part. */
+  bodies?: KeptBodies | undefined;
 }
 
 /** Hook that lets `attachRuntime` install the real socket disposer once ready. */
@@ -184,6 +188,7 @@ export async function connectRuntimeSocket(
   // can dispatch `playground:execute` here. The responder reads the live
   // sources registry on every dispatch.
   const disposeResponder = setupPlaygroundResponder(socket, () => getSources() ?? {});
+  if (input.bodies) answerBodyRequests(socket, input.bodies);
 
   handle.setDisposer(() => {
     unsubBus?.();

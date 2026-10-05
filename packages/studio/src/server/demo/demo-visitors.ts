@@ -86,6 +86,9 @@ export function demoVisitors({
         );
       case "mock:managed":
         return verdict(limits.take(pageId, "lifecycle"));
+      case "mock:body":
+      case "request:body":
+        return verdict(limits.take(pageId, "body"));
       default:
         return WRITING_EVENTS.has(event) ? { kind: "refuse", reason: DEMO_SHARED_REFUSAL } : RUN;
     }

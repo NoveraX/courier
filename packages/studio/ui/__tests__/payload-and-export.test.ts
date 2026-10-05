@@ -50,7 +50,7 @@ describe("the Response tab", () => {
 
   it("shows an answer that is not JSON as text, and an error's status", () => {
     const view = responseView(
-      requestEntry({ status: "error", statusCode: 502, rawResponse: "Bad gateway" }),
+      requestEntry({ status: "error", statusCode: 502, data: "Bad gateway" }),
     );
 
     expect(view.text).toBe("Bad gateway");

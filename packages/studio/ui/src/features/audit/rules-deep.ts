@@ -69,12 +69,12 @@ function emptyArrayResponse(requests: RequestEntry[]): AuditItem[] {
   ];
 }
 
-/** Request payload > 100KB. */
+/** Request payload > 100KB: its size whole, when its event carried a part of it. */
 function largeRequestPayload(requests: RequestEntry[]): AuditItem[] {
   const large: { r: RequestEntry; size: number }[] = [];
   for (const r of requests) {
-    if (!r.sentBody) continue;
-    const size = estimateSize(r.sentBody);
+    if (isEmptyBody(r.variables)) continue;
+    const size = r.variablesCutFrom ?? estimateSize(r.variables);
     if (size > 102_400) large.push({ r, size });
   }
   if (large.length === 0) return [];
@@ -114,6 +114,12 @@ function noCompression(requests: RequestEntry[]): AuditItem[] {
       suggestion: "Enable gzip or Brotli compression on the backend server.",
     },
   ];
+}
+
+/* A call that sent no body: no variables, or an empty set of them. */
+function isEmptyBody(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  return typeof value === "object" && Object.keys(value).length === 0;
 }
 
 function estimateSize(value: unknown): number {

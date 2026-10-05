@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createDemoLimits, DEMO_LIMITS, DEMO_WINDOW_MS } from "../../src/server/demo/demo-limits";
+import { demoVisitors } from "../../src/server/demo/demo-visitors";
 
 const AT = 1_000_000;
 
@@ -83,5 +84,22 @@ describe("the demo's counts", () => {
 
     expect(taken.filter((refusal) => refusal === null)).toHaveLength(DEMO_LIMITS.rest.all);
     expect(taken.at(-1)).toContain("from all its visitors");
+  });
+});
+
+describe("a demo visitor's asks for whole bodies", () => {
+  it("are counted, and refused past ten a page in a window", () => {
+    const visitors = demoVisitors({ callsInFlight: () => 0 });
+    const ask = { serverId: "shop", requestId: "r1", part: "response" };
+
+    const decisions = Array.from({ length: 11 }, (_, index) =>
+      visitors.decide("page-1", index % 2 === 0 ? "mock:body" : "request:body", [ask]),
+    );
+
+    expect(decisions.slice(0, 10).every((d) => d.kind === "run")).toBe(true);
+    expect(decisions[10]).toMatchObject({
+      kind: "refuse",
+      reason: expect.stringContaining("whole bodies"),
+    });
   });
 });

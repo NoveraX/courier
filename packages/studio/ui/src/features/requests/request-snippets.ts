@@ -1,6 +1,7 @@
-import { buildCurlSnippet, buildFetchSnippet, safeStringify } from "@/lib/snippets";
+import { buildCurlSnippet, buildFetchSnippet, safeStringify, wholeBodyNote } from "@/lib/snippets";
 import type { RequestEntry } from "@/store/types";
 import { isCredentialHeader } from "./credential-headers";
+import { requestBodyFile } from "./request-body-file";
 import { httpMethodOf } from "./request-parts";
 
 /** The ways a request can be written out: a shell command, browser code, a Courier call. */
@@ -48,7 +49,7 @@ export type SnippetRequest = Pick<
   | "transport"
   | "requestHeaders"
   | "variables"
-  | "sentBody"
+  | "variablesCutFrom"
   | "streamEvents"
 >;
 
@@ -77,6 +78,9 @@ function courierArgs(variables: unknown): string {
 
 function courierCall(r: SnippetRequest): string {
   const path = r.group ? `${r.group}.${r.method}` : r.method;
+  if (r.variablesCutFrom !== undefined) {
+    return `${wholeBodyNote(requestBodyFile(r, "request"))}\nconst data = await caller.${path}(wholeBody);`;
+  }
   const call = `caller.${path}(${courierArgs(r.variables)})`;
   if (r.transport === "sse")
     return `for await (const event of ${call}) {\n  console.log(event.data);\n}`;
@@ -130,7 +134,14 @@ export function requestSnippet(
       ? { code: streamShell(r, url, headers), redacted }
       : { code: streamBrowser(r, url), redacted: false };
   }
-  const input = { url, method: httpMethodOf(r), headers, body: r.sentBody ?? r.variables };
+  const input = {
+    url,
+    method: httpMethodOf(r),
+    headers,
+    ...(r.variablesCutFrom === undefined
+      ? { body: r.variables }
+      : { bodyFile: requestBodyFile(r, "request") }),
+  };
   const code = flavor === "shell" ? buildCurlSnippet(input) : buildFetchSnippet(input);
   return { code, redacted };
 }
@@ -162,7 +173,9 @@ export function requestAsJson(r: RequestEntry): string {
       startedAt: new Date(r.startedAt).toISOString(),
       timing: r.timing,
       variables: r.variables,
+      ...(r.variablesCutFrom !== undefined && { variablesCutFrom: r.variablesCutFrom }),
       response: r.data,
+      ...(r.dataCutFrom !== undefined && { responseCutFrom: r.dataCutFrom }),
       error: r.error,
     },
     null,

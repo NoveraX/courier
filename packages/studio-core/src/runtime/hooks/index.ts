@@ -8,13 +8,13 @@
  * previous slots — `attachRuntime`'s idempotent handle map prevents that
  * scenario, so we don't need any guard inside the wirers.
  *
- * The two-tier split (`wireHooks` + `wireHttpHooks`) is preserved from the
- * pre-6.1.8b shape so the call graph stays familiar across the codebase.
- * Both functions take a `bus` + `sessionId` + (optional) `resolveSourceName`
- * resolver. The resolver lets per-event source-name normalization use the
- * same global registry consumed by the playground responder.
+ * Both take a `bus` + `sessionId` + `resolveSourceName` resolver, which lets
+ * per-event source-name normalization use the same global registry the
+ * playground responder reads; `wireHooks` also takes the bodies the runtime
+ * keeps whole for Studio, of the requests whose events carry a part.
  */
 
+import type { KeptBodies } from "@noverax/courier/internal";
 import type { EventBus } from "../../event-bus";
 import type { HttpVersions } from "../http-versions/http-version";
 import { wireCacheHooks } from "./http-cache";
@@ -31,8 +31,9 @@ export function wireHooks(
   bus: EventBus,
   sessionId: string,
   resolveSourceName: (name: string) => string,
+  bodies: KeptBodies,
 ): void {
-  wireRequestHooks(bus, sessionId, resolveSourceName);
+  wireRequestHooks(bus, sessionId, resolveSourceName, bodies);
   wireMiddlewareHooks(bus, sessionId);
   wireValidationHooks(bus, sessionId);
   wireStreamHooks(bus, sessionId, resolveSourceName);

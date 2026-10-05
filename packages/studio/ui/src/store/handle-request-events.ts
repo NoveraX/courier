@@ -26,6 +26,7 @@ export function requestFromStart(event: EventPayload): RequestEntry {
     method: str(event.method),
     httpMethod: optStr(event.httpMethod),
     variables: event.variables,
+    variablesCutFrom: optNum(event.variablesCutFrom),
     mode: event.mode === "proxy" ? "proxy" : "direct",
     type:
       event.endpointType === "query" || event.endpointType === "mutation"
@@ -50,10 +51,7 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
     proxyTiming: mergeProxyTiming(readProxyTiming(event.proxyTiming), r.proxyTiming),
     size: optNum(event.size),
     data: event.data,
-    rawResponse: optStr(event.rawResponse),
-    validatedResponse: event.validatedResponse,
-    validatedVariables: event.validatedVariables,
-    sentBody: event.sentBody,
+    dataCutFrom: optNum(event.dataCutFrom),
     requestHeaders: readStringRecord(event.requestHeaders),
     headers: readStringRecord(event.headers),
     middlewareHeaders: readStringListRecord(event.middlewareHeaders),
@@ -88,7 +86,7 @@ export function withRequestError(r: RequestEntry, event: EventPayload): RequestE
     proxyTiming: mergeProxyTiming(readProxyTiming(event.proxyTiming), r.proxyTiming),
     size: optNum(event.size) ?? r.size,
     headers: readStringRecord(event.headers) ?? r.headers,
-    data: event.data !== undefined ? event.data : r.data,
+    ...(event.data !== undefined && { data: event.data, dataCutFrom: optNum(event.dataCutFrom) }),
   };
 }
 

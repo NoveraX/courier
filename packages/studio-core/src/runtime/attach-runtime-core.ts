@@ -4,7 +4,7 @@
  */
 
 import { createLogger, getSources } from "@noverax/courier";
-import { studioHooks } from "@noverax/courier/internal";
+import { createKeptBodies, KEPT_BODY_BYTES, studioHooks } from "@noverax/courier/internal";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
 import type { RuntimeHandle } from "./attach-runtime-types";
@@ -20,6 +20,9 @@ import {
 import { createSourceNameResolver } from "./source-resolution";
 
 const log = createLogger("Runtime");
+
+/* The most bytes of whole bodies a page keeps for Studio. */
+const BROWSER_KEPT_BODY_BYTES = 16 * 1024 * 1024;
 
 interface InternalHandle extends RuntimeHandle {
   setDisposer(fn: () => void): void;
@@ -132,12 +135,21 @@ async function attachFresh(
   if (!isProduction) {
     const bus = new EventBus();
     const resolveSourceName = createSourceNameResolver(getSources);
-    wireHooks(bus, runtimeId, resolveSourceName);
+    /* A page keeps less of the app's bodies than a server process does. */
+    const bodies = createKeptBodies(isBrowser ? BROWSER_KEPT_BODY_BYTES : KEPT_BODY_BYTES);
+    wireHooks(bus, runtimeId, resolveSourceName, bodies);
     versions = observeVersions?.();
     wireHttpHooks(bus, runtimeId, resolveSourceName, versions);
 
     const studioUrl = resolveStudioUrl(setup?.studio);
-    const input = { runtimeId, kind: handle.kind, studioUrl, bus, readToken: setup?.readToken };
+    const input = {
+      runtimeId,
+      kind: handle.kind,
+      studioUrl,
+      bus,
+      readToken: setup?.readToken,
+      bodies,
+    };
     connectRuntimeSocket(input, pending, handle).catch((err: unknown) =>
       log.warn("Studio connection failed to start", err),
     );

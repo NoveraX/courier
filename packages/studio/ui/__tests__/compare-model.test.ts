@@ -181,11 +181,9 @@ describe("the address", () => {
 });
 
 describe("what a call diffs as", () => {
-  it("is its response — else its raw text, else its error — and its variables, as indented JSON", () => {
+  it("is its response — a text as it came — else its error, and its variables, as indented JSON", () => {
     expect(responseText(timed("a", 1, { data: { ok: true } }), 2)).toBe('{\n  "ok": true\n}');
-    expect(responseText(timed("b", 1, { data: undefined, rawResponse: "<html>" }), 2)).toBe(
-      "<html>",
-    );
+    expect(responseText(timed("b", 1, { data: "<html>" }), 2)).toBe("<html>");
     expect(
       responseText(
         timed("c", 1, { data: undefined, error: { type: "network", message: "down" } }),

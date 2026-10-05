@@ -2,6 +2,7 @@
  * Session export — HAR format.
  */
 
+import { cutBodyNote } from "./cut-body-note";
 import { statusText } from "./session-export-utils";
 import type { SavedRequest, SavedSession } from "./session-types";
 
@@ -23,14 +24,14 @@ interface HarEntry {
     headers: HarHeader[];
     queryString: HarQueryParam[];
     bodySize: number;
-    postData?: { mimeType: string; text: string };
+    postData?: { mimeType: string; text: string; comment?: string };
   };
   response: {
     status: number;
     statusText: string;
     httpVersion: string;
     headers: HarHeader[];
-    content: { size: number; mimeType: string; text: string };
+    content: { size: number; mimeType: string; text: string; comment?: string };
     bodySize: number;
   };
   timings: { send: number; wait: number; receive: number };
@@ -70,9 +71,17 @@ function requestToHarEntry(req: SavedRequest): HarEntry {
       httpVersion: req.httpVersion ?? UNKNOWN_VERSION,
       headers: headersToHar(req.requestHeaders),
       queryString: [],
-      bodySize: req.variables ? JSON.stringify(req.variables).length : 0,
+      bodySize: req.variablesCutFrom ?? (req.variables ? JSON.stringify(req.variables).length : 0),
       ...(req.variables
-        ? { postData: { mimeType: "application/json", text: JSON.stringify(req.variables) } }
+        ? {
+            postData: {
+              mimeType: "application/json",
+              text: JSON.stringify(req.variables),
+              ...(req.variablesCutFrom !== undefined && {
+                comment: cutBodyNote(req.variablesCutFrom),
+              }),
+            },
+          }
         : {}),
     },
     response: {
@@ -81,9 +90,10 @@ function requestToHarEntry(req: SavedRequest): HarEntry {
       httpVersion: req.httpVersion ?? UNKNOWN_VERSION,
       headers: headersToHar(req.responseHeaders),
       content: {
-        size: req.size ?? 0,
+        size: req.size ?? req.dataCutFrom ?? 0,
         mimeType: "application/json",
         text: req.data ? JSON.stringify(req.data) : "",
+        ...(req.dataCutFrom !== undefined && { comment: cutBodyNote(req.dataCutFrom) }),
       },
       bodySize: req.size ?? 0,
     },

@@ -113,8 +113,8 @@ describe("the sheet of a request with a body too large for its event", () => {
     await settle(() => answer?.(null, { ok: true, data: '[{"id":1}]' }));
 
     expect([event, payload]).toEqual([
-      "mock:command",
-      { action: "mock:request:body", serverId: "api-mock", requestId: "big", part: "response" },
+      "mock:body",
+      { serverId: "api-mock", requestId: "big", part: "response" },
     ]);
     expect(saved.map(({ name }) => name)).toEqual(["orders.list-response.json"]);
     expect(await saved[0]?.blob.text()).toBe('[{"id":1}]');

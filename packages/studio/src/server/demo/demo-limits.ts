@@ -5,7 +5,7 @@
  */
 
 /** What a visitor does that the demo counts. */
-export type DemoAction = "send" | "command" | "lifecycle" | "rest";
+export type DemoAction = "send" | "command" | "lifecycle" | "rest" | "body";
 
 /** How long a count lasts. */
 export const DEMO_WINDOW_MS = 10_000;
@@ -19,6 +19,7 @@ export const DEMO_LIMITS: Readonly<Record<DemoAction, { page: number; all: numbe
   command: { page: 20, all: 60 },
   lifecycle: { page: 5, all: 20 },
   rest: { page: 60, all: 60 },
+  body: { page: 10, all: 30 },
 };
 
 const NAMES: Readonly<Record<DemoAction, string>> = {
@@ -26,6 +27,7 @@ const NAMES: Readonly<Record<DemoAction, string>> = {
   command: "mock commands",
   lifecycle: "mock starts and stops",
   rest: "requests to Studio's API",
+  body: "whole bodies",
 };
 
 const ACTIONS = Object.keys(DEMO_LIMITS).filter(isAction);

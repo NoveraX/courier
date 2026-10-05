@@ -9,6 +9,7 @@ import { getSocket } from "@/socket";
 import { isPlaygroundErrorPayload } from "@/socket/playground-guards";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
+import { replayWhole } from "./replay-whole";
 import { rememberStream } from "./streams-opened-here";
 import { useInspector } from "./use-inspector";
 
@@ -25,7 +26,7 @@ export interface Replay {
 }
 
 /* What a replay sends the runtime: the call as it was made, by the runtime that made it. */
-function callOf(r: RequestEntry, rid: string): Record<string, unknown> {
+function callOf(r: RequestEntry, rid: string, variables: unknown): Record<string, unknown> {
   return {
     rid,
     source: r.source,
@@ -33,7 +34,7 @@ function callOf(r: RequestEntry, rid: string): Record<string, unknown> {
     method: r.method,
     mode: r.mode,
     transport: r.transport ?? "http",
-    variables: r.variables ?? {},
+    variables,
     headers: {},
     runtimeId: r.callerRuntimeId ?? r.sessionId,
   };
@@ -72,8 +73,9 @@ function follow(rid: string, failure: string, onArrive: (requestId: string) => v
 
 /**
  * What replays a request: Studio has the runtime that made it run the same
- * endpoint again — in the same mode, with the same variables, the
- * middleware setting the headers afresh — and opens the new request in the
+ * endpoint again — in the same mode, with the same variables, whole even
+ * when its event carried a part of them, the middleware setting the
+ * headers afresh — and opens the new request in the
  * inspector once it arrives, held while recording pauses, or says why the
  * runtime could not run it. A stream reconnects the same way, and stays
  * open until its server ends it or it is stopped from here. Nothing runs
@@ -96,13 +98,18 @@ export function useReplay(): (r: RequestEntry) => Replay {
       if (sessionShown) {
         return { label, title: "Go back to the live requests to run it again", run: undefined };
       }
-      const run = () => {
+      const name = endpointName(r);
+      const failure = `Could not ${stream ? "reconnect" : "replay"} ${name}`;
+      const send = (variables: unknown) => {
         const rid = crypto.randomUUID();
-        const name = endpointName(r);
-        follow(rid, `Could not ${stream ? "reconnect" : "replay"} ${name}`, open);
+        follow(rid, failure, open);
         if (stream) rememberStream(playgroundRequestId(rid), rid);
-        getSocket().emit("playground:exec", callOf(r, rid));
+        getSocket().emit("playground:exec", callOf(r, rid, variables));
         toast.success(`${stream ? "Reconnecting" : "Replaying"} ${name}`);
+      };
+      const run = () => {
+        if (r.variablesCutFrom === undefined) send(r.variables ?? {});
+        else void replayWhole(r, send, failure);
       };
       return { label, title: titleOf(r, label), run };
     },

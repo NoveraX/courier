@@ -3,6 +3,7 @@ import { requestView, responseView } from "@/features/requests/payload-view";
 import { failureOf } from "@/features/requests/request-failure";
 import type { SnippetFlavor } from "@/features/requests/request-snippets";
 import type { RequestEntry } from "@/store/types";
+import { downloadRequestBody } from "./download-request-body";
 import { FailureTab } from "./tabs/failure-tab";
 import { HeadersTab } from "./tabs/headers-tab";
 import { MessagesTab } from "./tabs/messages-tab";
@@ -56,17 +57,34 @@ export function TabContent({
     }
     case "response":
       return (
-        <PayloadTab view={responseView(request)} mode={payload.mode} onMode={payload.onMode} />
+        <PayloadTab
+          view={responseView(request)}
+          mode={payload.mode}
+          onMode={payload.onMode}
+          onWhole={() => void downloadRequestBody(request, "response")}
+        />
       );
     case "request":
-      return <PayloadTab view={requestView(request)} mode={payload.mode} onMode={payload.onMode} />;
+      return (
+        <PayloadTab
+          view={requestView(request)}
+          mode={payload.mode}
+          onMode={payload.onMode}
+          onWhole={() => void downloadRequestBody(request, "request")}
+        />
+      );
     case "headers":
       return <HeadersTab request={request} />;
     case "timing":
       return <TimingTab request={request} />;
     case "snippets":
       return (
-        <SnippetsTab request={request} flavor={snippets.flavor} onFlavor={snippets.onFlavor} />
+        <SnippetsTab
+          request={request}
+          flavor={snippets.flavor}
+          onFlavor={snippets.onFlavor}
+          onWhole={() => void downloadRequestBody(request, "request")}
+        />
       );
     case "messages":
       return <MessagesTab request={request} />;

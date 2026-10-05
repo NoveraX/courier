@@ -5,16 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { FormBodyField } from "@/features/playground/form-body";
+import { endpointUrl, snippetInput } from "@/features/playground/request-snippet";
+import { readRequestValues } from "@/features/playground/request-values";
 import { copyToClipboard } from "@/lib/clipboard";
 import { buildCurlSnippet, buildFetchSnippet, type SnippetInput } from "@/lib/snippets";
 import { cn } from "@/lib/utils";
 import type { EndpointInfo, SourceInfo } from "@/store/types-ui";
 import { PathDisplay } from "@/views/explorer/shared/path-display";
 import { type BodyKind, BodySection } from "./body-section";
-import type { FormBodyField } from "./form-body";
 import { JsonEditor } from "./json-editor";
-import { endpointUrl, snippetInput } from "./request-snippet";
-import { readRequestValues } from "./request-values";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

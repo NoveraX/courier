@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { readRequestValues } from "../src/views/playground/request-values";
+import { readRequestValues } from "@/features/playground/request-values";
 
 describe("the values a request is sent with", () => {
   it("reads JSON with comments and trailing commas", () => {

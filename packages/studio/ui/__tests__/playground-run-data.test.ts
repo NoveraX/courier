@@ -7,10 +7,9 @@
  */
 import { playgroundRequestId } from "@noverax/courier-studio-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import { subscribeForRunData } from "@/playground/run-data";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types-request";
-import { subscribeForRunData } from "@/views/playground/run-data";
 
 function request(id: string, statusCode: number, total: number): RequestEntry {
   return {

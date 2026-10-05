@@ -13,9 +13,8 @@
  * reducer is the single source of truth for streaming state.
  */
 
+import type { RequestValues } from "@/features/playground/request-values";
 import { getSocket } from "@/socket";
-
-import type { RequestValues } from "./request-values";
 import type { SendPayload } from "./send-http-request";
 
 interface InitiateStreamParams {

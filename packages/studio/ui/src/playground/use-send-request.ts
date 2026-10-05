@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
+import type { RequestValues } from "@/features/playground/request-values";
 import { useStudioStore } from "@/store";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
-
-import { cancelServerStream } from "./playground-utils";
-import type { RequestValues } from "./request-values";
+import { cancelServerStream } from "./cancel-server-stream";
 import { initiateHttpRequest, type SendPayload } from "./send-http-request";
 import { initiateStreamRequest } from "./send-stream-request";
 

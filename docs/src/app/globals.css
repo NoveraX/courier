@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 @import "../site/tokens.css";
 @import "../site/landing/landing.css";
+@import "../site/studio-landing/studio-landing.css";
 
 @custom-variant dark (&:is(.dark *));
 

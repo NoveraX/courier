@@ -78,8 +78,8 @@ export function RouteOverrideRow({
             />
             <SliderRow
               label="Error Rate"
-              value={override.errorRate ?? 0}
-              onChange={(v) => onOverrideChange({ ...override, errorRate: v })}
+              value={Math.round((override.errorRate ?? 0) * 100)}
+              onChange={(v) => onOverrideChange({ ...override, errorRate: v / 100 })}
               max={100}
               step={5}
               unit="%"

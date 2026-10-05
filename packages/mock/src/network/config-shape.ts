@@ -69,7 +69,7 @@ export function mergeOverride(
   return {
     ...global,
     latency: override.latency ?? global.latency,
-    errorRate: override.errorRate !== undefined ? override.errorRate / 100 : global.errorRate,
+    errorRate: override.errorRate ?? global.errorRate,
     faultTypes: override.faultTypes?.length
       ? override.faultTypes.filter(isFaultType)
       : global.faultTypes,

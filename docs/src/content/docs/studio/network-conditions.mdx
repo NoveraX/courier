@@ -69,7 +69,14 @@ A base of 0 adds no delay. **Bandwidth** caps how fast bodies are sent: **Unlimi
 
 ### Per-route overrides
 
-The card lists every route the mock serves, each with a switch. Open a route to give it a **Delay** of its own (0–2000 ms, fixed) and an **Error rate** of its own (0–100%, in steps of 5). Setting either switches the override on. While it is on, the route takes that delay and that rate in place of the global ones, so a route set to 0% answers even while the mock is Down. It keeps the global bandwidth cap and fault mix. **Use the global settings** clears the override and switches it off. The tag on each row sums it up, as `+300ms · 50%`, or `global` for a route with nothing of its own.
+The card lists every route the mock serves, each with a switch. Open a route to give it a **Delay** of its own (0–2000 ms, fixed), an **Error rate** of its own (0–100%, in steps of 5), or both. A setting the route has none of its own for reads `global`, and its slider rests at the global value.
+
+- Setting one switches the override on. The route then takes that setting in place of the global one and keeps the others: a route given only a delay still fails as often as the rest, and a route set to 0% answers even while the mock is Down.
+- The bandwidth cap and the fault mix are always the global ones.
+- The reset beside a setting takes it back to the global one; the last reset switches the override off. **Use the global settings** clears the override and switches it off.
+- Switching on a route with nothing of its own opens it, so you can set something.
+
+The tag on each row sums up what the route sets of its own: `+300ms`, `50%`, `+300ms · 0%`, or `global`.
 
 ### Safety
 

@@ -13,21 +13,23 @@ import { nodeFiguresOf } from "./node-figures";
  * @param e - The endpoint
  * @param centre - Its row's centre
  * @param options - The metric, the threshold, the search, the hovered and the selected node
+ * @param x - Its column, after the deepest groups shown
  * @returns The node
  * @example
  * ```ts
  * endpointNodeOf(endpoint, 76, options).label; // "create"
  * ```
  */
-export function endpointNodeOf(e: EndpointNode, centre: number, options: GraphOptions): GraphNode {
+export function endpointNodeOf(
+  e: EndpointNode,
+  centre: number,
+  options: GraphOptions,
+  x: number = GRAPH.x.endpoint,
+): GraphNode {
   const q = options.query.trim().toLowerCase();
   const id = `e:${e.key}`;
   const matched = !q || e.key.toLowerCase().includes(q);
-  const { height, width, x } = {
-    height: GRAPH.height.endpoint,
-    width: GRAPH.width.endpoint,
-    x: GRAPH.x.endpoint,
-  };
+  const { height, width } = { height: GRAPH.height.endpoint, width: GRAPH.width.endpoint };
   return {
     id,
     kind: "endpoint",
@@ -52,9 +54,11 @@ export function endpointNodeOf(e: EndpointNode, centre: number, options: GraphOp
 }
 
 /**
- * A group's or a source's node, centred between its children.
+ * A group's or a source's node, centred between its children. A group sits
+ * in the column of its depth, its own name on its card, its path in full on
+ * hover; one with anything inside it can be folded, and says so.
  *
- * @param node - The group or source
+ * @param node - The group or source; a group with its fold, when it has anything inside it
  * @param centre - Its centre
  * @param options - The metric, the threshold and the hovered node
  * @returns The node
@@ -64,7 +68,9 @@ export function endpointNodeOf(e: EndpointNode, centre: number, options: GraphOp
  * ```
  */
 export function parentNodeOf(
-  node: { kind: "group"; group: GroupNode } | { kind: "source"; source: SourceNode },
+  node:
+    | { kind: "group"; group: GroupNode; fold?: GraphNode["fold"] }
+    | { kind: "source"; source: SourceNode },
   centre: number,
   options: GraphOptions,
 ): GraphNode {
@@ -75,7 +81,7 @@ export function parentNodeOf(
       ? {
           key: node.group.key,
           label: node.group.name,
-          sub: undefined,
+          sub: node.fold?.folded ? `${node.fold.hidden} endpoints inside` : undefined,
           detail: node.group.key,
           metrics: node.group.metrics,
           level: node.group.level,
@@ -95,7 +101,7 @@ export function parentNodeOf(
     id,
     kind,
     key: base.key,
-    x: GRAPH.x[kind],
+    x: node.kind === "group" ? GRAPH.x.group + node.group.depth * GRAPH.step : GRAPH.x[kind],
     y: centre - height / 2,
     width: GRAPH.width[kind],
     height,
@@ -111,5 +117,6 @@ export function parentNodeOf(
     hovered: options.hover === id,
     detail: base.detail,
     figures: nodeFiguresOf(base.metrics, options.slowMs),
+    ...(node.kind === "group" && node.fold && { fold: node.fold }),
   };
 }

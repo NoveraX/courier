@@ -5,6 +5,7 @@ import { useState } from "react";
 import { POP_MOTION } from "@/design/overlay-motion";
 import type { FilterOption } from "@/features/requests/filter-options";
 import { selectionSummary } from "@/features/requests/filter-options";
+import { selectionState, toggleValues } from "@/features/requests/tree-selection";
 import { cn } from "@/lib/utils";
 import { FilterOptionRow } from "./filter-option-row";
 
@@ -23,7 +24,9 @@ const SEARCH_FROM = 8;
 /**
  * A filter's button and the menu it opens: every value with how many
  * requests choosing it would show, a box to tick, "only" to choose it
- * alone, a search for long lists, and Clear and Done.
+ * alone, a search for long lists, and Clear and Done. A value of a tree —
+ * a group with groups inside it — chooses everything under it, and shows
+ * a mixed box while only some of that is chosen.
  *
  * @param props - The filter's name, icon and values, the ones chosen, and what changes them
  * @returns The button and its menu
@@ -46,8 +49,7 @@ export function FilterMenu({
   const shown = query
     ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
     : options;
-  const toggle = (value: string) =>
-    onChange(chosen.includes(value) ? chosen.filter((v) => v !== value) : [...chosen, value]);
+  const valuesOf = (option: FilterOption) => option.subtree ?? [option.value];
   return (
     <Popover.Root
       open={open}
@@ -124,9 +126,10 @@ export function FilterMenu({
                 key={option.value}
                 option={option}
                 mono={mono}
-                on={chosen.includes(option.value)}
-                onToggle={() => toggle(option.value)}
-                onOnly={() => onChange([option.value])}
+                flat={query !== ""}
+                state={selectionState(chosen, valuesOf(option))}
+                onToggle={() => onChange(toggleValues(chosen, valuesOf(option)))}
+                onOnly={() => onChange([...valuesOf(option)])}
               />
             ))}
             {shown.length === 0 && (

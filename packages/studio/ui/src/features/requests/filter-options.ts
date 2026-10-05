@@ -9,6 +9,12 @@ export interface FilterOption {
   count: number;
   /** The colour swatch shown beside it, by name; none for most filters. */
   swatch?: string | undefined;
+  /** In a tree of values, what the row shows — its own name — beside the label's whole path. */
+  name?: string | undefined;
+  /** In a tree of values, how many levels it sits below the top. */
+  depth?: number | undefined;
+  /** In a tree of values, every value at or under it: choosing the row chooses them all. */
+  subtree?: readonly string[] | undefined;
 }
 
 /** How each filter is named, and whether its values are code. */

@@ -46,7 +46,9 @@ function Legend(): React.ReactNode {
  * pans and zooms, with each call running along its endpoint's branch as it
  * ends. A search lights the endpoints that match; hovering lights a node's
  * branch and shows its figures; a source or a group opens the Endpoints
- * list narrowed to it, an endpoint its panel.
+ * list narrowed to it, an endpoint its panel. Groups inside groups take a
+ * column a level; a group's fold control folds it into one card, the calls
+ * to what it hides running to that card.
  *
  * @returns The Graph tab
  * @example
@@ -60,10 +62,17 @@ export function GraphScreen(): React.ReactNode {
   const { q, metric, endpoint, set } = useExplorerSearch();
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const [hover, setHover] = useState<string | undefined>(undefined);
+  const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
   const layout = useMemo(
-    () => graphLayoutOf(model, { metric, slowMs, query: q, hover, selected: endpoint }),
-    [model, metric, slowMs, q, hover, endpoint],
+    () => graphLayoutOf(model, { metric, slowMs, query: q, hover, selected: endpoint, folded }),
+    [model, metric, slowMs, q, hover, endpoint, folded],
   );
+  const fold = (key: string) =>
+    setFolded((now) => {
+      const next = new Set(now);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
   const { pulses, done } = useCallPulses(layout.branches, slowMs);
   if (!model.endpoints.length) {
     return loading.sources ? <ExplorerSkeleton view="graph" /> : <ExplorerEmpty />;
@@ -90,6 +99,7 @@ export function GraphScreen(): React.ReactNode {
         calls={{ pulses, onPulseDone: done }}
         onHover={setHover}
         onOpen={open}
+        onFold={fold}
       />
     </div>
   );

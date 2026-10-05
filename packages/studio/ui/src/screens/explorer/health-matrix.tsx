@@ -59,7 +59,7 @@ export function HealthMatrix({ model, onGroup }: HealthMatrixProps): React.React
                   )}
                 >
                   <Dot tone={LEVEL_META[group.level].tone} />
-                  {group.name}
+                  {group.path}
                   <span className="font-mono text-meta text-fg-subtle">
                     {group.metrics.calls || ""}
                   </span>

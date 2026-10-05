@@ -1,56 +1,79 @@
-import { Check } from "lucide-react";
+import { Check, Minus } from "lucide-react";
 
 import type { FilterOption } from "@/features/requests/filter-options";
+import type { SelectionState } from "@/features/requests/tree-selection";
 import { cn } from "@/lib/utils";
 import { SwatchDot } from "./swatch-dot";
 
 interface FilterOptionRowProps {
   option: FilterOption;
   mono: boolean;
-  on: boolean;
+  /** Show the value's whole label and no indent, as a search lists it */
+  flat: boolean;
+  state: SelectionState;
   onToggle: () => void;
   onOnly: () => void;
 }
 
+/* How far each level of a tree of values is indented. */
+const INDENT_REM = 0.875;
+
 /**
  * A value in a filter's menu: a box to tick, its colour, its name, "only"
- * to choose it alone, and how many requests choosing it would show.
+ * to choose it alone, and how many requests choosing it would show. A value
+ * of a tree is indented by its depth and shows its own name, its box mixed
+ * while only some of what is under it is chosen.
  *
- * @param props - The value, whether it is chosen, and what chooses it
+ * @param props - The value, how much of it is chosen, and what chooses it
  * @returns The row
  * @example
  * ```tsx
- * <FilterOptionRow option={option} mono={false} on={false} onToggle={toggle} onOnly={only} />
+ * <FilterOptionRow option={option} mono={false} flat={false} state="off" onToggle={toggle} onOnly={only} />
  * ```
  */
 export function FilterOptionRow({
   option,
   mono,
-  on,
+  flat,
+  state,
   onToggle,
   onOnly,
 }: FilterOptionRowProps): React.ReactNode {
+  const marked = state !== "off";
+  const Mark = state === "mixed" ? Minus : Check;
   return (
     <div
       className={cn(
         "group mt-0.5 flex h-8 items-center gap-2.25 rounded-[6px] px-2 hover:bg-raised",
-        on && "bg-brand-tint",
+        state === "on" && "bg-brand-tint",
       )}
     >
-      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.25">
-        <input type="checkbox" checked={on} onChange={onToggle} className="peer sr-only" />
+      <label
+        className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.25"
+        style={flat ? undefined : { paddingLeft: `${(option.depth ?? 0) * INDENT_REM}rem` }}
+        title={option.name && !flat ? option.label : undefined}
+      >
+        <input
+          type="checkbox"
+          checked={state === "on"}
+          ref={(input) => {
+            if (input) input.indeterminate = state === "mixed";
+          }}
+          onChange={onToggle}
+          className="peer sr-only"
+        />
         <span
           aria-hidden="true"
           className={cn(
             "flex size-3.75 shrink-0 items-center justify-center rounded-chip border text-bg transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-brand",
-            on ? "border-brand bg-brand" : "border-line-strong",
+            marked ? "border-brand bg-brand" : "border-line-strong",
           )}
         >
-          <Check className={cn("size-2.5", on ? "opacity-100" : "opacity-0")} />
+          <Mark className={cn("size-2.5", marked ? "opacity-100" : "opacity-0")} />
         </span>
         {option.swatch && <SwatchDot swatch={option.swatch} />}
         <span className={cn("truncate text-control text-fg", mono && "font-mono")}>
-          {option.label}
+          {flat ? option.label : (option.name ?? option.label)}
         </span>
       </label>
       <button

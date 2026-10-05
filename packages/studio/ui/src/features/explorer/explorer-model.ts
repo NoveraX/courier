@@ -5,6 +5,7 @@ import type { EndpointMetrics, HealthLevel } from "./endpoint-metrics";
 import { levelOf, metricsOf } from "./endpoint-metrics";
 import type { NodeContext } from "./endpoint-node";
 import { endpointOf } from "./endpoint-node";
+import { groupOf, groupPaths } from "./group-nodes";
 
 /** An endpoint as the Explorer shows it: its definition, its calls and how it is doing. */
 export interface EndpointNode extends EndpointRef {
@@ -28,8 +29,18 @@ export interface EndpointNode extends EndpointRef {
 export interface GroupNode {
   key: string;
   source: string;
+  /** Its own name: `invoices` of `billing.invoices`. */
   name: string;
+  /** Its path in its source: `billing.invoices`. */
+  path: string;
+  /** How many groups it sits inside: 0 for a group of the source itself. */
+  depth: number;
+  /** The key of the group it sits inside, if it sits inside one. */
+  parent: string | undefined;
+  /** Its own endpoints; the groups inside it hold theirs. */
   endpoints: EndpointNode[];
+  /** Its endpoints and every group's inside it, which its metrics add up. */
+  subtree: EndpointNode[];
   metrics: EndpointMetrics;
   level: HealthLevel;
 }
@@ -37,6 +48,7 @@ export interface GroupNode {
 export interface SourceNode {
   name: string;
   baseURL: string;
+  /** Every group, in tree order: a group before the groups inside it. */
   groups: GroupNode[];
   /** Endpoints outside any group. */
   loose: EndpointNode[];
@@ -68,11 +80,8 @@ function rollUp(
 }
 
 function sourceOf(name: string, entry: Catalog[string], ctx: NodeContext): SourceNode {
-  const groups: GroupNode[] = [];
-  const loose: EndpointNode[] = [];
-  for (const [groupName, group] of Object.entries(entry.groups).sort(([a], [b]) =>
-    a.localeCompare(b),
-  )) {
+  const own = new Map<string, EndpointNode[]>();
+  for (const [groupName, group] of Object.entries(entry.groups)) {
     const endpoints = Object.entries(group.endpoints)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([method, def]) =>
@@ -84,16 +93,10 @@ function sourceOf(name: string, entry: Catalog[string], ctx: NodeContext): Sourc
           ctx,
         ),
       );
-    if (groupName === "") loose.push(...endpoints);
-    else
-      groups.push({
-        key: `${name}.${groupName}`,
-        source: name,
-        name: groupName,
-        endpoints,
-        ...rollUp(endpoints, ctx),
-      });
+    own.set(groupName, endpoints);
   }
+  const loose = own.get("") ?? [];
+  const groups = groupPaths(own.keys()).map((path) => groupOf(name, path, own, ctx, rollUp));
   const endpoints = [...groups.flatMap((g) => g.endpoints), ...loose];
   return { name, baseURL: entry.baseURL, groups, loose, endpoints, ...rollUp(endpoints, ctx) };
 }

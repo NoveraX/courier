@@ -3,10 +3,12 @@ import type { Node } from "@xyflow/react";
 import type { Pulse } from "./call-pulses";
 import type { GraphEdge, GraphLayout, GraphNode } from "./graph-types";
 
-/** What hovering and opening a card on the graph do. */
+/** What hovering, opening and folding a card on the graph do. */
 export interface CardActions {
   onHover: (id: string | undefined) => void;
   onOpen: (node: GraphNode) => void;
+  /** Folds or unfolds a group, by key; a graph without it folds nothing. */
+  onFold?: ((key: string) => void) | undefined;
 }
 
 /** What a card on the graph is handed: its node, and what hovering and opening it do. */

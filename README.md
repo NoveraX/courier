@@ -16,10 +16,10 @@
   </p>
 
   <p>
-    <a href="https://www.npmjs.com/package/@noverax/courier"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier?style=flat-square&label=npm&labelColor=0e1116&color=6d28d9" /></a>
-    <a href="https://github.com/NoveraX/courier/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/NoveraX/courier/ci.yml?branch=master&style=flat-square&label=ci&labelColor=0e1116" /></a>
-    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-6d28d9?style=flat-square&labelColor=0e1116" /></a>
-    <a href="./LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-6d28d9?style=flat-square&labelColor=0e1116" /></a>
+    <a href="https://www.npmjs.com/package/@noverax/courier"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://github.com/NoveraX/courier/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/NoveraX/courier/ci.yml?branch=master&style=flat-square&label=ci&labelColor=08090a" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a" /></a>
+    <a href="./LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>
@@ -741,33 +741,33 @@ See [`@noverax/courier-studio`](./packages/studio) for setup and [How Studio loa
 
 | Package | | |
 | --- | --- | --- |
-| [`@noverax/courier`](./packages/core) | Caller factories, HTTP client, middleware, validation, realtime, testing | [![npm](https://img.shields.io/npm/v/@noverax/courier?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier) |
-| [`@noverax/courier-react`](./packages/react) | `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, `useSubscription`, `useComputedQuery`, `useChannel` | [![npm](https://img.shields.io/npm/v/@noverax/courier-react?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-react) |
-| [`@noverax/courier-next`](./packages/next) | `apiRoute` handler and `createAction` for Server Actions | [![npm](https://img.shields.io/npm/v/@noverax/courier-next?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-next) |
+| [`@noverax/courier`](./packages/core) | Caller factories, HTTP client, middleware, validation, realtime, testing | [![npm](https://img.shields.io/npm/v/@noverax/courier?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier) |
+| [`@noverax/courier-react`](./packages/react) | `useQuery`, `useMutation`, `useSuspenseQuery`, `useInfiniteQuery`, `useSubscription`, `useComputedQuery`, `useChannel` | [![npm](https://img.shields.io/npm/v/@noverax/courier-react?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-react) |
+| [`@noverax/courier-next`](./packages/next) | `apiRoute` handler and `createAction` for Server Actions | [![npm](https://img.shields.io/npm/v/@noverax/courier-next?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-next) |
 
 **Server adapters**
 
 | Package | | |
 | --- | --- | --- |
-| [`@noverax/courier-express`](./packages/express) | Express middleware | [![npm](https://img.shields.io/npm/v/@noverax/courier-express?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-express) |
-| [`@noverax/courier-fastify`](./packages/fastify) | Fastify plugin | [![npm](https://img.shields.io/npm/v/@noverax/courier-fastify?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-fastify) |
-| [`@noverax/courier-hono`](./packages/hono) | Hono handler, Web Standard | [![npm](https://img.shields.io/npm/v/@noverax/courier-hono?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-hono) |
-| [`@noverax/courier-nestjs`](./packages/nestjs) | NestJS middleware | [![npm](https://img.shields.io/npm/v/@noverax/courier-nestjs?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-nestjs) |
-| [`@noverax/courier-nuxt`](./packages/nuxt) | Nuxt, Nitro and h3 event handler | [![npm](https://img.shields.io/npm/v/@noverax/courier-nuxt?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-nuxt) |
-| [`@noverax/courier-astro`](./packages/astro) | Astro API endpoint | [![npm](https://img.shields.io/npm/v/@noverax/courier-astro?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-astro) |
-| [`@noverax/courier-remix`](./packages/remix) | Remix and React Router loaders and actions | [![npm](https://img.shields.io/npm/v/@noverax/courier-remix?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-remix) |
-| [`@noverax/courier-solid`](./packages/solid) | SolidStart adapter and Solid primitives | [![npm](https://img.shields.io/npm/v/@noverax/courier-solid?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-solid) |
-| [`@noverax/courier-sveltekit`](./packages/sveltekit) | SvelteKit endpoint | [![npm](https://img.shields.io/npm/v/@noverax/courier-sveltekit?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-sveltekit) |
-| [`@noverax/courier-server`](./packages/server) | Standalone HTTP, SSE and WebSocket server | [![npm](https://img.shields.io/npm/v/@noverax/courier-server?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-server) |
-| [`@noverax/courier-redis`](./packages/redis) | Redis pub/sub for WebSocket across replicas | [![npm](https://img.shields.io/npm/v/@noverax/courier-redis?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-redis) |
+| [`@noverax/courier-express`](./packages/express) | Express middleware | [![npm](https://img.shields.io/npm/v/@noverax/courier-express?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-express) |
+| [`@noverax/courier-fastify`](./packages/fastify) | Fastify plugin | [![npm](https://img.shields.io/npm/v/@noverax/courier-fastify?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-fastify) |
+| [`@noverax/courier-hono`](./packages/hono) | Hono handler, Web Standard | [![npm](https://img.shields.io/npm/v/@noverax/courier-hono?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-hono) |
+| [`@noverax/courier-nestjs`](./packages/nestjs) | NestJS middleware | [![npm](https://img.shields.io/npm/v/@noverax/courier-nestjs?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-nestjs) |
+| [`@noverax/courier-nuxt`](./packages/nuxt) | Nuxt, Nitro and h3 event handler | [![npm](https://img.shields.io/npm/v/@noverax/courier-nuxt?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-nuxt) |
+| [`@noverax/courier-astro`](./packages/astro) | Astro API endpoint | [![npm](https://img.shields.io/npm/v/@noverax/courier-astro?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-astro) |
+| [`@noverax/courier-remix`](./packages/remix) | Remix and React Router loaders and actions | [![npm](https://img.shields.io/npm/v/@noverax/courier-remix?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-remix) |
+| [`@noverax/courier-solid`](./packages/solid) | SolidStart adapter and Solid primitives | [![npm](https://img.shields.io/npm/v/@noverax/courier-solid?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-solid) |
+| [`@noverax/courier-sveltekit`](./packages/sveltekit) | SvelteKit endpoint | [![npm](https://img.shields.io/npm/v/@noverax/courier-sveltekit?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-sveltekit) |
+| [`@noverax/courier-server`](./packages/server) | Standalone HTTP, SSE and WebSocket server | [![npm](https://img.shields.io/npm/v/@noverax/courier-server?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-server) |
+| [`@noverax/courier-redis`](./packages/redis) | Redis pub/sub for WebSocket across replicas | [![npm](https://img.shields.io/npm/v/@noverax/courier-redis?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-redis) |
 
 **Development**
 
 | Package | | |
 | --- | --- | --- |
-| [`@noverax/courier-studio`](./packages/studio) | Studio — request inspector, playground, OpenAPI import, mock servers | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-studio) |
-| [`@noverax/courier-studio-core`](./packages/studio-core) | Studio runtime — `attachRuntime` for your instrumentation | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio-core?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-studio-core) |
-| [`@noverax/courier-mock`](./packages/mock) | Mock servers, test utilities, contract testing and fixtures | [![npm](https://img.shields.io/npm/v/@noverax/courier-mock?style=flat-square&label=&labelColor=0e1116&color=6d28d9)](https://www.npmjs.com/package/@noverax/courier-mock) |
+| [`@noverax/courier-studio`](./packages/studio) | Studio — request inspector, playground, OpenAPI import, mock servers | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-studio) |
+| [`@noverax/courier-studio-core`](./packages/studio-core) | Studio runtime — `attachRuntime` for your instrumentation | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio-core?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-studio-core) |
+| [`@noverax/courier-mock`](./packages/mock) | Mock servers, test utilities, contract testing and fixtures | [![npm](https://img.shields.io/npm/v/@noverax/courier-mock?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-mock) |
 
 <br />
 

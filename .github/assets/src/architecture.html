@@ -4,22 +4,22 @@
 <meta charset="utf-8">
 <title>Courier — README architecture</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=block">
 <style>
   :root {
-    --ground: #f7f8fa; --dots: rgba(14, 17, 22, .07);
-    --card: #ffffff; --raised: #fbfbfd; --border: #e1e4ea; --hairline: #eceef2;
-    --text: #0e1116; --muted: #5d6877; --faint: #98a1ad;
-    --accent: #6d28d9; --accent-soft: #f1ecfd; --accent-line: #b9a3ef;
-    --fn: #0b6aa2; --str: #0a7a52;
-    --shadow: 0 24px 60px -24px rgba(23, 30, 45, .18), 0 6px 16px -6px rgba(23, 30, 45, .08);
+    --ground: #fbfbfa; --dots: rgba(12, 13, 15, .06);
+    --card: #ffffff; --raised: #f8f8f6; --border: #e2e2df; --hairline: #ececea;
+    --text: #0c0d0f; --muted: #474c54; --faint: #646a73;
+    --accent: #1c63d6; --accent-soft: rgba(28, 99, 214, .08); --accent-line: rgba(28, 99, 214, .45);
+    --fn: #1c63d6; --str: #1d7338;
+    --shadow: 0 24px 60px -24px rgba(24, 26, 32, .18), 0 6px 16px -6px rgba(24, 26, 32, .08);
   }
   :root[data-theme="dark"] {
-    --ground: #08090c; --dots: rgba(230, 234, 240, .05);
-    --card: #0e1116; --raised: #12161c; --border: #1f252e; --hairline: #181d24;
-    --text: #e6eaf0; --muted: #8b95a3; --faint: #59626f;
-    --accent: #a78bfa; --accent-soft: rgba(167, 139, 250, .12); --accent-line: rgba(167, 139, 250, .55);
-    --fn: #7dd3fc; --str: #86efac;
+    --ground: #08090a; --dots: rgba(255, 255, 255, .045);
+    --card: #101114; --raised: #141619; --border: #26272b; --hairline: #18191c;
+    --text: #f7f8f8; --muted: #a8aeb7; --faint: #9096a0;
+    --accent: #7db9ff; --accent-soft: rgba(125, 185, 255, .1); --accent-line: rgba(125, 185, 255, .5);
+    --fn: #7db9ff; --str: #9bd68c;
     --shadow: 0 24px 60px -24px rgba(0, 0, 0, .7), 0 6px 16px -6px rgba(0, 0, 0, .45);
   }
   * { box-sizing: border-box; }
@@ -28,22 +28,22 @@
     position: relative;
     background-image: radial-gradient(var(--dots) 1.1px, transparent 1.2px);
     background-size: 20px 20px;
-    font-family: "IBM Plex Sans", system-ui, sans-serif; color: var(--text);
+    font-family: "Geist", system-ui, sans-serif; color: var(--text);
     -webkit-font-smoothing: antialiased;
   }
-  .label { position: absolute; top: 56px; font: 600 12px/1 "IBM Plex Sans", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .label { position: absolute; top: 56px; font: 600 12px/1 "Geist", sans-serif; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
   .card { position: absolute; background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); padding: 18px 20px; }
-  .card h3 { margin: 0 0 8px; font: 600 16.5px/1.2 "IBM Plex Sans", sans-serif; letter-spacing: -.005em; }
-  .code { font: 400 13.5px/1.5 "JetBrains Mono", monospace; color: var(--text); font-variant-ligatures: none; }
+  .card h3 { margin: 0 0 8px; font: 600 16.5px/1.2 "Geist", sans-serif; letter-spacing: -.005em; }
+  .code { font: 400 13.5px/1.5 "Geist Mono", monospace; color: var(--text); font-variant-ligatures: none; }
   .code .fn { color: var(--fn); } .code .str { color: var(--str); }
-  .note { margin-top: 8px; font: 400 13.5px/1.45 "IBM Plex Sans", sans-serif; color: var(--muted); }
+  .note { margin-top: 8px; font: 400 13.5px/1.45 "Geist", sans-serif; color: var(--muted); }
   .core { background: var(--raised); border-color: var(--accent-line); }
   .brand { display: flex; align-items: center; gap: 10px; }
   .brand svg { width: 26px; height: 22px; }
-  .brand b { font: 600 18px/1 "IBM Plex Sans", sans-serif; letter-spacing: -.01em; }
-  .sub { margin: 8px 0 16px; font: 400 13px/1 "JetBrains Mono", monospace; color: var(--muted); }
+  .brand b { font: 600 18px/1 "Geist", sans-serif; letter-spacing: -.01em; }
+  .sub { margin: 8px 0 16px; font: 400 13px/1 "Geist Mono", monospace; color: var(--muted); }
   .rows { display: grid; gap: 11px; }
-  .row { display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: start; font: 400 14px/1.35 "IBM Plex Sans", sans-serif; }
+  .row { display: grid; grid-template-columns: 16px 1fr; gap: 10px; align-items: start; font: 400 14px/1.35 "Geist", sans-serif; }
   .tick { width: 16px; height: 16px; border-radius: 5px; background: var(--accent-soft); position: relative; top: 1px; }
   .tick::after { content: ""; position: absolute; left: 5px; top: 3px; width: 4px; height: 7px; border: solid var(--accent); border-width: 0 1.6px 1.6px 0; transform: rotate(45deg); }
   .strip { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 24px; align-items: start; }

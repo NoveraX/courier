@@ -19,8 +19,12 @@ Install the adapter for your server framework. Each adapter is a thin wrapper ar
 
 | Framework | Package | Export |
 |-----------|---------|--------|
-| **Next.js** | `@noverax/courier-next` | `apiRoute`, `createAction` |
+| **Next.js** | `@noverax/courier-next` | `apiRoute`, `sseRoute`, `createAction` |
 | **Nuxt / Nitro / h3** | `@noverax/courier-nuxt` | `courierHandler` |
+| **SvelteKit** | `@noverax/courier-sveltekit` | `courierHandler` |
+| **Astro** | `@noverax/courier-astro` | `courierHandler` |
+| **Remix / React Router** | `@noverax/courier-remix` | `courierHandler` |
+| **SolidStart** | `@noverax/courier-solid` | `courierHandler` |
 | **Express** | `@noverax/courier-express` | `courierHandler` |
 | **Hono** | `@noverax/courier-hono` | `courierHandler` |
 | **Fastify** | `@noverax/courier-fastify` | `courierPlugin` |
@@ -30,6 +34,10 @@ Install the adapter for your server framework. Each adapter is a thin wrapper ar
   items={[
     { label: "Next.js", code: "npm install @noverax/courier-next", language: "bash" },
     { label: "Nuxt", code: "npm install @noverax/courier-nuxt", language: "bash" },
+    { label: "SvelteKit", code: "npm install @noverax/courier-sveltekit", language: "bash" },
+    { label: "Astro", code: "npm install @noverax/courier-astro", language: "bash" },
+    { label: "Remix", code: "npm install @noverax/courier-remix", language: "bash" },
+    { label: "SolidStart", code: "npm install @noverax/courier-solid", language: "bash" },
     { label: "Express", code: "npm install @noverax/courier-express", language: "bash" },
     { label: "Hono", code: "npm install @noverax/courier-hono", language: "bash" },
     { label: "Fastify", code: "npm install @noverax/courier-fastify", language: "bash" },

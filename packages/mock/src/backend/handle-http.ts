@@ -1,4 +1,5 @@
 import { pickFault, shouldFail } from "../network/failure";
+import { resolveDelay } from "../network/latency";
 import type { ScenarioMark } from "../scenario/scenario-state";
 import type { MockHistoryEntry, MockRequestContext, NetworkConfig } from "../types";
 import type { HttpCall } from "./http-outcomes";
@@ -9,7 +10,7 @@ import {
   recordOutcome,
   thrownByHandler,
 } from "./http-outcomes";
-import { resolveHandlerDelay, sleep } from "./resolve-delay";
+import { sleep } from "./resolve-delay";
 import type { ResolvedHandler } from "./types";
 
 interface HandleHTTPParams {
@@ -40,7 +41,7 @@ export async function handleHTTP(params: HandleHTTPParams): Promise<unknown> {
   }
   if (!handler) throw missingHandler(call, params.getScenarioState());
 
-  const delay = resolveHandlerDelay(handler, network);
+  const delay = resolveDelay(handler, network);
   if (delay) await sleep(delay);
 
   const ctx: MockRequestContext = {

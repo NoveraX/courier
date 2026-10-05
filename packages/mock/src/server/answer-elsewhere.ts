@@ -1,10 +1,11 @@
 import type { Context as HonoContext } from "hono";
 
 import { sleep } from "../backend/resolve-delay";
+import { resolveDelay } from "../network/latency";
 import type { NetworkConfig } from "../types";
 import type { ElsewhereAnswer } from "./elsewhere";
 import { forwardedHeaders } from "./forwarded-headers";
-import { computeBandwidthDelay, resolveDelay } from "./route-network";
+import { computeBandwidthDelay } from "./route-network";
 import { buildResponse, pushHistory } from "./route-response";
 import type { RouteConfig } from "./route-types";
 

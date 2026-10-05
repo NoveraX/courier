@@ -12,16 +12,16 @@ import { randomUUID } from "node:crypto";
 
 import type { Context as HonoContext } from "hono";
 
+import { sleep } from "../backend/resolve-delay";
 import { pickFault, shouldFail } from "../network/failure";
+import { resolveDelay } from "../network/latency";
 import type { MockRequestContext } from "../types";
 import { answerElsewhere } from "./answer-elsewhere";
 import { answerFault } from "./fault-response";
-import { computeBandwidthDelay, resolveDelay, resolveNetConfig } from "./route-network";
+import { computeBandwidthDelay, resolveNetConfig } from "./route-network";
 import { buildResponse, handlerFailure, pushHistory } from "./route-response";
 import type { RouteConfig } from "./route-types";
 import { handleSSEMock } from "./sse-handler";
-
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /** How a route wants a request answered */
 export interface AnswerOptions {

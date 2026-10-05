@@ -52,7 +52,32 @@ export function findRouteOverride(
 }
 
 /**
+ * The config one route is answered with: the global config, with the
+ * route's enabled override laid over it when it has one.
+ *
+ * @param config - The global config
+ * @param group - The route's group
+ * @param endpoint - The route's endpoint
+ * @returns The route's config
+ * @example
+ * ```ts
+ * routeConfigOf(config, "users", "list").errorRate;
+ * ```
+ */
+export function routeConfigOf(
+  config: NetworkConfig,
+  group: string,
+  endpoint: string,
+): NetworkConfig {
+  const overrides = config.routeOverrides;
+  const override = overrides?.length ? findRouteOverride(overrides, group, endpoint) : undefined;
+  return override ? mergeOverride(config, override) : config;
+}
+
+/**
  * A route override laid over the global config; the override's fields win.
+ * Faults it names replace the global mix, weighted or not, so its own
+ * `faultTypes` are the ones its failures take.
  *
  * @param global - The global config
  * @param override - The route's override
@@ -70,9 +95,9 @@ export function mergeOverride(
     ...global,
     latency: override.latency ?? global.latency,
     errorRate: override.errorRate ?? global.errorRate,
-    faultTypes: override.faultTypes?.length
-      ? override.faultTypes.filter(isFaultType)
-      : global.faultTypes,
+    ...(override.faultTypes?.length
+      ? { faultTypes: override.faultTypes.filter(isFaultType), faultWeights: undefined }
+      : {}),
     // Clear route overrides so we don't recurse
     routeOverrides: undefined,
   };

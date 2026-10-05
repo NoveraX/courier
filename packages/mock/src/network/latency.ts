@@ -1,4 +1,4 @@
-import type { LatencyDistribution, LatencyProfile } from "../types";
+import type { LatencyDistribution, LatencyProfile, NetworkConfig, ResolvedHandler } from "../types";
 
 const LATENCY_PROFILES: Record<string, { min: number; max: number; jitter: number }> = {
   "3g": { min: 300, max: 900, jitter: 150 },
@@ -20,6 +20,34 @@ export function resolveLatency(
   const jitterOffset = (Math.random() - 0.5) * 2 * jitter;
 
   return Math.max(0, Math.round(base + jitterOffset));
+}
+
+/**
+ * How long an answer waits before it is sent: the handler's own delay, else
+ * its own latency, else the network's — a latency drawn in the network's
+ * distribution, uniform unless it names one.
+ *
+ * @param handler - The handler's own delay and latency, if it has them
+ * @param network - The network conditions the answer is made under
+ * @returns The delay in ms, or `undefined` when nothing delays the answer
+ * @example
+ * ```ts
+ * resolveDelay({}, { latency: { min: 100, max: 300 }, distribution: "normal" }); // → about 200
+ * ```
+ */
+export function resolveDelay(
+  handler: Pick<ResolvedHandler, "delayMs" | "latency">,
+  network?: NetworkConfig,
+): number | undefined {
+  const distribution = network?.distribution ?? "uniform";
+  if (handler.delayMs !== undefined) return handler.delayMs;
+  if (handler.latency) return resolveLatency(handler.latency, distribution);
+  if (!network?.latency) return undefined;
+  const { latency } = network;
+  return resolveLatency(
+    typeof latency === "number" ? { min: latency, max: latency } : latency,
+    distribution,
+  );
 }
 
 /** Sample a base value from [min, max] using the given distribution */

@@ -2,13 +2,11 @@
  * Network simulation helpers for the mock route handler.
  *
  * Pure functions that resolve the effective network config (dynamic state
- * takes precedence over static config), compute the delay to apply before
- * the response, and simulate bandwidth throttling based on the serialized
- * response payload size.
+ * takes precedence over static config) and simulate bandwidth throttling
+ * based on the serialized response payload size.
  */
 
-import { resolveLatency } from "../network/latency";
-import type { LatencyDistribution, LatencyProfile, NetworkConfig, ResolvedHandler } from "../types";
+import type { NetworkConfig } from "../types";
 import type { RouteConfig } from "./route-types";
 
 /** Resolve effective NetworkConfig — dynamic state (with per-route) > static config */
@@ -19,31 +17,6 @@ export function resolveNetConfig(
 ): NetworkConfig | undefined {
   if (config.networkState) return config.networkState.getConfig(group, method);
   return config.network;
-}
-
-/** Resolve delay from handler-level or effective network config */
-export function resolveDelay(
-  handler: Pick<ResolvedHandler, "delayMs" | "latency">,
-  network?: NetworkConfig,
-): number | undefined {
-  const distribution = network?.distribution ?? "uniform";
-  return (
-    handler.delayMs ??
-    (handler.latency ? resolveLatency(handler.latency, distribution) : undefined) ??
-    resolveNetworkLatency(network, distribution)
-  );
-}
-
-function resolveNetworkLatency(
-  network: NetworkConfig | undefined,
-  distribution: LatencyDistribution,
-): number | undefined {
-  if (!network?.latency) return undefined;
-  const profile: LatencyProfile =
-    typeof network.latency === "number"
-      ? { min: network.latency, max: network.latency }
-      : network.latency;
-  return resolveLatency(profile, distribution);
 }
 
 /**

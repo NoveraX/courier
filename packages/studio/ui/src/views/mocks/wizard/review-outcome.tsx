@@ -1,6 +1,6 @@
 import { CodeBlock } from "@/components/shared/code-block";
+import type { ApplyState } from "@/features/mocks/wizard/types";
 import { InsertedLinesList } from "./inserted-lines-list";
-import type { ApplyState } from "./types";
 
 type ShownOutcome = Extract<
   ApplyState,

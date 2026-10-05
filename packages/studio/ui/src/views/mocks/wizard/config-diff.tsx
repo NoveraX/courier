@@ -1,6 +1,6 @@
+import { diffStats } from "@/features/mocks/wizard/diff-stats";
+import type { DiffHunk, DiffLine } from "@/features/mocks/wizard/wire-types";
 import { cn } from "@/lib/utils";
-import { diffStats } from "./diff-stats";
-import type { DiffHunk, DiffLine } from "./wire-types";
 
 const MARK: Record<DiffLine["kind"], string> = { context: " ", add: "+", remove: "−" };
 const SPOKEN: Record<DiffLine["kind"], string> = {

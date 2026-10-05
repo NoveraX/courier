@@ -11,13 +11,12 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useSyncExternalStore } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { DeclareClient } from "../src/views/mocks/wizard/declare-client";
+import type { ReadyOutcome } from "../src/features/mocks/wizard/wire-types";
+import type { DeclareClient } from "../src/mocks/wizard/declare-client";
+import type { MockWizardHandle } from "../src/mocks/wizard/use-mock-wizard";
+import type { WizardSession } from "../src/mocks/wizard/wizard-session";
+import { createWizardSession } from "../src/mocks/wizard/wizard-session";
 import { MockWizard } from "../src/views/mocks/wizard/mock-wizard";
-import type { MockWizardHandle } from "../src/views/mocks/wizard/use-mock-wizard";
-import type { ReadyOutcome } from "../src/views/mocks/wizard/wire-types";
-import type { WizardSession } from "../src/views/mocks/wizard/wizard-session";
-import { createWizardSession } from "../src/views/mocks/wizard/wizard-session";
 
 const READY: ReadyOutcome = {
   status: "ready",

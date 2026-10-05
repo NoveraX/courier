@@ -1,7 +1,7 @@
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { Input } from "@/components/ui/input";
-import { fieldDescriptionIds } from "./field-description-ids";
-import type { MockDraft, PortMode } from "./types";
+import { fieldDescriptionIds } from "@/features/mocks/wizard/field-description-ids";
+import type { MockDraft, PortMode } from "@/features/mocks/wizard/types";
 
 const PORT_MODES: { value: PortMode; label: string }[] = [
   { value: "auto", label: "Automatic" },

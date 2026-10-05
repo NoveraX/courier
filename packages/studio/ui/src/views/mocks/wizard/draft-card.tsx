@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { fieldDescriptionIds } from "./field-description-ids";
+import { fieldDescriptionIds } from "@/features/mocks/wizard/field-description-ids";
+import type { DraftErrors, MockDraft } from "@/features/mocks/wizard/types";
 import { FieldRow } from "./field-row";
 import { PortField } from "./port-field";
-import type { DraftErrors, MockDraft } from "./types";
 
 const PORT_HINTS = {
   auto: "Studio assigns one from studio.mockBasePort; it can change after Studio restarts. Choose Fixed to keep one.",

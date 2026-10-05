@@ -1,10 +1,9 @@
 import { Loader2 } from "lucide-react";
-
+import type { SourceAvailability } from "@/features/mocks/wizard/source-availability";
+import type { MockWizardState, WizardMode } from "@/features/mocks/wizard/types";
 import type { ScannedSource } from "@/views/apis/types";
 import { ModeSwitch } from "./mode-switch";
-import type { SourceAvailability } from "./source-availability";
 import { SourceList } from "./source-list";
-import type { MockWizardState, WizardMode } from "./types";
 
 function Unavailable({
   availability,

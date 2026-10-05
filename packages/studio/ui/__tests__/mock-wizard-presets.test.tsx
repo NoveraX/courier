@@ -5,9 +5,8 @@
  */
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-
+import { INITIAL_WIZARD_STATE } from "../src/features/mocks/wizard/wizard-reducer";
 import { ConfigureStep } from "../src/views/mocks/wizard/step-configure";
-import { INITIAL_WIZARD_STATE } from "../src/views/mocks/wizard/wizard-reducer";
 
 function presetLine(name: string): string {
   const html = renderToStaticMarkup(

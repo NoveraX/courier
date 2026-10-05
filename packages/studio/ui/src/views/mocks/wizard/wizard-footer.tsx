@@ -1,8 +1,8 @@
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { reviewCta } from "@/features/mocks/wizard/review-cta";
+import type { MockWizardHandle } from "@/mocks/wizard/use-mock-wizard";
 import { ApplyButton } from "./apply-button";
-import { reviewCta } from "./review-cta";
-import type { MockWizardHandle } from "./use-mock-wizard";
 
 const PRIMARY =
   "h-7 gap-1.5 bg-accent-brand px-3 text-xs font-medium text-white hover:bg-accent-brand/90";

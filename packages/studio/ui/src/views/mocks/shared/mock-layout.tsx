@@ -2,9 +2,10 @@ import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import { Activity, Database, Globe, LayoutDashboard, Network, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMockWizard } from "@/mocks/wizard/use-mock-wizard";
 import { useStudioStore } from "@/store";
 import { useServerCount } from "@/store/mock-slice";
-import { MockWizard, useMockWizard } from "../wizard";
+import { MockWizard } from "../wizard";
 import { MocksFileBanner } from "./mocks-file-banner";
 
 const TABS: Array<{ label: string; path: string; icon: LucideIcon }> = [

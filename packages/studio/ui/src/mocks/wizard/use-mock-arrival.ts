@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
+import type { MockArrival } from "@/features/mocks/wizard/mock-arrival";
+import { ARRIVAL_PATIENCE_MS, mockArrival } from "@/features/mocks/wizard/mock-arrival";
 import { useMockStore } from "@/store/mock-slice";
-import type { MockArrival } from "./mock-arrival";
-import { ARRIVAL_PATIENCE_MS, mockArrival } from "./mock-arrival";
 
 /**
  * Which of the mocks added Studio lists yet, kept current as Studio lists

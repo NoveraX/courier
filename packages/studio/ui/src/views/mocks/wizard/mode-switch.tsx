@@ -1,7 +1,7 @@
 import { Globe, Server } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import type { WizardMode } from "@/features/mocks/wizard/types";
 import { cn } from "@/lib/utils";
-import type { WizardMode } from "./types";
 
 const MODES: { value: WizardMode; label: string; icon: typeof Globe }[] = [
   { value: "sources", label: "From Source", icon: Globe },

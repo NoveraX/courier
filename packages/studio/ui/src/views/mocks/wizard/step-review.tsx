@@ -1,7 +1,7 @@
+import type { MockWizardState } from "@/features/mocks/wizard/types";
 import { ReviewManual } from "./review-manual";
 import { ReviewOutcome } from "./review-outcome";
 import { ReviewReady } from "./review-ready";
-import type { MockWizardState } from "./types";
 
 function Planning(): React.ReactElement {
   return (

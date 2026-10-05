@@ -1,7 +1,8 @@
 import { Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { openMockWizard } from "@/mocks/wizard/open-mock-wizard";
+import { useAddMockBlocked } from "@/mocks/wizard/use-add-mock-blocked";
 import { useActiveServer, useServerCount } from "@/store/mock-slice";
-import { openMockWizard, useAddMockBlocked } from "../wizard";
 import { DashboardGrid } from "./dashboard-grid";
 
 export function MockDashboardView(): React.ReactElement {

@@ -1,5 +1,5 @@
+import type { DraftErrors, MockDraft, MockWizardState } from "@/features/mocks/wizard/types";
 import { DraftCard } from "./draft-card";
-import type { DraftErrors, MockDraft, MockWizardState } from "./types";
 
 interface ConfigureStepProps {
   state: MockWizardState;

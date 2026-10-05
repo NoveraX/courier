@@ -55,9 +55,13 @@ export function MiddlewareScreen(): React.ReactNode {
     overview.stats.map((s, i) => [s.name, lookOf(s.name, i, s.phase)]),
   );
   const view: MiddlewareView = search.view ?? "overview";
-  const go = (next: MiddlewareSearch): void =>
-    void navigate({ search: (prev) => ({ req: prev.req, tab: prev.tab, ...next }), replace: true });
-  const trace = (id: string): void => go({ view: "chain", trace: id });
+  /* Opening a chain or switching the view is a step the browser's Back undoes; picking another call in the chain is not. */
+  const go = (next: MiddlewareSearch, step = false): void =>
+    void navigate({
+      search: (prev) => ({ req: prev.req, tab: prev.tab, ...next }),
+      replace: !step,
+    });
+  const trace = (id: string): void => go({ view: "chain", trace: id }, true);
   const traceMiddleware = (name: string): void => {
     const ran = calls.filter((r) => r.middlewareEntries.some((e) => e.name === name));
     const failed = ran.find((r) =>
@@ -79,7 +83,9 @@ export function MiddlewareScreen(): React.ReactNode {
           label="View"
           options={VIEWS}
           value={view}
-          onChange={(v) => go({ view: v === "chain" ? "chain" : undefined, trace: search.trace })}
+          onChange={(v) =>
+            go({ view: v === "chain" ? "chain" : undefined, trace: search.trace }, true)
+          }
         />
       </header>
       {!chosen && <NoMiddleware />}

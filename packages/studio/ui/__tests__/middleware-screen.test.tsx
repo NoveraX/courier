@@ -95,6 +95,18 @@ describe("the Middleware page", () => {
     expect(screen.getByText("Token refresh failed")).toBeTruthy();
   });
 
+  it("goes back to the overview from a chain it opened, with the browser's Back", async () => {
+    const router = await openShell("/middleware");
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^auth/ })));
+    expect(router.state.location.search).toMatchObject({ view: "chain" });
+
+    await settle(() => router.history.back());
+
+    expect(router.state.location.pathname).toBe("/middleware");
+    expect(router.state.location.search).not.toHaveProperty("view");
+    expect(screen.getByRole("region", { name: "Impact by endpoint" })).toBeTruthy();
+  });
+
   it("opens an endpoint's newest chain from the impact table", async () => {
     const router = await openShell("/middleware");
 

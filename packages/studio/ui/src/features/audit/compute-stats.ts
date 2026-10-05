@@ -107,8 +107,9 @@ function computeOverheads(s: EndpointStats, reqs: RequestEntry[]): void {
       valCount++;
     }
     if (r.proxyTiming) {
-      const proxyOverhead = (r.proxyTiming.clientToProxy ?? 0) + (r.proxyTiming.proxyToClient ?? 0);
-      proxySum += proxyOverhead / total;
+      /* The browser measures the trips to and from the proxy; they lie outside the server's total. */
+      const legs = (r.proxyTiming.clientToProxy ?? 0) + (r.proxyTiming.proxyToClient ?? 0);
+      proxySum += legs / (legs + total);
       proxyCount++;
     }
   }

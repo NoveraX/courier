@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { LoadedCourierConfig } from "../src/server/config-loader";
 import { ConfigLoaderError, loadCourierConfig } from "../src/server/config-loader";
@@ -260,7 +260,7 @@ describe("startConfigWatcher — a load given up that finishes after all", () =>
     expect(applied.map(baseURLOf)).not.toContain("late.example.com");
     expect(baseURLOf(applied.at(-1))).toBe("saved.example.com");
     const reloadsOfConfig = status.emitChange.mock.calls.filter(
-      ([, paths]) => paths.join() === config,
+      ([, paths]) => paths.join() === relative(root, config),
     );
     expect(reloadsOfConfig).toHaveLength(1);
   });

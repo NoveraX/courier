@@ -59,6 +59,7 @@ import {
   isHTTPError,           // Type guard for HTTPError
   createLogger,          // Logger bound to a context — see Logging
   logger,                // Logger that takes the context per call
+  smoothProgress,        // A progress callback that moves a bar smoothly between a transfer's events
 } from "@noverax/courier"
 ```
 

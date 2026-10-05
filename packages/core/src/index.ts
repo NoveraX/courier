@@ -98,6 +98,7 @@ export {
 } from "./realtime/errors";
 export type { CallerWSOptions } from "./realtime/ws/ws-types";
 export { getSources, registerSources } from "./sources";
+export { type SmoothProgressOptions, smoothProgress } from "./utils/smooth-progress";
 export type {
   CacheConfig,
   Transport,

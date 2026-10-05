@@ -5,7 +5,10 @@ import Link from "next/link"
 import { useState } from "react"
 
 import type { BuilderVerb, EntryPoint } from "@/site/content/reference-modules"
+import type { SearchEntry } from "@/site/content/search-index"
 import { PageActions } from "@/site/layout/page-actions"
+import { SearchPalette } from "@/site/layout/search-palette"
+import { useSearchShortcut } from "@/site/layout/use-search-shortcut"
 import { SiteFooter } from "@/site/site-footer"
 import { BuilderTable } from "./builder-table"
 import { EntryPointsTable } from "./entry-points-table"
@@ -21,6 +24,8 @@ const TITLE = "API reference"
 
 interface ReferenceViewProps {
   sections: readonly ReferenceSection[]
+  /** What search finds from here: the exports, then every docs page. */
+  searchable: readonly SearchEntry[]
   entryPoints: readonly EntryPoint[]
   verbs: readonly BuilderVerb[]
   version: string
@@ -36,17 +41,19 @@ function matches(section: ReferenceSection, filter: string): boolean {
  * The API reference: every export the docs describe, filtered from the
  * header, listed beside with the one being read lit, each with its module,
  * signature, fields and example — then the modules to import from and how
- * an endpoint begins.
+ * an endpoint begins. ⌘K, or Search on a phone, searches the exports and
+ * every docs page.
  *
- * @param props - The exports, the modules, the builder's starters, the version and the page as Markdown
+ * @param props - The exports, what search finds, the modules, the builder's starters, the version and the page as Markdown
  * @returns The page
  * @example
  * ```tsx
- * <ReferenceView sections={sections} entryPoints={ENTRY_POINTS} verbs={BUILDER_VERBS} version="0.0.0" markdown={md} />
+ * <ReferenceView sections={sections} searchable={entries} entryPoints={ENTRY_POINTS} verbs={BUILDER_VERBS} version="0.0.0" markdown={md} />
  * ```
  */
 export function ReferenceView({
   sections,
+  searchable,
   entryPoints,
   verbs,
   version,
@@ -54,6 +61,8 @@ export function ReferenceView({
 }: ReferenceViewProps) {
   const [filter, setFilter] = useState("")
   const [listing, setListing] = useState(false)
+  const [searching, setSearching] = useState(false)
+  useSearchShortcut(setSearching)
   const shown = sections.filter((section) => matches(section, filter))
   const listed: ListedExport[] = [
     ...shown.map(({ id, name, kind }) => ({ id, name, kind })),
@@ -68,7 +77,9 @@ export function ReferenceView({
         shown={shown.length}
         total={sections.length}
         onMenu={() => setListing(true)}
+        onSearch={() => setSearching(true)}
       />
+      <SearchPalette entries={searchable} open={searching} onOpenChange={setSearching} />
       <ReferenceDrawer exports={listed} open={listing} onOpenChange={setListing} />
       <div className="mx-auto grid max-w-[1400px] grid-cols-1 gap-11 px-6 min-[1000px]:grid-cols-[220px_minmax(0,1fr)]">
         <ReferenceSidebar exports={listed} active={active} title={TITLE} markdown={markdown} />

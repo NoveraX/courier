@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import type { SearchEntry } from "@/site/content/search-index"
 import { MobileDrawer } from "./mobile-drawer"
 import { ReadingProgress } from "./reading-progress"
 import { SearchPalette } from "./search-palette"
 import { SiteHeader } from "./site-header"
+import { useSearchShortcut } from "./use-search-shortcut"
 
 /**
  * What surrounds every docs page: the reading progress, the header, and
@@ -22,16 +23,7 @@ import { SiteHeader } from "./site-header"
 export function DocsChrome({ label, entries }: { label: string; entries: readonly SearchEntry[] }) {
   const [searching, setSearching] = useState(false)
   const [menu, setMenu] = useState(false)
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault()
-        setSearching(true)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  useSearchShortcut(setSearching)
   return (
     <>
       <ReadingProgress />

@@ -5,9 +5,12 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { playgroundCells } from "@/features/playground/playground-cells";
 import { streamEnd, streamEnding, streamSparkline } from "@/features/requests/stream-activity";
 import { streamMessages, streamStats } from "@/features/requests/stream-summary";
+import { durationOf } from "@/screens/timeline/row-values";
 import type { StreamEventRecord } from "@/store/types";
+import type { PlaygroundHistoryEntry } from "@/store/types-ui";
 import { requestEntry } from "./request-entry-fixture";
 
 const OPENED = 1_000_000;
@@ -118,5 +121,38 @@ describe("an event stream", () => {
 
     expect(streamMessages(long)[0]?.truncated).toBe(true);
     expect(streamMessages(closed)[0]?.truncated).toBe(false);
+  });
+});
+
+describe("a stream that opened since the page's clock last ticked", () => {
+  const behind = OPENED - 4_000;
+
+  it("has been open for no time yet in the Timeline and the inspector", () => {
+    const live = requestEntry({ transport: "sse", startedAt: OPENED, streamStatus: "streaming" });
+    const context = { now: behind, slowMs: 500, timestamps: "relative" as const, wide: true };
+
+    expect(streamEnd(live, behind)).toBe(OPENED);
+    expect(durationOf(live, "streaming", context).text).toBe("live 0µs");
+  });
+
+  it("has been open for no time yet in the Playground", () => {
+    const entry: PlaygroundHistoryEntry = {
+      id: "entry-1",
+      rid: "rid-1",
+      source: "api",
+      group: "live",
+      method: "ticks",
+      variables: "{}",
+      headers: "{}",
+      mode: "direct",
+      timestamp: OPENED,
+      status: "pending",
+      transport: "sse",
+      streamStatus: "streaming",
+    };
+
+    const cells = playgroundCells({ entry, row: undefined, now: behind, slowMs: 500 });
+
+    expect(cells.find((cell) => cell.label === "Open for")?.value).toBe("0µs");
   });
 });

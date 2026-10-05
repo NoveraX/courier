@@ -58,7 +58,8 @@ function largest(value: unknown, depth: number): number {
   if (typeof value === "number") return Number.isNaN(value) ? 0 : value;
   if (typeof value !== "object" || value === null) return 0;
   if (depth >= MAX_DEPTH) return Number.POSITIVE_INFINITY;
+  const items: unknown[] = Object.values(value);
   let found = 0;
-  for (const item of Object.values(value)) found = Math.max(found, largest(item, depth + 1));
+  for (const item of items) found = Math.max(found, largest(item, depth + 1));
   return found;
 }

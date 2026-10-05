@@ -8,6 +8,7 @@ function formatLabel(r: RequestEntry): string {
 }
 
 const N1_WINDOW_MS = 3000;
+const READ_METHODS = new Set(["GET", "HEAD"]);
 const DUPLICATE_WINDOW_MS = 2000;
 const WATERFALL_MIN_CHAIN = 3;
 const WATERFALL_MIN_TOTAL_MS = 2000;
@@ -57,14 +58,21 @@ export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
   return items;
 }
 
-/* The calls to the list's source that start after it ends, within the window. */
+/* A call that reads: not a mutation, and sent with a method that only reads. */
+function isReadCall(r: RequestEntry): boolean {
+  return r.type !== "mutation" && READ_METHODS.has((r.httpMethod ?? "GET").toUpperCase());
+}
+
+/* The reads of the list's source, other than the list itself, that start after it ends, within the window. */
 function followersOf(completed: RequestEntry[], from: number, list: RequestEntry): RequestEntry[] {
   const listEnd = list.startedAt + (list.timing?.total ?? 0);
+  const listKey = buildKey(list);
   const followers: RequestEntry[] = [];
   for (let j = from; j < completed.length; j++) {
     const r = completed[j];
     if (r === undefined || r.startedAt - listEnd > N1_WINDOW_MS) break;
-    if (r.source === list.source && r.startedAt >= listEnd) followers.push(r);
+    if (r.source !== list.source || r.startedAt < listEnd) continue;
+    if (buildKey(r) !== listKey && isReadCall(r)) followers.push(r);
   }
   return followers;
 }

@@ -8,7 +8,13 @@ import { describe, expect, it } from "vitest";
 import { detectNPlusOne } from "@/features/audit/rules-patterns";
 import type { RequestEntry } from "@/store/types";
 
-function request(id: string, method: string, startedAt: number, data?: unknown): RequestEntry {
+function request(
+  id: string,
+  method: string,
+  startedAt: number,
+  data?: unknown,
+  fields: Partial<RequestEntry> = {},
+): RequestEntry {
   return {
     id,
     source: "api",
@@ -24,6 +30,7 @@ function request(id: string, method: string, startedAt: number, data?: unknown):
     sessionId: "app",
     timing: { total: 20, middleware: 0, fetch: 20, validation: 0 },
     data,
+    ...fields,
   };
 }
 
@@ -49,6 +56,31 @@ describe("the N+1 rule", () => {
         request("list", "list", 1_000, [{ id: 1 }, { id: 2 }]),
         request("d1", "byId", 9_000),
         request("d2", "byId", 9_030),
+      ].reverse(),
+    );
+
+    expect(items).toEqual([]);
+  });
+
+  it("does not take the list endpoint's own calls for detail calls", () => {
+    const items = detectNPlusOne(
+      [
+        request("list", "list", 1_000, [{ id: 1 }, { id: 2 }]),
+        request("again", "list", 1_030, [{ id: 1 }, { id: 2 }]),
+        request("more", "list", 1_060, [{ id: 1 }, { id: 2 }]),
+      ].reverse(),
+    );
+
+    expect(items).toEqual([]);
+  });
+
+  it("does not take mutations for detail calls", () => {
+    const write = { type: "mutation", httpMethod: "POST" } as const;
+    const items = detectNPlusOne(
+      [
+        request("list", "list", 1_000, [{ id: 1 }, { id: 2 }]),
+        request("c1", "create", 1_030, undefined, write),
+        request("c2", "create", 1_060, undefined, write),
       ].reverse(),
     );
 

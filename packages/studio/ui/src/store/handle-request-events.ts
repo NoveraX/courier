@@ -98,9 +98,11 @@ function failureStatus(type: string | undefined): RequestStatus {
   return "error";
 }
 
+/* The caller times its own legs, so its timing names the runtime that made the call. */
 export function withProxyClientTiming(r: RequestEntry, event: EventPayload): RequestEntry {
   return {
     ...r,
+    callerRuntimeId: optStr(event.sessionId) ?? r.callerRuntimeId,
     proxyTiming: {
       clientToProxy: num(event.networkLatency),
       proxyToBackend: r.proxyTiming?.proxyToBackend ?? 0,

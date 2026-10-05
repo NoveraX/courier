@@ -164,21 +164,30 @@ describe("a proxied call's route", () => {
     proxyToClient: 3,
   };
 
-  it("goes from the app, through Courier's proxy, to the source, timed either way", () => {
-    const route = proxyRouteOf(requestEntry({ mode: "proxy", proxyTiming }), "browser");
+  const page = { id: "vite-browser", kind: "browser" } as const;
+
+  it("goes from the page that made it, through Courier's proxy, to the source, timed either way", () => {
+    const route = proxyRouteOf(requestEntry({ mode: "proxy", proxyTiming }), page);
 
     expect(route?.nodes.map((n) => n.label)).toEqual(["Browser", "Courier proxy", "api"]);
     expect(route?.legs).toEqual([
       { out: 4, back: 3 },
       { out: 10, back: 80 },
     ]);
-    expect(
-      proxyRouteOf(requestEntry({ mode: "proxy", proxyTiming }), undefined)?.nodes[0].label,
-    ).toBe("Client");
+  });
+
+  it("starts at the process that made it by name, or at a client Studio never heard from", () => {
+    const proxied = requestEntry({ mode: "proxy", proxyTiming });
+
+    expect(proxyRouteOf(proxied, { id: "traffic-script", kind: "server" })?.nodes[0]).toEqual({
+      kind: "app",
+      label: "traffic-script",
+    });
+    expect(proxyRouteOf(proxied, undefined)?.nodes[0]).toEqual({ kind: "client", label: "Client" });
   });
 
   it("is none for a direct call, or one not timed", () => {
-    expect(proxyRouteOf(requestEntry({ mode: "direct", proxyTiming }), "server")).toBeNull();
-    expect(proxyRouteOf(requestEntry({ mode: "proxy" }), "server")).toBeNull();
+    expect(proxyRouteOf(requestEntry({ mode: "direct", proxyTiming }), page)).toBeNull();
+    expect(proxyRouteOf(requestEntry({ mode: "proxy" }), page)).toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { Globe, Laptop, Monitor, Server, Shuffle } from "lucide-react";
+import { Laptop, Monitor, Server, Shuffle, SquareTerminal } from "lucide-react";
 
 import type { RouteNode } from "@/features/requests/middleware-pipeline";
 import { proxyRouteOf } from "@/features/requests/middleware-pipeline";
@@ -8,10 +8,10 @@ import type { RequestEntry } from "@/store/types";
 
 const NODE_ICON = {
   browser: Monitor,
-  server: Server,
+  app: SquareTerminal,
   client: Laptop,
   proxy: Shuffle,
-  source: Globe,
+  source: Server,
 } as const;
 
 /**
@@ -26,10 +26,11 @@ const NODE_ICON = {
  * ```
  */
 export function ProxyRoute({ request }: { request: RequestEntry }): React.ReactNode {
+  const callerId = request.callerRuntimeId;
   const kind = useStudioStore(
-    (s) => s.bindingSnapshot.runtimes.find((r) => r.runtimeId === request.sessionId)?.kind,
+    (s) => s.bindingSnapshot.runtimes.find((r) => r.runtimeId === callerId)?.kind,
   );
-  const route = proxyRouteOf(request, kind);
+  const route = proxyRouteOf(request, callerId === undefined ? undefined : { id: callerId, kind });
   if (!route) return null;
   const [app, proxy, source] = route.nodes;
   const [first, second] = route.legs;

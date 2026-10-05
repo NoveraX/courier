@@ -38,7 +38,8 @@ function operationOf(r: RequestEntry): string {
  */
 export function requestProperties(r: RequestEntry, context: PropertyContext): RequestProperty[] {
   const kind = context.runtimeKind;
-  const runtime = kind && kind !== r.sessionId ? `${r.sessionId} · ${kind}` : r.sessionId;
+  const id = r.callerRuntimeId ?? r.sessionId;
+  const runtime = kind && kind !== id ? `${id} · ${kind}` : id;
   const properties: RequestProperty[] = [
     { label: "Endpoint", value: endpointName(r), mono: true },
     { label: "Request ID", value: r.id, mono: true },

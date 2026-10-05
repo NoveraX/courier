@@ -51,6 +51,8 @@ export interface RequestEntry {
   httpVersion?: HttpVersion | undefined;
   pinned?: boolean | undefined;
   sessionId: string;
+  /** The runtime that made a proxied call — a page, or a process calling the proxy — when it said so. */
+  callerRuntimeId?: string | undefined;
   /** What the cache middleware did: answered from a stored response (`age` ms old), or missed. */
   cache?: { hit: boolean; age?: number } | undefined;
   /** How much of the request's body has been sent, while a caller watches its upload */

@@ -1,0 +1,137 @@
+/*
+ * The landing page's motion and its tones. A tone is set on an element with
+ * `data-tone`; inside it `--tone` is the tone's colour and `--tone-rgb` the
+ * glow it casts — the glows keep the dark theme's colours in both themes.
+ */
+
+@theme {
+  --animate-rise: landing-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-rise-quick: landing-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-drop: landing-drop 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fade: landing-fade 0.2s ease both;
+  --animate-caret: landing-caret 1s steps(1) infinite;
+  --animate-marquee: landing-marquee 44s linear infinite;
+  --animate-marquee-reverse: landing-marquee-reverse 52s linear infinite;
+  --animate-fill: landing-fill 5.2s linear forwards;
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes landing-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes landing-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes landing-caret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  95% {
+    opacity: 0;
+  }
+}
+
+@keyframes landing-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes landing-marquee-reverse {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes landing-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes landing-beam {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+[data-tone="blue"] {
+  --tone: var(--color-tone-blue);
+  --tone-rgb: 125 185 255;
+}
+
+[data-tone="green"] {
+  --tone: var(--color-tone-green);
+  --tone-rgb: 155 214 140;
+}
+
+[data-tone="teal"] {
+  --tone: var(--color-tone-teal);
+  --tone-rgb: 111 211 199;
+}
+
+[data-tone="violet"] {
+  --tone: var(--color-tone-violet);
+  --tone-rgb: 184 161 245;
+}
+
+[data-tone="amber"] {
+  --tone: var(--color-tone-amber);
+  --tone-rgb: 232 181 115;
+}
+
+[data-tone="red"] {
+  --tone: var(--color-tone-red);
+  --tone-rgb: 240 128 106;
+}
+
+[data-tone="ok"] {
+  --tone: var(--color-ok);
+  --tone-rgb: 94 211 163;
+}
+
+/* A beam runs along a path drawn with `pathLength="100"`; a path may set its own pace and delay. */
+.landing-beam {
+  animation: landing-beam 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-beam {
+    animation: none;
+  }
+}

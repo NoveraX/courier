@@ -14,8 +14,21 @@ const OPTIONS: readonly { id: string; label: string; icon: LucideIcon }[] = [
 ]
 
 const SIZE = {
-  header: { group: "h-7.5 p-0.5", option: "size-6", icon: "size-3.25" },
-  drawer: { group: "h-9 p-0.75", option: "size-7.5", icon: "size-3.5" },
+  header: {
+    group: "h-7.5 rounded-full bg-panel p-0.5",
+    option: "size-6 rounded-full",
+    icon: "size-3.25",
+  },
+  drawer: {
+    group: "h-9 rounded-full bg-panel p-0.75",
+    option: "size-7.5 rounded-full",
+    icon: "size-3.5",
+  },
+  menu: {
+    group: "h-11 rounded-[10px] bg-bg-subtle p-1",
+    option: "size-8.5 rounded-[7px]",
+    icon: "size-3.5",
+  },
 } as const
 
 /**
@@ -40,10 +53,7 @@ export function ThemeSwitch({ size }: { size: keyof typeof SIZE }) {
   return (
     <fieldset
       aria-label="Colour theme"
-      className={cn(
-        "m-0 flex items-center gap-0.5 rounded-full border border-line bg-panel",
-        look.group
-      )}
+      className={cn("m-0 flex items-center gap-0.5 border border-line", look.group)}
     >
       {OPTIONS.map(({ id, label, icon: Icon }) => {
         const on = known && theme === id
@@ -52,7 +62,7 @@ export function ThemeSwitch({ size }: { size: keyof typeof SIZE }) {
             key={id}
             title={label}
             className={cn(
-              "grid cursor-pointer place-items-center rounded-full transition-colors hover:text-fg has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brand",
+              "grid cursor-pointer place-items-center transition-colors hover:text-fg has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brand",
               look.option,
               on ? "bg-raised text-fg shadow-panel" : "text-fg-subtle"
             )}

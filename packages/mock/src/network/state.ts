@@ -40,7 +40,7 @@ export interface NetworkState {
 
 export function createNetworkState(initial?: NetworkConfig): NetworkState {
   let config: NetworkConfig | undefined = initial;
-  let startedAt: number | null = initial ? Date.now() : null;
+  let startedAt: number | null = initial && isActive(initial) ? Date.now() : null;
   let latencyPreset = "none";
   let latencyStartedAt: number | null = null;
   let chaosPreset = "none";

@@ -3,9 +3,11 @@ import { Sprout, Table2 } from "lucide-react";
 
 import type { MockStoreSearch } from "@/features/mocks/collection-view";
 import { inspectorOf } from "@/features/requests/inspector-of";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
 import { useStoreCrud } from "@/mocks/use-store-crud";
 import { CollectionTable } from "./collection-table";
+import { MocksSkeleton } from "./mocks-skeleton";
 import { useMockServer } from "./use-mock-server";
 
 /**
@@ -21,10 +23,12 @@ import { useMockServer } from "./use-mock-server";
  */
 export function MockStoreScreen(): React.ReactNode {
   const { server } = useMockServer();
+  const first = useFirstLoad();
+  const loading = first.requests || first.sources;
   const search: MockStoreSearch = useSearch({ from: "/mocks/store" });
   const navigate = useNavigate({ from: "/mocks/store" });
   const crud = useStoreCrud();
-  if (!server) return null;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
   const open =
     server.collections.find((c) => c.name === search.collection) ?? server.collections[0];
   return (

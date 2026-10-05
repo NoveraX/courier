@@ -4,12 +4,14 @@ import type { Choice } from "@/design/choice-menu";
 import { ChoiceMenu } from "@/design/choice-menu";
 import { SearchField } from "@/design/search-field";
 import { Segmented } from "@/design/segmented";
+import { Skeleton } from "@/design/skeleton";
 import type {
   WaterfallGroup,
   WaterfallMode,
   WaterfallSort,
   WaterfallView,
 } from "@/features/waterfall/waterfall-search";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
 
 const SORTS: readonly Choice<WaterfallSort>[] = [
@@ -58,6 +60,7 @@ export interface WaterfallToolbarProps {
  */
 export function WaterfallToolbar(props: WaterfallToolbarProps): React.ReactNode {
   const { view, onView, shown, total, following, onFollow, zoomLabel, onZoom } = props;
+  const loading = useFirstLoad();
   return (
     <div className="flex min-h-12.5 shrink-0 flex-wrap items-center gap-2 border-b border-line py-2.5 pr-4 pl-5">
       <SearchField
@@ -67,9 +70,13 @@ export function WaterfallToolbar(props: WaterfallToolbarProps): React.ReactNode 
         label="Filter endpoints"
         className="max-w-85 flex-[1_1_220px] pr-1"
       >
-        <span className="flex h-5.5 shrink-0 items-center rounded-[5px] bg-raised px-1.75 text-badge whitespace-nowrap text-fg-subtle tabular-nums">
-          <span className="font-semibold text-fg">{shown}</span>&nbsp;/ {total}
-        </span>
+        {loading.requests ? (
+          <Skeleton className="h-5.5 w-12 rounded-[5px]" />
+        ) : (
+          <span className="flex h-5.5 shrink-0 items-center rounded-[5px] bg-raised px-1.75 text-badge whitespace-nowrap text-fg-subtle tabular-nums">
+            <span className="font-semibold text-fg">{shown}</span>&nbsp;/ {total}
+          </span>
+        )}
       </SearchField>
       <ChoiceMenu
         icon={ArrowDownWideNarrow}

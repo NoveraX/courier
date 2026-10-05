@@ -7,11 +7,13 @@ import { Segmented } from "@/design/segmented";
 import { endpointRows, kindCounts } from "@/features/explorer/endpoints-table";
 import type { EndpointKind } from "@/features/explorer/explorer-search";
 import { useElementWidth } from "@/hooks/use-element-width";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useNow } from "@/hooks/use-tick";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { EndpointRow } from "./endpoint-row";
 import { ExplorerEmpty } from "./explorer-empty";
+import { ExplorerSkeleton } from "./explorer-skeleton";
 import { useExplorerModel } from "./use-explorer-model";
 import { useExplorerSearch } from "./use-explorer-search";
 
@@ -49,12 +51,15 @@ const KIND_LABELS: Readonly<Record<EndpointKind, string>> = {
  */
 export function EndpointsScreen(): React.ReactNode {
   const model = useExplorerModel();
+  const loading = useFirstLoad();
   const { q, kind, endpoint, set } = useExplorerSearch();
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const now = useNow();
   const listRef = useRef<HTMLElement>(null);
   const wide = useElementWidth(listRef, 1200) >= WIDE_PX;
-  if (!model.endpoints.length) return <ExplorerEmpty />;
+  if (!model.endpoints.length) {
+    return loading.sources ? <ExplorerSkeleton view="endpoints" /> : <ExplorerEmpty />;
+  }
   const rows = endpointRows(model, q, kind);
   const shown = rows.flatMap((row) => (row.kind === "endpoint" ? [row.endpoint] : []));
   const counts = kindCounts(model);

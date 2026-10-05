@@ -3,10 +3,12 @@ import { LayoutDashboard, Workflow } from "lucide-react";
 
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
+import { Skeleton } from "@/design/skeleton";
 import { endpointImpact } from "@/features/middleware/endpoint-impact";
 import type { MiddlewareSearch, MiddlewareView } from "@/features/middleware/middleware-search";
 import { middlewareOverview, traced } from "@/features/middleware/middleware-stats";
 import { inspectorOf } from "@/features/requests/inspector-of";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useInspector } from "@/inspector/use-inspector";
 import { useStudioStore } from "@/store";
 import { ChainView } from "./chain-view";
@@ -14,6 +16,7 @@ import { ImpactTable } from "./impact-table";
 import { MiddlewareCards } from "./middleware-cards";
 import type { MiddlewareLook } from "./middleware-look";
 import { lookOf } from "./middleware-look";
+import { MiddlewareSkeleton } from "./middleware-skeleton";
 import { OverheadHero } from "./overhead-hero";
 
 const VIEWS: readonly SegmentedOption<MiddlewareView>[] = [
@@ -50,6 +53,7 @@ export function MiddlewareScreen(): React.ReactNode {
   const search: MiddlewareSearch = useSearch({ from: "/middleware" });
   const navigate = useNavigate({ from: "/middleware" });
   const { open } = useInspector();
+  const loading = useFirstLoad();
   const calls = traced(useStudioStore((s) => s.requests));
   const overview = middlewareOverview(calls);
   const looks = new Map<string, MiddlewareLook>(
@@ -77,7 +81,11 @@ export function MiddlewareScreen(): React.ReactNode {
       <header className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Middleware</h1>
-          <span className="text-control text-fg-subtle">{`${overview.stats.length} middleware · ${calls.length} requests traced`}</span>
+          {loading.requests ? (
+            <Skeleton className="my-0.75 h-3 w-56" />
+          ) : (
+            <span className="text-control text-fg-subtle">{`${overview.stats.length} middleware · ${calls.length} requests traced`}</span>
+          )}
         </div>
         <div className="flex-1" />
         <Segmented
@@ -89,7 +97,8 @@ export function MiddlewareScreen(): React.ReactNode {
           }
         />
       </header>
-      {!chosen && <NoMiddleware />}
+      {loading.requests && <MiddlewareSkeleton />}
+      {!loading.requests && !chosen && <NoMiddleware />}
       {chosen && view === "overview" && (
         <>
           <OverheadHero overview={overview} looks={looks} />

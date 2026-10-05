@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useElementWidth } from "@/hooks/use-element-width";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useInspector } from "@/inspector/use-inspector";
 import { InsightStrip } from "./insight-strip";
 import { useWaterfall } from "./use-waterfall";
 import { useWaterfallView } from "./use-waterfall-view";
 import { WaterfallChart } from "./waterfall-chart";
 import { WaterfallLegend } from "./waterfall-legend";
+import { WaterfallSkeleton } from "./waterfall-skeleton";
 import { WaterfallToolbar } from "./waterfall-toolbar";
 
 /* A zoom step multiplies or divides the zoom by this, between 1× and 10×. */
@@ -41,6 +43,7 @@ export function WaterfallScreen(): React.ReactNode {
   const [zoom, setZoom] = useState<number | null>(null);
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());
   const model = useWaterfall({ view, held, zoom, width, closed });
+  const loading = useFirstLoad();
   const zoomTo = useCallback(
     (step: "in" | "out" | "fit") => {
       if (step === "fit") return setZoom(null);
@@ -77,15 +80,21 @@ export function WaterfallScreen(): React.ReactNode {
         zoomLabel={zoom === null ? "Auto" : `${model.zoom.toFixed(1)}×`}
         onZoom={zoomTo}
       />
-      <InsightStrip figures={model.insights} />
-      <WaterfallChart
-        ref={chartRef}
-        model={model}
-        visiblePx={width}
-        selectedId={requestId}
-        onSelect={(id) => (id === requestId ? close() : open(id))}
-        onToggle={toggleGroup}
-      />
+      {loading.requests ? (
+        <WaterfallSkeleton />
+      ) : (
+        <>
+          <InsightStrip figures={model.insights} />
+          <WaterfallChart
+            ref={chartRef}
+            model={model}
+            visiblePx={width}
+            selectedId={requestId}
+            onSelect={(id) => (id === requestId ? close() : open(id))}
+            onToggle={toggleGroup}
+          />
+        </>
+      )}
       <WaterfallLegend />
     </div>
   );

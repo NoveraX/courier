@@ -9,12 +9,14 @@ import type { LogFilter, MockLogsSearch } from "@/features/mocks/logs-view";
 import { filterCounts, LOG_FILTERS, logMatches, showsIn } from "@/features/mocks/logs-view";
 import { logsOf } from "@/features/mocks/mock-log";
 import { inspectorOf } from "@/features/requests/inspector-of";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useMockInspector } from "@/inspector/use-mock-inspector";
 import { exportAsJson } from "@/lib/export";
 import { clearMockLogs } from "@/mocks/clear-mock-logs";
 import { useStudioStore } from "@/store";
 import { useMockStore } from "@/store/mock-slice";
 import { MockLogRow } from "./mock-log-row";
+import { MocksSkeleton } from "./mocks-skeleton";
 import { useMockServer } from "./use-mock-server";
 
 const LABELS: Readonly<Record<LogFilter, string>> = {
@@ -60,6 +62,8 @@ function ToolButton({
  */
 export function MockLogsScreen(): React.ReactNode {
   const { server } = useMockServer();
+  const first = useFirstLoad();
+  const loading = first.requests || first.sources;
   const search: MockLogsSearch = useSearch({ from: "/mocks/logs" });
   const navigate = useNavigate({ from: "/mocks/logs" });
   const sheet = useMockInspector();
@@ -67,7 +71,7 @@ export function MockLogsScreen(): React.ReactNode {
   const paused = useMockStore((s) => s.logsPaused);
   const togglePaused = useMockStore((s) => s.toggleLogsPaused);
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
-  if (!server) return null;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
   const logs = logsOf(allLogs, server.serverId);
   const counts = filterCounts(logs);
   const show = search.show ?? "all";

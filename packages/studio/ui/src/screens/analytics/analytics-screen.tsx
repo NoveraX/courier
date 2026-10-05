@@ -2,11 +2,14 @@ import { ChartColumn, Download } from "lucide-react";
 
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
+import { Skeleton } from "@/design/skeleton";
 import type { AnalyticsRange } from "@/features/analytics/analytics-search";
 import { successRate } from "@/features/analytics/call-stats";
 import { exportShownRequests } from "@/features/sessions/export-requests";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useInspector } from "@/inspector/use-inspector";
 import { useStudioStore } from "@/store";
+import { AnalyticsSkeleton } from "./analytics-skeleton";
 import { EndpointsTable } from "./endpoints-table";
 import { KpiStrip } from "./kpi-strip";
 import { LatencyChart } from "./latency-chart";
@@ -61,6 +64,7 @@ export function AnalyticsScreen(): React.ReactNode {
   const project = useStudioStore((s) => s.studioInfo?.project.name);
   const format = useStudioStore((s) => s.settings.defaultExportFormat);
   const total = useStudioStore((s) => s.requests.length);
+  const loading = useFirstLoad();
   const { view, win, endpoints } = model;
   const sub = [
     project,
@@ -72,7 +76,11 @@ export function AnalyticsScreen(): React.ReactNode {
       <header className="flex flex-wrap items-end gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Analytics</h1>
-          <span className="text-control text-fg-subtle">{sub.filter(Boolean).join(" · ")}</span>
+          {loading.requests ? (
+            <Skeleton className="my-0.75 h-3 w-64" />
+          ) : (
+            <span className="text-control text-fg-subtle">{sub.filter(Boolean).join(" · ")}</span>
+          )}
         </div>
         <div className="flex-1" />
         <Segmented
@@ -92,7 +100,9 @@ export function AnalyticsScreen(): React.ReactNode {
           Export
         </button>
       </header>
-      {win.done.length === 0 ? (
+      {loading.requests ? (
+        <AnalyticsSkeleton />
+      ) : win.done.length === 0 ? (
         <Nothing range={view.range} />
       ) : (
         <>

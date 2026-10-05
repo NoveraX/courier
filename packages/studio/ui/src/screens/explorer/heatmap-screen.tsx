@@ -1,8 +1,10 @@
 import { HEAT_INTERVALS, heatmapOf, heatStep } from "@/features/explorer/heatmap-model";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { ExplorerEmpty } from "./explorer-empty";
+import { ExplorerSkeleton } from "./explorer-skeleton";
 import { HEAT_FILLS } from "./heat-format";
 import { HeatmapGrid } from "./heatmap-grid";
 import { useExplorerModel } from "./use-explorer-model";
@@ -22,9 +24,12 @@ import { useExplorerSearch } from "./use-explorer-search";
  */
 export function HeatmapScreen(): React.ReactNode {
   const model = useExplorerModel();
+  const loading = useFirstLoad();
   const { metric, set } = useExplorerSearch();
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
-  if (!model.endpoints.length) return <ExplorerEmpty />;
+  if (!model.endpoints.length) {
+    return loading.sources ? <ExplorerSkeleton view="heatmap" /> : <ExplorerEmpty />;
+  }
   const heatmap = heatmapOf(model, metric);
   const fills = HEAT_FILLS[metric === "traffic" ? "traffic" : "health"];
   return (

@@ -4,11 +4,13 @@ import { useImport } from "@/apis/use-import";
 import { useManage } from "@/apis/use-manage";
 import { useRegistry } from "@/apis/use-registry";
 import { useRemoveImport } from "@/apis/use-remove-import";
+import { Skeleton } from "@/design/skeleton";
 import { apiCardView, handWrittenRow } from "@/features/apis/api-card-view";
 import { countScannedEndpoints } from "@/features/apis/helpers";
 import { useNow } from "@/hooks/use-tick";
 import { cn } from "@/lib/utils";
 import { ApiCard } from "./api-card";
+import { ApisSkeleton } from "./apis-skeleton";
 import { ConfigNoticeBar, NoConfig, NoSources } from "./apis-states";
 import { HandWrittenTable } from "./hand-written-table";
 import { ImportDialog } from "./import/import-dialog";
@@ -60,6 +62,7 @@ export function ApisScreen(): React.ReactNode {
     toast.success(message);
   });
   const { page, imported, handWritten, statuses } = registry;
+  const loading = page.kind === "connecting" || page.kind === "loading";
   const checking = Object.values(statuses).some((s) => s.status === "checking");
   const endpoints = [...imported, ...handWritten].reduce(
     (sum, source) => sum + countScannedEndpoints(source),
@@ -75,7 +78,11 @@ export function ApisScreen(): React.ReactNode {
         <header className="flex flex-wrap items-end gap-3.5">
           <div className="flex min-w-0 flex-col gap-1">
             <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">APIs</h1>
-            <span className="text-control text-fg-subtle">{`${imported.length} imported · ${handWritten.length} hand-written · ${plural(endpoints, "endpoint")}`}</span>
+            {loading ? (
+              <Skeleton className="my-0.75 h-3 w-64" />
+            ) : (
+              <span className="text-control text-fg-subtle">{`${imported.length} imported · ${handWritten.length} hand-written · ${plural(endpoints, "endpoint")}`}</span>
+            )}
           </div>
           <div className="flex-1" />
           <button
@@ -98,19 +105,7 @@ export function ApisScreen(): React.ReactNode {
             Import API
           </button>
         </header>
-        {(page.kind === "connecting" || page.kind === "loading") && (
-          <div
-            aria-busy="true"
-            className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3"
-          >
-            {[0, 1, 2].map((slot) => (
-              <div
-                key={slot}
-                className="h-75 animate-pulse rounded-sheet border border-line bg-panel"
-              />
-            ))}
-          </div>
-        )}
+        {loading && <ApisSkeleton />}
         {page.kind === "no-config" && <NoConfig />}
         {page.kind === "broken" && <NoSources broken={page} />}
         {(page.kind === "sources" || page.kind === "empty") && page.notice && (

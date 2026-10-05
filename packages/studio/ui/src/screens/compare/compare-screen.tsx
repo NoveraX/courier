@@ -1,8 +1,10 @@
 import { ArrowLeftRight, GitCompare } from "lucide-react";
 
 import { compareSummary } from "@/features/compare/compare-summary";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { CompareBody } from "./compare-body";
 import { CompareHeader } from "./compare-header";
+import { CompareSkeleton } from "./compare-skeleton";
 import { RequestSlot } from "./request-slot";
 import { SummaryStrip } from "./summary-strip";
 import { useCompareModel } from "./use-compare-model";
@@ -34,10 +36,13 @@ function NotEnough(): React.ReactNode {
 export function CompareScreen(): React.ReactNode {
   const model = useCompareModel();
   const { pair } = model;
+  const loading = useFirstLoad();
   return (
     <div className="mx-auto flex w-full max-w-320 flex-col gap-4 px-6 pt-6 pb-12">
       <CompareHeader preset={pair ? model.preset : undefined} onPreset={model.applyPreset} />
-      {!pair ? (
+      {loading.requests ? (
+        <CompareSkeleton />
+      ) : !pair ? (
         <NotEnough />
       ) : (
         <>

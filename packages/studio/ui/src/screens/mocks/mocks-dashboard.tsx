@@ -14,6 +14,7 @@ import { FigureGrid } from "@/design/figure-grid";
 import type { MockFigure } from "@/features/mocks/dashboard-model";
 import { mockFigures } from "@/features/mocks/dashboard-model";
 import { logsOf } from "@/features/mocks/mock-log";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useNow } from "@/hooks/use-tick";
 import { useMockInspector } from "@/inspector/use-mock-inspector";
 import { openMockWizard } from "@/mocks/wizard/open-mock-wizard";
@@ -22,6 +23,7 @@ import { useStudioStore } from "@/store";
 import { useMockStore } from "@/store/mock-slice";
 import { CollectionCards } from "./collection-cards";
 import { LiveActivity } from "./live-activity";
+import { MocksSkeleton } from "./mocks-skeleton";
 import { TopRoutes } from "./top-routes";
 import { useMockServer } from "./use-mock-server";
 
@@ -76,7 +78,9 @@ export function MocksDashboard(): React.ReactNode {
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const now = useNow();
   const sheet = useMockInspector();
-  if (!server) return <NoServers />;
+  const first = useFirstLoad();
+  const loading = first.requests || first.sources;
+  if (!server) return loading ? <MocksSkeleton view="dashboard" /> : <NoServers />;
   const logs = logsOf(allLogs, server.serverId);
   const figures = mockFigures(server, logs, now, slowMs).map((figure) => ({
     ...figure,

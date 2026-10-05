@@ -6,6 +6,7 @@ import { experimentLog } from "@/features/mocks/experiment-log";
 import { logsOf } from "@/features/mocks/mock-log";
 import { networkLive } from "@/features/mocks/network-live";
 import { faultsByType, latencyHistogram, statusStrip } from "@/features/mocks/observed-model";
+import { useFirstLoad } from "@/hooks/use-first-load";
 import { useNow } from "@/hooks/use-tick";
 import { useMockInspector } from "@/inspector/use-mock-inspector";
 import { setChaos } from "@/mocks/network-commands";
@@ -15,6 +16,7 @@ import { useMockStore } from "@/store/mock-slice";
 import { ChaosCards } from "./chaos-cards";
 import { FaultPanel } from "./fault-panel";
 import { LatencyPanel } from "./latency-panel";
+import { MocksSkeleton } from "./mocks-skeleton";
 import { NetworkHero } from "./network-hero";
 import { ObservedPanel } from "./observed-panel";
 import { RouteOverridesPanel } from "./route-overrides-panel";
@@ -106,6 +108,8 @@ function NetworkTab({ server }: { server: MockServerInfo }): React.ReactNode {
  */
 export function MockNetworkScreen(): React.ReactNode {
   const { server } = useMockServer();
-  if (!server) return null;
+  const first = useFirstLoad();
+  const loading = first.requests || first.sources;
+  if (!server) return loading ? <MocksSkeleton view="list" /> : null;
   return <NetworkTab key={server.serverId} server={server} />;
 }

@@ -2,6 +2,7 @@ import { ClipboardCopy, Download, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import type { AuditReport } from "@/audit/use-audit-report";
+import { Skeleton } from "@/design/skeleton";
 import { exportAsMarkdown } from "@/features/audit/export-report";
 import { shortAgo } from "@/features/explorer/endpoint-key";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -16,6 +17,8 @@ interface AuditHeaderProps {
   /** Requests captured since the report ran. */
   newSince: number;
   now: number;
+  /** Studio has not sent the requests yet: the figures are not known. */
+  loading: boolean;
   onRerun: () => void;
 }
 
@@ -34,7 +37,13 @@ function analysedAgo(at: number, now: number): string {
  * <AuditHeader report={report} newSince={3} now={Date.now()} onRerun={rerun} />
  * ```
  */
-export function AuditHeader({ report, newSince, now, onRerun }: AuditHeaderProps): React.ReactNode {
+export function AuditHeader({
+  report,
+  newSince,
+  now,
+  loading,
+  onRerun,
+}: AuditHeaderProps): React.ReactNode {
   const empty = report.requests === 0;
   const markdown = (): string => exportAsMarkdown(report.result);
   const download = (): void => {
@@ -45,10 +54,14 @@ export function AuditHeader({ report, newSince, now, onRerun }: AuditHeaderProps
     <header className="flex flex-wrap items-end gap-3">
       <div className="flex min-w-0 flex-col gap-1">
         <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Audit</h1>
-        <span className="text-control text-fg-subtle">
-          {`${report.requests} requests · ${report.endpoints} endpoints · ${analysedAgo(report.at, now)}`}
-          {newSince > 0 && <span className="text-brand">{` · ${newSince} new since`}</span>}
-        </span>
+        {loading ? (
+          <Skeleton className="my-0.75 h-3 w-64" />
+        ) : (
+          <span className="text-control text-fg-subtle">
+            {`${report.requests} requests · ${report.endpoints} endpoints · ${analysedAgo(report.at, now)}`}
+            {newSince > 0 && <span className="text-brand">{` · ${newSince} new since`}</span>}
+          </span>
+        )}
       </div>
       <div className="flex-1" />
       <button type="button" onClick={onRerun} className={OUTLINE}>

@@ -1,6 +1,7 @@
-import { Download, History, Pin, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
+import { Download, History, Pin, SlidersHorizontal, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { SearchField } from "@/design/search-field";
 import { exportShownRequests } from "@/features/sessions/export-requests";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import { cn } from "@/lib/utils";
@@ -39,26 +40,13 @@ export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
   const clear = useClearRequests();
   return (
     <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line pr-4 pl-5">
-      <label className="flex h-7.5 w-80 max-w-[34%] items-center gap-2 rounded-control border border-line bg-panel px-2.5">
-        <Search aria-hidden="true" className="size-3.25 shrink-0 text-fg-subtle" />
-        <input
-          value={search}
-          onChange={(e) => onSearch(e.target.value)}
-          placeholder="Filter by endpoint, path or status…"
-          aria-label="Filter requests"
-          className="min-w-0 flex-1 bg-transparent text-control text-fg outline-none placeholder:text-fg-subtle"
-        />
-        {search && (
-          <button
-            type="button"
-            aria-label="Clear the search"
-            onClick={() => onSearch("")}
-            className="flex cursor-pointer text-fg-subtle hover:text-fg"
-          >
-            <X aria-hidden="true" className="size-3.25" />
-          </button>
-        )}
-      </label>
+      <SearchField
+        value={search}
+        onChange={onSearch}
+        placeholder="Filter by endpoint, path or status…"
+        label="Filter requests"
+        className="w-80 max-w-[34%]"
+      />
       <button
         type="button"
         aria-pressed={filtersShown}

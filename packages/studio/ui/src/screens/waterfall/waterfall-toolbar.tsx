@@ -1,7 +1,8 @@
-import { ArrowDownWideNarrow, Layers, Minus, Plus, Search, X } from "lucide-react";
+import { ArrowDownWideNarrow, Layers, Minus, Plus } from "lucide-react";
 
 import type { Choice } from "@/design/choice-menu";
 import { ChoiceMenu } from "@/design/choice-menu";
+import { SearchField } from "@/design/search-field";
 import { Segmented } from "@/design/segmented";
 import type {
   WaterfallGroup,
@@ -59,29 +60,17 @@ export function WaterfallToolbar(props: WaterfallToolbarProps): React.ReactNode 
   const { view, onView, shown, total, following, onFollow, zoomLabel, onZoom } = props;
   return (
     <div className="flex min-h-12.5 shrink-0 flex-wrap items-center gap-2 border-b border-line py-2.5 pr-4 pl-5">
-      <label className="flex h-7.5 max-w-85 flex-[1_1_220px] items-center gap-2 rounded-control border border-line bg-panel pr-1 pl-2.5">
-        <Search aria-hidden="true" className="size-3.25 shrink-0 text-fg-subtle" />
-        <input
-          value={view.q}
-          onChange={(e) => onView({ q: e.target.value })}
-          placeholder="Filter endpoints…"
-          aria-label="Filter endpoints"
-          className="min-w-0 flex-1 bg-transparent text-control text-fg outline-none placeholder:text-fg-subtle"
-        />
-        {view.q && (
-          <button
-            type="button"
-            aria-label="Clear the search"
-            onClick={() => onView({ q: "" })}
-            className="flex cursor-pointer text-fg-subtle hover:text-fg"
-          >
-            <X aria-hidden="true" className="size-3.25" />
-          </button>
-        )}
+      <SearchField
+        value={view.q}
+        onChange={(q) => onView({ q })}
+        placeholder="Filter endpoints…"
+        label="Filter endpoints"
+        className="max-w-85 flex-[1_1_220px] pr-1"
+      >
         <span className="flex h-5.5 shrink-0 items-center rounded-[5px] bg-raised px-1.75 text-badge whitespace-nowrap text-fg-subtle tabular-nums">
           <span className="font-semibold text-fg">{shown}</span>&nbsp;/ {total}
         </span>
-      </label>
+      </SearchField>
       <ChoiceMenu
         icon={ArrowDownWideNarrow}
         label="Sort"

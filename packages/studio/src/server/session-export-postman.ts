@@ -3,7 +3,7 @@
  */
 
 import { cutBodyNote } from "./cut-body-note";
-import { statusText } from "./session-export-utils";
+import { sentRequest, statusText } from "./session-export-utils";
 import type { SavedRequest, SavedSession } from "./session-types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -40,18 +40,19 @@ function requestToPostmanItem(req: SavedRequest): PostmanItem {
   const headers = req.requestHeaders
     ? Object.entries(req.requestHeaders).map(([key, value]) => ({ key, value }))
     : [];
+  const { method, body } = sentRequest(req);
 
   return {
     name: label,
     request: {
-      method: (req.httpMethod ?? "GET").toUpperCase(),
+      method,
       url: req.url ?? label,
       header: headers,
-      ...(req.variables
+      ...(body
         ? {
             body: {
               mode: "raw",
-              raw: JSON.stringify(req.variables, null, 2),
+              raw: JSON.stringify(body, null, 2),
               options: { raw: { language: "json" } },
             },
           }

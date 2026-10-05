@@ -30,10 +30,11 @@ const api = defineApi({
 });
 
 let worker: DrivenWorker;
+let url: string;
 
 beforeEach(async () => {
   worker = driveWorker(defineMockServer({ source: api, log: "silent" }));
-  await startWorker(worker);
+  url = await startWorker(worker);
 });
 
 afterEach(async () => {
@@ -72,5 +73,42 @@ describe("a managed mock whose network a command changed", () => {
     });
 
     expect(lastNetworkConfig(worker.sent)).toMatchObject({ latency: { min: 40, max: 60 } });
+  });
+});
+
+type WorkerEvent = Extract<ChildMessage, { type: "event" }>;
+
+function isHalt(message: ChildMessage): message is WorkerEvent {
+  return message.type === "event" && message.event.eventType === "auto-halted";
+}
+
+describe("a managed mock whose run a stop condition halts", () => {
+  it("tells Studio why the run ended, and that its settings are cleared", async () => {
+    await worker.command({
+      action: "mock:chaos:set",
+      preset: "down",
+      config: {
+        errorRate: 1,
+        faultWeights: [{ type: "500", weight: 100 }],
+        stopConditions: {
+          enabled: true,
+          errorRateThreshold: 50,
+          errorRateDurationSecs: 30,
+          p99Threshold: 0,
+          p99DurationSecs: 60,
+          maxDurationMins: 0,
+        },
+      },
+    });
+
+    for (let i = 0; i < 5; i++) await fetch(`${url}/users`);
+    const halt = await worker.next(isHalt);
+
+    expect(halt.event).toMatchObject({ mode: "chaos", reason: "error rate 100% > 50%" });
+    expect(lastNetworkConfig(worker.sent)).toEqual({
+      autoHalted: true,
+      haltReason: "error rate 100% > 50%",
+    });
+    expect((await fetch(`${url}/users`)).status).toBe(200);
   });
 });

@@ -37,7 +37,12 @@ export function shouldIgnoreRequest(event: EventPayload, patterns: string[]): bo
       .map((p) => {
         try {
           return new RegExp(p, "i");
-        } catch {
+        } catch (error) {
+          /* A pattern saved before Studio checked it is skipped, and said so once per new set. */
+          console.warn(
+            `Studio skips the ignore pattern "${p}": it is not a regular expression`,
+            error,
+          );
           return null;
         }
       })

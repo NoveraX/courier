@@ -24,7 +24,7 @@ export async function HeroSection() {
     highlightTokens(CALLS_FILE.join("\n"), "ts"),
   ])
   return (
-    <section id="top" className="relative">
+    <section className="relative">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-50 left-1/2 h-155 w-[1100px] max-w-[150vw] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgb(125_185_255/0.1),transparent_62%)]"

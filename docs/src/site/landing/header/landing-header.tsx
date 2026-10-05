@@ -7,6 +7,7 @@ import { GitHubMark } from "@/site/github-mark"
 import { PageLink } from "@/site/landing/page-link"
 import { StudioPill } from "@/site/landing/studio-pill"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
+import { TopLink } from "@/site/top-link"
 import { Burger } from "./burger"
 import { LandingMenu } from "./landing-menu"
 import { NAV_LINKS } from "./menu-links"
@@ -28,13 +29,13 @@ export function LandingHeader({ version }: { version: string }) {
   return (
     <header className="sticky top-0 z-70 border-b border-line bg-(--site-header) backdrop-blur-[14px] backdrop-saturate-160">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-2.5 px-5 min-[600px]:gap-7">
-        <a href="#top" className="flex items-center gap-2.25 text-fg hover:text-fg">
+        <TopLink href="/" className="flex items-center gap-2.25 text-fg hover:text-fg">
           <CourierMark width={19} />
           <span className="text-[14.5px] font-semibold tracking-[-0.02em]">courier</span>
           <span className="rounded-[5px] border border-line px-1.25 py-0.5 font-mono text-micro text-fg-subtle">
             {version}
           </span>
-        </a>
+        </TopLink>
         <nav aria-label="Courier" className="hidden gap-5.5 text-nav min-[940px]:flex">
           {NAV_LINKS.map(({ label, href }) => (
             <PageLink key={href} href={href} className="text-fg-muted hover:text-brand">

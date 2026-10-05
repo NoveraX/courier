@@ -19,7 +19,7 @@ export const STUDIO_INSTALL = "npm i -D @noverax/courier-studio"
  */
 export function StudioHero() {
   return (
-    <section id="top" className="relative">
+    <section className="relative">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -top-55 left-1/2 h-175 w-[1200px] max-w-[160vw] -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,var(--studio-glow),transparent_62%)]"

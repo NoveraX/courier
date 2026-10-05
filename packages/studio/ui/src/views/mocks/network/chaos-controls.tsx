@@ -3,19 +3,19 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 
 import { SegmentedControl } from "@/components/shared/segmented-control";
+import type { ChaosFormValues, ChaosMode } from "@/features/mocks/chaos-config";
+import {
+  DEFAULT_STOP,
+  FORM_DEFAULTS,
+  PRESET_CONFIG,
+  presetConfig,
+} from "@/features/mocks/chaos-config";
 import { cn } from "@/lib/utils";
 import { getSocket } from "@/socket";
 import type { ChaosPreset, FaultWeight, MockServerInfo, StopCondition } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
 import { ChaosPresetPreview } from "./chaos-preset-preview";
-import {
-  CHAOS_PRESETS,
-  type ChaosFormValues,
-  type ChaosMode,
-  DEFAULT_STOP,
-  FORM_DEFAULTS,
-  PRESET_CONFIG,
-} from "./chaos-presets";
+import { CHAOS_PRESETS } from "./chaos-presets";
 import { FaultConfigPanel } from "./fault-config";
 import { StopConditionsPanel } from "./stop-conditions";
 
@@ -68,7 +68,6 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
     }
     setCustomDraft(false);
     const cfg = PRESET_CONFIG[next];
-    if (cfg === undefined) return;
     sendConfig(cfg.errorRate, cfg.faultWeights, next);
   };
 
@@ -97,9 +96,9 @@ export function ChaosControls({ server }: ChaosControlsProps): React.ReactElemen
     setValue("faultWeights", next, { shouldDirty: true });
   };
 
-  const activeCfg = PRESET_CONFIG[mode];
+  const activeCfg = presetConfig(mode);
   const isActive = storePreset !== "none";
-  const appliedCfg = PRESET_CONFIG[storePreset];
+  const appliedCfg = presetConfig(storePreset);
   // Show draft rate for custom (even before Apply), applied rate for presets
   const displayRate =
     mode === "custom"

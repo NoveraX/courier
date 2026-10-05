@@ -4,7 +4,8 @@
  * Owns the slider rows and the cross-validation that keeps `min` ≤ `max`.
  */
 
-import { LATENCY_DEFAULTS, type LatencyFormValues } from "./latency-presets";
+import type { LatencyFormValues } from "@/features/mocks/latency-config";
+import { LATENCY_DEFAULTS } from "@/features/mocks/latency-config";
 import { SliderRow } from "./slider-row";
 
 interface LatencyCustomPanelProps {

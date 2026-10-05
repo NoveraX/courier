@@ -45,3 +45,34 @@ export function mockLogCode(log: Pick<MockRequestLog, "status" | "error">): stri
 export function logsOf(logs: readonly MockRequestLog[], serverId: string): MockRequestLog[] {
   return logs.filter((log) => log.serverId === serverId);
 }
+
+/** A failure the mock's chaos injected on purpose, by kind. */
+export type InjectedFault = "500" | "502" | "503" | "timeout" | "reset";
+
+/* How the mock words the failures its chaos injects (createFaultError in @noverax/mock). */
+const SIMULATED = /^(?:HTTP (500|502|503)|(Request Timeout)|(Connection Reset)) \(simulated\)$/;
+
+function statusFault(status: string | undefined): InjectedFault | undefined {
+  return status === "500" || status === "502" || status === "503" ? status : undefined;
+}
+
+/**
+ * The kind of failure the mock's chaos injected into an answer, told apart
+ * from a handler's own error by the mock's wording for its simulated
+ * faults.
+ *
+ * @param log - The logged request
+ * @returns The fault's kind, or `undefined` for an answer chaos left alone
+ * @example
+ * ```ts
+ * injectedFault({ error: "Connection Reset (simulated)" }); // "reset"
+ * injectedFault({ error: "HTTP 500" }); // undefined
+ * ```
+ */
+export function injectedFault(log: Pick<MockRequestLog, "error">): InjectedFault | undefined {
+  const match = log.error === undefined ? null : SIMULATED.exec(log.error);
+  if (!match) return undefined;
+  if (match[2]) return "timeout";
+  if (match[3]) return "reset";
+  return statusFault(match[1]);
+}

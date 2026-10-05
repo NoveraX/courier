@@ -11,6 +11,7 @@ export default defineConfig({
     projects: [
       "packages/*",
       "packages/studio/ui",
+      "docs",
       { test: { name: "scripts", include: ["scripts/**/*.test.mjs"] } },
     ],
     coverage: {

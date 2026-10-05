@@ -4,7 +4,7 @@ import { ChevronRight, Home } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-import { findNavContext } from "./nav-items"
+import { findNavContext } from "@/site/content/docs-nav"
 
 export function Breadcrumbs() {
   const pathname = usePathname()

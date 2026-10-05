@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { cn } from "@/lib/utils"
-import { flatNavItems } from "./nav-items"
+import { flatNavItems } from "@/site/content/docs-nav"
 
 export function DocsPagination() {
   const pathname = usePathname()

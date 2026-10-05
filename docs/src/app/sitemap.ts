@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next"
 
-import { flatNavItems } from "@/components/layout/nav-items"
-
-const BASE_URL = "https://courier.noverax.cloud"
+import { flatNavItems } from "@/site/content/docs-nav"
+import { SITE_URL as BASE_URL } from "@/site/site-url"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const navItems = flatNavItems()

@@ -1,0 +1,178 @@
+/*
+ * The site's design tokens: colours, type, radii and shadows for every page
+ * built on `src/site`. Dark is the default; `data-theme="light"` on the root
+ * element, as the theme provider sets it, switches to light. Colours name
+ * their role; the code colours are what highlighted code is painted with.
+ *
+ * `--color-brand` exists in the older stylesheet too, so its value is set
+ * on `[data-site]` — the root of every page built here and every overlay
+ * those pages open — where it wins over the older one.
+ */
+
+@theme {
+  --color-bg: #08090a;
+  --color-bg-subtle: #0c0d0f;
+  --color-panel: #101114;
+  --color-panel-subtle: #15171b;
+  --color-raised: #1a1c21;
+
+  --color-line: rgb(255 255 255 / 0.07);
+  --color-line-strong: rgb(255 255 255 / 0.12);
+
+  --color-fg: #f7f8f8;
+  --color-fg-muted: #a8aeb7;
+  --color-fg-subtle: #9096a0;
+
+  --color-brand-dim: rgb(125 185 255 / 0.1);
+
+  --color-ok: #5ed3a3;
+  --color-warn: #e8b573;
+  --color-err: #f0806a;
+
+  --color-code-keyword: #b8a1f5;
+  --color-code-function: #7db9ff;
+  --color-code-string: #9bd68c;
+  --color-code-type: #6fd3c7;
+  --color-code-number: #e8b573;
+  --color-code-comment: #8a9098;
+  --color-code-punctuation: #878d97;
+  --color-code-plain: #e6e8eb;
+
+  --text-micro: 10.5px;
+  --text-meta: 11.5px;
+  --text-label: 12px;
+  --text-small: 12.5px;
+  --text-control: 13px;
+  --text-nav: 13.5px;
+  --text-callout: 14.5px;
+  --text-callout--line-height: 1.55;
+  --text-body: 15.5px;
+  --text-body--line-height: 1.65;
+  --text-lead: 17px;
+  --text-lead--line-height: 1.62;
+  --text-h3: 17px;
+  --text-h2: 22px;
+  --text-h1: clamp(32px, 4vw, 44px);
+  --text-h1--line-height: 1.06;
+  --text-code: 12.8px;
+  --text-code--line-height: 1.8;
+
+  --tracking-site: -0.011em;
+  --tracking-h2: -0.025em;
+  --tracking-h1: -0.038em;
+
+  --radius-chip: 6px;
+  --radius-control: 8px;
+  --radius-panel: 12px;
+  --radius-dialog: 14px;
+
+  --animate-site-in: site-in 0.16s ease both;
+
+  /* Shadows take their colour and strength from the theme (see [data-site]). */
+  --shadow-panel: 0 1px 2px rgb(var(--site-shadow-rgb) / calc(0.25 * var(--site-shadow-alpha)));
+  --shadow-overlay:
+    0 24px 60px -24px rgb(var(--site-shadow-rgb) / calc(0.7 * var(--site-shadow-alpha))),
+    0 2px 8px rgb(var(--site-shadow-rgb) / calc(0.25 * var(--site-shadow-alpha)));
+  --shadow-dialog: 0 40px 90px -30px
+    rgb(var(--site-shadow-rgb) / calc(0.9 * var(--site-shadow-alpha)));
+}
+
+@keyframes site-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-site] {
+  --color-brand: #7db9ff;
+  --site-dot: rgb(255 255 255 / 0.045);
+  --site-header: rgb(8 9 10 / 0.78);
+  --site-scrim: rgb(4 5 6 / 0.66);
+  --site-shadow-rgb: 0 0 0;
+  --site-shadow-alpha: 1;
+  color-scheme: dark;
+  color: var(--color-fg);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* The design leaves text at the browser's own leading; prose sets its own. */
+  line-height: normal;
+  letter-spacing: var(--tracking-site);
+  -webkit-font-smoothing: antialiased;
+}
+
+:root[data-theme="light"] [data-site] {
+  --color-bg: #fbfbfa;
+  --color-bg-subtle: #f4f4f2;
+  --color-panel: #ffffff;
+  --color-panel-subtle: #f8f8f6;
+  --color-raised: #ecece9;
+  --color-line: rgb(12 13 15 / 0.09);
+  --color-line-strong: rgb(12 13 15 / 0.16);
+  --color-fg: #0c0d0f;
+  --color-fg-muted: #474c54;
+  --color-fg-subtle: #646a73;
+  --color-brand: #1c63d6;
+  --color-brand-dim: rgb(28 99 214 / 0.07);
+  --color-ok: #0f7a55;
+  --color-warn: #a3500a;
+  --color-err: #c0392b;
+  --color-code-keyword: #7a3bd6;
+  --color-code-function: #1c63d6;
+  --color-code-string: #1d7338;
+  --color-code-type: #0b6f68;
+  --color-code-number: #a3500a;
+  --color-code-comment: #6a7079;
+  --color-code-punctuation: #5e646d;
+  --color-code-plain: #1e2227;
+  --site-dot: rgb(12 13 15 / 0.06);
+  --site-header: rgb(251 251 250 / 0.8);
+  --site-scrim: rgb(24 26 32 / 0.28);
+  --site-shadow-rgb: 24 26 32;
+  --site-shadow-alpha: 0.13;
+  color-scheme: light;
+}
+
+@layer base {
+  [data-site] *,
+  [data-site] ::before,
+  [data-site] ::after {
+    border-color: var(--color-line);
+  }
+
+  [data-site] :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  [data-site] code,
+  [data-site] pre,
+  [data-site] kbd {
+    font-family: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+    font-variant-ligatures: none;
+    letter-spacing: 0;
+  }
+
+  [data-site] h1,
+  [data-site] h2,
+  [data-site] h3 {
+    text-wrap: balance;
+  }
+
+  /* As the browser draws them: controls take no tracking from the text around them. */
+  [data-site] :is(button, input, select, textarea) {
+    letter-spacing: normal;
+  }
+
+  [data-site] ::selection {
+    background: color-mix(in srgb, var(--color-brand) 28%, transparent);
+  }
+}
+
+@utility dots {
+  background-image: radial-gradient(var(--site-dot) 1px, transparent 1px);
+  background-size: 14px 14px;
+}

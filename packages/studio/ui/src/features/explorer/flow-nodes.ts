@@ -69,6 +69,9 @@ export function flowNodesOf(layout: GraphLayout, card: CardActions): FlowNode[] 
       height: node.height,
       data: { node, ...card },
       zIndex: 2,
+      /* The flow lets the pointer through a node it neither drags nor
+         selects; the card is a button, hovered and clicked itself. */
+      style: { pointerEvents: "all" },
       ...FIXED,
     }),
   );

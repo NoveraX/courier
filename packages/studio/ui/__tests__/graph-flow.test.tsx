@@ -89,6 +89,15 @@ describe("the graph as flow nodes", () => {
     });
     expect(nodes.every((n) => !n.draggable && !n.selectable && !n.focusable)).toBe(true);
   });
+
+  it("lets a card take the pointer, which the flow withholds from a node it neither drags nor selects", () => {
+    const nodes = flowNodesOf(layoutOf(2), { onHover: vi.fn(), onOpen: vi.fn() });
+
+    const cards = nodes.filter((n) => n.type === "card");
+
+    expect(cards).toHaveLength(2);
+    for (const card of cards) expect(card.style).toEqual({ pointerEvents: "all" });
+  });
 });
 
 describe("the graph's canvas", () => {

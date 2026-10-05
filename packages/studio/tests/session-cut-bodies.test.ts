@@ -61,14 +61,74 @@ describe("a saved request with bodies too large for its log", () => {
   it("exports a request kept whole with no note", () => {
     const whole = buildSession({
       requests: [
-        { id: "r2", source: "api", method: "me", variables: { id: 1 }, data: {}, startedAt: 1 },
+        {
+          id: "r2",
+          source: "api",
+          method: "rename",
+          httpMethod: "POST",
+          variables: { id: 1 },
+          data: {},
+          startedAt: 1,
+        },
       ],
       apps: [],
     });
 
     const [entry] = exportAsHar(whole).log.entries;
+    expect(entry?.request.postData?.text).toBe('{"id":1}');
     expect(entry?.request.postData).not.toHaveProperty("comment");
     expect(entry?.response.content).not.toHaveProperty("comment");
     expect(exportAsPostman(whole).item[0]?.request).not.toHaveProperty("description");
+  });
+});
+
+describe("a saved read", () => {
+  const read = buildSession({
+    requests: [
+      {
+        id: "r3",
+        source: "api",
+        group: "users",
+        method: "list",
+        httpMethod: "GET",
+        url: "https://api.example/users?page=2&sort=name",
+        variables: { page: 2, sort: "name" },
+        startedAt: 1,
+      },
+      {
+        id: "r4",
+        source: "api",
+        group: "users",
+        method: "search",
+        httpMethod: "QUERY",
+        url: "https://api.example/users/search",
+        variables: { team: "core" },
+        startedAt: 2,
+      },
+    ],
+    apps: [],
+  });
+
+  it("exports to HAR with its variables in the query string, not a body", () => {
+    const [list, search] = exportAsHar(read).log.entries;
+
+    expect(list?.request.queryString).toEqual([
+      { name: "page", value: "2" },
+      { name: "sort", value: "name" },
+    ]);
+    expect(list?.request).not.toHaveProperty("postData");
+    expect(list?.request.bodySize).toBe(0);
+    expect(search?.request).toMatchObject({
+      method: "QUERY",
+      postData: { text: '{"team":"core"}' },
+    });
+  });
+
+  it("exports to Postman with no body, its URL carrying the query", () => {
+    const [list, search] = exportAsPostman(read).item;
+
+    expect(list?.request.url).toBe("https://api.example/users?page=2&sort=name");
+    expect(list?.request).not.toHaveProperty("body");
+    expect(search?.request.body?.raw).toContain('"team": "core"');
   });
 });

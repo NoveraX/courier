@@ -3,7 +3,7 @@
  */
 
 import { cutBodyNote } from "./cut-body-note";
-import { statusText } from "./session-export-utils";
+import { queryPairs, sentRequest, statusText } from "./session-export-utils";
 import type { SavedRequest, SavedSession } from "./session-types";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -61,22 +61,23 @@ function headersToHar(headers?: Record<string, string>): HarHeader[] {
 function requestToHarEntry(req: SavedRequest): HarEntry {
   const fetchTime = req.timing?.fetch ?? 0;
   const totalTime = req.timing?.total ?? fetchTime;
+  const { method, body } = sentRequest(req);
 
   return {
     startedDateTime: new Date(req.startedAt).toISOString(),
     time: totalTime,
     request: {
-      method: (req.httpMethod ?? "GET").toUpperCase(),
+      method,
       url: req.url ?? `${req.source}.${req.group ?? ""}.${req.method}`,
       httpVersion: req.httpVersion ?? UNKNOWN_VERSION,
       headers: headersToHar(req.requestHeaders),
-      queryString: [],
-      bodySize: req.variablesCutFrom ?? (req.variables ? JSON.stringify(req.variables).length : 0),
-      ...(req.variables
+      queryString: queryPairs(req.url),
+      bodySize: body ? (req.variablesCutFrom ?? JSON.stringify(body).length) : 0,
+      ...(body
         ? {
             postData: {
               mimeType: "application/json",
-              text: JSON.stringify(req.variables),
+              text: JSON.stringify(body),
               ...(req.variablesCutFrom !== undefined && {
                 comment: cutBodyNote(req.variablesCutFrom),
               }),

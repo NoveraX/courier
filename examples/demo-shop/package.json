@@ -1,0 +1,22 @@
+{
+  "name": "demo-shop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A shop and its payments provider, called through Courier with Studio watching: the project behind Courier Studio's live demo",
+  "type": "module",
+  "scripts": {
+    "demo": "tsx src/demo/run.ts",
+    "upstream": "tsx src/upstream/main.ts",
+    "app": "tsx src/app/main.ts",
+    "traffic": "tsx src/traffic/main.ts"
+  },
+  "dependencies": {
+    "@noverax/courier": "*",
+    "@noverax/courier-mock": "*",
+    "@noverax/courier-server": "*",
+    "@noverax/courier-studio": "*",
+    "@noverax/courier-studio-core": "*",
+    "tsx": "^4.23.15",
+    "zod": "^4.6.5"
+  }
+}

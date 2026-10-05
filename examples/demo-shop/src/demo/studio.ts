@@ -1,0 +1,36 @@
+import { createStudioServer } from "@noverax/courier-studio/server";
+
+import { PORTS } from "../ports";
+
+const resetsAt = Number(process.env.DEMO_RESETS_AT);
+const origin = process.env.DEMO_ORIGIN;
+
+/* Studio over the shop, as a public demo: a visitor reads everything, sends
+   from the Playground and drives the mocks; the link with the token, printed
+   here, is the host's. The public origin is the page's when Studio sits
+   behind a proxy on a domain of its own. */
+const studio = createStudioServer({
+  host: process.env.STUDIO_HOST ?? "0.0.0.0",
+  port: PORTS.studio,
+  projectRoot: process.cwd(),
+  demo: Number.isFinite(resetsAt) ? { resetsAt } : {},
+  extraCorsOrigins: origin ? [origin] : [],
+  onStarted: ({ url }) => {
+    console.log(`Studio's demo at ${url}`);
+    console.log(`The host's link, with the token: ${url}/#token=${studio.token}`);
+  },
+  onError: (error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+    void studio.close();
+  },
+});
+
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(signal, () => {
+    studio
+      .close()
+      .catch((error: unknown) => console.error("Studio did not close cleanly", error))
+      .finally(() => process.exit(0));
+  });
+}

@@ -1,0 +1,14 @@
+# What the demo's image is built from: the repository's sources, nothing a
+# working copy accumulates.
+**/node_modules
+**/.turbo
+**/.courier
+**/coverage
+**/*.log
+**/*.tsbuildinfo
+packages/*/lib
+packages/**/dist
+.git
+docs
+.env
+.env.*

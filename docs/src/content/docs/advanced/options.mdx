@@ -44,10 +44,9 @@ Named with `.with()`, which returns a caller carrying them. These control how a 
 
 ```ts title="types"
 type CallOptions = {
-  rawData?: boolean              // Return { status, headers, data } instead of just data
   stream?: boolean               // Return ReadableStream instead of parsed response
   forwardVariables?: boolean     // Pass variables to method body (default: true)
-  method?: "GET" | "POST"       // Proxy HTTP method (default: "POST")
+  method?: "GET" | "POST"       // Verb sent to the proxy (default: GET for a read, POST for a write)
   signal?: AbortSignal           // Manual abort signal
   timeout?: number               // Per-request timeout override
   headers?: HeadersInit          // Per-request header overrides
@@ -64,6 +63,8 @@ type CallOptions = {
   }) => void                     // Download progress callback
 }
 ```
+
+The status and headers of an answer are not an option: call through the group's `.raw` accessor, `caller.users.raw.getAll()`, and the call resolves to `{ status, headers, data }`.
 
 `onDownloadProgress` reports against the answer's `content-length`, which the proxy sets on every answer it re-serializes and passes on for a streamed one. When no length is known — a compressed answer — `totalBytes` and `percent` stay 0 until the last event, which reports 100% of what arrived.
 
@@ -204,6 +205,6 @@ The `credentials` option controls cookie handling:
 ## Next steps
 
 - [Middleware](/docs/advanced/middleware) — composable middleware for auth, logging, retry, and more
-- [Raw Data Mode](/docs/advanced/raw-data) — using rawData to access status codes and headers
+- [Raw Data Mode](/docs/advanced/raw-data) — using `.raw` to access status codes and headers
 - [Streaming](/docs/advanced/streaming) — enabling stream mode for ReadableStream responses
 - [Abort & Deduplication](/docs/advanced/abort) — automatic request deduplication with abort signals

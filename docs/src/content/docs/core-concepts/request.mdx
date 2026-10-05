@@ -120,15 +120,16 @@ await caller.users
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `rawData` | `boolean` | Return full `{ status, headers, data }` instead of just data |
-| `stream` | `boolean` | Return raw `Response` for streaming |
+| `stream` | `boolean` | Return the unread body, a `ReadableStream`, for streaming |
 | `method` | `"GET" \| "POST"` | Proxy HTTP method (GET for cacheable reads) |
 | `signal` | `AbortSignal` | Cancel the request |
 | `timeout` | `number` | Request timeout in ms |
 | `headers` | `HeadersInit` | Additional headers for this call |
-| `onUploadProgress` | `(progress) => void` | Upload progress callback (proxy mode, uses XHR) |
+| `onUploadProgress` | `(progress) => void` | Upload progress callback (XHR in the browser) |
 | `onDownloadProgress` | `(progress) => void` | Download progress callback |
 | `forwardVariables` | `boolean` | Pass variables to the HTTP method (default: `true`) |
+
+The status and headers of an answer are not an option: call through the group's `.raw` accessor, `caller.users.raw.getAll()`.
 
 ## Internal Lifecycle
 

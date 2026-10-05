@@ -108,7 +108,7 @@ Path parameter extraction uses an internal regex-based `:param` parser. Any patt
 
 ## Response Type
 
-Every HTTP method returns an `HttpResponse<T>` internally. By default, Courier unwraps this and returns just the `data` property. If you need the full response (status code, headers), use the `rawData` option:
+Every HTTP method returns an `HttpResponse<T>` internally. By default, Courier unwraps this and returns just the `data` property. If you need the full response (status code, headers), call through the group's `.raw` accessor:
 
 ```typescript
 // HttpResponse<T> — what every method returns internally
@@ -122,7 +122,7 @@ type HttpResponse<T> = {
 const users = await caller.users.getAll()
 //    ^? User[]
 
-// With rawData: true, you get the full response object
+// Through .raw, you get the full response object
 const response = await caller.users.raw.getAll()
 //    ^? { status: number; headers: Headers; data: User[] }
 ```

@@ -42,4 +42,4 @@ docker build -f examples/demo-shop/Dockerfile -t courier-studio-demo .
 docker run --rm -p 6280:6280 courier-studio-demo
 ```
 
-Build it from the repository's root. The image builds the packages the demo uses and keeps their production dependencies only. It runs as the unprivileged `node` user and publishes Studio's port alone. `compose.yml` runs it as a host such as Dokploy does, from this repository: point a domain at port 6280 with HTTPS, and set `DEMO_ORIGIN` to that domain's address.
+Build it from the repository's root. The image builds the packages the demo uses, packs them as npm publishes them and installs them as a project would, so it carries their runtime dependencies only and runs what users get. It runs as the unprivileged `node` user and publishes Studio's port alone. `compose.yml` runs it as a host such as Dokploy does, from this repository: point a domain at port 6280 with HTTPS, and set `DEMO_ORIGIN` to that domain's address.

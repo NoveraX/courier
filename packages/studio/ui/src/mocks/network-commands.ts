@@ -1,5 +1,5 @@
 import type { ChaosFormValues, ChaosMode } from "@/features/mocks/chaos-config";
-import { DEFAULT_STOP } from "@/features/mocks/chaos-config";
+import { stopConditionsOf } from "@/features/mocks/chaos-config";
 import { LATENCY_DEFAULTS } from "@/features/mocks/latency-config";
 import { routeOverridesOf } from "@/features/mocks/route-overrides";
 import { getSocket } from "@/socket";
@@ -39,7 +39,7 @@ export function setChaos(
   server: MockServerInfo,
   mode: ChaosMode,
   values: ChaosFormValues,
-  stop: StopCondition = server.stopConditions ?? DEFAULT_STOP,
+  stop: StopCondition = stopConditionsOf(server),
 ): void {
   const preset = values.errorRate === 0 || mode === "stable" ? "none" : mode;
   const config = {

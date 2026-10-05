@@ -362,6 +362,20 @@ describe("safety", () => {
     ]);
   });
 
+  it("shows the thresholds the mock holds, and starts a chaos mode under them", async () => {
+    const held = { ...DEFAULT_STOP, enabled: true, errorRateThreshold: 50 };
+    serve({ networkConfig: { latency: 0, errorRate: 0, stopConditions: held } });
+    await openShell("/mocks/network");
+
+    expect(screen.getByRole("switch", { name: "Auto-halt" }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    expect(screen.getByText("50% over 30s")).toBeTruthy();
+    await settle(() => fireEvent.click(screen.getByRole("radio", { name: /Degraded/ })));
+
+    expect(sent("mock:chaos:set")).toMatchObject([{ config: { stopConditions: held } }]);
+  });
+
   it("logs each run with how long it lasted", async () => {
     const at = Date.now() - 60_000;
     useMockStore.setState({

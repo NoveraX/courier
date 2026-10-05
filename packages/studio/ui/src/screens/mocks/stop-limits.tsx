@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { RangeSlider } from "@/design/range-slider";
 import { ToggleSwitch } from "@/design/toggle-switch";
-import { DEFAULT_STOP } from "@/features/mocks/chaos-config";
+import { stopConditionsOf } from "@/features/mocks/chaos-config";
 import { cn } from "@/lib/utils";
 import { setStopConditions } from "@/mocks/network-commands";
 import type { MockServerInfo, StopCondition } from "@/store/mock-slice";
@@ -60,7 +60,7 @@ export function StopLimits({
   disabled: boolean;
 }): React.ReactNode {
   const [draft, setDraft] = useState<StopCondition | null>(null);
-  const stop = draft ?? server.stopConditions ?? DEFAULT_STOP;
+  const stop = draft ?? stopConditionsOf(server);
   const send = (next: StopCondition): void => {
     setDraft(null);
     setStopConditions(server, next);

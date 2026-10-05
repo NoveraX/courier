@@ -1,8 +1,8 @@
+import { FIELD_INPUT, FormField } from "@/design/form-field";
 import { Segmented } from "@/design/segmented";
 import { ToggleSwitch } from "@/design/toggle-switch";
 import { fieldDescriptionIds } from "@/features/mocks/wizard/field-description-ids";
 import type { DraftErrors, MockDraft, PortMode } from "@/features/mocks/wizard/types";
-import { FIELD_INPUT, WizardField } from "./wizard-field";
 
 const PORT_MODES: readonly { value: PortMode; label: string }[] = [
   { value: "auto", label: "Automatic" },
@@ -67,12 +67,7 @@ export function DraftPanel({
         )}
       </header>
       <div className="flex flex-col px-3.5">
-        <WizardField
-          id={`${id}-key`}
-          label="Mock key"
-          sub="its name under mocks"
-          error={errors?.key}
-        >
+        <FormField id={`${id}-key`} label="Mock key" sub="its name under mocks" error={errors?.key}>
           <input
             id={`${id}-key`}
             value={draft.key}
@@ -83,8 +78,8 @@ export function DraftPanel({
             onChange={(e) => onEdit({ key: e.target.value })}
             className={FIELD_INPUT}
           />
-        </WizardField>
-        <WizardField
+        </FormField>
+        <FormField
           id={`${id}-port`}
           label="Port"
           sub="where the mock listens"
@@ -114,8 +109,8 @@ export function DraftPanel({
               />
             )}
           </div>
-        </WizardField>
-        <WizardField
+        </FormField>
+        <FormField
           id={`${id}-seed`}
           label="Records per collection"
           sub="seeded into each collection"
@@ -131,8 +126,8 @@ export function DraftPanel({
             onChange={(e) => onEdit({ seedCountText: e.target.value })}
             className={`${FIELD_INPUT} max-w-24`}
           />
-        </WizardField>
-        <WizardField
+        </FormField>
+        <FormField
           id={`${id}-start`}
           label="Start with Studio"
           sub="also starts it as soon as it is added"
@@ -143,7 +138,7 @@ export function DraftPanel({
             checked={draft.autoStart}
             onChange={(autoStart) => onEdit({ autoStart })}
           />
-        </WizardField>
+        </FormField>
       </div>
     </section>
   );

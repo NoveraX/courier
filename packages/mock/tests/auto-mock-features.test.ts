@@ -337,7 +337,7 @@ describe("CORS headers", () => {
   it("handles OPTIONS preflight", async () => {
     const res = await fetch(`${url}/items`, {
       method: "OPTIONS",
-      headers: { Origin: "http://localhost:3000" },
+      headers: { Origin: "http://localhost:3000", "Access-Control-Request-Method": "POST" },
     });
     expect(res.status).toBeLessThan(400);
   });

@@ -4,24 +4,18 @@ import {
   CircleArrowUp,
   CircleCheck,
   CircleDashed,
-  Eye,
   FileText,
   FileUp,
-  GitCompare,
   GitPullRequest,
   Globe,
   LoaderCircle,
-  RefreshCw,
-  Settings2,
-  ShieldAlert,
-  ShieldCheck,
-  Trash2,
   TriangleAlert,
-  Zap,
 } from "lucide-react";
 
-import type { ApiCardView, QualityRow } from "@/features/apis/api-card-view";
+import type { ApiCardView } from "@/features/apis/api-card-view";
 import { cn } from "@/lib/utils";
+import { ApiCardActions } from "./api-card-actions";
+import { ApiQualityRows } from "./api-quality-rows";
 
 const ORIGIN: Readonly<Record<ApiCardView["importType"], LucideIcon>> = {
   url: Globe,
@@ -38,17 +32,6 @@ const STATUS: Readonly<
   unchecked: { icon: CircleDashed, className: "bg-raised text-fg-subtle" },
   none: { icon: CircleDashed, className: "bg-raised text-fg-subtle" },
 };
-const TONE = {
-  ok: { bar: "bg-ok", icon: "text-ok", count: "text-fg-muted" },
-  warn: { bar: "bg-warn", icon: "text-warn", count: "text-warn" },
-  subtle: { bar: "bg-fg-subtle", icon: "text-fg-subtle", count: "text-fg-subtle" },
-} as const;
-
-function qualityIcon(row: QualityRow): LucideIcon {
-  if (row.kind === "response") return Eye;
-  if (row.kind === "variables") return Zap;
-  return row.tone === "ok" ? ShieldCheck : ShieldAlert;
-}
 
 interface ApiCardProps {
   card: ApiCardView;
@@ -113,33 +96,7 @@ export function ApiCard({ card, onManage, onCheck, onRemove }: ApiCardProps): Re
             </div>
           ))}
         </div>
-        <div className="flex flex-col gap-2">
-          {card.quality.map((row) => {
-            const tone = TONE[row.tone];
-            const Icon = qualityIcon(row);
-            return (
-              <div
-                key={row.kind}
-                title={row.tip}
-                className="grid grid-cols-[120px_minmax(0,1fr)_44px] items-center gap-2.5"
-              >
-                <span className="flex items-center gap-1.5 text-label whitespace-nowrap text-fg-muted">
-                  <Icon aria-hidden="true" className={cn("size-2.75", tone.icon)} />
-                  {row.label}
-                </span>
-                <span className="h-1 overflow-hidden rounded-full bg-raised">
-                  <span
-                    className={cn("block h-full rounded-full", tone.bar)}
-                    style={{ width: `${row.total ? (row.count / row.total) * 100 : 0}%` }}
-                  />
-                </span>
-                <span
-                  className={cn("text-right font-mono text-badge", tone.count)}
-                >{`${row.count}/${row.total}`}</span>
-              </div>
-            );
-          })}
-        </div>
+        <ApiQualityRows rows={card.quality} />
         {card.note && (
           <p
             className={cn(
@@ -156,46 +113,7 @@ export function ApiCard({ card, onManage, onCheck, onRemove }: ApiCardProps): Re
           </p>
         )}
       </div>
-      <div className="mt-auto flex items-center gap-1.5 border-t border-line bg-panel-subtle px-3 py-2.5">
-        <button
-          type="button"
-          onClick={onManage}
-          className={cn(
-            "flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-2.5 text-small font-semibold whitespace-nowrap",
-            card.update
-              ? "bg-warn text-bg hover:bg-warn/90"
-              : "border border-line-strong bg-panel text-fg hover:bg-raised",
-          )}
-        >
-          {card.update ? (
-            <GitCompare aria-hidden="true" className="size-3" />
-          ) : (
-            <Settings2 aria-hidden="true" className="size-3" />
-          )}
-          {card.update ? "Review update" : "Manage"}
-        </button>
-        <div className="flex-1" />
-        <span className="min-w-0 truncate text-badge text-fg-subtle">{card.checked}</span>
-        <button
-          type="button"
-          onClick={onCheck}
-          disabled={!card.check.can || card.status.kind === "checking"}
-          title={card.check.can ? "Check for updates" : card.check.why}
-          aria-label={`Check ${card.name} for updates`}
-          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control border border-line text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
-        >
-          <RefreshCw aria-hidden="true" className="size-3" />
-        </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          title="Remove"
-          aria-label={`Remove ${card.name}`}
-          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-err-dim hover:text-err"
-        >
-          <Trash2 aria-hidden="true" className="size-3.25" />
-        </button>
-      </div>
+      <ApiCardActions card={card} onManage={onManage} onCheck={onCheck} onRemove={onRemove} />
     </section>
   );
 }

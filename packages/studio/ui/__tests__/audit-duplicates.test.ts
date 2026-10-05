@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { detectDuplicates } from "@/features/audit/rules-patterns";
+import { detectDuplicates } from "@/features/audit/rules-duplicates";
 import { requestEntry } from "./request-entry-fixture";
 
 describe("the duplicate-request rule", () => {

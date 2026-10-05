@@ -1,17 +1,10 @@
 import { AlertTriangle } from "lucide-react";
 
-import { methodText } from "@/design/method-color";
 import type { EndpointInventory, InventoryEndpoint, InventoryGroup } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
 import { cn } from "@/lib/utils";
 import { TickBox } from "../import/tick-box";
-
-const TAG: Readonly<Record<string, { label: string; className: string }>> = {
-  available: { label: "New", className: "bg-ok-dim text-ok" },
-  "removed-from-spec": { label: "Removed from spec", className: "bg-err-dim text-err" },
-  modified: { label: "Edited", className: "bg-warn-dim text-warn" },
-  custom: { label: "Custom", className: "bg-raised text-fg-subtle" },
-};
+import { InventoryRow } from "./inventory-row";
 
 /* An endpoint kept is ticked: an active one not marked to remove, a new one marked to add. */
 function kept(
@@ -20,12 +13,6 @@ function kept(
   toRemove: ReadonlySet<string>,
 ): boolean {
   return ep.status === "available" ? toAdd.has(ep.name) : !toRemove.has(ep.name);
-}
-
-function tagOf(ep: InventoryEndpoint): { label: string; className: string } | undefined {
-  if (ep.status === "active")
-    return ep.modificationStatus === "modified" ? TAG.modified : undefined;
-  return TAG[ep.status];
 }
 
 interface InventoryStepProps {
@@ -68,59 +55,15 @@ function Group({
           {group.isCustomGroup ? "custom group" : `${ticked}/${toggleable.length}`}
         </span>
       </div>
-      {group.endpoints.map((ep) => {
-        const tag = tagOf(ep);
-        const on = ep.status === "custom" || kept(ep, toAdd, toRemove);
-        const row = cn(
-          "grid min-h-10 grid-cols-[15px_44px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-line px-3",
-          !on && "opacity-55",
-        );
-        const body = (
-          <>
-            <span
-              className={cn(
-                "font-mono text-meta font-semibold uppercase",
-                methodText(ep.httpMethod.toUpperCase()),
-              )}
-            >
-              {ep.httpMethod}
-            </span>
-            <span className="flex min-w-0 items-baseline gap-2.5 overflow-hidden whitespace-nowrap">
-              <span className="font-mono text-small">{ep.name}</span>
-              <span className="truncate font-mono text-badge text-fg-subtle">{ep.path}</span>
-            </span>
-            {tag ? (
-              <span
-                className={cn(
-                  "flex h-4.75 items-center rounded-[5px] px-1.75 text-meta font-semibold whitespace-nowrap",
-                  tag.className,
-                )}
-              >
-                {tag.label}
-              </span>
-            ) : (
-              <span />
-            )}
-          </>
-        );
-        if (ep.status === "custom")
-          return (
-            <div key={ep.name} title="Added by hand — Studio leaves it as it is" className={row}>
-              <span />
-              {body}
-            </div>
-          );
-        return (
-          <label key={ep.name} className={cn(row, "cursor-pointer hover:bg-raised")}>
-            <TickBox
-              checked={on}
-              label={`Keep ${group.name}.${ep.name}`}
-              onChange={() => onToggle(group.name, ep.name, ep.status !== "available")}
-            />
-            {body}
-          </label>
-        );
-      })}
+      {group.endpoints.map((ep) => (
+        <InventoryRow
+          key={ep.name}
+          group={group.name}
+          endpoint={ep}
+          on={ep.status === "custom" || kept(ep, toAdd, toRemove)}
+          onToggle={onToggle}
+        />
+      ))}
     </section>
   );
 }

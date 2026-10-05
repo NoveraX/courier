@@ -8,11 +8,23 @@ import type { AuditEndpoint, EndpointStats } from "./types";
 
 /** Convert an `EndpointStats` row into the `AuditEndpoint` shape used by hint items. */
 export function formatEndpoint(s: EndpointStats): AuditEndpoint {
-  return {
-    key: s.key,
-    label: s.group ? `${s.source}.${s.group}.${s.method}` : `${s.source}.${s.method}`,
-    requestIds: s.requestIds,
-  };
+  return { key: s.key, label: labelOf(s), requestIds: s.requestIds };
+}
+
+/**
+ * An endpoint's full name, as a finding names it: its source, its group
+ * when it has one, and its method.
+ *
+ * @param e - The endpoint, or a request to it
+ * @returns The name, e.g. `api.users.getById`
+ *
+ * @example
+ * ```ts
+ * labelOf({ source: "api", group: undefined, method: "health" }); // "api.health"
+ * ```
+ */
+export function labelOf(e: Pick<RequestEntry, "source" | "group" | "method">): string {
+  return e.group ? `${e.source}.${e.group}.${e.method}` : `${e.source}.${e.method}`;
 }
 
 /**

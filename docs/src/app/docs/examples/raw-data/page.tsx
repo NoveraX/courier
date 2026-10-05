@@ -12,7 +12,7 @@ const rawDataCode = `// .raw accessor — returns { status, headers, data }
 const response = await caller.users.raw.getAll()
 
 // response.status  → 200
-// response.headers → { "content-type": "application/json", ... }
+// response.headers → Headers { etag, vary, … }: those that describe the answer
 // response.data    → { data: [...], total: 3 }`
 
 const typeCode = `// The .raw accessor changes what the call is typed to return
@@ -36,24 +36,22 @@ export default function RawDataExamplesPage() {
       description="Access full response metadata through .raw — status code, headers, and data in one object."
       mode="both"
     >
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ExampleSection
-          title="Normal Mode"
-          description="Returns just the response data."
-          code={normalCode}
-        >
-          <NormalFetchDemo />
-        </ExampleSection>
+      <ExampleSection
+        title="Normal Mode"
+        description="Returns just the response data."
+        code={normalCode}
+      >
+        <NormalFetchDemo />
+      </ExampleSection>
 
-        <ExampleSection
-          title="Raw Data Mode"
-          description="Returns status, headers, and data."
-          code={rawDataCode}
-          learnMore={{ href: "/docs/advanced/raw-data", label: "Raw data docs" }}
-        >
-          <RawFetchDemo />
-        </ExampleSection>
-      </div>
+      <ExampleSection
+        title="Raw Data Mode"
+        description="Returns status, headers, and data."
+        code={rawDataCode}
+        learnMore={{ href: "/docs/advanced/raw-data", label: "Raw data docs" }}
+      >
+        <RawFetchDemo />
+      </ExampleSection>
 
       <ExampleSection
         title="Type Safety"

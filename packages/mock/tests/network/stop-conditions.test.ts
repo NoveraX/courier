@@ -158,6 +158,34 @@ describe("a run that crosses a stop condition", () => {
     expect(halted).toHaveBeenCalledWith({ reason: "max duration (2min)", durationMs: 120_000 });
   });
 
+  it("is one that fails or delays only routes of its own, or only caps bandwidth", () => {
+    const failing = createNetworkState();
+    const capped = createNetworkState();
+    failing.mergeConfig({
+      routeOverrides: [{ routeId: "users:list", enabled: true, errorRate: 1 }],
+      stopConditions: { ...OFF, errorRateThreshold: 50 },
+    });
+    capped.mergeConfig({ bandwidth: 512, stopConditions: { ...OFF, p99Threshold: 100 } });
+
+    for (let i = 0; i < 5; i++) failing.trackRequest(5, true);
+    for (let i = 0; i < 10; i++) capped.trackRequest(250, false);
+
+    expect(failing.getGlobalConfig()?.routeOverrides).toBeUndefined();
+    expect(capped.getGlobalConfig()?.bandwidth).toBeUndefined();
+  });
+
+  it("does not start for limits alone, with nothing simulated", () => {
+    vi.useFakeTimers();
+    const state = createNetworkState({ stopConditions: { ...OFF, maxDurationMins: 1 } });
+    const halted = vi.fn();
+    state.onHalt = halted;
+
+    vi.advanceTimersByTime(120_000);
+
+    expect(state.startedAt).toBeNull();
+    expect(halted).not.toHaveBeenCalled();
+  });
+
   it("does not end once its settings are cleared", () => {
     vi.useFakeTimers();
     const state = createNetworkState({

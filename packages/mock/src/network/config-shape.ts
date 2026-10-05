@@ -1,7 +1,8 @@
 import type { NetworkConfig, RouteNetworkOverride } from "../types";
 
 /**
- * Whether a network config simulates anything: errors or latency.
+ * Whether a network config simulates anything: errors, latency, a
+ * bandwidth cap, or a route override that fails or delays its route.
  *
  * @param config - The config
  * @returns Whether it changes how requests are answered
@@ -11,7 +12,12 @@ import type { NetworkConfig, RouteNetworkOverride } from "../types";
  * ```
  */
 export function isActive(config: NetworkConfig): boolean {
-  return (config.errorRate ?? 0) > 0 || hasLatency(config);
+  if ((config.errorRate ?? 0) > 0 || hasLatency(config) || (config.bandwidth ?? 0) > 0) return true;
+  return config.routeOverrides?.some(overrideSimulates) ?? false;
+}
+
+function overrideSimulates(override: RouteNetworkOverride): boolean {
+  return override.enabled && ((override.errorRate ?? 0) > 0 || (override.latency?.max ?? 0) > 0);
 }
 
 /**

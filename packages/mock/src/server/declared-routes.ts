@@ -4,15 +4,25 @@ import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
 import { type BodyLimits, bodyValue, readRequestBody } from "./read-request-body";
 import { parsePathParams, parseQueryParams, servedByCatchAll } from "./route-helpers";
 
-const METHODS = new Set<string>(["GET", "QUERY", "POST", "PUT", "PATCH", "DELETE"]);
-const WITHOUT_BODY = new Set<string>(["GET", "DELETE"]);
+const METHODS = new Set<string>([
+  "GET",
+  "HEAD",
+  "OPTIONS",
+  "QUERY",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+]);
+const WITHOUT_BODY = new Set<string>(["GET", "HEAD", "OPTIONS", "DELETE"]);
 
 /**
  * Register a route at its declared path for every HTTP endpoint the prefix
  * catch-alls do not answer: fixed sub-paths (`stats`), lookups
  * (`by-email/:email`), paths that go on past a parameter (`:id/orders`), and
  * methods the catch-alls leave out (`PUT` on the collection, `POST :id`,
- * every `QUERY`). The path's parameters join the query or body as variables.
+ * every `QUERY`, `HEAD` and `OPTIONS`). The path's parameters join the query
+ * or body as variables.
  *
  * Routes are registered most specific first — a fixed segment before a
  * parameter at the same position — and all of them before the catch-alls,
@@ -37,13 +47,18 @@ export function registerDeclaredRoutes(
   group: string,
   config: PrefixRouteConfig,
 ): void {
-  const own = endpoints.filter(needsOwnRoute).sort(bySpecificity);
+  const own = endpoints
+    .filter(needsOwnRoute)
+    .sort((a, b) => bySpecificity(a, b) || headFirst(a, b));
   for (const ep of own) {
     const method = (ep.httpMethod ?? "GET").toUpperCase();
     /* A route at the collection root is `/users`, not `/users/`, which a
        request to the collection never matches. */
     const path = `/${[prefix, ...ep.path.split("/")].filter(Boolean).join("/")}`;
-    app.on(method, path, async (c) => {
+    /* Hono answers every HEAD with the GET route at its path, so a HEAD
+       endpoint is a GET route that hands any other request on. */
+    app.on(method === "HEAD" ? "GET" : method, path, async (c, next) => {
+      if (method === "HEAD" && c.req.method !== "HEAD") return next();
       const read = await inputOf(c, method, config.bodyLimits);
       if ("error" in read) return config.refuse(c, group, ep.name, read);
       return config.handleRequest(c, group, ep.name, {
@@ -61,6 +76,12 @@ function needsOwnRoute(ep: MappedEndpoint): boolean {
   return !servedByCatchAll(ep);
 }
 
+/* A HEAD endpoint's route comes before the GET at its path, which answers HEAD otherwise. */
+function headFirst(a: MappedEndpoint, b: MappedEndpoint): number {
+  const isHead = (ep: MappedEndpoint) => (ep.httpMethod ?? "").toUpperCase() === "HEAD";
+  return Number(isHead(b)) - Number(isHead(a));
+}
+
 /** Fixed segments sort before parameters, position by position */
 function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
   const rank = (ep: MappedEndpoint) =>
@@ -72,7 +93,7 @@ function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
   return rank(a).localeCompare(rank(b));
 }
 
-/** The query of a GET or DELETE; the JSON, form or upload of anything else — a QUERY's question included — which holds an object */
+/** The query of a GET, HEAD, OPTIONS or DELETE; the JSON, form or upload of anything else — a QUERY's question included — which holds an object */
 async function inputOf(
   c: Context,
   method: string,

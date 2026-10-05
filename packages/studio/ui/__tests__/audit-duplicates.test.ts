@@ -21,4 +21,19 @@ describe("the duplicate-request rule", () => {
       '"api.users.list" was called again with the same variables within 2 s — 5 calls in 2 bursts.',
     );
   });
+
+  it("tells calls apart by nested variables, and not by the order of their keys", () => {
+    const filter = (status: string) => ({ filter: { status, page: 1 } });
+    const differing = [
+      requestEntry({ id: "a", startedAt: 1_000, variables: filter("open") }),
+      requestEntry({ id: "b", startedAt: 1_200, variables: filter("closed") }),
+    ];
+    const reordered = [
+      requestEntry({ id: "c", startedAt: 1_000, variables: { a: 1, b: { x: 1, y: 2 } } }),
+      requestEntry({ id: "d", startedAt: 1_200, variables: { b: { y: 2, x: 1 }, a: 1 } }),
+    ];
+
+    expect(detectDuplicates(differing)).toEqual([]);
+    expect(detectDuplicates(reordered).map((item) => item.requestIds)).toEqual([["c", "d"]]);
+  });
 });

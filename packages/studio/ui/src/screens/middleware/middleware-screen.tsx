@@ -6,6 +6,7 @@ import { Segmented } from "@/design/segmented";
 import { endpointImpact } from "@/features/middleware/endpoint-impact";
 import type { MiddlewareSearch, MiddlewareView } from "@/features/middleware/middleware-search";
 import { middlewareOverview, traced } from "@/features/middleware/middleware-stats";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import { useInspector } from "@/inspector/use-inspector";
 import { useStudioStore } from "@/store";
 import { ChainView } from "./chain-view";
@@ -58,7 +59,7 @@ export function MiddlewareScreen(): React.ReactNode {
   /* Opening a chain or switching the view is a step the browser's Back undoes; picking another call in the chain is not. */
   const go = (next: MiddlewareSearch, step = false): void =>
     void navigate({
-      search: (prev) => ({ req: prev.req, tab: prev.tab, ...next }),
+      search: (prev) => ({ ...inspectorOf(prev), ...next }),
       replace: !step,
     });
   const trace = (id: string): void => go({ view: "chain", trace: id }, true);

@@ -2,6 +2,7 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Sprout, Table2 } from "lucide-react";
 
 import type { MockStoreSearch } from "@/features/mocks/collection-view";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import { cn } from "@/lib/utils";
 import { useStoreCrud } from "@/mocks/use-store-crud";
 import { CollectionTable } from "./collection-table";
@@ -45,7 +46,7 @@ export function MockStoreScreen(): React.ReactNode {
               aria-current={on ? "true" : undefined}
               onClick={() =>
                 void navigate({
-                  search: (prev) => ({ req: prev.req, tab: prev.tab, collection: collection.name }),
+                  search: (prev) => ({ ...inspectorOf(prev), collection: collection.name }),
                   replace: true,
                 })
               }

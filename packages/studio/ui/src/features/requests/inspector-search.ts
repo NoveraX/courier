@@ -5,11 +5,13 @@ import { isInspectorTab } from "./inspector-tabs";
 export interface InspectorSearch {
   req?: string | undefined;
   tab?: InspectorTab | undefined;
+  /** A request a mock answered, open in its own sheet in place of the inspector. */
+  mreq?: string | undefined;
 }
 
 /**
- * Read the inspector's part of an address: a request id, and a tab when it
- * is one of the inspector's.
+ * Read the inspector's part of an address: a request id, a tab when it is
+ * one of the inspector's, and the id of a request a mock answered.
  *
  * @param raw - The address's search parameters
  * @returns The inspector's parameters
@@ -22,5 +24,6 @@ export function validateInspectorSearch(raw: Record<string, unknown>): Inspector
   const search: InspectorSearch = {};
   if (typeof raw.req === "string" && raw.req !== "") search.req = raw.req;
   if (isInspectorTab(raw.tab)) search.tab = raw.tab;
+  if (typeof raw.mreq === "string" && raw.mreq !== "") search.mreq = raw.mreq;
   return search;
 }

@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Table2 } from "lucide-react";
 
 import { CardSection } from "@/design/card-section";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import type { MockCollectionEntry } from "@/store/mock-slice";
 
 /**
@@ -28,7 +29,7 @@ export function CollectionCards({
           <Link
             from="/mocks"
             to="/mocks/store"
-            search={(prev) => ({ req: prev.req, tab: prev.tab })}
+            search={(prev) => ({ ...inspectorOf(prev) })}
             className="flex h-6.5 items-center rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg"
           >
             Open store →
@@ -47,7 +48,7 @@ export function CollectionCards({
             key={collection.name}
             from="/mocks"
             to="/mocks/store"
-            search={(prev) => ({ req: prev.req, tab: prev.tab, collection: collection.name })}
+            search={(prev) => ({ ...inspectorOf(prev), collection: collection.name })}
             className="flex items-center gap-2.5 rounded-panel border border-line bg-inset px-3 py-2.5 hover:border-line-strong"
           >
             <Table2 aria-hidden="true" className="size-3.5 text-syntax-type" />

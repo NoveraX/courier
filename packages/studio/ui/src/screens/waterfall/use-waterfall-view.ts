@@ -1,6 +1,6 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
-
+import { inspectorOf } from "@/features/requests/inspector-of";
 import type { WaterfallView } from "@/features/waterfall/waterfall-search";
 import { searchFromView, viewFromSearch } from "@/features/waterfall/waterfall-search";
 
@@ -29,8 +29,7 @@ export function useWaterfallView(): WaterfallViewControl {
     (patch: Partial<WaterfallView>) =>
       void navigate({
         search: (prev) => ({
-          req: prev.req,
-          tab: prev.tab,
+          ...inspectorOf(prev),
           ...searchFromView({ ...view, ...patch }),
         }),
         replace: true,

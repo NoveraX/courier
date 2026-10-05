@@ -22,20 +22,28 @@ interface ObservedPanelProps {
   bins: readonly LatencyBin[];
   strip: readonly StripCell[];
   faults: readonly FaultCount[];
+  /** Opens the request a status cell stands for. */
+  onOpen: (id: string) => void;
 }
 
 /**
  * What the mock's latest sixty answers looked like: how long they took,
- * their statuses in order, and the faults chaos injected among them.
+ * their statuses in order — each opening its request's sheet — and the
+ * faults chaos injected among them.
  *
- * @param props - The latency histogram, the status strip, and the injected faults by kind
+ * @param props - The latency histogram, the status strip, the injected faults by kind, and what opens a request
  * @returns The panel
  * @example
  * ```tsx
- * <ObservedPanel bins={latencyHistogram(logs, 500)} strip={statusStrip(logs)} faults={faultsByType(logs)} />
+ * <ObservedPanel bins={latencyHistogram(logs, 500)} strip={statusStrip(logs)} faults={faultsByType(logs)} onOpen={open} />
  * ```
  */
-export function ObservedPanel({ bins, strip, faults }: ObservedPanelProps): React.ReactNode {
+export function ObservedPanel({
+  bins,
+  strip,
+  faults,
+  onOpen,
+}: ObservedPanelProps): React.ReactNode {
   return (
     <NetworkCard icon={Radar} tone="text-brand" title="Observed" note="last 60 responses">
       <div className="flex flex-col gap-4.5 p-4.5">
@@ -78,14 +86,27 @@ export function ObservedPanel({ bins, strip, faults }: ObservedPanelProps): Reac
             </span>
           </div>
           <div className="flex h-7 gap-0.5">
-            {strip.map((cell, i) => (
-              <span
-                // biome-ignore lint/suspicious/noArrayIndexKey: a cell is a fixed slot among the latest sixty answers
-                key={i}
-                title={cell.tip || undefined}
-                className={cn("flex-1 rounded-[2px]", CELL[cell.tone])}
-              />
-            ))}
+            {strip.map((cell, i) =>
+              cell.id === undefined ? (
+                <span
+                  // biome-ignore lint/suspicious/noArrayIndexKey: a cell is a fixed slot among the latest sixty answers
+                  key={i}
+                  className={cn("flex-1 rounded-[2px]", CELL[cell.tone])}
+                />
+              ) : (
+                <button
+                  type="button"
+                  key={cell.id}
+                  title={cell.tip}
+                  aria-label={`Open ${cell.tip}`}
+                  onClick={() => onOpen(cell.id ?? "")}
+                  className={cn(
+                    "flex-1 cursor-pointer rounded-[2px] hover:brightness-125 focus-visible:outline-2 focus-visible:outline-brand",
+                    CELL[cell.tone],
+                  )}
+                />
+              ),
+            )}
           </div>
         </div>
         <div className="flex flex-col gap-2">

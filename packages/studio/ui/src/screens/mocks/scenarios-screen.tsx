@@ -1,6 +1,7 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 
 import type { MockScenariosSearch } from "@/features/mocks/scenario-view";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import { ScenarioCard } from "./scenario-card";
 import { ScenarioDetail } from "./scenario-detail";
 import { useMockServer } from "./use-mock-server";
@@ -46,7 +47,7 @@ export function MockScenariosScreen(): React.ReactNode {
             running={server.processStatus === "running"}
             onOpen={() =>
               void navigate({
-                search: (prev) => ({ req: prev.req, tab: prev.tab, scenario: scenario.name }),
+                search: (prev) => ({ ...inspectorOf(prev), scenario: scenario.name }),
                 replace: true,
               })
             }

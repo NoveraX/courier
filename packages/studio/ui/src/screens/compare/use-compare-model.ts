@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { PairPreset, RequestPair } from "@/features/compare/compare-pairs";
 import { comparable, pairOf } from "@/features/compare/compare-pairs";
 import type { CompareSearch, CompareTab } from "@/features/compare/compare-search";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types-request";
 
@@ -56,7 +57,7 @@ export function useCompareModel(): CompareModel {
   const b = named(search.b) ?? opening?.pair[1];
   const pair: RequestPair | null = a && b ? [a, b] : null;
   const go = (next: CompareSearch): void =>
-    void navigate({ search: (prev) => ({ req: prev.req, tab: prev.tab, ...next }), replace: true });
+    void navigate({ search: (prev) => ({ ...inspectorOf(prev), ...next }), replace: true });
   const keep = { a: pair?.[0].id, b: pair?.[1].id, show: search.show, pair: search.pair };
   const unnamed = search.a === undefined && search.b === undefined;
   const openingA = opening?.pair[0].id;

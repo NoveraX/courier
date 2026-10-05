@@ -4,6 +4,7 @@ import { useCallback, useMemo } from "react";
 import type { PlaygroundEndpoint } from "@/features/playground/endpoint-choices";
 import { endpointChoicesOf } from "@/features/playground/endpoint-choices";
 import { sendableCatalog } from "@/features/playground/sendable-catalog";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import { useCatalog } from "@/hooks/use-catalog";
 import { useStudioStore } from "@/store";
 
@@ -37,7 +38,7 @@ export function usePlaygroundModel(): PlaygroundModel {
   const navigate = useNavigate({ from: "/playground" });
   const choose = useCallback(
     (next: PlaygroundEndpoint) =>
-      void navigate({ search: (prev) => ({ req: prev.req, tab: prev.tab, endpoint: next.key }) }),
+      void navigate({ search: (prev) => ({ ...inspectorOf(prev), endpoint: next.key }) }),
     [navigate],
   );
   return { choices, endpoint: choices.find((c) => c.key === key) ?? choices[0], choose };

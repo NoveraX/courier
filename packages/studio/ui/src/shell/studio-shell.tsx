@@ -2,6 +2,7 @@ import { Outlet } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { useHotkeys } from "@/hooks/use-hotkeys";
+import { MockRequestInspector } from "@/inspector/mock-request-inspector";
 import { RequestInspector } from "@/inspector/request-inspector";
 import { CommandPalette } from "./command-palette/command-palette";
 import { useRunAction } from "./command-palette/use-run-action";
@@ -49,6 +50,7 @@ export function StudioShell(): React.ReactNode {
       </div>
       <StatusBar />
       <RequestInspector />
+      <MockRequestInspector />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );

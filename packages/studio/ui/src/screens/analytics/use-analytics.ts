@@ -15,6 +15,7 @@ import type { RequestSeries } from "@/features/analytics/request-series";
 import { requestSeries } from "@/features/analytics/request-series";
 import type { StatusGroup } from "@/features/analytics/status-breakdown";
 import { statusBreakdown } from "@/features/analytics/status-breakdown";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import { shownNow } from "@/features/sessions/shown-now";
 import { useNow } from "@/hooks/use-tick";
 import { useStudioStore } from "@/store";
@@ -71,7 +72,7 @@ export function useAnalytics(): AnalyticsModel {
   const { rows, ...rest } = figures;
   const change = (next: AnalyticsView): void =>
     void navigate({
-      search: (prev) => ({ req: prev.req, tab: prev.tab, ...analyticsSearch(next) }),
+      search: (prev) => ({ ...inspectorOf(prev), ...analyticsSearch(next) }),
       replace: true,
     });
   return {

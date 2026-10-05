@@ -5,6 +5,7 @@ import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import type { MockRoutesSearch, RouteKind } from "@/features/mocks/routes-view";
 import { filterRoutes, routeKeyOf, routeKindCounts } from "@/features/mocks/routes-view";
+import { inspectorOf } from "@/features/requests/inspector-of";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { ROUTE_COLUMNS } from "./route-columns";
@@ -38,7 +39,7 @@ export function MockRoutesScreen(): React.ReactNode {
   const kind = search.kind ?? "all";
   const set = (patch: MockRoutesSearch) =>
     void navigate({
-      search: (prev) => ({ req: prev.req, tab: prev.tab, ...search, ...patch }),
+      search: (prev) => ({ ...inspectorOf(prev), ...search, ...patch }),
       replace: true,
     });
   const counts = routeKindCounts(server.routes);

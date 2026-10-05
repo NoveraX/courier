@@ -98,6 +98,7 @@ export function extractEndpoints(
       ...(variablesFields && { variablesFields }),
       ...(transport && transport !== "http" && { transport }),
       ...(transport === "ws" && schema?.receive ? { hasReceiveSchema: true } : {}),
+      ...(probed.served && { served: true }),
     };
   }
 

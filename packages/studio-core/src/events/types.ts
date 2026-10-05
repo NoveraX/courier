@@ -109,6 +109,8 @@ export interface SourceMap {
             transport?: "sse" | "ws";
             /** True when WS channel has a receive schema (bidirectional) */
             hasReceiveSchema?: boolean;
+            /** True when the app serves it itself: a stream or a channel it implements */
+            served?: boolean;
           };
         };
       };

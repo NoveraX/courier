@@ -28,8 +28,13 @@ describe("a declared source from Studio", () => {
     ).toBe(true);
   });
 
+  it("keeps a stream the app serves itself", () => {
+    expect(isScannedSource(withTicks({ served: true }))).toBe(true);
+  });
+
   it("is left out when a field it carries has the wrong shape", () => {
     expect(isScannedSource(withTicks({ transport: "grpc" }))).toBe(false);
+    expect(isScannedSource(withTicks({ served: "yes" }))).toBe(false);
     expect(isScannedSource(withTicks({ variablesStub: "count" }))).toBe(false);
     expect(
       isScannedSource(withTicks({ variablesFields: [{ path: "count", type: "number" }] })),

@@ -69,6 +69,8 @@ export interface EndpointAnalysis {
   variablesFields?: SchemaField[];
   /** A channel whose messages from the client have a schema. */
   hasReceiveSchema?: true;
+  /** A stream or a channel the app serves itself, rather than an upstream. */
+  served?: true;
 }
 
 export interface ScannedEndpoint {

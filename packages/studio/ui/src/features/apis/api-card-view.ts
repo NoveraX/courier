@@ -1,5 +1,5 @@
+import type { ScannedSource, SourceStatusInfo, SourceSummary } from "@/features/apis/types";
 import { shortAgo } from "@/features/explorer/endpoint-key";
-import type { ScannedSource, SourceStatusInfo, SourceSummary } from "@/views/apis/types";
 import { computeAnalysisStats, countScannedEndpoints } from "./helpers";
 
 /** How much of a source is typed, by one measure. */
@@ -33,7 +33,7 @@ const STATUS_LABEL: Readonly<Record<ApiCardView["status"]["kind"], string>> = {
   "up-to-date": "Up to date",
   "updates-available": "Update available",
   checking: "Checking…",
-  error: "Error",
+  error: "Check failed",
   unchecked: "Not checked",
   none: "Not checked",
 };

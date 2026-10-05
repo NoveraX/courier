@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AnalyticsView } from "@/views/analytics";
+
+import { validateAnalyticsSearch } from "@/features/analytics/analytics-search";
+import { AnalyticsScreen } from "@/screens/analytics/analytics-screen";
 
 export const Route = createFileRoute("/analytics")({
-  component: AnalyticsView,
+  component: AnalyticsScreen,
+  validateSearch: validateAnalyticsSearch,
 });

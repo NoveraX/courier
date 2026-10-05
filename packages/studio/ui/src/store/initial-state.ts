@@ -14,7 +14,6 @@ export type InitialState = Pick<
   | "paused"
   | "heldRequests"
   | "shownSession"
-  | "auditExpandedIds"
   | "playgroundHistory"
   | "playgroundActiveResponse"
   | "connected"
@@ -43,7 +42,6 @@ export function createInitialState(savedTheme: StudioState["theme"]): InitialSta
     paused: false,
     heldRequests: [],
     shownSession: null,
-    auditExpandedIds: new Set<string>(),
     playgroundHistory: [],
     playgroundActiveResponse: null,
     connected: false,

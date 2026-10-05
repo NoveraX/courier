@@ -9,15 +9,19 @@
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const copied = vi.hoisted(() => vi.fn());
+
 vi.mock("@/lib/api-client", () => ({ post: vi.fn(), get: vi.fn() }));
+vi.mock("@/lib/clipboard", () => ({ copyToClipboard: copied }));
 vi.mock("@/socket", () => ({
   getSocket: () => ({ emit: vi.fn(), on: vi.fn(), off: vi.fn(), connect: vi.fn() }),
 }));
 
 import { apiCardView, handWrittenRow } from "@/features/apis/api-card-view";
+import { MINIMAL_CONFIG } from "@/features/apis/minimal-config";
+import type { ScannedEndpoint, ScannedSource, SourceSummary } from "@/features/apis/types";
 import { post } from "@/lib/api-client";
 import { useStudioStore } from "@/store";
-import type { ScannedEndpoint, ScannedSource, SourceSummary } from "@/views/apis/types";
 import { openShell } from "./shell-harness";
 
 function endpoint(name: string, typed: boolean): ScannedEndpoint {
@@ -136,7 +140,7 @@ describe("an imported API's card", () => {
 
 describe("the APIs page", () => {
   it("counts the sources and endpoints, and lists the hand-written ones opening the Explorer", async () => {
-    await openShell("/next/apis");
+    await openShell("/apis");
 
     expect(screen.getByText("1 imported · 1 hand-written · 3 endpoints")).toBeTruthy();
     expect(within(card()).getByText("Not checked")).toBeTruthy();
@@ -144,7 +148,7 @@ describe("the APIs page", () => {
       "link",
       { name: /api/ },
     );
-    expect(row.getAttribute("href")).toBe("/next/explorer/endpoints?q=api.");
+    expect(row.getAttribute("href")).toBe("/explorer/endpoints?q=api.");
     expect(handWrittenRow(API)).toEqual({
       name: "api",
       endpoints: 1,
@@ -156,7 +160,7 @@ describe("the APIs page", () => {
 
   it("checks every import for a newer spec, and offers to review one that has one", async () => {
     vi.mocked(post).mockResolvedValueOnce({ results: { billing: { changed: true } } });
-    await openShell("/next/apis");
+    await openShell("/apis");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Check for updates" })));
 
@@ -166,7 +170,7 @@ describe("the APIs page", () => {
     expect(within(card()).getByText("checked just now")).toBeTruthy();
   });
 
-  it("says so when the project has no config yet", async () => {
+  it("says so when the project has no config yet, and copies the config it starts from", async () => {
     useStudioStore.setState({
       configStatus: {
         state: "missing",
@@ -179,9 +183,25 @@ describe("the APIs page", () => {
       registrySources: [],
     });
 
-    await openShell("/next/apis");
+    await openShell("/apis");
 
     expect(screen.getByText("No courier.config.ts")).toBeTruthy();
+    expect(screen.getByText(/^Create courier\.config\.ts at the project root\./)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Import API" })).toHaveProperty("disabled", true);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Copy config" }));
+    });
+    expect(copied).toHaveBeenCalledWith(MINIMAL_CONFIG, "config");
+  });
+
+  it("says where an API has to be declared while the config declares none", async () => {
+    useStudioStore.setState({ scanSources: [], registrySources: [] });
+
+    await openShell("/apis");
+
+    expect(
+      screen.getByText(/Studio lists the APIs courier\.config declares under sources\./),
+    ).toBeTruthy();
+    expect(screen.queryByText(/automatically/)).toBeNull();
   });
 });

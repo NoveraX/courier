@@ -2,8 +2,8 @@ import type { LucideIcon } from "lucide-react";
 import { ArrowRight, Download, Loader2 } from "lucide-react";
 import type { UseImportReturn } from "@/apis/use-import";
 import { countSelectedEndpoints } from "@/features/apis/helpers";
+import type { ImportState, ImportStep } from "@/features/apis/types";
 import { cn } from "@/lib/utils";
-import type { ImportState, ImportStep } from "@/views/apis/types";
 
 const BUTTON =
   "flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card px-3.5 text-control font-semibold disabled:cursor-default disabled:opacity-50";

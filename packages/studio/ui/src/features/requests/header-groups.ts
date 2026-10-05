@@ -11,12 +11,17 @@ export interface HeaderRow {
 
 /** The headers of one side of a request. */
 export interface HeaderGroup {
-  key: "response" | "request" | "middleware";
+  key: "response" | "request" | "middleware" | "dropped";
   title: string;
   rows: HeaderRow[];
   /** How many headers the side has, before the filter. */
   total: number;
+  /** What the reader should know about the side, when there is something. */
+  note?: string | undefined;
 }
+
+const NOT_FORWARDED_NOTE =
+  "A proxy passes on only the headers it carries by default and the ones the endpoint names with .headers(…) or its source with allowedHeaders.";
 
 function rowsOf(headers: Readonly<Record<string, string>> | undefined): HeaderRow[] {
   return Object.entries(headers ?? {}).map(([name, value]) => ({
@@ -34,21 +39,25 @@ function joined(headers: RequestEntry["middlewareHeaders"]): Record<string, stri
 }
 
 /**
- * A request's headers by side — the answer's, the request's, and the ones
- * middleware added when any did — each narrowed to the ones whose name or
- * value holds the filter.
+ * A request's headers by side — the answer's, the request's, the ones
+ * middleware added when any did, and the ones its caller wrote that a proxy
+ * did not pass on when there are any — each narrowed to the ones whose name
+ * or value holds the filter.
  *
  * @param r - The request
  * @param filter - What a header's name or value must hold
+ * @param notForwarded - The headers the caller wrote that the proxy did not send upstream
  * @returns The groups
  * @example
  * ```ts
  * headerGroupsOf(request, "content").map((g) => g.rows.length); // [1, 0]
+ * headerGroupsOf(request, "", { "x-trace": "abc" }).at(-1)?.title; // "Not forwarded by the proxy"
  * ```
  */
 export function headerGroupsOf(
   r: Pick<RequestEntry, "headers" | "requestHeaders" | "middlewareHeaders">,
   filter: string,
+  notForwarded: Readonly<Record<string, string>> = {},
 ): HeaderGroup[] {
   const query = filter.trim().toLowerCase();
   const groups: Omit<HeaderGroup, "total">[] = [
@@ -58,6 +67,14 @@ export function headerGroupsOf(
   const added = joined(r.middlewareHeaders);
   if (added && Object.keys(added).length > 0) {
     groups.push({ key: "middleware", title: "Added by middleware", rows: rowsOf(added) });
+  }
+  if (Object.keys(notForwarded).length > 0) {
+    groups.push({
+      key: "dropped",
+      title: "Not forwarded by the proxy",
+      rows: rowsOf(notForwarded),
+      note: NOT_FORWARDED_NOTE,
+    });
   }
   return groups.map((group) => ({
     ...group,

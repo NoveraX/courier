@@ -1,5 +1,5 @@
 import { parseSpecFromRaw } from "@/apis/client";
-import type { ParsedSpec } from "@/views/apis/types";
+import type { ParsedSpec } from "@/features/apis/types";
 
 /** A spec given again — typed, pasted or read from a file — and Studio's reading of it. */
 export interface ReuploadState {

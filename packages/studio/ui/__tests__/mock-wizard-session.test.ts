@@ -16,6 +16,7 @@ vi.mock("sonner", () => ({
 }));
 
 import type { Socket } from "socket.io-client";
+import type { ScannedSource } from "@/features/apis/types";
 import { reviewCta } from "../src/features/mocks/wizard/review-cta";
 import type {
   DeclarePreview,
@@ -29,7 +30,6 @@ import { createWizardSession } from "../src/mocks/wizard/wizard-session";
 import type { ApisStore } from "../src/socket/apis-bindings";
 import { bindApis } from "../src/socket/apis-bindings";
 import { DEFAULT_SETTINGS } from "../src/store/constants";
-import type { ScannedSource } from "../src/views/apis/types";
 
 const READY: ReadyOutcome = {
   status: "ready",

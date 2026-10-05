@@ -4,12 +4,15 @@
  * as the characters it holds, never as markup.
  */
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { MocksFileBanner } from "../src/views/mocks/shared/mocks-file-banner";
-import { ConfigDiff } from "../src/views/mocks/wizard/config-diff";
-import { InsertedLinesList } from "../src/views/mocks/wizard/inserted-lines-list";
-import { ReviewReady } from "../src/views/mocks/wizard/review-ready";
+vi.mock("@/socket", () => ({ getSocket: () => ({ emit: vi.fn() }) }));
+
+import { mockBannerOf } from "@/features/mocks/mock-banner";
+import { MocksBanner } from "@/screens/mocks/mocks-banner";
+import { ChangePreview } from "@/screens/mocks/wizard/change-preview";
+import { ReadyPlan } from "@/screens/mocks/wizard/review-plans";
+import { InsertedLines } from "@/screens/mocks/wizard/wizard-notes";
 
 const MARKUP = '<img src=x onerror="alert(1)">';
 const ESCAPED = "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;";
@@ -17,7 +20,7 @@ const ESCAPED = "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;";
 describe("text from Studio", () => {
   it("renders a diff line as text", () => {
     const html = renderToStaticMarkup(
-      <ConfigDiff
+      <ChangePreview
         target="courier.mocks.ts"
         hunks={[
           {
@@ -42,7 +45,7 @@ describe("text from Studio", () => {
 
   it("renders the lines Studio added as text", () => {
     const html = renderToStaticMarkup(
-      <InsertedLinesList lines={[{ line: 3, text: `x, ${MARKUP}`, added: MARKUP }]} />,
+      <InsertedLines lines={[{ line: 3, text: `x, ${MARKUP}`, added: MARKUP }]} />,
     );
 
     expect(html).toContain(ESCAPED);
@@ -50,31 +53,31 @@ describe("text from Studio", () => {
   });
 
   it("names the mocks file that does not load and why, as text", () => {
-    const html = renderToStaticMarkup(
-      <MocksFileBanner
-        status={{ file: "/project/courier.mocks.ts", error: `ParseError: ${MARKUP}` }}
-      />,
-    );
+    const banner = mockBannerOf(undefined, {
+      file: "/project/courier.mocks.ts",
+      error: `ParseError: ${MARKUP}`,
+    });
+    if (!banner) throw new Error("No banner for a mocks file that does not load");
+
+    const html = renderToStaticMarkup(<MocksBanner banner={banner} server={undefined} />);
 
     expect(html).toContain("courier.mocks.ts does not load");
-    expect(html).toContain(`ParseError: ${ESCAPED}`);
+    expect(html).toContain(ESCAPED);
     expect(html).not.toContain("<img");
   });
 
   it("shows no banner while the mocks file loads, or before Studio says how it loads", () => {
     expect(
-      renderToStaticMarkup(
-        <MocksFileBanner status={{ file: "/project/courier.mocks.ts", error: null }} />,
-      ),
-    ).toBe("");
-    expect(renderToStaticMarkup(<MocksFileBanner status={null} />)).toBe("");
+      mockBannerOf(undefined, { file: "/project/courier.mocks.ts", error: null }),
+    ).toBeUndefined();
+    expect(mockBannerOf(undefined, null)).toBeUndefined();
   });
 });
 
 describe("the change to confirm", () => {
   it("does not say nothing else changes when the plan also changes the file's imports", () => {
     const html = renderToStaticMarkup(
-      <ReviewReady
+      <ReadyPlan
         mockCount={1}
         changedOnDisk={false}
         outcome={{

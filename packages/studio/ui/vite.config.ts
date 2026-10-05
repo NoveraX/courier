@@ -48,11 +48,8 @@ export default defineConfig({
       output: {
         manualChunks: (id) => {
           if (id.includes("@tanstack/react-router")) return "vendor-router";
-          if (id.includes("recharts")) return "vendor-charts";
-          if (id.includes("@xyflow/react")) return "vendor-flow";
           if (id.includes("motion")) return "vendor-motion";
-          if (id.includes("shiki")) return "vendor-shiki";
-          if (id.includes("sonner") || id.includes("react-resizable-panels") || id.includes("cmdk")) return "vendor-ui";
+          if (id.includes("sonner") || id.includes("cmdk")) return "vendor-ui";
           return undefined;
         },
       },

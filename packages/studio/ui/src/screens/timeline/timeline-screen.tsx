@@ -17,7 +17,7 @@ import { useTimelineFilter } from "./use-timeline-filter";
  * @returns The screen
  * @example
  * ```tsx
- * export const Route = createFileRoute("/next/timeline")({ component: TimelineScreen });
+ * export const Route = createFileRoute("/timeline")({ component: TimelineScreen });
  * ```
  */
 export function TimelineScreen(): React.ReactNode {

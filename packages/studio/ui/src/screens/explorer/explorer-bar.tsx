@@ -10,10 +10,10 @@ import type { ExplorerTab } from "./use-explorer-search";
 import { useExplorerSearch } from "./use-explorer-search";
 
 const TABS: readonly { to: ExplorerTab; label: string; icon: LucideIcon }[] = [
-  { to: "/next/explorer", label: "Graph", icon: GitBranch },
-  { to: "/next/explorer/overview", label: "Overview", icon: LayoutDashboard },
-  { to: "/next/explorer/endpoints", label: "Endpoints", icon: List },
-  { to: "/next/explorer/heatmap", label: "Heatmap", icon: Flame },
+  { to: "/explorer", label: "Graph", icon: GitBranch },
+  { to: "/explorer/overview", label: "Overview", icon: LayoutDashboard },
+  { to: "/explorer/endpoints", label: "Endpoints", icon: List },
+  { to: "/explorer/heatmap", label: "Heatmap", icon: Flame },
 ];
 
 const METRICS: readonly SegmentedOption<ColorMetric>[] = [
@@ -24,7 +24,7 @@ const METRICS: readonly SegmentedOption<ColorMetric>[] = [
 ];
 
 /* The tabs that colour what they draw by a metric. */
-const COLOURED = new Set<string>(["/next/explorer", "/next/explorer/heatmap"]);
+const COLOURED = new Set<string>(["/explorer", "/explorer/heatmap"]);
 
 /**
  * The Explorer's bar: its four tabs, each keeping the search and the open

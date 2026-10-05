@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { WaterfallView } from "@/views/waterfall";
-import { validateWaterfallSearch } from "@/views/waterfall/search-schema";
+import { validateWaterfallSearch } from "@/features/waterfall/waterfall-search";
+import { WaterfallScreen } from "@/screens/waterfall/waterfall-screen";
 
 export const Route = createFileRoute("/waterfall")({
-  component: WaterfallView,
+  component: WaterfallScreen,
   validateSearch: validateWaterfallSearch,
 });

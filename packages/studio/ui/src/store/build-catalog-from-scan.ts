@@ -1,4 +1,4 @@
-import type { ScannedEndpoint, ScannedSource } from "@/views/apis/types";
+import type { ScannedEndpoint, ScannedSource } from "@/features/apis/types";
 import type { Catalog, CatalogEndpoint, CatalogGroup } from "./types-ui";
 
 /** Endpoints a source declares without a group are keyed under `""`. */

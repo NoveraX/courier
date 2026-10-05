@@ -46,10 +46,7 @@ export function RowMenu({ children }: RowMenuProps): React.ReactNode {
         {children}
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
-        <ContextMenu.Content
-          data-shell=""
-          className="z-50 w-55 animate-pop-in rounded-[9px] bg-panel p-1.25 shadow-overlay"
-        >
+        <ContextMenu.Content className="z-50 w-55 animate-pop-in rounded-[9px] bg-panel p-1.25 shadow-overlay">
           {request && <Items request={request} />}
         </ContextMenu.Content>
       </ContextMenu.Portal>

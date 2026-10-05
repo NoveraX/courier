@@ -1,9 +1,8 @@
 import { Check, Loader2, Server } from "lucide-react";
-
+import type { ScannedSource } from "@/features/apis/types";
 import type { SourceAvailability } from "@/features/mocks/wizard/source-availability";
 import type { MockDraft } from "@/features/mocks/wizard/types";
 import { cn } from "@/lib/utils";
-import type { ScannedSource } from "@/views/apis/types";
 
 function endpointCountOf(source: ScannedSource): number {
   /* A source may declare endpoints outside any group. */

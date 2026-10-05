@@ -77,7 +77,6 @@ export function ProjectCard(): React.ReactNode {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          data-shell=""
           align="start"
           sideOffset={6}
           className="z-50 w-(--radix-popover-trigger-width) min-w-56 animate-pop-in rounded-card border border-line bg-panel p-1 shadow-overlay"

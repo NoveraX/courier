@@ -23,7 +23,7 @@ const ROW =
  * ```
  */
 export function GetStartedLink(): React.ReactNode {
-  const active = useRouterState({ select: (s) => s.location.pathname === "/next" });
+  const active = useRouterState({ select: (s) => s.location.pathname === "/" });
   const attached = useStudioStore((s) => s.bindingSnapshot.runtimeCount > 0);
   const frameworkId = useSetupStore((s) => s.frameworkId);
   const copied = useSetupStore((s) => s.copied);
@@ -33,7 +33,7 @@ export function GetStartedLink(): React.ReactNode {
     const progress = setupProgress(framework, copied, attached, false);
     return (
       <Link
-        to="/next"
+        to="/"
         search={{ setup: true }}
         aria-current={active ? "page" : undefined}
         className="flex flex-col gap-1.5 rounded-card bg-brand-dim px-2.5 pt-2.5 pb-2.75 text-fg"
@@ -62,7 +62,7 @@ export function GetStartedLink(): React.ReactNode {
   }
   return (
     <Link
-      to="/next"
+      to="/"
       search={{ setup: true }}
       aria-current={active ? "page" : undefined}
       className={cn(ROW, active ? "bg-raised font-strong text-fg" : "text-fg-muted")}

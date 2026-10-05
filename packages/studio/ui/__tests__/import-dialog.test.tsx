@@ -15,11 +15,11 @@ vi.mock("sonner", () => ({
 }));
 vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
+import type { ParsedSpec } from "@/features/apis/types";
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
 import { useImport } from "../src/apis/use-import";
 import { ImportDialog } from "../src/screens/apis/import/import-dialog";
-import type { ParsedSpec } from "../src/views/apis/types";
 
 const SPEC: ParsedSpec = {
   title: "Pets",
@@ -183,6 +183,8 @@ describe("importing an API", () => {
     ).toBeTruthy();
     expect(document.body.textContent).toContain('import { pets } from "./src/api/pets/source";');
     expect(onWritten).toHaveBeenCalledTimes(1);
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: "Done" })));
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("shows the plan of a write Studio will not apply unasked, and writes as allowed next", async () => {

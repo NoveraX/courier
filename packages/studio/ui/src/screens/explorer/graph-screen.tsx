@@ -60,7 +60,7 @@ export function GraphScreen(): React.ReactNode {
   const open = (node: GraphNode) =>
     node.kind === "endpoint"
       ? set({ endpoint: node.key })
-      : set({ q: `${node.key}.` }, "/next/explorer/endpoints");
+      : set({ q: `${node.key}.` }, "/explorer/endpoints");
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center gap-3.5 border-b border-line bg-bg-subtle py-2.5 pr-4 pl-5">

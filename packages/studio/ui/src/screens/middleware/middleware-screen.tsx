@@ -46,8 +46,8 @@ function NoMiddleware(): React.ReactNode {
  * ```
  */
 export function MiddlewareScreen(): React.ReactNode {
-  const search: MiddlewareSearch = useSearch({ from: "/next/middleware" });
-  const navigate = useNavigate({ from: "/next/middleware" });
+  const search: MiddlewareSearch = useSearch({ from: "/middleware" });
+  const navigate = useNavigate({ from: "/middleware" });
   const { open } = useInspector();
   const calls = traced(useStudioStore((s) => s.requests));
   const overview = middlewareOverview(calls);

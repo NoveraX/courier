@@ -5,7 +5,7 @@ import { FIELD_INPUT, FormField } from "@/design/form-field";
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import { ToggleSwitch } from "@/design/toggle-switch";
-import type { GenerateOptions } from "@/views/apis/types";
+import type { GenerateOptions } from "@/features/apis/types";
 
 type Flag = "generateTypes" | "generateSchemas" | "addAuthMiddleware" | "includeComments";
 

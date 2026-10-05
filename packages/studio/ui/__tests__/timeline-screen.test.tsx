@@ -62,7 +62,7 @@ afterEach(cleanup);
 
 describe("the Timeline", () => {
   it("lists the pinned requests above the live ones, newest first, and counts them", async () => {
-    await openShell("/next/timeline");
+    await openShell("/timeline");
 
     expect(rows()).toEqual(["pinned", "new", "failed", "old"]);
     expect(screen.getByText("Pinned")).toBeTruthy();
@@ -71,7 +71,7 @@ describe("the Timeline", () => {
   });
 
   it("shows a quick view and keeps it in the address", async () => {
-    const router = await openShell("/next/timeline");
+    const router = await openShell("/timeline");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Errors/ })));
 
@@ -81,7 +81,7 @@ describe("the Timeline", () => {
   });
 
   it("opens a row's request in the inspector, and closes it on a second click", async () => {
-    const router = await openShell("/next/timeline");
+    const router = await openShell("/timeline");
     const row = () => document.querySelector('[data-request-id="failed"]') as HTMLElement;
 
     await settle(() => fireEvent.click(row()));
@@ -96,7 +96,7 @@ describe("the Timeline", () => {
   });
 
   it("moves through the rows with j and k, from the top when none is open", async () => {
-    const router = await openShell("/next/timeline");
+    const router = await openShell("/timeline");
 
     await settle(() => fireEvent.keyDown(window, { key: "j" }));
     expect(router.state.location.search).toMatchObject({ req: "pinned" });
@@ -110,7 +110,7 @@ describe("the Timeline", () => {
   });
 
   it("finds requests by the search, and resets the filters when none match", async () => {
-    await openShell("/next/timeline?q=nothing-like-this");
+    await openShell("/timeline?q=nothing-like-this");
     expect(screen.getByText("No requests match")).toBeTruthy();
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Reset filters" })));
@@ -123,7 +123,7 @@ describe("the Timeline", () => {
       paused: true,
       heldRequests: [requestEntry({ id: "held", startedAt: NOW })],
     });
-    await openShell("/next/timeline");
+    await openShell("/timeline");
 
     fireEvent.click(screen.getByRole("button", { name: "1 new · resume" }));
 
@@ -134,13 +134,13 @@ describe("the Timeline", () => {
   it("waits for requests while there are none", async () => {
     useStudioStore.setState({ requests: [] });
 
-    await openShell("/next/timeline");
+    await openShell("/timeline");
 
     expect(screen.getByText("Waiting for requests")).toBeTruthy();
   });
 
   it("narrows by a filter's value chosen in its menu", async () => {
-    await openShell("/next/timeline");
+    await openShell("/timeline");
 
     fireEvent.click(screen.getByRole("button", { name: /^Method/ }));
     const menu = await screen.findByRole("dialog");
@@ -150,7 +150,7 @@ describe("the Timeline", () => {
   });
 
   it("keeps pinned requests on Clear while Preserve log is on", async () => {
-    await openShell("/next/timeline");
+    await openShell("/timeline");
 
     fireEvent.click(screen.getByRole("button", { name: /Preserve log/ }));
     act(() => {
@@ -174,7 +174,7 @@ describe("the Timeline's last minute", () => {
       ],
     });
 
-    await openShell("/next/timeline");
+    await openShell("/timeline");
 
     const perMinute = screen.getByText("Req / min").nextElementSibling;
     expect(perMinute?.textContent).toBe("2");

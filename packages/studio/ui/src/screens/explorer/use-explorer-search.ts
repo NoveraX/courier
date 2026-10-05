@@ -7,10 +7,10 @@ import type { ColorMetric } from "@/features/explorer/metric-value";
 
 /** The Explorer's tabs, by the address each lives at. */
 export type ExplorerTab =
-  | "/next/explorer"
-  | "/next/explorer/overview"
-  | "/next/explorer/endpoints"
-  | "/next/explorer/heatmap";
+  | "/explorer"
+  | "/explorer/overview"
+  | "/explorer/endpoints"
+  | "/explorer/heatmap";
 
 /** The Explorer's parameters with their defaults filled in, and what changes them. */
 export interface ExplorerSearchControl {
@@ -32,11 +32,11 @@ export interface ExplorerSearchControl {
  * @example
  * ```ts
  * const { q, set } = useExplorerSearch();
- * set({ q: "api.orders." }, "/next/explorer/endpoints");
+ * set({ q: "api.orders." }, "/explorer/endpoints");
  * ```
  */
 export function useExplorerSearch(): ExplorerSearchControl {
-  const search = useSearch({ from: "/next/explorer" });
+  const search = useSearch({ from: "/explorer" });
   const navigate = useNavigate();
   const set = useCallback(
     (patch: ExplorerSearch, tab?: ExplorerTab) =>

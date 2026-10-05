@@ -96,7 +96,7 @@ export function DangerSection({ history, onResetSettings }: DangerSectionProps):
     {
       action: "sessions",
       label: "Delete saved sessions",
-      description: "Removes every saved session from .courier/sessions",
+      description: "Removes every saved session from .courier/studio.db",
       button: "Delete",
       icon: Trash2,
       question: `Delete ${history.sessions.length} saved session${history.sessions.length === 1 ? "" : "s"} from disk?`,

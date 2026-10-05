@@ -29,7 +29,6 @@ export type {
   CatalogEntry,
   CatalogGroup,
   ConnectionStatus,
-  DensityMode,
   EndpointInfo,
   ExportFormat,
   GroupInfo,

@@ -1,4 +1,4 @@
-import type { ScannedSource, SourceSummary } from "@/views/apis/types";
+import type { ScannedSource, SourceSummary } from "@/features/apis/types";
 import type { ConfigStatusPayload } from "./config-status";
 import type { MocksFileStatus } from "./mocks-file-status";
 import type { StudioInfo } from "./studio-info";
@@ -61,9 +61,6 @@ export interface StudioState {
    */
   mocksFileStatus: MocksFileStatus | null;
 
-  // Audit
-  auditExpandedIds: Set<string>;
-
   // Playground
   playgroundHistory: PlaygroundHistoryEntry[];
   playgroundActiveResponse: PlaygroundHistoryEntry | null;
@@ -119,9 +116,6 @@ export interface StudioState {
    * captured, oldest first — merged with the requests already held.
    */
   replayEvents: (events: Array<StudioEvent & Record<string, unknown>>) => void;
-
-  // Actions — Audit
-  toggleAuditExpanded: (id: string) => void;
 
   // Actions — Playground
   addPlaygroundEntry: (entry: PlaygroundHistoryEntry) => void;

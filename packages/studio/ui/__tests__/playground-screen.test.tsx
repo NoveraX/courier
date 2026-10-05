@@ -3,8 +3,11 @@
  *
  * The Playground in the new shell: the endpoint the address names, its
  * variables checked against the fields its schema declares, the URL with
- * its parameters, a send and its answer as the inspector shows it, ⌘↵,
- * the recent sends, copying the call as code, and what it says without an
+ * its parameters, where it is served and the proxy route, a send and its
+ * answer as the inspector shows it, the headers a proxy did not forward,
+ * one stream at a time, ⌘↵,
+ * the recent sends, copying the call as code, why it sends
+ * nothing when the variables are not JSON, and what it says without an
  * attached app.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
@@ -12,16 +15,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const emit = vi.hoisted(() => vi.fn());
 const copied = vi.hoisted(() => vi.fn());
+const toast = vi.hoisted(() => ({ error: vi.fn(), success: vi.fn() }));
 
 vi.mock("@/socket", () => ({
   getSocket: () => ({ emit, on: vi.fn(), off: vi.fn(), connect: vi.fn() }),
 }));
 vi.mock("@/lib/clipboard", () => ({ copyToClipboard: copied }));
+vi.mock("sonner", () => ({ toast }));
 
+import type { ScannedSource } from "@/features/apis/types";
 import { usePlaygroundDrafts } from "@/playground/draft-store";
 import { useStudioStore } from "@/store";
-import type { ScannedSource } from "@/views/apis/types";
-import { API, BOUND } from "./playground-fixtures";
+import { API, BOUND, trafficRequest } from "./playground-fixtures";
 import { requestEntry } from "./request-entry-fixture";
 import { openShell } from "./shell-harness";
 
@@ -88,7 +93,7 @@ afterEach(() => {
 
 describe("the Playground", () => {
   it("opens on the endpoint its address names, its variables checked against its schema", async () => {
-    await openShell("/next/playground?endpoint=api.users.create");
+    await openShell("/playground?endpoint=api.users.create");
 
     expect(screen.getByRole("button", { name: "Endpoint: api.users.create" })).toBeTruthy();
     expect(editor()).toHaveProperty("value", '{\n  "name": ""\n}');
@@ -105,7 +110,7 @@ describe("the Playground", () => {
   });
 
   it("fills a path parameter from the variables, and marks it while it is missing", async () => {
-    await openShell("/next/playground?endpoint=api.users.byId");
+    await openShell("/playground?endpoint=api.users.byId");
 
     expect(screen.getByTitle("Set id in the variables").textContent).toBe("/:id");
     await settle(() =>
@@ -116,8 +121,27 @@ describe("the Playground", () => {
     expect(screen.getByText("?full=true")).toBeTruthy();
   });
 
+  it("shows where the endpoint is served, and the proxy route its source declares", async () => {
+    await openShell("/playground?endpoint=api.misc.headers");
+    const request = screen.getByRole("region", { name: "Request" });
+
+    expect(request.textContent).toContain("http://localhost:7501/v2/misc/echo/headers");
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: "Proxy" })));
+    expect(within(request).getByText("via http://localhost:7502/api/request")).toBeTruthy();
+  });
+
+  it("says why it sends nothing when the variables are not JSON", async () => {
+    await openShell("/playground?endpoint=api.users.byId");
+
+    await settle(() => fireEvent.change(editor(), { target: { value: '{ "id": ' } }));
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Send/ })));
+
+    expect(execCalls()).toEqual([]);
+    expect(toast.error).toHaveBeenCalledWith("Variables are not valid JSON");
+  });
+
   it("sends the call, then shows its answer from the request it made", async () => {
-    await openShell("/next/playground?endpoint=api.users.create");
+    await openShell("/playground?endpoint=api.users.create");
     await settle(() => fireEvent.change(editor(), { target: { value: '{ "name": "Ada" }' } }));
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Send/ })));
@@ -154,8 +178,92 @@ describe("the Playground", () => {
     expect(within(response()).getByRole("button", { name: "Inspect" })).toBeTruthy();
   });
 
+  it("lists the headers it wrote that the proxy did not forward, and how to carry them", async () => {
+    usePlaygroundDrafts.setState({
+      variables: { "api.users.create": '{ "name": "Ada" }' },
+      headers: '{ "authorization": "Bearer t", "x-trace": "abc" }',
+      mode: "proxy",
+    });
+    await openShell("/playground?endpoint=api.users.create");
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Send/ })));
+    const rid = useStudioStore.getState().playgroundHistory[0]?.rid ?? "";
+    await settle(() => {
+      const store = useStudioStore.getState();
+      store.appendPlaygroundChunk(rid, { kind: "http-result", status: 201, data: { id: 7 } });
+      store.endPlayground(rid, { durationMs: 40 });
+      useStudioStore.setState({
+        requests: [
+          requestEntry({
+            id: `pg_${rid}`,
+            group: "users",
+            method: "create",
+            mode: "proxy",
+            statusCode: 201,
+            requestHeaders: { Authorization: "Bearer t" },
+          }),
+        ],
+      });
+    });
+
+    await settle(() =>
+      fireEvent.click(within(response()).getByRole("button", { name: "Headers" })),
+    );
+
+    const group = within(
+      within(response()).getByRole("region", { name: "Not forwarded by the proxy" }),
+    );
+    expect(group.getByText("x-trace")).toBeTruthy();
+    expect(group.queryByText("authorization")).toBeNull();
+    expect(group.getByText(/\.headers\(…\) or its source with allowedHeaders/)).toBeTruthy();
+  });
+
+  it("claims no header left behind by a direct call, which sends every header itself", async () => {
+    usePlaygroundDrafts.setState({
+      variables: { "api.users.create": '{ "name": "Ada" }' },
+      headers: '{ "x-client-tag": "pg", "x-not-allowed": "1" }',
+    });
+    await openShell("/playground?endpoint=api.users.create");
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Send/ })));
+    const rid = useStudioStore.getState().playgroundHistory[0]?.rid ?? "";
+    await settle(() => {
+      useStudioStore.getState().endPlayground(rid, { durationMs: 40 });
+      useStudioStore.setState({
+        requests: [
+          requestEntry({
+            id: `pg_${rid}`,
+            method: "create",
+            requestHeaders: { "x-client-tag": "pg", "x-not-allowed": "1" },
+          }),
+        ],
+      });
+    });
+
+    await settle(() =>
+      fireEvent.click(within(response()).getByRole("button", { name: "Headers" })),
+    );
+
+    expect(execCalls()).toEqual([
+      expect.objectContaining({ headers: { "x-client-tag": "pg", "x-not-allowed": "1" } }),
+    ]);
+    expect(
+      within(response()).queryByRole("region", { name: "Not forwarded by the proxy" }),
+    ).toBeNull();
+  });
+
+  it("opens no second stream while one is live: ⌘↵ unsubscribes, as its button does", async () => {
+    await openShell("/playground?endpoint=api.live.ticks");
+
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Subscribe/ })));
+    const rid = useStudioStore.getState().playgroundHistory[0]?.rid ?? "";
+    await settle(() => fireEvent.keyDown(document, { key: "Enter", metaKey: true }));
+
+    expect(execCalls()).toEqual([expect.objectContaining({ method: "ticks", transport: "sse" })]);
+    expect(useStudioStore.getState().playgroundHistory).toHaveLength(1);
+    expect(emit).toHaveBeenCalledWith("playground:exec:cancel", { rid });
+  });
+
   it("subscribes to a stream, and unsubscribes", async () => {
-    await openShell("/next/playground?endpoint=api.live.ticks");
+    await openShell("/playground?endpoint=api.live.ticks");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Subscribe/ })));
 
@@ -180,7 +288,7 @@ describe("the Playground", () => {
       variables: { "api.users.create": '{ "name": "Ada" }' },
       headers: '{ "authorization": "Bearer t" }',
     });
-    await openShell("/next/playground?endpoint=api.users.create");
+    await openShell("/playground?endpoint=api.users.create");
 
     await settle(() =>
       fireEvent.pointerDown(screen.getByRole("button", { name: /Copy as/ }), {
@@ -201,12 +309,12 @@ describe("the Playground", () => {
 
   /* After the menu test: a Radix popover opened and closed here leaves a later test's menu in jsdom closing as it opens. */
   it("sends with ⌘↵, and brings a recent send back", async () => {
-    const router = await openShell("/next/playground?endpoint=api.users.create");
+    const router = await openShell("/playground?endpoint=api.users.create");
 
     await settle(() => fireEvent.keyDown(document, { key: "Enter", metaKey: true }));
     expect(execCalls()).toHaveLength(1);
     await settle(() =>
-      router.navigate({ to: "/next/playground", search: { endpoint: "api.users.search" } }),
+      router.navigate({ to: "/playground", search: { endpoint: "api.users.search" } }),
     );
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /History/ })));
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /users\.create/ })));
@@ -218,8 +326,22 @@ describe("the Playground", () => {
   it("says so when no app is attached", async () => {
     useStudioStore.setState({ bindingSnapshot: { ...BOUND, runtimeCount: 0 } });
 
-    await openShell("/next/playground");
+    await openShell("/playground");
 
     expect(screen.getByText("No app attached")).toBeTruthy();
+  });
+
+  it("offers the sources the config declares, under their names, not the one traffic reported", async () => {
+    useStudioStore.setState({ requests: [trafficRequest()] });
+    await openShell("/playground?endpoint=api.users.byId");
+
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Send/ })));
+
+    expect(execCalls()).toEqual([
+      expect.objectContaining({ source: "api", group: "users", method: "byId" }),
+    ]);
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Endpoint:/ })));
+    expect(screen.getByPlaceholderText("Search 6 endpoints…")).toBeTruthy();
+    expect(screen.queryByText("localhost")).toBeNull();
   });
 });

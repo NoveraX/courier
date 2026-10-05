@@ -31,13 +31,15 @@ function rowOf(step: TraceStep, place: number, look: MiddlewareLook | undefined)
   };
 }
 
-/* The fetch comes after every middleware that works before it, before the ones that work only after. */
+/* The fetch comes after every middleware that works before it, before the ones that work only after
+   — when the call got that far. */
 function rowsOf(
   trace: ChainTrace,
   r: RequestEntry,
   looks: ReadonlyMap<string, MiddlewareLook>,
 ): Row[] {
   const rows = trace.steps.map((step, place) => rowOf(step, place, looks.get(step.name)));
+  if (!trace.reachedFetch) return rows;
   const at = trace.steps.filter((step) => step.phase !== "after").length;
   const code = r.statusCode ?? (r.status === "aborted" ? "aborted" : "no response");
   rows.splice(at, 0, {
@@ -56,7 +58,8 @@ function rowsOf(
 /**
  * A call's pipeline, step by step: each middleware — whether it went
  * through, its phase and time, what it does or how it failed, and the
- * headers it added — with the fetch in its place among them.
+ * headers it added — with the fetch in its place among them, when the call
+ * got that far.
  *
  * @param props - The trace, the call, and the middleware's looks
  * @returns The steps

@@ -6,15 +6,14 @@
  * listed, and a cancelled one is aborted — as the runtime reports them
  * (`validation`, `aborted`) — not a red "Error", so the Status filter's
  * "Validation Error" and "Aborted" match them and the issues a failed
- * validation reported are kept.
+ * validation reported are kept; an aborted request is no failure.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { StudioEvent } from "@/store";
+import { isFailure } from "@/features/analytics/call-stats";
+import { matchesFilter, NO_SELECTION, OPEN_FILTER } from "@/features/requests/timeline-filter";
+import type { RequestEntry, StudioEvent } from "@/store";
 import { useStudioStore } from "@/store";
-import { EMPTY_FILTERS } from "@/store/constants";
-import { computeKPIs } from "@/views/analytics/compute-kpis";
-import { filterRequests } from "@/views/timeline/filters";
 
 type Event = StudioEvent & Record<string, unknown>;
 
@@ -23,6 +22,15 @@ function event(type: string, fields: Record<string, unknown>): Event {
 }
 
 const start = event("request:start", { source: "api", group: "users", method: "get" });
+
+/* The requests the Timeline shows with one status chosen in its Status filter. */
+function withStatus(status: string): string[] {
+  const filter = { ...OPEN_FILTER, selected: { ...NO_SELECTION, status: [status] } };
+  return useStudioStore
+    .getState()
+    .requests.filter((r: RequestEntry) => matchesFilter(r, filter, { slowMs: 500 }))
+    .map((r) => r.id);
+}
 
 function statusOf(id = "r1") {
   return useStudioStore.getState().requests.find((r) => r.id === id);
@@ -65,13 +73,8 @@ describe("a request that failed its response schema", () => {
     ]);
   });
 
-  it("is what the Validation Error filter finds", () => {
-    const found = filterRequests(useStudioStore.getState().requests, {
-      ...EMPTY_FILTERS,
-      status: ["validation_error"],
-    });
-
-    expect(found.map((r) => r.id)).toEqual(["r1"]);
+  it("is what the Validation status filter finds", () => {
+    expect(withStatus("validation_error")).toEqual(["r1"]);
   });
 });
 
@@ -90,17 +93,12 @@ describe("a request its caller cancelled", () => {
     expect(statusOf()?.status).toBe("aborted");
   });
 
-  it("is what the Aborted filter finds", () => {
-    const found = filterRequests(useStudioStore.getState().requests, {
-      ...EMPTY_FILTERS,
-      status: ["aborted"],
-    });
-
-    expect(found.map((r) => r.id)).toEqual(["r1"]);
+  it("is what the Aborted status filter finds", () => {
+    expect(withStatus("aborted")).toEqual(["r1"]);
   });
 
-  it("is not counted as an error", () => {
-    expect(computeKPIs(useStudioStore.getState().requests).errorCount).toBe(0);
+  it("is not counted as a failure", () => {
+    expect(useStudioStore.getState().requests.filter(isFailure)).toEqual([]);
   });
 });
 

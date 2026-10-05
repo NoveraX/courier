@@ -26,7 +26,7 @@ interface HealthMatrixProps {
  * @returns The card
  * @example
  * ```tsx
- * <HealthMatrix model={model} onGroup={(key) => set({ q: `${key}.` }, "/next/explorer/endpoints")} />
+ * <HealthMatrix model={model} onGroup={(key) => set({ q: `${key}.` }, "/explorer/endpoints")} />
  * ```
  */
 export function HealthMatrix({ model, onGroup }: HealthMatrixProps): React.ReactNode {

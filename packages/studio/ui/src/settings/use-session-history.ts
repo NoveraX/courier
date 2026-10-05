@@ -24,9 +24,10 @@ interface SessionHistory {
 }
 
 /**
- * The sessions Studio keeps in `.courier/sessions/`, and what can be done
- * with them: save the requests on screen as one, load one back into the
- * Timeline, export, delete. A step that fails says why in a toast.
+ * The sessions Studio keeps in the project's database, `.courier/studio.db`,
+ * and what can be done with them: save the requests on screen as one, load
+ * one back into the Timeline, export, delete. A step that fails says why in
+ * a toast.
  *
  * @returns The saved sessions, whether they are still loading, and the actions
  *

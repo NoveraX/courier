@@ -126,7 +126,7 @@ describe("a logged request", () => {
 
 describe("the Logs tab", () => {
   it("lists the mock's own requests newest first, tagged by what answered them", async () => {
-    await openShell("/next/mocks/logs");
+    await openShell("/mocks/logs");
 
     expect(
       rows().map(
@@ -137,7 +137,7 @@ describe("the Logs tab", () => {
   });
 
   it("narrows to a filter kept in the address, and to a search", async () => {
-    const router = await openShell("/next/mocks/logs");
+    const router = await openShell("/mocks/logs");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Errors/ })));
     expect(router.state.location.search).toMatchObject({ show: "errors" });
@@ -153,7 +153,7 @@ describe("the Logs tab", () => {
   });
 
   it("opens a request on what it was answered with and the variables it sent", async () => {
-    const router = await openShell("/next/mocks/logs");
+    const router = await openShell("/mocks/logs");
 
     await settle(() => fireEvent.click(row("handler")));
 
@@ -164,7 +164,7 @@ describe("the Logs tab", () => {
   });
 
   it("clears the mock's log here and in what Studio replays, every other mock's kept", async () => {
-    await openShell("/next/mocks/logs");
+    await openShell("/mocks/logs");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Clear" })));
 
@@ -174,7 +174,7 @@ describe("the Logs tab", () => {
   });
 
   it("pauses, and says so", async () => {
-    await openShell("/next/mocks/logs");
+    await openShell("/mocks/logs");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Pause" })));
 
@@ -183,10 +183,10 @@ describe("the Logs tab", () => {
   });
 
   it("is where the dashboard's All logs leads", async () => {
-    await openShell("/next/mocks");
+    await openShell("/mocks");
 
     expect(screen.getByRole("link", { name: "All logs →" }).getAttribute("href")).toBe(
-      "/next/mocks/logs",
+      "/mocks/logs",
     );
   });
 });

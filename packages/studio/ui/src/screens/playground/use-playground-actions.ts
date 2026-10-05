@@ -4,12 +4,13 @@ import { endpointKey } from "@/features/explorer/endpoint-key";
 import { draftSnippet } from "@/features/playground/draft-snippet";
 import type { PlaygroundEndpoint } from "@/features/playground/endpoint-choices";
 import { parseJsonc } from "@/features/playground/jsonc-helpers";
+import { requestUrlParts } from "@/features/playground/request-url";
 import { readRequestValues } from "@/features/playground/request-values";
-import type { SnippetFlavor } from "@/features/requests/request-snippets";
 import { copyToClipboard } from "@/lib/clipboard";
 import { usePlaygroundDrafts } from "@/playground/draft-store";
 import { useStudioStore } from "@/store";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
+import type { CopyChoice } from "./copy-as-menu";
 import type { EditorTab } from "./request-pane";
 import type { ResponseTab } from "./response-content";
 import type { PlaygroundEditors } from "./use-playground-editors";
@@ -26,14 +27,14 @@ interface ActionsInput {
 /** What the Playground's smaller controls do. */
 export interface PlaygroundActions {
   prettify: () => void;
-  copy: (flavor: SnippetFlavor, label: string) => void;
+  copy: (choice: CopyChoice, label: string) => void;
   restore: (entry: PlaygroundHistoryEntry) => void;
   labelOf: (entry: PlaygroundHistoryEntry) => string;
 }
 
 /**
- * Laying the editor's JSON out, copying the call as code, bringing back a
- * recent send — its endpoint, variables, headers, mode and answer — and
+ * Laying the editor's JSON out, copying the call as code or its URL — as
+ * the variables fill it — bringing back a recent send — its endpoint, variables, headers, mode and answer — and
  * the method a recent send is listed under.
  *
  * @param input - The endpoint, the editors, the editor shown, the endpoints, and what chooses one and shows a tab
@@ -56,10 +57,16 @@ export function usePlaygroundActions(input: ActionsInput): PlaygroundActions {
       if (!parsed.ok) return void toast.error("Cannot lay out text that is not valid JSON");
       editor.onChange(JSON.stringify(parsed.value, null, indent));
     },
-    copy: (flavor, label) => {
+    copy: (choice, label) => {
       const request = readRequestValues(editors.variables.text, editors.headers.text);
       if (!request.ok) return void toast.error(request.problem);
-      void copyToClipboard(draftSnippet(endpoint, request.values, flavor), label);
+      const text =
+        choice === "url"
+          ? requestUrlParts(endpoint, request.values.variables)
+              .map((part) => part.text)
+              .join("")
+          : draftSnippet(endpoint, request.values, choice);
+      void copyToClipboard(text, label);
     },
     restore: (entry) => {
       const choice = choiceOf(entry);

@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { TimelineView } from "@/views/timeline";
-import { validateTimelineSearch } from "@/views/timeline/search-schema";
+import { validateTimelineSearch } from "@/features/requests/timeline-search";
+import { TimelineScreen } from "@/screens/timeline/timeline-screen";
 
 export const Route = createFileRoute("/timeline")({
-  component: TimelineView,
+  component: TimelineScreen,
   validateSearch: validateTimelineSearch,
 });

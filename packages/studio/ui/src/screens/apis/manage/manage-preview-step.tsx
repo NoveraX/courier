@@ -1,7 +1,6 @@
 import { AlertTriangle, Info } from "lucide-react";
-
+import type { ManagePreviewResult } from "@/features/apis/types";
 import type { PlanConsent } from "@/features/apis/types-file-plan";
-import type { ManagePreviewResult } from "@/views/apis/types";
 import { FilePlanSections } from "../file-plan-sections";
 
 interface ManagePreviewStepProps {

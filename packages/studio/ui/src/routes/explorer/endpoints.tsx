@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EndpointsCatalog } from "@/views/explorer/endpoints";
+
+import { EndpointsScreen } from "@/screens/explorer/endpoints-screen";
 
 export const Route = createFileRoute("/explorer/endpoints")({
-  component: EndpointsCatalog,
+  component: EndpointsScreen,
 });

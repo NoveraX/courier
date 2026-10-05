@@ -52,7 +52,6 @@ export function DialogFrame({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[3px]" />
         <Dialog.Content
-          data-shell=""
           {...(description ? {} : { "aria-describedby": undefined })}
           onInteractOutside={(event) => keepOpen && event.preventDefault()}
           onEscapeKeyDown={(event) => keepOpen && event.preventDefault()}

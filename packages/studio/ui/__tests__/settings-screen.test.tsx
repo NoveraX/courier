@@ -2,8 +2,9 @@
  * @vitest-environment jsdom
  *
  * Settings on the new shell: a change marked "edited", dotted in the
- * navigation and counted in the bar until Save keeps it or Discard drops
- * it; a theme shown as soon as it is picked; an ignore pattern that is not
+ * navigation and counted in the bar until Save keeps it — in this browser,
+ * where Import reads the API defaults — or Discard drops it; a theme shown
+ * as soon as it is picked; an ignore pattern that is not
  * a regular expression refused with the reason; a setting saved elsewhere
  * followed; the saved sessions with a delete that asks; and the captured
  * requests cleared after asking.
@@ -17,9 +18,10 @@ vi.mock("@/socket", () => ({
 vi.mock("@/socket/socket-instance", () => ({ getSocket: () => ({ emit: vi.fn() }) }));
 vi.mock("@/lib/api-client", () => ({ post: vi.fn(), get: vi.fn(), apiClient: { post: vi.fn() } }));
 
+import { buildDefaultOptions } from "@/features/apis/helpers";
 import { post } from "@/lib/api-client";
 import { useStudioStore } from "@/store";
-import { DEFAULT_SETTINGS } from "@/store/constants";
+import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEY } from "@/store/constants";
 import { requestEntry } from "./request-entry-fixture";
 import { openShell } from "./shell-harness";
 
@@ -62,7 +64,7 @@ afterEach(() => {
 
 describe("Settings", () => {
   it("marks a change, counts it in the bar, and keeps it on Save", async () => {
-    await openShell("/next/settings");
+    await openShell("/settings");
 
     await settle(() =>
       fireEvent.click(section("Display").getByRole("button", { name: "4 spaces" })),
@@ -76,8 +78,29 @@ describe("Settings", () => {
     expect(screen.queryByText("1 unsaved change")).toBeNull();
   });
 
+  it("keeps a save in this browser, applies its theme, and hands the API defaults to Import", async () => {
+    localStorage.clear();
+    await openShell("/settings");
+
+    await settle(() =>
+      fireEvent.click(section("Appearance").getByRole("button", { name: "Light" })),
+    );
+    await settle(() =>
+      fireEvent.click(section("API defaults").getByRole("switch", { name: "Include comments" })),
+    );
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: "Save changes" })));
+
+    const state = useStudioStore.getState();
+    const stored: unknown = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? "null");
+    expect(state.settings).toMatchObject({ theme: "light", apisIncludeComments: false });
+    expect(stored).toMatchObject({ theme: "light", apisIncludeComments: false });
+    expect(state.theme).toBe("light");
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light");
+    expect(buildDefaultOptions("pets", state.settings).includeComments).toBe(false);
+  });
+
   it("shows a theme at once, and puts the saved one back on Discard", async () => {
-    await openShell("/next/settings");
+    await openShell("/settings");
 
     await settle(() =>
       fireEvent.click(section("Appearance").getByRole("button", { name: "Light" })),
@@ -90,7 +113,7 @@ describe("Settings", () => {
   });
 
   it("refuses an ignore pattern that is not a regular expression, and adds one that is", async () => {
-    await openShell("/next/settings");
+    await openShell("/settings");
     const field = screen.getByRole("textbox", { name: "Ignore pattern to add" });
 
     await settle(() => fireEvent.change(field, { target: { value: "*.png" } }));
@@ -105,7 +128,7 @@ describe("Settings", () => {
   });
 
   it("follows a setting saved elsewhere while keeping the ones edited here", async () => {
-    await openShell("/next/settings");
+    await openShell("/settings");
     await settle(() =>
       fireEvent.click(section("Display").getByRole("button", { name: "4 spaces" })),
     );
@@ -119,7 +142,7 @@ describe("Settings", () => {
   });
 
   it("lists the saved sessions, and deletes one after asking", async () => {
-    await openShell("/next/settings");
+    await openShell("/settings");
 
     const saved = within(screen.getByRole("list", { name: "Saved sessions" }));
     expect(saved.getByText("Checkout bug")).toBeTruthy();
@@ -131,7 +154,7 @@ describe("Settings", () => {
   });
 
   it("clears the captured requests after asking", async () => {
-    await openShell("/next/settings");
+    await openShell("/settings");
 
     await settle(() =>
       fireEvent.click(section("Danger zone").getByRole("button", { name: "Clear" })),

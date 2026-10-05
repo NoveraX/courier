@@ -2,8 +2,8 @@
  * Pure toggle helpers for manage endpoint selection.
  */
 
+import type { EndpointInventory, InventoryEndpoint } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
-import type { EndpointInventory, InventoryEndpoint } from "@/views/apis/types";
 
 type SetMap = Record<string, Set<string>>;
 

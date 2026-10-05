@@ -39,7 +39,7 @@ describe("an ignore pattern", () => {
 
 describe("the header's trail", () => {
   it("puts Settings under System", () => {
-    expect(crumbsOf("/next/settings")).toEqual(["System", "Settings"]);
-    expect(crumbsOf("/next")).toEqual(["Studio", "Welcome"]);
+    expect(crumbsOf("/settings")).toEqual(["System", "Settings"]);
+    expect(crumbsOf("/")).toEqual(["Studio", "Welcome"]);
   });
 });

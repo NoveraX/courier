@@ -62,7 +62,7 @@ afterEach(() => {
 
 describe("Compare", () => {
   it("shows a success against a failure of one endpoint by default, and what moved", async () => {
-    await openShell("/next/compare");
+    await openShell("/compare");
 
     expect(screen.getByRole("button", { name: "Request A: api.users.get" }).textContent).toContain(
       "200",
@@ -79,7 +79,7 @@ describe("Compare", () => {
   });
 
   it("diffs the responses, and narrows them to the changes", async () => {
-    await openShell("/next/compare");
+    await openShell("/compare");
 
     const lines = () => document.querySelectorAll("pre")[0]?.children.length ?? 0;
     const all = lines();
@@ -95,7 +95,7 @@ describe("Compare", () => {
   });
 
   it("shows the headers that changed, keeping the choice in the address apart from the inspector's tab", async () => {
-    const router = await openShell("/next/compare");
+    const router = await openShell("/compare");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /^Headers/ })));
 
@@ -107,7 +107,7 @@ describe("Compare", () => {
   });
 
   it("swaps the sides, and puts a picked call on one", async () => {
-    const router = await openShell("/next/compare");
+    const router = await openShell("/compare");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Swap A and B" })));
     expect(router.state.location.search).toMatchObject({ a: "failed", b: "ok" });
@@ -122,7 +122,7 @@ describe("Compare", () => {
   });
 
   it("says when a call the link named is no longer held", async () => {
-    await openShell("/next/compare?a=gone&b=ok");
+    await openShell("/compare?a=gone&b=ok");
 
     expect(screen.getByRole("status").textContent).toContain("no longer held");
   });
@@ -130,7 +130,7 @@ describe("Compare", () => {
   it("asks for two finished requests while there are fewer", async () => {
     useStudioStore.setState({ requests: [OK] });
 
-    await openShell("/next/compare");
+    await openShell("/compare");
 
     expect(screen.getByText("Compare needs two finished requests")).toBeTruthy();
     expect(screen.queryByRole("group", { name: "Ready-made pairs" })).toBeNull();

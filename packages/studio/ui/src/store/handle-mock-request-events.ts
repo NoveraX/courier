@@ -135,8 +135,6 @@ export function handleExperimentEvent(serverId: string, event: MockEvent): void 
     type: readOneOf(event.eventType, EXPERIMENT_EVENTS) ?? "started",
     mode: str(event.mode, "unknown"),
     errorRate: num(event.errorRate),
-    peakErrorRate: optNum(event.peakErrorRate),
-    peakP99: optNum(event.peakP99),
     durationMs: optNum(event.durationMs),
     reason: optStr(event.reason),
   });

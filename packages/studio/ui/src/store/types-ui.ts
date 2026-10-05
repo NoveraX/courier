@@ -212,12 +212,10 @@ export type ValidationLib = "zod" | "valibot" | "arktype" | "none";
 export type ApisGroupBy = "tag" | "path" | "single";
 export type ApisClient = "direct" | "proxy" | "both" | "none";
 export type ExportFormat = "har" | "json" | "postman";
-export type DensityMode = "comfortable" | "compact";
 
 export interface Settings {
   // Appearance
   theme: Theme;
-  density: DensityMode;
 
   // Recording
   maxRequests: number;
@@ -227,7 +225,6 @@ export interface Settings {
   // Display
   timestampFormat: TimestampFormat;
   jsonIndent: JsonIndent;
-  showRequestPreview: boolean;
 
   // Notifications
   toastOnError: boolean;

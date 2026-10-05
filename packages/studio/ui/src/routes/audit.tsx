@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AuditView } from "../views/audit";
+
+import { validateAuditSearch } from "@/features/audit/audit-search";
+import { AuditScreen } from "@/screens/audit/audit-screen";
 
 export const Route = createFileRoute("/audit")({
-  component: AuditView,
+  component: AuditScreen,
+  validateSearch: validateAuditSearch,
 });

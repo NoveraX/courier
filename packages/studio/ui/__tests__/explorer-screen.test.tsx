@@ -9,10 +9,13 @@
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
+import type {
+  EndpointAnalysis,
+  ScannedEndpoint,
+  ScannedSource,
+} from "@/features/apis/types-generate";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
-import type { EndpointAnalysis, ScannedEndpoint, ScannedSource } from "@/views/apis/types-generate";
 import { requestEntry } from "./request-entry-fixture";
 import { openShell } from "./shell-harness";
 
@@ -143,7 +146,7 @@ afterEach(cleanup);
 
 describe("the Explorer's graph", () => {
   it("draws every source, group and endpoint with its health and figure", async () => {
-    await openShell("/next/explorer");
+    await openShell("/explorer");
 
     const graph = region("Endpoint graph");
     expect(within(graph).getByText("Sources · 2")).toBeTruthy();
@@ -158,7 +161,7 @@ describe("the Explorer's graph", () => {
   });
 
   it("colours by another metric, kept in the address", async () => {
-    const router = await openShell("/next/explorer");
+    const router = await openShell("/explorer");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Errors" })));
 
@@ -169,11 +172,11 @@ describe("the Explorer's graph", () => {
   });
 
   it("opens the Endpoints list narrowed to a group, and an endpoint's panel", async () => {
-    const router = await openShell("/next/explorer");
+    const router = await openShell("/explorer");
 
     await settle(() => fireEvent.click(screen.getByRole("button", { name: /^api\.orders · / })));
 
-    expect(router.state.location.pathname).toBe("/next/explorer/endpoints");
+    expect(router.state.location.pathname).toBe("/explorer/endpoints");
     expect(router.state.location.search).toMatchObject({ q: "api.orders." });
     expect(rowsOf(region("Endpoints"))).toHaveLength(2);
   });
@@ -181,14 +184,14 @@ describe("the Explorer's graph", () => {
 
 describe("the Endpoints list", () => {
   it("narrows to a kind and counts what it shows", async () => {
-    await openShell("/next/explorer/endpoints?kind=stream");
+    await openShell("/explorer/endpoints?kind=stream");
 
     expect(rowsOf(region("Endpoints"))).toHaveLength(1);
     expect(screen.getByText(/never called$/).textContent).toBe("1 endpoint · 0 never called");
   });
 
   it("tags each endpoint with its kind, proxy and an undeclared response", async () => {
-    await openShell("/next/explorer/endpoints");
+    await openShell("/explorer/endpoints");
 
     const list = region("Endpoints");
     expect(rowWith(list, "orders.create").textContent).toMatch(/mutation.*proxy.*auth.*logger/);
@@ -196,18 +199,18 @@ describe("the Endpoints list", () => {
   });
 
   it("keeps its search across the tabs", async () => {
-    const router = await openShell("/next/explorer/endpoints?q=orders");
+    const router = await openShell("/explorer/endpoints?q=orders");
 
     await settle(() => fireEvent.click(screen.getByRole("link", { name: "Overview" })));
 
-    expect(router.state.location.pathname).toBe("/next/explorer/overview");
+    expect(router.state.location.pathname).toBe("/explorer/overview");
     expect(router.state.location.search).toMatchObject({ q: "orders" });
   });
 });
 
 describe("an endpoint's panel", () => {
   it("opens from its row with its figures and calls, and closes with Esc", async () => {
-    const router = await openShell("/next/explorer/endpoints");
+    const router = await openShell("/explorer/endpoints");
 
     await settle(() => fireEvent.click(rowWith(region("Endpoints"), "orders.create")));
 
@@ -221,7 +224,7 @@ describe("an endpoint's panel", () => {
   });
 
   it("opens a call in the inspector over it, Esc closing the inspector first", async () => {
-    const router = await openShell("/next/explorer/endpoints?endpoint=api.orders.create");
+    const router = await openShell("/explorer/endpoints?endpoint=api.orders.create");
     const sheet = panel();
     if (!sheet) throw new Error("the panel did not open");
 
@@ -240,22 +243,22 @@ describe("an endpoint's panel", () => {
   });
 
   it("links to the endpoint's calls in the Timeline and to the Playground", async () => {
-    await openShell("/next/explorer?endpoint=api.orders.create");
+    await openShell("/explorer?endpoint=api.orders.create");
     const sheet = panel();
     if (!sheet) throw new Error("the panel did not open");
 
     expect(within(sheet).getByRole("link", { name: "View in Timeline" }).getAttribute("href")).toBe(
-      "/next/timeline?q=api.orders.create",
+      "/timeline?q=api.orders.create",
     );
     expect(
       within(sheet).getByRole("link", { name: "Open in Playground" }).getAttribute("href"),
-    ).toBe("/next/playground?endpoint=api.orders.create");
+    ).toBe("/playground?endpoint=api.orders.create");
   });
 });
 
 describe("the overview", () => {
   it("gives six figures over the project's API surface", async () => {
-    await openShell("/next/explorer/overview");
+    await openShell("/explorer/overview");
 
     const figure = (label: string) =>
       within(region("Figures")).getByText(label).parentElement?.textContent;
@@ -266,19 +269,19 @@ describe("the overview", () => {
   });
 
   it("opens a group's endpoints from the matrix and a call from the activity", async () => {
-    const router = await openShell("/next/explorer/overview");
+    const router = await openShell("/explorer/overview");
 
     await settle(() => fireEvent.click(rowsOf(region("Activity"))[0] ?? document.body));
     expect(router.state.location.search).toMatchObject({ req: "c1" });
     await settle(() => fireEvent.click(rowWith(region("Health matrix"), "orders")));
-    expect(router.state.location.pathname).toBe("/next/explorer/endpoints");
+    expect(router.state.location.pathname).toBe("/explorer/endpoints");
     expect(router.state.location.search).toMatchObject({ q: "api.orders." });
   });
 });
 
 describe("the heatmap", () => {
   it("gives each called HTTP endpoint a row of twenty spans", async () => {
-    await openShell("/next/explorer/heatmap");
+    await openShell("/explorer/heatmap");
 
     expect(screen.getByText(/intervals of/).textContent).toBe(
       "2 endpoints × 20 intervals of 3.00s",
@@ -292,7 +295,7 @@ describe("before any endpoint is known", () => {
   it("says so on every tab", async () => {
     useStudioStore.setState({ scanSources: [], requests: [] });
 
-    await openShell("/next/explorer");
+    await openShell("/explorer");
 
     expect(screen.getByText("No endpoints yet")).toBeTruthy();
   });

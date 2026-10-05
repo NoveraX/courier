@@ -4,7 +4,7 @@ import type {
   ScannedGroup,
   ScannedSource,
   SourceSummary,
-} from "@/views/apis/types";
+} from "@/features/apis/types";
 
 import { isPlainObject } from "./is-plain-object";
 

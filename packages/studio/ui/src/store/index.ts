@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { createActions } from "./actions";
 import { loadSettings } from "./constants";
-import { applyDensity } from "./density";
 import { createInitialState } from "./initial-state";
 import type { StudioState } from "./store-types";
 import { applyTheme } from "./theme";
@@ -34,7 +33,6 @@ export type {
   CatalogEntry,
   CatalogGroup,
   ConnectionStatus,
-  DensityMode,
   EndpointInfo,
   ExportFormat,
   GroupInfo,
@@ -55,7 +53,6 @@ export type {
 
 const savedSettings = loadSettings();
 applyTheme(savedSettings.theme);
-applyDensity(savedSettings.density);
 
 // ── Store ───────────────────────────────────────────────────────────────────
 

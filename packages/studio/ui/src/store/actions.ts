@@ -1,7 +1,6 @@
 import { applyEvents } from "./apply-events";
 import { createConnectionActions } from "./connection-actions";
 import { DEFAULT_SETTINGS, saveSettings } from "./constants";
-import { applyDensity } from "./density";
 import { notifyOnEvents } from "./event-notifications";
 import { holdEvents, releaseHeld } from "./held-requests";
 import type { createInitialState } from "./initial-state";
@@ -70,15 +69,6 @@ export function createActions(
         requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),
       })),
 
-    // Audit
-    toggleAuditExpanded: (id) =>
-      set((s) => {
-        const next = new Set(s.auditExpandedIds);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return { auditExpandedIds: next };
-      }),
-
     handleEvents: (events) => {
       const {
         settings: { maxRequests, ignorePatterns },
@@ -132,13 +122,11 @@ export function createActions(
       const next = { ...get().settings, ...patch };
       saveSettings(next);
       if (patch.theme) applyTheme(patch.theme);
-      if (patch.density) applyDensity(patch.density);
       set({ settings: next, theme: next.theme });
     },
     resetSettings: () => {
       saveSettings(DEFAULT_SETTINGS);
       applyTheme(DEFAULT_SETTINGS.theme);
-      applyDensity(DEFAULT_SETTINGS.density);
       set({ settings: DEFAULT_SETTINGS, theme: DEFAULT_SETTINGS.theme });
     },
   };

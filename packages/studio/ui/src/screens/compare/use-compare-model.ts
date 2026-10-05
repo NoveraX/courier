@@ -36,8 +36,8 @@ const PRESETS: readonly PairPreset[] = ["failure", "slow", "latest"];
  * ```
  */
 export function useCompareModel(): CompareModel {
-  const search: CompareSearch = useSearch({ from: "/next/compare" });
-  const navigate = useNavigate({ from: "/next/compare" });
+  const search: CompareSearch = useSearch({ from: "/compare" });
+  const navigate = useNavigate({ from: "/compare" });
   const candidates = comparable(useStudioStore((s) => s.requests));
   const fallback = pairOf(candidates, "failure") ?? pairOf(candidates, "latest");
   const named = (id: string | undefined) => (id ? candidates.find((r) => r.id === id) : undefined);

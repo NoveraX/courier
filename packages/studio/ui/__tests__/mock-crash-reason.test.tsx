@@ -1,7 +1,6 @@
 /**
  * @vitest-environment jsdom
- */
-/**
+ *
  * A managed mock that could not start says why where the user looks: on
  * the wizard's last step and on the Mocks page, as a sentence rather than a
  * stack trace in a tooltip. And a mock that is not running shows no address
@@ -11,16 +10,16 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("socket.io-client", () => ({
-  io: () => ({ emit: vi.fn(), on: vi.fn(), off: vi.fn(), io: { on: vi.fn(), off: vi.fn() } }),
+vi.mock("@/socket", () => ({
+  getSocket: () => ({ emit: vi.fn(), on: vi.fn(), off: vi.fn(), connect: vi.fn() }),
 }));
 
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { mockFailureReason } from "@/features/mocks/mock-failure-reason";
-import { handleServerConnect } from "../src/store/handle-mock-server-events";
-import { useMockStore } from "../src/store/mock-slice";
-import { DashboardGrid } from "../src/views/mocks/dashboard/dashboard-grid";
-import { DoneStep } from "../src/views/mocks/wizard/step-done";
+import { DoneStep } from "@/screens/mocks/wizard/done-step";
+import { useStudioStore } from "@/store";
+import { handleServerConnect } from "@/store/handle-mock-server-events";
+import { useMockStore } from "@/store/mock-slice";
+import { openShell } from "./shell-harness";
 
 const PORT_TAKEN =
   "Error: listen EADDRINUSE: address already in use 127.0.0.1:7501\n" +
@@ -28,6 +27,7 @@ const PORT_TAKEN =
   "    at listenInCluster (node:net:1965:12)";
 
 beforeEach(() => {
+  useStudioStore.setState({ connected: true, connectionStatus: "connected" });
   for (const id of Object.keys(useMockStore.getState().servers)) {
     useMockStore.getState().removeServer(id);
   }
@@ -46,27 +46,19 @@ beforeEach(() => {
 
 afterEach(() => cleanup());
 
-function third() {
-  const server = useMockStore.getState().servers.third;
-  if (!server) throw new Error("mock not registered");
-  return server;
-}
-
 describe("a mock that could not start", () => {
   it("says why on the wizard's last step", () => {
     render(
-      <TooltipProvider>
-        <DoneStep
-          applied={{
-            status: "applied",
-            target: "courier.mocks.ts",
-            keys: ["third"],
-            warnings: [],
-            at: Date.now(),
-          }}
-          connected
-        />
-      </TooltipProvider>,
+      <DoneStep
+        applied={{
+          status: "applied",
+          target: "courier.mocks.ts",
+          keys: ["third"],
+          warnings: [],
+          at: Date.now(),
+        }}
+        connected
+      />,
     );
 
     expect(screen.getByRole("alert").textContent).toBe(
@@ -74,19 +66,13 @@ describe("a mock that could not start", () => {
     );
   });
 
-  it("says why on the Mocks page, and offers no address to copy", () => {
-    render(
-      <TooltipProvider>
-        <DashboardGrid server={third()} />
-      </TooltipProvider>,
-    );
+  it("says why on the Mocks page, and offers no address to copy", async () => {
+    await openShell("/mocks");
 
-    expect(screen.getByText("Not listening")).toBeTruthy();
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toContain("third is not running");
+    expect(alert.textContent).toContain("Port 7501 is in use by another process");
     expect(document.body.textContent).not.toContain("http://localhost:7501");
-    expect(screen.queryByRole("button", { name: "Copy URL" })).toBeNull();
-    expect(screen.getByRole("alert").textContent).toContain(
-      "Port 7501 is in use by another process",
-    );
   });
 });
 

@@ -1,4 +1,4 @@
-import type { ImportState } from "@/views/apis/types";
+import type { ImportState } from "@/features/apis/types";
 
 /** The import wizard's state when it opens. */
 export const INITIAL_IMPORT_STATE: ImportState = {

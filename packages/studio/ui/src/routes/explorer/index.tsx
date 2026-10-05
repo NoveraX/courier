@@ -1,9 +1,7 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-function ExplorerIndex(): React.ReactNode {
-  return <Navigate to="/explorer/graph" replace />;
-}
+import { GraphScreen } from "@/screens/explorer/graph-screen";
 
 export const Route = createFileRoute("/explorer/")({
-  component: ExplorerIndex,
+  component: GraphScreen,
 });

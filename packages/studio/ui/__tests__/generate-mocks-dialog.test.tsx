@@ -10,7 +10,7 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { useSyncExternalStore } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
+import type { ScannedSource } from "@/features/apis/types";
 import type { SourceAvailability } from "../src/features/mocks/wizard/source-availability";
 import type { ManualOutcome, ReadyOutcome } from "../src/features/mocks/wizard/wire-types";
 import type { DeclareClient } from "../src/mocks/wizard/declare-client";
@@ -18,7 +18,6 @@ import type { MockWizardHandle } from "../src/mocks/wizard/use-mock-wizard";
 import type { WizardSession } from "../src/mocks/wizard/wizard-session";
 import { createWizardSession } from "../src/mocks/wizard/wizard-session";
 import { GenerateMocksDialog } from "../src/screens/mocks/wizard/generate-mocks-dialog";
-import type { ScannedSource } from "../src/views/apis/types";
 
 const SOURCES: ScannedSource[] = [
   {

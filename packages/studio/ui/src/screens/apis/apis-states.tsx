@@ -2,10 +2,10 @@ import { CircleAlert, Copy, TriangleAlert } from "lucide-react";
 
 import { CodeLines } from "@/design/code/code-lines";
 import type { ConfigNoticeState } from "@/features/apis/apis-page-state";
+import { MINIMAL_CONFIG } from "@/features/apis/minimal-config";
 import { copyToClipboard } from "@/lib/clipboard";
 import { formatClockTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { MINIMAL_CONFIG } from "@/views/apis/minimal-config";
 
 function Centered({
   title,

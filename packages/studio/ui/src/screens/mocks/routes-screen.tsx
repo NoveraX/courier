@@ -41,8 +41,8 @@ const COLUMNS = "grid-cols-[minmax(0,1fr)_90px_70px_60px]";
  */
 export function MockRoutesScreen(): React.ReactNode {
   const { server } = useMockServer();
-  const search: MockRoutesSearch = useSearch({ from: "/next/mocks/routes" });
-  const navigate = useNavigate({ from: "/next/mocks/routes" });
+  const search: MockRoutesSearch = useSearch({ from: "/mocks/routes" });
+  const navigate = useNavigate({ from: "/mocks/routes" });
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   if (!server) return null;
   const kind = search.kind ?? "all";

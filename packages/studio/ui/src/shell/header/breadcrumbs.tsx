@@ -10,7 +10,7 @@ import { SETTINGS_PAGE, SHELL_NAV } from "../nav";
  * @returns The two parts
  * @example
  * ```ts
- * crumbsOf("/next"); // ["Studio", "Welcome"]
+ * crumbsOf("/"); // ["Studio", "Welcome"]
  * ```
  */
 export function crumbsOf(pathname: string): [string, string] {

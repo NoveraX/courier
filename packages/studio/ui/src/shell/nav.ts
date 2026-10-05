@@ -38,32 +38,32 @@ export const SHELL_NAV: readonly ShellNavGroup[] = [
   {
     label: "Inspect",
     items: [
-      { label: "Timeline", to: "/next/timeline", icon: Activity, badge: "requests" },
-      { label: "Waterfall", to: "/next/waterfall", icon: Timer },
-      { label: "Analytics", to: "/next/analytics", icon: ChartColumn },
+      { label: "Timeline", to: "/timeline", icon: Activity, badge: "requests" },
+      { label: "Waterfall", to: "/waterfall", icon: Timer },
+      { label: "Analytics", to: "/analytics", icon: ChartColumn },
     ],
   },
   {
     label: "Build",
     items: [
-      { label: "Explorer", to: "/next/explorer", icon: Network },
-      { label: "Playground", to: "/next/playground", icon: Play },
-      { label: "APIs", to: "/next/apis", icon: Globe },
-      { label: "Mocks", to: "/next/mocks", icon: Server },
+      { label: "Explorer", to: "/explorer", icon: Network },
+      { label: "Playground", to: "/playground", icon: Play },
+      { label: "APIs", to: "/apis", icon: Globe },
+      { label: "Mocks", to: "/mocks", icon: Server },
     ],
   },
   {
     label: "Quality",
     items: [
-      { label: "Audit", to: "/next/audit", icon: Shield, badge: "audit-score" },
-      { label: "Middleware", to: "/next/middleware", icon: Workflow },
-      { label: "Compare", to: "/next/compare", icon: GitCompare },
+      { label: "Audit", to: "/audit", icon: Shield, badge: "audit-score" },
+      { label: "Middleware", to: "/middleware", icon: Workflow },
+      { label: "Compare", to: "/compare", icon: GitCompare },
     ],
   },
 ];
 
 /** Settings, which the sidebar keeps at its foot rather than among the views. */
-export const SETTINGS_PAGE = { label: "Settings", group: "System", to: "/next/settings" } as const;
+export const SETTINGS_PAGE = { label: "Settings", group: "System", to: "/settings" } as const;
 
 /** Where Courier's documentation lives. */
 export const DOCS_URL = "https://courier.noverax.cloud";

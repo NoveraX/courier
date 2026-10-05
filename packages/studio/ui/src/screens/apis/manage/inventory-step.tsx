@@ -1,9 +1,9 @@
 import { AlertTriangle } from "lucide-react";
 
 import { methodText } from "@/design/method-color";
+import type { EndpointInventory, InventoryEndpoint, InventoryGroup } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
 import { cn } from "@/lib/utils";
-import type { EndpointInventory, InventoryEndpoint, InventoryGroup } from "@/views/apis/types";
 import { TickBox } from "../import/tick-box";
 
 const TAG: Readonly<Record<string, { label: string; className: string }>> = {

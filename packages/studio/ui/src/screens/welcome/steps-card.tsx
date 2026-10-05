@@ -37,7 +37,7 @@ function StepBody({
           disabled={!attached}
           onClick={() => {
             markWelcomeCompleted();
-            void navigate({ to: "/next/timeline" });
+            void navigate({ to: "/timeline" });
           }}
           className="flex h-8.5 w-max items-center gap-2 rounded-card border border-brand bg-brand px-3.5 font-semibold text-bg transition-all enabled:cursor-pointer disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-fg-subtle"
         >

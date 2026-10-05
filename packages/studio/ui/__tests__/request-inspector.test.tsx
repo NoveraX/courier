@@ -78,16 +78,16 @@ afterEach(cleanup);
 
 describe("the request inspector", () => {
   it("shows nothing while the address names no request, or one Studio does not hold", async () => {
-    await openShell("/next/timeline");
+    await openShell("/timeline");
     expect(screen.queryByRole("complementary", { name: "Request inspector" })).toBeNull();
 
     cleanup();
-    await openShell("/next/timeline?req=gone");
+    await openShell("/timeline?req=gone");
     expect(screen.queryByRole("complementary", { name: "Request inspector" })).toBeNull();
   });
 
   it("opens the request on its overview: the endpoint, the figures, the tabs, the properties and checks", async () => {
-    await openShell("/next/timeline?req=ok");
+    await openShell("/timeline?req=ok");
     const panel = within(inspector());
 
     expect(panel.getByRole("heading", { level: 2 }).textContent).toBe("api.users.list");
@@ -108,11 +108,11 @@ describe("the request inspector", () => {
   it("names the HTTP version the request went over, or just HTTP when it is not known", async () => {
     useStudioStore.setState({ requests: [ok, { ...failed, httpVersion: "HTTP/2" }] });
 
-    await openShell("/next/timeline?req=failed&tab=overview");
+    await openShell("/timeline?req=failed&tab=overview");
     expect(within(inspector()).getByText("HTTP/2")).toBeTruthy();
 
     cleanup();
-    await openShell("/next/timeline?req=ok");
+    await openShell("/timeline?req=ok");
     const panel = within(inspector());
     expect(panel.queryByText(/^HTTP\/\d/)).toBeNull();
     expect(panel.getAllByText("HTTP")).toHaveLength(2);
@@ -134,7 +134,7 @@ describe("the request inspector", () => {
       },
     });
 
-    await openShell("/next/timeline?req=proxied&tab=timing");
+    await openShell("/timeline?req=proxied&tab=timing");
 
     const route = within(inspector()).getByText("Proxy route").closest("section");
     expect(route?.textContent).toContain("Browser");
@@ -142,7 +142,7 @@ describe("the request inspector", () => {
   });
 
   it("keeps the tab shown in the address, and shows the answer as a tree", async () => {
-    const router = await openShell("/next/timeline?req=ok");
+    const router = await openShell("/timeline?req=ok");
 
     await settle(() => fireEvent.click(within(inspector()).getByRole("tab", { name: "Response" })));
 
@@ -151,7 +151,7 @@ describe("the request inspector", () => {
   });
 
   it("closes on Esc", async () => {
-    const router = await openShell("/next/timeline?req=ok");
+    const router = await openShell("/timeline?req=ok");
 
     await settle(() => fireEvent.keyDown(window, { key: "Escape" }));
 
@@ -161,7 +161,7 @@ describe("the request inspector", () => {
   it("leaves the way it came, still showing the request it closes until it has gone", async () => {
     MotionGlobalConfig.skipAnimations = false;
     try {
-      const router = await openShell("/next/timeline?req=ok");
+      const router = await openShell("/timeline?req=ok");
 
       await settle(() => fireEvent.keyDown(window, { key: "Escape" }));
 
@@ -178,7 +178,7 @@ describe("the request inspector", () => {
   });
 
   it("opens a failed request on its error, with what usually fixes it", async () => {
-    await openShell("/next/timeline?req=failed");
+    await openShell("/timeline?req=failed");
     const panel = within(inspector());
 
     expect(panel.getByRole("tab", { name: "Error" }).getAttribute("aria-selected")).toBe("true");
@@ -187,7 +187,7 @@ describe("the request inspector", () => {
   });
 
   it("opens a stream on its messages", async () => {
-    await openShell("/next/timeline?req=stream");
+    await openShell("/timeline?req=stream");
     const panel = within(inspector());
 
     expect(panel.getByRole("tab", { name: "Messages2" }).getAttribute("aria-selected")).toBe(
@@ -198,7 +198,7 @@ describe("the request inspector", () => {
   });
 
   it("reconnects a stream on the runtime that opened it, and stops it from here", async () => {
-    const router = await openShell("/next/timeline?req=stream");
+    const router = await openShell("/timeline?req=stream");
     const panel = within(inspector());
     expect(panel.queryByTitle("Stop the stream")).toBeNull();
 
@@ -219,7 +219,7 @@ describe("the request inspector", () => {
   });
 
   it("hides a credential header's value until asked", async () => {
-    await openShell("/next/timeline?req=ok&tab=headers");
+    await openShell("/timeline?req=ok&tab=headers");
     const panel = within(inspector());
     expect(panel.queryByText("Bearer t0k3n")).toBeNull();
 
@@ -229,7 +229,7 @@ describe("the request inspector", () => {
   });
 
   it("writes snippets with the credential left out, and says so", async () => {
-    await openShell("/next/timeline?req=ok&tab=snippets");
+    await openShell("/timeline?req=ok&tab=snippets");
     const panel = within(inspector());
 
     expect(panel.getByText("credentials redacted")).toBeTruthy();
@@ -237,7 +237,7 @@ describe("the request inspector", () => {
   });
 
   it("pins the request, and replays it through the app with the same variables", async () => {
-    await openShell("/next/timeline?req=ok");
+    await openShell("/timeline?req=ok");
     const panel = within(inspector());
 
     fireEvent.click(panel.getByTitle("Pin request"));
@@ -264,7 +264,7 @@ describe("the request inspector", () => {
       heldRequests: [requestEntry({ id: "held", method: "held" })],
     });
 
-    await openShell("/next/timeline?req=held");
+    await openShell("/timeline?req=held");
 
     expect(within(inspector()).getByRole("heading", { level: 2 }).textContent).toBe(
       "api.users.held",
@@ -273,7 +273,7 @@ describe("the request inspector", () => {
 
   it("opens a replay held while recording pauses, once it arrives", async () => {
     useStudioStore.setState({ paused: true });
-    const router = await openShell("/next/timeline?req=ok");
+    const router = await openShell("/timeline?req=ok");
 
     fireEvent.click(within(inspector()).getByTitle("Replay request"));
     const [, sent] = socket.emit.mock.calls.find(([event]) => event === "playground:exec") ?? [];
@@ -288,7 +288,7 @@ describe("the request inspector", () => {
   it("replays nothing while a saved session shows, and says why", async () => {
     useStudioStore.setState({ shownSession: { id: "s1", name: "Saved" } });
 
-    await openShell("/next/timeline?req=ok");
+    await openShell("/timeline?req=ok");
     const button = within(inspector()).getByTitle("Go back to the live requests to run it again");
 
     expect(button.hasAttribute("disabled")).toBe(true);

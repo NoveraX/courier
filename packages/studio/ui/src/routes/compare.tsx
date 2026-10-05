@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { CompareView } from "@/views/compare";
-import { validateCompareSearch } from "@/views/compare/search-schema";
+import { validateCompareSearch } from "@/features/compare/compare-search";
+import { CompareScreen } from "@/screens/compare/compare-screen";
 
 export const Route = createFileRoute("/compare")({
-  component: CompareView,
+  component: CompareScreen,
   validateSearch: validateCompareSearch,
 });

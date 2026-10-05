@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MockLogsView } from "@/views/mocks/logs";
+
+import { validateMockLogsSearch } from "@/features/mocks/logs-view";
+import { MockLogsScreen } from "@/screens/mocks/logs-screen";
 
 export const Route = createFileRoute("/mocks/logs")({
-  component: MockLogsView,
+  component: MockLogsScreen,
+  validateSearch: validateMockLogsSearch,
 });

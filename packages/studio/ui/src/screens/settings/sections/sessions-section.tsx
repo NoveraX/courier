@@ -73,7 +73,7 @@ export function SessionsSection({ history }: SessionsSectionProps): React.ReactN
       />
       <SettingRow
         label="Saved"
-        description={`${history.sessions.length} session${history.sessions.length === 1 ? "" : "s"} · kept in .courier/sessions`}
+        description={`${history.sessions.length} session${history.sessions.length === 1 ? "" : "s"} · kept in .courier/studio.db`}
       >
         {history.sessions.length > 0 && (
           <ul

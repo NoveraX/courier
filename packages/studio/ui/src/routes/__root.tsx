@@ -1,43 +1,25 @@
-import { createRootRoute, Outlet, useRouterState } from "@tanstack/react-router";
-import { Toaster } from "sonner";
+import { createRootRoute } from "@tanstack/react-router";
 
-import { ClassicShell } from "@/components/layout/classic-shell";
-import { NotFound } from "@/components/layout/not-found";
+import { validateInspectorSearch } from "@/features/requests/inspector-search";
 import { useTickProvider } from "@/hooks/use-tick";
+import { NotFoundScreen } from "@/screens/not-found-screen";
 import { ShellToaster } from "@/shell/shell-toaster";
+import { StudioShell } from "@/shell/studio-shell";
 import { useSocketConnection } from "@/socket";
-
-/* `/next` and below bring their own shell; every other page is framed by the classic one. */
-function isInNewShell(pathname: string): boolean {
-  return pathname === "/next" || pathname.startsWith("/next/");
-}
 
 function RootComponent(): React.ReactNode {
   useSocketConnection();
   useTickProvider();
-  const inNewShell = useRouterState({ select: (s) => isInNewShell(s.location.pathname) });
   return (
     <>
-      {inNewShell ? <Outlet /> : <ClassicShell />}
-      {inNewShell ? (
-        <ShellToaster />
-      ) : (
-        <Toaster
-          position="bottom-right"
-          richColors
-          closeButton
-          toastOptions={{ className: "text-body-sm" }}
-        />
-      )}
+      <StudioShell />
+      <ShellToaster />
     </>
   );
 }
 
-function RootNotFound(): React.ReactNode {
-  return <NotFound />;
-}
-
 export const Route = createRootRoute({
   component: RootComponent,
-  notFoundComponent: RootNotFound,
+  notFoundComponent: NotFoundScreen,
+  validateSearch: validateInspectorSearch,
 });

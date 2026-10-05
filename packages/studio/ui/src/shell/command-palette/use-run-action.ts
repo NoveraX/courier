@@ -29,13 +29,13 @@ export function useRunAction(): (action: PaletteAction) => void {
         void navigate({ to: action.to });
         return;
       case "open-request":
-        void navigate({ to: "/next/timeline", search: { req: action.id } });
+        void navigate({ to: "/timeline", search: { req: action.id } });
         return;
       case "show-errors":
-        void navigate({ to: "/next/timeline", search: { view: "errors" } });
+        void navigate({ to: "/timeline", search: { view: "errors" } });
         return;
       case "show-streams":
-        void navigate({ to: "/next/timeline", search: { transport: "sse,ws" } });
+        void navigate({ to: "/timeline", search: { transport: "sse,ws" } });
         return;
       case "export":
         void exportShownRequests(state.settings.defaultExportFormat);

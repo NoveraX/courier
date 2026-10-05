@@ -1,4 +1,4 @@
-import type { ScannedSource } from "@/views/apis/types";
+import type { ScannedSource } from "@/features/apis/types";
 import { buildCatalogFromRequests } from "./build-catalog-from-requests";
 import { buildCatalogFromScan } from "./build-catalog-from-scan";
 import { mergeCatalogs } from "./merge-catalogs";

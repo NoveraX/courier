@@ -11,10 +11,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
+import type { ParsedSpec, SourceSummary } from "@/features/apis/types";
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
 import { useManage } from "../src/apis/use-manage";
-import type { ParsedSpec, SourceSummary } from "../src/views/apis/types";
 
 const SPEC: ParsedSpec = {
   title: "Pets",

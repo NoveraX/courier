@@ -57,8 +57,8 @@ function ToolButton({
  */
 export function MockLogsScreen(): React.ReactNode {
   const { server } = useMockServer();
-  const search: MockLogsSearch = useSearch({ from: "/next/mocks/logs" });
-  const navigate = useNavigate({ from: "/next/mocks/logs" });
+  const search: MockLogsSearch = useSearch({ from: "/mocks/logs" });
+  const navigate = useNavigate({ from: "/mocks/logs" });
   const allLogs = useMockStore((s) => s.logs);
   const paused = useMockStore((s) => s.logsPaused);
   const togglePaused = useMockStore((s) => s.toggleLogsPaused);

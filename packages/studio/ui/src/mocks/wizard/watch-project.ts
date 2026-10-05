@@ -1,6 +1,6 @@
+import type { ScannedSource } from "@/features/apis/types";
 import type { ConfigStatusPayload } from "@/store/config-status";
 import type { MocksFileStatus } from "@/store/mocks-file-status";
-import type { ScannedSource } from "@/views/apis/types";
 
 /** What of the project Studio runs a plan is made from. */
 export interface ProjectSignals {

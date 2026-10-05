@@ -49,7 +49,7 @@ afterEach(() => {
 
 describe("the Mocks pages", () => {
   it("offer to generate a first mock while there is none", async () => {
-    await openShell("/next/mocks");
+    await openShell("/mocks");
 
     expect(screen.getByText("No mock servers yet")).toBeTruthy();
     expect(screen.getAllByRole("button", { name: /Generate mocks/ }).length).toBeGreaterThan(0);
@@ -57,7 +57,7 @@ describe("the Mocks pages", () => {
 
   it("show the server in use and stop it", async () => {
     useMockStore.setState({ servers: { "api-mock": mockServer() }, activeServerId: "api-mock" });
-    await openShell("/next/mocks");
+    await openShell("/mocks");
 
     expect(screen.getByText("Running")).toBeTruthy();
     await settle(() =>
@@ -75,7 +75,7 @@ describe("the Mocks pages", () => {
       servers: { "api-mock": mockServer({ processStatus: "stopped" }) },
       activeServerId: "api-mock",
     });
-    await openShell("/next/mocks");
+    await openShell("/mocks");
 
     const banner = screen.getByRole("status", { name: "" });
     expect(within(banner).getByText("Mock server stopped")).toBeTruthy();
@@ -110,7 +110,7 @@ describe("the Mocks pages", () => {
       activeServerId: "api-mock",
       logs: [mockLog({ timestamp: Date.now() })],
     });
-    await openShell("/next/mocks");
+    await openShell("/mocks");
 
     const figures = screen.getByRole("region", { name: "Mock figures" });
     expect(within(figures).getByText("Routes").parentElement?.textContent).toBe(
@@ -133,7 +133,7 @@ describe("the Mocks pages", () => {
       },
       activeServerId: "api-mock",
     });
-    await openShell("/next/mocks");
+    await openShell("/mocks");
 
     await settle(() =>
       fireEvent.keyDown(screen.getByRole("button", { name: "Mock server: api-mock" }), {

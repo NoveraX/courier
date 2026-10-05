@@ -18,8 +18,8 @@ import { useMockServer } from "./use-mock-server";
  */
 export function MockScenariosScreen(): React.ReactNode {
   const { server } = useMockServer();
-  const search: MockScenariosSearch = useSearch({ from: "/next/mocks/scenarios" });
-  const navigate = useNavigate({ from: "/next/mocks/scenarios" });
+  const search: MockScenariosSearch = useSearch({ from: "/mocks/scenarios" });
+  const navigate = useNavigate({ from: "/mocks/scenarios" });
   if (!server) return null;
   if (server.scenarios.length === 0) {
     return (

@@ -1,7 +1,7 @@
 import { CheckCircle2 } from "lucide-react";
 
 import { CodeLines } from "@/design/code/code-lines";
-import type { ImportDeclaration } from "@/views/apis/types";
+import type { ImportDeclaration } from "@/features/apis/types";
 
 function Part({ label, code }: { label: string; code: string }): React.ReactNode {
   return (

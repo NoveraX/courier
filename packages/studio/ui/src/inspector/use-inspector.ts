@@ -1,4 +1,4 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { rootRouteId, useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback } from "react";
 
 import type { InspectorTab } from "@/features/requests/inspector-tabs";
@@ -25,7 +25,7 @@ export interface InspectorControl {
  * ```
  */
 export function useInspector(): InspectorControl {
-  const { req, tab } = useSearch({ from: "/next" });
+  const { req, tab } = useSearch({ from: rootRouteId });
   const navigate = useNavigate();
   const open = useCallback(
     (requestId: string) =>

@@ -41,7 +41,7 @@ export function HandWrittenTable({ rows }: { rows: readonly HandWrittenRow[] }):
       {rows.map((row) => (
         <Link
           key={row.name}
-          to="/next/explorer/endpoints"
+          to="/explorer/endpoints"
           search={{ q: `${row.name}.` }}
           className={cn(
             "grid h-10.5 items-center gap-3 border-b border-line px-4 last:border-b-0 hover:bg-raised",

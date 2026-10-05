@@ -93,7 +93,6 @@ export function FilterMenu({
       </div>
       <Popover.Portal>
         <Popover.Content
-          data-shell=""
           align="start"
           sideOffset={6}
           className="z-50 w-68 animate-pop-in overflow-hidden rounded-[11px] bg-panel shadow-overlay"

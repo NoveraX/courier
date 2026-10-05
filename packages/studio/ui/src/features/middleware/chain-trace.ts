@@ -37,6 +37,8 @@ export interface ChainTrace {
   lanes: TraceLane[];
   /** The span the lanes are drawn against, ms. */
   span: number;
+  /** Whether the call got as far as its fetch — a middleware may stop it before. */
+  reachedFetch: boolean;
 }
 
 function stepOf(entry: RequestEntry["middlewareEntries"][number]): TraceStep {
@@ -61,7 +63,8 @@ function stepOf(entry: RequestEntry["middlewareEntries"][number]): TraceStep {
  * A call traced through its middleware, as an onion: each middleware's
  * time before `next()` in chain order, the fetch, then each one's time
  * after it in reverse — lanes drawn against the call's whole time — and
- * the steps in chain order.
+ * the steps in chain order. A call a middleware stopped before it fetched
+ * has no fetch: it had no URL to fetch and spent no time fetching.
  *
  * @param r - The call
  * @returns The trace
@@ -99,12 +102,15 @@ export function traceOf(r: RequestEntry): ChainTrace {
     ],
     duration: s.duration,
   }));
-  lanes.push({
-    name: "fetch",
-    kind: "fetch",
-    depth: steps.length,
-    spans: [{ start: fetchStart / span, width: fetch / span }],
-    duration: fetch,
-  });
-  return { steps, lanes, span };
+  const reachedFetch = r.url !== undefined || fetch > 0;
+  if (reachedFetch) {
+    lanes.push({
+      name: "fetch",
+      kind: "fetch",
+      depth: steps.length,
+      spans: [{ start: fetchStart / span, width: fetch / span }],
+      duration: fetch,
+    });
+  }
+  return { steps, lanes, span, reachedFetch };
 }

@@ -46,7 +46,7 @@ export function AppearanceSection({ settings }: { settings: SettingsDraft }): Re
         description="Run the framework setup again if you switched your stack"
         control={
           <Link
-            to="/next"
+            to="/"
             search={{ setup: true }}
             className="flex h-7.5 items-center gap-1.75 rounded-card border border-line bg-panel px-3 text-control font-strong text-fg hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand"
           >

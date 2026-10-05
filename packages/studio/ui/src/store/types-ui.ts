@@ -241,6 +241,10 @@ export interface Settings {
   // Export
   defaultExportFormat: ExportFormat;
 
+  // Storage
+  /** The size of Studio's database, in megabytes, past which the page says so. */
+  storageWarnMb: number;
+
   // Apis defaults
   apisValidation: ValidationLib;
   apisGroupBy: ApisGroupBy;

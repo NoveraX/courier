@@ -4,6 +4,7 @@ import {
   Cable,
   CircleDot,
   CodeXml,
+  Database,
   Eye,
   FileOutput,
   History,
@@ -100,6 +101,13 @@ export const SECTION_GROUPS: readonly { label: string; sections: readonly Sectio
   {
     label: "System",
     sections: [
+      {
+        id: "storage",
+        label: "Storage",
+        icon: Database,
+        tone: "text-syntax-type",
+        keys: ["storageWarnMb"],
+      },
       { id: "danger", label: "Danger zone", icon: TriangleAlert, tone: "text-err", keys: [] },
     ],
   },

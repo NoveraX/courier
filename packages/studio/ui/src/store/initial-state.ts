@@ -23,6 +23,7 @@ export type InitialState = Pick<
   | "registrySources"
   | "configStatus"
   | "mocksFileStatus"
+  | "databaseBytes"
   | "clientTick"
   | "droppedRequests"
   | "watcherApiPaths"
@@ -43,6 +44,7 @@ export function createInitialState(savedTheme: StudioState["theme"]): InitialSta
     heldRequests: [],
     shownSession: null,
     playgroundHistory: [],
+    databaseBytes: null,
     playgroundActiveResponse: null,
     connected: false,
     settings: loadSettings(),

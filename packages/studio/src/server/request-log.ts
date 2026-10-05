@@ -18,7 +18,7 @@ import { type RequestBatch, requestRows } from "./storage/request-rows";
 type RuntimeEvent = Record<string, unknown>;
 
 /** As many requests as the UI keeps by default. */
-const MAX_REQUESTS = 2000;
+export const MAX_REQUESTS: number = 2000;
 
 /**
  * The events kept per request. A stream's later messages beyond it are

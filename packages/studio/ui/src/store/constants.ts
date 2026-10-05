@@ -35,6 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autoReconnect: true,
   reconnectDelay: 1000,
   defaultExportFormat: "har",
+  storageWarnMb: 500,
   apisValidation: "zod",
   apisGroupBy: "tag",
   apisGenerateTypes: true,

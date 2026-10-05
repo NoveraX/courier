@@ -11,7 +11,7 @@ import { withoutCredentials } from "./without-credentials";
 type MockEvent = Record<string, unknown>;
 
 /** As many requests as the Mocks view's log keeps. */
-const MAX_REQUESTS = 500;
+export const MOCK_LOG_REQUESTS: number = 500;
 
 const LOGGED = new Set(["mock:request:start", "mock:request:end", "mock:request:error"]);
 
@@ -21,6 +21,8 @@ export interface MockLog {
   record(event: MockEvent): void;
   /** The kept events a page is sent as it connects, oldest first: the newest requests', each whole, as many as fit the replay. */
   events(): MockEvent[];
+  /** Forget every request every mock answered, as the Storage settings' Clear does. */
+  forgetAll(): void;
   /** Forget every request one mock answered, as its page's Clear does. */
   forget(serverId: string): void;
   /** Write what is kept to the database, and keep nothing more: the database is closing. */
@@ -91,7 +93,7 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
       requests.add(id);
       const owner = serverIdOf(event);
       if (owner) owners.set(id, owner);
-      if (requests.size > MAX_REQUESTS) forgetOldest();
+      if (requests.size > MOCK_LOG_REQUESTS) forgetOldest();
     }
     pending.push({ id, event });
     schedule();
@@ -130,6 +132,10 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
           ? [{ ...value }]
           : [];
       });
+    },
+    forgetAll() {
+      for (const id of [...requests]) forgetRequest(id);
+      flush();
     },
     forget(serverId) {
       for (const [id, owner] of owners) if (owner === serverId) forgetRequest(id);

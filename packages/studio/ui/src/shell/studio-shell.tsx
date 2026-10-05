@@ -11,6 +11,7 @@ import { DemoBanner } from "./demo-banner";
 import { Header } from "./header/header";
 import { Sidebar } from "./sidebar/sidebar";
 import { StatusBar } from "./status-bar/status-bar";
+import { StorageBanner } from "./storage-banner";
 
 /**
  * Studio's frame around every view: the sidebar, the header, a banner while
@@ -47,6 +48,7 @@ export function StudioShell(): React.ReactNode {
         <Header onOpenPalette={() => setPaletteOpen(true)} />
         <ConnectionBanner />
         <DemoBanner />
+        <StorageBanner />
         <main className="min-h-0 flex-1 overflow-auto">
           <Outlet />
         </main>

@@ -60,6 +60,8 @@ export interface StudioState {
    * `null` until Studio tells it after a connect.
    */
   mocksFileStatus: MocksFileStatus | null;
+  /** The room Studio's database takes on disk, as Studio last said; `null` before it has. */
+  databaseBytes: number | null;
 
   // Playground
   playgroundHistory: PlaygroundHistoryEntry[];

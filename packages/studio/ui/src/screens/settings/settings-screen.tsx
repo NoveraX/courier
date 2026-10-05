@@ -1,5 +1,6 @@
 import { useSessionHistory } from "@/settings/use-session-history";
 import { useSettingsDraft } from "@/settings/use-settings-draft";
+import { useStorage } from "@/settings/use-storage";
 import { SaveBar } from "./save-bar";
 import { ApiDefaultsSection } from "./sections/api-defaults-section";
 import { AppearanceSection } from "./sections/appearance-section";
@@ -10,6 +11,7 @@ import { ExportSection } from "./sections/export-section";
 import { NotificationsSection } from "./sections/notifications-section";
 import { RecordingSection } from "./sections/recording-section";
 import { SessionsSection } from "./sections/sessions-section";
+import { StorageSection } from "./sections/storage-section";
 import { SettingsNav } from "./settings-nav";
 
 /**
@@ -27,6 +29,7 @@ import { SettingsNav } from "./settings-nav";
 export function SettingsScreen(): React.ReactNode {
   const settings = useSettingsDraft();
   const history = useSessionHistory();
+  const storage = useStorage();
   return (
     <div className="mx-auto grid w-full max-w-280 grid-cols-1 items-start gap-7 px-6 pt-6 pb-10 min-[860px]:grid-cols-[200px_minmax(0,1fr)]">
       <SettingsNav changed={settings.changed} />
@@ -39,6 +42,13 @@ export function SettingsScreen(): React.ReactNode {
         <ExportSection settings={settings} />
         <ApiDefaultsSection settings={settings} />
         <SessionsSection history={history} />
+        <StorageSection
+          settings={settings}
+          storage={storage}
+          onCleared={(kinds) => {
+            if (kinds.includes("sessions")) void history.refresh();
+          }}
+        />
         <DangerSection history={history} onResetSettings={settings.resetAll} />
         {settings.changed.size > 0 && (
           <SaveBar

@@ -115,6 +115,10 @@ export function createMockSliceActions(set: Setter, get: Getter): MockActions {
       set({ logs: [] });
     },
 
+    clearServerLogs(serverId: string) {
+      set((state) => ({ logs: state.logs.filter((log) => log.serverId !== serverId) }));
+    },
+
     toggleLogsPaused() {
       set((state) => ({ logsPaused: !state.logsPaused }));
     },

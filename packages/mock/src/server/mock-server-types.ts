@@ -100,6 +100,11 @@ export interface MockServer {
    * applied scenario's `initialState` and the admin API's resets.
    */
   readonly scenarioState: string;
+  /**
+   * The scenario in force, by name — the one applied last, at start, by
+   * `applyScenario` or through the admin API — or `null` while none is.
+   */
+  readonly activeScenario: string | null;
   /** All registered scenarios by name */
   scenarios: Record<string, AnyMockScenario>;
   /** Request lifecycle hooks — the worker Studio runs a mock in sets them to report each request */

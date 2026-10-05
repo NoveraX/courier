@@ -9,7 +9,12 @@ export function composeScenarios(
   presets: Record<string, AnyMockScenario>,
   userScenarios?: Record<string, AnyMockScenario>,
 ): Record<string, AnyMockScenario> {
-  const happyPath: AnyMockScenario = { name: "happy-path", apply: () => {} };
+  const happyPath: AnyMockScenario = {
+    name: "happy-path",
+    description:
+      "No scenario on top: every route answers as declared, from its schema or its override.",
+    apply: () => {},
+  };
   const merged = { ...userScenarios };
   delete merged["happy-path"];
   return {

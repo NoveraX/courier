@@ -119,6 +119,9 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
     network: config.network,
     mappings,
     scenarios: allScenarios,
+    /* It starts as `happy-path`, the state with no scenario on top, so that
+       one is in force and switching back to it turns any other off. */
+    scenario: allScenarios["happy-path"],
     reseed,
     ...(config.persist && {
       persist: { file: config.persist.file, collections: [...new Set(routes.map((r) => r.group))] },

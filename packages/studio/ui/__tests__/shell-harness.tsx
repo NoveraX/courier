@@ -11,6 +11,7 @@ import { act, render } from "@testing-library/react";
 import { MotionGlobalConfig } from "motion/react";
 
 import { validateExplorerSearch } from "@/features/explorer/explorer-search";
+import { validateMockRoutesSearch } from "@/features/mocks/routes-view";
 import { validatePlaygroundSearch } from "@/features/playground/playground-search";
 import { validateInspectorSearch } from "@/features/requests/inspector-search";
 import { validateTimelineSearch } from "@/features/requests/timeline-search";
@@ -22,6 +23,7 @@ import { HeatmapScreen } from "@/screens/explorer/heatmap-screen";
 import { OverviewScreen } from "@/screens/explorer/overview-screen";
 import { MocksDashboard } from "@/screens/mocks/mocks-dashboard";
 import { MocksLayout } from "@/screens/mocks/mocks-layout";
+import { MockRoutesScreen } from "@/screens/mocks/routes-screen";
 import { PlaygroundScreen } from "@/screens/playground/playground-screen";
 import { TimelineScreen } from "@/screens/timeline/timeline-screen";
 import { WaterfallScreen } from "@/screens/waterfall/waterfall-screen";
@@ -110,6 +112,12 @@ export async function openShell(url: string): Promise<AnyRouter> {
     path: "/",
     component: MocksDashboard,
   });
+  const mocksRoutes = createRoute({
+    getParentRoute: () => mocks,
+    path: "routes",
+    component: MockRoutesScreen,
+    validateSearch: validateMockRoutesSearch,
+  });
   const router = createRouter({
     routeTree: root.addChildren([
       shell.addChildren([
@@ -118,7 +126,7 @@ export async function openShell(url: string): Promise<AnyRouter> {
         waterfall,
         explorer.addChildren(tabs),
         playground,
-        mocks.addChildren([mocksDashboard]),
+        mocks.addChildren([mocksDashboard, mocksRoutes]),
       ]),
     ]),
     history: createMemoryHistory({ initialEntries: [url] }),

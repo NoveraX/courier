@@ -32,7 +32,9 @@ function oneOf<TValue extends string>(values: readonly TValue[], raw: unknown): 
 
 /**
  * Read the Waterfall's parameters from its address, keeping only what
- * differs from the defaults — start time, no grouping, every mode.
+ * differs from the defaults — start time, no grouping, every mode. The
+ * search stays as typed: the field reads it back, so a space typed before
+ * the next word must survive.
  *
  * @param raw - The address's parameters
  * @returns The Waterfall's parameters
@@ -43,8 +45,7 @@ function oneOf<TValue extends string>(values: readonly TValue[], raw: unknown): 
  */
 export function validateWaterfallSearch(raw: Record<string, unknown>): WaterfallSearch {
   const search: WaterfallSearch = {};
-  const q = typeof raw.q === "string" ? raw.q.trim() : "";
-  if (q) search.q = q;
+  if (typeof raw.q === "string" && raw.q) search.q = raw.q;
   const sort = oneOf(WATERFALL_SORTS, raw.sort);
   if (sort && sort !== "start") search.sort = sort;
   const group = oneOf(WATERFALL_GROUPS, raw.group);

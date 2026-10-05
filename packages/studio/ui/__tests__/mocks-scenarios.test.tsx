@@ -9,6 +9,8 @@ import { act, cleanup, fireEvent, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const emit = vi.hoisted(() => vi.fn());
+/* A command sent with an acknowledgement: the test answers it as the mock would. */
+const acked = vi.hoisted(() => vi.fn());
 
 vi.mock("@/socket", () => ({
   getSocket: () => ({
@@ -16,7 +18,7 @@ vi.mock("@/socket", () => ({
     on: vi.fn(),
     off: vi.fn(),
     connect: vi.fn(),
-    timeout: () => ({ emit: vi.fn() }),
+    timeout: () => ({ emit: acked }),
   }),
 }));
 
@@ -133,12 +135,28 @@ describe("the Scenarios tab", () => {
     expect(
       within(screen.getByRole("region", { name: "Scenario checkout-failure" })).getByText("+300ms"),
     ).toBeTruthy();
+    acked.mockImplementation((_event, _command, ack) => ack(null, { ok: true }));
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Activate" })));
 
-    expect(emit).toHaveBeenCalledWith("mock:command", {
-      action: "mock:scenario:apply",
-      serverId: "api-mock",
-      scenario: "checkout-failure",
-    });
+    expect(acked).toHaveBeenCalledWith(
+      "mock:command",
+      { action: "mock:scenario:apply", serverId: "api-mock", scenario: "checkout-failure" },
+      expect.any(Function),
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("says why the mock could not turn a scenario on, the one on staying", async () => {
+    acked.mockImplementation((_event, _command, ack) =>
+      ack(null, { ok: false, error: "returns() expects a function of the request context" }),
+    );
+    await openShell("/next/mocks/scenarios?scenario=checkout-failure");
+
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: "Activate" })));
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Could not turn it on — returns() expects a function of the request context",
+    );
+    expect(screen.getByRole("button", { name: "Active" })).toBeTruthy();
   });
 });

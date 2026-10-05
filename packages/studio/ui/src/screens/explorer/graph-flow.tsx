@@ -13,12 +13,18 @@ import type {
 import { flowNodesOf } from "@/features/explorer/flow-nodes";
 import type { GraphLayout, GraphNode } from "@/features/explorer/graph-types";
 import { GraphControls } from "./graph-controls";
+import { GraphFoldToggle } from "./graph-fold-toggle";
 import { GraphNodeCard } from "./graph-node-card";
 import { GRAPH_VIEW } from "./graph-view-options";
 import { GraphWires } from "./graph-wires";
 
 function Card({ data }: NodeProps<CardNode>): React.ReactNode {
-  return <GraphNodeCard node={data.node} onHover={data.onHover} onOpen={data.onOpen} />;
+  return (
+    <div className="relative">
+      <GraphNodeCard node={data.node} onHover={data.onHover} onOpen={data.onOpen} />
+      {data.onFold && <GraphFoldToggle node={data.node} onFold={data.onFold} />}
+    </div>
+  );
 }
 
 function Heading({ data }: NodeProps<HeadingNode>): React.ReactNode {
@@ -59,6 +65,8 @@ interface GraphFlowProps {
   calls: RunningCalls;
   onHover: (id: string | undefined) => void;
   onOpen: (node: GraphNode) => void;
+  /** Folds or unfolds a group, by key. */
+  onFold?: ((key: string) => void) | undefined;
 }
 
 /**
@@ -75,8 +83,14 @@ interface GraphFlowProps {
  * <GraphFlow layout={layout} onHover={setHover} onOpen={open} />
  * ```
  */
-export function GraphFlow({ layout, calls, onHover, onOpen }: GraphFlowProps): React.ReactNode {
-  const nodes = flowNodesOf(layout, { onHover, onOpen }, calls);
+export function GraphFlow({
+  layout,
+  calls,
+  onHover,
+  onOpen,
+  onFold,
+}: GraphFlowProps): React.ReactNode {
+  const nodes = flowNodesOf(layout, { onHover, onOpen, onFold }, calls);
   return (
     <section
       aria-label="Endpoint graph"

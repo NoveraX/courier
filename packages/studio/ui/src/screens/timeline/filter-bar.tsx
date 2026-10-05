@@ -12,6 +12,7 @@ import {
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import { DIMENSION_META, filterOptions, viewCounts } from "@/features/requests/filter-options";
+import { groupTreeOptions } from "@/features/requests/group-tree-options";
 import type {
   FilterDimension,
   TimelineFilter,
@@ -70,6 +71,11 @@ export function FilterBar({ filter, onChange }: FilterBarProps): React.ReactNode
     count: counts[view],
     countTone: view === "errors" ? "err" : "subtle",
   }));
+  /* Groups inside groups are offered as a tree, each under the group it sits in. */
+  const optionsOf = (dimension: FilterDimension) => {
+    const options = filterOptions(requests, filter, dimension, slowMs);
+    return dimension === "group" ? groupTreeOptions(options) : options;
+  };
   const choose = (dimension: FilterDimension, chosen: string[]) =>
     onChange({ ...filter, selected: { ...filter.selected, [dimension]: chosen } });
   const changed = activeFilterCount(filter) > 0;
@@ -88,7 +94,7 @@ export function FilterBar({ filter, onChange }: FilterBarProps): React.ReactNode
           label={DIMENSION_META[dimension].label}
           icon={ICONS[dimension]}
           mono={DIMENSION_META[dimension].mono}
-          options={filterOptions(requests, filter, dimension, slowMs)}
+          options={optionsOf(dimension)}
           chosen={filter.selected[dimension]}
           onChange={(chosen) => choose(dimension, chosen)}
         />

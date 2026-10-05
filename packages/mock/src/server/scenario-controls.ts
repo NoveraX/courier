@@ -1,14 +1,13 @@
 /**
  * Mock builder factories and scenario application logic.
  *
- * `createScenarioControls` returns the three pieces the bootstrap needs
- * to wire up scenarios:
+ * `createScenarioControls` returns the two pieces the bootstrap needs to
+ * wire up scenarios:
  *
  * - `mock`        — the base-layer builder, persists across scenario switches
- * - `scenarioMock` — the scenario-layer builder, cleared on `applyScenario`
- * - `applyScenario` — clears the scenario layer + call counts, runs the
- *                     scenario's `apply` against `scenarioMock`, and updates
- *                     the supplied scenario state setter
+ * - `applyScenario` — runs the scenario's `apply`, then — only once it has
+ *                     run whole — replaces the scenario layer with what it
+ *                     defined, clears the call counts and resets the state
  *
  * The bootstrap owns `scenarioState` and `callCounts` and threads them in
  * via callbacks so this helper has no hidden state.
@@ -16,7 +15,12 @@
 
 import { createEnhancedMockBuilder } from "../builder";
 import type { MockRegistry } from "../registry";
-import type { AnyMockScenario, EnhancedMockBuilder, UntypedMockFn } from "../types";
+import type {
+  AnyMockScenario,
+  EnhancedMockBuilder,
+  ResolvedHandler,
+  UntypedMockFn,
+} from "../types";
 
 /** Dependencies threaded in from the bootstrap */
 export interface ScenarioControlsDeps {
@@ -28,11 +32,10 @@ export interface ScenarioControlsDeps {
 /** Builders + scenario applier returned to the bootstrap */
 export interface ScenarioControls {
   mock: UntypedMockFn;
-  scenarioMock: UntypedMockFn;
   applyScenario: (scenario: AnyMockScenario) => void;
 }
 
-/** Build the mock + scenario builder pair and the scenario applier */
+/** Build the base-layer builder and the scenario applier */
 export function createScenarioControls(deps: ScenarioControlsDeps): ScenarioControls {
   const { registry, callCounts, setScenarioState } = deps;
 
@@ -49,21 +52,21 @@ export function createScenarioControls(deps: ScenarioControlsDeps): ScenarioCont
     }, existing);
   }
 
-  function scenarioMock<TResponse, TVariables>(
-    group: string,
-    method: string,
-  ): EnhancedMockBuilder<TResponse, TVariables> {
-    return createEnhancedMockBuilder((handler) => {
-      registry.set(group, method, handler);
-    });
-  }
-
+  /* The definition runs against a staging list first: one that throws part-way
+     leaves the scenario on, its counts and its state as they were, instead of
+     a layer half cleared and half written. */
   function applyScenario(scenario: AnyMockScenario): void {
+    const staged: Array<{ group: string; method: string; handler: ResolvedHandler }> = [];
+    scenario.apply(<TResponse, TVariables>(group: string, method: string) =>
+      createEnhancedMockBuilder<TResponse, TVariables>((handler) => {
+        staged.push({ group, method, handler });
+      }),
+    );
     registry.clear();
+    for (const { group, method, handler } of staged) registry.set(group, method, handler);
     callCounts.clear();
     setScenarioState(scenario.initialState ?? "Started");
-    scenario.apply(scenarioMock);
   }
 
-  return { mock, scenarioMock, applyScenario };
+  return { mock, applyScenario };
 }

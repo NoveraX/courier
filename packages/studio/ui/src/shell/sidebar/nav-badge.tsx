@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAuditContext } from "@/audit/use-audit-context";
 import { CountBadge } from "@/design/count-badge";
 import { runAudit } from "@/features/audit/run-audit";
-import { useCatalog } from "@/hooks/use-catalog";
+import { useCatalogOf } from "@/hooks/use-catalog";
 import { useThrottledValue } from "@/hooks/use-throttled-value";
 import { useStudioStore } from "@/store";
 import type { NavBadgeKind } from "../nav";
@@ -21,7 +21,7 @@ function AuditScoreBadge(): React.ReactNode {
     useStudioStore((s) => s.requests),
     AUDIT_INTERVAL_MS,
   );
-  const catalog = useCatalog();
+  const catalog = useCatalogOf(requests);
   const context = useAuditContext();
   const score = useMemo(
     () => (requests.length === 0 ? null : runAudit(requests, catalog, context).score),

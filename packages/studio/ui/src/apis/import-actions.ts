@@ -3,13 +3,13 @@
  */
 
 import { generateCode, parseSpecFromRaw, parseSpecFromUrl } from "@/apis/client";
+import { writeFiles } from "@/apis/client-file-changes";
+import { deriveSourceName } from "@/features/apis/derive-source-name";
 import { buildDefaultOptions, selectAllEndpoints } from "@/features/apis/helpers";
+import { consentBody } from "@/features/apis/plan-consent";
 import { ownValue } from "@/lib/own-value";
 import type { Settings } from "@/store/types-ui";
-import { writeFiles } from "./client-file-changes";
-import { deriveSourceName } from "./derive-source-name";
-import { consentBody } from "./plan-consent";
-import type { GenerateOptions, ImportState, ParsedSpec } from "./types";
+import type { GenerateOptions, ImportState, ParsedSpec } from "@/views/apis/types";
 
 // ── Spec parsing ────────────────────────────────────────────────────────────
 

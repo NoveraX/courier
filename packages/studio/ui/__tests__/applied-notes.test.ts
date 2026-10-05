@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { appliedMessage, countsOf } from "../src/views/apis/applied-notes";
+import { appliedMessage, countsOf } from "../src/features/apis/applied-notes";
 
 describe("appliedMessage", () => {
   it("names the emptied folders Studio could not remove", () => {

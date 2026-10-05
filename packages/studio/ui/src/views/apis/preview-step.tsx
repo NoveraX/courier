@@ -3,10 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { CodeBlock } from "@/components/shared/code-block";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import type { PlanConsent } from "@/features/apis/types-file-plan";
 import { cn } from "@/lib/utils";
 import { FilePlanView } from "./file-plan-view";
 import type { GeneratedFile } from "./types";
-import type { PlanConsent } from "./types-file-plan";
 
 interface PreviewStepProps {
   files: GeneratedFile[];

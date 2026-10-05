@@ -3,7 +3,7 @@
  * the endpoint inventory, preview, and apply flows.
  */
 
-import type { FilePlanSummary } from "./types-file-plan";
+import type { FilePlanSummary } from "@/features/apis/types-file-plan";
 
 export type ManageEndpointStatus = "active" | "available" | "custom" | "removed-from-spec";
 export type ManageModificationStatus = "safe" | "modified";

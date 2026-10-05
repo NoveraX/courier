@@ -13,9 +13,9 @@ vi.mock("@/components/shared/code-block", async () => {
   return { CodeBlock: ({ code }: { code: string }) => createElement("pre", null, code) };
 });
 
+import { settleWrite } from "../src/features/apis/settle-write";
 import { ApisEmptyState } from "../src/views/apis/apis-empty-state";
 import { DeclareStepView } from "../src/views/apis/declare-step";
-import { settleWrite } from "../src/views/apis/settle-write";
 import type { ImportDeclaration, ImportState } from "../src/views/apis/types";
 
 const IMPORT_ENTRY = [

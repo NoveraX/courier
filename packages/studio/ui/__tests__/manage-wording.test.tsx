@@ -8,11 +8,10 @@
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-
+import type { FilePlanSummary } from "../src/features/apis/types-file-plan";
 import { FilePlanView } from "../src/views/apis/file-plan-view";
 import { ManageInventoryView } from "../src/views/apis/manage-inventory";
 import type { EndpointInventory } from "../src/views/apis/types";
-import type { FilePlanSummary } from "../src/views/apis/types-file-plan";
 
 const PLAN: FilePlanSummary = {
   digest: "plan-1",

@@ -1,4 +1,4 @@
-import type { AppliedFiles } from "./client-file-changes";
+import type { AppliedFiles } from "@/apis/client-file-changes";
 
 /** How many files an apply wrote, removed, kept as they were and left in a previous directory. */
 export interface AppliedCounts {

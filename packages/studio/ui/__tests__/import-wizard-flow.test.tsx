@@ -34,9 +34,9 @@ import { toast } from "sonner";
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
 import { useStudioStore } from "@/store";
+import { useImport } from "../src/apis/use-import";
 import { ApisView } from "../src/views/apis";
 import type { ParsedSpec } from "../src/views/apis/types";
-import { useImport } from "../src/views/apis/use-import";
 
 const SPEC_URL = "https://specs.example/pets.json";
 

@@ -4,11 +4,10 @@
  */
 
 import { Loader2 } from "lucide-react";
-
+import type { UseImportReturn } from "@/apis/use-import";
 import { Button } from "@/components/ui/button";
 import { countSelectedEndpoints } from "@/features/apis/helpers";
 import type { ImportState } from "./types";
-import type { UseImportReturn } from "./use-import";
 
 /* A write Studio refused names what the next one does: allowed steps, or a fresh plan once blocked files are dealt with. */
 function writeLabel({ consent }: ImportState): string {

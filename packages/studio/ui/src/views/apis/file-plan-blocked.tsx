@@ -1,6 +1,6 @@
 import { Ban } from "lucide-react";
 
-import type { FilePlanSummary } from "./types-file-plan";
+import type { FilePlanSummary } from "@/features/apis/types-file-plan";
 
 /** Files Studio cannot write at all; nothing is applied until they are dealt with. */
 export function FilePlanBlocked({

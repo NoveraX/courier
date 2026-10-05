@@ -1,13 +1,15 @@
 /**
  * Wire mock server request lifecycle hooks to IPC events for Studio Logs tab.
+ * A body too large for an event travels as a part of it, and the mock keeps
+ * the whole for a page that asks.
  */
 
-import type { MockServer } from "../server/create-mock-server";
-import type { StoreFeed } from "./store-feed";
+import { carriedBody } from "@noverax/courier/internal";
+import type { ServedMock } from "./types";
 import { send } from "./worker-ipc";
 import { trackWritesInFlight } from "./writes-in-flight";
 
-export function wireRequestHooks(server: MockServer, feed: StoreFeed): void {
+export function wireRequestHooks({ server, feed, bodies }: ServedMock): void {
   const writes = trackWritesInFlight();
   server.requestHooks.onStart = (
     id,
@@ -19,6 +21,8 @@ export function wireRequestHooks(server: MockServer, feed: StoreFeed): void {
     requestHeaders,
   ) => {
     writes.start(id, httpMethod);
+    const sent = carriedBody(variables);
+    bodies.keep(id, "request", sent);
     send({
       type: "event",
       event: {
@@ -30,7 +34,8 @@ export function wireRequestHooks(server: MockServer, feed: StoreFeed): void {
         endpoint,
         /* What answers it, read as it arrives: a later scenario does not rewrite it. */
         source: server.getRouteSource(group, endpoint),
-        variables,
+        variables: sent.value,
+        ...(sent.whole && { variablesCutFrom: sent.whole.bytes }),
         requestHeaders,
       },
     });
@@ -44,13 +49,16 @@ export function wireRequestHooks(server: MockServer, feed: StoreFeed): void {
     scenarioState,
     responseHeaders,
   ) => {
+    const answered = carriedBody(data);
+    bodies.keep(id, "response", answered);
     send({
       type: "event",
       event: {
         type: "mock:request:end",
         requestId: id,
         status,
-        data,
+        data: answered.value,
+        ...(answered.whole && { dataCutFrom: answered.whole.bytes }),
         duration,
         latencyInjected,
         scenarioState,

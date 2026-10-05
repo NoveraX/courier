@@ -1,9 +1,11 @@
 import type { ChildMessage } from "@noverax/courier-mock/managed";
 
-/** A mock's answer to a command: whether it ran it, and why not when it did not. */
+/** A mock's answer to a command: whether it ran it, why not when it did not, and what it answered with. */
 export interface CommandReply {
   ok: boolean;
   error?: string;
+  /** What the command answers with, such as a request's whole body. */
+  data?: unknown;
 }
 
 type CommandResult = Extract<ChildMessage, { type: "command-result" }>;
@@ -46,11 +48,12 @@ export function createCommandReplies(): CommandReplies {
       const reply = new Promise<CommandReply>((resolve) => waiting.set(requestId, resolve));
       return { requestId, reply };
     },
-    settle({ requestId, ok, error }) {
+    settle({ requestId, ok, error, data }) {
       const resolve = waiting.get(requestId);
       if (!resolve) return;
       waiting.delete(requestId);
-      resolve(ok ? { ok } : { ok, error: error ?? "The mock did not run the command." });
+      if (!ok) resolve({ ok, error: error ?? "The mock did not run the command." });
+      else resolve(data === undefined ? { ok } : { ok, data });
     },
     failAll(error) {
       for (const resolve of waiting.values()) resolve({ ok: false, error });

@@ -134,7 +134,11 @@ export interface MockRequestLog {
   /** What answered it as it arrived — the generated handler, an override in the mocks file, or the scenario on — when the mock said. */
   source?: MockRouteEntry["source"] | undefined;
   variables?: unknown;
+  /** The size in bytes of the whole body the request sent, when `variables` is a part of it. */
+  variablesCutFrom?: number | undefined;
   data?: unknown;
+  /** The size in bytes of the whole body the mock answered with, when `data` is a part of it. */
+  dataCutFrom?: number | undefined;
   requestHeaders?: Record<string, string> | undefined;
   responseHeaders?: Record<string, string> | undefined;
 }

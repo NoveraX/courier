@@ -5,6 +5,7 @@ import type { PayloadView } from "@/features/requests/payload-view";
 import { buildCurlSnippet } from "@/lib/snippets";
 import type { MockRequestLog } from "@/store/mock-slice";
 import { mockLogCode, mockLogTone } from "./mock-log";
+import { wholeBodyFile } from "./whole-body-file";
 
 const NONE: ReadonlyMap<string, string> = new Map();
 /* Headers the transport adds on the way, which a replayed call sets itself. */
@@ -28,12 +29,15 @@ export interface MockRequestView {
   curl: string;
   /** Whether credentials were left out of the cURL. */
   redacted: boolean;
+  /** The file the cURL reads the body from, when the body is too large to write out. */
+  bodyFile?: string | undefined;
 }
 
 function responseOf(log: MockRequestLog): PayloadView {
   if (log.data !== undefined) {
     return {
       value: log.data,
+      cutFrom: log.dataCutFrom,
       chips: [{ label: mockLogCode(log), tone: mockLogTone(log) }],
       issues: NONE,
     };
@@ -57,7 +61,7 @@ function requestOf(log: MockRequestLog): PayloadView {
         chips: [],
         issues: NONE,
       }
-    : { value: log.variables, chips: [], issues: NONE };
+    : { value: log.variables, cutFrom: log.variablesCutFrom, chips: [], issues: NONE };
 }
 
 function rowsOf(headers: Readonly<Record<string, string>> | undefined): HeaderRow[] {
@@ -72,7 +76,10 @@ function groupOf(key: "response" | "request", title: string, rows: HeaderRow[]):
   return { key, title, rows, total: rows.length };
 }
 
-function curlOf(log: MockRequestLog, serverUrl: string): { curl: string; redacted: boolean } {
+function curlOf(
+  log: MockRequestLog,
+  serverUrl: string,
+): Pick<MockRequestView, "curl" | "redacted" | "bodyFile"> {
   const kept = Object.entries(log.requestHeaders ?? {}).filter(
     ([name]) =>
       !TRANSPORT_HEADERS.has(name.toLowerCase()) && !name.toLowerCase().startsWith("sec-"),
@@ -83,10 +90,12 @@ function curlOf(log: MockRequestLog, serverUrl: string): { curl: string; redacte
   );
   const method = log.httpMethod.toUpperCase();
   const body = method === "GET" || method === "HEAD" ? undefined : log.variables;
-  return {
-    curl: buildCurlSnippet({ url: `${serverUrl}${log.path}`, method, headers, body }),
-    redacted,
-  };
+  const url = `${serverUrl}${log.path}`;
+  if (body !== undefined && log.variablesCutFrom !== undefined) {
+    const bodyFile = wholeBodyFile(log, "request");
+    return { curl: buildCurlSnippet({ url, method, headers, bodyFile }), redacted, bodyFile };
+  }
+  return { curl: buildCurlSnippet({ url, method, headers, body }), redacted };
 }
 
 /**

@@ -7,19 +7,23 @@ export interface SnippetInput {
   method: string;
   headers?: Record<string, string> | undefined;
   body?: unknown;
+  /** A file that holds the body, sent in place of `body`: one too large to write out. */
+  bodyFile?: string | undefined;
 }
 
 /** Build a cURL command */
 export function buildCurlSnippet(input: SnippetInput): string {
-  const { url, method, body } = input;
-  const headers = mergeContentType(input.headers, body, method);
+  const { url, method, body, bodyFile } = input;
+  const headers = mergeContentType(input.headers, bodyFile ?? body, method);
   const parts: string[] = ["curl"];
   if (method !== "GET") parts.push(`-X ${method}`);
   parts.push(`'${shellEscape(url)}'`);
   for (const [k, v] of Object.entries(headers)) {
     parts.push(`-H '${shellEscape(`${k}: ${v}`)}'`);
   }
-  if (body && method !== "GET") {
+  if (bodyFile !== undefined && method !== "GET") {
+    parts.push(`--data-binary '@${shellEscape(bodyFile)}'`);
+  } else if (body && method !== "GET") {
     parts.push(`-d '${shellEscape(safeStringify(body))}'`);
   }
   return parts.join(" \\\n  ");

@@ -1,4 +1,5 @@
 import type { AnySource } from "@noverax/courier/define";
+import type { KeptBodies } from "@noverax/courier/internal";
 import type { AutoScenarioOptions } from "../auto/auto-seed";
 import type { RouteInfo } from "../auto/route-types";
 import type { MockServer } from "../server/mock-server-types";
@@ -113,6 +114,8 @@ export interface ServedMock {
   seed: AutoScenarioOptions;
   /** Reports the store's changes to Studio */
   feed: StoreFeed;
+  /** The whole bodies of the latest requests whose events carried a part of them */
+  bodies: KeptBodies;
 }
 
 // ── IPC Protocol ─────────────────────────────────────────────────────────────

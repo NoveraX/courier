@@ -12,7 +12,9 @@ import { MotionGlobalConfig } from "motion/react";
 
 import { validateInspectorSearch } from "@/features/requests/inspector-search";
 import { validateTimelineSearch } from "@/features/requests/timeline-search";
+import { validateWaterfallSearch } from "@/features/waterfall/waterfall-search";
 import { TimelineScreen } from "@/screens/timeline/timeline-screen";
+import { WaterfallScreen } from "@/screens/waterfall/waterfall-screen";
 import { StudioShell } from "@/shell/studio-shell";
 
 /* jsdom has neither; the palette and the lists measure themselves and scroll their selection into view. */
@@ -38,8 +40,8 @@ Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
 });
 
 /**
- * Render the new shell at an address, with the Timeline under it and a
- * page of its own at `/next/`, as the app's routes have them.
+ * Render the new shell at an address, with the Timeline and the Waterfall
+ * under it and a page of its own at `/next/`, as the app's routes have them.
  *
  * @param url - The address
  * @returns The router, to read where it went
@@ -63,8 +65,14 @@ export async function openShell(url: string): Promise<AnyRouter> {
     component: TimelineScreen,
     validateSearch: validateTimelineSearch,
   });
+  const waterfall = createRoute({
+    getParentRoute: () => shell,
+    path: "waterfall",
+    component: WaterfallScreen,
+    validateSearch: validateWaterfallSearch,
+  });
   const router = createRouter({
-    routeTree: root.addChildren([shell.addChildren([home, timeline])]),
+    routeTree: root.addChildren([shell.addChildren([home, timeline, waterfall])]),
     history: createMemoryHistory({ initialEntries: [url] }),
   });
   await act(() => router.load());

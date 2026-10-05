@@ -39,7 +39,7 @@ export const SHELL_NAV: readonly ShellNavGroup[] = [
     label: "Inspect",
     items: [
       { label: "Timeline", to: "/next/timeline", icon: Activity, badge: "requests" },
-      { label: "Waterfall", to: "/waterfall", icon: Timer },
+      { label: "Waterfall", to: "/next/waterfall", icon: Timer },
       { label: "Analytics", to: "/analytics", icon: ChartColumn },
     ],
   },

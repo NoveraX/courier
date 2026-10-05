@@ -1,7 +1,9 @@
 import type { LucideIcon } from "lucide-react"
 import { Activity, Flame, Network, ShieldCheck } from "lucide-react"
 
-/** One of Studio's chapters: what a group of its views does, and where to read on. */
+import { STUDIO_DEMO_URL } from "@/site/site-url"
+
+/** One of Studio's chapters: what a group of its views does, and where to see it in the live demo. */
 export interface Chapter {
   id: "inspect" | "explore" | "mock" | "audit"
   eyebrow: string
@@ -42,7 +44,7 @@ export const CHAPTERS: readonly Chapter[] = [
       },
       { title: "Replay and copy", detail: "any call as cURL, fetch or a typed Courier call." },
     ],
-    cta: { label: "Read the Studio guide", href: "/docs/studio/overview" },
+    cta: { label: "Open Timeline", href: `${STUDIO_DEMO_URL}/timeline` },
     visual: "right",
   },
   {
@@ -57,7 +59,7 @@ export const CHAPTERS: readonly Chapter[] = [
       { title: "Heatmaps", detail: "show which endpoints degrade and when." },
       { title: "Playground", detail: "sends typed requests straight from any endpoint." },
     ],
-    cta: { label: "Import an API", href: "/docs/studio/import-api" },
+    cta: { label: "Open Explorer", href: `${STUDIO_DEMO_URL}/explorer` },
     visual: "left",
   },
   {
@@ -78,7 +80,7 @@ export const CHAPTERS: readonly Chapter[] = [
       },
       { title: "Chaos presets", detail: "from Degraded to Down, plus a custom fault mix." },
     ],
-    cta: { label: "Declare a mock server", href: "/docs/studio/mock-servers" },
+    cta: { label: "Open Mocks", href: `${STUDIO_DEMO_URL}/mocks` },
     visual: "right",
   },
   {
@@ -99,7 +101,7 @@ export const CHAPTERS: readonly Chapter[] = [
       },
       { title: "Compare", detail: "diffs two calls to pinpoint what changed." },
     ],
-    cta: { label: "Set up Studio", href: "#setup" },
+    cta: { label: "Open Audit", href: `${STUDIO_DEMO_URL}/audit` },
     visual: "left",
   },
 ]

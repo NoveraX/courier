@@ -1,14 +1,15 @@
-import { ArrowRight, ShieldCheck } from "lucide-react"
+import { ArrowUpRight, ShieldCheck } from "lucide-react"
 
 import { InstallButton } from "@/site/landing/install-button"
+import { STUDIO_DEMO_URL } from "@/site/site-url"
 import { StudioWindow } from "./studio-window"
 
 /** The command that installs Studio. */
 export const STUDIO_INSTALL = "npm i -D @noverax/courier-studio"
 
 /**
- * The top of Studio's page: what Studio is in one line, the way to set it
- * up, its install command, and Studio itself, streaming calls.
+ * The top of Studio's page: what Studio is in one line, the live demo to
+ * try it in, its install command, and Studio itself, streaming calls.
  *
  * @returns The section
  * @example
@@ -38,11 +39,13 @@ export function StudioHero() {
         </p>
         <div className="mt-8 flex animate-rise flex-wrap justify-center gap-2.5">
           <a
-            href="#setup"
+            href={STUDIO_DEMO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex h-11 items-center gap-2 rounded-[10px] bg-fg px-5 text-[14.5px] font-medium text-bg hover:text-bg hover:opacity-86"
           >
-            Set up Studio
-            <ArrowRight aria-hidden="true" className="size-3.5" />
+            Try the live demo
+            <ArrowUpRight aria-hidden="true" className="size-3.5" />
           </a>
           <InstallButton look="studio" command={STUDIO_INSTALL} />
         </div>

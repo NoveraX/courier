@@ -1,4 +1,5 @@
 import { PageLink } from "@/site/landing/page-link"
+import { STUDIO_DEMO_URL } from "@/site/site-url"
 import { StudioWordmark } from "./header/studio-wordmark"
 
 const REPO = "https://github.com/NoveraX/courier"
@@ -7,6 +8,7 @@ const COLUMNS = [
   {
     heading: "Studio",
     links: [
+      { label: "Live demo", href: STUDIO_DEMO_URL },
       { label: "Setup", href: "#setup" },
       { label: "Mock servers", href: "/docs/studio/mock-servers" },
       { label: "Import an API", href: "/docs/studio/import-api" },

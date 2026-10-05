@@ -1,14 +1,13 @@
-import { ArrowRight, Check } from "lucide-react"
+import { ArrowUpRight, Check } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { cn } from "@/site/cn"
-import { PageLink } from "@/site/landing/page-link"
 import type { Chapter } from "./chapters"
 
 /**
  * One of Studio's chapters: what it does, three things it does well and
- * where to read on, beside a visual of it running — the sides swapping
- * from one chapter to the next.
+ * the view in the live demo that does them, beside a visual of it running —
+ * the sides swapping from one chapter to the next.
  *
  * @param props - The chapter, and its visual
  * @returns The section
@@ -53,13 +52,15 @@ export function ChapterSection({ chapter, children }: { chapter: Chapter; childr
               </li>
             ))}
           </ul>
-          <PageLink
+          <a
             href={chapter.cta.href}
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-2 flex items-center gap-1.75 self-start text-[14px] font-[550] text-(--tone) hover:text-(--tone) hover:underline"
           >
             {chapter.cta.label}
-            <ArrowRight aria-hidden="true" className="size-3.25" />
-          </PageLink>
+            <ArrowUpRight aria-hidden="true" className="size-3.25" />
+          </a>
         </div>
         <div className="relative min-w-0">
           <div

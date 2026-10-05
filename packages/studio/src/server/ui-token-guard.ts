@@ -11,11 +11,12 @@ import type { StudioToken } from "./studio-token";
 import { TOKEN_REFUSAL } from "./token-guard";
 
 /**
- * The events that change the log, the view every page shows, the mocks or
- * what the Playground sends. Every other event reads.
+ * The events that change the log, a mock's log, the view every page shows,
+ * the mocks or what the Playground sends. Every other event reads.
  */
 export const WRITING_EVENTS: ReadonlySet<string> = new Set([
   "requests:clear",
+  "mock:logs:clear",
   "view:live",
   "playground:exec",
   "playground:exec:cancel",

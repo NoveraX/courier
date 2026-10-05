@@ -207,7 +207,7 @@ describe("the requests a managed mock answered", () => {
     const emit = vi.fn();
     const record = vi.fn();
     const servers = new Map<string, ServerState>();
-    const mockLog = { record, events: () => [], close: () => undefined };
+    const mockLog = { record, events: () => [], forget: vi.fn(), close: () => undefined };
     const { onEvent } = createProcessEvents({ servers, emit, updateAndEmit: vi.fn(), mockLog });
     const start = {
       type: "mock:request:start",

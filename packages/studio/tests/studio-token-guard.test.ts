@@ -177,6 +177,15 @@ describe("a page without the token", () => {
     expect(await ended).toEqual({ rid: "call-1", error: { message: TOKEN_REFUSAL } });
   });
 
+  it("is told that Studio did not clear a mock's log", async () => {
+    const watching = await page();
+    const told = new Promise((resolve) => watching.once("studio:read-only", resolve));
+
+    watching.emit("mock:logs:clear", { serverId: "petstore" });
+
+    expect(await told).toEqual({ event: "mock:logs:clear", error: TOKEN_REFUSAL });
+  });
+
   it("is told that Studio did not clear the log, and the log keeps its requests", async () => {
     const app = await runtime();
     const watching = await page();

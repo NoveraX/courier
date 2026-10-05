@@ -13,6 +13,7 @@ import { logger } from "@noverax/courier";
 import type { Namespace } from "socket.io";
 import { buildBindingSnapshot } from "./binding-snapshot";
 import type { BindingTable } from "./catalog/binding-table";
+import { clearedMockOf } from "./mock-log-clear";
 import type { LifecycleCoordinator } from "./mock-manager";
 import type { CommandReply } from "./mock-manager/command-replies";
 import { sendProject } from "./project-state/send-project";
@@ -107,8 +108,15 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
 
     // Send managed mock server states
     mockManager?.sendSnapshot(socket);
-    /* After the mocks, the requests they answered: a page that reloads shows each mock's log again. */
-    if (mockLog) socket.emit("mock:events:replay", mockLog.events());
+    /* After the mocks, the requests they answered: a page that reloads shows each mock's log
+       again, unless a page cleared that mock's log. */
+    if (mockLog) {
+      socket.emit("mock:events:replay", mockLog.events());
+      socket.on("mock:logs:clear", (raw: unknown) => {
+        const serverId = clearedMockOf(raw);
+        if (serverId) mockLog.forget(serverId);
+      });
+    }
 
     // Send current watcher status (watching N files indicator)
     watcherStatus?.sendSnapshot(socket);

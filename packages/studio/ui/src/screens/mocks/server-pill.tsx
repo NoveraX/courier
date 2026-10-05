@@ -2,28 +2,13 @@ import { ChevronsUpDown, Play, RotateCw, Square } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 
 import { cn } from "@/lib/utils";
-import { getSocket } from "@/socket";
-import type { MockServerInfo, ProcessStatus } from "@/store/mock-slice";
+import { manageMock } from "@/mocks/manage-mock";
+import type { MockServerInfo } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
-
-const STATUS: Readonly<
-  Record<ProcessStatus, { label: string; className: string; pulse: boolean }>
-> = {
-  declared: { label: "Not started", className: "text-fg-subtle", pulse: false },
-  starting: { label: "Starting", className: "text-brand", pulse: true },
-  running: { label: "Running", className: "text-ok", pulse: false },
-  stopping: { label: "Stopping", className: "text-warn", pulse: true },
-  stopped: { label: "Stopped", className: "text-fg-subtle", pulse: false },
-  crashed: { label: "Crashed", className: "text-err", pulse: false },
-  restarting: { label: "Restarting", className: "text-brand", pulse: true },
-};
+import { PROCESS_STATUS } from "./process-status";
 
 const BUTTON =
   "flex h-full w-8 cursor-pointer items-center justify-center border-l border-line hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-40";
-
-function manage(serverId: string, command: "start" | "stop" | "restart"): void {
-  getSocket().emit("mock:managed", { command: `mock:managed:${command}`, serverId });
-}
 
 /**
  * The mock server in use: its state, name and port — a menu of the others
@@ -44,7 +29,7 @@ export function ServerPill({
   server: MockServerInfo;
   servers: readonly MockServerInfo[];
 }): React.ReactNode {
-  const status = STATUS[server.processStatus];
+  const status = PROCESS_STATUS[server.processStatus];
   const running = server.processStatus === "running";
   const busy = status.pulse;
   const name = (
@@ -93,7 +78,7 @@ export function ServerPill({
                     <span
                       className={cn(
                         "size-1.5 rounded-full bg-current",
-                        STATUS[s.processStatus].className,
+                        PROCESS_STATUS[s.processStatus].className,
                       )}
                     />
                     <span className="flex-1">{s.name}</span>
@@ -120,7 +105,7 @@ export function ServerPill({
             title="Restart"
             aria-label="Restart the mock server"
             disabled={busy}
-            onClick={() => manage(server.serverId, "restart")}
+            onClick={() => manageMock(server.serverId, "restart")}
             className={cn(BUTTON, "text-fg-muted hover:text-fg")}
           >
             <RotateCw aria-hidden="true" className="size-3.25" />
@@ -130,7 +115,7 @@ export function ServerPill({
             title={running ? "Stop server" : "Start server"}
             aria-label={running ? "Stop the mock server" : "Start the mock server"}
             disabled={busy}
-            onClick={() => manage(server.serverId, running ? "stop" : "start")}
+            onClick={() => manageMock(server.serverId, running ? "stop" : "start")}
             className={cn(BUTTON, running ? "text-err" : "text-ok")}
           >
             {running ? (

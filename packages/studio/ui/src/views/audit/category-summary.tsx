@@ -1,6 +1,7 @@
+import { CATEGORY_ORDER } from "@/features/audit/audit-meta";
+import type { AuditCategory, AuditItem, AuditSeverity } from "@/features/audit/types";
 import { cn } from "../../lib/utils";
-import { CATEGORY_CONFIG, CATEGORY_ORDER, SEVERITY_CONFIG } from "./constants";
-import type { AuditCategory, AuditItem, AuditSeverity } from "./types";
+import { CATEGORY_CONFIG, SEVERITY_CONFIG } from "./constants";
 
 interface CategorySummaryProps {
   items: AuditItem[];

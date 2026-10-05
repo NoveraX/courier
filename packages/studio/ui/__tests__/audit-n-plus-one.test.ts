@@ -5,9 +5,8 @@
  * closes.
  */
 import { describe, expect, it } from "vitest";
-
+import { detectNPlusOne } from "@/features/audit/rules-patterns";
 import type { RequestEntry } from "@/store/types";
-import { detectNPlusOne } from "../src/views/audit/rules-patterns";
 
 function request(id: string, method: string, startedAt: number, data?: unknown): RequestEntry {
   return {

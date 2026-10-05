@@ -1,4 +1,4 @@
-import type { RequestEntry } from "../../store/types-request";
+import type { RequestEntry } from "@/store/types-request";
 import type { AuditItem } from "./types";
 
 const SLOW_MW_THRESHOLD_MS = 50;

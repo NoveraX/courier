@@ -1,12 +1,12 @@
 import { ChevronDown, ExternalLink, Lightbulb } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
+import type { AuditItem as AuditItemType } from "@/features/audit/types";
 import { CodeBlock as SyntaxBlock } from "../../components/shared/code-block";
 import { Badge } from "../../components/ui/badge";
 import { useRequestDetail } from "../../hooks/use-request-detail";
 import { cn } from "../../lib/utils";
 import { SEVERITY_CONFIG } from "./constants";
-import type { AuditItem as AuditItemType } from "./types";
 
 const VISIBLE_LIMIT = 5;
 

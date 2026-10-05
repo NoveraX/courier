@@ -1,4 +1,4 @@
-import { CATEGORY_CONFIG, CATEGORY_ORDER } from "./constants";
+import { CATEGORY_LABEL, CATEGORY_ORDER } from "./audit-meta";
 import type { AuditItem, AuditResult } from "./types";
 
 /** Generate a markdown audit report for clipboard/PR. */
@@ -16,7 +16,7 @@ export function exportAsMarkdown(result: AuditResult): string {
     const items = result.items.filter((i) => i.category === cat);
     if (items.length === 0) continue;
 
-    lines.push(`## ${CATEGORY_CONFIG[cat].label}`);
+    lines.push(`## ${CATEGORY_LABEL[cat]}`);
     lines.push("");
 
     for (const item of items) {

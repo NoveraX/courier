@@ -1,8 +1,7 @@
 import { motion, useSpring, useTransform } from "motion/react";
 import { useEffect } from "react";
-
+import type { AuditResult } from "@/features/audit/types";
 import { SCORE_THRESHOLDS } from "./constants";
-import type { AuditResult } from "./types";
 
 const RADIUS = 54;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;

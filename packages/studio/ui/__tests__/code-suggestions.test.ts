@@ -14,9 +14,8 @@ import { join } from "node:path";
 
 import * as ts from "typescript";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
+import { runAudit } from "@/features/audit/run-audit";
 import type { RequestEntry } from "@/store";
-import { runAudit } from "@/views/audit/run-audit";
 
 let dir = "";
 

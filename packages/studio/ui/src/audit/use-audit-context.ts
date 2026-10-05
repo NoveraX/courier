@@ -1,7 +1,6 @@
 import { useMemo } from "react";
-
+import type { AuditContext } from "@/features/audit/types";
 import { useStudioStore } from "@/store";
-import type { AuditContext } from "./types";
 
 /**
  * What the audit weighs besides the requests: which sessions are runtimes

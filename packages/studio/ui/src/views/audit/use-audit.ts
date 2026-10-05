@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
+import { useAuditContext } from "@/audit/use-audit-context";
+import { runAudit } from "@/features/audit/run-audit";
+import type { AuditCategory, AuditResult } from "@/features/audit/types";
 import { useCatalog } from "@/hooks/use-catalog";
 import { useThrottledValue } from "@/hooks/use-throttled-value";
 import { useStudioStore } from "../../store";
-import { runAudit } from "./run-audit";
-import type { AuditCategory, AuditResult } from "./types";
-import { useAuditContext } from "./use-audit-context";
 
 export type SeverityFilter = "error" | "warning" | "hint" | "pass" | "all";
 

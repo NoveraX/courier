@@ -1,5 +1,5 @@
-import type { RequestEntry } from "../../store/types-request";
-import type { Catalog } from "../../store/types-ui";
+import type { RequestEntry } from "@/store/types-request";
+import type { Catalog } from "@/store/types-ui";
 import { AUTH_SUGGESTION } from "./code-suggestions";
 import type { AuditItem } from "./types";
 

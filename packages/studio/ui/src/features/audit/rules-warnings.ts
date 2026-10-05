@@ -1,6 +1,6 @@
-import type { RequestEntry } from "../../store/types-request";
-import type { Catalog } from "../../store/types-ui";
-import { P95_SLOW_MS } from "./constants";
+import type { RequestEntry } from "@/store/types-request";
+import type { Catalog } from "@/store/types-ui";
+import { P95_SLOW_MS } from "./thresholds";
 import type { AuditEndpoint, AuditItem, EndpointStats } from "./types";
 
 function formatEp(s: EndpointStats): AuditEndpoint {

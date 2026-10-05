@@ -1,7 +1,7 @@
-import type { RequestEntry } from "../../store/types-request";
-import type { Catalog } from "../../store/types-ui";
+import type { RequestEntry } from "@/store/types-request";
+import type { Catalog } from "@/store/types-ui";
+import { MAX_SCORE, SEVERITY_WEIGHT } from "./audit-meta";
 import { computeEndpointStats } from "./compute-stats";
-import { MAX_SCORE, SEVERITY_CONFIG } from "./constants";
 import { collectCourierRules } from "./rules-courier";
 import { collectDeepPerformance } from "./rules-deep";
 import { collectErrors } from "./rules-errors";
@@ -26,7 +26,7 @@ function computeScore(items: AuditItem[]): number {
   const penalties: Record<AuditSeverity, number> = { error: 0, warning: 0, hint: 0, pass: 0 };
   for (const item of items) {
     const sev = item.severity;
-    const w = Math.abs(SEVERITY_CONFIG[sev].weight);
+    const w = Math.abs(SEVERITY_WEIGHT[sev]);
     penalties[sev] = Math.min(penalties[sev] + w, MAX_PENALTY[sev]);
   }
   const totalPenalty = penalties.error + penalties.warning + penalties.hint;

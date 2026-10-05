@@ -1,4 +1,4 @@
-import type { RequestEntry } from "../../store/types-request";
+import type { RequestEntry } from "@/store/types-request";
 import type { EndpointStats } from "./types";
 
 function percentile(sorted: number[], p: number): number {

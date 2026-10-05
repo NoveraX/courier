@@ -1,4 +1,4 @@
-import type { Catalog } from "../../store/types-ui";
+import type { Catalog } from "@/store/types-ui";
 import type { AuditItem, EndpointStats } from "./types";
 
 /** Same endpoint called in both direct and proxy mode. */

@@ -11,6 +11,7 @@ import { act, render } from "@testing-library/react";
 import { MotionGlobalConfig } from "motion/react";
 
 import { validateExplorerSearch } from "@/features/explorer/explorer-search";
+import { validatePlaygroundSearch } from "@/features/playground/playground-search";
 import { validateInspectorSearch } from "@/features/requests/inspector-search";
 import { validateTimelineSearch } from "@/features/requests/timeline-search";
 import { validateWaterfallSearch } from "@/features/waterfall/waterfall-search";
@@ -19,6 +20,7 @@ import { ExplorerLayout } from "@/screens/explorer/explorer-layout";
 import { GraphScreen } from "@/screens/explorer/graph-screen";
 import { HeatmapScreen } from "@/screens/explorer/heatmap-screen";
 import { OverviewScreen } from "@/screens/explorer/overview-screen";
+import { PlaygroundScreen } from "@/screens/playground/playground-screen";
 import { TimelineScreen } from "@/screens/timeline/timeline-screen";
 import { WaterfallScreen } from "@/screens/waterfall/waterfall-screen";
 import { StudioShell } from "@/shell/studio-shell";
@@ -50,9 +52,9 @@ Object.defineProperty(HTMLElement.prototype, "clientWidth", {
 });
 
 /**
- * Render the new shell at an address, with the Timeline, the Waterfall and
- * the Explorer's tabs under it and a page of its own at `/next/`, as the
- * app's routes have them.
+ * Render the new shell at an address, with the Timeline, the Waterfall, the
+ * Explorer's tabs and the Playground under it and a page of its own at
+ * `/next/`, as the app's routes have them.
  *
  * @param url - The address
  * @returns The router, to read where it went
@@ -94,9 +96,15 @@ export async function openShell(url: string): Promise<AnyRouter> {
     { path: "endpoints", component: EndpointsScreen },
     { path: "heatmap", component: HeatmapScreen },
   ].map(({ path, component }) => createRoute({ getParentRoute: () => explorer, path, component }));
+  const playground = createRoute({
+    getParentRoute: () => shell,
+    path: "playground",
+    component: PlaygroundScreen,
+    validateSearch: validatePlaygroundSearch,
+  });
   const router = createRouter({
     routeTree: root.addChildren([
-      shell.addChildren([home, timeline, waterfall, explorer.addChildren(tabs)]),
+      shell.addChildren([home, timeline, waterfall, explorer.addChildren(tabs), playground]),
     ]),
     history: createMemoryHistory({ initialEntries: [url] }),
   });

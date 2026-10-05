@@ -10,6 +10,8 @@ export interface SegmentedOption<TValue extends string> {
   /** A count after the label, coloured as an error's when it counts errors. */
   count?: number | undefined;
   countTone?: "err" | "subtle" | undefined;
+  /** A dot after the label: what the option shows was changed. */
+  dot?: boolean | undefined;
 }
 
 interface SegmentedProps<TValue extends string> {
@@ -61,6 +63,12 @@ export function Segmented<TValue extends string>({
           >
             {Icon && <Icon aria-hidden="true" className="size-2.75" />}
             {option.label}
+            {option.dot && (
+              <>
+                <span aria-hidden="true" className="size-1.25 shrink-0 rounded-full bg-brand" />
+                <span className="sr-only">(changed)</span>
+              </>
+            )}
             {option.count !== undefined && (
               <span
                 className={cn(

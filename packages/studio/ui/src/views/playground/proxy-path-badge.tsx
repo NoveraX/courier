@@ -1,9 +1,10 @@
-import { isSafeHttpOrigin } from "@noverax/courier-studio-core";
 import { Check, Copy, Globe, Radio, Wifi } from "lucide-react";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ProxyRoute } from "@/features/playground/proxy-route";
+import { proxyRouteOf } from "@/features/playground/proxy-route";
 import { cn } from "@/lib/utils";
 import { writeClipboardText } from "@/lib/write-clipboard-text";
 import type { CatalogEntry } from "@/store/types-ui";
@@ -18,61 +19,16 @@ interface ProxyPathBadgeProps {
 
 const TRANSPORT_ICON = { http: Globe, sse: Radio, ws: Wifi } as const;
 
-/**
- * `absolute`   — raw value already had a scheme (`http://` / `ws://` / etc.).
- *                The URL points wherever the user said; we don't claim it's
- *                on their app.
- * `resolved`   — raw value was a relative path AND appOrigin was set, so we
- *                joined them. The endpoint IS mounted on the user's app.
- * `unresolved` — raw value was a relative path BUT appOrigin is missing.
- *                We display the raw path as a fallback and surface a hint.
- */
-type Resolution =
-  | { display: string; kind: "absolute" }
-  | { display: string; kind: "resolved" }
-  | { display: string; kind: "unresolved" };
-
-const ABSOLUTE_URL_RE = /^(https?|wss?):\/\//i;
-
-function resolveDisplayUrl(
-  transport: Transport,
-  rawValue: string,
-  appOrigin: string | undefined,
-): Resolution {
-  if (ABSOLUTE_URL_RE.test(rawValue)) return { display: rawValue, kind: "absolute" };
-  if (!appOrigin || !isSafeHttpOrigin(appOrigin)) {
-    return { display: rawValue, kind: "unresolved" };
-  }
-
-  const base = appOrigin.replace(/\/+$/, "");
-  const path = rawValue.startsWith("/") ? rawValue : `/${rawValue}`;
-  const httpUrl = `${base}${path}`;
-  // WS endpoints declared as relative paths inherit the user-app's HTTP
-  // origin and need scheme promotion so the displayed/copied URL is the
-  // actual one a `new WebSocket(...)` call would use.
-  const display = transport === "ws" ? httpUrl.replace(/^http/i, "ws") : httpUrl;
-  return { display, kind: "resolved" };
-}
-
-/* The paths a proxy caller uses when a source declares none. A WebSocket
-   has no default: its calls fail until one is declared. */
-const DEFAULT_PATHS: Readonly<Partial<Record<Transport, string>>> = {
-  http: "/api/request",
-  sse: "/api/sse",
-};
-
 export function ProxyPathBadge({ transport, source }: ProxyPathBadgeProps): React.ReactElement {
-  const declared = source?.proxyPath?.[transport];
-  const rawValue = declared ?? DEFAULT_PATHS[transport];
-  if (!rawValue) return <NotConfiguredBadge transport={transport} />;
-  const resolution = resolveDisplayUrl(transport, rawValue, source?.appOrigin);
+  const route = proxyRouteOf(transport, source);
+  if (!route) return <NotConfiguredBadge transport={transport} />;
   return (
     <ConfiguredBadge
       transport={transport}
-      display={resolution.display}
-      kind={resolution.kind}
+      display={route.display}
+      kind={route.kind}
       appOrigin={source?.appOrigin}
-      isDefault={!declared}
+      isDefault={!route.declared}
     />
   );
 }
@@ -86,7 +42,7 @@ function ConfiguredBadge({
 }: {
   transport: Transport;
   display: string;
-  kind: Resolution["kind"];
+  kind: ProxyRoute["kind"];
   appOrigin: string | undefined;
   isDefault: boolean;
 }): React.ReactElement {

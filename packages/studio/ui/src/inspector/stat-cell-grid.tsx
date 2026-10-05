@@ -40,7 +40,9 @@ export function StatCellGrid({ cells }: { cells: readonly StatCell[] }): React.R
             )}
             {cell.value}
           </dd>
-          <dd className="m-0 truncate text-badge text-fg-subtle">{cell.sub || " "}</dd>
+          {cell.sub !== undefined && (
+            <dd className="m-0 truncate text-badge text-fg-subtle">{cell.sub || " "}</dd>
+          )}
         </div>
       ))}
     </dl>

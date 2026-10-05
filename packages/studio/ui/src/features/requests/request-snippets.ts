@@ -37,10 +37,29 @@ export function snippetLabels(r: Pick<RequestEntry, "transport">): Record<Snippe
   return LABELS[r.transport ?? "http"];
 }
 
-function redactedHeaders(headers: RequestEntry["requestHeaders"]): {
+/** What a snippet is written from: a request the runtime reported, or one the Playground is about to send. */
+export type SnippetRequest = Pick<
+  RequestEntry,
+  | "url"
+  | "source"
+  | "group"
+  | "method"
+  | "httpMethod"
+  | "transport"
+  | "requestHeaders"
+  | "variables"
+  | "sentBody"
+  | "streamEvents"
+>;
+
+function redactedHeaders(
+  headers: RequestEntry["requestHeaders"],
+  redact: boolean,
+): {
   headers: Record<string, string>;
   redacted: boolean;
 } {
+  if (!redact) return { headers: { ...headers }, redacted: false };
   let redacted = false;
   const entries = Object.entries(headers ?? {}).map(([name, value]): [string, string] => {
     if (!isCredentialHeader(name)) return [name, value];
@@ -56,7 +75,7 @@ function courierArgs(variables: unknown): string {
   return safeStringify(variables, 2).replace(/"([A-Za-z_$][\w$]*)":/g, "$1:");
 }
 
-function courierCall(r: RequestEntry): string {
+function courierCall(r: SnippetRequest): string {
   const path = r.group ? `${r.group}.${r.method}` : r.method;
   const call = `caller.${path}(${courierArgs(r.variables)})`;
   if (r.transport === "sse")
@@ -67,13 +86,13 @@ function courierCall(r: RequestEntry): string {
   return `const data = await ${call};`;
 }
 
-function streamShell(r: RequestEntry, url: string, headers: Record<string, string>): string {
+function streamShell(r: SnippetRequest, url: string, headers: Record<string, string>): string {
   const flags = Object.entries(headers).map(([k, v]) => `-H '${k}: ${v}'`);
   if (r.transport === "ws") return ["websocat", `'${url}'`, ...flags].join(" \\\n  ");
   return ["curl -N", `'${url}'`, "-H 'accept: text/event-stream'", ...flags].join(" \\\n  ");
 }
 
-function streamBrowser(r: RequestEntry, url: string): string {
+function streamBrowser(r: SnippetRequest, url: string): string {
   if (r.transport === "ws") {
     return `const socket = new WebSocket("${url}");\n\nsocket.onmessage = (event) => console.log(JSON.parse(event.data));`;
   }
@@ -86,19 +105,25 @@ function streamBrowser(r: RequestEntry, url: string): string {
 
 /**
  * A request written out in a flavour, with the values of credential
- * headers left out — the Headers tab shows them, on request.
+ * headers left out — the Headers tab shows them, on request — unless the
+ * headers are the caller's own, as the Playground's are.
  *
  * @param r - The request
  * @param flavor - The flavour
+ * @param options - Whether to leave credentials out; they are by default
  * @returns The snippet, and whether a credential was left out
  * @example
  * ```ts
  * requestSnippet(request, "shell").code; // "curl -X POST 'http://…' \\\n  -H 'authorization: <redacted>'"
  * ```
  */
-export function requestSnippet(r: RequestEntry, flavor: SnippetFlavor): Snippet {
+export function requestSnippet(
+  r: SnippetRequest,
+  flavor: SnippetFlavor,
+  { redact = true }: { redact?: boolean } = {},
+): Snippet {
   const url = r.url ?? `/${[r.source, r.group, r.method].filter(Boolean).join("/")}`;
-  const { headers, redacted } = redactedHeaders(r.requestHeaders);
+  const { headers, redacted } = redactedHeaders(r.requestHeaders, redact);
   if (flavor === "courier") return { code: courierCall(r), redacted: false };
   if (r.transport === "sse" || r.transport === "ws") {
     return flavor === "shell"

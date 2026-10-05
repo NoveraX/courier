@@ -10,7 +10,8 @@ import { streamEnd } from "./stream-activity";
 export interface StatCell {
   label: string;
   value: string;
-  sub: string;
+  /** A line under the value; a cell without one has none. */
+  sub?: string | undefined;
   /** The status cell's dot, pulsing while the request runs. */
   dot?: { tone: StateTone; pulse: boolean } | undefined;
   tone: StateTone | DurationTone;

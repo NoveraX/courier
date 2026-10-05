@@ -1,17 +1,9 @@
+import { joinPath } from "@/lib/join-path";
 import type { CatalogEndpoint, RequestEntry } from "@/store/types";
 import type { EndpointRef } from "./endpoint-key";
 import { endpointKey } from "./endpoint-key";
 import { levelOf, metricsOf } from "./endpoint-metrics";
 import type { EndpointNode } from "./explorer-model";
-
-/* A path joined from a group's prefix and an endpoint's own path, with single slashes. */
-function joinPath(prefix: string, path: string): string {
-  const joined = [prefix, path]
-    .map((p) => p.replace(/^\/+|\/+$/g, ""))
-    .filter(Boolean)
-    .join("/");
-  return `/${joined}`;
-}
 
 function methodOf(def: CatalogEndpoint, calls: readonly RequestEntry[]): string {
   return (

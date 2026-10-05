@@ -1,0 +1,97 @@
+export const metadata = { title: "defineMiddleware", description: "Build a named middleware that runs before a call, after it, or around it, for a whole source, a base or one endpoint.", mode: "both" }
+
+## Import
+
+```ts
+import { defineMiddleware } from "@noverax/courier/middleware"
+```
+
+## Signature
+
+`defineMiddleware` takes the middleware's name, its phase and a handler of that phase, and returns a `Middleware`. List it in a source's `middleware`, a base's `courier({ middleware })`, or one endpoint's `.use()`:
+
+```ts
+import type { AfterHandler, BeforeHandler, Middleware, WrapHandler } from "@noverax/courier/middleware"
+
+declare function defineMiddleware(name: string, phase: "before", handler: BeforeHandler): Middleware
+declare function defineMiddleware(name: string, phase: "after", handler: AfterHandler): Middleware
+declare function defineMiddleware(name: string, phase: "wrap", handler: WrapHandler): Middleware
+```
+
+## Parameters
+
+### name
+
+A string: what Studio calls the middleware. Its Middleware view, each request's pipeline and its timings show it under this name.
+
+### phase
+
+When the handler runs, and so what it is handed.
+
+```ts
+type MiddlewarePhase = "before" | "after" | "wrap"
+```
+
+- `before` — changes the request — its headers, its variables — and lets it go on; it never sees the answer
+- `after` — receives the answer and returns it, changed or not
+- `wrap` — calls `next()` once, more than once or not at all, and returns an answer; for timing, retries, short-circuiting and error handling
+
+### handler
+
+The function for that phase, handed the call's context:
+
+```ts
+type BeforeHandler = (ctx: MiddlewareContext) => void | Promise<void>
+type AfterHandler = (
+  ctx: MiddlewareContext,
+  response: MiddlewareResponse,
+) => MiddlewareResponse | Promise<MiddlewareResponse>
+type WrapHandler = (
+  ctx: MiddlewareContext,
+  next: () => Promise<MiddlewareResponse>,
+) => Promise<MiddlewareResponse>
+```
+
+- `ctx.source`, `ctx.group`, `ctx.method` — the endpoint being called
+- `ctx.variables` — the call's variables, which a `before` or `wrap` handler may replace
+- `ctx.headers` — the request's headers, to read or set
+- `ctx.transport` — `"http"` for a request, `"sse"` or `"ws"` for a stream or a channel
+- `ctx.kind` — whether the endpoint reads or writes
+- `ctx.signal` — fires when the caller stops waiting
+- `ctx.request` — the incoming request, when a proxy runs the call
+- `response` — `{ status, data, headers }`: the answer an `after` handler receives and `next()` resolves to
+
+## Basic Usage
+
+```ts title="lib/middleware.ts"
+import { defineMiddleware } from "@noverax/courier/middleware"
+
+export const timing = defineMiddleware("timing", "wrap", async (ctx, next) => {
+  const start = performance.now()
+  const response = await next()
+  const ms = Math.round(performance.now() - start)
+  console.log(`${ctx.source}.${ctx.group}.${ctx.method} → ${response.status} in ${ms} ms`)
+  return response
+})
+```
+
+Then run it for every endpoint of a source:
+
+```ts title="api/index.ts"
+import { defineApi } from "@noverax/courier/define"
+import { timing } from "@/lib/middleware"
+
+export const api = defineApi({
+  baseURL: process.env.API_URL!,
+  middleware: [timing],
+  groups: { users },
+})
+```
+
+Middleware run in the order they are listed, the first outermost: it runs first on the way in and last on the way out.
+
+## Related
+
+- [Middleware overview](/docs/middleware/overview) — the onion model and `composeMiddleware`
+- [Built-in middleware](/docs/middleware/built-in) — auth, retry, cache, log, rate limit
+- [Custom middleware](/docs/middleware/custom) — patterns: enriching, unwrapping, short-circuiting

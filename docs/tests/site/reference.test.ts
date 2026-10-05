@@ -34,6 +34,37 @@ describe("a reference entry", () => {
     expect(entry.example?.language).toBe("ts")
   })
 
+  it("reads a type's module from the type import its page writes", () => {
+    const entry = referenceEntry("call-options", page("call-options"), {
+      title: "CallOptions",
+      description: "",
+    })
+
+    expect(entry).toMatchObject({
+      kind: "TYPE",
+      from: "@noverax/courier",
+      importLine: 'import type { CallOptions, WithOptions } from "@noverax/courier"',
+    })
+    expect(entry.params.map((p) => p.name)).toContain("onUploadProgress")
+  })
+
+  it("names no module from a signature's own type imports", () => {
+    const entry = referenceEntry("create-test-client", page("create-test-client"), {
+      title: "createTestClient",
+      description: "",
+    })
+
+    expect(entry.from).toBe("@noverax/courier/testing")
+    expect(entry.params.map((p) => p.name)).toEqual([
+      "client",
+      "mock",
+      "history",
+      "reset",
+      "resetMocks",
+      "resetHistory",
+    ])
+  })
+
   it("reads a class from its own heading, and its properties as its fields", () => {
     const entry = referenceEntry("http-error", page("http-error"), {
       title: "HTTPError",

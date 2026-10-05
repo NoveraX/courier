@@ -1,0 +1,56 @@
+export const metadata = { title: "createTestClient", description: "An in-memory client for tests: typed like your API, answered by mocks, recording every call — no HTTP.", mode: "direct" }
+
+## Import
+
+```ts
+import { createTestClient } from "@noverax/courier/testing"
+```
+
+## Signature
+
+`createTestClient` takes the API as a type argument and returns a client typed from it, the `mock` that answers its endpoints, the `history` of every call, and resets:
+
+```ts
+import type { DefinedApi } from "@noverax/courier/define"
+import type { TestClient } from "@noverax/courier/testing"
+
+declare function createTestClient<TApi extends DefinedApi = DefinedApi>(): TestClient<TApi>
+```
+
+## Properties
+
+- `client` — a typed client, with the same dot-notation, `.raw` and `.with()` as `createCaller`; streams and channels answer as their mocks say
+- `mock` — `mock(group, method)`, checked against the API, returns a builder typed by the endpoint's response and variables: `resolves`, `returns`, `rejects`, `stream`, `channel`, `once`, `times`, `delay`
+- `history` — every call, in order, with its `group`, `method`, `variables`, `result` or `error`, and whether it was a stream or a channel
+- `reset` — clears the mocks and the history
+- `resetMocks` — clears the mocks only
+- `resetHistory` — clears the history only
+
+## Basic Usage
+
+```ts title="tests/users.test.ts"
+import { beforeEach, expect, it } from "vitest"
+import { createTestClient } from "@noverax/courier/testing"
+import type { api } from "../lib/api"
+
+const { client, mock, history, reset } = createTestClient<typeof api>()
+
+beforeEach(() => reset())
+
+it("lists the users", async () => {
+  mock("users", "getAll").resolves([{ id: 1, name: "Ada" }])
+
+  const users = await client.users.getAll()
+
+  expect(users).toEqual([{ id: 1, name: "Ada" }])
+  expect(history[0]?.method).toBe("getAll")
+})
+```
+
+A call to an endpoint with no mock throws, naming the mock to write: `[courier/testing] No mock for "users.getAll". Call mock("users", "getAll").resolves(data) first.`
+
+## Related
+
+- [Test Client](/docs/testing/test-client) — the whole guide: history entries, `findRequests`, testing errors
+- [Mocking](/docs/testing/mocking) — every builder method, and the order mocks answer in
+- [Mock utilities](/docs/testing/mock-utilities) — `createMockClient`, with scenarios, network simulation and recording a real API

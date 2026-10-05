@@ -36,6 +36,10 @@ export interface ReferenceEntry {
 
 const PROPERTY = /^- `([^`]+)` — (.*)$/
 const IMPORT_LINE = /^import (?!type\b).* from "(@noverax\/[^"]+)"$/m
+/* A type's page imports it as a type, and that names its module too — but
+   only in its Import block: a signature's own type imports name the types
+   it uses, not the export's module. */
+const TYPE_IMPORT_LINE = /^import type .* from "(@noverax\/[^"]+)"$/m
 
 function section(sections: readonly MdxSection[], ...headings: string[]): MdxSection | undefined {
   return sections.find((s) =>
@@ -97,7 +101,10 @@ export function referenceEntry(
     fencesOf(named?.lines ?? [])[0] ??
     sections.flatMap((s) => (s.heading === "Import" ? [] : fencesOf(s.lines)))[0] ??
     null
-  const imported = IMPORT_LINE.exec(importCode) ?? IMPORT_LINE.exec(signature?.code ?? "")
+  const imported =
+    IMPORT_LINE.exec(importCode) ??
+    TYPE_IMPORT_LINE.exec(importCode) ??
+    IMPORT_LINE.exec(signature?.code ?? "")
   return {
     id,
     name: meta.title,

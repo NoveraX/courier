@@ -9,7 +9,7 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 3. `executeRequest` looks up the source, group, and endpoint, creates an `HttpClient`, and makes the real HTTP call to your backend
 4. The response is forwarded back to the browser
 
-```bash title="Architecture"
+```text title="Architecture"
 ┌──────────────────────────────────────────────────────────────┐
 │  Browser (Client Component)                                  │
 │                                                              │
@@ -25,9 +25,9 @@ In proxy mode, browser requests never reach your backend directly. Instead, ever
 │  Server Handler (any framework)                              │
 │                                                              │
 │  createHandler({ sources }) → handle, handleGet, handlePost  │
-│       │  ✓ origin validation                                 │
-│       │  ✓ cookies only where named                          │
-│       │  ✓ header whitelisting                               │
+│       │  → origin validation                                 │
+│       │  → cookies only where named                          │
+│       │  → header whitelisting                               │
 │       ▼                                                      │
 │  executeRequest(sources, payload, context)                   │
 │       │                                                      │

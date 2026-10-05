@@ -259,7 +259,7 @@ export function CreateUserForm() {
 
 ## Full project structure
 
-```
+```text title="Project structure"
 app/
   api/request/route.ts    # apiRoute()
   actions/users.ts        # server actions with createAction
@@ -267,7 +267,7 @@ app/
   dashboard/page.tsx      # server component with createCaller
 lib/
   sources.ts              # defineApi + defineGroup + endpoint
-  endpoint.ts                # createProxyQueryCaller<typeof api>("myApi")
+  endpoint.ts             # createProxyQueryCaller<typeof api>("myApi")
   server-caller.ts        # createCaller(api)
   actions.ts              # createAction(sources, "myApi")
 ```

@@ -180,7 +180,7 @@ Make sure your proxy backend has CORS configured to allow requests from your Rea
 
 ## Project structure
 
-```
+```text title="Project structure"
 shared/
   sources.ts                # courier + defineGroup + defineApi (shared)
 server/
@@ -188,8 +188,8 @@ server/
 src/
   lib/query.ts              # createProxyQueryCaller<typeof api>("myApi")
   components/
-    ProductList.tsx          # q.products.useQuery usage
-    CreateProduct.tsx        # q.products.useMutation usage
+    ProductList.tsx         # q.products.useQuery usage
+    CreateProduct.tsx       # q.products.useMutation usage
   main.tsx                  # QueryClientProvider setup
 ```
 

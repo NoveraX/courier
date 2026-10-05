@@ -12,6 +12,7 @@ import { MotionGlobalConfig } from "motion/react";
 
 import { validateExplorerSearch } from "@/features/explorer/explorer-search";
 import { validateMockStoreSearch } from "@/features/mocks/collection-view";
+import { validateMockLogsSearch } from "@/features/mocks/logs-view";
 import { validateMockRoutesSearch } from "@/features/mocks/routes-view";
 import { validateMockScenariosSearch } from "@/features/mocks/scenario-view";
 import { validatePlaygroundSearch } from "@/features/playground/playground-search";
@@ -23,6 +24,7 @@ import { ExplorerLayout } from "@/screens/explorer/explorer-layout";
 import { GraphScreen } from "@/screens/explorer/graph-screen";
 import { HeatmapScreen } from "@/screens/explorer/heatmap-screen";
 import { OverviewScreen } from "@/screens/explorer/overview-screen";
+import { MockLogsScreen } from "@/screens/mocks/logs-screen";
 import { MocksDashboard } from "@/screens/mocks/mocks-dashboard";
 import { MocksLayout } from "@/screens/mocks/mocks-layout";
 import { MockNetworkScreen } from "@/screens/mocks/network-screen";
@@ -62,8 +64,8 @@ Object.defineProperty(HTMLElement.prototype, "clientWidth", {
 
 /**
  * Render the new shell at an address, with the Timeline, the Waterfall, the
- * Explorer's tabs, the Playground and the Mocks dashboard under it and a
- * page of its own at `/next/`, as the app's routes have them.
+ * Explorer's tabs, the Playground and the Mocks tabs under it and a page of
+ * its own at `/next/`, as the app's routes have them.
  *
  * @param url - The address
  * @returns The router, to read where it went
@@ -140,6 +142,12 @@ export async function openShell(url: string): Promise<AnyRouter> {
     path: "network",
     component: MockNetworkScreen,
   });
+  const mocksLogs = createRoute({
+    getParentRoute: () => mocks,
+    path: "logs",
+    component: MockLogsScreen,
+    validateSearch: validateMockLogsSearch,
+  });
   const router = createRouter({
     routeTree: root.addChildren([
       shell.addChildren([
@@ -148,7 +156,14 @@ export async function openShell(url: string): Promise<AnyRouter> {
         waterfall,
         explorer.addChildren(tabs),
         playground,
-        mocks.addChildren([mocksDashboard, mocksRoutes, mocksStore, mocksScenarios, mocksNetwork]),
+        mocks.addChildren([
+          mocksDashboard,
+          mocksRoutes,
+          mocksStore,
+          mocksScenarios,
+          mocksNetwork,
+          mocksLogs,
+        ]),
       ]),
     ]),
     history: createMemoryHistory({ initialEntries: [url] }),

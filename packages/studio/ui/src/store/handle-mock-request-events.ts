@@ -16,6 +16,7 @@ import { readNetworkConfig, readOneOf, readStringRecord } from "./payload";
 import { updateRouteStats } from "./route-stats";
 
 const EXPERIMENT_EVENTS = ["started", "stopped", "auto-halted"] as const;
+const ROUTE_SOURCES = ["auto", "override", "scenario"] as const;
 
 export function handleRequestStart(serverId: string, event: MockEvent): void {
   const store = useMockStore.getState();
@@ -27,6 +28,7 @@ export function handleRequestStart(serverId: string, event: MockEvent): void {
     path: str(event.path),
     group: str(event.group),
     endpoint: str(event.endpoint),
+    source: readOneOf(event.source, ROUTE_SOURCES),
     variables: event.variables,
     requestHeaders: readStringRecord(event.requestHeaders),
   });

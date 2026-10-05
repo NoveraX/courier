@@ -37,6 +37,7 @@ const EVENTS = [
     path: "/pets",
     group: "pets",
     endpoint: "create",
+    source: "scenario",
   },
 ];
 
@@ -52,6 +53,16 @@ describe("the mocks' logs Studio replays", () => {
     expect(logs.map((log) => [log.id, log.status, log.timestamp])).toEqual([
       ["req_2", undefined, 3],
       ["req_1", 200, 1],
+    ]);
+  });
+
+  it("keep what answered each request as it arrived, when the mock said", () => {
+    replayMockEvents([...EVENTS, { ...EVENTS[0], requestId: "req_3", source: "nonsense" }]);
+
+    expect(useMockStore.getState().logs.map((log) => [log.id, log.source])).toEqual([
+      ["req_3", undefined],
+      ["req_2", "scenario"],
+      ["req_1", undefined],
     ]);
   });
 

@@ -132,6 +132,8 @@ export interface MockRequestLog {
   status?: number | undefined;
   duration?: number | undefined;
   error?: string | undefined;
+  /** What answered it as it arrived — the generated handler, an override in the mocks file, or the scenario on — when the mock said. */
+  source?: MockRouteEntry["source"] | undefined;
   variables?: unknown;
   data?: unknown;
   requestHeaders?: Record<string, string> | undefined;
@@ -157,6 +159,8 @@ export interface MockSliceState {
   setServerScenarios: (serverId: string, scenarios: MockScenarioEntry[]) => void;
   addLog: (log: MockRequestLog) => void;
   clearLogs: () => void;
+  /** Forget the requests one mock answered, every other mock's kept. */
+  clearServerLogs: (serverId: string) => void;
   toggleLogsPaused: () => void;
   resetMockState: () => void;
   addExperimentEvent: (event: ExperimentEvent) => void;

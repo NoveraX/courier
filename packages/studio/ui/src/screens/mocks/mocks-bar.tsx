@@ -14,7 +14,7 @@ const TABS = [
   { to: "/next/mocks/store", label: "Store", icon: Database },
   { to: "/next/mocks/scenarios", label: "Scenarios", icon: Network },
   { to: "/next/mocks/network", label: "Network", icon: Zap },
-  { to: "/mocks/logs", label: "Logs", icon: Activity },
+  { to: "/next/mocks/logs", label: "Logs", icon: Activity },
 ] as const satisfies readonly { to: string; label: string; icon: LucideIcon }[];
 
 interface MocksBarProps {

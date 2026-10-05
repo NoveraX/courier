@@ -5,6 +5,7 @@
  */
 
 import type { DatabaseSync } from "node:sqlite";
+import { REPLAY_BYTES } from "./replay-bytes";
 import { withoutCredentials } from "./without-credentials";
 
 type MockEvent = Record<string, unknown>;
@@ -18,7 +19,7 @@ const LOGGED = new Set(["mock:request:start", "mock:request:end", "mock:request:
 export interface MockLog {
   /** Keep an event a mock sent, if it is one of its log's; the event names its mock. */
   record(event: MockEvent): void;
-  /** Every kept event, oldest first */
+  /** The kept events a page is sent as it connects, oldest first: the newest requests', each whole, as many as fit the replay. */
   events(): MockEvent[];
   /** Forget every request one mock answered, as its page's Clear does. */
   forget(serverId: string): void;
@@ -30,6 +31,7 @@ export interface MockLog {
  * The mocks' request logs, kept in a database.
  *
  * @param db - Studio's database
+ * @param replayBytes - The most of the log a page is sent as it connects
  * @returns The logs
  * @example
  * ```ts
@@ -38,10 +40,19 @@ export interface MockLog {
  * socket.emit("mock:events:replay", mockLog.events());
  * ```
  */
-export function createMockLog(db: DatabaseSync): MockLog {
+export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYTES): MockLog {
   const insert = db.prepare("INSERT INTO mock_events (request_id, body) VALUES (?, ?)");
   const drop = db.prepare("DELETE FROM mock_events WHERE request_id = ?");
   const selectAll = db.prepare("SELECT request_id, body FROM mock_events ORDER BY seq");
+  /* The newest requests whose events fit the replay, each whole, oldest first. */
+  const selectReplay = db.prepare(
+    "WITH sized AS (SELECT request_id, MIN(seq) AS first, SUM(LENGTH(body)) AS bytes " +
+      "FROM mock_events GROUP BY request_id), " +
+      "kept AS (SELECT request_id, " +
+      "SUM(bytes) OVER (ORDER BY first DESC ROWS UNBOUNDED PRECEDING) AS upto FROM sized) " +
+      "SELECT m.body FROM mock_events m JOIN kept k ON k.request_id = m.request_id " +
+      "WHERE k.upto <= ? ORDER BY m.seq",
+  );
   const requests = new Set<string>();
   /* The mock each kept request was answered by, so one mock's log can be forgotten alone. */
   const owners = new Map<string, string>();
@@ -113,7 +124,7 @@ export function createMockLog(db: DatabaseSync): MockLog {
     },
     events() {
       flush();
-      return selectAll.all().flatMap((row): MockEvent[] => {
+      return selectReplay.all(replayBytes).flatMap((row): MockEvent[] => {
         const value: unknown = typeof row.body === "string" ? JSON.parse(row.body) : undefined;
         return typeof value === "object" && value !== null && !Array.isArray(value)
           ? [{ ...value }]

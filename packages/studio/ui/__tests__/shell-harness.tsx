@@ -10,9 +10,15 @@ import {
 import { act, render } from "@testing-library/react";
 import { MotionGlobalConfig } from "motion/react";
 
+import { validateExplorerSearch } from "@/features/explorer/explorer-search";
 import { validateInspectorSearch } from "@/features/requests/inspector-search";
 import { validateTimelineSearch } from "@/features/requests/timeline-search";
 import { validateWaterfallSearch } from "@/features/waterfall/waterfall-search";
+import { EndpointsScreen } from "@/screens/explorer/endpoints-screen";
+import { ExplorerLayout } from "@/screens/explorer/explorer-layout";
+import { GraphScreen } from "@/screens/explorer/graph-screen";
+import { HeatmapScreen } from "@/screens/explorer/heatmap-screen";
+import { OverviewScreen } from "@/screens/explorer/overview-screen";
 import { TimelineScreen } from "@/screens/timeline/timeline-screen";
 import { WaterfallScreen } from "@/screens/waterfall/waterfall-screen";
 import { StudioShell } from "@/shell/studio-shell";
@@ -38,10 +44,15 @@ Object.defineProperty(HTMLElement.prototype, "offsetWidth", {
   configurable: true,
   get: () => 1200,
 });
+Object.defineProperty(HTMLElement.prototype, "clientWidth", {
+  configurable: true,
+  get: () => 1200,
+});
 
 /**
- * Render the new shell at an address, with the Timeline and the Waterfall
- * under it and a page of its own at `/next/`, as the app's routes have them.
+ * Render the new shell at an address, with the Timeline, the Waterfall and
+ * the Explorer's tabs under it and a page of its own at `/next/`, as the
+ * app's routes have them.
  *
  * @param url - The address
  * @returns The router, to read where it went
@@ -71,8 +82,22 @@ export async function openShell(url: string): Promise<AnyRouter> {
     component: WaterfallScreen,
     validateSearch: validateWaterfallSearch,
   });
+  const explorer = createRoute({
+    getParentRoute: () => shell,
+    path: "explorer",
+    component: ExplorerLayout,
+    validateSearch: validateExplorerSearch,
+  });
+  const tabs = [
+    { path: "/", component: GraphScreen },
+    { path: "overview", component: OverviewScreen },
+    { path: "endpoints", component: EndpointsScreen },
+    { path: "heatmap", component: HeatmapScreen },
+  ].map(({ path, component }) => createRoute({ getParentRoute: () => explorer, path, component }));
   const router = createRouter({
-    routeTree: root.addChildren([shell.addChildren([home, timeline, waterfall])]),
+    routeTree: root.addChildren([
+      shell.addChildren([home, timeline, waterfall, explorer.addChildren(tabs)]),
+    ]),
     history: createMemoryHistory({ initialEntries: [url] }),
   });
   await act(() => router.load());

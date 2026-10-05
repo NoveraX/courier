@@ -37,6 +37,7 @@ const twMerge = extendTailwindMerge({
             "figure",
             "metric",
             "wordmark",
+            "kpi",
             "hero",
           ],
         },

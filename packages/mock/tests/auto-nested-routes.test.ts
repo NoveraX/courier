@@ -34,6 +34,7 @@ function usersApi(baseURL: string) {
           activate: endpoint.post(":id/activate").variables<{ id: number }>().response(User),
           stats: endpoint.get("stats").response(z.object({ count: z.number() })),
           rename: endpoint.patch("by-email/:email").variables<{ email: string; name: string }>(),
+          upsert: endpoint.put("").variables<z.infer<typeof User>>().response(User),
         },
       }),
     },
@@ -131,5 +132,20 @@ describe("serving mixed paths", () => {
     const res = await fetch(`${url}/users/2`);
     expect(res.status).toBe(200);
     expect(((await res.json()) as { id: number }).id).toBe(2);
+  });
+
+  it("answers a verb declared at the collection root that the catch-all leaves out", async () => {
+    const url = await serve();
+    const user = { id: 9, name: "Nine", email: "nine@example.com" };
+
+    const res = await fetch(`${url}/users`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(user),
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual(user);
+    expect((await fetch(`${url}/users/9`)).status).toBe(200);
   });
 });

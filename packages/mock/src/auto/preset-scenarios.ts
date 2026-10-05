@@ -1,3 +1,5 @@
+import { isReadingMethod } from "@noverax/courier/internal";
+
 import type { MockStore } from "../store";
 import type { AnyMockScenario, UntypedMockFn } from "../types";
 import { createHandler } from "./auto-handlers";
@@ -16,7 +18,7 @@ export function buildPresetScenarios(
   getStore: () => MockStore | undefined,
 ): Record<string, AnyMockScenario> {
   const listRoutes = routes.filter((r) => r.operation === "list");
-  const readRoutes = routes.filter((r) => r.httpMethod === "GET" && r.transport === "http");
+  const readRoutes = routes.filter((r) => isReadingMethod(r.httpMethod) && r.transport === "http");
 
   return {
     empty: buildEmptyScenario(listRoutes),

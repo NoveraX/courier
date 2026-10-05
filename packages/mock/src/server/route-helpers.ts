@@ -13,24 +13,44 @@
  * All helpers are pure and synchronous.
  */
 
-import { pathShape } from "./path-shape";
+import { type PathShape, pathShape } from "./path-shape";
 import type { EndpointOperation, MappedEndpoint } from "./prefix-route-types";
 
-const CATCH_ALL_SHAPES = new Set(["collection", "record"]);
+/* The shapes and verbs the prefix catch-alls answer, with their
+   by-convention fallbacks; every other endpoint gets a route of its own. */
+const CATCH_ALL = new Map<PathShape, ReadonlySet<string>>([
+  ["collection", new Set(["GET", "POST", "DELETE"])],
+  ["record", new Set(["GET", "PUT", "PATCH", "DELETE"])],
+]);
+
+/**
+ * Whether a prefix catch-all answers an endpoint: one at the collection root
+ * or at a single parameter, addressed with a verb the catch-all takes there.
+ *
+ * @param ep - The endpoint
+ * @returns Whether `/users` or `/users/:id` reaches it without a route of its own
+ * @example
+ * ```ts
+ * servedByCatchAll({ name: "list", operation: "list", path: "", httpMethod: "GET" }); // → true
+ * servedByCatchAll({ name: "search", operation: "list", path: "", httpMethod: "QUERY" }); // → false
+ * ```
+ */
+export function servedByCatchAll(ep: MappedEndpoint): boolean {
+  const verbs = CATCH_ALL.get(pathShape(ep.path));
+  return verbs?.has((ep.httpMethod ?? "GET").toUpperCase()) ?? false;
+}
 
 /**
  * Resolve the endpoint a prefix catch-all answers by its analyzed operation.
- * Only an endpoint at the collection root or at a single parameter is one
- * the catch-alls serve; a lookup such as `by-email/:email` has a route of
- * its own and must not answer `/users/5`.
+ * A lookup such as `by-email/:email` has a route of its own and must not
+ * answer `/users/5`, and neither may a QUERY that lists the collection
+ * answer its GET.
  */
 export function resolveByOperation(
   endpoints: MappedEndpoint[] | undefined,
   operation: EndpointOperation,
 ): MappedEndpoint | undefined {
-  return endpoints?.find(
-    (e) => e.operation === operation && CATCH_ALL_SHAPES.has(pathShape(e.path)),
-  );
+  return endpoints?.find((e) => e.operation === operation && servedByCatchAll(e));
 }
 
 /** Build variables with the correct param name from endpoint path (e.g. ":petId" → { petId: val }) */

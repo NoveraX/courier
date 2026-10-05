@@ -10,6 +10,9 @@ const RECORD_OPERATIONS: readonly CrudOperation[] = [
   "upsert",
 ];
 
+/* The verbs a sub-path read lists records with: GET, or QUERY asking with a body. */
+const LISTING_METHODS: ReadonlySet<string> = new Set(["GET", "QUERY"]);
+
 /**
  * The schema each group's collection is seeded from, by group.
  *
@@ -60,7 +63,7 @@ function recordSchemaOf(groupRoutes: RouteInfo[]): unknown {
   const listing = groupRoutes.find(
     (r) =>
       r.transport === "http" &&
-      r.httpMethod === "GET" &&
+      LISTING_METHODS.has(r.httpMethod) &&
       extractShape(unwrapArraySchema(r.responseSchema)) !== undefined,
   );
   return listing ? unwrapArraySchema(listing.responseSchema) : undefined;

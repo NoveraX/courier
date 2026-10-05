@@ -1,27 +1,18 @@
 import type { Context, Hono } from "hono";
 
-import type { PathShape } from "./path-shape";
-import { pathShape } from "./path-shape";
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
 import { type BodyLimits, bodyValue, readRequestBody } from "./read-request-body";
-import { parsePathParams, parseQueryParams } from "./route-helpers";
+import { parsePathParams, parseQueryParams, servedByCatchAll } from "./route-helpers";
 
-const METHODS = new Set<string>(["GET", "POST", "PUT", "PATCH", "DELETE"]);
+const METHODS = new Set<string>(["GET", "QUERY", "POST", "PUT", "PATCH", "DELETE"]);
 const WITHOUT_BODY = new Set<string>(["GET", "DELETE"]);
-
-/* The shapes and methods the prefix catch-alls answer, with their
-   by-convention fallbacks; every other endpoint gets a route of its own. */
-const CATCH_ALL = new Map<PathShape, Set<string>>([
-  ["collection", new Set(["GET", "POST", "DELETE"])],
-  ["record", new Set(["GET", "PUT", "PATCH", "DELETE"])],
-]);
 
 /**
  * Register a route at its declared path for every HTTP endpoint the prefix
  * catch-alls do not answer: fixed sub-paths (`stats`), lookups
  * (`by-email/:email`), paths that go on past a parameter (`:id/orders`), and
- * methods the catch-alls leave out (`PUT` on the collection, `POST :id`).
- * The path's parameters join the query or body as variables.
+ * methods the catch-alls leave out (`PUT` on the collection, `POST :id`,
+ * every `QUERY`). The path's parameters join the query or body as variables.
  *
  * Routes are registered most specific first — a fixed segment before a
  * parameter at the same position — and all of them before the catch-alls,
@@ -49,7 +40,9 @@ export function registerDeclaredRoutes(
   const own = endpoints.filter(needsOwnRoute).sort(bySpecificity);
   for (const ep of own) {
     const method = (ep.httpMethod ?? "GET").toUpperCase();
-    const path = `/${prefix}/${ep.path.split("/").filter(Boolean).join("/")}`;
+    /* A route at the collection root is `/users`, not `/users/`, which a
+       request to the collection never matches. */
+    const path = `/${[prefix, ...ep.path.split("/")].filter(Boolean).join("/")}`;
     app.on(method, path, async (c) => {
       const read = await inputOf(c, method, config.bodyLimits);
       if ("error" in read) return config.refuse(c, group, ep.name, read);
@@ -65,7 +58,7 @@ function needsOwnRoute(ep: MappedEndpoint): boolean {
   if (ep.transport === "sse" || ep.transport === "ws") return false;
   const method = (ep.httpMethod ?? "GET").toUpperCase();
   if (!METHODS.has(method)) return false;
-  return !(CATCH_ALL.get(pathShape(ep.path))?.has(method) ?? false);
+  return !servedByCatchAll(ep);
 }
 
 /** Fixed segments sort before parameters, position by position */
@@ -79,7 +72,7 @@ function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
   return rank(a).localeCompare(rank(b));
 }
 
-/** The query of a GET or DELETE; the JSON, form or upload of anything else, which holds an object */
+/** The query of a GET or DELETE; the JSON, form or upload of anything else — a QUERY's question included — which holds an object */
 async function inputOf(
   c: Context,
   method: string,

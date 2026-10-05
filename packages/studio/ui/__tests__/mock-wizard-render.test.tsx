@@ -8,9 +8,9 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/socket", () => ({ getSocket: () => ({ emit: vi.fn() }) }));
 
+import { ChangePreview } from "@/design/code/change-preview";
 import { mockBannerOf } from "@/features/mocks/mock-banner";
 import { MocksBanner } from "@/screens/mocks/mocks-banner";
-import { ChangePreview } from "@/screens/mocks/wizard/change-preview";
 import { ReadyPlan } from "@/screens/mocks/wizard/review-plans";
 import { InsertedLines } from "@/screens/mocks/wizard/wizard-notes";
 

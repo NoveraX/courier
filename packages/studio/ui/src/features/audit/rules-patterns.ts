@@ -4,7 +4,7 @@ import { callOf, labelOf } from "./hints-utils";
 import type { AuditItem } from "./types";
 
 const N1_WINDOW_MS = 3000;
-const READ_METHODS = new Set(["GET", "HEAD"]);
+const READ_METHODS = new Set(["GET", "HEAD", "QUERY"]);
 const WATERFALL_MIN_CHAIN = 3;
 const WATERFALL_MIN_TOTAL_MS = 2000;
 

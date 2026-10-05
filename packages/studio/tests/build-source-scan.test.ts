@@ -234,4 +234,30 @@ describe("an endpoint in the source catalogue", () => {
     expect(ticks).toBeDefined();
     expect(ticks).not.toHaveProperty("served");
   }, 30_000);
+
+  it("names the verb each endpoint is addressed with, the reads beyond GET included", async () => {
+    const config = [
+      `import { courier, defineApi, defineGroup } from "@noverax/courier/define";`,
+      `const { endpoint } = courier();`,
+      `const items = defineGroup({ prefix: "items", endpoints: {`,
+      `  search: endpoint.query("search"),`,
+      `  check: endpoint.head(":id"),`,
+      `  allowed: endpoint.options(""),`,
+      `  remove: endpoint.del(":id"),`,
+      `} });`,
+      `export default { sources: { api: defineApi({ baseURL: "https://api.example", groups: { items } }) } };`,
+    ].join("\n");
+    writeFileSync(join(root, "courier.config.ts"), config);
+    const loaded = await loadCourierConfig(root);
+
+    const { sources } = buildSourceScan(loaded, importsSnapshotOf(undefined, root), root);
+
+    const endpoints = sources[0]?.groups[0]?.endpoints ?? [];
+    expect(endpoints.map((e) => [e.name, e.analysis.httpMethod, e.analysis.type])).toEqual([
+      ["search", "query", "query"],
+      ["check", "head", "query"],
+      ["allowed", "options", "query"],
+      ["remove", "delete", "mutation"],
+    ]);
+  }, 30_000);
 });

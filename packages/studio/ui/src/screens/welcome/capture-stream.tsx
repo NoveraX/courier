@@ -1,17 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
 
+import { methodText } from "@/design/method-color";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store";
 import { useStudioStore } from "@/store";
 import { captureMetrics } from "./capture-metrics";
-
-const METHOD_TONE: Readonly<Record<string, string>> = {
-  GET: "text-method-get",
-  POST: "text-method-post",
-  PUT: "text-method-put",
-  PATCH: "text-method-patch",
-  DELETE: "text-method-delete",
-};
 
 const pad = (n: number, width = 2): string => String(n).padStart(width, "0");
 const clock = (at: number): string => {
@@ -49,12 +42,7 @@ function Row({ request, newest }: { request: RequestEntry; newest: boolean }): R
         className={cn("absolute inset-y-0 left-0 w-0.5", newest ? "bg-brand" : failed && "bg-err")}
       />
       <span className="text-fg-subtle tabular-nums">{clock(request.startedAt)}</span>
-      <span
-        className={cn(
-          "text-meta font-semibold",
-          METHOD_TONE[request.httpMethod ?? ""] ?? "text-fg-muted",
-        )}
-      >
+      <span className={cn("text-meta font-semibold", methodText(request.httpMethod ?? ""))}>
         {request.httpMethod ?? "—"}
       </span>
       <span className="flex min-w-0 gap-2 overflow-hidden whitespace-nowrap">

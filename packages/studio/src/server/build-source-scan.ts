@@ -18,12 +18,23 @@ import { findSourceDeclaration } from "./find-source-declaration";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import { scannedFilePaths } from "./scanned-file-paths";
 
+/** Every verb an endpoint can be addressed with, as the scan reports it. */
+export type ScannedHttpMethod =
+  | "get"
+  | "head"
+  | "options"
+  | "query"
+  | "post"
+  | "put"
+  | "patch"
+  | "delete";
+
 /** How an endpoint is shaped, as the APIs page and mock wizard read it. */
 export interface ScannedEndpointAnalysis {
   hasResponseType: boolean;
   hasVariablesType: boolean;
   hasValidation: boolean;
-  httpMethod: "get" | "post" | "put" | "patch" | "delete";
+  httpMethod: ScannedHttpMethod;
   path: string;
   type: "query" | "mutation" | null;
   /** How a stream or a channel is carried; absent for plain HTTP. */
@@ -69,8 +80,11 @@ export interface ScanResult {
   scannedFiles: number;
 }
 
-const HTTP_METHODS: ReadonlyArray<ScannedEndpointAnalysis["httpMethod"]> = [
+const HTTP_METHODS: ReadonlyArray<ScannedHttpMethod> = [
   "get",
+  "head",
+  "options",
+  "query",
   "post",
   "put",
   "patch",

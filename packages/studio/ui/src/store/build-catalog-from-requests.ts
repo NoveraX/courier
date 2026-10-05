@@ -1,3 +1,5 @@
+import { isReadingMethod } from "@noverax/courier/internal";
+
 import { ownValue } from "@/lib/own-value";
 import type { RequestEntry } from "./types-request";
 import type { Catalog, CatalogEndpoint } from "./types-ui";
@@ -52,12 +54,10 @@ function endpointOf(req: RequestEntry): CatalogEndpoint {
   };
 }
 
-const READING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS"]);
-
 /** An HTTP call reads when its verb reads, as `courier()` decides it. */
 function kindOf(httpMethod: string | undefined): CatalogEndpoint["type"] {
   if (!httpMethod) return undefined;
-  return READING_METHODS.has(httpMethod) ? "query" : "mutation";
+  return isReadingMethod(httpMethod) ? "query" : "mutation";
 }
 
 /**

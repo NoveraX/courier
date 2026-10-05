@@ -10,6 +10,7 @@ const SWATCH: Readonly<Record<string, string>> = {
   put: "bg-method-put",
   patch: "bg-method-patch",
   delete: "bg-method-delete",
+  query: "bg-method-query",
 };
 
 /**

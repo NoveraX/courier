@@ -37,6 +37,7 @@
   --color-method-put: #b8a1f5;
   --color-method-patch: #e8b573;
   --color-method-delete: #f0806a;
+  --color-method-query: #6fd3c7;
 
   --color-syntax-keyword: #b8a1f5;
   --color-syntax-function: #7db9ff;
@@ -136,6 +137,7 @@
   --color-method-put: #7a3bd6;
   --color-method-patch: #a3500a;
   --color-method-delete: #c0392b;
+  --color-method-query: #0b6f68;
 
   --color-syntax-keyword: #7a3bd6;
   --color-syntax-function: #1c63d6;

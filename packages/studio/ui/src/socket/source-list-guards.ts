@@ -9,7 +9,16 @@ import type {
 import { isPlainObject } from "./is-plain-object";
 
 const IMPORT_TYPES: ReadonlySet<unknown> = new Set(["url", "file", "raw"]);
-const HTTP_METHODS: ReadonlySet<unknown> = new Set(["get", "post", "put", "patch", "delete"]);
+const HTTP_METHODS: ReadonlySet<unknown> = new Set([
+  "get",
+  "head",
+  "options",
+  "query",
+  "post",
+  "put",
+  "patch",
+  "delete",
+]);
 const ENDPOINT_TYPES: ReadonlySet<unknown> = new Set(["query", "mutation", null]);
 const STREAM_TRANSPORTS: ReadonlySet<unknown> = new Set(["sse", "ws"]);
 const TRANSPORTS: ReadonlySet<string> = new Set(["http", "sse", "ws"]);

@@ -3,8 +3,8 @@
  * alone would put some of them in the wrong place.
  *
  * An endpoint addressed by its verb fills the path from its variables and
- * sends the rest as the body of a write, or as the query string of a read or
- * a DELETE. An operation taking query parameters beside a body sent them in
+ * sends the rest as the body of a write or a QUERY, or as the query string
+ * of any other read or a DELETE. An operation taking query parameters beside a body sent them in
  * the JSON body, and zod and valibot, validating the body, dropped them
  * first; a DELETE with a body sent its fields as query parameters. Such an
  * endpoint is addressed by a closure that says where each variable goes, and
@@ -62,7 +62,8 @@ export function wireClosure(
   return `(http, vars) => http.${method}(${at}, ${vars}${read === null ? "" : `, { ${read} }`})`;
 }
 
-const WRITES = new Set(["post", "put", "patch", "del"]);
+/* The verbs that may carry a body: the writes, and QUERY, a read that asks with one. */
+const WITH_BODY = new Set(["post", "put", "patch", "del", "query"]);
 
 function placingClosure(
   ep: ParsedEndpoint,
@@ -72,7 +73,7 @@ function placingClosure(
   read: string | null,
   media: string | null,
 ): string | null {
-  if (!WRITES.has(method)) return null;
+  if (!WITH_BODY.has(method)) return null;
   const params = ep.parameters.filter((param) => param.in === "path" || param.in === "query");
   const query = params.filter((param) => param.in === "query");
 
@@ -133,8 +134,8 @@ function wholeBodyClosure(
 
 /**
  * Whether an endpoint sends its fields url-encoded, written by `formBody`:
- * a write whose body is a set of fields of that media type, beside the
- * parameters or under a key of its own.
+ * a write or a QUERY whose body is a set of fields of that media type,
+ * beside the parameters or under a key of its own.
  *
  * @param ep - The endpoint
  * @param kind - The kind of body it sends
@@ -147,7 +148,7 @@ function wholeBodyClosure(
 export function sendsUrlEncoded(ep: ParsedEndpoint, kind: RequestBodyKind): boolean {
   return (
     (kind === "fields" || kind === "nested") &&
-    WRITES.has(toInternalMethod(ep.httpMethod)) &&
+    WITH_BODY.has(toInternalMethod(ep.httpMethod)) &&
     isUrlEncoded(ep)
   );
 }

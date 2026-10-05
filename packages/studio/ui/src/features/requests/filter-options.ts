@@ -35,7 +35,9 @@ const KNOWN: Partial<Record<FilterDimension, Known>> = {
     ["streaming", "Streaming", "brand"],
     ["closed", "Closed", "ok"],
   ],
-  method: ["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => [m, m, m.toLowerCase()] as const),
+  method: ["GET", "POST", "PUT", "PATCH", "DELETE", "QUERY"].map(
+    (m) => [m, m, m.toLowerCase()] as const,
+  ),
   transport: [
     ["http", "HTTP", "muted"],
     ["sse", "SSE", "brand"],

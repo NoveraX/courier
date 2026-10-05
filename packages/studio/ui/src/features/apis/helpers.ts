@@ -15,7 +15,7 @@ export interface AnalysisStats {
   validation: { count: number; total: number };
 }
 
-const BODY_METHODS = new Set(["post", "put", "patch"]);
+const BODY_METHODS = new Set(["post", "put", "patch", "query"]);
 
 /** Check if an endpoint needs variables (has path params or body method) */
 function needsVariables(

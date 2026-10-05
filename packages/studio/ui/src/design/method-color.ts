@@ -4,6 +4,7 @@ const METHOD_TEXT: Readonly<Record<string, string>> = {
   PUT: "text-method-put",
   PATCH: "text-method-patch",
   DELETE: "text-method-delete",
+  QUERY: "text-method-query",
 };
 
 const METHOD_CHIP: Readonly<Record<string, string>> = {
@@ -12,6 +13,7 @@ const METHOD_CHIP: Readonly<Record<string, string>> = {
   PUT: "bg-method-put/13 text-method-put",
   PATCH: "bg-method-patch/13 text-method-patch",
   DELETE: "bg-method-delete/13 text-method-delete",
+  QUERY: "bg-method-query/13 text-method-query",
 };
 
 /**

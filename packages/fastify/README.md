@@ -12,8 +12,8 @@
   <p><strong>Fastify adapter for Courier.</strong></p>
 
   <p>
-    <a href="https://www.npmjs.com/package/@noverax/courier-fastify"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-fastify?style=flat-square&label=npm&labelColor=0e1116&color=6d28d9" /></a>
-    <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-6d28d9?style=flat-square&labelColor=0e1116" /></a>
+    <a href="https://www.npmjs.com/package/@noverax/courier-fastify"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-fastify?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>

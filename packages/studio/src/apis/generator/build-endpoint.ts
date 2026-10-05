@@ -2,7 +2,7 @@
  * Builds the builder chain describing each endpoint of a generated group.
  */
 
-import { toInternalMethod } from "@noverax/courier/internal";
+import { isReadingMethod, toInternalMethod } from "@noverax/courier/internal";
 import type { ParsedEndpoint } from "../parser/types";
 import { convertPathParams } from "../parser/utils";
 import { buildEndpointChain } from "./build-endpoint-helpers";
@@ -67,6 +67,8 @@ export function buildEndpointDefinition(
     head,
     address: `${head}.${toInternalMethod(ep.httpMethod)}(${JSON.stringify(path)})`,
     closure,
+    /* A stream is its own kind; a request that reads says so past its closure. */
+    reads: head === "endpoint" && isReadingMethod(ep.httpMethod),
     headers,
     variablesSchema: variables,
     variablesType:

@@ -4,9 +4,9 @@ import { methodChip } from "@/design/method-color";
 import { endpointParts, httpMethodOf } from "@/features/requests/request-parts";
 import { requestSnippet } from "@/features/requests/request-snippets";
 import { isStreamRequest } from "@/features/requests/request-state";
+import { useTogglePin } from "@/hooks/use-toggle-pin";
 import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
-import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
 import type { Replay } from "./use-replay";
 
@@ -45,7 +45,7 @@ export function InspectorHeader({
   stop,
   onClose,
 }: InspectorHeaderProps): React.ReactNode {
-  const togglePin = useStudioStore((s) => s.togglePin);
+  const togglePin = useTogglePin();
   const method = isStreamRequest(request) ? "GET" : httpMethodOf(request);
   const transport = request.transport ?? "http";
   const { prefix, name } = endpointParts(request);

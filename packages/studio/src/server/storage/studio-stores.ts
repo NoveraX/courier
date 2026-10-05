@@ -1,7 +1,10 @@
 import { createRequestLog, type RequestLog } from "../request-log";
 import { trimFreedRoom } from "../storage-space/compact-db";
+import { createMockConditionsStore, type MockConditionsStore } from "./mock-conditions-store";
 import { createMockLog, type MockLog } from "./mock-log";
+import { createPageState, type PageState } from "./page-state";
 import { createPlaygroundHistory, type PlaygroundHistory } from "./playground-history";
+import { createRequestPins, type RequestPins } from "./request-pins";
 import { createSessionStore, type SessionStore } from "./session-rows";
 import { openStudioDb, type StudioDb } from "./studio-db";
 import { createStudioView, type StudioView } from "./studio-view";
@@ -16,6 +19,12 @@ export interface StudioStores {
   view: StudioView;
   mockLog: MockLog;
   playgroundHistory: PlaygroundHistory;
+  /** What the pages keep in the project: their settings, drafts and progress */
+  pageState: PageState;
+  /** The requests pinned on the pages */
+  pins: RequestPins;
+  /** The conditions set on each mock: its network conditions and the scenario applied */
+  mockConditions: MockConditionsStore;
   /** The database they are kept in */
   storage: StudioDb;
   close(): void;
@@ -35,7 +44,8 @@ export interface StudioStores {
  */
 export function openStudioStores(root: string): StudioStores {
   const storage = openStudioDb(root);
-  const requestLog = createRequestLog(storage.db);
+  const pins = createRequestPins(storage.db);
+  const requestLog = createRequestLog(storage.db, undefined, pins.has);
   const mockLog = createMockLog(storage.db);
   /* The logs let their oldest requests go as new ones come: the room they took goes back to the disk. */
   const trim = setInterval(() => trimFreedRoom(storage.db), TRIM_EVERY_MS);
@@ -46,6 +56,9 @@ export function openStudioStores(root: string): StudioStores {
     view: createStudioView(storage.db),
     mockLog,
     playgroundHistory: createPlaygroundHistory(storage.db),
+    pageState: createPageState(storage.db),
+    pins,
+    mockConditions: createMockConditionsStore(storage.db),
     storage,
     close() {
       clearInterval(trim);

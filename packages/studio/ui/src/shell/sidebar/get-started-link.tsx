@@ -4,7 +4,6 @@ import { Check, Rocket } from "lucide-react";
 import { FRAMEWORKS } from "@/features/welcome/frameworks";
 import { setupProgress } from "@/features/welcome/setup-progress";
 import { useSetupStore } from "@/features/welcome/setup-store";
-import { isWelcomeCompleted } from "@/features/welcome/welcome-storage";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 
@@ -28,7 +27,8 @@ export function GetStartedLink(): React.ReactNode {
   const frameworkId = useSetupStore((s) => s.frameworkId);
   const copied = useSetupStore((s) => s.copied);
   const framework = FRAMEWORKS.find((f) => f.id === frameworkId);
-  const done = attached || isWelcomeCompleted();
+  const completed = useSetupStore((s) => s.completed);
+  const done = attached || completed;
   if (framework && !done) {
     const progress = setupProgress(framework, copied, attached, false);
     return (

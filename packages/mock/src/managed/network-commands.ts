@@ -131,7 +131,17 @@ function emitPresetTransition(
   }
 }
 
-function emitNetworkState(server: MockServer): void {
+/**
+ * Tell Studio the mock's network conditions as they are now.
+ *
+ * @param server - The mock
+ * @example
+ * ```ts
+ * state.mergeConfig(patch);
+ * emitNetworkState(server);
+ * ```
+ */
+export function emitNetworkState(server: MockServer): void {
   send({
     type: "event",
     event: { type: "mock:network:config", config: networkConfigOnWire(server.networkState) },

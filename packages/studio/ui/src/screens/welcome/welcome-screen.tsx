@@ -6,7 +6,6 @@ import { detectFramework } from "@/features/welcome/detect-framework";
 import { FRAMEWORKS } from "@/features/welcome/frameworks";
 import { setupProgress } from "@/features/welcome/setup-progress";
 import { useSetupStore } from "@/features/welcome/setup-store";
-import { isWelcomeCompleted, markWelcomeCompleted } from "@/features/welcome/welcome-storage";
 import { useStudioStore } from "@/store";
 import { FrameworkGrid } from "./framework-grid";
 import { LiveCapture } from "./live-capture";
@@ -30,6 +29,8 @@ export function WelcomeScreen(): React.ReactNode {
   const frameworkId = useSetupStore((s) => s.frameworkId);
   const copied = useSetupStore((s) => s.copied);
   const select = useSetupStore((s) => s.select);
+  const completed = useSetupStore((s) => s.completed);
+  const complete = useSetupStore((s) => s.complete);
   const snapshot = useStudioStore((s) => s.bindingSnapshot);
   const dependencies = useStudioStore((s) => s.studioInfo?.project.dependencies);
   const detected = dependencies ? detectFramework(dependencies) : null;
@@ -39,8 +40,8 @@ export function WelcomeScreen(): React.ReactNode {
     if (fromLink) select(fromLink);
     else if (detectedId && frameworkId === null) select(detectedId);
   }, [fromLink, detectedId, frameworkId, select]);
-  if (!setup && (isWelcomeCompleted() || (attached && !fromLink))) {
-    if (attached) markWelcomeCompleted();
+  if (!setup && (completed || (attached && !fromLink))) {
+    if (attached && !completed) complete();
     return <Navigate to="/timeline" replace />;
   }
   const framework = FRAMEWORKS.find((f) => f.id === frameworkId) ?? null;

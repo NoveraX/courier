@@ -23,14 +23,18 @@ import { keptIdsOf } from "./request-log-clear";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import { sanitizeMockCommand, sanitizeMockManaged } from "./sanitize-mock-events";
 import type { MockLog } from "./storage/mock-log";
+import type { PageState } from "./storage/page-state";
 import type { PlaygroundHistory } from "./storage/playground-history";
+import type { RequestPins } from "./storage/request-pins";
 import type { SessionStore } from "./storage/session-rows";
 import type { StudioView } from "./storage/studio-view";
 import { type StudioInfo, studioInfo } from "./studio-info";
 import type { StudioToken } from "./studio-token";
 import type { StudioDemo } from "./types";
 import { bindBodies } from "./ui-bodies";
+import { bindPageState } from "./ui-page-state";
 import { bindPlaygroundHistory } from "./ui-playground-history";
+import { bindRequestPins } from "./ui-request-pins";
 import { guardUiWrites, type VisitorPolicy } from "./ui-token-guard";
 import { bindView } from "./ui-view";
 import type { WatcherStatus } from "./watcher-status";
@@ -66,6 +70,10 @@ export interface SetupUiNamespaceDeps {
   demo?: StudioDemo | undefined;
   /** The room Studio's database takes on disk, which each page is told as it connects. */
   databaseSize?: (() => number) | undefined;
+  /** What the pages keep in the project: their settings, drafts and progress. */
+  pageState?: PageState | undefined;
+  /** The requests pinned on the pages. */
+  pins?: RequestPins | undefined;
 }
 
 /**
@@ -83,7 +91,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
   const { uiNamespace, bindingTable, mockManager, watcherStatus, playgroundRouter, requestLog } =
     deps;
   const { sessions, view, mockLog, playgroundHistory } = deps;
-  const { project, projectRoot, token, visitors, demo, databaseSize } = deps;
+  const { project, projectRoot, token, visitors, demo, databaseSize, pageState, pins } = deps;
   /* Read once: the version cannot change while Studio runs, and a renamed
      package shows after a restart. */
   const info: StudioInfo = { ...studioInfo(projectRoot), ...(demo && { demo }) };
@@ -91,6 +99,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
   uiNamespace.on("connection", (socket) => {
     const trusted = guardUiWrites(socket, token, visitors);
     socket.emit("studio:info", info);
+    if (pageState) bindPageState(socket, pageState, trusted);
     // Send current binding-table snapshot so a UI client that joins after a
     // runtime has already announced gets the live state without waiting for
     // the next `runtime:announce`. This is the source of truth for the
@@ -135,9 +144,12 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
        too, except the ones it keeps. */
     if (requestLog) {
       socket.emit("events:replay", requestLog.events());
+      if (pins) bindRequestPins(socket, pins);
       socket.on("requests:clear", (raw: unknown) => {
         const keep = keptIdsOf(raw);
-        if (keep) requestLog.forget(keep);
+        if (!keep) return;
+        requestLog.forget(keep);
+        pins?.retain(keep);
       });
     }
 

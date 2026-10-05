@@ -4,7 +4,6 @@ import type { FrameworkConfig } from "@/features/welcome/frameworks-types";
 import type { StepProgress } from "@/features/welcome/setup-progress";
 import { setupProgress } from "@/features/welcome/setup-progress";
 import { useSetupStore } from "@/features/welcome/setup-store";
-import { markWelcomeCompleted } from "@/features/welcome/welcome-storage";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { ConnectState } from "./connect-step";
@@ -36,7 +35,7 @@ function StepBody({
           type="button"
           disabled={!attached}
           onClick={() => {
-            markWelcomeCompleted();
+            useSetupStore.getState().complete();
             void navigate({ to: "/timeline" });
           }}
           className="flex h-8.5 w-max items-center gap-2 rounded-card border border-brand bg-brand px-3.5 font-semibold text-bg transition-all enabled:cursor-pointer disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-fg-subtle"

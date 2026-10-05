@@ -112,6 +112,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     transformCacheDirectory: () => findTransformCacheDirectory(projectRoot),
     storeFile: (mockKey) => mockStoreFile(root, mockKey),
     mockLog,
+    conditions: stores.mockConditions,
   });
 
   const storage = wireStorage({ stores, root, mocks: mockManager, uiNamespace });
@@ -146,6 +147,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
       demoLimits &&
       demoVisitors({ callsInFlight: playgroundRouter.callsInFlight, limits: demoLimits }),
     databaseSize: storage.databaseSize,
+    pageState: stores.pageState,
+    pins: stores.pins,
   });
 
   undoUnfinishedImportWrites(root);

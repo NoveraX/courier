@@ -24,6 +24,8 @@ export const WRITING_EVENTS: ReadonlySet<string> = new Set([
   "playground:history:save",
   "mock:command",
   "mock:managed",
+  "page:state:set",
+  "requests:pin",
 ]);
 
 /** What becomes of an event a page without the token sent: run, let go unanswered, or refused. */

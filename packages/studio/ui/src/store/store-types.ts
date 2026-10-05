@@ -62,6 +62,8 @@ export interface StudioState {
   mocksFileStatus: MocksFileStatus | null;
   /** The room Studio's database takes on disk, as Studio last said; `null` before it has. */
   databaseBytes: number | null;
+  /** Whether this page may change what the project keeps — its settings, pins and drafts: it has the token. */
+  projectWritable: boolean;
 
   // Playground
   playgroundHistory: PlaygroundHistoryEntry[];
@@ -111,6 +113,8 @@ export interface StudioState {
   /** Show the live requests again: the saved session goes, and recording resumes. */
   showLive: () => void;
   togglePin: (id: string) => void;
+  /** Pin, or unpin, the requests named, as Studio says another page did. */
+  setPinned: (ids: readonly string[], pinned: boolean) => void;
   /** Take in a batch of runtime events, oldest first, in one store update. */
   handleEvents: (events: Array<StudioEvent & Record<string, unknown>>) => void;
   /**

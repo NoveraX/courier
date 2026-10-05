@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { useStudioStore } from "@/store";
 import type { Settings } from "@/store/types-ui";
 import { SECTION_GROUPS } from "./settings-sections";
 
@@ -47,6 +48,7 @@ export function SettingsNav({
   changed: ReadonlySet<keyof Settings>;
 }): React.ReactNode {
   const inView = useSectionInView();
+  const writable = useStudioStore((s) => s.projectWritable);
   return (
     <nav
       aria-label="Settings sections"
@@ -54,7 +56,9 @@ export function SettingsNav({
     >
       <div className="flex flex-col gap-1 px-2.5 pb-1">
         <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Settings</h1>
-        <span className="text-small text-fg-subtle">Kept in this browser</span>
+        <span className="text-small text-fg-subtle">
+          {writable ? "Kept in the project" : "Kept in this browser"}
+        </span>
       </div>
       {SECTION_GROUPS.map((group) => (
         <div key={group.label} className="flex flex-col gap-px">

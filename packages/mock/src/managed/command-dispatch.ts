@@ -6,6 +6,7 @@ import type { MockServer } from "../server/create-mock-server";
 import { answerBodyCommand } from "./body-command";
 import type { DescribedRoute } from "./describe-route";
 import { handleChaosCommand, handleNetworkCommand } from "./network-commands";
+import { restoreNetwork } from "./restore-network";
 import { buildScenarioMeta } from "./scenario-meta";
 import { handleStoreCommand } from "./store-commands";
 import type { ParentMessage, ServedMock } from "./types";
@@ -22,6 +23,14 @@ export function handleCommand(
   if (action === "mock:network:set") {
     const result = handleNetworkCommand(server, msg.command);
     send({ type: "command-result", requestId: msg.requestId, ...result });
+    return;
+  }
+  if (action === "mock:network:restore") {
+    send({
+      type: "command-result",
+      requestId: msg.requestId,
+      ...restoreNetwork(server, msg.command),
+    });
     return;
   }
   if (action === "mock:chaos:set") {

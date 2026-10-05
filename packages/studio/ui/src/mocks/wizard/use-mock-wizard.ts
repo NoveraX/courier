@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { ScannedSource } from "@/features/apis/types";
+import { keptWizard } from "@/features/mocks/wizard/kept-wizard";
 import { mergeDraftErrors } from "@/features/mocks/wizard/merge-draft-errors";
 import type { SourceAvailability } from "@/features/mocks/wizard/source-availability";
 import { sourceAvailability } from "@/features/mocks/wizard/source-availability";
@@ -9,6 +10,7 @@ import { useStudioStore } from "@/store";
 import type { MockServerInfo } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
 import { declareClient } from "./declare-client";
+import { useKeptWizard } from "./kept-wizard-store";
 import { watchProject } from "./watch-project";
 import { wizardBus } from "./wizard-bus";
 import type { WizardSession } from "./wizard-session";
@@ -38,7 +40,8 @@ function declaredKeysOf(servers: Readonly<Record<string, MockServerInfo>>): stri
 
 /**
  * The mock wizard: its session, the project it plans against, and the
- * dialog's open state. It opens on `openMockWizard()`, from its first step.
+ * dialog's open state. It opens on `openMockWizard()` where it was left —
+ * its step and drafts, kept in the project — or from its first step.
  * While it is open, a change to the project Studio runs asks for a plan
  * shown again (`WizardSession.projectChanged`); it never applies one.
  *
@@ -73,11 +76,18 @@ export function useMockWizard(): MockWizardHandle {
 
   useEffect(() => {
     const onOpen = (): void => {
-      session.dispatch({ type: "open" });
+      session.dispatch({ type: "open", resume: useKeptWizard.getState().kept ?? undefined });
       setOpen(true);
     };
     wizardBus.addEventListener("open", onOpen);
-    return () => wizardBus.removeEventListener("open", onOpen);
+    /* What is left unfinished is kept, for the wizard to open at again. */
+    const unsubscribe = session.subscribe(() =>
+      useKeptWizard.setState({ kept: keptWizard(session.getState()) }),
+    );
+    return () => {
+      wizardBus.removeEventListener("open", onOpen);
+      unsubscribe();
+    };
   }, [session]);
 
   useEffect(() => {

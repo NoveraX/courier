@@ -52,10 +52,12 @@ export interface RequestLog {
 /**
  * Open the request log kept in a database, ending the requests a previous
  * Studio left open. A page that connects is sent its newest requests, each
- * whole, as many as fit `replayBytes`.
+ * whole, as many as fit `replayBytes`. The oldest request goes to make room
+ * for a new one, unless it is pinned.
  *
  * @param db - Studio's database
  * @param replayBytes - The most of the log a page is sent as it connects
+ * @param isPinned - Whether a page pinned a request
  * @returns The log
  *
  * @example
@@ -65,7 +67,11 @@ export interface RequestLog {
  * uiSocket.emit("events:replay", log.events());
  * ```
  */
-export function createRequestLog(db: DatabaseSync, replayBytes?: number): RequestLog {
+export function createRequestLog(
+  db: DatabaseSync,
+  replayBytes?: number,
+  isPinned: (id: string) => boolean = () => false,
+): RequestLog {
   const rows = requestRows(db, replayBytes);
   const requests = new Map<string, LoggedRequest>();
   let batch: RequestBatch = { events: [], requests: [], dropped: [] };
@@ -116,9 +122,13 @@ export function createRequestLog(db: DatabaseSync, replayBytes?: number): Reques
       append(id, known, event);
       return;
     }
+    /* The oldest request goes to make room, unless a page pinned it. */
     if (requests.size >= MAX_REQUESTS) {
-      const oldest = requests.keys().next().value;
-      if (oldest !== undefined) drop(oldest);
+      for (const kept of requests.keys()) {
+        if (isPinned(kept)) continue;
+        drop(kept);
+        break;
+      }
     }
     const request: LoggedRequest = {
       position: next++,

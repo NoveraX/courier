@@ -7,7 +7,7 @@ import type { StorageKind } from "./storage-kinds";
 export interface ClearDeps {
   stores: Pick<
     StudioStores,
-    "requestLog" | "mockLog" | "playgroundHistory" | "sessions" | "view" | "storage"
+    "requestLog" | "mockLog" | "playgroundHistory" | "sessions" | "view" | "storage" | "pins"
   >;
   root: string;
   resetMockStores: () => Promise<void>;
@@ -18,7 +18,8 @@ export interface ClearDeps {
 async function clearKind(kind: StorageKind, { stores, root, resetMockStores }: ClearDeps) {
   switch (kind) {
     case "requests":
-      return stores.requestLog.forget(new Set());
+      stores.requestLog.forget(new Set());
+      return stores.pins.retain(new Set());
     case "mockLogs":
       return stores.mockLog.forgetAll();
     case "playground":

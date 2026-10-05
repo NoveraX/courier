@@ -18,6 +18,7 @@ import { resolveDelay } from "../network/latency";
 import type { MockRequestContext } from "../types";
 import { answerElsewhere } from "./answer-elsewhere";
 import { answerFault } from "./fault-response";
+import { requestTarget } from "./request-target";
 import { computeBandwidthDelay, resolveNetConfig } from "./route-network";
 import { buildResponse, handlerFailure, pushHistory } from "./route-response";
 import type { RouteConfig } from "./route-types";
@@ -43,7 +44,7 @@ export async function handleMockRequest(
   const start = performance.now();
   const requestId = `req_${randomUUID()}`;
   const httpMethod = c.req.method;
-  const path = new URL(c.req.url).pathname;
+  const path = requestTarget(c.req.url);
   const key = `${group}/${method}`;
   const index = config.callCounts.get(key) ?? 0;
   config.callCounts.set(key, index + 1);

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Context as HonoContext } from "hono";
 
+import { requestTarget } from "./request-target";
 import { pushHistory } from "./route-response";
 import type { RouteConfig } from "./route-types";
 
@@ -29,7 +30,7 @@ export function refuseRequest(
   config: Pick<RouteConfig, "history" | "hooks">,
 ): Response {
   const requestId = `req_${randomUUID()}`;
-  const path = new URL(c.req.url).pathname;
+  const path = requestTarget(c.req.url);
   const headers = Object.fromEntries(c.req.raw.headers);
   config.hooks?.onStart?.(requestId, c.req.method, path, group, method, undefined, headers);
   pushHistory(config, {

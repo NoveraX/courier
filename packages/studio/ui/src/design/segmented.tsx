@@ -7,6 +7,8 @@ export interface SegmentedOption<TValue extends string> {
   value: TValue;
   label: string;
   icon?: LucideIcon | undefined;
+  /** A dot before the label in the colour of what the option shows: a `bg-*` class. */
+  swatch?: string | undefined;
   /** A count after the label, coloured as an error's when it counts errors. */
   count?: number | undefined;
   countTone?: "err" | "subtle" | undefined;
@@ -62,6 +64,12 @@ export function Segmented<TValue extends string>({
             )}
           >
             {Icon && <Icon aria-hidden="true" className="size-2.75" />}
+            {option.swatch && (
+              <span
+                aria-hidden="true"
+                className={cn("size-1.5 shrink-0 rounded-full", option.swatch)}
+              />
+            )}
             {option.label}
             {option.dot && (
               <>

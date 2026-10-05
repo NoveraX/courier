@@ -1,6 +1,6 @@
 import type { RequestEntry } from "@/store/types-request";
 import type { Catalog } from "@/store/types-ui";
-import { MAX_SCORE, SEVERITY_WEIGHT } from "./audit-meta";
+import { auditScore } from "./audit-score";
 import { computeEndpointStats } from "./compute-stats";
 import { collectCourierRules } from "./rules-courier";
 import { collectDeepPerformance } from "./rules-deep";
@@ -13,26 +13,6 @@ import { collectWarnings } from "./rules-warnings";
 import type { AuditContext, AuditItem, AuditResult, AuditSeverity } from "./types";
 
 const SEVERITY_ORDER: AuditSeverity[] = ["error", "warning", "hint", "pass"];
-
-/** Cap penalty per severity so one category can't zero the score. */
-const MAX_PENALTY: Record<AuditSeverity, number> = {
-  error: 60,
-  warning: 30,
-  hint: 10,
-  pass: Infinity,
-};
-
-function computeScore(items: AuditItem[]): number {
-  const penalties: Record<AuditSeverity, number> = { error: 0, warning: 0, hint: 0, pass: 0 };
-  for (const item of items) {
-    const sev = item.severity;
-    const w = Math.abs(SEVERITY_WEIGHT[sev]);
-    penalties[sev] = Math.min(penalties[sev] + w, MAX_PENALTY[sev]);
-  }
-  const totalPenalty = penalties.error + penalties.warning + penalties.hint;
-  const bonus = penalties.pass;
-  return Math.max(0, Math.min(MAX_SCORE, MAX_SCORE - totalPenalty + bonus));
-}
 
 function countBreakdown(items: AuditItem[]): Record<AuditSeverity, number> {
   const counts = { error: 0, warning: 0, hint: 0, pass: 0 };
@@ -99,7 +79,7 @@ export function runAudit(
 
   return {
     items,
-    score: computeScore(items),
+    score: auditScore(items),
     breakdown: countBreakdown(items),
     timestamp: Date.now(),
   };

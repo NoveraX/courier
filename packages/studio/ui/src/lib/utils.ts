@@ -41,6 +41,7 @@ const twMerge = extendTailwindMerge({
             "page",
             "kpi",
             "hero",
+            "score",
           ],
         },
       ],

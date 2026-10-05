@@ -1,0 +1,193 @@
+export const metadata = { title: "Network Conditions", description: "Make a mock answer as a slow or failing network would, from Studio's Network tab or in code, and halt a run on its own.", mode: "both" }
+
+A mock can answer as a slow or unreliable network would. It adds latency to its answers, caps how fast it sends them, and fails a share of calls with a 500, a 503, a timeout or a dropped connection. Set the conditions in Studio's **Network** tab while the mock runs, or declare them with the mock in code. Stop conditions end a run on their own once it fails too often, grows too slow, or has run long enough.
+
+## What they apply to
+
+- Every HTTP call the mock answers: at its routes, at the proxy route `/api/request` and by name. That includes the calls it passes to the source's own server and the ones it answers from recordings (see [Mock only some endpoints, or answer with recordings](/docs/studio/mock-servers#mock-only-some-endpoints-or-answer-with-recordings)).
+- A stream: its faults, and its latency, which comes before the stream opens. A bandwidth cap does not slow its events.
+- Not a channel: WebSocket subscriptions are answered as they would be with no conditions set.
+- Whether a call fails is decided first. A failed call gets no added latency; a `timeout` fault holds it instead.
+- An endpoint mocked with a delay of its own, by `.delay(ms)`, `.withLatency(...)` or a sequence entry's `delay`, waits that delay instead of the network's latency. Its faults still apply.
+
+## The Network tab
+
+Open a running mock in Studio's Mocks view and pick **Network**. A change goes to the mock at once. While the mock is stopped, the tab takes none.
+
+### Network condition
+
+The card at the top names what the mock simulates: its chaos mode, its delay as a base ± jitter, its bandwidth cap, and how many routes an override of their own delays or fails. **Stop** ends all of it. It clears the chaos, the delay and the cap, and switches every route override off, keeping what each one sets. The banner over the Mocks view offers it too, as **Stop chaos**, while a chaos mode is on.
+
+Beside it are four live figures, each with a sparkline of the last minute:
+
+- **Throughput**: the answers in the last minute.
+- **Error rate**: the share of the latest 60 answers that failed.
+- **P50** and **P99**: the median and 99th percentile of the latest 60 answers' durations, shown in amber past Studio's **Slow request threshold** (in Settings) and in red past twice that.
+
+### Chaos modes
+
+| Mode | Fails | With |
+| --- | --- | --- |
+| **Stable** | nothing | real handlers only |
+| **Degraded** | 10% of answers | 500 (60%), timeout (40%) |
+| **Unstable** | 40% | 500 (40%), 503 (30%), timeout (20%), reset (10%) |
+| **Down** | every answer | 503 |
+| **Custom** | your own rate | your own mix |
+
+**Custom** starts from the rate and mix in force, or 30% split 50/30/20 between 500, 503 and timeout when nothing fails yet.
+
+### Fault injection
+
+**Error rate** sets the share of answers the mock fails, from 0 to 100%. The **Fault mix** weighs four faults against each other. A weight is relative, and the percentage beside it is its share of the failures. Moving the rate or a weight makes the run Custom.
+
+| Fault | The call gets |
+| --- | --- |
+| HTTP 500 | a 500 at once |
+| HTTP 503 | a 503 at once |
+| timeout | held until it times out, then a 408 |
+| reset | its connection dropped, with no answer |
+
+### Latency
+
+| Preset | Delays |
+| --- | --- |
+| **None** | none |
+| **3G** | 300–900 ms, ± 150 ms |
+| **4G** | 100–350 ms, ± 60 ms |
+| **Satellite** | 600–800 ms, ± 150 ms |
+| **Custom** | your own |
+
+A preset draws its delays log-normally: most of them short, now and then one near the top of its window. The card shows a delay as **Base delay** ± **Jitter**, and its window on a track from 0 to 2 s. 3G reads 600 ms ± 450 ms, from 150 ms to 1.05 s.
+
+With **Custom**, the base (up to 2000 ms) and the jitter (up to the base, and at most 1000 ms) set a window from the base less the jitter to the base plus it. **Shape** sets how delays spread across that window:
+
+- **Uniform**: every delay in the window is as likely. This is the default.
+- **Normal**: most delays near the base, few at the edges.
+- **Log-normal**: most delays short, now and then one near the top, as on a real network.
+
+A base of 0 adds no delay. **Bandwidth** caps how fast bodies are sent: **Unlimited**, **512 Kbps**, **1.5 Mbps** or **10 Mbps**. An answer then waits as long as its JSON body takes to send at that rate, on top of its delay.
+
+### Per-route overrides
+
+The card lists every route the mock serves, each with a switch. Open a route to give it a **Delay** of its own (0–2000 ms, fixed) and an **Error rate** of its own (0–100%, in steps of 5). Setting either switches the override on. While it is on, the route takes that delay and that rate in place of the global ones, so a route set to 0% answers even while the mock is Down. It keeps the global bandwidth cap and fault mix. **Use the global settings** clears the override and switches it off. The tag on each row sums it up, as `+300ms · 50%`, or `global` for a route with nothing of its own.
+
+### Safety
+
+**Auto-halt** ends a run on its own once a threshold is crossed:
+
+| Threshold | Ends the run when | Default |
+| --- | --- | --- |
+| **Error rate above** | the share of failed answers over the last 30 s reaches it, once those 30 s hold 5 answers | 30% |
+| **P99 above** | the p99 of the durations over the last 60 s reaches it, once those 60 s hold 10 answers | 2000 ms |
+| **Run at most** | the run has lasted that many minutes, on time even if no call comes | no limit |
+
+A threshold set to 0 is off. Auto-halt itself is off until switched on, and the thresholds apply to any run, chaos or delay. A run starts when the mock begins to simulate anything, and lasts until it simulates nothing. A halt clears what the mock simulated, its chaos, its delay, its cap and its route overrides, and keeps the thresholds for the next run.
+
+**Runs** lists each start, stop and halt, newest first: what ran, when, how long it lasted, and which threshold ended a halted run.
+
+### Observed
+
+The **Observed** card shows the latest 60 answers:
+
+- **Latency distribution**: how their durations spread, from under 50 ms to over 4 s, coloured against the slow threshold.
+- **Status timeline**: one cell per answer, oldest first. A cell opens its request.
+- **Injected faults by type**: the 500s, 503s, timeouts and resets chaos injected. A handler's own errors are not counted.
+
+### When the mock starts again
+
+What the tab sets lives in the running mock. A mock that starts again, after **Restart**, an edit of `courier.mocks.ts` that changes it, or a crash, starts with the conditions its definition declares, or none, and the tab shows those.
+
+## In code
+
+`network` sets the conditions a mock starts with:
+
+- `defineMockServer({ network })` in `courier.mocks.ts`, for a mock Studio runs.
+- `createMockServer({ network })` from `@noverax/courier-mock/server`, for a mock server of your own.
+- `createMockClient({ network })` from `@noverax/courier-mock/testing`, for a mock client in tests.
+
+```ts
+// src/api.ts
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+
+type User = { id: number; name: string }
+
+const { endpoint } = courier()
+const users = defineGroup({
+  prefix: "users",
+  endpoints: {
+    getAll: endpoint.get("").response<User[]>(),
+    getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+  },
+})
+export const api = defineApi({ baseURL: "https://api.example.com", groups: { users } })
+```
+
+```ts
+// courier.mocks.ts
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+import { api } from "./src/api"
+
+export default defineMocks({
+  api: defineMockServer({
+    source: api,
+    network: {
+      latency: "4g",
+      errorRate: 0.1,
+      faultWeights: [
+        { type: "503", weight: 3 },
+        { type: "timeout", weight: 1 },
+      ],
+      timeout: 5000,
+      routeOverrides: [{ routeId: "users:getById", enabled: true, errorRate: 0.5 }],
+      stopConditions: {
+        enabled: true,
+        errorRateThreshold: 50,
+        errorRateDurationSecs: 30,
+        p99Threshold: 0,
+        p99DurationSecs: 60,
+        maxDurationMins: 10,
+      },
+    },
+  }),
+})
+```
+
+| Field | What it sets |
+| --- | --- |
+| `latency` | The delay before each answer: a number of ms, a profile, or a range `{ min, max, jitter }` in ms. The profiles are `"3g"` (300–900 ms, ± 150), `"4g"` (100–350, ± 60), `"wifi"` (15–60, ± 15) and `"fiber"` (1–8, ± 2). |
+| `distribution` | How a delay is drawn between `min` and `max`: `"uniform"` (the default), `"normal"` or `"log-normal"`. The jitter is added either way, and no delay goes below 0. |
+| `bandwidth` | A cap in kilobits a second. An answer waits as long as its JSON body takes to send at this rate, on top of the latency. 0 or unset is unlimited. |
+| `errorRate` | The share of calls that fail, from 0 (none) to 1 (every one). |
+| `faultTypes` | The faults a failing call takes, each as likely: `"500"`, `"502"`, `"503"`, `"timeout"`, `"reset"`. Unset, 500 and 503. |
+| `faultWeights` | `{ type, weight }` pairs, the weights relative to each other. When set, they are used in place of `faultTypes`. |
+| `timeout` | How long a `timeout` fault holds a call, in ms. A mock server holds it 30 000 ms unless set, or until the client gives up. A mock client waits this long, and fails at once unless set. |
+| `routeOverrides` | `{ routeId, enabled, latency?, errorRate?, faultTypes? }` for one route, named `"group:endpoint"`. Each field an enabled override sets is used for that route in place of the global one. Faults it names replace the global mix. |
+| `stopConditions` | `{ enabled, errorRateThreshold, errorRateDurationSecs, p99Threshold, p99DurationSecs, maxDurationMins }`, every field given: thresholds in percent and ms, windows in seconds, the longest run in minutes. A threshold of 0 is off. |
+
+How each fault fails a call:
+
+| Fault | A mock server | A mock client |
+| --- | --- | --- |
+| `"500"`, `"502"`, `"503"` | answers that status at once, with `{ "error": "HTTP 503 (simulated)" }` | throws an `HTTPError` with that status, its data `{ message: "HTTP 503 (simulated)" }` |
+| `"timeout"` | holds the call for `timeout`, or until the client gives up, then answers 408 | waits `timeout` if set, then throws a 408 |
+| `"reset"` | drops the connection without an answer, or answers 502 to a call made with `app.request()` | throws a 502 |
+
+A mock client applies faults, latency, its distribution and route overrides to its HTTP calls. It has no wire to cap, so `bandwidth` does not apply, and neither do stop conditions, which halt a mock server's runs. Its streams and channels answer as they would with no conditions set.
+
+### Change them while the server runs
+
+A mock server from `createMockServer` holds its conditions in `server.networkState`. `mergeConfig` changes the fields it names, `setConfig` replaces them all, and `setConfig(undefined)` clears them. `onHalt` hears when a stop condition ends a run, with the reason and how long the run lasted in ms. The run's settings are cleared by then, and its stop conditions kept.
+
+```ts
+// mock-server.ts
+import { createMockServer } from "@noverax/courier-mock/server"
+
+const server = createMockServer({ port: 7002, network: { latency: { min: 50, max: 150 } } })
+server.mock("users", "getAll").resolves([])
+server.networkState.onHalt = ({ reason, durationMs }) => {
+  console.log(`Halted after ${durationMs} ms: ${reason}`)
+}
+await server.start()
+
+server.networkState.mergeConfig({ errorRate: 0.2, faultTypes: ["503"] })
+```

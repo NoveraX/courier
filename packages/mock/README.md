@@ -149,6 +149,20 @@ const api = createProxyCaller("api", {
 
 On `/api/ws` a subscription goes as it does on a Courier server. The variables are checked against the channel's schema, and a subscription that fails them ends with code 4422. Its topic is keyed as the channel's `.topic()` says, with a `renamed` frame first when that differs from the topic asked for, so subscribers who share a key share the channel's broadcasts. Each message is checked against what the channel `.send()`s, and one that fails is refused with 4422 while the subscription goes on. A channel that is not mocked ends with 4404, naming it and the scenario state. `ctx.close()` ends that one subscription and leaves the socket's others open. A mock built without a source checks nothing and keys each topic by its variables. Studio's mock logs show each subscription as it opens and ends.
 
+### Slow and failing answers
+
+`network` makes a mock answer as a slow or unreliable network would: it adds latency, caps bandwidth, and fails a share of calls with a 500, a 503, a timeout or a dropped connection, and its stop conditions end a run on their own. Studio's **Network** tab sets the same conditions on a running mock. See [Network conditions](https://courier.noverax.cloud/docs/studio/network-conditions).
+
+```ts
+// courier.mocks.ts
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+import { api } from "./src/api"
+
+export default defineMocks({
+  api: defineMockServer({ source: api, network: { latency: "3g", errorRate: 0.1 } }),
+})
+```
+
 <br />
 
 ## Test utilities

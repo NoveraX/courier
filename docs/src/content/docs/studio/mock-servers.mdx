@@ -120,6 +120,20 @@ const api = createProxyCaller("api", {
 
 On `/api/ws` a subscription goes as it does on a Courier server. The variables are checked against the channel's schema, and a subscription that fails them ends with code 4422. Its topic is keyed as the channel's `.topic()` says, with a `renamed` frame first when that differs from the topic asked for, so subscribers who share a key share the channel's broadcasts. Each message is checked against what the channel `.send()`s, and one that fails is refused with 4422 while the subscription goes on. A channel that is not mocked ends with 4404, naming it and the scenario state. `ctx.close()` ends that one subscription and leaves the socket's others open. A mock built without a source checks nothing and keys each topic by its variables. Studio's mock logs show each subscription as it opens and ends.
 
+### Slow and failing answers
+
+`network` makes a mock answer as a slow or unreliable network would: it adds latency, caps bandwidth, and fails a share of calls with a 500, a 503, a timeout or a dropped connection, and its stop conditions end a run on their own. Studio's **Network** tab sets the same conditions on a running mock. See [Network conditions](/docs/studio/network-conditions).
+
+```ts
+// courier.mocks.ts
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+import { api } from "./src/api"
+
+export default defineMocks({
+  api: defineMockServer({ source: api, network: { latency: "3g", errorRate: 0.1 } }),
+})
+```
+
 ## Add mocks from Studio
 
 **Generate mocks** in the Mocks view opens a wizard: pick the sources to mock, set each mock's key, its port — assigned by Studio or fixed — its records per collection, whether it starts with Studio, which endpoints it answers — every one, or those ticked, the rest going to the source's own server — and whether its data is generated or recorded, then review. Studio shows the exact change to `courier.mocks.ts` as a diff, with what the diff does not show — that it creates the file, which running mocks it restarts, that a port is taken or assigned — and writes it on one click. It creates `courier.mocks.ts` when there is none (`courier.mocks.mts` beside a `courier.config.mts`), and changes an existing file only by inserting text: the new entries in the object `defineMocks` takes, and the imports they need. It imports the config by its default export — or, for a config of named exports alone, as a namespace (`import * as courierConfig`) — and imports a `courier.config.ts` the way the project resolves modules: as `./courier.config.js` when the tsconfig, or a project it lists under `references`, resolves them as Node does (`node16` or `nodenext`) in a `"type": "module"` package, or when the config's or the mocks file's own relative imports end in `.js` or `.mjs`, and as `./courier.config` otherwise. A key another mock has, in any letter case, a port that is Studio's own or that another mock declares, or a source the config does not declare is marked on its field instead. A port Studio assigned to another mock may be taken: the review warns that the other mock moves to another port. **Generate mocks** is turned off, and says why, while Studio's first load of `courier.config` runs, while the config does not load, and while it is missing. During a later reload it stays on: the wizard waits for the reload before it plans the change, and answers `STUDIO_BUSY` when the reload outlasts that wait.

@@ -119,6 +119,27 @@ async function startMock() {
 const DOWN = { errorRate: 1, faultWeights: [{ type: "503", weight: 100 }] };
 
 describe("the network controls of a managed mock", () => {
+  it("says how long a run lasted when it stops", async () => {
+    const mock = await startMock();
+    await mock.command("mock:chaos:set", { config: DOWN, preset: "down" });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    await mock.command("mock:chaos:set", {
+      config: { errorRate: 0, faultWeights: [] },
+      preset: "none",
+    });
+
+    const runs = mock.events.onEvent.mock.calls
+      .map(([, event]) => event)
+      .filter((event) => event.type === "mock:experiment:event");
+    expect(runs.map((event) => [event.eventType, event.mode])).toEqual([
+      ["started", "down"],
+      ["stopped", "down"],
+    ]);
+    expect(runs[0]).not.toHaveProperty("durationMs");
+    expect(runs[1]?.durationMs).toBeGreaterThanOrEqual(200);
+  }, 30_000);
+
   it("keeps the active chaos when a latency preset is picked", async () => {
     const mock = await startMock();
     await mock.command("mock:chaos:set", { config: DOWN, preset: "down" });

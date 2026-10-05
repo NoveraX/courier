@@ -87,8 +87,7 @@ function groupEndpointsByTag(spec: SpecNode): {
        no caller could fill. */
     const shared = listAt(item, "parameters");
 
-    for (const [method, operation] of Object.entries(item)) {
-      if (!isOperationKey(method)) continue;
+    for (const [method, operation] of operationsOf(item)) {
       if (!isNode(operation)) continue;
       if (!isSupportedMethod(method)) {
         skipped.push({
@@ -118,6 +117,21 @@ function groupEndpointsByTag(spec: SpecNode): {
     }
   }
   return { endpointsByTag, skipped };
+}
+
+/**
+ * The operations a path item declares: its fixed fields, `get` to `query`,
+ * then the verbs OpenAPI 3.2 lists under `additionalOperations` by the name
+ * HTTP spells them with. A verb written there that has a field of its own
+ * is read from the field when both are present.
+ */
+function operationsOf(item: SpecNode): Array<[method: string, operation: unknown]> {
+  const fixed = Object.entries(item).filter(([key]) => isOperationKey(key));
+  const named = new Set(fixed.map(([key]) => key));
+  const additional = Object.entries(nodeAt(item, "additionalOperations") ?? {})
+    .map(([name, operation]): [string, unknown] => [name.toLowerCase(), operation])
+    .filter(([method]) => !named.has(method));
+  return [...fixed, ...additional];
 }
 
 /* The path item a reference names, its own fields beside the reference

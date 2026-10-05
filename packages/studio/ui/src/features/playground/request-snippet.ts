@@ -3,8 +3,8 @@ import type { EndpointInfo, SourceInfo } from "@/store/types-ui";
 import { queryString } from "./query-string";
 import type { RequestValues } from "./request-values";
 
-/** Methods that carry no body, so a client sends their variables in the query string. */
-const QUERY_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "DELETE"]);
+/** Methods that carry no body, so a client sends their variables in the query string; a QUERY carries one. */
+const QUERY_STRING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "DELETE"]);
 
 const PARAM_PATTERN = /:(\w+)/g;
 
@@ -72,7 +72,7 @@ export function snippetInput(
     ? Object.fromEntries(Object.entries(fields).filter(([name]) => !params.has(name)))
     : variables;
 
-  if (QUERY_METHODS.has(method)) {
+  if (QUERY_STRING_METHODS.has(method)) {
     return { url: filled + queryString(isRecord(rest) ? rest : {}), method, headers };
   }
   const hasBody = isRecord(rest) ? Object.keys(rest).length > 0 : rest !== undefined;

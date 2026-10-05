@@ -7,8 +7,8 @@ export interface UrlPart {
   kind: "origin" | "path" | "param" | "missing" | "query";
 }
 
-/* The methods whose variables go in the query rather than the body. */
-const QUERY_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "DELETE"]);
+/* The methods whose variables go in the query string rather than the body; a QUERY asks with a body. */
+const QUERY_STRING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "DELETE"]);
 
 function fieldsOf(variables: unknown): Record<string, unknown> {
   return typeof variables === "object" && variables !== null && !Array.isArray(variables)
@@ -51,7 +51,7 @@ export function requestUrlParts(endpoint: PlaygroundEndpoint, variables: unknown
         : { text: `/${segment}`, kind: "missing" },
     );
   }
-  if (endpoint.transport === "http" && QUERY_METHODS.has(endpoint.httpMethod)) {
+  if (endpoint.transport === "http" && QUERY_STRING_METHODS.has(endpoint.httpMethod)) {
     const query = queryString(
       Object.fromEntries(Object.entries(fields).filter(([k]) => !used.has(k))),
     );

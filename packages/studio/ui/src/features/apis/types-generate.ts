@@ -56,7 +56,7 @@ export interface EndpointAnalysis {
   hasResponseType: boolean;
   hasVariablesType: boolean;
   hasValidation: boolean;
-  httpMethod: "get" | "post" | "put" | "patch" | "delete";
+  httpMethod: "get" | "head" | "options" | "query" | "post" | "put" | "patch" | "delete";
   path: string;
   type: "query" | "mutation" | null;
   /** How a stream or a channel is carried; absent for plain HTTP. */

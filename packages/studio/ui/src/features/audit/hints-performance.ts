@@ -14,7 +14,7 @@ const PROXY_OVERHEAD_THRESHOLD = 1 / 3;
 const VALIDATION_OVERHEAD_THRESHOLD = 0.2;
 
 const FREQUENT_READS = 3;
-const READ_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD"]);
+const READ_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "QUERY"]);
 
 /** Reads answered successfully again and again that never went through a cache. */
 export function noCachingDetected(stats: Map<string, EndpointStats>): AuditItem[] {

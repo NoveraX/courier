@@ -58,7 +58,7 @@ export interface ParsedParameter {
 export interface ParsedEndpoint {
   name: string;
   operationId: string | null;
-  httpMethod: "get" | "head" | "options" | "post" | "put" | "patch" | "delete";
+  httpMethod: "get" | "head" | "options" | "query" | "post" | "put" | "patch" | "delete";
   path: string;
   fullPath: string;
   description: string;

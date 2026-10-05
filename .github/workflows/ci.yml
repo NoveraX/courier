@@ -52,8 +52,17 @@ jobs:
       - name: Lint (Biome)
         run: npx biome check .
 
+      # Biome notes a field it has deprecated only as a note, and a schema
+      # left behind only in an editor; this fails on either.
+      - name: Check Biome's configuration
+        run: npm run check:biome
+
       - name: Check file and directory names
         run: npm run check:names
+
+      # 150 lines of code a file; comments, blank lines and files of types alone are free.
+      - name: Check file length
+        run: npm run check:lines
 
       - name: Typecheck
         run: npx tsc --noEmit

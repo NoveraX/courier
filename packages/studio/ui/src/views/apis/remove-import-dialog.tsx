@@ -1,5 +1,6 @@
 import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import type { RemovalConfigNotes } from "@/apis/client-file-changes";
+import type { UseRemoveImportReturn } from "@/apis/use-remove-import";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { FilePlanView } from "./file-plan-view";
-import type { UseRemoveImportReturn } from "./use-remove-import";
 
 function ConfigNotes({
   name,

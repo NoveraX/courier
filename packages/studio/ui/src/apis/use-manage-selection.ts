@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
-import { computeAllToggle, computeGroupToggle, toggleInSet } from "./manage-toggle";
-import type { EndpointInventory } from "./types";
+import { computeAllToggle, computeGroupToggle, toggleInSet } from "@/features/apis/manage-toggle";
+import type { EndpointInventory } from "@/views/apis/types";
 
 /** The endpoints the user picked to add and to remove, and the toggles that pick them. */
 export interface ManageSelection {

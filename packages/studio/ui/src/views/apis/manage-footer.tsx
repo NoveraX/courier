@@ -1,8 +1,8 @@
 import { Loader2 } from "lucide-react";
-
+import type { ReuploadState } from "@/apis/parse-raw-spec";
+import { parseRawSpec } from "@/apis/parse-raw-spec";
+import type { UseManageReturn } from "@/apis/use-manage";
 import { Button } from "@/components/ui/button";
-import { parseAndContinue, type ReuploadStepState } from "./manage-reupload-step";
-import type { UseManageReturn } from "./use-manage";
 
 /**
  * The manage dialog's buttons for the step it is on: parse an uploaded
@@ -15,8 +15,8 @@ export function ManageFooter({
   onParse,
 }: {
   manage: UseManageReturn;
-  reupload: ReuploadStepState;
-  onParse: (update: Partial<ReuploadStepState>) => void;
+  reupload: ReuploadState;
+  onParse: (update: Partial<ReuploadState>) => void;
 }): React.ReactElement {
   const isReupload = manage.step === "reupload";
   const isApplying = manage.step === "applying";
@@ -42,11 +42,7 @@ export function ManageFooter({
           size="sm"
           disabled={!reupload.content.trim() || reupload.parsing}
           onClick={() =>
-            void parseAndContinue(
-              reupload.content,
-              (spec) => void manage.provideSpec(spec),
-              onParse,
-            )
+            void parseRawSpec(reupload.content, (spec) => void manage.provideSpec(spec), onParse)
           }
         >
           {reupload.parsing && <Loader2 className="mr-1.5 size-3 animate-spin" />}

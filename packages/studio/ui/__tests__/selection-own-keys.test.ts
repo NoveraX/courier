@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { toggleEndpointReducer } from "../src/apis/import-actions";
 import { INITIAL_IMPORT_STATE } from "../src/features/apis/initial-import-state";
-import { toggleInSet } from "../src/views/apis/manage-toggle";
+import { toggleInSet } from "../src/features/apis/manage-toggle";
 
 describe("a group named like an Object.prototype member", () => {
   it("is toggled in manage like any other", () => {

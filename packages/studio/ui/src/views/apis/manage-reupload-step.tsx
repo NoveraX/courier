@@ -4,22 +4,15 @@
 
 import { FileText, Upload } from "lucide-react";
 import { useState } from "react";
-import { parseSpecFromRaw } from "@/apis/client";
+import type { ReuploadState } from "@/apis/parse-raw-spec";
 import { FileDropzone } from "@/components/ui/file-dropzone";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { ParsedSpec } from "./types";
 
 type ReuploadSource = "file" | "raw";
 
-export interface ReuploadStepState {
-  content: string;
-  parsing: boolean;
-  error: string | null;
-}
-
 interface ReuploadStepProps {
-  state: ReuploadStepState;
+  state: ReuploadState;
   onContentChange: (content: string) => void;
 }
 
@@ -64,21 +57,6 @@ export function ReuploadStep({ state, onContentChange }: ReuploadStepProps): Rea
 }
 
 /** Parse raw spec content and call onParsed on success */
-export async function parseAndContinue(
-  content: string,
-  onParsed: (spec: ParsedSpec) => void,
-  setState: (update: Partial<ReuploadStepState>) => void,
-): Promise<void> {
-  setState({ parsing: true, error: null });
-  try {
-    const spec = await parseSpecFromRaw(content);
-    onParsed(spec);
-  } catch (err) {
-    setState({ error: err instanceof Error ? err.message : "Failed to parse spec" });
-  } finally {
-    setState({ parsing: false });
-  }
-}
 
 // ── Source toggle ────────────────────────────────────────────────────────────
 

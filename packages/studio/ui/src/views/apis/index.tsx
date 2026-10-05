@@ -1,7 +1,9 @@
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useImport } from "@/apis/use-import";
+import { useManage } from "@/apis/use-manage";
 import { useRegistry } from "@/apis/use-registry";
+import { useRemoveImport } from "@/apis/use-remove-import";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { PageShell } from "@/components/shared/page-shell";
@@ -14,8 +16,6 @@ import { NoConfigState } from "./no-config-state";
 import { RegistryCard } from "./registry-card";
 import { RemoveImportDialog } from "./remove-import-dialog";
 import { ScannedCard } from "./scanned-card";
-import { useManage } from "./use-manage";
-import { useRemoveImport } from "./use-remove-import";
 
 export function ApisView(): React.ReactElement {
   const registry = useRegistry();

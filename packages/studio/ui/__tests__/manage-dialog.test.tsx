@@ -14,9 +14,9 @@ vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
+import { type UseManageReturn, useManage } from "../src/apis/use-manage";
 import { ManageDialog } from "../src/views/apis/manage-dialog";
 import type { ParsedSpec, SourceSummary } from "../src/views/apis/types";
-import { type UseManageReturn, useManage } from "../src/views/apis/use-manage";
 
 const SPEC: ParsedSpec = {
   title: "Pets",

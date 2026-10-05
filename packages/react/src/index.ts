@@ -30,5 +30,6 @@ export type {
   CourierSuspenseQueryOptions,
   QueryCallerClient,
   QueryGroupClient,
+  QueryGroupNode,
   SubscriptionResult,
 } from "./types";

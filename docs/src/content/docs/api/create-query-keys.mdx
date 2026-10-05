@@ -21,7 +21,7 @@ declare function createProxyQueryKeys<TApi extends DefinedApi>(source: string): 
 
 ## Keys
 
-A key is `[source, group, method?, variables?]`. The group and the method are checked against the API, so a key cannot name an endpoint that does not exist:
+A key is `[source, group, method?, variables?]`. The group and the method are checked against the API, so a key cannot name an endpoint that does not exist. A group inside another is named by its path, and keyed one element per group:
 
 ```ts title="lib/query.ts"
 import { createQueryCaller, createQueryKeys } from "@noverax/courier-react"
@@ -33,13 +33,14 @@ export const queryKeys = createQueryKeys(api)
 queryKeys("users")                        // ["api", "users"]
 queryKeys("users", "getAll")              // ["api", "users", "getAll"]
 queryKeys("users", "getById", { id: 1 })  // ["api", "users", "getById", { id: 1 }]
+queryKeys("billing.invoices", "list")     // ["api", "billing", "invoices", "list"]
 ```
 
 `source` is the name the caller was made for: for `createQueryKeys(api)`, the API's own name — its `defineApi({ name })`, or else the first label of its `baseURL` host — and for `createProxyQueryKeys`, the name you pass. Build the keys for the same source as the caller, and a key names what the caller's hooks cached.
 
 ## Invalidating
 
-A shorter key matches every longer one under it, so the three lengths invalidate an endpoint's call with those variables, every call of an endpoint, or every endpoint of a group:
+A shorter key matches every longer one under it, so the three lengths invalidate an endpoint's call with those variables, every call of an endpoint, or every endpoint of a group — and `queryKeys("billing")` every endpoint of the groups inside `billing` as well:
 
 ```ts title="components/create-user.tsx"
 "use client"

@@ -9,6 +9,7 @@
 import type {
   AnyEndpoint,
   DefinedApi,
+  GroupsAt,
   InferResponse,
   InferSend,
   InferVariables,
@@ -210,7 +211,18 @@ export type QueryGroupClient<TGroup> = {
     : never;
 };
 
-/** Top-level query client with group-based dot-notation access */
+/**
+ * A group's hooks, and the groups inside it with hooks of their own —
+ * `q.billing.invoices.useQuery("list")`. A hook's name is the hook's: a
+ * group inside named like one is reached through a client of the source.
+ */
+export type QueryGroupNode<TGroup> = QueryGroupClient<TGroup> & {
+  [TKey in Exclude<keyof GroupsAt<TGroup>, keyof QueryGroupClient<TGroup>>]: QueryGroupNode<
+    GroupsAt<TGroup>[TKey]
+  >;
+};
+
+/** Top-level query client with group-based dot-notation access, groups inside groups included */
 export type QueryCallerClient<TApi extends DefinedApi> = {
-  [TKey in keyof TApi["options"]["groups"]]: QueryGroupClient<TApi["options"]["groups"][TKey]>;
+  [TKey in keyof TApi["options"]["groups"]]: QueryGroupNode<TApi["options"]["groups"][TKey]>;
 };

@@ -60,29 +60,35 @@ export function handleChaosCommand(server: MockServer, cmd: Record<string, unkno
   return { ok: true, data: { updated: true } };
 }
 
-export function checkAutoHalt(server: MockServer): void {
-  const reason = server.networkState.checkStopConditions();
-  if (!reason) return;
-
-  const ran = lengthSince(server.networkState.startedAt);
-  server.networkState.setConfig(undefined);
-  server.networkState.resetMetrics();
-  send({
-    type: "event",
-    event: {
-      type: "mock:experiment:event",
-      eventType: "auto-halted",
-      mode: "chaos",
-      reason,
-      errorRate: 0,
-      ...ran,
-    },
-  });
-  emitNetworkState(server);
-  send({
-    type: "event",
-    event: { type: "mock:network:config", config: { autoHalted: true, haltReason: reason } },
-  });
+/**
+ * Tell Studio when a stop condition halts the mock's run: the run's end,
+ * with its reason and length, and the settings it cleared.
+ *
+ * @param server The worker's mock server
+ * @example
+ * ```ts
+ * reportHalts(server);
+ * ```
+ */
+export function reportHalts(server: MockServer): void {
+  server.networkState.onHalt = ({ reason, durationMs }) => {
+    send({
+      type: "event",
+      event: {
+        type: "mock:experiment:event",
+        eventType: "auto-halted",
+        mode: "chaos",
+        reason,
+        errorRate: 0,
+        ...(durationMs === undefined ? {} : { durationMs }),
+      },
+    });
+    emitNetworkState(server);
+    send({
+      type: "event",
+      event: { type: "mock:network:config", config: { autoHalted: true, haltReason: reason } },
+    });
+  };
 }
 
 function presetOf(preset: unknown): string | undefined {

@@ -18,6 +18,7 @@ import { handleCommand } from "./command-dispatch";
 import { isMockServerDefinition } from "./define-mock-server";
 import type { DescribedRoute } from "./describe-route";
 import { describeRoute } from "./describe-route";
+import { reportHalts } from "./network-commands";
 import { wireRequestHooks } from "./request-hooks";
 import { buildScenarioMeta } from "./scenario-meta";
 import { startFailure } from "./start-failure";
@@ -118,6 +119,7 @@ async function start(
     seed: seedOptionsOf(definition.seed),
   };
   wireRequestHooks(served.server);
+  reportHalts(served.server);
   const info = await served.server.start();
   if (stopping()) return served;
   send({

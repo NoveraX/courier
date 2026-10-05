@@ -1,5 +1,7 @@
 import type { NetworkConfig } from "../types";
 import { isActive, routeConfigOf } from "./config-shape";
+import type { NetworkHalt, TrackedAnswer } from "./stop-conditions";
+import { crossedStopCondition } from "./stop-conditions";
 
 /** Mutable network simulation state — shared across request handlers */
 export interface NetworkState {
@@ -11,10 +13,16 @@ export interface NetworkState {
   mergeConfig(patch: Partial<NetworkConfig>): NetworkConfig;
   /** Replace the entire config */
   setConfig(config: NetworkConfig | undefined): void;
-  /** Track a request result for stop condition monitoring */
+  /**
+   * Track an answer for the stop conditions. An answer that brings the run
+   * across one halts it: every setting is cleared, as `setConfig(undefined)`
+   * clears them, and `onHalt` is told why.
+   */
   trackRequest(duration: number, isError: boolean): void;
   /** Check if stop conditions have been met — returns reason or undefined */
   checkStopConditions(): string | undefined;
+  /** Called when a stop condition halts the run, after its settings are cleared */
+  onHalt: ((halt: NetworkHalt) => void) | undefined;
   /** Reset tracking metrics (called on config change) */
   resetMetrics(): void;
   /** Timestamp when fault injection started */
@@ -37,9 +45,40 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
   let chaosPreset = "none";
   let chaosStartedAt: number | null = null;
 
-  // Stop condition metrics
-  const recentRequests: Array<{ time: number; duration: number; error: boolean }> = [];
+  let onHalt: ((halt: NetworkHalt) => void) | undefined;
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const recentRequests: TrackedAnswer[] = [];
   const MAX_TRACKING = 1000;
+
+  const clear = (): void => {
+    clearTimeout(deadline);
+    config = undefined;
+    startedAt = null;
+    latencyPreset = "none";
+    latencyStartedAt = null;
+    chaosPreset = "none";
+    chaosStartedAt = null;
+  };
+  const crossed = (): string | undefined => {
+    if (!config?.stopConditions?.enabled || !startedAt) return undefined;
+    return crossedStopCondition(config.stopConditions, startedAt, recentRequests, Date.now());
+  };
+  const halt = (reason: string): void => {
+    const ran = startedAt === null ? undefined : Date.now() - startedAt;
+    clear();
+    recentRequests.length = 0;
+    onHalt?.({ reason, durationMs: ran });
+  };
+  /* A run's longest length ends it on time, though no answer comes to notice. */
+  const scheduleDeadline = (): void => {
+    clearTimeout(deadline);
+    const mins = config?.stopConditions?.enabled ? config.stopConditions.maxDurationMins : 0;
+    if (!mins || startedAt === null) return;
+    const left = Math.max(0, startedAt + mins * 60_000 - Date.now());
+    deadline = setTimeout(() => halt(`max duration (${mins}min)`), left);
+    deadline.unref?.();
+  };
+  scheduleDeadline();
 
   return {
     get startedAt() {
@@ -47,6 +86,7 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
     },
     set startedAt(v) {
       startedAt = v;
+      scheduleDeadline();
     },
     get latencyPreset() {
       return latencyPreset;
@@ -72,6 +112,12 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
     set chaosStartedAt(v) {
       chaosStartedAt = v;
     },
+    get onHalt() {
+      return onHalt;
+    },
+    set onHalt(v) {
+      onHalt = v;
+    },
 
     getConfig(group, endpoint) {
       if (!config || !group || !endpoint) return config;
@@ -83,66 +129,29 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
     },
 
     mergeConfig(patch) {
-      config = { ...config, ...patch };
-      if (isActive(config)) {
-        startedAt ??= Date.now();
-      } else {
-        startedAt = null;
-      }
-      return config;
+      const merged = { ...config, ...patch };
+      config = merged;
+      startedAt = isActive(merged) ? (startedAt ?? Date.now()) : null;
+      scheduleDeadline();
+      return merged;
     },
 
     setConfig(newConfig) {
-      config = newConfig;
-      startedAt = newConfig && isActive(newConfig) ? Date.now() : null;
-      if (!newConfig) {
-        latencyPreset = "none";
-        latencyStartedAt = null;
-        chaosPreset = "none";
-        chaosStartedAt = null;
-      }
+      if (newConfig) {
+        config = newConfig;
+        startedAt = isActive(newConfig) ? Date.now() : null;
+      } else clear();
+      scheduleDeadline();
     },
 
     trackRequest(duration, isError) {
       recentRequests.push({ time: Date.now(), duration, error: isError });
       if (recentRequests.length > MAX_TRACKING) recentRequests.splice(0, 100);
+      const reason = crossed();
+      if (reason) halt(reason);
     },
 
-    checkStopConditions() {
-      if (!config?.stopConditions?.enabled || !startedAt) return undefined;
-      const sc = config.stopConditions;
-      const now = Date.now();
-
-      // Max duration check
-      if (sc.maxDurationMins > 0) {
-        const elapsed = (now - startedAt) / 60_000;
-        if (elapsed >= sc.maxDurationMins) return `max duration (${sc.maxDurationMins}min)`;
-      }
-
-      // Error rate check
-      if (sc.errorRateThreshold > 0) {
-        const window = now - sc.errorRateDurationSecs * 1000;
-        const recent = recentRequests.filter((r) => r.time >= window);
-        if (recent.length >= 5) {
-          const rate = (recent.filter((r) => r.error).length / recent.length) * 100;
-          if (rate >= sc.errorRateThreshold)
-            return `error rate ${rate.toFixed(0)}% > ${sc.errorRateThreshold}%`;
-        }
-      }
-
-      // P99 check
-      if (sc.p99Threshold > 0) {
-        const window = now - sc.p99DurationSecs * 1000;
-        const recent = recentRequests.filter((r) => r.time >= window);
-        if (recent.length >= 10) {
-          const sorted = recent.map((r) => r.duration).sort((a, b) => a - b);
-          const p99 = sorted[Math.floor(sorted.length * 0.99)] ?? 0;
-          if (p99 >= sc.p99Threshold) return `P99 ${p99.toFixed(0)}ms > ${sc.p99Threshold}ms`;
-        }
-      }
-
-      return undefined;
-    },
+    checkStopConditions: crossed,
 
     resetMetrics() {
       recentRequests.length = 0;

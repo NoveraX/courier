@@ -3,6 +3,7 @@ import { percentile } from "@/features/requests/percentile";
 import { formatDuration } from "@/lib/formatters";
 import type { MockRequestLog, MockRouteEntry, MockServerInfo } from "@/store/mock-slice";
 import { mockLogTone } from "./mock-log";
+import { HAPPY_PATH } from "./scenario-view";
 
 /* The figures that sample the latest answers read this many. */
 const RECENT = 60;
@@ -37,14 +38,23 @@ function delayOf(server: MockServerInfo): string {
 function scenarioFigure(server: MockServerInfo): MockFigure {
   const active = server.scenarios.find((s) => s.isActive);
   const name = active?.name ?? server.activeScenario;
+  if (!name || name === HAPPY_PATH) {
+    return {
+      key: "scenario",
+      label: "Scenario",
+      value: "Happy path",
+      sub: "0 overrides",
+      tone: "normal",
+      text: true,
+    };
+  }
+  const count = active?.endpointCount ?? 0;
   return {
     key: "scenario",
     label: "Scenario",
-    value: name ?? "Default",
-    sub: active
-      ? `${active.endpointCount} ${active.endpointCount === 1 ? "route" : "routes"} overridden`
-      : "every route as written",
-    tone: name ? "warn" : "normal",
+    value: name,
+    sub: `${count} ${count === 1 ? "override" : "overrides"}`,
+    tone: "warn",
     text: true,
   };
 }

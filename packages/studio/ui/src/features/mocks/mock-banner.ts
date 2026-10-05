@@ -1,13 +1,14 @@
 import type { MockServerInfo } from "@/store/mock-slice";
 import type { MocksFileStatus } from "@/store/mocks-file-status";
 import { mockFailureReason } from "./mock-failure-reason";
+import { HAPPY_PATH } from "./scenario-view";
 
 /** What the Mocks page's banner says, in what tone, and what its button does. */
 export interface MockBanner {
   tone: "err" | "warn" | "muted";
   title: string;
   detail: string;
-  action?: { label: string; kind: "start" | "stop-chaos" | "open-scenarios" } | undefined;
+  action?: { label: string; kind: "start" | "stop-chaos" | "reset-scenario" } | undefined;
 }
 
 const CHAOS_LABELS: Readonly<Record<MockServerInfo["chaosPreset"], string>> = {
@@ -50,18 +51,18 @@ function serverBanner(server: MockServerInfo): MockBanner | undefined {
     };
   }
   const scenario = server.scenarios.find((s) => s.isActive)?.name ?? server.activeScenario;
-  if (!scenario) return undefined;
+  if (!scenario || scenario === HAPPY_PATH) return undefined;
   return {
     tone: "warn",
     title: `Scenario · ${scenario}`,
     detail: "Its overrides answer on matching routes",
-    action: { label: "Open scenarios", kind: "open-scenarios" },
+    action: { label: "Reset to happy path", kind: "reset-scenario" },
   };
 }
 
 /**
  * The banner over the Mocks page: the mocks file that does not load, a
- * server that crashed or stopped, chaos in force, or a scenario on — in
+ * server that crashed or stopped, chaos in force, or a scenario other than the happy path on — in
  * that order — with the button that undoes it where Studio can.
  *
  * @param server - The server shown, if any

@@ -1,9 +1,8 @@
 import { AlertTriangle } from "lucide-react";
-
+import { TickBox } from "@/design/tick-box";
 import type { EndpointInventory, InventoryEndpoint, InventoryGroup } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
 import { cn } from "@/lib/utils";
-import { TickBox } from "../import/tick-box";
 import { InventoryRow } from "./inventory-row";
 
 /* An endpoint kept is ticked: an active one not marked to remove, a new one marked to add. */

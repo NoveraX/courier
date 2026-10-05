@@ -1,7 +1,7 @@
 import { methodText } from "@/design/method-color";
+import { TickBox } from "@/design/tick-box";
 import type { InventoryEndpoint } from "@/features/apis/types";
 import { cn } from "@/lib/utils";
-import { TickBox } from "../import/tick-box";
 
 const TAG: Readonly<Record<string, { label: string; className: string }>> = {
   available: { label: "New", className: "bg-ok-dim text-ok" },

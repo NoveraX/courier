@@ -3,10 +3,10 @@ import { Outlet } from "@tanstack/react-router";
 import { mockBannerOf } from "@/features/mocks/mock-banner";
 import { useMockWizard } from "@/mocks/wizard/use-mock-wizard";
 import { useStudioStore } from "@/store";
-import { MockWizard } from "@/views/mocks/wizard";
 import { MocksBanner } from "./mocks-banner";
 import { MocksBar } from "./mocks-bar";
 import { useMockServer } from "./use-mock-server";
+import { GenerateMocksDialog } from "./wizard/generate-mocks-dialog";
 
 /**
  * The Mocks pages: the bar with the tabs, the server in use and the way to
@@ -31,7 +31,7 @@ export function MocksLayout(): React.ReactNode {
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
         <Outlet />
       </div>
-      <MockWizard wizard={wizard} />
+      <GenerateMocksDialog wizard={wizard} />
     </div>
   );
 }

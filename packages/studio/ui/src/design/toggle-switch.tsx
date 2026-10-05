@@ -1,6 +1,8 @@
 import { cn } from "@/lib/utils";
 
 interface ToggleSwitchProps {
+  /** For a label elsewhere that names it. */
+  id?: string | undefined;
   checked: boolean;
   onChange: (checked: boolean) => void;
   /** What the switch turns on, for assistive technology. */
@@ -22,6 +24,7 @@ interface ToggleSwitchProps {
  * ```
  */
 export function ToggleSwitch({
+  id,
   checked,
   onChange,
   label,
@@ -30,6 +33,7 @@ export function ToggleSwitch({
 }: ToggleSwitchProps): React.ReactNode {
   return (
     <button
+      id={id}
       type="button"
       role="switch"
       aria-checked={checked}

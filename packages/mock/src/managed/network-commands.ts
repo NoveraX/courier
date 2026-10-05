@@ -62,7 +62,8 @@ export function handleChaosCommand(server: MockServer, cmd: Record<string, unkno
 
 /**
  * Tell Studio when a stop condition halts the mock's run: the run's end,
- * with its reason and length, and the settings it cleared.
+ * with its reason and length, that it halted, and then the settings left —
+ * none simulated, the stop conditions kept.
  *
  * @param server The worker's mock server
  * @example
@@ -83,11 +84,11 @@ export function reportHalts(server: MockServer): void {
         ...(durationMs === undefined ? {} : { durationMs }),
       },
     });
-    emitNetworkState(server);
     send({
       type: "event",
       event: { type: "mock:network:config", config: { autoHalted: true, haltReason: reason } },
     });
+    emitNetworkState(server);
   };
 }
 

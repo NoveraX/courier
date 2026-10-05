@@ -219,7 +219,7 @@ const { data, isLoading } = useQuery({
 
 ## Project structure
 
-```
+```text title="Project structure"
 shared/
   sources.ts                  # defineApi + defineGroup + endpoint
 server/
@@ -227,7 +227,7 @@ server/
 src/
   composables/
     useCaller.ts              # createProxyCaller<typeof api>("api")
-    useCourierQuery.ts          # optional generic fetch composable
+    useCourierQuery.ts        # optional generic fetch composable
   components/
     TaskList.vue              # data fetching with ref
     CreateTask.vue            # mutations with reactive

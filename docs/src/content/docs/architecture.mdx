@@ -31,7 +31,7 @@ export { api }
 
 Server-side code calls the backend with no proxy hop:
 
-```
+```text title="Direct mode"
 ┌──────────────────────────────────────────────────────────────┐
 │  Any Runtime (Node.js, Bun, Deno, RSC, Server Actions)       │
 │                                                              │
@@ -55,7 +55,7 @@ Server-side code calls the backend with no proxy hop:
 
 The browser sends requests through your server, which hides API keys and bypasses CORS:
 
-```
+```text title="Proxy mode"
 ┌──────────────────────────────────────────────────────────────┐
 │  Browser                                                     │
 │                                                              │
@@ -73,8 +73,8 @@ The browser sends requests through your server, which hides API keys and bypasse
 │  Your Server (Next.js, Nuxt, Hono, Express, Fastify...)      │
 │                                                              │
 │  Server Adapter → createHandler({ sources })                 │
-│       │  ✓ origin validation                                 │
-│       │  ✓ cookies only where named                          │
+│       │  → origin validation                                 │
+│       │  → cookies only where named                          │
 │       ▼                                                      │
 │  executeRequest(sources, payload, context)                   │
 │       │  → middleware chain                                  │

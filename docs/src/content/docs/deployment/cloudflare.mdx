@@ -47,9 +47,9 @@ export default app
 
 Cloudflare terminates connections after **100 seconds of inactivity**. The Courier SSE server sends heartbeat pings every 25 seconds by default, which keeps the connection alive.
 
-```
+```text title="Heartbeat timeline"
 Timeline: 0s ───── 25s (ping) ───── 50s (ping) ───── 75s (ping) ───── 100s limit
-                ✓ alive          ✓ alive          ✓ alive          ✓ reset
+                ↑ alive          ↑ alive          ↑ alive          ↑ reset
 ```
 
 <Callout variant="tip" title="Default heartbeat is sufficient">

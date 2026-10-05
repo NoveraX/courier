@@ -1,5 +1,6 @@
+import { GeistMono } from "geist/font/mono"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Geist } from "next/font/google"
 import type { ReactNode } from "react"
 
 import { QueryProvider } from "@/site/query-provider"
@@ -12,10 +13,10 @@ const geistSans = Geist({
   subsets: ["latin"],
 })
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-})
+/* Code is set in the whole Geist Mono, from the geist package rather than Google's
+   subsets: its arrows, triangles and box drawing are one cell wide like every other
+   glyph, so diagrams and file trees line up. */
+const geistMono = GeistMono
 
 export const metadata: Metadata = {
   title: {

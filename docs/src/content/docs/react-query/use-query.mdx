@@ -8,7 +8,7 @@ Access `useQuery` through the query caller's dot-notation API. Types are fully i
 const result = q.users.useQuery("getAll", options)
 
 // q.<group>.useQuery(method, options?)
-// group   — endpoint group name (e.g. "users")
+// group   — endpoint group name (e.g. "users"), or a group inside one: q.billing.invoices
 // method  — method name within the group (e.g. "getAll")
 // options — { variables?, requestOptions?, ...reactQueryOptions }
 ```

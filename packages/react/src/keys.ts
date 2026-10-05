@@ -1,38 +1,44 @@
-import type { DefinedApi } from "@noverax/courier/define";
+import type { DefinedApi, EndpointNamesAt, GroupAtPath, GroupPaths } from "@noverax/courier/define";
 import { getSourceName } from "@noverax/courier/define";
 
-type Groups<TApi extends DefinedApi> = TApi["options"]["groups"];
-type GroupKey<TApi extends DefinedApi> = keyof Groups<TApi> & string;
-type MethodKey<TApi extends DefinedApi, TGroup extends GroupKey<TApi>> = Exclude<
-  keyof Groups<TApi>[TGroup],
-  "options"
-> &
-  string;
+import { buildQueryKey, groupKeyParts } from "./query-key";
+
+type GroupKey<TApi extends DefinedApi> = GroupPaths<TApi>;
+type MethodKey<TApi extends DefinedApi, TGroup extends GroupKey<TApi>> = EndpointNamesAt<
+  GroupAtPath<TApi, TGroup>
+>;
+
+/** A group's path as a key's elements: `"billing.invoices"` is `["billing", "invoices"]`. */
+type GroupParts<TGroup extends string> = TGroup extends `${infer THead}.${infer TRest}`
+  ? [THead, ...GroupParts<TRest>]
+  : [TGroup];
 
 /**
  * Type-safe query key factory returned by `createQueryKeys` and `createProxyQueryKeys`.
  *
- * Returns hierarchical react-query keys: `[source, group, method?, variables?]`.
+ * Returns hierarchical react-query keys: `[source, ...group, method?, variables?]`,
+ * a group inside another named by its path — `"billing.invoices"` — and
+ * keyed one element per group, so invalidating the outer group's key
+ * invalidates every group inside it too.
  * Use for cache invalidation, prefetching, and optimistic updates.
  */
 export interface QueryKeyFactory<TApi extends DefinedApi> {
-  <TGroup extends GroupKey<TApi>>(group: TGroup): readonly [string, TGroup];
+  <TGroup extends GroupKey<TApi>>(group: TGroup): readonly [string, ...GroupParts<TGroup>];
   <TGroup extends GroupKey<TApi>, TMethod extends MethodKey<TApi, TGroup>>(
     group: TGroup,
     method: TMethod,
-  ): readonly [string, TGroup, TMethod];
+  ): readonly [string, ...GroupParts<TGroup>, TMethod];
   <TGroup extends GroupKey<TApi>, TMethod extends MethodKey<TApi, TGroup>>(
     group: TGroup,
     method: TMethod,
     variables: Record<string, unknown>,
-  ): readonly [string, TGroup, TMethod, Record<string, unknown>];
+  ): readonly [string, ...GroupParts<TGroup>, TMethod, Record<string, unknown>];
 }
 
 function buildKeyFactory<TApi extends DefinedApi>(source: string): QueryKeyFactory<TApi> {
   function queryKey(group: string, method?: string, variables?: Record<string, unknown>) {
-    if (method === undefined) return [source, group] as const;
-    if (variables !== undefined) return [source, group, method, variables] as const;
-    return [source, group, method] as const;
+    if (method === undefined) return [source, ...groupKeyParts(group)];
+    return buildQueryKey(source, group, method, variables);
   }
   return queryKey as QueryKeyFactory<TApi>;
 }
@@ -55,8 +61,10 @@ function buildKeyFactory<TApi extends DefinedApi>(source: string): QueryKeyFacto
  * queryKeys("users")                          // → ["api", "users"]
  * queryKeys("users", "getAll")                // → ["api", "users", "getAll"]
  * queryKeys("users", "getById", { id: 1 })    // → ["api", "users", "getById", { id: 1 }]
+ * queryKeys("billing.invoices", "list")       // → ["api", "billing", "invoices", "list"]
  *
  * queryClient.invalidateQueries({ queryKey: queryKeys("users") });
+ * queryClient.invalidateQueries({ queryKey: queryKeys("billing") }); // billing.invoices too
  * ```
  */
 export function createQueryKeys<TApi extends DefinedApi>(api: TApi): QueryKeyFactory<TApi> {

@@ -8,8 +8,8 @@ import {
   shapeOfClient,
 } from "@noverax/courier/internal";
 
-import { cachedGroupHooks } from "./cached-group-hooks";
 import { createGroupHooks } from "./group-hooks";
+import { groupNodes } from "./group-nodes";
 import type { ChannelFn } from "./hooks/use-channel";
 import type { SubscribeFn } from "./hooks/use-subscription";
 import type { QueryCallerClient } from "./types";
@@ -108,10 +108,12 @@ export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDef
 
   /* A group named like a hook the runtime reads, such as `then`, is reached
      only when the caller was given what the source declares. */
+  const shape = shapeOfClient({ source: defaults?.source, boundary: defaults?.boundary });
   return createClientRoot(
-    shapeOfClient({ source: defaults?.source, boundary: defaults?.boundary }),
-    cachedGroupHooks((group) =>
-      createGroupHooks(source, group, httpExecutor, subscribeFn, channelFn),
+    shape,
+    groupNodes(
+      (group) => createGroupHooks(source, group, httpExecutor, subscribeFn, channelFn),
+      shape,
     ),
   );
 }

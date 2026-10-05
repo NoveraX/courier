@@ -8,8 +8,8 @@ import {
   shapeOfClient,
 } from "@noverax/courier/internal";
 
-import { cachedGroupHooks } from "./cached-group-hooks";
 import { createGroupHooks } from "./group-hooks";
+import { groupNodes } from "./group-nodes";
 import type { ChannelFn } from "./hooks/use-channel";
 import type { SubscribeFn } from "./hooks/use-subscription";
 import type { QueryCallerClient } from "./types";
@@ -73,10 +73,12 @@ export function createQueryCaller<TApi extends DefinedApi>(
   const channelFn: ChannelFn = (group, method, variables) =>
     streaming.wsChannel(group, method, variables, {});
 
+  const shape = shapeOfClient({ source: api });
   return createClientRoot(
-    shapeOfClient({ source: api }),
-    cachedGroupHooks((group) =>
-      createGroupHooks(sourceName, group, httpExecutor, subscribeFn, channelFn),
+    shape,
+    groupNodes(
+      (group) => createGroupHooks(sourceName, group, httpExecutor, subscribeFn, channelFn),
+      shape,
     ),
   ) as QueryCallerClient<TApi>;
 }

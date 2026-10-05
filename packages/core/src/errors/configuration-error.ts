@@ -131,6 +131,11 @@ export type ConfigurationErrorCode =
    */
   | "RESERVED_ENDPOINT_NAME"
   /**
+   * A group or an endpoint was named with a dot, which separates the groups
+   * of a path — `billing.invoices.list` — so the name would be read as two.
+   */
+  | "DOTTED_NAME"
+  /**
    * A proxy call's variables hold binary data — a Blob, an ArrayBuffer or a
    * typed array — which JSON cannot carry to the proxy. It belongs in a
    * FormData.

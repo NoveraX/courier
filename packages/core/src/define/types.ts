@@ -20,7 +20,7 @@ type ClientAccessorNames = { readonly raw?: never; readonly with?: never };
  */
 export type OwnEndpoints = EndpointRecord & { readonly options?: never } & ClientAccessorNames;
 
-/** Groups a source may be defined with: any name but `raw` or `with`, which a client answers itself. */
+/** Groups a source or a group may be defined with: any name but `raw` or `with`, which a client answers itself. */
 export type OwnGroups = GroupRecord & ClientAccessorNames;
 
 /** Configuration for defineGroup() */
@@ -29,10 +29,27 @@ export type DefineGroupConfig<TEndpoints extends EndpointRecord> = GroupOptions 
   endpoints: TEndpoints;
 };
 
+/** Configuration for defineGroup() with groups inside it */
+export type DefineNestingGroupConfig<
+  TEndpoints extends EndpointRecord,
+  TGroups extends GroupRecord,
+> = GroupOptions & {
+  /** The group's own endpoints, beside its groups */
+  endpoints?: TEndpoints | undefined;
+  /** Groups inside this one, each reached under its name and its prefix after this one's */
+  groups: TGroups;
+};
+
 /** Result of defineGroup() — endpoint functions merged with group options */
 export type DefinedGroup<TEndpoints extends EndpointRecord = EndpointRecord> = TEndpoints & {
   options: GroupOptions;
 };
+
+/** Result of defineGroup() with groups inside it, kept under `options.groups` as a source keeps its own */
+export type DefinedNestingGroup<
+  TEndpoints extends EndpointRecord = EndpointRecord,
+  TGroups extends GroupRecord = GroupRecord,
+> = TEndpoints & { options: GroupOptions & { groups: TGroups } };
 
 /** Constraint for groups parameter in defineApi() */
 export type GroupRecord = Record<

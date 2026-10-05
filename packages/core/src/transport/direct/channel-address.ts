@@ -6,6 +6,7 @@
 import { getSourceName } from "../../define/api";
 import { buildDirectWSUrl, buildWSTopic } from "../../realtime/ws-address";
 import { addressCall } from "./address";
+import { placedEndpoint } from "./placed-endpoint";
 import { fieldOf, textOf } from "./read-definition";
 
 /** Where a channel is: the socket's URL, and the topic it is subscribed to on it */
@@ -23,7 +24,7 @@ export interface ChannelAddress {
  * variables it is sent.
  *
  * @param api - The source
- * @param group - The channel's group, empty for none
+ * @param group - The channel's group's path, empty for none
  * @param method - The channel's name
  * @param variables - What it is subscribed with; its path takes its parameters from them
  * @returns The address
@@ -41,9 +42,8 @@ export function channelAddress(
   variables: unknown,
 ): ChannelAddress {
   const options = fieldOf(api, "options");
-  const groupDefinition = group ? fieldOf(fieldOf(options, "groups"), group) : api;
-  const prefix = group ? textOf(fieldOf(groupDefinition, "options"), "prefix") : "";
-  const { path } = addressCall(fieldOf(groupDefinition, method), method, variables);
+  const { definition, prefix } = placedEndpoint(api, group, method);
+  const { path } = addressCall(definition, method, variables);
   const sourceName = getSourceName(api) ?? "_";
   return {
     url: buildDirectWSUrl(textOf(options, "baseURL"), prefix, path),

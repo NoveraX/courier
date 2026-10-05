@@ -111,7 +111,7 @@ const response = await caller.users.raw.getById({ id: "5" })
 
 ## Body composition
 
-The endpoint is always named in the URL — `_s` for the source, `_g` for the group, `_m` for the method — so the server knows which call a request is before its body arrives. How the body is built depends on the type of variables you pass:
+The endpoint is always named in the URL — `_s` for the source, `_g` for the group, `_m` for the method — so the server knows which call a request is before its body arrives. A group inside another is named by its path: `client.billing.invoices.list()` sends `_g=billing.invoices`. How the body is built depends on the type of variables you pass:
 
 ```ts title="JSON vs FormData"
 // JSON body (default for objects)

@@ -226,9 +226,8 @@ describe("executeRequest", () => {
       expect(result).toEqual(responseData);
     });
 
-    it("falls back to source method if not found in group", async () => {
-      const responseData = { health: "ok" };
-      fetchSpy.mockResolvedValue(mockFetchResponse(responseData));
+    it("finds a group's endpoints alone, never a source's own of the same name", async () => {
+      fetchSpy.mockResolvedValue(mockFetchResponse({ health: "ok" }));
 
       const healthFn = vi.fn((methods: HttpMethods) => methods.get("health"));
 
@@ -239,14 +238,10 @@ describe("executeRequest", () => {
       };
       const sources = { api: source };
 
-      const result = await executeRequest(sources, {
-        source: "api",
-        group: "misc",
-        method: "health",
-      });
-
-      expect(healthFn).toHaveBeenCalled();
-      expect(result).toEqual(responseData);
+      await expect(
+        executeRequest(sources, { source: "api", group: "misc", method: "health" }),
+      ).rejects.toMatchObject({ status: 400 });
+      expect(healthFn).not.toHaveBeenCalled();
     });
   });
 

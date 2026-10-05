@@ -1,3 +1,4 @@
+import type { GroupsAt } from "../define/group-path-types";
 import type {
   AnyEndpoint,
   InferKind,
@@ -27,12 +28,18 @@ type GroupMethods<TGroup, TRaw extends boolean, TStream extends boolean> = {
 /** Conditionally expose .raw only when not already in raw mode */
 type RawAccessor<TClient> = { raw: TClient };
 
-/** A group with typed methods, .raw accessor, and .with() */
+/** The groups inside a group, each a client of its own: `client.billing.invoices`. */
+type SubGroupClients<TGroup, TRaw extends boolean, TStream extends boolean> = {
+  [K in keyof GroupsAt<TGroup>]: GroupClient<GroupsAt<TGroup>[K], TRaw, TStream>;
+};
+
+/** A group with typed methods, the groups inside it, .raw accessor, and .with() */
 export type GroupClient<
   TGroup,
   TRaw extends boolean = false,
   TStream extends boolean = false,
 > = GroupMethods<TGroup, TRaw, TStream> &
+  SubGroupClients<TGroup, TRaw, TStream> &
   (TRaw extends true ? unknown : RawAccessor<GroupClient<TGroup, true, TStream>>) & {
     with<const TOptions extends WithOptions>(
       options: TOptions,

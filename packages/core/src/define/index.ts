@@ -33,6 +33,14 @@ export { type FormFieldEncoding, formBody } from "./form-body";
 export { formQuery } from "./form-query";
 export { defineGroup } from "./group";
 export type {
+  EndpointAtPath,
+  EndpointNamesAt,
+  GroupAtPath,
+  GroupedEndpointPaths,
+  GroupPaths,
+  GroupsAt,
+} from "./group-path-types";
+export type {
   AnyEndpoint,
   EndpointKind,
   InferKind,
@@ -59,7 +67,9 @@ export type {
   DefinedFlatApi,
   DefinedGroup,
   DefinedMixedApi,
+  DefinedNestingGroup,
   DefineGroupConfig,
+  DefineNestingGroupConfig,
   EndpointRecord,
   GroupRecord,
   OwnEndpoints,

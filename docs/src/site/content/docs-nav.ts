@@ -17,7 +17,8 @@ import {
   Zap,
 } from "lucide-react"
 
-export type NavItem = {
+/** A page in the docs' navigation. */
+export interface NavItem {
   title: string
   href: string
   description?: string
@@ -25,11 +26,18 @@ export type NavItem = {
   disabled?: boolean
 }
 
-export type NavSection = {
+/** A section of the docs' navigation and its pages. */
+export interface NavSection {
   label: string
   icon: LucideIcon
   items: NavItem[]
   defaultOpen?: boolean
+}
+
+/** Where a page sits in the navigation. */
+export interface NavContext {
+  section: NavSection
+  item: NavItem
 }
 
 export const docsNav: NavSection[] = [
@@ -251,13 +259,31 @@ export const docsNav: NavSection[] = [
   },
 ]
 
-/** Flatten all enabled nav items in order (for pagination) */
+/**
+ * Every page the navigation lists, in order, without the disabled ones —
+ * what Previous and Next walk through.
+ *
+ * @returns The pages
+ * @example
+ * ```ts
+ * flatNavItems()[0]?.href // "/docs/introduction"
+ * ```
+ */
 export function flatNavItems(): NavItem[] {
   return docsNav.flatMap((section) => section.items.filter((item) => !item.disabled))
 }
 
-/** Find the section and item for a given pathname */
-export function findNavContext(pathname: string) {
+/**
+ * The section and the page of the navigation an address belongs to.
+ *
+ * @param pathname - The page's address
+ * @returns Its section and its page, or `null` when the navigation does not list it
+ * @example
+ * ```ts
+ * findNavContext("/docs/introduction")?.section.label // "Introduction"
+ * ```
+ */
+export function findNavContext(pathname: string): NavContext | null {
   for (const section of docsNav) {
     const item = section.items.find((i) => i.href === pathname)
     if (item) return { section, item }

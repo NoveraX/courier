@@ -5,6 +5,8 @@ import { Package } from "lucide-react"
 import { cn } from "@/site/cn"
 import type { ReferenceKind } from "@/site/content/reference"
 import { AssistantActions } from "@/site/layout/assistant-actions"
+import type { ExportFilterState } from "./export-filter"
+import { ExportFilter } from "./export-filter"
 import { KIND_LOOK } from "./kind-look"
 
 /** An export as the side list names it. */
@@ -16,6 +18,7 @@ export interface ListedExport {
 
 interface ReferenceSidebarProps {
   exports: readonly ListedExport[]
+  filter: ExportFilterState
   /** The export being read. */
   active: string | undefined
   title: string
@@ -23,20 +26,27 @@ interface ReferenceSidebarProps {
 }
 
 /**
- * The exports beside the API reference, each marked by its kind, the one
- * being read lit — and copying the reference or asking an assistant about
- * it at the foot.
+ * The exports beside the API reference, under a filter over them, each
+ * marked by its kind, the one being read lit — and copying the reference
+ * or asking an assistant about it at the foot.
  *
- * @param props - The exports listed, the one being read, and the page's title and Markdown
+ * @param props - The exports listed, their filter, the one being read, and the page's title and Markdown
  * @returns The sidebar
  * @example
  * ```tsx
- * <ReferenceSidebar exports={listed} active="create-caller" title="API reference" markdown={md} />
+ * <ReferenceSidebar exports={listed} filter={filter} active="create-caller" title="API reference" markdown={md} />
  * ```
  */
-export function ReferenceSidebar({ exports, active, title, markdown }: ReferenceSidebarProps) {
+export function ReferenceSidebar({
+  exports,
+  filter,
+  active,
+  title,
+  markdown,
+}: ReferenceSidebarProps) {
   return (
-    <aside className="sticky top-14 hidden h-[calc(100vh-56px)] self-start overflow-y-auto pt-7 pb-15 min-[1000px]:block">
+    <aside className="sticky top-14 hidden h-[calc(100vh-56px)] self-start overflow-y-auto pt-6 pr-4 pb-15 [scrollbar-width:thin] min-[1000px]:block">
+      <ExportFilter {...filter} />
       <p className="m-0 mb-2.5 flex items-center gap-1.75 text-label font-semibold text-fg">
         <Package aria-hidden="true" className="size-3.25 text-fg-subtle" />
         Exports

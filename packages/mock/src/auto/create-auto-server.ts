@@ -1,5 +1,6 @@
 import type { MockServer, MockServerOptions } from "../server/create-mock-server";
 import { createMockServer } from "../server/create-mock-server";
+import { generatedRoutes } from "../server/generated-routes";
 import type { MockStore } from "../store";
 import type { AnyMockScenario, NetworkConfig, UntypedMockFn } from "../types";
 import { seedAllCollections } from "./auto-seed";
@@ -128,7 +129,8 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   // Register auto-CRUD handlers in the BASE layer via server.mock.
   // They persist across all scenario switches (switching to server-error, empty, etc.
   // writes to the scenario layer which has priority, but base is always the fallback).
-  buildAutoHandlers(routes, server.store, server.mock);
+  const generated = generatedRoutes(server);
+  for (const key of buildAutoHandlers(routes, server.store, server.mock)) generated.add(key);
 
   // User overrides also go to the base layer, on top of auto-CRUD. A decorator-only
   // override (.withLatency, .withHeaders) builds on a copy of the auto-CRUD handler;

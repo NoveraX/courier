@@ -25,6 +25,7 @@ import type { AnyMockScenario } from "../types";
 import { registerAdminRoutes } from "./admin-api";
 import { registerRequestRoutes } from "./api-routes";
 import { applyMiddleware } from "./app-middleware";
+import { generatedRoutes, routeKey } from "./generated-routes";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { persistedStore } from "./persisted-store";
 import type { RequestHooks } from "./route-types";
@@ -156,8 +157,8 @@ export function createMockServer(config?: MockServerOptions): MockServer {
 
     getRouteSource(group, method) {
       if (registry.hasScenario(group, method)) return "scenario";
-      if (registry.baseCount(group, method) > 1) return "override";
-      return "auto";
+      const generated = generatedRoutes(mockServer).has(routeKey(group, method)) ? 1 : 0;
+      return registry.baseCount(group, method) > generated ? "override" : "auto";
     },
 
     ...lifecycle,

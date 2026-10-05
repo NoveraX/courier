@@ -24,13 +24,13 @@ type CmdResult = { ok: boolean; data?: unknown; error?: string };
  */
 export function handleNetworkCommand(server: MockServer, cmd: Record<string, unknown>): CmdResult {
   const state = server.networkState;
-  const prevPreset = state.latencyPreset;
+  const prev = { preset: state.latencyPreset, startedAt: state.latencyStartedAt };
   const patch = networkCommandPatch(cmd.config);
 
   state.mergeConfig(patch);
   recordPresets(state, patch, { latency: presetOf(cmd.preset) });
   state.resetMetrics();
-  emitPresetTransition(prevPreset, state.latencyPreset, "none");
+  emitPresetTransition(prev, state.latencyPreset, "none");
   emitNetworkState(server);
   return { ok: true, data: { updated: true } };
 }
@@ -49,13 +49,13 @@ export function handleNetworkCommand(server: MockServer, cmd: Record<string, unk
  */
 export function handleChaosCommand(server: MockServer, cmd: Record<string, unknown>): CmdResult {
   const state = server.networkState;
-  const prevPreset = state.chaosPreset;
+  const prev = { preset: state.chaosPreset, startedAt: state.chaosStartedAt };
   const patch = networkCommandPatch(cmd.config);
 
   state.mergeConfig(patch);
   recordPresets(state, patch, { chaos: presetOf(cmd.preset) ?? "unstable" });
   state.resetMetrics();
-  emitPresetTransition(prevPreset, state.chaosPreset, "none");
+  emitPresetTransition(prev, state.chaosPreset, "none");
   emitNetworkState(server);
   return { ok: true, data: { updated: true } };
 }
@@ -64,6 +64,7 @@ export function checkAutoHalt(server: MockServer): void {
   const reason = server.networkState.checkStopConditions();
   if (!reason) return;
 
+  const ran = lengthSince(server.networkState.startedAt);
   server.networkState.setConfig(undefined);
   server.networkState.resetMetrics();
   send({
@@ -74,6 +75,7 @@ export function checkAutoHalt(server: MockServer): void {
       mode: "chaos",
       reason,
       errorRate: 0,
+      ...ran,
     },
   });
   emitNetworkState(server);
@@ -87,16 +89,31 @@ function presetOf(preset: unknown): string | undefined {
   return typeof preset === "string" ? preset : undefined;
 }
 
+/* How long a run that started at `startedAt` lasted, for its stop event; nothing when its start is unknown. */
+function lengthSince(startedAt: number | null): { durationMs?: number } {
+  return startedAt === null ? {} : { durationMs: Date.now() - startedAt };
+}
+
 /** Compare prev/next preset names and emit appropriate experiment events */
-function emitPresetTransition(prev: string, next: string, offValue: string): void {
-  if (prev === next) return;
-  const wasActive = prev !== offValue && prev !== "none" && prev !== "stable";
+function emitPresetTransition(
+  prev: { preset: string; startedAt: number | null },
+  next: string,
+  offValue: string,
+): void {
+  if (prev.preset === next) return;
+  const wasActive = prev.preset !== offValue && prev.preset !== "none" && prev.preset !== "stable";
   const isActive = next !== offValue && next !== "none" && next !== "stable";
 
   if (wasActive) {
     send({
       type: "event",
-      event: { type: "mock:experiment:event", eventType: "stopped", mode: prev, errorRate: 0 },
+      event: {
+        type: "mock:experiment:event",
+        eventType: "stopped",
+        mode: prev.preset,
+        errorRate: 0,
+        ...lengthSince(prev.startedAt),
+      },
     });
   }
   if (isActive) {

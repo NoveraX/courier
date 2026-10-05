@@ -1,8 +1,11 @@
 import { pathShape } from "../server/path-shape";
 import type { CrudOperation } from "./route-types";
 
+/* A QUERY reads as GET does, asking with a body: the collection's records,
+   or the one record its path names. */
 const COLLECTION_OPERATIONS = new Map<string, CrudOperation>([
   ["GET", "list"],
+  ["QUERY", "list"],
   ["POST", "create"],
   ["PUT", "upsert"],
   ["DELETE", "deleteAll"],
@@ -10,6 +13,7 @@ const COLLECTION_OPERATIONS = new Map<string, CrudOperation>([
 
 const RECORD_OPERATIONS = new Map<string, CrudOperation>([
   ["GET", "get"],
+  ["QUERY", "get"],
   ["PUT", "replace"],
   ["PATCH", "update"],
   ["DELETE", "delete"],

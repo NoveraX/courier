@@ -1,5 +1,4 @@
-/** Methods that read: a request by one of them leaves the store as it was. */
-const READING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS"]);
+import { isReadingMethod } from "@noverax/courier/internal";
 
 /** The requests in flight that may write to the store, by request id. */
 export interface WritesInFlight {
@@ -13,7 +12,8 @@ export interface WritesInFlight {
  * Track which requests in flight may write to the store, so the store is
  * sent to Studio again once one of them ends: the Mocks dashboard's counts
  * and the Store view then follow what requests change, not only what
- * Studio's own store commands do.
+ * Studio's own store commands do. A request whose verb only reads — GET,
+ * HEAD, OPTIONS or QUERY — leaves the store as it was.
  *
  * @returns The tracker; a request it was not told of reads as no write
  *
@@ -30,7 +30,7 @@ export function trackWritesInFlight(): WritesInFlight {
   const writes = new Set<string>();
   return {
     start(requestId, httpMethod) {
-      if (!READING_METHODS.has(httpMethod.toUpperCase())) writes.add(requestId);
+      if (!isReadingMethod(httpMethod)) writes.add(requestId);
     },
     end(requestId) {
       return writes.delete(requestId);

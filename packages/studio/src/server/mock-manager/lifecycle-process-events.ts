@@ -11,6 +11,7 @@ import { createLogger } from "@noverax/courier";
 import { isPlainObject } from "../is-plain-object";
 import type { MockLog } from "../storage/mock-log";
 import { applyWorkerEvent, NO_NETWORK, networkStateOf } from "./apply-worker-event";
+import type { ConditionsKeeper } from "./mock-conditions";
 import type { ProcessManagerEvents } from "./process-manager";
 import type { ServerState } from "./types";
 
@@ -27,6 +28,8 @@ export interface ProcessEventsContext {
   mockLog?: MockLog | undefined;
   /** Ask a mock for its store whole, when Studio's copy fell out of step with it. */
   resendStore: (serverId: string) => void;
+  /** Keeps the conditions set on each mock, and sets them again when it starts again. */
+  conditions?: ConditionsKeeper | undefined;
 }
 
 export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEvents {
@@ -52,7 +55,9 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
         scenarios: data.scenarios ?? [],
         activeScenario: null,
         ...(isPlainObject(data.network) ? networkStateOf(data.network) : NO_NETWORK),
+        declaredNetwork: JSON.stringify(data.network ?? {}),
       });
+      ctx.conditions?.restore(serverId);
     },
 
     /* Every failure is said where the developer is looking — the terminal —
@@ -105,6 +110,9 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
       ctx.mockLog?.record(shown);
       const state = servers.get(serverId);
       if (state && !applyWorkerEvent(state, event)) ctx.resendStore(serverId);
+      if (type === "mock:network:config" || type === "mock:scenario:active") {
+        ctx.conditions?.keep(serverId);
+      }
     },
   };
 }

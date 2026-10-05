@@ -68,6 +68,14 @@ export function createActions(
       set((s) => ({
         requests: s.requests.map((r) => (r.id === id ? { ...r, pinned: !r.pinned } : r)),
       })),
+    setPinned: (ids, pinned) => {
+      const named = new Set(ids);
+      set((s) => ({
+        requests: s.requests.map((r) =>
+          named.has(r.id) && (r.pinned === true) !== pinned ? { ...r, pinned } : r,
+        ),
+      }));
+    },
 
     handleEvents: (events) => {
       const {

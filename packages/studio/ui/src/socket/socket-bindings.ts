@@ -7,6 +7,7 @@ import { bindApis } from "./apis-bindings";
 import { isBindingErrorPayload, isBindingSnapshot } from "./binding-guards";
 import { bindEvents } from "./event-bindings";
 import { isPlainObject } from "./is-plain-object";
+import { bindPageState } from "./page-state-bindings";
 import {
   isPlaygroundChunkPayload,
   isPlaygroundEndPayload,
@@ -40,6 +41,8 @@ export interface Bindings {
   unbindReadOnly: () => void;
   /** Removes the listener for what Settings → Storage cleared (`bindStorageCleared`). */
   unbindStorage: () => void;
+  /** Removes the listeners for what the page keeps in the project (`bindPageState`). */
+  unbindPageState: () => void;
 }
 
 export function buildBindings(s: Socket, store: typeof useStudioStore.getState): Bindings {
@@ -103,6 +106,7 @@ export function buildBindings(s: Socket, store: typeof useStudioStore.getState):
     unbindEvents: bindEvents(s, store),
     unbindReadOnly: bindReadOnly(s),
     unbindStorage: bindStorageCleared(s, store),
+    unbindPageState: bindPageState(s),
   };
 
   s.on("connect", b.onConnect);
@@ -142,4 +146,5 @@ export function unbind(s: Socket, b: Bindings): void {
   b.unbindEvents();
   b.unbindReadOnly();
   b.unbindStorage();
+  b.unbindPageState();
 }

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { endpointName } from "@/features/requests/request-parts";
 import { requestAsJson, requestSnippet } from "@/features/requests/request-snippets";
+import { useTogglePin } from "@/hooks/use-toggle-pin";
 import { useReplay } from "@/inspector/use-replay";
 import { copyToClipboard } from "@/lib/clipboard";
 import { downloadFile } from "@/lib/export";
@@ -58,7 +59,7 @@ export function RowMenu({ children }: RowMenuProps): React.ReactNode {
 }
 
 function Items({ request }: { request: RequestEntry }): React.ReactNode {
-  const togglePin = useStudioStore((s) => s.togglePin);
+  const togglePin = useTogglePin();
   const replay = useReplay()(request);
   const name = endpointName(request);
   const json = () => requestAsJson(request);

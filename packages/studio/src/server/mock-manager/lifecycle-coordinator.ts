@@ -17,6 +17,7 @@ import { createCommandHandler } from "./command-handler";
 import type { CommandReply } from "./command-replies";
 import { createProcessEvents } from "./lifecycle-process-events";
 import { createServerOps } from "./lifecycle-server-ops";
+import { keepConditions } from "./mock-conditions";
 import { declaredPorts } from "./mock-ports";
 import { createMockRegistration } from "./mock-registration";
 import { createMocksFileState, type MocksFileStatus } from "./mocks-file-state";
@@ -66,6 +67,11 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
       emit,
       updateAndEmit,
       mockLog: config.mockLog,
+      conditions:
+        config.conditions &&
+        keepConditions(servers, config.conditions, (serverId, command) =>
+          processManager.sendCommand(serverId, command),
+        ),
       resendStore: (serverId) =>
         runVoid(
           `resendStore(${serverId})`,
@@ -117,6 +123,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
     onRemoved(key) {
       const gone = () => {
         emit("mock:server:disconnect", { serverId: key });
+        config.conditions?.forget(key);
         const declaredAgain = config.mockRegistry.getEntries().find((e) => e.key === key);
         if (declaredAgain && !closed) {
           runVoid(`register(${key})`, apply(declaredAgain));

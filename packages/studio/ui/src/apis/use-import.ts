@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { INITIAL_IMPORT_STATE } from "@/features/apis/initial-import-state";
 import { consentFor, toggleConfirmed } from "@/features/apis/plan-consent";
 import { readPlanRefusal } from "@/features/apis/plan-refusal";
@@ -14,6 +14,7 @@ import {
   toggleGroupReducer,
   writeGeneratedFiles,
 } from "./import-actions";
+import { keptImport, useKeptImport } from "./kept-import";
 
 export interface UseImportReturn {
   state: ImportState;
@@ -58,11 +59,23 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
   const [open, setOpen] = useState(false);
   const settings = useStudioStore((s) => s.settings);
 
+  /* An import left unfinished opens again with what was typed, unless another source is asked for. */
   const openWizard = useCallback((source?: ImportSource) => {
-    setState({ ...INITIAL_IMPORT_STATE, source: source ?? "url" });
+    const kept = useKeptImport.getState().kept;
+    const resume = kept !== null && (source === undefined || source === kept.source);
+    setState({
+      ...INITIAL_IMPORT_STATE,
+      source: resume ? kept.source : (source ?? "url"),
+      content: resume ? kept.content : "",
+    });
     setError(null);
     setOpen(true);
   }, []);
+
+  /* What is typed is kept until a write ends the import. */
+  useEffect(() => {
+    if (open) useKeptImport.setState({ kept: keptImport(state.source, state.content) });
+  }, [open, state.source, state.content]);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -113,6 +126,7 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
     setError(null);
     try {
       const settled = settleWrite(state, await writeGeneratedFiles(state));
+      useKeptImport.setState({ kept: null });
       if (settled.state.step === "declare") setState(settled.state);
       else close();
       onWritten?.(settled.message);

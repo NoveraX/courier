@@ -2,6 +2,7 @@ import type { ChildScenarioMeta, DescribedRoute } from "@noverax/courier-mock/ma
 import type { Namespace } from "socket.io";
 
 import type { MockRegistry } from "../mock-registry";
+import type { MockConditionsStore } from "../storage/mock-conditions-store";
 import type { MockLog } from "../storage/mock-log";
 import type { WatcherStatus } from "../watcher-status";
 import type { CommandReply } from "./command-replies";
@@ -49,6 +50,8 @@ export interface ServerState {
   chaosPreset?: string | undefined;
   chaosStartedAt?: number | null | undefined;
   networkConfig?: Record<string, unknown> | undefined;
+  /** The network conditions the mocks file declared when the mock last started, as JSON. */
+  declaredNetwork?: string | undefined;
 }
 
 export interface CoordinatorConfig {
@@ -63,6 +66,8 @@ export interface CoordinatorConfig {
   storeFile: (mockKey: string) => string | null;
   /** Keeps the requests each mock answered, for the pages that connect later. */
   mockLog?: MockLog;
+  /** Keeps the conditions set on each mock, for when it starts again. */
+  conditions?: MockConditionsStore;
 }
 
 /** What a mock's worker is started with. */

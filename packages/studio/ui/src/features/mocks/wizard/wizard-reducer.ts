@@ -1,4 +1,5 @@
 import { DRAFT_LIMITS } from "./draft-limits";
+import type { KeptWizard } from "./kept-wizard";
 import { suggestMockKey } from "./suggest-mock-key";
 import type { MockDraft, MockWizardState } from "./types";
 import { UNPLANNED } from "./unplanned";
@@ -7,7 +8,7 @@ import { withApplyResult } from "./with-apply-result";
 import { withPreview } from "./with-preview";
 
 export type MockWizardAction =
-  | { type: "open" }
+  | { type: "open"; resume?: KeptWizard | undefined }
   | { type: "toggleSource"; source: string; declaredKeys: readonly string[] }
   | { type: "editDraft"; index: number; patch: Partial<Omit<MockDraft, "source">> }
   | { type: "removeDraft"; index: number }
@@ -148,6 +149,12 @@ function onDrafts(state: MockWizardState, action: MockWizardAction): MockWizardS
   }
 }
 
+/* A wizard opens where it was left — its step and its drafts — or from its first step. */
+function opened(kept: KeptWizard | undefined): MockWizardState {
+  if (!kept || kept.drafts.length === 0) return INITIAL_WIZARD_STATE;
+  return { ...INITIAL_WIZARD_STATE, step: kept.step, drafts: kept.drafts };
+}
+
 /**
  * The mock wizard's state after an action. Pure: every rule the wizard
  * relies on is here. While an apply is in flight only its outcome is taken,
@@ -172,7 +179,7 @@ export function mockWizardReducer(
   action: MockWizardAction,
 ): MockWizardState {
   if (state.apply.status === "applying") return whileApplying(state, action);
-  if (action.type === "open") return INITIAL_WIZARD_STATE;
+  if (action.type === "open") return opened(action.resume);
   if (state.step === "done") return state;
   return onDrafts(state, action);
 }

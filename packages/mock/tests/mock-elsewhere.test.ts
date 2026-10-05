@@ -4,8 +4,9 @@
  * name goes to the server as the app calls it — credentials and all — and
  * the server's answer, failure included, comes back as it was; recordings
  * are made the first time a call is asked and answer it from then on, even
- * with the server gone; a call with neither is a 502 that says why; and a
- * mock naming an endpoint its source does not have does not start.
+ * with the server gone; a call with neither is a 502 that says why; a
+ * mock naming an endpoint its source does not have does not start; and the
+ * mock's network conditions delay those answers as they do its own.
  */
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
@@ -173,5 +174,41 @@ describe("a mock that answers with recordings", () => {
 
     expect(await answered.json()).toEqual({ id: 1, name: "Override" });
     expect(calls).toEqual([]);
+  });
+});
+
+/* How long an answer took, in ms, with its status. */
+async function timed(
+  call: () => Response | Promise<Response>,
+): Promise<{ status: number; ms: number }> {
+  const start = performance.now();
+  const response = await call();
+  await response.arrayBuffer();
+  return { status: response.status, ms: performance.now() - start };
+}
+
+describe("a mock's network conditions", () => {
+  it("delay a call it passes to the server, and one it answers from a recording", async () => {
+    const passing = createAutoMockServer({
+      source: api(upstreamUrl),
+      endpoints: ["orders.refund"],
+      network: { latency: 150 },
+      log: false,
+    });
+    const recording = createAutoMockServer({
+      source: api(upstreamUrl),
+      fixtures: { file: join(dir, "shop.har") },
+      network: { latency: 150 },
+      log: false,
+    });
+    await recording.app.request("/users/1");
+
+    const passed = await timed(() => passing.app.request("/users"));
+    const replayed = await timed(() => recording.app.request("/users/1"));
+
+    expect(passed).toMatchObject({ status: 200 });
+    expect(passed.ms).toBeGreaterThanOrEqual(140);
+    expect(replayed).toMatchObject({ status: 200 });
+    expect(replayed.ms).toBeGreaterThanOrEqual(140);
   });
 });

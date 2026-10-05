@@ -110,8 +110,7 @@ const { data } = q.users.useQuery("getAll", {
 
   // Courier-specific options
   requestOptions: {
-    rawData: true,   // Get { data, status, headers } instead of just data
-    stream: true,    // Handle streaming responses
+    timeout: 5000,   // The options .with() takes, per call
   },
 })
 ```

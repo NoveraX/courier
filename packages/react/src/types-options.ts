@@ -6,7 +6,7 @@
  * hooks exposed by `QueryGroupClient`.
  */
 
-import type { CallOptions } from "@noverax/courier";
+import type { WithOptions } from "@noverax/courier";
 import type { ConnectionStatus, SSEEvent } from "@noverax/courier/realtime";
 import type {
   InfiniteData,
@@ -26,7 +26,7 @@ export type CourierQueryOptions<
   TData = TResponse,
 > = WithVariables<TVariables> &
   Omit<UseQueryOptions<TResponse, Error, TData, QueryKey>, "queryKey" | "queryFn"> & {
-    requestOptions?: CallOptions | undefined;
+    requestOptions?: WithOptions | undefined;
   };
 
 /** `TData` is what the hook returns: the response, or what `select` makes of it. */
@@ -36,11 +36,11 @@ export type CourierSuspenseQueryOptions<
   TData = TResponse,
 > = WithVariables<TVariables> &
   Omit<UseSuspenseQueryOptions<TResponse, Error, TData, QueryKey>, "queryKey" | "queryFn"> & {
-    requestOptions?: CallOptions | undefined;
+    requestOptions?: WithOptions | undefined;
   };
 
 export type CourierInfiniteQueryOptions<TResponse, TVariables, TPageParam> = {
-  requestOptions?: CallOptions | undefined;
+  requestOptions?: WithOptions | undefined;
   initialPageParam: TPageParam;
   getNextPageParam: (
     lastPage: TResponse,
@@ -81,7 +81,7 @@ export type CourierMutationOptions<TResponse, TVariables, TOnMutateResult = unkn
   UseMutationOptions<TResponse, Error, MutationVariables<TVariables>, TOnMutateResult>,
   "mutationFn"
 > & {
-  requestOptions?: CallOptions | undefined;
+  requestOptions?: WithOptions | undefined;
   /**
    * Query keys to invalidate once the mutation has succeeded — not after a
    * failure. The mutation stays pending until their refetch is done.
@@ -93,18 +93,18 @@ export type CourierMutationOptions<TResponse, TVariables, TOnMutateResult = unkn
 export type CourierPrefetchOptions<TVariables> = [TVariables] extends [undefined | void]
   ? {
       variables?: undefined;
-      requestOptions?: CallOptions | undefined;
+      requestOptions?: WithOptions | undefined;
       staleTime?: number | undefined;
     }
   : MayOmitVariables<TVariables> extends true
     ? {
         variables?: TVariables | undefined;
-        requestOptions?: CallOptions | undefined;
+        requestOptions?: WithOptions | undefined;
         staleTime?: number | undefined;
       }
     : {
         variables: TVariables;
-        requestOptions?: CallOptions | undefined;
+        requestOptions?: WithOptions | undefined;
         staleTime?: number | undefined;
       };
 
@@ -129,7 +129,7 @@ export type CourierComputedQueryOptions<
   /** react-query staleTime */
   staleTime?: number | undefined;
   /** Per-request options for the HTTP query */
-  requestOptions?: CallOptions | undefined;
+  requestOptions?: WithOptions | undefined;
   /**
    * Called when the stream fails or is refused, or cannot be opened at all;
    * the query keeps its last data and goes on without live updates

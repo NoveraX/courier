@@ -1,17 +1,14 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { methodText } from "@/design/method-color";
+
 import { SearchField } from "@/design/search-field";
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import type { MockRoutesSearch, RouteKind } from "@/features/mocks/routes-view";
 import { filterRoutes, routeKeyOf, routeKindCounts } from "@/features/mocks/routes-view";
-import { durationTone } from "@/features/requests/duration-tone";
-import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
-import type { MockRouteEntry } from "@/store/mock-slice";
-import { RouteDetail } from "./route-detail";
+import { ROUTE_COLUMNS } from "./route-columns";
+import { RouteRow } from "./route-row";
 import { useMockServer } from "./use-mock-server";
 
 const KIND_LABELS: Readonly<Record<RouteKind, string>> = {
@@ -20,13 +17,6 @@ const KIND_LABELS: Readonly<Record<RouteKind, string>> = {
   override: "Override",
   scenario: "Scenario",
 };
-const KIND_TAG: Readonly<Record<MockRouteEntry["source"], string>> = {
-  auto: "bg-raised text-fg-muted",
-  override: "bg-warn-dim text-warn",
-  scenario: "bg-syntax-keyword/12 text-syntax-keyword",
-};
-const AVG_TEXT = { normal: "text-fg", warn: "text-warn", err: "text-err" } as const;
-const COLUMNS = "grid-cols-[minmax(0,1fr)_90px_70px_60px]";
 
 /**
  * The mock's routes: searched, narrowed to what answers them, each with its
@@ -87,7 +77,7 @@ export function MockRoutesScreen(): React.ReactNode {
           aria-hidden="true"
           className={cn(
             "grid h-8.5 items-center gap-3 border-b border-line bg-panel-subtle px-4 text-label text-fg-subtle",
-            COLUMNS,
+            ROUTE_COLUMNS,
           )}
         >
           <span>Route</span>
@@ -101,64 +91,15 @@ export function MockRoutesScreen(): React.ReactNode {
         {routes.map((route) => {
           const key = routeKeyOf(route);
           const open = search.open === key;
-          const Caret = open ? ChevronDown : ChevronRight;
           return (
-            <div key={key} className="border-b border-line last:border-b-0">
-              <button
-                type="button"
-                aria-expanded={open}
-                onClick={() => set({ open: open ? undefined : key })}
-                className={cn(
-                  "grid min-h-10.5 w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-left hover:bg-raised",
-                  COLUMNS,
-                  open && "bg-brand-tint",
-                )}
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <Caret aria-hidden="true" className="size-3 shrink-0 text-fg-subtle" />
-                  <span
-                    className={cn(
-                      "w-11 shrink-0 font-mono text-meta font-semibold",
-                      methodText(route.httpMethod.toUpperCase()),
-                    )}
-                  >
-                    {route.httpMethod.toUpperCase()}
-                  </span>
-                  <span className="flex min-w-0 flex-col gap-px">
-                    <span className="truncate font-mono text-control">{route.fullPath}</span>
-                    <span className="font-mono text-meta text-fg-subtle">
-                      {route.group}.{route.endpoint}
-                    </span>
-                  </span>
-                </span>
-                <span
-                  className={cn(
-                    "flex h-5 items-center justify-self-start rounded-[5px] px-1.75 text-badge font-strong",
-                    KIND_TAG[route.source],
-                  )}
-                >
-                  {route.source}
-                </span>
-                <span
-                  className={cn(
-                    "text-right font-mono text-small",
-                    route.hits
-                      ? AVG_TEXT[durationTone(route.avgLatency, slowMs)]
-                      : "text-fg-subtle",
-                  )}
-                >
-                  {!route.hits
-                    ? "—"
-                    : route.avgLatency >= 1
-                      ? formatDuration(route.avgLatency)
-                      : "<1ms"}
-                </span>
-                <span className="text-right font-mono text-small text-fg-muted tabular-nums">
-                  {route.hits}
-                </span>
-              </button>
-              {open && <RouteDetail route={route} serverUrl={server.url} />}
-            </div>
+            <RouteRow
+              key={key}
+              route={route}
+              open={open}
+              serverUrl={server.url}
+              slowMs={slowMs}
+              onToggle={() => set({ open: open ? undefined : key })}
+            />
           );
         })}
       </section>

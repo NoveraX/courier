@@ -1,15 +1,10 @@
 import type { RequestEntry } from "@/store/types-request";
 import { buildKey } from "./compute-stats";
-import { callOf } from "./hints-utils";
+import { callOf, labelOf } from "./hints-utils";
 import type { AuditItem } from "./types";
-
-function formatLabel(r: RequestEntry): string {
-  return r.group ? `${r.source}.${r.group}.${r.method}` : `${r.source}.${r.method}`;
-}
 
 const N1_WINDOW_MS = 3000;
 const READ_METHODS = new Set(["GET", "HEAD"]);
-const DUPLICATE_WINDOW_MS = 2000;
 const WATERFALL_MIN_CHAIN = 3;
 const WATERFALL_MIN_TOTAL_MS = 2000;
 
@@ -48,7 +43,7 @@ export function detectNPlusOne(requests: RequestEntry[]): AuditItem[] {
       severity: "error",
       category: "performance",
       title: "N+1 request pattern",
-      description: `List call to "${formatLabel(listReq)}" followed by ${matching.length} sequential detail calls to "${formatLabel(firstMatch)}".`,
+      description: `List call to "${labelOf(listReq)}" followed by ${matching.length} sequential detail calls to "${labelOf(firstMatch)}".`,
       suggestion: "Fetch all needed data in one request, or use batching.",
       codeSuggestion: `// Consider batching:\nconst items = await ${callOf(listReq)};\n// Instead of N calls, fetch all at once`,
       requestIds: allIds,
@@ -75,45 +70,6 @@ function followersOf(completed: RequestEntry[], from: number, list: RequestEntry
     if (buildKey(r) !== listKey && isReadCall(r)) followers.push(r);
   }
   return followers;
-}
-
-/** Detect duplicate requests: same endpoint + same variables within a short window. */
-export function detectDuplicates(requests: RequestEntry[]): AuditItem[] {
-  const completed = requests;
-  const groups = new Map<string, RequestEntry[]>();
-
-  for (const r of completed) {
-    const sig = `${buildKey(r)}:${stableStringify(r.variables)}`;
-    const list = groups.get(sig) ?? [];
-    list.push(r);
-    groups.set(sig, list);
-  }
-
-  const items: AuditItem[] = [];
-
-  for (const [sig, reqs] of groups) {
-    if (reqs.length < 2) continue;
-
-    const dupes = findTimeClusters(reqs, DUPLICATE_WINDOW_MS);
-    if (dupes.length === 0) continue;
-
-    const allIds = dupes.flatMap((c) => c.map((r) => r.id));
-    const totalCount = dupes.reduce((s, c) => s + c.length, 0);
-    const first = dupes[0]?.[0];
-    if (first === undefined) continue;
-    const fullName = formatLabel(first);
-    items.push({
-      id: `warn-duplicate-${sig}`,
-      severity: "warning",
-      category: "performance",
-      title: "Duplicate requests",
-      description: `"${fullName}" was called again with the same variables within ${DUPLICATE_WINDOW_MS / 1000} s — ${totalCount} calls in ${dupes.length} ${dupes.length === 1 ? "burst" : "bursts"}.`,
-      suggestion: "Deduplicate with caching, useMemo, or request deduplication middleware.",
-      requestIds: allIds,
-    });
-  }
-
-  return items;
 }
 
 /** Detect sequential waterfall: 3+ requests that run strictly in series. */
@@ -166,40 +122,4 @@ function emitWaterfallItem(chain: RequestEntry[], items: AuditItem[]): void {
     codeSuggestion: `// Before (sequential):\nconst a = await ${callOf(a)};\nconst b = await ${callOf(b)};\n\n// After (parallel):\nconst [a, b] = await Promise.all([\n  ${callOf(a)},\n  ${callOf(b)},\n]);`,
     requestIds: chain.map((r) => r.id),
   });
-}
-
-function findTimeClusters(reqs: RequestEntry[], windowMs: number): RequestEntry[][] {
-  const sorted = [...reqs].sort((a, b) => a.startedAt - b.startedAt);
-  const clusters: RequestEntry[][] = [];
-  let current: RequestEntry[] = [];
-
-  for (const r of sorted) {
-    const first = current[0];
-    if (first === undefined || r.startedAt - first.startedAt <= windowMs) {
-      current.push(r);
-    } else {
-      if (current.length >= 2) clusters.push(current);
-      current = [r];
-    }
-  }
-  if (current.length >= 2) clusters.push(current);
-
-  return clusters;
-}
-
-/* Variables arrive as JSON, so they hold no cycles; their keys are sorted at every depth. */
-function withSortedKeys(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(withSortedKeys);
-  if (value === null || typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([key, inner]: [string, unknown]) => [key, withSortedKeys(inner)]),
-  );
-}
-
-function stableStringify(value: unknown): string {
-  if (value === null || value === undefined) return String(value);
-  if (typeof value !== "object") return String(value);
-  return JSON.stringify(withSortedKeys(value));
 }

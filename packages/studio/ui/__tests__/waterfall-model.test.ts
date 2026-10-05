@@ -35,12 +35,17 @@ function item(id: string, startedAt: number, total: number, extra: Partial<Reque
 describe("the Waterfall's address", () => {
   it("keeps only what differs from the defaults", () => {
     expect(
-      validateWaterfallSearch({ sort: "duration", group: "none", mode: "all", q: " users " }),
+      validateWaterfallSearch({ sort: "duration", group: "none", mode: "all", q: "users" }),
     ).toEqual({
       sort: "duration",
       q: "users",
     });
     expect(validateWaterfallSearch({ sort: "random", mode: "proxy" })).toEqual({ mode: "proxy" });
+  });
+
+  it("keeps the search as typed, a space before the next word included", () => {
+    expect(validateWaterfallSearch({ q: "list " })).toEqual({ q: "list " });
+    expect(validateWaterfallSearch({ q: "" })).toEqual({});
   });
 
   it("fills the defaults in, and leaves them out again", () => {
@@ -174,6 +179,7 @@ describe("what is in view", () => {
       requestsInView(requests, { q: "", mode: "all", held: new Set(["r59"]) }).map((r) => r.id),
     ).toEqual(["r59"]);
     expect(requestsInView(requests, { q: "nothing-like-it", mode: "all" })).toEqual([]);
+    expect(requestsInView(requests, { q: " list /api ", mode: "all" })).toHaveLength(50);
   });
 
   it("draws a stream above them while it was open in the window", () => {

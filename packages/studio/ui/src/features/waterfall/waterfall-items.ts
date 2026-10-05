@@ -28,7 +28,7 @@ export interface WaterfallScope {
  */
 export function matchesScope(r: RequestEntry, scope: WaterfallScope): boolean {
   if (scope.mode !== "all" && r.mode !== scope.mode) return false;
-  const q = scope.q.toLowerCase();
+  const q = scope.q.trim().toLowerCase();
   return q === "" || `${endpointName(r)} ${pathOf(r.url)}`.toLowerCase().includes(q);
 }
 

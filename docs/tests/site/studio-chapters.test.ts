@@ -2,12 +2,14 @@
  * The Studio page's chapter visuals run on clocks. Each must loop, stay
  * the same on the server and in the browser, and show what the view it
  * stands for would: a lit edge with its two nodes, chaos failing about as
- * often as its preset says, and an audit re-checked rule by rule.
+ * often as its preset says, and an audit re-checked rule by rule. Each
+ * chapter opens its view in the live demo.
  */
 import { describe, expect, it } from "vitest"
 
 import { auditFrame, auditScore, SESSION_TICKS, scoreLook } from "@/site/studio-landing/chapters/audit-model"
 import { edgePath, GRAPH_EDGES, hotEdge } from "@/site/studio-landing/chapters/graph-model"
+import { CHAPTERS } from "@/site/studio-landing/chapters/chapters"
 import { callStrip, outcomeOf, presetAt } from "@/site/studio-landing/chapters/mock-model"
 
 describe("the Explorer graph", () => {
@@ -56,5 +58,16 @@ describe("the audit", () => {
     expect(auditScore(["error", "error", "warning", "pass"])).toBe(88)
     expect(scoreLook(88)).toEqual({ label: "Good", tone: "warn" })
     expect(scoreLook(100).label).toBe("Excellent")
+  })
+})
+
+describe("the chapters' links", () => {
+  it("open each chapter's view in the live demo", () => {
+    expect(CHAPTERS.map((chapter) => [chapter.cta.label, chapter.cta.href])).toEqual([
+      ["Open Timeline", "https://demo.courier.noverax.cloud/timeline"],
+      ["Open Explorer", "https://demo.courier.noverax.cloud/explorer"],
+      ["Open Mocks", "https://demo.courier.noverax.cloud/mocks"],
+      ["Open Audit", "https://demo.courier.noverax.cloud/audit"],
+    ])
   })
 })

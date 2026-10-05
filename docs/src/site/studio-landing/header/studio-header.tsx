@@ -4,6 +4,7 @@ import Link from "next/link"
 import { CourierMark } from "@/site/courier-mark"
 import { GitHubMark } from "@/site/github-mark"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
+import { STUDIO_DEMO_URL } from "@/site/site-url"
 import { StudioWordmark } from "./studio-wordmark"
 
 const NAV = [
@@ -17,7 +18,7 @@ const NAV = [
 /**
  * The bar across the top of Studio's page: its name, its chapters, the
  * way back to the Courier library, the colour theme, the repository and
- * the setup.
+ * the live demo.
  *
  * @returns The header
  * @example
@@ -61,10 +62,12 @@ export function StudioHeader() {
           <GitHubMark />
         </a>
         <a
-          href="#setup"
+          href={STUDIO_DEMO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
           className="flex h-7.5 shrink-0 items-center rounded-[7px] bg-fg px-3.25 text-control font-medium whitespace-nowrap text-bg hover:text-bg hover:opacity-86"
         >
-          Set up Studio
+          Open demo
         </a>
       </div>
     </header>

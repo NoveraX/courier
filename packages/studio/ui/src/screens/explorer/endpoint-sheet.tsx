@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { Activity, Play, X } from "lucide-react";
-import { motion } from "motion/react";
+import { useState } from "react";
 
 import { Dot } from "@/design/dot";
-import { SHEET_VARIANTS } from "@/design/motion";
+import { Reveal } from "@/design/reveal";
+import { SheetFrame } from "@/design/sheet-frame";
 import { TONE_TEXT } from "@/design/tone";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type { EndpointNode } from "@/features/explorer/explorer-model";
@@ -30,7 +31,8 @@ interface EndpointSheetProps {
 /**
  * An endpoint's panel: its method, health, name and URL, four figures, the
  * way to its calls in the Timeline and to the Playground, its latency
- * chart, its definition and its newest calls.
+ * chart, its definition and its newest calls — arriving one after another
+ * as the sheet springs in, as the inspector's parts do.
  *
  * @param props - The endpoint, the time, the slow threshold, and what closes the panel and opens a call
  * @returns The panel
@@ -43,18 +45,16 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
   const { endpoint: e, now, slowMs, onClose, onOpenCall } = props;
   const method = methodLabelOf(e);
   const level = LEVEL_META[e.level];
+  const [opening, setOpening] = useState(true);
   return (
-    <motion.aside
-      aria-label="Endpoint"
-      variants={SHEET_VARIANTS}
-      initial="hidden"
-      animate="shown"
-      exit="gone"
-      style={{ originX: 1 }}
-      className="fixed top-2 right-2 bottom-8 z-30 flex w-[min(440px,calc(100vw-16px))] flex-col overflow-hidden rounded-sheet border border-line-strong bg-panel shadow-overlay"
+    <SheetFrame
+      label="Endpoint"
+      width="w-[min(440px,calc(100vw-16px))]"
+      layer="panel"
+      onShown={() => setOpening(false)}
     >
       <div className="flex shrink-0 flex-col gap-3.5 border-b border-line pt-4 pr-3.5 pb-4 pl-4.5">
-        <div className="flex items-start gap-3">
+        <Reveal step={0} play={opening} className="flex items-start gap-3">
           <div className="flex min-w-0 flex-1 flex-col gap-1.75">
             <div className="flex items-center gap-1.5">
               <span
@@ -85,9 +85,11 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
           >
             <X aria-hidden="true" className="size-3.75" />
           </button>
-        </div>
-        <EndpointFigures endpoint={e} slowMs={slowMs} />
-        <div className="flex gap-2">
+        </Reveal>
+        <Reveal step={1} play={opening}>
+          <EndpointFigures endpoint={e} slowMs={slowMs} />
+        </Reveal>
+        <Reveal step={2} play={opening} className="flex gap-2">
           <Link
             to="/timeline"
             search={{ q: e.key }}
@@ -107,13 +109,17 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
             <Play aria-hidden="true" className="size-3" />
             Open in Playground
           </Link>
-        </div>
+        </Reveal>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4.5 pt-4.5 pb-7">
+      <Reveal
+        step={3}
+        play={opening}
+        className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4.5 pt-4.5 pb-7"
+      >
         <EndpointLatency endpoint={e} slowMs={slowMs} />
         <EndpointDefinition endpoint={e} now={now} />
         <EndpointCalls endpoint={e} slowMs={slowMs} onOpen={onOpenCall} />
-      </div>
-    </motion.aside>
+      </Reveal>
+    </SheetFrame>
   );
 }

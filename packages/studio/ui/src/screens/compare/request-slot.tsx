@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Dot } from "@/design/dot";
 import { methodText } from "@/design/method-color";
+import { POP_MOTION } from "@/design/overlay-motion";
 import { codeLabel, endpointParts, httpMethodOf } from "@/features/requests/request-parts";
 import { isFailedState, STATE_META } from "@/features/requests/request-state";
 import { formatClockTime, formatDuration } from "@/lib/formatters";
@@ -110,7 +111,10 @@ export function RequestSlot({
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-50 max-h-85 w-(--radix-popover-trigger-width) overflow-auto rounded-dialog bg-panel p-1 shadow-overlay animate-pop-in"
+          className={cn(
+            "z-50 max-h-85 w-(--radix-popover-trigger-width) overflow-auto rounded-dialog bg-panel p-1 shadow-overlay",
+            POP_MOTION,
+          )}
         >
           {candidates.slice(0, LISTED).map((r) => (
             <Option

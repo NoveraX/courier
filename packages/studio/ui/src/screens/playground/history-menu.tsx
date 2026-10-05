@@ -3,6 +3,7 @@ import { Popover } from "radix-ui";
 import { useState } from "react";
 
 import { Dot } from "@/design/dot";
+import { POP_MOTION } from "@/design/overlay-motion";
 import { shortAgo } from "@/features/explorer/endpoint-key";
 import { cn } from "@/lib/utils";
 import { methodClassOf } from "@/screens/explorer/method-class";
@@ -57,7 +58,10 @@ export function HistoryMenu({ now, labelOf, onPick }: HistoryMenuProps): React.R
         <Popover.Content
           align="end"
           sideOffset={6}
-          className="z-50 w-90 animate-pop-in overflow-hidden rounded-dialog bg-panel shadow-overlay"
+          className={cn(
+            "z-50 w-90 overflow-hidden rounded-dialog bg-panel shadow-overlay",
+            POP_MOTION,
+          )}
         >
           <div className="flex h-10 items-center gap-2 border-b border-line pr-1.5 pl-3">
             <span className="flex-1 text-control font-semibold">Recent sends</span>

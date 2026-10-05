@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { Dialog } from "radix-ui";
 
 import { Kbd } from "@/design/kbd";
+import { DIALOG_MOTION, SCRIM_MOTION } from "@/design/overlay-motion";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { PaletteEntry } from "./palette-entries";
@@ -68,10 +69,15 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/42 backdrop-blur-[3px]" />
+        <Dialog.Overlay
+          className={cn("fixed inset-0 z-50 bg-black/42 backdrop-blur-[3px]", SCRIM_MOTION)}
+        />
         <Dialog.Content
           aria-describedby={undefined}
-          className="fixed top-[13vh] left-1/2 z-50 w-150 max-w-[calc(100vw-40px)] -translate-x-1/2 animate-pop-in overflow-hidden rounded-dialog bg-panel shadow-overlay"
+          className={cn(
+            "fixed top-[13vh] left-1/2 z-50 w-150 max-w-[calc(100vw-40px)] -translate-x-1/2 overflow-hidden rounded-dialog bg-panel shadow-overlay",
+            DIALOG_MOTION,
+          )}
         >
           <Dialog.Title className="sr-only">Search Studio</Dialog.Title>
           <Command loop label="Search Studio">

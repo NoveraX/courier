@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { Dialog } from "radix-ui";
 
 import { cn } from "@/lib/utils";
+import { DIALOG_MOTION, SCRIM_MOTION } from "./overlay-motion";
 
 interface DialogFrameProps {
   open: boolean;
@@ -50,13 +51,16 @@ export function DialogFrame({
   return (
     <Dialog.Root open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[3px]" />
+        <Dialog.Overlay
+          className={cn("fixed inset-0 z-50 bg-black/45 backdrop-blur-[3px]", SCRIM_MOTION)}
+        />
         <Dialog.Content
           {...(description ? {} : { "aria-describedby": undefined })}
           onInteractOutside={(event) => keepOpen && event.preventDefault()}
           onEscapeKeyDown={(event) => keepOpen && event.preventDefault()}
           className={cn(
-            "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100vh-48px)] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 animate-pop-in flex-col overflow-hidden rounded-[16px] bg-panel shadow-overlay outline-none",
+            "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100vh-48px)] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[16px] bg-panel shadow-overlay outline-none",
+            DIALOG_MOTION,
             width,
           )}
         >

@@ -1,8 +1,9 @@
 import { motion } from "motion/react";
 import { useState } from "react";
 
-import { EASE_OUT, revealAfter, SHEET_VARIANTS, SWAP_DURATION } from "@/design/motion";
+import { EASE_OUT, revealAfter, SWAP_DURATION } from "@/design/motion";
 import { Reveal } from "@/design/reveal";
+import { SheetFrame } from "@/design/sheet-frame";
 import type { InspectorTab } from "@/features/requests/inspector-tabs";
 import { inspectorTabsOf, shownTab } from "@/features/requests/inspector-tabs";
 import { statCellsOf } from "@/features/requests/stat-cells";
@@ -47,17 +48,11 @@ export function InspectorSheet(props: InspectorSheetProps): React.ReactNode {
   const [opening, setOpening] = useState(true);
   const current = shownTab(request, tab);
   return (
-    <motion.aside
-      aria-label="Request inspector"
-      variants={SHEET_VARIANTS}
-      initial="hidden"
-      animate="shown"
-      exit="gone"
-      onAnimationComplete={(definition) => {
-        if (definition === "shown") setOpening(false);
-      }}
-      style={{ originX: 1 }}
-      className="fixed top-2 right-2 bottom-8 z-40 flex w-[min(480px,calc(100vw-16px))] flex-col overflow-hidden rounded-sheet border border-line-strong bg-panel shadow-overlay"
+    <SheetFrame
+      label="Request inspector"
+      width="w-[min(480px,calc(100vw-16px))]"
+      layer="inspector"
+      onShown={() => setOpening(false)}
     >
       <Head
         key={request.id}
@@ -77,7 +72,7 @@ export function InspectorSheet(props: InspectorSheetProps): React.ReactNode {
       >
         <TabContent request={request} current={current} payload={payload} snippets={snippets} />
       </motion.div>
-    </motion.aside>
+    </SheetFrame>
   );
 }
 

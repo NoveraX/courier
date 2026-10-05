@@ -1,7 +1,9 @@
 import { EllipsisVertical, Plus, Trash2 } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
+import { POP_MOTION } from "@/design/overlay-motion";
 import { collectionView } from "@/features/mocks/collection-view";
 import { buildDefaultRecord, recordKey } from "@/features/mocks/data-table-utils";
+import { cn } from "@/lib/utils";
 import { useStoreCrud } from "@/mocks/use-store-crud";
 import type { MockCollectionEntry, MockRouteEntry } from "@/store/mock-slice";
 import { EditableCell } from "./editable-cell";
@@ -64,7 +66,7 @@ export function CollectionTable({
             <DropdownMenu.Content
               align="end"
               sideOffset={6}
-              className="z-50 w-48 animate-pop-in rounded-panel bg-panel p-1 shadow-overlay"
+              className={cn("z-50 w-48 rounded-panel bg-panel p-1 shadow-overlay", POP_MOTION)}
             >
               <DropdownMenu.Item
                 className={MENU_ITEM}

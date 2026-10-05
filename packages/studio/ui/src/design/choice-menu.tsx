@@ -3,6 +3,7 @@ import { Check, ChevronDown } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 
 import { cn } from "@/lib/utils";
+import { POP_MOTION } from "./overlay-motion";
 
 /** One of the choices a choice menu offers. */
 export interface Choice<TValue extends string> {
@@ -45,7 +46,7 @@ export function ChoiceMenu<TValue extends string>(props: ChoiceMenuProps<TValue>
         <DropdownMenu.Content
           align="start"
           sideOffset={6}
-          className="z-50 min-w-45 animate-pop-in rounded-panel bg-panel p-1 shadow-overlay"
+          className={cn("z-50 min-w-45 rounded-panel bg-panel p-1 shadow-overlay", POP_MOTION)}
         >
           <DropdownMenu.RadioGroup
             value={value}

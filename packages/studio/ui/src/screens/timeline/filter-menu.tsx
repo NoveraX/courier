@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { ChevronDown, Search, X } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useState } from "react";
-
+import { POP_MOTION } from "@/design/overlay-motion";
 import type { FilterOption } from "@/features/requests/filter-options";
 import { selectionSummary } from "@/features/requests/filter-options";
 import { cn } from "@/lib/utils";
@@ -95,7 +95,10 @@ export function FilterMenu({
         <Popover.Content
           align="start"
           sideOffset={6}
-          className="z-50 w-68 animate-pop-in overflow-hidden rounded-[11px] bg-panel shadow-overlay"
+          className={cn(
+            "z-50 w-68 overflow-hidden rounded-[11px] bg-panel shadow-overlay",
+            POP_MOTION,
+          )}
         >
           <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
             <span className="text-small font-semibold">{label}</span>

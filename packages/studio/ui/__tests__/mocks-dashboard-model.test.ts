@@ -75,7 +75,7 @@ describe("the dashboard's figures", () => {
       ["Throughput", "2/min", "40 responses served"],
       ["Error rate", "33.3%", "last 60 responses"],
       ["P95 latency", "900ms", "p50 20ms"],
-      ["Scenario", "checkout-failure", "2 routes overridden"],
+      ["Scenario", "checkout-failure", "2 overrides"],
       ["Chaos", "Unstable", "25% faults · 100–300ms delay"],
     ]);
   });
@@ -129,8 +129,9 @@ describe("the banner", () => {
     ).toMatchObject({ title: "Chaos · Down", action: { kind: "stop-chaos" } });
     expect(mockBannerOf(mockServer({ activeScenario: "empty" }), null)).toMatchObject({
       title: "Scenario · empty",
-      action: { kind: "open-scenarios" },
+      action: { kind: "reset-scenario" },
     });
+    expect(mockBannerOf(mockServer({ activeScenario: "happy-path" }), null)).toBeUndefined();
     expect(mockBannerOf(mockServer(), null)).toBeUndefined();
   });
 });

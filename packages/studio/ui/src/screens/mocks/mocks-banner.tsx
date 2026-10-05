@@ -1,7 +1,7 @@
-import { useNavigate } from "@tanstack/react-router";
 import { CircleAlert, CirclePause, Flame, GitFork } from "lucide-react";
 
 import type { MockBanner } from "@/features/mocks/mock-banner";
+import { HAPPY_PATH } from "@/features/mocks/scenario-view";
 import { cn } from "@/lib/utils";
 import { stopAllFaults } from "@/mocks/stop-all-faults";
 import { getSocket } from "@/socket";
@@ -17,7 +17,7 @@ function iconOf(banner: MockBanner): React.ReactNode {
   const Icon =
     banner.action?.kind === "stop-chaos"
       ? Flame
-      : banner.action?.kind === "open-scenarios"
+      : banner.action?.kind === "reset-scenario"
         ? GitFork
         : banner.tone === "muted"
           ? CirclePause
@@ -44,7 +44,6 @@ export function MocksBanner({
   banner: MockBanner;
   server: MockServerInfo | undefined;
 }): React.ReactNode {
-  const navigate = useNavigate();
   const act = () => {
     if (!server || !banner.action) return;
     if (banner.action.kind === "start")
@@ -53,7 +52,12 @@ export function MocksBanner({
         serverId: server.serverId,
       });
     else if (banner.action.kind === "stop-chaos") stopAllFaults(server.serverId);
-    else void navigate({ to: "/mocks/scenarios" });
+    else
+      getSocket().emit("mock:command", {
+        action: "mock:scenario:apply",
+        serverId: server.serverId,
+        scenario: HAPPY_PATH,
+      });
   };
   return (
     <div

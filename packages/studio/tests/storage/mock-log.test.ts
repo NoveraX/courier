@@ -104,7 +104,7 @@ describe("the mocks' request logs", () => {
   it("keep only a log's events, and no end of a request they never saw start", () => {
     const { log } = run(project());
 
-    log.record({ type: "mock:store:snapshot", serverId: "petstore", collections: [] });
+    log.record({ type: "mock:store:changes", serverId: "petstore", seq: 1, collections: [] });
     log.record(end("req_9"));
 
     expect(log.events()).toEqual([]);

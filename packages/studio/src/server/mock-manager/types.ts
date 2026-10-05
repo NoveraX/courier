@@ -39,6 +39,8 @@ export interface ServerState {
   lastError?: string | undefined;
   routes: DescribedRoute[];
   collections: Array<{ name: string; count: number; records: unknown[] }>;
+  /** The number of the last report of the store applied to `collections`; 0 for the store the mock started with. */
+  storeSeq: number;
   scenarios: ScenarioMeta[];
   activeScenario: string | null;
   /** Network simulation presets — persisted for UI restore on reconnect */

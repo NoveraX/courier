@@ -37,6 +37,11 @@ export type {
   MiddlewareEnterEvent,
   MiddlewareErrorEvent,
   MiddlewareExitEvent,
+  MockCollectionEdits,
+  MockCollectionReport,
+  MockCollectionSnapshot,
+  MockStoreChangesEvent,
+  MockStoreReport,
   ProxyOriginRejectEvent,
   ProxyParseEvent,
   ProxyReceiveEvent,
@@ -56,5 +61,6 @@ export type {
 } from "./events";
 export { isSafeHttpOrigin } from "./lib/is-safe-http-origin";
 export { playgroundRequestId } from "./lib/playground-request-id";
+export { applyStoreReport, readStoreReport } from "./mock-store";
 export type { SchemaField } from "./schema-fields";
 export { extractSourceMap } from "./source-map";

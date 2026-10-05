@@ -37,6 +37,7 @@ function server(serverId: string, managed: boolean): MockServerInfo {
     processStatus: "running",
     origin: managed ? "studio" : "external",
     collections: [],
+    storeSeq: 0,
     routes: [],
     scenarios: [],
   };

@@ -31,6 +31,7 @@ export function mockServer(fields: Partial<MockServerInfo> = {}): MockServerInfo
     processStatus: "running",
     origin: "studio",
     collections: [],
+    storeSeq: 0,
     routes: [],
     scenarios: [],
     ...fields,

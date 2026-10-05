@@ -1,8 +1,8 @@
 /**
  * A managed mock server keeps Studio's view of its store current: a request
- * that writes to the store is followed by the store as it now is, so the
- * Mocks dashboard counts the record a POST created, and a read sends
- * nothing more than its own lifecycle.
+ * that writes to the store is followed by a report of what it changed — the
+ * record a POST created, not the collection it joined — so the Mocks
+ * dashboard counts it, and a read sends nothing more than its own lifecycle.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -77,20 +77,24 @@ async function startMock(): Promise<{
   return { port, events };
 }
 
-function usersCounts(onEvent: ReturnType<typeof vi.fn>): number[] {
+interface UsersReport {
+  name: string;
+  count: number;
+  records?: unknown[];
+  edits?: { added: unknown[] };
+}
+
+function usersReports(onEvent: ReturnType<typeof vi.fn>): UsersReport[] {
   return onEvent.mock.calls
-    .map(
-      ([, event]) =>
-        event as { type?: string; collections?: Array<{ name: string; count: number }> },
-    )
-    .filter((event) => event.type === "mock:store:snapshot")
-    .map(
-      (event) => event.collections?.find((collection) => collection.name === "users")?.count ?? -1,
+    .map(([, event]) => event as { type?: string; collections?: UsersReport[] })
+    .filter((event) => event.type === "mock:store:changes")
+    .flatMap(
+      (event) => event.collections?.filter((collection) => collection.name === "users") ?? [],
     );
 }
 
 describe("a managed mock server's store, as Studio sees it", () => {
-  it("is sent again once a request writes to it", async () => {
+  it("is followed by the record a request writes to it", async () => {
     const { port, events } = await startMock();
 
     const created = await fetch(`http://127.0.0.1:${port}/users`, {
@@ -100,7 +104,16 @@ describe("a managed mock server's store, as Studio sees it", () => {
     });
     expect(created.ok).toBe(true);
 
-    await vi.waitFor(() => expect(usersCounts(events.onEvent)).toEqual([4]), { timeout: 5_000 });
+    await vi.waitFor(() => expect(usersReports(events.onEvent)).toHaveLength(1), {
+      timeout: 5_000,
+    });
+    expect(usersReports(events.onEvent)).toEqual([
+      {
+        name: "users",
+        count: 4,
+        edits: { removed: [], changed: [], added: [expect.objectContaining({ name: "Ada" })] },
+      },
+    ]);
   }, 20_000);
 
   it("is not sent after a request that only reads it", async () => {
@@ -114,6 +127,6 @@ describe("a managed mock server's store, as Studio sees it", () => {
       ),
     );
 
-    expect(usersCounts(events.onEvent)).toEqual([]);
+    expect(usersReports(events.onEvent)).toEqual([]);
   }, 20_000);
 });

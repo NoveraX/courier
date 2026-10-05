@@ -25,6 +25,8 @@ export interface ProcessEventsContext {
   updateAndEmit: (serverId: string, patch: Partial<ServerState>) => void;
   /** Keeps the requests each mock answered, for the pages that connect later. */
   mockLog?: MockLog | undefined;
+  /** Ask a mock for its store whole, when Studio's copy fell out of step with it. */
+  resendStore: (serverId: string) => void;
 }
 
 export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEvents {
@@ -46,6 +48,7 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
         startedAt: Date.now(),
         routes: data.routes,
         collections: data.collections,
+        storeSeq: 0,
         scenarios: data.scenarios ?? [],
         activeScenario: null,
         ...(isPlainObject(data.network) ? networkStateOf(data.network) : NO_NETWORK),
@@ -101,7 +104,7 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
       emit(type, shown);
       ctx.mockLog?.record(shown);
       const state = servers.get(serverId);
-      if (state) applyWorkerEvent(state, event);
+      if (state && !applyWorkerEvent(state, event)) ctx.resendStore(serverId);
     },
   };
 }

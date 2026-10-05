@@ -1,13 +1,13 @@
 /**
  * The Mocks dashboard's Records and Collections follow the store as the
- * mock server last sent it, not only as it was when the server connected.
+ * mock server last reported it, not only as it was when the server connected.
  */
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { handleMockEvent } from "../src/store/handle-mock-events";
 import { useMockStore } from "../src/store/mock-slice";
 
-const users = (count: number) => ({ name: "users", count, records: [] });
+const records = (count: number) => Array.from({ length: count }, (_, id) => ({ id }));
 
 beforeEach(() => {
   for (const id of Object.keys(useMockStore.getState().servers)) {
@@ -20,13 +20,27 @@ beforeEach(() => {
     processStatus: "running",
     recordCount: 20,
     collectionCount: 1,
-    collections: [users(20)],
+    collections: [{ name: "users", count: 20, records: records(20) }],
+    storeSeq: 0,
   });
 });
 
+function report(seq: number, collections: unknown[]) {
+  return {
+    type: "mock:store:changes",
+    serverId: "apiMock",
+    seq,
+    whole: false,
+    collections,
+    removed: [],
+  };
+}
+
 describe("the dashboard's store counts", () => {
   it("count a record the store gained after the server connected", () => {
-    handleMockEvent({ type: "mock:store:snapshot", serverId: "apiMock", collections: [users(21)] });
+    const edits = { removed: [], changed: [], added: [{ id: 20 }] };
+
+    handleMockEvent(report(1, [{ name: "users", count: 21, edits }]));
 
     expect(useMockStore.getState().servers.apiMock).toMatchObject({
       recordCount: 21,
@@ -34,18 +48,11 @@ describe("the dashboard's store counts", () => {
     });
   });
 
-  it("follow a change to one collection", () => {
-    handleMockEvent({
-      type: "mock:store:snapshot",
-      serverId: "apiMock",
-      collections: [users(21), { name: "posts", count: 4, records: [] }],
-    });
-    handleMockEvent({
-      type: "mock:store:change",
-      serverId: "apiMock",
-      collection: "users",
-      count: 22,
-    });
+  it("follow a change to one collection among others", () => {
+    const edits = { removed: [], changed: [], added: [{ id: 20 }, { id: 21 }] };
+
+    handleMockEvent(report(1, [{ name: "posts", count: 4, records: records(4) }]));
+    handleMockEvent(report(2, [{ name: "users", count: 22, edits }]));
 
     expect(useMockStore.getState().servers.apiMock).toMatchObject({
       recordCount: 26,

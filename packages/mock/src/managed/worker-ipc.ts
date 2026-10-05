@@ -3,7 +3,6 @@
  * Handles communication with the Studio parent process.
  */
 
-import type { MockServer } from "../server/create-mock-server";
 import type { ChildMessage } from "./types";
 
 /**
@@ -21,18 +20,4 @@ export function send(msg: ChildMessage): void {
 export function sendError(message: string, fatal: boolean): void {
   send({ type: "error", message, fatal });
   if (fatal) process.exit(1);
-}
-
-export function sendStoreSnapshot(server: MockServer): void {
-  send({
-    type: "event",
-    event: {
-      type: "mock:store:snapshot",
-      collections: server.store.list().map((name) => ({
-        name,
-        count: server.store.collection(name).count(),
-        records: server.store.collection(name).getAll(),
-      })),
-    },
-  });
 }

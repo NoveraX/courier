@@ -61,7 +61,17 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
   };
 
   const processManager = createProcessManager(
-    createProcessEvents({ servers, emit, updateAndEmit, mockLog: config.mockLog }),
+    createProcessEvents({
+      servers,
+      emit,
+      updateAndEmit,
+      mockLog: config.mockLog,
+      resendStore: (serverId) =>
+        runVoid(
+          `resendStore(${serverId})`,
+          processManager.sendCommand(serverId, { action: "mock:store:resend", serverId }),
+        ),
+    }),
     { transformCacheDirectory: config.transformCacheDirectory, storeFile: config.storeFile },
   );
   const reservedPorts = () => declaredPorts(config.mockRegistry.getEntries());

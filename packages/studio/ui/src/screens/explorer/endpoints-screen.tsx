@@ -1,4 +1,3 @@
-import { Server } from "lucide-react";
 import { useRef } from "react";
 
 import { SearchField } from "@/design/search-field";
@@ -11,7 +10,7 @@ import { useFirstLoad } from "@/hooks/use-first-load";
 import { useNow } from "@/hooks/use-tick";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
-import { EndpointRow } from "./endpoint-row";
+import { EndpointList } from "./endpoint-list";
 import { ExplorerEmpty } from "./explorer-empty";
 import { ExplorerSkeleton } from "./explorer-skeleton";
 import { useExplorerModel } from "./use-explorer-model";
@@ -111,31 +110,16 @@ export function EndpointsScreen(): React.ReactNode {
         {rows.length === 0 && (
           <p className="px-5 py-10 text-center text-control text-fg-subtle">No endpoints match</p>
         )}
-        {rows.map((row) =>
-          row.kind === "source" ? (
-            <div
-              key={`source:${row.source.name}`}
-              className="flex h-8 items-center gap-2 border-b border-line bg-bg-subtle px-5 font-mono text-small font-semibold"
-            >
-              <Server aria-hidden="true" className="size-3 text-syntax-type" />
-              {row.source.name}
-              <span className="font-sans text-label font-normal text-fg-subtle">
-                {row.source.baseURL}
-              </span>
-            </div>
-          ) : (
-            <EndpointRow
-              key={row.endpoint.key}
-              endpoint={row.endpoint}
-              columns={columns}
-              wide={wide}
-              selected={endpoint === row.endpoint.key}
-              now={now}
-              slowMs={slowMs}
-              onOpen={(key) => set({ endpoint: key })}
-            />
-          ),
-        )}
+        <EndpointList
+          rows={rows}
+          scroller={listRef}
+          columns={columns}
+          wide={wide}
+          selected={endpoint}
+          now={now}
+          slowMs={slowMs}
+          onOpen={(key) => set({ endpoint: key })}
+        />
       </section>
     </div>
   );

@@ -202,3 +202,21 @@ describe("the Logs tab", () => {
     );
   });
 });
+
+describe("a long log", () => {
+  it("draws only the rows in view, newest first, and scrolls as far as every request", async () => {
+    const many = Array.from({ length: 500 }, (_, i) =>
+      mockLog({ id: `log-${i}`, timestamp: 500 - i, path: `/api/users/${i}` }),
+    );
+    useMockStore.setState({ logs: many });
+
+    await openShell("/mocks/logs");
+    const list = screen.getByRole("region", { name: "Requests" });
+
+    expect(rows().length).toBeGreaterThan(0);
+    expect(rows().length).toBeLessThan(100);
+    expect(within(list).getByText("/api/users/0")).toBeTruthy();
+    expect(within(list).queryByText("/api/users/499")).toBeNull();
+    expect(list.firstElementChild?.getAttribute("style")).toContain(`height: ${500 * 34}px`);
+  });
+});

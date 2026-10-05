@@ -32,10 +32,10 @@ export function MockStoreScreen(): React.ReactNode {
   const open =
     server.collections.find((c) => c.name === search.collection) ?? server.collections[0];
   return (
-    <div className="grid min-h-full grid-cols-[220px_minmax(0,1fr)] max-[700px]:grid-cols-1">
+    <div className="grid min-h-0 flex-1 grid-cols-[220px_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] max-[700px]:grid-cols-1 max-[700px]:grid-rows-[auto_minmax(0,1fr)]">
       <nav
         aria-label="Collections"
-        className="flex flex-col gap-0.5 border-r border-line px-2.5 py-3.5 max-[700px]:border-r-0 max-[700px]:border-b"
+        className="flex min-h-0 flex-col gap-0.5 overflow-y-auto border-r border-line px-2.5 py-3.5 max-[700px]:max-h-48 max-[700px]:border-r-0 max-[700px]:border-b"
       >
         <h2 className="px-2 pb-1.5 text-label font-semibold text-fg-subtle">Collections</h2>
         {server.collections.length === 0 && (

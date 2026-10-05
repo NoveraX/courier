@@ -3,7 +3,7 @@ import type { AutoScenarioOptions } from "../auto/auto-seed";
 import type { RouteInfo } from "../auto/route-types";
 import type { MockServer } from "../server/mock-server-types";
 import type { MockStore } from "../store";
-import type { TypedMockFn } from "../typed-mock-fn";
+import type { EndpointName, TypedMockFn } from "../typed-mock-fn";
 import type { MockScenario, NetworkConfig } from "../types";
 import type { DescribedRoute } from "./describe-route";
 
@@ -55,6 +55,23 @@ export interface MockServerDefinition<TSource extends AnySource = AnySource>
   scenarios?: Record<string, MockScenario<NoInfer<TSource>>> | undefined;
   /** Default network simulation */
   network?: NetworkConfig | undefined;
+  /**
+   * The endpoints the mock answers, as `group.method` — or the method alone
+   * for one outside any group. Every other HTTP endpoint goes to the
+   * source's own server at its `baseURL`, as the app calls it, so a mock can
+   * stand in for the few endpoints a backend does not have yet. Streams and
+   * channels the mock always answers. Default: every endpoint.
+   */
+  endpoints?: readonly EndpointName<NoInfer<TSource>>[] | undefined;
+  /**
+   * Answer with recordings of the source's own server, kept in this HAR
+   * file, relative to the mocks file: a call the mock has no answer to yet
+   * goes to the server once, and the answer is written to the file — for
+   * demos and tests that see the same data every time. An override or a
+   * scenario wins over the recordings. Default: the mock generates its
+   * answers and keeps what is created in its store.
+   */
+  fixtures?: string | undefined;
   /** CORS config (default: true) */
   cors?: boolean | { origin: string | string[] } | undefined;
   /** Enable admin API at /__admin/ (default: true) */

@@ -1,16 +1,14 @@
-import type { HttpResponse, InferClient } from "@noverax/courier";
-import { HTTPError } from "@noverax/courier";
+import type { InferClient } from "@noverax/courier";
 import type { AnyDefinedApi } from "@noverax/courier/define";
 import type { ExecuteBackend } from "@noverax/courier/internal";
 import { buildClientProxy } from "@noverax/courier/internal";
 
+import { callAndCapture, fixtureOf } from "./capture-call";
 import { RecorderError } from "./errors";
 import type { Fixture } from "./fixture";
 import { fixturesToHar, sanitizeFixture } from "./fixture";
 import { findFixture, replayAnswer } from "./match-fixture";
-import { recordedHeaders } from "./recorded-headers";
 import type { RecorderClient, RecorderConfig } from "./recorder-types";
-import type { RecordingTransport } from "./recording-transport";
 import { createRecordingTransport } from "./recording-transport";
 
 export type { RecorderClient, RecorderConfig, RecordMode, Sanitizer } from "./recorder-types";
@@ -84,52 +82,6 @@ function recordingClient<TSource extends AnyDefinedApi>(
 ): InferClient<TSource>;
 function recordingClient(backend: ExecuteBackend): unknown {
   return buildClientProxy(backend);
-}
-
-interface Call {
-  group: string;
-  method: string;
-  variables: unknown;
-}
-
-interface Captured extends HttpResponse {
-  /** The error a failed call rejects with, after it is recorded */
-  error?: HTTPError;
-  duration: number;
-  startedAt: string;
-}
-
-async function callAndCapture(
-  transport: RecordingTransport,
-  call: Call,
-  options: Record<string, unknown>,
-): Promise<Captured> {
-  const startedAt = new Date().toISOString();
-  const start = performance.now();
-  const took = () => Math.round(performance.now() - start);
-  try {
-    const response = await transport.call(call.group, call.method, call.variables, options);
-    return { ...response, duration: took(), startedAt };
-  } catch (error) {
-    if (!(error instanceof HTTPError)) throw error;
-    const { status, headers } = error;
-    const data: unknown = error.data;
-    return { status, headers, data, error, duration: took(), startedAt };
-  }
-}
-
-function fixtureOf(transport: RecordingTransport, call: Call, response: Captured): Fixture {
-  return {
-    ...call,
-    request: transport.describe(call.group, call.method, call.variables),
-    response: {
-      status: response.status,
-      data: response.data,
-      headers: recordedHeaders(response.headers),
-    },
-    duration: response.duration,
-    recordedAt: response.startedAt,
-  };
 }
 
 /* The variables as a recording made with the config's sanitizer holds them. */

@@ -106,6 +106,25 @@ export default defineMocks({
 - Editing `courier.mocks.ts`, or a module it imports, restarts a running mock whose declaration changed, or something that declaration uses — a declaration beside it, an import and every module that import reaches, a statement of the file that declares nothing. The other mocks keep running, with their records: adding a mock does not restart the ones already running. A mocks file whose mocks Studio cannot tell apart — its keys spread in or computed, or a CommonJS file — restarts every running mock on each edit. `autoStart` applies when Studio first reads the definition, or when an edit turns it on — not again after you stop the mock.
 - A mock keeps its records in the project, in `.courier/mocks/` — one SQLite database per mock, saved shortly after each request and when the mock stops, and read when it starts — so what an app created is still there after the mock restarts, an edit that changes it included, and after Studio restarts. Nothing is set up by hand: the database and its schema are created on the first start, a database from an earlier Courier is brought up to date as it opens, and records are kept as JSON documents, so an API whose shapes change needs no migration. A save writes, in one transaction, only the records that changed. A database that cannot be read is kept beside the new one as `<name>.unreadable-<time>`. A collection the database holds nothing for starts from its seeds, and one the mock no longer serves is dropped. **Reset store** empties the store and seeds it again, and that is kept too. `persist: false` starts the mock from its seeds each time. The database is Node's built-in SQLite, in Node 22.13 and later; elsewhere a mock keeps its records only while it runs, and says so.
 
+### Mock only some endpoints, or answer with recordings
+
+A mock need not answer everything. `endpoints` names the endpoints it answers; every other HTTP call goes to the source's own server at its `baseURL`, as the app calls it — handy while the backend has all but a few endpoints. `fixtures` answers with recordings of that server in place of generated data: a call the mock has no answer to yet goes to the server once, its answer is written to a HAR file, and the same call is answered from the file from then on.
+
+```ts
+// courier.mocks.ts
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+import { api } from "./src/api"
+
+export default defineMocks({
+  refunds: defineMockServer({ source: api, endpoints: ["users.getById"] }),
+  demo: defineMockServer({ source: api, fixtures: "./fixtures/api.har" }),
+})
+```
+
+- `endpoints` takes `group.method`, or the method alone for an endpoint outside any group, and is checked against the source: a name it does not have stops the mock with a `MockEndpointsError` that lists the names it has. Streams and channels the mock always answers itself. An endpoint left to the server is not mocked at all, so an override or a scenario for it does not apply.
+- A call passed to the server carries the request's own headers, its credentials included, but none of the hop's (`host`, `origin`, `content-length`, `sec-*` and the like). The server's answer, a failure included, comes back with its status, its data and its headers.
+- `fixtures` is relative to `courier.mocks.ts`. The file is a HAR log, the format browsers' developer tools open; commit it to give everyone the same answers. A recording is matched by its endpoint and its variables, and keeps no credentials: `authorization`, `cookie` and `set-cookie` are left out. An override or a scenario on an endpoint answers in place of its recordings. A call with no recording while the server cannot be reached is answered with a 502 that says so; delete the file to record everything again. A file that is not a HAR log of recordings stops the mock with a `FixtureFileError`.
+
 ### A proxy caller pointed at the mock
 
 A mock stands in for the API itself, where a direct caller goes, and also for a Courier proxy, where a proxy caller goes. It serves the proxy's three routes:

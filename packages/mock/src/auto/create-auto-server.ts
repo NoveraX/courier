@@ -1,6 +1,7 @@
 import { scenarioRecord } from "../scenario/scenario-record";
 import type { MockServer, MockServerOptions } from "../server/create-mock-server";
 import { createMockServer } from "../server/create-mock-server";
+import type { Elsewhere } from "../server/elsewhere";
 import { generatedRoutes } from "../server/generated-routes";
 import type { MockStore } from "../store";
 import type { AnyMockScenario, NetworkConfig, UntypedMockFn } from "../types";
@@ -9,10 +10,13 @@ import { withBasePath } from "./base-path-mappings";
 import { buildAutoHandlers } from "./build-auto-handlers";
 import { checkedMock, withCheckedMock } from "./checked-mock-targets";
 import { composeScenarios } from "./compose-scenarios";
+import { createElsewhere } from "./create-elsewhere";
+import { isApiDefinition } from "./is-api-definition";
 import type { SeedConfig } from "./prefix-mappings";
 import { buildPrefixMappings } from "./prefix-mappings";
 import { buildPresetScenarios } from "./preset-scenarios";
 import { analyzeRoutes, getSourceGroupNames } from "./route-analyzer";
+import type { RouteInfo } from "./route-types";
 import { seedOptionsOf } from "./seed-options";
 
 /** Configuration for the auto-generated mock server */
@@ -52,6 +56,20 @@ export interface AutoMockServerConfig {
    * keeps them, and one the source no longer serves is not brought back.
    */
   persist?: { file: string } | undefined;
+  /**
+   * The endpoints the mock answers, as `group.method` — or the method alone
+   * for one outside any group. Every other HTTP endpoint goes to the
+   * source's own server, as the app calls it; streams and channels the mock
+   * always answers. Default: every endpoint.
+   */
+  endpoints?: readonly string[] | undefined;
+  /**
+   * Answer with recordings of the source's own server, kept in this HAR
+   * file: a call it has no answer to yet goes to the server once, and the
+   * answer is written to the file. An override or a scenario wins over the
+   * recordings. Default: the mock generates its answers from its store.
+   */
+  fixtures?: { file: string } | undefined;
 }
 
 /**
@@ -123,6 +141,7 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
        one is in force and switching back to it turns any other off. */
     scenario: allScenarios["happy-path"],
     reseed,
+    elsewhere: elsewhereOf(config, routes, groupNames),
     ...(config.persist && {
       persist: { file: config.persist.file, collections: [...new Set(routes.map((r) => r.group))] },
     }),
@@ -147,4 +166,24 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
   }
 
   return server;
+}
+
+function elsewhereOf(
+  config: AutoMockServerConfig,
+  routes: readonly RouteInfo[],
+  groupNames: ReadonlySet<string>,
+): Elsewhere | undefined {
+  if (config.endpoints === undefined && config.fixtures === undefined) return undefined;
+  if (!isApiDefinition(config.source)) {
+    throw new TypeError(
+      "[courier-mock] A mock that passes calls on needs a source made with defineApi().",
+    );
+  }
+  return createElsewhere({
+    source: config.source,
+    routes,
+    groupNames,
+    endpoints: config.endpoints,
+    fixturesFile: config.fixtures?.file,
+  });
 }

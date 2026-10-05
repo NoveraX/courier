@@ -7,6 +7,8 @@
  * install.
  */
 
+import { dirname, resolve } from "node:path";
+
 import { createAutoMockServer } from "../auto/create-auto-server";
 import { analyzeRoutes, getSourceGroupNames } from "../auto/route-analyzer";
 import { seedOptionsOf } from "../auto/seed-options";
@@ -109,7 +111,7 @@ async function start(
     return undefined;
   }
   const served: ServedMock = {
-    server: createServer(definition, msg.port, msg.storeFile),
+    server: createServer(definition, msg),
     routes: analyzeRoutes(definition.source),
     groupNames: getSourceGroupNames(definition.source),
     seed: seedOptionsOf(definition.seed),
@@ -138,14 +140,18 @@ async function start(
 
 function createServer(
   definition: MockServerDefinition,
-  port: number,
-  storeFile: string | null,
+  { port, storeFile, mocksFile }: Pick<StartMessage, "port" | "storeFile" | "mocksFile">,
 ): MockServer {
   return createAutoMockServer({
     source: definition.source,
     port,
     strictPort: true,
     ...(storeFile !== null && definition.persist !== false && { persist: { file: storeFile } }),
+    ...(definition.endpoints && { endpoints: definition.endpoints }),
+    /* Relative to the mocks file that names it, wherever Studio runs from. */
+    ...(definition.fixtures && {
+      fixtures: { file: resolve(dirname(mocksFile), definition.fixtures) },
+    }),
     ...(definition.hostname && { hostname: definition.hostname }),
     cors: definition.cors,
     admin: definition.admin,

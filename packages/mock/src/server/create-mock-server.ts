@@ -63,6 +63,13 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     setScenarioState,
   });
 
+  /* What the mock itself answers a route with, whatever it leaves elsewhere. */
+  function ownSource(group: string, method: string): "auto" | "override" | "scenario" {
+    if (registry.hasScenario(group, method)) return "scenario";
+    const generated = generatedRoutes(mockServer).has(routeKey(group, method)) ? 1 : 0;
+    return registry.baseCount(group, method) > generated ? "override" : "auto";
+  }
+
   const routeConfig = {
     registry,
     history,
@@ -75,6 +82,8 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     networkState,
     hooks: requestHooks,
     streamsStopping: streams.signal,
+    elsewhere: config?.elsewhere,
+    answersOwn: (group: string, method: string) => ownSource(group, method) !== "auto",
   };
 
   registerRequestRoutes(app, routeConfig, config?.mappings);
@@ -162,9 +171,10 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     },
 
     getRouteSource(group, method) {
-      if (registry.hasScenario(group, method)) return "scenario";
-      const generated = generatedRoutes(mockServer).has(routeKey(group, method)) ? 1 : 0;
-      return registry.baseCount(group, method) > generated ? "override" : "auto";
+      if (config?.elsewhere?.passes(group, method)) return "upstream";
+      const own = ownSource(group, method);
+      if (own === "auto" && config?.elsewhere?.replays(group, method)) return "fixtures";
+      return own;
     },
 
     ...lifecycle,

@@ -8,6 +8,7 @@ import type { NetworkState } from "../network/state";
 import type { MockRegistry } from "../registry";
 import type { ScenarioMark } from "../scenario/scenario-state";
 import type { MockHistoryEntry, NetworkConfig } from "../types";
+import type { Elsewhere } from "./elsewhere";
 
 /** Hooks for emitting request lifecycle events (set by the worker Studio runs a mock in) */
 export interface RequestHooks {
@@ -49,4 +50,8 @@ export interface RouteConfig {
   hooks?: RequestHooks;
   /** Fires when the server stops, to end its event streams */
   streamsStopping?: () => AbortSignal;
+  /** The calls the mock leaves to the source's own server, or answers with recordings of it */
+  elsewhere?: Elsewhere | undefined;
+  /** Whether an override or a scenario answers an endpoint, which wins over its recordings */
+  answersOwn?: ((group: string, method: string) => boolean) | undefined;
 }

@@ -5,6 +5,7 @@
  * import from "@noverax/courier-mock/testing" instead.
  */
 
+export { MockEndpointsError } from "./auto/mock-endpoints-error";
 export { MockTargetError, type MockTargetErrorCode } from "./auto/mock-target-error";
 // Factory (test data generation helpers)
 export type { FactoryConfig, ResponseFactory } from "./factory";
@@ -17,6 +18,7 @@ export type {
   MockServerSeedConfig,
 } from "./managed";
 export { defineMockServer, defineMocks, isMockServerDefinition } from "./managed";
+export { FixtureFileError } from "./record/fixture-file-error";
 // Scenarios
 export { defineScenario } from "./scenario";
 export {
@@ -25,10 +27,9 @@ export {
 } from "./scenario/scenario-record";
 // Errors (used in override handlers)
 export { isMockHttpError, MockHttpError } from "./server/errors";
-
 // Store types (appear in override callback signatures)
 export type { Collection, MockStore } from "./store";
-export type { TypedMockFn } from "./typed-mock-fn";
+export type { EndpointName, TypedMockFn } from "./typed-mock-fn";
 // Types used in override callbacks and scenario definitions
 export type {
   LatencyProfile,

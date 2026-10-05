@@ -38,6 +38,14 @@
   --color-code-punctuation: #878d97;
   --color-code-plain: #e6e8eb;
 
+  /* What the landing page colours a feature, a brand or a step by. */
+  --color-tone-blue: #7db9ff;
+  --color-tone-green: #9bd68c;
+  --color-tone-teal: #6fd3c7;
+  --color-tone-violet: #b8a1f5;
+  --color-tone-amber: #e8b573;
+  --color-tone-red: #f0806a;
+
   /* The API reference colours an HTTP method, or an export's kind, by these. */
   --color-verb-get: #5ed3a3;
   --color-verb-post: #e8b573;
@@ -104,7 +112,7 @@
   color-scheme: dark;
   color: var(--color-fg);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  /* The design leaves text at the browser's own leading; prose sets its own. */
+  /* Text keeps the browser's own leading; prose sets its own. */
   line-height: normal;
   letter-spacing: var(--tracking-site);
   -webkit-font-smoothing: antialiased;
@@ -134,6 +142,12 @@
   --color-code-comment: #6a7079;
   --color-code-punctuation: #5e646d;
   --color-code-plain: #1e2227;
+  --color-tone-blue: #1c63d6;
+  --color-tone-green: #1d7338;
+  --color-tone-teal: #0b6f68;
+  --color-tone-violet: #7a3bd6;
+  --color-tone-amber: #a3500a;
+  --color-tone-red: #c0392b;
   --color-verb-get: #0f7a55;
   --color-verb-post: #a3500a;
   --color-verb-put: #2f56a8;

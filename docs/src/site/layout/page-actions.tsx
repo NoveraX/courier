@@ -1,11 +1,13 @@
 "use client"
-import { Bot, Check, ChevronDown, Copy, FileText, MessageSquare, Sparkles } from "lucide-react"
+import { Bot, Check, ChevronDown, Copy, FileText } from "lucide-react"
 import { DropdownMenu } from "radix-ui"
 import { useState } from "react"
 
 import { assistantLinks } from "@/site/content/assistant-links"
 import { copyText } from "@/site/copy-text"
 import { useFlash } from "@/site/use-flash"
+import { ChatGptMark } from "./chatgpt-mark"
+import { ClaudeMark } from "./claude-mark"
 import { MarkdownDialog } from "./markdown-dialog"
 import { PageActionItem } from "./page-action-item"
 
@@ -84,7 +86,7 @@ export function PageActions({ title, fileName, markdown }: PageActionsProps) {
             <DropdownMenu.Item className={ITEM} asChild>
               <a href={links.chatgpt} target="_blank" rel="noopener noreferrer">
                 <PageActionItem
-                  icon={MessageSquare}
+                  icon={ChatGptMark}
                   title="Open in ChatGPT"
                   sub="Ask questions about this page"
                   external
@@ -94,7 +96,7 @@ export function PageActions({ title, fileName, markdown }: PageActionsProps) {
             <DropdownMenu.Item className={ITEM} asChild>
               <a href={links.claude} target="_blank" rel="noopener noreferrer">
                 <PageActionItem
-                  icon={Sparkles}
+                  icon={ClaudeMark}
                   title="Open in Claude"
                   sub="Ask questions about this page"
                   external

@@ -1,9 +1,8 @@
 import { AlertTriangle, Copy } from "lucide-react";
-
+import { ChangePreview } from "@/design/code/change-preview";
 import { CodeLines } from "@/design/code/code-lines";
 import type { ManualOutcome, ReadyOutcome } from "@/features/mocks/wizard/wire-types";
 import { copyToClipboard } from "@/lib/clipboard";
-import { ChangePreview } from "./change-preview";
 import { WarningNotes } from "./wizard-notes";
 
 /**

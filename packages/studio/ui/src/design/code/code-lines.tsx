@@ -15,6 +15,8 @@ export const CODE_TONES: Readonly<Record<CodeTone, string>> = {
   space: "",
 };
 
+const HIGHLIGHTS = { brand: "bg-brand-tint", warn: "bg-warn-dim", ok: "bg-ok-dim" } as const;
+
 /* A setup snippet reads at the size of the page; code in the inspector, a size down. */
 const VARIANTS = {
   snippet: { pre: "pt-6 pb-6.5 text-control", line: "min-h-5.25", number: "opacity-55" },
@@ -28,8 +30,8 @@ interface CodeLinesProps {
   /** How a line splits into pieces to colour; TypeScript and shell by default. */
   tokenize?: ((line: string) => CodeToken[]) | undefined;
   variant?: keyof typeof VARIANTS | undefined;
-  /** The ground of a highlighted line: a hint, or a warning. */
-  highlight?: "brand" | "warn" | undefined;
+  /** The ground of a highlighted line: a hint, a warning, or a fix. */
+  highlight?: keyof typeof HIGHLIGHTS | undefined;
 }
 
 /**
@@ -56,12 +58,7 @@ export function CodeLines({
         <div
           // biome-ignore lint/suspicious/noArrayIndexKey: a snippet's lines are fixed; the number is the line's identity
           key={index}
-          className={cn(
-            "flex",
-            v.line,
-            isHighlighted?.(line, index + 1) &&
-              (highlight === "warn" ? "bg-warn-dim" : "bg-brand-tint"),
-          )}
+          className={cn("flex", v.line, isHighlighted?.(line, index + 1) && HIGHLIGHTS[highlight])}
         >
           <span
             className={cn("w-10 shrink-0 pr-3.5 text-right text-fg-subtle select-none", v.number)}

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.6/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -7,15 +7,19 @@
   },
   "files": {
     "includes": [
+      "*.{ts,cjs,mjs,json}",
+      "types/**",
+      "scripts/**",
       "packages/*/src/**",
-      "packages/*/tsdown.config.ts",
       "packages/*/tests/**",
+      "packages/*/*.{ts,json}",
       "packages/studio/ui/src/**",
       "packages/studio/ui/__tests__/**",
-      "scripts/**",
+      "packages/studio/ui/*.{ts,json}",
       "examples/*/src/**",
-      "examples/*/courier.config.ts",
-      "examples/demo-shop/courier.mocks.ts"
+      "examples/*/*.{ts,json}",
+      "!**/package.json",
+      "!**/package-lock.json"
     ]
   },
   "formatter": {
@@ -25,12 +29,23 @@
   },
   "linter": {
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "style": {
-        "noParameterAssign": "off"
+        "noParameterAssign": "off",
+        "noDefaultExport": "error",
+        "noEnum": "error",
+        "useImportType": "error",
+        "useExportType": "error",
+        "useFilenamingConvention": {
+          "level": "error",
+          "options": { "filenameCases": ["kebab-case"], "requireAscii": true }
+        }
       },
       "suspicious": {
         "noExplicitAny": "error"
+      },
+      "performance": {
+        "noReExportAll": "error"
       },
       "complexity": {
         "noForEach": "off",
@@ -67,6 +82,39 @@
           },
           "correctness": {
             "useYield": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.config.{ts,cjs,mjs}", "**/courier.mocks.ts", "**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["packages/studio/ui/src/routes/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUndeclaredEnvVars": {
+              "level": "error",
+              "options": { "allowedEnvVars": ["GITHUB_ACTIONS"] }
+            }
           }
         }
       }

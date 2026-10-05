@@ -1,8 +1,8 @@
 import path from "node:path";
-import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
 import { thirdPartyLicenses } from "../../../scripts/third-party-licenses";
 
 /* Paths resolve from this directory, not from wherever the build is run. */

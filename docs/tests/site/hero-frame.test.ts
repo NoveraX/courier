@@ -11,13 +11,21 @@ import { HERO_CYCLE, HERO_REST, heroFrame } from "@/site/landing/hero/hero-frame
 
 describe("the hero's frames", () => {
   it("starts empty, with the caret on the first call", () => {
-    expect(heroFrame(0)).toMatchObject({ typed: [0, 0, 0], caret: 1, completion: null, refused: false })
+    expect(heroFrame(0)).toMatchObject({
+      typed: [0, 0, 0],
+      caret: 1,
+      completion: null,
+      refused: false,
+    })
   })
 
   it("stops at `caller.users.` while the completion list moves from getAll to getById", () => {
     expect(heroFrame(READ_STOP).typed[0]).toBe(READ_STOP)
     expect(heroFrame(40)).toMatchObject({ completion: { line: 1, picked: 0 }, lit: { lines: [6] } })
-    expect(heroFrame(50)).toMatchObject({ completion: { line: 1, picked: 1 }, lit: { lines: [7, 8, 9] } })
+    expect(heroFrame(50)).toMatchObject({
+      completion: { line: 1, picked: 1 },
+      lit: { lines: [7, 8, 9] },
+    })
     expect(heroFrame(55).typed[0]).toBe(READ_STOP)
   })
 
@@ -29,8 +37,13 @@ describe("the hero's frames", () => {
   })
 
   it("opens a second list at the create and picks it, lighting the create's lines", () => {
-    expect(heroFrame(170)).toMatchObject({ typed: [expect.any(Number), expect.any(Number), CREATE_STOP] })
-    expect(heroFrame(180)).toMatchObject({ completion: { line: 7, picked: 2 }, lit: { lines: [10, 11, 12] } })
+    expect(heroFrame(170)).toMatchObject({
+      typed: [expect.any(Number), expect.any(Number), CREATE_STOP],
+    })
+    expect(heroFrame(180)).toMatchObject({
+      completion: { line: 7, picked: 2 },
+      lit: { lines: [10, 11, 12] },
+    })
   })
 
   it("refuses the create once it is typed, lighting its variables in red", () => {
@@ -46,7 +59,11 @@ describe("the hero's frames", () => {
     const rest = heroFrame(HERO_REST)
 
     expect(HERO_REST).toBeLessThan(HERO_CYCLE)
-    expect(rest.typed).toEqual([CALLS_FILE[1]?.length, CALLS_FILE[4]?.length, CALLS_FILE[7]?.length])
+    expect(rest.typed).toEqual([
+      CALLS_FILE[1]?.length,
+      CALLS_FILE[4]?.length,
+      CALLS_FILE[7]?.length,
+    ])
     expect(rest.hints).toEqual([true, true])
     expect(rest.refused).toBe(true)
   })

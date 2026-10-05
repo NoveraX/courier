@@ -7,9 +7,14 @@
  */
 import { describe, expect, it } from "vitest"
 
-import { auditFrame, auditScore, SESSION_TICKS, scoreLook } from "@/site/studio-landing/chapters/audit-model"
-import { edgePath, GRAPH_EDGES, hotEdge } from "@/site/studio-landing/chapters/graph-model"
+import {
+  auditFrame,
+  auditScore,
+  SESSION_TICKS,
+  scoreLook,
+} from "@/site/studio-landing/chapters/audit-model"
 import { CHAPTERS } from "@/site/studio-landing/chapters/chapters"
+import { edgePath, GRAPH_EDGES, hotEdge } from "@/site/studio-landing/chapters/graph-model"
 import { callStrip, outcomeOf, presetAt } from "@/site/studio-landing/chapters/mock-model"
 
 describe("the Explorer graph", () => {
@@ -31,7 +36,9 @@ describe("chaos", () => {
 
   it("fails calls about as often as the preset says", () => {
     const failed = (preset: number) =>
-      Array.from({ length: 2000 }, (_, call) => outcomeOf(call, preset)).filter((o) => o === "failed").length / 2000
+      Array.from({ length: 2000 }, (_, call) => outcomeOf(call, preset)).filter(
+        (o) => o === "failed"
+      ).length / 2000
 
     expect(failed(0)).toBeLessThan(0.05)
     expect(failed(2)).toBeGreaterThan(0.25)

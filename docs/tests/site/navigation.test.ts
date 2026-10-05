@@ -19,7 +19,9 @@ describe("the sidebar's filter", () => {
     expect(pages.map((s) => [s.label, s.items.map((i) => i.title)])).toEqual([
       ["Framework Guides", ["Next.js"]],
     ])
-    expect(section[0]?.items.length).toBe(docsNav.find((s) => s.label === "React Query")?.items.length)
+    expect(section[0]?.items.length).toBe(
+      docsNav.find((s) => s.label === "React Query")?.items.length
+    )
     expect(filterNav(docsNav, "  ")).toHaveLength(docsNav.length)
     expect(filterNav(docsNav, "nothing like it")).toEqual([])
   })
@@ -37,7 +39,9 @@ describe("a page's neighbours", () => {
 })
 
 describe("search", () => {
-  const entries = searchEntries((href) => (href === "/docs/proxy-mode/proxy-caller" ? "Typed client" : ""))
+  const entries = searchEntries((href) =>
+    href === "/docs/proxy-mode/proxy-caller" ? "Typed client" : ""
+  )
 
   it("lists every page in the navigation with its section", () => {
     expect(entries).toHaveLength(docsNav.reduce((n, s) => n + s.items.length, 0))

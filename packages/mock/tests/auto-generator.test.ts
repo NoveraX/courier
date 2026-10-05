@@ -44,8 +44,8 @@ describe("gen-helpers", () => {
 
   describe("roundTo", () => {
     it("rounds to specified decimal places", () => {
-      expect(roundTo(3.14159, 2)).toBe(3.14);
-      expect(roundTo(3.14159, 0)).toBe(3);
+      expect(roundTo(2.34567, 2)).toBe(2.35);
+      expect(roundTo(2.34567, 0)).toBe(2);
       expect(roundTo(3.145, 2)).toBe(3.15);
     });
   });

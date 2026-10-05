@@ -221,6 +221,7 @@ describe("loadCourierConfig on a CommonJS config, as Node runs it", () => {
 
 /** A TypeScript module Node's type stripping cannot run: it declares an enum. */
 const ENUM_BASE =
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the template is the fixture's source code, written out as text
   'enum Scheme {\n  Https = "https",\n}\nexport const baseURL: string = `${Scheme.Https}://api.example.com`;\n';
 
 const TYPED_BASE = 'export const baseURL: string = "https://api.example.com";\n';
@@ -442,6 +443,7 @@ describe("loadCourierConfig on an ES module config, as it evaluates TypeScript",
   it("has CommonJS's require, exports and __dirname, and an arguments object, in scope in a courier.config.mjs", async () => {
     writeFileSync(
       join(dir, "courier.config.mjs"),
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the template is the fixture's source code, written out as text
       "export default { sources: { api: { baseURL: `${typeof require}:${typeof exports}:${typeof __dirname}:${typeof arguments}` } } };\n",
     );
 

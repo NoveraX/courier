@@ -46,9 +46,9 @@ function danglingImports(generated: { path: string; content: string }[]): string
       const resolved = `${dir}/${target}`
         .split("/")
         .reduce<string[]>((parts, part) => {
-          if (part === "." || part === "") return parts;
-          if (part === "..") return parts.slice(0, -1);
-          return [...parts, part];
+          if (part === "..") parts.pop();
+          else if (part !== "." && part !== "") parts.push(part);
+          return parts;
         }, [])
         .join("/");
       if (!written.has(resolved) && !written.has(`${resolved}/index`)) {

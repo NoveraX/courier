@@ -91,6 +91,7 @@ describe("readModuleImports", () => {
   it("skips a dynamic import whose specifier is computed", () => {
     const path = file(
       "a.ts",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the template is the fixture's source code, written out as text
       ["const a = import(name);", "const b = import(`./${name}`);"].join("\n"),
     );
 

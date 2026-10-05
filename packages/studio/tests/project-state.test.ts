@@ -132,6 +132,7 @@ function project({ config = "good" }: ProjectOptions = {}): Project {
       "const counts = globalThis as Record<string, number | undefined>;\n" +
       `const evaluation = (counts.${key}_demo ?? 0) + 1;\n` +
       `counts.${key}_demo = evaluation;\n` +
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the template is the fixture's source code, written out as text
       "export const demo = defineApi({ baseURL: `https://v${evaluation}.example`, endpoints: {} });\n",
   );
   const file = join(root, "courier.config.ts");

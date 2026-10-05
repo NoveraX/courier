@@ -1,10 +1,14 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.6/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
   "root": false,
   "files": {
     "includes": [
       "src/**",
-      "server/**"
+      "server/**",
+      "tests/**",
+      "*.{ts,tsx,mjs,json}",
+      "!package.json",
+      "!package-lock.json"
     ]
   },
   "css": {
@@ -28,7 +32,7 @@
   },
   "linter": {
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "style": {
         "noDefaultExport": "off",
         "noParameterAssign": "off",

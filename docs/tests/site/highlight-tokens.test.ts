@@ -9,11 +9,16 @@ import { highlightTokens, sliceTokens } from "@/site/code/highlight-tokens"
 
 describe("highlighted runs", () => {
   it("paints a line's runs in the site's code colours", async () => {
-    const [line] = await highlightTokens('const user = await caller.users.getById({ id: "5" })', "ts")
+    const [line] = await highlightTokens(
+      'const user = await caller.users.getById({ id: "5" })',
+      "ts"
+    )
 
     expect(line?.find((t) => t.text === "const")?.tone).toBe("keyword")
     expect(line?.find((t) => t.text === "getById")?.tone).toBe("function")
-    expect(line?.map((t) => t.text).join("")).toBe('const user = await caller.users.getById({ id: "5" })')
+    expect(line?.map((t) => t.text).join("")).toBe(
+      'const user = await caller.users.getById({ id: "5" })'
+    )
   })
 
   it("keeps one array per line, an empty line included", async () => {

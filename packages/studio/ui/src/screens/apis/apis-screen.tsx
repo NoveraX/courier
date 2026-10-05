@@ -8,12 +8,12 @@ import { apiCardView, handWrittenRow } from "@/features/apis/api-card-view";
 import { countScannedEndpoints } from "@/features/apis/helpers";
 import { useNow } from "@/hooks/use-tick";
 import { cn } from "@/lib/utils";
-import { ManageDialog } from "@/views/apis/manage-dialog";
-import { RemoveImportDialog } from "@/views/apis/remove-import-dialog";
 import { ApiCard } from "./api-card";
 import { ConfigNoticeBar, NoConfig, NoSources } from "./apis-states";
 import { HandWrittenTable } from "./hand-written-table";
 import { ImportDialog } from "./import/import-dialog";
+import { ManageDialog } from "./manage/manage-dialog";
+import { RemoveImportDialog } from "./remove-import-dialog";
 
 function Section({
   title,

@@ -141,6 +141,8 @@ function handleClose(ctx: LifecycleContext, ev: SocketClosure): void {
   }
   if (ev.code === MESSAGE_TOO_BIG) tellOfOversizedMessage(ctx, ev);
   ctx.state.set("reconnecting");
+  /* Whoever heard of the drop may have closed the connection for good. */
+  if (ctx.refs.closed) return;
   clearReconnectTimer(ctx);
   const delay = calculateBackoff(ctx.refs.attempt++, ctx.config.backoff);
   ctx.log.info(`Reconnecting in ${delay}ms (attempt ${ctx.refs.attempt})`);

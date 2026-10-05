@@ -7,6 +7,8 @@ interface PooledConnection {
   connection: WSConnection;
   users: number;
   idleTimer?: ReturnType<typeof setTimeout> | undefined;
+  /** Stops listening for a drop while the connection sits idle. */
+  unwatch?: (() => void) | undefined;
 }
 
 /** A pooled connection taken by one subscription, released when it ends. */
@@ -66,6 +68,8 @@ export function acquireConnection(
   const pooled = poolEntry(key, url, config);
   clearTimeout(pooled.idleTimer);
   pooled.idleTimer = undefined;
+  pooled.unwatch?.();
+  pooled.unwatch = undefined;
   pooled.users++;
   let released = false;
 
@@ -75,10 +79,20 @@ export function acquireConnection(
       if (released) return;
       released = true;
       if (--pooled.users > 0) return;
-      pooled.idleTimer = setTimeout(() => {
+      const retire = (): void => {
+        clearTimeout(pooled.idleTimer);
+        pooled.idleTimer = undefined;
+        pooled.unwatch?.();
+        pooled.unwatch = undefined;
         if (pool.get(key) === pooled) pool.delete(key);
         pooled.connection.close();
-      }, LIMITS.WS_IDLE_CLOSE_MS);
+      };
+      pooled.idleTimer = setTimeout(retire, LIMITS.WS_IDLE_CLOSE_MS);
+      /* Nobody is subscribed while it waits to be reused: a socket that drops
+         then is not worth reopening, and the next subscription opens anew. */
+      pooled.unwatch = pooled.connection.onStatusChange((status) => {
+        if (status === "reconnecting" || status === "disconnected") retire();
+      });
     },
   };
 }
@@ -107,6 +121,7 @@ function poolEntry(
 export function clearWSConnectionPool(): void {
   for (const pooled of pool.values()) {
     clearTimeout(pooled.idleTimer);
+    pooled.unwatch?.();
     pooled.connection.close();
   }
   pool.clear();

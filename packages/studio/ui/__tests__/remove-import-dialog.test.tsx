@@ -15,8 +15,8 @@ vi.mock("@/lib/api-client", () => ({ post: vi.fn() }));
 
 import { post } from "@/lib/api-client";
 import { StudioRequestError } from "@/lib/studio-request-error";
+import { type UseRemoveImportReturn, useRemoveImport } from "../src/apis/use-remove-import";
 import { RemoveImportDialog } from "../src/views/apis/remove-import-dialog";
-import { type UseRemoveImportReturn, useRemoveImport } from "../src/views/apis/use-remove-import";
 
 const PLAN = {
   digest: "plan-1",

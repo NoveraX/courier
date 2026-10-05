@@ -4,29 +4,29 @@
 
 import { Loader2, Settings2 } from "lucide-react";
 import { useEffect, useState } from "react";
-
+import type { ReuploadState } from "@/apis/parse-raw-spec";
+import type { UseManageReturn } from "@/apis/use-manage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ManageFooter } from "./manage-footer";
 import { ManageInventoryView } from "./manage-inventory";
 import { ManagePreviewView } from "./manage-preview";
-import { ReuploadStep, type ReuploadStepState } from "./manage-reupload-step";
-import type { UseManageReturn } from "./use-manage";
+import { ReuploadStep } from "./manage-reupload-step";
 
 interface ManageDialogProps {
   manage: UseManageReturn;
 }
 
-const EMPTY_REUPLOAD: ReuploadStepState = { content: "", parsing: false, error: null };
+const EMPTY_REUPLOAD: ReuploadState = { content: "", parsing: false, error: null };
 
 export function ManageDialog({ manage }: ManageDialogProps): React.ReactElement {
-  const [reupload, setReupload] = useState<ReuploadStepState>(EMPTY_REUPLOAD);
+  const [reupload, setReupload] = useState<ReuploadState>(EMPTY_REUPLOAD);
 
   /* Each opening starts from an empty spec, not the one pasted for another import. */
   useEffect(() => {
     if (manage.open) setReupload(EMPTY_REUPLOAD);
   }, [manage.open]);
 
-  const updateReupload = (update: Partial<ReuploadStepState>) => {
+  const updateReupload = (update: Partial<ReuploadState>) => {
     setReupload((prev) => ({ ...prev, ...update }));
   };
 
@@ -82,7 +82,7 @@ function StepContent({
   onContentChange,
 }: {
   manage: UseManageReturn;
-  reupload: ReuploadStepState;
+  reupload: ReuploadState;
   onContentChange: (content: string) => void;
 }): React.ReactElement {
   if (manage.step === "loading") {

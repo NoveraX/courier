@@ -3,7 +3,7 @@
  */
 
 import { ownValue } from "@/lib/own-value";
-import type { EndpointInventory, InventoryEndpoint } from "./types";
+import type { EndpointInventory, InventoryEndpoint } from "@/views/apis/types";
 
 type SetMap = Record<string, Set<string>>;
 

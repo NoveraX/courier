@@ -5,7 +5,7 @@
 
 import { useCallback } from "react";
 import { fetchInventory, parseSpecFromUrl } from "@/apis/client";
-import type { EndpointInventory, ManageStep, ParsedSpec } from "./types";
+import type { EndpointInventory, ManageStep, ParsedSpec } from "@/views/apis/types";
 
 interface LoaderDeps {
   setStep: (step: ManageStep) => void;

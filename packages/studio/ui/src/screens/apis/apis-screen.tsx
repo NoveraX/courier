@@ -1,15 +1,15 @@
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useImport } from "@/apis/use-import";
+import { useManage } from "@/apis/use-manage";
 import { useRegistry } from "@/apis/use-registry";
+import { useRemoveImport } from "@/apis/use-remove-import";
 import { apiCardView, handWrittenRow } from "@/features/apis/api-card-view";
 import { countScannedEndpoints } from "@/features/apis/helpers";
 import { useNow } from "@/hooks/use-tick";
 import { cn } from "@/lib/utils";
 import { ManageDialog } from "@/views/apis/manage-dialog";
 import { RemoveImportDialog } from "@/views/apis/remove-import-dialog";
-import { useManage } from "@/views/apis/use-manage";
-import { useRemoveImport } from "@/views/apis/use-remove-import";
 import { ApiCard } from "./api-card";
 import { ConfigNoticeBar, NoConfig, NoSources } from "./apis-states";
 import { HandWrittenTable } from "./hand-written-table";

@@ -11,7 +11,7 @@ import type {
   ManageStep,
   ParsedSpec,
   SourceSummary,
-} from "./types";
+} from "@/views/apis/types";
 import { useInventoryLoaders } from "./use-manage-loaders";
 import { useManagePlan } from "./use-manage-plan";
 import { type ManageSelection, useManageSelection } from "./use-manage-selection";

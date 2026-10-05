@@ -5,7 +5,8 @@
  * picked and a rate dragged — each sent as the share the mock reads — a
  * latency preset and a base and jitter of one's own, a bandwidth cap, a
  * route's own override sent with the ones the mock already held, the
- * thresholds that halt a run, the log of runs, Stop, and a stopped mock.
+ * thresholds that halt a run, the log of runs, Stop — which switches the
+ * route overrides off too — and a stopped mock.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -113,6 +114,24 @@ describe("the network condition", () => {
     const faults = within(screen.getByRole("region", { name: "Observed" }));
     expect(faults.getByText("503").nextElementSibling?.textContent).toBe("1");
     expect(faults.getByText("500").nextElementSibling?.textContent).toBe("0");
+  });
+});
+
+describe("the network condition of a mock that only caps or overrides", () => {
+  it("names its bandwidth cap and the routes overridden, with a Stop", async () => {
+    serve({
+      networkConfig: {
+        latency: 0,
+        errorRate: 0,
+        bandwidth: 512,
+        routeOverrides: [{ routeId: "users:list", enabled: true, errorRate: 0.5 }],
+      },
+    });
+
+    await openShell("/mocks/network");
+
+    expect(within(condition()).getByText("512 Kbps cap · 1 route overridden")).toBeTruthy();
+    expect(within(condition()).getByRole("button", { name: /Stop/ })).toBeTruthy();
   });
 });
 
@@ -389,6 +408,23 @@ describe("Stop and a stopped mock", () => {
     ]);
     expect(sent("mock:chaos:set")).toMatchObject([
       { config: { errorRate: 0, faultWeights: [] }, preset: "none" },
+    ]);
+  });
+
+  it("switches every route override off, keeping what it sets", async () => {
+    const override = { routeId: "users:list", enabled: true, errorRate: 0.5 };
+    serve({ networkConfig: { latency: 0, errorRate: 0, routeOverrides: [override] } });
+    await openShell("/mocks/network");
+
+    await settle(() => fireEvent.click(within(condition()).getByRole("button", { name: /Stop/ })));
+
+    expect(sent("mock:network:set")).toMatchObject([
+      { config: { latency: 0, bandwidth: 0, routeOverrides: [] }, preset: "none" },
+    ]);
+    const toggle = screen.getByRole("switch", { name: "Override users.list" });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(useMockStore.getState().servers["api-mock"]?.routeOverrides).toEqual([
+      { ...override, enabled: false },
     ]);
   });
 

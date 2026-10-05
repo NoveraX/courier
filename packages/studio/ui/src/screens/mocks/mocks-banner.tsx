@@ -51,7 +51,7 @@ export function MocksBanner({
         command: "mock:managed:start",
         serverId: server.serverId,
       });
-    else if (banner.action.kind === "stop-chaos") stopAllFaults(server.serverId);
+    else if (banner.action.kind === "stop-chaos") stopAllFaults(server);
     else
       getSocket().emit("mock:command", {
         action: "mock:scenario:apply",

@@ -2,7 +2,8 @@
  * The Network tab's figures: the live figures and their sparklines, the
  * latency histogram, the status strip, the faults chaos injected told apart
  * from a handler's own errors, the delay a range stands for, the route
- * overrides the mock already holds, and the log of runs with their length.
+ * overrides the mock already holds, what the mock simulates in all, and
+ * the log of runs with their length.
  */
 import { describe, expect, it } from "vitest";
 
@@ -10,6 +11,7 @@ import { chaosModeOf } from "@/features/mocks/chaos-config";
 import { experimentLog, runLength } from "@/features/mocks/experiment-log";
 import { delayLabel, delayOf, delayWindow } from "@/features/mocks/latency-window";
 import { injectedFault } from "@/features/mocks/mock-log";
+import { bandwidthLabel, networkConditionOf } from "@/features/mocks/network-condition";
 import { networkLive } from "@/features/mocks/network-live";
 import { faultsByType, latencyHistogram, statusStrip } from "@/features/mocks/observed-model";
 import { overrideRows, routeOverridesOf } from "@/features/mocks/route-overrides";
@@ -214,6 +216,36 @@ describe("the route overrides", () => {
       { method: "GET", path: "/api/users", name: "users.list", tag: "global", tone: "subtle" },
       { method: "POST", path: "/orders", name: "orders.create", tag: "+300ms · 50%", tone: "err" },
     ]);
+  });
+});
+
+describe("what a mock simulates", () => {
+  it("sums up its rate, delay and bandwidth cap, and the routes whose override delays or fails them", () => {
+    const server = mockServer({
+      networkConfig: {
+        errorRate: 0.4,
+        latency: { min: 300, max: 900, jitter: 150 },
+        bandwidth: 512,
+        routeOverrides: [
+          { routeId: "users:list", enabled: true, errorRate: 0.5 },
+          { routeId: "users:get", enabled: true, latency: { min: 0, max: 0, jitter: 0 } },
+          { routeId: "orders:list", enabled: false, errorRate: 1 },
+        ],
+      },
+    });
+
+    expect(networkConditionOf(server)).toEqual({
+      rate: 40,
+      delay: { base: 600, jitter: 450 },
+      kbps: 512,
+      routes: 1,
+    });
+  });
+
+  it("names a bandwidth cap in Kbps below a megabit and in Mbps from one up", () => {
+    expect(bandwidthLabel(512)).toBe("512 Kbps");
+    expect(bandwidthLabel(1_500)).toBe("1.5 Mbps");
+    expect(bandwidthLabel(10_000)).toBe("10 Mbps");
   });
 });
 

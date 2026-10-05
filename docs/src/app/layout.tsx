@@ -52,6 +52,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html
       lang="en"
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="min-h-screen antialiased">

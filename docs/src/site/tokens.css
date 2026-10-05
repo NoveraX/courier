@@ -93,6 +93,17 @@
     rgb(var(--site-shadow-rgb) / calc(0.9 * var(--site-shadow-alpha)));
 }
 
+@keyframes site-target {
+  from {
+    background: color-mix(in srgb, var(--color-brand) 14%, transparent);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-brand) 14%, transparent);
+  }
+  to {
+    background: transparent;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
 @keyframes site-in {
   from {
     opacity: 0;
@@ -200,6 +211,30 @@
 
   ::selection {
     background: color-mix(in srgb, var(--color-brand) 28%, transparent);
+  }
+
+  /* A link to a place on the page glides there. Between pages the router jumps
+     straight to the place, as html's data-scroll-behavior asks of it. */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* A heading a link lands on lights up for a moment, so the reader sees where they are. */
+  :is(h2, h3, h4)[id]:target,
+  section[id]:target > :first-child {
+    border-radius: 6px;
+    animation: site-target 1.6s ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    :is(h2, h3, h4)[id]:target,
+    section[id]:target > :first-child {
+      animation: none;
+    }
   }
 }
 

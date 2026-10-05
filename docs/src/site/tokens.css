@@ -3,13 +3,13 @@
  * built on `src/site`. Dark is the default; `data-theme="light"` on the root
  * element, as the theme provider sets it, switches to light. Colours name
  * their role; the code colours are what highlighted code is painted with.
- *
- * `--color-brand` exists in the older stylesheet too, so its value is set
- * on `[data-site]` — the root of every page built here and every overlay
- * those pages open — where it wins over the older one.
  */
 
 @theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --color-brand: #7db9ff;
   --color-bg: #08090a;
   --color-bg-subtle: #0c0d0f;
   --color-panel: #101114;
@@ -84,7 +84,7 @@
 
   --animate-site-in: site-in 0.16s ease both;
 
-  /* Shadows take their colour and strength from the theme (see [data-site]). */
+  /* Shadows take their colour and strength from the theme (see :root). */
   --shadow-panel: 0 1px 2px rgb(var(--site-shadow-rgb) / calc(0.25 * var(--site-shadow-alpha)));
   --shadow-overlay:
     0 24px 60px -24px rgb(var(--site-shadow-rgb) / calc(0.7 * var(--site-shadow-alpha))),
@@ -104,23 +104,16 @@
   }
 }
 
-[data-site] {
-  --color-brand: #7db9ff;
+:root {
   --site-dot: rgb(255 255 255 / 0.045);
   --site-header: rgb(8 9 10 / 0.78);
   --site-scrim: rgb(4 5 6 / 0.66);
   --site-shadow-rgb: 0 0 0;
   --site-shadow-alpha: 1;
   color-scheme: dark;
-  color: var(--color-fg);
-  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  /* Text keeps the browser's own leading; prose sets its own. */
-  line-height: normal;
-  letter-spacing: var(--tracking-site);
-  -webkit-font-smoothing: antialiased;
 }
 
-:root[data-theme="light"] [data-site] {
+:root[data-theme="light"] {
   --color-bg: #fbfbfa;
   --color-bg-subtle: #f4f4f2;
   --color-panel: #ffffff;
@@ -164,37 +157,48 @@
 }
 
 @layer base {
-  [data-site] *,
-  [data-site] ::before,
-  [data-site] ::after {
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    /* Text keeps the browser's own leading; prose sets its own. */
+    line-height: normal;
+    letter-spacing: var(--tracking-site);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  *,
+  ::before,
+  ::after {
     border-color: var(--color-line);
   }
 
-  [data-site] :focus-visible {
+  :focus-visible {
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
   }
 
-  [data-site] code,
-  [data-site] pre,
-  [data-site] kbd {
-    font-family: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  code,
+  pre,
+  kbd {
+    font-family: var(--font-mono);
     font-variant-ligatures: none;
     letter-spacing: 0;
   }
 
-  [data-site] h1,
-  [data-site] h2,
-  [data-site] h3 {
+  h1,
+  h2,
+  h3 {
     text-wrap: balance;
   }
 
   /* As the browser draws them: controls take no tracking from the text around them. */
-  [data-site] :is(button, input, select, textarea) {
+  :is(button, input, select, textarea) {
     letter-spacing: normal;
   }
 
-  [data-site] ::selection {
+  ::selection {
     background: color-mix(in srgb, var(--color-brand) 28%, transparent);
   }
 }

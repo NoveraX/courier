@@ -12,7 +12,7 @@ export function docsMetadata(title: string, description: string): Metadata {
           url: "/opengraph-image",
           width: 1200,
           height: 630,
-          alt: "Courier — Type-Safe HTTP for Next.js",
+          alt: "Courier — type-safe HTTP for any framework",
         },
       ],
     },

@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import type { ReactNode } from "react"
 
-import { QueryProvider } from "@/components/query-provider"
-import { ThemeProvider } from "@/components/theme-provider"
+import { QueryProvider } from "@/site/query-provider"
+import { ThemeProvider } from "@/site/theme-provider"
 
 import "./globals.css"
 
@@ -19,22 +19,22 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Courier — Type-Safe HTTP for Next.js",
+    default: "@noverax/courier — type-safe HTTP for any framework, any REST backend",
     template: "%s — Courier Docs",
   },
   description:
-    "Type-safe HTTP client with request grouping, path parameters, and full Next.js integration. Proxy & direct modes, React Query, streaming, uploads.",
+    "Define your API once in plain TypeScript. Get end-to-end inference, one proxy route for every endpoint, React Query bindings and middleware — against any REST backend, which needs zero changes.",
   metadataBase: new URL("https://courier.noverax.cloud"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "Courier Docs",
+    siteName: "Courier",
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Courier — Type-Safe HTTP for Next.js",
+        alt: "Courier — type-safe HTTP for any framework",
       },
     ],
   },

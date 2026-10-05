@@ -6,7 +6,6 @@ import { Dialog } from "radix-ui"
 
 import { cn } from "@/site/cn"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
-import { sitePath } from "@/site/site-path"
 import { KIND_LOOK } from "./kind-look"
 import type { ListedExport } from "./reference-sidebar"
 
@@ -32,12 +31,8 @@ export function ReferenceDrawer({ exports, open, onOpenChange }: ReferenceDrawer
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay
-          data-site=""
-          className="fixed inset-0 z-85 bg-(--site-scrim) backdrop-blur-[3px]"
-        />
+        <Dialog.Overlay className="fixed inset-0 z-85 bg-(--site-scrim) backdrop-blur-[3px]" />
         <Dialog.Content
-          data-site=""
           aria-describedby={undefined}
           className="fixed inset-y-0 left-0 z-86 w-[min(300px,84vw)] animate-site-in overflow-y-auto border-r border-line bg-bg-subtle px-4 pt-4.5 pb-10"
         >
@@ -72,7 +67,7 @@ export function ReferenceDrawer({ exports, open, onOpenChange }: ReferenceDrawer
             </a>
           ))}
           <Link
-            href={sitePath("/docs/introduction")}
+            href={"/docs/introduction"}
             onClick={close}
             className="mt-3.5 block border-t border-line pt-3.5 text-nav text-brand"
           >

@@ -1,21 +1,13 @@
-import { Architecture } from "@/components/landing/architecture"
-import { CodeComparison } from "@/components/landing/code-comparison"
-import { FeaturesGrid } from "@/components/landing/features-grid"
-import { Footer } from "@/components/landing/footer"
-import { Hero } from "@/components/landing/hero"
-import { QuickStart } from "@/components/landing/quick-start"
-import { WhyCourier } from "@/components/landing/why-courier"
+import type { Metadata } from "next"
 
-export default function LandingPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <Hero />
-      <Architecture />
-      <FeaturesGrid />
-      <CodeComparison />
-      <WhyCourier />
-      <QuickStart />
-      <Footer />
-    </div>
-  )
+import { LandingPage } from "@/site/landing/landing-page"
+
+export const metadata: Metadata = {
+  title: { absolute: "@noverax/courier — type-safe HTTP for any framework, any REST backend" },
+  description:
+    "Define your API once in plain TypeScript. Get end-to-end inference, one proxy route for every endpoint, React Query bindings and middleware — against any REST backend, which needs zero changes.",
+}
+
+export default function Page() {
+  return <LandingPage />
 }

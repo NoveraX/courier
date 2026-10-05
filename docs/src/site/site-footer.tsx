@@ -1,7 +1,5 @@
 import Link from "next/link"
 
-import { sitePath } from "./site-path"
-
 /**
  * The foot of a page: the licence, and the way home, to the docs and to
  * the repository.
@@ -18,10 +16,10 @@ export function SiteFooter() {
       <div className="mx-auto flex max-w-[1400px] flex-wrap justify-between gap-4 px-6 py-6.5 text-control text-fg-subtle">
         <span>© 2026 NoveraX · MIT</span>
         <span className="flex gap-5.5">
-          <Link href={sitePath("/")} className="hover:text-fg">
+          <Link href={"/"} className="hover:text-fg">
             Home
           </Link>
-          <Link href={sitePath("/docs/introduction")} className="hover:text-fg">
+          <Link href={"/docs/introduction"} className="hover:text-fg">
             Docs
           </Link>
           <a

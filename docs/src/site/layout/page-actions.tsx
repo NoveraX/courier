@@ -63,7 +63,6 @@ export function PageActions({ title, fileName, markdown }: PageActionsProps) {
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            data-site=""
             align="end"
             sideOffset={8}
             className="z-60 w-75 animate-site-in rounded-panel border border-line-strong bg-panel p-1.5 shadow-overlay"

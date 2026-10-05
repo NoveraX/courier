@@ -4,7 +4,6 @@ import type { ReactNode } from "react"
 
 import { CodePanel } from "@/site/code/code-panel"
 import { Heading } from "@/site/mdx/heading"
-import { sitePath } from "@/site/site-path"
 
 interface ExampleSectionProps {
   title: string
@@ -57,7 +56,7 @@ export function ExampleSection({
       </div>
       {learnMore && (
         <Link
-          href={sitePath(learnMore.href)}
+          href={learnMore.href}
           className="mt-3.5 inline-flex items-center gap-1.5 text-control text-brand hover:underline"
         >
           {learnMore.label}

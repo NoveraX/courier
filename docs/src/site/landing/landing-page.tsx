@@ -31,7 +31,7 @@ export async function LandingPage() {
     "ts"
   )
   return (
-    <div data-site="" className="min-h-screen overflow-x-clip bg-bg">
+    <div className="min-h-screen overflow-x-clip bg-bg">
       <LandingHeader version={version} />
       <main id="main-content">
         <HeroSection />

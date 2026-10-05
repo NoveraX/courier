@@ -6,7 +6,7 @@ Under the hood, Courier uses an `HttpClient` class that wraps the native `fetch`
 
 ## HTTP Methods
 
-An endpoint names its HTTP method with a head — `endpoint.get(path)`, `.post`, `.put`, `.patch`, `.del` or `.head`. One whose path or body its variables have to be worked into passes `.via()` a closure instead, which receives an `http` object with the same helpers.
+An endpoint names its HTTP method with a head — `endpoint.get(path)`, `.post`, `.put`, `.patch`, `.del`, `.head`, `.options` or `.query`. One whose path or body its variables have to be worked into passes `.via()` a closure instead, which receives an `http` object with the same helpers.
 
 ```ts title="api/users.ts"
 import { courier, defineGroup } from "@noverax/courier/define"

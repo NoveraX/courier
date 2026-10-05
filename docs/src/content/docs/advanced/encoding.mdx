@@ -2,7 +2,7 @@ export const metadata = { title: "Encoding", description: "Control how request b
 
 ## Default behavior
 
-By default, Courier serializes variables based on the HTTP method. GET, HEAD, OPTIONS and DELETE methods send variables as URL search params. POST, PUT, and PATCH send them as a JSON body:
+By default, Courier serializes variables based on the HTTP method. GET, HEAD, OPTIONS and DELETE methods send variables as URL search params. POST, PUT, PATCH and QUERY send them as a JSON body:
 
 ```ts title="Default encoding"
 import { courier, defineGroup } from "@noverax/courier/define"
@@ -24,6 +24,10 @@ const users = defineGroup({
 
     // HEAD -> like GET, variables go to URLSearchParams; no body
     check: endpoint.head("").response<void>(),
+
+    // QUERY -> a read whose variables go to the JSON body
+    // QUERY /users/search  Body: { "team": "core", "roles": ["admin"] }
+    search: endpoint.query("search").variables<{ team: string; roles: string[] }>().response<User[]>(),
   },
 })
 
@@ -167,13 +171,13 @@ const api = defineApi({
 
 ## defaultBody
 
-Provide default values that are merged into every request. For GET, HEAD, OPTIONS and DELETE, they become query params. For POST/PUT/PATCH, they are merged into the JSON body. Caller variables override defaults with the same key:
+Provide default values that are merged into every request. For GET, HEAD, OPTIONS and DELETE, they become query params. For POST/PUT/PATCH/QUERY, they are merged into the JSON body. Caller variables override defaults with the same key:
 
 ```ts title="api/index.ts"
 const api = defineApi({
   baseURL: process.env.API_URL,
   groups: { users, posts },
-  // Merged into every request body (POST/PUT/PATCH)
+  // Merged into every request body (POST/PUT/PATCH/QUERY)
   // and every query string (GET/DELETE)
   defaultBody: {
     apiVersion: "v2",
@@ -233,7 +237,7 @@ Understanding the order of operations helps when combining path params, defaults
 
 // 4. Method determines where merged variables go:
 //    GET/DELETE  -> URLSearchParams: /users/5?locale=en&name=Jane&api_key=123
-//    POST/PUT   -> JSON body: { locale: "en", name: "Jane" } + query: ?api_key=123
+//    POST/PUT/QUERY -> JSON body: { locale: "en", name: "Jane" } + query: ?api_key=123
 ```
 
 ## Next Steps

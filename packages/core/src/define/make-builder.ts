@@ -9,7 +9,16 @@ import { probeWire } from "./probe";
 import { type AnyBuilder, refinements } from "./refinements";
 
 /** Every verb that may begin a chain, plus the one a channel connects with. */
-const VERBS: readonly HttpMethod[] = ["get", "head", "options", "post", "put", "patch", "del"];
+const VERBS: readonly HttpMethod[] = [
+  "get",
+  "head",
+  "options",
+  "query",
+  "post",
+  "put",
+  "patch",
+  "del",
+];
 
 /**
  * An endpoint that has not yet said where it is.

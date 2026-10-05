@@ -24,9 +24,11 @@ describe("tintRequest", () => {
   it("pads a leading method so the paths line up, and changes no other text", () => {
     const get = tintRequest("GET /users → 200 (4ms)", style).replace(ESCAPE, "");
     const remove = tintRequest("DELETE /users/9 → 404 (2ms)", style).replace(ESCAPE, "");
+    const query = tintRequest("QUERY /users → 200 (3ms)", style).replace(ESCAPE, "");
 
     expect(get).toBe("GET    /users → 200 (4ms)");
     expect(remove).toBe("DELETE /users/9 → 404 (2ms)");
+    expect(query).toBe("QUERY  /users → 200 (3ms)");
   });
 
   it("leaves any other message as it is", () => {

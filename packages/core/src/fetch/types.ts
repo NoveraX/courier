@@ -27,4 +27,6 @@ export type FetchClient = {
   patch: RequestFn;
   del: RequestFn;
   head: (url: string, options?: RequestOptions) => Promise<Headers>;
+  /** A read that asks its question in the body, sent as `json` or `body`. */
+  query: RequestFn;
 };

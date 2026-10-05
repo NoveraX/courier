@@ -125,6 +125,15 @@ export interface HttpBuilder<TVariables, TVariablesOut>
     path?: CheckedPath<TPath, TVariables>,
     options?: HttpEndpointOptions,
   ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query">;
+  /**
+   * Ask it a question too long or too structured for an address: HTTP QUERY,
+   * which sends the variables as a body and reads like GET — retried, cached
+   * and served to the query hooks as a read.
+   */
+  query<TPath extends string = "">(
+    path?: CheckedPath<TPath, TVariables>,
+    options?: HttpEndpointOptions,
+  ): HttpAddressedAt<TVariables, TVariablesOut, TPath, "query">;
   /** Create it. */
   post<TPath extends string = "">(
     path?: CheckedPath<TPath, TVariables>,

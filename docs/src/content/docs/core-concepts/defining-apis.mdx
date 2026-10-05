@@ -37,7 +37,7 @@ export const users = defineGroup({
 
 `courier()` returns three heads and `extend`. Which head you start from declares what the endpoint is, not just what it returns:
 
-- **`endpoint`** — an HTTP endpoint. The verb that addresses it decides whether it reads or writes: `get`, `head` and `options` read, and are proxied as a `GET` a CDN can cache; `post`, `put`, `patch` and `del` write, and are proxied as a `POST`.
+- **`endpoint`** — an HTTP endpoint. The verb that addresses it decides whether it reads or writes: `get`, `head`, `options` and `query` read, and are proxied as a `GET` a CDN can cache; `post`, `put`, `patch` and `del` write, and are proxied as a `POST`.
 - **`stream`** — server-sent events.
 - **`channel`** — a WebSocket channel.
 
@@ -58,7 +58,7 @@ endpoint.get("").response<User[]>()
 endpoint.post("").variables(CreateUserSchema).response(UserSchema)
 ```
 
-`.via()` receives `http` — an object with typed HTTP methods (`get`, `post`, `put`, `patch`, `del`, `head`, `options`) — and optionally `vars` (the variables).
+`.via()` receives `http` — an object with typed HTTP methods (`get`, `post`, `put`, `patch`, `del`, `head`, `options`, `query`) — and optionally `vars` (the variables).
 
 A base can carry what a whole vendor surface shares, so no endpoint repeats it:
 
@@ -81,9 +81,10 @@ http.put(":id", vars)         // PUT /users/5 with JSON body
 http.patch(":id", vars)       // PATCH /users/5 with JSON body
 http.del(":id", vars)         // DELETE /users/5
 http.options(":id", vars)     // OPTIONS /users/5 — what the resource allows
+http.query("search", vars)    // QUERY /users/search with JSON body — a read
 ```
 
-The second argument is what the call sends: the body of a write, or the query string of a read. Left out, the endpoint's own variables are sent; passed as `undefined`, nothing is, so a write can put a value in the query string alone. The path is filled from the endpoint's variables either way:
+The second argument is what the call sends: the body of a write or a QUERY, or the query string of any other read. Left out, the endpoint's own variables are sent; passed as `undefined`, nothing is, so a write can put a value in the query string alone. The path is filled from the endpoint's variables either way:
 
 ```ts
 endpoint
@@ -104,6 +105,24 @@ endpoint
   .variables<{ file: Blob }>()
   .via((http, v) => http.put("raw", undefined, { body: v.file, headers: { "content-type": "image/png" } }))
 ```
+
+### Asking with a body: QUERY
+
+HTTP QUERY is a read whose question travels in the body: a filter too long for an address, or too structured to flatten into one — nested conditions, a list of ids, a query language. `endpoint.query(path)` addresses one. It reads as `get` does — it is retried, its answer may be kept with `.cache()`, the query hooks take it, and the proxy carries it as any read: as a `GET`, or as a `POST` when its variables would not fit in an address — and it sends its variables as `post` does, its path filled from them and the rest as a JSON body:
+
+```ts
+const Filter = z.object({ team: z.string(), status: z.array(z.enum(["active", "invited"])) })
+
+const people = defineGroup({
+  prefix: "people",
+  endpoints: {
+    search: endpoint.query("search").variables(Filter).response(z.array(Person)),
+  },
+})
+// → QUERY /people/search  Body: {"team":"core","status":["active"]}
+```
+
+QUERY needs an upstream that takes it: Node 22 and later parse it, and so do the mock servers Studio runs. An API that answers its searches over POST instead stays a `post` declared `.reads()`.
 
 An API that takes its writes url-encoded, as Stripe and Twilio do, gets a body `formBody` writes from the fields. Each field is written as OpenAPI's `encoding` would name it — by default an array repeats its field and an object's properties are fields of their own; `deepObject` puts an object's properties, and its arrays' items, in brackets:
 

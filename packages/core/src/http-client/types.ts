@@ -3,7 +3,7 @@ import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { WebBody } from "./web-types";
 
-export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head" | "options";
+export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head" | "options" | "query";
 
 export type HttpMethods = {
   [TMethod in HttpMethod]: <TData = unknown>(

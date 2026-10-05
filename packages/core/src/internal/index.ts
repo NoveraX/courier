@@ -83,4 +83,4 @@ export {
   type WSChannelFactory,
 } from "../transport";
 export { executeRequest } from "../utils/execute";
-export { normalizeHttpMethod, toInternalMethod } from "../utils/helpers";
+export { isReadingMethod, normalizeHttpMethod, toInternalMethod } from "../utils/helpers";

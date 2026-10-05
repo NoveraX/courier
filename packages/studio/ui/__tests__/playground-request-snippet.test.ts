@@ -4,11 +4,10 @@
  * carries in its query string, and a write's method and body.
  */
 import { describe, expect, it } from "vitest";
-
+import { endpointUrl, snippetInput } from "@/features/playground/request-snippet";
 import { buildCurlSnippet, buildFetchSnippet } from "@/lib/snippets";
 import { buildCatalog } from "@/store/build-catalog";
 import type { EndpointInfo } from "@/store/types-ui";
-import { endpointUrl, snippetInput } from "../src/views/playground/request-snippet";
 import { API } from "./playground-fixtures";
 
 const catalog = buildCatalog([API], []);

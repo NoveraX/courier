@@ -1,12 +1,11 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-
+import { emptyField, type FormBodyField } from "@/features/playground/form-body";
+import { sendableCatalog } from "@/features/playground/sendable-catalog";
 import { useCatalog } from "@/hooks/use-catalog";
 import { useStudioStore } from "@/store";
 import type { CatalogEndpoint, CatalogEntry } from "@/store/types-ui";
 import type { BodyKind } from "./body-section";
-import { emptyField, type FormBodyField } from "./form-body";
 import type { PlaygroundState } from "./playground-state";
-import { sendableCatalog } from "./sendable-catalog";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 

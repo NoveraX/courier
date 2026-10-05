@@ -13,10 +13,10 @@ const emit = vi.hoisted(() => vi.fn());
 
 vi.mock("@/socket", () => ({ getSocket: () => ({ emit }) }));
 
+import { initiateHttpRequest } from "@/playground/send-http-request";
 import { useStudioStore } from "../src/store";
 import type { StudioEvent } from "../src/store/types";
 import type { PlaygroundHistoryEntry } from "../src/store/types-ui";
-import { initiateHttpRequest } from "../src/views/playground/send-http-request";
 
 afterEach(() => {
   useStudioStore.getState().clearPlaygroundHistory();

@@ -12,10 +12,10 @@
  * through the same store path as any other error.
  */
 
+import type { WireFormField } from "@/features/playground/form-body";
+import type { RequestValues } from "@/features/playground/request-values";
 import { getSocket } from "@/socket";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
-import type { WireFormField } from "./form-body";
-import type { RequestValues } from "./request-values";
 import { subscribeForRunData } from "./run-data";
 
 export interface SendPayload {

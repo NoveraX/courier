@@ -5,16 +5,16 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageShell } from "@/components/shared/page-shell";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { describeForm, wireForm } from "@/features/playground/form-body";
+import { readRequestValues } from "@/features/playground/request-values";
+import { useSendRequest } from "@/playground/use-send-request";
 import { useStudioStore } from "@/store";
 import type { PlaygroundHistoryEntry } from "@/store/types-ui";
-import { describeForm, wireForm } from "./form-body";
 import { HistoryBar } from "./history-bar";
 import { RequestPanel } from "./request-panel";
-import { readRequestValues } from "./request-values";
 import { ResponsePanel } from "./response-panel";
 import { PlaygroundToolbar } from "./toolbar";
 import { usePlayground } from "./use-playground";
-import { useSendRequest } from "./use-send-request";
 
 export function PlaygroundView(): React.ReactElement {
   const connected = useStudioStore((s) => s.connected);

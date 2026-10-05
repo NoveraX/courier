@@ -5,10 +5,9 @@
  * history shows, and the upload's progress on the entry.
  */
 import { describe, expect, it } from "vitest";
-
+import { describeForm, emptyField, wireForm } from "@/features/playground/form-body";
 import { useStudioStore } from "../src/store";
 import type { PlaygroundHistoryEntry } from "../src/store/types-ui";
-import { describeForm, emptyField, wireForm } from "../src/views/playground/form-body";
 
 function fields() {
   const note = { ...emptyField(), name: "note", text: "hi" };

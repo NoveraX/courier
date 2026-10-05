@@ -1,9 +1,8 @@
 import { Send, SendHorizontal } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
-
+import { parseJsonc, stripComments } from "@/features/playground/jsonc-helpers";
 import { cn } from "@/lib/utils";
 import { JsonEditor } from "./json-editor";
-import { parseJsonc, stripComments } from "./jsonc-helpers";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

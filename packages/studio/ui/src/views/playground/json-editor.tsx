@@ -3,10 +3,9 @@ import { useCallback, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { isValidJsonc, parseJsonc, toggleComment } from "@/features/playground/jsonc-helpers";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
-
-import { isValidJsonc, parseJsonc, toggleComment } from "./jsonc-helpers";
 import { highlightJsonc } from "./jsonc-highlight";
 
 interface JsonEditorProps {

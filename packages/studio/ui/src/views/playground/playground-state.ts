@@ -1,8 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
-
+import type { FormBodyField } from "@/features/playground/form-body";
 import type { Catalog, CatalogEndpoint, CatalogEntry } from "@/store/types-ui";
 import type { BodyKind } from "./body-section";
-import type { FormBodyField } from "./form-body";
 
 /** The Playground's choice of endpoint, the request it is writing, and how to change both. */
 export interface PlaygroundState {

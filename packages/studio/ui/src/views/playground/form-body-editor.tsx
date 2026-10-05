@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import { emptyField, type FormBodyField } from "./form-body";
+import { emptyField, type FormBodyField } from "@/features/playground/form-body";
 
 interface FormBodyEditorProps {
   fields: FormBodyField[];

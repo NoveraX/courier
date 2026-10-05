@@ -2,7 +2,7 @@ import { FileJson } from "lucide-react";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-import type { FormBodyField } from "./form-body";
+import type { FormBodyField } from "@/features/playground/form-body";
 import { FormBodyEditor } from "./form-body-editor";
 import { JsonEditor } from "./json-editor";
 

@@ -25,6 +25,7 @@ export default defineProject({
   test: {
     ...sharedTestOptions,
     include: ["__tests__/**/*.test.{ts,tsx}"],
+    setupFiles: [...sharedTestOptions.setupFiles, "./vitest.setup.ts"],
     environment: "node",
     /* A component test renders a whole view. In a full run, sharing the
        machine with every other suite, one that takes a quarter of a second

@@ -3,19 +3,14 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { SegmentedControl } from "@/components/shared/segmented-control";
 import { Button } from "@/components/ui/button";
+import type { LatencyFormValues } from "@/features/mocks/latency-config";
+import { LATENCY_DEFAULTS, PRESET_VALUES } from "@/features/mocks/latency-config";
 import { cn } from "@/lib/utils";
 import { getSocket } from "@/socket";
 import type { LatencyPreset, MockServerInfo } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
 import { LatencyCustomPanel } from "./latency-custom-panel";
-import {
-  BANDWIDTH_OPTIONS,
-  DISTRIBUTION_OPTIONS,
-  LATENCY_DEFAULTS,
-  LATENCY_PRESETS,
-  type LatencyFormValues,
-  PRESET_VALUES,
-} from "./latency-presets";
+import { BANDWIDTH_OPTIONS, DISTRIBUTION_OPTIONS, LATENCY_PRESETS } from "./latency-presets";
 
 interface LatencyControlsProps {
   server: MockServerInfo;

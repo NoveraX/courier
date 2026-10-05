@@ -4,9 +4,8 @@
  * own.
  */
 import { describe, expect, it } from "vitest";
-
+import { PRESET_VALUES } from "@/features/mocks/latency-config";
 import { LATENCY_PROFILES } from "../../../mock/src/network/latency";
-import { PRESET_VALUES } from "../src/views/mocks/network/latency-presets";
 
 describe("Studio's latency profiles", () => {
   it.each(["3g", "4g"] as const)("send the mock's own range for %s", (profile) => {

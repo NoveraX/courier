@@ -25,6 +25,7 @@ import { HeatmapScreen } from "@/screens/explorer/heatmap-screen";
 import { OverviewScreen } from "@/screens/explorer/overview-screen";
 import { MocksDashboard } from "@/screens/mocks/mocks-dashboard";
 import { MocksLayout } from "@/screens/mocks/mocks-layout";
+import { MockNetworkScreen } from "@/screens/mocks/network-screen";
 import { MockRoutesScreen } from "@/screens/mocks/routes-screen";
 import { MockScenariosScreen } from "@/screens/mocks/scenarios-screen";
 import { MockStoreScreen } from "@/screens/mocks/store-screen";
@@ -134,6 +135,11 @@ export async function openShell(url: string): Promise<AnyRouter> {
     component: MockScenariosScreen,
     validateSearch: validateMockScenariosSearch,
   });
+  const mocksNetwork = createRoute({
+    getParentRoute: () => mocks,
+    path: "network",
+    component: MockNetworkScreen,
+  });
   const router = createRouter({
     routeTree: root.addChildren([
       shell.addChildren([
@@ -142,7 +148,7 @@ export async function openShell(url: string): Promise<AnyRouter> {
         waterfall,
         explorer.addChildren(tabs),
         playground,
-        mocks.addChildren([mocksDashboard, mocksRoutes, mocksStore, mocksScenarios]),
+        mocks.addChildren([mocksDashboard, mocksRoutes, mocksStore, mocksScenarios, mocksNetwork]),
       ]),
     ]),
     history: createMemoryHistory({ initialEntries: [url] }),

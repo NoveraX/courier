@@ -56,6 +56,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /* The config names the version its module exports in its source's baseURL. */
 const VERSIONED =
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the template is the fixture's source code, written out as text
   'import { version } from "./version";\nexport default { sources: { demo: { baseURL: `https://v${version}.example` } } };\n';
 
 function versionModule(version: number, delayMs = 0): string {
@@ -349,6 +350,7 @@ describe("fresh()", () => {
     writeFileSync(
       join(root, "courier.config.ts"),
       'import { generation } from "./generated";\nimport { next } from "./last";\nimport { version } from "./version";\n' +
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the template is the fixture's source code, written out as text
         "export default { sources: { demo: { baseURL: `https://v${version + generation + (next ?? 0)}.example` } } };\n",
     );
     expect(await state.fresh(5_000)).toMatchObject({ settling: false, failure: null });
@@ -360,6 +362,7 @@ describe("fresh()", () => {
       join(root, "courier.config.ts"),
       'import { generation } from "./generated";\nimport { next } from "./last";\nimport { version } from "./version";\n' +
         'if (next === undefined) throw new Error("last.ts is not written yet");\n' +
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the template is the fixture's source code, written out as text
         "export default { sources: { demo: { baseURL: `https://v${version + generation + next}.example` } } };\n",
     );
     const view = state.fresh(5_000);

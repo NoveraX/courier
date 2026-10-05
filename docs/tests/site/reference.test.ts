@@ -28,7 +28,9 @@ describe("a reference entry", () => {
       importLine: 'import { createCaller } from "@noverax/courier"',
       desc: "Direct mode.",
     })
-    expect(entry.signature?.code).toContain("declare function createCaller<TApi extends DefinedApi>(")
+    expect(entry.signature?.code).toContain(
+      "declare function createCaller<TApi extends DefinedApi>("
+    )
     expect(entry.params.map((p) => p.name)).toEqual(["api", "CallerDefaults"])
     expect(entry.params[0]?.desc).toBe("An API source definition created with `defineApi()`.")
     expect(entry.example?.language).toBe("ts")
@@ -72,7 +74,13 @@ describe("a reference entry", () => {
     })
 
     expect(entry.kind).toBe("CLASS")
-    expect(entry.params.map((p) => p.name)).toEqual(["status", "headers", "data", "name", "message"])
+    expect(entry.params.map((p) => p.name)).toEqual([
+      "status",
+      "headers",
+      "data",
+      "name",
+      "message",
+    ])
   })
 
   it("reads the type a parameter's page writes out, and the parts of it the page lists", () => {
@@ -103,8 +111,14 @@ describe("a reference entry", () => {
   })
 
   it("copies the import a page without an Import block writes in its first code, and none it never writes; a capitalised name with no class is a type", () => {
-    const config = referenceEntry("config", page("config"), { title: "courier.config.ts", description: "" })
-    const client = referenceEntry("instance", page("instance"), { title: "HttpClient", description: "" })
+    const config = referenceEntry("config", page("config"), {
+      title: "courier.config.ts",
+      description: "",
+    })
+    const client = referenceEntry("instance", page("instance"), {
+      title: "HttpClient",
+      description: "",
+    })
 
     expect(config.importLine).toBe('import { defineConfig } from "@noverax/courier/config"')
     expect(client).toMatchObject({ from: "", importLine: "", kind: "TYPE" })

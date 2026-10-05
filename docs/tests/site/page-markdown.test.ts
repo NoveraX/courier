@@ -14,7 +14,7 @@ import { pageMarkdown } from "@/site/content/page-markdown"
 const PAGE = [
   'export const metadata = { title: "T", description: "D", mode: "proxy" }',
   "",
-  "## Setup <ModeBadge mode=\"proxy\" />",
+  '## Setup <ModeBadge mode="proxy" />',
   "",
   '<Callout variant="tip" title="One instance">',
   "Create it once.",
@@ -63,7 +63,9 @@ describe("a page as Markdown", () => {
     const header = table.findIndex((line) => line.startsWith("| Feature |"))
     expect(table[header]).toBe("| Feature | Proxy Mode | Direct Mode |")
     expect(table[header + 1]).toBe("| --- | --- | --- |")
-    expect(table[header + 2]).toBe("| Execution | Browser -> proxy handler -> backend | Server -> backend |")
+    expect(table[header + 2]).toBe(
+      "| Execution | Browser -> proxy handler -> backend | Server -> backend |"
+    )
   })
 })
 

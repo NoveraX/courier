@@ -10,8 +10,8 @@
     "dev": "concurrently -n next,express -c blue,green \"next dev\" \"tsx watch server/index.ts\"",
     "build": "next build",
     "start": "next start",
-    "lint": "biome check --write src/ server/",
-    "check": "biome check src/ server/ && tsc --noEmit"
+    "lint": "biome check --write .",
+    "check": "biome check . && tsc --noEmit"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",

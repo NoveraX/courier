@@ -89,6 +89,7 @@ describe("sanitizeChunk", () => {
     const evil = Object.create(null);
     evil.kind = "http-result";
     evil.status = 200;
+    // biome-ignore lint/suspicious/noProto: the test hands the guard the very key it must refuse
     evil.__proto__ = { admin: true };
     expect(sanitizeChunk({ rid: "r-1", chunk: evil })).toBeNull();
   });

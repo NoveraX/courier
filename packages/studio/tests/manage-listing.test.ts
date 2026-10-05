@@ -272,6 +272,7 @@ describe("adding to a group whose file declares another prefix than the spec giv
   });
 
   it("refuses when it cannot read the prefix, saying so", () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the template is the fixture's source code, written out as text
     expect(() => added(written("prefix: `/v1/${'customers'}`,"))).toThrow(/cannot read the prefix/);
   });
 });

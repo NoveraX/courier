@@ -60,9 +60,13 @@ function headerOf(characters, prefix = "fix: 🐛 ") {
 function releaseMessage(version, notes) {
   const config = JSON.parse(readFileSync(join(ROOT, ".releaserc.json"), "utf8"));
   const git = config.plugins.find((plugin) => plugin[0] === "@semantic-release/git");
-  return git[1].message
-    .replace("${nextRelease.version}", version)
-    .replace("${nextRelease.notes}", notes);
+  return (
+    git[1].message
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: semantic-release's own placeholder, replaced here as text
+      .replace("${nextRelease.version}", version)
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: semantic-release's own placeholder, replaced here as text
+      .replace("${nextRelease.notes}", notes)
+  );
 }
 
 describe("headerMaxCharacters", () => {

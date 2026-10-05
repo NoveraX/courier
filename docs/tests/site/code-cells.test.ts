@@ -43,7 +43,12 @@ function blocksOf(page: string): { page: string; blocks: Block[]; prose: [number
       blocks.push(open)
       open = null
     } else if (fence) {
-      open = { page: path.relative(DOCS, page), line: at + 1, language: fence[1] || "text", lines: [] }
+      open = {
+        page: path.relative(DOCS, page),
+        line: at + 1,
+        language: fence[1] || "text",
+        lines: [],
+      }
     } else if (open) open.lines.push(text)
     else prose.push([at + 1, text])
   })
@@ -70,7 +75,9 @@ describe("the docs' code", () => {
       }
     }
     for (const block of BLOCKS) {
-      block.lines.forEach((text, at) => check(`${block.page}:${block.line + 1 + at}`, text))
+      block.lines.forEach((text, at) => {
+        check(`${block.page}:${block.line + 1 + at}`, text)
+      })
     }
     for (const page of PAGES) {
       for (const [line, text] of page.prose) {
@@ -96,7 +103,9 @@ describe("a diagram", () => {
           const closing = grid[at]?.[left] === "└"
           const wanted = closing ? "┘" : "│┤"
           if (edge === undefined || !wanted.includes(edge)) {
-            open.push(`${block.page}:${block.line + 1 + at} the box opened on line ${block.line + 1 + top}`)
+            open.push(
+              `${block.page}:${block.line + 1 + at} the box opened on line ${block.line + 1 + top}`
+            )
             break
           }
           if (closing) break
@@ -114,10 +123,14 @@ describe("a file tree", () => {
     for (const block of BLOCKS.filter((b) => b.language === "text")) {
       const columns = block.lines.flatMap((text) => {
         const cells = cellsOf(text)
-        const at = cells.findIndex((glyph, i) => (glyph === "#" || glyph === "←") && cells[i - 1] === " " && cells[i - 2] === " ")
+        const at = cells.findIndex(
+          (glyph, i) =>
+            (glyph === "#" || glyph === "←") && cells[i - 1] === " " && cells[i - 2] === " "
+        )
         return at > 0 && /\S/.test(cells.slice(0, at).join("")) ? [at] : []
       })
-      if (new Set(columns).size > 1) ragged.push(`${block.page}:${block.line} at ${[...new Set(columns)].join(", ")}`)
+      if (new Set(columns).size > 1)
+        ragged.push(`${block.page}:${block.line} at ${[...new Set(columns)].join(", ")}`)
     }
 
     expect(ragged).toEqual([])

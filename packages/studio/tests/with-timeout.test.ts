@@ -22,6 +22,7 @@ function waitForever() {
     `import { withTimeout } from ${JSON.stringify(WITH_TIMEOUT)};\n` +
     "const started = Date.now();\n" +
     'withTimeout(new Promise(() => {}), 300, () => new Error("timed out"))' +
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the template is the fixture's source code, written out as text
     ".catch((error) => console.log(`${error.message} after ${Date.now() - started} ms`));\n";
   return spawnSync(process.execPath, ["--import", TSX, "--input-type=module", "-e", script], {
     encoding: "utf8",

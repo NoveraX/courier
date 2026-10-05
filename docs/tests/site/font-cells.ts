@@ -25,7 +25,8 @@ function readFormat4(font: Buffer, table: number, glyphs: Map<number, number>): 
     const delta = font.readInt16BE(deltas + i * 2)
     const range = font.readUInt16BE(ranges + i * 2)
     for (let cp = first; cp <= last && cp !== 0xffff; cp++) {
-      const indexed = range === 0 ? cp : font.readUInt16BE(ranges + i * 2 + range + (cp - first) * 2)
+      const indexed =
+        range === 0 ? cp : font.readUInt16BE(ranges + i * 2 + range + (cp - first) * 2)
       if (range !== 0 && indexed === 0) continue
       glyphs.set(cp, (indexed + delta) & 0xffff)
     }

@@ -45,7 +45,9 @@ describe("the feature demos", () => {
   it("pauses on a half-typed address before finishing it", () => {
     expect(validationFrame(7)).toBe(8)
     expect(validationFrame(15)).toBe(8)
-    const whole = Array.from({ length: 60 }, (_, tick) => validationFrame(tick)).indexOf(TYPED_EMAIL.length)
+    const whole = Array.from({ length: 60 }, (_, tick) => validationFrame(tick)).indexOf(
+      TYPED_EMAIL.length
+    )
     expect(whole).toBeGreaterThan(19)
   })
 

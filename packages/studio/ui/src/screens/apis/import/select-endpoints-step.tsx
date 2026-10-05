@@ -1,11 +1,11 @@
 import { CircleCheck } from "lucide-react";
 
 import { methodText } from "@/design/method-color";
+import { TickBox } from "@/design/tick-box";
 import { countSelectedEndpoints } from "@/features/apis/helpers";
 import type { ParsedSpec } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
 import { cn } from "@/lib/utils";
-import { TickBox } from "./tick-box";
 
 const FORMAT: Readonly<Record<ParsedSpec["format"], string>> = {
   openapi3: "OpenAPI 3",

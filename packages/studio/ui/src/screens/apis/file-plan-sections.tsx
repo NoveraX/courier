@@ -1,8 +1,7 @@
 import { Ban } from "lucide-react";
-
+import { TickBox } from "@/design/tick-box";
 import { KEPT_LABEL, pendingLabel, writeLabel } from "@/features/apis/file-plan-labels";
 import type { FilePlanSummary } from "@/features/apis/types-file-plan";
-import { TickBox } from "./import/tick-box";
 
 function FileList({
   title,

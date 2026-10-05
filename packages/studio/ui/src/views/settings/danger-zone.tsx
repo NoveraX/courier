@@ -3,9 +3,9 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useClearRequests } from "@/hooks/use-clear-requests";
+import type { useSessionHistory } from "@/settings/use-session-history";
 import { useStudioStore } from "@/store";
 import { ConfirmDialog } from "./confirm-dialog";
-import type { useSessionHistory } from "./use-session-history";
 
 // ── Danger zone ──────────────────────────────────────────────────────────────
 

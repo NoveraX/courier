@@ -42,9 +42,9 @@ vi.mock("@/lib/api-client", async () => {
   };
 });
 
+import { useSessionHistory } from "@/settings/use-session-history";
 import type { RequestEntry } from "@/store";
 import { useStudioStore } from "@/store";
-import { useSessionHistory } from "@/views/settings/use-session-history";
 import { createStudioServer } from "../../src/server";
 
 let root = "";

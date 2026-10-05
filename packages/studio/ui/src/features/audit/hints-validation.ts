@@ -10,7 +10,7 @@
  * endpoint is told to validate its variables only when its calls sent some.
  */
 
-import type { Catalog, CatalogEndpoint } from "../../store/types-ui";
+import type { Catalog, CatalogEndpoint } from "@/store/types-ui";
 import { RESPONSE_SCHEMA_SUGGESTION, VARIABLES_SCHEMA_SUGGESTION } from "./code-suggestions";
 import { formatEndpoint } from "./hints-utils";
 import type { AuditEndpoint, AuditItem, EndpointStats } from "./types";

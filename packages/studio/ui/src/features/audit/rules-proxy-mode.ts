@@ -1,4 +1,4 @@
-import type { RequestEntry } from "../../store/types-request";
+import type { RequestEntry } from "@/store/types-request";
 import { PROXY_SUGGESTION } from "./code-suggestions";
 import type { AuditContext, AuditEndpoint, AuditItem } from "./types";
 

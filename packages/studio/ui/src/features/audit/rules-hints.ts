@@ -6,7 +6,7 @@
  * collectors that the audit runner imports.
  */
 
-import type { Catalog } from "../../store/types-ui";
+import type { Catalog } from "@/store/types-ui";
 import {
   inconsistentStatusCodes,
   noCachingDetected,

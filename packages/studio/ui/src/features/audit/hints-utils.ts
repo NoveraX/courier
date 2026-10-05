@@ -3,7 +3,7 @@
  * `EndpointStats → AuditEndpoint` projection.
  */
 
-import type { RequestEntry } from "../../store/types-request";
+import type { RequestEntry } from "@/store/types-request";
 import type { AuditEndpoint, EndpointStats } from "./types";
 
 /** Convert an `EndpointStats` row into the `AuditEndpoint` shape used by hint items. */

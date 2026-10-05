@@ -1,5 +1,6 @@
 import { ClipboardCopy, Download, Share2, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { exportAsMarkdown } from "@/features/audit/export-report";
 import { copyToClipboard } from "@/lib/clipboard";
 import { downloadFile } from "@/lib/export";
 import { EmptyState } from "../../components/shared/empty-state";
@@ -15,7 +16,6 @@ import { useStudioStore } from "../../store";
 import { AuditFilterBar } from "./audit-filter-bar";
 import { AuditList } from "./audit-list";
 import { CategorySummary } from "./category-summary";
-import { exportAsMarkdown } from "./export-report";
 import { ScoreGauge } from "./score-gauge";
 import { useAudit } from "./use-audit";
 

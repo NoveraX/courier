@@ -1,9 +1,10 @@
+import { CATEGORY_ORDER } from "@/features/audit/audit-meta";
+import type { AuditCategory, AuditItem } from "@/features/audit/types";
 import { StaggerItem, StaggerList } from "../../components/shared/stagger-list";
 import { Badge } from "../../components/ui/badge";
 import { useStudioStore } from "../../store";
 import { AuditItemCard } from "./audit-item";
-import { CATEGORY_CONFIG, CATEGORY_ORDER } from "./constants";
-import type { AuditCategory, AuditItem } from "./types";
+import { CATEGORY_CONFIG } from "./constants";
 
 interface AuditListProps {
   items: AuditItem[];

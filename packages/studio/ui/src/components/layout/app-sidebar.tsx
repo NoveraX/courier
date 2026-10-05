@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
 import type { NavItem } from "@/app-config";
 import { NAV_GROUPS } from "@/app-config";
+import { useAuditContext } from "@/audit/use-audit-context";
 import { CourierMark } from "@/components/courier-mark";
 import {
   Sidebar,
@@ -15,12 +16,11 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { runAudit } from "@/features/audit/run-audit";
 import { useCatalog } from "@/hooks/use-catalog";
 import { useThrottledValue } from "@/hooks/use-throttled-value";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
-import { runAudit } from "@/views/audit/run-audit";
-import { useAuditContext } from "@/views/audit/use-audit-context";
 import { SidebarFooterSection } from "./sidebar-footer";
 
 function NavBadge({ item }: { item: NavItem }): React.ReactNode {

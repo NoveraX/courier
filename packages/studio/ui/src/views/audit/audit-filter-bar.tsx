@@ -1,3 +1,4 @@
+import type { AuditCategory, AuditResult, AuditSeverity } from "@/features/audit/types";
 import {
   Select,
   SelectContent,
@@ -7,7 +8,6 @@ import {
 } from "../../components/ui/select";
 import { cn } from "../../lib/utils";
 import { CATEGORY_CONFIG, SEVERITY_CONFIG } from "./constants";
-import type { AuditCategory, AuditResult, AuditSeverity } from "./types";
 import type { SeverityFilter } from "./use-audit";
 
 interface AuditFilterBarProps {

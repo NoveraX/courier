@@ -4,10 +4,9 @@
  * does not tell it to use GET.
  */
 import { describe, expect, it } from "vitest";
-
+import { collectWarnings } from "@/features/audit/rules-warnings";
+import type { EndpointStats } from "@/features/audit/types";
 import type { Catalog } from "@/store/types-ui";
-import { collectWarnings } from "../src/views/audit/rules-warnings";
-import type { EndpointStats } from "../src/views/audit/types";
 
 function stats(type: "query" | "mutation", method: string): EndpointStats {
   return {

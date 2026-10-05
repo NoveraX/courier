@@ -4,11 +4,10 @@
  * endpoint whose calls send no variables has nothing to validate.
  */
 import { describe, expect, it } from "vitest";
-
+import { computeEndpointStats } from "@/features/audit/compute-stats";
+import { noResponseValidation, noVariablesValidation } from "@/features/audit/hints-validation";
 import type { RequestEntry } from "@/store/types";
 import type { Catalog, CatalogEndpoint } from "@/store/types-ui";
-import { computeEndpointStats } from "../src/views/audit/compute-stats";
-import { noResponseValidation, noVariablesValidation } from "../src/views/audit/hints-validation";
 
 function request(group: string, method: string, fields: Partial<RequestEntry> = {}): RequestEntry {
   return {

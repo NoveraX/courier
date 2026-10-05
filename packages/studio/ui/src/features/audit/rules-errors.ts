@@ -1,12 +1,12 @@
-import type { RequestEntry } from "../../store/types-request";
-import type { Catalog } from "../../store/types-ui";
+import type { RequestEntry } from "@/store/types-request";
+import type { Catalog } from "@/store/types-ui";
 import {
   HEADER_TOKEN_SUGGESTION,
   RESPONSE_SCHEMA_SUGGESTION,
   RETRY_SUGGESTION,
   TIMEOUT_SUGGESTION,
 } from "./code-suggestions";
-import { ERROR_RATE_HIGH, LARGE_RESPONSE_BYTES, P95_TIMEOUT_MS } from "./constants";
+import { ERROR_RATE_HIGH, LARGE_RESPONSE_BYTES, P95_TIMEOUT_MS } from "./thresholds";
 import type { AuditEndpoint, AuditItem, EndpointStats } from "./types";
 
 function formatEp(s: EndpointStats): AuditEndpoint {

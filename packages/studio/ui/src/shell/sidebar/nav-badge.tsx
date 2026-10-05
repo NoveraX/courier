@@ -1,11 +1,10 @@
 import { useMemo } from "react";
-
+import { useAuditContext } from "@/audit/use-audit-context";
 import { CountBadge } from "@/design/count-badge";
+import { runAudit } from "@/features/audit/run-audit";
 import { useCatalog } from "@/hooks/use-catalog";
 import { useThrottledValue } from "@/hooks/use-throttled-value";
 import { useStudioStore } from "@/store";
-import { runAudit } from "@/views/audit/run-audit";
-import { useAuditContext } from "@/views/audit/use-audit-context";
 import type { NavBadgeKind } from "../nav";
 
 /* How often the score may run the whole audit again while requests arrive. */

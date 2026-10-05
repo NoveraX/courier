@@ -1,4 +1,4 @@
-import type { RequestEntry } from "../../store/types-request";
+import type { RequestEntry } from "@/store/types-request";
 import { buildKey } from "./compute-stats";
 import { callOf } from "./hints-utils";
 import type { AuditItem } from "./types";

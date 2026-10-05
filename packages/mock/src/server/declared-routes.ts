@@ -1,3 +1,4 @@
+import { sendsVariablesInQuery } from "@noverax/courier/internal";
 import type { Context, Hono } from "hono";
 
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
@@ -14,7 +15,6 @@ const METHODS = new Set<string>([
   "PATCH",
   "DELETE",
 ]);
-const WITHOUT_BODY = new Set<string>(["GET", "HEAD", "OPTIONS", "DELETE"]);
 
 /**
  * Register a route at its declared path for every HTTP endpoint the prefix
@@ -99,7 +99,7 @@ async function inputOf(
   method: string,
   limits: BodyLimits | undefined,
 ): Promise<{ input: Record<string, unknown> } | { error: string; status: 400 | 413 }> {
-  if (WITHOUT_BODY.has(method)) {
+  if (sendsVariablesInQuery(method)) {
     return { input: parseQueryParams(new URL(c.req.url).searchParams) };
   }
   const body = await readRequestBody(c, limits);

@@ -1,6 +1,6 @@
 import { HTTPError } from "../errors";
 import { isFieldRecord, isRawBody, toBodyInit } from "../utils/body-kind";
-import { isFormData, normalizeHttpMethod } from "../utils/helpers";
+import { isFormData, normalizeHttpMethod, sendsVariablesInQuery } from "../utils/helpers";
 import { toQueryEntries } from "../utils/query-string";
 import type { FetchOptions, HttpMethod, SearchParamsSerializer } from "./types";
 import type { WebBody } from "./web-types";
@@ -130,23 +130,18 @@ export const buildBody = (
 ): Pick<FetchOptions, "body" | "json" | "duplex" | "searchParams"> | undefined => {
   const cleaned = stripUndefined(variables);
 
-  switch (method) {
-    case "get":
-    case "head":
-    case "options":
-    case "del":
-      /* With no body to carry them, the defaults a body would have had
-         become query values, as the encoding page describes. */
-      return buildSearchParams(
-        queryFields(method, cleaned),
-        searchParameters,
-        { ...defaultQueryParams, ...defaultBody },
-        serializer,
-      );
-    default:
-      return {
-        ...buildSearchParams(undefined, searchParameters, defaultQueryParams, serializer),
-        ...buildRequestBody(cleaned, defaultBody, bodySerializer),
-      };
+  if (sendsVariablesInQuery(method)) {
+    /* With no body to carry them, the defaults a body would have had
+       become query values, as the encoding page describes. */
+    return buildSearchParams(
+      queryFields(method, cleaned),
+      searchParameters,
+      { ...defaultQueryParams, ...defaultBody },
+      serializer,
+    );
   }
+  return {
+    ...buildSearchParams(undefined, searchParameters, defaultQueryParams, serializer),
+    ...buildRequestBody(cleaned, defaultBody, bodySerializer),
+  };
 };

@@ -2,6 +2,8 @@
  * Shared utilities for session export formats.
  */
 
+import { sendsVariablesInQuery } from "@noverax/courier/internal";
+
 const STATUS_MAP: Record<number, string> = {
   200: "OK",
   201: "Created",
@@ -23,9 +25,6 @@ export function statusText(code?: number): string {
   return STATUS_MAP[code] ?? "";
 }
 
-/* The verbs whose variables go in the query string rather than a body. */
-const QUERY_STRING_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "DELETE"]);
-
 /**
  * The verb a saved request went out with, and the body it carried: the
  * variables of a write or a QUERY. A GET's, a HEAD's, an OPTIONS' or a
@@ -43,7 +42,7 @@ export function sentRequest(req: { httpMethod?: string | undefined; variables?: 
   body: unknown;
 } {
   const method = (req.httpMethod ?? "GET").toUpperCase();
-  const body = QUERY_STRING_METHODS.has(method) ? undefined : req.variables;
+  const body = sendsVariablesInQuery(method) ? undefined : req.variables;
   return { method, body };
 }
 

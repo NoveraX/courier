@@ -107,7 +107,7 @@ export function detectDuplicates(requests: RequestEntry[]): AuditItem[] {
       severity: "warning",
       category: "performance",
       title: "Duplicate requests",
-      description: `"${fullName}" called ${totalCount}x with identical variables within ${DUPLICATE_WINDOW_MS}ms.`,
+      description: `"${fullName}" was called again with the same variables within ${DUPLICATE_WINDOW_MS / 1000} s — ${totalCount} calls in ${dupes.length} ${dupes.length === 1 ? "burst" : "bursts"}.`,
       suggestion: "Deduplicate with caching, useMemo, or request deduplication middleware.",
       requestIds: allIds,
     });

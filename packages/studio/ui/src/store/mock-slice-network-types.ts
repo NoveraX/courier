@@ -47,6 +47,7 @@ export interface RouteOverride {
   routeId: string;
   enabled: boolean;
   latency?: { min: number; max: number; jitter: number };
+  /** The share of the route's calls the mock fails, 0–1, as for the mock's global rate. */
   errorRate?: number;
   faultTypes?: string[];
 }

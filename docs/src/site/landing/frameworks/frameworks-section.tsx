@@ -2,7 +2,7 @@ import { highlightTokens } from "@/site/code/highlight-tokens"
 import { ADAPTER_BRANDS } from "@/site/landing/brands"
 import type { ShownAdapter } from "./adapter-picker"
 import { AdapterPicker } from "./adapter-picker"
-import { ADAPTERS } from "./adapters"
+import { ADAPTERS, landingAdapters } from "./adapters"
 
 function Stat({ value, label }: { value: string; label: string }) {
   return (
@@ -17,7 +17,8 @@ function Stat({ value, label }: { value: string; label: string }) {
 
 /**
  * The frameworks Courier mounts in: how many, how little differs between
- * them, and each adapter's mount beside the list.
+ * them, and the most used adapters' mounts beside the list, with the way to
+ * every other.
  *
  * @returns The section
  * @example
@@ -27,7 +28,7 @@ function Stat({ value, label }: { value: string; label: string }) {
  */
 export async function FrameworksSection() {
   const adapters: ShownAdapter[] = await Promise.all(
-    ADAPTERS.map(async (adapter) => ({
+    landingAdapters().map(async (adapter) => ({
       ...adapter,
       icon: ADAPTER_BRANDS.find((brand) => brand.name === adapter.label)?.path ?? "",
       lines: await highlightTokens(adapter.code, "ts"),
@@ -52,7 +53,7 @@ export async function FrameworksSection() {
             <Stat value="0" label="handler arguments" />
           </div>
         </div>
-        <AdapterPicker adapters={adapters} />
+        <AdapterPicker adapters={adapters} total={ADAPTERS.length} />
       </div>
     </section>
   )

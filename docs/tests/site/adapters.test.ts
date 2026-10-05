@@ -1,11 +1,24 @@
 /**
  * The landing page's adapter list says only the import and one call
  * differ between frameworks. Each adapter's code must name the package it
- * claims, and exactly those two lines must be its own.
+ * claims, and exactly those two lines must be its own. The page shows the
+ * most used ones, each with its guide, and leads to an overview of all.
  */
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
-import { ADAPTERS, ownLines } from "@/site/landing/frameworks/adapters"
+import { docsNav } from "@/site/content/docs-nav"
+import {
+  ADAPTERS,
+  ADAPTERS_OVERVIEW,
+  LANDING_ADAPTERS,
+  landingAdapters,
+  ownLines,
+} from "@/site/landing/frameworks/adapters"
+
+function docsPage(href: string): string {
+  return readFileSync(new URL(`../../src/content${href}.mdx`, import.meta.url), "utf8")
+}
 
 describe("the adapters on the landing page", () => {
   it("lists every official server adapter once", () => {
@@ -38,5 +51,31 @@ describe("the landing page's adapter count", () => {
 
     expect(ADAPTERS).toHaveLength(10)
     expect(ADAPTER_BRANDS.map((b) => b.name)).toEqual(ADAPTERS.map((a) => a.label))
+  })
+})
+
+describe("the adapters the landing page shows", () => {
+  it("are six official ones, Next.js first, the rest on the overview", () => {
+    expect(landingAdapters().map((a) => a.label)).toEqual([...LANDING_ADAPTERS])
+    expect(landingAdapters()).toHaveLength(6)
+    expect(landingAdapters()[0]?.label).toBe("Next.js")
+  })
+
+  it.each(ADAPTERS)("lead to $label's guide, a page in the docs' navigation", (adapter) => {
+    const pages = docsNav.flatMap((section) => section.items.map((item) => item.href))
+
+    expect(pages).toContain(adapter.guide)
+    expect(docsPage(adapter.guide)).toContain(adapter.pkg)
+  })
+})
+
+describe("the adapters overview", () => {
+  it("lists every official adapter with its package and its guide", () => {
+    const overview = docsPage(ADAPTERS_OVERVIEW)
+
+    for (const adapter of ADAPTERS) {
+      expect(overview).toContain(`\`${adapter.pkg}\``)
+      expect(overview).toContain(`](${adapter.guide})`)
+    }
   })
 })

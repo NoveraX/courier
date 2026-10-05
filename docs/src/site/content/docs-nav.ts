@@ -78,6 +78,7 @@ export const docsNav: NavSection[] = [
     icon: Box,
     defaultOpen: true,
     items: [
+      { title: "Overview", href: "/docs/frameworks/overview" },
       { title: "Next.js", href: "/docs/frameworks/nextjs" },
       { title: "Nuxt", href: "/docs/frameworks/nuxt" },
       { title: "React", href: "/docs/frameworks/react" },

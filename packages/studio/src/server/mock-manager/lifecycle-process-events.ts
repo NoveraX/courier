@@ -8,8 +8,9 @@
  */
 
 import { createLogger } from "@noverax/courier";
+import { isPlainObject } from "../is-plain-object";
 import type { MockLog } from "../storage/mock-log";
-import { applyWorkerEvent } from "./apply-worker-event";
+import { applyWorkerEvent, NO_NETWORK, networkStateOf } from "./apply-worker-event";
 import type { ProcessManagerEvents } from "./process-manager";
 import type { ServerState } from "./types";
 
@@ -31,6 +32,9 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
   const nameOf = (serverId: string): string => servers.get(serverId)?.name ?? serverId;
 
   return {
+    /* A mock that started again serves the network conditions it starts
+       with, not the ones set on the worker that went before; a worker that
+       reports none serves none. */
     onReady(serverId, data) {
       const name = nameOf(serverId);
       log.info(`[${name}] ready at ${data.url}`);
@@ -44,6 +48,7 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
         collections: data.collections,
         scenarios: data.scenarios ?? [],
         activeScenario: null,
+        ...(isPlainObject(data.network) ? networkStateOf(data.network) : NO_NETWORK),
       });
     },
 

@@ -12,6 +12,7 @@ import { dirname, resolve } from "node:path";
 import { createAutoMockServer } from "../auto/create-auto-server";
 import { analyzeRoutes, getSourceGroupNames } from "../auto/route-analyzer";
 import { seedOptionsOf } from "../auto/seed-options";
+import { networkConfigOnWire } from "../network/network-config-on-wire";
 import type { MockServer } from "../server/mock-server-types";
 import { handleCommand } from "./command-dispatch";
 import { isMockServerDefinition } from "./define-mock-server";
@@ -129,6 +130,7 @@ async function start(
       served.routes,
       served.server.activeScenario,
     ),
+    network: networkConfigOnWire(served.server.networkState),
     collections: served.server.store.list().map((name) => ({
       name,
       count: served.server.store.collection(name).count(),

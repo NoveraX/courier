@@ -91,9 +91,62 @@ describe("a managed mock that fails", () => {
       routes: [],
       collections: [],
       scenarios: [],
+      network: { latency: 0, errorRate: 0, latencyPreset: "none", chaosPreset: "none" },
     });
 
     expect(state).toMatchObject({ status: "running", lastError: undefined });
+  });
+});
+
+describe("a managed mock that starts again", () => {
+  it("serves the network conditions it starts with, not the ones set before", () => {
+    const { state, handlers } = events();
+    Object.assign(state, {
+      chaosPreset: "unstable",
+      chaosStartedAt: 99,
+      networkConfig: { latency: 0, errorRate: 0.4, chaosPreset: "unstable" },
+    });
+    const declared = {
+      latency: 200,
+      errorRate: 0,
+      latencyPreset: "none",
+      latencyStartedAt: null,
+      chaosPreset: "none",
+      chaosStartedAt: null,
+    };
+
+    handlers.onReady("apiMock", {
+      port: 7401,
+      url: "http://localhost:7401",
+      routes: [],
+      collections: [],
+      scenarios: [],
+      network: declared,
+    });
+
+    expect(state).toMatchObject({
+      chaosPreset: "none",
+      chaosStartedAt: null,
+      latencyPreset: "none",
+      networkConfig: declared,
+    });
+  });
+
+  it("serves none when its worker reports none", () => {
+    const { state, handlers } = events();
+    Object.assign(state, { chaosPreset: "unstable", networkConfig: { errorRate: 0.4 } });
+    const ready: Record<string, unknown> = {
+      port: 7401,
+      url: "http://localhost:7401",
+      routes: [],
+      collections: [],
+      scenarios: [],
+    };
+
+    Reflect.apply(handlers.onReady, handlers, ["apiMock", ready]);
+
+    expect(state.chaosPreset).toBeUndefined();
+    expect(state.networkConfig).toBeUndefined();
   });
 });
 

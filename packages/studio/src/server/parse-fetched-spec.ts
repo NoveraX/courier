@@ -1,8 +1,10 @@
 import { type ParsedSpec, parseSpec } from "../apis";
+import { resolveBaseURL } from "../apis/resolve-base-url";
 import { SpecUnreadableError } from "./spec-unreadable-error";
 
 /**
- * Parse the specification a URL answered with. An answer that is not one
+ * Parse the specification a URL answered with, its server address made
+ * absolute against that URL. An answer that is not one
  * is the host's failure, not Studio's: it is reported as such, with the
  * reason, instead of as an error of Studio's own.
  *
@@ -17,7 +19,7 @@ import { SpecUnreadableError } from "./spec-unreadable-error";
  */
 export function parseFetchedSpec(url: string, raw: string): ParsedSpec {
   try {
-    return parseSpec(raw);
+    return resolveBaseURL(parseSpec(raw), url);
   } catch (error) {
     throw new SpecUnreadableError(url, error);
   }

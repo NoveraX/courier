@@ -28,6 +28,8 @@ export function wireRequestHooks(server: MockServer): void {
         path,
         group,
         endpoint,
+        /* What answers it, read as it arrives: a later scenario does not rewrite it. */
+        source: server.getRouteSource(group, endpoint),
         variables,
         requestHeaders,
       },

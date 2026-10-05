@@ -118,7 +118,28 @@ async function startMock() {
 
 const DOWN = { errorRate: 1, faultWeights: [{ type: "503", weight: 100 }] };
 
+/** The request starts a mock reported, in order. */
+function starts(mock: Awaited<ReturnType<typeof startMock>>): SentEvent[] {
+  return mock.events.onEvent.mock.calls
+    .map(([, event]) => event)
+    .filter((event) => event.type === "mock:request:start");
+}
+
 describe("the network controls of a managed mock", () => {
+  it("names what answered each request as it arrived", async () => {
+    const mock = await startMock();
+    await fetch(`${mock.url}/users`);
+
+    mock.pm.sendCommand("apiMock", { action: "mock:scenario:apply", scenario: "server-error" });
+    await vi.waitFor(async () => expect((await fetch(`${mock.url}/users`)).status).toBe(500), {
+      timeout: 5_000,
+    });
+
+    const sources = starts(mock).map((event) => event.source);
+    expect(sources[0]).toBe("auto");
+    expect(sources.at(-1)).toBe("scenario");
+  }, 30_000);
+
   it("says how long a run lasted when it stops", async () => {
     const mock = await startMock();
     await mock.command("mock:chaos:set", { config: DOWN, preset: "down" });

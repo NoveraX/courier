@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, BookOpen, Settings } from "lucide-react";
 
-import { DOCS_URL } from "../nav";
+import { DOCS_URL, SETTINGS_PAGE } from "../nav";
 
 const ROW =
   "flex h-8 items-center gap-2.5 rounded-control px-2.5 text-fg-muted transition-colors hover:bg-raised hover:text-fg";
@@ -24,7 +24,7 @@ export function SidebarLinks(): React.ReactNode {
         <span className="flex-1" />
         <ArrowUpRight aria-hidden="true" className="size-3 text-fg-subtle" />
       </a>
-      <Link to="/settings" className={ROW}>
+      <Link to={SETTINGS_PAGE.to} className={ROW} activeProps={{ className: "bg-raised text-fg" }}>
         <Settings aria-hidden="true" className="size-3.75 shrink-0 opacity-85" />
         <span>Settings</span>
       </Link>

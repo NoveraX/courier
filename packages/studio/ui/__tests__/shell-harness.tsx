@@ -41,6 +41,7 @@ import { MockRoutesScreen } from "@/screens/mocks/routes-screen";
 import { MockScenariosScreen } from "@/screens/mocks/scenarios-screen";
 import { MockStoreScreen } from "@/screens/mocks/store-screen";
 import { PlaygroundScreen } from "@/screens/playground/playground-screen";
+import { SettingsScreen } from "@/screens/settings/settings-screen";
 import { TimelineScreen } from "@/screens/timeline/timeline-screen";
 import { WaterfallScreen } from "@/screens/waterfall/waterfall-screen";
 import { StudioShell } from "@/shell/studio-shell";
@@ -128,6 +129,11 @@ export async function openShell(url: string): Promise<AnyRouter> {
     component: MiddlewareScreen,
     validateSearch: validateMiddlewareSearch,
   });
+  const settings = createRoute({
+    getParentRoute: () => shell,
+    path: "settings",
+    component: SettingsScreen,
+  });
   const explorer = createRoute({
     getParentRoute: () => shell,
     path: "explorer",
@@ -192,6 +198,7 @@ export async function openShell(url: string): Promise<AnyRouter> {
         audit,
         compare,
         middleware,
+        settings,
         explorer.addChildren(tabs),
         playground,
         apis,

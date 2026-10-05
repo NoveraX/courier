@@ -14,6 +14,7 @@ import type { Context as HonoContext } from "hono";
 
 import { pickFault, shouldFail } from "../network/failure";
 import type { MockRequestContext } from "../types";
+import { answerElsewhere } from "./answer-elsewhere";
 import { answerFault } from "./fault-response";
 import { computeBandwidthDelay, resolveDelay, resolveNetConfig } from "./route-network";
 import { buildResponse, handlerFailure, pushHistory } from "./route-response";
@@ -61,6 +62,13 @@ export async function handleMockRequest(
       config.hooks?.onError?.(requestId, status, message, duration);
     });
   }
+
+  const elsewhere = await answerElsewhere(
+    c,
+    { requestId, group, method, variables, raw, start },
+    config,
+  );
+  if (elsewhere) return elsewhere;
 
   const mark = config.markScenario();
   const scenarioState = mark.state;

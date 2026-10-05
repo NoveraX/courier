@@ -11,6 +11,7 @@ import type { NetworkState } from "../network/state";
 import type { MockStore } from "../store";
 import type { StorePersistOptions } from "../store/store-persistence";
 import type { AnyMockScenario, MockHistoryEntry, NetworkConfig, UntypedMockFn } from "../types";
+import type { Elsewhere } from "./elsewhere";
 import type { PrefixMapping } from "./prefix-route-types";
 import type { MockLogMode } from "./request-logger";
 import type { RequestHooks } from "./route-types";
@@ -65,7 +66,12 @@ export interface MockServerOptions {
         maxPayload?: number | undefined;
       }
     | undefined;
+  /** The calls the mock leaves to its source's own server, or answers with recordings of it */
+  elsewhere?: Elsewhere | undefined;
 }
+
+/** What answers a route of a mock. */
+export type RouteSource = "auto" | "override" | "scenario" | "upstream" | "fixtures";
 
 /** Mock HTTP server instance */
 export interface MockServer {
@@ -111,6 +117,10 @@ export interface MockServer {
   requestHooks: RequestHooks;
   /** Dynamic network simulation state — use for runtime config changes */
   networkState: NetworkState;
-  /** Determine the active source for a route: "auto" | "override" | "scenario" */
-  getRouteSource(group: string, method: string): "auto" | "override" | "scenario";
+  /**
+   * What answers a route: the generated handler, an override, the scenario
+   * on, the source's own server it passes to, or the recordings of that
+   * server it replays.
+   */
+  getRouteSource(group: string, method: string): RouteSource;
 }

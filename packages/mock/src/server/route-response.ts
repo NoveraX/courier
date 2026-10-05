@@ -91,6 +91,8 @@ export interface HistoryEntryInput {
   data?: unknown;
   error?: string;
   stream?: boolean;
+  /** Whether the mock answered it, rather than the source's own server (default: true) */
+  mocked?: boolean;
 }
 
 /** Append a normalized history entry to the route config history array */
@@ -99,7 +101,7 @@ export function pushHistory(config: RouteConfig, entry: HistoryEntryInput): void
     group: entry.group,
     method: entry.method,
     variables: entry.variables,
-    mocked: true,
+    mocked: entry.mocked ?? true,
     duration: performance.now() - entry.start,
     timestamp: Date.now(),
     result: entry.error ? undefined : { status: entry.status, data: entry.data },

@@ -73,3 +73,18 @@ export type TypedMockFn<TSource extends AnySource> =
     ? UntypedMockFn
     : ([keyof ApiGroups<TSource>] extends [never] ? unknown : GroupedMockFn<TSource>) &
         ([TopLevelKeys<TSource>] extends [never] ? unknown : TopLevelMockFn<TSource>);
+
+/**
+ * An endpoint of a source by name, as a mock lists the endpoints it
+ * answers: `group.method`, or the method alone for one outside any group.
+ * Any string for a source whose endpoints are unknown to the type system.
+ */
+export type EndpointName<TSource> =
+  IsUntyped<TSource> extends true
+    ? string
+    :
+        | {
+            [TGroup in keyof ApiGroups<TSource> &
+              string]: `${TGroup}.${EndpointKeys<ApiGroups<TSource>[TGroup]>}`;
+          }[keyof ApiGroups<TSource> & string]
+        | TopLevelKeys<TSource>;

@@ -2,7 +2,8 @@
  * A docs page as Markdown, the way "Copy as Markdown", "View as Markdown"
  * and the assistant links hand it on: no metadata export, callouts as
  * quotes under their title, tabbed code as one fence a tab, comparisons as
- * tables, mode badges as words, and code fences exactly as written.
+ * tables, mode badges as words, the upload lab as a line saying what runs
+ * there, and code fences exactly as written.
  */
 import { readFileSync } from "node:fs"
 
@@ -27,6 +28,8 @@ const PAGE = [
   '    { label: "pnpm", code: "pnpm add \\"x\\"", language: "bash" }]}',
   "/>",
   "",
+  "<UploadLab />",
+  "",
   "```tsx",
   '<Callout variant="info">kept as code</Callout>',
   "```",
@@ -48,6 +51,11 @@ describe("a page as Markdown", () => {
   it("gives each tab of tabbed code its own fence, escapes read", () => {
     expect(md).toContain("**npm**\n\n```bash\nnpm install @noverax/courier\n```")
     expect(md).toContain('**pnpm**\n\n```bash\npnpm add "x"\n```')
+  })
+
+  it("says what the upload lab runs, in place of its tag", () => {
+    expect(md).toContain("*On the site, a live upload runs here:")
+    expect(md).not.toContain("<UploadLab")
   })
 
   it("leaves code fences exactly as written", () => {

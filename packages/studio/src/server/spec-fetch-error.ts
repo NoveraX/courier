@@ -84,6 +84,20 @@ export class SpecFetchError extends CourierError<SpecFetchErrorCode> {
   }
 
   /**
+   * The refusal, for a visitor of a public demo, of any address but a public
+   * one: this machine runs the demo's own services, and its network is the host's.
+   *
+   * @param what - The host, and the address it resolved to when there was a lookup
+   * @returns The error
+   */
+  static publicOnly(what: string): SpecFetchError {
+    return new SpecFetchError(
+      "SPEC_HOST_PRIVATE",
+      `Blocked request to ${what}: in this demo, Studio reads a specification for a visitor from the public internet only. Paste the specification, or give a public URL.`,
+    );
+  }
+
+  /**
    * The refusal for an address that means every interface: no host to
    * fetch from, yet connecting to it reaches this machine's own services, so
    * no entry in `studio.allowedSpecHosts` allows it.

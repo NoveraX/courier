@@ -8,6 +8,13 @@ import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
 import { requestSpec, type SpecAnswer } from "./spec-request";
 
 const MAX_REDIRECTS = 5;
+
+/**
+ * What a request for a specification may reach: what the project allows —
+ * the public internet, this machine when asked for, and the private hosts
+ * it names — or, for a visitor of a public demo, the public internet only.
+ */
+export type SpecReach = "project" | "public";
 const WEB_PROTOCOLS: ReadonlySet<string> = new Set(["http:", "https:"]);
 
 /* The whole fetch, redirects and the wait for the project's list of private
@@ -41,6 +48,7 @@ const DEADLINE_MS = 60_000;
  * @param url - The URL the developer asked Studio to read
  * @param allowlist - The private hosts the project names, read when a hop needs them
  * @param headers - Headers to send the URL's own origin, such as an import's auth
+ * @param reach - What the request may reach: the project's, or only the public internet
  * @returns The specification's text
  * @throws {SpecFetchError} When the URL is refused or cannot be fetched
  * @throws {SpecHostsUnavailableError} For a private host, while Studio cannot read the project's list
@@ -54,11 +62,12 @@ export async function fetchSpec(
   url: string,
   allowlist: SpecHostAllowlist,
   headers: Readonly<Record<string, string>> = {},
+  reach: SpecReach = "project",
 ): Promise<string> {
   const deadline = Date.now() + DEADLINE_MS;
   let current = specUrl(url);
   const { origin } = current;
-  let loopback = true;
+  let loopback = reach === "project";
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const remaining = deadline - Date.now();
     if (remaining <= 0)
@@ -69,7 +78,7 @@ export async function fetchSpec(
       );
     const answer: SpecAnswer = await requestSpec(
       current,
-      hopPolicy(current, loopback, allowlist, hop === 0 ? null : url),
+      hopPolicy(current, loopback, reach === "public" ? null : allowlist, hop === 0 ? null : url),
       remaining,
       current.origin === origin ? headers : {},
     );
@@ -129,11 +138,18 @@ function redirectTarget(location: string, from: URL, asked: string): URL {
 function hopPolicy(
   url: URL,
   loopback: boolean,
-  allowlist: SpecHostAllowlist,
+  allowlist: SpecHostAllowlist | null,
   redirectedFrom: string | null,
 ): LookupPolicy {
   const named = (what: string) =>
     redirectedFrom === null ? what : `${what}, which ${redirectedFrom} redirects to`;
+  /* A demo's visitor reaches no private host, whatever the project names. */
+  if (allowlist === null) {
+    return {
+      loopback,
+      admitPrivate: (what) => Promise.reject(SpecFetchError.publicOnly(named(what))),
+    };
+  }
   return { loopback, admitPrivate: async (what) => admit(await allowlist(), url, named(what)) };
 }
 

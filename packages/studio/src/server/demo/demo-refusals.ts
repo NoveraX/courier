@@ -12,3 +12,8 @@ export const DEMO_WRITE_REFUSAL =
 export const DEMO_SHARED_REFUSAL =
   "Everyone in this demo sees the same requests, mock logs and view, " +
   "so Studio does not clear or switch them for the other visitors.";
+
+/** A file of the project is the host's, read for no visitor. */
+export const DEMO_FILE_REFUSAL =
+  "This is a shared demo, so Studio reads no file of its own for a visitor. " +
+  "Paste the specification, or give its public URL.";

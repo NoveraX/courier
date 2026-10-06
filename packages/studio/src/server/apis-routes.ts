@@ -4,7 +4,8 @@
 
 import { diffSpecs, generateCode, parseSpec } from "../apis";
 import { resolveBaseURL } from "../apis/resolve-base-url";
-import { fetchSpec } from "./fetch-spec";
+import { DEMO_FILE_REFUSAL } from "./demo/demo-refusals";
+import { fetchSpec, type SpecReach } from "./fetch-spec";
 import { errMsg } from "./fs-helpers";
 import { withImportExtension } from "./generated-import-extension";
 import { registerLayoutRoute } from "./layout-route";
@@ -15,7 +16,7 @@ import type { ProjectImports } from "./project-state/types";
 import { refuseUnsendable } from "./refuse-unsendable";
 import { registerRegistryRoutes } from "./registry-routes";
 import { sendRouteFailure } from "./route-failure";
-import type { RouteApp } from "./route-types";
+import type { RouteApp, RouteRequest } from "./route-types";
 import { SpecFetchError } from "./spec-fetch-error";
 import { type SpecHostAllowlist, specHostAllowlist } from "./spec-host-allowlist";
 import { SpecHostsUnavailableError } from "./spec-hosts-unavailable-error";
@@ -33,6 +34,12 @@ export interface ApisRouteDeps {
   project: ProjectImports;
   /** The project root, symlinks resolved: where the imports state lives. */
   projectRoot: string;
+  /**
+   * Whether a request comes from a visitor of a public demo, who may have
+   * Studio read a specification from the public internet or as pasted,
+   * never from this machine, its network, or a file of the project.
+   */
+  isDemoVisitor?: ((req: RouteRequest) => boolean) | undefined;
 }
 
 /**
@@ -52,13 +59,16 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
     try {
       const body = validateParseBody(req.body, res);
       if (!body) return;
-      const allowlist = specHostAllowlist(deps.project, deps.projectRoot);
-      const raw = await resolveSpecContent(
-        body.source,
-        body.content,
-        allowlist,
-        projectRootAt(deps.projectRoot),
-      );
+      const visitor = deps.isDemoVisitor?.(req) === true;
+      if (visitor && body.source === "file") {
+        res.status(403).json({ error: DEMO_FILE_REFUSAL, code: "STUDIO_DEMO_REFUSED" });
+        return;
+      }
+      const raw = await resolveSpecContent(body, {
+        allowlist: specHostAllowlist(deps.project, deps.projectRoot),
+        root: projectRootAt(deps.projectRoot),
+        reach: visitor ? "public" : "project",
+      });
       const parsed = parseSpec(raw);
       const spec = body.source === "url" ? resolveBaseURL(parsed, body.content) : parsed;
       refuseUnsendable(spec);
@@ -107,14 +117,10 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function resolveSpecContent(
-  source: "url" | "raw" | "file",
-  content: string,
-  allowlist: SpecHostAllowlist,
-  root: ProjectRoot,
+  { source, content }: { source: "url" | "raw" | "file"; content: string },
+  where: { allowlist: SpecHostAllowlist; root: ProjectRoot; reach: SpecReach },
 ): Promise<string> {
-  if (source === "url") return fetchSpec(content, allowlist);
-  if (source === "file") {
-    return readProjectText(root, content);
-  }
+  if (source === "url") return fetchSpec(content, where.allowlist, {}, where.reach);
+  if (source === "file") return readProjectText(where.root, content);
   return content;
 }

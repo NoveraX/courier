@@ -8,6 +8,7 @@ import { buildGroups } from "./openapi-groups";
 import { parseOpenApi3Operation } from "./parse-openapi3-operation";
 import { serverUrl } from "./server-url";
 import { asNode, fieldOf, isNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
+import { tagParents } from "./tag-parents";
 import type { ParsedEndpoint, ParsedSpec, SkippedOperation } from "./types";
 import {
   convertSchema,
@@ -29,7 +30,7 @@ export function parseOpenApi3(spec: SpecNode): ParsedSpec {
   const schemas = parseSchemas(spec);
   const { endpointsByTag, skipped } = groupEndpointsByTag(spec);
   const tagDescriptions = parseTagDescriptions(spec);
-  const groups = buildGroups(endpointsByTag, tagDescriptions);
+  const groups = buildGroups(endpointsByTag, tagDescriptions, tagParents(spec));
   const securitySchemes = parseSecuritySchemes(spec);
 
   return {

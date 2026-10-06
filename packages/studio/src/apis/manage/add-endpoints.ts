@@ -14,9 +14,11 @@ import { appendEndpointsToGroup } from "./append-to-group";
 import { exportedNames } from "./exported-names";
 import { listedSelection } from "./listed-selection";
 import { mergeSchemaFiles } from "./merge-schemas";
+import { newGroupsOf } from "./new-groups";
 import { rebuildBarrel } from "./rebuild-barrel";
 import { sourceWithNewGroups } from "./source-with-new-groups";
 import type { AddResult, FileChange } from "./types";
+import { withInnerGroups } from "./with-inner-groups";
 
 /**
  * Generate a preview of what adding endpoints would produce.
@@ -102,7 +104,10 @@ export function previewAddEndpoints(
         : existingContent;
     if (merged !== existingContent) files.push(change(merged, "modify"));
   }
-  const sourceFileUpdate = sourceWithNewGroups(endpointsToAdd, options, existingFiles, layout);
+  const created = newGroupsOf(spec, options.groupBy ?? "tag", selection, existingFiles, layout);
+  const outer = created.filter((group) => group.parent === undefined).map((group) => group.name);
+  const sourceFileUpdate = sourceWithNewGroups(outer, options, existingFiles, layout);
+  withInnerGroups(files, created, existingFiles, layout);
   /* Last, from every file as the other changes leave it. */
   if (barrel !== undefined) {
     const { existing, change } = barrel;

@@ -44,7 +44,10 @@ export interface ParsedGroup {
   name: string;
   /** Tag description from the spec (for JSDoc generation) */
   description: string;
+  /** The path its endpoints share — after its parent group's, for a group inside one */
   prefix: string;
+  /** The group it is generated inside, by name: an OpenAPI 3.2 tag's parent */
+  parent?: string | undefined;
   endpoints: ParsedEndpoint[];
 }
 

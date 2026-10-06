@@ -3,6 +3,8 @@
  * code: only the group entries and their imports change.
  */
 
+import type { ObjectExpression } from "oxc-parser";
+
 import { applyEdits } from "../../server/mocks-edit/plan/apply-edits";
 import { detectStyle } from "../../server/mocks-edit/plan/detect-style";
 import { planImportLines } from "../../server/mocks-edit/plan/import-lines";
@@ -103,6 +105,27 @@ export function removeGroupsFromSourceFile(
 ): string {
   if (groupNames.length === 0) return existingContent;
   const { parsed, groups } = parsedSource(path, existingContent);
+  return removeEntries(path, existingContent, parsed, groups, groupNames);
+}
+
+/**
+ * Take named entries out of an object literal of groups, and the imports
+ * only those entries used.
+ *
+ * @param path - The file, project-relative
+ * @param existingContent - The file as it is
+ * @param parsed - The file, parsed
+ * @param groups - The object literal listing the groups
+ * @param groupNames - The entries to take out
+ * @returns The file without them
+ */
+export function removeEntries(
+  path: string,
+  existingContent: string,
+  parsed: ReturnType<typeof parseSource>,
+  groups: ObjectExpression,
+  groupNames: readonly string[],
+): string {
   const removing = new Set(groupNames);
   const indices = new Set<number>();
   const locals = new Set<string>();

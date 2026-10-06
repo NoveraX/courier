@@ -109,7 +109,14 @@ function generateGrouped(
     files.push(generateGroupFile(processed, spec, opts, declared, params));
   }
 
-  files.push(generateSourceFile(spec.groups, spec, opts));
+  /* A group inside another is listed in its parent's file, not the source's. */
+  files.push(
+    generateSourceFile(
+      spec.groups.filter((group) => !group.parent),
+      spec,
+      opts,
+    ),
+  );
   files.push(generateIndexFile(spec, spec.groups, opts, groupSchemaMap));
 
   return files;

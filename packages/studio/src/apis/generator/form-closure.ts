@@ -47,7 +47,7 @@ export function formClosure(
       : `http.${method}(${at}, body, { ${callOptions(null, searchParams, read)} })`;
   /* The path's entries fill the path, and are not part of the body either. */
   const taken = JSON.stringify(params.map((param) => param.name));
-  const copy = `const body = new FormData(); form.forEach((value, key) => { if (!${taken}.includes(key)) body.append(key, value); });`;
+  const copy = `const body = new globalThis.FormData(); form.forEach((value, key) => { if (!${taken}.includes(key)) body.append(key, value); });`;
   return `(http, form) => { ${copy} return ${send}; }`;
 }
 

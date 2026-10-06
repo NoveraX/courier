@@ -78,12 +78,13 @@ describe("the barrel of an import", () => {
     expect(store).not.toMatch(/\bPetSchema\b/);
   });
 
-  it("re-exports types alone from a types module when no validator writes schemas", () => {
+  it("re-exports a module of types alone with export type when no validator writes schemas", () => {
     const barrel = barrelOf({ validation: "none" });
 
     expect(barrel).not.toContain("export *");
-    expect(barrel).toContain("type Pet");
+    expect(barrel).toMatch(/^export type \{[^}]*\bPet\b[^}]*\} from "\.\/pets\/schemas";$/m);
     expect(barrel).not.toMatch(/\bPetSchema\b/);
+    expect(barrel).not.toMatch(/export \{[^}]*\btype /);
   });
 });
 

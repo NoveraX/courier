@@ -48,7 +48,18 @@ export function barrelReexports(
   return modules.flatMap(({ from, text }) => {
     const fresh = [...declaredExports(text)].filter(([name]) => !exported.has(name));
     for (const [name] of fresh) exported.add(name);
+    if (fresh.length === 0) return [];
+    /* A module of types alone is re-exported with `export type`, as linters ask. */
+    if (fresh.every(([, kind]) => kind === "type")) {
+      return [
+        namedStatement(
+          "export type",
+          fresh.map(([name]) => name),
+          from,
+        ),
+      ];
+    }
     const names = fresh.map(([name, kind]) => (kind === "type" ? `type ${name}` : name));
-    return names.length === 0 ? [] : [namedStatement("export", names, from)];
+    return [namedStatement("export", names, from)];
   });
 }

@@ -211,6 +211,16 @@ describe("rebuildBarrel", () => {
     expect(barrel).toContain('export { ASchema } from "./alpha/schemas";');
   });
 
+  it("writes a module of types alone with export type, and rebuilds its line as names change", () => {
+    const types = (...names: string[]) =>
+      names.map((n) => `export type ${n} = { id?: string };\n`).join("");
+    const old = `${HEAD}export type { A } from "./alpha/schemas";\n`;
+
+    const barrel = rebuildBarrel(layout, files(old, { "alpha/schemas": types("A", "B") }), false);
+
+    expect(barrel).toBe(`${HEAD}export type { A, B } from "./alpha/schemas";\n`);
+  });
+
   it("re-exports a flat import's schemas file again once it is back", () => {
     const flat = { ...files(HEAD, { schemas: schema("X") }) };
     delete flat[layout.sourceFile];

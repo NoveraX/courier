@@ -1,0 +1,49 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Billing", "version": "1" },
+  "servers": [{ "url": "http://127.0.0.1:9" }],
+  "paths": {
+    "/invoices": {
+      "get": {
+        "operationId": "listInvoices",
+        "tags": ["invoices"],
+        "responses": {
+          "200": {
+            "description": "Invoices",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Invoice" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers": {
+      "get": {
+        "operationId": "listCustomers",
+        "tags": ["customers"],
+        "responses": {
+          "200": {
+            "description": "Customers",
+            "content": {
+              "application/json": { "schema": { "type": "array", "items": { "type": "string" } } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Invoice": {
+        "type": "object",
+        "required": ["id", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string", "enum": ["draft", "open", "paid"] }
+        }
+      }
+    }
+  }
+}

@@ -6,7 +6,8 @@
     "scripts/**/*",
     "examples/*/src/**/*",
     "examples/*/courier.config.ts",
-    "examples/demo-shop/courier.mocks.ts"
+    "examples/demo-shop/courier.mocks.ts",
+    "e2e/**/*"
   ],
   "exclude": ["examples/expo"],
   "compilerOptions": {

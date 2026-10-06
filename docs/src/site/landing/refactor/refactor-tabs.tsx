@@ -8,11 +8,6 @@ interface RefactorTabsProps {
   diff: { label: string; tone: string }
 }
 
-function dotTone(at: number, frame: RefactorFrame): string {
-  if (at === 0) return frame.done ? "bg-ok" : "bg-tone-red"
-  return frame.tabs[at]?.active ? "bg-tone-red" : "bg-fg-subtle"
-}
-
 /**
  * The refactor's files as tabs: the page stays, the route and the query
  * keys close once their code is gone.
@@ -42,12 +37,6 @@ export function RefactorTabs({ frame, diff }: RefactorTabsProps) {
               tab?.active ? "text-fg" : "text-fg-subtle"
             )}
           >
-            <span
-              className={cn(
-                "size-1.5 shrink-0 rounded-full transition-colors duration-350",
-                dotTone(at, frame)
-              )}
-            />
             {name}
           </div>
         )

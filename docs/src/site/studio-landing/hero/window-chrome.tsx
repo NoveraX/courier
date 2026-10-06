@@ -47,10 +47,7 @@ export function WindowTitleBar() {
           localhost:6280/timeline
         </span>
       </span>
-      <span className="flex items-center gap-1.5 font-mono text-micro tracking-[0.06em] text-err">
-        <span className="size-1.5 rounded-full bg-current" />
-        REC
-      </span>
+      <span className="font-mono text-micro tracking-[0.06em] text-err">REC</span>
     </div>
   )
 }

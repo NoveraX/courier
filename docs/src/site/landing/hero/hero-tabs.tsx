@@ -23,15 +23,10 @@ export function HeroTabs({ lit }: { lit: boolean }) {
           lit ? "bg-panel text-fg" : "text-fg-subtle"
         )}
       >
-        <span className="size-1.5 rounded-full bg-tone-blue" />
         api/sources.ts
       </div>
-      <div className={cn(TAB, "bg-panel text-fg")}>
-        <span className="size-1.5 rounded-full bg-tone-green" />
-        app/users/page.tsx
-      </div>
+      <div className={cn(TAB, "bg-panel text-fg")}>app/users/page.tsx</div>
       <div className="ml-auto hidden items-center gap-2 px-3.5 font-mono text-micro text-fg-subtle min-[640px]:flex">
-        <span className="size-1.5 rounded-[2px] bg-tone-teal" />
         TS · STRICT
       </div>
     </div>

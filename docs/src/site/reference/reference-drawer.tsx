@@ -4,11 +4,10 @@ import { X } from "lucide-react"
 import Link from "next/link"
 import { Dialog } from "radix-ui"
 
-import { cn } from "@/site/cn"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
 import type { ExportFilterState } from "./export-filter"
 import { ExportFilter } from "./export-filter"
-import { KIND_LOOK } from "./kind-look"
+import { KindMark } from "./kind-mark"
 import type { ListedExport } from "./reference-sidebar"
 
 interface ReferenceDrawerProps {
@@ -61,13 +60,7 @@ export function ReferenceDrawer({ exports, filter, open, onOpenChange }: Referen
               onClick={close}
               className="flex items-center gap-2.25 rounded-chip px-2.25 py-1.75 font-mono text-small text-fg-muted"
             >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "size-1.25 rounded-full",
-                  kind === "BUILDER" ? "bg-fg-subtle" : KIND_LOOK[kind].dot
-                )}
-              />
+              <KindMark kind={kind} />
               {name}
             </a>
           ))}

@@ -60,7 +60,7 @@ export function StudioWindow() {
               <div
                 key={row.n}
                 className={cn(
-                  "relative grid h-8.25 grid-cols-[8px_42px_minmax(0,1fr)_34px_58px] items-center gap-2.5 border-b border-line px-3.5",
+                  "relative grid h-8.25 grid-cols-[42px_minmax(0,1fr)_34px_58px] items-center gap-2.5 border-b border-line px-3.5",
                   at === 0 && "studio-row-in bg-brand/6",
                   at !== 0 && row.endpoint === "orders.create" && "bg-brand-dim"
                 )}
@@ -70,9 +70,6 @@ export function StudioWindow() {
                     "absolute inset-y-0 left-0 w-0.5",
                     at === 0 ? "bg-brand" : "bg-transparent"
                   )}
-                />
-                <span
-                  className={cn("size-1.75 rounded-full", row.status >= 400 ? "bg-err" : "bg-ok")}
                 />
                 <span className={cn("text-[10px] font-semibold", METHOD_TEXT[row.method])}>
                   {row.method}

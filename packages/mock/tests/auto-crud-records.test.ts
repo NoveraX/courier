@@ -5,7 +5,8 @@
  * never hides behind an old one; records keyed "1" or "007" are found by
  * every by-id route; PUT replaces where PATCH merges; and a list endpoint
  * declaring a pagination wrapper answers that wrapper, not a bare array its
- * own schema refuses.
+ * own schema refuses. A file a form uploads is kept as its name, type and
+ * size.
  */
 import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, describe, expect, it } from "vitest";
@@ -92,6 +93,23 @@ describe("auto-CRUD records", () => {
     }).then((r) => r.json());
 
     expect(replaced).toEqual({ id: 1, title: "Only" });
+  });
+
+  it("keeps a file a form uploads by its name, type and size, which a record can hold", async () => {
+    const url = await serve(todosApi());
+    const form = new FormData();
+    form.append("title", "Scan");
+    form.append("attachment", new File(["%PDF-1.7"], "scan.pdf", { type: "application/pdf" }));
+
+    const created = await fetch(`${url}/todos`, { method: "POST", body: form }).then((r) =>
+      r.json(),
+    );
+    const read = await fetch(`${url}/todos/${created.id}`).then((r) => r.json());
+
+    expect(read).toMatchObject({
+      title: "Scan",
+      attachment: { name: "scan.pdf", type: "application/pdf", size: 8 },
+    });
   });
 
   it("reaches records whose ids are digit strings", async () => {

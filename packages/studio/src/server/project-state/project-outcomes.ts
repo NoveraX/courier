@@ -7,6 +7,7 @@ import { buildBindingSnapshot } from "../binding-snapshot";
 import type { BindingTable } from "../catalog/binding-table";
 import type { LoadedCourierConfig } from "../config-loader";
 import { recordStartupIssue } from "../startup-issues";
+import type { UpdateChecks } from "../update-checks";
 import { failureOf } from "./failure-of";
 import { sendProject } from "./send-project";
 import type { ConfigFailure, ProjectSnapshot } from "./types";
@@ -20,6 +21,8 @@ export interface ProjectOutcomeDeps {
   bindingTable: BindingTable;
   uiNamespace: Namespace;
   mocks: MocksConsumers;
+  /** The last update check of each import, which the imports lists carry. */
+  updateChecks: UpdateChecks;
 }
 
 /** Where the project's snapshot is kept. */
@@ -57,7 +60,7 @@ export interface ProjectOutcomes {
  *
  * @example
  * ```ts
- * const outcomes = createProjectOutcomes({ root, bindingTable, uiNamespace, mocks }, store);
+ * const outcomes = createProjectOutcomes({ root, bindingTable, uiNamespace, mocks, updateChecks }, store);
  * outcomes.applied(await loadCourierConfig(root));
  * ```
  */
@@ -79,7 +82,7 @@ export function createProjectOutcomes(
       failure: null,
     };
     store.commit(next);
-    sendProject(deps.uiNamespace, next, deps.root);
+    sendProject(deps.uiNamespace, next, deps.root, deps.updateChecks);
     deps.uiNamespace.emit("binding:snapshot", buildBindingSnapshot(deps.bindingTable));
     if (previous.starting && loaded.mocks.error !== null) {
       recordStartupIssue(
@@ -120,7 +123,7 @@ export function createProjectOutcomes(
       failure,
     };
     store.commit(next);
-    sendProject(deps.uiNamespace, next, deps.root);
+    sendProject(deps.uiNamespace, next, deps.root, deps.updateChecks);
     if (previous.starting && failure.code !== "CONFIG_NOT_FOUND") {
       /* Recorded as well as logged: the banner clears the terminal, and
          without a config there is nothing bound to show why. */

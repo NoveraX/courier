@@ -13,6 +13,7 @@ import { prepareEdit } from "../../src/server/mocks-edit/prepare-edit";
 import type { ManualOutcome } from "../../src/server/mocks-edit/types";
 import { failureOf } from "../../src/server/project-state/failure-of";
 import type { ProjectState } from "../../src/server/project-state/types";
+import { createUpdateChecks } from "../../src/server/update-checks";
 
 const CACHE = join(__dirname, "../../../../node_modules/.cache/courier-studio-tests");
 const EXISTING =
@@ -55,6 +56,7 @@ const unused: ProjectState = {
   fresh: async () => {
     throw new Error("planning caught up with the disk");
   },
+  updateChecks: createUpdateChecks(),
   runExclusive: async () => {
     throw new Error("planning ran an edit");
   },

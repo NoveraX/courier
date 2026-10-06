@@ -17,7 +17,7 @@ import { clearedMockOf } from "./mock-log-clear";
 import type { LifecycleCoordinator } from "./mock-manager";
 import type { CommandReply } from "./mock-manager/command-replies";
 import { sendProject } from "./project-state/send-project";
-import type { ProjectReads } from "./project-state/types";
+import type { ProjectImports } from "./project-state/types";
 import type { RequestLog } from "./request-log";
 import { keptIdsOf } from "./request-log-clear";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
@@ -43,7 +43,7 @@ export interface SetupUiNamespaceDeps {
   uiNamespace: Namespace;
   bindingTable: BindingTable;
   /** The project Studio runs, replayed to each UI that connects. */
-  project: ProjectReads;
+  project: ProjectImports;
   /** The project root, symlinks resolved. */
   projectRoot: string;
   mockManager?: LifecycleCoordinator;
@@ -118,7 +118,7 @@ export function setupUiNamespace(deps: SetupUiNamespaceDeps): void {
        is told so, and gets the lists with the first outcome. socket.io calls
        this handler outside any promise, so a throw here would stop Studio. */
     try {
-      sendProject(socket, project.snapshot(), projectRoot);
+      sendProject(socket, project.snapshot(), projectRoot, project.updateChecks);
     } catch (err) {
       logger.warn("Studio", "Failed to send the project to a UI that connected", err);
     }

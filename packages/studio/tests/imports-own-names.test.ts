@@ -24,6 +24,7 @@ import { getImportEntry, getImportState, importsSnapshotOf } from "../src/server
 import type { ProjectSnapshot, ProjectState } from "../src/server/project-state/types";
 import { registerRegistryRoutes } from "../src/server/registry-routes";
 import type { JsonResponse, RouteApp } from "../src/server/route-types";
+import { createUpdateChecks } from "../src/server/update-checks";
 import { registerWriteRoutes } from "../src/server/write-routes";
 
 type Handler = Parameters<RouteApp["post"]>[1];
@@ -55,6 +56,7 @@ async function routes(): Promise<Map<string, Handler>> {
     snapshot: () => view,
     fresh: async () => ({ ...view, settling: false }),
     importsChanged: () => undefined,
+    updateChecks: createUpdateChecks(),
     runExclusive: () => Promise.reject(new Error("no config edit in these tests")),
     finishEdits: async () => undefined,
     stop: () => undefined,

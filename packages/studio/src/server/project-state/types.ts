@@ -1,5 +1,6 @@
 import type { ConfigLoaderErrorCode, LoadedCourierConfig } from "../config-loader";
 import type { ExclusiveTransaction } from "../exclusive-context";
+import type { UpdateChecks } from "../update-checks";
 
 /** Why the latest load of the config failed. */
 export interface ConfigFailure {
@@ -70,10 +71,12 @@ export interface ProjectReads {
 export interface ProjectImports extends ProjectReads {
   /**
    * Send every UI the imports lists anew, after a route wrote the imports
-   * state. Nothing is sent while Studio starts, and a failure to send is
-   * logged, never thrown at the route that wrote.
+   * state or checked an import for updates. Nothing is sent while Studio
+   * starts, and a failure to send is logged, never thrown at the route.
    */
   importsChanged(): void;
+  /** The last update check of each import, which the imports lists carry to every UI. */
+  readonly updateChecks: UpdateChecks;
 }
 
 export interface ProjectState extends ProjectImports {

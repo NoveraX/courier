@@ -4,13 +4,17 @@ import type { ParsedSource } from "../../server/mocks-edit/plan/parse-source";
 import type { TextEdit } from "../../server/mocks-edit/types";
 import { planEntryRemoval } from "./entry-removal";
 
+/* A statement on a line of its own goes with the line, and a comment after
+   it; one sharing its line with other code goes alone, with the spaces after it. */
 function wholeStatement(text: string, statement: ImportDeclaration): TextEdit {
+  const line = lineStart(text, statement.start);
   const eol = text.indexOf("\n", statement.end);
-  return {
-    start: lineStart(text, statement.start),
-    end: eol === -1 ? text.length : eol + 1,
-    text: "",
-  };
+  const rest = text.slice(statement.end, eol === -1 ? text.length : eol);
+  if (text.slice(line, statement.start).trim() === "" && /^\s*(?:\/\/.*)?$/.test(rest)) {
+    return { start: line, end: eol === -1 ? text.length : eol + 1, text: "" };
+  }
+  const spaces = /^[ \t]*/.exec(text.slice(statement.end))?.[0].length ?? 0;
+  return { start: statement.start, end: statement.end + spaces, text: "" };
 }
 
 /**

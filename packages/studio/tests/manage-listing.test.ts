@@ -126,7 +126,11 @@ describe("the inventory", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  function inventoryOf(groupBy: "single" | "path", selected: Record<string, string[]>) {
+  function inventoryOf(
+    groupBy: "single" | "path",
+    selected: Record<string, string[]>,
+    newSpec = SPEC,
+  ) {
     for (const [path, content] of Object.entries(written(groupBy, selected))) {
       mkdirSync(dirname(join(root, path)), { recursive: true });
       writeFileSync(join(root, path), content);
@@ -140,7 +144,7 @@ describe("the inventory", () => {
       },
     };
     return handleInventory(
-      { name: "shop", newSpec: SPEC },
+      { name: "shop", newSpec },
       importsSnapshotOf(declarations, root),
       projectRootAt(root),
     );
@@ -160,6 +164,23 @@ describe("the inventory", () => {
     expect("groups" in inventory ? inventory.groups.map((group) => group.name) : []).toEqual([
       "pets",
       "store",
+    ]);
+  });
+
+  it("shows the method and path an endpoint the specification no longer lists declares in its file", () => {
+    const withoutStore = parseSpec(
+      JSON.stringify({
+        openapi: "3.1.0",
+        info: { title: "Shop", version: "2" },
+        paths: { "/pets": { get: { tags: ["animals"], responses: OK } } },
+      }),
+    );
+
+    const inventory = inventoryOf("path", { shop: ["getById"] }, withoutStore);
+
+    const store = "groups" in inventory ? inventory.groups.find((g) => g.name === "store") : null;
+    expect(store?.endpoints).toEqual([
+      expect.objectContaining({ name: "getById", httpMethod: "get", path: "/:id" }),
     ]);
   });
 });

@@ -9,7 +9,7 @@
  *
  * The inventory needs only the endpoint names and the group's identity: the
  * spec is the canonical source of each active endpoint's `httpMethod` and
- * `path`.
+ * `path`, and an endpoint's own code of one the spec does not list.
  */
 export interface DiskGroupListing {
   name: string;

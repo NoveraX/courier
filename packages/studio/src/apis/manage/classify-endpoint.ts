@@ -17,7 +17,7 @@ interface SpecGroupInfo {
  * — disk listings only carry endpoint names, and spec data is the canonical
  * source for HTTP method + path of any endpoint that still exists upstream.
  * Endpoints with no matching spec entry (custom or removed-from-spec) get
- * empty strings; UI consumers degrade gracefully on those rows.
+ * empty strings here; the inventory fills them from the endpoint's own code.
  */
 export function classifyDiskEndpoint(
   group: string,

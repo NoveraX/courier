@@ -7,7 +7,7 @@
 import type { ParsedSpec } from "../parser/types";
 
 import { buildGroupEndpoints } from "./inventory-classifier";
-import { buildDiskMap, buildSpecMap, endpointHashes } from "./inventory-indexers";
+import { buildDiskMap, buildSpecMap, endpointHashes, endpointRoutes } from "./inventory-indexers";
 import type { DiskGroupListing, EndpointInventory, InventoryGroup } from "./types";
 
 export function buildEndpointInventory(
@@ -36,6 +36,7 @@ export function buildEndpointInventory(
       diskGroup,
       file === undefined ? {} : (fingerprints[file] ?? {}),
       file === undefined ? {} : endpointHashes(existingFiles[file]),
+      file === undefined ? {} : endpointRoutes(existingFiles[file]),
     );
     const isCustomGroup = endpoints.length > 0 && endpoints.every((e) => e.status === "custom");
 

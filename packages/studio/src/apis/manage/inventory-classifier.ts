@@ -2,6 +2,7 @@
  * Classifies endpoints within a group by cross-referencing spec and disk data.
  */
 
+import { ownValue } from "../own-value";
 import { classifyDiskEndpoint } from "./classify-endpoint";
 import type { DiskGroupInfo, SpecGroupInfo } from "./inventory-indexers";
 import type { InventoryEndpoint } from "./types";
@@ -13,16 +14,19 @@ export function buildGroupEndpoints(
   diskGroup: DiskGroupInfo | undefined,
   fingerprints: Record<string, string>,
   diskHashes: Record<string, string>,
+  diskRoutes: Record<string, { httpMethod: string; path: string }> = {},
 ): InventoryEndpoint[] {
   const endpoints: InventoryEndpoint[] = [];
 
-  // Disk endpoints: classify against spec + fingerprints. The disk listing only
-  // carries endpoint names — the canonical `httpMethod`/`path` is read from the
-  // matching spec entry when present (active endpoints) and left empty for
-  // custom or removed-from-spec endpoints.
+  // Disk endpoints: classify against spec + fingerprints. The canonical
+  // `httpMethod`/`path` is the matching spec entry's (active endpoints); an
+  // endpoint the spec does not list (custom or removed-from-spec) shows the
+  // method and path its own code declares, when the code shows them.
   if (diskGroup) {
     for (const name of diskGroup.endpoints) {
-      endpoints.push(classifyDiskEndpoint(groupName, name, specGroup, fingerprints, diskHashes));
+      const endpoint = classifyDiskEndpoint(groupName, name, specGroup, fingerprints, diskHashes);
+      const route = endpoint.httpMethod === "" ? ownValue(diskRoutes, name) : undefined;
+      endpoints.push(route ? { ...endpoint, ...route } : endpoint);
     }
   }
 

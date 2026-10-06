@@ -195,3 +195,36 @@ describe("mock:store:update and mock:store:delete", () => {
     expect(await count("users")).toBe(5);
   });
 });
+
+describe("mock:store:create without a record", () => {
+  it("adds one the mock makes as its seed makes them, which the schema accepts, under a new id", async () => {
+    const result = await worker.command({ action: "mock:store:create", collection: "users" });
+
+    const users: Array<{ id: unknown }> = await fetch(`${url}/users`).then((res) => res.json());
+    expect(result.ok).toBe(true);
+    expect(users).toHaveLength(7);
+    expect(() =>
+      z.array(z.object({ id: z.number(), name: z.string() })).parse(users),
+    ).not.toThrow();
+    expect(new Set(users.map((user) => user.id)).size).toBe(7);
+  });
+
+  it("adds the record it is given, as it is", async () => {
+    const result = await worker.command({
+      action: "mock:store:create",
+      collection: "pets",
+      record: { name: "Rex" },
+    });
+
+    expect(result).toMatchObject({ ok: true, data: { name: "Rex" } });
+  });
+
+  it("refuses a collection no endpoint gives a schema, and says to give the record", async () => {
+    const result = await worker.command({ action: "mock:store:create", collection: "unknown" });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: 'Collection "unknown" has no schema to make a record from; give the record to add',
+    });
+  });
+});

@@ -21,7 +21,6 @@ vi.mock("@/socket", () => ({
 }));
 
 import { collectionView, validateMockStoreSearch } from "@/features/mocks/collection-view";
-import { buildDefaultRecord } from "@/features/mocks/data-table-utils";
 import { useStudioStore } from "@/store";
 import type { MockCollectionEntry, MockRouteEntry } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
@@ -86,22 +85,6 @@ describe("a collection's table", () => {
     ]);
     expect(validateMockStoreSearch({ collection: "" })).toEqual({});
   });
-
-  it("adds a record typed like the others — never null in a typed field — and without an id", () => {
-    const people = {
-      name: "people",
-      count: 2,
-      records: [
-        { id: 1, name: "Ada", admin: true, tags: ["a"], address: { city: "London" } },
-        { id: 2, name: "Grace", admin: false, tags: [], address: { city: "NYC" } },
-      ],
-    };
-    const { columns } = collectionView(people, []);
-
-    const record = buildDefaultRecord(Object.fromEntries(columns.map((c) => [c.field, c.type])));
-
-    expect(record).toEqual({ name: "", admin: false, tags: [], address: {} });
-  });
 });
 
 describe("the Store tab", () => {
@@ -136,12 +119,8 @@ describe("the Store tab", () => {
     );
 
     expect(sent()).toEqual([
-      {
-        action: "mock:store:create",
-        serverId: "api-mock",
-        collection: "users",
-        record: { name: "", role: "", age: 0 },
-      },
+      /* The mock makes the record, so every field holds a value its schema accepts. */
+      { action: "mock:store:create", serverId: "api-mock", collection: "users" },
       { action: "mock:store:delete", serverId: "api-mock", collection: "users", id: "u2" },
       { action: "mock:store:seed", serverId: "api-mock", collection: "*" },
     ]);

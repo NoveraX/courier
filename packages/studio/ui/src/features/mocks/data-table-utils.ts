@@ -56,36 +56,6 @@ export function parseValue(raw: string, type: FieldType): unknown {
   return raw;
 }
 
-const EMPTY_VALUE: Record<FieldType, () => unknown> = {
-  str: () => "",
-  num: () => 0,
-  bool: () => false,
-  arr: () => [],
-  obj: () => ({}),
-  null: () => null,
-};
-
-/**
- * A new record for a collection: each field the records hold, with an
- * empty value of the type it holds there, so the record keeps the shape
- * the source's schema gives them. The mock server gives it its id.
- *
- * @param colTypes - Each field, with the type its records hold
- * @returns The record, without an id
- *
- * @example
- * ```ts
- * buildDefaultRecord({ id: "num", name: "str", admin: "bool" }); // → { name: "", admin: false }
- * ```
- */
-export function buildDefaultRecord(colTypes: Record<string, FieldType>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(colTypes)
-      .filter(([key]) => key !== "id" && key !== "_id")
-      .map(([key, type]) => [key, EMPTY_VALUE[type]()]),
-  );
-}
-
 export function recordKey(record: Record<string, unknown>, idx: number): string {
   const id = record.id ?? record._id;
   return id !== undefined ? String(id) : `row-${idx}`;

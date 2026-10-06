@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createRequestLog } from "../../src/server/request-log";
 import { createMockLog } from "../../src/server/storage/mock-log";
 import { openStudioDb } from "../../src/server/storage/studio-db";
+import { openStudioStores } from "../../src/server/storage/studio-stores";
 
 const cleanups: Array<() => void> = [];
 
@@ -60,5 +61,31 @@ describe("the mock log's replay", () => {
       ["mock:request:end", "m4"],
     ]);
     log.close();
+  });
+});
+
+describe("the stores Studio opens with a replay budget of its own", () => {
+  it("send each page no more of either log than the budget, as a public demo does", () => {
+    const dir = mkdtempSync(join(tmpdir(), "courier-replay-"));
+    const stores = openStudioStores(dir, 5000);
+    cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
+    cleanups.push(() => stores.close());
+    for (const id of ["r1", "r2", "r3", "r4"]) {
+      stores.requestLog.record(
+        { type: "request:start", id, source: "api", method: "list", padding },
+        "s1",
+      );
+      stores.requestLog.record({ type: "request:end", requestId: id, status: 200, padding }, "s1");
+      stores.mockLog.record({
+        type: "mock:request:start",
+        requestId: id,
+        serverId: "shop",
+        padding,
+      });
+      stores.mockLog.record({ type: "mock:request:end", requestId: id, serverId: "shop", padding });
+    }
+
+    expect(stores.requestLog.events()).toHaveLength(4);
+    expect(stores.mockLog.events()).toHaveLength(4);
   });
 });

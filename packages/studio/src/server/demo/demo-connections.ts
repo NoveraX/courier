@@ -5,10 +5,11 @@
 
 import type { IncomingMessage } from "node:http";
 
+import type { DemoLimits } from "./demo-limits";
 import { type VisitorConnection, visitorAddress } from "./visitor-address";
 
 /** How many sockets one address, and every visitor together, may hold open at once. */
-export const DEMO_CONNECTIONS = { address: 20, all: 500 } as const;
+export const DEMO_CONNECTIONS = { address: 10, all: 200 } as const;
 
 /** A socket the demo counts until it closes: the request that opened it, and its close. */
 export interface CountedSocket {
@@ -28,9 +29,12 @@ export interface DemoConnections {
  * The sockets a demo's visitors hold open, counted from the moment each
  * opens until it closes. A visitor past its address's share — pages and
  * sockets opened by a script, say — is refused a new one; every visitor is,
- * once the demo holds as many as it serves. The demo's own runtimes count
+ * once the demo holds as many as it serves. Each socket that opens is also
+ * counted toward the address's and every visitor's `connect` budget, since
+ * each is sent the logs as it connects. The demo's own runtimes count
  * toward this machine's address, a handful of sockets.
  *
+ * @param limits - The visitors' counts, which take each socket that opens
  * @returns Empty counts
  * @example
  * ```ts
@@ -39,13 +43,15 @@ export interface DemoConnections {
  * io.engine.on("connection", (socket) => connections.count(socket));
  * ```
  */
-export function createDemoConnections(): DemoConnections {
+export function createDemoConnections(limits: DemoLimits): DemoConnections {
   const open = new Map<string, number>();
   let total = 0;
   return {
     admits(request) {
-      const held = open.get(visitorAddress(connectionOf(request))) ?? 0;
-      return held < DEMO_CONNECTIONS.address && total < DEMO_CONNECTIONS.all;
+      const address = visitorAddress(connectionOf(request));
+      const held = open.get(address) ?? 0;
+      if (held >= DEMO_CONNECTIONS.address || total >= DEMO_CONNECTIONS.all) return false;
+      return limits.take({ address }, "connect") === null;
     },
     count(socket) {
       const address = visitorAddress(connectionOf(socket.request));

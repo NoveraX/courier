@@ -7,7 +7,7 @@ import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config
 import express from "express";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
-import { demoServing } from "./demo/demo-serving";
+import { DEMO_REPLAY_BYTES, demoServing } from "./demo/demo-serving";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { createLifecycleCoordinator } from "./mock-manager";
@@ -87,7 +87,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const nameSource = createConfigSourceNamer(() => project.snapshot().running?.config);
   /* The loader resolves links; every path shown is relative to the same root. */
   const root = resolvedRoot(projectRoot);
-  const stores = openStudioStores(root);
+  const stores = openStudioStores(root, serving && DEMO_REPLAY_BYTES);
   const { requestLog, sessions, view, mockLog, playgroundHistory } = stores;
   const token = studioToken(root);
   setupRuntimeNamespace(runtimeNamespace, {

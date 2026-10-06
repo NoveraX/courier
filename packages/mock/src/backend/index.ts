@@ -1,4 +1,5 @@
 import type { ExecuteBackend } from "@noverax/courier/internal";
+import { handlerVariables } from "../form-fields";
 import { routeConfigOf } from "../network/config-shape";
 import type { MockRegistry } from "../registry";
 import type { ScenarioMark } from "../scenario/scenario-state";
@@ -22,7 +23,9 @@ export function createMockBackend(deps: BackendDeps): ExecuteBackend {
   const { registry, history, callCounts } = deps;
   const callKey = (group: string, method: string) => `${group}/${method}`;
 
-  return (group, method, variables) => {
+  return (group, method, sent) => {
+    /* A form reaches the handler as its fields, as one sent to the mock server does. */
+    const variables = handlerVariables(sent);
     const key = callKey(group, method);
     const index = callCounts.get(key) ?? 0;
     callCounts.set(key, index + 1);

@@ -39,10 +39,10 @@ export interface ScenarioControls {
 export function createScenarioControls(deps: ScenarioControlsDeps): ScenarioControls {
   const { registry, callCounts, setScenarioState } = deps;
 
-  function mock<TResponse, TVariables>(
+  function mock<TResponse, TVariables, TSend>(
     group: string,
     method: string,
-  ): EnhancedMockBuilder<TResponse, TVariables> {
+  ): EnhancedMockBuilder<TResponse, TVariables, TSend> {
     /* The base layer builds on its own latest handler only: one from the
        scenario layer would be copied into the base for good, and outlive
        every scenario switch and reset. */
@@ -57,8 +57,8 @@ export function createScenarioControls(deps: ScenarioControlsDeps): ScenarioCont
      a layer half cleared and half written. */
   function applyScenario(scenario: AnyMockScenario): void {
     const staged: Array<{ group: string; method: string; handler: ResolvedHandler }> = [];
-    scenario.apply(<TResponse, TVariables>(group: string, method: string) =>
-      createEnhancedMockBuilder<TResponse, TVariables>((handler) => {
+    scenario.apply(<TResponse, TVariables, TSend>(group: string, method: string) =>
+      createEnhancedMockBuilder<TResponse, TVariables, TSend>((handler) => {
         staged.push({ group, method, handler });
       }),
     );

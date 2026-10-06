@@ -1,6 +1,7 @@
 import type { Context as HonoContext } from "hono";
 
-import { type BodyLimits, formRecord, readRequestBody } from "./read-request-body";
+import { formFields } from "../form-fields";
+import { type BodyLimits, readRequestBody } from "./read-request-body";
 
 /** The endpoint call a proxy request names, or why the request cannot be read */
 export type ProxyCall =
@@ -88,7 +89,7 @@ function fromForm(form: FormData): Envelope {
     }
   }
   if (options === INVALID) return { error: "_options must be a JSON string", status: 400 };
-  return { variables: formRecord(fields), options };
+  return { variables: formFields(fields), options };
 }
 
 function isRaw(options: unknown): boolean {

@@ -121,19 +121,40 @@ const api = createProxyCaller("api", {
 })
 ```
 
-On `/api/ws` a subscription goes as it does on a Courier server. The variables are checked against the channel's schema, and a subscription that fails them ends with code 4422. Its topic is keyed as the channel's `.topic()` says, with a `renamed` frame first when that differs from the topic asked for, so subscribers who share a key share the channel's broadcasts. Each message is checked against what the channel `.send()`s, and one that fails is refused with 4422 while the subscription goes on. A channel that is not mocked ends with 4404, naming it and the scenario state. `ctx.close()` ends that one subscription and leaves the socket's others open. A mock built without a source checks nothing and keys each topic by its variables. Studio's mock logs show each subscription as it opens and ends.
+On `/api/ws` a subscription goes as it does on a Courier server. The variables are checked against the channel's schema, and a subscription that fails them ends with code 4422. Its topic is keyed as the channel's `.topic()` says, with a `renamed` frame first when that differs from the topic asked for, so subscribers who share a key share the channel's broadcasts. Each message is checked against what the channel `.send()`s, and one that fails is refused with 4422 while the subscription goes on; the message an override's `onMessage` receives is typed as that. A channel that is not mocked ends with 4404, naming it and the scenario state. `ctx.close()` ends that one subscription and leaves the socket's others open. A mock built without a source checks nothing and keys each topic by its variables. Studio's mock logs show each subscription as it opens and ends.
 
 ### Uploads and large bodies
 
-A mock reads a body as a Courier server does, at every path it serves: JSON, and a form — `multipart/form-data` or URL-encoded — whose fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order. A file's name is kept as it was sent, `../` and all: the mock writes no file. It reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
+A mock reads a body as a Courier server does, at every path it serves: JSON, and a form — `multipart/form-data` or URL-encoded — whose fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order. The handler's `ctx.variables` is typed so — `MockFormFields`, from `@noverax/courier-mock/testing` — and a mock client given a form in a test hands it over the same way, so one handler serves both. A file's name is kept as it was sent, `../` and all: the mock writes no file. It reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
 
 ```ts
 // courier.mocks.ts
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
 import { defineMocks, defineMockServer } from "@noverax/courier-mock"
-import { api } from "./src/api"
+
+const { endpoint } = courier()
+type Stored = { name: string; size: number }
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  groups: {
+    files: defineGroup({
+      prefix: "files",
+      endpoints: { upload: endpoint.post("").variables<FormData>().response<Stored>() },
+    }),
+  },
+})
 
 export default defineMocks({
-  api: defineMockServer({ source: api, maxUploadBytes: 50 * 1024 * 1024 }),
+  api: defineMockServer({
+    source: api,
+    maxUploadBytes: 50 * 1024 * 1024,
+    overrides: (mock) => {
+      mock("files", "upload").returns(({ variables }) => {
+        const file = variables.file
+        return file instanceof File ? { name: file.name, size: file.size } : { name: "", size: 0 }
+      })
+    },
+  }),
 })
 ```
 

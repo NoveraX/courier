@@ -4,8 +4,10 @@ import type {
   GroupAtPath,
   GroupPaths,
   InferResponse,
+  InferSend,
   InferVariables,
 } from "@noverax/courier/define";
+import type { MockFormFields } from "./form-fields";
 import type { EnhancedMockBuilder, UntypedMockFn } from "./types";
 
 /** The groups a source declares, by name; none for a source without groups. */
@@ -27,10 +29,18 @@ export type ExtractResponse<TEndpoint> = TEndpoint extends AnyEndpoint
   ? InferResponse<TEndpoint>
   : unknown;
 
-/** Variables type of an endpoint; `unknown` for anything else. */
+/**
+ * Variables type of an endpoint as a mock's handler receives them — a form
+ * as its fields, which is how the mock reads one; `unknown` for anything else.
+ */
 export type ExtractVariables<TEndpoint> = TEndpoint extends AnyEndpoint
-  ? InferVariables<TEndpoint>
+  ? InferVariables<TEndpoint> extends FormData
+    ? MockFormFields
+    : InferVariables<TEndpoint>
   : unknown;
+
+/** What a client sends an endpoint's channel; `unknown` for anything else. */
+export type ExtractSend<TEndpoint> = TEndpoint extends AnyEndpoint ? InferSend<TEndpoint> : unknown;
 
 /**
  * Mocks an endpoint of a group, by the group's path and the endpoint's name:
@@ -45,7 +55,8 @@ export type GroupedMockFn<TSource> = <
   method: TMethod,
 ) => EnhancedMockBuilder<
   ExtractResponse<GroupAtPath<TSource, TGroup>[TMethod]>,
-  ExtractVariables<GroupAtPath<TSource, TGroup>[TMethod]>
+  ExtractVariables<GroupAtPath<TSource, TGroup>[TMethod]>,
+  ExtractSend<GroupAtPath<TSource, TGroup>[TMethod]>
 >;
 
 /**
@@ -60,7 +71,8 @@ export type TopLevelMockFn<TSource> = <TMethod extends TopLevelKeys<TSource>>(
   method: TMethod,
 ) => EnhancedMockBuilder<
   ExtractResponse<TSource[TMethod & keyof TSource]>,
-  ExtractVariables<TSource[TMethod & keyof TSource]>
+  ExtractVariables<TSource[TMethod & keyof TSource]>,
+  ExtractSend<TSource[TMethod & keyof TSource]>
 >;
 
 /** Whether a source's endpoints are unknown to the type system. */

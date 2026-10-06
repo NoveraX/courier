@@ -76,10 +76,10 @@ export function createMockClient<TApi extends AnySource>(
     network: config?.network,
   });
 
-  function mock<TResponse, TVariables>(
+  function mock<TResponse, TVariables, TSend>(
     group: string,
     method: string,
-  ): EnhancedMockBuilder<TResponse, TVariables> {
+  ): EnhancedMockBuilder<TResponse, TVariables, TSend> {
     const existing = registry.peek(group, method);
     return createEnhancedMockBuilder((handler) => {
       registry.set(group, method, handler);

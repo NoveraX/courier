@@ -25,10 +25,13 @@ export type MockStreamFn<TResponse = unknown, TVariables = unknown> = (
   ctx: MockRequestContext<TVariables>,
 ) => AsyncGenerator<SSEEvent<TResponse>, void, unknown>;
 
-/** WS channel handler factory stored in a handler */
-export type MockChannelFn<TResponse = unknown, TVariables = unknown> = (
+/**
+ * WS channel handler factory stored in a handler: the handlers it returns
+ * receive each message a client sends as the endpoint's `send` type.
+ */
+export type MockChannelFn<TResponse = unknown, TVariables = unknown, TSend = unknown> = (
   ctx: MockRequestContext<TVariables>,
-) => ChannelHandlers<unknown, TResponse>;
+) => ChannelHandlers<TSend, TResponse>;
 
 /** Resolved handler stored in the registry */
 export interface ResolvedHandler {
@@ -179,10 +182,10 @@ declare const SCENARIO_SOURCE: unique symbol;
  * unless named. Being generic in both, it stands in for the typed `mock` of
  * every source, which is how a server hands one `mock` to every scenario.
  */
-export type UntypedMockFn = <TResponse = unknown, TVariables = unknown>(
+export type UntypedMockFn = <TResponse = unknown, TVariables = unknown, TSend = unknown>(
   group: string,
   method: string,
-) => EnhancedMockBuilder<TResponse, TVariables>;
+) => EnhancedMockBuilder<TResponse, TVariables, TSend>;
 
 /**
  * A scenario as a server holds and applies it, whatever source it was written
@@ -250,38 +253,46 @@ export type SequenceEntry<TResponse> =
   | { error: true; status: number; data?: unknown };
 
 /** Fluent builder for configuring endpoint mocks */
-export interface EnhancedMockBuilder<TResponse = unknown, TVariables = unknown> {
+export interface EnhancedMockBuilder<TResponse = unknown, TVariables = unknown, TSend = unknown> {
   /** Return static data on success (status 200) */
-  resolves(data: TResponse): EnhancedMockBuilder<TResponse, TVariables>;
+  resolves(data: TResponse): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Return dynamic data based on request context */
-  returns(fn: MockHandlerFn<TResponse, TVariables>): EnhancedMockBuilder<TResponse, TVariables>;
+  returns(
+    fn: MockHandlerFn<TResponse, TVariables>,
+  ): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Throw HTTPError with given status and optional data */
-  rejects(status: number, data?: unknown): EnhancedMockBuilder<TResponse, TVariables>;
+  rejects(status: number, data?: unknown): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Limit mock to a single invocation */
-  once(): EnhancedMockBuilder<TResponse, TVariables>;
+  once(): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Limit mock to N invocations */
-  times(n: number): EnhancedMockBuilder<TResponse, TVariables>;
+  times(n: number): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Add artificial delay (ms) before responding */
-  delay(ms: number): EnhancedMockBuilder<TResponse, TVariables>;
+  delay(ms: number): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Respond with a latency profile (3g, 4g, wifi, fiber, or custom) */
-  withLatency(profile: LatencyProfile): EnhancedMockBuilder<TResponse, TVariables>;
+  withLatency(profile: LatencyProfile): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Add custom response headers */
-  withHeaders(headers: Record<string, string>): EnhancedMockBuilder<TResponse, TVariables>;
+  withHeaders(headers: Record<string, string>): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Set custom HTTP status code */
-  withStatus(status: number): EnhancedMockBuilder<TResponse, TVariables>;
+  withStatus(status: number): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Only match when scenario is in this state (WireMock-style) */
-  inState(state: string): EnhancedMockBuilder<TResponse, TVariables>;
+  inState(state: string): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Transition scenario to new state after response (WireMock-style) */
-  transitionTo(state: string): EnhancedMockBuilder<TResponse, TVariables>;
+  transitionTo(state: string): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /**
    * Ordered sequence of responses — success, error, or mixed.
    * Last entry repeats indefinitely once reached.
    */
-  sequence(responses: Array<SequenceEntry<TResponse>>): EnhancedMockBuilder<TResponse, TVariables>;
+  sequence(
+    responses: Array<SequenceEntry<TResponse>>,
+  ): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Mock as SSE stream — provide async generator yielding SSEEvent<T> */
-  stream(fn: MockStreamFn<TResponse, TVariables>): EnhancedMockBuilder<TResponse, TVariables>;
+  stream(
+    fn: MockStreamFn<TResponse, TVariables>,
+  ): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Convenience: emit fixed SSE events in sequence, then close */
-  emits(events: Array<SSEEvent<TResponse>>): EnhancedMockBuilder<TResponse, TVariables>;
+  emits(events: Array<SSEEvent<TResponse>>): EnhancedMockBuilder<TResponse, TVariables, TSend>;
   /** Mock as WS channel — provide channel handler factory */
-  channel(fn: MockChannelFn<TResponse, TVariables>): EnhancedMockBuilder<TResponse, TVariables>;
+  channel(
+    fn: MockChannelFn<TResponse, TVariables, TSend>,
+  ): EnhancedMockBuilder<TResponse, TVariables, TSend>;
 }

@@ -78,7 +78,14 @@ async function startMock() {
   });
   cleanups.push(() => pm.dispose());
   const port = await freePort();
-  pm.spawn({ serverId: "apiMock", mocksFile: project(), mockKey: "apiMock", port });
+  pm.spawn({
+    serverId: "apiMock",
+    mocksFile: project(),
+    mockKey: "apiMock",
+    port,
+    strictPort: true,
+    avoidPorts: [],
+  });
   await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 15_000 });
 
   /** Send a command and wait for the network config event it answers with. */

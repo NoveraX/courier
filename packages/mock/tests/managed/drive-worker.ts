@@ -74,6 +74,8 @@ export async function startWorker(worker: DrivenWorker): Promise<string> {
     mocksFile: "/app/courier.mocks.ts",
     mockKey: "api",
     port: 0,
+    strictPort: true,
+    avoidPorts: [],
     transformCacheDirectory: null,
     storeFile: null,
   });

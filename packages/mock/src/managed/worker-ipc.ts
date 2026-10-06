@@ -3,7 +3,7 @@
  * Handles communication with the Studio parent process.
  */
 
-import type { ChildErrorCode, ChildMessage } from "./types";
+import type { ChildMessage } from "./types";
 
 /**
  * End the worker when Studio goes away. The IPC channel closes the moment the
@@ -17,7 +17,7 @@ export function send(msg: ChildMessage): void {
   process.send?.(msg);
 }
 
-export function sendError(message: string, fatal: boolean, code?: ChildErrorCode): void {
-  send({ type: "error", message, fatal, ...(code && { code }) });
+export function sendError(message: string, fatal: boolean): void {
+  send({ type: "error", message, fatal });
   if (fatal) process.exit(1);
 }

@@ -26,6 +26,11 @@ export interface MockServerOptions {
    * one (default: false). For a port something else was told to call.
    */
   strictPort?: boolean | undefined;
+  /**
+   * Ports the search for a free one passes over when `port` is taken: ones
+   * other servers were given and have not taken yet (default: none).
+   */
+  avoidPorts?: readonly number[] | undefined;
   /** Hostname (default: "localhost") */
   hostname?: string | undefined;
   /** Enable CORS (default: true) */

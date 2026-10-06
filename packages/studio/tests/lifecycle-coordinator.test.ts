@@ -29,10 +29,6 @@ const fake = {
   killDelay: 0,
 };
 
-vi.mock("../src/server/mock-manager/port-allocator", () => ({
-  allocatePort: async (preferred: number) => preferred,
-}));
-
 vi.mock("../src/server/mock-manager/process-manager", () => ({
   createProcessManager: (events: ProcessManagerEvents, options: ProcessManagerOptions) => {
     fake.events = events;
@@ -146,6 +142,25 @@ describe("a declared mock", () => {
     );
 
     await vi.waitFor(() => expect(last("a")?.source).toBeNull());
+    await coordinator.stop();
+  });
+});
+
+describe("the port a mock listens on", () => {
+  it("is the developer's, held exactly, or one Studio assigns, from which the mock takes the first free", async () => {
+    const { coordinator, declare } = studio();
+    declare({
+      named: defineMockServer({ source: api, port: 7444, autoStart: true }),
+      assigned: defineMockServer({ source: api, autoStart: true }),
+    });
+    await vi.waitFor(() => expect(fake.spawned).toHaveLength(2));
+
+    const named = fake.spawned.find((request) => request.serverId === "named");
+    const assigned = fake.spawned.find((request) => request.serverId === "assigned");
+    expect(named).toMatchObject({ port: 7444, strictPort: true, avoidPorts: [] });
+    expect(assigned).toMatchObject({ port: 7001, strictPort: false });
+    /* The search passes over the port the other mock was given. */
+    expect(assigned?.avoidPorts).toContain(7444);
     await coordinator.stop();
   });
 });

@@ -51,6 +51,8 @@ describe("a mock whose port another process holds", () => {
       mocksFile: "/app/courier.mocks.ts",
       mockKey: "api",
       port,
+      strictPort: true,
+      avoidPorts: [],
       transformCacheDirectory: null,
       storeFile: null,
     });
@@ -62,7 +64,6 @@ describe("a mock whose port another process holds", () => {
       type: "error",
       message: `Port ${port} is in use by another process.`,
       fatal: true,
-      code: "PORT_IN_USE",
     });
   });
 });
@@ -85,6 +86,8 @@ describe("a mock that fails to start for another reason", () => {
       mocksFile: "/app/courier.mocks.ts",
       mockKey: "api",
       port: 0,
+      strictPort: true,
+      avoidPorts: [],
       transformCacheDirectory: null,
       storeFile: null,
     });
@@ -122,6 +125,8 @@ describe("a mock that starts", () => {
       mocksFile: "/app/courier.mocks.ts",
       mockKey: "api",
       port: 0,
+      strictPort: true,
+      avoidPorts: [],
       transformCacheDirectory: null,
       storeFile: null,
     });

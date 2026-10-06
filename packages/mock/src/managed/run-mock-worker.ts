@@ -82,8 +82,7 @@ export function runMockWorker(loadDefinition: MockDefinitionLoader): void {
           served = started;
         })
         .catch((err: unknown) => {
-          const { message, code } = startFailure(err);
-          sendError(message, true, code);
+          sendError(startFailure(err), true);
         });
     } else if (msg.type === "stop" && !stopping) {
       stopping = true;
@@ -146,12 +145,19 @@ async function start(
 
 function createServer(
   definition: MockServerDefinition,
-  { port, storeFile, mocksFile }: Pick<StartMessage, "port" | "storeFile" | "mocksFile">,
+  {
+    port,
+    strictPort,
+    avoidPorts,
+    storeFile,
+    mocksFile,
+  }: Pick<StartMessage, "port" | "strictPort" | "avoidPorts" | "storeFile" | "mocksFile">,
 ): MockServer {
   return createAutoMockServer({
     source: definition.source,
     port,
-    strictPort: true,
+    strictPort,
+    avoidPorts,
     ...(storeFile !== null && definition.persist !== false && { persist: { file: storeFile } }),
     ...(definition.endpoints && { endpoints: definition.endpoints }),
     /* Relative to the mocks file that names it, wherever Studio runs from. */

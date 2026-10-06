@@ -98,7 +98,14 @@ describe("a managed mock server", () => {
     const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`);
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
+    pm.spawn({
+      serverId: "apiMock",
+      mocksFile,
+      mockKey: "apiMock",
+      port,
+      strictPort: true,
+      avoidPorts: [],
+    });
     await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 15_000 });
 
     const reply = await fetch(`http://127.0.0.1:${port}/users`);
@@ -111,7 +118,14 @@ describe("a managed mock server", () => {
     const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`);
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
+    pm.spawn({
+      serverId: "apiMock",
+      mocksFile,
+      mockKey: "apiMock",
+      port,
+      strictPort: true,
+      avoidPorts: [],
+    });
     await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 15_000 });
 
     const [route] = events.onReady.mock.calls[0]?.[1].routes ?? [];
@@ -132,7 +146,14 @@ describe("a managed mock server", () => {
     });
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
+    pm.spawn({
+      serverId: "apiMock",
+      mocksFile,
+      mockKey: "apiMock",
+      port,
+      strictPort: true,
+      avoidPorts: [],
+    });
     await new Promise((resolve) => setTimeout(resolve, 300));
     const asked = Date.now();
     await pm.kill("apiMock");
@@ -146,7 +167,14 @@ describe("a managed mock server", () => {
     const mocksFile = project("{ broken: { autoStart: true } }");
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "broken", mocksFile, mockKey: "broken", port: await freePort() });
+    pm.spawn({
+      serverId: "broken",
+      mocksFile,
+      mockKey: "broken",
+      port: await freePort(),
+      strictPort: true,
+      avoidPorts: [],
+    });
 
     await vi.waitFor(
       () =>
@@ -154,10 +182,32 @@ describe("a managed mock server", () => {
           "broken",
           expect.stringContaining("is not a defineMockServer() definition"),
           true,
-          undefined,
         ),
       { timeout: 15_000 },
     );
+  }, 20_000);
+
+  it("takes the first free port from the one Studio assigned, past the ones other mocks were given", async () => {
+    const holder = createServer();
+    const port = await freePort();
+    await new Promise<void>((resolve) => holder.listen(port, "127.0.0.1", resolve));
+    cleanups.push(() => new Promise<void>((resolve) => holder.close(() => resolve())));
+    const mocksFile = project("{ apiMock: defineMockServer({ source: api }) }");
+    const { events, pm } = manager();
+
+    pm.spawn({
+      serverId: "apiMock",
+      mocksFile,
+      mockKey: "apiMock",
+      port,
+      strictPort: false,
+      avoidPorts: [port + 1],
+    });
+
+    await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 15_000 });
+    const [, ready] = events.onReady.mock.calls[0] as [string, { port: number }];
+    expect(ready.port).toBeGreaterThan(port + 1);
+    expect(events.onError).not.toHaveBeenCalled();
   }, 20_000);
 
   it("reports its declared port taken instead of moving to another", async () => {
@@ -168,7 +218,14 @@ describe("a managed mock server", () => {
     const mocksFile = project(`{ apiMock: defineMockServer({ source: api, port: ${port} }) }`);
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
+    pm.spawn({
+      serverId: "apiMock",
+      mocksFile,
+      mockKey: "apiMock",
+      port,
+      strictPort: true,
+      avoidPorts: [],
+    });
 
     await vi.waitFor(
       () =>
@@ -176,7 +233,6 @@ describe("a managed mock server", () => {
           "apiMock",
           `Port ${port} is in use by another process.`,
           true,
-          "PORT_IN_USE",
         ),
       { timeout: 15_000 },
     );
@@ -187,7 +243,14 @@ describe("a managed mock server", () => {
     const mocksFile = project("{ apiMock: defineMockServer({ source: api }) }");
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "gone", mocksFile, mockKey: "gone", port: await freePort() });
+    pm.spawn({
+      serverId: "gone",
+      mocksFile,
+      mockKey: "gone",
+      port: await freePort(),
+      strictPort: true,
+      avoidPorts: [],
+    });
 
     await vi.waitFor(
       () =>
@@ -195,7 +258,6 @@ describe("a managed mock server", () => {
           "gone",
           expect.stringContaining('Mock "gone" in'),
           true,
-          undefined,
         ),
       { timeout: 15_000 },
     );
@@ -207,7 +269,14 @@ describe("a managed mock server", () => {
     });
     const { events, pm } = manager();
 
-    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port: await freePort() });
+    pm.spawn({
+      serverId: "apiMock",
+      mocksFile,
+      mockKey: "apiMock",
+      port: await freePort(),
+      strictPort: true,
+      avoidPorts: [],
+    });
 
     await vi.waitFor(
       () =>
@@ -215,7 +284,6 @@ describe("a managed mock server", () => {
           "apiMock",
           expect.stringContaining("has no default export; export default defineMocks({ ... })"),
           true,
-          undefined,
         ),
       { timeout: 15_000 },
     );
@@ -263,7 +331,14 @@ describe("a managed mock server started with Studio's transforms", () => {
     const before = snapshot(directory);
     const { events, pm } = manager(directory);
 
-    pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
+    pm.spawn({
+      serverId: "apiMock",
+      mocksFile,
+      mockKey: "apiMock",
+      port,
+      strictPort: true,
+      avoidPorts: [],
+    });
     await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 15_000 });
     await pm.kill("apiMock");
 

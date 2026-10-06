@@ -34,6 +34,7 @@ export interface ServerLifecycle {
  * @param hostname - Where to listen; `localhost` means loopback only
  * @param ws - What the WebSocket upgrade route needs
  * @param strictPort - Fail when `port` is busy rather than take the next one
+ * @param avoidPorts - Ports the search for the next one passes over
  * @param stopStreams - Ends the server's open event streams when it stops
  * @returns `start` and `stop`
  */
@@ -44,6 +45,7 @@ export function createServerLifecycle(
   ws: WSUpgradeOptions,
   strictPort = false,
   stopStreams: () => void = () => undefined,
+  avoidPorts: readonly number[] = [],
 ): ServerLifecycle {
   let server: ClosableServer | undefined;
   let wsUpgrade: MockWSHandler | undefined;
@@ -59,7 +61,8 @@ export function createServerLifecycle(
         /* The mock serves HTTP/1.1, where a WebSocket upgrades. */
         if (wsUpgrade && nodeServer instanceof Server) attachWSUpgrade(nodeServer, wsUpgrade);
       };
-      return tryListen(serve, app, port, hostname, onServer, strictPort ? 0 : undefined);
+      const retries = strictPort ? 0 : undefined;
+      return tryListen(serve, app, port, hostname, onServer, retries, new Set(avoidPorts));
     },
 
     /* Closes the channels — each hears onLeave — and ends the event streams,

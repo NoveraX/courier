@@ -131,8 +131,16 @@ export type ParentMessage =
       /** The project's `courier.mocks.*`, which declares the mock. */
       mocksFile: string;
       mockKey: string;
-      /** The port to listen on, exactly: Studio chose it, and a taken one is reported. */
+      /** The port to listen on, or to start the search for a free one from. */
       port: number;
+      /**
+       * Whether `port` is held exactly, as the developer named it: a taken one
+       * is reported. Otherwise the mock takes the first free port from it, and
+       * the bind itself decides, so two runners starting at once never share one.
+       */
+      strictPort: boolean;
+      /** Ports given to the project's other mocks, which the search passes over. */
+      avoidPorts: number[];
       /**
        * Where Studio keeps the transforms of the project's modules, for the
        * loader to read rather than transform them again; `null` when Studio
@@ -183,19 +191,10 @@ export type ChildMessage =
        */
       network: Record<string, unknown>;
     }
-  | {
-      type: "error";
-      message: string;
-      fatal: boolean;
-      /** `PORT_IN_USE`: another process took the port the mock was to listen on. */
-      code?: ChildErrorCode;
-    }
+  | { type: "error"; message: string; fatal: boolean }
   | { type: "stopped" }
   | { type: "event"; event: Record<string, unknown> }
   | { type: "command-result"; requestId: string; ok: boolean; data?: unknown; error?: string };
-
-/** What kind of failure a worker reports, where Studio can act on it. */
-export type ChildErrorCode = "PORT_IN_USE";
 
 // ── Process State ────────────────────────────────────────────────────────────
 

@@ -37,6 +37,8 @@ describe("runMockWorker", () => {
       mocksFile: "/app/courier.mocks.ts",
       mockKey: "apiMock",
       port: 7401,
+      strictPort: true,
+      avoidPorts: [],
       transformCacheDirectory: "/app/node_modules/.cache/courier/transform",
       storeFile: null,
     });
@@ -58,6 +60,8 @@ describe("runMockWorker", () => {
       mocksFile: "/app/courier.mocks.ts",
       mockKey: "apiMock",
       port: 7401,
+      strictPort: true,
+      avoidPorts: [],
       transformCacheDirectory: null,
       storeFile: null,
     });

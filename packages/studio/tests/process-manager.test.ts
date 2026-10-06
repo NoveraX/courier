@@ -81,6 +81,8 @@ const request = {
   mocksFile: "/work/courier.mocks.ts",
   mockKey: "apiMock",
   port: 7401,
+  strictPort: false,
+  avoidPorts: [7402],
 };
 
 afterEach(() => {
@@ -116,6 +118,8 @@ describe("starting a managed mock", () => {
         mocksFile: "/work/courier.mocks.ts",
         mockKey: "apiMock",
         port: 7401,
+        strictPort: false,
+        avoidPorts: [7402],
         transformCacheDirectory: STUDIO_TRANSFORMS,
         storeFile: null,
       },

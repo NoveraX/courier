@@ -2,6 +2,7 @@ import type { RequestEntry } from "@/store/types-request";
 import type { Catalog } from "@/store/types-ui";
 import { auditScore } from "./audit-score";
 import { computeEndpointStats } from "./compute-stats";
+import { passedChecks } from "./passed-checks";
 import { collectCourierRules } from "./rules-courier";
 import { collectDeepPerformance } from "./rules-deep";
 import { detectDuplicates } from "./rules-duplicates";
@@ -57,7 +58,7 @@ export function runAudit(
   const completed = requests.filter((r) => r.status !== "pending");
   const stats = computeEndpointStats(completed);
 
-  const raw = [
+  const found = [
     // Stats-based rules
     ...collectErrors(stats, catalog, completed),
     ...collectWarnings(stats, catalog, completed),
@@ -76,7 +77,7 @@ export function runAudit(
     ...collectCourierRules(stats, catalog),
   ];
 
-  const items = sortBySeverity(deduplicateItems(raw));
+  const items = sortBySeverity(deduplicateItems([...found, ...passedChecks(completed, found)]));
 
   return {
     items,

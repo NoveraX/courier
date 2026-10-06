@@ -50,6 +50,16 @@ export interface FilePlanSummary {
   blocked: Array<{ path: string; reason: "link" | "not-a-file" }>;
   /** Files Studio recorded that are gone from disk. */
   forgotten: string[];
+  /** How the written files were formatted, as the project formats its code. */
+  formatting?: PlanFormatting;
+}
+
+/** How the files a plan writes were formatted. */
+export interface PlanFormatting {
+  /** The tools that formatted them, with their versions; none when the project has none. */
+  formattedWith: string[];
+  /** Why a file, or every file, is written as Studio composed it. */
+  problem: string | null;
 }
 
 /** The plan the user was shown, with the steps they allowed. */

@@ -3,6 +3,7 @@ import type {
   FilePlan,
   KeptReason,
   Ownership,
+  PlanFormatting,
   PlannedWrite,
 } from "./file-plan-types";
 
@@ -16,6 +17,8 @@ export interface PlanSummary {
   pending: Confirmation[];
   blocked: FilePlan["blocked"];
   forgotten: string[];
+  /** How the files were formatted, when the plan was made to format them. */
+  formatting?: PlanFormatting;
 }
 
 /**
@@ -39,5 +42,6 @@ export function summarizePlan(plan: FilePlan): PlanSummary {
     pending: plan.pending.map((step) => step.confirmation),
     blocked: plan.blocked,
     forgotten: plan.forgotten,
+    ...(plan.formatting && { formatting: plan.formatting }),
   };
 }

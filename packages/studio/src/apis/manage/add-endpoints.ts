@@ -4,12 +4,12 @@
  */
 
 import { parseSource } from "../../server/mocks-edit/plan/parse-source";
-import { generateCode } from "../generator";
-import type { GenerateOptions } from "../generator/types";
+import type { GeneratedFile, GenerateOptions } from "../generator/types";
 import type { ImportLayout } from "../layout";
 import { declaresEndpoints } from "../merge/declares-endpoints";
 import { generateFingerprints } from "../merge/fingerprint";
 import type { ParsedSpec } from "../parser/types";
+import { addedEndpointsCode } from "./added-endpoints-code";
 import { appendEndpointsToGroup } from "./append-to-group";
 import { exportedNames } from "./exported-names";
 import { listedSelection } from "./listed-selection";
@@ -28,6 +28,7 @@ import { withInnerGroups } from "./with-inner-groups";
  * @param options - Persisted generation options (selectedEndpoints is overridden)
  * @param existingFiles - Map of filePath → content for files currently on disk
  * @param layout - Where the import's files go
+ * @param generated - The code generated for the endpoints, as the project formats it; generated here when not given
  * @returns AddResult with files to create/modify and new fingerprints
  */
 export function previewAddEndpoints(
@@ -36,11 +37,9 @@ export function previewAddEndpoints(
   options: GenerateOptions,
   existingFiles: Record<string, string>,
   layout: ImportLayout,
+  generated: readonly GeneratedFile[] = addedEndpointsCode(spec, endpointsToAdd, options, layout),
 ): AddResult {
-  /* Picked as the import lists them; the generator selects as the specification names them. */
   const { selection } = listedSelection(spec, options.groupBy ?? "tag", endpointsToAdd);
-  const genOptions: GenerateOptions = { ...options, selectedEndpoints: selection };
-  const generated = generateCode(spec, genOptions, layout.importName);
   const files: FileChange[] = [];
   const newFingerprints: Record<string, string> = {};
   let barrel:

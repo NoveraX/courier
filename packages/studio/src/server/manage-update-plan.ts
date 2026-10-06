@@ -33,15 +33,15 @@ export interface ManagedImport {
  * @throws {SpecGenerationError} When the specification cannot be generated from
  * @example
  * ```ts
- * const planned = planManageUpdate(request, imports, root, { declared, entry, layout });
+ * const planned = await planManageUpdate(request, imports, root, { declared, entry, layout });
  * ```
  */
-export function planManageUpdate(
+export async function planManageUpdate(
   body: ManageRequest & { specHash: string },
   imports: ImportsSnapshot,
   root: ProjectRoot,
   { declared, entry, layout }: ManagedImport,
-): ManagePlan | { error: string; status: number } {
+): Promise<ManagePlan | { error: string; status: number }> {
   const inventory = handleInventory(
     { name: body.name, newSpec: body.spec },
     imports,
@@ -55,7 +55,7 @@ export function planManageUpdate(
     return { error, status: 400 };
   }
   const { selection } = listedSelection(body.spec, declared.groupBy ?? "tag", picks);
-  const { plan } = planRegeneration({
+  const { plan } = await planRegeneration({
     root,
     name: body.name,
     layout,

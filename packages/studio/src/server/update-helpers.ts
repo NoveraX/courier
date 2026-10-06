@@ -56,7 +56,7 @@ export async function handlePreviewUpdate(
 ): Promise<UpdatePreview | Refusal> {
   const regeneration = await regenerationOf(body, imports, root);
   if ("error" in regeneration) return regeneration;
-  const { plan, leftBehind } = planRegeneration(regeneration);
+  const { plan, leftBehind } = await planRegeneration(regeneration);
   const specDiff = computeSpecDiff(regeneration.entry, regeneration.spec);
   return {
     plan: summarizePlan(plan),

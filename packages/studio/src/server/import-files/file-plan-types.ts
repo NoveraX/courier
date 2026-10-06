@@ -114,4 +114,14 @@ export interface FilePlan {
   blocked: Array<{ path: string; reason: "link" | "not-a-file" }>;
   /** Changes whenever the plan or anything on disk it rests on changes. */
   digest: string;
+  /** How the files the plan writes were formatted, once they were; the digest covers their text. */
+  formatting?: PlanFormatting;
+}
+
+/** How the files a plan writes were formatted, as the project formats its code. */
+export interface PlanFormatting {
+  /** The tools that formatted them, with their versions: `["Biome 2.5.14"]`; none when the project has none. */
+  formattedWith: string[];
+  /** Why a file, or every file, is written as Studio composed it; `null` when none is. */
+  problem: string | null;
 }

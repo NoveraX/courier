@@ -42,4 +42,31 @@ describe("a write's file plan", () => {
     expect(written.queryByText("src/api/pets/source.ts")).toBeNull();
     expect(screen.getByText("1 file is already as Studio would write it.")).toBeTruthy();
   });
+
+  it("says the files are formatted as the project formats its code, and with what", () => {
+    const formatting = { formattedWith: ["Biome 2.5.14"], problem: null };
+
+    render(<FilePlanSections plan={{ ...PLAN, formatting }} confirmed={[]} onToggle={() => {}} />);
+
+    expect(
+      screen.getByText("Formatted with Biome 2.5.14, as the project formats its code."),
+    ).toBeTruthy();
+  });
+
+  it("says why files are written as composed when formatting could not run", () => {
+    const formatting = { formattedWith: [], problem: "Biome is configured but not installed" };
+
+    render(<FilePlanSections plan={{ ...PLAN, formatting }} confirmed={[]} onToggle={() => {}} />);
+
+    expect(screen.getByText("Biome is configured but not installed.")).toBeTruthy();
+    expect(screen.queryByText(/Formatted with/)).toBeNull();
+  });
+
+  it("says nothing of formatting in a project that has no formatter", () => {
+    const formatting = { formattedWith: [], problem: null };
+
+    render(<FilePlanSections plan={{ ...PLAN, formatting }} confirmed={[]} onToggle={() => {}} />);
+
+    expect(screen.queryByText(/Formatted with|formatted/i)).toBeNull();
+  });
 });

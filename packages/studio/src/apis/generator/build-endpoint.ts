@@ -19,11 +19,11 @@ import { sendsUrlEncoded, wireClosure } from "./wire-closure";
 /** The validators whose generated objects are loose. */
 const LOOSE: ReadonlySet<string> = new Set(["zod", "valibot"]);
 
-/** The type of an answer read otherwise than as JSON. */
+/** The type of an answer read otherwise than as JSON; the DOM's named through globalThis, past a schema of its name. */
 const READ_TYPES: Readonly<Record<ResponseReading, string | undefined>> = {
   json: undefined,
   text: "string",
-  blob: "Blob",
+  blob: "globalThis.Blob",
 };
 
 /**

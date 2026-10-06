@@ -102,7 +102,8 @@ export function propToTsType(prop: ParsedSchemaProperty, style = EXACT_OPTIONAL)
     const inner = schemaToTsType(prop.items, style);
     return inner.includes("|") ? `(${inner})[]` : `${inner}[]`;
   }
-  if (prop.type === "object") return "Record<string, unknown>";
+  /* Not `Record<…>`: a schema the specification calls Record would take its place. */
+  if (prop.type === "object") return "{ [key: string]: unknown }";
   return primitiveToTsType(prop.type);
 }
 

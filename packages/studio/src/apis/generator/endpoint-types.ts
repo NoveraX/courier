@@ -48,10 +48,12 @@ export function resolveVariablesType(ep: ParsedEndpoint, context: EndpointContex
   );
 
   const kind = requestBodyKind(ep, context.spec);
-  /* A form's entries fill the path, so the form is the whole of it. */
-  if (kind === "form") return "FormData";
+  /* A form's entries fill the path, so the form is the whole of it. The DOM's
+     types are named through globalThis: a schema the specification calls Blob
+     or FormData, imported into the same file, would stand in for them. */
+  if (kind === "form") return "globalThis.FormData";
   if (kind === "value" || kind === "nested" || kind === "bytes") {
-    const body = kind === "bytes" ? "Blob" : bodyType(ep, context, style);
+    const body = kind === "bytes" ? "globalThis.Blob" : bodyType(ep, context, style);
     /* A body the operation does not require may be left out. */
     const optional = ep.requestBodyOptional === true;
     if (parts.length === 0) return optional ? `${body} | undefined` : body;
@@ -82,7 +84,7 @@ function bodyType(ep: ParsedEndpoint, context: EndpointContext, style: TypeStyle
   if (!target) return "unknown";
   if (target.type !== "object") return schemaToTsType(target, style);
   const parts = fields(target.properties ?? {}, context, style);
-  return parts.length > 0 ? `{ ${parts.join("; ")} }` : "Record<string, unknown>";
+  return parts.length > 0 ? `{ ${parts.join("; ")} }` : "{ [key: string]: unknown }";
 }
 
 function fields(

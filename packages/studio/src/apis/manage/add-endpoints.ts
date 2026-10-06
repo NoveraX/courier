@@ -47,6 +47,8 @@ export function previewAddEndpoints(
   let source: (Pending & { generated: string }) | undefined;
 
   for (const genFile of generated) {
+    /* The proxy caller is written whole for the endpoints the import ends up with. */
+    if (genFile.path === layout.proxyFile) continue;
     const fps = generateFingerprints(genFile.content);
     Object.assign(newFingerprints, fps);
 

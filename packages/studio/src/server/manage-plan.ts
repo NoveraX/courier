@@ -5,6 +5,7 @@ import { previewAddEndpoints, previewRemoveEndpoints } from "../apis/manage";
 import { addedEndpointsCode } from "../apis/manage/added-endpoints-code";
 import { isFlatImport } from "../apis/manage/flat-import";
 import { listedSelection } from "../apis/manage/listed-selection";
+import { filesAfter, proxyAfterChange } from "../apis/manage/proxy-after-change";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
 import { isTopLevel } from "../apis/parser/top-level";
@@ -122,7 +123,10 @@ export async function planManage(
   }
   const fileOf = (group: string): string =>
     flat || isTopLevel(group) ? layout.sourceFile : layout.groupFile(group);
-  const request = managePlanRequest(layout, body.toRemove, addResult, removeResult, entry, fileOf);
+  const proxy = proxyAfterChange(body.spec, options, layout, filesAfter(afterAdd, removeResult));
+  const whole = proxy ? (await formatProjectFiles(root.path, [proxy], formatters)).files : [];
+  const changes = { toRemove: body.toRemove, added: addResult, removed: removeResult, whole };
+  const request = managePlanRequest(layout, changes, entry, fileOf);
   return {
     ...(addResult && { addResult }),
     ...(removeResult && { removeResult }),

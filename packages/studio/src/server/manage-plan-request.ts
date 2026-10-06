@@ -4,19 +4,29 @@ import type { AddResult, RemoveResult } from "../apis/manage/types";
 import type { PlanRequest, PlanTarget } from "./import-files/file-plan-types";
 import { ManagePlanConflictError } from "./manage-plan-conflict-error";
 
+/** What adding and removing endpoints changes, as a plan asks for it. */
+export interface ManageChanges {
+  /** The endpoints removed, by group. */
+  toRemove: Record<string, string[]>;
+  /** What adding endpoints produced, if anything. */
+  added: AddResult | undefined;
+  /** What removing endpoints produced, on top of the addition, if anything. */
+  removed: RemoveResult | undefined;
+  /** Files written whole from the specification as the change leaves the import: its proxy caller. */
+  whole: readonly { path: string; content: string }[];
+}
+
 /**
  * Ask for the files adding and removing endpoints produce. Each file is
  * computed from its version on disk, so it is written as computed; the
  * files of a group removed whole are no longer wanted. A file both steps
  * change is written as the removal computed it, on top of the addition;
- * the addition changes each file once.
+ * the addition changes each file once. A file written whole comes last.
  * Endpoint fingerprints stay as recorded, with the added endpoints' taken
  * from the generated file and the removed endpoints' dropped.
  *
  * @param layout - Where the import's files are
- * @param toRemove - The endpoints removed, by group
- * @param added - What adding endpoints produced, if anything
- * @param removed - What removing endpoints produced, on top of the addition, if anything
+ * @param changes - The endpoints removed, what adding and removing produced, and the files written whole
  * @param entry - What Studio recorded about the import, if anything
  * @param fileOf - The file a group's endpoints are in
  * @returns The request
@@ -24,9 +34,7 @@ import { ManagePlanConflictError } from "./manage-plan-conflict-error";
  */
 export function managePlanRequest(
   layout: ImportLayout,
-  toRemove: Record<string, string[]>,
-  added: AddResult | undefined,
-  removed: RemoveResult | undefined,
+  { toRemove, added, removed, whole }: ManageChanges,
   entry: ImportStateEntry | undefined,
   fileOf: (group: string) => string,
 ): PlanRequest {
@@ -51,6 +59,14 @@ export function managePlanRequest(
   if (removed?.indexFileUpdate) {
     const { path, content } = removed.indexFileUpdate;
     want(path, content, recorded(path));
+  }
+  for (const file of whole) {
+    targets.set(file.path, {
+      path: file.path,
+      body: file.content,
+      kind: "generated",
+      endpoints: {},
+    });
   }
   const removals = (removed?.deletedFiles ?? []).filter((path) => !targets.has(path));
   return {

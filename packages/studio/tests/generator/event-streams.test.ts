@@ -7,6 +7,7 @@
  * stream is relayed from the API.
  */
 import { createProxyCaller } from "@noverax/courier";
+import type { ProxyBoundary } from "@noverax/courier/define";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { GenerateOptions } from "../../src/apis/generator";
@@ -245,6 +246,41 @@ describe("through the proxy", () => {
 
     expect(upstream.requests[0]?.query).toEqual([["fields", "a,b"]]);
   });
+
+  /* The generated proxy caller names its source only as a type, so the boundary it is
+     given is what tells it which endpoints are streams. */
+  it("reaches the API's stream through the boundary the generated proxy caller is given", async () => {
+    const files = generate({ generateClient: "both" });
+    const { shopBoundary } = loadGenerated(files, "src/api/shop/proxy.ts");
+    if (!isRecord(shopBoundary)) throw new Error("proxy.ts exports no boundary");
+    const caller = createProxyCaller("shop", {
+      boundary: shopBoundary as unknown as ProxyBoundary,
+      proxyPath: { http: proxy.url, sse: proxy.url },
+    });
+    upstream.requests.length = 0;
+
+    const got = await received(endpointAt(caller, "orders", "watchOrder")({ id: "o1" }));
+
+    expect(got).toEqual([{ status: "paid" }, { status: "shipped" }]);
+    expect(shopBoundary.endpoints).toEqual({
+      "orders.listOrders": { type: "query" },
+      "orders.watchOrder": { transport: "sse" },
+      "orders.watchFields": { transport: "sse" },
+      "orders.replayOrder": { type: "mutation" },
+    });
+  });
+
+  it("gives the generated proxy caller that boundary, and compiles with every check on", () => {
+    const files = generate({ generateClient: "proxy" });
+    const proxyFile = files.find((file) => file.path === "src/api/shop/proxy.ts")?.content ?? "";
+    const dir = writeProject("event-streams/proxy", files);
+    const strictest = { ...STRICT, noUnusedLocals: true, verbatimModuleSyntax: true };
+
+    expect(proxyFile).toContain(
+      'export const shopProxyApi = createProxyCaller<typeof shop>("shop", { boundary: shopBoundary });',
+    );
+    expect(compileProject(dir, ["src/api/shop/proxy.ts"], strictest)).toEqual([]);
+  }, 60_000);
 
   it("says so in the generated comment", () => {
     expect(groupFile({})).toContain(

@@ -6,11 +6,10 @@
 import type { ParsedSpec } from "../apis";
 import { computeSpecHash } from "../apis";
 import { transformSpec } from "../apis/generator/transform-spec";
-import { type ImportLayout, resolveImportLayout } from "../apis/layout";
+import { resolveImportLayout } from "../apis/layout";
 import { buildEndpointInventory } from "../apis/manage";
-import type { DiskGroupListing, EndpointInventory } from "../apis/manage/types";
-import { extractEndpoints } from "../apis/merge/extract-endpoints";
-import { TOP_LEVEL } from "../apis/parser/top-level";
+import { diskListing } from "../apis/manage/disk-listing";
+import type { EndpointInventory } from "../apis/manage/types";
 import { importBodies } from "./import-files/import-bodies";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import { manageFingerprints } from "./manage-fingerprints";
@@ -52,7 +51,7 @@ export function handleInventory(
 
   const layout = resolveImportLayout(entry, body.name);
   const existingFiles = importBodies(root, layout.dir);
-  const diskGroups = scanSourceGroups(layout, existingFiles);
+  const diskGroups = diskListing(layout, existingFiles);
   const fingerprints = manageFingerprints(state, existingFiles);
 
   /* Listed as the import's files hold them: by its grouping, under the names it generates. */
@@ -61,36 +60,4 @@ export function handleInventory(
   inventory.specChanged = (specHash ?? computeSpecHash(spec)) !== (state?.specHash ?? "");
 
   return inventory;
-}
-
-// ── Internal helpers ─────────────────────────────────────────────────────────
-
-/* How a group file names its group, with or without a type on the binding. */
-const GROUP_BINDING = /^export const (\w+)\s*(?::[^=]+)?=\s*defineGroup\(/m;
-
-/**
- * Derive the per-group endpoint listing for an import from the generated
- * files already loaded into `existingFiles`. A group lives in
- * `<dir>/<group-dir>/index.ts`, which names it in its `defineGroup` export;
- * the API's own endpoints are in `source.ts`, listed under `""`. Endpoint
- * names are read with the same `extractEndpoints()` parser the merge layer uses.
- */
-function scanSourceGroups(
-  layout: ImportLayout,
-  existingFiles: Record<string, string>,
-): DiskGroupListing[] {
-  const groups: DiskGroupListing[] = [];
-  for (const [path, content] of Object.entries(existingFiles)) {
-    const name = path === layout.sourceFile ? TOP_LEVEL : groupNameOf(path, content, layout);
-    if (name === undefined) continue;
-    const endpointNames = Object.keys(extractEndpoints(content));
-    if (endpointNames.length === 0) continue;
-    groups.push({ name, prefix: "", endpoints: endpointNames, file: path });
-  }
-  return groups;
-}
-
-function groupNameOf(path: string, content: string, layout: ImportLayout): string | undefined {
-  const name = GROUP_BINDING.exec(content)?.[1];
-  return name !== undefined && layout.groupFile(name) === path ? name : undefined;
 }

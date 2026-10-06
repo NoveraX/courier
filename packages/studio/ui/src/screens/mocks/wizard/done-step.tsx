@@ -29,9 +29,6 @@ function ArrivedRow({ server }: { server: MockServerInfo }): React.ReactNode {
     <li className="flex h-10 items-center gap-2.5 border-b border-line px-3 last:border-b-0">
       <span className="font-mono text-control">mocks.{server.serverId}</span>
       <span className={cn("flex items-center gap-1.5 text-small font-medium", status.className)}>
-        <span
-          className={cn("size-1.75 rounded-full bg-current", status.pulse && "animate-pulse")}
-        />
         {status.label}
       </span>
       {running && server.url && (

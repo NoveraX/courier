@@ -1,7 +1,6 @@
 import { Pin } from "lucide-react";
 
 import { methodText } from "@/design/method-color";
-import { TONE_FILL } from "@/design/tone";
 import { codeLabel, endpointParts, httpMethodOf, pathOf } from "@/features/requests/request-parts";
 import { isStreamRequest, requestStateOf, STATE_META } from "@/features/requests/request-state";
 import { useSecondNow } from "@/hooks/use-tick";
@@ -63,14 +62,6 @@ export function RequestRow({
       <span
         aria-hidden="true"
         className={cn("absolute inset-y-0 left-0 w-0.5", selected ? "bg-brand" : "bg-transparent")}
-      />
-      <span
-        aria-hidden="true"
-        className={cn(
-          "size-1.75 rounded-full",
-          TONE_FILL[STATE_META[state].tone],
-          pulse && "animate-pulse-live",
-        )}
       />
       <span className={cn("text-meta font-semibold", methodText(method))}>{method}</span>
       <span className="flex min-w-0 items-baseline gap-2.5 overflow-hidden whitespace-nowrap">

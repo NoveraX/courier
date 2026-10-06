@@ -23,7 +23,6 @@ const NOT_SENT: readonly StatCell[] = [
   {
     label: "Status",
     value: "Not sent",
-    dot: { tone: "muted", pulse: false },
     tone: "muted",
     mono: false,
   },
@@ -43,8 +42,7 @@ const STREAM_STATES: Readonly<
 
 function statusCell(state: RequestState, label: string, value: string): StatCell {
   const { tone } = STATE_META[state];
-  const pulse = state === "pending" || state === "streaming";
-  return { label, value, dot: { tone, pulse }, tone, mono: false };
+  return { label, value, tone, mono: false };
 }
 
 function httpCells(

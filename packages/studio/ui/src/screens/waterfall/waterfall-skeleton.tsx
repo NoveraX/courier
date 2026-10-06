@@ -55,7 +55,6 @@ export function WaterfallSkeleton(): React.ReactNode {
                 LABEL,
               )}
             >
-              <Skeleton className="size-1.75 rounded-full" />
               <Skeleton className="h-2.5 w-8" />
               <Skeleton className={cn("h-3", row.name)} />
               <span className="flex-1" />

@@ -86,7 +86,6 @@ export function RequestBarRow(props: RequestBarRowProps): React.ReactNode {
     >
       <RowLabel
         request={r}
-        state={state}
         method={httpMethodOf(r)}
         duration={pending ? "···" : formatDuration(bar.total)}
         durationClass={pending ? "text-warn" : durationClassOf(durationTone(bar.total, slowMs))}

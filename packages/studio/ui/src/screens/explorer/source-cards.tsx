@@ -1,6 +1,5 @@
 import { Server } from "lucide-react";
 import { CardSection } from "@/design/card-section";
-import { Dot } from "@/design/dot";
 import { TONE_FILL, TONE_TEXT } from "@/design/tone";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type { ExplorerModel, SourceNode } from "@/features/explorer/explorer-model";
@@ -30,7 +29,6 @@ function SourceCard({ source }: { source: SourceNode }): React.ReactNode {
             {source.baseURL.replace(/^https?:\/\//, "")}
           </span>
         </div>
-        <Dot tone={tone} pulse={source.metrics.active} className="size-1.75" />
       </div>
       <div className="flex items-center gap-3 text-label text-fg-subtle">
         {count(source.groups.length, "group")}

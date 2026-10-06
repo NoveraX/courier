@@ -11,8 +11,9 @@ interface TabBarProps {
 }
 
 /**
- * The inspector's tabs, the one shown underlined, with their counts and a
- * dot on the failure's. The underline moves across to the tab chosen.
+ * The inspector's tabs, the one shown underlined, with their counts, and
+ * the failure's named in the error colour. The underline moves across to
+ * the tab chosen.
  *
  * @param props - The tabs, the one shown, and what shows another
  * @returns The bar
@@ -40,7 +41,8 @@ export function TabBar({ tabs, current, onSelect }: TabBarProps): React.ReactNod
             onClick={() => onSelect(tab.key)}
             className={cn(
               "relative flex h-9.5 shrink-0 cursor-pointer items-center gap-1.5 px-1.5 text-control whitespace-nowrap transition-colors hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
-              on ? "font-semibold text-fg" : "font-medium text-fg-subtle",
+              on ? "font-semibold" : "font-medium",
+              tab.alert ? "text-err" : on ? "text-fg" : "text-fg-subtle",
             )}
           >
             {tab.label}
@@ -49,7 +51,6 @@ export function TabBar({ tabs, current, onSelect }: TabBarProps): React.ReactNod
                 {tab.count}
               </span>
             )}
-            {tab.alert && <span aria-hidden="true" className="size-1.5 rounded-full bg-err" />}
             {on && (
               <motion.span
                 layoutId="request-inspector-tab"

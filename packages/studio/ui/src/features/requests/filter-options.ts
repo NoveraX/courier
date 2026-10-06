@@ -7,8 +7,8 @@ export interface FilterOption {
   value: string;
   label: string;
   count: number;
-  /** The colour swatch shown beside it, by name; none for most filters. */
-  swatch?: string | undefined;
+  /** The colour its value is written in, by name — a state's, a method's; none for most filters. */
+  tone?: string | undefined;
   /** In a tree of values, what the row shows — its own name — beside the label's whole path. */
   name?: string | undefined;
   /** In a tree of values, how many levels it sits below the top. */
@@ -28,7 +28,7 @@ export const DIMENSION_META: Readonly<Record<FilterDimension, { label: string; m
   type: { label: "Type", mono: false },
 };
 
-type Known = readonly (readonly [value: string, label: string, swatch?: string])[];
+type Known = readonly (readonly [value: string, label: string, tone?: string])[];
 
 /* The values a filter always offers, in this order; Source and Group offer the ones seen. */
 const KNOWN: Partial<Record<FilterDimension, Known>> = {
@@ -98,10 +98,10 @@ export function filterOptions(
     .filter((value) => !knownValues.has(value))
     .sort((a, b) => (seen.get(b) ?? 0) - (seen.get(a) ?? 0) || a.localeCompare(b));
   return [
-    ...known.map(([value, label, swatch]) => ({
+    ...known.map(([value, label, tone]) => ({
       value,
       label,
-      swatch,
+      tone,
       count: counts.get(value) ?? 0,
     })),
     ...others.map((value) => ({

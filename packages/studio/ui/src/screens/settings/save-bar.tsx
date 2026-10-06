@@ -22,7 +22,6 @@ export function SaveBar({ count, onDiscard, onSave }: SaveBarProps): React.React
       className="pointer-events-none sticky bottom-4 z-10 flex justify-center"
     >
       <div className="pointer-events-auto flex items-center gap-3 rounded-sheet border border-line-strong bg-panel py-2 pr-2 pl-3.5 shadow-overlay animate-pop-in">
-        <span aria-hidden="true" className="size-1.75 rounded-full bg-warn" />
         <span className="text-control font-strong">{`${count} unsaved change${count === 1 ? "" : "s"}`}</span>
         <button
           type="button"

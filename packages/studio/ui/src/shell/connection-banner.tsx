@@ -1,5 +1,4 @@
 import { Button } from "@/design/button";
-import { Dot } from "@/design/dot";
 import { cn } from "@/lib/utils";
 import { getSocket } from "@/socket";
 import { useStudioStore } from "@/store";
@@ -33,7 +32,6 @@ export function ConnectionBanner(): React.ReactNode {
         resetting ? "border-brand/20 bg-brand-dim" : "border-err/30 bg-err-dim",
       )}
     >
-      <Dot tone={resetting ? "brand" : "err"} pulse={resetting} className="size-1.75" />
       {resetting ? (
         <span className="text-fg">
           <strong className="font-semibold">The demo is resetting.</strong>{" "}

@@ -7,13 +7,11 @@ export interface SegmentedOption<TValue extends string> {
   value: TValue;
   label: string;
   icon?: LucideIcon | undefined;
-  /** A dot before the label in the colour of what the option shows: a `bg-*` class. */
-  swatch?: string | undefined;
   /** A count after the label, coloured as an error's when it counts errors, a warning's when it counts changes. */
   count?: number | undefined;
   countTone?: "err" | "warn" | "subtle" | undefined;
-  /** A dot after the label: what the option shows was changed. */
-  dot?: boolean | undefined;
+  /** What the option shows was changed: its label takes the accent colour, and assistive technology hears so. */
+  changed?: boolean | undefined;
 }
 
 interface SegmentedProps<TValue extends string> {
@@ -64,19 +62,8 @@ export function Segmented<TValue extends string>({
             )}
           >
             {Icon && <Icon aria-hidden="true" className="size-2.75" />}
-            {option.swatch && (
-              <span
-                aria-hidden="true"
-                className={cn("size-1.5 shrink-0 rounded-full", option.swatch)}
-              />
-            )}
-            {option.label}
-            {option.dot && (
-              <>
-                <span aria-hidden="true" className="size-1.25 shrink-0 rounded-full bg-brand" />
-                <span className="sr-only">(changed)</span>
-              </>
-            )}
+            <span className={cn(option.changed && "text-brand")}>{option.label}</span>
+            {option.changed && <span className="sr-only">(changed)</span>}
             {option.count !== undefined && (
               <span
                 className={cn(

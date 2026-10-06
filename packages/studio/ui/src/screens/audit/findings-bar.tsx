@@ -15,6 +15,9 @@ interface FindingsBarProps {
   onSearch: (next: AuditSearch) => void;
 }
 
+/* Each severity's count in its colour, where that colour means something to act on. */
+const COUNT_TONE = { error: "err", warning: "warn", hint: "subtle", pass: "subtle" } as const;
+
 /**
  * The findings' filters: a severity with how many each has, the category
  * chosen above as a chip that clears it, and a search of the titles and
@@ -33,9 +36,8 @@ export function FindingsBar({ search, counts, onSearch }: FindingsBarProps): Rea
     ...AUDIT_SEVERITIES.map((severity) => ({
       value: severity,
       label: SEVERITY_LOOK[severity].label,
-      swatch: SEVERITY_LOOK[severity].fill,
       count: counts[severity],
-      countTone: "subtle" as const,
+      countTone: COUNT_TONE[severity],
     })),
   ];
   return (

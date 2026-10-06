@@ -39,13 +39,6 @@ export function LiveCapture(): React.ReactNode {
             state === "idle" && "bg-raised text-fg-subtle",
           )}
         >
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-1.25 rounded-full bg-current",
-              state === "streaming" && "animate-pulse-live",
-            )}
-          />
           {state}
         </span>
       </div>

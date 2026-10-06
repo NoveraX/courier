@@ -78,9 +78,9 @@ export function RequestPane(props: RequestPaneProps): React.ReactNode {
     {
       value: "variables",
       label: endpoint.transport === "http" ? "Variables" : "Params",
-      dot: variables.changed,
+      changed: variables.changed,
     },
-    { value: "headers", label: "Headers", dot: headers.changed },
+    { value: "headers", label: "Headers", changed: headers.changed },
   ];
   const look = CHECK_LOOK[check.tone];
   return (

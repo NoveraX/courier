@@ -78,7 +78,6 @@ export function RequestTable({ requests }: { requests: readonly RequestEntry[] }
           columnsOf(wide),
         )}
       >
-        <span />
         <span>Method</span>
         <span>Endpoint</span>
         {wide && <span>Mode</span>}

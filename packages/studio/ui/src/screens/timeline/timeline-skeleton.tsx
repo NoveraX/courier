@@ -58,9 +58,8 @@ export function TimelineSkeleton(): React.ReactNode {
         {ROWS.map((row) => (
           <div
             key={row.id}
-            className="grid h-8.5 grid-cols-[10px_50px_minmax(120px,1fr)_44px_104px_92px_14px] items-center gap-3 border-b border-line pr-4 pl-5"
+            className="grid h-8.5 grid-cols-[50px_minmax(120px,1fr)_44px_104px_92px_14px] items-center gap-3 border-b border-line pr-4 pl-5"
           >
-            <Skeleton className="size-1.75 rounded-full" />
             <Skeleton className="h-2.5 w-8" />
             <Skeleton className={cn("h-3", row.width)} />
             <Skeleton className="h-2.5 w-7" />

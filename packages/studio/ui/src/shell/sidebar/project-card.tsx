@@ -1,7 +1,6 @@
 import { ChevronsUpDown, Globe, Server } from "lucide-react";
 import { Popover } from "radix-ui";
 
-import { Dot } from "@/design/dot";
 import { POP_MOTION } from "@/design/overlay-motion";
 import type { AttachedApp } from "@/features/runtimes/attached-apps";
 import { attachedApps } from "@/features/runtimes/attached-apps";
@@ -13,21 +12,21 @@ interface CardState {
   /** The apps attached, as Studio last told — none while it cannot say. */
   apps: AttachedApp[];
   summary: string;
-  dot: "ok" | "muted" | "err";
+  tone: "ok" | "muted" | "err";
 }
 
 /* What the card says: the connection first, since a Studio that cannot be
    reached cannot vouch for the apps it last listed. */
 function cardState(apps: AttachedApp[], status: ConnectionStatus): CardState {
-  if (status === "connecting") return { apps: [], summary: "connecting…", dot: "muted" };
-  if (status !== "connected") return { apps: [], summary: "Studio unreachable", dot: "err" };
+  if (status === "connecting") return { apps: [], summary: "connecting…", tone: "muted" };
+  if (status !== "connected") return { apps: [], summary: "Studio unreachable", tone: "err" };
   const [first] = apps;
-  if (!first) return { apps, summary: "no app attached", dot: "muted" };
+  if (!first) return { apps, summary: "no app attached", tone: "muted" };
   const more = apps.length > 1 ? ` +${apps.length - 1}` : "";
   return {
     apps,
     summary: `${first.id}${first.origin ? ` · ${first.origin}` : ""}${more}`,
-    dot: "ok",
+    tone: "ok",
   };
 }
 
@@ -61,17 +60,21 @@ export function ProjectCard(): React.ReactNode {
   const name = useStudioStore((s) => s.studioInfo?.project.name ?? "Project");
   const status = useStudioStore((s) => s.connectionStatus);
   const snapshot = useStudioStore((s) => s.bindingSnapshot);
-  const { apps, summary, dot } = cardState(attachedApps(snapshot), status);
+  const { apps, summary, tone } = cardState(attachedApps(snapshot), status);
   return (
     <Popover.Root>
       <Popover.Trigger className="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-card border border-line bg-panel px-2.5 text-left text-fg transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand">
-        <span className="relative flex size-5.5 shrink-0 items-center justify-center rounded-md bg-raised text-badge font-semibold text-fg-muted">
+        <span className="flex size-5.5 shrink-0 items-center justify-center rounded-md bg-raised text-badge font-semibold text-fg-muted">
           {name.slice(0, 1)}
-          <Dot tone={dot} className="absolute -right-0.5 -bottom-0.5 size-2 ring-2 ring-panel" />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-px">
           <span className="truncate text-control leading-[1.2] font-strong">{name}</span>
-          <span className="truncate font-mono text-micro leading-[1.2] text-fg-subtle">
+          <span
+            className={cn(
+              "truncate font-mono text-micro leading-[1.2]",
+              tone === "err" ? "text-err" : "text-fg-subtle",
+            )}
+          >
             {summary}
           </span>
         </span>
@@ -91,7 +94,7 @@ export function ProjectCard(): React.ReactNode {
           </div>
           {apps.length === 0 ? (
             <p className="px-2 pb-2 text-small text-fg-muted">
-              {dot === "err"
+              {tone === "err"
                 ? "Studio cannot be reached; the apps attached show here once it is back."
                 : "Start your dev server with the Studio plugin, and it attaches here."}
             </p>

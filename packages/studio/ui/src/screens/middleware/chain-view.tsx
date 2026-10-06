@@ -1,9 +1,9 @@
 import { PanelRight } from "lucide-react";
 
-import { Dot } from "@/design/dot";
 import { methodChip, methodText } from "@/design/method-color";
+import { TONE_TEXT } from "@/design/tone";
 import { traceOf } from "@/features/middleware/chain-trace";
-import { endpointParts, httpMethodOf } from "@/features/requests/request-parts";
+import { codeLabel, endpointParts, httpMethodOf } from "@/features/requests/request-parts";
 import { STATE_META } from "@/features/requests/request-state";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -39,15 +39,17 @@ function Pick({
       aria-current={on}
       onClick={onChoose}
       className={cn(
-        "grid h-8.5 w-full cursor-pointer grid-cols-[8px_36px_minmax(0,1fr)_44px] items-center gap-2 rounded-[7px] px-2.5 text-left font-mono text-label hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+        "grid h-8.5 w-full cursor-pointer grid-cols-[36px_minmax(0,1fr)_36px_44px] items-center gap-2 rounded-[7px] px-2.5 text-left font-mono text-label hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
         on && "bg-brand-dim",
       )}
     >
-      <Dot tone={STATE_META[r.status].tone} className="size-1.75" />
       <span className={cn("text-micro font-semibold", methodText(httpMethodOf(r)))}>
         {httpMethodOf(r)}
       </span>
       <span className={cn("truncate", on ? "text-fg" : "text-fg-muted")}>{name}</span>
+      <span className={cn("text-right", TONE_TEXT[STATE_META[r.status].tone])}>
+        {codeLabel(r, r.status)}
+      </span>
       <span className="text-right text-fg-subtle">{formatDuration(r.timing?.middleware ?? 0)}</span>
     </button>
   );
@@ -110,9 +112,10 @@ export function ChainView({
           </span>
           <div className="flex-1" />
           <span className="flex items-center gap-1.5 text-small text-fg-muted">
-            <Dot tone={STATE_META[chosen.status].tone} />
-            {STATE_META[chosen.status].label} ·
-            <span className="font-mono">{formatDuration(chosen.timing?.total ?? 0)}</span>
+            <span className={TONE_TEXT[STATE_META[chosen.status].tone]}>
+              {STATE_META[chosen.status].label}
+            </span>{" "}
+            ·<span className="font-mono">{formatDuration(chosen.timing?.total ?? 0)}</span>
           </span>
           <button
             type="button"

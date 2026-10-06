@@ -21,7 +21,6 @@ export function ConnectState(): React.ReactNode {
   if (status === "disconnected" || status === "reconnecting") {
     return (
       <div className="flex flex-wrap items-center gap-2.5 rounded-card border border-err/30 bg-err-dim px-3 py-2.5">
-        <span aria-hidden="true" className="size-1.75 rounded-full bg-err" />
         <span className="font-strong">Studio cannot be reached</span>
         <span className="font-mono text-label text-fg-muted">
           {status === "reconnecting" ? `reconnecting · attempt ${attempt}` : "disconnected"}
@@ -32,7 +31,6 @@ export function ConnectState(): React.ReactNode {
   if (app) {
     return (
       <div className="flex animate-pop-in flex-wrap items-center gap-2.5 rounded-card border border-ok/30 bg-ok-dim px-3 py-2.5">
-        <span aria-hidden="true" className="size-1.75 rounded-full bg-ok" />
         <span className="font-strong">{app.id} attached</span>
         <span className="font-mono text-label text-fg-muted">
           {app.kind} · {plural(snapshot.sourceCount, "source")} bound
@@ -42,7 +40,6 @@ export function ConnectState(): React.ReactNode {
   }
   return (
     <div className="flex h-8 w-max max-w-full items-center gap-2.25 rounded-control border border-line bg-inset px-3 font-mono text-small text-fg-muted">
-      <span aria-hidden="true" className="size-1.5 animate-pulse-live rounded-full bg-brand" />
       listening on ws://{window.location.host}/runtime
     </div>
   );

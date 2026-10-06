@@ -31,16 +31,9 @@ export function ServerPill({
 }): React.ReactNode {
   const status = PROCESS_STATUS[server.processStatus];
   const running = server.processStatus === "running";
-  const busy = status.pulse;
+  const busy = status.changing;
   const name = (
     <span className="flex h-full items-center gap-2 border-r border-line px-2.75">
-      <span
-        className={cn(
-          "size-1.75 shrink-0 rounded-full bg-current shadow-[0_0_0_3px_color-mix(in_srgb,currentColor_18%,transparent)]",
-          status.className,
-          status.pulse && "animate-pulse-live",
-        )}
-      />
       <span className="font-mono text-small font-medium">{server.name}</span>
       <span className="font-mono text-badge text-fg-subtle max-md:hidden">:{server.port}</span>
       {servers.length > 1 && (
@@ -74,14 +67,11 @@ export function ServerPill({
                     value={s.serverId}
                     className="flex h-8 cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 font-mono text-control text-fg-muted outline-none data-[highlighted]:bg-raised data-[highlighted]:text-fg data-[state=checked]:text-fg"
                   >
-                    <span
-                      className={cn(
-                        "size-1.5 rounded-full bg-current",
-                        PROCESS_STATUS[s.processStatus].className,
-                      )}
-                    />
                     <span className="flex-1">{s.name}</span>
                     <span className="text-badge text-fg-subtle">:{s.port}</span>
+                    <span className={cn("text-badge", PROCESS_STATUS[s.processStatus].className)}>
+                      {PROCESS_STATUS[s.processStatus].label.toLowerCase()}
+                    </span>
                   </DropdownMenu.RadioItem>
                 ))}
               </DropdownMenu.RadioGroup>

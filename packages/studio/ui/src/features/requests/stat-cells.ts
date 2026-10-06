@@ -12,8 +12,6 @@ export interface StatCell {
   value: string;
   /** A line under the value; a cell without one has none. */
   sub?: string | undefined;
-  /** The status cell's dot, pulsing while the request runs. */
-  dot?: { tone: StateTone; pulse: boolean } | undefined;
   tone: StateTone | DurationTone;
   mono: boolean;
 }
@@ -44,12 +42,10 @@ function statusCell(r: RequestEntry): StatCell {
       : state === "pending"
         ? "in flight"
         : "no response";
-  const pulse = state === "pending" || state === "streaming";
   return {
     label: "Status",
     value: meta.label,
     sub,
-    dot: { tone: meta.tone, pulse },
     tone: meta.tone,
     mono: false,
   };

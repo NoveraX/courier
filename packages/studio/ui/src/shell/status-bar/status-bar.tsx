@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { useMockStore } from "@/store/mock-slice";
 import { ConnectionSegment } from "./connection-segment";
@@ -11,15 +12,7 @@ function WatchSegment(): React.ReactNode {
   );
   if (watched === 0 && !reloading) return null;
   return (
-    <div className="flex items-center gap-1.5 border-l border-line px-3">
-      <span
-        aria-hidden="true"
-        className={
-          reloading
-            ? "size-1.25 animate-pulse-live rounded-full bg-warn"
-            : "size-1.25 rounded-full bg-ok"
-        }
-      />
+    <div className={cn("flex items-center border-l border-line px-3", reloading && "text-warn")}>
       {reloading ? "reloading…" : `watching ${watched}`}
     </div>
   );

@@ -13,7 +13,7 @@ interface LabControlsProps {
 }
 
 /**
- * The lab's toolbar: the file's size and the link's pace, then the button
+ * The lab's toolbar: the file's size and the speed the site reads it at, then the button
  * that sends the file, naming how much it sends. With room for one row
  * the pickers sit on the left, a rule between them, and the button at the
  * right edge; on a narrow screen each picker takes a row and the button
@@ -28,7 +28,7 @@ interface LabControlsProps {
  */
 export function LabControls({ size, pace, sending, onSize, onPace, onSend }: LabControlsProps) {
   return (
-    <div className="flex flex-col gap-3 @min-[620px]:flex-row @min-[620px]:items-center @min-[620px]:gap-5">
+    <div className="flex flex-col gap-3 @min-[640px]:flex-row @min-[640px]:items-center @min-[640px]:gap-5">
       <Choice
         label="File"
         legend="File size"
@@ -38,10 +38,10 @@ export function LabControls({ size, pace, sending, onSize, onPace, onSend }: Lab
         disabled={sending}
         onPick={onSize}
       />
-      <span aria-hidden="true" className="hidden h-5 w-px shrink-0 bg-line @min-[620px]:block" />
+      <span aria-hidden="true" className="hidden h-5 w-px shrink-0 bg-line @min-[640px]:block" />
       <Choice
-        label="Link"
-        legend="Link speed"
+        label="Speed"
+        legend="Upload speed"
         options={LAB_PACES}
         value={pace}
         unit="MB/s"
@@ -52,7 +52,7 @@ export function LabControls({ size, pace, sending, onSize, onPace, onSend }: Lab
         type="button"
         onClick={onSend}
         disabled={sending}
-        className="mt-1 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-fg px-4 text-[14px] font-medium text-bg transition-opacity hover:opacity-86 disabled:cursor-default disabled:opacity-55 @min-[620px]:mt-0 @min-[620px]:ml-auto @min-[620px]:h-9 @min-[620px]:w-auto @min-[620px]:min-w-[8.5rem] @min-[620px]:rounded-[9px] @min-[620px]:text-[13.5px]"
+        className="mt-1 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-fg px-4 text-[14px] font-medium text-bg transition-opacity hover:opacity-86 disabled:cursor-default disabled:opacity-55 @min-[640px]:mt-0 @min-[640px]:ml-auto @min-[640px]:h-9 @min-[640px]:w-auto @min-[640px]:min-w-[8.5rem] @min-[640px]:rounded-[9px] @min-[640px]:text-[13.5px]"
       >
         <CloudUpload aria-hidden="true" className="size-3.75" />
         {sending ? "Sending…" : `Send ${size} MB`}
@@ -72,7 +72,7 @@ interface ChoiceProps<TValue extends number> {
   onPick: (value: TValue) => void
 }
 
-/* One picker: its name with the values' unit, said once, then the values as a segmented row. */
+/* One picker: its name and, in brackets, the values' unit, said once; then the values as a segmented row. */
 function Choice<TValue extends number>({
   label,
   legend,
@@ -87,12 +87,11 @@ function Choice<TValue extends number>({
       <legend className="sr-only">{legend}</legend>
       <span
         aria-hidden="true"
-        className="w-[5.25rem] shrink-0 font-mono text-micro whitespace-nowrap text-fg-subtle @min-[620px]:w-auto"
+        className="w-[5.75rem] shrink-0 font-mono text-micro tracking-[0.08em] whitespace-nowrap text-fg-subtle @min-[640px]:w-auto"
       >
-        <span className="tracking-[0.08em] uppercase">{label}</span>
-        <span className="opacity-70"> · {unit}</span>
+        <span className="uppercase">{label}</span> ({unit})
       </span>
-      <div className="flex flex-1 rounded-[9px] border border-line bg-inset p-0.75 @min-[620px]:flex-none">
+      <div className="flex flex-1 rounded-[9px] border border-line bg-inset p-0.75 @min-[640px]:flex-none">
         {options.map((option) => (
           <button
             key={option}
@@ -102,7 +101,7 @@ function Choice<TValue extends number>({
             disabled={disabled}
             onClick={() => onPick(option)}
             className={cn(
-              "h-8 flex-1 cursor-pointer rounded-[7px] px-3 font-mono text-label tabular-nums transition-colors disabled:cursor-default @min-[620px]:h-7 @min-[620px]:flex-none",
+              "h-8 flex-1 cursor-pointer rounded-[7px] px-3 font-mono text-label tabular-nums transition-colors disabled:cursor-default @min-[640px]:h-7 @min-[640px]:flex-none",
               option === value ? "bg-raised text-fg shadow-panel" : "text-fg-subtle hover:text-fg"
             )}
           >

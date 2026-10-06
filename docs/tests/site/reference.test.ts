@@ -92,7 +92,13 @@ describe("a reference entry", () => {
     const [config] = entry.params
     expect(config?.name).toBe("DefineGroupConfig")
     expect(config?.code?.code).toContain("type DefineGroupConfig<E> = GroupOptions & {")
-    expect(config?.fields.map((f) => f.name)).toEqual(["prefix", "pathOptions", "endpoints"])
+    expect(config?.fields.map((f) => f.name)).toEqual([
+      "prefix",
+      "pathOptions",
+      "expose",
+      "groups",
+      "endpoints",
+    ])
   })
 
   it("lists only the parts written outside a parameter's code", () => {

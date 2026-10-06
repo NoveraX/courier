@@ -100,11 +100,12 @@ describe("extractSourceMap", () => {
       },
     });
 
-    const { groups } = extractSourceMap({ api }).api ?? { groups: {} };
+    const groups = extractSourceMap({ api }).api?.groups;
+    const invoices = groups?.["billing.invoices"];
 
-    expect(Object.keys(groups)).toEqual(["billing", "billing.invoices"]);
-    expect(groups["billing.invoices"]?.prefix).toBe("billing/invoices");
-    expect(Object.keys(groups["billing.invoices"]?.endpoints ?? {})).toEqual(["list"]);
+    expect(Object.keys(groups ?? {})).toEqual(["billing", "billing.invoices"]);
+    expect(invoices?.prefix).toBe("billing/invoices");
+    expect(Object.keys(invoices?.endpoints ?? {})).toEqual(["list"]);
   });
 
   it("handles multiple sources", () => {

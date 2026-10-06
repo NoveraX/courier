@@ -18,7 +18,13 @@ import { requestEntry } from "./request-entry-fixture";
 const NOW = 1_000_000;
 
 function def(path: string): CatalogEndpoint {
-  return { type: "query", hasVariablesSchema: false, hasResponseSchema: false, path };
+  return {
+    type: "query",
+    hasVariablesSchema: false,
+    hasResponseSchema: false,
+    path,
+    origin: "scan",
+  };
 }
 
 const CATALOG: Catalog = {

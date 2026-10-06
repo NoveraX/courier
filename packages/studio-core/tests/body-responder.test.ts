@@ -3,6 +3,7 @@ import type { Socket } from "socket.io-client";
 import { describe, expect, it, vi } from "vitest";
 
 import { answerBodyRequests } from "../src/runtime/body-responder";
+import { studioMessageLimit } from "../src/runtime/studio-message-limit";
 
 function socketWith() {
   const handlers = new Map<string, (asked: unknown, answer: unknown) => void>();
@@ -43,6 +44,26 @@ describe("answerBodyRequests", () => {
     expect(unnamed).toHaveBeenCalledWith({
       ok: false,
       error: expect.stringContaining("which body"),
+    });
+  });
+
+  it("refuses a body larger than Studio said it takes, rather than break the connection", () => {
+    const { socket, handlers } = socketWith();
+    const bodies = createKeptBodies();
+    const text = JSON.stringify("x".repeat(3 * 1024 * 1024));
+    bodies.keep("req_1", "response", { value: "", whole: { text, bytes: text.length } });
+    const limit = studioMessageLimit();
+    limit.welcome({ maxMessageBytes: 1024 * 1024 });
+    answerBodyRequests(socket, bodies, limit);
+    const answer = vi.fn();
+
+    handlers.get("runtime:body")?.({ requestId: "req_1", part: "response" }, answer);
+
+    expect(answer).toHaveBeenCalledWith({
+      ok: false,
+      error: expect.stringMatching(
+        /^This body is 3\.0 MB, more than Studio takes from an app in one message \(1\.0 MB\)/,
+      ),
     });
   });
 });

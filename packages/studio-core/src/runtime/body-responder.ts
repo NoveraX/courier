@@ -1,6 +1,8 @@
 import type { BodyPart, KeptBodies } from "@noverax/courier/internal";
 import type { Socket } from "socket.io-client";
 
+import { type StudioMessageLimit, studioMessageLimit } from "./studio-message-limit";
+
 type BodyAnswer = { ok: true; data: string } | { ok: false; error: string };
 
 function partOf(value: unknown): BodyPart | undefined {
@@ -30,20 +32,30 @@ function answerFor(bodies: KeptBodies, asked: unknown): BodyAnswer {
 /**
  * Answer Studio's `runtime:body`: the whole body of one of this app's
  * latest requests, as JSON, when the request's event carried only a part of
- * it — a page downloads it, or replays the request with it.
+ * it — a page downloads it, or replays the request with it. A body larger
+ * than Studio takes in one message is refused, saying so: sent whole, it
+ * closed the runtime's connection.
  *
  * The listener goes with the socket's others when the runtime detaches.
  *
  * @param socket - The runtime's socket to Studio
  * @param bodies - The bodies the runtime keeps whole
+ * @param limit - The largest message Studio takes, as it said
  * @example
  * ```ts
  * answerBodyRequests(socket, bodies);
  * // Studio: runtimeSocket.emit("runtime:body", { requestId, part: "response" }, (answer) => …)
  * ```
  */
-export function answerBodyRequests(socket: Socket, bodies: KeptBodies): void {
+export function answerBodyRequests(
+  socket: Socket,
+  bodies: KeptBodies,
+  limit: StudioMessageLimit = studioMessageLimit(),
+): void {
   socket.on("runtime:body", (asked: unknown, answer: unknown): void => {
-    if (typeof answer === "function") answer(answerFor(bodies, asked));
+    if (typeof answer !== "function") return;
+    const body = answerFor(bodies, asked);
+    const refusal = body.ok ? limit.refusal("This body", body) : null;
+    answer(refusal === null ? body : { ok: false, error: refusal });
   });
 }

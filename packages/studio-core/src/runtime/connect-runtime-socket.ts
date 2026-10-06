@@ -26,8 +26,10 @@ import type { BufferedAnnouncement } from "./announce-hosting";
 import { buildAnnouncePayload } from "./announce-payload";
 import type { RuntimeKind } from "./attach-runtime-types";
 import { answerBodyRequests } from "./body-responder";
+import { limitedResponderSocket } from "./limited-responder-socket";
 import { setupPlaygroundResponder } from "./playground-responder";
 import { timersCanUnref } from "./runtime-environment";
+import { studioMessageLimit } from "./studio-message-limit";
 import { keepUnsentEvents } from "./unsent-events";
 
 const log = createLogger("Studio");
@@ -149,13 +151,18 @@ export async function connectRuntimeSocket(
   };
 
   const unsent = keepUnsentEvents();
+  /* Studio says it in answer to hello. An event is small by design — its
+     bodies cut, a stream's messages previewed — but a Playground answer or
+     a whole body is as large as the app made it. */
+  const limit = studioMessageLimit();
 
   socket.on("connect", () => {
-    socket.emit("runtime:hello", {
+    const hello = {
       runtimeId: input.runtimeId,
       kind: input.kind,
       ...(input.listenOrigin && { listenOrigin: input.listenOrigin }),
-    });
+    };
+    socket.emit("runtime:hello", hello, limit.welcome);
     /* Empty on the first connect, so this replays nothing until there is
        genuinely a previous session's worth of claims to restore. */
     for (const entry of announced) {
@@ -187,8 +194,11 @@ export async function connectRuntimeSocket(
   // Wire the rid-keyed playground responder onto this socket so Studio
   // can dispatch `playground:execute` here. The responder reads the live
   // sources registry on every dispatch.
-  const disposeResponder = setupPlaygroundResponder(socket, () => getSources() ?? {});
-  if (input.bodies) answerBodyRequests(socket, input.bodies);
+  const disposeResponder = setupPlaygroundResponder(
+    limitedResponderSocket(socket, limit),
+    () => getSources() ?? {},
+  );
+  if (input.bodies) answerBodyRequests(socket, input.bodies, limit);
 
   handle.setDisposer(() => {
     unsubBus?.();

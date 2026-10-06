@@ -392,6 +392,19 @@ describe("a specification a visitor imports", () => {
   });
 });
 
+describe("a runtime of the demo", () => {
+  it("is told, as it says hello, the largest message the demo takes", async () => {
+    const runtime = await open("/runtime", token());
+
+    const welcome = await runtime.emitWithAck("runtime:hello", {
+      runtimeId: "app",
+      kind: "server",
+    });
+
+    expect(welcome).toEqual({ maxMessageBytes: DEMO_MAX_MESSAGE_BYTES });
+  });
+});
+
 describe("a message larger than the demo reads", () => {
   it("closes the socket that sent it", async () => {
     const page = await open("/ui");

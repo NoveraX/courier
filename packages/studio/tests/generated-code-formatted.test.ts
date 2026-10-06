@@ -197,6 +197,26 @@ describe("the code Studio writes in a project that checks with Biome", () => {
     expect(files).toContain("from '@noverax/courier/define';");
   }, 60_000);
 
+  it("says how the files are formatted when regenerating them changes nothing", async () => {
+    const url = await start();
+    await importBilling(url, { invoices: ["listInvoices"], customers: ["listCustomers"] });
+
+    const preview = await post(url, "/api/apis/manage/preview", {
+      name: "billing",
+      spec: SPEC,
+      toAdd: {},
+      toRemove: {},
+      regenerate: true,
+    });
+    const plan = preview.body.plan as {
+      writes: Array<{ action: string }>;
+      formatting?: { formattedWith: string[] };
+    };
+
+    expect(plan.writes.every((write) => write.action === "unchanged")).toBe(true);
+    expect(plan.formatting?.formattedWith).toEqual([expect.stringMatching(/^Biome /)]);
+  }, 60_000);
+
   it("finds nothing edited when the import is managed later, and stays checked", async () => {
     const url = await start();
     await importBilling(url, { invoices: ["listInvoices"], customers: ["listCustomers"] });

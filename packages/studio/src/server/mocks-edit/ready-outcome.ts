@@ -25,6 +25,7 @@ export async function readyOutcome(
     target: target.relative,
     restarting: restartingMocks(ctx, prepared),
     creates: plan.creates,
+    formatting: prepared.formatting,
     mockBasePort: ctx.mockBasePort(),
   });
   return {

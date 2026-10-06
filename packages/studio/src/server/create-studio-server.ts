@@ -7,18 +7,17 @@ import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config
 import express from "express";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
+import { closeStudio } from "./close-studio";
 import { DEMO_REPLAY_BYTES, demoServing } from "./demo/demo-serving";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { mockStoreFile } from "./mock-store-file";
-import { EDIT_FINISH_BUDGET_MS } from "./mocks-edit/edit-timing";
 import { createProjectState } from "./project-state/create-project-state";
 import { resolvedRoot } from "./resolved-root";
 import { registerRestApi } from "./rest-api";
 import { setupRuntimeNamespace } from "./runtime-namespace";
-import { clearStudioServerState } from "./runtime-namespace-state";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { securityHeaders } from "./security-headers";
 import { serveStudioUi } from "./serve-ui";
@@ -176,21 +175,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   startup.start();
 
-  const close = async () => {
-    await startup.close();
-    await project.finishEdits(EDIT_FINISH_BUDGET_MS);
-    await mockManager.stop();
-    project.stop();
-    playgroundRouter.dispose();
-    clearStudioServerState();
-    io.close();
-    storage.stop();
-    stores.close();
-    if (!httpServer.listening) return;
-    return new Promise<void>((resolve, reject) => {
-      httpServer.close((err) => (err ? reject(err) : resolve()));
-    });
-  };
+  const held = { root, startup, project, mockManager, playgroundRouter, io, storage, stores };
+  const close = () => closeStudio({ ...held, httpServer });
 
   return {
     get url() {

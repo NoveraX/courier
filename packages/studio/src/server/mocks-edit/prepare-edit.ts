@@ -1,10 +1,12 @@
 import { realpathSync } from "node:fs";
 import type { LoadedCourierConfig } from "../config-loader";
+import type { PlanFormatting } from "../import-files/file-plan-types";
 import { sha256Hex } from "../sha256-hex";
 import { checkConfigNotShadowed } from "./check-config-not-shadowed";
 import { checkLoadedState } from "./check-loaded-state";
 import { checkNoHiddenKeys } from "./check-no-hidden-keys";
 import { declarationState } from "./declaration-state";
+import { formattedCreation } from "./formatted-creation";
 import { inspectMocksTarget, type MocksTarget } from "./inspect-mocks-target";
 import { manualOutcome } from "./manual-outcome";
 import type { MocksEditContext } from "./mocks-edit-context";
@@ -27,6 +29,8 @@ export interface PreparedEdit {
   target: MocksTarget;
   input: PlanInput;
   plan: MocksPlan;
+  /** How a created file was formatted; `null` for an edit. */
+  formatting: PlanFormatting | null;
   baseHash: string | null;
   planDigest: string;
 }
@@ -79,9 +83,10 @@ async function planned(
   const errors = validateDeclarations(input.requests, declarationState(ctx, loaded, target.name));
   if (errors.length > 0) return { status: "invalid", errors };
   await probeMockPackage(root);
-  const plan = planMocksEdit(input);
+  const { plan, formatting } = await formattedCreation(root, target.relative, planMocksEdit(input));
   checkNoHiddenKeys(loaded, plan);
   await checkConfigNotShadowed(root, target.configName, target.relative, plan.configSpecifier);
   const baseHash = target.kind === "existing" ? target.hash : null;
-  return { status: "prepared", ...planning, plan, baseHash, planDigest: sha256Hex(plan.text) };
+  const planDigest = sha256Hex(plan.text);
+  return { status: "prepared", ...planning, plan, formatting, baseHash, planDigest };
 }

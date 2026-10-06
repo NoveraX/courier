@@ -93,19 +93,32 @@ describe("formatting files as the project formats its code", () => {
 
   it("keeps the text of a file a tool fails on, and says which and why", async () => {
     const root = project({ "package.json": "{}", "broken.cjs": "process.exit(3);" });
-    const tool = { name: "Biome" as const, version: "0.0.0", bin: join(root, "broken.cjs") };
+    const command = { program: process.execPath, prefix: [join(root, "broken.cjs")] };
+    const tool = { name: "Biome" as const, version: "0.0.0", command };
     const files = [{ path: "src/pets.ts", content: COMPOSED }];
 
-    const outcome = await formatProjectFiles(root, files, { tools: [tool], missing: null });
+    const outcome = await formatProjectFiles(root, files, {
+      tools: [tool],
+      missing: null,
+      stamp: "",
+    });
 
     expect(outcome.files[0]?.content).toBe(COMPOSED);
-    expect(outcome.problem).toBe("src/pets.ts was not formatted: Biome exited with 3");
+    expect(outcome.problem).toBe("src/pets.ts was not formatted with Biome: it exited with 3");
   });
 
   it("names the project's formatter even when no file needs formatting", async () => {
-    const tool = { name: "Biome" as const, version: "2.5.14", bin: "/nowhere/biome" };
+    const tool = {
+      name: "Biome" as const,
+      version: "2.5.14",
+      command: { program: "/nowhere/biome", prefix: [] },
+    };
 
-    const outcome = await formatProjectFiles("/nowhere", [], { tools: [tool], missing: null });
+    const outcome = await formatProjectFiles("/nowhere", [], {
+      tools: [tool],
+      missing: null,
+      stamp: "",
+    });
 
     expect(outcome).toEqual({ files: [], formattedWith: ["Biome 2.5.14"], problem: null });
   });
@@ -113,7 +126,11 @@ describe("formatting files as the project formats its code", () => {
   it("leaves the files as composed in a project with no formatter", async () => {
     const files = [{ path: "src/pets.ts", content: COMPOSED }];
 
-    const outcome = await formatProjectFiles("/nowhere", files, { tools: [], missing: null });
+    const outcome = await formatProjectFiles("/nowhere", files, {
+      tools: [],
+      missing: null,
+      stamp: "",
+    });
 
     expect(outcome).toEqual({ files, formattedWith: [], problem: null });
   });
@@ -122,7 +139,7 @@ describe("formatting files as the project formats its code", () => {
     const files = [{ path: "src/pets.ts", content: COMPOSED }];
     const missing = "Biome is configured but not installed";
 
-    const outcome = await formatProjectFiles("/nowhere", files, { tools: [], missing });
+    const outcome = await formatProjectFiles("/nowhere", files, { tools: [], missing, stamp: "" });
 
     expect(outcome.problem).toBe(missing);
     expect(outcome.files[0]?.content).toBe(COMPOSED);

@@ -12,7 +12,9 @@ import { POST } from "@/app/api/upload-lab/route"
 import {
   chartScale,
   chartSpan,
+  grownSpan,
   linePath,
+  startSpan,
   stepPath,
   timeTicks,
 } from "@/site/upload-lab/lab-geometry"
@@ -95,6 +97,15 @@ describe("the lab's chart", () => {
     expect(timeTicks(2500, 1100)).toEqual([0, 500, 1000, 1500, 2000, 2500])
   })
 
+  it("spans a run from its start with room past the pace's time, and only ever widens", () => {
+    expect(startSpan(2000)).toBe(2500)
+    expect(startSpan(8000)).toBe(10_000)
+    expect(grownSpan(2500, 2020)).toBe(2500)
+    expect(grownSpan(2500, 2400)).toBe(3000)
+    expect(grownSpan(10_000, 8030)).toBe(10_000)
+    expect(grownSpan(3000, 100)).toBe(3000)
+  })
+
   it("draws the reports as steps and the smoothed moves as a line, within the box", () => {
     const scale = chartScale(BOX, 1000)
 
@@ -135,6 +146,8 @@ describe("the run the lab shows at rest", () => {
     expect(smoothed.at(-1)?.[1]).toBe(1)
     expect(reported.every(([ms], at) => at === 0 || ms > (reported[at - 1]?.[0] ?? 0))).toBe(true)
     expect(answeredAt).toBeGreaterThan(reported.at(-1)?.[0] ?? Number.POSITIVE_INFINITY)
+    expect(RECORDED_RUN.span).toBe(startSpan((RECORDED_RUN.size / RECORDED_RUN.pace) * 1000))
+    expect(RECORDED_RUN.span).toBeGreaterThan(answeredAt ?? Number.POSITIVE_INFINITY)
   })
 
   it("never shows the smoothed bar ahead of what the browser had reported, nor going back", () => {

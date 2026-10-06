@@ -34,6 +34,43 @@ export function chartSpan(lastMs: number): number {
   return Math.max(1000, Math.ceil(lastMs / unit) * unit)
 }
 
+/* Room past the time a run should take: its answer comes a little after the pace's time. */
+const HEADROOM = 1.25
+
+/**
+ * The time a chart spans as a run starts: the time the pace takes to read
+ * the file, and a quarter more, so the answer that comes a little after it
+ * still falls inside and the axis never moves when the run ends.
+ *
+ * @param expectedMs - How long the pace takes to read the file, in ms
+ * @returns The span, in ms
+ * @example
+ * ```ts
+ * startSpan(2000) // 2500
+ * ```
+ */
+export function startSpan(expectedMs: number): number {
+  return chartSpan(expectedMs * HEADROOM)
+}
+
+/**
+ * The time a chart spans once a run has got to `neededMs`: the same span
+ * while the run keeps clear of its right edge, a wider one — never a
+ * narrower — once it comes near, as an upload slower than its pace does.
+ *
+ * @param span - The span so far, in ms
+ * @param neededMs - The run's latest moment, in ms
+ * @returns The span, in ms
+ * @example
+ * ```ts
+ * grownSpan(2500, 1800) // 2500
+ * grownSpan(2500, 2400) // 3000
+ * ```
+ */
+export function grownSpan(span: number, neededMs: number): number {
+  return neededMs > span * 0.92 ? Math.max(span, chartSpan(neededMs * HEADROOM)) : span
+}
+
 /**
  * Place a run's moments in a chart's box.
  *

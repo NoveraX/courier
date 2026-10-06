@@ -172,6 +172,38 @@ jobs:
         run: npm run bundle
         working-directory: examples/expo
 
+  # Studio's flows in a real browser: each test file starts Studio from its
+  # command line over its own copy of a fixture project, and drives the pages
+  # as a developer does. A failure keeps its trace and screenshots.
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Studio in a browser
+        run: npm run test:e2e
+
+      - name: Keep what a failure left
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: studio-e2e
+          path: node_modules/.cache/courier-e2e/
+          retention-days: 7
+
   # The commit-msg hook runs only where it is installed and can be skipped, so
   # the same rules run here. A pull request is checked from its merge base; a
   # push, from the last release tag, so a cancelled or skipped run leaves
@@ -229,7 +261,7 @@ jobs:
         working-directory: docs
 
   release:
-    needs: [ci, platforms, react-native]
+    needs: [ci, platforms, react-native, browser]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     concurrency:

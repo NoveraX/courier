@@ -10,6 +10,8 @@
  */
 
 import type { Server } from "node:http";
+
+import type { HeartbeatConfig } from "@noverax/courier/internal";
 import type { MockRegistry } from "../registry";
 import type { MockHistoryEntry } from "../types";
 import type { PrefixMapping } from "./prefix-route-types";
@@ -24,6 +26,8 @@ export interface WSUpgradeOptions {
   getScenarioState: () => string;
   allowedOrigins?: readonly string[] | undefined;
   maxPayload?: number | undefined;
+  /** How often each socket is pinged, and how long its pong may take */
+  heartbeat?: HeartbeatConfig | undefined;
   /** Told of each channel subscription as it opens and ends — Studio's mock logs */
   hooks?: RequestHooks | undefined;
 }
@@ -47,6 +51,7 @@ export function createWSUpgrade(options: WSUpgradeOptions): MockWSHandler {
     getScenarioState: options.getScenarioState,
     allowedOrigins: options.allowedOrigins,
     maxPayload: options.maxPayload,
+    heartbeat: options.heartbeat,
     hooks: options.hooks,
   });
 }

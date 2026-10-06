@@ -40,6 +40,11 @@ export { mergeProxyPath, type ResolveOrigin, resolveProxyPath } from "../proxy-c
 export { type ConnectionState, createConnectionState } from "../realtime/connection-state";
 export { describeFailure, type StreamFailure } from "../realtime/describe-failure";
 export { SSE_CONTROL_EVENTS } from "../realtime/sse/control-events";
+export {
+  createHeartbeat,
+  type Heartbeat,
+  type HeartbeatConfig,
+} from "../realtime/ws/heartbeat";
 export { decodeMessage, encodeMessage, type WSMessage } from "../realtime/ws/ws-protocol";
 export { buildDirectWSUrl, parseWSTopic, type TopicEndpoint } from "../realtime/ws-address";
 export { getSourcesGeneration, onSourcesChange } from "../sources";

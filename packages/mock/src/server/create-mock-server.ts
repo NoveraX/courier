@@ -132,6 +132,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
       getScenarioState: scenario.get,
       allowedOrigins: config?.ws?.allowedOrigins,
       maxPayload: config?.ws?.maxPayload,
+      heartbeat: config?.ws?.heartbeat,
       hooks: requestHooks,
     },
     config?.strictPort,

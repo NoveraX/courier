@@ -13,6 +13,7 @@ import type { WSMessage } from "@noverax/courier/internal";
 import type { WebSocket as NodeWebSocket, WebSocketServer } from "ws";
 import { parseMessage } from "../ws-handler/message-router";
 import { generateConnectionId } from "../ws-handler/protocol";
+import { keepAlive } from "../ws-keep-alive";
 import { sendFrame } from "./frames";
 import { handleMessage, handleUnsubscribe } from "./message";
 import { handleSubscribe } from "./subscribe";
@@ -76,9 +77,11 @@ export function activateProxySocket(
     subscriptions: new Map(),
     opening: new Map(),
   };
+  const alive = keepAlive(ws, config.heartbeat);
   ws.on("message", (raw: Buffer | string) => {
     const message = parseMessage(ws, raw);
-    if (message) route(socket, message);
+    if (message?.type === "pong") alive.receivedPong();
+    else if (message) route(socket, message);
   });
   ws.on("close", () => {
     for (const [topic, subscription] of [...socket.subscriptions]) {

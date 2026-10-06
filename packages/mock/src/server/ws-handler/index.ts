@@ -2,6 +2,7 @@ import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 
 import { logger } from "@noverax/courier";
+import type { HeartbeatConfig } from "@noverax/courier/internal";
 import type { WebSocketServer as WSServerType } from "ws";
 import type { MockRegistry } from "../../registry";
 import type { MockHistoryEntry } from "../../types";
@@ -37,6 +38,8 @@ export interface WSHandlerConfig {
   allowedOrigins?: readonly string[] | undefined;
   /** Maximum payload size in bytes (default 1 MiB) */
   maxPayload?: number | undefined;
+  /** How often each socket is pinged, and how long its pong may take (default 25 s and 10 s) */
+  heartbeat?: HeartbeatConfig | undefined;
 }
 
 /** What `createMockWSHandler` hands the server: the upgrade route, and its shutdown */
@@ -74,6 +77,7 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
     getScenarioState: config.getScenarioState,
     connections,
     hooks: config.hooks,
+    heartbeat: config.heartbeat,
   };
   const maxPayload = config.maxPayload ?? DEFAULT_MAX_PAYLOAD;
 
@@ -148,6 +152,7 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
         hooks: config.hooks,
         registry: connections,
         scenarioState: config.getScenarioState(),
+        heartbeat: config.heartbeat,
       });
     });
   }

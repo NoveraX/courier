@@ -89,6 +89,7 @@ export const RECORDED_RUN: LabRun = {
     [1894, 1],
   ],
   elapsed: 2017,
+  span: 2500,
   answeredAt: 2017,
   received: 8388814,
   error: null,

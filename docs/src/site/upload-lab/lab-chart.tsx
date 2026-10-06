@@ -2,7 +2,7 @@
 
 import { useId } from "react"
 
-import { chartScale, chartSpan, linePath, stepPath, timeTicks } from "./lab-geometry"
+import { chartScale, linePath, stepPath, timeTicks } from "./lab-geometry"
 import { useElementWidth } from "./use-element-width"
 import type { LabRun } from "./use-upload-lab"
 
@@ -25,18 +25,7 @@ export function LabChart({ run }: { run: LabRun }) {
   /* React's ids carry characters a `url(#…)` reference may not take in every browser. */
   const area = `lab-area-${useId().replace(/[^\w-]/g, "")}`
   const height = width < 520 ? 220 : 250
-  /* Spanned from the start for the time the pace takes, so the axis holds still while the upload runs. */
-  const expected = (run.size / run.pace) * 1000
-  const last = Math.max(
-    expected,
-    run.phase === "sending" ? run.elapsed : (run.answeredAt ?? 0),
-    run.reported.at(-1)?.[0] ?? 0,
-    run.smoothed.at(-1)?.[0] ?? 0
-  )
-  const scale = chartScale(
-    { width, height, left: 44, right: 14, top: 18, bottom: 30 },
-    chartSpan(last)
-  )
+  const scale = chartScale({ width, height, left: 44, right: 14, top: 18, bottom: 30 }, run.span)
   const line = linePath(run.smoothed, scale, false)
   const summary = `Share sent over time: the browser reported ${run.reported.length} times, smoothProgress moved the bar ${run.smoothed.length} times.`
   return (

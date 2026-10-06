@@ -4,6 +4,7 @@ import { isHTTPError, smoothProgress, type UploadProgress } from "@noverax/couri
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { labCaller } from "./lab-api"
+import { grownSpan, startSpan } from "./lab-geometry"
 import { LAB_PACE_HEADER, type LabPace, type LabSize, MB } from "./lab-settings"
 import type { LabPoint } from "./lab-stats"
 
@@ -19,8 +20,10 @@ export interface LabRun {
   reported: readonly LabPoint[]
   /** Each move smoothProgress made of the same reports. */
   smoothed: readonly LabPoint[]
-  /** The ms since the send, while it runs; the run's length once over. */
+  /** The ms since the send, while it runs; when the site answered, once over. */
   elapsed: number
+  /** The time the chart spans, in ms: set as the run starts, grown only while it runs. */
+  span: number
   /** When the site's answer came, in ms. */
   answeredAt: number | null
   /** The bytes the site read. */
@@ -71,14 +74,19 @@ export function useUploadLab(recorded: LabRun) {
     const smoothed: LabPoint[] = []
     let endedAt: number | null = null
     let failed = false
+    let span = startSpan((size / pace) * 1000)
     const draw = () => {
       if (controller.signal.aborted) return
       const now = performance.now()
+      /* Once the run is over its clock stops, so nothing past its end moves the axis. */
+      const elapsed = (endedAt ?? now) - started
+      span = grownSpan(span, Math.max(elapsed, smoothed.at(-1)?.[0] ?? 0))
       setRun((current) => ({
         ...current,
         reported: [...reported],
         smoothed: [...smoothed],
-        elapsed: now - started,
+        elapsed,
+        span,
       }))
       /* The smoothed bar eases on past the answer: draw until it rests, for two seconds at most. */
       const resting =
@@ -95,6 +103,7 @@ export function useUploadLab(recorded: LabRun) {
       reported: [],
       smoothed: [],
       elapsed: 0,
+      span,
       answeredAt: null,
       received: null,
       error: null,

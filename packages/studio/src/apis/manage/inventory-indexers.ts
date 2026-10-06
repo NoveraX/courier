@@ -54,3 +54,34 @@ export function endpointHashes(content: string | undefined): Record<string, stri
     hashes[name] = computeHash(code);
   return hashes;
 }
+
+/* An endpoint's code as the generator writes it starts with `endpoint.<method>("<path>")`. */
+const ROUTE =
+  /\bendpoint\s*\.\s*(get|head|options|query|post|put|patch|delete)\s*\(\s*(["'`])([^"'`\\]*)\2/;
+
+/**
+ * Read each endpoint's method and path from its code, for an endpoint the
+ * specification no longer lists: the path relative to the group's prefix,
+ * as the specification's endpoints are listed. An endpoint whose code
+ * starts otherwise is left out.
+ *
+ * @param content - The file, or `undefined` when there is none
+ * @returns The method and path of each endpoint whose code shows them
+ * @example
+ * ```ts
+ * endpointRoutes('  listCustomers: endpoint.get("customers").response<Customer[]>(),');
+ * // → { listCustomers: { httpMethod: "get", path: "/customers" } }
+ * ```
+ */
+export function endpointRoutes(
+  content: string | undefined,
+): Record<string, { httpMethod: string; path: string }> {
+  const routes: Record<string, { httpMethod: string; path: string }> = {};
+  for (const [name, code] of Object.entries(extractEndpoints(content ?? ""))) {
+    const route = ROUTE.exec(code);
+    if (route?.[1] === undefined) continue;
+    const path = route[3] ?? "";
+    routes[name] = { httpMethod: route[1], path: path.startsWith("/") ? path : `/${path}` };
+  }
+  return routes;
+}

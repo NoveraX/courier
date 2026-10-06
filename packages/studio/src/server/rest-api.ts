@@ -13,11 +13,12 @@ import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
 import { createOriginGuard } from "./origin-guard";
+import type { RouteRequest } from "./route-types";
 import { registerSessionRoutes, type SessionRouteDeps } from "./session-routes";
 import { registerStorageRoutes, type StorageRouteDeps } from "./storage-space/storage-routes";
 import type { StudioOriginPolicy } from "./studio-origin";
 import type { StudioToken } from "./studio-token";
-import { tokenGuard } from "./token-guard";
+import { TOKEN_HEADER, tokenGuard } from "./token-guard";
 
 /** What the REST API's routes read and change in the running Studio. */
 export interface RestApiDeps {
@@ -70,7 +71,9 @@ export function registerRestApi(
     res.json({ status: "ok" });
   });
 
-  registerApisRoutes(app, apis);
+  /* A demo's visitor has Studio read no file of its own and no private host. */
+  const isDemoVisitor = (req: RouteRequest) => !token.matches(req.get?.(TOKEN_HEADER));
+  registerApisRoutes(app, demo ? { ...apis, isDemoVisitor } : apis);
   registerSessionRoutes(app, sessions);
   registerStorageRoutes(app, storage);
   registerMockDeclareRoutes(app, mocksEdit);

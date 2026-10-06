@@ -7,14 +7,19 @@
  */
 import { randomBytes } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { request } from "node:http";
+import { createServer as createHttpServer, request } from "node:http";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createStudioServer } from "../src/server/create-studio-server";
-import { DEMO_SHARED_REFUSAL, DEMO_WRITE_REFUSAL } from "../src/server/demo/demo-refusals";
+import {
+  DEMO_FILE_REFUSAL,
+  DEMO_SHARED_REFUSAL,
+  DEMO_WRITE_REFUSAL,
+} from "../src/server/demo/demo-refusals";
 import { DEMO_MAX_MESSAGE_BYTES } from "../src/server/demo/demo-visitors";
 import { TOKEN_HEADER } from "../src/server/token-guard";
 import type { StudioServer } from "../src/server/types";
@@ -101,10 +106,25 @@ function command(page: Socket, sent: Record<string, unknown>): Promise<unknown> 
   return page.timeout(5_000).emitWithAck("mock:command", { serverId: "shop", ...sent });
 }
 
-async function post(path: string, presented?: string): Promise<Response> {
+async function post(path: string, presented?: string, body: unknown = {}): Promise<Response> {
   const headers: Record<string, string> = { "content-type": "application/json", origin: url };
   if (presented !== undefined) headers[TOKEN_HEADER] = presented;
-  return fetch(`${url}${path}`, { method: "POST", headers, body: "{}" });
+  return fetch(`${url}${path}`, { method: "POST", headers, body: JSON.stringify(body) });
+}
+
+/* A specification served on this machine, as the demo's own services are. */
+async function localSpec(): Promise<{ url: string; close: () => Promise<void> }> {
+  const spec = { openapi: "3.0.0", info: { title: "Local", version: "1" }, paths: {} };
+  const server = createHttpServer((_req, res) => {
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify(spec));
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as AddressInfo;
+  return {
+    url: `http://127.0.0.1:${port}/openapi.json`,
+    close: () => new Promise((resolve) => server.close(() => resolve())),
+  };
 }
 
 describe("a page of the demo", () => {
@@ -251,6 +271,32 @@ describe("the demo's API", () => {
     expect(statuses.slice(0, 60).every((status) => status === 200)).toBe(true);
     expect(statuses[60]).toBe(429);
     expect((await post("/api/sessions/list", token())).status).toBe(200);
+  });
+});
+
+describe("a specification a visitor imports", () => {
+  it("is never read from a file of the project, which the host may read", async () => {
+    const asked = { source: "file", content: "courier.config.ts" };
+
+    const visitor = await post("/api/apis/parse", undefined, asked);
+    const host = await post("/api/apis/parse", token(), asked);
+
+    expect(visitor.status).toBe(403);
+    expect(await visitor.json()).toEqual({ error: DEMO_FILE_REFUSAL, code: "STUDIO_DEMO_REFUSED" });
+    expect(host.status).toBe(400);
+  });
+
+  it("is never fetched from this machine, from which the host may fetch it", async () => {
+    const spec = await localSpec();
+    const asked = { source: "url", content: spec.url };
+
+    const visitor = await post("/api/apis/parse", undefined, asked);
+    const host = await post("/api/apis/parse", token(), asked);
+    await spec.close();
+
+    expect(visitor.status).toBe(400);
+    expect(((await visitor.json()) as { error: string }).error).toContain("public internet only");
+    expect(host.status).toBe(200);
   });
 });
 

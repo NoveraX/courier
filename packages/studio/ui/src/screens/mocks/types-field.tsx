@@ -19,8 +19,9 @@ interface TypesFieldProps {
 /**
  * The types of file an upload may hold, typed as `<input accept>` lists
  * them — `image/*, .pdf`. What is typed is sent once the field is let go or
- * Enter is pressed, and only when it names other types; Escape puts back
- * the types in force.
+ * Enter is pressed, and only when it names other types than the field held
+ * as typing began, so types set elsewhere meanwhile — by Stop, say — are
+ * not put back by a field merely left; Escape puts back the types in force.
  *
  * @param props - The types in force, the placeholder and label, and what follows a settled change
  * @returns The field
@@ -37,12 +38,13 @@ export function TypesField({
   onCommit,
   className,
 }: TypesFieldProps): React.ReactNode {
-  const [draft, setDraft] = useState<string | null>(null);
+  /* What is typed, and the types the field held as typing began: only a change typed is sent. */
+  const [draft, setDraft] = useState<{ text: string; from: string } | null>(null);
   const settle = (): void => {
     if (draft === null) return;
     setDraft(null);
-    const types = typesOf(draft);
-    if (typesText(types) !== typesText(value)) onCommit(types);
+    const types = typesOf(draft.text);
+    if (typesText(types) !== draft.from) onCommit(types);
   };
   return (
     <input
@@ -51,9 +53,12 @@ export function TypesField({
       placeholder={placeholder}
       spellCheck={false}
       disabled={disabled}
-      value={draft ?? typesText(value)}
-      onFocus={() => setDraft(typesText(value))}
-      onChange={(e) => setDraft(e.target.value)}
+      value={draft?.text ?? typesText(value)}
+      onFocus={() => setDraft({ text: typesText(value), from: typesText(value) })}
+      onChange={(e) => {
+        const text = e.target.value;
+        setDraft((typing) => ({ text, from: typing?.from ?? typesText(value) }));
+      }}
       onBlur={settle}
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();

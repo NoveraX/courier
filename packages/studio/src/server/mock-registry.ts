@@ -20,6 +20,8 @@ export interface MockEntry {
   definition: unknown;
   /** The fingerprint of its declaration and what that uses, when Studio could read one */
   fingerprint?: string;
+  /** The name under `sources` of the config's source it serves, when it serves one the config declares */
+  source?: string;
 }
 
 export interface MockRegistryEvents {
@@ -33,9 +35,14 @@ export interface MockRegistry {
    * Apply freshly loaded mocks, by key — diffs against the previous snapshot.
    * A mock whose fingerprint is what it was is unchanged, though the load
    * made its definition anew; without fingerprints on both sides, any other
-   * definition object is a change.
+   * definition object is a change. `sources` names, by mock key, the
+   * config's source each mock serves.
    */
-  syncFromMocks(mocks: Record<string, unknown>, fingerprints?: ReadonlyMap<string, string>): void;
+  syncFromMocks(
+    mocks: Record<string, unknown>,
+    fingerprints?: ReadonlyMap<string, string>,
+    sources?: ReadonlyMap<string, string>,
+  ): void;
   /** Read the current snapshot — used by tests and the UI initial state. */
   getEntries(): MockEntry[];
   /**
@@ -72,8 +79,9 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
     syncFromMocks(
       mocks: Record<string, unknown>,
       fingerprints?: ReadonlyMap<string, string>,
+      sources?: ReadonlyMap<string, string>,
     ): void {
-      const next = declaredMocks(mocks, fingerprints);
+      const next = declaredMocks(mocks, fingerprints, sources);
       const seen = new Set<string>();
 
       for (const entry of next) {
@@ -113,12 +121,19 @@ export function createMockRegistry(initialEvents?: MockRegistryEvents): MockRegi
 function declaredMocks(
   mocks: Record<string, unknown>,
   fingerprints: ReadonlyMap<string, string> | undefined,
+  sources: ReadonlyMap<string, string> | undefined,
 ): MockEntry[] {
   const out: MockEntry[] = [];
   for (const [key, definition] of Object.entries(mocks)) {
     if (definition === undefined || definition === null) continue;
     const fingerprint = fingerprints?.get(key);
-    out.push(fingerprint === undefined ? { key, definition } : { key, definition, fingerprint });
+    const source = sources?.get(key);
+    out.push({
+      key,
+      definition,
+      ...(fingerprint !== undefined && { fingerprint }),
+      ...(source !== undefined && { source }),
+    });
   }
   return out;
 }

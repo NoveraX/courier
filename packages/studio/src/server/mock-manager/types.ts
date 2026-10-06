@@ -25,6 +25,8 @@ export interface ServerState {
   /** The `courier.mocks.*` the mock's worker loads it from. */
   mocksFile: string;
   mockKey: string;
+  /** The name under `sources` of the config's source it serves, when it serves one the config declares. */
+  source?: string | undefined;
   relativePath: string;
   configuredPort: number;
   /** Whether the config named `configuredPort`, which then holds exactly, or Studio assigned it. */

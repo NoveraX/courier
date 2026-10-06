@@ -1,12 +1,12 @@
 /**
  * What a load's mocks do to the mock manager: a file that loaded replaces the
- * mocks, one that did not leaves them as they were and says why, and a
- * project without one declares none.
+ * mocks, each with the config's source it serves, one that did not leaves
+ * them as they were and says why, and a project without one declares none.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applyLoadedMocks } from "../src/server/apply-loaded-mocks";
-import type { LoadedCourierMocks } from "../src/server/config-loader";
+import type { LoadedCourierConfig, LoadedCourierMocks } from "../src/server/config-loader";
 
 const ROOT = "/p";
 const FILE = "/p/courier.mocks.ts";
@@ -14,8 +14,12 @@ const FILE = "/p/courier.mocks.ts";
 function consumers() {
   const calls: string[] = [];
   const mockRegistry = {
-    syncFromMocks: vi.fn((mocks: Record<string, unknown>) =>
-      calls.push(`sync ${Object.keys(mocks).join(",")}`),
+    syncFromMocks: vi.fn(
+      (
+        mocks: Record<string, unknown>,
+        _fingerprints?: ReadonlyMap<string, string>,
+        _sources?: ReadonlyMap<string, string>,
+      ) => calls.push(`sync ${Object.keys(mocks).join(",")}`),
     ),
     getEntries: vi.fn(() => []),
     attach: vi.fn(() => () => {}),
@@ -28,8 +32,14 @@ function consumers() {
   return { calls, mockRegistry, mockManager };
 }
 
-function mocks(overrides: Partial<LoadedCourierMocks>): LoadedCourierMocks {
-  return { file: FILE, entries: {}, contentHash: "abc", error: null, ...overrides };
+function mocks(
+  overrides: Partial<LoadedCourierMocks>,
+  sources: Record<string, unknown> = {},
+): Pick<LoadedCourierConfig, "mocks" | "config"> {
+  return {
+    mocks: { file: FILE, entries: {}, contentHash: "abc", error: null, ...overrides },
+    config: { sources } as LoadedCourierConfig["config"],
+  };
 }
 
 beforeEach(() => {
@@ -99,5 +109,20 @@ describe("applyLoadedMocks", () => {
     applyLoadedMocks(mocks({ file: null, contentHash: null }), target, ROOT);
 
     expect(target.calls).toEqual(["status null null", "sync "]);
+  });
+
+  it("names the config's source each mock serves, and none for a mock of another API", () => {
+    const target = consumers();
+    const shop = { name: "shop" };
+    const elsewhere = { name: "elsewhere" };
+
+    applyLoadedMocks(
+      mocks({ entries: { shopMock: { source: shop }, other: { source: elsewhere } } }, { shop }),
+      target,
+      ROOT,
+    );
+
+    const [, , served] = target.mockRegistry.syncFromMocks.mock.calls[0] ?? [];
+    expect(served).toEqual(new Map([["shopMock", "shop"]]));
   });
 });

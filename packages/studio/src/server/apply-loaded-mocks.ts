@@ -1,8 +1,9 @@
 import { createLogger } from "@noverax/courier";
-import type { LoadedCourierMocks } from "./config-loader";
+import type { LoadedCourierConfig } from "./config-loader";
 import { describeError } from "./describe-error";
 import type { LifecycleCoordinator } from "./mock-manager";
 import type { MockRegistry } from "./mock-registry";
+import { isRecord } from "./mocks-edit/is-record";
 
 const log = createLogger("Studio");
 
@@ -19,12 +20,12 @@ export interface MocksConsumers {
  * one keeps serving — and says why on each, so the fix is one save away. A
  * project with no mocks file declares no mocks, so deleting it removes them.
  *
- * @param mocks - The mocks part of a config load
+ * @param loaded - The mocks a config load produced, and the config whose sources they serve
  * @param consumers - The registry the mocks are synced into, and the manager told of the file
  * @param root - The project root, which the reason a page is shown names paths relative to
  */
 export function applyLoadedMocks(
-  mocks: LoadedCourierMocks,
+  { mocks, config }: Pick<LoadedCourierConfig, "mocks" | "config">,
   consumers: MocksConsumers,
   root: string,
 ): void {
@@ -38,5 +39,21 @@ export function applyLoadedMocks(
     return;
   }
   consumers.mockManager.setMocksFile({ file: mocks.file, error: null });
-  consumers.mockRegistry.syncFromMocks(mocks.entries, mocks.fingerprints);
+  const served = servedSources(mocks.entries, config.sources);
+  consumers.mockRegistry.syncFromMocks(mocks.entries, mocks.fingerprints, served);
+}
+
+/* Which of the config's sources each mock serves: the mocks file and the
+   config load in one graph, so a mock holds the very source object. */
+function servedSources(
+  entries: Record<string, unknown>,
+  sources: Record<string, unknown>,
+): Map<string, string> {
+  const names = new Map<unknown, string>(Object.entries(sources).map(([name, api]) => [api, name]));
+  const served = new Map<string, string>();
+  for (const [key, entry] of Object.entries(entries)) {
+    const name = isRecord(entry) ? names.get(entry.source) : undefined;
+    if (name !== undefined) served.set(key, name);
+  }
+  return served;
 }

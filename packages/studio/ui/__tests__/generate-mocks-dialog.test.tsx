@@ -80,10 +80,12 @@ function Wizard({
   session,
   close,
   availability = { kind: "sources", blocked: null },
+  mocked = new Map(),
 }: {
   session: WizardSession;
   close: () => void;
   availability?: SourceAvailability;
+  mocked?: ReadonlyMap<string, readonly string[]>;
 }): React.ReactElement {
   const state = useSyncExternalStore(session.subscribe, session.getState);
   const wizard: MockWizardHandle = {
@@ -93,6 +95,7 @@ function Wizard({
     connected: true,
     availability,
     sources: SOURCES,
+    mocked,
     errors: new Map(),
     close,
     toggleSource: (source) => session.dispatch({ type: "toggleSource", source, declaredKeys: [] }),
@@ -252,6 +255,22 @@ describe("generating a mock", () => {
     );
 
     expect(screen.getByRole("alert").textContent).toContain("courier.config.ts does not load");
+  });
+
+  it("marks a source a mock already serves, naming the mock", () => {
+    render(
+      <Wizard
+        session={wizardSession()}
+        close={vi.fn()}
+        mocked={new Map([["shop", ["shopMock"]]])}
+      />,
+    );
+
+    const mark = screen.getByText(/already mocked as/);
+    expect(mark.textContent).toBe("already mocked as shopMock");
+    expect(mark.getAttribute("title")).toBe(
+      "courier.mocks.ts already mocks it as shopMock; a new mock serves it too",
+    );
   });
 });
 

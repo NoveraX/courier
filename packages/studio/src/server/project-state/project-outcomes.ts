@@ -104,9 +104,10 @@ export function createProjectOutcomes(
     }
   }
 
-  function runMocks({ mocks }: LoadedCourierConfig): void {
+  function runMocks(loaded: LoadedCourierConfig): void {
+    const { mocks } = loaded;
     try {
-      applyLoadedMocks(mocks, deps.mocks, deps.root);
+      applyLoadedMocks(loaded, deps.mocks, deps.root);
     } catch (err) {
       log.error(`Studio could not run the mocks of ${mocks.file ?? "courier.mocks.ts"}`, err);
     }

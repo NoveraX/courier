@@ -54,12 +54,12 @@ export function createDescriptionApplier(ctx: ApplyContext): (entry: MockEntry) 
     const { description } = described;
     const state = ctx.servers.get(entry.key);
     if (!state) {
-      registration.registerDeclared(entry.key, location, description);
+      registration.registerDeclared(entry.key, location, description, entry.source);
       if (description.autoStart) await ops.startServer(entry.key);
       return;
     }
     const startedAtLaunch = state.autoStart;
-    registration.updateDeclared(entry.key, location, description);
+    registration.updateDeclared(entry.key, location, description, entry.source);
     if (ctx.isAlive(entry.key)) await ops.restartServer(entry.key);
     else if (description.autoStart && !startedAtLaunch) await ops.startServer(entry.key);
   };

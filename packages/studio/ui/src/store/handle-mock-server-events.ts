@@ -76,6 +76,7 @@ function reconnectServer(
        it runs, the one it will use and none while it does not. */
     port: optNum(event.port) ?? existing.port,
     url: optStr(event.url) ?? existing.url,
+    source: optStr(event.source),
     lastError: optStr(event.lastError),
     startedAt: optNum(event.startedAt) ?? existing.startedAt,
     routeCount: num(event.routeCount),
@@ -99,6 +100,7 @@ function registerNewServer(store: Store, serverId: string, event: MockEvent): vo
   store.addServer({
     serverId,
     name: str(event.name, serverId),
+    source: optStr(event.source),
     port: num(event.port),
     url: str(event.url),
     status: "connected",

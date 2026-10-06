@@ -126,4 +126,33 @@ describe("createHeartbeat", () => {
 
     hb.stop();
   });
+
+  it("fires onTimeout for a silent client when the timeout outlasts the interval", () => {
+    const sendPing = vi.fn();
+    const onTimeout = vi.fn();
+    const hb = createHeartbeat(sendPing, onTimeout, { intervalMs: 1000, timeoutMs: 3000 });
+
+    hb.start();
+    vi.advanceTimersByTime(1000 + 3000);
+
+    expect(sendPing).toHaveBeenCalledTimes(4);
+    expect(onTimeout).toHaveBeenCalledOnce();
+
+    hb.stop();
+  });
+
+  it("keeps a client that answers when the timeout outlasts the interval", () => {
+    const onTimeout = vi.fn();
+    const hb = createHeartbeat(() => hb.receivedPong(), onTimeout, {
+      intervalMs: 1000,
+      timeoutMs: 3000,
+    });
+
+    hb.start();
+    vi.advanceTimersByTime(20_000);
+
+    expect(onTimeout).not.toHaveBeenCalled();
+
+    hb.stop();
+  });
 });

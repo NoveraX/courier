@@ -8,6 +8,7 @@
     "examples/*/courier.config.ts",
     "examples/demo-shop/courier.mocks.ts"
   ],
+  "exclude": ["examples/expo"],
   "compilerOptions": {
     "paths": {
       "@noverax/courier": ["./packages/core/src/index.ts"],

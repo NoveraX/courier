@@ -68,6 +68,29 @@ describe("formatting files as the project formats its code", () => {
     expect(outcome.files[0]?.content).toContain("import { z } from 'zod';");
   });
 
+  it("formats until the text stops changing, where one pass of Biome does not settle it", async () => {
+    const root = project({
+      "package.json": "{}",
+      "biome.json": JSON.stringify({ formatter: { indentStyle: "space", lineWidth: 100 } }),
+    });
+    /* As the generator wrote an endpoint of OpenAI's specification: a comment inside a type argument. */
+    const composed = [
+      'import { z } from "zod";',
+      'import { LiveCallAcceptRequestSchema, type LiveCallAcceptRequest } from "./schemas";',
+      "",
+      "export const live = {",
+      '  acceptLiveSession: endpoint.post(":session_id/accept").variables<LiveCallAcceptRequest & { /** Opaque Live session identifier from the creation response or incoming-call webhook. Preserve the returned value unchanged, including its prefix. */ session_id: string }>(LiveCallAcceptRequestSchema.extend({ session_id: z.string() })),',
+      "};",
+      "",
+    ].join("\n");
+
+    const once = await formatProjectFiles(root, [{ path: "src/live.ts", content: composed }]);
+    const again = await formatProjectFiles(root, once.files);
+
+    expect(once.problem).toBeNull();
+    expect(again.files[0]?.content).toBe(once.files[0]?.content);
+  });
+
   it("keeps the text of a file a tool fails on, and says which and why", async () => {
     const root = project({ "package.json": "{}", "broken.cjs": "process.exit(3);" });
     const tool = { name: "Biome" as const, version: "0.0.0", bin: join(root, "broken.cjs") };

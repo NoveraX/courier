@@ -3,6 +3,7 @@ import { Check, Loader2 } from "lucide-react";
 import type { ReuploadState } from "@/apis/parse-raw-spec";
 import { parseRawSpec } from "@/apis/parse-raw-spec";
 import type { UseManageReturn } from "@/apis/use-manage";
+import type { FilePlanSummary } from "@/features/apis/types-file-plan";
 import { cn } from "@/lib/utils";
 
 const BUTTON =
@@ -16,12 +17,22 @@ function changesOf(manage: UseManageReturn): number {
   return count(manage.toAdd) + count(manage.toRemove);
 }
 
+const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+
+/* What applying the plan does to the files, as the note after it says it was done. */
+function planNote(plan: FilePlanSummary | undefined): string {
+  const written = plan?.writes.filter((file) => file.action !== "unchanged").length ?? 0;
+  const removed = plan?.removals.length ?? 0;
+  const writes = `${plural(written, "file", "files")} to write`;
+  return removed > 0 ? `${writes}, ${removed} to remove` : writes;
+}
+
 function noteOf(manage: UseManageReturn): string {
   if (manage.step === "reupload") return "The spec, again";
   if (manage.step === "inventory")
-    return `${changesOf(manage)} change${changesOf(manage) === 1 ? "" : "s"} selected`;
+    return `${plural(changesOf(manage), "change", "changes")} selected`;
   if (manage.step === "preview" || manage.step === "applying")
-    return `${manage.consent?.plan.writes.length ?? 0} files touched`;
+    return planNote(manage.consent?.plan);
   return "";
 }
 

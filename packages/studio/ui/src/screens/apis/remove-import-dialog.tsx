@@ -1,50 +1,12 @@
-import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
-import type { RemovalConfigNotes } from "@/apis/client-file-changes";
 import type { UseRemoveImportReturn } from "@/apis/use-remove-import";
 import { DialogFrame } from "@/design/dialog-frame";
 import { FilePlanSections } from "./file-plan-sections";
-
-function ConfigNotes({
-  name,
-  notes,
-}: {
-  name: string;
-  notes: RemovalConfigNotes;
-}): React.ReactNode {
-  const config = notes.configFile ?? "courier.config";
-  if (notes.configImports.length === 0 && !notes.importDeclared) return null;
-  return (
-    <section aria-label={config} className="flex flex-col gap-2 rounded-panel bg-warn-dim p-3">
-      <h4 className="m-0 flex items-center gap-1.5 text-small font-strong text-warn">
-        <AlertTriangle aria-hidden="true" className="size-3.25" />
-        Studio leaves {config} as it is
-      </h4>
-      {notes.configImports.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <p className="m-0 text-small text-fg-muted">
-            {config} imports these files. Once they are gone it stops loading, until you remove
-            those imports too:
-          </p>
-          {notes.configImports.map((path) => (
-            <span key={path} className="font-mono text-small">
-              {path}
-            </span>
-          ))}
-        </div>
-      )}
-      {notes.importDeclared && (
-        <p className="m-0 text-small text-fg-muted">
-          It still declares <span className="font-mono text-fg">imports.{name}</span>: remove that
-          entry too, or Studio goes on checking the import for updates.
-        </p>
-      )}
-    </section>
-  );
-}
+import { RemoveConfigSection } from "./remove-config-section";
 
 function Body({ removal }: { removal: UseRemoveImportReturn }): React.ReactNode {
-  const { name, consent, notes, loading, error } = removal;
+  const { consent, loading, error } = removal;
   if (loading) {
     return (
       <p className="flex items-center justify-center gap-2 py-10 text-control text-fg-subtle">
@@ -62,7 +24,7 @@ function Body({ removal }: { removal: UseRemoveImportReturn }): React.ReactNode 
           {error}
         </p>
       )}
-      {name !== null && notes && <ConfigNotes name={name} notes={notes} />}
+      <RemoveConfigSection removal={removal} />
       {nothing && (
         <p className="m-0 text-control text-fg-muted">
           No file Studio wrote for it is left; removing forgets the import.
@@ -80,8 +42,8 @@ function Body({ removal }: { removal: UseRemoveImportReturn }): React.ReactNode 
 }
 
 /**
- * Remove an import: what Studio would delete and what the config still
- * says about it, the files waiting for the user's leave, and Remove.
+ * Remove an import: the change Studio makes to the config first, what it
+ * would delete, the files waiting for the user's leave, and Remove.
  *
  * @param props - The removal from `useRemoveImport`
  * @returns The dialog

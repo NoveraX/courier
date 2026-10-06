@@ -13,7 +13,6 @@ import type {
 import type { FilePlanSummary, KeptReason } from "@/features/apis/types-file-plan";
 import { post } from "@/lib/api-client";
 
-/** The plan a request applies, as the user saw it, and the pending steps they allowed. */
 /** An import as the wizard sends it: the spec, where it came from, and the options. */
 export interface ImportBody {
   sourceName: string;
@@ -23,6 +22,7 @@ export interface ImportBody {
   options: GenerateOptions;
 }
 
+/** The plan a request applies, as the user saw it, and the pending steps they allowed. */
 export interface PlanQuote {
   planDigest?: string;
   confirm?: string[];
@@ -72,30 +72,39 @@ export function writeFiles(payload: ImportBody & PlanQuote): Promise<unknown> {
 
 /**
  * Plan removing an import: which files go, which wait for the user and
- * which stay, and what courier.config still says about it.
+ * which stay, what courier.config still says about it, and the change that
+ * takes it out of the config, read with `readConfigUndeclare`.
  *
  * @param name - The import
- * @returns The plan and the notes
+ * @returns The plan, the notes and the change
  */
 export function previewRemoval(
   name: string,
-): Promise<{ plan: FilePlanSummary } & RemovalConfigNotes> {
+): Promise<{ plan: FilePlanSummary; config?: unknown } & RemovalConfigNotes> {
   return post("/api/apis/imports/remove/preview", { name });
 }
 
 /**
- * Remove an import's files as previewed, and forget the import.
+ * Remove an import's files as previewed, and forget the import — first
+ * taking it out of courier.config, when the change the preview showed is quoted.
  *
  * @param name - The import
  * @param quote - The plan the user saw, and the steps they allowed
- * @returns What was removed and kept, and where the copies are
- * @throws {StudioRequestError} `PLAN_STALE` with the plan when the files changed since the preview
+ * @param configBaseHash - The `baseHash` of the config change shown; absent to leave the config as it is
+ * @returns What was removed and kept, where the copies are, and the config changed
+ * @throws {StudioRequestError} `PLAN_STALE` with the plan when the files changed since the preview;
+ *   `CONFIG_STALE` or `CONFIG_NOT_CHANGED` when Studio could not change the config, and removed nothing
  */
 export function removeImport(
   name: string,
   quote: PlanQuote,
-): Promise<AppliedFiles & RemovalConfigNotes> {
-  return post("/api/apis/imports/remove", { name, ...quote });
+  configBaseHash?: string,
+): Promise<AppliedFiles & RemovalConfigNotes & { undeclaredFrom?: string }> {
+  return post("/api/apis/imports/remove", {
+    name,
+    ...quote,
+    ...(configBaseHash !== undefined && { configBaseHash }),
+  });
 }
 
 // ── Update ──────────────────────────────────────────────────────────────────

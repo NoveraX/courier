@@ -33,6 +33,7 @@ export interface PlanConsent {
  * @param consent - The digest the user saw, if any, and the steps the user allowed
  * @param commit - Records the applied plan with the apply's id; called once the files are in place
  * @param quoting - Whether the request must quote the plan
+ * @param beforeApply - Runs once the plan is checked, with the plan as it will be applied, before any file changes; what it throws leaves every file as it was
  * @returns What was written, removed and kept
  * @throws {FilePlanError} `TARGET_BLOCKED`, `PLAN_NOT_SEEN`, `PLAN_STALE`, `NEEDS_CONFIRMATION` or `CONFIRMATION_NOT_IN_PLAN`
  * @example
@@ -46,6 +47,7 @@ export async function runPlan(
   consent: PlanConsent,
   commit: (applied: FilePlan, applyId: string) => void,
   quoting: PlanQuoting,
+  beforeApply?: (applied: FilePlan) => Promise<void>,
 ): Promise<ApplyReport> {
   const summary = summarizePlan(plan);
   if (plan.blocked.length > 0) {
@@ -79,5 +81,6 @@ export async function runPlan(
   }
   /* Whatever the user left unticked, no file that stays loses a file it imports. */
   const applied = keepImported(root, withConfirmations(plan, consent.confirm ?? []));
+  await beforeApply?.(applied);
   return applyFilePlan(root, applied, (applyId) => commit(applied, applyId));
 }

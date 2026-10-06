@@ -12,7 +12,7 @@ import { registerLayoutRoute } from "./layout-route";
 import { registerManageRoutes } from "./manage-routes";
 import { type ProjectRoot, projectRootAt } from "./project-fs/project-root";
 import { readProjectText } from "./project-fs/read-project-text";
-import type { ProjectImports } from "./project-state/types";
+import type { ProjectState } from "./project-state/types";
 import { refuseUnsendable } from "./refuse-unsendable";
 import { registerRegistryRoutes } from "./registry-routes";
 import { sendRouteFailure } from "./route-failure";
@@ -30,8 +30,9 @@ export interface ApisRouteDeps {
   /**
    * The project Studio runs: the routes read its import declarations, never
    * load their own, and announce each change they make to the imports state.
+   * Removing an import takes it out of the config alone on its reload chain.
    */
-  project: ProjectImports;
+  project: ProjectState;
   /** The project root, symlinks resolved: where the imports state lives. */
   projectRoot: string;
   /**

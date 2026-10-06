@@ -29,7 +29,7 @@ import { bodyHash } from "../src/server/import-files/body-hash";
 import { signGeneratedFile } from "../src/server/import-files/generated-header";
 import { withImportsLock } from "../src/server/imports-lock";
 import { ACT_BUDGET_MS } from "../src/server/project-state/budgets";
-import type { FreshSnapshot, ProjectImports } from "../src/server/project-state/types";
+import type { FreshSnapshot, ProjectState } from "../src/server/project-state/types";
 import { registerRegistryRoutes } from "../src/server/registry-routes";
 import type { JsonResponse, RouteApp } from "../src/server/route-types";
 import type { StudioServer } from "../src/server/types";
@@ -1040,10 +1040,13 @@ describe("a check of all imports", () => {
       settling: false,
     };
     const fresh = vi.fn(async (_budgetMs: number) => view);
-    const project: ProjectImports = {
+    const project: ProjectState = {
       snapshot: () => view,
       fresh,
       importsChanged: () => undefined,
+      runExclusive: () => Promise.reject(new Error("no config edit in these tests")),
+      finishEdits: async () => undefined,
+      stop: () => undefined,
     };
     let handler: Handler | undefined;
     const app: RouteApp = {

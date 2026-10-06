@@ -11,14 +11,14 @@ import {
   planListInsertion,
 } from "../mocks-edit/plan/list-insertion";
 import { collectModuleBindings } from "../mocks-edit/plan/module-bindings";
-import { type ParsedSource, parseSource } from "../mocks-edit/plan/parse-source";
+import type { ParsedSource } from "../mocks-edit/plan/parse-source";
 import { quoteString } from "../mocks-edit/plan/quote-string";
 import type { FileStyle } from "../mocks-edit/plan/types";
 import type { TextEdit } from "../mocks-edit/types";
 import type { ConfigDeclarationInput, ConfigDeclarationPlan } from "./config-declaration-types";
 import { ConfigEditRefusal } from "./config-edit-refusal";
 import { findConfigList } from "./find-config-list";
-import { locateConfigObject } from "./locate-config-object";
+import { parseConfigObject } from "./parse-config-object";
 import { importEntry, objectEntry, type RenderEntry, sourceEntry } from "./render-config-entries";
 import { verifyConfigPlan } from "./verify-config-plan";
 
@@ -81,19 +81,8 @@ export function planConfigDeclaration(input: ConfigDeclarationInput): ConfigDecl
 }
 
 function targetOf(input: ConfigDeclarationInput): Target {
-  const parsed = parseSource(input.configName, input.text);
-  if (parsed.problem !== null) {
-    const why = `${input.configName} does not parse (${parsed.problem.message})`;
-    throw new ConfigEditRefusal(
-      "CONFIG_UNREADABLE",
-      `${why}, so Studio cannot place anything in it.`,
-    );
-  }
-  const located = locateConfigObject(parsed.program);
-  if (located.kind === "other") {
-    throw new ConfigEditRefusal("CONFIG_SHAPE", `${input.configName} ${located.what}.`);
-  }
-  const style = detectStyle(parsed, located.object);
+  const { parsed, config } = parseConfigObject(input.configName, input.text);
+  const style = detectStyle(parsed, config);
   const code = parsed.text.trimEnd();
   const singleLineFile = countLineTerminators(code, 0, code.length) === 0;
   const site = {
@@ -103,7 +92,7 @@ function targetOf(input: ConfigDeclarationInput): Target {
     style,
     singleLineFile,
   };
-  return { input, parsed, config: located.object, style, site };
+  return { input, parsed, config, style, site };
 }
 
 function importLine(target: Target, binding: string, specifier: string): TextEdit {

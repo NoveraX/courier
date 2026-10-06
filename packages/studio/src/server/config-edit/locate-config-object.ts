@@ -6,7 +6,7 @@ import { topLevelConst } from "./top-level-const";
 /** The object literal a config exports, or what stands in its place. */
 export type ConfigObject =
   | { kind: "object"; object: ObjectExpression }
-  /** No object Studio can add to: `what` completes "The config …". */
+  /** No object Studio can change: `what` completes "The config …". */
   | { kind: "other"; what: string };
 
 /**
@@ -58,7 +58,7 @@ function objectIn(expression: Expression, program: Program, followName: boolean)
     const init = topLevelConst(program, value.name);
     if (init !== null) return objectIn(init, program, false);
   }
-  return other("builds its default export in a way Studio cannot add to");
+  return other("builds its default export in a way Studio cannot change");
 }
 
 function other(what: string): ConfigObject {

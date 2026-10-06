@@ -1,5 +1,6 @@
-import { join, relative, sep } from "node:path";
+import { relative, sep } from "node:path";
 import type { LoadedCourierConfig } from "./config-loader";
+import { configReads } from "./config-reads";
 
 /** What courier.config still says about an import once its files are gone. */
 export interface RemovalConfigNotes {
@@ -37,11 +38,9 @@ export function removalConfigNotes(
   taken: readonly string[],
 ): RemovalConfigNotes {
   if (running === null) return { importDeclared: false, configImports: [] };
-  const read = (path: string): boolean =>
-    (running.depHashes.get(join(root, path)) ?? null) !== null;
   return {
     configFile: relative(root, running.configFile).split(sep).join("/"),
     importDeclared: Object.hasOwn(running.config.imports ?? {}, name),
-    configImports: taken.filter(read),
+    configImports: configReads(running, root, taken),
   };
 }

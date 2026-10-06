@@ -1,15 +1,11 @@
 import type { LoadedCourierConfig } from "../config-loader";
 import { declarationText } from "../declaration-text";
-import { describeError } from "../describe-error";
 import { type ImportDeclarationParts, importDeclarationParts } from "../import-declaration-parts";
-import { readRegularFile } from "../read-regular-file";
-import { sha256Hex } from "../sha256-hex";
 import type { ImportDeclaration, WriteBody } from "../write-types";
 import type { ConfigDeclarationPlan } from "./config-declaration-types";
 import { ConfigEditRefusal } from "./config-edit-refusal";
 import { planConfigDeclaration } from "./plan-config-declaration";
-
-const UTF8 = new TextDecoder("utf-8", { fatal: true });
+import { readConfigFile } from "./read-config-file";
 
 /** The config as read to declare an import in it, and the change planned. */
 export interface PreparedDeclaration {
@@ -54,32 +50,11 @@ export function prepareConfigDeclaration(
   const parts = importDeclarationParts({ name, body, loaded, root });
   if (!parts) return null;
   const declaration = declarationText(name, parts);
-  const read = readConfig(parts.configPath, parts.configFile, root);
+  const read = readConfigFile(parts.configPath, parts.configFile, root);
   if (read instanceof ConfigEditRefusal) {
     return { name, parts, declaration, text: "", baseHash: "", mode: 0, plan: read };
   }
   return { name, parts, declaration, ...read, plan: planOf(name, parts, read.text) };
-}
-
-function readConfig(
-  path: string,
-  configFile: string,
-  root: string,
-): { text: string; baseHash: string; mode: number } | ConfigEditRefusal {
-  try {
-    const file = readRegularFile(path);
-    if (file === null) {
-      return new ConfigEditRefusal(
-        "CONFIG_CHANGED",
-        `${configFile} is gone since Studio loaded it.`,
-      );
-    }
-    const text = UTF8.decode(file.bytes);
-    return { text, baseHash: sha256Hex(file.bytes), mode: file.stats.mode & 0o7777 };
-  } catch (error) {
-    const why = `Studio could not read ${configFile} as a UTF-8 file (${describeError(error, root)})`;
-    return new ConfigEditRefusal("CONFIG_UNREADABLE", `${why}.`, { cause: error });
-  }
 }
 
 function planOf(

@@ -304,12 +304,65 @@ A `ReadableStream` body is read into memory before it is sent in a browser: `XML
 In development mode, Courier logs a console warning for each ignored option so you can identify unintended usage early. In production, ignored options are silently skipped.
 </Callout>
 
+## Uploads in Studio
+
+With Studio attached, a call made with `onUploadProgress` shows its progress in the Timeline while it uploads, and its request detail says how much of the body has been sent. In proxy mode the browser names the call's Studio request id in an `X-Courier-Rid` header, and the proxy shows the call under that id, so the progress and the proxy's own events land on one row. The proxy announces the call as soon as it arrives, so an upload it refuses — a body over `maxUploadBytes`, say — appears as a failed request with its status.
+
+## Test uploads against a mock
+
+A [mock server](/docs/studio/mock-servers) takes uploads as your backend does, and can take them as a slow or strict one would, so the app's progress bar and its errors can be seen without the backend. Set its upload conditions in Studio's **Network** tab while it runs, or declare them with the mock:
+
+```ts
+// courier.mocks.ts
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+import { defineMocks, defineMockServer } from "@noverax/courier-mock"
+
+const { endpoint } = courier()
+type User = { id: number; name: string; avatarUrl: string }
+const api = defineApi({
+  baseURL: "https://api.example.com",
+  groups: {
+    users: defineGroup({
+      prefix: "users",
+      endpoints: {
+        uploadAvatar: endpoint.post("avatar").variables<FormData>().response<User>(),
+        uploadDocument: endpoint.post("documents").variables<FormData>().response<{ url: string }>(),
+      },
+    }),
+  },
+})
+
+export default defineMocks({
+  api: defineMockServer({
+    source: api,
+    network: {
+      // Every upload arrives at 1.5 Mbps; none over 10 MB is taken
+      uploads: { bandwidth: 1500, maxBytes: 10 * 1024 * 1024 },
+      routeOverrides: [
+        {
+          routeId: "users:uploadAvatar",
+          enabled: true,
+          uploads: { maxBytes: 2 * 1024 * 1024, accept: ["image/png", "image/jpeg"] },
+        },
+      ],
+    },
+  }),
+})
+```
+
+| To see | Set | The app gets |
+| --- | --- | --- |
+| Progress on a slow link | `uploads.bandwidth`, or **Upload speed** | its progress moving at that speed, past the first part of the file the system takes at once |
+| A file too large | `uploads.maxBytes`, or **Size limit** | 413, `{ "error": "The upload is 3.2 MB, over the 2 MB the mock takes" }`, before the file is sent whole |
+| A type the server does not take | `uploads.accept`, or **File types** | 415, `{ "error": "photo.heic (image/heic) is not a type the mock takes: image/png, image/jpeg" }` |
+| A connection lost partway | the `interrupt` fault | a network error once half the file has arrived |
+| Any other error | a status fault: `"401"`, `"403"`, `"409"`, `"422"`, `"429"`, `"500"`, `"503"`, `"507"`… | that status, `{ "error": "HTTP 507 Insufficient Storage (simulated)" }` |
+
+A route's own override sets its limit and types, and the faults it fails with, in place of the mock's. See [Network conditions](/docs/studio/network-conditions#uploads) for every setting, and how each one answers.
+
 ## Next Steps
 
 - [Encoding](/docs/advanced/encoding) — body and query serialization options
 - [Streaming](/docs/advanced/streaming) — streaming responses with ReadableStream
 - [Options Reference](/docs/advanced/options) — timeout, retry, caching, and more
 
-## Uploads in Studio
-
-With Studio attached, a call made with `onUploadProgress` shows its progress in the Timeline while it uploads, and its request detail says how much of the body has been sent. In proxy mode the browser names the call's Studio request id in an `X-Courier-Rid` header, and the proxy shows the call under that id, so the progress and the proxy's own events land on one row. The proxy announces the call as soon as it arrives, so an upload it refuses — a body over `maxUploadBytes`, say — appears as a failed request with its status.

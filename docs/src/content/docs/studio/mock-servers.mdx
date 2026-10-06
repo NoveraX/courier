@@ -126,7 +126,13 @@ On `/api/ws` a subscription goes as it does on a Courier server. The variables a
 
 ### Uploads and large bodies
 
-A mock reads a body as a Courier server does, at every path it serves: JSON, and a form — `multipart/form-data` or URL-encoded — whose fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order. The handler's `ctx.variables` is typed so — `MockFormFields`, from `@noverax/courier-mock/testing` — and a mock client given a form in a test hands it over the same way, so one handler serves both. A file's name is kept as it was sent, `../` and all: the mock writes no file. It reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
+A mock reads a body as a Courier server does, at every path it serves:
+
+- JSON: `application/json` or any `+json` type. A body sent with no type, or as plain text, is read as JSON when it is JSON, as `fetch` sends a JSON string it is given no type for.
+- A form, `multipart/form-data` or URL-encoded: its fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order. The handler's `ctx.variables` is typed so — `MockFormFields`, from `@noverax/courier-mock/testing` — and a mock client given a form in a test, URL-encoded too, hands it over the same way, so one handler serves both.
+- A file sent as the whole body, as a direct call made with a `Blob`, an `ArrayBuffer` or a typed array sends it: the handler gets a `Blob` of its type. A path that gives values of its own (`PUT /files/:id`) is refused such a body with 400, since raw bytes have no fields to hold them; send the file in a form there. The proxy route takes JSON or a form only, as a Courier proxy does.
+
+A file's name is kept as it was sent, `../` and all: the mock writes no file. A generated create, update or replace keeps each file in its record as its name, type and size. The mock reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
 
 ```ts
 // courier.mocks.ts
@@ -159,11 +165,13 @@ export default defineMocks({
 })
 ```
 
-A body over its limit is answered with 413 before it is all read, a form that does not parse with 400, and one whose client stopped sending it with 400; each is answered `{ error }`, saying why. Studio's mock log shows such a request refused, with its status and the reason, and a file a request sent by its name, type and size.
+A body over its limit is answered with 413 before it is all read, and the rest is taken off the connection, so a browser still sending it hears the answer; a form that does not parse is answered 400, and so is one whose client stopped sending it. Each is answered `{ error }`, saying why. Studio's mock log shows such a request refused, with its status and the reason, and a file a request sent by its name, type and size; the admin API's history shows it so too.
+
+To see how an app takes uploads that go wrong — a slow link, a file too large, a type the server does not take, a connection lost partway, any error status — give the mock upload conditions and faults: see [Uploads](/docs/studio/network-conditions#uploads).
 
 ### Slow and failing answers
 
-`network` makes a mock answer as a slow or unreliable network would: it adds latency, caps bandwidth, and fails a share of calls with a 500, a 503, a timeout or a dropped connection, and its stop conditions end a run on their own. Studio's **Network** tab sets the same conditions on a running mock. See [Network conditions](/docs/studio/network-conditions).
+`network` makes a mock answer as a slow or unreliable network would, and take uploads as a server with limits does: it adds latency, caps how fast answers are sent and uploads arrive, refuses an upload over a size or of a type it does not take, and fails a share of calls with any HTTP error status, a timeout, a dropped connection or an upload cut off partway, and its stop conditions end a run on their own. Studio's **Network** tab sets the same conditions on a running mock. See [Network conditions](/docs/studio/network-conditions).
 
 ```ts
 // courier.mocks.ts

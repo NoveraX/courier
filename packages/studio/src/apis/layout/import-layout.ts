@@ -37,8 +37,10 @@ export interface ImportLayout {
   readonly dir: string;
   /** `source.ts`, which defines the API. */
   readonly sourceFile: string;
-  /** `index.ts`, the barrel. */
+  /** `index.ts`, the barrel: the direct caller, and the schemas and types. */
   readonly indexFile: string;
+  /** `proxy.ts`, the proxy caller alone, which browser code imports. */
+  readonly proxyFile: string;
   /** The schemas or types file of an import generated as one flat group. */
   schemaFile(kind: SchemaFileKind): string;
   /** The directory of a group, by the group's binding. */
@@ -84,6 +86,7 @@ export function resolveImportLayout(placement: ImportPlacement, importName: stri
     dir,
     sourceFile: inDir("source.ts"),
     indexFile: inDir("index.ts"),
+    proxyFile: inDir("proxy.ts"),
     schemaFile: (kind) => inDir(`${kind}.ts`),
     groupDir: (group) => inDir(groupDirName(group)),
     groupFile: (group) => inDir(groupDirName(group), "index.ts"),

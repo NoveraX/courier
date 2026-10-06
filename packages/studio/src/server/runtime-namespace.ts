@@ -59,6 +59,12 @@ export interface SetupRuntimeNamespaceDeps {
    * is sent Playground calls; any other is only heard.
    */
   token: StudioToken;
+  /**
+   * The largest message Studio's sockets take, told to each runtime as it
+   * says hello: one larger closes the runtime's connection, so the runtime
+   * sends a short refusal in its place.
+   */
+  maxMessageBytes?: number | undefined;
 }
 
 export function setupRuntimeNamespace(
@@ -70,8 +76,9 @@ export function setupRuntimeNamespace(
     const trusted = admitRuntimeSocket(socket, deps.token);
     let warned = trusted;
 
-    socket.on("runtime:hello", (raw: unknown) => {
+    socket.on("runtime:hello", (raw: unknown, welcome?: unknown) => {
       handleHello(raw, socket, ref, deps);
+      if (typeof welcome === "function") welcome({ maxMessageBytes: deps.maxMessageBytes });
     });
 
     socket.on("runtime:announce", (raw: unknown) => {

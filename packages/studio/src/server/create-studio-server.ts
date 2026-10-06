@@ -9,6 +9,7 @@ import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { demoServing } from "./demo/demo-serving";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
+import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { mockStoreFile } from "./mock-store-file";
@@ -96,6 +97,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     nameSource,
     requestLog,
     token,
+    maxMessageBytes: serving?.sockets.maxMessageBytes ?? MAX_MESSAGE_BYTES,
   });
 
   const watcherStatus = createWatcherStatus(uiNamespace);

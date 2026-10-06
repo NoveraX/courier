@@ -93,4 +93,6 @@ export interface ParsedSpec {
   schemas: Record<string, ParsedSchema>;
   securitySchemes: ParsedSecurityScheme[];
   skipped: SkippedOperation[];
+  /** Set when no operation declares a tag: grouped by tag, they all form one group. */
+  untagged?: true;
 }

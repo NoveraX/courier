@@ -62,11 +62,8 @@ function generateFiles(
   const own = written.find((entry) => isTopLevel(entry.group));
   const groups = written.filter((entry) => !isTopLevel(entry.group));
   /* The import's module: the schemas of its own endpoints, and those groups share. */
-  const rootSchemas: Record<string, ParsedSchema> = Object.assign(
-    {},
-    own?.own,
-    ...groups.map((entry) => entry.shared),
-  );
+  const rootSchemas: Record<string, ParsedSchema> = { ...own?.own };
+  for (const entry of groups) Object.assign(rootSchemas, entry.shared);
   const root = schemaFileFor(rootSchemas, opts);
   const files: GeneratedFile[] = root ? [root] : [];
   const schemaModules = new Map<string, string>(root ? [[TOP_LEVEL, root.content]] : []);

@@ -7,12 +7,12 @@
  * the application's modules define, redefine or name theirs.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 
 const ENTRY = resolve(__dirname, "../src/runtime/attach-runtime.ts");
 const ROOT_MODULES = resolve(__dirname, "../../../node_modules");
@@ -94,8 +94,17 @@ handle.detach();
 upstream.close();
 `;
 
+/* Each project made, removed once the file's tests are done: rmSync takes the
+   node_modules link away without following it into the repository. */
+const made: string[] = [];
+
+afterAll(() => {
+  for (const dir of made.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
 function makeProject(config = CONFIG): string {
   const dir = mkdtempSync(join(tmpdir(), "courier-follow-"));
+  made.push(dir);
   symlinkSync(ROOT_MODULES, join(dir, "node_modules"), "dir");
   writeFileSync(join(dir, "api.ts"), API);
   writeFileSync(join(dir, "named.ts"), NAMED);

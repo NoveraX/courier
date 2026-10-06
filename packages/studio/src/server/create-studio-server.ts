@@ -8,7 +8,6 @@ import express from "express";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { demoServing } from "./demo/demo-serving";
-import { demoVisitors } from "./demo/demo-visitors";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
@@ -65,7 +64,6 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   app.use(securityHeaders);
   /* A public demo counts what its visitors send, on the sockets and the API alike. */
   const serving = demo ? demoServing() : undefined;
-  const demoLimits = serving?.limits;
   if (serving) app.use(serving.httpGuard);
   const httpServer = createServer(app);
   const startup = createStudioStartup(httpServer, startupOptions);
@@ -145,9 +143,10 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     playgroundHistory,
     token,
     demo,
-    visitors:
-      demoLimits &&
-      demoVisitors({ callsInFlight: playgroundRouter.callsInFlight, limits: demoLimits }),
+    visitors: serving?.visitors({
+      callsInFlight: playgroundRouter.callsInFlight,
+      recordsIn: mockManager.recordsIn,
+    }),
     databaseSize: storage.databaseSize,
     pageState: stores.pageState,
     pins: stores.pins,
@@ -168,7 +167,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     sessions: { sessions, view },
     storage: storage.routes,
     token,
-    demo: demoLimits && { limits: demoLimits },
+    demo: serving && { limits: serving.limits },
   });
   serveStudioUi(app);
 

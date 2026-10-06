@@ -1,11 +1,12 @@
 /**
  * A public demo keeps a visitor's mock commands in bounds: a seed the mock
  * serves at once, latencies a visitor can wait out, answers not slowed to a
- * crawl. What the demo does not bound is left to the mock.
+ * crawl, a collection grown no larger than it keeps. What the demo does not
+ * bound is left to the mock.
  */
 import { describe, expect, it } from "vitest";
 
-import { demoCommandProblem } from "../../src/server/demo/demo-command-bounds";
+import { DEMO_MAX_RECORDS, demoCommandProblem } from "../../src/server/demo/demo-command-bounds";
 
 describe("a visitor's mock command", () => {
   it("seeds up to 200 records at a time", () => {
@@ -59,5 +60,23 @@ describe("a visitor's mock command", () => {
       demoCommandProblem({ action: "mock:scenario:apply", serverId: "shop", scenario: "errors" }),
     ).toBeNull();
     expect(demoCommandProblem("not a command")).toBeNull();
+  });
+});
+
+describe("a record a visitor adds to a mock's collection", () => {
+  const create = { action: "mock:store:create", serverId: "shop", collection: "users", record: {} };
+
+  it("is added while the collection holds fewer than the demo keeps", () => {
+    expect(demoCommandProblem(create, () => DEMO_MAX_RECORDS - 1)).toBeNull();
+  });
+
+  it("is refused once the collection holds as many as the demo keeps, saying how to add one", () => {
+    expect(demoCommandProblem(create, () => DEMO_MAX_RECORDS)).toBe(
+      "The demo keeps up to 1000 records in a collection. Delete some to add another.",
+    );
+  });
+
+  it("is left to the mock when Studio does not know the collection", () => {
+    expect(demoCommandProblem(create, () => undefined)).toBeNull();
   });
 });

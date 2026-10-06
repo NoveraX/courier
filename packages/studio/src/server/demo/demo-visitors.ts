@@ -4,7 +4,7 @@
 
 import type { VisitorDecision, VisitorPage, VisitorPolicy } from "../ui-token-guard";
 import { WRITING_EVENTS } from "../ui-token-guard";
-import { demoCommandProblem } from "./demo-command-bounds";
+import { demoCommandProblem, type RecordsIn } from "./demo-command-bounds";
 import { createDemoLimits, type DemoLimits } from "./demo-limits";
 import { DEMO_SHARED_REFUSAL } from "./demo-refusals";
 
@@ -33,6 +33,8 @@ export interface DemoVisitorsDeps {
   callsInFlight: (pageId?: string) => number;
   /** The visitors' counts, fresh unless given. */
   limits?: DemoLimits | undefined;
+  /** How many records a mock's collection holds, for the demo's bound on them. */
+  recordsIn?: RecordsIn | undefined;
 }
 
 /**
@@ -55,6 +57,7 @@ export interface DemoVisitorsDeps {
 export function demoVisitors({
   callsInFlight,
   limits = createDemoLimits(),
+  recordsIn,
 }: DemoVisitorsDeps): VisitorPolicy {
   const openProblem = (pageId: string): string | null => {
     const { page, all } = DEMO_OPEN_CALLS;
@@ -87,7 +90,7 @@ export function demoVisitors({
       case "mock:command":
         return verdict(
           sizeProblem(args, DEMO_MAX_COMMAND) ??
-            demoCommandProblem(args[0]) ??
+            demoCommandProblem(args[0], recordsIn) ??
             limits.take(visitor, "command"),
         );
       case "mock:managed":

@@ -12,6 +12,7 @@ import { type ExtractedTypeNames, extractedTypeNames } from "./extracted-type-na
 import { generateFlatSourceFile } from "./generate-flat-source";
 import { generateGroupFile } from "./generate-group";
 import { generateIndexFile } from "./generate-index";
+import { generateProxyFile } from "./generate-proxy";
 import { generateSchemasFile, generateTypesFile } from "./generate-schemas";
 import { generateSourceFile } from "./generate-source";
 import { selectedEndpoints, transformSpec } from "./transform-spec";
@@ -83,6 +84,8 @@ function generateFlat(
   files.push(generateFlatSourceFile(processed.endpoints, spec, opts, declared, params));
   /* The barrel re-exports the schemas file only when one was written. */
   files.push(generateIndexFile(spec, [], opts, schemaModules));
+  const proxy = generateProxyFile(spec, opts);
+  if (proxy) files.push(proxy);
 
   return files;
 }
@@ -118,6 +121,8 @@ function generateGrouped(
     ),
   );
   files.push(generateIndexFile(spec, spec.groups, opts, schemaModules));
+  const proxy = generateProxyFile(spec, opts);
+  if (proxy) files.push(proxy);
 
   return files;
 }

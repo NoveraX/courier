@@ -18,8 +18,17 @@ const users = defineGroup({
   },
 });
 
+const FileSchema = z.object({ id: z.string(), name: z.string(), size: z.number() });
+
+const files = defineGroup({
+  prefix: "files",
+  endpoints: {
+    upload: endpoint.post("").variables<FormData>().response(FileSchema),
+  },
+});
+
 /** The upstream the test starts, which answers the users it holds. */
 export const shop = defineApi({
   baseURL: process.env.COURIER_E2E_UPSTREAM ?? "http://127.0.0.1:9",
-  groups: { users },
+  groups: { users, files },
 });

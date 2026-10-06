@@ -4,6 +4,7 @@ import { exportName } from "../../server/mocks-edit/plan/export-name";
 import { importsCarryExtensions } from "../../server/mocks-edit/plan/imports-carry-extensions";
 import { lineStart } from "../../server/mocks-edit/plan/line-start";
 import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { namedStatement } from "../generator/named-statement";
 import type { ImportLayout } from "../layout";
 import { type ExportedKind, exportedNames } from "./exported-names";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
@@ -18,13 +19,13 @@ type Reexport = ExportAllDeclaration | ExportNamedDeclaration;
 /**
  * The import's barrel with its re-exports of the import's schema modules
  * written again from the files as they are now, as a full write writes
- * them: in the order the groups are listed, a module whose names no earlier
- * line exports is re-exported whole, and one that shares a name is
- * re-exported by the names still free, so no name is exported twice and
- * none a module exports is left out. A line the user wrote — a type-only
- * list, a renamed name, a module that is not one of the import's — stays as
- * it is, and its names count as exported. Everything else in the barrel
- * stays too.
+ * them: in the order the groups are listed, each module re-exported by the
+ * names no earlier line exports, so no name is exported twice and none a
+ * module exports is left out. A line the user wrote — a type-only list, a
+ * renamed name, a module that is not one of the import's — stays as it is,
+ * and its names count as exported. A whole-module `export *` an older
+ * version wrote is the generator's own and is written again by name.
+ * Everything else in the barrel stays too.
  *
  * @param layout - Where the import's files are
  * @param files - The import's files as the change leaves them, by path, without Studio's header
@@ -138,13 +139,11 @@ function lineFor(
   text: string | undefined,
   taken: Map<string, ExportedKind>,
 ): string[] {
-  const names = [...namesOf(text)];
-  const fresh = names.filter(([name]) => !taken.has(name));
+  const fresh = [...namesOf(text)].filter(([name]) => !taken.has(name));
   for (const [name, kind] of fresh) taken.set(name, kind);
   if (fresh.length === 0) return [];
-  if (fresh.length === names.length) return [`export * from "${specifier}";`];
   const listed = fresh.map(([name, kind]) => (kind === "type" ? `type ${name}` : name));
-  return [`export { ${listed.join(", ")} } from "${specifier}";`];
+  return [namedStatement("export", listed, specifier)];
 }
 
 /* The barrel with the generated lines replaced, where the first of them was, or at its end. */

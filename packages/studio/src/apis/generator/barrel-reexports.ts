@@ -3,62 +3,52 @@
  */
 
 import type { ParsedGroup } from "../parser/types";
-import { emitsSchemas } from "./build-endpoint-helpers";
+import { declaredExports } from "./declared-exports";
+import { namedStatement } from "./named-statement";
 import type { ResolvedGenerateOptions } from "./types";
 
 /**
- * Re-export every schema and type the import declares, each name once.
+ * Re-export every schema and type the import declares by name, each name
+ * once: a module's names no earlier module exports, read from the module as
+ * it was written. A name is a type where the module declares only a type.
  *
- * A module whose names no earlier one exports is re-exported whole; one
- * sharing a name — a schema two groups both use — by the names still free.
- * The file's name follows `generateSchemas` alone: `validation: "none"`
- * still writes schemas.ts, and re-exporting a `types` file nobody generated
- * failed.
+ * By name rather than `export *`, which linters reject: it hides from the
+ * reader and the bundler what the barrel exports, and lets two modules
+ * export one name. The file's name follows `generateSchemas` alone:
+ * `validation: "none"` still writes schemas.ts, and re-exporting a `types`
+ * file nobody generated failed.
  *
  * @param groups - The groups, in order; none for an import generated flat
  * @param options - The import's resolved options
- * @param groupSchemaMap - The names each written schemas file declares, by group; `""` for a flat import
- * @returns The re-export lines
+ * @param schemaModules - The text of each written schemas file, by group; `""` for a flat import
+ * @returns The re-export statements
  * @example
  * ```ts
- * barrelReexports(spec.groups, options, schemaMap); // ['export * from "./pets/schemas";']
+ * barrelReexports(spec.groups, options, schemaModules);
+ * // ['export { type Pet, PetSchema } from "./pets/schemas";']
  * ```
  */
 export function barrelReexports(
   groups: readonly ParsedGroup[],
   options: ResolvedGenerateOptions,
-  groupSchemaMap: ReadonlyMap<string, ReadonlySet<string>>,
+  schemaModules: ReadonlyMap<string, string>,
 ): string[] {
   const file = options.generateSchemas ? "schemas" : "types";
   const extension = options.importExtension;
-  if (groups.length === 0) {
-    return groupSchemaMap.size > 0 ? [`export * from "./${file}${extension}";`] : [];
-  }
+  const modules =
+    groups.length === 0
+      ? [...schemaModules.values()].map((text) => ({ from: `./${file}${extension}`, text }))
+      : groups.flatMap((group) => {
+          const text = schemaModules.get(group.name);
+          const from = `${options.layout.groupSpecifier(group.name, file)}${extension}`;
+          return text === undefined ? [] : [{ from, text }];
+        });
 
-  const lines: string[] = [];
   const exported = new Set<string>();
-  for (const group of groups) {
-    const schemaNames = groupSchemaMap.get(group.name);
-    if (!schemaNames) continue;
-    const from = `${options.layout.groupSpecifier(group.name, file)}${extension}`;
-    const unique = [...schemaNames].filter((n) => !exported.has(n));
-    if (unique.length === schemaNames.size) lines.push(`export * from "${from}";`);
-    else if (unique.length > 0) lines.push(...namedReexport(unique, from, options));
-    for (const n of schemaNames) exported.add(n);
-  }
-  return lines;
-}
-
-function namedReexport(
-  names: readonly string[],
-  from: string,
-  options: ResolvedGenerateOptions,
-): string[] {
-  const listed: string[] = [];
-  for (const n of names) {
-    /* A `XSchema` binding exists only when a validator wrote one. */
-    if (emitsSchemas(options)) listed.push(`${n}Schema`);
-    if (options.generateTypes) listed.push(`type ${n}`);
-  }
-  return listed.length > 0 ? [`export { ${listed.join(", ")} } from "${from}";`] : [];
+  return modules.flatMap(({ from, text }) => {
+    const fresh = [...declaredExports(text)].filter(([name]) => !exported.has(name));
+    for (const [name] of fresh) exported.add(name);
+    const names = fresh.map(([name, kind]) => (kind === "type" ? `type ${name}` : name));
+    return names.length === 0 ? [] : [namedStatement("export", names, from)];
+  });
 }

@@ -142,7 +142,7 @@ describe("rebuildBarrel", () => {
     ),
   });
 
-  it("re-exports each module whole, or by the names no earlier one exports, in the order of the groups", () => {
+  it("re-exports each module by the names no earlier one exports, in the order of the groups", () => {
     const barrel = rebuildBarrel(
       layout,
       files(HEAD, {
@@ -154,7 +154,7 @@ describe("rebuildBarrel", () => {
     );
 
     expect(barrel).toBe(
-      `${HEAD}export * from "./alpha/schemas";\nexport { type Order, OrderSchema } from "./gamma/schemas";\n`,
+      `${HEAD}export { type A, ASchema, type Pet, PetSchema } from "./alpha/schemas";\nexport { type Order, OrderSchema } from "./gamma/schemas";\n`,
     );
   });
 
@@ -164,7 +164,7 @@ describe("rebuildBarrel", () => {
     const barrel = rebuildBarrel(layout, files(old, { "alpha/schemas": schema("A") }), false);
 
     expect(barrel).toBe(
-      `${HEAD}export * from "./alpha/schemas";\n// mine\nexport const extra = 1;\n`,
+      `${HEAD}export { type A, ASchema } from "./alpha/schemas";\n// mine\nexport const extra = 1;\n`,
     );
   });
 
@@ -186,9 +186,11 @@ describe("rebuildBarrel", () => {
     );
 
     expect(grown).toContain(
-      'export { type Order, OrderSchema, type Fresh, FreshSchema } from "./gamma/schemas";',
+      'export {\n  type Order,\n  OrderSchema,\n  type Fresh,\n  FreshSchema,\n} from "./gamma/schemas";',
     );
-    expect(shrunk).toContain('export * from "./gamma/schemas";');
+    expect(shrunk).toContain(
+      'export { type Pet, PetSchema, type Order, OrderSchema } from "./gamma/schemas";',
+    );
   });
 
   it("keeps a line the user wrote, and counts its names", () => {
@@ -213,7 +215,9 @@ describe("rebuildBarrel", () => {
     const flat = { ...files(HEAD, { schemas: schema("X") }) };
     delete flat[layout.sourceFile];
 
-    expect(rebuildBarrel(layout, flat, true)).toBe(`${HEAD}export * from "./schemas";\n`);
+    expect(rebuildBarrel(layout, flat, true)).toBe(
+      `${HEAD}export { type X, XSchema } from "./schemas";\n`,
+    );
   });
 });
 

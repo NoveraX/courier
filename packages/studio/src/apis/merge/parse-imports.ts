@@ -1,6 +1,6 @@
 import type { ParsedImport } from "./types";
 
-const NAMED_IMPORT_RE = /^import\s+\{([^}]*)\}\s+from\s+["']([^"']+)["'];?\s*$/;
+const NAMED_IMPORT_RE = /^import\s+(type\s+)?\{([^}]*)\}\s+from\s+["']([^"']+)["'];?\s*$/;
 const NS_IMPORT_RE = /^import\s+\*\s+as\s+(\w+)\s+from\s+["']([^"']+)["'];?\s*$/;
 
 /**
@@ -34,26 +34,29 @@ export function parseImports(lines: string[]): ParsedImport[] {
     }
 
     const namedMatch = flat.match(NAMED_IMPORT_RE);
-    if (!namedMatch?.[1] || !namedMatch[2]) {
+    if (!namedMatch?.[2] || !namedMatch[3]) {
       /* A default, mixed or side-effect import. It is kept as written, and
          keyed by its own text so two of them never collapse onto one another. */
       result.push({ raw, source: sourceOf(flat) ?? raw, names: [], typeNames: [] });
       continue;
     }
 
-    const specifiers = namedMatch[1]
+    const specifiers = namedMatch[2]
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
     const names: string[] = [];
     const typeNames: string[] = [];
+    /* `import type { … }` makes every name a type. */
+    const typeOnly = namedMatch[1] !== undefined;
 
     for (const s of specifiers) {
       if (s.startsWith("type ")) typeNames.push(s.slice(5));
+      else if (typeOnly) typeNames.push(s);
       else names.push(s);
     }
 
-    result.push({ raw, source: namedMatch[2], names, typeNames });
+    result.push({ raw, source: namedMatch[3], names, typeNames });
   }
 
   return result;

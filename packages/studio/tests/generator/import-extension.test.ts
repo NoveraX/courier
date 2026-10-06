@@ -155,7 +155,7 @@ describe("adding endpoints to an import whose files carry the extension", () => 
   it("keeps it on the barrel's re-exports", () => {
     const barrel = rebuildBarrel(layout, files, false) ?? "";
 
-    expect(barrel).toContain('export * from "./pets/schemas.js";');
+    expect(barrel).toMatch(/^export \{[^}]*\} from "\.\/pets\/schemas\.js";$/m);
     expect(barrel).not.toMatch(/from "\.\/pets\/schemas";/);
   });
 });

@@ -78,6 +78,9 @@ function formatImport(imp: ParsedImport): string {
     return `import * as ${imp.namespaceImport} from "${imp.source}";`;
   }
 
+  if (imp.names.length === 0 && imp.typeNames.length > 0) {
+    return `import type { ${imp.typeNames.join(", ")} } from "${imp.source}";`;
+  }
   const specifiers: string[] = [...imp.names, ...imp.typeNames.map((t) => `type ${t}`)];
 
   if (specifiers.length === 0) return imp.raw;

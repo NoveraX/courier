@@ -4,6 +4,7 @@
 
 import type { ParsedGroup, ParsedSpec } from "../parser/types";
 import { barrelReexports } from "./barrel-reexports";
+import { firstParagraph } from "./first-paragraph";
 import { jsdocText } from "./jsdoc-text";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
 
@@ -19,18 +20,18 @@ const PROXY_HINT =
  * @param spec - The parsed specification
  * @param groups - The groups, in order; none for an import generated flat
  * @param options - The import's resolved options
- * @param groupSchemaMap - The names each written schemas file declares, by group
+ * @param schemaModules - The text of each written schemas file, by group; `""` for a flat import
  * @returns The barrel
  * @example
  * ```ts
- * generateIndexFile(spec, spec.groups, options, schemaMap).path; // "src/api/pets/index.ts"
+ * generateIndexFile(spec, spec.groups, options, schemaModules).path; // "src/api/pets/index.ts"
  * ```
  */
 export function generateIndexFile(
   spec: ParsedSpec,
   groups: ParsedGroup[],
   options: ResolvedGenerateOptions,
-  groupSchemaMap: ReadonlyMap<string, ReadonlySet<string>>,
+  schemaModules: ReadonlyMap<string, string>,
 ): GeneratedFile {
   const name = options.sourceName;
   const hasDirect = options.generateClient === "direct" || options.generateClient === "both";
@@ -64,28 +65,16 @@ export function generateIndexFile(
     lines.push(`export const ${name}ProxyApi = createProxyCaller<typeof ${name}>("${name}");`, "");
   }
 
-  lines.push(...barrelReexports(groups, options, groupSchemaMap), "");
+  lines.push(...barrelReexports(groups, options, schemaModules), "");
   return { path: options.layout.indexFile, content: lines.join("\n") };
 }
 
 /** The comment above a caller: the API, the mode, and its description. */
 function callerDoc(spec: ParsedSpec, mode: string, hint: string): string[] {
-  const short = extractFirstParagraph(spec.description) || spec.title;
+  const short = firstParagraph(spec.description) || spec.title;
   const lines = ["/**", ` * \`${mode}\` — ${jsdocText(spec.title)} v${jsdocText(spec.version)}`];
   lines.push(" *", ` * ${hint}`);
   if (short) lines.push(" *", " * ---", " *", ` * ${jsdocText(short)}`);
   lines.push(" */");
   return lines;
-}
-
-/** Extract first meaningful paragraph from a description, skipping markdown headers. */
-function extractFirstParagraph(description: string): string {
-  if (!description) return "";
-
-  for (const line of description.split(/\n+/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    return trimmed.length > 200 ? `${trimmed.slice(0, 200)}...` : trimmed;
-  }
-  return "";
 }

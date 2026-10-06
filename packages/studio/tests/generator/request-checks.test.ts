@@ -118,10 +118,34 @@ describe("checks written as text", () => {
     expect(arkExpressionOf("number", { minimum: 1 })).toBe("number");
   });
 
-  it("build a pattern from a string, with the u flag only when it compiled with it", () => {
-    expect(patternLiteral({ source: "^a/b\\d$", unicode: true })).toBe(
-      'new RegExp("^a/b\\\\d$", "u")',
-    );
-    expect(patternLiteral({ source: "^a\\-b$", unicode: false })).toBe('new RegExp("^a\\\\-b$")');
+  it("write a pattern as a literal, with the u flag only when it compiled with it", () => {
+    expect(patternLiteral({ source: "^a\\d$", unicode: true })).toBe("/^a\\d$/u");
+    expect(patternLiteral({ source: "^a\\-b$", unicode: false })).toBe("/^a\\-b$/");
+  });
+
+  it("escape what would end or break the literal, and keep every escape the pattern has", () => {
+    expect(patternLiteral({ source: "^a/b$", unicode: false })).toBe("/^a\\/b$/");
+    expect(patternLiteral({ source: "^a\\/b$", unicode: false })).toBe("/^a\\/b$/");
+    expect(patternLiteral({ source: "[/]+/", unicode: true })).toBe("/[/]+\\//u");
+    expect(patternLiteral({ source: "a\nb", unicode: false })).toBe("/a\\nb/");
+    expect(patternLiteral({ source: "^\\\\$", unicode: false })).toBe("/^\\\\$/");
+  });
+
+  it("write a literal that matches exactly as the pattern compiled from its string does", () => {
+    const sources = [
+      ["^https?://[^/]+/v1/$", true],
+      ["^[a-z0-9_/-]{1,40}$", true],
+      ["^\\p{L}+/\\p{N}*$", true],
+      ["a\u2028b", false],
+      ["^(?:[0-9]{3}/){2}\\d$", false],
+      ["^[^\\\\/]+\\/?$", true],
+    ] as const;
+    for (const [source, unicode] of sources) {
+      const literal = patternLiteral({ source, unicode });
+      const built = new RegExp(source, unicode ? "u" : "");
+      const written = new Function(`return ${literal};`)() as RegExp;
+      expect(written.source).toBe(built.source);
+      expect(written.flags).toBe(built.flags);
+    }
   });
 });

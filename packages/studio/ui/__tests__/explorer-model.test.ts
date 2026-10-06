@@ -146,6 +146,35 @@ describe("the tree", () => {
     expect(model.endpoints.find((e) => e.key === "billing.invoices.get")?.level).toBe("idle");
   });
 
+  it("shows an endpoint only traffic showed at the path it was last called at", () => {
+    const catalog: Catalog = {
+      shop: {
+        baseURL: "http://127.0.0.1:4401",
+        groups: { users: { prefix: "", endpoints: { getById: def({ origin: "runtime" }) } } },
+      },
+    };
+    const calls = [
+      requestEntry({
+        id: "n2",
+        source: "shop",
+        group: "users",
+        method: "getById",
+        url: "http://127.0.0.1:4401/users/5",
+      }),
+      requestEntry({
+        id: "n1",
+        source: "shop",
+        group: "users",
+        method: "getById",
+        url: "http://127.0.0.1:4401/users/1",
+      }),
+    ];
+
+    const [endpoint] = explorerModelOf(catalog, calls, NOW, 500).endpoints;
+
+    expect(endpoint).toMatchObject({ path: "/users/5", url: "http://127.0.0.1:4401/users/5" });
+  });
+
   it("names an endpoint outside any group by its source and method", () => {
     expect(endpointKey({ source: "api", group: "", method: "health" })).toBe("api.health");
   });

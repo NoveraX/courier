@@ -89,7 +89,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
-    "{packages,scripts,examples}/**/*.{ts,tsx,mjs,css}": "biome check --write --no-errors-on-unmatched"
+    "{packages,scripts,examples,e2e}/**/*.{ts,tsx,mjs,css}": "biome check --write --no-errors-on-unmatched"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,

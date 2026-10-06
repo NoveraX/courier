@@ -36,6 +36,8 @@ const CATCH_ALL = new Map<PathShape, ReadonlySet<string>>([
  * ```
  */
 export function servedByCatchAll(ep: MappedEndpoint): boolean {
+  /* A path that fixes query values tells its endpoint apart from another at it: a route of its own. */
+  if (ep.fixedQuery !== undefined) return false;
   const verbs = CATCH_ALL.get(pathShape(ep.path));
   return verbs?.has((ep.httpMethod ?? "GET").toUpperCase()) ?? false;
 }

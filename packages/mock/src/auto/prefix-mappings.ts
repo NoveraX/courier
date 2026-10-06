@@ -40,6 +40,7 @@ export function buildPrefixMappings(
       transport: route.transport,
       isChannel: route.isChannel,
       ...(route.channel && { channel: route.channel }),
+      ...(route.fixedQuery && { fixedQuery: route.fixedQuery }),
     };
     const key = `${route.group}\u0000${route.prefix}`;
     const existing = byGroup.get(key);

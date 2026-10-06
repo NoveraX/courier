@@ -15,6 +15,7 @@ import {
 } from "./endpoint-probe";
 import { detectOperation } from "./operation-detect";
 import type { RouteInfo } from "./route-types";
+import { splitQuery } from "./split-query";
 
 /**
  * Analyze all endpoints in an API source and extract route information.
@@ -65,8 +66,10 @@ function rooted(declared: string, name: string): { collection: string; path: str
 
 function analyzeTopLevelEndpoint(routes: RouteInfo[], name: string, fn: unknown): void {
   const probed = probeEndpoint(fn);
-  const { collection, path } = rooted(probed.path ?? name, name);
-  analyzeEndpoint(routes, collection, name, fn, `/${collection}`, { ...probed, path });
+  const declared = splitQuery(probed.path ?? name);
+  const { collection, path } = rooted(declared.path, name);
+  const at = declared.query ? `${path}?${declared.query}` : path;
+  analyzeEndpoint(routes, collection, name, fn, `/${collection}`, { ...probed, path: at });
 }
 
 /**
@@ -87,16 +90,18 @@ function analyzeGroup(routes: RouteInfo[], placed: PlacedGroup): void {
     const transport = extractSchema(endpointFn)?.transport;
     const probed =
       transport === "sse" || transport === "ws" ? undefined : probeEndpoint(endpointFn);
-    const at = probed ? rooted(probed.path ?? "", "") : undefined;
+    const declared = probed && splitQuery(probed.path ?? "");
+    const at = declared ? rooted(declared.path, "") : undefined;
     const prefix = at ? normalizePrefix(`${base}/${at.collection}`) : base;
     const before = routes.length;
+    const query = declared?.query ? `?${declared.query}` : "";
     analyzeEndpoint(
       routes,
       placed.path,
       endpointName,
       endpointFn,
       prefix,
-      at && { ...probed, path: at.path },
+      at && { ...probed, path: `${at.path}${query}` },
     );
     for (const route of routes.slice(before)) route.exact = true;
   }
@@ -141,9 +146,11 @@ function analyzeEndpoint(
 
   const probed = preProbed ?? probeEndpoint(endpointFn);
   const httpMethod = normalizeHttpMethod(probed.method ?? "GET");
-  const path = (probed.path ?? "").split("/").filter(Boolean).join("/");
-  const fullPath = (path ? `${prefix}/${path}`.replace(/\/+/g, "/") : prefix) || "/";
-  const idParam = recordParam(path);
+  const declared = splitQuery(probed.path ?? "");
+  const path = declared.path.split("/").filter(Boolean).join("/");
+  const at = (path ? `${prefix}/${path}`.replace(/\/+/g, "/") : prefix) || "/";
+  const fullPath = declared.query ? `${at}?${declared.query}` : at;
+  const idParam = declared.fixed ? undefined : recordParam(path);
 
   routes.push({
     group: groupName,
@@ -154,7 +161,9 @@ function analyzeEndpoint(
     fullPath,
     hasIdParam: path.includes(":"),
     ...(idParam !== undefined && { idParam }),
-    operation: detectOperation(httpMethod, path),
+    /* One of two operations at a path its query tells apart is no collection's CRUD. */
+    operation: declared.fixed ? "custom" : detectOperation(httpMethod, path),
+    ...(declared.fixed && { fixedQuery: declared.fixed }),
     responseSchema: schema?.response,
     variablesSchema: schema?.variables,
     type: schema?.type,

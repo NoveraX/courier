@@ -1,4 +1,6 @@
 import { HTTPError } from "../errors";
+import { abortReason } from "../utils/abort-reason";
+import { anySignal } from "../utils/any-signal";
 import {
   cleanupDeduplication,
   deduplicateAndAbortPrevious,
@@ -127,10 +129,7 @@ export function bindMethod(
          caller's reason, and the reader reports that as a body it could
          not parse; it is rethrown as the cancellation it is. */
       forget();
-      if (options.signal?.aborted) {
-        const reason: unknown = options.signal.reason;
-        throw reason;
-      }
+      if (options.signal?.aborted) throw abortReason(options.signal);
       throw error;
     }
   };
@@ -146,7 +145,7 @@ function applyDeduplication(
     dedupeKey,
   );
   options.signal = options.signal
-    ? AbortSignal.any([controller.signal, options.signal])
+    ? anySignal([controller.signal, options.signal])
     : controller.signal;
   return controller;
 }

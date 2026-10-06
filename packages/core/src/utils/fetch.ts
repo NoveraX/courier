@@ -1,10 +1,13 @@
 import { fetchFailure } from "../http-client/transport-failure";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
+import { assertAbsoluteUrl } from "./absolute-url";
 import { anySignal } from "./any-signal";
+import { holdsDeviceFiles } from "./device-files";
 import { fetchWithinOrigin } from "./fetch-within-origin";
 import { normalizeHttpMethod } from "./helpers";
 import { sendWithUploadProgress, trackDownload } from "./progress";
+import { timeoutSignal } from "./timeout-signal";
 
 export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
   /** What the request sends; absent, nothing unless `json` is given. */
@@ -64,11 +67,9 @@ export async function coreFetch(
     }
   }
 
-  let finalSignal: AbortSignal | null | undefined = signal;
-  if (timeout) {
-    const timeoutSignal = AbortSignal.timeout(timeout);
-    finalSignal = finalSignal ? anySignal([finalSignal, timeoutSignal]) : timeoutSignal;
-  }
+  assertAbsoluteUrl(fullUrl);
+  const expiry = timeout ? timeoutSignal(timeout) : undefined;
+  const finalSignal = signal && expiry ? anySignal([signal, expiry]) : (expiry ?? signal);
 
   const init = {
     ...rest,
@@ -76,19 +77,28 @@ export async function coreFetch(
     headers: requestHeaders,
     body: requestBody ?? null,
     ...(finalSignal != null && { signal: finalSignal }),
-    /* Fetch refuses a streamed body unless the request says so. */
-    ...(requestBody instanceof ReadableStream && { duplex: "half" }),
+    /* Fetch refuses a streamed body unless the request says so. React Native has no streams. */
+    ...(typeof ReadableStream !== "undefined" &&
+      requestBody instanceof ReadableStream && { duplex: "half" }),
   };
   let response: Response;
   try {
+    /* XMLHttpRequest reports an upload's progress, which fetch cannot, and
+       reads a file a React Native form names by where it is, which expo/fetch refuses. */
     response =
-      onUploadProgress && requestBody != null
-        ? await sendWithUploadProgress(fullUrl, { ...init, body: requestBody }, onUploadProgress)
+      requestBody != null && (onUploadProgress || holdsDeviceFiles(requestBody))
+        ? await sendWithUploadProgress(
+            fullUrl,
+            { ...init, body: requestBody },
+            onUploadProgress ?? ignoreProgress,
+          )
         : withinOrigin && rest.redirect === undefined
           ? await fetchWithinOrigin(fullUrl, init)
           : await fetch(fullUrl, init);
   } catch (error) {
-    throw fetchFailure(error, signal, timeout);
+    throw fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
   }
   return onDownloadProgress ? trackDownload(response, onDownloadProgress) : response;
 }
+
+function ignoreProgress(): void {}

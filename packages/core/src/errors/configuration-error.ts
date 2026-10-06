@@ -157,7 +157,12 @@ export type ConfigurationErrorCode =
   /** An endpoint's `idempotencyKey` is not `header:<name>`. */
   | "INVALID_IDEMPOTENCY_KEY"
   /** An `allowedOrigins` entry is not an origin a browser can send, or admits every sandboxed page. */
-  | "INVALID_ALLOWED_ORIGIN";
+  | "INVALID_ALLOWED_ORIGIN"
+  /**
+   * A request's address is a path, such as a `baseURL` of `/api`, in a
+   * runtime with no page to resolve it against — React Native, Node.
+   */
+  | "URL_NOT_ABSOLUTE";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

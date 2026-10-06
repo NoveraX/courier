@@ -4,6 +4,7 @@ import { streamLabel } from "../../realtime/stream-label";
 import type { SSEContext, SSEEvent, SSESubscription } from "../../realtime/types";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
+import { anySignal } from "../../utils/any-signal";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
 import {
@@ -80,9 +81,7 @@ export async function executeDirectSSE(
   // caller passes a signal that fires before this point, abort eagerly so
   // the wrapped generator never starts iterating.
   if (options.signal?.aborted) ownAC.abort();
-  const composedSignal = options.signal
-    ? AbortSignal.any([options.signal, ownAC.signal])
-    : ownAC.signal;
+  const composedSignal = options.signal ? anySignal([options.signal, ownAC.signal]) : ownAC.signal;
 
   const sseCtx: SSEContext = {
     variables: variables ?? {},

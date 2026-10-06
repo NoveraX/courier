@@ -1,5 +1,6 @@
 import { createLogger } from "../logger";
 import { studioHooks } from "../studio";
+import { cloneData } from "../utils/clone-data";
 import { defineMiddleware } from "./define";
 import type { Middleware, MiddlewareContext, MiddlewareResponse } from "./types";
 
@@ -148,10 +149,10 @@ function copyOf(response: MiddlewareResponse): MiddlewareResponse | undefined {
     return {
       status: response.status,
       headers: new Headers(response.headers),
-      data: structuredClone(response.data),
+      data: cloneData(response.data),
     };
   } catch (error) {
-    if (!(error instanceof DOMException && error.name === "DataCloneError")) throw error;
+    if (!(error instanceof Error && error.name === "DataCloneError")) throw error;
     log.debug("Answer not cached: its data holds a value that cannot be copied", error);
     return undefined;
   }

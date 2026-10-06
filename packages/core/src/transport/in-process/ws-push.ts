@@ -5,6 +5,7 @@ import type { SSEEvent, SSESubscription, WSContext } from "../../realtime/types"
 import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
 import { abortableEvents } from "../../utils/abortable-events";
+import { randomId } from "../../utils/random-id";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { beginStream, instrumentSSE } from "../instrument";
 import {
@@ -59,7 +60,7 @@ export async function executeDirectWSPush(
   const wsCtx: WSContext = {
     topic: servedTopic(baseTopic, variables, topicKey),
     variables: variables ?? {},
-    connectionId: crypto.randomUUID(),
+    connectionId: randomId(),
     meta: {},
     signal: ownAC.signal,
   };

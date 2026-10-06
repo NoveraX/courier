@@ -4,6 +4,7 @@ import { streamLabel } from "../../realtime/stream-label";
 import type { ChannelHandlers } from "../../realtime/types";
 import { servedTopic } from "../../realtime/ws/served-topic";
 import { generateRequestId } from "../../studio";
+import { randomId } from "../../utils/random-id";
 import { runTransportMiddleware } from "../../utils/transport-middleware";
 import { instrumentWSChannel } from "../instrument";
 import {
@@ -71,7 +72,7 @@ export async function executeDirectWSChannel(
   }
 
   const topic = servedTopic(baseTopic, variables, topicKey);
-  const connectionId = crypto.randomUUID();
+  const connectionId = randomId();
 
   // Subscribe up-front so cross-channel broadcasts work even if a peer
   // publishes inside its own onJoin (race-free, mirrors canonical

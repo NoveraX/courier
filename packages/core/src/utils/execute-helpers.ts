@@ -1,5 +1,6 @@
 import { HttpClient } from "../http-client/index";
 import type { BaseOptions, Context } from "../http-client/types";
+import { servesOneUser } from "./serves-one-user";
 
 const pendingBySource = new WeakMap<object, Record<string, AbortController>>();
 
@@ -10,11 +11,12 @@ const pendingBySource = new WeakMap<object, Record<string, AbortController>>();
  * path options, while its in-flight table lives as long as the source: a
  * fresh, empty table per call would let `deduplicate` cancel nothing.
  *
- * Deduplication only runs in a browser, for a call that did not come off the
- * wire. On a server, requests from different users reach the same endpoint
- * under the same key, and one user's request would cancel another's. It only
- * runs for a read: a write that a newer one superseded has usually been
- * applied by the server, and cancelling it would tell its caller it had not.
+ * Deduplication only runs in a browser or a React Native app, for a call
+ * that did not come off the wire. On a server, requests from different
+ * users reach the same endpoint under the same key, and one user's request
+ * would cancel another's. It only runs for a read: a write that a newer one
+ * superseded has usually been applied by the server, and cancelling it
+ * would tell its caller it had not.
  *
  * @param dataSource - The source the call belongs to
  * @param context - The call's context, when it has one
@@ -26,8 +28,7 @@ export function clientForCall(
   context?: Context,
   kind?: "query" | "mutation",
 ): HttpClient {
-  const inBrowser = Reflect.get(globalThis, "document") !== undefined;
-  const dedupes = inBrowser && context?.proxyMethod === undefined && kind === "query";
+  const dedupes = servesOneUser() && context?.proxyMethod === undefined && kind === "query";
   const options = dedupes ? dataSource.options : { ...dataSource.options, deduplicate: false };
   const client = new HttpClient(options, context);
   if (dedupes) client.pendingRequests = pendingRequestsOf(dataSource);

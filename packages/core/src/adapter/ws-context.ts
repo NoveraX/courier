@@ -4,6 +4,7 @@ import type { WebSocketLike } from "../realtime/adapters";
 import type { WSMessage } from "../realtime/ws/ws-protocol";
 import { encodeMessage } from "../realtime/ws/ws-protocol";
 import { generateRequestId, PLAYGROUND_RID_PARAM, playgroundRidOf, studioHooks } from "../studio";
+import { randomId } from "../utils/random-id";
 import { LIMITS } from "./limits";
 import { servedSources } from "./served-sources";
 import type { PubSubBridge } from "./ws-pubsub-bridge";
@@ -112,7 +113,7 @@ export function buildContext(
   const maxConsecutiveDrops = config.maxConsecutiveDrops ?? LIMITS.MAX_CONSECUTIVE_DROPS;
   const maxSubscriptions =
     config.maxSubscriptionsPerConnection ?? LIMITS.MAX_SUBSCRIPTIONS_PER_CONNECTION;
-  const connectionId = crypto.randomUUID();
+  const connectionId = randomId();
   const requestId = generateRequestId();
   // Studio Playground proxy executor forwards its pre-allocated requestId
   // via `?_playground_rid=<id>` on the WS upgrade URL. Extract it once at

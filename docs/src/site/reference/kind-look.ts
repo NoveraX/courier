@@ -8,8 +8,6 @@ export interface KindLook {
   icon: LucideIcon
   /** The text colour; tiles and chips tint from it. */
   tone: string
-  /** The dot beside its name in the exports list. */
-  dot: string
 }
 
 /**
@@ -22,8 +20,8 @@ export interface KindLook {
  * ```
  */
 export const KIND_LOOK: Readonly<Record<ReferenceKind, KindLook>> = {
-  FUNCTION: { icon: SquareFunction, tone: "text-brand", dot: "bg-brand" },
-  TYPE: { icon: Braces, tone: "text-verb-put", dot: "bg-verb-put" },
-  CLASS: { icon: Box, tone: "text-verb-del", dot: "bg-verb-del" },
-  FILE: { icon: FileCode, tone: "text-fg-muted", dot: "bg-fg-subtle" },
+  FUNCTION: { icon: SquareFunction, tone: "text-brand" },
+  TYPE: { icon: Braces, tone: "text-verb-put" },
+  CLASS: { icon: Box, tone: "text-verb-del" },
+  FILE: { icon: FileCode, tone: "text-fg-muted" },
 }

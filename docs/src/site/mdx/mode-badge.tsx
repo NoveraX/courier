@@ -2,10 +2,10 @@ import { cn } from "@/site/cn"
 
 type Mode = "direct" | "proxy" | "both"
 
-const LOOK: Readonly<Record<Mode, { label: string; dot: string }>> = {
-  proxy: { label: "proxy mode", dot: "bg-brand" },
-  direct: { label: "direct mode", dot: "bg-ok" },
-  both: { label: "both modes", dot: "bg-fg-subtle" },
+const LABEL: Readonly<Record<Mode, string>> = {
+  proxy: "proxy mode",
+  direct: "direct mode",
+  both: "both modes",
 }
 
 /**
@@ -20,7 +20,7 @@ const LOOK: Readonly<Record<Mode, { label: string; dot: string }>> = {
  * ```
  */
 export function ModeBadge({ mode, className }: { mode: Mode; className?: string }) {
-  const { label, dot } = LOOK[mode]
+  const label = LABEL[mode]
   return (
     <span
       data-badge=""
@@ -29,7 +29,6 @@ export function ModeBadge({ mode, className }: { mode: Mode; className?: string 
         className
       )}
     >
-      <span aria-hidden="true" className={cn("size-1.5 rounded-full", dot)} />
       {label}
     </span>
   )

@@ -7,7 +7,7 @@ import type { ReferenceKind } from "@/site/content/reference"
 import { AssistantActions } from "@/site/layout/assistant-actions"
 import type { ExportFilterState } from "./export-filter"
 import { ExportFilter } from "./export-filter"
-import { KIND_LOOK } from "./kind-look"
+import { KindMark } from "./kind-mark"
 
 /** An export as the side list names it. */
 export interface ListedExport {
@@ -62,13 +62,7 @@ export function ReferenceSidebar({
               id === active ? "border-brand text-fg" : "border-transparent text-fg-muted"
             )}
           >
-            <span
-              aria-hidden="true"
-              className={cn(
-                "size-1.5 shrink-0 rounded-[2px]",
-                kind === "BUILDER" ? "bg-fg-subtle" : KIND_LOOK[kind].dot
-              )}
-            />
+            <KindMark kind={kind} />
             <span className="truncate">{name}</span>
           </a>
         ))}

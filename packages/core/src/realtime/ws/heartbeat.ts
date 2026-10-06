@@ -65,9 +65,12 @@ export function createHeartbeat(
   function start(): void {
     if (pingInterval !== null) return;
 
+    /* The wait runs from the first ping left unanswered: restarted by each
+       ping, a timeout no shorter than the interval never ran out, and a
+       client that had stopped answering was kept for good. */
     pingInterval = setInterval(() => {
       sendPing();
-      startPongTimeout();
+      if (pongTimeout === null) startPongTimeout();
     }, intervalMs);
   }
 

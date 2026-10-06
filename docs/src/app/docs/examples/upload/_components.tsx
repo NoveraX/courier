@@ -1,5 +1,6 @@
 "use client"
 
+import { smoothProgress } from "@noverax/courier"
 import { useState } from "react"
 
 import { caller } from "@/lib/caller"
@@ -7,6 +8,7 @@ import { ResponseView } from "@/site/sandbox/response-view"
 import { RunButton } from "@/site/sandbox/run-button"
 import { Sandbox } from "@/site/sandbox/sandbox"
 import { FileDrop } from "./file-drop"
+import { ProgressBars } from "./progress-bars"
 
 function formOf(file: File): FormData {
   const form = new FormData()
@@ -59,43 +61,41 @@ export function SimpleUploadDemo() {
 
 export function ProgressUploadDemo() {
   const upload = useUpload()
-  const [percent, setPercent] = useState(0)
+  const [reported, setReported] = useState(0)
+  const [smoothed, setSmoothed] = useState(0)
   return (
     <Sandbox
       label="caller.files.with({ onUploadProgress }).upload"
       controls={
         <>
           <FileDrop file={upload.file} onFile={upload.setFile} />
-          {(upload.loading || percent > 0) && (
-            <div>
-              <div className="mb-1.5 flex justify-between font-mono text-[11px] text-fg-subtle">
-                <span>{upload.loading ? "uploading" : "done"}</span>
-                <span>{percent}%</span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-raised">
-                <div
-                  className="h-full rounded-full bg-brand transition-[width] duration-150"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            </div>
+          {(upload.loading || reported > 0) && (
+            <ProgressBars reported={reported} smoothed={smoothed} />
           )}
           <RunButton
             loading={upload.loading}
             disabled={!upload.file}
             label="Upload with progress"
             onClick={() => {
-              setPercent(0)
+              setReported(0)
+              setSmoothed(0)
+              const smooth = smoothProgress(({ percent }) => setSmoothed(percent * 100))
               void upload.run((form) =>
                 caller.files
-                  .with({ onUploadProgress: (p) => setPercent(Math.round(p.percent * 100)) })
+                  .with({
+                    onUploadProgress: (progress) => {
+                      setReported(progress.percent * 100)
+                      smooth(progress)
+                    },
+                  })
                   .upload(form)
               )
             }}
           />
           <p className="m-0 text-[11.5px] leading-[1.5] text-fg-subtle">
-            On localhost an upload is near instant: throttle the network in DevTools to watch it
-            climb.
+            Both bars follow the same upload. On localhost it is near instant: throttle the network
+            in DevTools to watch the browser report in steps and the smoothed bar glide between
+            them.
           </p>
         </>
       }

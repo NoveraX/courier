@@ -13,16 +13,17 @@ formData.append("description", "My upload")
 // FormData is auto-detected — courier sends multipart/form-data
 const result = await caller.files.upload(formData)`
 
-const progressCode = `import { caller } from "@/lib/caller"
+const progressCode = `import { smoothProgress } from "@noverax/courier"
+import { caller } from "@/lib/caller"
 
 const formData = new FormData()
 formData.append("file", file)
 
-// onUploadProgress tracks real upload progress (HTTP/2 compatible)
+// The browser reports progress in steps: smoothProgress moves the bar between them
 const result = await caller.files.with({
-  onUploadProgress: (progress) => {
-    setProgress(Math.round(progress.percent * 100))
-  },
+  onUploadProgress: smoothProgress((progress) => {
+    setProgress(progress.percent * 100)
+  }),
 }).upload(formData)`
 
 const sourceCode = `import { courier, defineGroup } from "@noverax/courier/define"
@@ -62,8 +63,12 @@ export default function UploadExamplesPage() {
 
       <ExampleSection
         title="Upload with Progress"
-        description="onUploadProgress tracks real upload progress. HTTP/2 compatible — uses ReadableStream internally instead of XHR."
+        description="A browser reports an upload's progress over XMLHttpRequest, since fetch has none — every 100 ms or so, a step of several percent each on a slow link. smoothProgress moves the bar between the reports: never ahead of the upload, never back, and at rest at 100%."
         code={progressCode}
+        learnMore={{
+          href: "/docs/advanced/upload#a-bar-that-moves-smoothly",
+          label: "smoothProgress",
+        }}
       >
         <ProgressUploadDemo />
       </ExampleSection>

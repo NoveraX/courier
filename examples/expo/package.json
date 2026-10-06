@@ -1,0 +1,33 @@
+{
+  "name": "courier-example-expo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "One API definition, called from a React Native app built with Expo: queries, a search sent as QUERY, an upload from the device, a live stream, a chat channel and a cancelled call",
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "server": "courier-studio --no-open",
+    "typecheck": "tsc --noEmit",
+    "bundle": "expo export --platform ios --platform android --output-dir dist"
+  },
+  "dependencies": {
+    "@noverax/courier": "file:../../packages/core",
+    "@noverax/courier-react": "file:../../packages/react",
+    "@tanstack/react-query": "^5.104.1",
+    "expo": "~57.0.26",
+    "expo-file-system": "~57.0.7",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@noverax/courier-mock": "file:../../packages/mock",
+    "@noverax/courier-studio": "file:../../packages/studio",
+    "@noverax/courier-studio-core": "file:../../packages/studio-core",
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  }
+}

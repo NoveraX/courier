@@ -13,6 +13,12 @@ function methodOf(def: CatalogEndpoint, calls: readonly RequestEntry[]): string 
   ).toUpperCase();
 }
 
+/* The path of the newest call that has a URL Studio can read. */
+function lastCalledPath(calls: readonly RequestEntry[]): string | null {
+  const url = calls.find((call) => call.url !== undefined && URL.canParse(call.url))?.url;
+  return url === undefined ? null : new URL(url).pathname;
+}
+
 /** What building an endpoint's node reads beside its definition. */
 export interface NodeContext {
   byKey: Map<string, RequestEntry[]>;
@@ -23,7 +29,9 @@ export interface NodeContext {
 
 /**
  * An endpoint's node: its definition — method, transport, path and URL,
- * middleware, schemas — with its calls, their metrics and its health.
+ * middleware, schemas — with its calls, their metrics and its health. An
+ * endpoint only traffic showed, whose path nothing declares, shows the path
+ * it was last called at.
  *
  * @param ref - Where the endpoint is
  * @param prefix - Its group's path prefix
@@ -46,7 +54,9 @@ export function endpointOf(
   const key = endpointKey(ref);
   const requests = ctx.byKey.get(key) ?? [];
   const metrics = metricsOf(requests, ctx.now, ctx.since);
-  const path = joinPath(prefix, def.path ?? "");
+  /* An endpoint only traffic showed has no declared path: it shows where it was last called. */
+  const declared = def.path !== undefined || prefix !== "";
+  const path = (!declared && lastCalledPath(requests)) || joinPath(prefix, def.path ?? "");
   return {
     ...ref,
     key,

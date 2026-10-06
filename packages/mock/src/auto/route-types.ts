@@ -40,6 +40,12 @@ export interface RouteInfo {
   idParam?: string | undefined;
   /** Detected CRUD operation */
   operation: CrudOperation;
+  /**
+   * Query values the declared path fixes, as a specification writes
+   * `/responses?beta=true` to tell two operations at one path apart: the
+   * endpoint answers only a request that carries them
+   */
+  fixedQuery?: Readonly<Record<string, string>> | undefined;
   /** Response schema if available */
   responseSchema?: StandardSchemaV1 | undefined;
   /** Variables schema if available */

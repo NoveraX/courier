@@ -28,6 +28,8 @@ export interface MappedEndpoint {
   path: string;
   /** HTTP method for this endpoint (e.g. "GET", "POST") */
   httpMethod?: string | undefined;
+  /** Query values the declared path fixes; the endpoint answers only a request that carries them */
+  fixedQuery?: Readonly<Record<string, string>> | undefined;
   /** Transport mode — "http" (default), "sse", or "ws" */
   transport?: Transport | undefined;
   /** True for WS bidirectional channel endpoints (have a `receive` schema) */

@@ -62,10 +62,12 @@ export function registerDeclaredRoutes(
        endpoint is a GET route that hands any other request on. */
     app.on(method === "HEAD" ? "GET" : method, path, async (c, next) => {
       if (method === "HEAD" && c.req.method !== "HEAD") return next();
+      /* A path that fixes query values answers only a request that carries them. */
+      if (!carriesFixedQuery(c.req.url, ep.fixedQuery)) return next();
       const read = await inputOf(c, method, config.bodyLimits);
       if ("error" in read) return config.refuse(c, group, ep.name, read);
       return config.handleRequest(c, group, ep.name, {
-        ...read.input,
+        ...withoutFixedQuery(read.input, ep.fixedQuery),
         ...parsePathParams(c.req.param()),
       });
     });
@@ -74,6 +76,21 @@ export function registerDeclaredRoutes(
 
 function needsOwnRoute(ep: MappedEndpoint): boolean {
   return isServedHttp(ep) && !servedByCatchAll(ep);
+}
+
+function carriesFixedQuery(url: string, fixed: MappedEndpoint["fixedQuery"]): boolean {
+  if (fixed === undefined) return true;
+  const query = new URL(url).searchParams;
+  return Object.entries(fixed).every(([name, value]) => query.getAll(name).includes(value));
+}
+
+/* The variables without the values the path fixes, which no variable declares. */
+function withoutFixedQuery(
+  input: Record<string, unknown>,
+  fixed: MappedEndpoint["fixedQuery"],
+): Record<string, unknown> {
+  if (fixed === undefined) return input;
+  return Object.fromEntries(Object.entries(input).filter(([name]) => !Object.hasOwn(fixed, name)));
 }
 
 /* An HTTP endpoint with a verb the mock serves. */
@@ -96,7 +113,9 @@ function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
       .filter(Boolean)
       .map((segment) => (segment.startsWith(":") ? "1" : "0"))
       .join("");
-  return rank(a).localeCompare(rank(b));
+  /* At one path, the endpoint whose query is fixed comes first: the other takes what is left. */
+  const fixes = (ep: MappedEndpoint) => Object.keys(ep.fixedQuery ?? {}).length;
+  return rank(a).localeCompare(rank(b)) || fixes(b) - fixes(a);
 }
 
 /** The query of a GET, HEAD, OPTIONS or DELETE; the JSON, form or upload of anything else — a QUERY's question included — which holds an object */

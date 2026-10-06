@@ -21,6 +21,7 @@ import { NetworkHero } from "./network-hero";
 import { ObservedPanel } from "./observed-panel";
 import { RouteOverridesPanel } from "./route-overrides-panel";
 import { SafetyPanel } from "./safety-panel";
+import { UploadsPanel } from "./uploads-panel";
 import { useMockServer } from "./use-mock-server";
 
 /* The rate and mix in force; with no chaos, the mix a custom run would start from. */
@@ -73,12 +74,16 @@ function NetworkTab({ server }: { server: MockServerInfo }): React.ReactNode {
             }}
           />
           <LatencyPanel server={server} disabled={disabled} />
+          <UploadsPanel server={server} disabled={disabled} />
         </div>
         <div className="flex min-w-0 flex-col gap-4">
           <ObservedPanel
             bins={latencyHistogram(logs, slowMs)}
             strip={statusStrip(logs)}
-            faults={faultsByType(logs)}
+            faults={faultsByType(
+              logs,
+              current.faultWeights.map((f) => f.type),
+            )}
             onOpen={sheet.open}
           />
           <RouteOverridesPanel server={server} disabled={disabled} />
@@ -96,9 +101,9 @@ function NetworkTab({ server }: { server: MockServerInfo }): React.ReactNode {
 
 /**
  * The mock's Network tab: the condition it serves under and its live
- * figures, its chaos mode, the faults it injects and the delay it adds,
- * what its latest answers looked like, its per-route overrides, and what
- * halts a run.
+ * figures, its chaos mode, the faults it injects, the delay it adds and
+ * how it takes uploads, what its latest answers looked like, its per-route
+ * overrides, and what halts a run.
  *
  * @returns The Network tab
  * @example

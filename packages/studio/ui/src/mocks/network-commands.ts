@@ -10,6 +10,7 @@ import type {
   NetworkConfig,
   RouteOverride,
   StopCondition,
+  UploadConditions,
 } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
 
@@ -24,7 +25,9 @@ function configWith(server: MockServerInfo, patch: Partial<NetworkConfig>): Netw
 
 /**
  * Fail a share of the mock's answers: a preset's rate and mix or one's
- * own, with the stop conditions in force. A rate of 0 is no chaos.
+ * own, with the stop conditions in force. A rate of 0 is no chaos, and
+ * keeps the mix — faults added to it while nothing fails are there when a
+ * rate is set; Stable clears it.
  *
  * @param server - The mock server
  * @param mode - The preset, or `custom`
@@ -44,7 +47,7 @@ export function setChaos(
   const preset = values.errorRate === 0 || mode === "stable" ? "none" : mode;
   const config = {
     errorRate: preset === "none" ? 0 : values.errorRate / 100,
-    faultWeights: preset === "none" ? [] : values.faultWeights,
+    faultWeights: mode === "stable" ? [] : values.faultWeights,
     stopConditions: stop,
   };
   useMockStore.getState().updateServer(server.serverId, {
@@ -97,6 +100,25 @@ export function setBandwidth(server: MockServerInfo, kbps: number): void {
     .getState()
     .updateServer(server.serverId, { networkConfig: configWith(server, { bandwidth: kbps }) });
   send(server.serverId, "mock:network:set", { config: { bandwidth: kbps } });
+}
+
+/**
+ * Set how the mock takes uploads: how fast request bodies arrive, the
+ * largest upload it takes, and the types of file. Each condition left out
+ * is none.
+ *
+ * @param server - The mock server
+ * @param uploads - The conditions
+ * @example
+ * ```ts
+ * setUploads(server, { bandwidth: 1500, maxBytes: 1_048_576 });
+ * ```
+ */
+export function setUploads(server: MockServerInfo, uploads: UploadConditions): void {
+  useMockStore.getState().updateServer(server.serverId, {
+    networkConfig: configWith(server, { uploads }),
+  });
+  send(server.serverId, "mock:network:set", { config: { uploads } });
 }
 
 /**

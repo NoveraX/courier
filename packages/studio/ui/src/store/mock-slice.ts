@@ -24,6 +24,7 @@ export type {
   NetworkPreset,
   RouteOverride,
   StopCondition,
+  UploadConditions,
 } from "./mock-slice-network-types";
 export type {
   MockCollectionEntry,

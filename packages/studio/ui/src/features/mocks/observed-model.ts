@@ -73,7 +73,8 @@ export function statusStrip(logs: readonly MockRequestLog[]): StripCell[] {
     tip: "",
   }));
   const cells = answered.map((log): StripCell => {
-    const code = injectedFault(log) === "reset" ? "reset" : mockLogCode(log);
+    const fault = injectedFault(log);
+    const code = fault === "reset" || fault === "interrupt" ? fault : mockLogCode(log);
     return { tone: mockLogTone(log), tip: `${code} · ${log.path}`, id: log.id };
   });
   return [...empty, ...cells];
@@ -81,25 +82,31 @@ export function statusStrip(logs: readonly MockRequestLog[]): StripCell[] {
 
 /** How many of the latest answers chaos failed in one way. */
 export interface FaultCount {
-  kind: "500" | "503" | "timeout" | "reset";
+  kind: string;
   count: number;
 }
 
 /**
- * How many of the latest answers chaos failed in each of the ways the
- * Fault injection card mixes: a 500, a 503, a timeout, a dropped connection.
+ * How many of the latest answers chaos failed in each way: every fault in
+ * the mix, in its order, then any other the latest answers met — one a
+ * route fails with of its own, say.
  *
  * @param logs - The server's logged requests, newest first
+ * @param mix - The faults in the mix
  * @returns The count per kind
  * @example
  * ```ts
- * faultsByType(logs); // [{ kind: "500", count: 3 }, …]
+ * faultsByType(logs, ["500", "503"]); // [{ kind: "500", count: 3 }, { kind: "503", count: 0 }, { kind: "413", count: 2 }]
  * ```
  */
-export function faultsByType(logs: readonly MockRequestLog[]): FaultCount[] {
-  const kinds = logs.slice(0, RECENT).map(injectedFault);
-  return (["500", "503", "timeout", "reset"] as const).map((kind) => ({
-    kind,
-    count: kinds.filter((k) => k === kind).length,
-  }));
+export function faultsByType(
+  logs: readonly MockRequestLog[],
+  mix: readonly string[],
+): FaultCount[] {
+  const kinds = logs
+    .slice(0, RECENT)
+    .map(injectedFault)
+    .filter((kind) => kind !== undefined);
+  const shown = [...new Set([...mix, ...kinds])];
+  return shown.map((kind) => ({ kind, count: kinds.filter((k) => k === kind).length }));
 }

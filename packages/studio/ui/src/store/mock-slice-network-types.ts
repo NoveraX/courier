@@ -29,6 +29,16 @@ export interface StopCondition {
   maxDurationMins: number;
 }
 
+/** How the mock takes uploads: how fast request bodies arrive, the largest upload and the types of file it takes. */
+export interface UploadConditions {
+  /** How fast request bodies arrive, in Kbps; absent is unlimited */
+  bandwidth?: number;
+  /** The largest upload taken, in bytes; absent is no limit of its own */
+  maxBytes?: number;
+  /** The types of file taken, as `<input accept>` lists them; absent or empty takes any */
+  accept?: string[];
+}
+
 export interface NetworkConfig {
   latency:
     | number
@@ -38,6 +48,7 @@ export interface NetworkConfig {
   faultWeights?: FaultWeight[];
   /** Bandwidth cap in Kbps; 0 = unlimited */
   bandwidth?: number;
+  uploads?: UploadConditions;
   stopConditions?: StopCondition;
   routeOverrides?: RouteOverride[];
 }
@@ -49,7 +60,10 @@ export interface RouteOverride {
   latency?: { min: number; max: number; jitter: number };
   /** The share of the route's calls the mock fails, 0–1, as for the mock's global rate. */
   errorRate?: number;
+  /** The faults the route's failures take, each as likely, in place of the mix. */
   faultTypes?: string[];
+  /** The largest upload the route takes and its types of file, each in place of the mock's. */
+  uploads?: Omit<UploadConditions, "bandwidth">;
 }
 
 export interface ExperimentEvent {

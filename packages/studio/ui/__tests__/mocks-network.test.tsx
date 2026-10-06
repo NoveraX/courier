@@ -2,11 +2,13 @@
  * @vitest-environment jsdom
  *
  * The mock's Network tab: the condition it serves under, a chaos mode
- * picked and a rate dragged — each sent as the share the mock reads — a
- * latency preset and a base and jitter of one's own, a bandwidth cap, a
- * route's own override sent with the ones the mock already held, the
- * thresholds that halt a run, the log of runs, Stop — which switches the
- * route overrides off too — and a stopped mock.
+ * picked and a rate dragged — each sent as the share the mock reads — the
+ * fault mix grown from the catalogue and cut back, a latency preset and a
+ * base and jitter of one's own, a download cap, an upload speed, size limit
+ * and types, a route's own override — its faults and upload rules included —
+ * sent with the ones the mock already held, the thresholds that halt a run,
+ * the log of runs, Stop — which switches the route overrides off and clears
+ * the upload conditions too — and a stopped mock.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -63,6 +65,26 @@ async function drag(name: string, value: number): Promise<void> {
   const slider = screen.getByRole("slider", { name });
   await settle(() => fireEvent.change(slider, { target: { value: String(value) } }));
   await settle(() => fireEvent.pointerUp(slider));
+}
+
+/*
+ * Radix opens a menu on a primary pointer press. A click focuses its button
+ * first; without that, jsdom fires `blur` on the window as focus leaves the
+ * document for the menu, and Radix closes a menu on the window's blur.
+ */
+async function openMenu(name: string | RegExp): Promise<void> {
+  const button = screen.getByRole("button", { name });
+  await settle(() => button.focus());
+  await settle(() =>
+    fireEvent.pointerDown(button, { button: 0, ctrlKey: false, pointerType: "mouse" }),
+  );
+}
+
+/* Typed into a field as a person does: focused, changed, and let go with Enter. */
+async function typeInto(field: HTMLElement, value: string): Promise<void> {
+  await settle(() => field.focus());
+  await settle(() => fireEvent.change(field, { target: { value } }));
+  await settle(() => fireEvent.keyDown(field, { key: "Enter" }));
 }
 
 function sent(action: string): unknown[] {
@@ -182,7 +204,7 @@ describe("chaos", () => {
       config: { errorRate: 0.25 },
       preset: "custom",
     });
-    await drag("Weight of reset", 40);
+    await drag("Weight of timeout", 40);
 
     expect(sent("mock:chaos:set").at(-1)).toMatchObject({
       config: {
@@ -190,13 +212,64 @@ describe("chaos", () => {
         faultWeights: [
           { type: "500", weight: 50 },
           { type: "503", weight: 30 },
-          { type: "timeout", weight: 20 },
-          { type: "reset", weight: 40 },
+          { type: "timeout", weight: 40 },
         ],
       },
       preset: "custom",
     });
     expect(screen.getByRole("radio", { name: /Custom/ })).toHaveProperty("checked", true);
+  });
+
+  it("adds any error status to the mix from its menu, and takes one out", async () => {
+    serve({
+      chaosPreset: "custom",
+      networkConfig: {
+        latency: 0,
+        errorRate: 0.3,
+        faultWeights: [...PRESET_CONFIG.degraded.faultWeights],
+      },
+    });
+    await openShell("/mocks/network");
+
+    await openMenu("Add a fault");
+    await settle(() => fireEvent.click(screen.getByRole("menuitem", { name: /HTTP 413/ })));
+    expect(sent("mock:chaos:set").at(-1)).toMatchObject({
+      config: {
+        errorRate: 0.3,
+        faultWeights: [
+          { type: "500", weight: 60 },
+          { type: "timeout", weight: 40 },
+          { type: "413", weight: 20 },
+        ],
+      },
+      preset: "custom",
+    });
+    expect(screen.getByRole("slider", { name: "Weight of HTTP 413" })).toBeTruthy();
+
+    await settle(() =>
+      fireEvent.click(screen.getByRole("button", { name: "Take HTTP 500 out of the mix" })),
+    );
+    expect(sent("mock:chaos:set").at(-1)).toMatchObject({
+      config: {
+        faultWeights: [
+          { type: "timeout", weight: 40 },
+          { type: "413", weight: 20 },
+        ],
+      },
+    });
+  });
+
+  it("keeps a mix changed while nothing fails, for when a rate is set", async () => {
+    await openShell("/mocks/network");
+
+    await openMenu("Add a fault");
+    await settle(() => fireEvent.click(screen.getByRole("menuitem", { name: /HTTP 429/ })));
+
+    expect(sent("mock:chaos:set").at(-1)).toMatchObject({
+      config: { errorRate: 0, faultWeights: expect.arrayContaining([{ type: "429", weight: 20 }]) },
+      preset: "none",
+    });
+    expect(screen.getByRole("radio", { name: /Stable/ })).toHaveProperty("checked", true);
   });
 });
 
@@ -290,14 +363,87 @@ describe("latency", () => {
     expect(screen.queryByRole("group", { name: "Delay shape" })).toBeNull();
   });
 
-  it("caps how fast bodies are sent", async () => {
+  it("caps how fast answers are sent", async () => {
     await openShell("/mocks/network");
 
-    await settle(() => fireEvent.click(screen.getByRole("button", { name: "512 Kbps" })));
+    await settle(() =>
+      fireEvent.click(
+        within(screen.getByRole("group", { name: "Download speed" })).getByRole("button", {
+          name: "512 Kbps",
+        }),
+      ),
+    );
 
     expect(sent("mock:network:set")).toEqual([
       { action: "mock:network:set", serverId: "api-mock", config: { bandwidth: 512 } },
     ]);
+  });
+});
+
+describe("uploads", () => {
+  const uploads = () => within(screen.getByRole("region", { name: "Uploads" }));
+  const pick = async (group: string, name: string) =>
+    settle(() =>
+      fireEvent.click(
+        within(uploads().getByRole("group", { name: group })).getByRole("button", { name }),
+      ),
+    );
+
+  it("sets a speed, a size limit and file types, each sent with the ones already set", async () => {
+    await openShell("/mocks/network");
+
+    await pick("Upload speed", "1.5 Mbps");
+    await pick("Size limit", "1 MB");
+    await typeInto(uploads().getByRole("textbox", { name: "File types" }), "image/*, .pdf");
+
+    expect(
+      sent("mock:network:set").map((command) => (command as { config: unknown }).config),
+    ).toEqual([
+      { uploads: { bandwidth: 1_500 } },
+      { uploads: { bandwidth: 1_500, maxBytes: 1_048_576 } },
+      { uploads: { bandwidth: 1_500, maxBytes: 1_048_576, accept: ["image/*", ".pdf"] } },
+    ]);
+  });
+
+  it("takes a condition back to none, keeping the others", async () => {
+    serve({
+      networkConfig: { latency: 0, errorRate: 0, uploads: { bandwidth: 512, maxBytes: 102_400 } },
+    });
+    await openShell("/mocks/network");
+
+    await pick("Upload speed", "Unlimited");
+
+    expect(sent("mock:network:set").at(-1)).toMatchObject({
+      config: { uploads: { maxBytes: 102_400 } },
+    });
+    expect(sent("mock:network:set").at(-1)).not.toHaveProperty("config.uploads.bandwidth");
+  });
+
+  it("shows a limit the mocks file set among the presets, chosen", async () => {
+    serve({ networkConfig: { latency: 0, errorRate: 0, uploads: { maxBytes: 2_097_152 } } });
+    await openShell("/mocks/network");
+
+    const limit = within(uploads().getByRole("group", { name: "Size limit" })).getByRole("button", {
+      name: "2 MB",
+    });
+    expect(limit.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("are named in the network condition, with a Stop that clears them", async () => {
+    serve({
+      networkConfig: {
+        latency: 0,
+        errorRate: 0,
+        uploads: { bandwidth: 1_500, maxBytes: 1_048_576, accept: ["image/*"] },
+      },
+    });
+    await openShell("/mocks/network");
+
+    expect(
+      within(condition()).getByText("uploads at 1.5 Mbps · up to 1 MB · image/* only"),
+    ).toBeTruthy();
+    await settle(() => fireEvent.click(within(condition()).getByRole("button", { name: /Stop/ })));
+    expect(sent("mock:network:set")).toMatchObject([{ config: { uploads: {} }, preset: "none" }]);
   });
 });
 
@@ -379,6 +525,59 @@ describe("a route's own override", () => {
 
     expect(sent("mock:network:set").at(-1)).toMatchObject({
       config: { routeOverrides: [held, { routeId: "users:list", enabled: true }] },
+    });
+  });
+
+  it("fails with the faults picked, at 100% when nothing would fail it", async () => {
+    await openShell("/mocks/network");
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /orders\.create/ })));
+
+    await openMenu("Pick faults");
+    await settle(() => fireEvent.click(screen.getByRole("menuitem", { name: /HTTP 413/ })));
+
+    expect(sent("mock:network:set").at(-1)).toEqual({
+      action: "mock:network:set",
+      serverId: "api-mock",
+      config: {
+        routeOverrides: [
+          { routeId: "orders:create", enabled: true, faultTypes: ["413"], errorRate: 1 },
+        ],
+      },
+    });
+    expect(screen.getByRole("button", { name: /orders\.create/ }).textContent).toContain(
+      "100% · 413",
+    );
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: "Take HTTP 413 out" })));
+    expect(sent("mock:network:set").at(-1)).toMatchObject({
+      config: { routeOverrides: [{ routeId: "orders:create", enabled: true, errorRate: 1 }] },
+    });
+  });
+
+  it("takes a size limit and file types of its own, each in place of the mock's", async () => {
+    await openShell("/mocks/network");
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: /orders\.create/ })));
+
+    await settle(() =>
+      fireEvent.click(
+        within(screen.getByRole("group", { name: "Route size limit" })).getByRole("button", {
+          name: "100 KB",
+        }),
+      ),
+    );
+    await typeInto(screen.getByRole("textbox", { name: "Route file types" }), ".csv");
+
+    expect(sent("mock:network:set").at(-1)).toEqual({
+      action: "mock:network:set",
+      serverId: "api-mock",
+      config: {
+        routeOverrides: [
+          {
+            routeId: "orders:create",
+            enabled: true,
+            uploads: { maxBytes: 102_400, accept: [".csv"] },
+          },
+        ],
+      },
     });
   });
 });

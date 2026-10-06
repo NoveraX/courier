@@ -1,7 +1,8 @@
-import type { MockServerInfo } from "@/store/mock-slice";
+import type { MockServerInfo, UploadConditions } from "@/store/mock-slice";
 import type { Delay } from "./latency-window";
 import { delayOf } from "./latency-window";
 import { hasOwnSettings, routeOverridesOf } from "./route-overrides";
+import { uploadsOf } from "./upload-conditions";
 
 /** What a mock simulates, as the network condition sums it up. */
 export interface NetworkCondition {
@@ -11,19 +12,22 @@ export interface NetworkCondition {
   delay: Delay | null;
   /** Its cap on how fast bodies are sent, in Kbps; 0 for none */
   kbps: number;
+  /** How it takes uploads: how fast, the largest, and the types of file */
+  uploads: UploadConditions;
   /** How many routes are answered under an override of their own */
   routes: number;
 }
 
 /**
  * What a mock simulates: its failure rate, its delay and bandwidth cap,
- * and the routes answered under an override of their own.
+ * its upload conditions, and the routes answered under an override of
+ * their own.
  *
  * @param server - The mock server
  * @returns What it simulates
  * @example
  * ```ts
- * networkConditionOf(server); // { rate: 40, delay: { base: 600, jitter: 450 }, kbps: 512, routes: 1 }
+ * networkConditionOf(server); // { rate: 40, delay: { base: 600, jitter: 450 }, kbps: 512, uploads: {}, routes: 1 }
  * ```
  */
 export function networkConditionOf(
@@ -34,6 +38,7 @@ export function networkConditionOf(
     rate: Math.round((config?.errorRate ?? 0) * 100),
     delay: delayOf(config?.latency),
     kbps: config?.bandwidth ?? 0,
+    uploads: uploadsOf(server),
     routes: routeOverridesOf(server).filter(hasOwnSettings).length,
   };
 }

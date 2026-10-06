@@ -27,9 +27,10 @@ const MAX_DEPTH = 6;
  * Why a visitor's mock command is out of the demo's bounds: a seed of more
  * than {@link DEMO_MAX_SEED} records, a record added to a collection that
  * holds {@link DEMO_MAX_RECORDS} already, a latency or failure setting above
- * {@link DEMO_MAX_SETTING}, or answers capped below
- * {@link DEMO_MIN_BANDWIDTH} Kbps. A command the mock cannot read is left
- * to the mock to refuse.
+ * {@link DEMO_MAX_SETTING}, or answers or uploads capped below
+ * {@link DEMO_MIN_BANDWIDTH} Kbps. An upload's size limit is a count of
+ * bytes, not a setting a visitor waits out, and is not held to the bound.
+ * A command the mock cannot read is left to the mock to refuse.
  *
  * @param command - The command as the page sent it
  * @param recordsIn - How many records a collection holds, when Studio knows
@@ -64,19 +65,30 @@ export function demoCommandProblem(command: unknown, recordsIn?: RecordsIn): str
       `${DEMO_MAX_SETTING / 1000} s for a latency.`
     );
   }
-  const bandwidth = isPlainObject(command.config) ? command.config.bandwidth : undefined;
-  return typeof bandwidth === "number" && bandwidth > 0 && bandwidth < DEMO_MIN_BANDWIDTH
-    ? `The demo caps a mock's answers at ${DEMO_MIN_BANDWIDTH} Kbps or faster.`
-    : null;
+  const config = isPlainObject(command.config) ? command.config : {};
+  const uploads = isPlainObject(config.uploads) ? config.uploads : {};
+  if (tooSlow(config.bandwidth) || tooSlow(uploads.bandwidth)) {
+    return `The demo caps a mock's answers and uploads at ${DEMO_MIN_BANDWIDTH} Kbps or faster.`;
+  }
+  return null;
 }
 
-/* The largest number anywhere in a setting; one nested too deep to read counts as too large. */
+function tooSlow(kbps: unknown): boolean {
+  return typeof kbps === "number" && kbps > 0 && kbps < DEMO_MIN_BANDWIDTH;
+}
+
+/* An upload's size limit, in bytes, wherever it is set. */
+const BYTE_COUNTS: ReadonlySet<string> = new Set(["maxBytes"]);
+
+/* The largest number anywhere in a setting, byte counts aside; one nested too deep to read counts as too large. */
 function largest(value: unknown, depth: number): number {
   if (typeof value === "number") return Number.isNaN(value) ? 0 : value;
   if (typeof value !== "object" || value === null) return 0;
   if (depth >= MAX_DEPTH) return Number.POSITIVE_INFINITY;
-  const items: unknown[] = Object.values(value);
+  const entries: Array<[string, unknown]> = Object.entries(value);
   let found = 0;
-  for (const item of items) found = Math.max(found, largest(item, depth + 1));
+  for (const [key, item] of entries) {
+    if (!BYTE_COUNTS.has(key)) found = Math.max(found, largest(item, depth + 1));
+  }
   return found;
 }

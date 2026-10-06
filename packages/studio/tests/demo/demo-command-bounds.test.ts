@@ -1,7 +1,7 @@
 /**
  * A public demo keeps a visitor's mock commands in bounds: a seed the mock
- * serves at once, latencies a visitor can wait out, answers not slowed to a
- * crawl, a collection grown no larger than it keeps. What the demo does not
+ * serves at once, latencies a visitor can wait out, answers and uploads not
+ * slowed to a crawl, a collection grown no larger than it keeps. What the demo does not
  * bound is left to the mock.
  */
 import { describe, expect, it } from "vitest";
@@ -50,9 +50,34 @@ describe("a visitor's mock command", () => {
         config: { bandwidth: kbps },
       });
 
-    expect(bandwidth(1)).toBe("The demo caps a mock's answers at 256 Kbps or faster.");
+    expect(bandwidth(1)).toBe("The demo caps a mock's answers and uploads at 256 Kbps or faster.");
     expect(bandwidth(512)).toBeNull();
     expect(bandwidth(0)).toBeNull();
+  });
+
+  it("caps uploads at 256 Kbps or faster, as it caps answers", () => {
+    const uploads = (kbps: number) =>
+      demoCommandProblem({
+        action: "mock:network:set",
+        serverId: "shop",
+        config: { uploads: { bandwidth: kbps } },
+      });
+
+    expect(uploads(64)).toBe("The demo caps a mock's answers and uploads at 256 Kbps or faster.");
+    expect(uploads(1500)).toBeNull();
+  });
+
+  it("takes an upload size limit, a count of bytes, whatever its size", () => {
+    const set = (config: unknown) =>
+      demoCommandProblem({ action: "mock:network:set", serverId: "shop", config });
+
+    expect(set({ uploads: { maxBytes: 5_242_880, accept: ["image/*"] } })).toBeNull();
+    expect(
+      set({ routeOverrides: [{ routeId: "users:avatar", uploads: { maxBytes: 1_048_576 } }] }),
+    ).toBeNull();
+    expect(set({ uploads: { maxBytes: 1_048_576 }, latency: 60_000 })).toContain(
+      "10 s for a latency",
+    );
   });
 
   it("leaves a command the demo does not bound to the mock", () => {

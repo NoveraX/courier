@@ -5,8 +5,8 @@ import { useMockStore } from "@/store/mock-slice";
 
 /**
  * Stop everything the mock simulates: its chaos, its delay, its bandwidth
- * cap, and every route override, which keeps its values but is switched
- * off.
+ * cap, its upload conditions, and every route override, which keeps its
+ * values but is switched off.
  *
  * @param server - The mock server
  * @example
@@ -33,7 +33,7 @@ export function stopAllFaults(server: MockServerInfo): void {
   socket.emit("mock:command", {
     action: "mock:network:set",
     serverId,
-    config: { latency: 0, bandwidth: 0, routeOverrides: [] },
+    config: { latency: 0, bandwidth: 0, uploads: {}, routeOverrides: [] },
     preset: "none",
   });
   socket.emit("mock:command", {

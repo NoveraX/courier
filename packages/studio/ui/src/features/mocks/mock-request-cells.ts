@@ -2,7 +2,7 @@ import { durationTone } from "@/features/requests/duration-tone";
 import { httpStatusText } from "@/features/requests/http-status-text";
 import type { StateTone } from "@/features/requests/request-state";
 import type { StatCell } from "@/features/requests/stat-cells";
-import { formatClockTime, formatDuration, formatRelativeTime } from "@/lib/formatters";
+import { formatClockTime, formatDuration, formatRelativeTime, formatSize } from "@/lib/formatters";
 import type { MockRequestLog } from "@/store/mock-slice";
 import { logTag } from "./logs-view";
 import { mockLogCode, mockLogTone } from "./mock-log";
@@ -14,16 +14,24 @@ const TAG_TONE: Readonly<Record<ReturnType<typeof logTag>["tone"], StateTone>> =
   subtle: "muted",
 };
 
+/* A request whose body still arrives says how much of it has. */
+function inFlight(log: MockRequestLog): Pick<StatCell, "value" | "sub"> {
+  const upload = log.upload;
+  if (!upload?.arriving) return { value: "In flight" };
+  const share = upload.total ? ` ${Math.floor((upload.received / upload.total) * 100)}%` : "";
+  return { value: `Uploading${share}`, sub: `${formatSize(upload.received)} arrived` };
+}
+
 function statusCell(log: MockRequestLog): StatCell {
   const answered = log.status !== undefined || log.error !== undefined;
-  const tone: StateTone = answered ? mockLogTone(log) : "muted";
+  if (!answered) return { label: "Status", ...inFlight(log), tone: "muted", mono: false };
   const reason = log.status === undefined ? undefined : httpStatusText(log.status);
   return {
     label: "Status",
-    value: answered ? mockLogCode(log) : "In flight",
+    value: mockLogCode(log),
     sub: reason ?? (log.error === undefined ? undefined : "no answer"),
-    tone,
-    mono: answered,
+    tone: mockLogTone(log),
+    mono: true,
   };
 }
 

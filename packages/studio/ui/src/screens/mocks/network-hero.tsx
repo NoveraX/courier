@@ -4,21 +4,33 @@ import { chaosModeOf } from "@/features/mocks/chaos-config";
 import { delayLabel } from "@/features/mocks/latency-window";
 import { bandwidthLabel, networkConditionOf } from "@/features/mocks/network-condition";
 import type { LiveFigure } from "@/features/mocks/network-live";
+import { sizeLimitLabel } from "@/features/mocks/upload-conditions";
 import { cn } from "@/lib/utils";
 import { stopAllFaults } from "@/mocks/stop-all-faults";
-import type { MockServerInfo } from "@/store/mock-slice";
+import type { MockServerInfo, UploadConditions } from "@/store/mock-slice";
 import { CHAOS_LOOK } from "./chaos-look";
 
 const SPARK = { brand: "bg-brand", ok: "bg-ok", err: "bg-err", warn: "bg-warn" } as const;
 const VALUE = { normal: "text-fg", err: "text-err", warn: "text-warn" } as const;
 
+/* How the mock takes uploads, said once: `uploads at 512 Kbps · up to 1 MB · image/* only`. */
+function uploadsOf({ bandwidth, maxBytes, accept }: UploadConditions): string {
+  const parts = [
+    bandwidth ? `at ${bandwidthLabel(bandwidth)}` : "",
+    maxBytes ? `up to ${sizeLimitLabel(maxBytes)}` : "",
+    accept?.length ? `${accept.join(", ")} only` : "",
+  ].filter(Boolean);
+  return parts.length > 0 ? `uploads ${parts.join(" · ")}` : "";
+}
+
 function conditionOf(server: MockServerInfo): { title: string; sub: string; active: boolean } {
   const look = CHAOS_LOOK[chaosModeOf(server.chaosPreset)];
-  const { rate, delay, kbps, routes } = networkConditionOf(server);
+  const { rate, delay, kbps, uploads, routes } = networkConditionOf(server);
   const parts = [
     rate ? `${rate}% of responses faulted` : "",
     delay ? `${delayLabel(delay.base)} ± ${delayLabel(delay.jitter)} delay` : "",
     kbps ? `${bandwidthLabel(kbps)} cap` : "",
+    uploadsOf(uploads),
     routes ? `${routes} ${routes === 1 ? "route" : "routes"} overridden` : "",
   ].filter(Boolean);
   return {
@@ -30,9 +42,9 @@ function conditionOf(server: MockServerInfo): { title: string; sub: string; acti
 
 /**
  * The network condition the mock serves under — its chaos, its added
- * delay, its bandwidth cap and the routes overridden, drawn in the chaos
- * mode's colour, with a Stop for all of them — and four live figures with
- * their sparklines.
+ * delay, its bandwidth cap, how it takes uploads and the routes
+ * overridden, drawn in the chaos mode's colour, with a Stop for all of
+ * them — and four live figures with their sparklines.
  *
  * @param props - The mock server, and its live figures
  * @returns The hero

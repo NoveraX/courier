@@ -143,6 +143,11 @@ export interface MockRequestLog {
   dataCutFrom?: number | undefined;
   requestHeaders?: Record<string, string> | undefined;
   responseHeaders?: Record<string, string> | undefined;
+  /**
+   * How much of its body has arrived, for a request whose body arrived
+   * slowly: reported as it came, `arriving` until the mock had all of it.
+   */
+  upload?: { received: number; total?: number | undefined; arriving: boolean } | undefined;
 }
 
 export interface MockSliceState {

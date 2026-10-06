@@ -123,8 +123,10 @@ export function logMatches(
 }
 
 /**
- * The code a row shows: the status, `RST` for a connection chaos dropped,
- * `ERR` for a failure without one, `···` while the request runs.
+ * The code a row shows: the status, `RST` for a connection chaos dropped —
+ * a reset, or an upload cut off — `ERR` for a failure without one, how much
+ * of a slow body has arrived while it arrives (`↑42%`), `···` while the
+ * request runs.
  *
  * @param log - The logged request
  * @returns The code
@@ -133,6 +135,12 @@ export function logMatches(
  * logCode({ status: 502, error: "Connection Reset (simulated)" }); // "RST"
  * ```
  */
-export function logCode(log: Pick<MockRequestLog, "status" | "error">): string {
-  return injectedFault(log) === "reset" ? "RST" : mockLogCode(log);
+export function logCode(log: Pick<MockRequestLog, "status" | "error" | "upload">): string {
+  const fault = injectedFault(log);
+  if (fault === "reset" || fault === "interrupt") return "RST";
+  const { upload } = log;
+  if (upload?.arriving && log.status === undefined && log.error === undefined) {
+    return upload.total ? `↑${Math.floor((upload.received / upload.total) * 100)}%` : "↑";
+  }
+  return mockLogCode(log);
 }

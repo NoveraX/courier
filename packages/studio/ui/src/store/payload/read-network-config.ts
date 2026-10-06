@@ -4,10 +4,12 @@ import type {
   NetworkConfig,
   RouteOverride,
   StopCondition,
+  UploadConditions,
 } from "../mock-slice-network-types";
 import { readList } from "./read-list";
 import { readNumbers } from "./read-numbers";
 import { readOneOf } from "./read-one-of";
+import { readUploads } from "./read-uploads";
 
 const DISTRIBUTIONS = ["uniform", "normal", "log-normal"] as const;
 const STOP_NUMBERS = [
@@ -51,6 +53,8 @@ function isStopCondition(value: unknown): value is StopCondition {
 function readRouteOverride(value: unknown): RouteOverride | undefined {
   if (!isPlainObject(value)) return undefined;
   const { routeId, enabled, latency, errorRate, faultTypes } = value;
+  const uploads = value.uploads === undefined ? undefined : readUploads(value.uploads);
+  if (value.uploads !== undefined && uploads === undefined) return undefined;
   if (typeof routeId !== "string" || typeof enabled !== "boolean") return undefined;
   const range = latency === undefined ? undefined : readNumbers(latency, ["min", "max"] as const);
   if (latency !== undefined && (range === undefined || !isPlainObject(latency))) return undefined;
@@ -67,6 +71,15 @@ function readRouteOverride(value: unknown): RouteOverride | undefined {
     ...(range && { latency: { ...range, jitter } }),
     ...(typeof errorRate === "number" && { errorRate }),
     ...(faults && { faultTypes: faults }),
+    ...(uploads && routeUploads(uploads)),
+  };
+}
+
+/* A route takes the mock's upload speed, so its own conditions are its size limit and types. */
+function routeUploads({ maxBytes, accept }: UploadConditions): Pick<RouteOverride, "uploads"> {
+  if (maxBytes === undefined && accept === undefined) return {};
+  return {
+    uploads: { ...(maxBytes !== undefined && { maxBytes }), ...(accept && { accept }) },
   };
 }
 
@@ -97,6 +110,8 @@ export function readNetworkConfig(value: unknown): NetworkConfig | undefined {
   const latency = readLatency(value.latency, value.distribution);
   const { errorRate, faultWeights, bandwidth, stopConditions, routeOverrides } = value;
   if (latency === undefined || typeof errorRate !== "number") return undefined;
+  const uploads = value.uploads === undefined ? undefined : readUploads(value.uploads);
+  if (value.uploads !== undefined && uploads === undefined) return undefined;
   const weights = faultWeights === undefined ? undefined : readList(faultWeights, isFaultWeight);
   const overrides = routeOverrides === undefined ? undefined : readRouteOverrides(routeOverrides);
   if (faultWeights !== undefined && weights === undefined) return undefined;
@@ -110,6 +125,7 @@ export function readNetworkConfig(value: unknown): NetworkConfig | undefined {
     errorRate,
     ...(weights && { faultWeights: weights }),
     ...(typeof bandwidth === "number" && { bandwidth }),
+    ...(uploads && { uploads }),
     ...(stops !== undefined && { stopConditions: stops }),
     ...(overrides && { routeOverrides: overrides }),
   };

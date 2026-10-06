@@ -1,9 +1,10 @@
 /**
  * The Network tab's figures: the live figures and their sparklines, the
  * latency histogram, the status strip, the faults chaos injected told apart
- * from a handler's own errors, the delay a range stands for, the route
- * overrides the mock already holds, what the mock simulates in all, and
- * the log of runs with their length.
+ * from a handler's own errors — any error status, a reset, an upload cut
+ * off — the delay a range stands for, the route overrides the mock already
+ * holds, what the mock simulates in all, and the log of runs with their
+ * length.
  */
 import { describe, expect, it } from "vitest";
 
@@ -107,7 +108,7 @@ describe("what the latest answers looked like", () => {
       mockLog({ id: "e", status: 503 }),
     ];
 
-    expect(faultsByType(logs)).toEqual([
+    expect(faultsByType(logs, ["500", "503", "timeout", "reset"])).toEqual([
       { kind: "500", count: 1 },
       { kind: "503", count: 1 },
       { kind: "timeout", count: 1 },
@@ -115,10 +116,29 @@ describe("what the latest answers looked like", () => {
     ]);
   });
 
+  it("counts every fault in the mix, then any other the latest answers met", () => {
+    const logs = [
+      mockLog({ id: "a", status: 413, error: "HTTP 413 Content Too Large (simulated)" }),
+      mockLog({ id: "b", status: 502, error: "Upload Interrupted (simulated)" }),
+      mockLog({ id: "c", status: 413, error: "HTTP 413 Content Too Large (simulated)" }),
+    ];
+
+    expect(faultsByType(logs, ["500", "413"])).toEqual([
+      { kind: "500", count: 0 },
+      { kind: "413", count: 2 },
+      { kind: "interrupt", count: 1 },
+    ]);
+  });
+
   it("tells each injected fault by the mock's wording for it", () => {
-    expect(injectedFault({ error: "HTTP 502 (simulated)" })).toBe("502");
+    expect(injectedFault({ error: "HTTP 502 Bad Gateway (simulated)" })).toBe("502");
+    expect(injectedFault({ error: "HTTP 429 Too Many Requests (simulated)" })).toBe("429");
+    expect(injectedFault({ error: "HTTP 499 (simulated)" })).toBe("499");
     expect(injectedFault({ error: "Connection Reset (simulated)" })).toBe("reset");
+    expect(injectedFault({ error: "Upload Interrupted (simulated)" })).toBe("interrupt");
+    expect(injectedFault({ error: "Request Timeout (simulated)" })).toBe("timeout");
     expect(injectedFault({ error: "HTTP 500" })).toBeUndefined();
+    expect(injectedFault({ error: "HTTP 302 Found (simulated)" })).toBeUndefined();
     expect(injectedFault({ error: undefined })).toBeUndefined();
   });
 });
@@ -291,7 +311,26 @@ describe("what a mock simulates", () => {
       rate: 40,
       delay: { base: 600, jitter: 450 },
       kbps: 512,
+      uploads: {},
       routes: 2,
+    });
+  });
+
+  it("names how it takes uploads, and counts a route that only limits its uploads", () => {
+    const server = mockServer({
+      networkConfig: {
+        errorRate: 0,
+        latency: 0,
+        uploads: { bandwidth: 1_500, maxBytes: 1_048_576, accept: ["image/*"] },
+        routeOverrides: [
+          { routeId: "users:avatar", enabled: true, uploads: { accept: ["image/png"] } },
+        ],
+      },
+    });
+
+    expect(networkConditionOf(server)).toMatchObject({
+      uploads: { bandwidth: 1_500, maxBytes: 1_048_576, accept: ["image/*"] },
+      routes: 1,
     });
   });
 

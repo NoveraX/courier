@@ -46,6 +46,7 @@ export const LEARN_SECTIONS: NavSection[] = [
       { title: "Nuxt", href: "/docs/frameworks/nuxt" },
       { title: "React", href: "/docs/frameworks/react" },
       { title: "Vue", href: "/docs/frameworks/vue" },
+      { title: "React Native", href: "/docs/frameworks/react-native" },
       { title: "Hono", href: "/docs/frameworks/hono" },
       { title: "Express", href: "/docs/frameworks/express" },
       { title: "Fastify", href: "/docs/frameworks/fastify" },

@@ -1,0 +1,155 @@
+export const metadata = { title: "React Native & Expo", description: "Courier in a React Native app: an absolute address, React Query hooks, streams through expo/fetch, channels, uploads from the device and cancellation, on Hermes.", mode: "direct" }
+
+A React Native app calls its API as a page does in direct mode: the typed client, the React Query hooks, server-sent events, WebSocket channels, uploads with their progress, and cancellation. Each is checked on Hermes, in an Expo SDK 57 app, by the example in [`examples/expo`](https://github.com/NoveraX/courier/tree/main/examples/expo).
+
+## Installation
+
+```bash
+npm install @noverax/courier @noverax/courier-react
+npx expo install @tanstack/react-query
+```
+
+## An absolute address
+
+An app has no page, so nothing resolves a path such as `/api` for it: the API's `baseURL` is an absolute URL. A path is refused before any request is sent, with a `ConfigurationError` whose code is `URL_NOT_ABSOLUTE`.
+
+The computer that serves the API while you work on the app is `localhost` from the iOS simulator, `10.0.2.2` from the Android emulator, and its address on the network from a phone, which an `EXPO_PUBLIC_` variable can carry:
+
+```ts title="src/address.ts"
+import { Platform } from "react-native"
+
+export const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ??
+  (Platform.OS === "android" ? "http://10.0.2.2:4000" : "http://localhost:4000")
+```
+
+## The API and its client
+
+The API is defined once, with that address, and both callers are built from it: the hooks for components, and plain calls for what a hook does not do.
+
+```ts title="src/api.ts"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+import { API_URL } from "./address"
+
+type User = { id: number; name: string }
+type Stored = { name: string; size: number }
+type Message = { text: string }
+
+const { endpoint, stream, channel } = courier()
+
+export const shop = defineApi({
+  baseURL: API_URL,
+  deduplicate: true,
+  groups: {
+    users: defineGroup({
+      prefix: "users",
+      endpoints: {
+        list: endpoint.get("").response<User[]>(),
+        search: endpoint.query("search").variables<{ name: string }>().response<User[]>(),
+      },
+    }),
+    files: defineGroup({
+      prefix: "files",
+      endpoints: { upload: endpoint.post("").variables<FormData>().response<Stored>() },
+    }),
+    live: defineGroup({
+      prefix: "live",
+      endpoints: {
+        ticks: stream.response<{ n: number }>().get("ticks"),
+        chat: channel.send<Message>().response<Message>().connect("chat"),
+      },
+    }),
+  },
+})
+```
+
+```ts title="src/client.ts"
+import { createCaller } from "@noverax/courier"
+import { createQueryCaller } from "@noverax/courier-react"
+import { QueryClient } from "@tanstack/react-query"
+import { shop } from "./api"
+
+export const q = createQueryCaller(shop)
+export const client = createCaller(shop)
+export const queryClient = new QueryClient()
+```
+
+Wrap the app in `QueryClientProvider` with that client, and a component reads as it would on the web:
+
+```tsx title="src/users.tsx"
+import { Text } from "react-native"
+import { q } from "./client"
+
+export function Users() {
+  const users = q.users.useQuery("list")
+  const found = q.users.useQuery("search", { variables: { name: "a" } })
+  return <Text>{users.data?.length} users, {found.data?.length} found</Text>
+}
+```
+
+## Streams and channels
+
+`useSubscription` reads server-sent events as they arrive, which takes a `fetch` that hands over a response's body as it comes. React Native's own `fetch` hands it over only once all of it has arrived; Expo replaces it with `expo/fetch`, which streams. Expo SDK 57 does so for every app unless `EXPO_PUBLIC_USE_RN_FETCH` is set. A channel needs nothing more: React Native has WebSocket.
+
+```tsx title="src/live.tsx"
+import { Button, Text } from "react-native"
+import { q } from "./client"
+
+export function Live() {
+  const ticks = q.live.useSubscription("ticks")
+  const chat = q.live.useChannel("chat")
+  return (
+    <>
+      <Text>tick {ticks.data?.n}</Text>
+      <Button title="Say hello" onPress={() => chat.send({ text: "hello" })} />
+    </>
+  )
+}
+```
+
+## Uploads from the device
+
+React Native's `FormData` takes a file on the device by its address, name and type. Courier sends a form holding one through XMLHttpRequest, which reads the file from where it is — `expo/fetch` refuses such a form — and reports the upload's progress when you ask for it:
+
+```ts title="src/upload.ts"
+import { client } from "./client"
+
+export async function upload(uri: string, onProgress: (share: number) => void) {
+  const form = new FormData()
+  /* The DOM's FormData type has no file given by its address. */
+  form.append("photo", { uri, name: "photo.jpg", type: "image/jpeg" } as unknown as Blob)
+  return client.files.with({ onUploadProgress: (p) => onProgress(p.percent) }).upload(form)
+}
+```
+
+A form whose files the app holds as bytes — a `Blob` — goes with the app's `fetch`.
+
+## Cancellation and timeouts
+
+A call is cancelled through its signal, and rejects with an `AbortError`:
+
+```ts
+const controller = new AbortController()
+const pending = client.users.with({ signal: controller.signal }).list()
+controller.abort()
+await pending // rejects with an AbortError
+```
+
+React Native's `AbortController` keeps no reason, and `expo/fetch` reports a cancelled request as a fetch that failed; either way the call rejects with an `AbortError`, never with `undefined` or a network failure. A call whose `timeout` runs out rejects with an `HTTPError` of status 0 and the code `TIMEOUT`, though React Native's `fetch` reports it as an abort.
+
+`deduplicate: true` works as it does in a browser, since an app serves one user: a newer read of an endpoint cancels the one before it. See [Abort & Deduplication](/docs/advanced/abort).
+
+## Without Expo
+
+React Native without Expo lacks more of the web platform: `AbortSignal.any` and `AbortSignal.timeout`, `crypto.randomUUID`, `structuredClone`, `DOMException`, streams and `TextDecoder`. Courier does without each where it uses it, so calls, uploads, cancellation, timeouts, the cache middleware and channels work as they are. Server-sent events alone need more: a `fetch` that streams and a `TextDecoder`, installed as globals before the first subscription.
+
+## Working against a mock
+
+Studio runs the mock the app calls while you work, from the project's `courier.mocks.ts`, and shows each request the app makes. The example's mock serves the shop on port 7020:
+
+```bash
+npm run server
+npx expo start
+```
+
+The first starts Studio with its mock, the second the app. See [Mock Servers](/docs/studio/mock-servers) for what a mock answers and how.

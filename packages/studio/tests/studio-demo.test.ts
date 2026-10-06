@@ -20,6 +20,7 @@ import {
   DEMO_SHARED_REFUSAL,
   DEMO_WRITE_REFUSAL,
 } from "../src/server/demo/demo-refusals";
+import { DEMO_REST_BUSY } from "../src/server/demo/demo-rest-guard";
 import { DEMO_MAX_MESSAGE_BYTES } from "../src/server/demo/demo-visitors";
 import { TOKEN_HEADER } from "../src/server/token-guard";
 import type { StudioServer } from "../src/server/types";
@@ -282,6 +283,43 @@ describe("the demo's API", () => {
     expect(one[20]).toBe(429);
     expect(others.every((status) => status === 200)).toBe(true);
     expect((await from("203.0.113.99")).status).toBe(429);
+    expect((await post("/api/sessions/list", token())).status).toBe(200);
+  });
+});
+
+describe("the demo's API at work", () => {
+  /* A visitor's request whose body is still on its way, which the API holds open. */
+  function hanging(visitor: string): () => void {
+    const { hostname, port } = new URL(url);
+    const pending = request({
+      host: hostname,
+      port,
+      method: "POST",
+      path: "/api/apis/parse",
+      headers: {
+        "content-type": "application/json",
+        "content-length": "1000",
+        origin: url,
+        "x-forwarded-for": visitor,
+      },
+    });
+    pending.on("error", () => {});
+    pending.write('{"source":"raw",');
+    return () => pending.destroy();
+  }
+
+  it("works on two visitors' requests at once, and turns a third away until one ends", async () => {
+    const ends = [hanging("203.0.113.21"), hanging("203.0.113.22")];
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const third = await post("/api/sessions/list", undefined, {}, "203.0.113.23");
+    for (const end of ends) end();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const later = await post("/api/sessions/list", undefined, {}, "203.0.113.23");
+
+    expect(third.status).toBe(429);
+    expect(((await third.json()) as { error: string }).error).toBe(DEMO_REST_BUSY);
+    expect(later.status).toBe(200);
     expect((await post("/api/sessions/list", token())).status).toBe(200);
   });
 });

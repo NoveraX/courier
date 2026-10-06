@@ -8,7 +8,7 @@
 import { randomBytes } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer as createHttpServer, request } from "node:http";
-import type { AddressInfo } from "node:net";
+import { type AddressInfo, createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { io as connect, type Socket } from "socket.io-client";
@@ -21,6 +21,7 @@ import {
   DEMO_WRITE_REFUSAL,
 } from "../src/server/demo/demo-refusals";
 import { DEMO_REST_BUSY } from "../src/server/demo/demo-rest-guard";
+import { DEMO_SERVER_OPTIONS } from "../src/server/demo/demo-serving";
 import { DEMO_MAX_MESSAGE_BYTES } from "../src/server/demo/demo-visitors";
 import { TOKEN_HEADER } from "../src/server/token-guard";
 import type { StudioServer } from "../src/server/types";
@@ -322,6 +323,22 @@ describe("the demo's API at work", () => {
     expect(later.status).toBe(200);
     expect((await post("/api/sessions/list", token())).status).toBe(200);
   });
+});
+
+describe("a connection that sends its request a byte at a time", () => {
+  it("is closed once ten seconds pass without its headers", async () => {
+    const { hostname, port } = new URL(url);
+    const startedAt = Date.now();
+    const socket = createConnection({ host: hostname, port: Number(port) });
+    socket.on("error", () => {});
+    socket.write("GET / HTTP/1.1\r\nHost: demo\r\n");
+    const trickle = setInterval(() => socket.write("X"), 1000);
+
+    await new Promise<void>((resolve) => socket.once("close", () => resolve()));
+    clearInterval(trickle);
+
+    expect(Date.now() - startedAt).toBeLessThan(DEMO_SERVER_OPTIONS.headersTimeout + 3 * 2_000);
+  }, 30_000);
 });
 
 describe("the demo's HTTP server", () => {

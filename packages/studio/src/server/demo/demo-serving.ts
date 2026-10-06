@@ -2,6 +2,8 @@
  * What serving Studio as a public demo adds to its servers.
  */
 
+import type { Server, ServerOptions } from "node:http";
+
 import type { RequestHandler } from "express-serve-static-core";
 
 import type { StudioSocketOptions } from "../socket-server";
@@ -10,6 +12,22 @@ import { createDemoConnections } from "./demo-connections";
 import { demoHttpGuard } from "./demo-http-guard";
 import { createDemoLimits, type DemoLimits } from "./demo-limits";
 import { DEMO_MAX_MESSAGE_BYTES, type DemoVisitorsDeps, demoVisitors } from "./demo-visitors";
+
+/**
+ * How long a demo's HTTP server waits for what a connection is sending —
+ * the headers of a request, and the whole of it, a spec of 16 MB pasted
+ * over a slow line included — and how often it looks. Node's defaults gave
+ * a connection that sent a byte now and then a minute for its headers and
+ * five for the request, looked at every thirty seconds.
+ */
+export const DEMO_SERVER_OPTIONS = {
+  headersTimeout: 10_000,
+  requestTimeout: 120_000,
+  connectionsCheckingInterval: 2_000,
+} as const satisfies ServerOptions;
+
+/** How many connections a demo's HTTP server holds at once; one past it is closed as it opens. */
+export const DEMO_MAX_CONNECTIONS = 1000;
 
 /**
  * How much of each log a demo's page is sent as it connects: the newest
@@ -26,6 +44,10 @@ export interface DemoServing {
   sockets: StudioSocketOptions;
   /** The rule a page without the token is held to, counted with the rest. */
   visitors(deps: Omit<DemoVisitorsDeps, "limits">): VisitorPolicy;
+  /** The options the HTTP server is made with: its timeouts. */
+  serverOptions: ServerOptions;
+  /** Hold the HTTP server to the demo's connection count. */
+  holdServer(server: Server): void;
 }
 
 /**
@@ -51,5 +73,9 @@ export function demoServing(): DemoServing {
       connections: createDemoConnections(limits),
     },
     visitors: (deps) => demoVisitors({ ...deps, limits }),
+    serverOptions: DEMO_SERVER_OPTIONS,
+    holdServer(server) {
+      server.maxConnections = DEMO_MAX_CONNECTIONS;
+    },
   };
 }

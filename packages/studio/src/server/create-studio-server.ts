@@ -66,7 +66,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   /* A public demo counts what its visitors send, on the sockets and the API alike. */
   const serving = demo ? demoServing() : undefined;
   if (serving) app.use(serving.httpGuard);
-  const httpServer = createServer(app);
+  const httpServer = createServer(serving?.serverOptions ?? {}, app);
+  serving?.holdServer(httpServer);
   const startup = createStudioStartup(httpServer, startupOptions);
   const policy = createStudioOriginPolicy({
     bindHost: startup.host,

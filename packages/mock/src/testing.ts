@@ -11,7 +11,7 @@ export { createEnhancedMockBuilder } from "./builder";
 export type { MockClient, MockClientConfig } from "./create-mock-client";
 export { createMockClient } from "./create-mock-client";
 // Forms, as a handler receives them
-export type { MockFormFields } from "./form-fields";
+export type { MockFormFields, MockFormValue } from "./form-fields";
 // Network utils
 export { LATENCY_PROFILES, resolveLatency } from "./network";
 

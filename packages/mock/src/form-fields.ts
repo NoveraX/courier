@@ -1,8 +1,14 @@
 /**
+ * A form field's value as `FormData` gives it: a string, or a `File`. Read
+ * off `FormData` itself, so it needs no DOM library where Node's is used.
+ */
+export type MockFormValue = NonNullable<ReturnType<FormData["get"]>>;
+
+/**
  * A form as a mock's handler receives it: each field by name, a file the
  * `File` itself, a field sent more than once a list in the order sent.
  */
-export type MockFormFields = Record<string, FormDataEntryValue | FormDataEntryValue[]>;
+export type MockFormFields = Record<string, MockFormValue | MockFormValue[]>;
 
 /**
  * A form as a mock answers from it — the same whether it arrived over HTTP
@@ -17,7 +23,7 @@ export type MockFormFields = Record<string, FormDataEntryValue | FormDataEntryVa
  * ```
  */
 export function formFields(form: FormData): MockFormFields {
-  const fields = new Map<string, FormDataEntryValue | FormDataEntryValue[]>();
+  const fields = new Map<string, MockFormValue | MockFormValue[]>();
   for (const [key, value] of form.entries()) {
     const earlier = fields.get(key);
     fields.set(

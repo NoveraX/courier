@@ -16,7 +16,8 @@ import type { Hono } from "hono";
 import { registerDeclaredRoutes } from "./declared-routes";
 import type { PrefixMapping, PrefixRouteConfig } from "./prefix-route-types";
 import { registerSSERoutes } from "./prefix-static-routes";
-import { bodyValue, readRequestBody } from "./read-request-body";
+import { RAW_BESIDE_PATH_VALUES } from "./raw-body-refusal";
+import { bodyValue } from "./read-request-body";
 import {
   buildIdVars,
   parseId,
@@ -89,7 +90,7 @@ export function registerPrefixRoutes(
       const method =
         ep?.name ??
         resolveMethod(mapping.methods, ["create", "add", "insert"], /^(create|add|insert)/);
-      const read = await readRequestBody(c, config.bodyLimits);
+      const read = await config.readBody(c, mapping.group, method);
       if ("error" in read) return config.refuse(c, mapping.group, method, read);
       return config.handleRequest(c, mapping.group, method, bodyValue(read) ?? {});
     });
@@ -101,8 +102,10 @@ export function registerPrefixRoutes(
       const method =
         ep?.name ??
         resolveMethod(mapping.methods, ["update", "replace", "put"], /^(update|replace|put)/);
-      const read = await readRequestBody(c, config.bodyLimits);
+      const read = await config.readBody(c, mapping.group, method);
       if ("error" in read) return config.refuse(c, mapping.group, method, read);
+      if (read.kind === "raw")
+        return config.refuse(c, mapping.group, method, RAW_BESIDE_PATH_VALUES);
       const body = bodyValue(read) ?? {};
       return config.handleRequest(c, mapping.group, method, {
         ...(body as object),
@@ -117,8 +120,10 @@ export function registerPrefixRoutes(
       const method =
         ep?.name ??
         resolveMethod(mapping.methods, ["patch", "update", "updateStatus"], /^(patch|update|edit)/);
-      const read = await readRequestBody(c, config.bodyLimits);
+      const read = await config.readBody(c, mapping.group, method);
       if ("error" in read) return config.refuse(c, mapping.group, method, read);
+      if (read.kind === "raw")
+        return config.refuse(c, mapping.group, method, RAW_BESIDE_PATH_VALUES);
       const body = bodyValue(read) ?? {};
       return config.handleRequest(c, mapping.group, method, {
         ...(body as object),

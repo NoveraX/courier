@@ -13,6 +13,7 @@
  * this entry carries them only when it opens one.
  */
 
+export { discardBody } from "../adapter/discard-body";
 export { isOriginAccepted, isOriginAllowed } from "../adapter/origin-policy";
 export { type BoundedBody, readBoundedBody } from "../adapter/read-body";
 export { discoverAppOrigin, getAppOriginParsed } from "../app-origin";

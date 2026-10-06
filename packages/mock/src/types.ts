@@ -80,10 +80,44 @@ export type LatencyProfile =
   | "fiber"
   | { min: number; max: number; jitter?: number | undefined };
 
+/**
+ * A fault a failing request is given: an error status it is answered with
+ * at once (`"413"`, `"429"`, `"503"` — any from 400 to 599), or a fault of
+ * its connection — `timeout`, `reset`, or `interrupt` for an upload cut off
+ * partway.
+ */
+export type FaultType = `4${number}` | `5${number}` | "timeout" | "reset" | "interrupt";
+
 /** Weighted fault entry — weight is 0–100, normalized at selection time */
 export interface FaultWeight {
   type: string;
   weight: number;
+}
+
+/**
+ * How the mock takes uploads: how fast request bodies arrive, and which
+ * uploads it refuses as a server with limits does.
+ */
+export interface UploadConditions {
+  /**
+   * How fast request bodies arrive, in kilobits a second — a form, a file or
+   * JSON alike: the mock reads a body no faster, so the client's upload
+   * progress moves as it would on a slow link. 0 or unset is unlimited.
+   */
+  bandwidth?: number | undefined;
+  /**
+   * The largest upload the mock takes, in bytes: a form or a file body over
+   * it is answered 413 before it is read. It cannot raise the mock's
+   * `maxUploadBytes`, the most it ever reads.
+   */
+  maxBytes?: number | undefined;
+  /**
+   * The types of file the mock takes, as an `<input accept>` lists them — a
+   * type (`"application/pdf"`), a family (`"image/*"`) or an extension
+   * (`".csv"`). An upload holding a file of another type is answered 415.
+   * Unset or empty takes any.
+   */
+  accept?: string[] | undefined;
 }
 
 /** Per-route network override */
@@ -94,7 +128,10 @@ export interface RouteNetworkOverride {
   latency?: { min: number; max: number; jitter?: number | undefined } | undefined;
   /** The share of this route's requests that fail, from 0 (none) to 1 (every one) */
   errorRate?: number | undefined;
-  faultTypes?: string[] | undefined;
+  /** The faults this route's failures take, each as likely, in place of the global mix */
+  faultTypes?: FaultType[] | undefined;
+  /** The largest upload this route takes and the types of file, each in place of the global one */
+  uploads?: Omit<UploadConditions, "bandwidth"> | undefined;
 }
 
 /** Latency distribution model */
@@ -124,11 +161,13 @@ export interface NetworkConfig {
   timeout?: number | undefined;
   /**
    * The faults a failing request is given (default: 500 and 503). A status
-   * fails with that status. `timeout` fails after `timeout` ms. `reset` drops
-   * the connection on the mock server, so the client gets no answer at all;
-   * the mock client throws a 502 for it.
+   * fails with that status, its reason phrase in the body. `timeout` fails
+   * after `timeout` ms. `reset` drops the connection on the mock server, so
+   * the client gets no answer at all, and `interrupt` drops it once half the
+   * request's body has arrived, so an upload fails partway; the mock client
+   * throws a 502 for either.
    */
-  faultTypes?: Array<"500" | "502" | "503" | "timeout" | "reset"> | undefined;
+  faultTypes?: FaultType[] | undefined;
   /** Weighted fault distribution — overrides faultTypes when present */
   faultWeights?: FaultWeight[] | undefined;
   /** Per-route overrides — checked before global config */
@@ -140,6 +179,8 @@ export interface NetworkConfig {
    * takes to send at this rate, on top of the latency. 0 or unset is unlimited.
    */
   bandwidth?: number | undefined;
+  /** How fast request bodies arrive, and the largest upload and the types of file the mock takes */
+  uploads?: UploadConditions | undefined;
   /** Stop conditions for auto-halting */
   stopConditions?: StopCondition | undefined;
 }

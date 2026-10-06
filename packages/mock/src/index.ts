@@ -32,8 +32,10 @@ export type { Collection, MockStore } from "./store";
 export type { EndpointName, TypedMockFn } from "./typed-mock-fn";
 // Types used in override callbacks and scenario definitions
 export type {
+  FaultType,
   LatencyProfile,
   MockRequestContext,
   MockScenario,
   NetworkConfig,
+  UploadConditions,
 } from "./types";

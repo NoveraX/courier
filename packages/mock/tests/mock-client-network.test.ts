@@ -79,7 +79,11 @@ describe("a mock client's fault", () => {
     const failure = await client.users.getAll().catch((error: unknown) => error);
 
     expect(failure).toBeInstanceOf(HTTPError);
-    expect(failure).toMatchObject({ status: 503, data: { error: "HTTP 503 (simulated)" } });
+    expect(failure).toMatchObject({
+      status: 503,
+      data: { error: "HTTP 503 Service Unavailable (simulated)" },
+    });
+    expect((failure as HTTPError).headers.get("retry-after")).toBe("5");
   });
 });
 

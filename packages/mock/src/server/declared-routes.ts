@@ -2,7 +2,8 @@ import { sendsVariablesInQuery } from "@noverax/courier/internal";
 import type { Context, Hono } from "hono";
 
 import type { MappedEndpoint, PrefixRouteConfig } from "./prefix-route-types";
-import { type BodyLimits, bodyValue, readRequestBody } from "./read-request-body";
+import { RAW_BESIDE_PATH_VALUES } from "./raw-body-refusal";
+import { type BodyRefusal, bodyValue, type RequestBody } from "./read-request-body";
 import { parsePathParams, parseQueryParams, servedByCatchAll } from "./route-helpers";
 
 const METHODS = new Set<string>([
@@ -64,14 +65,25 @@ export function registerDeclaredRoutes(
       if (method === "HEAD" && c.req.method !== "HEAD") return next();
       /* A path that fixes query values answers only a request that carries them. */
       if (!carriesFixedQuery(c.req.url, ep.fixedQuery)) return next();
-      const read = await inputOf(c, method, config.bodyLimits);
+      const read = await inputOf(c, method, () => config.readBody(c, group, ep.name));
       if ("error" in read) return config.refuse(c, group, ep.name, read);
-      return config.handleRequest(c, group, ep.name, {
-        ...withoutFixedQuery(read.input, ep.fixedQuery),
-        ...parsePathParams(c.req.param()),
-      });
+      const variables = variablesOf(read, ep, parsePathParams(c.req.param()));
+      if ("error" in variables) return config.refuse(c, group, ep.name, variables);
+      return config.handleRequest(c, group, ep.name, variables.value);
     });
   }
+}
+
+/* The input with the path's values laid over it; a file sent as the whole body has no fields to hold them. */
+function variablesOf(
+  read: { input: Record<string, unknown> } | { blob: Blob },
+  ep: MappedEndpoint,
+  pathValues: Record<string, unknown>,
+): { value: unknown } | BodyRefusal {
+  if ("input" in read) {
+    return { value: { ...withoutFixedQuery(read.input, ep.fixedQuery), ...pathValues } };
+  }
+  return Object.keys(pathValues).length > 0 ? RAW_BESIDE_PATH_VALUES : { value: read.blob };
 }
 
 function needsOwnRoute(ep: MappedEndpoint): boolean {
@@ -118,17 +130,22 @@ function bySpecificity(a: MappedEndpoint, b: MappedEndpoint): number {
   return rank(a).localeCompare(rank(b)) || fixes(b) - fixes(a);
 }
 
-/** The query of a GET, HEAD, OPTIONS or DELETE; the JSON, form or upload of anything else — a QUERY's question included — which holds an object */
+/**
+ * The query of a GET, HEAD, OPTIONS or DELETE; the JSON or form of anything
+ * else — a QUERY's question included — which holds an object; or a file sent
+ * as the whole body, as its `Blob`.
+ */
 async function inputOf(
   c: Context,
   method: string,
-  limits: BodyLimits | undefined,
-): Promise<{ input: Record<string, unknown> } | { error: string; status: 400 | 413 }> {
+  readBody: () => Promise<RequestBody>,
+): Promise<{ input: Record<string, unknown> } | { blob: Blob } | BodyRefusal> {
   if (sendsVariablesInQuery(method)) {
     return { input: parseQueryParams(new URL(c.req.url).searchParams) };
   }
-  const body = await readRequestBody(c, limits);
+  const body = await readBody();
   if ("error" in body) return body;
+  if (body.kind === "raw") return { blob: body.blob };
   const value = bodyValue(body);
   if (value === undefined) return { input: {} };
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {

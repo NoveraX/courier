@@ -1,17 +1,35 @@
 /**
  * Wire mock server request lifecycle hooks to IPC events for Studio Logs tab.
  * A body too large for an event travels as a part of it, and the mock keeps
- * the whole for a page that asks.
+ * the whole for a page that asks. A body still arriving is reported as it
+ * comes, so a slow upload is in the log before it is whole.
  */
 
 import { carriedBody } from "@noverax/courier/internal";
-import { describedUploads } from "./described-uploads";
+import { describedUploads } from "../described-uploads";
 import type { ServedMock } from "./types";
 import { send } from "./worker-ipc";
 import { trackWritesInFlight } from "./writes-in-flight";
 
 export function wireRequestHooks({ server, feed, bodies }: ServedMock): void {
   const writes = trackWritesInFlight();
+  /* A slow body shows in Studio's log as it arrives; its `start` follows under the same id. */
+  server.requestHooks.onUpload = (id, { httpMethod, path, group, endpoint, received, total }) => {
+    send({
+      type: "event",
+      event: {
+        type: "mock:request:upload",
+        requestId: id,
+        httpMethod,
+        path,
+        group,
+        endpoint,
+        source: server.getRouteSource(group, endpoint),
+        received,
+        ...(total !== undefined && { total }),
+      },
+    });
+  };
   server.requestHooks.onStart = (
     id,
     httpMethod,

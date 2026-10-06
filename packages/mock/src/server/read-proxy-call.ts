@@ -1,12 +1,15 @@
 import type { Context as HonoContext } from "hono";
 
 import { formFields } from "../form-fields";
-import { type BodyLimits, readRequestBody } from "./read-request-body";
+import type { BodyRefusal, RequestBody } from "./read-request-body";
 
 /** The endpoint call a proxy request names, or why the request cannot be read */
 export type ProxyCall =
   | { group: string; method: string; variables: unknown; raw: boolean }
-  | { error: string; status: 400 | 413; group?: string; method?: string };
+  | (BodyRefusal & { group?: string; method?: string });
+
+/** Reads the body of a call to `group.method`, under the conditions its route is answered with */
+export type ReadCallBody = (group: string, method: string) => Promise<RequestBody>;
 
 /** The fields a JSON body may have; the endpoint's names travel in the URL. */
 const ENVELOPE_KEYS: ReadonlySet<string> = new Set(["variables", "options"]);
@@ -24,26 +27,27 @@ const OPTIONS_FIELD = "_options";
  * (`options.rawData`) is answered with the response around the data.
  *
  * @param c - The request's Hono context
- * @returns The group, method, variables and raw flag, or the error to answer 400 with
+ * @param readBody - Reads a POST's body, once the URL has named the endpoint
+ * @returns The group, method, variables and raw flag, or why the request was not taken
  * @example
  * ```ts
- * const call = await readProxyCall(c);
- * if ("error" in call) return c.json({ error: call.error }, 400);
+ * const call = await readProxyCall(c, (group, method) => readRouteBody(c, config, group, method));
+ * if ("error" in call) return c.json({ error: call.error }, call.status);
  * ```
  */
-export async function readProxyCall(c: HonoContext, limits?: BodyLimits): Promise<ProxyCall> {
+export async function readProxyCall(c: HonoContext, readBody: ReadCallBody): Promise<ProxyCall> {
   const params = new URL(c.req.url).searchParams;
   const method = params.get("_m");
   if (!params.get("_s") || !method) {
     return { error: "The endpoint is not named in the URL: _s and _m are required", status: 400 };
   }
   const group = params.get("_g") ?? "";
-  const body = c.req.method === "GET" ? fromQuery(params) : await fromBody(c, limits);
+  const body = c.req.method === "GET" ? fromQuery(params) : await fromBody(readBody(group, method));
   if ("error" in body) return { ...body, group, method };
   return { group, method, variables: body.variables, raw: isRaw(body.options) };
 }
 
-type Envelope = { variables: unknown; options: unknown } | { error: string; status: 400 | 413 };
+type Envelope = { variables: unknown; options: unknown } | BodyRefusal;
 
 function fromQuery(params: URLSearchParams): Envelope {
   const variables = parseJson(params.get("_v"));
@@ -54,10 +58,14 @@ function fromQuery(params: URLSearchParams): Envelope {
   return { variables, options };
 }
 
-async function fromBody(c: HonoContext, limits?: BodyLimits): Promise<Envelope> {
-  const body = await readRequestBody(c, limits);
+/* A proxy client sends JSON or a form; raw bytes it refuses to send, so none arrive from one. */
+async function fromBody(read: Promise<RequestBody>): Promise<Envelope> {
+  const body = await read;
   if ("error" in body) return body;
   if (body.kind === "form") return fromForm(body.form);
+  if (body.kind === "raw") {
+    return { error: "The proxy takes JSON or a form; send a file in a form", status: 400 };
+  }
   const { value } = body;
   if (value === undefined) return { variables: undefined, options: undefined };
   if (typeof value !== "object" || value === null || Array.isArray(value)) {

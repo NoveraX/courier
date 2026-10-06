@@ -17,9 +17,10 @@ function described(value: unknown): unknown {
 }
 
 /**
- * A request's variables as Studio shows them: each file a form sent as its
- * name, type and size — a file has no JSON, and showed as `{}` — and every
- * other field as it is.
+ * A request's variables as Studio and the admin API show them: each file a
+ * form sent as its name, type and size — a file has no JSON, and showed as
+ * `{}` — every other field as it is, and a file sent as the whole body as
+ * its own description.
  *
  * @param variables - The variables the mock read
  * @returns The variables to show
@@ -27,9 +28,12 @@ function described(value: unknown): unknown {
  * ```ts
  * describedUploads({ title: "Q3", file: new File(["…"], "q3.pdf") });
  * // → { title: "Q3", file: { name: "q3.pdf", type: "", size: 3 } }
+ * describedUploads(new Blob(["%PDF"], { type: "application/pdf" }));
+ * // → { name: "", type: "application/pdf", size: 4 }
  * ```
  */
 export function describedUploads(variables: unknown): unknown {
+  if (variables instanceof Blob) return described(variables);
   if (typeof variables !== "object" || variables === null || Array.isArray(variables)) {
     return variables;
   }

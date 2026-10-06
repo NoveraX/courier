@@ -1,122 +1,132 @@
 import { logger } from "@noverax/courier";
-import { readBoundedBody } from "@noverax/courier/internal";
+import { discardBody } from "@noverax/courier/internal";
 import type { Context as HonoContext } from "hono";
 
 import { formFields } from "../form-fields";
+import { createFaultError } from "../network/failure";
+import type { UploadConditions } from "../types";
+import { sizeLabel } from "../uploads/size-label";
+import { oversizeRefusal, typeRefusal } from "../uploads/upload-refusals";
+import { uploadedFiles } from "../uploads/uploaded-files";
+import { bodyKindOf, type ParsedBody, parseBody } from "./body-kind";
+import { BODY_LIMITS, type BodyLimits } from "./body-limits";
+import { type PacedBody, readPaced } from "./paced-body";
 
-/** The most of a request body the mock reads: JSON, and a form or an upload. */
-export interface BodyLimits {
-  json: number;
-  upload: number;
+/** How a request body is read: the mock's limits, the route's upload conditions, and whether its connection is lost partway. */
+export interface BodyRules {
+  limits: BodyLimits;
+  uploads?: UploadConditions | undefined;
+  /** Drop the connection once half the body has arrived: the `interrupt` fault. */
+  interrupt?: boolean | undefined;
+  /** Hears how much of the body has arrived, and how much its request declared. */
+  onProgress?: ((received: number, declared: number | undefined) => void) | undefined;
 }
 
-/** A Courier server's limits: 1 MB of JSON, 10 MB of form or upload. */
-export const BODY_LIMITS: BodyLimits = { json: 1_048_576, upload: 10_485_760 };
-
-/**
- * The limits a mock was given, each one left out a Courier server's.
- *
- * @param options - The mock's options
- * @returns Its limits
- * @example
- * ```ts
- * bodyLimitsOf({ maxUploadBytes: 50_000_000 }); // { json: 1_048_576, upload: 50_000_000 }
- * ```
- */
-export function bodyLimitsOf(
-  options: { maxBodyBytes?: number | undefined; maxUploadBytes?: number | undefined } | undefined,
-): BodyLimits {
-  return {
-    json: options?.maxBodyBytes ?? BODY_LIMITS.json,
-    upload: options?.maxUploadBytes ?? BODY_LIMITS.upload,
-  };
+/** Why a body was not taken: its status and the reason. A `dropped` one had its connection cut, so nothing answers it. */
+export interface BodyRefusal {
+  error: string;
+  status: 400 | 413 | 415 | 502;
+  dropped?: true | undefined;
 }
 
-/** A request body as the mock read it, or why it could not. */
-export type RequestBody =
-  | { kind: "json"; value: unknown }
-  | { kind: "form"; form: FormData }
-  | { error: string; status: 400 | 413 };
+/** A request body as the mock read it, or why it was not taken. */
+export type RequestBody = ParsedBody | BodyRefusal;
 
-const FORM_TYPES = new Set(["multipart/form-data", "application/x-www-form-urlencoded"]);
+/* The most of a body to take, and whether it is the upload limit the conditions set rather than the mock's own. */
+interface Limit {
+  bytes: number;
+  simulated: boolean;
+}
 
-/* A limit as people say it: in megabytes from one up, in kilobytes below. */
-const sizeOf = (bytes: number): string =>
-  bytes >= 1_048_576
-    ? `${Number((bytes / 1_048_576).toFixed(1))} MB`
-    : `${Number((bytes / 1024).toFixed(1))} KB`;
+function limitOf(contentType: string, { limits, uploads }: BodyRules): Limit {
+  if (bodyKindOf(contentType) === "json") return { bytes: limits.json, simulated: false };
+  const taken = uploads?.maxBytes ?? Number.POSITIVE_INFINITY;
+  return taken < limits.upload
+    ? { bytes: taken, simulated: true }
+    : { bytes: limits.upload, simulated: false };
+}
 
-async function bounded(c: HonoContext, limit: number) {
+function declaredSize(request: Request): number | undefined {
+  const declared = Number(request.headers.get("content-length"));
+  return request.headers.has("content-length") && Number.isFinite(declared) ? declared : undefined;
+}
+
+async function paced(c: HonoContext, limit: Limit, rules: BodyRules) {
+  const declared = declaredSize(c.req.raw);
   try {
-    return await readBoundedBody(c.req.raw, limit);
+    return await readPaced(c.req.raw, {
+      limit: limit.bytes,
+      kbps: rules.uploads?.bandwidth ?? 0,
+      cutAt: rules.interrupt ? Math.max(1, Math.ceil((declared ?? 0) / 2)) : undefined,
+      onProgress: rules.onProgress && ((received) => rules.onProgress?.(received, declared)),
+      signal: c.req.raw.signal,
+    });
   } catch (error) {
     logger.debug("MockServer", `The client stopped sending ${c.req.method} ${c.req.path}`, error);
     return undefined;
   }
 }
 
-async function formOf(
-  bytes: Uint8Array<ArrayBuffer>,
-  contentType: string,
-): Promise<FormData | undefined> {
-  try {
-    /* The platform parses the form; the content type carries a multipart boundary. */
-    return await new Response(bytes, { headers: { "content-type": contentType } }).formData();
-  } catch (error) {
-    logger.debug("MockServer", "A form body could not be parsed", error);
-    return undefined;
+/* A body stopped at its limit is answered at once: the rest is taken off the connection unread, so a browser still sending it hears the answer. */
+function stopped(
+  request: Request,
+  reason: Exclude<PacedBody, { ok: true }>["reason"],
+  limit: Limit,
+): BodyRefusal {
+  if (reason === "cut") {
+    return { error: createFaultError("interrupt").message, status: 502, dropped: true };
   }
+  discardBody(request);
+  if (limit.simulated) return oversizeRefusal(declaredSize(request), limit.bytes);
+  return {
+    error: `The request body is larger than ${sizeLabel(limit.bytes)}, the most this mock reads`,
+    status: 413,
+  };
+}
+
+function typeChecked(body: ParsedBody, accept: readonly string[] | undefined): RequestBody {
+  if (!accept?.length || body.kind === "json") return body;
+  const files = uploadedFiles(body.kind === "form" ? body.form : body.blob);
+  return typeRefusal(files, accept) ?? body;
 }
 
 /**
  * Read a request body as a Courier server does: JSON up to 1 MB, a form or
- * an upload up to 10 MB — or the limits the mock was given. A body over its
- * limit is refused with 413 before it is all read, one that does not parse
- * with 400, and one whose client stopped sending it with 400. A body with
- * no content type is read as JSON.
+ * an upload up to 10 MB — or the limits the mock was given — under the
+ * upload conditions in force: no faster than their speed, no larger than
+ * their size limit, holding no file of a type they do not take.
+ *
+ * A body over a limit is refused with 413 before it is all read, and the
+ * rest taken off the connection; a file of a type not taken with 415; one
+ * that does not parse, or whose client stopped sending it, with 400. One
+ * cut off by the `interrupt` fault is refused as dropped. Raw bytes — a
+ * file sent as the whole body — are read as a `Blob` of their type.
  *
  * @param c - The request's context
- * @param limits - The most of a body to read
- * @returns The body as JSON or a form, or why it could not be read
+ * @param rules - The limits, the upload conditions, whether to cut the connection, who hears the progress
+ * @returns The body, or why it was not taken
  * @example
  * ```ts
- * const body = await readRequestBody(c, config.bodyLimits);
+ * const body = await readRequestBody(c, { limits: config.bodyLimits });
  * if ("error" in body) return c.json({ error: body.error }, body.status);
  * ```
  */
 export async function readRequestBody(
   c: HonoContext,
-  limits: BodyLimits = BODY_LIMITS,
+  rules: BodyRules = { limits: BODY_LIMITS },
 ): Promise<RequestBody> {
   const contentType = c.req.header("content-type") ?? "";
-  const isForm = FORM_TYPES.has(contentType.split(";")[0]?.trim().toLowerCase() ?? "");
-  const limit = isForm ? limits.upload : limits.json;
-  const read = await bounded(c, limit);
+  const limit = limitOf(contentType, rules);
+  const read = await paced(c, limit, rules);
   if (read === undefined) return { error: "The request body was not sent whole", status: 400 };
-  if (!read.ok) {
-    return {
-      error: `The request body is larger than ${sizeOf(limit)}, the most this mock reads`,
-      status: 413,
-    };
-  }
-  if (isForm) {
-    const form = await formOf(read.bytes, contentType);
-    return form
-      ? { kind: "form", form }
-      : { error: "The form body could not be read", status: 400 };
-  }
-  const text = new TextDecoder().decode(read.bytes);
-  if (text.trim() === "") return { kind: "json", value: undefined };
-  try {
-    return { kind: "json", value: JSON.parse(text) };
-  } catch (error) {
-    logger.debug("MockServer", `Unparseable body on ${c.req.method} ${c.req.path}`, error);
-    return { error: "The request body is not valid JSON", status: 400 };
-  }
+  if (!read.ok) return stopped(c.req.raw, read.reason, limit);
+  const body = await parseBody(read.bytes, contentType, rules.limits.json);
+  return "error" in body ? body : typeChecked(body, rules.uploads?.accept);
 }
 
 /**
- * The variables a body holds: its JSON, or its form's fields as a record.
+ * The variables a body holds: its JSON, its form's fields as a record, or
+ * its raw bytes as the `Blob` itself.
  *
  * @param body - A body the mock read
  * @returns Its value
@@ -126,6 +136,7 @@ export async function readRequestBody(
  * if (!("error" in body)) handle(bodyValue(body));
  * ```
  */
-export function bodyValue(body: Exclude<RequestBody, { error: string }>): unknown {
-  return body.kind === "form" ? formFields(body.form) : body.value;
+export function bodyValue(body: ParsedBody): unknown {
+  if (body.kind === "form") return formFields(body.form);
+  return body.kind === "raw" ? body.blob : body.value;
 }

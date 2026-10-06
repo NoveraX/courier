@@ -23,6 +23,7 @@ export function networkConfigOnWire(state: NetworkState): Record<string, unknown
     errorRate: cfg?.errorRate ?? 0,
     faultWeights: cfg?.faultWeights ?? [],
     bandwidth: cfg?.bandwidth ?? 0,
+    uploads: cfg?.uploads ?? {},
     distribution: cfg?.distribution ?? "uniform",
     routeOverrides: cfg?.routeOverrides ?? [],
     stopConditions: cfg?.stopConditions ?? null,

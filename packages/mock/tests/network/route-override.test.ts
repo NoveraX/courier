@@ -38,4 +38,46 @@ describe("a route's own network override", () => {
     expect(route && pickFault(route)).toBe("timeout");
     expect(other && pickFault(other)).toBe("503");
   });
+
+  it("fails with any error status it names, though the global mix weighs none of them", () => {
+    const state = createNetworkState({
+      errorRate: 1,
+      routeOverrides: [{ routeId: "files:upload", enabled: true, faultTypes: ["413"] }],
+    });
+    const route = state.getConfig("files", "upload");
+
+    expect(route && pickFault(route)).toBe("413");
+  });
+
+  it("lays its upload limit and types over the global ones, each on its own, keeping the speed", () => {
+    const state = createNetworkState({
+      uploads: { bandwidth: 512, maxBytes: 5_242_880, accept: ["image/*"] },
+      routeOverrides: [
+        { routeId: "files:avatar", enabled: true, uploads: { maxBytes: 1_048_576 } },
+        { routeId: "files:docs", enabled: true, uploads: { accept: [".pdf"] } },
+      ],
+    });
+
+    expect(state.getConfig("files", "avatar")?.uploads).toEqual({
+      bandwidth: 512,
+      maxBytes: 1_048_576,
+      accept: ["image/*"],
+    });
+    expect(state.getConfig("files", "docs")?.uploads).toEqual({
+      bandwidth: 512,
+      maxBytes: 5_242_880,
+      accept: [".pdf"],
+    });
+    expect(state.getConfig("files", "other")?.uploads?.maxBytes).toBe(5_242_880);
+  });
+
+  it("makes a run of a mock that only limits a route's uploads", () => {
+    const state = createNetworkState({
+      routeOverrides: [
+        { routeId: "files:avatar", enabled: true, uploads: { accept: ["image/*"] } },
+      ],
+    });
+
+    expect(state.startedAt).not.toBeNull();
+  });
 });

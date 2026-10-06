@@ -32,13 +32,7 @@ export function LabChannel({ tone, name, caption, share, stats, moves }: LabChan
     <div data-tone={tone} className="flex flex-col rounded-panel border border-line bg-bg/40 p-4.5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="m-0 flex items-center gap-2 font-mono text-small text-fg">
-            <span
-              aria-hidden="true"
-              className="size-1.75 shrink-0 rounded-full bg-(--tone) shadow-[0_0_10px_rgb(var(--tone-rgb)/0.9)]"
-            />
-            {name}
-          </p>
+          <p className="m-0 font-mono text-small text-fg">{name}</p>
           <p className="m-0 mt-1.25 text-label text-fg-subtle">{caption}</p>
         </div>
         <p className="m-0 font-mono text-[34px] leading-none font-medium tracking-[-0.04em] text-fg tabular-nums">

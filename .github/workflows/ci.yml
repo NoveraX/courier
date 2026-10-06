@@ -141,6 +141,37 @@ jobs:
       - name: Run the example
         run: npm run demo --workspace examples/basic
 
+  # The Expo example installs the packages packed, as the registry would ship
+  # them, and is typechecked and bundled for iOS and Android: Metro resolves
+  # every entry the app imports and Hermes compiles the result, so a package
+  # a React Native app cannot load fails here rather than in someone's app.
+  react-native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Install the example
+        run: npm ci
+        working-directory: examples/expo
+
+      - name: Typecheck the example
+        run: npm run typecheck
+        working-directory: examples/expo
+
+      - name: Bundle the example for iOS and Android
+        run: npm run bundle
+        working-directory: examples/expo
+
   # The commit-msg hook runs only where it is installed and can be skipped, so
   # the same rules run here. A pull request is checked from its merge base; a
   # push, from the last release tag, so a cancelled or skipped run leaves
@@ -198,7 +229,7 @@ jobs:
         working-directory: docs
 
   release:
-    needs: [ci, platforms]
+    needs: [ci, platforms, react-native]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     concurrency:

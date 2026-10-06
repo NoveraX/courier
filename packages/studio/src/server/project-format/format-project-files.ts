@@ -50,8 +50,10 @@ export async function formatProjectFiles<TFile extends ComposedFile>(
   formatters: ProjectFormatters = findFormatters(root),
 ): Promise<FormatOutcome<TFile>> {
   const { tools, missing } = formatters;
+  /* The tools that format the project's code, whether or not these files needed them. */
+  const formattedWith = tools.map((tool) => `${tool.name} ${tool.version}`);
   if (tools.length === 0 || files.length === 0) {
-    return { files: [...files], formattedWith: [], problem: files.length > 0 ? missing : null };
+    return { files: [...files], formattedWith, problem: files.length > 0 ? missing : null };
   }
   let problem: string | null = missing;
   const formatOne = async (file: TFile): Promise<TFile> => {
@@ -66,11 +68,7 @@ export async function formatProjectFiles<TFile extends ComposedFile>(
     }
     return content === file.content ? file : { ...file, content };
   };
-  return {
-    files: await inParallel(files, formatOne),
-    formattedWith: tools.map((tool) => `${tool.name} ${tool.version}`),
-    problem,
-  };
+  return { files: await inParallel(files, formatOne), formattedWith, problem };
 }
 
 /* The text as the tool leaves it once another pass changes nothing. */

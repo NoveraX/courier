@@ -102,6 +102,14 @@ describe("formatting files as the project formats its code", () => {
     expect(outcome.problem).toBe("src/pets.ts was not formatted: Biome exited with 3");
   });
 
+  it("names the project's formatter even when no file needs formatting", async () => {
+    const tool = { name: "Biome" as const, version: "2.5.14", bin: "/nowhere/biome" };
+
+    const outcome = await formatProjectFiles("/nowhere", [], { tools: [tool], missing: null });
+
+    expect(outcome).toEqual({ files: [], formattedWith: ["Biome 2.5.14"], problem: null });
+  });
+
   it("leaves the files as composed in a project with no formatter", async () => {
     const files = [{ path: "src/pets.ts", content: COMPOSED }];
 

@@ -66,7 +66,15 @@ afterAll(async () => {
 
 function expectGuarded(response: Response): void {
   expect(response.headers.get("x-frame-options")).toBe("DENY");
-  expect(response.headers.get("content-security-policy")).toBe("frame-ancestors 'none'");
+  const policy = response.headers.get("content-security-policy") ?? "";
+  expect(policy).toContain("frame-ancestors 'none'");
+  /* Only Studio's own scripts run, and nothing loads, calls out or posts a form elsewhere. */
+  expect(policy).toContain("script-src 'self'");
+  expect(policy).toContain("connect-src 'self'");
+  expect(policy).toContain("object-src 'none'");
+  expect(policy).toContain("base-uri 'none'");
+  expect(policy).toContain("form-action 'self'");
+  expect(policy).not.toContain("unsafe-eval");
   expect(response.headers.get("x-content-type-options")).toBe("nosniff");
   expect(response.headers.get("referrer-policy")).toBe("no-referrer");
 }

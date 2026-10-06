@@ -95,7 +95,9 @@ export function responseToExtract(ep: ParsedEndpoint): ParsedSchema | null {
 /**
  * The type of what an endpoint is called with, when it gets one of its own:
  * its path and query parameters, and the fields of a body written inline
- * beside them.
+ * beside them. A body's fields always get one, so the schema that checks
+ * them before the call is made has a type to name; a parameter or two alone
+ * stay written where they are used.
  *
  * The body's fields are part of it, so an endpoint whose parameters are named
  * this way is still called with the body it requires.
@@ -117,7 +119,11 @@ export function paramsToExtract(ep: ParsedEndpoint, bodyName?: string): ParsedSc
     ...headerParameters(ep),
   ];
   const nested = bodyToExtract(ep);
-  if (params.length < 2 && !params.some((p) => p.description) && !nested) return null;
+  /* Past the check above, a body is an object's fields written inline. */
+  const bodyFields = Boolean(ep.requestBody);
+  if (params.length < 2 && !params.some((p) => p.description) && !nested && !bodyFields) {
+    return null;
+  }
 
   const properties: Record<string, ParsedSchemaProperty> = {};
   for (const param of params) properties[param.name] = parameterProperty(param);

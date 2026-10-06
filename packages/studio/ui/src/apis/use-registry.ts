@@ -2,10 +2,10 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { checkAllUpdates, checkSourceUpdates } from "@/apis/client";
 import type { ApisPageState } from "@/features/apis/apis-page-state";
 import { apisPageState } from "@/features/apis/apis-page-state";
+import { checkStatuses, type PageStatus } from "@/features/apis/check-statuses";
 import type {
   ParsedSpec,
   ScannedSource,
-  SourceStatus,
   SourceStatusInfo,
   SourceSummary,
 } from "@/features/apis/types";
@@ -32,8 +32,20 @@ interface UseRegistryReturn {
   getNewSpec: (name: string) => ParsedSpec | undefined;
 }
 
+/**
+ * The APIs page's sources and their update checks. Studio keeps each
+ * check's outcome and sends it with the imports list, so it shows on every
+ * page — one opened later, or reloaded, too; this page shows a check under
+ * way, and the answer to its own check until that list comes.
+ *
+ * @returns The sources, their statuses, and the checks to run
+ * @example
+ * ```ts
+ * const { imported, statuses, checkAll } = useRegistry();
+ * ```
+ */
 export function useRegistry(): UseRegistryReturn {
-  const [statuses, setStatuses] = useState<Record<string, SourceStatusInfo>>({});
+  const [pageStatuses, setPageStatuses] = useState<Record<string, PageStatus>>({});
   const newSpecsRef = useRef<Record<string, ParsedSpec>>({});
 
   // Live data from socket (pushed by server on connect + file changes)
@@ -44,6 +56,10 @@ export function useRegistry(): UseRegistryReturn {
   const page = useMemo(
     () => apisPageState({ connected, status: configStatus, sourceCount: scanSources.length }),
     [connected, configStatus, scanSources.length],
+  );
+  const statuses = useMemo(
+    () => checkStatuses(registrySources, pageStatuses),
+    [registrySources, pageStatuses],
   );
 
   // Derive enriched/handWritten from store data
@@ -62,38 +78,47 @@ export function useRegistry(): UseRegistryReturn {
     return { imported: enriched, handWritten: handW };
   }, [scanSources, registrySources]);
 
-  const checkUpdates = useCallback(async (name: string) => {
-    setStatuses((prev) => ({
-      ...prev,
-      [name]: { status: "checking" as SourceStatus },
-    }));
-    try {
-      const result = await checkSourceUpdates(name);
-      if (result.newSpec) newSpecsRef.current[name] = result.newSpec;
-      setStatuses((prev) => ({
-        ...prev,
-        [name]: {
-          status: result.changed ? "updates-available" : "up-to-date",
-          newSpec: result.newSpec,
-          checkedAt: Date.now(),
-        },
-      }));
-    } catch (err) {
-      setStatuses((prev) => ({
-        ...prev,
-        [name]: {
-          status: "error",
-          error: err instanceof Error ? err.message : "Check failed",
-          checkedAt: Date.now(),
-        },
-      }));
-    }
+  /* The checks of `names` end with `answers`, each holding until Studio sends the list anew. */
+  const answered = useCallback(
+    (names: readonly string[], answers: Record<string, SourceStatusInfo>) => {
+      const against = useStudioStore.getState().registrySources;
+      setPageStatuses((prev) => {
+        const next = { ...prev };
+        for (const name of names) delete next[name];
+        for (const [name, info] of Object.entries(answers)) next[name] = { info, against };
+        return next;
+      });
+    },
+    [],
+  );
+
+  const checking = useCallback((names: readonly string[]) => {
+    setPageStatuses((prev) => {
+      const next = { ...prev };
+      for (const name of names) next[name] = { info: { status: "checking" }, against: null };
+      return next;
+    });
   }, []);
 
+  const checkUpdates = useCallback(
+    async (name: string) => {
+      checking([name]);
+      try {
+        const result = await checkSourceUpdates(name);
+        if (result.newSpec) newSpecsRef.current[name] = result.newSpec;
+        const status = result.changed ? "updates-available" : "up-to-date";
+        answered([name], { [name]: { status, checkedAt: Date.now() } });
+      } catch (err) {
+        const error = err instanceof Error ? err.message : "Check failed";
+        answered([name], { [name]: { status: "error", error, checkedAt: Date.now() } });
+      }
+    },
+    [checking, answered],
+  );
+
   const checkAll = useCallback(async () => {
-    const checking: Record<string, SourceStatusInfo> = {};
-    for (const s of imported) checking[s.name] = { status: "checking" };
-    setStatuses(checking);
+    const names = imported.map((s) => s.name);
+    checking(names);
     try {
       const { results } = await checkAllUpdates();
       const next: Record<string, SourceStatusInfo> = {};
@@ -104,26 +129,20 @@ export function useRegistry(): UseRegistryReturn {
         else
           next[name] = { status: result.changed ? "updates-available" : "up-to-date", checkedAt };
       }
-      setStatuses(next);
+      answered(names, next);
     } catch (err) {
       /* Every import shows why the check failed, rather than no status at all. */
       const error = err instanceof Error ? err.message : "Check failed";
       const failed: Record<string, SourceStatusInfo> = {};
-      for (const s of imported) failed[s.name] = { status: "error", error };
-      setStatuses(failed);
+      for (const name of names) failed[name] = { status: "error", error };
+      answered(names, failed);
     }
-  }, [imported]);
+  }, [imported, checking, answered]);
 
   /* The lists come back from Studio once the import's state is gone. A
      source the running config still imports stays listed until the config
      no longer imports it, since Studio still runs it. */
-  const forget = useCallback((name: string) => {
-    setStatuses((prev) => {
-      const next = { ...prev };
-      delete next[name];
-      return next;
-    });
-  }, []);
+  const forget = useCallback((name: string) => answered([name], {}), [answered]);
 
   const getNewSpec = useCallback((name: string) => {
     return ownValue(newSpecsRef.current, name);

@@ -54,6 +54,7 @@ import { previewMocksEdit } from "../../src/server/mocks-edit/preview-mocks-edit
 import type { ReadyOutcome } from "../../src/server/mocks-edit/types";
 import { ACT_BUDGET_MS, CONFIG_LOAD_TIMEOUT_MS } from "../../src/server/project-state/budgets";
 import type { ProjectState } from "../../src/server/project-state/types";
+import { createUpdateChecks } from "../../src/server/update-checks";
 
 const CACHE = join(__dirname, "../../../../node_modules/.cache/courier-studio-tests");
 const IS_WINDOWS = process.platform === "win32";
@@ -136,6 +137,7 @@ async function harness(
       settling: false,
     }),
     importsChanged: () => undefined,
+    updateChecks: createUpdateChecks(),
     runExclusive: async <TResult>(transaction: ExclusiveTransaction<TResult>) => {
       await slotFree;
       return transaction(tx);

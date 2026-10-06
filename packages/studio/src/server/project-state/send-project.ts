@@ -1,4 +1,5 @@
 import { createLogger } from "@noverax/courier";
+import type { UpdateChecks } from "../update-checks";
 import { configStatusOf } from "./config-status";
 import { sendImportLists } from "./send-import-lists";
 import type { ProjectEventTarget, ProjectSnapshot } from "./types";
@@ -22,20 +23,22 @@ const log = createLogger("Studio");
  * @param target - Every UI, or the one that connected
  * @param snapshot - The project as Studio runs it
  * @param root - The project root, symlinks resolved
+ * @param checks - The last update check of each import
  *
  * @example
  * ```ts
- * sendProject(uiNamespace, project.snapshot(), root);
+ * sendProject(uiNamespace, project.snapshot(), root, project.updateChecks);
  * ```
  */
 export function sendProject(
   target: ProjectEventTarget,
   snapshot: ProjectSnapshot,
   root: string,
+  checks: UpdateChecks,
 ): void {
   if (!snapshot.starting) {
     try {
-      sendImportLists(target, snapshot, root);
+      sendImportLists(target, snapshot, root, checks);
     } catch (err) {
       log.warn("Studio could not send the imports and sources to the UI", err);
     }

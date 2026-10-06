@@ -4,6 +4,7 @@ import type { Namespace } from "socket.io";
 import type { MocksConsumers } from "../apply-loaded-mocks";
 import type { BindingTable } from "../catalog/binding-table";
 import { startConfigWatcher } from "../config-watcher";
+import { createUpdateChecks } from "../update-checks";
 import type { WatcherStatus } from "../watcher-status";
 import { withinBudget } from "../within-budget";
 import { CONFIG_LOAD_TIMEOUT_MS } from "./budgets";
@@ -13,9 +14,9 @@ import { ProjectStateError } from "./project-state-error";
 import { sendImportLists } from "./send-import-lists";
 import type { FreshSnapshot, ProjectSnapshot, ProjectState } from "./types";
 
-/** What owning the project needs from the Studio server. */
 const log = createLogger("Studio");
 
+/** What owning the project needs from the Studio server. */
 export interface ProjectStateDeps {
   /** The project root, symlinks resolved: every path Studio shows is relative to it. */
   projectRoot: string;
@@ -70,6 +71,7 @@ const STARTING: ProjectSnapshot = {
  */
 export function createProjectState(deps: ProjectStateDeps): ProjectState {
   const { projectRoot, bindingTable, uiNamespace, mocks } = deps;
+  const updateChecks = createUpdateChecks();
   let current = STARTING;
   const store = {
     snapshot: () => current,
@@ -78,7 +80,7 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     },
   };
   const outcomes = createProjectOutcomes(
-    { root: projectRoot, bindingTable, uiNamespace, mocks },
+    { root: projectRoot, bindingTable, uiNamespace, mocks, updateChecks },
     store,
   );
 
@@ -118,7 +120,7 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
   function importsChanged(): void {
     if (current.starting) return;
     try {
-      sendImportLists(uiNamespace, current, projectRoot);
+      sendImportLists(uiNamespace, current, projectRoot, updateChecks);
     } catch (error) {
       log.warn("Studio could not send the imports lists after an import changed", error);
     }
@@ -128,6 +130,7 @@ export function createProjectState(deps: ProjectStateDeps): ProjectState {
     snapshot: () => current,
     fresh,
     importsChanged,
+    updateChecks,
     runExclusive: engine.runExclusive,
     finishEdits: async (budgetMs) => {
       engine.refuseEdits();

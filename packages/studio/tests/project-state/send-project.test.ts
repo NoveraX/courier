@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LoadedCourierConfig } from "../../src/server/config-loader";
 import { sendProject } from "../../src/server/project-state/send-project";
 import type { ProjectSnapshot } from "../../src/server/project-state/types";
+import { createUpdateChecks } from "../../src/server/update-checks";
 
 let root: string;
 
@@ -64,7 +65,7 @@ describe("sendProject", () => {
       },
     };
 
-    sendProject(target, snapshotOf(loadedWith(config)), root);
+    sendProject(target, snapshotOf(loadedWith(config)), root, createUpdateChecks());
 
     expect(sent.map(([event]) => event)).toEqual([
       "registry:updated",
@@ -84,6 +85,7 @@ describe("sendProject", () => {
       target,
       { revision: 0, starting: true, running: null, loadedAt: null, failure: null },
       root,
+      createUpdateChecks(),
     );
 
     expect(sent).toEqual([["config:status", { state: "starting", revision: 0 }]]);
@@ -98,7 +100,7 @@ describe("sendProject", () => {
       },
     };
 
-    sendProject(target, snapshotOf(loadedWith(unreadable)), root);
+    sendProject(target, snapshotOf(loadedWith(unreadable)), root, createUpdateChecks());
 
     expect(sent.map(([event]) => event)).toEqual(["config:status"]);
     expect(warn).toHaveBeenCalledTimes(1);

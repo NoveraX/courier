@@ -9,6 +9,7 @@ import type {
 import { isPlainObject } from "./is-plain-object";
 
 const IMPORT_TYPES: ReadonlySet<unknown> = new Set(["url", "file", "raw"]);
+const CHECK_STATUSES: ReadonlySet<unknown> = new Set(["up-to-date", "updates-available", "error"]);
 const HTTP_METHODS: ReadonlySet<unknown> = new Set([
   "get",
   "head",
@@ -25,7 +26,7 @@ const TRANSPORTS: ReadonlySet<string> = new Set(["http", "sse", "ws"]);
 
 /**
  * Whether an entry of a `registry:updated` list is an import the UI can
- * show: its type, its spec and where its code goes.
+ * show: its type, its spec, where its code goes, and its last update check.
  *
  * `options` are the generate options Studio wrote with the import. Only
  * their shape as a record is checked: an import written by another Studio
@@ -46,7 +47,17 @@ export function isSourceSummary(item: unknown): item is SourceSummary {
     typeof item.specUrl === "string" &&
     IMPORT_TYPES.has(item.importType) &&
     typeof item.outputDir === "string" &&
-    isPlainObject(item.options)
+    isPlainObject(item.options) &&
+    (item.check === undefined || isImportCheck(item.check))
+  );
+}
+
+function isImportCheck(check: unknown): boolean {
+  return (
+    isPlainObject(check) &&
+    CHECK_STATUSES.has(check.status) &&
+    typeof check.checkedAt === "number" &&
+    (check.error === undefined || typeof check.error === "string")
   );
 }
 

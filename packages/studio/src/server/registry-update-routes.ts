@@ -8,12 +8,13 @@
 import { computeSpecHash, hasSpecChanged } from "../apis";
 import type { ApisRouteDeps } from "./apis-routes";
 import { authHeaders } from "./auth-headers";
+import { checkedResponse } from "./checked-response";
 import { getImportEntry, getImportState, importsSnapshotOf } from "./imports-bridge";
 import { parseFetchedSpec } from "./parse-fetched-spec";
 import { projectRootAt } from "./project-fs/project-root";
 import { readDeclarations } from "./project-state/read-declarations";
 import { refuseUnsendable } from "./refuse-unsendable";
-import { checkSingleSource, fetchSpecRaw } from "./registry-spec";
+import { checkSingleSource, fetchSpecRaw, type UpdateCheck } from "./registry-spec";
 import { sendRouteFailure } from "./route-failure";
 import type { JsonResponse, RouteApp } from "./route-types";
 import { checkPinnedHash } from "./spec-as-declared";
@@ -61,22 +62,33 @@ async function handleCheckUpdates(
       return;
     }
 
-    const raw = await fetchSpecRaw(
-      entry.from,
-      res,
-      specHostAllowlist(project, projectRoot),
-      projectRootAt(projectRoot),
-      authHeaders(entry.auth),
-    );
-    /* An empty body is text too: it fails as a specification below, and the route answers. */
-    if (raw === null) return;
+    /* From here every answer is the check's outcome, which every page is told. */
+    const remember = (found: { latestHash: string } | { error: string }) => {
+      project.updateChecks.record(body.name, { from: entry.from, checkedAt: Date.now(), ...found });
+      project.importsChanged();
+    };
+    const answer = checkedResponse(res, (error) => remember({ error }));
+    try {
+      const raw = await fetchSpecRaw(
+        entry.from,
+        answer,
+        specHostAllowlist(project, projectRoot),
+        projectRootAt(projectRoot),
+        authHeaders(entry.auth),
+      );
+      /* An empty body is text too: it fails as a specification below, and the route answers. */
+      if (raw === null) return;
 
-    const newSpec = parseFetchedSpec(entry.from, raw);
-    checkPinnedHash(body.name, entry, newSpec);
-    const newHash = computeSpecHash(newSpec);
-    const changed = hasSpecChanged(imports.state, body.name, newHash);
-    if (changed) refuseUnsendable(newSpec);
-    res.json(changed ? { changed: true, newSpec } : { changed: false });
+      const newSpec = parseFetchedSpec(entry.from, raw);
+      checkPinnedHash(body.name, entry, newSpec);
+      const newHash = computeSpecHash(newSpec);
+      const changed = hasSpecChanged(imports.state, body.name, newHash);
+      if (changed) refuseUnsendable(newSpec);
+      remember({ latestHash: newHash });
+      res.json(changed ? { changed: true, newSpec } : { changed: false });
+    } catch (err) {
+      sendRouteFailure(answer, err, "Failed to check updates");
+    }
   } catch (err) {
     sendRouteFailure(res, err, "Failed to check updates");
   }
@@ -101,9 +113,33 @@ async function handleCheckAll(
       ),
     );
 
+    /* Every page is told each outcome, a page opened later too. */
+    const checkedAt = Date.now();
+    for (const [name, check] of checks) {
+      const entry = getImportEntry(imports, name);
+      if (entry?.importType !== "url") continue;
+      const at = { from: entry.from, checkedAt };
+      if (check.latestHash !== undefined) {
+        project.updateChecks.record(name, { ...at, latestHash: check.latestHash });
+      } else if (check.error !== undefined) {
+        project.updateChecks.record(name, { ...at, error: check.error });
+      }
+    }
+    project.importsChanged();
     /* Own properties, so an import named `__proto__` is reported like any other. */
-    res.json({ results: Object.fromEntries(checks) });
+    res.json({
+      results: Object.fromEntries(checks.map(([name, check]) => [name, answerOf(check)])),
+    });
   } catch (err) {
     sendRouteFailure(res, err, "Failed to check sources");
   }
+}
+
+/* What a page is told of a check: the hash read stays Studio's. */
+function answerOf({ changed, error, unchecked }: UpdateCheck): Omit<UpdateCheck, "latestHash"> {
+  return {
+    changed,
+    ...(error !== undefined && { error }),
+    ...(unchecked !== undefined && { unchecked }),
+  };
 }

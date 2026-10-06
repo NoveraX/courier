@@ -9,6 +9,7 @@
 import type { CourierImportEntry } from "@noverax/courier/config";
 import { DEFAULT_OPTIONS } from "../apis/generator/types";
 import { type ImportStateEntry, type ImportsState, loadImportsState } from "../apis/imports-state";
+import type { ImportCheck, UpdateChecks } from "./update-checks";
 
 /** The `imports` a config declares, by import name. */
 export type ImportDeclarations = Record<string, CourierImportEntry>;
@@ -25,6 +26,8 @@ export interface ImportSummary {
   importType: "url" | "file" | "raw";
   outputDir: string;
   options: Record<string, unknown>;
+  /** The import's last update check, while it still says something of the import. */
+  check?: ImportCheck | undefined;
 }
 
 /**
@@ -47,7 +50,23 @@ export function importsSnapshotOf(
   return { declarations: declarations ?? {}, state: loadImportsState(root) };
 }
 
-export function summarizeImports(snapshot: ImportsSnapshot): ImportSummary[] {
+/**
+ * The imports list every UI shows: each import the config declares, with
+ * its options and its last update check, then each import only the imports
+ * state still records.
+ *
+ * @param snapshot - The declarations, with the imports state
+ * @param checks - The last update check of each import; none to list the imports without them
+ * @returns The list
+ * @example
+ * ```ts
+ * summarizeImports(importsSnapshotOf(declarations, root), project.updateChecks);
+ * ```
+ */
+export function summarizeImports(
+  snapshot: ImportsSnapshot,
+  checks?: UpdateChecks,
+): ImportSummary[] {
   const out: ImportSummary[] = [];
   const seen = new Set<string>();
   for (const [name, entry] of Object.entries(snapshot.declarations)) {
@@ -58,6 +77,7 @@ export function summarizeImports(snapshot: ImportsSnapshot): ImportSummary[] {
       importType: entry.importType,
       outputDir: entry.outputDir,
       options: extractOptions(entry),
+      check: checks?.of(name, entry, getImportState(snapshot, name)?.specHash),
     });
   }
   for (const name of Object.keys(snapshot.state.imports)) {

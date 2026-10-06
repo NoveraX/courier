@@ -67,6 +67,7 @@ export function applyImportRemoval(
         undeclaredFrom = (await undeclareForRemoval(deps, request)).configFile;
       },
     );
+    project.updateChecks.forget(name);
     project.importsChanged();
     const { removed, kept, backupDir, pruneFailures } = report;
     const notes = undeclaredFrom

@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 import { registerMockDeclareRoutes } from "../src/server/mock-declare-routes";
 import type { MocksEditContext } from "../src/server/mocks-edit/mocks-edit-context";
 import type { ProjectState } from "../src/server/project-state/types";
+import { createUpdateChecks } from "../src/server/update-checks";
 
 type Handler = (req: IncomingMessage & { body: unknown }, res: FakeResponse) => void;
 
@@ -73,6 +74,7 @@ function project(overrides: Partial<ProjectState> = {}): ProjectState {
       settling: true,
     })),
     importsChanged: vi.fn(),
+    updateChecks: createUpdateChecks(),
     runExclusive: vi.fn(async () => {
       throw new Error("no edit expected");
     }),

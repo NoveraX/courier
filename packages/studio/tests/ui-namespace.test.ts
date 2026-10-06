@@ -10,9 +10,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { BindingTable } from "../src/server/catalog/binding-table";
 import type { LifecycleCoordinator } from "../src/server/mock-manager";
-import type { ProjectReads } from "../src/server/project-state/types";
+import type { ProjectImports } from "../src/server/project-state/types";
 import type { StudioToken } from "../src/server/studio-token";
 import { setupUiNamespace } from "../src/server/ui-namespace";
+import { createUpdateChecks } from "../src/server/update-checks";
 import { createWatcherStatus } from "../src/server/watcher-status";
 
 const cleanups: Array<() => Promise<void> | void> = [];
@@ -50,13 +51,15 @@ describe("setupUiNamespace", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { io, url } = await listening();
     const uiNamespace = io.of("/ui");
-    const project: ProjectReads = {
+    const project: ProjectImports = {
       snapshot: () => {
         throw new Error("the snapshot could not be read");
       },
       fresh: async () => {
         throw new Error("a UI is sent the project as it is, never after catching up");
       },
+      importsChanged: () => undefined,
+      updateChecks: createUpdateChecks(),
     };
     setupUiNamespace({
       uiNamespace,
@@ -108,7 +111,12 @@ describe("setupUiNamespace", () => {
     setupUiNamespace({
       uiNamespace,
       bindingTable: new BindingTable(),
-      project: { snapshot: () => STARTING, fresh: async () => ({ ...STARTING, settling: false }) },
+      project: {
+        snapshot: () => STARTING,
+        fresh: async () => ({ ...STARTING, settling: false }),
+        importsChanged: () => undefined,
+        updateChecks: createUpdateChecks(),
+      },
       projectRoot: "/app",
       mockManager,
       token: TOKEN,

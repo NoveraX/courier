@@ -33,6 +33,7 @@ import type { FreshSnapshot, ProjectState } from "../src/server/project-state/ty
 import { registerRegistryRoutes } from "../src/server/registry-routes";
 import type { JsonResponse, RouteApp } from "../src/server/route-types";
 import type { StudioServer } from "../src/server/types";
+import { createUpdateChecks } from "../src/server/update-checks";
 import { tokenHeader } from "./helpers/token-header";
 
 /* Every evaluation of the config imports ./count, which adds one here. */
@@ -1044,6 +1045,7 @@ describe("a check of all imports", () => {
       snapshot: () => view,
       fresh,
       importsChanged: () => undefined,
+      updateChecks: createUpdateChecks(),
       runExclusive: () => Promise.reject(new Error("no config edit in these tests")),
       finishEdits: async () => undefined,
       stop: () => undefined,

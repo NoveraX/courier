@@ -25,6 +25,8 @@ const log = createLogger("Studio");
 /** What checking one import for updates found. */
 export interface UpdateCheck {
   changed: boolean;
+  /** The hash of the specification read, when it was. */
+  latestHash?: string;
   /** Why the check failed, when it did. */
   error?: string;
   /** Why the import cannot be checked at all: it has no URL to fetch. */
@@ -121,7 +123,8 @@ export async function checkSingleSource(
     const raw = await fetchSpec(specUrl, allowlist, authHeaders(entry.auth));
     const newSpec = parseFetchedSpec(specUrl, raw);
     checkPinnedHash(name, entry, newSpec);
-    return { changed: computeSpecHash(newSpec) !== state?.specHash };
+    const latestHash = computeSpecHash(newSpec);
+    return { changed: latestHash !== state?.specHash, latestHash };
   } catch (err) {
     return { changed: false, error: err instanceof Error ? err.message : "Check failed" };
   }

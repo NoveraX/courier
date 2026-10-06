@@ -48,6 +48,17 @@ export interface SourceSummary {
    * declare, whose options Studio does not know.
    */
   options: Partial<PersistedGenerateOptions>;
+  /** The import's last update check, from any page, while Studio runs; absent before one. */
+  check?: ImportCheck | undefined;
+}
+
+/** What an import's last update check found, as Studio keeps it for every page. */
+export interface ImportCheck {
+  status: "up-to-date" | "updates-available" | "error";
+  /** When the check ended, in epoch milliseconds. */
+  checkedAt: number;
+  /** Why the check failed. */
+  error?: string | undefined;
 }
 
 // ── Scanner ─────────────────────────────────────────────────────────────────

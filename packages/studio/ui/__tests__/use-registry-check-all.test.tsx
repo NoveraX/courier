@@ -4,7 +4,9 @@
 /**
  * Checking every import for updates: an import whose check failed says why,
  * and a check that fails as a whole says so on every import rather than
- * leaving none with a status.
+ * leaving none with a status. The outcome Studio keeps comes with the
+ * imports list, so a page opened after a check shows it, and a list Studio
+ * sends after a check replaces the page's own answer.
  */
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -71,5 +73,55 @@ describe("checking every import for updates", () => {
       status: "error",
       error: "Studio is not reachable.",
     });
+  });
+});
+
+const SUMMARY = {
+  name: "pets",
+  specUrl: "https://pets.example/openapi.json",
+  importType: "url" as const,
+  outputDir: "src/api",
+  options: {},
+};
+
+describe("the outcome Studio keeps", () => {
+  it("shows on a page opened after the check", () => {
+    const check = { status: "updates-available" as const, checkedAt: 1_000 };
+    useStudioStore.setState({ registrySources: [{ ...SUMMARY, check }] });
+
+    const { result } = renderHook(() => useRegistry());
+
+    expect(result.current.statuses.pets).toEqual({
+      status: "updates-available",
+      error: undefined,
+      checkedAt: 1_000,
+    });
+  });
+
+  it("replaces the page's own answer once Studio sends the list anew", async () => {
+    vi.mocked(post).mockResolvedValueOnce({ results: { pets: { changed: false } } });
+    const { result } = renderHook(() => useRegistry());
+    await act(() => result.current.checkAll());
+    expect(result.current.statuses.pets?.status).toBe("up-to-date");
+
+    const check = { status: "error" as const, checkedAt: 2_000, error: "The host did not answer." };
+    act(() => useStudioStore.setState({ registrySources: [{ ...SUMMARY, check }] }));
+
+    expect(result.current.statuses.pets).toMatchObject({ status: "error", error: check.error });
+  });
+
+  it("keeps showing a check under way, whatever list comes meanwhile", async () => {
+    const answer = Promise.withResolvers<unknown>();
+    vi.mocked(post).mockImplementationOnce(() => answer.promise);
+    const { result } = renderHook(() => useRegistry());
+
+    act(() => {
+      void result.current.checkUpdates("pets");
+    });
+    act(() => useStudioStore.setState({ registrySources: [{ ...SUMMARY }] }));
+
+    expect(result.current.statuses.pets?.status).toBe("checking");
+    await act(async () => answer.resolve({ changed: true }));
+    expect(result.current.statuses.pets?.status).toBe("updates-available");
   });
 });

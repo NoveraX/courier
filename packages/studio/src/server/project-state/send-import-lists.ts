@@ -1,5 +1,6 @@
 import { buildSourceScan } from "../build-source-scan";
 import { importsSnapshotOf, summarizeImports } from "../imports-bridge";
+import type { UpdateChecks } from "../update-checks";
 import type { ProjectEventTarget, ProjectSnapshot } from "./types";
 
 /**
@@ -16,20 +17,22 @@ import type { ProjectEventTarget, ProjectSnapshot } from "./types";
  * @param target - Every UI, or the one that connected
  * @param snapshot - The project as Studio runs it
  * @param root - The project root, symlinks resolved
+ * @param checks - The last update check of each import
  * @throws What reading the imports state or building the catalogue throws
  *
  * @example
  * ```ts
- * sendImportLists(socket, project.snapshot(), root);
+ * sendImportLists(socket, project.snapshot(), root, project.updateChecks);
  * ```
  */
 export function sendImportLists(
   target: ProjectEventTarget,
   snapshot: ProjectSnapshot,
   root: string,
+  checks: UpdateChecks,
 ): void {
   const imports = importsSnapshotOf(snapshot.running?.config.imports, root);
-  const registry = { sources: summarizeImports(imports) };
+  const registry = { sources: summarizeImports(imports, checks) };
   const scan = buildSourceScan(snapshot.running, imports, root);
   target.emit("registry:updated", registry);
   target.emit("scan:sources", scan);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import type { ScannedSource } from "@/features/apis/types";
 import { keptWizard } from "@/features/mocks/wizard/kept-wizard";
 import { mergeDraftErrors } from "@/features/mocks/wizard/merge-draft-errors";
+import { mockedSources } from "@/features/mocks/wizard/mocked-sources";
 import type { SourceAvailability } from "@/features/mocks/wizard/source-availability";
 import { sourceAvailability } from "@/features/mocks/wizard/source-availability";
 import type { DraftErrors, MockWizardState } from "@/features/mocks/wizard/types";
@@ -24,6 +25,8 @@ export interface MockWizardHandle {
   connected: boolean;
   availability: SourceAvailability;
   sources: readonly ScannedSource[];
+  /** The mocks that already serve each source, by source. */
+  mocked: ReadonlyMap<string, readonly string[]>;
   /** The problems of each draft, found while typing or told by Studio. */
   errors: ReadonlyMap<number, DraftErrors>;
   /** Close the dialog; ignored while an apply is in flight. */
@@ -62,6 +65,7 @@ export function useMockWizard(): MockWizardHandle {
   const sources = useStudioStore((s) => s.scanSources);
   const servers = useMockStore((s) => s.servers);
   const declaredKeys = useMemo(() => declaredKeysOf(servers), [servers]);
+  const mocked = useMemo(() => mockedSources(servers), [servers]);
   const availability = sourceAvailability({
     connected,
     status: configStatus,
@@ -104,5 +108,16 @@ export function useMockWizard(): MockWizardHandle {
     [session, declaredKeys],
   );
 
-  return { open, state, session, connected, availability, sources, errors, close, toggleSource };
+  return {
+    open,
+    state,
+    session,
+    connected,
+    availability,
+    sources,
+    mocked,
+    errors,
+    close,
+    toggleSource,
+  };
 }

@@ -28,8 +28,14 @@ export interface MockRegistration {
     key: string,
     location: MockLocation,
     description: MockServerDescription,
+    source?: string,
   ) => void;
-  updateDeclared: (key: string, location: MockLocation, description: MockServerDescription) => void;
+  updateDeclared: (
+    key: string,
+    location: MockLocation,
+    description: MockServerDescription,
+    source?: string,
+  ) => void;
   /** Track a mock whose definition cannot be read; returns what is reported for it. */
   registerProblem: (
     key: string,
@@ -78,9 +84,10 @@ export function createMockRegistration(ctx: RegistrationContext): MockRegistrati
     key: string,
     location: MockLocation,
     description: MockServerDescription,
+    source?: string,
   ): void {
     if (servers.has(key)) return;
-    track(key, location, { ...assignPort(description.port), ...described(description) });
+    track(key, location, { ...assignPort(description.port), ...described(description), source });
   }
 
   /**
@@ -91,6 +98,7 @@ export function createMockRegistration(ctx: RegistrationContext): MockRegistrati
     key: string,
     location: MockLocation,
     description: MockServerDescription,
+    source?: string,
   ): void {
     const state = servers.get(key);
     if (!state) return;
@@ -99,6 +107,7 @@ export function createMockRegistration(ctx: RegistrationContext): MockRegistrati
       ...location,
       ...assignPort(description.port, state),
       ...described(description),
+      source,
       lastError: undefined,
       ...(settled ? { status: state.startedAt === undefined ? "declared" : "stopped" } : {}),
     });

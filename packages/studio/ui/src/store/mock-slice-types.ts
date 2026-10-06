@@ -30,6 +30,8 @@ export type ProcessStatus =
 export interface MockServerInfo {
   serverId: string;
   name: string;
+  /** The name under `sources` of the config's source it serves, when it serves one the config declares. */
+  source?: string | undefined;
   port: number;
   url: string;
   status: "connected" | "disconnected";

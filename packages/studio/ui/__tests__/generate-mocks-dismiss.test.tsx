@@ -44,6 +44,7 @@ function Wizard({
     connected: true,
     availability: { kind: "sources", blocked: null },
     sources: [],
+    mocked: new Map(),
     errors: new Map(),
     close,
     toggleSource: (source) => session.dispatch({ type: "toggleSource", source, declaredKeys: [] }),

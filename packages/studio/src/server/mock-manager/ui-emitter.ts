@@ -42,6 +42,7 @@ function serverStateData(state: ServerState): Record<string, unknown> {
   return {
     serverId: state.serverId,
     name: state.name,
+    source: state.source ?? null,
     port: state.actualPort ?? state.configuredPort,
     url: state.url ?? "",
     startedAt: state.startedAt ?? 0,

@@ -90,6 +90,7 @@ type Emitted = {
   lastError?: string | null;
   port?: number;
   filePath?: string;
+  source?: string | null;
 };
 
 const MOCKS_FILE = "/p/courier.mocks.ts";
@@ -129,6 +130,24 @@ afterEach(() => {
   fake.children.clear();
   fake.spawned.length = 0;
   fake.killDelay = 0;
+});
+
+describe("a declared mock", () => {
+  it("tells the pages the config's source it serves, and that it serves none once it does not", async () => {
+    const { coordinator, registry, last } = studio();
+    const mock = defineMockServer({ source: api });
+    registry.syncFromMocks({ a: mock }, undefined, new Map([["a", "shop"]]));
+    await vi.waitFor(() => expect(last("a")?.source).toBe("shop"));
+
+    registry.syncFromMocks(
+      { a: defineMockServer({ source: api, port: 7444 }) },
+      undefined,
+      new Map(),
+    );
+
+    await vi.waitFor(() => expect(last("a")?.source).toBeNull());
+    await coordinator.stop();
+  });
 });
 
 describe("autoStart", () => {

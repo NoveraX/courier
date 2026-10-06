@@ -18,6 +18,7 @@ function StepBody({ wizard }: { wizard: MockWizardHandle }): React.ReactNode {
         <SourceStep
           availability={wizard.availability}
           sources={wizard.sources}
+          mocked={wizard.mocked}
           drafts={state.drafts}
           onToggle={wizard.toggleSource}
         />

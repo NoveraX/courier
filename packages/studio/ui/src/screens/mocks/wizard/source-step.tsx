@@ -65,24 +65,28 @@ function Unavailable({ availability }: { availability: SourceAvailability }): Re
 interface SourceStepProps {
   availability: SourceAvailability;
   sources: readonly ScannedSource[];
+  /** The mocks that already serve each source, by source. */
+  mocked: ReadonlyMap<string, readonly string[]>;
   drafts: readonly MockDraft[];
   onToggle: (source: string) => void;
 }
 
 /**
  * The Sources step: the sources courier.config declares, each picked or
- * not for a mock of its own — or why there are none to pick.
+ * not for a mock of its own and marked when a mock already serves it — or
+ * why there are none to pick.
  *
- * @param props - Whether there are sources, the sources, the ones picked, and what picking does
+ * @param props - Whether there are sources, the sources, the mocks serving each, the ones picked, and what picking does
  * @returns The step
  * @example
  * ```tsx
- * <SourceStep availability={availability} sources={sources} drafts={state.drafts} onToggle={toggleSource} />
+ * <SourceStep availability={availability} sources={sources} mocked={mocked} drafts={state.drafts} onToggle={toggleSource} />
  * ```
  */
 export function SourceStep({
   availability,
   sources,
+  mocked,
   drafts,
   onToggle,
 }: SourceStepProps): React.ReactNode {
@@ -100,6 +104,7 @@ export function SourceStep({
         <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
           {sources.map((source) => {
             const on = drafts.some((draft) => draft.source === source.name);
+            const mocks = mocked.get(source.name) ?? [];
             return (
               <button
                 key={source.name}
@@ -118,6 +123,14 @@ export function SourceStep({
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate font-mono text-control font-medium">{source.name}</span>
                   <span className="truncate text-badge text-fg-subtle">{`${plural(endpointCountOf(source), "endpoint")} · ${plural(source.groups.length, "group")}`}</span>
+                  {mocks.length > 0 && (
+                    <span
+                      title={`courier.mocks.ts already mocks it as ${mocks.join(", ")}; a new mock serves it too`}
+                      className="truncate text-badge text-fg-muted"
+                    >
+                      already mocked as <span className="font-mono">{mocks.join(", ")}</span>
+                    </span>
+                  )}
                 </span>
                 <span
                   className={cn(

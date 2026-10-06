@@ -82,6 +82,17 @@ rather than hidden in a helper.
 
 A bug fix should come with the test that would have caught it.
 
+Studio's flows also run in a real browser: `e2e/` starts Studio from its
+command line over a copy of a fixture project, and drives importing,
+updating and removing an API, the mock wizard and the mocks, and the
+Playground as a developer does. It runs on the built packages, in Chromium:
+
+```bash
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
 ## Commits
 
 Conventional Commits, with an emoji after the colon:

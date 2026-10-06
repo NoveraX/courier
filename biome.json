@@ -18,6 +18,7 @@
       "packages/studio/ui/*.{ts,json}",
       "examples/*/src/**",
       "examples/*/*.{ts,json}",
+      "e2e/**",
       "!**/package.json",
       "!**/package-lock.json"
     ]

@@ -30,11 +30,30 @@ export interface ProcessEventsContext {
   resendStore: (serverId: string) => void;
   /** Keeps the conditions set on each mock, and sets them again when it starts again. */
   conditions?: ConditionsKeeper | undefined;
+  /** Start a mock again, once its worker is gone. */
+  restart?: ((serverId: string) => void) | undefined;
 }
+
+/* Starts again of a mock whose port Studio assigned and another process took meanwhile. */
+const PORT_RETRIES = 3;
 
 export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEvents {
   const { servers, emit, updateAndEmit } = ctx;
   const nameOf = (serverId: string): string => servers.get(serverId)?.name ?? serverId;
+  const portRetries = new Map<string, number>();
+  const restarting = new Set<string>();
+
+  /* A port Studio assigned that another process took between Studio's check and
+     the worker's listen — another Studio starting its mocks at the same moment —
+     is no reason to fail: the mock starts again, on the next free port. */
+  function retriesOnAnotherPort(serverId: string): boolean {
+    const state = servers.get(serverId);
+    const tries = portRetries.get(serverId) ?? 0;
+    if (!ctx.restart || !state || state.portDeclared || tries >= PORT_RETRIES) return false;
+    portRetries.set(serverId, tries + 1);
+    restarting.add(serverId);
+    return true;
+  }
 
   return {
     /* A mock that started again serves the network conditions it starts
@@ -42,6 +61,7 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
        reports none serves none. */
     onReady(serverId, data) {
       const name = nameOf(serverId);
+      portRetries.delete(serverId);
       log.info(`[${name}] ready at ${data.url}`);
       updateAndEmit(serverId, {
         status: "running",
@@ -63,10 +83,14 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
     /* Every failure is said where the developer is looking — the terminal —
        and kept on the mock for the UI, so a mock that could not start says
        why. */
-    onError(serverId, message, fatal) {
+    onError(serverId, message, fatal, code) {
       const name = nameOf(serverId);
       if (!fatal) {
         log.warn(`[${name}] ${message}`);
+        return;
+      }
+      if (code === "PORT_IN_USE" && retriesOnAnotherPort(serverId)) {
+        log.info(`[${name}] ${message} Studio starts it on the next free port.`);
         return;
       }
       log.error(`[${name}] failed: ${message}`);
@@ -89,6 +113,11 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
     /* A reason the worker reported before it died is the better one; the exit
        itself only says how it ended. */
     onExited(serverId, reason) {
+      if (restarting.delete(serverId)) {
+        updateAndEmit(serverId, GONE);
+        ctx.restart?.(serverId);
+        return;
+      }
       const state = servers.get(serverId);
       if (state?.status === "crashed" && state.lastError) {
         updateAndEmit(serverId, GONE);

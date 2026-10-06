@@ -4,6 +4,7 @@ export { describeMockServer, type MockServerDescription } from "./describe-mock-
 export type { DescribedRoute, RouteSource } from "./describe-route";
 export { type MockDefinitionLoader, runMockWorker } from "./run-mock-worker";
 export type {
+  ChildErrorCode,
   ChildMessage,
   ChildScenarioMeta,
   MockProcessState,

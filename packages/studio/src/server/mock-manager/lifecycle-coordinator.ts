@@ -79,6 +79,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
           `resendStore(${serverId})`,
           processManager.sendCommand(serverId, { action: "mock:store:resend", serverId }),
         ),
+      restart: (serverId) => runVoid(`startServer(${serverId})`, ops.startServer(serverId)),
     }),
     { transformCacheDirectory: config.transformCacheDirectory, storeFile: config.storeFile },
   );

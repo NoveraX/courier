@@ -369,3 +369,74 @@ describe("the requests a managed mock answered", () => {
     expect(emit.mock.calls[0]).toEqual(["mock:request:start", kept]);
   });
 });
+
+describe("a mock whose port another process took before it listened", () => {
+  function racing(portDeclared: boolean) {
+    const state = {
+      serverId: "apiMock",
+      name: "apiMock",
+      status: "starting",
+      portDeclared,
+      configuredPort: 7001,
+      routes: [],
+      collections: [],
+      scenarios: [],
+    } as unknown as ServerState;
+    const servers = new Map([["apiMock", state]]);
+    const updateAndEmit = (serverId: string, patch: Partial<ServerState>) => {
+      Object.assign(servers.get(serverId) as ServerState, patch);
+    };
+    const restart = vi.fn();
+    const handlers = createProcessEvents({
+      servers,
+      emit: vi.fn(),
+      updateAndEmit,
+      resendStore: vi.fn(),
+      restart,
+    });
+    const lose = () => {
+      handlers.onError("apiMock", "Port 7001 is in use by another process.", true, "PORT_IN_USE");
+      handlers.onExited("apiMock", "exited with code 1");
+    };
+    return { state, handlers, restart, lose };
+  }
+
+  it("starts again, on the next free port, when Studio assigned the port", () => {
+    const { state, restart, lose } = racing(false);
+
+    lose();
+
+    expect(restart).toHaveBeenCalledWith("apiMock");
+    expect(state.status).toBe("starting");
+    expect(output.join("\n")).toContain("Studio starts it on the next free port.");
+  });
+
+  it("fails with the reason when the developer named the port", () => {
+    const { state, restart, lose } = racing(true);
+
+    lose();
+
+    expect(restart).not.toHaveBeenCalled();
+    expect(state).toMatchObject({
+      status: "crashed",
+      lastError: "Port 7001 is in use by another process.",
+    });
+  });
+
+  it("gives up after three tries, and tries afresh once it started", () => {
+    const { state, handlers, restart, lose } = racing(false);
+
+    for (let i = 0; i < 4; i++) lose();
+    const gaveUp = { status: state.status, restarts: restart.mock.calls.length };
+    handlers.onReady("apiMock", {
+      port: 7004,
+      url: "http://localhost:7004",
+      routes: [],
+      collections: [],
+    } as never);
+    lose();
+
+    expect(gaveUp).toEqual({ status: "crashed", restarts: 3 });
+    expect(restart).toHaveBeenCalledTimes(4);
+  });
+});

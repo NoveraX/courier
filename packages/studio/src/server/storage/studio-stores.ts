@@ -34,6 +34,7 @@ export interface StudioStores {
  * Open Studio's database for a project, and every store kept in it.
  *
  * @param root - The project root, symlinks resolved
+ * @param replayBytes - How much of each log a page is sent as it connects; the logs' own budget unless given
  * @returns The stores, and how to close them
  * @example
  * ```ts
@@ -42,11 +43,11 @@ export interface StudioStores {
  * stores.close();
  * ```
  */
-export function openStudioStores(root: string): StudioStores {
+export function openStudioStores(root: string, replayBytes?: number): StudioStores {
   const storage = openStudioDb(root);
   const pins = createRequestPins(storage.db);
-  const requestLog = createRequestLog(storage.db, undefined, pins.has);
-  const mockLog = createMockLog(storage.db);
+  const requestLog = createRequestLog(storage.db, replayBytes, pins.has);
+  const mockLog = createMockLog(storage.db, replayBytes);
   /* The logs let their oldest requests go as new ones come: the room they took goes back to the disk. */
   const trim = setInterval(() => trimFreedRoom(storage.db), TRIM_EVERY_MS);
   trim.unref();

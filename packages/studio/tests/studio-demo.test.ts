@@ -356,13 +356,22 @@ describe("the demo's sockets, counted by address", () => {
     });
   }
 
-  it("are opened up to twenty for one address, and still for another", async () => {
+  it("are held open up to ten for one address, and still for another", async () => {
     const opened: boolean[] = [];
-    for (let n = 0; n < 20; n++) opened.push(await visit("192.0.2.200"));
+    for (let n = 0; n < 10; n++) opened.push(await visit("192.0.2.200"));
 
     expect(opened.every(Boolean)).toBe(true);
     expect(await visit("192.0.2.200")).toBe(false);
     expect(await visit("192.0.2.201")).toBe(true);
+  });
+
+  it("are opened up to ten every ten seconds for one address, each sent the logs", async () => {
+    for (let n = 0; n < 10; n++) expect(await visit("192.0.2.210")).toBe(true);
+    for (const socket of sockets.splice(0)) socket.disconnect();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    expect(await visit("192.0.2.210")).toBe(false);
+    expect(await visit("192.0.2.211")).toBe(true);
   });
 });
 

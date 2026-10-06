@@ -6,7 +6,7 @@
  */
 
 /** What a visitor does that the demo counts. */
-export type DemoAction = "send" | "command" | "lifecycle" | "rest" | "body" | "http";
+export type DemoAction = "send" | "command" | "lifecycle" | "rest" | "body" | "http" | "connect";
 
 /** How long a count lasts. */
 export const DEMO_WINDOW_MS = 10_000;
@@ -31,6 +31,7 @@ export const DEMO_LIMITS: Readonly<Record<DemoAction, DemoLimit>> = {
   rest: { address: 20, all: 60 },
   body: { page: 10, address: 15, all: 30 },
   http: { address: 600, all: 6000 },
+  connect: { address: 10, all: 40 },
 };
 
 const NAMES: Readonly<Record<DemoAction, string>> = {
@@ -40,6 +41,7 @@ const NAMES: Readonly<Record<DemoAction, string>> = {
   rest: "requests to Studio's API",
   body: "whole bodies",
   http: "requests",
+  connect: "sockets opened",
 };
 
 const ACTIONS = Object.keys(DEMO_LIMITS).filter(isAction);

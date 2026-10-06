@@ -11,6 +11,14 @@ import { demoHttpGuard } from "./demo-http-guard";
 import { createDemoLimits, type DemoLimits } from "./demo-limits";
 import { DEMO_MAX_MESSAGE_BYTES, type DemoVisitorsDeps, demoVisitors } from "./demo-visitors";
 
+/**
+ * How much of each log a demo's page is sent as it connects: the newest
+ * requests, a few hundred, rather than the 16 MB a developer's page gets.
+ * Each page that connects is sent its own copy, so a crowd connecting at
+ * once costs the demo this much for each.
+ */
+export const DEMO_REPLAY_BYTES = 2 * 1024 * 1024;
+
 /** A public demo's counts, the guard on its HTTP server, how its sockets take messages, and its visitors' rule. */
 export interface DemoServing {
   limits: DemoLimits;
@@ -40,7 +48,7 @@ export function demoServing(): DemoServing {
     sockets: {
       maxMessageBytes: DEMO_MAX_MESSAGE_BYTES,
       compress: true,
-      connections: createDemoConnections(),
+      connections: createDemoConnections(limits),
     },
     visitors: (deps) => demoVisitors({ ...deps, limits }),
   };

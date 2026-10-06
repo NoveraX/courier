@@ -10,7 +10,7 @@ import { CLIENT, FLAGS, flagPatch, GROUP_BY, VALIDATION } from "./generation-opt
 interface GenerationStepProps {
   options: GenerateOptions;
   error: string | null;
-  /** Whether the spec tags none of its operations, so grouping by tag makes one group. */
+  /** Whether the spec tags none of its operations, so grouping by tag puts none in a group. */
   untagged?: boolean;
   onChange: (patch: Partial<GenerateOptions>) => void;
 }
@@ -76,7 +76,7 @@ export function GenerationStep({
         label="Group by"
         sub={
           untagged && options.groupBy === "tag"
-            ? "no endpoint has a tag: by tag, they all go in one group"
+            ? "no endpoint has a tag: by tag, none goes in a group"
             : "how endpoints split into files"
         }
       >

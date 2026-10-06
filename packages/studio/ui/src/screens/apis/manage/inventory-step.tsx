@@ -1,5 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { TickBox } from "@/design/tick-box";
+import { groupLabel, TOP_LEVEL } from "@/features/apis/group-label";
 import type { EndpointInventory, InventoryEndpoint, InventoryGroup } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
 import { cn } from "@/lib/utils";
@@ -41,9 +42,10 @@ function Group({
 >): React.ReactNode {
   const toggleable = group.endpoints.filter(pickable);
   const ticked = toggleable.filter((ep) => kept(ep, toAdd, toRemove)).length;
+  const top = group.name === TOP_LEVEL;
   return (
     <section
-      aria-label={`Group ${group.name}`}
+      aria-label={top ? "Top-level endpoints" : `Group ${group.name}`}
       className="overflow-hidden rounded-[11px] border border-line"
     >
       <div className="flex h-9.5 items-center gap-2.5 bg-panel-subtle px-3">
@@ -51,11 +53,14 @@ function Group({
           <TickBox
             checked={ticked === toggleable.length}
             mixed={ticked > 0 && ticked < toggleable.length}
-            label={`Keep ${group.name}`}
+            label={`Keep ${groupLabel(group.name)}`}
             onChange={() => onToggleGroup(group.name)}
           />
         )}
-        <span className="font-mono text-control font-semibold">{group.name}</span>
+        <span className={cn("text-control font-semibold", !top && "font-mono")}>
+          {groupLabel(group.name)}
+        </span>
+        {top && <span className="text-label text-fg-subtle">in no group</span>}
         <span className="text-label text-fg-subtle">
           {group.isCustomGroup ? "custom group" : `${ticked}/${toggleable.length}`}
         </span>

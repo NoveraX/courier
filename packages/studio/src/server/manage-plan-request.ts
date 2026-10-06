@@ -38,12 +38,8 @@ export function managePlanRequest(
     targets.set(path, { path, body, kind: "derived", endpoints: fingerprints });
   };
   for (const change of added?.files ?? []) {
+    if (targets.has(change.path)) throw new ManagePlanConflictError(change.path);
     want(change.path, change.content, { ...recorded(change.path), ...change.generatedEndpoints });
-  }
-  if (added?.sourceFileUpdate) {
-    const { path, content } = added.sourceFileUpdate;
-    if (targets.has(path)) throw new ManagePlanConflictError(path);
-    want(path, content, recorded(path));
   }
   for (const change of removed?.modifiedFiles ?? []) {
     want(
@@ -52,8 +48,9 @@ export function managePlanRequest(
       withoutRemoved(recorded(change.path), change.path, toRemove, fileOf),
     );
   }
-  for (const update of [removed?.sourceFileUpdate, removed?.indexFileUpdate]) {
-    if (update) want(update.path, update.content, recorded(update.path));
+  if (removed?.indexFileUpdate) {
+    const { path, content } = removed.indexFileUpdate;
+    want(path, content, recorded(path));
   }
   const removals = (removed?.deletedFiles ?? []).filter((path) => !targets.has(path));
   return {

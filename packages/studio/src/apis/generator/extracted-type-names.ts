@@ -8,6 +8,7 @@
  * export only once.
  */
 
+import { isTopLevel } from "../parser/top-level";
 import type { ParsedEndpoint, ParsedGroup, ParsedSchema } from "../parser/types";
 import { bodyToExtract, paramsToExtract, responseToExtract } from "./extract-endpoint-types";
 
@@ -39,9 +40,10 @@ export interface ExtractedTypeNames {
  * A type is named after its endpoint, `ListItemsResponse`, unless another
  * type of the import would take that name too or a schema of the
  * specification has it; it is then qualified by its group,
- * `ItemsListItemsResponse`, and numbered if that is taken as well. The
- * whole import is named at once, whatever is selected, so an endpoint added
- * later is named as it would have been from the start.
+ * `ItemsListItemsResponse` — by `Api` for an endpoint of the API itself —
+ * and numbered if that is taken as well. The whole import is named at once,
+ * whatever is selected, so an endpoint added later is named as it would
+ * have been from the start.
  *
  * @param groups - Every group of the import, as it is generated
  * @param declared - The names of the specification's own schemas
@@ -69,7 +71,7 @@ export function extractedTypeNames(
   }
   for (const { key, group, base } of wanted) {
     if (names.has(key)) continue;
-    const name = free(`${pascal(group)}${base}`, taken);
+    const name = free(`${qualifier(group)}${base}`, taken);
     names.set(key, name);
     taken.add(name);
   }
@@ -110,4 +112,9 @@ function free(name: string, taken: ReadonlySet<string>): string {
 
 function pascal(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/* What a type is qualified by: its group, or `Api` for the API's own endpoints, which have none. */
+function qualifier(group: string): string {
+  return isTopLevel(group) ? "Api" : pascal(group);
 }

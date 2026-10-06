@@ -70,6 +70,7 @@ export interface ParsedEndpoint {
 }
 
 export interface ParsedGroup {
+  /** The group's name; `""` for the API's own endpoints, those in no group. */
   name: string;
   description: string;
   prefix: string;
@@ -93,6 +94,6 @@ export interface ParsedSpec {
   schemas: Record<string, ParsedSchema>;
   securitySchemes: ParsedSecurityScheme[];
   skipped: SkippedOperation[];
-  /** Set when no operation declares a tag: grouped by tag, they all form one group. */
+  /** Set when no operation declares a tag: grouped by tag, none is in a group. */
   untagged?: true;
 }

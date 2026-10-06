@@ -117,6 +117,18 @@ describe("an OpenAPI 3.2 specification with nested tags", () => {
 
     expect(compileProject(dir, ["src/api/shop/index.ts"], strictest)).toEqual([]);
   }, 60_000);
+
+  it("takes no builder for a group that only holds groups, so nothing goes unused", () => {
+    const files = generate({ selectedEndpoints: { lines: ["listLines"] } });
+    const dir = writeProject("nested-tags/outer-only", files);
+    const strictest = { ...STRICT, noUnusedLocals: true, noUnusedParameters: true };
+    const billing = files.find((file) => file.path === "src/api/shop/billing/index.ts");
+
+    expect(billing?.content).not.toContain("courier()");
+    expect(billing?.content).toContain('import { defineGroup } from "@noverax/courier/define";');
+    expect(billing?.content).toContain("endpoints: {\n  },");
+    expect(compileProject(dir, ["src/api/shop/index.ts"], strictest)).toEqual([]);
+  }, 60_000);
 });
 
 describe("adding endpoints of nested tags to an import", () => {
@@ -131,8 +143,6 @@ describe("adding endpoints of nested tags to an import", () => {
     const result = previewAddEndpoints(spec(upstream.origin), adding, options, before, layout);
     const after = { ...before };
     for (const file of result.files) after[file.path] = file.content;
-    if (result.sourceFileUpdate)
-      after[result.sourceFileUpdate.path] = result.sourceFileUpdate.content;
     return { result, files: Object.entries(after).map(([path, content]) => ({ path, content })) };
   }
 
@@ -146,7 +156,7 @@ describe("adding endpoints of nested tags to an import", () => {
 
     await endpointAt(shopApi, "billing", "invoices", "listInvoices")();
 
-    expect(result.sourceFileUpdate).toBeUndefined();
+    expect(result.files.map((file) => file.path)).not.toContain(layout.sourceFile);
     expect(files.find((f) => f.path === layout.groupFile("billing"))?.content).toContain(
       "invoices: invoicesGroup",
     );
@@ -174,8 +184,6 @@ describe("removing endpoints of nested tags from an import", () => {
     const after: Record<string, string> = { ...before };
     for (const file of result.modifiedFiles) after[file.path] = file.content;
     for (const path of result.deletedFiles) delete after[path];
-    if (result.sourceFileUpdate)
-      after[result.sourceFileUpdate.path] = result.sourceFileUpdate.content;
     if (result.indexFileUpdate) after[result.indexFileUpdate.path] = result.indexFileUpdate.content;
     return { result, files: Object.entries(after).map(([path, content]) => ({ path, content })) };
   }

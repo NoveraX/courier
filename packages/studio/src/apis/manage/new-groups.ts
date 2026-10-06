@@ -1,6 +1,7 @@
 import type { GroupBy } from "../generator/endpoint-placements";
 import { selectedEndpoints, transformSpec } from "../generator/transform-spec";
 import type { ImportLayout } from "../layout";
+import { isTopLevel } from "../parser/top-level";
 import type { ParsedSpec } from "../parser/types";
 
 /** A group adding endpoints creates, and the group it is generated inside, if any. */
@@ -11,8 +12,9 @@ export interface NewGroup {
 
 /**
  * The groups adding a selection creates: every group generated for it
- * whose file is not on disk yet — a group kept only for the groups inside it
- * among them — each with the group it is generated inside.
+ * whose file is not on disk yet — a group kept only for the groups inside
+ * it among them — each with the group it is generated inside. The API's
+ * own endpoints are in no group, so they create none.
  *
  * @param spec - The parsed specification
  * @param groupBy - How the import groups its endpoints
@@ -35,6 +37,7 @@ export function newGroupsOf(
   if (groupBy === "single") return [];
   const generated = transformSpec(spec, { groupBy }, selectedEndpoints(spec.groups, selection));
   return generated.groups
+    .filter((group) => !isTopLevel(group))
     .filter((group) => !Object.hasOwn(existingFiles, layout.groupFile(group.name)))
     .map((group) => ({ name: group.name, parent: group.parent }));
 }

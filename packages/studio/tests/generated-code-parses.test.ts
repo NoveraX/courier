@@ -3,9 +3,10 @@ import { generateCode } from "../src/apis/generator";
 import { parseSpec } from "../src/apis/parser";
 
 /**
- * A spec whose operations carry no tag is the most ordinary spec there is,
- * and its endpoints are grouped under the name `default` — which may name an
- * object key but may not name a binding. The generated module has to parse.
+ * A spec whose operations carry no tag is the most ordinary spec there is.
+ * Grouped by tag, its endpoints are in no group: they sit in the API itself,
+ * where a group named `default` — which may name an object key but may not
+ * name a binding — once put them. The generated module has to parse.
  */
 const TAGLESS_SPEC = JSON.stringify({
   openapi: "3.0.0",
@@ -51,13 +52,16 @@ function filesFor(spec: string): { path: string; content: string }[] {
 }
 
 describe("generated code", () => {
-  it("names the untagged group with something that can be a binding", () => {
+  it("puts the untagged endpoints in the API itself, in no group", () => {
     const files = filesFor(TAGLESS_SPEC);
     const source = files.find((f) => f.path.endsWith("source.ts"));
 
-    expect(source?.content).not.toMatch(/import \{ default \}/);
-    expect(source?.content).not.toMatch(/\bconst default\b/);
-    expect(source?.content).toMatch(/import \{ defaultGroup \}/);
+    expect(source?.content).toMatch(/endpoints: \{\n {4}listTodos: endpoint\.get\("todos"\)/);
+    expect(source?.content).not.toMatch(/\bgroups:/);
+    expect(files.map((f) => f.path)).toEqual([
+      "src/api/todoApi/todo-api/source.ts",
+      "src/api/todoApi/todo-api/index.ts",
+    ]);
   });
 
   it("emits an untagged group that parses", () => {

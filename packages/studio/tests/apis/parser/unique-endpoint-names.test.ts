@@ -76,6 +76,8 @@ function reservedSpec(): string {
     paths: {
       "/raw/items": { get: { tags: ["raw"], operationId: "raw", ...ok } },
       "/raw/other": { get: { tags: ["raw"], operationId: "with", ...ok } },
+      /* Grouped by path, a segment every path shared would name the API, not a group. */
+      "/things": { get: { tags: ["things"], operationId: "listThings", ...ok } },
     },
   });
 }

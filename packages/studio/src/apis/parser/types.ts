@@ -17,7 +17,7 @@ export interface ParsedSpec {
   securitySchemes: ParsedSecurityScheme[];
   /** Operations the spec declares that the builder API cannot express */
   skipped: SkippedOperation[];
-  /** Set when no operation declares a tag: grouped by tag, they all form one group. */
+  /** Set when no operation declares a tag: grouped by tag, none is in a group. */
   untagged?: true;
 }
 
@@ -43,6 +43,7 @@ export interface ParsedSecurityScheme {
 }
 
 export interface ParsedGroup {
+  /** The group's binding; `""` for the API's own endpoints, those in no group */
   name: string;
   /** Tag description from the spec (for JSDoc generation) */
   description: string;

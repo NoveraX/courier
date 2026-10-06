@@ -1,7 +1,8 @@
 /**
  * An import's barrel re-exports its schemas and types by name, never with
  * `export *`, which linters reject: every name each schemas module declares,
- * once, a type as a type.
+ * once, a type as a type. A schema two groups use is declared once, in the
+ * import's own module.
  */
 import { describe, expect, it } from "vitest";
 import { generateCode } from "../../src/apis/generator";
@@ -18,7 +19,22 @@ const SPEC = parseSpec(
     openapi: "3.1.0",
     info: { title: "Shop", version: "1" },
     paths: {
-      "/pets": { get: { operationId: "listPets", tags: ["pets"], responses: ok(ref("Pet")) } },
+      "/pets": {
+        get: { operationId: "listPets", tags: ["pets"], responses: ok(ref("Pet")) },
+        post: {
+          operationId: "createPet",
+          tags: ["pets"],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { type: "object", properties: { name: { type: "string" } } },
+              },
+            },
+          },
+          responses: ok(ref("Pet")),
+        },
+      },
       "/pets/{id}": {
         get: {
           operationId: "getPet",
@@ -71,18 +87,29 @@ describe("the barrel of an import", () => {
     }
   });
 
-  it("exports a name two modules declare once, through the first", () => {
+  it("declares a schema two groups use once, in the import's own module, which each imports", () => {
+    const files = generateCode(SPEC, { type: "openapi", outputDir: "src" }, "shop");
+    const text = (path: string) => files.find((file) => file.path === path)?.content ?? "";
     const barrel = barrelOf();
-    const store = barrel.match(/^export \{([^}]*)\} from "\.\/store\/schemas";$/m)?.[1] ?? "";
 
-    expect(store).not.toMatch(/\bPetSchema\b/);
+    expect(declaredExports(text("src/shop/schemas.ts")).has("PetSchema")).toBe(true);
+    expect(declaredExports(text("src/shop/pets/schemas.ts")).has("PetSchema")).toBe(false);
+    expect(declaredExports(text("src/shop/store/schemas.ts")).has("PetSchema")).toBe(false);
+    expect(text("src/shop/store/schemas.ts")).toContain(
+      'import { type Pet, PetSchema } from "../schemas";',
+    );
+    expect(text("src/shop/pets/index.ts")).toContain(
+      'import { type Pet, PetSchema } from "../schemas";',
+    );
+    expect(barrel).toContain('export { type Pet, PetSchema } from "./schemas";');
+    expect(barrel.match(/\bPetSchema\b/g)).toHaveLength(1);
   });
 
   it("re-exports a module of types alone with export type when no validator writes schemas", () => {
     const barrel = barrelOf({ validation: "none" });
 
     expect(barrel).not.toContain("export *");
-    expect(barrel).toMatch(/^export type \{[^}]*\bPet\b[^}]*\} from "\.\/pets\/schemas";$/m);
+    expect(barrel).toMatch(/^export type \{[^}]*\bPet\b[^}]*\} from "\.\/schemas";$/m);
     expect(barrel).not.toMatch(/\bPetSchema\b/);
     expect(barrel).not.toMatch(/export \{[^}]*\btype /);
   });

@@ -8,9 +8,9 @@ import { computeSpecHash } from "../apis";
 import { transformSpec } from "../apis/generator/transform-spec";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import { buildEndpointInventory } from "../apis/manage";
-import { FLAT_GROUP } from "../apis/manage/flat-import";
 import type { DiskGroupListing, EndpointInventory } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
+import { TOP_LEVEL } from "../apis/parser/top-level";
 import { importBodies } from "./import-files/import-bodies";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import { manageFingerprints } from "./manage-fingerprints";
@@ -72,7 +72,7 @@ const GROUP_BINDING = /^export const (\w+)\s*(?::[^=]+)?=\s*defineGroup\(/m;
  * Derive the per-group endpoint listing for an import from the generated
  * files already loaded into `existingFiles`. A group lives in
  * `<dir>/<group-dir>/index.ts`, which names it in its `defineGroup` export;
- * an import generated flat keeps its endpoints in `source.ts`. Endpoint
+ * the API's own endpoints are in `source.ts`, listed under `""`. Endpoint
  * names are read with the same `extractEndpoints()` parser the merge layer uses.
  */
 function scanSourceGroups(
@@ -81,7 +81,7 @@ function scanSourceGroups(
 ): DiskGroupListing[] {
   const groups: DiskGroupListing[] = [];
   for (const [path, content] of Object.entries(existingFiles)) {
-    const name = path === layout.sourceFile ? FLAT_GROUP : groupNameOf(path, content, layout);
+    const name = path === layout.sourceFile ? TOP_LEVEL : groupNameOf(path, content, layout);
     if (name === undefined) continue;
     const endpointNames = Object.keys(extractEndpoints(content));
     if (endpointNames.length === 0) continue;

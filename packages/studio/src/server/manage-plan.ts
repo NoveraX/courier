@@ -3,11 +3,11 @@ import type { ImportStateEntry } from "../apis/imports-state";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import { previewAddEndpoints, previewRemoveEndpoints } from "../apis/manage";
 import { addedEndpointsCode } from "../apis/manage/added-endpoints-code";
-import { FLAT_GROUP, isFlatImport } from "../apis/manage/flat-import";
+import { isFlatImport } from "../apis/manage/flat-import";
 import { listedSelection } from "../apis/manage/listed-selection";
-import { previewRemoveFlatEndpoints } from "../apis/manage/remove-flat-endpoints";
 import type { AddResult, RemoveResult } from "../apis/manage/types";
 import { extractEndpoints } from "../apis/merge/extract-endpoints";
+import { isTopLevel } from "../apis/parser/top-level";
 import { checkDirOverlap } from "./check-dir-overlap";
 import { generatedImportExtension } from "./generated-import-extension";
 import type { FilePlan } from "./import-files/file-plan-types";
@@ -115,14 +115,13 @@ export async function planManage(
   const fingerprints = manageFingerprints(entry, onDisk);
   const removeResult = !Object.values(body.toRemove).some((names) => names.length > 0)
     ? undefined
-    : flat
-      ? previewRemoveFlatEndpoints(body.toRemove[FLAT_GROUP] ?? [], afterAdd, fingerprints, layout)
-      : previewRemoveEndpoints(body.toRemove, afterAdd, fingerprints, layout);
+    : previewRemoveEndpoints(body.toRemove, afterAdd, fingerprints, layout);
   if (flat && removeResult && leavesNoEndpoint(removeResult, layout.sourceFile)) {
     const error = "A flat import keeps at least one endpoint; remove the import to drop them all";
     return { error, status: 400 };
   }
-  const fileOf = (group: string): string => (flat ? layout.sourceFile : layout.groupFile(group));
+  const fileOf = (group: string): string =>
+    flat || isTopLevel(group) ? layout.sourceFile : layout.groupFile(group);
   const request = managePlanRequest(layout, body.toRemove, addResult, removeResult, entry, fileOf);
   return {
     ...(addResult && { addResult }),
@@ -146,9 +145,5 @@ function leavesNoEndpoint(removed: RemoveResult, sourceFile: string): boolean {
 
 function contentsOf(added: AddResult | undefined): Record<string, string> {
   if (!added) return {};
-  const files = added.files.map((file) => [file.path, file.content] as const);
-  const source = added.sourceFileUpdate
-    ? [[added.sourceFileUpdate.path, added.sourceFileUpdate.content] as const]
-    : [];
-  return Object.fromEntries([...files, ...source]);
+  return Object.fromEntries(added.files.map((file) => [file.path, file.content]));
 }

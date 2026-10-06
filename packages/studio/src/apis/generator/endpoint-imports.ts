@@ -6,6 +6,9 @@ import type { EndpointContext } from "./endpoint-context";
 import { namedStatement } from "./named-statement";
 import type { ResolvedGenerateOptions } from "./types";
 
+/** What a schema's constant adds to its name: `PetSchema` validates `Pet`. */
+const SUFFIX = "Schema";
+
 /** How each validation library is imported under the name the chains call. */
 const VALIDATOR_IMPORT: Readonly<Record<string, string>> = {
   zod: `import { z } from "zod";`,
@@ -21,31 +24,60 @@ const VALIDATOR_IMPORT: Readonly<Record<string, string>> = {
  * never looks for a value the schemas module does not export. When every
  * name is a type, the whole import is `import type`, as linters ask.
  *
+ * A schema the import's own module declares is imported from it rather
+ * than from the module beside the file. Each module is imported once:
+ * middleware the file uses besides comes in the same statement as the
+ * middleware the definitions use.
+ *
  * @param context - The file, after its definitions were built
+ * @param middleware - Other middleware the file imports, as the source imports its auth
  * @returns The import lines, the validator's first
  * @example
  * ```ts
  * endpointImports(context);
- * // ['import { z } from "zod";', 'import { PetSchema, type ListPetsParams } from "./schemas";']
+ * // ['import { z } from "zod";', 'import { type ListPetsParams, PetSchema } from "./schemas";']
  * ```
  */
-export function endpointImports(context: EndpointContext): string[] {
+export function endpointImports(
+  context: EndpointContext,
+  middleware: readonly string[] = [],
+): string[] {
   const { uses, options } = context;
   const lines: string[] = [];
-  if (uses.headerVariables) {
-    lines.push('import { headerVariablesMiddleware } from "@noverax/courier/middleware";');
+  const middlewareNames = [
+    ...middleware,
+    ...(uses.headerVariables ? ["headerVariablesMiddleware"] : []),
+  ];
+  if (middlewareNames.length > 0) {
+    lines.push(namedStatement("import", middlewareNames, "@noverax/courier/middleware"));
   }
   const validator = VALIDATOR_IMPORT[options.validation];
   if (uses.validator && validator) lines.push(validator);
 
-  const from = schemasModule(options);
-  if (uses.values.size === 0 && uses.types.size > 0) {
-    lines.push(namedStatement("import type", [...uses.types], from));
-  } else if (uses.values.size > 0) {
-    const names = [...uses.values, ...[...uses.types].map((name) => `type ${name}`)];
-    lines.push(namedStatement("import", names, from));
-  }
+  const fromShared = (name: string): boolean => context.shared.has(name);
+  const isShared = (constant: string): boolean => fromShared(constant.slice(0, -SUFFIX.length));
+  const values = [...uses.values];
+  const types = [...uses.types];
+  lines.push(
+    ...schemaImport(
+      values.filter((v) => !isShared(v)),
+      types.filter((t) => !fromShared(t)),
+      schemasModule(options, "./"),
+    ),
+    ...schemaImport(
+      values.filter(isShared),
+      types.filter(fromShared),
+      schemasModule(options, "../"),
+    ),
+  );
   return lines;
+}
+
+/* What a file imports of one schemas module: as types alone when it uses no value of it. */
+function schemaImport(values: string[], types: string[], from: string): string[] {
+  if (values.length === 0 && types.length > 0) return [namedStatement("import type", types, from)];
+  if (values.length === 0) return [];
+  return [namedStatement("import", [...values, ...types.map((name) => `type ${name}`)], from)];
 }
 
 /**
@@ -71,7 +103,7 @@ export function defineImport(
     ...(context.uses.formBody ? ["formBody"] : []),
     ...(context.uses.formQuery ? ["formQuery"] : []),
   ];
-  return `import { ${names.join(", ")} } from "@noverax/courier/define";`;
+  return namedStatement("import", names, "@noverax/courier/define");
 }
 
 /**
@@ -92,9 +124,10 @@ export function basesDeclaration(context: EndpointContext): string {
   return `const { ${names.join(", ")} } = courier();`;
 }
 
-/* The module beside the endpoints that declares their schemas and types.
-   Its name follows `generateSchemas` alone: `validation: "none"` still
-   writes schemas.ts, holding types. */
-function schemasModule(options: ResolvedGenerateOptions): string {
-  return `${options.generateSchemas ? "./schemas" : "./types"}${options.importExtension}`;
+/* A module declaring schemas and types: the one beside the endpoints, at
+   `./`, or the import's own, at `../` from a group's folder. Its name
+   follows `generateSchemas` alone: `validation: "none"` still writes
+   schemas.ts, holding types. */
+function schemasModule(options: ResolvedGenerateOptions, at: "./" | "../"): string {
+  return `${at}${options.generateSchemas ? "schemas" : "types"}${options.importExtension}`;
 }

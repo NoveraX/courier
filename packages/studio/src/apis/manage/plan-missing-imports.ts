@@ -6,7 +6,14 @@ import type { ParsedSource } from "../../server/mocks-edit/plan/parse-source";
 import { quoteString } from "../../server/mocks-edit/plan/quote-string";
 import type { FileStyle } from "../../server/mocks-edit/plan/types";
 import type { TextEdit } from "../../server/mocks-edit/types";
+import { compareNames } from "../generator/import-order";
 import type { ParsedImport } from "../merge/types";
+
+/* A new statement's names in the order linters keep them, whatever `type` marks one. */
+function sortedNames(names: readonly string[]): string[] {
+  const bare = (name: string): string => name.replace(/^type\s+/, "");
+  return [...names].sort((a, b) => compareNames(bare(a), bare(b)));
+}
 
 /* The name a specifier binds: `b` for `a as b`. */
 function localOf(specifier: string): string {
@@ -55,8 +62,8 @@ export function planMissingImports(
   for (const wanted of needed) {
     const namespace = wanted.namespaceImport;
     if (namespace !== undefined) {
-      if (!bindings.has(namespace))
-        statements.push(statement(`* as ${namespace}`, wanted.source, style));
+      const clause = `${wanted.typeOnly ? "type " : ""}* as ${namespace}`;
+      if (!bindings.has(namespace)) statements.push(statement(clause, wanted.source, style));
       continue;
     }
     const names = [...wanted.names, ...wanted.typeNames.map((name) => `type ${name}`)].filter(
@@ -66,7 +73,7 @@ export function planMissingImports(
     const existing = joinable(parsed.program, wanted.source);
     const joined = existing === null ? null : planImportJoin(parsed, existing, names, style);
     if (joined !== null) joins.push(...joined);
-    else statements.push(statement(`{ ${names.join(", ")} }`, wanted.source, style));
+    else statements.push(statement(`{ ${sortedNames(names).join(", ")} }`, wanted.source, style));
   }
   const lines = planImportLines(parsed, statements, style);
   return lines === null ? joins : [...joins, lines.edit].sort((a, b) => a.start - b.start);

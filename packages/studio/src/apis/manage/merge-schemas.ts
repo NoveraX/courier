@@ -1,12 +1,20 @@
 import { applyEdits } from "../../server/mocks-edit/plan/apply-edits";
+import { detectStyle } from "../../server/mocks-edit/plan/detect-style";
+import { collectModuleBindings } from "../../server/mocks-edit/plan/module-bindings";
+import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import type { TextEdit } from "../../server/mocks-edit/types";
+import { parseImports } from "../merge/parse-imports";
+import type { ParsedImport } from "../merge/types";
+import { planMissingImports } from "./plan-missing-imports";
+import { referencedImports } from "./referenced-imports";
 import { readSchemaFile, type SchemaStatement } from "./schema-file";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
 
 /**
  * Add to a schemas or types file on disk the declarations a freshly
  * generated one has that it lacks, read as code: each comes with its
- * comments, and with what it needs that the file does not have — an import,
+ * comments, and with what it needs that the file does not have — the names
+ * it imports, joined to the file's import of their module when it has one,
  * or a helper such as ArkType's cycle helper and the statement that arms
  * it. New declarations go before that statement when the file has it, as
  * the generator writes them; everything already there stays as it is.
@@ -43,15 +51,15 @@ export function mergeSchemaFiles(
   if (added.length === 0) return existingContent;
   const helpers = neededHelpers(added, generated, present);
   const textOf = (s: SchemaStatement): string => generatedContent.slice(s.start, s.end).trimEnd();
-  const imports = generated.filter(
-    (s) => s.kind === "import" && s.binds.length > 0 && !s.binds.every((name) => present.has(name)),
-  );
   const lastImport = existing.filter((s) => s.kind === "import").at(-1);
   const arming = existing.find((s) => s.kind === "helper" && s.binds.length === 0);
-  const head = [...imports, ...helpers.defining].map(textOf);
+  const head = helpers.defining.map(textOf);
   const headAt = lastImport?.end ?? 0;
   const body = [...added, ...(arming === undefined ? helpers.arming : [])].map(textOf);
-  const edits: TextEdit[] = [];
+  const edits: TextEdit[] = importEdits(path, existingContent, generatedContent, [
+    ...head,
+    ...body,
+  ]);
   if (head.length > 0) edits.push({ start: headAt, end: headAt, text: `${head.join("\n")}\n` });
   if (arming !== undefined) {
     edits.push({ start: arming.start, end: arming.start, text: `${body.join("\n\n")}\n\n` });
@@ -60,7 +68,35 @@ export function mergeSchemaFiles(
     const at = existingContent.length;
     edits.push({ start: at, end: at, text: `${gap}${body.join("\n\n")}\n` });
   }
-  return applyEdits(existingContent, edits);
+  return applyEdits(
+    existingContent,
+    edits.sort((a, b) => a.start - b.start),
+  );
+}
+
+/* A namespace read for its types alone, `import type * as ark from "arktype"`. */
+const TYPE_NAMESPACE = /^import\s+type\s+\*\s+as\s+([\w$]+)\s+from\s+["']([^"']+)["']/;
+
+/* The names the added code imports that the file lacks, each joined to the file's import of its module. */
+function importEdits(
+  path: string,
+  existingContent: string,
+  generatedContent: string,
+  added: readonly string[],
+): TextEdit[] {
+  const parsed = parseSource(path, existingContent);
+  const imports = parseImports(generatedContent.split("\n")).map((statement): ParsedImport => {
+    const [, namespace, source] = TYPE_NAMESPACE.exec(statement.raw.trim()) ?? [];
+    if (namespace === undefined || source === undefined) return statement;
+    return { ...statement, source, namespaceImport: namespace, typeOnly: true };
+  });
+  const needed = referencedImports(imports, added.join("\n"));
+  return planMissingImports(
+    parsed,
+    needed,
+    collectModuleBindings(parsed.program),
+    detectStyle(parsed),
+  );
 }
 
 /* The helpers the added declarations need that the file lacks, and the statements that arm them. */

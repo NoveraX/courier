@@ -142,7 +142,7 @@ describe("rebuildBarrel", () => {
     ),
   });
 
-  it("re-exports each module by the names no earlier one exports, in the order of the groups", () => {
+  it("re-exports each module by the names no earlier one exports, the modules sorted as linters sort them", () => {
     const barrel = rebuildBarrel(
       layout,
       files(HEAD, {
@@ -150,7 +150,6 @@ describe("rebuildBarrel", () => {
         "gamma/schemas": schema("Pet", "Order"),
         "misc/schemas": schema("Order"),
       }),
-      false,
     );
 
     expect(barrel).toBe(
@@ -161,7 +160,7 @@ describe("rebuildBarrel", () => {
   it("writes the lines again in place, whatever quotes they had, dropping those of modules gone", () => {
     const old = `${HEAD}export * from './users/schemas';\nexport * from './alpha/schemas';\n// mine\nexport const extra = 1;\n`;
 
-    const barrel = rebuildBarrel(layout, files(old, { "alpha/schemas": schema("A") }), false);
+    const barrel = rebuildBarrel(layout, files(old, { "alpha/schemas": schema("A") }));
 
     expect(barrel).toBe(
       `${HEAD}export { type A, ASchema } from "./alpha/schemas";\n// mine\nexport const extra = 1;\n`,
@@ -177,19 +176,17 @@ describe("rebuildBarrel", () => {
         "alpha/schemas": schema("Pet"),
         "gamma/schemas": schema("Pet", "Order", "Fresh"),
       }),
-      false,
     );
     const shrunk = rebuildBarrel(
       layout,
       files(old, { "alpha/schemas": schema("A"), "gamma/schemas": schema("Pet", "Order") }),
-      false,
     );
 
     expect(grown).toContain(
-      'export {\n  type Order,\n  OrderSchema,\n  type Fresh,\n  FreshSchema,\n} from "./gamma/schemas";',
+      'export {\n  type Fresh,\n  FreshSchema,\n  type Order,\n  OrderSchema,\n} from "./gamma/schemas";',
     );
     expect(shrunk).toContain(
-      'export { type Pet, PetSchema, type Order, OrderSchema } from "./gamma/schemas";',
+      'export { type Order, OrderSchema, type Pet, PetSchema } from "./gamma/schemas";',
     );
   });
 
@@ -201,7 +198,7 @@ describe("rebuildBarrel", () => {
       "extras/types": "export type A = { custom: true };\n",
     };
 
-    const barrel = rebuildBarrel(layout, files(old, modules), false) ?? "";
+    const barrel = rebuildBarrel(layout, files(old, modules)) ?? "";
 
     expect(barrel).toContain('export type { Order } from "./gamma/schemas";');
     expect(barrel).toContain('export { PetSchema as MyPet } from "./gamma/schemas";');
@@ -216,7 +213,7 @@ describe("rebuildBarrel", () => {
       names.map((n) => `export type ${n} = { id?: string };\n`).join("");
     const old = `${HEAD}export type { A } from "./alpha/schemas";\n`;
 
-    const barrel = rebuildBarrel(layout, files(old, { "alpha/schemas": types("A", "B") }), false);
+    const barrel = rebuildBarrel(layout, files(old, { "alpha/schemas": types("A", "B") }));
 
     expect(barrel).toBe(`${HEAD}export type { A, B } from "./alpha/schemas";\n`);
   });
@@ -225,7 +222,7 @@ describe("rebuildBarrel", () => {
     const flat = { ...files(HEAD, { schemas: schema("X") }) };
     delete flat[layout.sourceFile];
 
-    expect(rebuildBarrel(layout, flat, true)).toBe(
+    expect(rebuildBarrel(layout, flat)).toBe(
       `${HEAD}export { type X, XSchema } from "./schemas";\n`,
     );
   });
@@ -239,19 +236,19 @@ describe("detectOrphanSchemas", () => {
   ].join("\n");
 
   it("drops a type and the schema written for it together, whichever of them the endpoint used", () => {
-    expect(detectOrphanSchemas(PARAMS, "", ["find: endpoint.get<FindParams>('/find')"])).toEqual([
+    expect(detectOrphanSchemas(PARAMS, [""], ["find: endpoint.get<FindParams>('/find')"])).toEqual([
       "FindParams",
       "FindParamsSchema",
     ]);
     expect(
-      detectOrphanSchemas(PARAMS, "", ["find: endpoint.get('/find').query(FindParamsSchema)"]),
+      detectOrphanSchemas(PARAMS, [""], ["find: endpoint.get('/find').query(FindParamsSchema)"]),
     ).toEqual(["FindParams", "FindParamsSchema"]);
   });
 
   it("keeps a type a schema of the user's that stays is written with", () => {
     const schemas = `${PARAMS}export const MineSchema = z.object({}) satisfies z.ZodType<FindParams>;\n`;
 
-    expect(detectOrphanSchemas(schemas, "", ["find: endpoint.get<FindParams>('/find')"])).toEqual(
+    expect(detectOrphanSchemas(schemas, [""], ["find: endpoint.get<FindParams>('/find')"])).toEqual(
       [],
     );
   });
@@ -268,7 +265,7 @@ describe("detectOrphanSchemas", () => {
       "export const g = defineGroup({ endpoints: { s: endpoint.get('s').response(StatusSchema) } });";
 
     expect(
-      detectOrphanSchemas(schemas, remaining, ["o: endpoint.get('o').response(OrderSchema)"]),
+      detectOrphanSchemas(schemas, [remaining], ["o: endpoint.get('o').response(OrderSchema)"]),
     ).toEqual(["Order", "OrderSchema"]);
   });
 
@@ -285,7 +282,11 @@ describe("detectOrphanSchemas", () => {
     ].join("\n");
 
     expect(
-      detectOrphanSchemas(schemas, remaining, ['getPet: endpoint.get(":id").response(PetSchema)']),
+      detectOrphanSchemas(
+        schemas,
+        [remaining],
+        ['getPet: endpoint.get(":id").response(PetSchema)'],
+      ),
     ).toEqual([]);
   });
 
@@ -305,9 +306,11 @@ describe("detectOrphanSchemas", () => {
     const remaining =
       "export const g = defineGroup({ endpoints: { t: endpoint.get('t').response(TxnSchema) } });";
 
-    const orphans = detectOrphanSchemas(schemas, remaining, [
-      "a: endpoint.get('a').response(AuthSchema)",
-    ]);
+    const orphans = detectOrphanSchemas(
+      schemas,
+      [remaining],
+      ["a: endpoint.get('a').response(AuthSchema)"],
+    );
     const cleaned = removeOrphanSchemas(schemas, orphans);
 
     expect(orphans).toEqual(["Auth", "AuthSchema"]);
@@ -318,7 +321,11 @@ describe("detectOrphanSchemas", () => {
 
   it("removes nothing when the endpoints left do not parse", () => {
     expect(
-      detectOrphanSchemas(PARAMS, "export const = ;", ["find: endpoint.get<FindParams>('/find')"]),
+      detectOrphanSchemas(
+        PARAMS,
+        ["export const = ;"],
+        ["find: endpoint.get<FindParams>('/find')"],
+      ),
     ).toEqual([]);
   });
 });

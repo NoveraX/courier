@@ -2,7 +2,7 @@
  * Generates the barrel index file (the direct caller + schema re-exports).
  */
 
-import type { ParsedGroup, ParsedSpec } from "../parser/types";
+import type { ParsedSpec } from "../parser/types";
 import { barrelReexports } from "./barrel-reexports";
 import { callerDoc } from "./caller-doc";
 import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
@@ -15,18 +15,16 @@ import type { GeneratedFile, ResolvedGenerateOptions } from "./types";
  * no direct caller the source is not imported at all: nothing would read it.
  *
  * @param spec - The parsed specification
- * @param groups - The groups, in order; none for an import generated flat
  * @param options - The import's resolved options
- * @param schemaModules - The text of each written schemas file, by group; `""` for a flat import
+ * @param schemaModules - The text of each written schemas file, by group; under `""` the import's own
  * @returns The barrel
  * @example
  * ```ts
- * generateIndexFile(spec, spec.groups, options, schemaModules).path; // "src/api/pets/index.ts"
+ * generateIndexFile(spec, options, schemaModules).path; // "src/api/pets/index.ts"
  * ```
  */
 export function generateIndexFile(
   spec: ParsedSpec,
-  groups: ParsedGroup[],
   options: ResolvedGenerateOptions,
   schemaModules: ReadonlyMap<string, string>,
 ): GeneratedFile {
@@ -42,6 +40,6 @@ export function generateIndexFile(
       "",
     );
   }
-  lines.push(...barrelReexports(groups, options, schemaModules), "");
+  lines.push(...barrelReexports(options, schemaModules), "");
   return { path: options.layout.indexFile, content: lines.join("\n") };
 }

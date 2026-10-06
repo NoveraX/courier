@@ -39,16 +39,15 @@ export interface FileChange {
 }
 
 export interface ManageAddResult {
+  /** Every file the addition creates or changes, the source among them. */
   files: FileChange[];
-  sourceFileUpdate?: { path: string; content: string };
-  indexFileUpdate?: { path: string; content: string };
   newFingerprints: Record<string, string>;
 }
 
 export interface ManageRemoveResult {
+  /** Every file the removal changes, the source among them. */
   modifiedFiles: Array<{ path: string; content: string }>;
   deletedFiles: string[];
-  sourceFileUpdate?: { path: string; content: string };
   indexFileUpdate?: { path: string; content: string };
   removedFingerprints: string[];
   orphanedSchemas: string[];

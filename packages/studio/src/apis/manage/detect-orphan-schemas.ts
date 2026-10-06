@@ -15,22 +15,24 @@ const SCHEMA_SUFFIX = "Schema";
  * throw it off; a file that does not parse gives no orphan at all.
  *
  * @param schemaFileContent - The schemas or types file, without Studio's header
- * @param remainingCode - The endpoints file as the removal leaves it
+ * @param remainingCode - Every file that may use it, as the removal leaves them: the endpoints
+ *   beside it, and for the import's own module every file of the import
  * @param removedCode - The code of each endpoint removed, as its property is written
  * @returns The names safe to remove, in the order the file declares them
  * @example
  * ```ts
- * detectOrphanSchemas(schemas, groupAfter, ['getPet: endpoint.get(":id").response(PetSchema)']);
+ * detectOrphanSchemas(schemas, [groupAfter], ['getPet: endpoint.get(":id").response(PetSchema)']);
  * ```
  */
 export function detectOrphanSchemas(
   schemaFileContent: string,
-  remainingCode: string,
+  remainingCode: readonly string[],
   removedCode: readonly string[],
 ): string[] {
   const statements = readSchemaFile("schemas.ts", schemaFileContent);
-  const remaining = codeNames(remainingCode);
-  if (statements === null || remaining === null) return [];
+  const read = remainingCode.map(codeNames);
+  if (statements === null || read.some((names) => names === null)) return [];
+  const remaining = new Set(read.flatMap((names) => [...(names ?? [])]));
   const declarations = statements.filter((s) => s.kind === "declaration");
   const declared = new Set(declarations.flatMap((s) => s.binds));
   const unitOf = (name: string): string => {

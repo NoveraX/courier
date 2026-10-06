@@ -70,7 +70,7 @@ describe("generating a selection", () => {
 
 describe("listedSelection", () => {
   it("maps picks from a flat listing to the specification's groups and names", () => {
-    expect(listedSelection(SPEC, "single", { api: ["getStoreById", "getPetsById"] })).toEqual({
+    expect(listedSelection(SPEC, "single", { "": ["getStoreById", "getPetsById"] })).toEqual({
       selection: { animals: ["getById"], shop: ["getById"] },
       unknown: [],
     });
@@ -92,7 +92,7 @@ describe("adding to an import generated from a selection", () => {
     const existing = written("single", { animals: ["getById"] });
     const options = { type: "openapi" as const, outputDir: "src/api", groupBy: "single" as const };
 
-    const result = previewAddEndpoints(SPEC, { api: ["getStoreById"] }, options, existing, LAYOUT);
+    const result = previewAddEndpoints(SPEC, { "": ["getStoreById"] }, options, existing, LAYOUT);
 
     const source = result.files.find((file) => file.path === LAYOUT.sourceFile)?.content ?? "";
     expect(parseSync("source.ts", source).errors).toEqual([]);
@@ -111,7 +111,7 @@ describe("adding to an import generated from a selection", () => {
     expect(group).toContain('prefix: "/pets",');
     expect(group).toContain('getById: endpoint.get(":id")');
     expect(group).toContain('getAll: endpoint.get("")');
-    expect(result.sourceFileUpdate).toBeUndefined();
+    expect(result.files.map((file) => file.path)).not.toContain(LAYOUT.sourceFile);
   });
 });
 

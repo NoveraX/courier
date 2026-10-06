@@ -87,6 +87,8 @@ export interface ParsedImport {
   typeNames: string[];
   /** Namespace import name if `import * as X` (e.g., "v") */
   namespaceImport?: string;
+  /** Set for `import type * as X`, a namespace read for its types alone. */
+  typeOnly?: true;
 }
 
 export interface ExistingEndpointInfo {

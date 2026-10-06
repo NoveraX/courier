@@ -1,7 +1,9 @@
 /**
- * A specification that tags none of its operations is marked so: grouped by
- * tag, every endpoint would go into one group, and one schemas file —
- * Stripe's runs to megabytes. The mark changes no hash an update compares.
+ * An operation with no tag is in no group: it sits in the API itself. A
+ * specification that tags none of its operations is marked so: grouped by
+ * tag, no endpoint would be in a group, and every schema would be in one
+ * file — Stripe's runs to megabytes. The mark changes no hash an update
+ * compares.
  */
 import { describe, expect, it } from "vitest";
 
@@ -30,6 +32,26 @@ function specWith(tags: { list?: string[]; create?: string[] }, swagger = false)
 }
 
 describe("a specification whose operations declare no tag", () => {
+  it("puts every operation in the API itself, at its whole path", () => {
+    const { groups } = parseSpec(specWith({}));
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ name: "", prefix: "" });
+    expect(groups[0]?.endpoints.map((e) => [e.name, e.path])).toEqual([
+      ["listCharges", "/charges"],
+      ["createCharge", "/charges"],
+    ]);
+  });
+
+  it("puts only the operations with no tag there once some declare one", () => {
+    const { groups } = parseSpec(specWith({ create: ["charges"] }));
+
+    expect(groups.map((g) => [g.name, g.endpoints.map((e) => e.name)])).toEqual([
+      ["", ["listCharges"]],
+      ["charges", ["createCharge"]],
+    ]);
+  });
+
   it("is marked untagged, in OpenAPI 3 and in Swagger 2", () => {
     expect(parseSpec(specWith({})).untagged).toBe(true);
     expect(parseSpec(specWith({}, true)).untagged).toBe(true);

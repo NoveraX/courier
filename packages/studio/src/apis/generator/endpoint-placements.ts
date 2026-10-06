@@ -1,9 +1,8 @@
+import { TOP_LEVEL } from "../parser/top-level";
 import type { ParsedEndpoint, ParsedGroup, ParsedSpec } from "../parser/types";
 import { uniqueEndpointNames } from "../parser/unique-endpoint-names";
 import { convertPathParams, findCommonPrefix, toGroupName } from "../parser/utils";
-
-/** The one group of an import generated with `groupBy: "single"`. */
-export const SINGLE_GROUP = "api";
+import { pathGroupKey, sharedRoot } from "./path-group-key";
 
 /** How an import groups its endpoints. */
 export type GroupBy = "tag" | "path" | "single";
@@ -14,7 +13,7 @@ export interface EndpointPlacement {
   source: ParsedEndpoint;
   /** The specification's group it is in. */
   sourceGroup: string;
-  /** The group it is generated into, without its endpoints. */
+  /** The group it is generated into, without its endpoints; {@link TOP_LEVEL} for the API itself. */
   group: Omit<ParsedGroup, "endpoints">;
   /** The endpoint as it is generated: its name, and its path within the group. */
   endpoint: ParsedEndpoint;
@@ -28,7 +27,10 @@ export interface EndpointPlacement {
  * written with it — a later addition matches what is on disk.
  *
  * @param spec - The parsed specification
- * @param groupBy - By tag, as the specification groups them; by the first path segment; or all in one group
+ * @param groupBy - By tag, as the specification groups them; by the first
+ *   segment after those every path shares, versions and parameters passed
+ *   over; or in no group at all. An endpoint with no tag, or with no such
+ *   segment, sits in the API itself, as with `"single"` every endpoint does.
  * @returns One placement per endpoint, in generation order
  * @example
  * ```ts
@@ -44,23 +46,30 @@ export function placeEndpoints(spec: ParsedSpec, groupBy: GroupBy): EndpointPlac
       endpoints.map((source) => ({ source, sourceGroup: group.name, group, endpoint: source })),
     );
   }
-  if (groupBy === "single") {
-    const group = { name: SINGLE_GROUP, description: "", prefix: "/" };
-    return placedIn(group, all, "", (e) => convertPathParams(e.fullPath));
-  }
+  if (groupBy === "single") return placedTop(all);
   return byPathSegment(all);
 }
 
 type Sourced = Pick<EndpointPlacement, "source" | "sourceGroup">;
 
+const TOP: EndpointPlacement["group"] = { name: TOP_LEVEL, description: "", prefix: "" };
+
+/* The API's own endpoints: each at its whole path, as there is no prefix to be under. */
+function placedTop(items: Sourced[]): EndpointPlacement[] {
+  return placedIn(TOP, items, "", (e) => convertPathParams(e.fullPath));
+}
+
 function byPathSegment(all: Sourced[]): EndpointPlacement[] {
+  const root = sharedRoot(all.map((item) => item.source.fullPath));
+  const top: Sourced[] = [];
   const bySegment = new Map<string, Sourced[]>();
   for (const item of all) {
-    const segment = firstSegment(item.source.fullPath);
-    bySegment.set(segment, [...(bySegment.get(segment) ?? []), item]);
+    const segment = pathGroupKey(item.source.fullPath, root);
+    if (segment === null) top.push(item);
+    else bySegment.set(segment, [...(bySegment.get(segment) ?? []), item]);
   }
   const taken = new Set<string>();
-  return [...bySegment].flatMap(([segment, items]) => {
+  const grouped = [...bySegment].flatMap(([segment, items]) => {
     const prefix = findCommonPrefix(items.map((item) => item.source.fullPath));
     /* A URL segment is not an identifier: Twilio's `2010-04-01` became
        `20100401`, and `export const 20100401` does not parse. */
@@ -72,6 +81,7 @@ function byPathSegment(all: Sourced[]): EndpointPlacement[] {
       convertPathParams(e.fullPath.slice(prefix.length) || "/"),
     );
   });
+  return top.length > 0 ? [...placedTop(top), ...grouped] : grouped;
 }
 
 function placedIn(
@@ -88,16 +98,6 @@ function placedIn(
     const endpoint = named[index] ?? item.source;
     return { ...item, group, endpoint: { ...endpoint, path: pathOf(item.source) } };
   });
-}
-
-function firstSegment(path: string): string {
-  const segments = path.split("/").filter(Boolean);
-  const first = segments[0] ?? "default";
-  /* Skip path params — use second segment if available */
-  if (first.startsWith("{") || first.startsWith(":")) {
-    return segments[1] ?? "default";
-  }
-  return first;
 }
 
 /** Take a name, or the first numbered variant of it that is still free. */

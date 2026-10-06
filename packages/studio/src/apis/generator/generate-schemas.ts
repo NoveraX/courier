@@ -63,7 +63,8 @@ function writeArkTypeFile(
 ): void {
   const components = schemaComponents(schemas);
   const hasCycle = components.some((component) => component.cyclic);
-  if (hasCycle) lines.splice(1, 0, `import type * as ark from "arktype";`);
+  /* Before the named import of the same module, as linters order them. */
+  if (hasCycle) lines.unshift(`import type * as ark from "arktype";`);
   if (hasCycle) lines.push(ARKTYPE_CYCLE_HELPER);
 
   for (const { names, cyclic } of components) {

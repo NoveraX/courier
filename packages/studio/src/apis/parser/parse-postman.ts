@@ -12,6 +12,7 @@ import {
   requestPath,
 } from "./postman-request";
 import { asNode, fieldOf, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
+import { topLevelGroup } from "./top-level";
 import type {
   ParsedEndpoint,
   ParsedGroup,
@@ -40,13 +41,14 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
     requestsIn(listAt(collection, "item")).map((request) => requestBase(request.url, variables)),
   );
 
-  function processItems(items: readonly unknown[], groupName: string) {
+  /* `null` for the collection itself, whose requests sit in no folder and so in no group. */
+  function processItems(items: readonly unknown[], groupName: string | null) {
     const endpoints: ParsedEndpoint[] = [];
 
     for (const entry of items) {
       const item = asNode(entry);
       if (item.item) {
-        processItems(listAt(item, "item"), textAt(item, "name") ?? groupName);
+        processItems(listAt(item, "item"), textAt(item, "name") ?? groupName ?? "");
         continue;
       }
 
@@ -85,12 +87,16 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
         ...(mediaType && { requestBodyMediaType: mediaType }),
         parameters: requestParameters(request.url),
         responseSchema: null,
-        tags: [groupName],
+        tags: groupName === null ? [] : [groupName],
         /* A request written with a host of its own is still sent there. */
         ...(base !== undefined && base !== baseURL && { origin: base }),
       });
     }
 
+    if (groupName === null) {
+      if (endpoints.length > 0) groups.unshift(topLevelGroup(endpoints));
+      return;
+    }
     if (endpoints.length > 0) {
       const prefix = findCommonPrefix(endpoints.map((e) => e.fullPath));
       groups.push({
@@ -107,7 +113,7 @@ export function parsePostman(collection: SpecNode): ParsedSpec {
     }
   }
 
-  processItems(listAt(collection, "item"), "default");
+  processItems(listAt(collection, "item"), null);
 
   return {
     title,

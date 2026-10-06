@@ -87,7 +87,7 @@ Each endpoint says how the client reaches it. The API that holds the boundary ch
 
 | shape | the endpoint it describes |
 | --- | --- |
-| `"query"` | an HTTP endpoint that reads: declared with `get` or `head`, or marked `.reads()` |
+| `"query"` | an HTTP endpoint that reads: declared with `get`, `head`, `options` or `query`, or marked `.reads()` |
 | `"mutation"` | an HTTP endpoint that writes: every other verb |
 | `"stream"` | a server-sent event stream |
 | `"channel"` | a socket the server pushes on |

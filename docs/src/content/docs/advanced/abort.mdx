@@ -27,7 +27,7 @@ On a server the option has no effect, for direct calls and for requests arriving
 </Callout>
 
 <Callout variant="info" title="Only reads are cancelled">
-Deduplication cancels reads only: endpoints declared with `get` or `head`, or marked `.reads()`. A write that a newer one superseded has usually reached the server and been applied, so cancelling it would tell its caller it failed when it did not — two concurrent creates to one path both complete. A proxy client follows the same rule whether it was created with `source` or with a `boundary`: the boundary declares each HTTP endpoint a `"query"` or a `"mutation"`, and only a query is cancelled.
+Deduplication cancels reads only: endpoints declared with `get`, `head`, `options` or `query`, or marked `.reads()`. A write that a newer one superseded has usually reached the server and been applied, so cancelling it would tell its caller it failed when it did not — two concurrent creates to one path both complete. A proxy client follows the same rule whether it was created with `source` or with a `boundary`: the boundary declares each HTTP endpoint a `"query"` or a `"mutation"`, and only a query is cancelled.
 </Callout>
 
 ## Deduplication key

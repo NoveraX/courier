@@ -5,16 +5,19 @@
 import type { RequestHandler } from "express-serve-static-core";
 
 import type { StudioSocketOptions } from "../socket-server";
+import type { VisitorPolicy } from "../ui-token-guard";
 import { createDemoConnections } from "./demo-connections";
 import { demoHttpGuard } from "./demo-http-guard";
 import { createDemoLimits, type DemoLimits } from "./demo-limits";
-import { DEMO_MAX_MESSAGE_BYTES } from "./demo-visitors";
+import { DEMO_MAX_MESSAGE_BYTES, type DemoVisitorsDeps, demoVisitors } from "./demo-visitors";
 
-/** A public demo's counts, the guard on its HTTP server, and how its sockets take messages. */
+/** A public demo's counts, the guard on its HTTP server, how its sockets take messages, and its visitors' rule. */
 export interface DemoServing {
   limits: DemoLimits;
   httpGuard: RequestHandler;
   sockets: StudioSocketOptions;
+  /** The rule a page without the token is held to, counted with the rest. */
+  visitors(deps: Omit<DemoVisitorsDeps, "limits">): VisitorPolicy;
 }
 
 /**
@@ -39,5 +42,6 @@ export function demoServing(): DemoServing {
       compress: true,
       connections: createDemoConnections(),
     },
+    visitors: (deps) => demoVisitors({ ...deps, limits }),
   };
 }

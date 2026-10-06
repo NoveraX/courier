@@ -46,6 +46,8 @@ export interface LifecycleCoordinator {
   /** Send a page that connects every mock's state and the mocks file's status. */
   sendSnapshot(socket: Socket): void;
   summarizeServers(): MockSummary[];
+  /** How many records a mock's collection holds, as Studio's copy of its store has it. */
+  recordsIn(serverId: string, collection: string): number | undefined;
   setMocksFile(next: MocksFileStatus): void;
 }
 
@@ -175,6 +177,8 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
     forwardStoreCommand,
     sendSnapshot,
     summarizeServers,
+    recordsIn: (serverId, collection) =>
+      servers.get(serverId)?.collections.find((c) => c.name === collection)?.count,
     setMocksFile: mocksFile.set,
   };
 }

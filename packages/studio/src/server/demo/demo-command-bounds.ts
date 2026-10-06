@@ -14,17 +14,25 @@ export const DEMO_MAX_SETTING = 10_000;
 /** The slowest a visitor may cap a mock's answers, in kilobits a second; 0 is no cap. */
 export const DEMO_MIN_BANDWIDTH = 256;
 
+/** The most records a collection may hold for a visitor to add another. */
+export const DEMO_MAX_RECORDS = 1000;
+
+/** How many records a mock's collection holds, when Studio knows. */
+export type RecordsIn = (serverId: string, collection: string) => number | undefined;
+
 /* Settings nest a level or two; anything deeper is not one the mock reads. */
 const MAX_DEPTH = 6;
 
 /**
  * Why a visitor's mock command is out of the demo's bounds: a seed of more
- * than {@link DEMO_MAX_SEED} records, a latency or failure setting above
+ * than {@link DEMO_MAX_SEED} records, a record added to a collection that
+ * holds {@link DEMO_MAX_RECORDS} already, a latency or failure setting above
  * {@link DEMO_MAX_SETTING}, or answers capped below
  * {@link DEMO_MIN_BANDWIDTH} Kbps. A command the mock cannot read is left
  * to the mock to refuse.
  *
  * @param command - The command as the page sent it
+ * @param recordsIn - How many records a collection holds, when Studio knows
  * @returns Why the demo refuses it, or `null` when it is within bounds
  * @example
  * ```ts
@@ -32,9 +40,18 @@ const MAX_DEPTH = 6;
  * // → "The demo seeds up to 200 records at a time."
  * ```
  */
-export function demoCommandProblem(command: unknown): string | null {
+export function demoCommandProblem(command: unknown, recordsIn?: RecordsIn): string | null {
   if (!isPlainObject(command)) return null;
-  const { action } = command;
+  const { action, serverId, collection } = command;
+  if (
+    action === "mock:store:create" &&
+    typeof serverId === "string" &&
+    typeof collection === "string"
+  ) {
+    return (recordsIn?.(serverId, collection) ?? 0) >= DEMO_MAX_RECORDS
+      ? `The demo keeps up to ${DEMO_MAX_RECORDS} records in a collection. Delete some to add another.`
+      : null;
+  }
   if (action === "mock:store:seed" && typeof command.count === "number") {
     return command.count > DEMO_MAX_SEED
       ? `The demo seeds up to ${DEMO_MAX_SEED} records at a time.`

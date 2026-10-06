@@ -10,6 +10,12 @@ const TAG: Readonly<Record<string, { label: string; className: string }>> = {
   custom: { label: "Custom", className: "bg-raised text-fg-subtle" },
 };
 
+/* What happens to an endpoint the user does not pick for, by its status. */
+const FIXED: Readonly<Partial<Record<InventoryEndpoint["status"], string>>> = {
+  custom: "Added by hand — Studio leaves it as it is",
+  "removed-from-spec": "The spec no longer has it, so it goes with the update; Studio keeps a copy",
+};
+
 function tagOf(ep: InventoryEndpoint): { label: string; className: string } | undefined {
   if (ep.status === "active")
     return ep.modificationStatus === "modified" ? TAG.modified : undefined;
@@ -27,7 +33,8 @@ interface InventoryRowProps {
 /**
  * One endpoint of the Endpoints step: its method, name and path, what
  * changed about it — new, removed from the spec, edited or added by hand —
- * and a tick box, unless it was added by hand and Studio leaves it alone.
+ * and a tick box, unless Studio decides for it: one added by hand stays,
+ * one the spec dropped goes with the update.
  *
  * @param props - Its group, the endpoint, whether it is kept, and what ticking does
  * @returns The row
@@ -75,9 +82,10 @@ export function InventoryRow({
       )}
     </>
   );
-  if (ep.status === "custom")
+  const fixed = FIXED[ep.status];
+  if (fixed !== undefined)
     return (
-      <div title="Added by hand — Studio leaves it as it is" className={row}>
+      <div title={fixed} className={row}>
         <span />
         {body}
       </div>

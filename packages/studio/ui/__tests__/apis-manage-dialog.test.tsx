@@ -3,8 +3,9 @@
  *
  * Manage and Remove on the new shell, against Studio's answers: an
  * import's endpoints with what changed in its spec — new, dropped, edited,
- * custom — kept or not, the files the change touches allowed one by one
- * and applied; and an import removed with what the config still says.
+ * custom — picked or not, those the spec dropped going with the update, the
+ * files the change touches allowed one by one and applied; and an import
+ * removed with what the config still says.
  */
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -119,7 +120,7 @@ afterEach(() => {
 });
 
 describe("managing an import whose spec changed", () => {
-  it("reviews what changed, keeps or drops each endpoint, previews the files and applies them", async () => {
+  it("reviews what changed, adds the endpoints picked and drops those the spec dropped, then applies the files", async () => {
     vi.mocked(post).mockImplementation(async (url: string) => {
       if (url === "/api/apis/manage/inventory") return INVENTORY;
       if (url === "/api/apis/manage/preview")
@@ -157,17 +158,17 @@ describe("managing an import whose spec changed", () => {
       "indeterminate",
       true,
     );
+    /* An update is worth previewing with nothing picked: what stays follows the new spec. */
     expect(screen.getByRole("button", { name: "Preview changes" })).toHaveProperty(
       "disabled",
-      true,
+      false,
     );
+    expect(screen.queryByRole("checkbox", { name: "Keep pets.sellPet" })).toBeNull();
+    expect(group.getByTitle(/goes with the update/)).toBeTruthy();
     await settle(() =>
       fireEvent.click(screen.getByRole("checkbox", { name: "Keep pets.adoptPet" })),
     );
-    await settle(() =>
-      fireEvent.click(screen.getByRole("checkbox", { name: "Keep pets.sellPet" })),
-    );
-    expect(screen.getByText("2 changes selected")).toBeTruthy();
+    expect(screen.getByText("The update, with 2 changes to endpoints")).toBeTruthy();
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Preview changes" })));
 
     expect(screen.getByText("merged, your edits kept")).toBeTruthy();

@@ -11,10 +11,15 @@ const BUTTON =
 const NEXT = `${BUTTON} bg-fg text-bg hover:bg-fg/90`;
 const OUTLINE = `${BUTTON} border border-line font-normal text-fg-muted hover:border-line-strong hover:text-fg`;
 
+/* The endpoints picked to add and remove, and those the update takes away. */
 function changesOf(manage: UseManageReturn): number {
   const count = (map: Record<string, Set<string>>) =>
     Object.values(map).reduce((n, set) => n + set.size, 0);
-  return count(manage.toAdd) + count(manage.toRemove);
+  const dropped = (manage.inventory?.groups ?? []).reduce(
+    (n, group) => n + group.endpoints.filter((ep) => ep.status === "removed-from-spec").length,
+    0,
+  );
+  return count(manage.toAdd) + count(manage.toRemove) + dropped;
 }
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
@@ -29,6 +34,8 @@ function planNote(plan: FilePlanSummary | undefined): string {
 
 function noteOf(manage: UseManageReturn): string {
   if (manage.step === "reupload") return "The spec, again";
+  if (manage.step === "inventory" && manage.inventory?.specChanged)
+    return `The update, with ${plural(changesOf(manage), "change", "changes")} to endpoints`;
   if (manage.step === "inventory")
     return `${plural(changesOf(manage), "change", "changes")} selected`;
   if (manage.step === "preview" || manage.step === "applying")
@@ -89,7 +96,7 @@ export function ManageFooter({ manage, reupload, onReupload }: ManageFooterProps
         <button
           type="button"
           className={NEXT}
-          disabled={!manage.hasChanges}
+          disabled={!manage.hasChanges && !manage.inventory?.specChanged}
           onClick={() => void manage.requestPreview()}
         >
           Preview changes

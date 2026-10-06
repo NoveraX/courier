@@ -1,3 +1,5 @@
+import { randomId } from "./random-id";
+
 /**
  * A FormData body as a Blob, built without reading its files.
  *
@@ -35,7 +37,7 @@ export interface MultipartBody {
  * ```
  */
 export function encodeMultipart(form: FormData): MultipartBody {
-  const boundary = `----courier-${crypto.randomUUID()}`;
+  const boundary = `----courier-${randomId()}`;
   const parts: BlobPart[] = [];
 
   for (const [name, value] of form) {

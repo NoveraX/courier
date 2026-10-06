@@ -104,5 +104,5 @@ export async function getResponse(
 function readFailure(response: Response, message: string | undefined, error: unknown): unknown {
   const stopped =
     error instanceof Error && (error.name === "TimeoutError" || error instanceof TypeError);
-  return stopped ? fetchFailure(error, undefined, undefined) : unreadable(response, message, error);
+  return stopped ? fetchFailure(error, undefined) : unreadable(response, message, error);
 }

@@ -1,22 +1,11 @@
+import { randomId } from "../utils/random-id";
 import type { PubSubAdapter, PubSubEnvelope } from "./adapters";
 
-/**
- * Lazy-evaluated origin ID — uses crypto.randomUUID when available
- * (browser + node 14.17+) and falls back to Math.random for legacy
- * environments. Lazy so the module-load cost stays zero.
- */
+/* The process's origin id, made when first asked for, so loading the module costs nothing. */
 let cachedOrigin: string | null = null;
 function getDefaultOrigin(): string {
-  if (cachedOrigin) return cachedOrigin;
-  cachedOrigin = `mem_${generateOriginId()}`;
+  cachedOrigin ??= `mem_${randomId()}`;
   return cachedOrigin;
-}
-
-function generateOriginId(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
 type EnvelopeHandler = (envelope: PubSubEnvelope) => void;

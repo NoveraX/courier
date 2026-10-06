@@ -1,11 +1,14 @@
 /** Lets callers through at a bounded rate, one at a time, in the order they asked. */
+
+import { abortReason } from "../utils/abort-reason";
+
 export interface AdmissionQueue {
   /**
    * Wait for this caller's turn.
    *
    * @param signal - The caller's signal, when it has one
    * @returns When the caller may go
-   * @throws The signal's reason, as soon as it aborts
+   * @throws Why the signal aborted, as soon as it does
    */
   enter(signal: AbortSignal | undefined): Promise<void>;
 }
@@ -63,7 +66,7 @@ export function createAdmissionQueue(limit: number, windowMs: number): Admission
     enter(signal) {
       return new Promise<void>((resolve, reject) => {
         if (signal?.aborted) {
-          reject(signal.reason);
+          reject(abortReason(signal));
           return;
         }
         const waiter: Waiter = { admit };
@@ -73,7 +76,7 @@ export function createAdmissionQueue(limit: number, windowMs: number): Admission
         }
         function cancel(): void {
           leave(waiter);
-          reject(signal?.reason);
+          if (signal) reject(abortReason(signal));
         }
         signal?.addEventListener("abort", cancel, { once: true });
         waiting.push(waiter);

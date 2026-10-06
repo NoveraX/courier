@@ -1,5 +1,6 @@
 import { LIMITS } from "../../adapter/limits";
 import { createLogger } from "../../logger";
+import { assertAbsoluteUrl } from "../../utils/absolute-url";
 import { createConnectionState } from "../connection-state";
 import { createMessageQueue } from "./message-queue";
 import { createServerSilence } from "./server-silence";
@@ -21,6 +22,7 @@ const DEFAULT_MAX_BUFFERED = 1_048_576;
  * Create a managed WebSocket connection with topic multiplexing,
  * auto-reconnect and server-silence detection.
  *
+ * @throws {ConfigurationError} `URL_NOT_ABSOLUTE` for a path where no page resolves it
  * @example
  * const conn = createWSConnection({ url: "wss://realtime.example.com/ws" });
  * const unsub = conn.subscribe("chat:room", (msg) => console.log(msg));
@@ -28,6 +30,7 @@ const DEFAULT_MAX_BUFFERED = 1_048_576;
  * conn.close();
  */
 export function createWSConnection(config: WSConnectionConfig): WSConnection {
+  assertAbsoluteUrl(config.url);
   const state = createConnectionState();
   const topics = createTopicRegistry({
     messageQueue: config.messageQueue,

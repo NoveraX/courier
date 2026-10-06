@@ -8,6 +8,7 @@
  * do it, because requests from different users reach it under the same key.
  */
 
+import { anySignal } from "../utils/any-signal";
 import { cleanupDeduplication, deduplicateAndAbortPrevious } from "../utils/deduplicate";
 
 export interface ProxyDedupe {
@@ -43,9 +44,7 @@ export function createProxyDedupe(): ProxyDedupe {
     async run(key, signal, send) {
       const controller = deduplicateAndAbortPrevious(host, key);
       try {
-        return await send(
-          signal ? AbortSignal.any([signal, controller.signal]) : controller.signal,
-        );
+        return await send(signal ? anySignal([signal, controller.signal]) : controller.signal);
       } finally {
         cleanupDeduplication(host, key, controller);
       }

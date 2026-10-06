@@ -1,3 +1,4 @@
+import { assertAbsoluteUrl } from "../../utils/absolute-url";
 import { createConnectionState } from "../connection-state";
 import type { ConnectionStatus, SSESubscription } from "../types";
 import { createEventQueue } from "./event-queue";
@@ -12,6 +13,7 @@ import type { SubscribeSSEOptions } from "./sse-types";
  * @param url - SSE endpoint URL
  * @param options - Connection and parsing options
  * @returns SSESubscription — async iterable with lifecycle control
+ * @throws {ConfigurationError} `URL_NOT_ABSOLUTE` for a path where no page resolves it
  *
  * @example
  * const sub = subscribeSSE<Notification>("/api/sse/notifications");
@@ -23,6 +25,7 @@ export function subscribeSSE<TData = unknown>(
   url: string,
   options: SubscribeSSEOptions = {},
 ): SSESubscription<TData> {
+  assertAbsoluteUrl(url);
   const state = createConnectionState();
   const controller = new AbortController();
   const queue = createEventQueue<TData>(options.maxBufferSize);

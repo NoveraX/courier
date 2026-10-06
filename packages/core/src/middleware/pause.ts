@@ -1,3 +1,5 @@
+import { abortReason } from "../utils/abort-reason";
+
 /**
  * Wait, unless the caller stops waiting first.
  *
@@ -7,7 +9,7 @@
  * @param ms - How long to wait
  * @param signal - The call's signal, when it has one
  * @returns When the delay has passed
- * @throws The signal's reason, as soon as it aborts
+ * @throws Why the signal aborted, as soon as it does
  *
  * @example
  * ```ts
@@ -15,7 +17,7 @@
  * ```
  */
 export async function pause(ms: number, signal: AbortSignal | undefined): Promise<void> {
-  signal?.throwIfAborted();
+  if (signal?.aborted) throw abortReason(signal);
   await new Promise<void>((resolve) => {
     const timer = setTimeout(finish, ms);
     signal?.addEventListener("abort", finish, { once: true });
@@ -25,5 +27,5 @@ export async function pause(ms: number, signal: AbortSignal | undefined): Promis
       resolve();
     }
   });
-  signal?.throwIfAborted();
+  if (signal?.aborted) throw abortReason(signal);
 }

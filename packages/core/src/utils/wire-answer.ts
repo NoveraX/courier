@@ -1,7 +1,8 @@
 import { isBodilessStatus } from "../http-client/response";
 import { toWireBody } from "./wire-body";
 
-const JSON_TEXT = new TextEncoder();
+/* Made when first needed, so an engine without TextEncoder still loads the client. */
+let jsonEncoder: TextEncoder | undefined;
 
 /**
  * The proxy's answer to a call whose body was read on the server.
@@ -43,7 +44,8 @@ export function toWireAnswer(
      object; serialized as they were, they arrived as `{}`. */
   const envelope = rawData ? { status, headers: Object.fromEntries(headers), data } : data;
   /* JSON has no `undefined`: a success without data answers `null`. */
-  const bytes = JSON_TEXT.encode(JSON.stringify(envelope ?? null));
+  jsonEncoder ??= new TextEncoder();
+  const bytes = jsonEncoder.encode(JSON.stringify(envelope ?? null));
   headers.set("content-type", "application/json");
   /* Without a length the answer went out chunked, and a download progress
      bar in the browser never learned its total. */

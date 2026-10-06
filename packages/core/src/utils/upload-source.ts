@@ -6,7 +6,13 @@
 import type { WebBody } from "../http-client/web-types";
 import { encodeMultipart } from "./multipart-body";
 
-const TEXT = new TextEncoder();
+/* Made when first needed, so an engine without TextEncoder still loads the client. */
+let textEncoder: TextEncoder | undefined;
+
+function encodeText(text: string): Uint8Array {
+  textEncoder ??= new TextEncoder();
+  return textEncoder.encode(text);
+}
 
 export interface UploadSource {
   /** Bytes in the body; 0 when it is a stream that does not say. */
@@ -43,10 +49,10 @@ export function toUploadSource(body: WebBody): UploadSource {
     return fromBlob(blob, contentType);
   }
   if (body instanceof Blob) return fromBlob(body, body.type || null);
-  if (typeof body === "string") return fromBytes(TEXT.encode(body), "text/plain;charset=UTF-8");
+  if (typeof body === "string") return fromBytes(encodeText(body), "text/plain;charset=UTF-8");
   if (body instanceof URLSearchParams) {
     return fromBytes(
-      TEXT.encode(body.toString()),
+      encodeText(body.toString()),
       "application/x-www-form-urlencoded;charset=UTF-8",
     );
   }

@@ -9,6 +9,7 @@ import {
   registerPlaygroundAbort,
   studioHooks,
 } from "../studio";
+import { randomId } from "../utils/random-id";
 import { runTransportMiddleware } from "../utils/transport-middleware";
 import { connectionMetaOf } from "./connection-meta-of";
 import { SSE_HEADERS } from "./format-sse";
@@ -86,7 +87,7 @@ export function createSSEHandler(
     const variables = await resolveSSEVariables(url.searchParams, resolved.schema);
     if (variables instanceof Response) return variables;
 
-    const connectionId = crypto.randomUUID();
+    const connectionId = randomId();
     // Studio Playground proxy mode forwards its own pre-allocated requestId
     // via the `x-courier-playground-rid` header so the events emitted by this
     // handler correlate back to the playground tab that initiated the

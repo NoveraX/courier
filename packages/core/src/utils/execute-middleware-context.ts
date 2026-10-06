@@ -4,6 +4,7 @@ import { namedHeadersOf } from "./execute-resolve";
 import { forwardedFor } from "./forwarded-for";
 import { headersToObject } from "./helpers";
 import { filterHeaders, mergeHeaders } from "./merge-headers";
+import { randomId } from "./random-id";
 
 export interface MiddlewareContextInput {
   source: unknown;
@@ -82,7 +83,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
   /* One key per call, set before any middleware: every attempt a retry makes
      carries it, so the upstream applies the write once. A caller's own key —
      server code's, or the browser's through the proxy — is kept. */
-  if (keyHeader && !newHeaders.has(keyHeader)) newHeaders.set(keyHeader, crypto.randomUUID());
+  if (keyHeader && !newHeaders.has(keyHeader)) newHeaders.set(keyHeader, randomId());
 
   return {
     source: String(source),

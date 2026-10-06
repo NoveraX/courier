@@ -21,7 +21,7 @@ const api = defineApi({
 ```
 
 <Callout variant="info" title="Where deduplication runs">
-Deduplication cancels a request its own user no longer needs, so it runs where one user is: in the browser. A direct call made in the browser uses the source's `deduplicate`, and so does a proxy client created with `source`. A proxy client created with a `boundary` carries no source options — pass `deduplicate: true` to `createProxyCaller` instead.
+Deduplication cancels a request its own user no longer needs, so it runs where one user is: in the browser, or in a React Native app. A direct call made there uses the source's `deduplicate`, and so does a proxy client created with `source`. A proxy client created with a `boundary` carries no source options — pass `deduplicate: true` to `createProxyCaller` instead.
 
 On a server the option has no effect, for direct calls and for requests arriving at the proxy alike: there, requests from different users reach the same endpoint under the same key, and one user's request would cancel another's.
 </Callout>

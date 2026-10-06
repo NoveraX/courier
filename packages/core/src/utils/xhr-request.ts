@@ -2,7 +2,9 @@ import { isBodilessStatus } from "../http-client/response";
 import type { UploadProgress } from "../http-client/types";
 import type { WebBody, WebCredentials } from "../http-client/web-types";
 import { createLogger } from "../logger";
+import { abortReason } from "./abort-reason";
 import { isRecord } from "./is-record";
+import { platformError } from "./platform-error";
 
 const log = createLogger("Upload");
 
@@ -20,7 +22,8 @@ export interface XhrRequestInit {
 
 /**
  * Send a request through XMLHttpRequest, for its upload progress events —
- * fetch has none.
+ * fetch has none — and, in React Native, for a form naming a file on the
+ * device, which XMLHttpRequest reads from where it is.
  *
  * @param url - Where to send it
  * @param init - The request, as it would be given to fetch
@@ -36,10 +39,7 @@ export async function xhrRequest(
   /* XMLHttpRequest cannot send a stream: handed one, it sent the text
      "[object ReadableStream]" and the call succeeded. The stream is read
      into a Blob, which it sends and reports. */
-  const body =
-    init.body instanceof ReadableStream
-      ? await new Response(init.body).blob()
-      : (init.body ?? null);
+  const body = isStream(init.body) ? await new Response(init.body).blob() : (init.body ?? null);
   return send(url, init, body, onProgress);
 }
 
@@ -52,7 +52,7 @@ function send(
   return new Promise((resolve, reject) => {
     const signal = init.signal;
     if (signal?.aborted) {
-      reject(signal.reason);
+      reject(abortReason(signal));
       return;
     }
 
@@ -89,7 +89,7 @@ function send(
        fetch does; without this listener the promise never settled. */
     xhr.addEventListener("abort", () => {
       settle();
-      reject(signal?.reason ?? new DOMException("Aborted", "AbortError"));
+      reject(signal ? abortReason(signal) : platformError("The request was aborted", "AbortError"));
     });
 
     xhr.send(body);
@@ -115,6 +115,11 @@ function warnAboutIgnoredOptions(init: XhrRequestInit): void {
   if (env?.NODE_ENV === "production") return;
   const ignored = FETCH_ONLY.filter((option) => init[option] !== undefined);
   if (ignored.length > 0) {
-    log.warn(`${ignored.join(", ")} cannot be applied to an upload with progress (XMLHttpRequest)`);
+    log.warn(`${ignored.join(", ")} cannot be applied to an upload sent with XMLHttpRequest`);
   }
+}
+
+/* React Native has no streams, and `instanceof` an undefined global throws. */
+function isStream(body: WebBody | null | undefined): body is ReadableStream {
+  return typeof ReadableStream !== "undefined" && body instanceof ReadableStream;
 }

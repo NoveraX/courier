@@ -16,9 +16,9 @@ import { type XhrRequestInit, xhrRequest } from "./xhr-request";
 /**
  * Send a request, reporting its body's progress.
  *
- * In a browser that is XMLHttpRequest, whose upload events fetch lacks.
- * Elsewhere the body is streamed to fetch without being read into memory
- * first, and reported as fetch takes each chunk.
+ * In a browser or a React Native app that is XMLHttpRequest, whose upload
+ * events fetch lacks. Elsewhere the body is streamed to fetch without being
+ * read into memory first, and reported as fetch takes each chunk.
  *
  * @param url - Where to send it
  * @param init - The request, as it would be given to fetch; its body is set

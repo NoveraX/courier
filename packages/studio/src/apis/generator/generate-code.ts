@@ -3,21 +3,21 @@
  */
 
 import { InvalidImportError, resolveImportLayout } from "../layout";
-import type { ParsedGroup, ParsedSchema, ParsedSpec } from "../parser/types";
+import { isTopLevel, TOP_LEVEL } from "../parser/top-level";
+import type { ParsedSchema, ParsedSpec } from "../parser/types";
 import { emitsSchemas } from "./build-endpoint-helpers";
-import { buildSchemaRecord } from "./build-schema-record";
-import { SINGLE_GROUP } from "./endpoint-placements";
-import { extractEndpointTypes } from "./extract-endpoint-types";
 import { type ExtractedTypeNames, extractedTypeNames } from "./extracted-type-names";
-import { generateFlatSourceFile } from "./generate-flat-source";
 import { generateGroupFile } from "./generate-group";
 import { generateIndexFile } from "./generate-index";
 import { generateProxyFile } from "./generate-proxy";
 import { generateSchemasFile, generateTypesFile } from "./generate-schemas";
 import { generateSourceFile } from "./generate-source";
+import { schemaHomes } from "./schema-homes";
+import { withSharedImports } from "./shared-schema-imports";
 import { selectedEndpoints, transformSpec } from "./transform-spec";
 import type { GeneratedFile, GenerateOptions, ResolvedGenerateOptions } from "./types";
 import { applyImportDefaults } from "./types";
+import { type WrittenGroup, writtenGroup } from "./written-group";
 
 /**
  * Generate an import's files from a parsed spec, at the paths its layout
@@ -46,85 +46,75 @@ export function generateCode(
   /* A selection names endpoints by the specification's own groups. */
   const selected = selectedEndpoints(spec.groups, opts.selectedEndpoints);
   const transformed = transformSpec(spec, opts, selected);
-  /* Named over the whole import, whatever is selected. */
+  /* Named, and its schemas placed, over the whole import, whatever is selected. */
   const whole = selected === null ? transformed : transformSpec(spec, opts, null);
   const names = extractedTypeNames(whole.groups, Object.keys(spec.schemas));
-
-  if (opts.groupBy === "single") {
-    return generateFlat(transformed, opts, names);
-  }
-
-  return generateGrouped(transformed, opts, names);
+  return generateFiles(transformed, opts, names, schemaHomes(whole));
 }
 
-function generateFlat(
+function generateFiles(
   spec: ParsedSpec,
   opts: ResolvedGenerateOptions,
   names: ExtractedTypeNames,
+  homes: ReadonlyMap<string, string>,
 ): GeneratedFile[] {
-  const files: GeneratedFile[] = [];
-  const flatGroup: ParsedGroup = {
-    name: SINGLE_GROUP,
-    description: "",
-    prefix: "/",
-    endpoints: spec.groups.flatMap((g) => g.endpoints),
-  };
-
-  const { group: processed, schemas: extracted, params } = extractEndpointTypes(flatGroup, names);
-  const groupSchemas = buildSchemaRecord(processed, spec, extracted);
-
-  const schemaModules = new Map<string, string>();
-  const schemasFile = schemaFileFor(groupSchemas, opts);
-  if (schemasFile) {
-    schemaModules.set("", schemasFile.content);
-    files.push(schemasFile);
-  }
-
-  const declared = schemasFile ? groupSchemas : {};
-  files.push(generateFlatSourceFile(processed.endpoints, spec, opts, declared, params));
-  /* The barrel re-exports the schemas file only when one was written. */
-  files.push(generateIndexFile(spec, [], opts, schemaModules));
-  const proxy = generateProxyFile(spec, opts);
-  if (proxy) files.push(proxy);
-
-  return files;
-}
-
-function generateGrouped(
-  spec: ParsedSpec,
-  opts: ResolvedGenerateOptions,
-  names: ExtractedTypeNames,
-): GeneratedFile[] {
-  const files: GeneratedFile[] = [];
-  const schemaModules = new Map<string, string>();
-
-  for (const group of spec.groups) {
-    const { group: processed, schemas: extracted, params } = extractEndpointTypes(group, names);
-    const groupSchemas = buildSchemaRecord(processed, spec, extracted);
-
-    const schemasFile = schemaFileFor(groupSchemas, opts, group.name);
-    if (schemasFile) {
-      schemaModules.set(group.name, schemasFile.content);
-      files.push(schemasFile);
-    }
-
-    const declared = schemasFile ? groupSchemas : {};
-    files.push(generateGroupFile(processed, spec, opts, declared, params));
-  }
-
-  /* A group inside another is listed in its parent's file, not the source's. */
-  files.push(
-    generateSourceFile(
-      spec.groups.filter((group) => !group.parent),
-      spec,
-      opts,
-    ),
+  const written = spec.groups.map((group) => writtenGroup(group, spec, names, homes));
+  const own = written.find((entry) => isTopLevel(entry.group));
+  const groups = written.filter((entry) => !isTopLevel(entry.group));
+  /* The import's module: the schemas of its own endpoints, and those groups share. */
+  const rootSchemas: Record<string, ParsedSchema> = Object.assign(
+    {},
+    own?.own,
+    ...groups.map((entry) => entry.shared),
   );
-  files.push(generateIndexFile(spec, spec.groups, opts, schemaModules));
+  const root = schemaFileFor(rootSchemas, opts);
+  const files: GeneratedFile[] = root ? [root] : [];
+  const schemaModules = new Map<string, string>(root ? [[TOP_LEVEL, root.content]] : []);
+
+  for (const entry of groups) files.push(...groupFiles(entry, spec, opts, root, schemaModules));
+  /* A group inside another is listed in its parent's file, not the source's. */
+  const listed = groups.map((entry) => entry.group).filter((group) => !group.parent);
+  const ownEndpoints = {
+    endpoints: own?.group.endpoints ?? [],
+    declared: root ? rootSchemas : {},
+    params: own?.params ?? {},
+  };
+  files.push(generateSourceFile(ownEndpoints, listed, spec, opts));
+  files.push(generateIndexFile(spec, opts, schemaModules));
   const proxy = generateProxyFile(spec, opts);
   if (proxy) files.push(proxy);
-
   return files;
+}
+
+/* A group's schemas module, importing what it names of the import's, and its endpoints. */
+function groupFiles(
+  group: WrittenGroup,
+  spec: ParsedSpec,
+  opts: ResolvedGenerateOptions,
+  root: GeneratedFile | null,
+  schemaModules: Map<string, string>,
+): GeneratedFile[] {
+  const name = group.group.name;
+  const ownFile = schemaFileFor(group.own, opts, name);
+  const module =
+    ownFile && root ? withSharedImports(ownFile, root.content, sharedFrom(opts)) : ownFile;
+  if (module) schemaModules.set(name, module.content);
+  const shared = root ? group.shared : {};
+  const declared = { ...(module ? group.own : {}), ...shared };
+  const endpoints = generateGroupFile(
+    group.group,
+    spec,
+    opts,
+    declared,
+    group.params,
+    new Set(Object.keys(shared)),
+  );
+  return module ? [module, endpoints] : [endpoints];
+}
+
+/* How a group's folder names the import's own schemas module. */
+function sharedFrom(opts: ResolvedGenerateOptions): string {
+  return `../${opts.generateSchemas ? "schemas" : "types"}${opts.importExtension}`;
 }
 
 /**

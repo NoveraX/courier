@@ -37,7 +37,7 @@ ${GROUP}`);
 
     const merged = mergeImports(existing.imports, generated.imports, [], "").join("\n");
 
-    expect(merged).toBe('import type { Pet, Owner } from "./schemas";');
+    expect(merged).toBe('import type { Owner, Pet } from "./schemas";');
   });
 
   it("joins the schema a newer version validates with, without importing a name twice", () => {
@@ -48,7 +48,27 @@ ${GROUP}`);
 
     const merged = mergeImports(existing.imports, generated.imports, [], "").join("\n");
 
-    expect(merged).toBe('import { PetSchema, type Pet } from "./schemas";');
+    expect(merged).toBe('import { type Pet, PetSchema } from "./schemas";');
+  });
+
+  it("writes the merged import as the generator does, its names sorted and a long list over lines", () => {
+    const names = ["PetSchema", "type Pet", "OwnerSchema", "type Owner", "NewPetSchema"];
+    const statement = `import { ${names.join(", ")} } from "./schemas";`;
+    const generated = parseExistingGroup(`${statement}\n${GROUP}`);
+
+    const merged = mergeImports(generated.imports, generated.imports, [], "").join("\n");
+
+    expect(merged).toBe(
+      [
+        "import {",
+        "  NewPetSchema,",
+        "  type Owner,",
+        "  OwnerSchema,",
+        "  type Pet,",
+        "  PetSchema,",
+        '} from "./schemas";',
+      ].join("\n"),
+    );
   });
 });
 

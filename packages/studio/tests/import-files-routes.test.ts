@@ -549,7 +549,7 @@ describe("adding and removing endpoints through manage", () => {
     const url = await start();
     await post(url, "/api/apis/write", writeSome("single"));
 
-    const reply = await manage(url, { toAdd: { api: ["createPet"] } });
+    const reply = await manage(url, { toAdd: { "": ["createPet"] } });
 
     const source = read("src/api/pets/source.ts");
     expect(reply.status).toBe(200);
@@ -571,7 +571,7 @@ describe("adding and removing endpoints through manage", () => {
       name: "pets",
       spec: TWO_GROUPS,
       toAdd: {},
-      toRemove: { api: ["listPets", "listUsers"] },
+      toRemove: { "": ["listPets", "listUsers"] },
     };
 
     const preview = await post(url, "/api/apis/manage/preview", body);
@@ -583,7 +583,7 @@ describe("adding and removing endpoints through manage", () => {
     expect(read("src/api/pets/source.ts")).toBe(source);
   }, 30_000);
 
-  it("lists, adds and removes a flat import's endpoints in its one group, in its source", async () => {
+  it("lists, adds and removes a flat import's endpoints at the top level, in its source", async () => {
     put(
       "courier.config.ts",
       CONFIG.replace('outputDir: "src/api"', 'outputDir: "src/api", groupBy: "single"'),
@@ -596,15 +596,15 @@ describe("adding and removing endpoints through manage", () => {
       newSpec: TWO_GROUPS,
     });
     const groups = inventory.body.groups;
-    const added = await manage(url, { toAdd: { api: ["createPet"] } });
-    const removed = await manage(url, { toRemove: { api: ["listPets"] } });
+    const added = await manage(url, { toAdd: { "": ["createPet"] } });
+    const removed = await manage(url, { toRemove: { "": ["listPets"] } });
 
     const source = read("src/api/pets/source.ts");
     expect(
       Array.isArray(groups)
         ? groups.map((g) => (typeof g === "object" && g !== null && "name" in g ? g.name : null))
         : null,
-    ).toEqual(["api"]);
+    ).toEqual([""]);
     expect(added.status).toBe(200);
     expect(removed.status).toBe(200);
     expect(parseSync("source.ts", source).errors).toEqual([]);
@@ -703,4 +703,147 @@ describe("starting Studio", () => {
     expect(read("src/api/pets/index.ts")).toBe("as it was\n");
     expect(existsSync(join(root, ".courier/journal/1700000000000-0000c0de.json"))).toBe(false);
   }, 20_000);
+});
+
+const WITH_OWN = parseSpec(
+  JSON.stringify({
+    openapi: "3.1.0",
+    info: { title: "Pets", version: "1" },
+    paths: {
+      "/health": {
+        get: {
+          operationId: "health",
+          responses: {
+            "200": {
+              description: "ok",
+              content: { "application/json": { schema: { $ref: "#/components/schemas/User" } } },
+            },
+          },
+        },
+      },
+      "/ping": { get: { operationId: "ping", responses: { "200": { description: "ok" } } } },
+      "/pets": {
+        get: {
+          operationId: "listPets",
+          tags: ["pets"],
+          responses: { "200": { description: "ok" } },
+        },
+      },
+      "/users": {
+        get: {
+          operationId: "listUsers",
+          tags: ["users"],
+          responses: {
+            "200": {
+              description: "ok",
+              content: { "application/json": { schema: { $ref: "#/components/schemas/User" } } },
+            },
+          },
+        },
+      },
+    },
+    components: { schemas: { User: { type: "object", properties: { id: { type: "string" } } } } },
+  }),
+);
+
+/* Preview and apply a change to the import of WITH_OWN, as the dialog does. */
+async function manageOwn(
+  url: string,
+  change: { toAdd?: Record<string, string[]>; toRemove?: Record<string, string[]> },
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const body = { name: "pets", spec: WITH_OWN, toAdd: {}, toRemove: {}, ...change };
+  const preview = await post(url, "/api/apis/manage/preview", body);
+  return post(url, "/api/apis/manage/apply", { ...body, planDigest: planOf(preview).digest });
+}
+
+describe("the API's own endpoints in an import grouped by tag", () => {
+  const writeGroupsOnly = () => ({
+    ...WRITE,
+    spec: WITH_OWN,
+    options: { ...WRITE.options, selectedEndpoints: { pets: ["listPets"] } },
+  });
+
+  it("lists them at the top level, apart from the groups", async () => {
+    const url = await start();
+    await post(url, "/api/apis/write", writeGroupsOnly());
+
+    const inventory = await post(url, "/api/apis/manage/inventory", {
+      name: "pets",
+      newSpec: WITH_OWN,
+    });
+
+    const groups = Array.isArray(inventory.body.groups) ? inventory.body.groups : [];
+    const names = groups.map((g: unknown) =>
+      typeof g === "object" && g !== null && "name" in g ? g.name : null,
+    );
+    expect(names).toEqual(["", "pets", "users"]);
+  }, 30_000);
+
+  it("adds the first of them to a source that lists only groups, with a group, in one change", async () => {
+    const url = await start();
+    await post(url, "/api/apis/write", writeGroupsOnly());
+
+    const added = await manageOwn(url, { toAdd: { "": ["health"], users: ["listUsers"] } });
+
+    const source = read("src/api/pets/source.ts");
+    expect(added.status).toBe(200);
+    expect(parseSync("source.ts", source).errors).toEqual([]);
+    expect(source).toContain('import { defineApi, courier } from "@noverax/courier/define";');
+    expect(source).toContain("const { endpoint } = courier();");
+    expect(source).toMatch(
+      / {2}endpoints: \{\n {4}health: endpoint\.get\("health"\)[^\n]*,\n {2}\},\n {2}groups: \{/,
+    );
+    expect(source).toMatch(/groups: \{\n {4}pets: group_pets,\n {4}users,\n {2}\}/);
+    expect(read("src/api/pets/schemas.ts")).toContain("export const UserSchema");
+    expect(read("src/api/pets/users/index.ts")).toContain('from "../schemas";');
+  }, 30_000);
+
+  it("takes away what they needed once the last of them goes, as a source of groups alone has it", async () => {
+    const url = await start();
+    await post(url, "/api/apis/write", writeGroupsOnly());
+    await manageOwn(url, { toAdd: { "": ["health", "ping"] } });
+
+    const removed = await manageOwn(url, { toRemove: { "": ["health", "ping"] } });
+
+    const source = read("src/api/pets/source.ts");
+    expect(removed.status).toBe(200);
+    expect(parseSync("source.ts", source).errors).toEqual([]);
+    expect(source).toContain('import { defineApi } from "@noverax/courier/define";');
+    expect(source).not.toContain("courier()");
+    expect(source).not.toContain("endpoints:");
+    expect(source).toMatch(/groups: \{\n {4}pets: group_pets,\n {2}\}/);
+    expect(existsSync(join(root, "src/api/pets/schemas.ts"))).toBe(false);
+  }, 30_000);
+
+  it("writes nothing again when regenerated from the same specification, a user's edit kept", async () => {
+    const url = await start();
+    await post(url, "/api/apis/write", { ...writeGroupsOnly(), options: { ...WRITE.options } });
+    const edited = read("src/api/pets/source.ts").replace(
+      'ping: endpoint.get("ping")',
+      'ping: endpoint.get("ping").retry(2)',
+    );
+    put("src/api/pets/source.ts", edited);
+    const body = { name: "pets", spec: WITH_OWN, toAdd: {}, toRemove: {}, regenerate: true };
+
+    const preview = await post(url, "/api/apis/manage/preview", body);
+
+    const plan = preview.body.plan as { writes: Array<{ path: string; action: string }> };
+    expect(preview.status).toBe(200);
+    expect(plan.writes.filter((write) => write.action !== "unchanged")).toEqual([]);
+    expect(read("src/api/pets/source.ts")).toBe(edited);
+  }, 30_000);
+
+  it("removes one of them and a whole group in one change", async () => {
+    const url = await start();
+    await post(url, "/api/apis/write", { ...writeGroupsOnly(), options: { ...WRITE.options } });
+
+    const removed = await manageOwn(url, { toRemove: { "": ["ping"], pets: ["listPets"] } });
+
+    const source = read("src/api/pets/source.ts");
+    expect(removed.status).toBe(200);
+    expect(source).toContain("health: endpoint.get(");
+    expect(source).not.toContain("ping:");
+    expect(source).not.toContain("pets: group_pets");
+    expect(source).toMatch(/groups: \{\n {4}users,\n {2}\}/);
+  }, 30_000);
 });

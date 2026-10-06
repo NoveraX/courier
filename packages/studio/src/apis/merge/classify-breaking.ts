@@ -2,6 +2,7 @@
  * Breaking change classification from endpoint and schema diffs.
  */
 
+import { qualifiedName } from "../parser/top-level";
 import type { EndpointDiffResult } from "./diff-endpoints";
 import type { BreakingChange, BreakingSeverity, DiffEndpoint, SchemaDiff } from "./types";
 
@@ -26,7 +27,7 @@ const SCHEMA_CHANGE_RULES: [string, BreakingSeverity, string][] = [
 ];
 
 function classifyEndpointChange(ep: DiffEndpoint, change: string): BreakingChange | null {
-  const epKey = `${ep.group}.${ep.name}`;
+  const epKey = qualifiedName(ep.group, ep.name);
   for (const [prefix, severity, category] of ENDPOINT_CHANGE_RULES) {
     if (change.startsWith(prefix)) {
       return { severity, category, message: `${epKey}: ${change}`, endpoint: epKey };
@@ -61,7 +62,7 @@ function classifyRemovedEndpoints(endpoints: DiffEndpoint[]): BreakingChange[] {
     severity: "breaking" as const,
     category: "endpoint-removed",
     message: `Endpoint removed: ${ep.method.toUpperCase()} ${ep.path}`,
-    endpoint: `${ep.group}.${ep.name}`,
+    endpoint: qualifiedName(ep.group, ep.name),
   }));
 }
 
@@ -81,7 +82,7 @@ function classifyAddedEndpoints(endpoints: DiffEndpoint[]): BreakingChange[] {
     severity: "non-breaking" as const,
     category: "endpoint-added",
     message: `New endpoint: ${ep.method.toUpperCase()} ${ep.path}`,
-    endpoint: `${ep.group}.${ep.name}`,
+    endpoint: qualifiedName(ep.group, ep.name),
   }));
 }
 

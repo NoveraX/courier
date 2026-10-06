@@ -13,6 +13,7 @@ import { join, relative } from "node:path";
 import type { ProxyPath } from "@noverax/courier";
 import type { SchemaField } from "@noverax/courier-studio-core";
 import { extractSourceMap } from "@noverax/courier-studio-core";
+import { isTopLevel } from "../apis/parser/top-level";
 import type { LoadedCourierConfig } from "./config-loader";
 import { findSourceDeclaration } from "./find-source-declaration";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
@@ -91,9 +92,6 @@ const HTTP_METHODS: ReadonlyArray<ScannedHttpMethod> = [
   "delete",
 ];
 
-/** Endpoints a specification declared without a group are keyed under `""`. */
-const FLAT_GROUP = "";
-
 /**
  * Build the source catalogue from the config Studio runs and the imports
  * state. Nothing is loaded: a hand-written source's file is found among the
@@ -136,7 +134,7 @@ export function buildSourceScan(
       const endpoints = Object.entries(group.endpoints).map(([endpointName, endpoint]) =>
         describeEndpoint(endpointName, endpoint),
       );
-      if (groupName === FLAT_GROUP) {
+      if (isTopLevel(groupName)) {
         inlineEndpoints = endpoints;
         continue;
       }

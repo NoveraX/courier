@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  *
  * A specification that tags none of its operations is grouped by path
- * unless the settings ask otherwise, since by tag every endpoint would go
- * into one group; the Configure step says so when tag is chosen anyway.
+ * unless the settings ask otherwise, since by tag no endpoint would be in a
+ * group; the Configure step says so when tag is chosen anyway.
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -52,7 +52,7 @@ describe("importing a specification that tags no operation", () => {
     expect(tagged.options?.groupBy).toBe("tag");
   });
 
-  it("says by tag makes one group when tag is chosen for it anyway", () => {
+  it("says by tag puts no endpoint in a group when tag is chosen for it anyway", () => {
     const options = buildPostParseState({ ...SPEC, untagged: true }, SETTINGS)
       .options as GenerateOptions;
 
@@ -65,9 +65,7 @@ describe("importing a specification that tags no operation", () => {
       />,
     );
 
-    expect(
-      screen.getByText("no endpoint has a tag: by tag, they all go in one group"),
-    ).toBeTruthy();
+    expect(screen.getByText("no endpoint has a tag: by tag, none goes in a group")).toBeTruthy();
   });
 
   it("says how endpoints split into files once path is chosen", () => {

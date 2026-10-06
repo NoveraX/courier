@@ -6,8 +6,9 @@
 import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import type { GeneratedFile, GenerateOptions } from "../generator/types";
 import type { ImportLayout } from "../layout";
-import { declaresEndpoints } from "../merge/declares-endpoints";
 import { generateFingerprints } from "../merge/fingerprint";
+import { ownValue } from "../own-value";
+import { TOP_LEVEL } from "../parser/top-level";
 import type { ParsedSpec } from "../parser/types";
 import { addedEndpointsCode } from "./added-endpoints-code";
 import { appendEndpointsToGroup } from "./append-to-group";
@@ -16,7 +17,7 @@ import { listedSelection } from "./listed-selection";
 import { mergeSchemaFiles } from "./merge-schemas";
 import { newGroupsOf } from "./new-groups";
 import { rebuildBarrel } from "./rebuild-barrel";
-import { sourceWithNewGroups } from "./source-with-new-groups";
+import { sourceAfterAdd } from "./source-after-add";
 import type { AddResult, FileChange } from "./types";
 import { withInnerGroups } from "./with-inner-groups";
 
@@ -42,9 +43,8 @@ export function previewAddEndpoints(
   const { selection } = listedSelection(spec, options.groupBy ?? "tag", endpointsToAdd);
   const files: FileChange[] = [];
   const newFingerprints: Record<string, string> = {};
-  let barrel:
-    | { existing: string; change: (content: string, action: "modify") => FileChange }
-    | undefined;
+  let barrel: Pending | undefined;
+  let source: (Pending & { generated: string }) | undefined;
 
   for (const genFile of generated) {
     const fps = generateFingerprints(genFile.content);
@@ -70,6 +70,18 @@ export function previewAddEndpoints(
       continue;
     }
 
+    /* The source and the barrel are changed last, from what the rest leaves:
+       generated for the endpoints added alone, either would drop every
+       endpoint and group already there. */
+    if (genFile.path === layout.sourceFile) {
+      source = { existing: existingContent, change, generated: genFile.content };
+      continue;
+    }
+    if (genFile.path === layout.indexFile) {
+      barrel = { existing: existingContent, change };
+      continue;
+    }
+
     // Group file — append new endpoints
     const endpointNames = endpointsToAddForFile(genFile.path, endpointsToAdd, layout);
     if (endpointNames.length > 0) {
@@ -80,43 +92,31 @@ export function previewAddEndpoints(
         endpointNames,
       );
       files.push(change(merged, "modify"));
-      continue;
     }
-
-    /* An import generated flat keeps its endpoints in source.ts: the new ones
-       are appended to it. A grouped source.ts, which lists its groups, gains
-       the new ones through the source file update below, and the barrel only
-       the re-exports it lacks: generated for the added groups alone, either
-       file would drop every group already there. */
-    if (genFile.path === layout.indexFile) {
-      barrel = { existing: existingContent, change };
-      continue;
-    }
-    const merged =
-      declaresEndpoints(genFile.content) && declaresEndpoints(existingContent)
-        ? appendEndpointsToGroup(
-            genFile.path,
-            existingContent,
-            genFile.content,
-            Object.values(endpointsToAdd).flat(),
-          )
-        : existingContent;
-    if (merged !== existingContent) files.push(change(merged, "modify"));
   }
   const created = newGroupsOf(spec, options.groupBy ?? "tag", selection, existingFiles, layout);
   const outer = created.filter((group) => group.parent === undefined).map((group) => group.name);
-  const sourceFileUpdate = sourceWithNewGroups(outer, options, existingFiles, layout);
+  if (source !== undefined) {
+    const own = ownValue(endpointsToAdd, TOP_LEVEL) ?? [];
+    const addition = { generated: source.generated, endpoints: own, groups: outer };
+    const content = sourceAfterAdd(addition, options, existingFiles, layout);
+    if (content !== undefined) files.push(source.change(content, "modify"));
+  }
   withInnerGroups(files, created, existingFiles, layout);
   /* Last, from every file as the other changes leave it. */
   if (barrel !== undefined) {
     const { existing, change } = barrel;
-    const final = { ...existingFiles, ...contentsOf(files) };
-    if (sourceFileUpdate) final[sourceFileUpdate.path] = sourceFileUpdate.content;
-    const rebuilt = rebuildBarrel(layout, final, options.groupBy === "single");
+    const rebuilt = rebuildBarrel(layout, { ...existingFiles, ...contentsOf(files) });
     if (rebuilt !== undefined && rebuilt !== existing) files.push(change(rebuilt, "modify"));
   }
 
-  return { files, sourceFileUpdate, newFingerprints };
+  return { files, newFingerprints };
+}
+
+/* A file changed once the others are: as it is, and how its change is written. */
+interface Pending {
+  existing: string;
+  change: (content: string, action: "modify") => FileChange;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -128,7 +128,7 @@ function endpointsToAddForFile(
   layout: ImportLayout,
 ): string[] {
   for (const [group, names] of Object.entries(endpointsToAdd)) {
-    if (filePath === layout.groupFile(group)) return names;
+    if (group !== TOP_LEVEL && filePath === layout.groupFile(group)) return names;
   }
   return [];
 }

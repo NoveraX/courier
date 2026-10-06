@@ -1,11 +1,15 @@
 import { type GroupBy, placeEndpoints } from "../generator/endpoint-placements";
+import { qualifiedName } from "../parser/top-level";
 import type { ParsedSpec } from "../parser/types";
 
 /** A selection made from an import's listing, as the generator takes it. */
 export interface ListedSelection {
   /** The endpoints picked, by the specification's group and under its names. */
   selection: Record<string, string[]>;
-  /** What was picked that the specification does not generate, as `group.endpoint`. */
+  /**
+   * What was picked that the specification does not generate, as
+   * `group.endpoint`, the API's own endpoints by their name alone.
+   */
   unknown: string[];
 }
 
@@ -20,7 +24,7 @@ export interface ListedSelection {
  * @returns The selection, and what matched no endpoint
  * @example
  * ```ts
- * listedSelection(spec, "single", { api: ["getStoreById"] });
+ * listedSelection(spec, "single", { "": ["getStoreById"] });
  * // → { selection: { store: ["getById"] }, unknown: [] }
  * ```
  */
@@ -29,13 +33,17 @@ export function listedSelection(
   groupBy: GroupBy,
   picked: Readonly<Record<string, readonly string[]>>,
 ): ListedSelection {
-  const wanted = new Set(
-    Object.entries(picked).flatMap(([group, names]) => names.map((name) => `${group}.${name}`)),
+  /* Keyed apart by a character no name holds, so the API's own `health` is not a group's. */
+  const keyOf = (group: string, name: string): string => `${group}\u0000${name}`;
+  const wanted = new Map(
+    Object.entries(picked).flatMap(([group, names]) =>
+      names.map((name) => [keyOf(group, name), qualifiedName(group, name)] as const),
+    ),
   );
   const selection = new Map<string, string[]>();
   for (const { source, sourceGroup, group, endpoint } of placeEndpoints(spec, groupBy)) {
-    if (!wanted.delete(`${group.name}.${endpoint.name}`)) continue;
+    if (!wanted.delete(keyOf(group.name, endpoint.name))) continue;
     selection.set(sourceGroup, [...(selection.get(sourceGroup) ?? []), source.name]);
   }
-  return { selection: Object.fromEntries(selection), unknown: [...wanted] };
+  return { selection: Object.fromEntries(selection), unknown: [...wanted.values()] };
 }

@@ -251,6 +251,32 @@ export const sources = { api }
 export type Sources = typeof sources
 ```
 
+### Endpoints in no group
+
+An API holds endpoints of its own beside its groups — a health check, its root, anything no group is about — and the client calls them on itself:
+
+```ts title="api/sources.ts"
+import { createCaller } from "@noverax/courier"
+import { courier, defineApi } from "@noverax/courier/define"
+import { users } from "./users"
+
+const { endpoint } = courier()
+
+const api = defineApi({
+  baseURL: process.env.API_URL!,
+  endpoints: {
+    health: endpoint.get("health"),
+  },
+  groups: { users },
+})
+
+const caller = createCaller(api)
+await caller.health()
+await caller.users.getAll()
+```
+
+An API may hold endpoints alone, with no group at all. Studio imports an operation with no tag this way, and a path no segment groups when grouping by path — see [Import an API](/docs/studio/import-api).
+
 ### Options
 
 `defineApi` accepts all `BaseOptions`:

@@ -2,6 +2,7 @@ import { CircleCheck } from "lucide-react";
 
 import { methodText } from "@/design/method-color";
 import { TickBox } from "@/design/tick-box";
+import { endpointLabel, groupLabel, TOP_LEVEL } from "@/features/apis/group-label";
 import { countSelectedEndpoints } from "@/features/apis/helpers";
 import type { ParsedSpec } from "@/features/apis/types";
 import { ownValue } from "@/lib/own-value";
@@ -55,7 +56,7 @@ export function SelectEndpointsStep({
             FORMAT[spec.format],
             spec.version && `v${spec.version.replace(/^v/, "")}`,
             plural(total, "operation"),
-            plural(spec.groups.length, "group"),
+            plural(spec.groups.filter((g) => g.name !== TOP_LEVEL).length, "group"),
           ]
             .filter(Boolean)
             .join(" · ")}
@@ -88,20 +89,24 @@ export function SelectEndpointsStep({
       {spec.groups.map((group) => {
         const picked = ownValue(selected, group.name) ?? [];
         const all = picked.length === group.endpoints.length;
+        const top = group.name === TOP_LEVEL;
         return (
           <section
             key={group.name}
-            aria-label={`Group ${group.name}`}
+            aria-label={top ? "Top-level endpoints" : `Group ${group.name}`}
             className="overflow-hidden rounded-[11px] border border-line"
           >
             <label className="flex h-9.5 cursor-pointer items-center gap-2.5 bg-panel-subtle px-3 hover:bg-raised">
               <TickBox
                 checked={all}
                 mixed={picked.length > 0 && !all}
-                label={`Select ${group.name}`}
+                label={`Select ${groupLabel(group.name)}`}
                 onChange={() => onToggleGroup(group.name)}
               />
-              <span className="font-mono text-control font-semibold">{group.name}</span>
+              <span className={cn("text-control font-semibold", !top && "font-mono")}>
+                {groupLabel(group.name)}
+              </span>
+              {top && <span className="text-label text-fg-subtle">in no group</span>}
               <span className="text-label text-fg-subtle">{`${picked.length}/${group.endpoints.length}`}</span>
             </label>
             {group.endpoints.map((op) => {
@@ -116,7 +121,7 @@ export function SelectEndpointsStep({
                 >
                   <TickBox
                     checked={on}
-                    label={`Select ${group.name}.${op.name}`}
+                    label={`Select ${endpointLabel(group.name, op.name)}`}
                     onChange={() => onToggleEndpoint(group.name, op.name)}
                   />
                   <span

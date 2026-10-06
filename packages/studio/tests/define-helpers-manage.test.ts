@@ -37,10 +37,13 @@ const UPDATE =
 const GENERATED = groupFile("courier, defineGroup, formBody, formQuery", [GET, LIST, UPDATE]);
 const ON_DISK = groupFile("courier, defineGroup", [GET]);
 
+/* The names the file imports from the define module, however many lines the import takes. */
 function imports(code: string): string[] {
-  const line =
-    code.split("\n").find((text) => text.includes('from "@noverax/courier/define"')) ?? "";
-  return (line.match(/\{([^}]*)\}/)?.[1] ?? "").split(",").map((name) => name.trim());
+  const list = /import \{([^}]*)\} from "@noverax\/courier\/define"/.exec(code)?.[1] ?? "";
+  return list
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean);
 }
 
 function parses(code: string): boolean {

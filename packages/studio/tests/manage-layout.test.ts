@@ -13,7 +13,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generateCode } from "../src/apis/generator";
 import { InvalidImportError, resolveImportLayout } from "../src/apis/layout";
 import { previewAddEndpoints, previewRemoveEndpoints } from "../src/apis/manage";
-import { previewRemoveFlatEndpoints } from "../src/apis/manage/remove-flat-endpoints";
 import {
   addGroupsToSourceFile,
   removeGroupsFromSourceFile,
@@ -89,8 +88,9 @@ describe("previewAddEndpoints", () => {
       resolveImportLayout(options, "shop"),
     );
 
-    expect(result.sourceFileUpdate?.content).toContain('import { store } from "./store/index";');
-    expect(result.sourceFileUpdate?.content).toContain("    store,");
+    const source = result.files.find((file) => file.path === "src/api/shop/source.ts")?.content;
+    expect(source).toContain('import { store } from "./store/index";');
+    expect(source).toContain("    store,");
   });
 });
 
@@ -117,7 +117,7 @@ describe("previewAddEndpoints with schemas two groups share", () => {
     }),
   );
 
-  it("re-exports the added group's schemas by the names the barrel does not export yet", () => {
+  it("declares the schema they share in the import's module, and re-exports the added group's own", () => {
     const options = { type: "openapi" as const, outputDir: "src/api" };
     const layout = resolveImportLayout(options, "shop");
     const existing = Object.fromEntries(
@@ -135,32 +135,53 @@ describe("previewAddEndpoints with schemas two groups share", () => {
     );
 
     const barrel = result.files.find((file) => file.path === layout.indexFile)?.content ?? "";
-    expect(barrel).toContain('export { type Pet, PetSchema } from "./pets/schemas";');
+    const store = result.files.find(
+      (file) => file.path === layout.groupSchemaFile("store", "schemas"),
+    );
+    expect(existing[layout.schemaFile("schemas")]).toContain("export const PetSchema");
+    expect(store?.content).toContain('import { type Pet, PetSchema } from "../schemas";');
+    expect(store?.content).not.toContain("export const PetSchema");
+    expect(barrel).toContain('export { type Pet, PetSchema } from "./schemas";');
     expect(barrel).not.toContain("export *");
     expect(barrel).toContain('export { type Order, OrderSchema } from "./store/schemas";');
   });
 
-  it("gives the barrel back the shared names when the group whose re-export carried them goes", () => {
+  it("keeps the schema they share while a group still uses it, when the other goes", () => {
     const options = { type: "openapi" as const, outputDir: "src/api" };
     const layout = resolveImportLayout(options, "shop");
     const existing = Object.fromEntries(
       generateCode(SHARED, options, "shop").map((file) => [file.path, file.content]),
     );
-    expect(existing[layout.indexFile]).toContain(
-      'export { type Pet, PetSchema } from "./pets/schemas";',
-    );
 
     const result = previewRemoveEndpoints({ pets: ["listPets"] }, existing, {}, layout);
 
-    const barrel = result.indexFileUpdate?.content ?? "";
-    const storeLine = barrel.match(/^export \{[^}]*\} from "\.\/store\/schemas";$/m)?.[0] ?? "";
-    expect(barrel).not.toContain("./pets/schemas");
-    expect(storeLine).toContain("PetSchema");
-    expect(storeLine).toContain("OrderSchema");
+    expect(result.deletedFiles).toEqual([layout.groupFile("pets")]);
+    expect(result.orphanedSchemas).toEqual([]);
+    expect(result.modifiedFiles.map((file) => file.path)).toEqual([layout.sourceFile]);
+    expect(result.indexFileUpdate).toBeUndefined();
+  });
+
+  it("removes the schema they share from the import's module once no group uses it", () => {
+    const options = { type: "openapi" as const, outputDir: "src/api" };
+    const layout = resolveImportLayout(options, "shop");
+    const existing = Object.fromEntries(
+      generateCode(SHARED, options, "shop").map((file) => [file.path, file.content]),
+    );
+
+    const result = previewRemoveEndpoints(
+      { pets: ["listPets"], store: ["listOrders"] },
+      existing,
+      {},
+      layout,
+    );
+
+    expect(result.orphanedSchemas).toEqual(expect.arrayContaining(["Pet", "PetSchema"]));
+    expect(result.deletedFiles).toContain(layout.schemaFile("schemas"));
+    expect(result.indexFileUpdate?.content).not.toContain("PetSchema");
   });
 });
 
-describe("previewAddEndpoints to a group whose schemas gain one another group exports", () => {
+describe("previewAddEndpoints of an endpoint naming a schema another group uses", () => {
   const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
   const ok = (schema: object) => ({
     "200": { description: "ok", content: { "application/json": { schema } } },
@@ -183,7 +204,7 @@ describe("previewAddEndpoints to a group whose schemas gain one another group ex
     }),
   );
 
-  it("exports the name once, through the module that exports it first", () => {
+  it("imports it from the import's module, where the first write declared it", () => {
     const options = { type: "openapi" as const, outputDir: "src/api" };
     const layout = resolveImportLayout(options, "shop");
     const selected = { animals: ["listPets"], misc: ["getToy"] };
@@ -194,7 +215,7 @@ describe("previewAddEndpoints to a group whose schemas gain one another group ex
       ]),
     );
     expect(existing[layout.indexFile]).toContain(
-      'export { type Toy, ToySchema } from "./misc/schemas";',
+      'export { type Toy, ToySchema } from "./schemas";',
     );
 
     const result = previewAddEndpoints(
@@ -205,19 +226,14 @@ describe("previewAddEndpoints to a group whose schemas gain one another group ex
       layout,
     );
 
-    const schemas = result.files.find(
-      (file) => file.path === layout.groupSchemaFile("animals", "schemas"),
-    );
-    const barrel = result.files.find((file) => file.path === layout.indexFile)?.content ?? "";
-    expect(schemas?.content).toContain("export const ToySchema");
-    expect(barrel).toContain(
-      'export { type Pet, PetSchema, type Toy, ToySchema } from "./animals/schemas";',
-    );
-    expect(barrel).not.toContain("./misc/schemas");
+    const animals = result.files.find((file) => file.path === layout.groupFile("animals"));
+    expect(animals?.content).toContain('import { type Toy, ToySchema } from "../schemas";');
+    expect(animals?.content).toContain("listToys: endpoint.get(");
+    expect(result.files.map((file) => file.path)).toEqual([layout.groupFile("animals")]);
   });
 });
 
-describe("removing a group whose re-export carried names other groups share", () => {
+describe("removing groups that share schemas", () => {
   const ref = (name: string) => ({ $ref: `#/components/schemas/${name}` });
   const ok = (schema: object) => ({
     "200": { description: "ok", content: { "application/json": { schema } } },
@@ -252,37 +268,36 @@ describe("removing a group whose re-export carried names other groups share", ()
     Object.fromEntries(
       generateCode(SPEC_SHARED, options, "shop").map((file) => [file.path, file.content]),
     );
-  /* Listed by name. */
-  const listing = (module: string, name: string) =>
-    new RegExp(`export \\{[^}]*\\b${name}\\b[^}]*\\} from "\\./${module}/schemas";`);
 
-  it("gives a module with no line of its own a line for the names it still exports", () => {
-    const files = existing();
-    expect(files[layout.indexFile]).not.toContain("./misc/schemas");
+  it("keeps in the import's module each schema a group left still uses", () => {
+    const result = previewRemoveEndpoints(
+      { animals: ["listPets", "listToys"] },
+      existing(),
+      {},
+      layout,
+    );
 
-    const barrel =
-      previewRemoveEndpoints({ animals: ["listPets", "listToys"] }, files, {}, layout)
-        .indexFileUpdate?.content ?? "";
-
-    expect(barrel).not.toContain("./animals/schemas");
-    expect(barrel).toMatch(listing("misc", "ToySchema"));
-    expect(barrel).toMatch(listing("misc", "type Toy"));
-    expect(barrel).toMatch(listing("shop", "PetSchema"));
+    expect(result.orphanedSchemas).toEqual([]);
+    expect(result.deletedFiles).toEqual([layout.groupFile("animals")]);
+    expect(result.indexFileUpdate).toBeUndefined();
   });
 
-  it("gives back names whose list the removal emptied", () => {
+  it("takes out of the import's module only the schemas no group left uses", () => {
     const result = previewRemoveEndpoints(
-      { animals: ["listPets", "listToys"], shop: ["listOrders"] },
+      { animals: ["listPets", "listToys"], misc: ["getToy"], shop: ["listOrders"] },
       existing(),
       {},
       layout,
     );
 
     const barrel = result.indexFileUpdate?.content ?? "";
-    expect(result.orphanedSchemas).toContain("Order");
+    const shared = result.modifiedFiles.find((file) => file.path === layout.schemaFile("schemas"));
+    expect(result.orphanedSchemas).toEqual(expect.arrayContaining(["Order", "Toy", "ToySchema"]));
+    expect(shared?.content).toContain("export const PetSchema");
+    expect(shared?.content).not.toContain("ToySchema");
     expect(barrel).not.toContain("OrderSchema");
-    expect(barrel).toMatch(listing("shop", "PetSchema"));
-    expect(barrel).toMatch(listing("misc", "ToySchema"));
+    expect(barrel).not.toContain("ToySchema");
+    expect(barrel).toContain('export { type Pet, PetSchema } from "./schemas";');
   });
 });
 
@@ -390,7 +405,7 @@ describe("removing the endpoints that used every schema of a group that stays", 
     const existing = written("single");
     expect(existing[layout.indexFile]).toMatch(/^export \{[^}]*\} from "\.\/schemas";$/m);
 
-    const result = previewRemoveFlatEndpoints(["listPets"], existing, {}, layout);
+    const result = previewRemoveEndpoints({ "": ["listPets"] }, existing, {}, layout);
 
     expect(result.deletedFiles).toEqual([layout.schemaFile("schemas")]);
     expect(result.indexFileUpdate?.content).not.toContain("./schemas");
@@ -403,7 +418,7 @@ describe("previewRemoveEndpoints with a group name that is not a binding", () =>
     const existing = filesOf(null);
     const layout = resolveImportLayout({ outputDir: "src/api" }, "shop");
 
-    for (const group of ["", ".", "pets/.."]) {
+    for (const group of [".", "pets/.."]) {
       expect(() => previewRemoveEndpoints({ [group]: [] }, existing, {}, layout)).toThrow(
         InvalidImportError,
       );

@@ -8,6 +8,7 @@
  * exports it.
  */
 
+import { namedStatement } from "../generator/named-statement";
 import type { MergeChange, ParsedImport } from "./types";
 
 /**
@@ -73,16 +74,17 @@ function unionImport(generated: ParsedImport, existing: ParsedImport, code: stri
   return { raw: "", source: generated.source, names, typeNames };
 }
 
+/* Written as the generator writes an import, so merging a file it just wrote changes nothing. */
 function formatImport(imp: ParsedImport): string {
   if (imp.namespaceImport) {
-    return `import * as ${imp.namespaceImport} from "${imp.source}";`;
+    return `import ${imp.typeOnly ? "type " : ""}* as ${imp.namespaceImport} from "${imp.source}";`;
   }
 
   if (imp.names.length === 0 && imp.typeNames.length > 0) {
-    return `import type { ${imp.typeNames.join(", ")} } from "${imp.source}";`;
+    return namedStatement("import type", imp.typeNames, imp.source);
   }
   const specifiers: string[] = [...imp.names, ...imp.typeNames.map((t) => `type ${t}`)];
 
   if (specifiers.length === 0) return imp.raw;
-  return `import { ${specifiers.join(", ")} } from "${imp.source}";`;
+  return namedStatement("import", specifiers, imp.source);
 }

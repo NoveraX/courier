@@ -61,12 +61,16 @@ const RESERVED_WORDS = new Set([
  */
 const GENERATED_IDENTIFIERS = new Set([
   "ark",
+  "authMiddleware",
   "courier",
   "createCaller",
   "createProxyCaller",
   "defineApi",
   "defineGroup",
   "endpoint",
+  "formBody",
+  "formQuery",
+  "headerVariablesMiddleware",
   "requireEnv",
   "stream",
   "type",

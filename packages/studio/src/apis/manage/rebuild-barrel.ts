@@ -4,6 +4,7 @@ import { exportName } from "../../server/mocks-edit/plan/export-name";
 import { importsCarryExtensions } from "../../server/mocks-edit/plan/imports-carry-extensions";
 import { lineStart } from "../../server/mocks-edit/plan/line-start";
 import { parseSource } from "../../server/mocks-edit/plan/parse-source";
+import { compareSpecifiers } from "../generator/import-order";
 import { namedStatement } from "../generator/named-statement";
 import type { ImportLayout } from "../layout";
 import { type ExportedKind, exportedNames } from "./exported-names";
@@ -19,9 +20,10 @@ type Reexport = ExportAllDeclaration | ExportNamedDeclaration;
 /**
  * The import's barrel with its re-exports of the import's schema modules
  * written again from the files as they are now, as a full write writes
- * them: in the order the groups are listed, each module re-exported by the
- * names no earlier line exports, so no name is exported twice and none a
- * module exports is left out. A line the user wrote — a type-only list, a
+ * them: the import's own module and each listed group's, in the order
+ * linters sort them, each re-exported by the names no earlier line
+ * exports, so no name is exported twice and none a module exports is left
+ * out. A line the user wrote — a type-only list, a
  * renamed name, a module that is not one of the import's — stays as it is,
  * and its names count as exported. A whole-module `export *` an older
  * version wrote is the generator's own and is written again by name.
@@ -29,18 +31,16 @@ type Reexport = ExportAllDeclaration | ExportNamedDeclaration;
  *
  * @param layout - Where the import's files are
  * @param files - The import's files as the change leaves them, by path, without Studio's header
- * @param flat - Whether the import is generated as one flat group
  * @returns The barrel, or `undefined` when the import has none
  * @throws {UnrecognizedFileError} When the barrel does not parse
  * @example
  * ```ts
- * const barrel = rebuildBarrel(layout, { ...onDisk, ...changed }, false);
+ * const barrel = rebuildBarrel(layout, { ...onDisk, ...changed });
  * ```
  */
 export function rebuildBarrel(
   layout: ImportLayout,
   files: Readonly<Record<string, string>>,
-  flat: boolean,
 ): string | undefined {
   const barrel = files[layout.indexFile];
   if (barrel === undefined) return undefined;
@@ -48,7 +48,9 @@ export function rebuildBarrel(
   if (parsed.problem !== null) throw new UnrecognizedFileError(layout.indexFile);
   /* Written as the barrel writes its imports, with their extension or without. */
   const extension = importsCarryExtensions(parsed.program) ? ".js" : "";
-  const modules = schemaModules(layout, files, flat).map((specifier) => `${specifier}${extension}`);
+  const modules = schemaModules(layout, files)
+    .map((specifier) => `${specifier}${extension}`)
+    .sort(compareSpecifiers);
   const textOf = (specifier: string): string | undefined =>
     files[posix.join(layout.dir, `${specifier.replace(/\.js$/, "")}.ts`)];
   const owned = new Set(modules);
@@ -61,19 +63,14 @@ export function rebuildBarrel(
   return withLines(barrel, generated, lines);
 }
 
-/* The import's schema modules, in the order its groups are listed. */
-function schemaModules(
-  layout: ImportLayout,
-  files: Readonly<Record<string, string>>,
-  flat: boolean,
-): string[] {
+/* The import's schema modules: its own, and each listed group's. */
+function schemaModules(layout: ImportLayout, files: Readonly<Record<string, string>>): string[] {
   const existing = (dir: string | null): string[] =>
     (["schemas", "types"] as const)
       .map((kind) => (dir === null ? `./${kind}` : `./${dir}/${kind}`))
       .filter((specifier) => files[posix.join(layout.dir, `${specifier}.ts`)] !== undefined)
       .slice(0, 1);
-  if (flat) return existing(null);
-  return groupDirs(layout, files).flatMap((dir) => existing(dir));
+  return [...existing(null), ...groupDirs(layout, files).flatMap((dir) => existing(dir))];
 }
 
 /* The folders of the groups source.ts imports, in its order; every group folder when it does not parse. */

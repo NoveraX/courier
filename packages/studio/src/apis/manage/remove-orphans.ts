@@ -1,4 +1,5 @@
 import type { ImportLayout, SchemaFileKind } from "../layout";
+import { isTopLevel } from "../parser/top-level";
 import { detectOrphanSchemas } from "./detect-orphan-schemas";
 import { removeOrphanSchemas } from "./remove-schemas";
 
@@ -29,13 +30,15 @@ export function processOrphanSchemas(
 ): string[] {
   const orphans: string[] = [];
   for (const [group, code] of removedCode) {
+    /* The API's own endpoints use the import's module, which every group may use too. */
+    if (isTopLevel(group)) continue;
     const remaining = modifiedFiles.find((f) => f.path === layout.groupFile(group));
     if (remaining === undefined) continue;
     for (const kind of SCHEMA_FILES) {
       const path = layout.groupSchemaFile(group, kind);
       const content = existingFiles[path];
       if (content === undefined || deletedFiles.includes(path)) continue;
-      const found = detectOrphanSchemas(content, remaining.content, code);
+      const found = detectOrphanSchemas(content, [remaining.content], code);
       if (found.length === 0) continue;
       orphans.push(...found);
       const cleaned = removeOrphanSchemas(content, found);

@@ -9,6 +9,7 @@ import { parseOpenApi3Operation } from "./parse-openapi3-operation";
 import { serverUrl } from "./server-url";
 import { asNode, fieldOf, isNode, listAt, nodeAt, type SpecNode, textAt } from "./spec-node";
 import { tagParents } from "./tag-parents";
+import { topLevelGroup } from "./top-level";
 import type { ParsedEndpoint, ParsedSpec, SkippedOperation } from "./types";
 import {
   convertSchema,
@@ -28,9 +29,13 @@ export function parseOpenApi3(spec: SpecNode): ParsedSpec {
 
   const baseURL = serverUrl(spec.servers);
   const schemas = parseSchemas(spec);
-  const { endpointsByTag, skipped, tagged } = groupEndpointsByTag(spec);
+  const { endpointsByTag, untaggedEndpoints, skipped } = groupEndpointsByTag(spec);
   const tagDescriptions = parseTagDescriptions(spec);
-  const groups = buildGroups(endpointsByTag, tagDescriptions, tagParents(spec));
+  /* An operation with no tag is in no group: it sits in the API itself. */
+  const groups = [
+    ...(untaggedEndpoints.length > 0 ? [topLevelGroup(untaggedEndpoints)] : []),
+    ...buildGroups(endpointsByTag, tagDescriptions, tagParents(spec)),
+  ];
   const securitySchemes = parseSecuritySchemes(spec);
 
   return {
@@ -43,8 +48,8 @@ export function parseOpenApi3(spec: SpecNode): ParsedSpec {
     schemas,
     securitySchemes,
     skipped,
-    /* Grouped by tag, an API that tags no operation is one group of all of them. */
-    ...(!tagged && endpointsByTag.size > 0 && { untagged: true }),
+    /* Grouped by tag, an API that tags no operation has no group at all. */
+    ...(endpointsByTag.size === 0 && untaggedEndpoints.length > 0 && { untagged: true }),
   };
 }
 
@@ -62,13 +67,13 @@ function parseSchemas(spec: SpecNode): Record<string, ReturnType<typeof convertS
 
 function groupEndpointsByTag(spec: SpecNode): {
   endpointsByTag: Map<string, ParsedEndpoint[]>;
+  /** The operations that declare no tag. */
+  untaggedEndpoints: ParsedEndpoint[];
   skipped: SkippedOperation[];
-  /** Whether any operation declares a tag. */
-  tagged: boolean;
 } {
   const endpointsByTag = new Map<string, ParsedEndpoint[]>();
+  const untaggedEndpoints: ParsedEndpoint[] = [];
   const skipped: SkippedOperation[] = [];
-  let tagged = false;
 
   for (const [path, methods] of Object.entries(nodeAt(spec, "paths") ?? {})) {
     /* A path item may be null in YAML, or a reference this file cannot
@@ -108,22 +113,22 @@ function groupEndpointsByTag(spec: SpecNode): {
         shared.length > 0
           ? { ...operation, parameters: [...listAt(operation, "parameters"), ...shared] }
           : operation;
-      const declaredTags = listAt(op, "tags").filter(
-        (tag): tag is string => typeof tag === "string",
-      );
-      if (declaredTags.length > 0) tagged = true;
-      const tags = declaredTags.length > 0 ? declaredTags : ["default"];
-      const [tag = "default"] = tags;
+      const tags = listAt(op, "tags").filter((tag): tag is string => typeof tag === "string");
       const endpoint = parseOpenApi3Operation(path, method, op, spec, (reason) =>
         skipped.push({ method: method.toUpperCase(), path, reason }),
       );
       endpoint.tags = tags;
 
+      const [tag] = tags;
+      if (tag === undefined) {
+        untaggedEndpoints.push(endpoint);
+        continue;
+      }
       if (!endpointsByTag.has(tag)) endpointsByTag.set(tag, []);
       endpointsByTag.get(tag)?.push(endpoint);
     }
   }
-  return { endpointsByTag, skipped, tagged };
+  return { endpointsByTag, untaggedEndpoints, skipped };
 }
 
 /**

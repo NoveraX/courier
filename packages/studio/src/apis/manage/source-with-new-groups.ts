@@ -3,7 +3,6 @@ import { parseSource } from "../../server/mocks-edit/plan/parse-source";
 import { groupLocalName } from "../generator";
 import type { GenerateOptions } from "../generator/types";
 import type { ImportLayout } from "../layout";
-import type { AddResult } from "./types";
 import { addGroupsToSourceFile } from "./update-source-file";
 
 /**
@@ -26,7 +25,7 @@ export function sourceWithNewGroups(
   options: Pick<GenerateOptions, "groupBy">,
   existingFiles: Record<string, string>,
   layout: ImportLayout,
-): AddResult["sourceFileUpdate"] {
+): { path: string; content: string } | undefined {
   if (options.groupBy === "single") return undefined;
   const source = existingFiles[layout.sourceFile];
   if (added.length === 0 || !source) return undefined;

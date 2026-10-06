@@ -38,8 +38,13 @@ export interface EndpointUses {
 export interface EndpointContext {
   readonly spec: ParsedSpec;
   readonly options: ResolvedGenerateOptions;
-  /** Every schema the module beside the file declares, by name. */
+  /**
+   * Every schema the file's endpoints can name, by name: those of the module
+   * beside it, and those it imports from the import's own module.
+   */
   readonly declared: Readonly<Record<string, ParsedSchema>>;
+  /** Of `declared`, those the import's own module declares; none for the source's own endpoints. */
+  readonly shared: ReadonlySet<string>;
   /**
    * The declared schemas that are written lazily, being on a reference
    * cycle: typed as a plain schema, they cannot be extended.
@@ -53,7 +58,8 @@ export interface EndpointContext {
  *
  * @param spec - The parsed specification
  * @param options - The import's resolved options
- * @param declared - The schemas the module beside the file declares
+ * @param declared - The schemas the file's endpoints can name
+ * @param shared - Of those, the ones the import's own module declares, for a group's file
  * @returns A context that has used nothing yet
  * @example
  * ```ts
@@ -64,11 +70,13 @@ export function endpointContext(
   spec: ParsedSpec,
   options: ResolvedGenerateOptions,
   declared: Readonly<Record<string, ParsedSchema>>,
+  shared: ReadonlySet<string> = new Set(),
 ): EndpointContext {
   return {
     spec,
     options,
     declared,
+    shared,
     lazy: emitsSchemas(options) ? findCyclicSchemas(declared) : new Set(),
     uses: {
       values: new Set(),

@@ -1,5 +1,6 @@
 import { methodText } from "@/design/method-color";
 import { TickBox } from "@/design/tick-box";
+import { endpointLabel } from "@/features/apis/group-label";
 import type { InventoryEndpoint } from "@/features/apis/types";
 import { cn } from "@/lib/utils";
 
@@ -94,7 +95,7 @@ export function InventoryRow({
     <label className={cn(row, "cursor-pointer hover:bg-raised")}>
       <TickBox
         checked={on}
-        label={`Keep ${group}.${ep.name}`}
+        label={`Keep ${endpointLabel(group, ep.name)}`}
         onChange={() => onToggle(group, ep.name, ep.status !== "available")}
       />
       {body}

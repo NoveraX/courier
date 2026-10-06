@@ -162,7 +162,7 @@ describe.each(VALIDATORS)("%s", (validation) => {
 
   it("refuses a call whose parameter breaks a constraint, before anything is sent", async () => {
     const { shopApi } = loadGenerated(generated(validation, upstream.url), "src/shop/index.ts");
-    const list = endpointAt(shopApi, "defaultGroup", "listProducts");
+    const list = endpointAt(shopApi, "listProducts");
     upstream.requests.length = 0;
 
     await expect(list({ limit: 1000 })).rejects.toThrow();

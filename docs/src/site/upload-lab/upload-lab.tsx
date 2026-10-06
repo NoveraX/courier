@@ -16,8 +16,9 @@ import { useUploadLab } from "./use-upload-lab"
  * reader's browser to this site, drawn twice — as the browser reports it
  * and through smoothProgress — with both bars' numbers and the run over
  * time. Until the reader sends one, it shows a run recorded the same way.
- * It lays itself out by the room it is given: the bars side by side from
- * 640 px across, one above the other below that.
+ * The toolbar sends; the status line under it says what the bars and the
+ * chart below show. It lays itself out by the room it is given: the bars
+ * side by side from 640 px across, one above the other below that.
  *
  * @returns The lab
  * @example
@@ -38,8 +39,7 @@ export function UploadLab() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(60%_100%_at_75%_0%,rgb(var(--tone-rgb)/0.13),transparent_72%)]"
       />
-      <div className="relative flex flex-wrap items-center justify-between gap-x-6 gap-y-3.5 border-b border-line px-4.5 py-4 @min-[640px]:px-6">
-        <LabStatus run={run} />
+      <div className="relative border-b border-line px-4.5 py-4 @min-[640px]:px-6">
         <LabControls
           size={size}
           pace={pace}
@@ -50,6 +50,7 @@ export function UploadLab() {
         />
       </div>
       <div className="relative grid gap-4 p-4.5 @min-[640px]:p-6">
+        <LabStatus run={run} />
         <div className="grid gap-3.5 @min-[640px]:grid-cols-2">
           <LabChannel
             tone="amber"
@@ -62,7 +63,7 @@ export function UploadLab() {
           <LabChannel
             tone="blue"
             name="smoothProgress(…)"
-            caption="the same reports, smoothed"
+            caption="the reports, smoothed"
             share={run.smoothed.at(-1)?.[1] ?? 0}
             stats={labStats(run.smoothed)}
             moves="moves"

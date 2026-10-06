@@ -39,9 +39,12 @@ export function LabStatus({ run }: { run: LabRun }) {
   return (
     <p
       aria-live="polite"
-      className="m-0 flex min-w-0 items-center gap-2.5 font-mono text-label text-fg-muted tabular-nums"
+      className="m-0 flex min-w-0 items-start gap-2.5 font-mono text-label leading-[1.5] text-fg-muted tabular-nums"
     >
-      <span aria-hidden="true" className={cn("size-1.75 shrink-0 rounded-full", DOT[run.phase])} />
+      <span
+        aria-hidden="true"
+        className={cn("mt-[6px] size-1.75 shrink-0 rounded-full", DOT[run.phase])}
+      />
       <span className="min-w-0 [overflow-wrap:anywhere]">
         {lineOf(run)}
         {run.phase === "sending" && (

@@ -29,7 +29,7 @@ interface LabChannelProps {
 export function LabChannel({ tone, name, caption, share, stats, moves }: LabChannelProps) {
   const [whole, tenth] = (share * 100).toFixed(1).split(".")
   return (
-    <div data-tone={tone} className="rounded-panel border border-line bg-bg/40 p-4.5">
+    <div data-tone={tone} className="flex flex-col rounded-panel border border-line bg-bg/40 p-4.5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="m-0 flex items-center gap-2 font-mono text-small text-fg">
@@ -46,17 +46,20 @@ export function LabChannel({ tone, name, caption, share, stats, moves }: LabChan
           <span className="text-fg-subtle">.{tenth}%</span>
         </p>
       </div>
-      <div className="mt-4.5 h-1.5 overflow-hidden rounded-full bg-raised">
-        <div
-          className="h-full rounded-full bg-(--tone) shadow-[0_0_16px_rgb(var(--tone-rgb)/0.6)]"
-          style={{ width: `${share * 100}%` }}
-        />
+      {/* At the bottom, so two bars side by side line up whatever their captions wrap to. */}
+      <div className="mt-auto pt-4.5">
+        <div className="h-1.5 overflow-hidden rounded-full bg-raised">
+          <div
+            className="h-full rounded-full bg-(--tone) shadow-[0_0_16px_rgb(var(--tone-rgb)/0.6)]"
+            style={{ width: `${share * 100}%` }}
+          />
+        </div>
+        <dl className="m-0 mt-4 grid grid-cols-3 gap-3 font-mono">
+          <Figure label={moves} value={String(stats.count)} />
+          <Figure label="biggest jump" value={`${Math.round(stats.step * 100)}%`} />
+          <Figure label="longest wait" value={`${Math.round(stats.wait)} ms`} />
+        </dl>
       </div>
-      <dl className="m-0 mt-4 grid grid-cols-3 gap-3 font-mono">
-        <Figure label={moves} value={String(stats.count)} />
-        <Figure label="biggest jump" value={`${Math.round(stats.step * 100)}%`} />
-        <Figure label="longest wait" value={`${Math.round(stats.wait)} ms`} />
-      </dl>
     </div>
   )
 }

@@ -106,9 +106,16 @@ function command(page: Socket, sent: Record<string, unknown>): Promise<unknown> 
   return page.timeout(5_000).emitWithAck("mock:command", { serverId: "shop", ...sent });
 }
 
-async function post(path: string, presented?: string, body: unknown = {}): Promise<Response> {
+async function post(
+  path: string,
+  presented?: string,
+  body: unknown = {},
+  visitor?: string,
+): Promise<Response> {
   const headers: Record<string, string> = { "content-type": "application/json", origin: url };
   if (presented !== undefined) headers[TOKEN_HEADER] = presented;
+  /* A visitor reaches the demo through a proxy on this machine, which says who it is. */
+  if (visitor !== undefined) headers["x-forwarded-for"] = visitor;
   return fetch(`${url}${path}`, { method: "POST", headers, body: JSON.stringify(body) });
 }
 
@@ -264,13 +271,60 @@ describe("the demo's API", () => {
     });
   });
 
-  it("answers its visitors up to sixty requests every ten seconds, and the host always", async () => {
-    const statuses: number[] = [];
-    for (let n = 0; n < 61; n++) statuses.push((await post("/api/sessions/list")).status);
+  it("answers an address up to twenty requests every ten seconds, every visitor sixty, and the host always", async () => {
+    const from = (visitor: string) => post("/api/sessions/list", undefined, {}, visitor);
+    const one: number[] = [];
+    for (let n = 0; n < 21; n++) one.push((await from("203.0.113.1")).status);
+    const others: number[] = [];
+    for (let n = 0; n < 40; n++) others.push((await from(`203.0.113.${10 + (n % 2)}`)).status);
 
-    expect(statuses.slice(0, 60).every((status) => status === 200)).toBe(true);
-    expect(statuses[60]).toBe(429);
+    expect(one.slice(0, 20).every((status) => status === 200)).toBe(true);
+    expect(one[20]).toBe(429);
+    expect(others.every((status) => status === 200)).toBe(true);
+    expect((await from("203.0.113.99")).status).toBe(429);
     expect((await post("/api/sessions/list", token())).status).toBe(200);
+  });
+});
+
+describe("the demo's HTTP server", () => {
+  it("answers an address up to six hundred requests every ten seconds, then says when to come back", async () => {
+    const get = (visitor: string) =>
+      fetch(`${url}/api/health`, { headers: { "x-forwarded-for": visitor } });
+    const statuses: number[] = [];
+    for (let n = 0; n < 600; n++) statuses.push((await get("198.51.100.7")).status);
+
+    const refused = await get("198.51.100.7");
+
+    expect(statuses.every((status) => status === 200)).toBe(true);
+    expect(refused.status).toBe(429);
+    expect(refused.headers.get("retry-after")).toBe("10");
+    expect((await get("198.51.100.8")).status).toBe(200);
+  }, 30_000);
+});
+
+describe("the demo's sockets, counted by address", () => {
+  /* A page reached through a proxy on this machine, which says who opened it. */
+  async function visit(visitor: string): Promise<boolean> {
+    const socket = connect(`${url}/ui`, {
+      transports: ["websocket"],
+      forceNew: true,
+      reconnection: false,
+      extraHeaders: { "x-forwarded-for": visitor },
+    });
+    sockets.push(socket);
+    return new Promise<boolean>((resolve) => {
+      socket.once("connect", () => resolve(true));
+      socket.once("connect_error", () => resolve(false));
+    });
+  }
+
+  it("are opened up to twenty for one address, and still for another", async () => {
+    const opened: boolean[] = [];
+    for (let n = 0; n < 20; n++) opened.push(await visit("192.0.2.200"));
+
+    expect(opened.every(Boolean)).toBe(true);
+    expect(await visit("192.0.2.200")).toBe(false);
+    expect(await visit("192.0.2.201")).toBe(true);
   });
 });
 

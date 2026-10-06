@@ -5,6 +5,7 @@
 
 import type { Socket } from "socket.io";
 
+import { visitorAddress } from "./demo/visitor-address";
 import { isPlainObject } from "./is-plain-object";
 import { READ_ONLY_PAGES, TOKEN_PAGES } from "./live-events";
 import type { StudioToken } from "./studio-token";
@@ -34,17 +35,23 @@ export type VisitorDecision =
   | { kind: "drop" }
   | { kind: "refuse"; reason: string };
 
+/** A page without the token: its socket id, and the address its visitor is counted against. */
+export interface VisitorPage {
+  page: string;
+  address: string;
+}
+
 /** What a page without the token may send. */
 export interface VisitorPolicy {
   /**
    * Decide on an event a page without the token sent.
    *
-   * @param pageId - The page's socket id
+   * @param visitor - The page's socket id, and its visitor's address
    * @param event - The event's name
    * @param args - Its arguments, the acknowledgement last when it waits for one
    * @returns Whether it runs, and why not when it is refused
    */
-  decide(pageId: string, event: string, args: readonly unknown[]): VisitorDecision;
+  decide(visitor: VisitorPage, event: string, args: readonly unknown[]): VisitorDecision;
   /** Forget what was counted for a page that left. */
   forget(pageId: string): void;
 }
@@ -57,7 +64,7 @@ const REFUSED: VisitorDecision = { kind: "refuse", reason: TOKEN_REFUSAL };
  * writing event is refused.
  */
 export const READ_ONLY_VISITORS: VisitorPolicy = {
-  decide: (_pageId, event) => (WRITING_EVENTS.has(event) ? REFUSED : RUN),
+  decide: (_visitor, event) => (WRITING_EVENTS.has(event) ? REFUSED : RUN),
   forget: () => {},
 };
 
@@ -93,10 +100,15 @@ export function guardUiWrites(
   }
   void socket.join(READ_ONLY_PAGES);
   socket.on("disconnect", () => visitors.forget(socket.id));
+  const { address: peer, headers } = socket.handshake;
+  const visitor = {
+    page: socket.id,
+    address: visitorAddress({ peer, forwardedFor: headers["x-forwarded-for"] }),
+  };
   socket.use((packet, next) => {
     const [event] = packet;
     const args: readonly unknown[] = packet.slice(1);
-    const decision = visitors.decide(socket.id, event, args);
+    const decision = visitors.decide(visitor, event, args);
     if (decision.kind === "run") next();
     else if (decision.kind === "refuse") refuse(socket, event, args, decision.reason);
   });

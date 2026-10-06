@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 
 import { SearchField } from "@/design/search-field";
-import { TONE_FILL } from "@/design/tone";
 import type { HealthLevel } from "@/features/explorer/endpoint-metrics";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import { graphLayoutOf } from "@/features/explorer/graph-layout";
@@ -12,6 +11,7 @@ import { useStudioStore } from "@/store";
 import { ExplorerEmpty } from "./explorer-empty";
 import { ExplorerSkeleton } from "./explorer-skeleton";
 import { GraphFlow } from "./graph-flow";
+import { LEVEL_EDGE } from "./level-edge";
 import { useCallPulses } from "./use-call-pulses";
 import { useExplorerModel } from "./use-explorer-model";
 import { useExplorerSearch } from "./use-explorer-search";
@@ -26,7 +26,13 @@ function Legend(): React.ReactNode {
           key={level}
           className="flex items-center gap-1.5 text-label whitespace-nowrap text-fg-muted"
         >
-          <span className={cn("size-1.75 rounded-full", TONE_FILL[LEVEL_META[level].tone])} />
+          <span
+            aria-hidden="true"
+            className={cn(
+              "h-2.5 w-3.5 rounded-[3px] border bg-panel",
+              LEVEL_EDGE[LEVEL_META[level].tone],
+            )}
+          />
           {LEVEL_META[level].label}
         </li>
       ))}
@@ -42,7 +48,7 @@ function Legend(): React.ReactNode {
 
 /**
  * The Explorer's graph: every source, its groups and their endpoints, each
- * coloured by its health and showing the metric chosen, on a canvas that
+ * edged by its health and showing the metric chosen, on a canvas that
  * pans and zooms, with each call running along its endpoint's branch as it
  * ends. A search lights the endpoints that match; hovering lights a node's
  * branch and shows its figures; a source or a group opens the Endpoints

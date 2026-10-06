@@ -1,6 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
 
-import { Dot } from "@/design/dot";
 import { demoResetLine } from "@/features/demo/demo-reset-line";
 import { isDemoVisitor } from "@/features/demo/is-demo-visitor";
 import { useLiveNow } from "@/hooks/use-live-now";
@@ -30,7 +29,6 @@ export function DemoBanner(): React.ReactNode {
       aria-label="Live demo"
       className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-brand/20 bg-brand-dim px-5 py-2.25 text-control"
     >
-      <Dot tone="brand" pulse className="size-1.75" />
       <span className="min-w-0 flex-1 text-fg">
         <strong className="font-semibold">Live demo.</strong>{" "}
         <span className="text-fg-muted">

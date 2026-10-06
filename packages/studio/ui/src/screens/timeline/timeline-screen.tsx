@@ -64,7 +64,6 @@ export function TimelineScreen(): React.ReactNode {
 function Waiting(): React.ReactNode {
   return (
     <div className="flex flex-col items-center gap-2.5 px-5 py-20 text-center">
-      <span aria-hidden="true" className="size-2 animate-pulse-live rounded-full bg-brand" />
       <span className="text-title font-semibold">Waiting for requests</span>
       <span className="text-ui text-fg-muted">
         Make API calls from your app to see them here as they happen.

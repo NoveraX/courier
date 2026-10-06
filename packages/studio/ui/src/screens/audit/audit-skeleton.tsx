@@ -41,7 +41,7 @@ export function AuditSkeleton(): React.ReactNode {
             key={width}
             className="flex h-14 items-center gap-3 rounded-card border border-line bg-panel px-4"
           >
-            <Skeleton className="size-2 rounded-full" />
+            <Skeleton className="size-7.5 rounded-[9px]" />
             <Skeleton className={`h-3 ${width} max-w-[60%]`} />
             <div className="flex-1" />
             <Skeleton className="h-5 w-20 rounded-full" />

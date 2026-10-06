@@ -32,7 +32,7 @@ function useSectionInView(): string {
 
 /**
  * Settings' navigation: what the page is, and its sections by group — the
- * one in view lit, a dot beside each with unsaved changes — each scrolling
+ * one in view lit, «unsaved» beside each with unsaved changes — each scrolling
  * its section into view.
  *
  * @param props - The settings the draft changed
@@ -88,7 +88,12 @@ export function SettingsNav({
                 {section.label}
                 {section.keys.some((key) => changed.has(key)) && (
                   <>
-                    <span aria-hidden="true" className="ml-auto size-1.5 rounded-full bg-warn" />
+                    <span
+                      aria-hidden="true"
+                      className="ml-auto font-mono text-micro font-normal text-warn"
+                    >
+                      unsaved
+                    </span>
                     <span className="sr-only">(unsaved changes)</span>
                   </>
                 )}

@@ -1,6 +1,4 @@
-import { Dot } from "@/design/dot";
 import { lastCallLabel } from "@/features/explorer/endpoint-key";
-import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type { EndpointTag } from "@/features/explorer/endpoint-tags";
 import { endpointTags } from "@/features/explorer/endpoint-tags";
 import type { EndpointNode } from "@/features/explorer/explorer-model";
@@ -74,7 +72,6 @@ export function EndpointRow(props: EndpointRowProps): React.ReactNode {
       )}
     >
       <span className="flex min-w-0 items-center gap-2.5">
-        <Dot tone={LEVEL_META[e.level].tone} className="size-1.75" />
         <span
           className={cn("w-10.5 shrink-0 font-mono text-meta font-semibold", methodClassOf(method))}
         >

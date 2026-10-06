@@ -11,7 +11,7 @@ export const TONE_TEXT: Readonly<Record<Tone, string>> = {
   normal: "text-fg",
 };
 
-/** A solid mark — a dot, a bar — in a tone. */
+/** A solid fill — a bar, a track — in a tone. */
 export const TONE_FILL: Readonly<Record<Tone, string>> = {
   ok: "bg-ok",
   warn: "bg-warn",

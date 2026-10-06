@@ -2,7 +2,6 @@ import { History, Trash2 } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useState } from "react";
 
-import { Dot } from "@/design/dot";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { shortAgo } from "@/features/explorer/endpoint-key";
 import { cn } from "@/lib/utils";
@@ -93,9 +92,8 @@ export function HistoryMenu({ now, labelOf, onPick }: HistoryMenuProps): React.R
                     onPick(entry);
                     setOpen(false);
                   }}
-                  className="grid h-8.5 w-full cursor-pointer grid-cols-[8px_40px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label hover:bg-raised"
+                  className="grid h-8.5 w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label hover:bg-raised"
                 >
-                  <Dot tone={status.tone} className="size-1.75" />
                   <span className={cn("text-micro font-semibold", methodClassOf(label))}>
                     {label}
                   </span>

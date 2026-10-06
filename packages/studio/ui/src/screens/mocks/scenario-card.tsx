@@ -2,7 +2,6 @@ import type { LucideIcon } from "lucide-react";
 import { FlaskConical, Inbox, ShieldAlert, Timer, Workflow } from "lucide-react";
 import { useState } from "react";
 
-import { Dot } from "@/design/dot";
 import type { ScenarioKind } from "@/features/mocks/scenario-view";
 import { scenarioKindOf } from "@/features/mocks/scenario-view";
 import { cn } from "@/lib/utils";
@@ -87,7 +86,6 @@ export function ScenarioCard({
               <span className="text-ui font-semibold">{scenario.name}</span>
               {scenario.isActive && (
                 <span className="flex h-4.5 items-center gap-1.25 rounded-full bg-ok-dim px-1.75 text-micro font-bold tracking-[0.04em] text-ok">
-                  <Dot tone="current" pulse />
                   ACTIVE
                 </span>
               )}

@@ -1,5 +1,4 @@
 import { Button } from "@/design/button";
-import { Dot } from "@/design/dot";
 import { useBackToLive } from "@/hooks/use-back-to-live";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
@@ -64,7 +63,6 @@ export function RecordingButton({ hideIdle = false }: RecordingButtonProps): Rea
       aria-label={title}
       className={cn("gap-1.5 font-mono text-meta tracking-caps", TONE[state])}
     >
-      <Dot tone="current" square={state === "paused"} pulse={state === "recording"} />
       {LABEL[state]}
     </Button>
   );

@@ -22,7 +22,6 @@ function statusCell(log: MockRequestLog): StatCell {
     label: "Status",
     value: answered ? mockLogCode(log) : "In flight",
     sub: reason ?? (log.error === undefined ? undefined : "no answer"),
-    dot: { tone, pulse: !answered },
     tone,
     mono: answered,
   };

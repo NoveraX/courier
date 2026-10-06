@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router";
 import { Activity, Play, X } from "lucide-react";
 import { useState } from "react";
 
-import { Dot } from "@/design/dot";
 import { Reveal } from "@/design/reveal";
 import { SheetFrame } from "@/design/sheet-frame";
 import { TONE_TEXT } from "@/design/tone";
@@ -67,7 +66,6 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
               </span>
               <span className="text-label text-fg-subtle">Endpoint</span>
               <span className={cn("flex items-center gap-1.25 text-label", TONE_TEXT[level.tone])}>
-                <Dot tone="current" />
                 {level.label}
               </span>
             </div>

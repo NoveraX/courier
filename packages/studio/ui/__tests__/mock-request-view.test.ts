@@ -28,7 +28,7 @@ describe("a mock request's figures", () => {
   it("say a request still waiting is in flight", () => {
     const [status] = mockRequestCells(mockLog({ status: undefined }), 0, 500);
 
-    expect(status).toMatchObject({ value: "In flight", dot: { pulse: true } });
+    expect(status).toMatchObject({ value: "In flight", tone: "muted" });
   });
 });
 

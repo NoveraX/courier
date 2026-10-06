@@ -50,10 +50,10 @@ describe("a QUERY in Studio", () => {
     expect(methodChip("QUERY")).toBe("bg-method-query/13 text-method-query");
   });
 
-  it("is offered as a method filter, with its swatch, before any request is seen", () => {
+  it("is offered as a method filter, in its colour, before any request is seen", () => {
     const query = filterOptions([], OPEN_FILTER, "method", 500).find((o) => o.value === "QUERY");
 
-    expect(query).toEqual({ value: "QUERY", label: "QUERY", swatch: "query", count: 0 });
+    expect(query).toEqual({ value: "QUERY", label: "QUERY", tone: "query", count: 0 });
   });
 
   it("is taken for a read when the traffic does not say", () => {

@@ -1,8 +1,7 @@
-import { Dot } from "@/design/dot";
 import { durationTone } from "@/features/requests/duration-tone";
 import type { RecentCall } from "@/features/requests/recent-calls";
 import { codeLabel } from "@/features/requests/request-parts";
-import { isFailedState, isStreamRequest, STATE_META } from "@/features/requests/request-state";
+import { isFailedState, isStreamRequest } from "@/features/requests/request-state";
 import { formatAbsoluteTime, formatDuration, formatSize } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -61,13 +60,12 @@ export function CallRow({
       className={cn(
         "grid w-full cursor-pointer items-center gap-2.5 text-left font-mono text-label tabular-nums focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
         withSize
-          ? "grid-cols-[92px_8px_44px_minmax(0,1fr)_58px_64px]"
-          : "grid-cols-[92px_8px_44px_minmax(0,1fr)_58px]",
+          ? "grid-cols-[92px_44px_minmax(0,1fr)_58px_64px]"
+          : "grid-cols-[92px_44px_minmax(0,1fr)_58px]",
         className,
       )}
     >
       <span className="text-fg-subtle">{formatAbsoluteTime(r.startedAt)}</span>
-      <Dot tone={STATE_META[state].tone} className="size-1.75" />
       <span className={codeTone(call)}>{codeLabel(r, state)}</span>
       <span className="h-1 overflow-hidden rounded-[2px] bg-raised">
         <span

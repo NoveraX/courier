@@ -46,10 +46,6 @@ export function ConnectionSegment(): React.ReactNode {
         status === "disconnected" && "bg-err-dim text-err",
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cn("size-1.5 rounded-full bg-current", waiting && "animate-pulse-live")}
-      />
       <span className="font-medium">{label}</span>
       {attached && since !== null && <SessionClock since={since} />}
     </div>

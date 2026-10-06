@@ -111,13 +111,6 @@ export function WaterfallToolbar(props: WaterfallToolbarProps): React.ReactNode 
             following ? "bg-brand-dim text-brand" : "text-fg-muted hover:text-fg",
           )}
         >
-          <span
-            aria-hidden="true"
-            className={cn(
-              "size-1.5 rounded-full bg-current",
-              following ? "animate-pulse-live" : "opacity-40",
-            )}
-          />
           Follow
         </button>
         <button

@@ -1,14 +1,11 @@
 import { methodText } from "@/design/method-color";
-import { TONE_FILL, TONE_TEXT } from "@/design/tone";
+import { TONE_TEXT } from "@/design/tone";
 import { endpointParts } from "@/features/requests/request-parts";
-import type { RequestState } from "@/features/requests/request-state";
-import { STATE_META } from "@/features/requests/request-state";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
 
 export interface RowLabelProps {
   request: RequestEntry;
-  state: RequestState;
   /** The method column: the HTTP verb, or SSE / WS for a stream. */
   method: string;
   methodClass?: string | undefined;
@@ -22,32 +19,19 @@ export interface RowLabelProps {
 
 /**
  * The part of a Waterfall row that stays in place while the track
- * scrolls: the request's state, its method and endpoint, and how long it
- * took.
+ * scrolls: the request's method and endpoint, and how long it took.
  *
  * @param props - The request, how it ended, its columns and how the row is marked
  * @returns The label cell
  * @example
  * ```tsx
- * <RowLabel request={r} state="success" method="GET" duration="44ms" durationClass="text-fg" width={300} indent={false} selected={false} failed={false} />
+ * <RowLabel request={r} method="GET" duration="44ms" durationClass="text-fg" width={300} indent={false} selected={false} failed={false} />
  * ```
  */
 export function RowLabel(props: RowLabelProps): React.ReactNode {
-  const {
-    request,
-    state,
-    method,
-    methodClass,
-    duration,
-    durationClass,
-    width,
-    indent,
-    selected,
-    failed,
-  } = props;
+  const { request, method, methodClass, duration, durationClass, width, indent, selected, failed } =
+    props;
   const { prefix, name } = endpointParts(request);
-  const tone = STATE_META[state].tone;
-  const live = state === "pending" || state === "streaming";
   return (
     <span
       style={{ width }}
@@ -64,14 +48,6 @@ export function RowLabel(props: RowLabelProps): React.ReactNode {
       <span
         aria-hidden="true"
         className={cn("absolute inset-y-0 left-0 w-0.5", selected ? "bg-brand" : "bg-transparent")}
-      />
-      <span
-        aria-hidden="true"
-        className={cn(
-          "size-1.75 shrink-0 rounded-full",
-          TONE_FILL[tone],
-          live && "animate-pulse-live",
-        )}
       />
       <span
         className={cn("w-10 shrink-0 text-meta font-semibold", methodClass ?? methodText(method))}

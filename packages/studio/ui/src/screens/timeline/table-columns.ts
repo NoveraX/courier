@@ -1,6 +1,6 @@
-/* The Timeline's columns: the state, the method, the name, [the mode], the status, the duration, [the size], the time, the pin. */
-const WIDE = "grid-cols-[10px_50px_minmax(0,1fr)_54px_44px_120px_64px_92px_14px]";
-const NARROW = "grid-cols-[10px_50px_minmax(120px,1fr)_44px_104px_92px_14px]";
+/* The Timeline's columns: the method, the name, [the mode], the status, the duration, [the size], the time, the pin. */
+const WIDE = "grid-cols-[50px_minmax(0,1fr)_54px_44px_120px_64px_92px_14px]";
+const NARROW = "grid-cols-[50px_minmax(120px,1fr)_44px_104px_92px_14px]";
 
 /** How wide the list must be for the Mode and Size columns. */
 export const WIDE_FROM = 760;
@@ -13,7 +13,7 @@ export const WIDE_FROM = 760;
  * @returns The grid template class
  * @example
  * ```ts
- * columnsOf(true); // "grid-cols-[10px_50px_…]"
+ * columnsOf(true); // "grid-cols-[50px_minmax(0,1fr)_…]"
  * ```
  */
 export function columnsOf(wide: boolean): string {

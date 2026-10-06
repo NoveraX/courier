@@ -2,11 +2,10 @@ import { ChevronsUpDown } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useState } from "react";
 
-import { Dot } from "@/design/dot";
 import { methodText } from "@/design/method-color";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { codeLabel, endpointParts, httpMethodOf } from "@/features/requests/request-parts";
-import { isFailedState, STATE_META } from "@/features/requests/request-state";
+import { isFailedState } from "@/features/requests/request-state";
 import { formatClockTime, formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types-request";
@@ -39,11 +38,10 @@ function Option({
       onClick={onPick}
       aria-current={chosen}
       className={cn(
-        "grid h-8.5 w-full cursor-pointer grid-cols-[8px_40px_minmax(0,1fr)_40px_64px] items-center gap-2.5 rounded-[7px] px-2.5 text-left font-mono text-label hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+        "grid h-8.5 w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_40px_64px] items-center gap-2.5 rounded-[7px] px-2.5 text-left font-mono text-label hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
         chosen && "bg-brand-dim",
       )}
     >
-      <Dot tone={STATE_META[r.status].tone} className="size-1.75" />
       <span className={cn("text-micro font-semibold", methodText(httpMethodOf(r)))}>
         {httpMethodOf(r)}
       </span>
@@ -101,7 +99,6 @@ export function RequestSlot({
             </span>
           </span>
           <span className="flex items-center gap-2 font-mono text-badge text-fg-subtle">
-            <Dot tone={STATE_META[request.status].tone} />
             {`${codeLabel(request, request.status)} · ${formatDuration(request.timing?.total ?? 0)} · ${formatClockTime(request.startedAt)}`}
           </span>
         </span>

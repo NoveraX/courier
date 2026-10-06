@@ -1,15 +1,9 @@
 import { CardSection } from "@/design/card-section";
-import { Dot } from "@/design/dot";
 import { shortAgo } from "@/features/explorer/endpoint-key";
 import { methodLabelOf } from "@/features/explorer/method-label";
 import { durationTone } from "@/features/requests/duration-tone";
 import { codeLabel, httpMethodOf } from "@/features/requests/request-parts";
-import {
-  isFailedState,
-  isStreamRequest,
-  requestStateOf,
-  STATE_META,
-} from "@/features/requests/request-state";
+import { isFailedState, isStreamRequest, requestStateOf } from "@/features/requests/request-state";
 import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
@@ -44,10 +38,9 @@ function ActivityRow({ request: r, now, slowMs, onOpen }: ActivityRowProps): Rea
     <button
       type="button"
       onClick={() => onOpen(r.id)}
-      className="grid h-8 cursor-pointer grid-cols-[58px_8px_40px_minmax(0,1fr)_44px_60px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label tabular-nums hover:bg-raised focus-visible:outline-2 focus-visible:outline-brand"
+      className="grid h-8 cursor-pointer grid-cols-[58px_40px_minmax(0,1fr)_44px_60px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label tabular-nums hover:bg-raised focus-visible:outline-2 focus-visible:outline-brand"
     >
       <span className="text-fg-subtle">{shortAgo(now - r.startedAt)}</span>
-      <Dot tone={STATE_META[state].tone} className="size-1.75" />
       <span className={cn("text-micro font-semibold", methodClassOf(method))}>{method}</span>
       <EndpointName source={r.source} group={r.group ?? ""} method={r.method} />
       <span
@@ -96,14 +89,7 @@ export function ActivityFeed(props: ActivityFeedProps): React.ReactNode {
   return (
     <CardSection
       title="Activity"
-      aside={
-        live && (
-          <span className="flex items-center gap-1.5 text-label text-brand">
-            <Dot tone="brand" pulse />
-            live
-          </span>
-        )
-      }
+      aside={live && <span className="flex items-center gap-1.5 text-label text-brand">live</span>}
     >
       <div className="flex max-h-105 flex-col overflow-auto p-1.5">
         {latest.length === 0 && (

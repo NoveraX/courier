@@ -100,7 +100,6 @@ describe("the four figures", () => {
     expect(status).toMatchObject({
       value: "Success",
       sub: "HTTP 200",
-      dot: { tone: "ok", pulse: false },
     });
     expect(duration).toMatchObject({
       label: "Duration",
@@ -121,7 +120,6 @@ describe("the four figures", () => {
     expect(status).toMatchObject({
       value: "Streaming",
       sub: "SSE · 200",
-      dot: { tone: "brand", pulse: true },
     });
     expect(open).toMatchObject({ label: "Open for", value: "5.00s", sub: "live" });
     expect(messages).toMatchObject({ label: "Messages", value: "7" });

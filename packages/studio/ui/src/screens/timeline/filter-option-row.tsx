@@ -3,7 +3,7 @@ import { Check, Minus } from "lucide-react";
 import type { FilterOption } from "@/features/requests/filter-options";
 import type { SelectionState } from "@/features/requests/tree-selection";
 import { cn } from "@/lib/utils";
-import { SwatchDot } from "./swatch-dot";
+import { optionTone } from "./option-tone";
 
 interface FilterOptionRowProps {
   option: FilterOption;
@@ -71,8 +71,7 @@ export function FilterOptionRow({
         >
           <Mark className={cn("size-2.5", marked ? "opacity-100" : "opacity-0")} />
         </span>
-        {option.swatch && <SwatchDot swatch={option.swatch} />}
-        <span className={cn("truncate text-control text-fg", mono && "font-mono")}>
+        <span className={cn("truncate text-control", optionTone(option.tone), mono && "font-mono")}>
           {flat ? option.label : (option.name ?? option.label)}
         </span>
       </label>

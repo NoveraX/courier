@@ -1,26 +1,17 @@
 import { Folder, Server } from "lucide-react";
 
-import { Dot } from "@/design/dot";
 import { TONE_TEXT } from "@/design/tone";
-import type { LevelTone } from "@/features/explorer/endpoint-metrics";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type { GraphNode } from "@/features/explorer/graph-types";
 import { cn } from "@/lib/utils";
 import { GraphNodeFigures } from "./graph-node-figures";
+import { LEVEL_EDGE } from "./level-edge";
 import { methodClassOf } from "./method-class";
 
 const SHAPE: Readonly<Record<GraphNode["kind"], string>> = {
   source: "rounded-dialog pl-2.5",
   group: "rounded-panel pl-2.5",
   endpoint: "rounded-[9px] pl-3",
-};
-
-/* A health's dot glows in its colour; a node with no traffic does not. */
-const GLOW: Readonly<Record<LevelTone, string>> = {
-  ok: "shadow-[0_0_0_3px_var(--color-ok-dim),0_0_8px_color-mix(in_srgb,var(--color-ok)_55%,transparent)]",
-  warn: "shadow-[0_0_0_3px_var(--color-warn-dim),0_0_8px_color-mix(in_srgb,var(--color-warn)_55%,transparent)]",
-  err: "shadow-[0_0_0_3px_var(--color-err-dim),0_0_8px_color-mix(in_srgb,var(--color-err)_55%,transparent)]",
-  muted: "",
 };
 
 /* A screen reader hears what hovering shows: the node, its address, its health and its figures. */
@@ -55,8 +46,8 @@ function Tile({ kind }: { kind: "source" | "group" }): React.ReactNode {
 /**
  * A node on the Explorer's graph: a source or a group with its icon, or an
  * endpoint with its method and path — a raised card with its figure under
- * the colour metric and its health in a glowing dot, which pulses while it
- * is active. Hovering or focusing it lights its branch and shows its whole
+ * the colour metric and its health in its edge — trouble in its colour, no
+ * traffic dashed. Hovering or focusing it lights its branch and shows its whole
  * address and what its calls add up to over it.
  *
  * @param props - The node, and what hovering and opening it do
@@ -87,7 +78,7 @@ export function GraphNodeCard(props: GraphNodeCardProps): React.ReactNode {
           ? "border-brand shadow-[0_0_0_3px_var(--color-brand-dim)]"
           : node.matched
             ? "border-brand/50"
-            : "border-line",
+            : LEVEL_EDGE[tone],
         node.dim && "opacity-30",
       )}
     >
@@ -123,7 +114,6 @@ export function GraphNodeCard(props: GraphNodeCardProps): React.ReactNode {
       >
         {node.value.text}
       </span>
-      <Dot tone={tone} pulse={node.active} className={cn("size-1.75", GLOW[tone])} />
       {node.hovered && <GraphNodeFigures node={node} />}
     </button>
   );

@@ -46,7 +46,6 @@ export function ConnectionSection({ settings }: { settings: SettingsDraft }): Re
               connected ? "bg-ok-dim text-ok" : "bg-err-dim text-err",
             )}
           >
-            <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
             {connected ? `connected · ${plural(runtimes, "runtime")}` : "disconnected"}
           </span>
         }

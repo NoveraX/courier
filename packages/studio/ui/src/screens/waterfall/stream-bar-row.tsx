@@ -65,7 +65,6 @@ export function StreamBarRow(props: StreamBarRowProps): React.ReactNode {
     >
       <RowLabel
         request={r}
-        state={state}
         method={ws ? "WS" : "SSE"}
         methodClass={ws ? "text-syntax-keyword" : "text-brand"}
         duration={live ? "live" : formatDuration(end - r.startedAt)}

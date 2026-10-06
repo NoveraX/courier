@@ -14,7 +14,6 @@ const TAG: Readonly<Record<LogTag["tone"], string>> = {
   subtle: "bg-raised text-fg-subtle",
 };
 const TONE = { ok: "text-ok", warn: "text-warn", err: "text-err" } as const;
-const DOT = { ok: "bg-ok", warn: "bg-warn", err: "bg-err" } as const;
 const DURATION_TEXT = { normal: "text-fg-muted", warn: "text-warn", err: "text-err" } as const;
 
 interface MockLogRowProps {
@@ -46,12 +45,11 @@ export function MockLogRow({ log, selected, slowMs, onOpen }: MockLogRowProps): 
       aria-pressed={selected}
       onClick={onOpen}
       className={cn(
-        "grid h-8.5 w-full cursor-pointer grid-cols-[96px_8px_48px_minmax(0,1fr)_110px_44px_64px] items-center gap-3 border-b border-line px-5 text-left font-mono text-small tabular-nums hover:bg-raised",
+        "grid h-8.5 w-full cursor-pointer grid-cols-[96px_48px_minmax(0,1fr)_110px_44px_64px] items-center gap-3 border-b border-line px-5 text-left font-mono text-small tabular-nums hover:bg-raised",
         selected && "bg-brand-tint",
       )}
     >
       <span className="text-fg-subtle">{formatAbsoluteTime(log.timestamp)}</span>
-      <span className={cn("size-1.75 rounded-full", tone ? DOT[tone] : "bg-fg-subtle")} />
       <span className={cn("text-meta font-semibold", methodText(log.httpMethod.toUpperCase()))}>
         {log.httpMethod.toUpperCase()}
       </span>

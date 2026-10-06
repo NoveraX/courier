@@ -76,8 +76,9 @@ export function ScoreHero(props: ScoreHeroProps): React.ReactNode {
           <div className="flex flex-wrap gap-3.5">
             {AUDIT_SEVERITIES.map((severity) => (
               <span key={severity} className="flex items-center gap-1.5 text-small text-fg-muted">
-                <span className={cn("size-1.75 rounded-full", SEVERITY_LOOK[severity].fill)} />
-                <span className="font-mono font-semibold text-fg">{counts[severity]}</span>
+                <span className={cn("font-mono font-semibold", SEVERITY_LOOK[severity].text)}>
+                  {counts[severity]}
+                </span>
                 {SEVERITY_LOOK[severity].label.toLowerCase()}
               </span>
             ))}

@@ -1,4 +1,4 @@
-import { TONE_FILL, TONE_TEXT } from "@/design/tone";
+import { TONE_TEXT } from "@/design/tone";
 import type { StatCell } from "@/features/requests/stat-cells";
 import { cn } from "@/lib/utils";
 
@@ -28,16 +28,6 @@ export function StatCellGrid({ cells }: { cells: readonly StatCell[] }): React.R
               TONE_TEXT[cell.tone],
             )}
           >
-            {cell.dot && (
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "size-1.5 shrink-0 rounded-full",
-                  TONE_FILL[cell.dot.tone],
-                  cell.dot.pulse && "animate-pulse-live",
-                )}
-              />
-            )}
             {cell.value}
           </dd>
           {cell.sub !== undefined && (

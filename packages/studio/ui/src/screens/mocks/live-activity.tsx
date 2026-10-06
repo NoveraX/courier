@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
 import { CardSection } from "@/design/card-section";
-import { Dot } from "@/design/dot";
 import { methodText } from "@/design/method-color";
 import { TONE_TEXT } from "@/design/tone";
 import { shortAgo } from "@/features/explorer/endpoint-key";
@@ -56,7 +55,6 @@ export function LiveActivity({
               running ? "text-ok" : "text-fg-subtle",
             )}
           >
-            <Dot tone="current" pulse={running} />
             {running ? "running" : "stopped"}
           </span>
           <div className="flex-1" />
@@ -87,14 +85,13 @@ export function LiveActivity({
               key={log.id}
               onClick={() => onOpen(log.id)}
               className={cn(
-                "grid h-8 w-full cursor-pointer grid-cols-[64px_8px_44px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label tabular-nums hover:bg-raised",
+                "grid h-8 w-full cursor-pointer grid-cols-[64px_44px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label tabular-nums hover:bg-raised",
                 index === 0 && running && "bg-brand-tint",
               )}
             >
               <span className="whitespace-nowrap text-fg-subtle">
                 {now - log.timestamp < 1_000 ? "now" : shortAgo(now - log.timestamp)}
               </span>
-              <Dot tone={tone} className="size-1.75" />
               <span
                 className={cn("text-micro font-semibold", methodText(log.httpMethod.toUpperCase()))}
               >

@@ -18,15 +18,12 @@ const speedLabel = (kbps: number): string => (kbps === 0 ? "Unlimited" : bandwid
 const limitLabel = (bytes: number): string => (bytes === 0 ? "None" : sizeLimitLabel(bytes));
 
 /* The conditions with one of them set anew; a speed or a limit of 0, or no types, is none. */
-function withCondition(
-  uploads: UploadConditions,
-  patch: Partial<Record<keyof UploadConditions, number | string[]>>,
-): UploadConditions {
-  const next = { ...uploads, ...patch };
+function withCondition(uploads: UploadConditions, patch: UploadConditions): UploadConditions {
+  const { bandwidth = 0, maxBytes = 0, accept = [] } = { ...uploads, ...patch };
   return {
-    ...(typeof next.bandwidth === "number" && next.bandwidth > 0 && { bandwidth: next.bandwidth }),
-    ...(typeof next.maxBytes === "number" && next.maxBytes > 0 && { maxBytes: next.maxBytes }),
-    ...(Array.isArray(next.accept) && next.accept.length > 0 && { accept: next.accept }),
+    ...(bandwidth > 0 && { bandwidth }),
+    ...(maxBytes > 0 && { maxBytes }),
+    ...(accept.length > 0 && { accept }),
   };
 }
 
@@ -74,8 +71,7 @@ export function UploadsPanel({
   const uploads = uploadsOf(server);
   const speed = uploads.bandwidth ?? 0;
   const limit = uploads.maxBytes ?? 0;
-  const set = (patch: Parameters<typeof withCondition>[1]): void =>
-    setUploads(server, withCondition(uploads, patch));
+  const set = (patch: UploadConditions): void => setUploads(server, withCondition(uploads, patch));
   return (
     <NetworkCard icon={Upload} tone="text-syntax-function" title="Uploads" note="request bodies">
       <fieldset

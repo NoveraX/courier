@@ -16,7 +16,8 @@ import { readNetworkConfig, readOneOf, readStringRecord } from "./payload";
 import { updateRouteStats } from "./route-stats";
 
 const EXPERIMENT_EVENTS = ["started", "stopped", "auto-halted"] as const;
-const ROUTE_SOURCES = ["auto", "override", "scenario", "upstream", "fixtures"] as const;
+/** What can answer a mock's route, as its request events name it. */
+export const ROUTE_SOURCES = ["auto", "override", "scenario", "upstream", "fixtures"] as const;
 
 /* A row an upload's reports made keeps its place and time, and its body is whole once the request starts. */
 export function handleRequestStart(serverId: string, event: MockEvent): void {

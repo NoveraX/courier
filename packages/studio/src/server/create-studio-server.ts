@@ -7,8 +7,8 @@ import { findTransformCacheDirectory } from "@noverax/courier-studio-core/config
 import express from "express";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
-import { createDemoLimits } from "./demo/demo-limits";
-import { DEMO_MAX_MESSAGE_BYTES, demoVisitors } from "./demo/demo-visitors";
+import { demoServing } from "./demo/demo-serving";
+import { demoVisitors } from "./demo/demo-visitors";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
@@ -63,6 +63,10 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   /* Nothing a caller needs, and it names what to probe for. */
   app.disable("x-powered-by");
   app.use(securityHeaders);
+  /* A public demo counts what its visitors send, on the sockets and the API alike. */
+  const serving = demo ? demoServing() : undefined;
+  const demoLimits = serving?.limits;
+  if (serving) app.use(serving.httpGuard);
   const httpServer = createServer(app);
   const startup = createStudioStartup(httpServer, startupOptions);
   const policy = createStudioOriginPolicy({
@@ -73,15 +77,13 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const { io, uiNamespace, runtimeNamespace } = createStudioSockets(
     httpServer,
     policy,
-    demo ? { maxMessageBytes: DEMO_MAX_MESSAGE_BYTES, compress: true } : {},
+    serving?.sockets,
   );
 
   // ── Binding table + /runtime namespace (config-driven routing) ─────────────
 
   const bindingTable = new BindingTable();
   const playgroundRouter = createRuntimePlaygroundRouter({ bindingTable, uiNamespace });
-  /* A public demo counts what its visitors send, on the sockets and the API alike. */
-  const demoLimits = demo ? createDemoLimits() : undefined;
   /* Read on each event, by which time the project below exists. */
   const nameSource = createConfigSourceNamer(() => project.snapshot().running?.config);
   /* The loader resolves links; every path shown is relative to the same root. */

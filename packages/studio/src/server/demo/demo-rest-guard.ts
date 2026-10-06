@@ -7,15 +7,16 @@ import type { NextFunction, Request, RequestHandler, Response } from "express-se
 import type { StudioToken } from "../studio-token";
 import { TOKEN_HEADER } from "../token-guard";
 import type { DemoLimits } from "./demo-limits";
+import { visitorAddress } from "./visitor-address";
 
 /** The largest body a demo's API reads: a spec pasted in, the log exported. */
 export const DEMO_MAX_BODY = 16 * 1024 * 1024;
 
 /**
  * Count each request to Studio's API from a caller without the token toward
- * one budget for every visitor, and answer one past it with 429 and
- * `STUDIO_DEMO_BUSY`. Parsing a spec or generating its code is work every
- * visitor waits on; a caller with the token is not counted.
+ * its address's budget and every visitor's, and answer one past either with
+ * 429 and `STUDIO_DEMO_BUSY`. Parsing a spec or generating its code is work
+ * every visitor waits on; a caller with the token is not counted.
  *
  * @param token - The project's token
  * @param limits - The visitors' counts
@@ -31,7 +32,11 @@ export function demoRestGuard(token: StudioToken, limits: DemoLimits): RequestHa
       next();
       return;
     }
-    const refusal = limits.take("*", "rest");
+    const address = visitorAddress({
+      peer: req.socket.remoteAddress,
+      forwardedFor: req.headers["x-forwarded-for"],
+    });
+    const refusal = limits.take({ address }, "rest");
     if (refusal === null) next();
     else res.status(429).json({ error: refusal, code: "STUDIO_DEMO_BUSY" });
   };

@@ -1,6 +1,7 @@
 import type { Server as HttpServer, IncomingMessage, ServerResponse } from "node:http";
 import { createLogger } from "@noverax/courier";
 import { type Namespace, type Socket, Server as SocketIOServer } from "socket.io";
+import type { CountedSocket, DemoConnections } from "./demo/demo-connections";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { messageOf } from "./message-of";
 import type { StudioOriginPolicy } from "./studio-origin";
@@ -17,6 +18,8 @@ export interface StudioSocketOptions {
    * Off unless given — a page on this machine gains nothing from it.
    */
   compress?: boolean | undefined;
+  /** The sockets a public demo counts, refusing a new one past its visitors' share. */
+  connections?: DemoConnections | undefined;
 }
 
 /* Compressing a message this small costs more than it saves. */
@@ -58,9 +61,12 @@ export interface StudioSockets {
 export function createStudioSockets(
   httpServer: HttpServer,
   policy: StudioOriginPolicy,
-  { maxMessageBytes = MAX_MESSAGE_BYTES, compress = false }: StudioSocketOptions = {},
+  { maxMessageBytes = MAX_MESSAGE_BYTES, compress = false, connections }: StudioSocketOptions = {},
 ): StudioSockets {
   const io = new SocketIOServer(httpServer, {
+    ...(connections && {
+      allowRequest: (req, done) => done(null, connections.admits(req)),
+    }),
     cors: {
       origin: (origin, callback) => callback(null, policy.isRuntimeCaller(origin, undefined)),
       methods: ["GET", "POST"],
@@ -69,6 +75,7 @@ export function createStudioSockets(
     perMessageDeflate: compress && { threshold: COMPRESS_FROM_BYTES },
     serveClient: false,
   });
+  if (connections) io.engine.on("connection", (socket: CountedSocket) => connections.count(socket));
   /* The handshake, every polling request after it, and the upgrade to a WebSocket. */
   io.engine.use((req: IncomingMessage, _res: ServerResponse, next: (err?: Error) => void) => {
     const { origin, host } = req.headers;

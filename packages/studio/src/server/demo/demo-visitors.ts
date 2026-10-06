@@ -2,7 +2,7 @@
  * What a visitor of a public demo may send from a page without the token.
  */
 
-import type { VisitorDecision, VisitorPolicy } from "../ui-token-guard";
+import type { VisitorDecision, VisitorPage, VisitorPolicy } from "../ui-token-guard";
 import { WRITING_EVENTS } from "../ui-token-guard";
 import { demoCommandProblem } from "./demo-command-bounds";
 import { createDemoLimits, type DemoLimits } from "./demo-limits";
@@ -66,7 +66,11 @@ export function demoVisitors({
       : null;
   };
   /* Each check runs only when the ones before it pass, so a refused event is not counted. */
-  const decide = (pageId: string, event: string, args: readonly unknown[]): VisitorDecision => {
+  const decide = (
+    visitor: VisitorPage,
+    event: string,
+    args: readonly unknown[],
+  ): VisitorDecision => {
     switch (event) {
       case "playground:history:save":
         return DROP;
@@ -74,21 +78,23 @@ export function demoVisitors({
         return RUN;
       case "playground:exec":
         return verdict(
-          sizeProblem(args, DEMO_MAX_PAYLOAD) ?? openProblem(pageId) ?? limits.take(pageId, "send"),
+          sizeProblem(args, DEMO_MAX_PAYLOAD) ??
+            openProblem(visitor.page) ??
+            limits.take(visitor, "send"),
         );
       case "playground:write":
-        return verdict(sizeProblem(args, DEMO_MAX_PAYLOAD) ?? limits.take(pageId, "send"));
+        return verdict(sizeProblem(args, DEMO_MAX_PAYLOAD) ?? limits.take(visitor, "send"));
       case "mock:command":
         return verdict(
           sizeProblem(args, DEMO_MAX_COMMAND) ??
             demoCommandProblem(args[0]) ??
-            limits.take(pageId, "command"),
+            limits.take(visitor, "command"),
         );
       case "mock:managed":
-        return verdict(limits.take(pageId, "lifecycle"));
+        return verdict(limits.take(visitor, "lifecycle"));
       case "mock:body":
       case "request:body":
-        return verdict(limits.take(pageId, "body"));
+        return verdict(limits.take(visitor, "body"));
       default:
         return WRITING_EVENTS.has(event) ? { kind: "refuse", reason: DEMO_SHARED_REFUSAL } : RUN;
     }

@@ -419,6 +419,23 @@ describe("uploads", () => {
     expect(sent("mock:network:set").at(-1)).not.toHaveProperty("config.uploads.bandwidth");
   });
 
+  it("does not put back types set elsewhere while the field held focus", async () => {
+    serve({ networkConfig: { latency: 0, errorRate: 0, uploads: { accept: ["image/*"] } } });
+    await openShell("/mocks/network");
+    const field = uploads().getByRole("textbox", { name: "File types" });
+
+    await settle(() => field.focus());
+    await settle(() =>
+      useMockStore.getState().updateServer("api-mock", {
+        networkConfig: { latency: 0, errorRate: 0, uploads: {} },
+      }),
+    );
+    await settle(() => field.blur());
+
+    expect(sent("mock:network:set")).toEqual([]);
+    expect((field as HTMLInputElement).value).toBe("");
+  });
+
   it("shows a limit the mocks file set among the presets, chosen", async () => {
     serve({ networkConfig: { latency: 0, errorRate: 0, uploads: { maxBytes: 2_097_152 } } });
     await openShell("/mocks/network");

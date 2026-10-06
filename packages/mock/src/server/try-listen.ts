@@ -47,6 +47,7 @@ function addressInUse(host: string, port: number): NodeJS.ErrnoException {
  * @param hostname - Where to listen; `localhost` means loopback only
  * @param onServer - Receives the Node server once it listens
  * @param retries - How many ports above `port` to try when it is taken
+ * @param avoid - Ports the search passes over without trying them: ones other servers were given
  * @returns The port listened on and the URL to reach it at
  * @throws The listen error, EADDRINUSE included once no retry is left
  *
@@ -64,6 +65,7 @@ export function tryListen(
   hostname: string,
   onServer: (server: ServerType) => void,
   retries: number = MAX_RETRIES,
+  avoid: ReadonlySet<number> = new Set(),
 ): Promise<{ port: number; url: string }> {
   const bind = hostname === "localhost" ? "127.0.0.1" : hostname;
   const shown = WILDCARDS.has(hostname) ? "localhost" : bracketed(hostname);
@@ -80,6 +82,12 @@ export function tryListen(
     };
 
     const tryPort = async (currentPort: number): Promise<void> => {
+      /* A port given to another server is skipped while searching, never when it is the one asked for. */
+      if (attempt > 0 && avoid.has(currentPort) && attempt < retries) {
+        attempt++;
+        void tryPort(currentPort + 1);
+        return;
+      }
       const answering =
         currentPort === 0 ? null : await answeringAddress(currentPort, reachedAt(hostname));
       if (answering !== null) {

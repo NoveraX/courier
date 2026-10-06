@@ -9,8 +9,7 @@
  */
 
 import { messageOf } from "../message-of";
-import { allocatePort } from "./port-allocator";
-import type { ProcessManager, ServerState } from "./types";
+import type { ProcessManager, ServerState, SpawnRequest } from "./types";
 
 export interface ServerOpsContext {
   servers: Map<string, ServerState>;
@@ -48,16 +47,21 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
     return run;
   }
 
-  /** A free port for a mock whose port Studio assigns, clear of every other mock's. */
-  async function portToListenOn(state: ServerState): Promise<number> {
-    if (state.portDeclared) return state.configuredPort;
+  /* What a mock listens on: the port the developer named, exactly, or the first
+     free one from the port Studio assigned. The worker takes that one as it
+     binds, passing over every other mock's port, so nothing checks a port
+     first and loses it to another process before it listens. */
+  function portRequest(
+    state: ServerState,
+  ): Pick<SpawnRequest, "port" | "strictPort" | "avoidPorts"> {
+    if (state.portDeclared) return { port: state.configuredPort, strictPort: true, avoidPorts: [] };
     const avoid = new Set<number>(ctx.reservedPorts());
     for (const other of servers.values()) {
       if (other === state) continue;
       avoid.add(other.configuredPort);
       if (other.actualPort) avoid.add(other.actualPort);
     }
-    return allocatePort(state.configuredPort, avoid);
+    return { port: state.configuredPort, strictPort: false, avoidPorts: [...avoid] };
   }
 
   async function start(serverId: string): Promise<void> {
@@ -65,10 +69,8 @@ export function createServerOps(ctx: ServerOpsContext): ServerOps {
     if (ctx.isClosed() || !state || processManager.has(serverId)) return;
     updateAndEmit(serverId, { status: "starting", origin: "studio", lastError: undefined });
     try {
-      const port = await portToListenOn(state);
-      if (ctx.isClosed()) return;
       const { mocksFile, mockKey } = state;
-      state.pid = processManager.spawn({ serverId, mocksFile, mockKey, port }).pid;
+      state.pid = processManager.spawn({ serverId, mocksFile, mockKey, ...portRequest(state) }).pid;
     } catch (err) {
       updateAndEmit(serverId, {
         status: "crashed",

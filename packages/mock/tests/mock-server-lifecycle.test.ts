@@ -81,6 +81,25 @@ describe("where the mock server listens", () => {
     expect(Number(new URL(next).port)).toBeGreaterThan(taken);
   });
 
+  it("passes over the ports given to other servers while it looks for a free one", async () => {
+    const { url } = await boot();
+    const taken = Number(new URL(url).port);
+
+    const { url: next } = await boot({ port: taken, avoidPorts: [taken + 1] });
+
+    expect(Number(new URL(next).port)).toBeGreaterThan(taken + 1);
+  });
+
+  it("takes the port it was asked for though it is among the ones to pass over", async () => {
+    const { url } = await boot();
+    const free = Number(new URL(url).port);
+    await running.pop()?.stop();
+
+    const { url: asked } = await boot({ port: free, avoidPorts: [free] });
+
+    expect(Number(new URL(asked).port)).toBe(free);
+  });
+
   it.skipIf(!ipv6Loopback)("counts a port another process holds on [::1] as taken", async () => {
     const other = createServer();
     await new Promise<void>((resolve) =>

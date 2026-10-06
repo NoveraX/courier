@@ -78,7 +78,14 @@ async function start(
 ): Promise<number> {
   const port = await freePort();
   const before = events.onReady.mock.calls.length;
-  pm.spawn({ serverId: "apiMock", mocksFile, mockKey: "apiMock", port });
+  pm.spawn({
+    serverId: "apiMock",
+    mocksFile,
+    mockKey: "apiMock",
+    port,
+    strictPort: true,
+    avoidPorts: [],
+  });
   await vi.waitFor(() => expect(events.onReady.mock.calls.length).toBe(before + 1), {
     timeout: 15_000,
   });

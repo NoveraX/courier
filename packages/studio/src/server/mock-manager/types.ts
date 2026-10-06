@@ -78,8 +78,12 @@ export interface SpawnRequest {
   /** The `courier.mocks.*` the worker loads the mock from. */
   mocksFile: string;
   mockKey: string;
-  /** Listened on exactly; a taken one is reported by the worker. */
+  /** The port to listen on, or to start the search for a free one from. */
   port: number;
+  /** Whether the developer named `port`, which is then held exactly and a taken one reported. */
+  strictPort: boolean;
+  /** Ports given to the project's other mocks, which the search for a free one passes over. */
+  avoidPorts: number[];
 }
 
 /** The worker processes of Studio's managed mocks, by mock; see `createProcessManager`. */

@@ -137,6 +137,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     },
     config?.strictPort,
     streams.stopAll,
+    config?.avoidPorts,
   );
 
   const mockServer: MockServer = {

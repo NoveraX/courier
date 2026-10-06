@@ -125,7 +125,14 @@ async function started(): Promise<string> {
   });
   cleanups.push(() => pm.dispose());
   const port = await freePort();
-  pm.spawn({ serverId: "petMock", mocksFile: project(), mockKey: "petMock", port });
+  pm.spawn({
+    serverId: "petMock",
+    mocksFile: project(),
+    mockKey: "petMock",
+    port,
+    strictPort: true,
+    avoidPorts: [],
+  });
   await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 20_000 });
   return `http://127.0.0.1:${port}/api/v3`;
 }

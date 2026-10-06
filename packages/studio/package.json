@@ -29,6 +29,7 @@
   },
   "sideEffects": [
     "./lib/cli.js",
+    "./lib/format-worker.js",
     "./lib/mock-worker.js"
   ],
   "bin": {
@@ -164,6 +165,7 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@types/compression": "^1.8.1",
     "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
     "rollup": "^4.63.4"
   }
 }

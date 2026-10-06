@@ -115,16 +115,22 @@ export function FilePlanSections({
           it.
         </p>
       )}
-      {plan.formatting?.problem ? (
+      {(plan.formatting?.formattedWith.length ?? 0) > 0 && (
+        <p className="m-0 text-small text-fg-subtle">
+          Formatted with {toolList(plan.formatting?.formattedWith ?? [])}, as the project formats
+          its code.
+        </p>
+      )}
+      {plan.formatting?.problem && (
         <p className="m-0 text-small text-warn">{plan.formatting.problem}.</p>
-      ) : (
-        (plan.formatting?.formattedWith.length ?? 0) > 0 && (
-          <p className="m-0 text-small text-fg-subtle">
-            Formatted with {plan.formatting?.formattedWith.join(" and ")}, as the project formats
-            its code.
-          </p>
-        )
       )}
     </div>
   );
+}
+
+/* The tools as a sentence names them: `Biome`, `ESLint and Prettier`, `Biome, ESLint and Prettier`. */
+function toolList(tools: readonly string[]): string {
+  return tools.length > 1
+    ? `${tools.slice(0, -1).join(", ")} and ${tools.at(-1)}`
+    : (tools[0] ?? "");
 }

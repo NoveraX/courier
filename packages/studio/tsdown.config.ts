@@ -9,6 +9,7 @@ export default defineConfig({
     server: "src/server/index.ts",
     cli: "src/cli.ts",
     "mock-worker": "src/server/mock-manager/mock-worker.ts",
+    "format-worker": "src/server/project-format/format-worker.ts",
     vite: "src/plugins/vite.ts",
     next: "src/plugins/next.ts",
     nuxt: "src/plugins/nuxt.ts",

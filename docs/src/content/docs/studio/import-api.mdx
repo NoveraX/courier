@@ -90,11 +90,14 @@ A request Studio refuses changes nothing. It is answered with `{ error }` — `4
 
 Studio writes the files the way your project formats its code, and shows them that way before you apply the change:
 
-- **Biome**, when a `biome.json` or `biome.jsonc` stands in the project or a folder above it, or its `package.json` lists `@biomejs/biome`: Studio runs the project's own Biome on each file, with your configuration — the formatter and the import sorting. Lint rules do not change the code.
-- **Prettier**, when a Prettier configuration stands there, or `package.json` lists `prettier` or has a `prettier` key: Studio runs it alone, or after Biome when Biome's formatter is off.
-- **Neither**: the files are written as Studio generates them.
+- **Biome**, when a `biome.json` or `biome.jsonc` stands in the project or a folder above it, or its `package.json` lists `@biomejs/biome`: Studio runs the project's own Biome on each file — its native program, without the Node launcher — with your configuration: the formatter and the import sorting. Lint rules do not change the code.
+- **ESLint**, when an ESLint configuration stands there — an `eslint.config.*` file, or for ESLint 8 an `.eslintrc` file or an `eslintConfig` key in `package.json`: Studio applies the fixes your rules offer, as `eslint --fix` does. A file your configuration ignores stays as it is.
+- **Prettier**, when a Prettier configuration stands there, or `package.json` lists `prettier` or has a `prettier` key: Studio runs it last, alone or after Biome when Biome's formatter is off, reading `.editorconfig`, `.prettierignore` and `.gitignore` as Prettier's command line does.
+- **None of them**: the files are written as Studio generates them.
 
-A file you edited is formatted whole when Studio merges a change into it, as your editor would format it when you save it. The change says which formatter ran, with its version. When a formatter fails on a file, or the project configures one it did not install, that file is written as Studio generated it — still correct code — and the change says why.
+Studio loads ESLint and Prettier once, from your project, in threads of their own — up to three — and keeps them between changes, so a file takes milliseconds: Petstore's eight files take about 20 ms once the tools are loaded, GitHub's 89 under a second. A configuration you change is read on the next change, and the threads go after five idle minutes. A file goes through the tools again until a pass changes nothing.
+
+A file you edited is formatted whole when Studio merges a change into it, as your editor would format it when you save it; a `courier.mocks.ts` Studio creates is formatted the same way. The change says which tools ran, with their versions. When a tool fails on a file — an ESLint configuration with no TypeScript parser cannot read TypeScript, say — the other tools still run on it, and the change says why; a tool the project configures but did not install is named the same way. A file no tool formats is still correct code.
 
 ## Specifications on a private network
 

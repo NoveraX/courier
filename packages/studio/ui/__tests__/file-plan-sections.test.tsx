@@ -62,6 +62,26 @@ describe("a write's file plan", () => {
     expect(screen.queryByText(/Formatted with/)).toBeNull();
   });
 
+  it("names every tool that ran, and why one of them did not format a file", () => {
+    const formatting = {
+      formattedWith: ["Biome 2.5.14", "ESLint 10.12.0", "Prettier 3.9.8"],
+      problem: "src/api/pets/index.ts was not formatted with ESLint: it cannot read the file",
+    };
+
+    render(<FilePlanSections plan={{ ...PLAN, formatting }} confirmed={[]} onToggle={() => {}} />);
+
+    expect(
+      screen.getByText(
+        "Formatted with Biome 2.5.14, ESLint 10.12.0 and Prettier 3.9.8, as the project formats its code.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "src/api/pets/index.ts was not formatted with ESLint: it cannot read the file.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("says nothing of formatting in a project that has no formatter", () => {
     const formatting = { formattedWith: [], problem: null };
 

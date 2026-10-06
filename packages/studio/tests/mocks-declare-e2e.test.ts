@@ -125,7 +125,7 @@ function declaration(key: string, port: number | null, autoStart = false) {
 }
 
 describe("adding mocks through Studio", () => {
-  it("creates courier.mocks.ts from a preview, and the mock it declares starts", async () => {
+  it("creates courier.mocks.ts from a preview, formatted as the project formats its code, and the mock it declares starts", async () => {
     const url = await start(project());
     const mockPort = await freePort();
 
@@ -135,6 +135,11 @@ describe("adding mocks through Studio", () => {
       target: "courier.mocks.ts",
       creates: true,
       baseHash: null,
+      warnings: expect.arrayContaining([
+        expect.stringMatching(
+          /^It is formatted with Biome \d+\.\d+\.\d+, as the project formats its code\.$/,
+        ),
+      ]),
     });
 
     const applied = await post(url, "/api/mocks/declare/apply", {
@@ -150,7 +155,7 @@ describe("adding mocks through Studio", () => {
       warnings: [],
     });
     expect(readFileSync(join(root, "courier.mocks.ts"), "utf8")).toBe(
-      'import { defineMocks, defineMockServer } from "@noverax/courier-mock";\n' +
+      'import { defineMockServer, defineMocks } from "@noverax/courier-mock";\n' +
         'import courierConfig from "./courier.config";\n\n' +
         "export default defineMocks({\n" +
         "  apiMock: defineMockServer({\n" +
@@ -368,7 +373,7 @@ describe("adding mocks through Studio", () => {
     });
     expect(typeErrors(root)).toEqual([]);
     expect(readFileSync(join(root, "courier.mocks.ts"), "utf8")).toBe(
-      'import { defineMocks, defineMockServer } from "@noverax/courier-mock";\n' +
+      'import { defineMockServer, defineMocks } from "@noverax/courier-mock";\n' +
         'import courierConfig from "./courier.config.js";\n\n' +
         "export default defineMocks({\n" +
         "  apiMock: defineMockServer({ source: courierConfig.sources.api }),\n" +

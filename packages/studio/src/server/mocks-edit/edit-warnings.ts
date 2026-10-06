@@ -1,4 +1,5 @@
 import type { LoadedCourierConfig } from "../config-loader";
+import type { PlanFormatting } from "../import-files/file-plan-types";
 import { portProblem } from "../mock-manager/port-problem";
 import type { MockSummary } from "../mock-manager/types";
 import { isRecord } from "./is-record";
@@ -15,6 +16,8 @@ export interface WarningInput {
   /** The running mocks the edit restarts: those whose declaration, or what it uses, it changes. */
   restarting: readonly string[];
   creates: boolean;
+  /** How a created file was formatted; `null` for an edit. */
+  formatting?: PlanFormatting | null | undefined;
   mockBasePort: number;
 }
 
@@ -32,9 +35,22 @@ export interface WarningInput {
 export async function editWarnings(input: WarningInput): Promise<string[]> {
   const warnings: string[] = [];
   if (input.creates) warnings.push(`Studio creates ${input.target}.`);
+  warnings.push(...formattingNotes(input.formatting));
   warnings.push(...restartWarning(input.restarting));
   for (const request of input.requests) warnings.push(...(await requestWarnings(request, input)));
   return warnings;
+}
+
+/* How the created file is formatted: by the project's tools, or as composed and why. */
+function formattingNotes(formatting: PlanFormatting | null | undefined): string[] {
+  if (!formatting) return [];
+  const { formattedWith, problem } = formatting;
+  const tools =
+    formattedWith.length > 1
+      ? `${formattedWith.slice(0, -1).join(", ")} and ${formattedWith.at(-1)}`
+      : formattedWith[0];
+  const notes = tools ? [`It is formatted with ${tools}, as the project formats its code.`] : [];
+  return problem === null ? notes : [...notes, `${problem}.`];
 }
 
 async function requestWarnings(request: MockDeclaration, input: WarningInput): Promise<string[]> {

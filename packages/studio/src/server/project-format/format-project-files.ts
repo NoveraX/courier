@@ -1,14 +1,16 @@
 import { resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { type FormatterTool, findFormatters, type ProjectFormatters } from "./find-formatters";
-import { runFormatter } from "./run-formatter";
+import { formatInThread } from "./formatter-host";
+import { runBiome } from "./run-biome";
 
 const log = createLogger("Studio");
 
-/* Files formatted at once: each is a process of its own. */
+/* Files formatted at once: Biome runs as a process for each. */
 const PARALLEL = 8;
 /* Biome does not always reach its own layout in one pass: a comment inside a type
-   argument moves again on the second. A file is formatted until it stops changing. */
+   argument moves again on the second; and one tool's fixes may move what another
+   laid out. A file goes through the tools until it stops changing. */
 const PASSES = 3;
 
 /** A file Studio composed, by its project-relative path. */
@@ -29,11 +31,13 @@ export interface FormatOutcome<TFile extends ComposedFile> {
 
 /**
  * Format files Studio composed as the project formats its code, before
- * anything reads, shows or signs them: with the Biome and the Prettier the
- * project installed, its own configuration and ignore files. A project
- * that formats with neither gets the files as composed. A file a tool fails
- * on keeps the text it had, and the failure is reported, never thrown: a
- * file that is not formatted is still correct code.
+ * anything reads, shows or signs them: with the Biome, the ESLint and the
+ * Prettier the project installed, its own configuration and ignore files.
+ * ESLint and Prettier stay loaded between files and between changes, so a
+ * file takes milliseconds. A project that uses none of them gets the files
+ * as composed. A file a tool fails on keeps the text it had, and the
+ * failure is reported, never thrown: a file that is not formatted is still
+ * correct code.
  *
  * @param root - The project root, symlinks resolved
  * @param files - The files, by project-relative path
@@ -57,34 +61,57 @@ export async function formatProjectFiles<TFile extends ComposedFile>(
   }
   let problem: string | null = missing;
   const formatOne = async (file: TFile): Promise<TFile> => {
-    let content = file.content;
-    try {
-      for (const tool of tools)
-        content = await settled(tool, resolve(root, file.path), content, root);
-    } catch (error) {
-      log.debug(`${file.path} is left as composed`, error);
-      problem ??= `${file.path} was not formatted: ${error instanceof Error ? error.message : String(error)}`;
-      return file;
+    const path = resolve(root, file.path);
+    const { content, failure } = await settled(formatters, path, file.content, root);
+    if (failure !== null) {
+      log.debug(`${file.path} was not formatted with ${failure}`);
+      problem ??= `${file.path} was not formatted with ${failure}`;
     }
     return content === file.content ? file : { ...file, content };
   };
   return { files: await inParallel(files, formatOne), formattedWith, problem };
 }
 
-/* The text as the tool leaves it once another pass changes nothing. */
-async function settled(
+/* A text after one tool: Biome as its own program, ESLint and Prettier in the project's threads. */
+function runTool(
   tool: FormatterTool,
   path: string,
   text: string,
   root: string,
+  stamp: string,
 ): Promise<string> {
+  if (tool.name === "Biome") return runBiome(tool.command, path, text, root);
+  return formatInThread(root, stamp, { tool: tool.name, module: tool.module, root, path, text });
+}
+
+/* The text as the tools leave it once another pass through them changes nothing. A tool
+   that fails on the file is left out of the rest, and the others still run: a pass is
+   confirmed where Biome runs, which does not always settle in one, or tools follow each
+   other. */
+async function settled(
+  { tools, stamp }: ProjectFormatters,
+  path: string,
+  text: string,
+  root: string,
+): Promise<{ content: string; failure: string | null }> {
+  const failed = new Set<FormatterTool>();
+  let failure: string | null = null;
+  const passes = tools.length > 1 || tools.some((tool) => tool.name === "Biome") ? PASSES : 1;
   let current = text;
-  for (let pass = 0; pass < PASSES; pass++) {
-    const next = await runFormatter(tool, path, current, root);
+  for (let pass = 0; pass < passes; pass++) {
+    let next = current;
+    for (const tool of tools.filter((each) => !failed.has(each))) {
+      try {
+        next = await runTool(tool, path, next, root, stamp);
+      } catch (error) {
+        failed.add(tool);
+        failure ??= `${tool.name}: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
     if (next === current) break;
     current = next;
   }
-  return current;
+  return { content: current, failure };
 }
 
 /* Each item through `run`, at most PARALLEL at a time, results in the items' order. */

@@ -2,6 +2,9 @@ import { jsxCells, jsxObjects, jsxRows, jsxText } from "./jsx-literals"
 
 const CALLOUT_OPEN = /^<Callout\b(.*)>\s*$/
 const MODE_BADGE = /\s*<ModeBadge mode="(\w+)" \/>/g
+/* The upload guide's live lab runs on the page only; the Markdown says what runs there. */
+const UPLOAD_LAB =
+  "*On the site, a live upload runs here: drawn as the browser reports its progress, and through `smoothProgress`.*"
 
 function withoutMetadata(lines: readonly string[]): string[] {
   const start = lines.findIndex((line) => line.startsWith("export const metadata"))
@@ -41,7 +44,8 @@ function tableLines(source: string): string[] {
  * A docs page as plain Markdown, to read or hand to an assistant: its title
  * and description on top, its metadata export gone, a callout as a quote
  * under its title, tabbed code as one fence a tab, a comparison as a
- * Markdown table, and a mode badge as words — code fences left as written.
+ * Markdown table, a mode badge as words, and the upload lab as a line saying
+ * what runs there — code fences left as written.
  *
  * @param source - The page's MDX source
  * @param title - The page's title
@@ -76,6 +80,10 @@ export function pageMarkdown(source: string, title: string, description: string)
       const block = lines.slice(i, end + 1).join("\n")
       out.push(...(line.startsWith("<CodeGroup") ? codeGroupLines(block) : tableLines(block)))
       i = end
+      continue
+    }
+    if (line.trim() === "<UploadLab />") {
+      out.push(UPLOAD_LAB)
       continue
     }
     out.push(line.replace(MODE_BADGE, (_, mode: string) => ` (${mode} mode)`))

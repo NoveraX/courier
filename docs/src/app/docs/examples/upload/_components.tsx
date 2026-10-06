@@ -1,6 +1,7 @@
 "use client"
 
 import { smoothProgress } from "@noverax/courier"
+import Link from "next/link"
 import { useState } from "react"
 
 import { caller } from "@/lib/caller"
@@ -94,8 +95,14 @@ export function ProgressUploadDemo() {
           />
           <p className="m-0 text-[11.5px] leading-[1.5] text-fg-subtle">
             Both bars follow the same upload. On localhost it is near instant: throttle the network
-            in DevTools to watch the browser report in steps and the smoothed bar glide between
-            them.
+            in DevTools, or{" "}
+            <Link
+              href="/docs/advanced/upload#a-bar-that-moves-smoothly"
+              className="text-brand hover:underline"
+            >
+              send one in the upload guide's lab
+            </Link>
+            , which reads it at the pace you pick.
           </p>
         </>
       }

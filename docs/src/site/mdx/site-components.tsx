@@ -1,5 +1,6 @@
 import type { MDXComponents } from "mdx/types"
 
+import { UploadLab } from "@/site/upload-lab/upload-lab"
 import { Callout } from "./callout"
 import { CodeGroup } from "./code-group"
 import { ComparisonTable } from "./comparison-table"
@@ -12,7 +13,8 @@ import { SiteLink } from "./site-link"
 /**
  * How a page's MDX renders on the site: headings with links to themselves,
  * text in the site's type, fenced code as code panels, tables, and the
- * components pages use — Callout, CodeGroup, ComparisonTable, ModeBadge.
+ * components pages use — Callout, CodeGroup, ComparisonTable, ModeBadge,
+ * and the upload guide's live UploadLab.
  * Passed to a page's content as `components`, they replace the ones the
  * MDX provider gives.
  *
@@ -76,4 +78,5 @@ export const SITE_COMPONENTS: MDXComponents = {
   CodeGroup,
   ComparisonTable,
   ModeBadge,
+  UploadLab,
 }

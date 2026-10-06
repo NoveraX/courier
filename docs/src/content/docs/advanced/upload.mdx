@@ -132,6 +132,10 @@ export async function uploadAvatar(form: FormData, setProgress: (percent: number
 }
 ```
 
+Send a file below to see both at once. Your browser uploads it to this site, which reads it at the pace you pick, as a slow link would. The amber bar moves as the browser reports progress; the blue one takes the same reports through `smoothProgress`.
+
+<UploadLab />
+
 Progress counts the bytes handed to the network, as the browser or the runtime reports them. They reach the server a moment later — the platform buffers them on the way — so 100% comes a little before the answer does, and an upload to a slow server can rest at 100% while the server reads the last of it. Show the wait after 100% as such — "Processing…" — until the call resolves.
 
 ### Progress in proxy mode

@@ -25,6 +25,17 @@ async function users(): Promise<{ status: number; body: unknown }> {
   return { status: res.status, body: await res.json().catch(() => null) };
 }
 
+/* A file uploaded to the mock as a browser's form sends it: the status, and what the mock said. */
+async function upload(name: string, type: string, bytes: number) {
+  const form = new FormData();
+  form.append("file", new File([new Uint8Array(bytes)], name, { type }));
+  const res = await fetch(`http://127.0.0.1:${studio.mockPort}/files`, {
+    method: "POST",
+    body: form,
+  });
+  return { status: res.status, body: await res.json().catch(() => null) };
+}
+
 async function openMocks(page: Page, tab?: string): Promise<void> {
   await page.goto(studio.link);
   await page.getByRole("link", { name: "Mocks" }).click();
@@ -82,4 +93,47 @@ test("fails every request while the network is down, and recovers", async ({ pag
   await page.locator("main").getByText("Stable", { exact: true }).first().click();
 
   await expect.poll(async () => (await users()).status).toBe(200);
+});
+
+test("takes uploads as the Uploads card says, and shows a slow one in the log as it arrives", async ({
+  page,
+}) => {
+  await openMocks(page, "Network");
+  const uploads = page.getByRole("region", { name: "Uploads" });
+  await uploads
+    .getByRole("group", { name: "Size limit" })
+    .getByRole("button", { name: "1 MB" })
+    .click();
+  await uploads.getByRole("textbox", { name: "File types" }).fill("image/*");
+  await uploads.getByRole("textbox", { name: "File types" }).press("Enter");
+  await uploads
+    .getByRole("group", { name: "Upload speed" })
+    .getByRole("button", { name: "512 Kbps" })
+    .click();
+
+  await expect
+    .poll(async () => (await upload("scan.png", "image/png", 2_097_152)).status)
+    .toBe(413);
+  expect(await upload("notes.txt", "text/plain", 1024)).toEqual({
+    status: 415,
+    body: { error: "notes.txt (text/plain) is not a type the mock takes: image/*" },
+  });
+  const slow = upload("photo.png", "image/png", 196_608);
+  await page.getByRole("link", { name: "Logs", exact: true }).first().click();
+  await expect(
+    page
+      .locator("main")
+      .getByText(/^↑\d+%$/)
+      .first(),
+  ).toBeVisible();
+  expect((await slow).status).toBe(200);
+
+  await openMocks(page, "Network");
+  await page
+    .getByRole("region", { name: "Network condition" })
+    .getByRole("button", { name: /Stop/ })
+    .click();
+  await expect
+    .poll(async () => (await upload("scan.png", "image/png", 2_097_152)).status)
+    .toBe(200);
 });

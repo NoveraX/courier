@@ -5,6 +5,7 @@
  * `MockServer` and `MockServerOptions` from there.
  */
 
+import type { HeartbeatConfig } from "@noverax/courier/internal";
 import type { Hono } from "hono";
 
 import type { NetworkState } from "../network/state";
@@ -59,11 +60,15 @@ export interface MockServerOptions {
    *   `string[]` enforces an exact-match allowlist; rejected upgrades return
    *   HTTP 403.
    * - `maxPayload` — maximum WebSocket frame size in bytes (default 1 MiB).
+   * - `heartbeat` — how often each socket is pinged, and how long the mock
+   *   waits for the pong before it closes the socket with 4408 (default
+   *   every 25 s, 10 s to answer, as a Courier server).
    */
   ws?:
     | {
         allowedOrigins?: readonly string[] | undefined;
         maxPayload?: number | undefined;
+        heartbeat?: HeartbeatConfig | undefined;
       }
     | undefined;
   /** The calls the mock leaves to its source's own server, or answers with recordings of it */

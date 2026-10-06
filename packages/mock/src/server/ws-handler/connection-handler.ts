@@ -1,10 +1,11 @@
 import { logger } from "@noverax/courier";
-import { describeFailure } from "@noverax/courier/internal";
+import { describeFailure, type HeartbeatConfig } from "@noverax/courier/internal";
 import type { ChannelHandlers } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { MockChannelFn, MockHistoryEntry, MockRequestContext } from "../../types";
 import type { RequestHooks } from "../route-types";
+import { keepAlive } from "../ws-keep-alive";
 import { buildChannelContext, refuseOnSubscribe } from "./channel-context";
 import type { WSConnectionRegistry } from "./connection-registry";
 import {
@@ -27,6 +28,8 @@ export interface ActivateConnectionParams {
   hooks?: RequestHooks | undefined;
   registry: WSConnectionRegistry;
   scenarioState: string;
+  /** How often the socket is pinged, and how long its pong may take */
+  heartbeat?: HeartbeatConfig | undefined;
 }
 
 /**
@@ -90,10 +93,12 @@ export function activateConnection(params: ActivateConnectionParams): void {
     ended: new AbortController(),
   };
   const channelCtx = buildChannelContext(ws, topic, variables, connectionId, registry, state);
+  const alive = keepAlive(ws, params.heartbeat);
 
   ws.on("message", (raw: Buffer | string) => {
     const msg = parseMessage(ws, raw);
     if (!msg) return;
+    if (msg.type === "pong") return alive.receivedPong();
     void dispatchMessage(msg, ws, handlers, channelCtx, state, registry).catch((error: unknown) =>
       logger.warn("MockWS", `Message handling failed (${connectionId})`, error),
     );

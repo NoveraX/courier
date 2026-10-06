@@ -3,6 +3,7 @@
  * and each subscription a socket holds.
  */
 
+import type { HeartbeatConfig } from "@noverax/courier/internal";
 import type { ChannelHandlers, WSChannelContext } from "@noverax/courier/realtime";
 import type { WebSocket as NodeWebSocket } from "ws";
 import type { MockRegistry } from "../../registry";
@@ -24,6 +25,8 @@ export interface ProxyWSConfig {
   connections: WSConnectionRegistry;
   /** Told of each subscription as it opens and ends — Studio's mock logs */
   hooks?: RequestHooks | undefined;
+  /** How often each socket is pinged, and how long its pong may take */
+  heartbeat?: HeartbeatConfig | undefined;
 }
 
 /** One subscription a socket holds */

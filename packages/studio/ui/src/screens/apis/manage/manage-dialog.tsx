@@ -57,6 +57,7 @@ function Body({
       <ManagePreviewStep
         preview={manage.preview}
         consent={manage.consent}
+        regenerating={manage.regenerating}
         onToggleConfirmed={manage.toggleConfirmed}
       />
     );

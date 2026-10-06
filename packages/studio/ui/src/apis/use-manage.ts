@@ -30,8 +30,10 @@ export interface UseManageReturn extends Omit<ManageSelection, "reset"> {
   start: (source: SourceSummary, spec?: ParsedSpec) => void;
   /** Provide spec after reupload */
   provideSpec: (spec: ParsedSpec) => Promise<void>;
-  /** Request preview of pending changes */
-  requestPreview: () => Promise<void>;
+  /** Whether the plan shown writes every file again from the spec. */
+  regenerating: boolean;
+  /** Preview the changes picked; with `regenerate`, every file written again from the spec */
+  requestPreview: (regenerate?: boolean) => Promise<void>;
   /** Apply changes to disk */
   apply: () => Promise<void>;
   /** Allow a pending step of the plan, or withdraw allowing it */
@@ -119,6 +121,7 @@ export function useManage(onSuccess?: (message: string) => void): UseManageRetur
     error,
     preview: plan.preview,
     consent: plan.consent,
+    regenerating: plan.regenerating,
     start,
     provideSpec,
     requestPreview: plan.requestPreview,

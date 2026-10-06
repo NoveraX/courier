@@ -11,6 +11,7 @@ import type {
   SpecDiff,
 } from "@/features/apis/types";
 import type { FilePlanSummary, KeptReason } from "@/features/apis/types-file-plan";
+import type { ManageChange } from "@/features/apis/types-manage";
 import { post } from "@/lib/api-client";
 
 /** An import as the wizard sends it: the spec, where it came from, and the options. */
@@ -128,30 +129,28 @@ export function previewUpdate(payload: { name: string; newSpec: ParsedSpec }): P
 // ── Manage ───────────────────────────────────────────────────────────────────
 
 /**
- * Plan adding and removing endpoints of an import.
+ * Plan adding and removing endpoints of an import, or writing its files
+ * again from its spec.
  *
  * @param name - The import
  * @param spec - Its specification
- * @param toAdd - The endpoints to add, by group
- * @param toRemove - The endpoints to remove, by group
+ * @param change - The endpoints to add and remove by group, and whether every file is written again
  * @returns What adding and removing produce, and the plan for the import's files
  */
 export function previewManage(
   name: string,
   spec: ParsedSpec,
-  toAdd: Record<string, string[]>,
-  toRemove: Record<string, string[]>,
+  change: ManageChange,
 ): Promise<ManagePreviewResult> {
-  return post("/api/apis/manage/preview", { name, spec, toAdd, toRemove });
+  return post("/api/apis/manage/preview", { name, spec, ...change });
 }
 
 /**
- * Add and remove endpoints of an import as previewed.
+ * Apply a change to an import's endpoints, or write its files again, as previewed.
  *
  * @param name - The import
  * @param spec - Its specification
- * @param toAdd - The endpoints to add, by group
- * @param toRemove - The endpoints to remove, by group
+ * @param change - The change previewed
  * @param quote - The plan the user saw, and the steps they allowed
  * @returns What was written, removed and kept, and where the copies are
  * @throws {StudioRequestError} `PLAN_NOT_SEEN` without a quoted plan, `PLAN_STALE` when the files changed
@@ -159,9 +158,8 @@ export function previewManage(
 export function applyManage(
   name: string,
   spec: ParsedSpec,
-  toAdd: Record<string, string[]>,
-  toRemove: Record<string, string[]>,
+  change: ManageChange,
   quote: PlanQuote,
 ): Promise<AppliedFiles> {
-  return post("/api/apis/manage/apply", { name, spec, toAdd, toRemove, ...quote });
+  return post("/api/apis/manage/apply", { name, spec, ...change, ...quote });
 }

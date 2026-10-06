@@ -63,3 +63,13 @@ export interface ManagePreviewResult {
 }
 
 export type ManageStep = "loading" | "reupload" | "inventory" | "preview" | "applying" | "done";
+
+/** The change to an import a manage request asks for. */
+export interface ManageChange {
+  /** The endpoints to add, by group. */
+  toAdd: Record<string, string[]>;
+  /** The endpoints to remove, by group. */
+  toRemove: Record<string, string[]>;
+  /** Write every file again from the spec, keeping the user's edits, though the spec did not change. */
+  regenerate?: boolean;
+}

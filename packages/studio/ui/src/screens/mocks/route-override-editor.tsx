@@ -3,10 +3,13 @@ import { useState } from "react";
 
 import { RangeSlider } from "@/design/range-slider";
 import { delayOf } from "@/features/mocks/latency-window";
+import { withFaults } from "@/features/mocks/route-override-rules";
 import type { OverrideField } from "@/features/mocks/route-overrides";
-import { withGlobalField, withOwnField } from "@/features/mocks/route-overrides";
+import { setsAnything, withGlobalField, withOwnField } from "@/features/mocks/route-overrides";
 import { cn } from "@/lib/utils";
 import type { RouteOverride } from "@/store/mock-slice";
+import { RouteFaultsRow } from "./route-faults-row";
+import { RouteUploadRows } from "./route-upload-rows";
 
 /** What a route takes for a setting it has none of its own for. */
 export interface GlobalSettings {
@@ -57,11 +60,12 @@ function ownValue(override: RouteOverride, field: OverrideField): number | undef
 }
 
 /**
- * A route override's delay and error rate, each the route's own or the
- * global one. Moving a slider makes that setting the route's own and
- * switches the override on; the other stays as it was. A setting's reset
- * takes it back to the global one, and the last reset switches the
- * override off.
+ * A route override's delay, error rate, faults, size limit and types of
+ * file, each the route's own or the global one. Setting one makes it the
+ * route's own and switches the override on; the others stay as they were.
+ * A setting's reset — or `Global`, or an empty field — takes it back to the
+ * global one, and the last one taken back switches the override off.
+ * Faults given to a route that nothing would fail come with a rate of 100%.
  *
  * @param props - The route's override, the global settings, and what follows a settled change
  * @returns The editor
@@ -80,7 +84,7 @@ export function RouteOverrideEditor({
     setDraft(null);
     onCommit(withOwnField(override, field, value));
   };
-  const owned = FIELDS.some(({ field }) => ownValue(override, field) !== undefined);
+  const owned = setsAnything(override);
   return (
     <div className="flex flex-col gap-3.5 border-b border-line bg-bg-subtle px-4.5 py-3.5 pl-[74px]">
       {FIELDS.map((f) => {
@@ -123,6 +127,11 @@ export function RouteOverrideEditor({
           </div>
         );
       })}
+      <RouteFaultsRow
+        faults={override.faultTypes ?? []}
+        onFaults={(faults) => onCommit(withFaults(override, faults, global.rate / 100))}
+      />
+      <RouteUploadRows override={override} onCommit={onCommit} />
       {owned && (
         <button
           type="button"

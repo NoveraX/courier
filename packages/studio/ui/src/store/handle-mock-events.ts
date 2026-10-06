@@ -21,6 +21,7 @@ import {
   handleRequestStart,
 } from "./handle-mock-request-events";
 import { handleScenarioActive, handleServerConnect } from "./handle-mock-server-events";
+import { handleRequestUpload } from "./handle-request-upload";
 import { handleStoreChanges } from "./handle-store-changes";
 import type { MockEvent } from "./mock-event-types";
 import { mockServerOf } from "./mock-server-of";
@@ -61,6 +62,9 @@ export function handleMockEvent(event: MockEvent): boolean {
       break;
     case "mock:scenario:active":
       handleScenarioActive(serverId, event);
+      break;
+    case "mock:request:upload":
+      handleRequestUpload(serverId, event);
       break;
     case "mock:request:start":
       handleRequestStart(serverId, event);

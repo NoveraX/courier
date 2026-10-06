@@ -1,5 +1,6 @@
 import type { MockServerInfo, RouteOverride } from "@/store/mock-slice";
 import { delayLabel, delayOf } from "./latency-window";
+import { sizeLimitLabel } from "./upload-conditions";
 
 /** A route of the mock with its own network override, if it has one. */
 export interface OverrideRow {
@@ -8,7 +9,7 @@ export interface OverrideRow {
   path: string;
   name: string;
   override: RouteOverride;
-  /** What the override sets of its own, short: `+300ms · 50%`, `0%`, or `global` when it sets nothing. */
+  /** What the override sets of its own, short: `+300ms · 50% · 413`, `≤ 1 MB`, or `global` when it sets nothing. */
   tag: string;
   tone: "err" | "brand" | "subtle";
 }
@@ -40,8 +41,8 @@ export type OverrideField = "delay" | "rate";
 
 /**
  * Whether a route override is on and sets something of its own — a delay,
- * an error rate or faults — rather than leaving its route to the global
- * settings.
+ * an error rate, faults, a size limit or types of file — rather than
+ * leaving its route to the global settings.
  *
  * @param override - The route's override
  * @returns Whether it overrides anything
@@ -51,11 +52,24 @@ export type OverrideField = "delay" | "rate";
  * ```
  */
 export function hasOwnSettings(override: RouteOverride): boolean {
-  return override.enabled && ownsAnything(override);
+  return override.enabled && setsAnything(override);
 }
 
-function ownsAnything({ latency, errorRate, faultTypes }: RouteOverride): boolean {
-  return latency !== undefined || errorRate !== undefined || (faultTypes?.length ?? 0) > 0;
+/**
+ * Whether a route override sets anything of its own, on or off: a delay,
+ * an error rate, faults, a size limit or types of file.
+ *
+ * @param override - The route's override
+ * @returns Whether it sets something
+ * @example
+ * ```ts
+ * setsAnything({ routeId: "users:avatar", enabled: false, uploads: { maxBytes: 1024 } }); // true
+ * ```
+ */
+export function setsAnything({ latency, errorRate, faultTypes, uploads }: RouteOverride): boolean {
+  if (latency !== undefined || errorRate !== undefined || (faultTypes?.length ?? 0) > 0)
+    return true;
+  return uploads?.maxBytes !== undefined || uploads?.accept !== undefined;
 }
 
 /**
@@ -103,14 +117,17 @@ export function withGlobalField(override: RouteOverride, field: OverrideField): 
     field === "delay"
       ? { ...rest, ...(errorRate !== undefined && { errorRate }) }
       : { ...rest, ...(latency !== undefined && { latency }) };
-  return { ...kept, enabled: override.enabled && ownsAnything(kept) };
+  return { ...kept, enabled: override.enabled && setsAnything(kept) };
 }
 
 function tagOf(override: RouteOverride): Pick<OverrideRow, "tag" | "tone"> {
-  const { latency, errorRate } = override;
+  const { latency, errorRate, faultTypes, uploads } = override;
   const parts = [
     latency === undefined ? "" : `+${delayLabel(delayOf(latency)?.base ?? 0)}`,
     errorRate === undefined ? "" : `${Math.round(errorRate * 100)}%`,
+    faultTypes?.join(", ") ?? "",
+    uploads?.maxBytes === undefined ? "" : `≤ ${sizeLimitLabel(uploads.maxBytes)}`,
+    uploads?.accept === undefined ? "" : uploads.accept.join(", ") || "any type",
   ].filter(Boolean);
   if (parts.length === 0) return { tag: "global", tone: "subtle" };
   return { tag: parts.join(" · "), tone: (errorRate ?? 0) > 0 ? "err" : "brand" };

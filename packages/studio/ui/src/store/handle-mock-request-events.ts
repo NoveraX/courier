@@ -11,16 +11,17 @@ import { num, optNum, optStr, str } from "./event-helpers";
 import type { MockEvent } from "./mock-event-types";
 import { mockServerOf } from "./mock-server-of";
 import { useMockStore } from "./mock-slice";
-import type { MockServerInfo } from "./mock-slice-types";
+import type { MockRequestLog, MockServerInfo } from "./mock-slice-types";
 import { readNetworkConfig, readOneOf, readStringRecord } from "./payload";
 import { updateRouteStats } from "./route-stats";
 
 const EXPERIMENT_EVENTS = ["started", "stopped", "auto-halted"] as const;
 const ROUTE_SOURCES = ["auto", "override", "scenario", "upstream", "fixtures"] as const;
 
+/* A row an upload's reports made keeps its place and time, and its body is whole once the request starts. */
 export function handleRequestStart(serverId: string, event: MockEvent): void {
   const store = useMockStore.getState();
-  store.addLog({
+  const log: MockRequestLog = {
     id: str(event.requestId, `${Date.now()}`),
     serverId,
     timestamp: num(event.timestamp, Date.now()),
@@ -32,7 +33,22 @@ export function handleRequestStart(serverId: string, event: MockEvent): void {
     variables: event.variables,
     variablesCutFrom: optNum(event.variablesCutFrom),
     requestHeaders: readStringRecord(event.requestHeaders),
-  });
+  };
+  const index = store.logs.findIndex((known) => known.id === log.id);
+  const uploading = store.logs[index];
+  if (!uploading) {
+    store.addLog(log);
+    return;
+  }
+  const logs = [...store.logs];
+  const { upload } = uploading;
+  const whole = upload && {
+    received: upload.total ?? upload.received,
+    total: upload.total,
+    arriving: false,
+  };
+  logs[index] = { ...log, timestamp: uploading.timestamp, ...(whole && { upload: whole }) };
+  useMockStore.setState({ logs });
 }
 
 export function handleRequestEnd(serverId: string, event: MockEvent): void {

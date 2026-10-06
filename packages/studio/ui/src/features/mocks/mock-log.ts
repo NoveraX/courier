@@ -46,15 +46,13 @@ export function logsOf(logs: readonly MockRequestLog[], serverId: string): MockR
   return logs.filter((log) => log.serverId === serverId);
 }
 
-/** A failure the mock's chaos injected on purpose, by kind. */
-export type InjectedFault = "500" | "502" | "503" | "timeout" | "reset";
+/** A failure the mock's chaos injected on purpose, by kind: an error status, `timeout`, `reset` or `interrupt`. */
+export type InjectedFault = string;
 
-/* How the mock words the failures its chaos injects (createFaultError in @noverax/mock). */
-const SIMULATED = /^(?:HTTP (500|502|503)|(Request Timeout)|(Connection Reset)) \(simulated\)$/;
-
-function statusFault(status: string | undefined): InjectedFault | undefined {
-  return status === "500" || status === "502" || status === "503" ? status : undefined;
-}
+/* How the mock words the failures its chaos injects (createFaultError in @noverax/courier-mock):
+   `HTTP 413 Content Too Large (simulated)`, and a status the registry names no reason for as `HTTP 499 (simulated)`. */
+const SIMULATED =
+  /^(?:HTTP ([45]\d\d)(?: [A-Za-z' -]+)?|(Request Timeout)|(Connection Reset)|(Upload Interrupted)) \(simulated\)$/;
 
 /**
  * The kind of failure the mock's chaos injected into an answer, told apart
@@ -66,6 +64,7 @@ function statusFault(status: string | undefined): InjectedFault | undefined {
  * @example
  * ```ts
  * injectedFault({ error: "Connection Reset (simulated)" }); // "reset"
+ * injectedFault({ error: "HTTP 413 Content Too Large (simulated)" }); // "413"
  * injectedFault({ error: "HTTP 500" }); // undefined
  * ```
  */
@@ -74,5 +73,6 @@ export function injectedFault(log: Pick<MockRequestLog, "error">): InjectedFault
   if (!match) return undefined;
   if (match[2]) return "timeout";
   if (match[3]) return "reset";
-  return statusFault(match[1]);
+  if (match[4]) return "interrupt";
+  return match[1];
 }

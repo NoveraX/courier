@@ -4,6 +4,7 @@ import { isCredentialHeader } from "@/features/requests/credential-headers";
 import type { HeaderGroup, HeaderRow } from "@/features/requests/header-groups";
 import type { InspectorTabInfo } from "@/features/requests/inspector-tabs";
 import type { PayloadView } from "@/features/requests/payload-view";
+import { formatSize } from "@/lib/formatters";
 import { buildCurlSnippet } from "@/lib/snippets";
 import type { MockRequestLog } from "@/store/mock-slice";
 import { mockLogCode, mockLogTone } from "./mock-log";
@@ -35,7 +36,25 @@ export interface MockRequestView {
   bodyFile?: string | undefined;
 }
 
+/* A body still arriving, as the sheet says it: how much has come, of how much. */
+function arrivingOf(log: MockRequestLog): string | undefined {
+  const { upload } = log;
+  if (!upload?.arriving || log.status !== undefined || log.error !== undefined) return undefined;
+  const of = upload.total === undefined ? "" : ` of ${formatSize(upload.total)}`;
+  return `${formatSize(upload.received)}${of} has arrived; the mock reads the rest as it comes.`;
+}
+
 function responseOf(log: MockRequestLog): PayloadView {
+  if (arrivingOf(log) !== undefined) {
+    return {
+      empty: {
+        title: "Waiting for the upload",
+        detail: "The mock answers once all of it has arrived.",
+      },
+      chips: [],
+      issues: NONE,
+    };
+  }
   if (log.data !== undefined) {
     return {
       value: log.data,
@@ -56,6 +75,10 @@ function responseOf(log: MockRequestLog): PayloadView {
 }
 
 function requestOf(log: MockRequestLog): PayloadView {
+  const arriving = arrivingOf(log);
+  if (arriving !== undefined) {
+    return { empty: { title: "Uploading", detail: arriving }, chips: [], issues: NONE };
+  }
   const empty = log.variables === undefined || JSON.stringify(log.variables) === "{}";
   return empty
     ? {

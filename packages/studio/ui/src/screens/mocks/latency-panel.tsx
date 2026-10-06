@@ -2,12 +2,13 @@ import { Timer } from "lucide-react";
 import { useState } from "react";
 
 import { RangeSlider } from "@/design/range-slider";
-import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import { PRESET_VALUES } from "@/features/mocks/latency-config";
 import { customWindow, shapeOf } from "@/features/mocks/latency-shape";
 import type { Delay } from "@/features/mocks/latency-window";
 import { delayOf } from "@/features/mocks/latency-window";
+import { bandwidthLabel } from "@/features/mocks/network-condition";
+import { optionsWith } from "@/features/mocks/preset-options";
 import { setBandwidth, setLatency } from "@/mocks/network-commands";
 import type { LatencyDistribution, LatencyPreset, MockServerInfo } from "@/store/mock-slice";
 import { LatencyShapeField } from "./latency-shape-field";
@@ -23,12 +24,9 @@ const PRESETS: readonly { value: LatencyPreset; label: string }[] = [
 ];
 
 /* Caps in kilobits a second; 0 is none. */
-const BANDWIDTHS: readonly SegmentedOption<string>[] = [
-  { value: "0", label: "Unlimited" },
-  { value: "512", label: "512 Kbps" },
-  { value: "1500", label: "1.5 Mbps" },
-  { value: "10000", label: "10 Mbps" },
-];
+const BANDWIDTHS: readonly number[] = [0, 512, 1_500, 10_000];
+
+const speedLabel = (kbps: number): string => (kbps === 0 ? "Unlimited" : bandwidthLabel(kbps));
 
 /* A delay of one's own starts from the one in force, in its shape. */
 function pick(server: MockServerInfo, preset: LatencyPreset): void {
@@ -50,8 +48,8 @@ function withinBase(delay: Delay): Delay {
 
 /**
  * The delay the mock adds to its answers: a preset, or a base, jitter and
- * shape of one's own; the window of delays they give; and a cap on how fast
- * bodies are sent.
+ * shape of one's own; the window of delays they give; and how fast the
+ * answers' bodies are sent. How fast uploads arrive is the Uploads card's.
  *
  * @param props - The mock server, and whether it can take a change
  * @returns The panel
@@ -132,12 +130,12 @@ export function LatencyPanel({
             onChange={(next) => setLatency(server, "custom", customWindow(shown, next))}
           />
         )}
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-control font-strong">Bandwidth</span>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <span className="text-control font-strong">Download speed</span>
           <Segmented
-            label="Bandwidth"
+            label="Download speed"
             quiet="subtle"
-            options={BANDWIDTHS}
+            options={optionsWith(BANDWIDTHS, server.networkConfig?.bandwidth ?? 0, speedLabel)}
             value={String(server.networkConfig?.bandwidth ?? 0)}
             onChange={(kbps) => setBandwidth(server, Number(kbps))}
           />

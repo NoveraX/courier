@@ -1,21 +1,16 @@
 import { Radar } from "lucide-react";
 
+import { faultLook } from "@/features/mocks/fault-catalogue";
 import type { FaultCount, LatencyBin, StripCell } from "@/features/mocks/observed-model";
 import { cn } from "@/lib/utils";
 import { NetworkCard } from "./network-card";
 
 const BIN = { brand: "bg-brand", warn: "bg-warn", err: "bg-err" } as const;
 const CELL = { ok: "bg-ok/70", warn: "bg-warn", err: "bg-err", empty: "bg-raised" } as const;
-const FAULT = {
-  "500": "bg-err",
-  "503": "bg-[color-mix(in_srgb,var(--color-err)_55%,var(--color-warn))]",
-  timeout: "bg-warn",
-  reset: "bg-fg-subtle",
-} as const;
 const LEGEND = [
   ["2xx", "bg-ok"],
   ["4xx", "bg-warn"],
-  ["5xx · reset", "bg-err"],
+  ["5xx · dropped", "bg-err"],
 ] as const;
 
 interface ObservedPanelProps {
@@ -111,11 +106,17 @@ export function ObservedPanel({
         </div>
         <div className="flex flex-col gap-2">
           <span className="text-small text-fg-subtle">Injected faults by type</span>
-          <div className="grid grid-cols-4 gap-px overflow-hidden rounded-panel border border-line bg-line">
+          <div className="flex flex-wrap gap-px overflow-hidden rounded-panel border border-line bg-line">
             {faults.map((fault) => (
-              <div key={fault.kind} className="flex flex-col gap-1 bg-inset px-3 py-2.5">
+              <div
+                key={fault.kind}
+                className="flex min-w-21 flex-1 flex-col gap-1 bg-inset px-3 py-2.5"
+              >
                 <span className="flex items-center gap-1.5 font-mono text-badge text-fg-subtle">
-                  <span className={cn("size-1.5 rounded-[2px]", FAULT[fault.kind])} />
+                  <span
+                    aria-hidden="true"
+                    className={cn("size-1.5 rounded-[2px]", faultLook(fault.kind).fill)}
+                  />
                   {fault.kind}
                 </span>
                 <span className="font-mono text-figure font-medium">{fault.count}</span>

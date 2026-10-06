@@ -2,25 +2,14 @@ import { ZapOff } from "lucide-react";
 
 import { RangeSlider } from "@/design/range-slider";
 import type { ChaosFormValues } from "@/features/mocks/chaos-config";
+import { faultLook } from "@/features/mocks/fault-catalogue";
 import { cn } from "@/lib/utils";
-import type { FaultWeight } from "@/store/mock-slice";
+import { AddFaultMenu } from "./add-fault-menu";
+import { FaultMixRow } from "./fault-mix-row";
 import { NetworkCard } from "./network-card";
 
-const FAULTS: readonly { type: string; label: string; sub: string; fill: string }[] = [
-  { type: "500", label: "HTTP 500", sub: "Internal error", fill: "bg-err" },
-  {
-    type: "503",
-    label: "HTTP 503",
-    sub: "Service unavailable",
-    fill: "bg-[color-mix(in_srgb,var(--color-err)_55%,var(--color-warn))]",
-  },
-  { type: "timeout", label: "timeout", sub: "Held until it times out · 408", fill: "bg-warn" },
-  { type: "reset", label: "reset", sub: "Connection reset", fill: "bg-fg-subtle" },
-];
-
-function weightOf(weights: readonly FaultWeight[], type: string): number {
-  return weights.find((w) => w.type === type)?.weight ?? 0;
-}
+/* The weight a fault added to the mix starts at. */
+const ADDED_WEIGHT = 20;
 
 interface FaultPanelProps {
   values: ChaosFormValues;
@@ -33,8 +22,9 @@ interface FaultPanelProps {
 
 /**
  * Fault injection: the share of answers the mock fails, and how those
- * failures split between server errors, unavailability, timeouts and
- * dropped connections.
+ * failures split between the faults in its mix — any server or client
+ * error status, a timeout, a dropped connection, an upload cut off — each
+ * added from a menu and taken out again.
  *
  * @param props - The rate and mix, whether the mock can take a change, and what follows a change and a settled one
  * @returns The panel
@@ -50,16 +40,18 @@ export function FaultPanel({
   onCommit,
 }: FaultPanelProps): React.ReactNode {
   const on = values.errorRate > 0;
+  const mix = values.faultWeights;
   const total = Math.max(
     1,
-    FAULTS.reduce((sum, f) => sum + weightOf(values.faultWeights, f.type), 0),
+    mix.reduce((sum, f) => sum + f.weight, 0),
   );
   const withWeight = (type: string, weight: number): ChaosFormValues => ({
     ...values,
-    faultWeights: FAULTS.map((f) => ({
-      type: f.type,
-      weight: f.type === type ? weight : weightOf(values.faultWeights, f.type),
-    })),
+    faultWeights: mix.map((f) => (f.type === type ? { type, weight } : f)),
+  });
+  const withMix = (faultWeights: ChaosFormValues["faultWeights"]): ChaosFormValues => ({
+    ...values,
+    faultWeights,
   });
   const pill = (
     <span
@@ -119,45 +111,36 @@ export function FaultPanel({
             aria-hidden="true"
             className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-raised"
           >
-            {FAULTS.map((f) => (
+            {mix.map((f) => (
               <span
                 key={f.type}
-                className={cn("transition-[flex] duration-200", f.fill, !on && "opacity-35")}
-                style={{ flex: `${weightOf(values.faultWeights, f.type)} 1 0px` }}
+                className={cn(
+                  "transition-[flex] duration-200",
+                  faultLook(f.type).fill,
+                  !on && "opacity-35",
+                )}
+                style={{ flex: `${f.weight} 1 0px` }}
               />
             ))}
           </div>
           <div className="flex flex-col overflow-hidden rounded-[11px] border border-line">
-            {FAULTS.map((f) => {
-              const weight = weightOf(values.faultWeights, f.type);
-              return (
-                <div
-                  key={f.type}
-                  className="grid min-h-11.5 grid-cols-[minmax(0,1fr)_minmax(90px,1.2fr)_40px] items-center gap-3.5 border-b border-line px-3.5 last:border-b-0"
-                >
-                  <span className="flex min-w-0 items-center gap-2.25">
-                    <span className={cn("size-2 shrink-0 rounded-[2px]", f.fill)} />
-                    <span className="flex min-w-0 flex-col gap-px">
-                      <span className="font-mono text-small font-medium">{f.label}</span>
-                      <span className="truncate text-badge text-fg-subtle">{f.sub}</span>
-                    </span>
-                  </span>
-                  <RangeSlider
-                    size="sm"
-                    fill={f.fill}
-                    label={`Weight of ${f.label}`}
-                    value={weight}
-                    max={100}
-                    onChange={(w) => onChange(withWeight(f.type, w))}
-                    onCommit={(w) => onCommit(withWeight(f.type, w))}
-                  />
-                  <span className="text-right font-mono text-small text-fg-muted">
-                    {Math.round((weight / total) * 100)}%
-                  </span>
-                </div>
-              );
-            })}
+            {mix.map((f) => (
+              <FaultMixRow
+                key={f.type}
+                type={f.type}
+                weight={f.weight}
+                share={Math.round((f.weight / total) * 100)}
+                removable={mix.length > 1}
+                onWeight={(w) => onChange(withWeight(f.type, w))}
+                onWeightSettled={(w) => onCommit(withWeight(f.type, w))}
+                onRemove={() => onCommit(withMix(mix.filter((other) => other.type !== f.type)))}
+              />
+            ))}
           </div>
+          <AddFaultMenu
+            taken={mix.map((f) => f.type)}
+            onAdd={(type) => onCommit(withMix([...mix, { type, weight: ADDED_WEIGHT }]))}
+          />
         </div>
       </fieldset>
     </NetworkCard>

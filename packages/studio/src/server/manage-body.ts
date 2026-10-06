@@ -28,8 +28,9 @@ export function validateInventoryBody(
 }
 
 /**
- * Read the body of a manage preview or apply: the import, its spec, and the
- * endpoints to add and remove by group. Answers 400 otherwise.
+ * Read the body of a manage preview or apply: the import, its spec, the
+ * endpoints to add and remove by group, and whether every file is written
+ * again from the spec. Answers 400 otherwise.
  *
  * @param body - The request body, as parsed
  * @param res - The route's response, answered when the body is refused
@@ -48,7 +49,12 @@ export function validateManageBody(body: unknown, res: JsonResponse): ManageRequ
     res.status(400).json({ error: "toAdd and toRemove list endpoint names by group" });
     return null;
   }
-  return { name: body.name, spec: body.spec, toAdd, toRemove };
+  if (body.regenerate !== undefined && typeof body.regenerate !== "boolean") {
+    res.status(400).json({ error: "regenerate is true or false" });
+    return null;
+  }
+  const regenerate = body.regenerate === true;
+  return { name: body.name, spec: body.spec, toAdd, toRemove, ...(regenerate && { regenerate }) };
 }
 
 function readGroups(value: unknown): Record<string, string[]> | null {

@@ -179,6 +179,58 @@ describe("managing an import whose spec changed", () => {
   });
 });
 
+describe("managing an import whose spec did not change", () => {
+  const UNCHANGED = {
+    ...INVENTORY,
+    specChanged: false,
+    groups: [{ ...INVENTORY.groups[0], endpoints: [INVENTORY.groups[0]?.endpoints[0]] }],
+  };
+
+  it("offers to write every file again with nothing picked, and applies that as previewed", async () => {
+    vi.mocked(post).mockImplementation(async (url: string) => {
+      if (url === "/api/apis/manage/inventory") return UNCHANGED;
+      if (url === "/api/apis/manage/preview") return { plan: PLAN };
+      if (url === "/api/apis/manage/apply")
+        return { written: [], removed: [], kept: [], pruneFailures: [], leftBehind: [] };
+      throw new Error(`unexpected request to ${url}`);
+    });
+    render(<Manage />);
+    await settle(() => manage.start(SOURCE, SPEC));
+
+    expect(screen.queryByRole("button", { name: "Preview changes" })).toBeNull();
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: "Regenerate files" })));
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: "Apply changes" })));
+
+    const bodies = vi
+      .mocked(post)
+      .mock.calls.filter(([url]) => url.startsWith("/api/apis/manage/p") || url.endsWith("/apply"))
+      .map(([url, body]) => [url, (body as { regenerate?: boolean }).regenerate]);
+    expect(bodies).toEqual([
+      ["/api/apis/manage/preview", true],
+      ["/api/apis/manage/apply", true],
+    ]);
+    expect(manage.open).toBe(false);
+  });
+
+  it("says in the review that every file is written again, the edits kept", async () => {
+    vi.mocked(post).mockImplementation(async (url: string) => {
+      if (url === "/api/apis/manage/inventory") return UNCHANGED;
+      if (url === "/api/apis/manage/preview") return { plan: PLAN };
+      throw new Error(`unexpected request to ${url}`);
+    });
+    render(<Manage />);
+    await settle(() => manage.start(SOURCE, SPEC));
+
+    await settle(() => fireEvent.click(screen.getByRole("button", { name: "Regenerate files" })));
+
+    expect(
+      screen.getByText(
+        /Every file is written again from the specification, as this version of Studio writes it/,
+      ),
+    ).toBeTruthy();
+  });
+});
+
 describe("removing an import", () => {
   it("says what the config still declares, and removes on Remove", async () => {
     vi.mocked(post).mockImplementation(async (url: string) => {

@@ -32,6 +32,8 @@ export interface ManageRequest {
   specHash?: string;
   toAdd: Record<string, string[]>;
   toRemove: Record<string, string[]>;
+  /** Write every file again from the spec, keeping the user's edits, though it did not change. */
+  regenerate?: boolean;
 }
 
 /** What adding and removing endpoints produces, and the plan that writes it. */
@@ -48,8 +50,9 @@ export interface ManagePlan {
  * files on disk: endpoints are added first and removed from the result, so
  * a file both change carries both. A specification other than the one the
  * import was last generated from is an update, which generates what stays
- * from it afresh (see `planManageUpdate`). The plan says what is written,
- * removed and kept, and what waits for the user.
+ * from it afresh (see `planManageUpdate`), and so is regenerating from the
+ * same one. The plan says what is written, removed and kept, and what waits
+ * for the user.
  *
  * @param body - The import, its spec, and the endpoints to add and remove by group
  * @param imports - The declarations of the config Studio runs, with the imports state
@@ -81,9 +84,14 @@ export async function planManage(
       status: 400,
     };
   }
-  /* A newer specification is an update: what stays is generated from it afresh. */
+  /* A newer specification is an update: what stays is generated from it afresh. So is
+     regenerating, from the same one: a newer Studio may write it differently. */
   const specHash = body.specHash ?? computeSpecHash(body.spec);
-  if (entry !== undefined && entry.specHash !== specHash) {
+  if (body.regenerate === true && entry === undefined) {
+    const error = `Studio has no record of writing ${body.name}, so it cannot tell your edits from its code; import it again instead`;
+    return { error, status: 409 };
+  }
+  if (entry !== undefined && (entry.specHash !== specHash || body.regenerate === true)) {
     return planManageUpdate({ ...body, specHash }, imports, root, { declared, entry, layout });
   }
   const toAdd = Object.fromEntries(

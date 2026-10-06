@@ -186,6 +186,48 @@ describe("managing an import with a newer specification", () => {
     expect(read(GROUP)).not.toContain("voidInvoice:");
   }, 30_000);
 
+  it("writes every file again from the same specification when asked, the user's edits kept", async () => {
+    const url = await imported();
+    rmSync(join(root, SCHEMAS));
+    const body = { name: "billing", spec: billing(1), toAdd: {}, toRemove: {} };
+
+    const plain = await post(url, "/api/apis/manage/preview", body);
+    const again = await post(url, "/api/apis/manage/preview", { ...body, regenerate: true });
+    const plan = again.body.plan as {
+      digest: string;
+      writes: Array<{ path: string; action: string }>;
+    };
+    const applied = await post(url, "/api/apis/manage/apply", {
+      ...body,
+      regenerate: true,
+      planDigest: plan.digest,
+      confirm: [],
+    });
+
+    const writesOf = (preview: typeof plain) =>
+      (preview.body.plan as { writes: Array<{ path: string; action: string }> }).writes;
+    expect(writesOf(plain).some((write) => write.path === SCHEMAS)).toBe(false);
+    expect(plan.writes).toContainEqual(
+      expect.objectContaining({ path: SCHEMAS, action: "create" }),
+    );
+    expect(applied.status).toBe(200);
+    expect(existsSync(join(root, SCHEMAS))).toBe(true);
+    expect(read(GROUP)).toContain(EDITED);
+  }, 30_000);
+
+  it("refuses a request to regenerate that is not true or false", async () => {
+    const url = await imported();
+
+    const refused = await post(url, "/api/apis/manage/preview", {
+      name: "billing",
+      spec: billing(1),
+      regenerate: "yes",
+    });
+
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toBe("regenerate is true or false");
+  }, 30_000);
+
   it("removes what the specification dropped, and records the specification it follows", async () => {
     const url = await imported();
 

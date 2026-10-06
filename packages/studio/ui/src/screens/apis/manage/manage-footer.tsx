@@ -51,8 +51,9 @@ interface ManageFooterProps {
 
 /**
  * The manage dialog's footer: where it stands, Later, Back, and the step's
- * next move — Parse and continue, Preview changes, Apply them, or Preview
- * again once files Studio cannot write are dealt with.
+ * next move — Parse and continue, Preview changes, Regenerate files when no
+ * change is picked, Apply them, or Preview again once files Studio cannot
+ * write are dealt with.
  *
  * @param props - The manage flow, the spec given again, and what reading it updates
  * @returns The footer
@@ -92,14 +93,20 @@ export function ManageFooter({ manage, reupload, onReupload }: ManageFooterProps
           Parse and continue
         </button>
       )}
-      {manage.step === "inventory" && (
+      {manage.step === "inventory" && (manage.hasChanges || manage.inventory?.specChanged) && (
+        <button type="button" className={NEXT} onClick={() => void manage.requestPreview()}>
+          Preview changes
+        </button>
+      )}
+      {manage.step === "inventory" && !manage.hasChanges && !manage.inventory?.specChanged && (
         <button
           type="button"
           className={NEXT}
-          disabled={!manage.hasChanges && !manage.inventory?.specChanged}
-          onClick={() => void manage.requestPreview()}
+          disabled={manage.inventory === null}
+          title="Write every file again from the spec, as this version of Studio writes it, keeping your edits"
+          onClick={() => void manage.requestPreview(true)}
         >
-          Preview changes
+          Regenerate files
         </button>
       )}
       {reviewing && blocked && (

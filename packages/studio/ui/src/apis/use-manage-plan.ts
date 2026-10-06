@@ -7,6 +7,7 @@ import { readPlanRefusal } from "@/features/apis/plan-refusal";
 import { readFilePlan } from "@/features/apis/read-file-plan";
 import type { ManagePreviewResult, ManageStep, ParsedSpec } from "@/features/apis/types";
 import type { PlanConsent } from "@/features/apis/types-file-plan";
+import type { ManageChange } from "@/features/apis/types-manage";
 
 /** What the manage dialog applies, and how it reports. */
 export interface ManagePlanInput {
@@ -24,7 +25,10 @@ export interface ManagePlanInput {
 export interface ManagePlan {
   preview: ManagePreviewResult | null;
   consent: PlanConsent | null;
-  requestPreview: () => Promise<void>;
+  /** Whether the plan shown writes every file again from the spec, as asked. */
+  regenerating: boolean;
+  /** Preview the change picked; with `regenerate`, every file written again from the spec. */
+  requestPreview: (regenerate?: boolean) => Promise<void>;
   apply: () => Promise<void>;
   toggleConfirmed: (path: string) => void;
   /** Drop the plan shown, as a new opening of the dialog does. */
@@ -36,8 +40,9 @@ function messageOf(error: unknown, fallback: string): string {
 }
 
 /**
- * Preview adding and removing the picked endpoints, and apply the plan the
- * user saw with the steps they allowed. A preview Studio refuses is said on
+ * Preview adding and removing the picked endpoints, or writing every file
+ * again from the spec, and apply the plan the user saw with the steps they
+ * allowed. A preview Studio refuses is said on
  * the endpoint list; an apply it refuses because the files changed is
  * previewed again in full, so the warnings and the plan shown are the
  * current ones, with nothing allowed.
@@ -53,21 +58,26 @@ export function useManagePlan(input: ManagePlanInput): ManagePlan {
   const { sourceName, spec, toAdd, toRemove, setStep, setError, onApplied } = input;
   const [preview, setPreview] = useState<ManagePreviewResult | null>(null);
   const [consent, setConsent] = useState<PlanConsent | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const changeOf = useCallback(
+    (regenerate: boolean): ManageChange => ({
+      toAdd: serializeSets(toAdd),
+      toRemove: serializeSets(toRemove),
+      ...(regenerate && { regenerate }),
+    }),
+    [toAdd, toRemove],
+  );
 
   const load = useCallback(
-    async (keptError: string | null) => {
+    async (keptError: string | null, regenerate: boolean) => {
       if (!spec) return;
       setStep("preview");
       setPreview(null);
       setConsent(null);
+      setRegenerating(regenerate);
       setError(keptError);
       try {
-        const result = await previewManage(
-          sourceName,
-          spec,
-          serializeSets(toAdd),
-          serializeSets(toRemove),
-        );
+        const result = await previewManage(sourceName, spec, changeOf(regenerate));
         const plan = readFilePlan(result.plan);
         if (plan === null)
           throw new Error("Studio sent a plan this page cannot read; preview the changes again.");
@@ -78,7 +88,7 @@ export function useManagePlan(input: ManagePlanInput): ManagePlan {
         setStep("inventory");
       }
     },
-    [spec, sourceName, toAdd, toRemove, setStep, setError],
+    [spec, sourceName, changeOf, setStep, setError],
   );
 
   const apply = useCallback(async () => {
@@ -86,30 +96,29 @@ export function useManagePlan(input: ManagePlanInput): ManagePlan {
     setStep("applying");
     setError(null);
     try {
-      const body = consentBody(consent);
       const applied = await applyManage(
         sourceName,
         spec,
-        serializeSets(toAdd),
-        serializeSets(toRemove),
-        body,
+        changeOf(regenerating),
+        consentBody(consent),
       );
       setStep("done");
       onApplied(appliedMessage(`Updated ${sourceName}`, countsOf(applied)));
     } catch (err) {
       if (readPlanRefusal(err) !== null) {
-        await load(messageOf(err, "Apply failed"));
+        await load(messageOf(err, "Apply failed"), regenerating);
         return;
       }
       setError(messageOf(err, "Apply failed"));
       setStep("preview");
     }
-  }, [spec, sourceName, toAdd, toRemove, consent, setStep, setError, onApplied, load]);
+  }, [spec, sourceName, changeOf, regenerating, consent, setStep, setError, onApplied, load]);
 
   return {
     preview,
     consent,
-    requestPreview: useCallback(() => load(null), [load]),
+    regenerating,
+    requestPreview: useCallback((regenerate = false) => load(null, regenerate), [load]),
     apply,
     toggleConfirmed: useCallback(
       (path: string) => setConsent((c) => c && toggleConfirmed(c, path)),

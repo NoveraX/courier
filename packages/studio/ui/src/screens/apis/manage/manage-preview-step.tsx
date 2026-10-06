@@ -6,6 +6,8 @@ import { FilePlanSections } from "../file-plan-sections";
 interface ManagePreviewStepProps {
   preview: ManagePreviewResult;
   consent: PlanConsent | null;
+  /** Whether the plan writes every file again from the spec. */
+  regenerating?: boolean;
   onToggleConfirmed: (path: string) => void;
 }
 
@@ -24,12 +26,19 @@ interface ManagePreviewStepProps {
 export function ManagePreviewStep({
   preview,
   consent,
+  regenerating = false,
   onToggleConfirmed,
 }: ManagePreviewStepProps): React.ReactNode {
   const edited = preview.removeResult?.modifiedEndpointsWarning ?? [];
   const orphaned = preview.removeResult?.orphanedSchemas ?? [];
   return (
     <div className="flex flex-col gap-3.5">
+      {regenerating && (
+        <p className="m-0 text-small text-fg-muted">
+          Every file is written again from the specification, as this version of Studio writes it.
+          Your edits to endpoints stay.
+        </p>
+      )}
       {edited.length > 0 && (
         <section
           aria-label="Edited endpoints"

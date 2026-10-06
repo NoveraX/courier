@@ -44,21 +44,20 @@ afterEach(() => {
 
 describe("a change to a mock's store", () => {
   it("is confirmed only once the mock answers that it made it", async () => {
-    crud().createRecord("apiMock", "users", { name: "Ada" });
+    crud().addRecord("apiMock", "users");
     await settle();
 
     expect(sent[0]?.command).toEqual({
       action: "mock:store:create",
       serverId: "apiMock",
       collection: "users",
-      record: { name: "Ada" },
     });
     expect(toast.success).not.toHaveBeenCalled();
 
     sent[0]?.ack(null, { ok: true });
     await settle();
 
-    expect(toast.success).toHaveBeenCalledWith("Created a record in users");
+    expect(toast.success).toHaveBeenCalledWith("Added a record to users");
     expect(toast.error).not.toHaveBeenCalled();
   });
 

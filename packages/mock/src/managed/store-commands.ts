@@ -5,6 +5,7 @@
 import { seedAllCollections } from "../auto/auto-seed";
 import type { MockServer } from "../server/mock-server-types";
 import { CommandInputError, countIn, idIn, nameIn, objectIn } from "./command-input";
+import { generatedRecord } from "./generated-record";
 import type { ServedMock } from "./types";
 
 export type CmdResult = { ok: boolean; data?: unknown; error?: string };
@@ -34,8 +35,14 @@ export function handleStoreCommand(served: ServedMock, cmd: Record<string, unkno
       case "mock:store:delete":
         return handleDelete(server, nameIn(cmd, "collection"), idIn(cmd, "id"));
       case "mock:store:create": {
-        const col = server.store.collection(nameIn(cmd, "collection"));
-        return { ok: true, data: col.create(objectIn(cmd, "record")) };
+        const collection = nameIn(cmd, "collection");
+        const col = server.store.collection(collection);
+        /* Without a record, one is made as the seed makes them, so it answers as the schema says. */
+        const record =
+          cmd.record === undefined
+            ? generatedRecord(served, collection, col)
+            : objectIn(cmd, "record");
+        return { ok: true, data: col.create(record) };
       }
       case "mock:store:update":
         return update(server, nameIn(cmd, "collection"), idIn(cmd, "id"), objectIn(cmd, "data"));

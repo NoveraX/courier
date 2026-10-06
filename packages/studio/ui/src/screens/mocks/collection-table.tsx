@@ -2,7 +2,6 @@ import { EllipsisVertical, Plus } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import { POP_MOTION } from "@/design/overlay-motion";
 import { collectionView } from "@/features/mocks/collection-view";
-import { buildDefaultRecord } from "@/features/mocks/data-table-utils";
 import { cn } from "@/lib/utils";
 import { useStoreCrud } from "@/mocks/use-store-crud";
 import type { MockCollectionEntry, MockRouteEntry } from "@/store/mock-slice";
@@ -37,7 +36,6 @@ export function CollectionTable({
 }: CollectionTableProps): React.ReactNode {
   const crud = useStoreCrud();
   const { rows, columns } = collectionView(collection, routes);
-  const types = Object.fromEntries(columns.map((c) => [c.field, c.type]));
   return (
     <section aria-label={`Collection ${collection.name}`} className="flex min-h-0 min-w-0 flex-col">
       <div className="flex items-center gap-2.5 px-4.5 py-3.5">
@@ -49,7 +47,7 @@ export function CollectionTable({
         <div className="flex-1" />
         <button
           type="button"
-          onClick={() => crud.createRecord(serverId, collection.name, buildDefaultRecord(types))}
+          onClick={() => crud.addRecord(serverId, collection.name)}
           className="flex h-7 cursor-pointer items-center gap-1.5 rounded-card border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg"
         >
           <Plus aria-hidden="true" className="size-3" />

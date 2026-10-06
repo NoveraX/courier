@@ -6,7 +6,8 @@ import { sendMockCommand } from "./send-mock-command";
 interface StoreCrudActions {
   activeCollection: string | null;
   selectCollection: (name: string) => void;
-  createRecord: (serverId: string, collection: string, record: Record<string, unknown>) => void;
+  /** Add a record the mock makes as its seed makes them: of the collection's shape, each field a value its schema accepts. */
+  addRecord: (serverId: string, collection: string) => void;
   updateRecord: (
     serverId: string,
     collection: string,
@@ -38,11 +39,11 @@ export function useStoreCrud(): StoreCrudActions {
   return {
     activeCollection,
     selectCollection: setActiveCollection,
-    createRecord: (serverId, collection, record) =>
+    addRecord: (serverId, collection) =>
       void run(
-        { action: "mock:store:create", serverId, collection, record },
-        `Created a record in ${collection}`,
-        `Could not create a record in ${collection}`,
+        { action: "mock:store:create", serverId, collection },
+        `Added a record to ${collection}`,
+        `Could not add a record to ${collection}`,
       ),
     updateRecord: (serverId, collection, id, data) =>
       void run(

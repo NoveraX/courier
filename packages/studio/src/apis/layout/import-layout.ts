@@ -49,6 +49,8 @@ export interface ImportLayout {
   groupSchemaFile(group: string, kind: SchemaFileKind): string;
   /** How a file in the import's directory imports a module of a group: `./<dir>/<module>`. */
   groupSpecifier(group: string, module: "index" | SchemaFileKind): string;
+  /** How a group's file imports a group generated inside it: `../<dir>/index`. */
+  innerGroupSpecifier(group: string): string;
 }
 
 /**
@@ -87,6 +89,7 @@ export function resolveImportLayout(placement: ImportPlacement, importName: stri
     groupFile: (group) => inDir(groupDirName(group), "index.ts"),
     groupSchemaFile: (group, kind) => inDir(groupDirName(group), `${kind}.ts`),
     groupSpecifier: (group, module) => `./${groupDirName(group)}/${module}`,
+    innerGroupSpecifier: (group) => `../${groupDirName(group)}/index`,
   };
 }
 

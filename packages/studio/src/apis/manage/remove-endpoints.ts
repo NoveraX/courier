@@ -7,6 +7,7 @@ import { ownValue } from "../own-value";
 import { barrelAfterRemoval } from "./barrel-after-removal";
 import { removeEndpointsFromFile } from "./remove-endpoints-from-file";
 import { collectGroupDeletions, collectModifiedWarnings, findGroupFile } from "./remove-helpers";
+import { withoutInnerGroups } from "./remove-inner-groups";
 import { processOrphanSchemas } from "./remove-orphans";
 import type { RemoveResult } from "./types";
 import { removeGroupsFromSourceFile } from "./update-source-file";
@@ -79,10 +80,15 @@ export function previewRemoveEndpoints(
     deletedFiles,
   );
 
+  /* A group inside another leaves its parent's file, and a parent left empty goes with it. */
+  const gone = withoutInnerGroups(deletedGroupNames, existingFiles, layout, {
+    modifiedFiles,
+    deletedFiles,
+  });
   return {
     modifiedFiles,
     deletedFiles,
-    ...withoutGroups(deletedGroupNames, existingFiles, layout),
+    ...withoutGroups(gone, existingFiles, layout),
     ...withBarrel(barrelAfterRemoval(layout, existingFiles, modifiedFiles, deletedFiles, false)),
     removedFingerprints,
     orphanedSchemas,
@@ -99,6 +105,8 @@ function withoutGroups(
   const source = existingFiles[layout.sourceFile];
   if (groups.length === 0 || source === undefined) return {};
   const content = removeGroupsFromSourceFile(layout.sourceFile, source, groups);
+  /* Groups that sat inside others are not in source.ts. */
+  if (content === source) return {};
   return { sourceFileUpdate: { path: layout.sourceFile, content } };
 }
 

@@ -31,10 +31,11 @@ export function transformSpec(
 ): ParsedSpec {
   if (options.groupBy === "tag") {
     if (selected === null) return spec;
-    const groups = spec.groups
-      .map((group) => ({ ...group, endpoints: group.endpoints.filter((e) => selected.has(e)) }))
-      .filter((group) => group.endpoints.length > 0);
-    return { ...spec, groups };
+    const groups = spec.groups.map((group) => ({
+      ...group,
+      endpoints: group.endpoints.filter((e) => selected.has(e)),
+    }));
+    return { ...spec, groups: groups.filter((group) => holdsSelected(group, groups)) };
   }
   const groups = new Map<string, ParsedGroup>();
   for (const placement of placeEndpoints(spec, options.groupBy)) {
@@ -44,6 +45,13 @@ export function transformSpec(
     groups.set(placement.group.name, group);
   }
   return { ...spec, groups: [...groups.values()] };
+}
+
+/* A group with a selected endpoint, or with one in a group inside it: a group
+   kept for the groups inside it keeps them a parent to be generated in. */
+function holdsSelected(group: ParsedGroup, groups: readonly ParsedGroup[]): boolean {
+  if (group.endpoints.length > 0) return true;
+  return groups.some((inner) => inner.parent === group.name && holdsSelected(inner, groups));
 }
 
 /**

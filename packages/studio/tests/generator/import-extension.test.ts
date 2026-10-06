@@ -147,12 +147,7 @@ describe("adding endpoints to an import whose files carry the extension", () => 
   );
 
   it("imports a new group's file with it", () => {
-    const update = sourceWithNewGroups(
-      { orders: ["listOrders"] },
-      { groupBy: "tag" },
-      files,
-      layout,
-    );
+    const update = sourceWithNewGroups(["orders"], { groupBy: "tag" }, files, layout);
 
     expect(update?.content).toContain('from "./orders/index.js"');
   });

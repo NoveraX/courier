@@ -5,6 +5,7 @@ import { dropUnusedImports } from "./drop-unused-imports";
 import { planEntryRemoval } from "./entry-removal";
 import { findGroupDeclaration } from "./group-declaration";
 import { UnrecognizedFileError } from "./unrecognized-file-error";
+import { groupsObject } from "./update-group-file";
 
 /** What removing endpoints from a file leaves, and what it took. */
 export interface EndpointRemoval {
@@ -56,7 +57,11 @@ export function removeEndpointsFromFile(
     content.slice(properties[at]?.start ?? 0, properties[at]?.end ?? 0),
   );
   if (indices.size === 0) return { content, removedCode };
-  if (indices.size === properties.length && !keepEmpty) return { content: null, removedCode };
+  /* A group that holds groups stays, its endpoints gone, so they keep a group to sit in. */
+  const holdsGroups = (groupsObject(declaration.config)?.properties.length ?? 0) > 0;
+  if (indices.size === properties.length && !keepEmpty && !holdsGroups) {
+    return { content: null, removedCode };
+  }
   const without = applyEdits(content, planEntryRemoval(parsed, properties, start, indices));
   const used = new Set(removedCode.flatMap((code) => code.match(/[A-Za-z_$][\w$]*/g) ?? []));
   return { content: dropUnusedImports(path, without, used), removedCode };

@@ -147,13 +147,19 @@ createStudioServer({
 })
 ```
 
-A visitor — a page opened without the token — sees everything Studio shows, the credentials of live traffic redacted, and may also send from the Playground and drive the mocks: start and stop them, set their latency and failures, apply scenarios, change their data. Limits keep one visitor from crowding out the rest:
+A visitor — a page opened without the token — sees everything Studio shows, the credentials of live traffic redacted, and may also send from the Playground and drive the mocks: start and stop them, set their latency and failures, apply scenarios, change their data. Limits keep one visitor from crowding out the rest, counted every ten seconds for each page, for each visitor's address — so opening more pages does not widen a share — and for all visitors together:
 
-- **Playground:** ten calls every ten seconds from one page and sixty from all of them, with four open at once from one page.
-- **Mocks:** twenty commands and five starts or stops every ten seconds from one page, a seed of up to 200 records, and a latency of up to ten seconds.
-- **Size:** nothing larger than 64 KB at a time.
+- **Playground:** ten calls from a page, twenty from an address and sixty from all, with four open at once from a page.
+- **Mocks:** twenty commands and five starts or stops from a page, thirty and ten from an address; a seed of up to 200 records, records added to a collection only while it holds fewer than a thousand, and a latency of up to ten seconds.
+- **Studio's API:** twenty requests from an address and sixty from all, two at work at once — a specification parsed, its code generated.
+- **The page itself:** six hundred requests from an address, six thousand from all; ten sockets open for an address and two hundred in all, ten opened every ten seconds for an address and forty in all.
+- **Size:** nothing larger than 64 KB at a time from a visitor; a socket reads no message larger than 512 KB, and each page is sent the newest 2 MB of each log as it connects.
 
-A visitor's clears stay in their own page, and their Playground history is their own. Studio still writes no file: importing an API, generating mocks and saving a session answer that the demo does not, and nothing every visitor sees is cleared. The page opened with the token keeps every right.
+Past a limit, the visitor is told which one and when to try again: a request is answered with 429 and `Retry-After`. A visitor's clears stay in their own page, and their Playground history is their own. Studio still writes no file: importing an API, generating mocks and saving a session answer that the demo does not, and nothing every visitor sees is cleared. A visitor's import reads a specification pasted, or fetched from the public internet only — never from the machine Studio runs on or its network. The page opened with the token keeps every right.
+
+<Callout variant="warning" title="Behind a proxy that reports the visitor">
+Studio counts a visitor by the address the proxy in front of it reports last in `X-Forwarded-For`, believed only from a proxy on this machine or a private network. Traefik, Caddy and nginx's usual configuration send it. Behind a proxy that does not, every visitor shares the proxy's address and its limits.
+</Callout>
 
 The Playground calls the project's own sources only, through the runtime that serves them, so point those sources at servers anyone may call. `resetsAt` is when you start the demo again from a clean state; each page counts down to it. `extraCorsOrigins` names the address visitors open when Studio sits behind a proxy on a domain of its own. [`examples/demo-shop`](https://github.com/NoveraX/courier/tree/main/examples/demo-shop) is a complete demo: two backends, a server, traffic, two mocks, a reset every hour, and the container it runs in.
 

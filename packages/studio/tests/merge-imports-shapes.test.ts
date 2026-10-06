@@ -17,6 +17,41 @@ export const users = defineGroup({
  * has no module to merge on, so every one of them would key alike and all but
  * the last would be dropped.
  */
+describe("a type-only import of the schemas", () => {
+  it("reads every name it binds as a type", () => {
+    const parsed = parseExistingGroup(`import type {
+  ListPetsParams,
+  Pet,
+} from "./schemas";
+${GROUP}`);
+
+    expect(parsed.imports).toHaveLength(1);
+    expect(parsed.imports[0]?.source).toBe("./schemas");
+    expect(parsed.imports[0]?.names).toEqual([]);
+    expect(parsed.imports[0]?.typeNames).toEqual(["ListPetsParams", "Pet"]);
+  });
+
+  it("stays type-only through a merge when the update imports types alone", () => {
+    const existing = parseExistingGroup(`import type { Pet } from "./schemas";\n${GROUP}`);
+    const generated = parseExistingGroup(`import type { Pet, Owner } from "./schemas";\n${GROUP}`);
+
+    const merged = mergeImports(existing.imports, generated.imports, [], "").join("\n");
+
+    expect(merged).toBe('import type { Pet, Owner } from "./schemas";');
+  });
+
+  it("joins the schema a newer version validates with, without importing a name twice", () => {
+    const existing = parseExistingGroup(`import type { Pet } from "./schemas";\n${GROUP}`);
+    const generated = parseExistingGroup(
+      `import { PetSchema, type Pet } from "./schemas";\n${GROUP}`,
+    );
+
+    const merged = mergeImports(existing.imports, generated.imports, [], "").join("\n");
+
+    expect(merged).toBe('import { PetSchema, type Pet } from "./schemas";');
+  });
+});
+
 describe("import shapes a group file may carry", () => {
   it("reads a list wrapped across lines", () => {
     const parsed = parseExistingGroup(`import {

@@ -72,17 +72,17 @@ function generateFlat(
   const { group: processed, schemas: extracted, params } = extractEndpointTypes(flatGroup, names);
   const groupSchemas = buildSchemaRecord(processed, spec, extracted);
 
-  const schemaMap = new Map<string, Set<string>>();
+  const schemaModules = new Map<string, string>();
   const schemasFile = schemaFileFor(groupSchemas, opts);
   if (schemasFile) {
-    schemaMap.set("", new Set(Object.keys(groupSchemas)));
+    schemaModules.set("", schemasFile.content);
     files.push(schemasFile);
   }
 
   const declared = schemasFile ? groupSchemas : {};
   files.push(generateFlatSourceFile(processed.endpoints, spec, opts, declared, params));
   /* The barrel re-exports the schemas file only when one was written. */
-  files.push(generateIndexFile(spec, [], opts, schemaMap));
+  files.push(generateIndexFile(spec, [], opts, schemaModules));
 
   return files;
 }
@@ -93,7 +93,7 @@ function generateGrouped(
   names: ExtractedTypeNames,
 ): GeneratedFile[] {
   const files: GeneratedFile[] = [];
-  const groupSchemaMap = new Map<string, Set<string>>();
+  const schemaModules = new Map<string, string>();
 
   for (const group of spec.groups) {
     const { group: processed, schemas: extracted, params } = extractEndpointTypes(group, names);
@@ -101,7 +101,7 @@ function generateGrouped(
 
     const schemasFile = schemaFileFor(groupSchemas, opts, group.name);
     if (schemasFile) {
-      groupSchemaMap.set(group.name, new Set(Object.keys(groupSchemas)));
+      schemaModules.set(group.name, schemasFile.content);
       files.push(schemasFile);
     }
 
@@ -117,7 +117,7 @@ function generateGrouped(
       opts,
     ),
   );
-  files.push(generateIndexFile(spec, spec.groups, opts, groupSchemaMap));
+  files.push(generateIndexFile(spec, spec.groups, opts, schemaModules));
 
   return files;
 }

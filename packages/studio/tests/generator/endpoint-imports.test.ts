@@ -132,17 +132,18 @@ describe("the files an import generates", () => {
     expect(group?.content).toContain('import { z } from "zod";');
   });
 
-  it("import types as types when no validator declares them", () => {
+  it("import types with import type when no validator declares them", () => {
     const group = generateCode(
       SPEC,
       { type: "openapi", outputDir: "src", generateSchemas: false },
       "shop",
     ).find((f) => f.path.endsWith("user/index.ts"));
-    const imports = group?.content.match(/^import \{([^}]*)\} from "\.\/types";$/m)?.[1] ?? "";
-    const names = imports.split(",").map((name) => name.trim());
+    const imports = group?.content.match(/^import type \{([^}]*)\} from "\.\/types";$/m)?.[1];
+    const names = (imports ?? "").split(",").map((name) => name.trim());
 
-    expect(names).toContain("type User");
-    expect(names.filter((name) => !name.startsWith("type "))).toEqual([]);
+    expect(imports).toBeDefined();
+    expect(names).toContain("User");
+    expect(group?.content).not.toMatch(/^import \{[^}]*\} from "\.\/types";$/m);
   });
 });
 
@@ -155,7 +156,7 @@ describe("a flat import", () => {
       { type: "openapi", outputDir: "src", groupBy: "single" },
       "shop",
     ).find((f) => f.path.endsWith("shop/source.ts"));
-    const imports = source?.content.match(/^import .* from "\.\/schemas";$/m)?.[0] ?? "";
+    const imports = source?.content.match(/^import [^;]* from "\.\/schemas";$/m)?.[0] ?? "";
 
     expect(imports).toContain("type Customer");
     expect(imports).toContain("type DeletedCustomer");

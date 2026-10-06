@@ -3,6 +3,7 @@
  */
 
 import type { EndpointContext } from "./endpoint-context";
+import { namedStatement } from "./named-statement";
 import type { ResolvedGenerateOptions } from "./types";
 
 /** How each validation library is imported under the name the chains call. */
@@ -17,7 +18,8 @@ const VALIDATOR_IMPORT: Readonly<Record<string, string>> = {
  *
  * A type is imported as a type, so a project compiling with
  * `verbatimModuleSyntax` — Vite's default — accepts the file, and a bundler
- * never looks for a value the schemas module does not export.
+ * never looks for a value the schemas module does not export. When every
+ * name is a type, the whole import is `import type`, as linters ask.
  *
  * @param context - The file, after its definitions were built
  * @returns The import lines, the validator's first
@@ -36,18 +38,16 @@ export function endpointImports(context: EndpointContext): string[] {
   const validator = VALIDATOR_IMPORT[options.validation];
   if (uses.validator && validator) lines.push(validator);
 
-  const names = [...uses.values, ...[...uses.types].map((name) => `type ${name}`)];
-  if (names.length > 0) {
-    lines.push(`import { ${names.join(", ")} } from "${schemasModule(options)}";`);
+  const from = schemasModule(options);
+  if (uses.values.size === 0 && uses.types.size > 0) {
+    lines.push(namedStatement("import type", [...uses.types], from));
+  } else if (uses.values.size > 0) {
+    const names = [...uses.values, ...[...uses.types].map((name) => `type ${name}`)];
+    lines.push(namedStatement("import", names, from));
   }
   return lines;
 }
 
-/**
- * The module beside the endpoints that declares their schemas and types.
- * Its name follows `generateSchemas` alone: `validation: "none"` still
- * writes schemas.ts, holding types.
- */
 /**
  * The import of what a file defines its endpoints with: `courier`, the
  * definer, `formBody` when a closure writes a url-encoded body, and
@@ -92,6 +92,9 @@ export function basesDeclaration(context: EndpointContext): string {
   return `const { ${names.join(", ")} } = courier();`;
 }
 
+/* The module beside the endpoints that declares their schemas and types.
+   Its name follows `generateSchemas` alone: `validation: "none"` still
+   writes schemas.ts, holding types. */
 function schemasModule(options: ResolvedGenerateOptions): string {
   return `${options.generateSchemas ? "./schemas" : "./types"}${options.importExtension}`;
 }

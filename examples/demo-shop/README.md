@@ -43,3 +43,7 @@ docker run --rm -p 6280:6280 courier-studio-demo
 ```
 
 Build it from the repository's root. The image builds the packages the demo uses, packs them as npm publishes them and installs them as a project would, so it carries their runtime dependencies only and runs what users get. It runs as the unprivileged `node` user and publishes Studio's port alone. `compose.yml` runs it as a host such as Dokploy does, from this repository: point a domain at port 6280 with HTTPS, and set `DEMO_ORIGIN` to that domain's address.
+
+`compose.yml` also locks the container down. Its file system is read-only but for two memory-backed folders — the demo's state in `.courier`, which each reset empties, and `/tmp` — so nothing a visitor does writes a file. It runs with no capabilities, within fixed memory, CPU and process limits, keeps its logs to 30 MB, and reports its health from Studio's `/api/health`.
+
+The proxy in front must say who each visitor is in `X-Forwarded-For`, as Traefik, Caddy and nginx's usual configuration do. The demo counts each visitor's share by that address — requests, sockets, Playground calls, mock commands — so without it every visitor would share the proxy's.

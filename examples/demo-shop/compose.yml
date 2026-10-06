@@ -2,6 +2,16 @@
 # repository. Only Studio's port is published; the shop's backends, its
 # server and the mocks stay inside the container. Point a domain at port
 # 6280 with HTTPS, and set DEMO_ORIGIN to the address visitors open.
+#
+# The proxy in front must say who each visitor is in X-Forwarded-For, as
+# Traefik, Caddy and nginx's usual configuration do: the demo counts each
+# visitor's share by that address, and without it every visitor would share
+# the proxy's.
+#
+# The container writes nowhere but two memory-backed folders: the demo's
+# state, which each reset empties, and /tmp. It runs unprivileged, with no
+# capabilities, within fixed memory, CPU and process limits, and keeps its
+# logs to 30 MB.
 services:
   studio-demo:
     build:
@@ -13,8 +23,30 @@ services:
       DEMO_RESET_MINUTES: "60"
     expose:
       - "6280"
-    mem_limit: 1g
+    read_only: true
+    tmpfs:
+      - /demo/.courier:size=256m,uid=1000,gid=1000,mode=0700
+      - /tmp:size=64m,uid=1000,gid=1000,mode=1777
+    init: true
+    mem_limit: 1536m
     cpus: 1.0
     pids_limit: 256
+    cap_drop:
+      - ALL
     security_opt:
       - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:6280/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 2m

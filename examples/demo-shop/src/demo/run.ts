@@ -1,4 +1,4 @@
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
@@ -15,12 +15,17 @@ const SETTLED_MS = 60_000;
 let running: Part[] = [];
 let stopping = false;
 
-/* What visitors changed — the requests Studio kept, the mocks' data — goes with each reset. */
+/* What visitors changed — the requests Studio kept, the mocks' data — goes
+   with each reset. The folder is emptied, not removed: in the container it is
+   a memory-backed mount, the one place the demo may write. */
 function wipeState(): void {
   if (!existsSync(join(ROOT, "courier.config.ts"))) {
     throw new Error(`${ROOT} is not the demo's root; nothing is wiped`);
   }
-  rmSync(join(ROOT, ".courier"), { recursive: true, force: true });
+  const state = join(ROOT, ".courier");
+  if (!existsSync(state)) return;
+  for (const entry of readdirSync(state))
+    rmSync(join(state, entry), { recursive: true, force: true });
 }
 
 /* The backends, Studio, the shop's server once Studio listens, and the traffic once the server does. */

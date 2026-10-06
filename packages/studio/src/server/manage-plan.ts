@@ -1,4 +1,4 @@
-import type { ParsedSpec } from "../apis";
+import { computeSpecHash, type ParsedSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import { previewAddEndpoints, previewRemoveEndpoints } from "../apis/manage";
@@ -15,6 +15,7 @@ import { planFiles } from "./import-files/plan-files";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
 import { manageFingerprints } from "./manage-fingerprints";
 import { managePlanRequest } from "./manage-plan-request";
+import { planManageUpdate } from "./manage-update-plan";
 import type { ProjectRoot } from "./project-fs/project-root";
 import { unknownRemovals } from "./unknown-removals";
 
@@ -41,8 +42,10 @@ export interface ManagePlan {
 /**
  * Work out adding and removing endpoints of a declared import, from its
  * files on disk: endpoints are added first and removed from the result, so
- * a file both change carries both. The plan says what is written, removed
- * and kept, and what waits for the user.
+ * a file both change carries both. A specification other than the one the
+ * import was last generated from is an update, which generates what stays
+ * from it afresh (see `planManageUpdate`). The plan says what is written,
+ * removed and kept, and what waits for the user.
  *
  * @param body - The import, its spec, and the endpoints to add and remove by group
  * @param imports - The declarations of the config Studio runs, with the imports state
@@ -73,6 +76,11 @@ export function planManage(
       error: `The import's files hold no endpoint ${absent.join(", ")} to remove`,
       status: 400,
     };
+  }
+  /* A newer specification is an update: what stays is generated from it afresh. */
+  const specHash = body.specHash ?? computeSpecHash(body.spec);
+  if (entry !== undefined && entry.specHash !== specHash) {
+    return planManageUpdate({ ...body, specHash }, imports, root, { declared, entry, layout });
   }
   const toAdd = Object.fromEntries(
     Object.entries(body.toAdd).filter(([, names]) => names.length > 0),

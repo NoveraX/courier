@@ -5,14 +5,20 @@ import { ownValue } from "@/lib/own-value";
 import { cn } from "@/lib/utils";
 import { InventoryRow } from "./inventory-row";
 
-/* An endpoint kept is ticked: an active one not marked to remove, a new one marked to add. */
+/* An endpoint kept is ticked: an active one not marked to remove, a new one marked to add.
+   One the spec dropped goes with the update, and one added by hand stays: neither is picked. */
 function kept(
   ep: InventoryEndpoint,
   toAdd: ReadonlySet<string>,
   toRemove: ReadonlySet<string>,
 ): boolean {
+  if (ep.status === "custom") return true;
+  if (ep.status === "removed-from-spec") return false;
   return ep.status === "available" ? toAdd.has(ep.name) : !toRemove.has(ep.name);
 }
+
+const pickable = (ep: InventoryEndpoint): boolean =>
+  ep.status === "active" || ep.status === "available";
 
 interface InventoryStepProps {
   inventory: EndpointInventory;
@@ -33,7 +39,7 @@ function Group({
   InventoryStepProps,
   "onToggle" | "onToggleGroup"
 >): React.ReactNode {
-  const toggleable = group.endpoints.filter((ep) => ep.status !== "custom");
+  const toggleable = group.endpoints.filter(pickable);
   const ticked = toggleable.filter((ep) => kept(ep, toAdd, toRemove)).length;
   return (
     <section
@@ -59,7 +65,7 @@ function Group({
           key={ep.name}
           group={group.name}
           endpoint={ep}
-          on={ep.status === "custom" || kept(ep, toAdd, toRemove)}
+          on={kept(ep, toAdd, toRemove)}
           onToggle={onToggle}
         />
       ))}
@@ -92,7 +98,7 @@ export function InventoryStep({
     0,
   );
   const toggleable = inventory.groups.flatMap((g) =>
-    g.endpoints.filter((ep) => ep.status !== "custom").map((ep) => ({ ep, group: g.name })),
+    g.endpoints.filter(pickable).map((ep) => ({ ep, group: g.name })),
   );
   const all =
     toggleable.length > 0 &&
@@ -122,7 +128,8 @@ export function InventoryStep({
       {inventory.specChanged && (
         <p className="m-0 flex items-center gap-2 rounded-panel bg-warn-dim px-3 py-2.5 text-small text-warn">
           <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" />
-          The spec changed since it was imported — tick the new endpoints to add them.
+          The spec changed since it was imported. Studio generates the endpoints you keep from it
+          afresh, keeping your edits; tick new ones to add them. Those it no longer has go.
         </p>
       )}
       <div className="flex items-center justify-end">

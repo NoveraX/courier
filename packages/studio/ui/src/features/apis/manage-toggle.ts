@@ -7,8 +7,8 @@ import { ownValue } from "@/lib/own-value";
 
 type SetMap = Record<string, Set<string>>;
 
-const isToggleable = (e: InventoryEndpoint): boolean =>
-  e.status === "active" || e.status === "removed-from-spec";
+/* An endpoint the spec dropped goes with the update; the user picks for the rest. */
+const isToggleable = (e: InventoryEndpoint): boolean => e.status === "active";
 
 const isAvailable = (e: InventoryEndpoint): boolean => e.status === "available";
 

@@ -45,6 +45,14 @@ npm run ios
 The app opens in Expo Go on the iOS simulator; `npm run android` opens it
 on the Android emulator. The packages are installed packed, as the
 registry would ship them, so run `npm install` again after rebuilding them.
+Stop Metro before you do, and start it again with a clean cache: Metro
+keeps a map of `node_modules`, and a package replaced while it runs leaves
+the app unable to resolve files that are on disk.
+
+```bash
+npm install
+npm run ios -- --clear
+```
 
 ## Addresses
 

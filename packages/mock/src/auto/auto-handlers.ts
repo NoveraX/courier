@@ -1,3 +1,4 @@
+import { describedUploads } from "../described-uploads";
 import { isRecord } from "../is-record";
 import { MockHttpError } from "../server/errors";
 import type { MockStore } from "../store";
@@ -149,7 +150,8 @@ function makeDeleteAllHandler(store: MockStore, groupName: string): Handler {
   };
 }
 
-/* The fields a call sends, when its variables are an object; none otherwise. */
+/* The fields a call sends, when its variables are an object — a file it uploads as its name, type and size, which a record can keep — none otherwise. */
 function fieldsOf(ctx: MockRequestContext): Record<string, unknown> {
-  return isRecord(ctx.variables) ? ctx.variables : {};
+  const fields = describedUploads(ctx.variables);
+  return isRecord(fields) ? fields : {};
 }

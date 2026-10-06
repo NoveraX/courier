@@ -183,10 +183,19 @@ export type ChildMessage =
        */
       network: Record<string, unknown>;
     }
-  | { type: "error"; message: string; fatal: boolean }
+  | {
+      type: "error";
+      message: string;
+      fatal: boolean;
+      /** `PORT_IN_USE`: another process took the port the mock was to listen on. */
+      code?: ChildErrorCode;
+    }
   | { type: "stopped" }
   | { type: "event"; event: Record<string, unknown> }
   | { type: "command-result"; requestId: string; ok: boolean; data?: unknown; error?: string };
+
+/** What kind of failure a worker reports, where Studio can act on it. */
+export type ChildErrorCode = "PORT_IN_USE";
 
 // ── Process State ────────────────────────────────────────────────────────────
 

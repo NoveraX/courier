@@ -154,6 +154,7 @@ describe("a managed mock server", () => {
           "broken",
           expect.stringContaining("is not a defineMockServer() definition"),
           true,
+          undefined,
         ),
       { timeout: 15_000 },
     );
@@ -175,6 +176,7 @@ describe("a managed mock server", () => {
           "apiMock",
           `Port ${port} is in use by another process.`,
           true,
+          "PORT_IN_USE",
         ),
       { timeout: 15_000 },
     );
@@ -193,6 +195,7 @@ describe("a managed mock server", () => {
           "gone",
           expect.stringContaining('Mock "gone" in'),
           true,
+          undefined,
         ),
       { timeout: 15_000 },
     );
@@ -212,6 +215,7 @@ describe("a managed mock server", () => {
           "apiMock",
           expect.stringContaining("has no default export; export default defineMocks({ ... })"),
           true,
+          undefined,
         ),
       { timeout: 15_000 },
     );

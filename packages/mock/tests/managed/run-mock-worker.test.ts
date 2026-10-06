@@ -62,6 +62,7 @@ describe("a mock whose port another process holds", () => {
       type: "error",
       message: `Port ${port} is in use by another process.`,
       fatal: true,
+      code: "PORT_IN_USE",
     });
   });
 });

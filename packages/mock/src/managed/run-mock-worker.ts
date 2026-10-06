@@ -82,7 +82,8 @@ export function runMockWorker(loadDefinition: MockDefinitionLoader): void {
           served = started;
         })
         .catch((err: unknown) => {
-          sendError(startFailure(err), true);
+          const { message, code } = startFailure(err);
+          sendError(message, true, code);
         });
     } else if (msg.type === "stop" && !stopping) {
       stopping = true;

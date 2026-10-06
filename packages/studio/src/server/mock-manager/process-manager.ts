@@ -3,7 +3,7 @@ import { fork } from "node:child_process";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { createLogger } from "@noverax/courier";
-import type { ChildMessage, ParentMessage } from "@noverax/courier-mock/managed";
+import type { ChildErrorCode, ChildMessage, ParentMessage } from "@noverax/courier-mock/managed";
 import type { CommandReplies, CommandReply } from "./command-replies";
 import { createCommandReplies } from "./command-replies";
 import { stopWorker } from "./stop-worker";
@@ -29,7 +29,8 @@ export type ChildReadyData = Omit<Extract<ChildMessage, { type: "ready" }>, "typ
 
 export interface ProcessManagerEvents {
   onReady: (serverId: string, data: ChildReadyData) => void;
-  onError: (serverId: string, message: string, fatal: boolean) => void;
+  /** A failure the worker reported, coded where Studio can act on it. */
+  onError: (serverId: string, message: string, fatal: boolean, code?: ChildErrorCode) => void;
   onStopped: (serverId: string) => void;
   /** The process ended without Studio asking it to — a crash, a signal, or an exit of its own. */
   onExited: (serverId: string, reason: string) => void;
@@ -84,7 +85,7 @@ export function createProcessManager(
 
   function route(serverId: string, child: ChildProcess, msg: ChildMessage): void {
     if (msg.type === "ready") events.onReady(serverId, msg);
-    else if (msg.type === "error") events.onError(serverId, msg.message, msg.fatal);
+    else if (msg.type === "error") events.onError(serverId, msg.message, msg.fatal, msg.code);
     else if (msg.type === "stopped") events.onStopped(serverId);
     else if (msg.type === "event") events.onEvent(serverId, msg.event);
     else if (msg.type === "command-result") commands.get(child)?.settle(msg);

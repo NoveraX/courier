@@ -1,10 +1,9 @@
 import { num, optNum, str } from "./event-helpers";
+import { ROUTE_SOURCES } from "./handle-mock-request-events";
 import type { MockEvent } from "./mock-event-types";
 import { useMockStore } from "./mock-slice";
 import type { MockRequestLog } from "./mock-slice-types";
 import { readOneOf } from "./payload";
-
-const ROUTE_SOURCES = ["auto", "override", "scenario", "upstream", "fixtures"] as const;
 
 /**
  * A slow body still arriving at a mock: the request's row shows how much of

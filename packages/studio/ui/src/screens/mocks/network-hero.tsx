@@ -14,7 +14,7 @@ const SPARK = { brand: "bg-brand", ok: "bg-ok", err: "bg-err", warn: "bg-warn" }
 const VALUE = { normal: "text-fg", err: "text-err", warn: "text-warn" } as const;
 
 /* How the mock takes uploads, said once: `uploads at 512 Kbps · up to 1 MB · image/* only`. */
-function uploadsOf({ bandwidth, maxBytes, accept }: UploadConditions): string {
+function uploadsPhrase({ bandwidth, maxBytes, accept }: UploadConditions): string {
   const parts = [
     bandwidth ? `at ${bandwidthLabel(bandwidth)}` : "",
     maxBytes ? `up to ${sizeLimitLabel(maxBytes)}` : "",
@@ -30,7 +30,7 @@ function conditionOf(server: MockServerInfo): { title: string; sub: string; acti
     rate ? `${rate}% of responses faulted` : "",
     delay ? `${delayLabel(delay.base)} ± ${delayLabel(delay.jitter)} delay` : "",
     kbps ? `${bandwidthLabel(kbps)} cap` : "",
-    uploadsOf(uploads),
+    uploadsPhrase(uploads),
     routes ? `${routes} ${routes === 1 ? "route" : "routes"} overridden` : "",
   ].filter(Boolean);
   return {

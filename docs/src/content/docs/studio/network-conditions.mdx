@@ -1,13 +1,14 @@
-export const metadata = { title: "Network Conditions", description: "Make a mock answer as a slow or failing network would, from Studio's Network tab or in code, and halt a run on its own.", mode: "both" }
+export const metadata = { title: "Network Conditions", description: "Make a mock answer as a slow or failing network would and take uploads as a strict server does, from Studio's Network tab or in code, and halt a run on its own.", mode: "both" }
 
-A mock can answer as a slow or unreliable network would. It adds latency to its answers, caps how fast it sends them, and fails a share of calls with a 500, a 503, a timeout or a dropped connection. Set the conditions in Studio's **Network** tab while the mock runs, or declare them with the mock in code. Stop conditions end a run on their own once it fails too often, grows too slow, or has run long enough.
+A mock can answer as a slow or unreliable network would, and take uploads as a server with limits does. It adds latency to its answers, caps how fast it sends them and how fast uploads arrive, refuses an upload over a size or of a type it does not take, and fails a share of calls with any HTTP error status, a timeout, a dropped connection or an upload cut off partway. Set the conditions in Studio's **Network** tab while the mock runs, or declare them with the mock in code. Stop conditions end a run on their own once it fails too often, grows too slow, or has run long enough.
 
 ## What they apply to
 
 - Every HTTP call the mock answers: at its routes, at the proxy route `/api/request` and by name. That includes the calls it passes to the source's own server and the ones it answers from recordings (see [Mock only some endpoints, or answer with recordings](/docs/studio/mock-servers#mock-only-some-endpoints-or-answer-with-recordings)).
+- Every request body the mock reads, at every path: the upload speed paces it, and the size limit and types refuse an upload before the handler runs.
 - A stream: its faults, and its latency, which comes before the stream opens. A bandwidth cap does not slow its events.
 - Not a channel: WebSocket subscriptions are answered as they would be with no conditions set.
-- Whether a call fails is decided first. A failed call gets no added latency; a `timeout` fault holds it instead.
+- Whether a call fails is decided as it arrives. Its body is read first — at the upload speed, and refused if the conditions refuse the upload — and the fault answers it then; an `interrupt` cuts the body off halfway instead. A failed call gets no added latency; a `timeout` fault holds it instead.
 - An endpoint mocked with a delay of its own, by `.delay(ms)`, `.withLatency(...)` or a sequence entry's `delay`, waits that delay instead of the network's latency. Its faults still apply.
 
 ## The Network tab
@@ -16,7 +17,7 @@ Open a running mock in Studio's Mocks view and pick **Network**. A change goes t
 
 ### Network condition
 
-The card at the top names what the mock simulates: its chaos mode, its delay as a base ± jitter, its bandwidth cap, and how many routes an override of their own delays or fails. **Stop** ends all of it. It clears the chaos, the delay and the cap, and switches every route override off, keeping what each one sets. The banner over the Mocks view offers it too, as **Stop chaos**, while a chaos mode is on.
+The card at the top names what the mock simulates: its chaos mode, its delay as a base ± jitter, its download cap, how it takes uploads, and how many routes an override of their own delays, fails or limits. **Stop** ends all of it. It clears the chaos, the delay, the cap and the upload conditions, and switches every route override off, keeping what each one sets. The banner over the Mocks view offers it too, as **Stop chaos**, while a chaos mode is on.
 
 Beside it are four live figures, each with a sparkline of the last minute:
 
@@ -38,14 +39,20 @@ Beside it are four live figures, each with a sparkline of the last minute:
 
 ### Fault injection
 
-**Error rate** sets the share of answers the mock fails, from 0 to 100%. The **Fault mix** weighs four faults against each other. A weight is relative, and the percentage beside it is its share of the failures. Moving the rate or a weight makes the run Custom.
+**Error rate** sets the share of answers the mock fails, from 0 to 100%. The **Fault mix** lists the faults those failures take and weighs them against each other. A weight is relative, and the percentage beside it is its share of the failures. **Add a fault** adds any fault from the list below, at a weight of 20; the cross beside a fault takes it out of the mix, down to the last one. Moving the rate or a weight, or changing the mix, makes the run Custom. A mix changed while nothing fails is kept for when a rate is set; **Stable** clears it.
 
 | Fault | The call gets |
 | --- | --- |
-| HTTP 500 | a 500 at once |
-| HTTP 503 | a 503 at once |
+| HTTP 500, 502, 504, 507 | that status at once |
+| HTTP 503 | a 503 at once, with `Retry-After: 5` |
+| HTTP 400, 403, 404, 409, 413, 415, 422 | that status at once |
+| HTTP 401 | a 401 at once, with `WWW-Authenticate: Bearer realm="mock"` — a challenge no browser answers with a sign-in prompt |
+| HTTP 429 | a 429 at once, with `Retry-After: 5` |
 | timeout | held until it times out, then a 408 |
 | reset | its connection dropped, with no answer |
+| interrupt | its connection dropped once half its body has arrived, so an upload fails partway. A call with no body is dropped as a reset drops it. |
+
+A status is answered with `{ "error": "HTTP 413 Content Too Large (simulated)" }`: the status, its reason, and the word Studio tells an injected fault from a handler's own error by.
 
 ### Latency
 
@@ -65,18 +72,38 @@ With **Custom**, the base (up to 2000 ms) and the jitter (up to the base, and at
 - **Normal**: most delays near the base, few at the edges.
 - **Log-normal**: most delays short, now and then one near the top, as on a real network.
 
-A base of 0 adds no delay. **Bandwidth** caps how fast bodies are sent: **Unlimited**, **512 Kbps**, **1.5 Mbps** or **10 Mbps**. An answer then waits as long as its JSON body takes to send at that rate, on top of its delay.
+A base of 0 adds no delay. **Download speed** caps how fast answers are sent: **Unlimited**, **512 Kbps**, **1.5 Mbps** or **10 Mbps**. An answer then waits as long as its JSON body takes to send at that rate, on top of its delay. How fast uploads arrive is the **Uploads** card's.
+
+### Uploads
+
+The **Uploads** card sets how the mock takes request bodies. Each setting goes to the mock as it is picked, and one the mocks file set shows among the presets.
+
+| Setting | What it does |
+| --- | --- |
+| **Upload speed**: Unlimited, 512 Kbps, 1.5 Mbps or 10 Mbps | The mock reads every request body no faster, a form, a file or JSON alike, so the app's upload progress moves as it would on that link: a 4 MB file at 1.5 Mbps takes about 22 s. |
+| **Size limit**: None, 100 KB, 1 MB or 5 MB | An upload over it, a form or a file, is answered 413 before it is read: `{ "error": "The upload is 3.2 MB, over the 1 MB the mock takes" }`. JSON keeps the mock's own limit for JSON, and no limit here raises `maxUploadBytes`, the most the mock reads. |
+| **File types** | Types as `<input accept>` lists them: a type (`application/pdf`), a family (`image/*`) or an extension (`.csv`), separated by commas. An upload holding a file of another type is answered 415: `{ "error": "notes.txt (text/plain) is not a type the mock takes: image/*, .pdf" }`. Empty takes any type. |
+
+The operating system takes the first part of an upload into its buffers at once, a couple of megabytes over `localhost`, so the app's progress runs that far ahead of what the mock has read, and the pace shows on a larger file. The mock's own log shows what it has read: a slow upload is in the **Logs** list as it arrives, its code `↑42%`, and its request sheet says it is uploading until the body is whole.
 
 ### Per-route overrides
 
-The card lists every route the mock serves, each with a switch. Open a route to give it a **Delay** of its own (0–2000 ms, fixed), an **Error rate** of its own (0–100%, in steps of 5), or both. A setting the route has none of its own for reads `global`, and its slider rests at the global value.
+The card lists every route the mock serves, each with a switch. Open a route to give it settings of its own:
+
+- **Delay**: 0–2000 ms, fixed.
+- **Error rate**: 0–100%, in steps of 5.
+- **Fails with**: the faults its failures take in place of the mix, picked from the same list. Faults picked for a route that nothing would fail, with no rate of its own and a global rate of 0, come with an error rate of 100%.
+- **Size limit**: 100 KB, 1 MB or 5 MB, or **Global**.
+- **File types**: typed as on the Uploads card; empty keeps the global ones, and `*/*` takes any type on this route.
+
+A setting the route has none of its own for reads `global`, and a slider rests at the global value.
 
 - Setting one switches the override on. The route then takes that setting in place of the global one and keeps the others: a route given only a delay still fails as often as the rest, and a route set to 0% answers even while the mock is Down.
-- The bandwidth cap and the fault mix are always the global ones.
-- The reset beside a setting takes it back to the global one; the last reset switches the override off. **Use the global settings** clears the override and switches it off.
+- The download cap and the upload speed are always the global ones.
+- The reset beside a delay or rate takes it back to the global one; so do **Global**, an emptied types field and taking out the last fault. The override switches off once it sets nothing of its own. **Use the global settings** clears the override and switches it off.
 - Switching on a route with nothing of its own opens it, so you can set something.
 
-The tag on each row sums up what the route sets of its own: `+300ms`, `50%`, `+300ms · 0%`, or `global`.
+The tag on each row sums up what the route sets of its own: `+300ms`, `50%`, `100% · 413, 429`, `≤ 1 MB · image/*`, or `global`.
 
 ### Safety
 
@@ -88,7 +115,7 @@ The tag on each row sums up what the route sets of its own: `+300ms`, `50%`, `+3
 | **P99 above** | the p99 of the durations over the last 60 s reaches it, once those 60 s hold 10 answers | 2000 ms |
 | **Run at most** | the run has lasted that many minutes, on time even if no call comes | no limit |
 
-A threshold set to 0 is off. Auto-halt itself is off until switched on, and the thresholds apply to any run, chaos or delay. A run starts when the mock begins to simulate anything, and lasts until it simulates nothing. A halt clears what the mock simulated, its chaos, its delay, its cap and its route overrides, and keeps the thresholds for the next run.
+A threshold set to 0 is off. Auto-halt itself is off until switched on, and the thresholds apply to any run, chaos or delay. A run starts when the mock begins to simulate anything, and lasts until it simulates nothing. A halt clears what the mock simulated, its chaos, its delay, its cap, its upload conditions and its route overrides, and keeps the thresholds for the next run.
 
 **Runs** lists each start, stop and halt, newest first: what ran, when, how long it lasted, and which threshold ended a halted run.
 
@@ -98,7 +125,7 @@ The **Observed** card shows the latest 60 answers:
 
 - **Latency distribution**: how their durations spread, from under 50 ms to over 4 s, coloured against the slow threshold.
 - **Status timeline**: one cell per answer, oldest first. A cell opens its request.
-- **Injected faults by type**: the 500s, 503s, timeouts and resets chaos injected. A handler's own errors are not counted.
+- **Injected faults by type**: how many answers each fault in the mix failed, and any other fault the latest answers met, a route's own, say. A handler's own errors are not counted.
 
 ### When the mock starts again
 
@@ -124,6 +151,7 @@ const users = defineGroup({
   endpoints: {
     getAll: endpoint.get("").response<User[]>(),
     getById: endpoint.get(":id").variables<{ id: number }>().response<User>(),
+    uploadAvatar: endpoint.post("avatar").variables<FormData>().response<User>(),
   },
 })
 export const api = defineApi({ baseURL: "https://api.example.com", groups: { users } })
@@ -145,7 +173,16 @@ export default defineMocks({
         { type: "timeout", weight: 1 },
       ],
       timeout: 5000,
-      routeOverrides: [{ routeId: "users:getById", enabled: true, errorRate: 0.5 }],
+      uploads: { bandwidth: 1500, maxBytes: 5 * 1024 * 1024 },
+      routeOverrides: [
+        { routeId: "users:getById", enabled: true, errorRate: 0.5 },
+        {
+          routeId: "users:uploadAvatar",
+          enabled: true,
+          faultTypes: ["413", "interrupt"],
+          uploads: { maxBytes: 1024 * 1024, accept: ["image/png", "image/jpeg"] },
+        },
+      ],
       stopConditions: {
         enabled: true,
         errorRateThreshold: 50,
@@ -164,22 +201,31 @@ export default defineMocks({
 | `latency` | The delay before each answer: a number of ms, a profile, or a range `{ min, max, jitter }` in ms. The profiles are `"3g"` (300–900 ms, ± 150), `"4g"` (100–350, ± 60), `"wifi"` (15–60, ± 15) and `"fiber"` (1–8, ± 2). |
 | `distribution` | How a delay is drawn between `min` and `max`: `"uniform"` (the default), `"normal"` or `"log-normal"`. The jitter is added either way, and no delay goes below 0. |
 | `bandwidth` | A cap in kilobits a second. An answer waits as long as its JSON body takes to send at this rate, on top of the latency. 0 or unset is unlimited. |
+| `uploads` | `{ bandwidth?, maxBytes?, accept? }`: how the mock takes request bodies. `bandwidth` is the speed in kilobits a second the mock reads every body at, a form, a file or JSON alike. `maxBytes` is the largest form or file it takes; a larger one is answered 413 before it is read, and it cannot raise `maxUploadBytes`. `accept` lists the types of file it takes, as `<input accept>` does; an upload holding another is answered 415. Each left out is none. |
 | `errorRate` | The share of calls that fail, from 0 (none) to 1 (every one). |
-| `faultTypes` | The faults a failing call takes, each as likely: `"500"`, `"502"`, `"503"`, `"timeout"`, `"reset"`. Unset, 500 and 503. |
+| `faultTypes` | The faults a failing call takes, each as likely: any error status from `"400"` to `"599"`, `"timeout"`, `"reset"` and `"interrupt"`. Unset, 500 and 503. |
 | `faultWeights` | `{ type, weight }` pairs, the weights relative to each other. When set, they are used in place of `faultTypes`. |
 | `timeout` | How long a `timeout` fault holds a call, in ms. A mock server holds it 30 000 ms unless set, or until the client gives up. A mock client waits this long, and fails at once unless set. |
-| `routeOverrides` | `{ routeId, enabled, latency?, errorRate?, faultTypes? }` for one route, named `"group:endpoint"`. Each field an enabled override sets is used for that route in place of the global one. Faults it names replace the global mix. |
+| `routeOverrides` | `{ routeId, enabled, latency?, errorRate?, faultTypes?, uploads? }` for one route, named `"group:endpoint"`. Each field an enabled override sets is used for that route in place of the global one. Faults it names replace the global mix, and its `uploads` take `maxBytes` and `accept`, each in place of the global one; the upload speed stays the global one. |
 | `stopConditions` | `{ enabled, errorRateThreshold, errorRateDurationSecs, p99Threshold, p99DurationSecs, maxDurationMins }`, every field given: thresholds in percent and ms, windows in seconds, the longest run in minutes. A threshold of 0 is off. |
 
 How each fault fails a call:
 
 | Fault | A mock server | A mock client |
 | --- | --- | --- |
-| `"500"`, `"502"`, `"503"` | answers that status at once, with `{ "error": "HTTP 503 (simulated)" }` | throws an `HTTPError` with that status and the same body as its data |
+| A status, `"400"` to `"599"` | answers it at once, with `{ "error": "HTTP 503 Service Unavailable (simulated)" }` and the headers a server sends with it: `WWW-Authenticate: Bearer realm="mock"` with a 401, `Retry-After: 5` with a 429 or a 503. A status outside 400–599 is answered 500. | throws an `HTTPError` with that status, the same body as its data, and the same headers |
 | `"timeout"` | holds the call for `timeout`, or until the client gives up, then answers 408 | waits `timeout` if set, then throws a 408 |
 | `"reset"` | drops the connection without an answer, or answers 502 to a call made with `app.request()` | throws a 502 |
+| `"interrupt"` | drops the connection once half the call's body has arrived, or at once for a call with no body; answers 502 to a call made with `app.request()` | throws a 502 before the handler runs |
 
-A mock client applies faults, latency, its distribution and route overrides to its HTTP calls. It has no wire to cap, so `bandwidth` does not apply, and neither do stop conditions, which halt a mock server's runs. Its streams and channels answer as they would with no conditions set.
+An upload the conditions refuse is answered as a server with limits answers it:
+
+| Upload | A mock server | A mock client |
+| --- | --- | --- |
+| over `uploads.maxBytes` | 413 before the body is read, `{ "error": "The upload is 3.2 MB, over the 1 MB the mock takes" }`, the rest of the body taken off the connection so a browser still sending it hears the answer | throws an `HTTPError` 413 with the same body, measuring a form as it would travel, encoded |
+| holding a file `uploads.accept` does not list | 415, `{ "error": "notes.txt (text/plain) is not a type the mock takes: image/*" }` | throws an `HTTPError` 415 with the same body |
+
+A mock client applies faults, latency, its distribution, route overrides and the upload size limit and types to its HTTP calls. It has no wire, so neither `bandwidth` nor `uploads.bandwidth` applies, and neither do stop conditions, which halt a mock server's runs. Its streams and channels answer as they would with no conditions set.
 
 ### Change them while the server runs
 

@@ -151,7 +151,7 @@ On `/api/ws` a subscription goes as it does on a Courier server. The variables a
 
 ### Uploads and large bodies
 
-A mock reads a body as a Courier server does, at every path it serves: JSON, and a form — `multipart/form-data` or URL-encoded — whose fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order. A file's name is kept as it was sent, `../` and all: the mock writes no file. It reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
+A mock reads a body as a Courier server does, at every path it serves: JSON — and a body sent with no type, or as plain text, when it is JSON — a form, `multipart/form-data` or URL-encoded, whose fields reach the handler as a record, a file as the `File` itself and a field sent more than once as a list, in order, and a file sent as the whole body, which reaches the handler as a `Blob` of its type. A file's name is kept as it was sent, `../` and all: the mock writes no file, and a generated create keeps each file in its record as its name, type and size. It reads up to 1 MB of JSON and 10 MB of form or upload, as a Courier server does; `maxBodyBytes` and `maxUploadBytes` set other limits.
 
 ```ts
 // courier.mocks.ts
@@ -163,11 +163,11 @@ export default defineMocks({
 })
 ```
 
-A body over its limit is answered with 413 before it is all read, a form that does not parse with 400, and one whose client stopped sending it with 400; each is answered `{ error }`, saying why. Studio's mock log shows such a request refused, with its status and the reason, and a file a request sent by its name, type and size.
+A body over its limit is answered with 413 before it is all read, and the rest is taken off the connection, so a browser still sending it hears the answer; a form that does not parse is answered 400, and so is one whose client stopped sending it. Each is answered `{ error }`, saying why. Studio's mock log shows such a request refused, with its status and the reason, and a file a request sent by its name, type and size.
 
 ### Slow and failing answers
 
-`network` makes a mock answer as a slow or unreliable network would: it adds latency, caps bandwidth, and fails a share of calls with a 500, a 503, a timeout or a dropped connection, and its stop conditions end a run on their own. Studio's **Network** tab sets the same conditions on a running mock. See [Network conditions](https://courier.noverax.cloud/docs/studio/network-conditions).
+`network` makes a mock answer as a slow or unreliable network would, and take uploads as a server with limits does: it adds latency, caps how fast answers are sent and uploads arrive, refuses an upload over a size (413) or holding a file of a type it does not take (415), and fails a share of calls with any HTTP error status, a timeout, a dropped connection or an upload cut off partway, and its stop conditions end a run on their own. Studio's **Network** tab sets the same conditions on a running mock. See [Network conditions](https://courier.noverax.cloud/docs/studio/network-conditions).
 
 ```ts
 // courier.mocks.ts
@@ -175,7 +175,15 @@ import { defineMocks, defineMockServer } from "@noverax/courier-mock"
 import { api } from "./src/api"
 
 export default defineMocks({
-  api: defineMockServer({ source: api, network: { latency: "3g", errorRate: 0.1 } }),
+  api: defineMockServer({
+    source: api,
+    network: {
+      latency: "3g",
+      errorRate: 0.1,
+      faultTypes: ["429", "503", "interrupt"],
+      uploads: { bandwidth: 1500, maxBytes: 5 * 1024 * 1024, accept: ["image/*", ".pdf"] },
+    },
+  }),
 })
 ```
 

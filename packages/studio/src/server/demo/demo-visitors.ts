@@ -21,12 +21,13 @@ export const DEMO_OPEN_CALLS = { page: 4, all: 40 } as const;
  * The largest message a socket may send a demo. Socket.IO reads a message
  * whole before any rule sees it, so each visitor's socket may hold this
  * much at once: a crowd of them sending the largest a developer's Studio
- * takes held gigabytes. The project's own runtimes are told it as they say
- * hello, and send a Playground answer or a whole body larger than it as a
- * refusal saying so; their events, bodies cut and stream messages
+ * takes held gigabytes, and a visitor sends no more than
+ * {@link DEMO_MAX_PAYLOAD}. The project's own runtimes are told it as they
+ * say hello, and send a Playground answer or a whole body larger than it as
+ * a refusal saying so; their events, bodies cut and stream messages
  * previewed, stay far below it.
  */
-export const DEMO_MAX_MESSAGE_BYTES = 1024 * 1024;
+export const DEMO_MAX_MESSAGE_BYTES = 512 * 1024;
 
 const RUN: VisitorDecision = { kind: "run" };
 const DROP: VisitorDecision = { kind: "drop" };

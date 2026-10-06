@@ -1,12 +1,15 @@
 import { resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
-import { findFormatters, type ProjectFormatters } from "./find-formatters";
+import { type FormatterTool, findFormatters, type ProjectFormatters } from "./find-formatters";
 import { runFormatter } from "./run-formatter";
 
 const log = createLogger("Studio");
 
 /* Files formatted at once: each is a process of its own. */
 const PARALLEL = 8;
+/* Biome does not always reach its own layout in one pass: a comment inside a type
+   argument moves again on the second. A file is formatted until it stops changing. */
+const PASSES = 3;
 
 /** A file Studio composed, by its project-relative path. */
 export interface ComposedFile {
@@ -55,7 +58,7 @@ export async function formatProjectFiles<TFile extends ComposedFile>(
     let content = file.content;
     try {
       for (const tool of tools)
-        content = await runFormatter(tool, resolve(root, file.path), content, root);
+        content = await settled(tool, resolve(root, file.path), content, root);
     } catch (error) {
       log.debug(`${file.path} is left as composed`, error);
       problem ??= `${file.path} was not formatted: ${error instanceof Error ? error.message : String(error)}`;
@@ -68,6 +71,22 @@ export async function formatProjectFiles<TFile extends ComposedFile>(
     formattedWith: tools.map((tool) => `${tool.name} ${tool.version}`),
     problem,
   };
+}
+
+/* The text as the tool leaves it once another pass changes nothing. */
+async function settled(
+  tool: FormatterTool,
+  path: string,
+  text: string,
+  root: string,
+): Promise<string> {
+  let current = text;
+  for (let pass = 0; pass < PASSES; pass++) {
+    const next = await runFormatter(tool, path, current, root);
+    if (next === current) break;
+    current = next;
+  }
+  return current;
 }
 
 /* Each item through `run`, at most PARALLEL at a time, results in the items' order. */

@@ -5,7 +5,7 @@ import { topLevelConst } from "./top-level-const";
 
 /** A list the config declares under a key: `sources` or `imports`. */
 export type ConfigList =
-  /** An object literal Studio can append to, and the keys it writes out. */
+  /** An object literal Studio can change, and the keys it writes out. */
   | { kind: "object"; object: ObjectExpression; keys: ReadonlySet<string> }
   /** No such key, and nothing that could declare it out of sight. */
   | { kind: "absent" }
@@ -62,7 +62,7 @@ function listIn(value: Expression, key: string, program: Program): ConfigList {
     current = unwrapExpression(init);
   }
   if (current.type !== "ObjectExpression") {
-    return other(`builds \`${key}\` in a way Studio cannot add to`);
+    return other(`builds \`${key}\` in a way Studio cannot change`);
   }
   const keys = new Set<string>();
   for (const property of current.properties) {

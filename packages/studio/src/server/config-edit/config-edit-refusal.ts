@@ -1,18 +1,18 @@
 import { CourierError } from "@noverax/courier";
 
-/** Why Studio leaves declaring an import in the config to the developer. */
+/** Why Studio leaves declaring an import in the config, or taking it out, to the developer. */
 export type ConfigEditRefusalCode =
   /** The config does not parse, is not UTF-8, or is not a regular file. */
   | "CONFIG_UNREADABLE"
-  /** Its default export is not an object Studio can find and add to. */
+  /** Its default export is not an object Studio can find and change. */
   | "CONFIG_SHAPE"
-  /** `sources` or `imports` is not an object literal Studio can add to. */
+  /** `sources` or `imports` is not an object literal Studio can change. */
   | "LIST_SHAPE"
   /** The name the generated source is imported under is taken in the config. */
   | "NAME_IN_USE"
   /** The config changed after the change was shown. */
   | "CONFIG_CHANGED"
-  /** The planned text did not read back as the declaration it was meant to be. */
+  /** The planned text did not read back as the change it was meant to be. */
   | "PLAN_REJECTED"
   /** The config does not load as it is on disk, or did not load once changed. */
   | "NOT_LOADED"
@@ -24,14 +24,14 @@ export type ConfigEditRefusalCode =
   | "NOT_LOCAL_PEER";
 
 /**
- * Studio leaves the declaration to the developer: the config is written in
- * a way it cannot add to safely, changed under it, or did not load once
- * changed. The message says why in words a developer can act on; the code
+ * Studio leaves a change to the config to the developer: the config is
+ * written in a way it cannot change safely, changed under it, or did not
+ * load once changed. The message says why in words a developer can act on; the code
  * says which case it is.
  *
  * @example
  * ```ts
- * throw new ConfigEditRefusal("LIST_SHAPE", "courier.config.ts builds `sources` in a way Studio cannot add to.");
+ * throw new ConfigEditRefusal("LIST_SHAPE", "courier.config.ts builds `sources` in a way Studio cannot change.");
  * ```
  */
 export class ConfigEditRefusal extends CourierError<ConfigEditRefusalCode> {

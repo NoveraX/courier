@@ -1,10 +1,8 @@
-import { formatDuration } from "../format-duration";
 import { withImportsLock } from "../imports-lock";
-import { ACT_BUDGET_MS, CONFIG_LOAD_TIMEOUT_MS } from "../project-state/budgets";
-import { withinBudget } from "../within-budget";
 import type { WriteBody } from "../write-types";
 import type { DeclareApplyResult } from "./config-declare-types";
 import { type ConfigEditDeps, declareAlone } from "./declare-alone";
+import { runConfigEdit } from "./run-config-edit";
 
 /**
  * Declare an import in the config, as the preview quoted by `baseHash`
@@ -28,30 +26,7 @@ export function applyConfigDeclaration(
   body: WriteBody,
   baseHash: string,
 ): Promise<DeclareApplyResult> {
-  return withImportsLock(async () => {
-    let started = false;
-    const dropped = new AbortController();
-    const edit = deps.project.runExclusive(
-      async (tx): Promise<DeclareApplyResult | null> => {
-        if (dropped.signal.aborted) return null;
-        started = true;
-        return declareAlone(deps, tx, body, baseHash);
-      },
-      CONFIG_LOAD_TIMEOUT_MS,
-      dropped.signal,
-    );
-    if (!(await withinBudget(edit, ACT_BUDGET_MS)) && !started) {
-      dropped.abort();
-      return busy();
-    }
-    return (await edit) ?? busy();
-  });
-}
-
-function busy(): DeclareApplyResult {
-  return {
-    status: "manual",
-    code: "STUDIO_BUSY",
-    reason: `Studio is still loading courier.config after ${formatDuration(ACT_BUDGET_MS)}, so it changed nothing. Try again once it has loaded.`,
-  };
+  return withImportsLock(() =>
+    runConfigEdit(deps.project, (tx) => declareAlone(deps, tx, body, baseHash)),
+  );
 }

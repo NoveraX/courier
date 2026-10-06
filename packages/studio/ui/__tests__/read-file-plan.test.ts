@@ -58,6 +58,20 @@ describe("consent to a plan", () => {
     expect(toggleConfirmed(consent, "package.json")).toBe(consent);
   });
 
+  it("reads how the files were formatted, and leaves out what does not read", () => {
+    const formatting = {
+      formattedWith: ["Biome 2.5.14", 3],
+      problem: "src/a.ts was not formatted",
+    };
+
+    expect(readFilePlan({ ...PLAN, formatting })?.formatting).toEqual({
+      formattedWith: ["Biome 2.5.14"],
+      problem: "src/a.ts was not formatted",
+    });
+    expect(readFilePlan({ ...PLAN, formatting: "Biome" })).not.toHaveProperty("formatting");
+    expect(readFilePlan(PLAN)).not.toHaveProperty("formatting");
+  });
+
   it("quotes the plan and the steps allowed, but never a plan with blocked files", () => {
     const plan = readFilePlan(PLAN);
     if (plan === null) throw new Error("the plan did not read");

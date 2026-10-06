@@ -75,7 +75,7 @@ async function handlePreviewRoute(
     const imports = importsSnapshotOf(declarations, projectRoot);
     const entry = getImportEntry(imports, body.name);
     const request = { ...body, ...(await declaredSpec(entry, body.name, body.spec)) };
-    const planned = planManage(request, imports, projectRootAt(projectRoot));
+    const planned = await planManage(request, imports, projectRootAt(projectRoot));
     if ("error" in planned) {
       sendResult(res, planned);
       return;

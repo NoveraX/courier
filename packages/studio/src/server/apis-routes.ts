@@ -10,6 +10,7 @@ import { errMsg } from "./fs-helpers";
 import { withImportExtension } from "./generated-import-extension";
 import { registerLayoutRoute } from "./layout-route";
 import { registerManageRoutes } from "./manage-routes";
+import { formatProjectFiles } from "./project-format/format-project-files";
 import { type ProjectRoot, projectRootAt } from "./project-fs/project-root";
 import { readProjectText } from "./project-fs/read-project-text";
 import type { ProjectState } from "./project-state/types";
@@ -85,13 +86,23 @@ export function registerApisRoutes(app: RouteApp, deps: ApisRouteDeps): void {
     }
   });
 
-  app.post("/api/apis/generate", (req, res) => {
+  app.post("/api/apis/generate", async (req, res) => {
     try {
       const body = validateGenerateBody(req.body, res);
       if (!body) return;
-      res.json({
-        files: generateCode(body.spec, withImportExtension(body.options, deps.projectRoot)),
-      });
+      const files = generateCode(body.spec, withImportExtension(body.options, deps.projectRoot));
+      /* A demo's visitor writes nothing, and a formatter is a process per file. */
+      if (deps.isDemoVisitor?.(req) === true) {
+        res.json({ files });
+        return;
+      }
+      /* Shown as they will be written: formatted as the project formats its code. */
+      const {
+        files: formatted,
+        formattedWith,
+        problem,
+      } = await formatProjectFiles(deps.projectRoot, files);
+      res.json({ files: formatted, formatting: { formattedWith, problem } });
     } catch (err) {
       res.status(400).json({ error: errMsg(err, "Code generation failed") });
     }

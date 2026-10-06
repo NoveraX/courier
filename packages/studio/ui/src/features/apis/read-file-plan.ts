@@ -5,6 +5,7 @@ import type {
   FilePlanSummary,
   KeptReason,
   PlanConfirmation,
+  PlanFormatting,
   PlannedWriteAction,
 } from "./types-file-plan";
 
@@ -115,5 +116,26 @@ export function readFilePlan(raw: unknown): FilePlanSummary | null {
   const blocked = listOf(raw.blocked, readBlocked);
   const forgotten = readPaths(raw.forgotten);
   if (!writes || !removals || !kept || !pending || !blocked || !forgotten) return null;
-  return { digest: raw.digest, dir: raw.dir, writes, removals, kept, pending, blocked, forgotten };
+  const formatting = readFormatting(raw.formatting);
+  return {
+    digest: raw.digest,
+    dir: raw.dir,
+    writes,
+    removals,
+    kept,
+    pending,
+    blocked,
+    forgotten,
+    ...(formatting && { formatting }),
+  };
+}
+
+/* How the files were formatted; left out when the answer says nothing readable about it. */
+function readFormatting(raw: unknown): PlanFormatting | undefined {
+  if (!isPlainObject(raw) || !Array.isArray(raw.formattedWith)) return undefined;
+  const formattedWith = raw.formattedWith.filter(
+    (tool): tool is string => typeof tool === "string",
+  );
+  const problem = typeof raw.problem === "string" ? raw.problem : null;
+  return { formattedWith, problem };
 }

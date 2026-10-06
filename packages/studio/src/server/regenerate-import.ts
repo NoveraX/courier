@@ -11,6 +11,9 @@ import { recordAfterApply } from "./import-files/record-after-apply";
 import { regenerationRequest } from "./import-files/regeneration-request";
 import { type PlanConsent, type PlanQuoting, runPlan } from "./import-files/run-plan";
 import { saveImportEntry } from "./import-files/save-import-entry";
+import { findFormatters } from "./project-format/find-formatters";
+import { formatPlannedWrites } from "./project-format/format-planned-writes";
+import { formatProjectFiles } from "./project-format/format-project-files";
 import type { ProjectRoot } from "./project-fs/project-root";
 import { SpecGenerationError } from "./spec-generation-error";
 
@@ -31,25 +34,28 @@ export interface Regeneration {
 /**
  * Plan generating an import afresh: its files as the spec gives them now,
  * merged with the user's edits to endpoints, and the files it had that the
- * spec no longer gives.
+ * spec no longer gives. The files are formatted as the project formats its
+ * code before anything reads them, so the endpoints' fingerprints, the plan
+ * shown and the files written are of the same text.
  *
  * @param regeneration - The import, where it goes, the spec and options, and its record
  * @returns The plan, and the recorded files left outside the import's directory
  * @throws {SpecGenerationError} When the spec cannot be generated from
  */
-export function planRegeneration(regeneration: Regeneration): {
-  plan: FilePlan;
-  leftBehind: string[];
-} {
+export async function planRegeneration(
+  regeneration: Regeneration,
+): Promise<{ plan: FilePlan; leftBehind: string[] }> {
   const { root, name, layout, spec, options, entry } = regeneration;
   const importExtension = generatedImportExtension(root.path, layout);
-  const generated = generate(
-    spec,
-    { ...options, ...(importExtension && { importExtension }) },
-    name,
+  const formatters = findFormatters(root.path);
+  const generated = await formatProjectFiles(
+    root.path,
+    generate(spec, { ...options, ...(importExtension && { importExtension }) }, name),
+    formatters,
   );
-  const { request, leftBehind } = regenerationRequest(root, layout, generated, entry);
-  return { plan: planFiles(root, request, entry?.files ?? {}), leftBehind };
+  const { request, leftBehind } = regenerationRequest(root, layout, generated.files, entry);
+  const planned = planFiles(root, request, entry?.files ?? {});
+  return { plan: await formatPlannedWrites(root.path, planned, formatters, generated), leftBehind };
 }
 
 /**
@@ -68,7 +74,7 @@ export async function applyRegeneration(
   consent: PlanConsent,
   quoting: PlanQuoting,
 ): Promise<{ report: ApplyReport; leftBehind: string[] }> {
-  const { plan, leftBehind } = planRegeneration(regeneration);
+  const { plan, leftBehind } = await planRegeneration(regeneration);
   const { root, name, spec, specHash, entry } = regeneration;
   const applied = { specHash, digest: createSpecDigest(spec) };
   const now = new Date().toISOString();

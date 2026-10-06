@@ -2,6 +2,7 @@ import { computeSpecHash, type ParsedSpec } from "../apis";
 import type { ImportStateEntry } from "../apis/imports-state";
 import { type ImportLayout, resolveImportLayout } from "../apis/layout";
 import { previewAddEndpoints, previewRemoveEndpoints } from "../apis/manage";
+import { addedEndpointsCode } from "../apis/manage/added-endpoints-code";
 import { FLAT_GROUP, isFlatImport } from "../apis/manage/flat-import";
 import { listedSelection } from "../apis/manage/listed-selection";
 import { previewRemoveFlatEndpoints } from "../apis/manage/remove-flat-endpoints";
@@ -16,6 +17,9 @@ import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-
 import { manageFingerprints } from "./manage-fingerprints";
 import { managePlanRequest } from "./manage-plan-request";
 import { planManageUpdate } from "./manage-update-plan";
+import { findFormatters } from "./project-format/find-formatters";
+import { formatPlannedWrites } from "./project-format/format-planned-writes";
+import { formatProjectFiles } from "./project-format/format-project-files";
 import type { ProjectRoot } from "./project-fs/project-root";
 import { unknownRemovals } from "./unknown-removals";
 
@@ -53,11 +57,11 @@ export interface ManagePlan {
  * @returns The changes and their plan, or the error to answer with and its status
  * @throws {DirOverlapError} When another import owns a directory overlapping the import's
  */
-export function planManage(
+export async function planManage(
   body: ManageRequest,
   imports: ImportsSnapshot,
   root: ProjectRoot,
-): ManagePlan | { error: string; status: number } {
+): Promise<ManagePlan | { error: string; status: number }> {
   const declared = getImportEntry(imports, body.name);
   if (!declared) return { error: `Source "${body.name}" not found`, status: 404 };
   const entry = getImportState(imports, body.name);
@@ -87,10 +91,18 @@ export function planManage(
   );
   const importExtension = generatedImportExtension(root.path, layout);
   const options = { ...declared, ...(importExtension && { importExtension }) };
-  const addResult =
+  /* Formatted as the project formats its code before anything reads it, as a full write is. */
+  const formatters = findFormatters(root.path);
+  const added =
     Object.keys(toAdd).length > 0
-      ? previewAddEndpoints(body.spec, toAdd, options, onDisk, layout)
+      ? await formatProjectFiles(
+          root.path,
+          addedEndpointsCode(body.spec, toAdd, options, layout),
+          formatters,
+        )
       : undefined;
+  const addResult =
+    added && previewAddEndpoints(body.spec, toAdd, options, onDisk, layout, added.files);
   const afterAdd = { ...onDisk, ...contentsOf(addResult) };
   const fingerprints = manageFingerprints(entry, onDisk);
   const removeResult = !Object.values(body.toRemove).some((names) => names.length > 0)
@@ -107,7 +119,12 @@ export function planManage(
   return {
     ...(addResult && { addResult }),
     ...(removeResult && { removeResult }),
-    plan: planFiles(root, request, entry?.files ?? {}),
+    plan: await formatPlannedWrites(
+      root.path,
+      planFiles(root, request, entry?.files ?? {}),
+      formatters,
+      added ?? null,
+    ),
     entry,
     layout,
   };

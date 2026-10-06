@@ -30,7 +30,7 @@ export async function handleManageApply(
   | Pick<ApplyReport, "written" | "removed" | "kept" | "backupDir" | "pruneFailures">
   | { error: string; status: number }
 > {
-  const planned = planManage(body, imports, root);
+  const planned = await planManage(body, imports, root);
   if ("error" in planned) return planned;
   const specHash = body.specHash ?? computeSpecHash(body.spec);
   const spec = { specHash, digest: createSpecDigest(body.spec) };

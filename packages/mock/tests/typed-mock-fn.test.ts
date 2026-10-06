@@ -11,7 +11,7 @@ import { defineMockServer } from "../src/managed";
 
 type User = { id: number; name: string };
 
-const { endpoint, stream } = courier();
+const { endpoint, stream, channel } = courier();
 const users = defineGroup({
   prefix: "users",
   endpoints: {
@@ -26,6 +26,21 @@ const flatApi = defineApi({
     listUsers: endpoint.get("users").response<User[]>(),
     getUser: endpoint.get("users/:id").variables<{ id: number }>().response<User>(),
     ticks: stream.response<{ n: number }>().get("ticks"),
+  },
+});
+const exchangeApi = defineApi({
+  baseURL: "https://api.example",
+  groups: {
+    files: defineGroup({
+      prefix: "files",
+      endpoints: { upload: endpoint.post("").variables<FormData>().response<{ size: number }>() },
+    }),
+    live: defineGroup({
+      prefix: "live",
+      endpoints: {
+        chat: channel.send<{ text: string }>().response<{ text: string }>().connect("chat"),
+      },
+    }),
   },
 });
 const mixedApi = defineApi({
@@ -122,6 +137,37 @@ describe("mock for a source with groups and top-level endpoints", () => {
       overrides: (mock) => {
         // @ts-expect-error getById belongs to users, and is not top-level
         mock("health", "getById");
+      },
+    });
+  });
+});
+
+describe("mock for endpoints that take a form or a channel's messages", () => {
+  it("hands a form's handler the fields the mock reads it into", () => {
+    defineMockServer({
+      source: exchangeApi,
+      overrides: (mock) => {
+        mock("files", "upload").returns((ctx) => {
+          expectTypeOf(ctx.variables).toEqualTypeOf<
+            Record<string, FormDataEntryValue | FormDataEntryValue[]>
+          >();
+          const file = ctx.variables.file;
+          return { size: file instanceof File ? file.size : 0 };
+        });
+      },
+    });
+  });
+
+  it("types each message a client sends a channel as the channel's send type", () => {
+    defineMockServer({
+      source: exchangeApi,
+      overrides: (mock) => {
+        mock("live", "chat").channel(() => ({
+          onMessage(ctx, message) {
+            expectTypeOf(message).toEqualTypeOf<{ text: string }>();
+            ctx.send({ text: message.text });
+          },
+        }));
       },
     });
   });

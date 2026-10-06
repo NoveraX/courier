@@ -2,6 +2,8 @@ import { logger } from "@noverax/courier";
 import { readBoundedBody } from "@noverax/courier/internal";
 import type { Context as HonoContext } from "hono";
 
+import { formFields } from "../form-fields";
+
 /** The most of a request body the mock reads: JSON, and a form or an upload. */
 export interface BodyLimits {
   json: number;
@@ -114,32 +116,6 @@ export async function readRequestBody(
 }
 
 /**
- * A form as the mock answers from it: a record of its fields, a field sent
- * more than once a list in the order sent, a file the `File` itself.
- *
- * @param form - The form
- * @returns Its fields
- * @example
- * ```ts
- * formRecord(form); // { title: "Q3", files: [File, File] }
- * ```
- */
-export function formRecord(
-  form: FormData,
-): Record<string, FormDataEntryValue | FormDataEntryValue[]> {
-  const fields = new Map<string, FormDataEntryValue | FormDataEntryValue[]>();
-  for (const [key, value] of form.entries()) {
-    const earlier = fields.get(key);
-    fields.set(
-      key,
-      earlier === undefined ? value : [...(Array.isArray(earlier) ? earlier : [earlier]), value],
-    );
-  }
-  /* `fromEntries` keeps a field called `__proto__` a field. */
-  return Object.fromEntries(fields);
-}
-
-/**
  * The variables a body holds: its JSON, or its form's fields as a record.
  *
  * @param body - A body the mock read
@@ -151,5 +127,5 @@ export function formRecord(
  * ```
  */
 export function bodyValue(body: Exclude<RequestBody, { error: string }>): unknown {
-  return body.kind === "form" ? formRecord(body.form) : body.value;
+  return body.kind === "form" ? formFields(body.form) : body.value;
 }

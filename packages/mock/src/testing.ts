@@ -10,6 +10,8 @@ export { createEnhancedMockBuilder } from "./builder";
 // Test client
 export type { MockClient, MockClientConfig } from "./create-mock-client";
 export { createMockClient } from "./create-mock-client";
+// Forms, as a handler receives them
+export type { MockFormFields } from "./form-fields";
 // Network utils
 export { LATENCY_PROFILES, resolveLatency } from "./network";
 
@@ -66,6 +68,7 @@ export type {
   ApiGroups,
   EndpointKeys,
   ExtractResponse,
+  ExtractSend,
   ExtractVariables,
   TopLevelKeys,
 } from "./typed-mock-fn";

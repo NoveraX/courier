@@ -40,10 +40,10 @@ export type { OnRegister } from "./builder-target";
  * createEnhancedMockBuilder((h) => registry.set("users", "list", h)).delay(200).resolves([]);
  * ```
  */
-export function createEnhancedMockBuilder<TResponse, TVariables>(
+export function createEnhancedMockBuilder<TResponse, TVariables, TSend = unknown>(
   onRegister: OnRegister,
   existing?: ResolvedHandler,
-): EnhancedMockBuilder<TResponse, TVariables> {
+): EnhancedMockBuilder<TResponse, TVariables, TSend> {
   const target = createBuilderTarget(onRegister, existing);
 
   const respond = (fn: MockHandlerFn, isError = false, status?: number): void => {
@@ -54,7 +54,7 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
     handler.nextStep = undefined;
   };
 
-  const builder: EnhancedMockBuilder<TResponse, TVariables> = {
+  const builder: EnhancedMockBuilder<TResponse, TVariables, TSend> = {
     resolves(data) {
       respond(() => data);
       return builder;
@@ -118,7 +118,7 @@ export function createEnhancedMockBuilder<TResponse, TVariables>(
 
   function decorated(
     decoration: Parameters<typeof target.decorate>[0],
-  ): EnhancedMockBuilder<TResponse, TVariables> {
+  ): EnhancedMockBuilder<TResponse, TVariables, TSend> {
     target.decorate(decoration);
     return builder;
   }

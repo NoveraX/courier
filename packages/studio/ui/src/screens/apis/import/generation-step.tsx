@@ -2,58 +2,16 @@ import { FolderOutput } from "lucide-react";
 
 import { useImportLayout } from "@/apis/use-import-layout";
 import { FIELD_INPUT, FormField } from "@/design/form-field";
-import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import { ToggleSwitch } from "@/design/toggle-switch";
 import type { GenerateOptions } from "@/features/apis/types";
-
-type Flag = "generateTypes" | "generateSchemas" | "addAuthMiddleware" | "includeComments";
-
-const VALIDATION: readonly SegmentedOption<GenerateOptions["validation"]>[] = [
-  { value: "zod", label: "Zod" },
-  { value: "valibot", label: "Valibot" },
-  { value: "arktype", label: "ArkType" },
-  { value: "none", label: "None" },
-];
-const GROUP_BY: readonly SegmentedOption<GenerateOptions["groupBy"]>[] = [
-  { value: "tag", label: "Tag" },
-  { value: "path", label: "Path" },
-  { value: "single", label: "Single file" },
-];
-const CLIENT: readonly SegmentedOption<GenerateOptions["generateClient"]>[] = [
-  { value: "direct", label: "Direct" },
-  { value: "proxy", label: "Proxy" },
-  { value: "both", label: "Both" },
-  { value: "none", label: "None" },
-];
-const FLAGS: readonly { key: Flag; label: string; sub: string }[] = [
-  {
-    key: "generateTypes",
-    label: "Generate types",
-    sub: "TypeScript types for every request and response",
-  },
-  {
-    key: "generateSchemas",
-    label: "Generate schemas",
-    sub: "runtime schemas with the validation library",
-  },
-  {
-    key: "addAuthMiddleware",
-    label: "Auth middleware",
-    sub: "a middleware that adds the spec's credentials",
-  },
-  { key: "includeComments", label: "Include comments", sub: "the spec's descriptions as JSDoc" },
-];
-
-function flagPatch(key: Flag, on: boolean): Partial<GenerateOptions> {
-  const patch: Partial<GenerateOptions> = {};
-  patch[key] = on;
-  return patch;
-}
+import { CLIENT, FLAGS, flagPatch, GROUP_BY, VALIDATION } from "./generation-options";
 
 interface GenerationStepProps {
   options: GenerateOptions;
   error: string | null;
+  /** Whether the spec tags none of its operations, so grouping by tag makes one group. */
+  untagged?: boolean;
   onChange: (patch: Partial<GenerateOptions>) => void;
 }
 
@@ -69,7 +27,12 @@ interface GenerationStepProps {
  * <GenerationStep options={options} error={null} onChange={setOptions} />
  * ```
  */
-export function GenerationStep({ options, error, onChange }: GenerationStepProps): React.ReactNode {
+export function GenerationStep({
+  options,
+  error,
+  untagged = false,
+  onChange,
+}: GenerationStepProps): React.ReactNode {
   const layout = useImportLayout(options.outputDir, options.sourceName);
   return (
     <div className="flex flex-col gap-1">
@@ -108,7 +71,15 @@ export function GenerationStep({ options, error, onChange }: GenerationStepProps
           onChange={(validation) => onChange({ validation })}
         />
       </FormField>
-      <FormField id="import-group" label="Group by" sub="how endpoints split into files">
+      <FormField
+        id="import-group"
+        label="Group by"
+        sub={
+          untagged && options.groupBy === "tag"
+            ? "no endpoint has a tag: by tag, they all go in one group"
+            : "how endpoints split into files"
+        }
+      >
         <Segmented
           label="Group by"
           quiet="subtle"

@@ -26,12 +26,10 @@ export function buildPostParseState(
   sourceUrl?: string,
 ): Partial<ImportState> {
   const sourceName = deriveSourceName(spec, sourceUrl);
-  return {
-    step: "select",
-    spec,
-    options: buildDefaultOptions(sourceName, settings),
-    selectedEndpoints: selectAllEndpoints(spec),
-  };
+  const options = buildDefaultOptions(sourceName, settings);
+  /* By tag, an API that tags no operation is one group — Stripe's, a schemas file of megabytes. */
+  if (spec.untagged && options.groupBy === "tag") options.groupBy = "path";
+  return { step: "select", spec, options, selectedEndpoints: selectAllEndpoints(spec) };
 }
 
 // ── Code generation ─────────────────────────────────────────────────────────

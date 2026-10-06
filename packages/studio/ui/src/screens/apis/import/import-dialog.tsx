@@ -45,7 +45,14 @@ function StepBody({
       />
     );
   if (state.step === "options")
-    return <GenerationStep options={state.options} error={error} onChange={wizard.setOptions} />;
+    return (
+      <GenerationStep
+        options={state.options}
+        error={error}
+        untagged={state.spec?.untagged === true}
+        onChange={wizard.setOptions}
+      />
+    );
   if (state.step === "preview")
     return (
       <FilesStep

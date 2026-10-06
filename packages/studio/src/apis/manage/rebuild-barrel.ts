@@ -112,8 +112,15 @@ function isGenerated(
   if (!SCHEMA_MODULE.test(specifier)) return false;
   if (!owned.has(specifier) && textOf(specifier) !== undefined) return false;
   if (statement.type === "ExportAllDeclaration") return true;
-  if (statement.exportKind === "type") return false;
+  /* A type-only list is the generator's for a module of types alone, the user's otherwise. */
+  const text = textOf(specifier);
+  if (statement.exportKind === "type" && text !== undefined && !onlyTypes(text)) return false;
   return statement.specifiers.every((s) => exportName(s.local) === exportName(s.exported));
+}
+
+function onlyTypes(text: string): boolean {
+  const kinds = [...namesOf(text).values()];
+  return kinds.length > 0 && kinds.every((kind) => kind === "type");
 }
 
 /* What the lines that stay export: their own lists, and every name of each module they re-export whole. */
@@ -142,6 +149,15 @@ function lineFor(
   const fresh = [...namesOf(text)].filter(([name]) => !taken.has(name));
   for (const [name, kind] of fresh) taken.set(name, kind);
   if (fresh.length === 0) return [];
+  if (fresh.every(([, kind]) => kind === "type")) {
+    return [
+      namedStatement(
+        "export type",
+        fresh.map(([name]) => name),
+        specifier,
+      ),
+    ];
+  }
   const listed = fresh.map(([name, kind]) => (kind === "type" ? `type ${name}` : name));
   return [namedStatement("export", listed, specifier)];
 }

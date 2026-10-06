@@ -15,9 +15,9 @@ interface LabControlsProps {
 /**
  * The lab's toolbar: the file's size and the link's pace, then the button
  * that sends the file, naming how much it sends. With room for one row
- * the pickers sit on the left and the button at the right edge; on a
- * narrow screen each picker takes a row and the button the full width
- * under them.
+ * the pickers sit on the left, a rule between them, and the button at the
+ * right edge; on a narrow screen each picker takes a row and the button
+ * the full width under them.
  *
  * @param props - The picks, whether a send is under way, and what each control does
  * @returns The controls
@@ -28,7 +28,7 @@ interface LabControlsProps {
  */
 export function LabControls({ size, pace, sending, onSize, onPace, onSend }: LabControlsProps) {
   return (
-    <div className="flex flex-col gap-3 @min-[560px]:flex-row @min-[560px]:items-center @min-[560px]:gap-5">
+    <div className="flex flex-col gap-3 @min-[620px]:flex-row @min-[620px]:items-center @min-[620px]:gap-5">
       <Choice
         label="File"
         legend="File size"
@@ -38,6 +38,7 @@ export function LabControls({ size, pace, sending, onSize, onPace, onSend }: Lab
         disabled={sending}
         onPick={onSize}
       />
+      <span aria-hidden="true" className="hidden h-5 w-px shrink-0 bg-line @min-[620px]:block" />
       <Choice
         label="Link"
         legend="Link speed"
@@ -51,7 +52,7 @@ export function LabControls({ size, pace, sending, onSize, onPace, onSend }: Lab
         type="button"
         onClick={onSend}
         disabled={sending}
-        className="mt-1 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-fg px-4 text-[14px] font-medium text-bg transition-opacity hover:opacity-86 disabled:cursor-default disabled:opacity-55 @min-[560px]:mt-0 @min-[560px]:ml-auto @min-[560px]:h-9 @min-[560px]:w-auto @min-[560px]:min-w-[8.5rem] @min-[560px]:rounded-[9px] @min-[560px]:text-[13.5px]"
+        className="mt-1 flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-fg px-4 text-[14px] font-medium text-bg transition-opacity hover:opacity-86 disabled:cursor-default disabled:opacity-55 @min-[620px]:mt-0 @min-[620px]:ml-auto @min-[620px]:h-9 @min-[620px]:w-auto @min-[620px]:min-w-[8.5rem] @min-[620px]:rounded-[9px] @min-[620px]:text-[13.5px]"
       >
         <CloudUpload aria-hidden="true" className="size-3.75" />
         {sending ? "Sending…" : `Send ${size} MB`}
@@ -71,7 +72,7 @@ interface ChoiceProps<TValue extends number> {
   onPick: (value: TValue) => void
 }
 
-/* One picker: its name, the values as a segmented row, and their unit after them, said once. */
+/* One picker: its name with the values' unit, said once, then the values as a segmented row. */
 function Choice<TValue extends number>({
   label,
   legend,
@@ -86,11 +87,12 @@ function Choice<TValue extends number>({
       <legend className="sr-only">{legend}</legend>
       <span
         aria-hidden="true"
-        className="w-9 shrink-0 font-mono text-micro tracking-[0.08em] text-fg-subtle uppercase @min-[560px]:w-auto"
+        className="w-[5.25rem] shrink-0 font-mono text-micro whitespace-nowrap text-fg-subtle @min-[620px]:w-auto"
       >
-        {label}
+        <span className="tracking-[0.08em] uppercase">{label}</span>
+        <span className="opacity-70"> · {unit}</span>
       </span>
-      <div className="flex flex-1 rounded-[9px] border border-line bg-inset p-0.75 @min-[560px]:flex-none">
+      <div className="flex flex-1 rounded-[9px] border border-line bg-inset p-0.75 @min-[620px]:flex-none">
         {options.map((option) => (
           <button
             key={option}
@@ -100,7 +102,7 @@ function Choice<TValue extends number>({
             disabled={disabled}
             onClick={() => onPick(option)}
             className={cn(
-              "h-8 flex-1 cursor-pointer rounded-[7px] px-3 font-mono text-label tabular-nums transition-colors disabled:cursor-default @min-[560px]:h-7 @min-[560px]:flex-none",
+              "h-8 flex-1 cursor-pointer rounded-[7px] px-3 font-mono text-label tabular-nums transition-colors disabled:cursor-default @min-[620px]:h-7 @min-[620px]:flex-none",
               option === value ? "bg-raised text-fg shadow-panel" : "text-fg-subtle hover:text-fg"
             )}
           >
@@ -108,12 +110,6 @@ function Choice<TValue extends number>({
           </button>
         ))}
       </div>
-      <span
-        aria-hidden="true"
-        className="w-9 shrink-0 font-mono text-label text-fg-subtle @min-[560px]:w-auto"
-      >
-        {unit}
-      </span>
     </fieldset>
   )
 }

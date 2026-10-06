@@ -708,7 +708,7 @@ See [`@noverax/courier-studio`](./packages/studio) for setup and [How Studio loa
 | | fetch | axios | tRPC | **Courier** |
 | --- | :---: | :---: | :---: | :---: |
 | End-to-end type safety | — | — | ✓ | **✓** |
-| No custom backend required | ✓ | ✓ | — | **✓** |
+| Works with any HTTP backend | ✓ | ✓ | — | **✓** |
 | Framework agnostic | ✓ | ✓ | ✓ | **✓** |
 | React Query integration | — | — | ✓ | **✓** |
 | Server Components | Manual | Manual | ✓ | **First-class** |

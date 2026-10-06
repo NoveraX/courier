@@ -1,23 +1,34 @@
-import type { NetworkConfig, RouteNetworkOverride } from "../types";
+import type { NetworkConfig, RouteNetworkOverride, UploadConditions } from "../types";
+import { isFaultType } from "./failure";
 
 /**
  * Whether a network config simulates anything: errors, latency, a
- * bandwidth cap, or a route override that fails or delays its route.
+ * bandwidth cap, upload conditions, or a route override that fails, delays
+ * or limits the uploads of its route.
  *
  * @param config - The config
  * @returns Whether it changes how requests are answered
  * @example
  * ```ts
  * isActive({ errorRate: 0.1 }); // → true
+ * isActive({ uploads: { maxBytes: 1_048_576 } }); // → true
  * ```
  */
 export function isActive(config: NetworkConfig): boolean {
   if ((config.errorRate ?? 0) > 0 || hasLatency(config) || (config.bandwidth ?? 0) > 0) return true;
+  if (limitsUploads(config.uploads) || (config.uploads?.bandwidth ?? 0) > 0) return true;
   return config.routeOverrides?.some(overrideSimulates) ?? false;
 }
 
 function overrideSimulates(override: RouteNetworkOverride): boolean {
-  return override.enabled && ((override.errorRate ?? 0) > 0 || (override.latency?.max ?? 0) > 0);
+  if (!override.enabled) return false;
+  const fails = (override.errorRate ?? 0) > 0 || (override.latency?.max ?? 0) > 0;
+  return fails || limitsUploads(override.uploads);
+}
+
+/* A size limit or a list of types refuses some uploads; a speed alone refuses none. */
+function limitsUploads(uploads: UploadConditions | undefined): boolean {
+  return uploads?.maxBytes !== undefined || (uploads?.accept?.length ?? 0) > 0;
 }
 
 /**
@@ -83,7 +94,8 @@ export function routeConfigOf(
 /**
  * A route override laid over the global config; the override's fields win.
  * Faults it names replace the global mix, weighted or not, so its own
- * `faultTypes` are the ones its failures take.
+ * `faultTypes` are the ones its failures take. Its upload limit and types
+ * each replace the global one; the upload speed stays the global one.
  *
  * @param global - The global config
  * @param override - The route's override
@@ -104,16 +116,21 @@ export function mergeOverride(
     ...(override.faultTypes?.length
       ? { faultTypes: override.faultTypes.filter(isFaultType), faultWeights: undefined }
       : {}),
+    uploads: uploadsOver(global.uploads, override.uploads),
     // Clear route overrides so we don't recurse
     routeOverrides: undefined,
   };
 }
 
-type FaultType = NonNullable<NetworkConfig["faultTypes"]>[number];
-
-const FAULT_TYPES: ReadonlySet<string> = new Set(["500", "502", "503", "timeout", "reset"]);
-
-/* An override comes from Studio as text; only a fault the mock simulates is kept. */
-function isFaultType(value: string): value is FaultType {
-  return FAULT_TYPES.has(value);
+/* Each upload rule the route sets replaces the global one; the rest stay. */
+function uploadsOver(
+  global: UploadConditions | undefined,
+  own: RouteNetworkOverride["uploads"],
+): UploadConditions | undefined {
+  if (own === undefined) return global;
+  return {
+    ...global,
+    ...(own.maxBytes !== undefined && { maxBytes: own.maxBytes }),
+    ...(own.accept !== undefined && { accept: own.accept }),
+  };
 }

@@ -6,6 +6,8 @@ import type {
   RouteNetworkOverride,
   StopCondition,
 } from "../types";
+import { isFaultType } from "./failure";
+import { readRouteUploads, readUploads } from "./read-uploads";
 
 type Patch = Partial<NetworkConfig>;
 type Fields = Record<string, unknown>;
@@ -25,6 +27,7 @@ const STOP_FIELDS = [
 const READERS: Array<[string, (value: unknown) => Patch]> = [
   ["latency", latencyPatch],
   ["bandwidth", (value) => ({ bandwidth: numberOr(value, 0) })],
+  ["uploads", (value) => ({ uploads: readUploads(value) })],
   ["errorRate", (value) => ({ errorRate: numberOr(value, 0) })],
   ["faultWeights", (value) => ({ faultWeights: listOf(value, faultWeightOf) })],
   ["routeOverrides", (value) => ({ routeOverrides: listOf(value, routeOverrideOf) })],
@@ -89,8 +92,11 @@ function routeOverrideOf(value: unknown): RouteNetworkOverride | undefined {
   if (typeof latency === "object") override.latency = latency;
   if (typeof value.errorRate === "number") override.errorRate = value.errorRate;
   if (Array.isArray(value.faultTypes)) {
-    override.faultTypes = value.faultTypes.filter((type) => typeof type === "string");
+    const types: unknown[] = value.faultTypes;
+    override.faultTypes = types.filter((type) => typeof type === "string").filter(isFaultType);
   }
+  const uploads = readRouteUploads(value.uploads);
+  if (uploads) override.uploads = uploads;
   return override;
 }
 

@@ -15,8 +15,9 @@ import type { Hono, Context as HonoContext } from "hono";
 import type { PrefixMapping } from "./prefix-route-types";
 import { registerPrefixRoutes } from "./prefix-routes";
 import { readProxyCall } from "./read-proxy-call";
-import { bodyValue, readRequestBody } from "./read-request-body";
+import { bodyValue } from "./read-request-body";
 import { refuseRequest } from "./refuse-request";
+import { readRouteBody } from "./route-body";
 import { handleMockRequest } from "./route-generator";
 import { parseQueryParams } from "./route-helpers";
 import type { RouteConfig } from "./route-types";
@@ -50,7 +51,7 @@ export function registerRequestRoutes(
       handleRequest: (c, group, method, variables) =>
         handleMockRequest(c, group, method, variables, config),
       refuse: (c, group, method, refusal) => refuseRequest(c, group, method, refusal, config),
-      bodyLimits: config.bodyLimits,
+      readBody: (c, group, method) => readRouteBody(c, config, group, method),
     });
   }
   registerRestRoutes(app, config);
@@ -62,7 +63,7 @@ export function registerRequestRoutes(
  */
 export function registerProxyRoute(app: Hono, config: RouteConfig): void {
   app.on(["GET", "POST"], "/api/request", async (c: HonoContext) => {
-    const call = await readProxyCall(c, config.bodyLimits);
+    const call = await readProxyCall(c, (group, method) => readRouteBody(c, config, group, method));
     if ("error" in call) {
       return call.method === undefined
         ? c.json({ error: call.error }, call.status)
@@ -114,7 +115,7 @@ export function registerRestRoutes(app: Hono, config: RouteConfig): void {
       const query = parseQueryParams(new URL(c.req.url).searchParams);
       return handleMockRequest(c, group, method, query, config);
     }
-    const body = await readRequestBody(c, config.bodyLimits);
+    const body = await readRouteBody(c, config, group, method);
     if ("error" in body) return refuseRequest(c, group, method, body, config);
     return handleMockRequest(c, group, method, bodyValue(body), config);
   });

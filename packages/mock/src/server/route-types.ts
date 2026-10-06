@@ -8,11 +8,29 @@ import type { NetworkState } from "../network/state";
 import type { MockRegistry } from "../registry";
 import type { ScenarioMark } from "../scenario/scenario-state";
 import type { MockHistoryEntry, NetworkConfig } from "../types";
+import type { BodyLimits } from "./body-limits";
 import type { Elsewhere } from "./elsewhere";
-import type { BodyLimits } from "./read-request-body";
+
+/** How much of a request's body has arrived, reported while a slow one arrives. */
+export interface UploadProgress {
+  httpMethod: string;
+  path: string;
+  group: string;
+  endpoint: string;
+  /** The bytes that have arrived. */
+  received: number;
+  /** The bytes the request declared, when it declared them. */
+  total: number | undefined;
+}
 
 /** Hooks for emitting request lifecycle events (set by the worker Studio runs a mock in) */
 export interface RequestHooks {
+  /**
+   * A body is still arriving a quarter second after the request came, and
+   * at most every quarter second after: how much of it has. The request's
+   * `onStart` follows once it is whole, under the same id.
+   */
+  onUpload?(id: string, upload: UploadProgress): void;
   onStart?(
     id: string,
     httpMethod: string,

@@ -18,7 +18,10 @@ export const DEFAULT_FAULT_TIMEOUT_MS = 30_000;
  * - `"reset"` drops the connection without an answer, so the client sees a
  *   failed request rather than an HTTP status. A request that did not arrive
  *   over a socket — one passed to `app.request()` — is answered 502 instead.
- * - A status code (`"500"`, `"503"`, …) is answered at once with that status.
+ *   An `"interrupt"` that reaches here had no body to cut off, and is dropped
+ *   the same way.
+ * - A status code (`"413"`, `"503"`, …) is answered at once with that status
+ *   and `{ error }` naming it, with the headers a server sends with it.
  *
  * `record` is called once the fault has run its course, with the status and
  * message the fault stands for, so the history and hooks get its real duration.
@@ -41,18 +44,34 @@ export async function answerFault(
   network: NetworkConfig,
   record: (status: number, message: string) => void,
 ): Promise<Response> {
-  const { status, message } = createFaultError(fault);
+  const { status, message, headers } = createFaultError(fault);
   if (fault === "timeout") {
     await holdFor(network.timeout ?? DEFAULT_FAULT_TIMEOUT_MS, c.req.raw.signal);
   }
   record(status, message);
+  if (fault === "reset" || fault === "interrupt") return dropConnection(c, message);
+  return c.json({ error: message }, status as 500, headers);
+}
 
-  const socket = fault === "reset" ? socketOf(c.env) : undefined;
-  if (socket) {
-    socket.destroy();
-    return new Response(null);
-  }
-  return c.json({ error: message }, status as 500);
+/**
+ * Drop a request's connection without an answer, as a lost connection
+ * does: the client sees its request fail, with no status. A request that
+ * did not arrive over a socket — one passed to `app.request()` — is
+ * answered 502 with `{ error }` instead.
+ *
+ * @param c - The request's Hono context
+ * @param message - What the 502 says, for a request with no socket
+ * @returns The response, which a dropped connection never delivers
+ * @example
+ * ```ts
+ * return dropConnection(c, "Upload Interrupted (simulated)");
+ * ```
+ */
+export function dropConnection(c: HonoContext, message: string): Response {
+  const socket = socketOf(c.env);
+  if (!socket) return c.json({ error: message }, 502);
+  socket.destroy();
+  return new Response(null);
 }
 
 /** Wait `ms`, or less when `signal` aborts first */

@@ -36,18 +36,26 @@ export function formFields(form: FormData): MockFormFields {
 }
 
 /**
- * Variables as a mock's handler receives them: a form as its fields, any
- * other value as it is.
+ * Variables as a mock's handler receives them: a form as its fields — one
+ * sent URL-encoded too, as the mock server reads it — any other value as it
+ * is.
  *
  * @param variables - What the call was made with
  * @returns What the handler is given
  * @example
  * ```ts
  * handlerVariables({ id: 1 }); // { id: 1 }
+ * handlerVariables(new URLSearchParams({ q: "x" })); // { q: "x" }
  * ```
  */
 export function handlerVariables(variables: unknown): unknown {
-  return typeof FormData !== "undefined" && variables instanceof FormData
-    ? formFields(variables)
-    : variables;
+  if (typeof FormData !== "undefined" && variables instanceof FormData) {
+    return formFields(variables);
+  }
+  if (typeof URLSearchParams === "undefined" || !(variables instanceof URLSearchParams)) {
+    return variables;
+  }
+  const form = new FormData();
+  for (const [key, value] of variables) form.append(key, value);
+  return formFields(form);
 }

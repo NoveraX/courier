@@ -34,6 +34,38 @@ describe("networkCommandPatch", () => {
     });
   });
 
+  it("reads upload conditions, and clears them for a command that sets none", () => {
+    expect(networkCommandPatch({ uploads: { bandwidth: 512, accept: ["image/*"] } })).toEqual({
+      uploads: { bandwidth: 512, accept: ["image/*"] },
+    });
+    const cleared = networkCommandPatch({ uploads: {} });
+    expect(Object.hasOwn(cleared, "uploads")).toBe(true);
+    expect(cleared.uploads).toBeUndefined();
+  });
+
+  it("keeps a route's faults the mock simulates and its upload limit, dropping the rest", () => {
+    const patch = networkCommandPatch({
+      routeOverrides: [
+        {
+          routeId: "files:upload",
+          enabled: true,
+          errorRate: 1,
+          faultTypes: ["413", "429", "interrupt", "302", "slow", 7],
+          uploads: { maxBytes: 1024, bandwidth: 64 },
+        },
+      ],
+    });
+    expect(patch.routeOverrides).toEqual([
+      {
+        routeId: "files:upload",
+        enabled: true,
+        errorRate: 1,
+        faultTypes: ["413", "429", "interrupt"],
+        uploads: { maxBytes: 1024 },
+      },
+    ]);
+  });
+
   it("holds nothing for a command without a config", () => {
     expect(networkCommandPatch(undefined)).toEqual({});
   });

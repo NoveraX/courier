@@ -1,23 +1,19 @@
 /**
  * The mock request lifecycle, shared by every route that answers a mocked
  * endpoint — the proxy routes and REST-style routes in `api-routes`, and the
- * prefix routes. Supporting pieces live in siblings:
- *
- * - `route-types`    — `RouteConfig`, `RequestHooks`
- * - `route-network`  — failure/latency/bandwidth resolution
- * - `route-response` — response shaping + history recording
+ * prefix routes. Its types are in `route-types`, the network conditions in
+ * `route-network`, the answer and its history in `route-response`, and the
+ * request's id, arrival and fault in `request-call`.
  */
-
-import { randomUUID } from "node:crypto";
 
 import type { Context as HonoContext } from "hono";
 
 import { sleep } from "../backend/resolve-delay";
-import { pickFault, shouldFail } from "../network/failure";
 import { resolveDelay } from "../network/latency";
 import type { MockRequestContext } from "../types";
 import { answerElsewhere } from "./answer-elsewhere";
 import { answerFault } from "./fault-response";
+import { callOf, faultOf } from "./request-call";
 import { requestTarget } from "./request-target";
 import { computeBandwidthDelay, resolveNetConfig } from "./route-network";
 import { buildResponse, handlerFailure, pushHistory } from "./route-response";
@@ -32,7 +28,10 @@ export interface AnswerOptions {
   stream?: boolean;
 }
 
-/** Core handler: resolve mock → apply network simulation → return response */
+/**
+ * Core handler: resolve mock → apply network simulation → return response,
+ * under the id, arrival and fault the request was given as it came.
+ */
 export async function handleMockRequest(
   c: HonoContext,
   group: string,
@@ -41,8 +40,7 @@ export async function handleMockRequest(
   config: RouteConfig,
   { raw = false, stream = false }: AnswerOptions = {},
 ): Promise<Response> {
-  const start = performance.now();
-  const requestId = `req_${randomUUID()}`;
+  const { id: requestId, start } = callOf(c.req.raw);
   const httpMethod = c.req.method;
   const path = requestTarget(c.req.url);
   const key = `${group}/${method}`;
@@ -55,8 +53,9 @@ export async function handleMockRequest(
   const netConfig = resolveNetConfig(config, group, method);
 
   // Random network failure injection
-  if (netConfig && shouldFail(netConfig)) {
-    return answerFault(c, pickFault(netConfig), netConfig, (status, message) => {
+  const fault = faultOf(c.req.raw, netConfig);
+  if (netConfig && fault !== undefined) {
+    return answerFault(c, fault, netConfig, (status, message) => {
       const duration = performance.now() - start;
       pushHistory(config, { group, method, variables, start, status, error: message });
       config.networkState?.trackRequest(duration, true);

@@ -3,6 +3,7 @@ import { HTTPError } from "@noverax/courier";
 import { createFaultError } from "../network/failure";
 import { isMockHttpError } from "../server/errors";
 import type { MockHistoryEntry } from "../types";
+import type { UploadRefusal } from "../uploads/upload-refusals";
 import type { ResolvedHandler } from "./types";
 
 /** One mock client call, as its history entry names it */
@@ -53,7 +54,27 @@ export function recordOutcome(
  * ```
  */
 export function networkFault(call: HttpCall, fault: string): HTTPError {
-  const { status, message } = createFaultError(fault);
+  const { status, message, headers } = createFaultError(fault);
+  const error = new HTTPError({ status, headers: new Headers(headers), data: { error: message } });
+  recordOutcome(call, { mocked: true, error });
+  return error;
+}
+
+/**
+ * The error an upload the conditions refuse fails the call with: a 413
+ * over the size limit, a 415 for a type not taken, with the `{ error }` a
+ * mock server answers the same upload with.
+ *
+ * @param call    The call
+ * @param refusal The status and why
+ * @returns The `HTTPError`, recorded in the history
+ * @example
+ * ```ts
+ * throw uploadRefused(call, { status: 413, error: "The upload is 3.2 MB, over the 1 MB the mock takes" });
+ * ```
+ */
+export function uploadRefused(call: HttpCall, refusal: UploadRefusal): HTTPError {
+  const { status, error: message } = refusal;
   const error = new HTTPError({ status, headers: new Headers(), data: { error: message } });
   recordOutcome(call, { mocked: true, error });
   return error;

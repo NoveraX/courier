@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describedUploads } from "../../src/managed/described-uploads";
+import { describedUploads } from "../src/described-uploads";
 
 describe("the variables Studio shows for a request", () => {
   it("show each file a form sent by its name, type and size", () => {
@@ -14,6 +14,12 @@ describe("the variables Studio shows for a request", () => {
         { name: "q3.pdf", type: "application/pdf", size: 4 },
       ],
     });
+  });
+
+  it("show a file sent as the whole body by its type and size, with no name", () => {
+    const body = new Blob(["%PDF-1.7"], { type: "application/pdf" });
+
+    expect(describedUploads(body)).toEqual({ name: "", type: "application/pdf", size: 8 });
   });
 
   it("leave variables with no file as they are", () => {

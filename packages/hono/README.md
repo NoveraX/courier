@@ -73,6 +73,18 @@ courierHandler({
 | `sseHeaders` | `Record<string, string>` | — | Extra headers on SSE responses (CORS, for instance) |
 | `sseMaxLifetimeMs` | `number` | 30 min | How long one SSE connection may live before the client reconnects and resumes |
 
+## The user's session
+
+An API that keeps the user's session describes it in `defineApi`, and every call a route makes — through every `await` — carries the session of the request being served, the cookies the session names and nothing else, once the request is served with it at hand:
+
+```ts
+import { requestContext } from "@noverax/courier-hono/request-context"
+
+app.use(requestContext())
+```
+
+The session cookies the API sets reach the browser on the response, beside the route's own. It needs `AsyncLocalStorage`: Node, Bun, Deno, or Cloudflare Workers with `nodejs_compat`.
+
 ## Streaming and WebSockets
 
 `courierSSEHandler()` serves SSE streams, and `courierWSHandler()` serves WebSocket channels through your runtime's `upgradeWebSocket`. On Node.js with `@hono/node-server` and `ws`:

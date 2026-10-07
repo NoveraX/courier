@@ -29,12 +29,16 @@ export interface CacheStore {
  * shape that does that by omission is the wrong shape.
  *
  *  - `"public"` — the response is the same whoever asks, so one copy serves
- *    everyone. Say this only when it is true.
+ *    everyone. Say this only when it is true. A call that carries the user's
+ *    session — its API's `session` — is never answered from it.
+ *  - `"session"` — one partition per set of credentials the call sends, its
+ *    `Cookie` and `Authorization`, kept as their SHA-256 digest; calls that
+ *    send none share one.
  *  - a function — returns the part of the key that identifies the caller.
  *    Read `ctx.request`, not `ctx.headers`: the latter has already been
  *    narrowed to what the allowlist forwards upstream.
  */
-export type CacheScope = "public" | ((ctx: MiddlewareContext) => string);
+export type CacheScope = "public" | "session" | ((ctx: MiddlewareContext) => string);
 
 export interface CacheOptions {
   /** How responses are partitioned between callers. */
@@ -71,6 +75,9 @@ const DEFAULT_MAX_ENTRIES = 1000;
  * cacheMiddleware({
  *   scope: (ctx) => ctx.request?.headers.get("authorization") ?? "anonymous",
  * });
+ *
+ * // One partition per user's session
+ * cacheMiddleware({ scope: "session", ttl: 10_000 });
  * ```
  */
 export function cacheMiddleware(options: CacheOptions): Middleware {
@@ -88,8 +95,12 @@ export function cacheMiddleware(options: CacheOptions): Middleware {
     const requestId = ctx._requestId ?? `${ctx.source}:${ctx.group ?? ""}:${ctx.method}`;
 
     if (!isCacheable(ctx)) return next();
+    if (scope === "public" && ctx.carriesSession) {
+      warnSessionInPublic(ctx);
+      return next();
+    }
 
-    const key = buildKey(ctx, scope);
+    const key = await buildKey(ctx, scope);
     const cached = storage.get(key);
     const hit = cached && cached.expiry > Date.now() ? copyOf(cached.data) : undefined;
     if (cached && hit) {
@@ -166,8 +177,9 @@ function isStream(data: unknown): boolean {
   );
 }
 
-function buildKey(ctx: MiddlewareContext, scope: CacheScope): string {
-  const partition = scope === "public" ? "public" : scope(ctx);
+async function buildKey(ctx: MiddlewareContext, scope: CacheScope): Promise<string> {
+  const partition =
+    scope === "public" ? "public" : scope === "session" ? await credentialsOf(ctx) : scope(ctx);
   return [
     partition,
     ctx.source,
@@ -176,6 +188,29 @@ function buildKey(ctx: MiddlewareContext, scope: CacheScope): string {
     ctx.transport ?? "http",
     JSON.stringify(ctx.variables ?? {}),
   ].join("\u0000");
+}
+
+/* The credentials themselves would sit in the store's keys — a Redis keyspace,
+   a log line — so a partition is named by their digest instead. */
+async function credentialsOf(ctx: MiddlewareContext): Promise<string> {
+  const cookie = ctx.headers.get("cookie") ?? "";
+  const authorization = ctx.headers.get("authorization") ?? "";
+  if (cookie === "" && authorization === "") return "anonymous";
+  const bytes = new TextEncoder().encode(`${cookie}\u0000${authorization}`);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  return `session:${Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+const warnedPublic = new Set<string>();
+
+/* Said once an endpoint: every call to it would say it again. */
+function warnSessionInPublic(ctx: MiddlewareContext): void {
+  const name = [ctx.source, ctx.group, ctx.method].filter(Boolean).join(".");
+  if (warnedPublic.has(name)) return;
+  warnedPublic.add(name);
+  log.warn(
+    `${name} carries the user's session, so its answer is not shared through a public cache. Give the endpoint { session: false } if it answers everyone alike, or cache it with scope "session"`,
+  );
 }
 
 /** Drop the oldest entries so a client-shaped key cannot grow the store forever. */

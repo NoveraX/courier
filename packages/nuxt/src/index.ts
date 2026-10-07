@@ -7,6 +7,7 @@ import { requestOfEvent } from "./event-request";
 import type { CourierEventHandler, H3EventLike } from "./h3-event";
 
 export type { CourierEventHandler, H3EventLike, H3NodeEvent, H3WebEvent } from "./h3-event";
+export { type NitroAppLike, nuxtIncomingRequest, requestContextPlugin } from "./request-context";
 
 /**
  * Create a Nuxt/Nitro event handler for the courier proxy.

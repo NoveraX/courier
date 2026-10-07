@@ -53,17 +53,25 @@ export function requestContextPlugin(nitroApp: NitroAppLike): void {
 export function nuxtIncomingRequest(event: H3EventLike): IncomingRequest {
   if (!isWebEvent(event)) return nodeIncomingRequest(event.node.req, event.node.res);
   const { req } = event;
-  const response = Reflect.get(event, "res") as { headers?: Headers } | undefined;
+  const headers = responseHeadersOf(event);
   return {
     key: event,
     method: req.method,
     origin: new URL(req.url).origin,
     headers: req.headers,
-    ...(response?.headers instanceof Headers && {
+    ...(headers !== undefined && {
       setCookie: ({ header }) => {
-        response.headers?.append("set-cookie", header);
+        headers.append("set-cookie", header);
         return true;
       },
     }),
   };
+}
+
+/* The headers of the response an h3 2.x event prepares, where it has one. */
+function responseHeadersOf(event: object): Headers | undefined {
+  const response: unknown = Reflect.get(event, "res");
+  if (typeof response !== "object" || response === null) return undefined;
+  const headers: unknown = Reflect.get(response, "headers");
+  return headers instanceof Headers ? headers : undefined;
 }

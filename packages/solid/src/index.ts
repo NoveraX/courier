@@ -7,6 +7,12 @@ import {
 } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 
+export {
+  type SolidStartServerEvent,
+  solidStartIncomingRequest,
+  solidStartRequestContext,
+} from "./request-context";
+
 /**
  * The parts of SolidStart's `APIEvent` the handler reads. `nativeEvent` is
  * the h3 event underneath, which on Node carries the response.

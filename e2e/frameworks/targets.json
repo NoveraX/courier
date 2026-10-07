@@ -158,6 +158,32 @@
     }
   },
   {
+    "id": "solid-start-1",
+    "app": "solid-start",
+    "overlays": ["solid-start-1"],
+    "build": ["npx", "vinxi", "build"],
+    "packages": ["core", "solid"],
+    "install": {
+      "@solidjs/start": "1",
+      "@solidjs/router": "0.15",
+      "solid-js": "1",
+      "vinxi": "0.5"
+    }
+  },
+  {
+    "id": "solid-start-2",
+    "app": "solid-start",
+    "overlays": ["solid-start-2"],
+    "packages": ["core", "solid"],
+    "install": {
+      "@solidjs/start": "2",
+      "@solidjs/router": "1",
+      "solid-js": "1",
+      "vite": "8",
+      "nitro": "latest"
+    }
+  },
+  {
     "id": "react-spa",
     "app": "spa",
     "packages": ["core", "react"],

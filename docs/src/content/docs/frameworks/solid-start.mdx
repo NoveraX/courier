@@ -1,4 +1,4 @@
-export const metadata = { title: "SolidStart", description: "Serve Courier's proxy from a SolidStart API route, with @noverax/courier-solid.", mode: "proxy" }
+export const metadata = { title: "SolidStart", description: "Serve Courier's proxy from a SolidStart API route and carry the user's session in server code, with @noverax/courier-solid.", mode: "proxy" }
 
 `@noverax/courier-solid` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call: one route answers every endpoint, reads over `GET` and writes over `POST`, and streams server-sent events.
 
@@ -48,6 +48,33 @@ const caller = createProxyCaller<typeof api>("api", {
 })
 const users = await caller.users.getAll()
 ```
+
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call a page's `query`, a server function, an action, an API route or a step it awaits makes. SolidStart keeps the request it is serving itself; register its `getRequestEvent` once, in the server entry:
+
+```tsx title="src/entry-server.tsx"
+import { registerRequestContext } from "@noverax/courier"
+import { solidStartRequestContext } from "@noverax/courier-solid"
+import { getRequestEvent } from "solid-js/web"
+
+registerRequestContext(solidStartRequestContext(getRequestEvent))
+```
+
+The session cookies the API sets reach the browser on the response SolidStart prepares: a page's, a server function's, an API route's, and an error response's too. A page streams, and its headers leave with its first part: a cookie the API sets after that cannot reach the browser, and the log says so. Load what may renew the session with `deferStream: true`, so the page waits for it:
+
+```tsx title="src/routes/account.tsx"
+const getMe = query(me, "me")
+
+export default function Account() {
+  const user = createAsync(() => getMe(), { deferStream: true })
+  // …
+}
+```
+
+The calls the same request makes after it still send the renewed session; only the browser keeps the old one. `forward`'s client address is the one SolidStart reports for the request.
+
+SolidStart 1 and 2 are checked with the Node server their build makes. See [User Sessions](/docs/server-side/session).
 
 ## Cancelled calls
 

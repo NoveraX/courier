@@ -108,6 +108,16 @@
       }
     },
     {
+      "includes": ["e2e/frameworks/apps/solid-start/src/entry-server.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noHeadElement": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["e2e/frameworks/apps/**/*.{vue,svelte,astro}"],
       "linter": {
         "rules": {

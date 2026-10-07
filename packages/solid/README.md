@@ -59,6 +59,21 @@ The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`mult
 
 Solid Start renders the page for a method the route does not export, so `PUT`, `DELETE` or `OPTIONS` on `/api/request` answer 200 with HTML rather than an error. Courier clients send only `GET` and `POST`; export the handler for the other methods too if anything else may call the route, and the proxy answers them with 405. In development, the dev server turns an upstream's `205 Reset Content` into a 500.
 
+## The user's session
+
+An API that keeps the user's session describes it in `defineApi`, and every call a page's `query`, a server function, an action or an API route makes — through every `await` — carries the session of the request being served, the cookies the session names and nothing else. SolidStart keeps that request itself; register its `getRequestEvent` once:
+
+```tsx
+// src/entry-server.tsx
+import { registerRequestContext } from "@noverax/courier"
+import { solidStartRequestContext } from "@noverax/courier-solid"
+import { getRequestEvent } from "solid-js/web"
+
+registerRequestContext(solidStartRequestContext(getRequestEvent))
+```
+
+The session cookies the API sets reach the browser on the response SolidStart prepares, an error response's too. A page streams: load what may renew the session with `deferStream: true`, so the page waits for it — a cookie set after its first part was sent cannot reach the browser, and the log says so.
+
 ## With Frontend
 
 Pair with `createProxyCaller` on the client:
@@ -84,6 +99,10 @@ When the browser cancels a call — an aborted upload, a query it no longer need
 ### `courierHandler()`
 
 Creates a Solid Start API route handler. Returns a function compatible with Solid Start's `GET`/`POST` exports.
+
+### `solidStartRequestContext(getRequestEvent)`
+
+The provider `registerRequestContext` takes, finding the request SolidStart is serving. `solidStartIncomingRequest(event)` reads one request event as the session does.
 
 ## License
 

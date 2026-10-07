@@ -11,6 +11,7 @@ export type AppKind =
   | "hono"
   | "astro"
   | "react-router"
+  | "solid-start"
   | "spa";
 
 /** A framework version the session is checked against, as an application installs it. */
@@ -21,6 +22,8 @@ export interface Target {
   readonly app: AppKind;
   /** Templates laid over it, under `apps/`, in order */
   readonly overlays?: readonly string[];
+  /** How it is built, where the version builds otherwise than its template does */
+  readonly build?: readonly string[];
   /** Courier's packages it installs, packed as the registry would ship them */
   readonly packages: readonly string[];
   /** What it installs from npm, by name and range */
@@ -39,6 +42,7 @@ const KINDS: ReadonlySet<string> = new Set([
   "hono",
   "astro",
   "react-router",
+  "solid-start",
   "spa",
 ]);
 
@@ -82,13 +86,14 @@ export function targetOf(id: string | undefined): Target {
 
 function isTarget(value: unknown): value is Target {
   if (typeof value !== "object" || value === null) return false;
-  const { id, app, packages, install, overlays } = value as Record<string, unknown>;
+  const { id, app, packages, install, overlays, build } = value as Record<string, unknown>;
   return (
     typeof id === "string" &&
     typeof app === "string" &&
     KINDS.has(app) &&
     isStrings(packages) &&
     (overlays === undefined || isStrings(overlays)) &&
+    (build === undefined || isStrings(build)) &&
     typeof install === "object" &&
     install !== null &&
     Object.values(install).every((range) => typeof range === "string")

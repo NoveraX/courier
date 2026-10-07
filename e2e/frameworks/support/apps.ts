@@ -110,6 +110,16 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     address: onLocalhost,
     peerAddress: false,
   },
+  remix: {
+    /* It serves the routes the SvelteKit application has, so the same checks drive it. */
+    spec: "forms.spec.ts",
+    apiUrlModule: "app/api-url.ts",
+    build: ["npx", "remix", "vite:build"],
+    start: () => ["node", "server.mjs"],
+    env: production,
+    ready: /Listening on/,
+    address: onLocalhost,
+  },
   "solid-start": {
     /* It serves the routes the SvelteKit application has, so the same checks drive it. */
     spec: "forms.spec.ts",

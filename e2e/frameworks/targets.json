@@ -158,6 +158,23 @@
     }
   },
   {
+    "id": "remix-2",
+    "app": "remix",
+    "packages": ["core", "express"],
+    "install": {
+      "@remix-run/react": "2",
+      "@remix-run/node": "2",
+      "@remix-run/express": "2",
+      "@remix-run/dev": "2",
+      "react": "18",
+      "react-dom": "18",
+      "vite": "6",
+      "express": "4",
+      "compression": "1",
+      "isbot": "4"
+    }
+  },
+  {
     "id": "solid-start-1",
     "app": "solid-start",
     "overlays": ["solid-start-1"],

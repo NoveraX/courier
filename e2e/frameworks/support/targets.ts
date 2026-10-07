@@ -11,6 +11,7 @@ export type AppKind =
   | "hono"
   | "astro"
   | "react-router"
+  | "remix"
   | "solid-start"
   | "nestjs"
   | "spa";
@@ -43,6 +44,7 @@ const KINDS: ReadonlySet<string> = new Set([
   "hono",
   "astro",
   "react-router",
+  "remix",
   "solid-start",
   "nestjs",
   "spa",

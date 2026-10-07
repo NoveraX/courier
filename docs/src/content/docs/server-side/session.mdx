@@ -130,6 +130,14 @@ import { requestContext } from "@noverax/courier-remix/request-context"
 export const middleware = [requestContext()]
 ```
 
+```tsx title="SolidStart 1 and 2 — src/entry-server.tsx"
+import { registerRequestContext } from "@noverax/courier"
+import { solidStartRequestContext } from "@noverax/courier-solid"
+import { getRequestEvent } from "solid-js/web"
+
+registerRequestContext(solidStartRequestContext(getRequestEvent))
+```
+
 `createAction` takes the action's request itself, and `withRequestContext` from `@noverax/courier-next/pages` serves `getServerSideProps` and API routes of the Pages Router. Any other Node server serves a request with `withIncomingRequest(nodeIncomingRequest(req, res), next)` from `@noverax/courier/node`; another framework registers a provider of its own with `registerRequestContext`.
 
 <Callout variant="warning" title="Next.js builds pages ahead of time">

@@ -39,7 +39,8 @@ export async function prepare(target: Target, apiUrl: string): Promise<string> {
   const tarballs = await pack(target.packages, join(BUILDS, `${target.id}-packages`));
   writeManifest(root, target, tarballs);
   await run(["npm", "install", "--no-audit", "--no-fund"], { cwd: root });
-  if (settings.build) await run(settings.build, { cwd: root, env: TELEMETRY_OFF });
+  const build = target.build ?? settings.build;
+  if (build) await run(build, { cwd: root, env: TELEMETRY_OFF });
   return root;
 }
 

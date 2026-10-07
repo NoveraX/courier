@@ -1,8 +1,8 @@
 /**
  * An application whose server renders pages and takes form posts, calling an
  * API that keeps the user's session: SvelteKit with its loads, form actions
- * and endpoints, and Express, Fastify, Hono, Astro and React Router with the
- * same routes.
+ * and endpoints, and Express, Fastify, Hono, Astro, React Router and
+ * SolidStart with the same routes.
  */
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 

@@ -4,7 +4,12 @@
  */
 
 /**
- * The kinds of frame. The server answers a `subscribe` carrying an `id` with
+ * The kinds of frame. A client's first frame on every socket is `auth`, its
+ * payload `{ headers?, auth? }` — the headers it could not put on the
+ * handshake, and the caller's `ws.auth` — which the server admits the
+ * connection on; `auth_required` asks the client to send it again, and an
+ * `auth` with the same `id` accepts what it sent. The server answers a
+ * `subscribe` carrying an `id` with
  * `subscribed` once the subscription is running, or `complete` with an
  * `error` when it refuses it — both with that `id`. When it subscribes the
  * connection under another topic than the one asked for, because it

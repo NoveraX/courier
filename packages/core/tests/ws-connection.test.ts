@@ -23,6 +23,7 @@ class MockWebSocket implements WSClientSocket {
   constructor(
     public url: string,
     public protocols?: string[],
+    public headers?: Readonly<Record<string, string>>,
   ) {
     MockWebSocket.instances.push(this);
   }
@@ -52,8 +53,12 @@ class MockWebSocket implements WSClientSocket {
   }
 }
 
-function mockFactory(url: string, protocols?: string[]): WSClientSocket {
-  return new MockWebSocket(url, protocols);
+function mockFactory(
+  url: string,
+  protocols?: string[],
+  headers?: Readonly<Record<string, string>>,
+): WSClientSocket {
+  return new MockWebSocket(url, protocols, headers);
 }
 
 function createConfig(overrides?: Partial<WSConnectionConfig>): WSConnectionConfig {
@@ -259,19 +264,74 @@ describe("createWSConnection", () => {
     conn.close();
   });
 
-  it("appends auth token to URL when getAuthToken provided", async () => {
-    createWSConnection(
+  it("opens with its credentials: headers on the handshake, the auth frame first, none in the URL", async () => {
+    const conn = createWSConnection(
       createConfig({
-        getAuthToken: () => Promise.resolve("secret123"),
+        credentials: () =>
+          Promise.resolve({
+            handshake: { authorization: "Bearer secret123" },
+            frame: { auth: { tenant: "t1" } },
+          }),
+      }),
+    );
+    conn.subscribe("chat:room", () => {});
+
+    await vi.advanceTimersByTimeAsync(0);
+    lastWs().simulateOpen();
+
+    expect(lastWs().url).toBe("ws://test/ws");
+    expect(lastWs().headers).toEqual({ authorization: "Bearer secret123" });
+    expect(JSON.parse(lastWs().sent[0]!)).toEqual({
+      type: "auth",
+      payload: { auth: { tenant: "t1" } },
+    });
+    expect(JSON.parse(lastWs().sent[1]!)).toMatchObject({ type: "subscribe", topic: "chat:room" });
+    conn.close();
+  });
+
+  it("asks for its credentials anew before it reconnects", async () => {
+    let issued = 0;
+    const conn = createWSConnection(
+      createConfig({ credentials: () => ({ frame: { auth: { token: `t${++issued}` } } }) }),
+    );
+    lastWs().simulateOpen();
+    lastWs().simulateClose(1006);
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    lastWs().simulateOpen();
+
+    expect(JSON.parse(lastWs().sent[0]!)).toEqual({
+      type: "auth",
+      payload: { auth: { token: "t2" } },
+    });
+    conn.close();
+  });
+
+  it("tries again, as after a drop, when its credentials cannot be had", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let attempts = 0;
+    const conn = createWSConnection(
+      createConfig({
+        credentials: () => {
+          attempts += 1;
+          if (attempts === 1) return Promise.reject(new Error("token service down"));
+          return { frame: { auth: { token: "t" } } };
+        },
       }),
     );
 
-    // Allow async buildUrl to resolve
-    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(60_000);
 
-    expect(lastWs().url).toBe("ws://test/ws?token=secret123");
+    expect(attempts).toBe(2);
+    expect(MockWebSocket.instances).toHaveLength(1);
+    conn.close();
+  });
+
+  it("sends an empty auth frame first when it has no credentials", () => {
+    const conn = createWSConnection(createConfig());
     lastWs().simulateOpen();
-    // cleanup
-    lastWs().simulateClose(1000);
+
+    expect(JSON.parse(lastWs().sent[0]!)).toEqual({ type: "auth", payload: {} });
+    conn.close();
   });
 });

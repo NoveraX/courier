@@ -9,6 +9,7 @@ import { connectionMetaOf } from "./connection-meta-of";
 import { LIMITS } from "./limits";
 import { rememberPeerAddress } from "./peer-address";
 import { admitSocket } from "./ws-admission";
+import { awaitCredentials } from "./ws-admit";
 import { buildContext, type WSSocketContext } from "./ws-context";
 import { holdFrames, type WSInbox } from "./ws-inbox";
 import { createIPTracker } from "./ws-ip-tracker";
@@ -70,8 +71,8 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
 
     const ctx = buildContext(ws, config, topicManager, registry, bridge, request);
     ctx.clientIP = ip;
-    /* What the client sends while onConnect runs — the subscriptions it
-       makes as its socket opens — waits for the connection, in order. */
+    /* What the client sends before its connection is admitted — who it is,
+       the subscriptions it makes as its socket opens — waits for it, in order. */
     const inbox = holdFrames(ws, ctx.maxControlPerSecond);
 
     if (config.onConnect) {
@@ -95,10 +96,17 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       closedWith ??= event.code;
     });
 
+    const admission = await awaitCredentials(ctx, inbox, config.authTimeoutMs ?? 3000);
+    if (closedWith !== undefined) {
+      ipTracker.release(ctx.clientIP);
+      return;
+    }
     try {
+      if ("invalid" in admission) throw new Error("Its auth frame was not one a client sends");
       const onConnect = config.onConnect;
       if (onConnect) {
-        const result = await onConnect({ connectionId: ctx.connectionId, request: ctx.request });
+        const { connectionId, request } = ctx;
+        const result = await onConnect({ connectionId, request, auth: admission.auth });
         ctx.meta = connectionMetaOf(result, "onConnect");
       }
     } catch (err) {

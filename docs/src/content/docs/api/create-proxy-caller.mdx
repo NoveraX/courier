@@ -46,13 +46,15 @@ type ProxyCallerDefaults = {
 }
 
 type CallerWSOptions = {
-  getAuthToken?: () => string | Promise<string>
+  auth?: WSAuthParams | (() => WSAuthParams | undefined | Promise<WSAuthParams | undefined>)
   backoff?: { initialMs?: number; maxMs?: number; factor?: number; jitter?: boolean }
   heartbeat?: { intervalMs?: number; timeoutMs?: number }
   messageQueue?: { maxCount?: number; maxBytes?: number }
   protocols?: string[]
   maxMessageSize?: number
 }
+
+type WSAuthParams = Record<string, unknown>
 ```
 
 - `proxyPath` — per-transport proxy endpoint configuration. Each field accepts either a relative path (resolved against `location.origin`) or an absolute URL. Caller-level fields are merged per-transport over `source.options.proxyPath` from `defineApi`.

@@ -14,6 +14,6 @@ export type {
   SSEConnectionRegistry,
   SSELifecycleConfig,
 } from "./sse-types";
+export { sendAuthRequired } from "./ws-reauth";
 export type { ConnectionInfo, ConnectionRegistry } from "./ws-registry-types";
-export { sendAuthRequired } from "./ws-token-refresh";
 export type { WSHandler, WSHandlerConfig } from "./ws-types";

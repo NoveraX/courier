@@ -146,7 +146,7 @@ import { boundary } from "./boundary"
 export const client = createProxyCaller<typeof api>("api", {
   boundary,
   ws: {
-    getAuthToken: () => session.accessToken(),
+    auth: async () => ({ token: await session.accessToken() }),
     backoff: { initialMs: 500, maxMs: 10_000 },
     heartbeat: { intervalMs: 25_000, timeoutMs: 10_000 },
     maxMessageSize: 65_536,
@@ -154,7 +154,7 @@ export const client = createProxyCaller<typeof api>("api", {
 })
 ```
 
-- `getAuthToken` — a token sent as `?token=` on every connect and reconnect, and sent again, on the open socket, when the server asks for a fresh one with `sendAuthRequired`. Without it the server's request goes unanswered, and the server closes the connection at its deadline — as it does when the server has no `onTokenRefresh` to check the token.
+- `auth` — what the client tells the server about itself, as socket.io's `auth` does: an object, or a function that returns one, called anew before every connect and reconnect so the token in it is current. It is sent in the socket's first frame, never in its URL, where proxies and servers log it, and the server's `onConnect` reads it as `auth` — see [Who a connection is](#who-a-connection-is). It is sent again, asked for anew, when the server asks with `sendAuthRequired`; a caller without it leaves that request unanswered, and the server closes the connection at its deadline.
 - `backoff` — the delay before each reconnect: `initialMs` (1 s), `maxMs` (30 s), `factor` (2), `jitter` (on).
 - `heartbeat` — the server's ping interval and pong timeout; a server silent for longer than the two together is taken for gone, and the client reconnects.
 - `messageQueue` — how much is kept to send while reconnecting: `maxCount` (100) and `maxBytes` (1 MB). A message beyond it is dropped with a warning, and its `send` answers `false`.
@@ -162,6 +162,28 @@ export const client = createProxyCaller<typeof api>("api", {
 - `maxMessageSize` — the largest message sent; see [Message size](#message-size).
 
 A caller with `ws` options opens a socket of its own, beside the one another caller uses on the same URL, so its options are never dropped in favour of the other's.
+
+## Who a connection is
+
+A browser's WebSocket carries the page's cookies on its handshake, and nothing else: no script can put an `Authorization` or an API key on it, and a token put in the URL ends up in the logs of every proxy and server it passes. So a Courier client says who it is in a frame of its own, the first it sends on every socket — before its subscriptions, on every reconnect too:
+
+- its `ws.auth`, which the server's `onConnect` reads as `auth`;
+- the headers it could not put on the handshake, which the server reads as the handshake's own: `onConnect`'s `request` carries them, and so does every subscription's middleware and session. A header the handshake has keeps its value, and none a browser or a proxy sets itself — `Cookie`, `Origin`, `Host`, the `Sec-` and forwarding headers — is taken from the frame.
+
+```ts title="server.ts"
+const server = await createCourierServer({
+  sources,
+  onConnect: async ({ request, auth }) => {
+    const user = await users.byToken(auth?.token ?? bearerOf(request))
+    if (!user) throw new Error("Unauthorized")
+    return { userId: user.id }
+  },
+})
+```
+
+The server holds what a client sends until `onConnect` has admitted its connection, then handles it in order, so a subscription made as the socket opens is not lost while the user is looked up. A client that sends no `auth` frame — one that is not Courier's — is admitted on its handshake alone once its first frame comes, or after `authTimeoutMs` (3 s).
+
+To have a client prove who it is again on an open connection — its token about to expire — call `sendAuthRequired(connections, connectionId, timeoutMs)`: the client sends its credentials again, asked for anew, and `onReauth` reads them as `onConnect` does and returns the connection's new metadata. Credentials it refuses, or none in time, close the connection with `4401`.
 
 ## Next steps
 

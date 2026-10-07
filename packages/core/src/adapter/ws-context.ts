@@ -66,7 +66,19 @@ export interface WSSocketContext {
   dt: typeof studioHooks;
   seq: { value: number };
   t0: number;
+  /** The upgrade request, as it came */
+  handshake: Request;
+  /**
+   * The upgrade request with the headers of the client's `auth` frame — what
+   * hooks, middleware and the session read; renewed by an accepted `onReauth`
+   */
   request: Request;
+  /**
+   * Whether the connection has taken its credentials: its first frame,
+   * read as them when it is an `auth` frame, and every later one as asked
+   * for again
+   */
+  credentialed: boolean;
   meta: Record<string, unknown>;
   maxSubscriptions: number;
   maxMessageSize: number;
@@ -82,7 +94,7 @@ export interface WSSocketContext {
   controlBucket: RateLimitBucket;
   authorize: WSHandlerConfig["authorize"];
   authorizeMessage: WSHandlerConfig["authorizeMessage"];
-  onTokenRefresh: WSHandlerConfig["onTokenRefresh"];
+  onReauth: WSHandlerConfig["onReauth"];
   authRequiredTimeoutMs: number;
   clientIP: string;
 }
@@ -171,7 +183,9 @@ export function buildContext(
     dt,
     seq: { value: 0 },
     t0: performance.now(),
+    handshake: request,
     request,
+    credentialed: false,
     meta: {},
     maxSubscriptions,
     maxMessageSize: config.maxMessageSize ?? LIMITS.MAX_MESSAGE_SIZE,
@@ -182,7 +196,7 @@ export function buildContext(
     controlBucket: createBucket(2 * maxSubscriptions),
     authorize: config.authorize,
     authorizeMessage: config.authorizeMessage,
-    onTokenRefresh: config.onTokenRefresh,
+    onReauth: config.onReauth,
     authRequiredTimeoutMs: config.authRequiredTimeoutMs ?? 30_000,
     clientIP: "",
   };

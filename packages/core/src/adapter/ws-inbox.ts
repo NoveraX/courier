@@ -6,6 +6,13 @@ const log = createLogger("WS");
 /** The frames a socket sends, held until its connection is admitted. */
 export interface WSInbox {
   /**
+   * The first frame the socket sends, left held; `undefined` when `ms` pass
+   * without one, or the socket closes first.
+   */
+  first(ms: number): Promise<string | undefined>;
+  /** Let go of the first frame held: the connection took it as its credentials. */
+  takeFirst(): void;
+  /**
    * Hand every frame held to `route`, in the order they came, then each
    * frame as it comes.
    */
@@ -14,10 +21,10 @@ export interface WSInbox {
 
 /**
  * Listen to a socket from the moment it is admitted, holding what it sends
- * until its connection is: a client subscribes as soon as its socket opens,
- * and a subscription sent while `onConnect` ran was lost, leaving the client
- * connected to nothing. A socket that sends more than `maxHeld` frames
- * before then is closed with 4429.
+ * until its connection is: a client proves who it is and subscribes as soon
+ * as its socket opens, and a subscription sent while `onConnect` ran was
+ * lost, leaving the client connected to nothing. A socket that sends more
+ * than `maxHeld` frames before then is closed with 4429.
  *
  * @param ws - The admitted socket
  * @param maxHeld - How many frames it may send before its connection is admitted
@@ -25,29 +32,49 @@ export interface WSInbox {
  * @example
  * ```ts
  * const inbox = holdFrames(ws, 200);
- * await onConnect(...);
+ * const first = await inbox.first(3000);
  * inbox.open((raw) => routeMessage(ctx, raw, heartbeat));
  * ```
  */
 export function holdFrames(ws: WebSocketLike, maxHeld: number): WSInbox {
   let held: string[] | undefined = [];
   let route: ((raw: string) => void) | undefined;
+  let awaitingFirst: ((raw: string | undefined) => void) | undefined;
   ws.addEventListener("message", (event) => {
     const raw = typeof event.data === "string" ? event.data : String(event.data);
-    if (route !== undefined) {
-      route(raw);
-      return;
-    }
-    if (held === undefined) return;
-    if (held.length < maxHeld) {
-      held.push(raw);
-      return;
-    }
-    log.warn(`A socket sent more than ${maxHeld} frames before its connection was admitted`);
-    held = undefined;
-    ws.close(4429, "Too many messages before the connection was accepted");
+    if (route !== undefined) route(raw);
+    else hold(raw);
   });
+  ws.addEventListener("close", () => awaitingFirst?.(undefined));
+
+  function hold(raw: string): void {
+    if (held === undefined) return;
+    if (held.length >= maxHeld) {
+      log.warn(`A socket sent more than ${maxHeld} frames before its connection was admitted`);
+      held = undefined;
+      ws.close(4429, "Too many messages before the connection was accepted");
+      return;
+    }
+    held.push(raw);
+    if (held.length === 1) awaitingFirst?.(raw);
+  }
+
   return {
+    first(ms) {
+      const [already] = held ?? [];
+      if (already !== undefined) return Promise.resolve(already);
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => awaitingFirst?.(undefined), ms);
+        awaitingFirst = (raw) => {
+          awaitingFirst = undefined;
+          clearTimeout(timer);
+          resolve(raw);
+        };
+      });
+    },
+    takeFirst() {
+      held?.shift();
+    },
     open(next) {
       const waiting = held ?? [];
       held = undefined;

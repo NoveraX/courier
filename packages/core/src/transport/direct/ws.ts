@@ -1,5 +1,6 @@
 import { getSourceName } from "../../define/api";
 import type { AnyDefinedApi } from "../../define/types";
+import { socketOptions } from "../../realtime/ws/ws-credentials";
 import type { CallerWSOptions } from "../../realtime/ws/ws-types";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";
@@ -39,7 +40,7 @@ export function createDirectWSChannelFactory(
     assertDirectlyReachable(api, group, method);
     const { url, topic } = channelAddress(api, group, method, variables);
     return instrumentWSChannel(
-      executeWSChannel(url, topic, variables, defaults.ws),
+      executeWSChannel(url, topic, variables, socketOptions(defaults.ws)),
       { source: sourceName, group, method, transport: "ws", mode: "direct" },
       studioRequestIdOption(options),
     );
@@ -66,7 +67,7 @@ export function createDirectWSPushFactory(
     assertDirectlyReachable(api, group, method);
     const { url, topic } = channelAddress(api, group, method, variables);
     return instrumentWSPush(
-      executeWSPush(url, topic, variables, defaults.ws),
+      executeWSPush(url, topic, variables, socketOptions(defaults.ws)),
       { source: sourceName, group, method, transport: "ws", mode: "direct" },
       studioRequestIdOption(options),
     );

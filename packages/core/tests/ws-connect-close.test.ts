@@ -55,17 +55,25 @@ function handlerWith(config: WSHandlerConfig) {
   return createWSHandler(config);
 }
 
+/* A Courier client's socket says who it is in its first frame, as it opens. */
 function connect(handler: ReturnType<typeof createWSHandler>): Socket {
   const socket = createSocket();
   handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
+  socket.emit("message", { data: JSON.stringify({ type: "auth", payload: {} }) });
   return socket;
+}
+
+/* Leaves once onConnect, which takes 20 ms, has started. */
+async function leaveDuringConnect(socket: Socket): Promise<void> {
+  await wait(5);
+  socket.emit("close", { code: 1001 });
 }
 
 describe("a client that leaves while onConnect runs", () => {
   it("is not registered once onConnect resolves", async () => {
     const handler = handlerWith({ onConnect: () => wait(20).then(() => ({ user: "u1" })) });
 
-    connect(handler).emit("close", { code: 1001 });
+    await leaveDuringConnect(connect(handler));
     await wait(40);
 
     expect(handler.connections.count).toBe(0);
@@ -77,7 +85,7 @@ describe("a client that leaves while onConnect runs", () => {
       onConnect: () => wait(20).then(() => ({})),
     });
 
-    for (let i = 0; i < 4; i += 1) connect(handler).emit("close", { code: 1001 });
+    await Promise.all(Array.from({ length: 4 }, () => leaveDuringConnect(connect(handler))));
     await wait(40);
     const next = connect(handler);
     await wait(40);
@@ -93,6 +101,7 @@ describe("a client that leaves while onConnect runs", () => {
       onConnect: () => wait(20).then(() => ({})),
     });
     const socket = connect(handler);
+    await vi.advanceTimersByTimeAsync(5);
     socket.emit("close", { code: 1001 });
     await vi.advanceTimersByTimeAsync(20);
 
@@ -109,7 +118,7 @@ describe("a client that leaves while onConnect runs", () => {
       onDisconnect,
     });
 
-    connect(handler).emit("close", { code: 1001 });
+    await leaveDuringConnect(connect(handler));
     await wait(40);
 
     expect(onDisconnect).toHaveBeenCalledOnce();
@@ -128,5 +137,54 @@ describe("a client that stays while onConnect runs", () => {
 
     expect(handler.connections.count).toBe(1);
     expect(handler.connections.list()[0]?.meta).toEqual({ user: "u1" });
+  });
+});
+
+describe("a client that leaves before it says who it is", () => {
+  it("is never handed to onConnect, and gives its address's slot back", async () => {
+    const onConnect = vi.fn(() => ({}));
+    const onDisconnect = vi.fn();
+    const handler = handlerWith({ maxConnectionsPerIP: 1, onConnect, onDisconnect });
+    const socket = createSocket();
+    handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
+
+    socket.emit("close", { code: 1001 });
+    await wait(20);
+    const next = connect(handler);
+    await wait(20);
+
+    expect(onConnect).toHaveBeenCalledOnce();
+    expect(onDisconnect).not.toHaveBeenCalled();
+    expect(next.closedWith).toBeUndefined();
+    expect(handler.connections.count).toBe(1);
+  });
+});
+
+describe("a client that sends no auth frame", () => {
+  it("is admitted on its handshake alone once the server stops waiting", async () => {
+    const onConnect = vi.fn(() => ({}));
+    const handler = handlerWith({ authTimeoutMs: 30, onConnect });
+    const socket = createSocket();
+    handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
+
+    await wait(10);
+    expect(onConnect).not.toHaveBeenCalled();
+    await wait(40);
+
+    expect(onConnect).toHaveBeenCalledWith(expect.objectContaining({ auth: undefined }));
+    expect(handler.connections.count).toBe(1);
+  });
+
+  it("is admitted at once when another frame comes first, which is then handled", async () => {
+    const onConnect = vi.fn(() => ({}));
+    const handler = handlerWith({ onConnect });
+    const socket = createSocket();
+    handler.handleSocket(socket, new Request("http://localhost/api/ws", { headers: ADDRESS }));
+
+    socket.emit("message", { data: JSON.stringify({ type: "ping" }) });
+    await wait(10);
+
+    expect(onConnect).toHaveBeenCalledOnce();
+    expect(socket.sent.map((frame) => JSON.parse(frame).type)).toEqual(["pong"]);
   });
 });

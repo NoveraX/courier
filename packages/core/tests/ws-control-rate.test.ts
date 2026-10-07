@@ -56,10 +56,10 @@ describe("control frames", () => {
     );
   });
 
-  it("count auth refreshes too", async () => {
+  it("count credentials sent again too", async () => {
     const client = await connect(5);
 
-    for (let i = 0; i < 15; i += 1) client.send({ type: "auth", payload: `token-${i}` });
+    for (let i = 0; i < 15; i += 1) client.send({ type: "auth", payload: { auth: { token: i } } });
     await settle(100);
 
     expect(rateLimited(client)).toHaveLength(5);

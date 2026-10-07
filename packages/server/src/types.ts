@@ -15,8 +15,8 @@ import type { Sources } from "@noverax/courier/define";
  * default) and `maxUploadBytes` for a multipart upload (10 MB by default) —
  * and the WebSocket limits and authorization hooks: `maxConnectionsPerIP`,
  * `clientIp`, `maxSubscriptionsPerConnection`, `maxMessageSize`,
- * `maxMessagesPerSecond`, `authorize`, `authorizeMessage` and
- * `onTokenRefresh`.
+ * `maxMessagesPerSecond`, `authorize`, `authorizeMessage`, `authTimeoutMs`
+ * and `onReauth`.
  *
  * `TConnect` and `TStreamConnect` are what `onConnect` and `onSSEConnect`
  * return, which type the `meta` the other WebSocket and SSE hooks receive;

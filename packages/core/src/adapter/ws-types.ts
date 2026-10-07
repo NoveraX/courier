@@ -1,5 +1,6 @@
 import type { Sources } from "../define/types";
 import type { PubSubAdapter, WebSocketLike } from "../realtime/adapters";
+import type { WSAuthParams } from "../realtime/ws/ws-credentials";
 import type { ConnectionMeta, ConnectResult } from "./connection-meta";
 import type { ClientIPResolver } from "./ws-ip-tracker";
 import type { ConnectionRegistry } from "./ws-registry-types";
@@ -77,12 +78,27 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
       }) => boolean | Promise<boolean>)
     | undefined;
   /**
-   * Called after upgrade, before subscriptions. Return the connection's
+   * Called once the client has said who it is, before its subscriptions:
+   * `request` is the upgrade request, with the headers of the client's
+   * `auth` frame a browser could not put on it — an `Authorization`, an API
+   * key — and `auth` is the client's `ws.auth`. Return the connection's
    * metadata — an object — or nothing, or throw to refuse the connection: it
    * is closed with 4401 "Connection rejected", and what was thrown is logged,
    * never sent. What it returns types `meta` in the hooks written after it.
    */
-  onConnect?: ((info: { connectionId: string; request: Request }) => TConnect) | undefined;
+  onConnect?:
+    | ((info: {
+        connectionId: string;
+        request: Request;
+        auth: WSAuthParams | undefined;
+      }) => TConnect)
+    | undefined;
+  /**
+   * How long `onConnect` waits for the client's `auth` frame, the first a
+   * Courier client sends (default 3000 ms). A client that sends none by
+   * then, or sends another frame first, is admitted on its handshake alone.
+   */
+  authTimeoutMs?: number | undefined;
   /** Called after socket close + topic cleanup */
   onDisconnect?:
     | ((info: {
@@ -105,17 +121,19 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
   /** Max consecutive message drops before force-closing a slow connection (default 50, 0 = disabled) */
   maxConsecutiveDrops?: number | undefined;
   /**
-   * Checks a token the client sent on its open connection, as
-   * `sendAuthRequired` asks it to: return the connection's new metadata, or
-   * throw to refuse the token. A refused token — and every token, when this
-   * is not set — leaves the deadline `sendAuthRequired` set, so the
-   * connection is closed at it.
+   * Checks the credentials a client sends again on its open connection, as
+   * `sendAuthRequired` asks it to — `request` and `auth` as `onConnect`
+   * reads them, with the new frame's headers. Return the connection's new
+   * metadata, or throw to refuse them. Refused credentials — and every
+   * frame, when this is not set — leave the deadline `sendAuthRequired`
+   * set, so the connection is closed at it.
    */
-  onTokenRefresh?:
+  onReauth?:
     | ((info: {
         connectionId: string;
-        token: string;
         meta: ConnectionMeta<TConnect>;
+        request: Request;
+        auth: WSAuthParams | undefined;
       }) => ConnectionMeta<TConnect> | Promise<ConnectionMeta<TConnect>>)
     | undefined;
   /** Per-message authorization — return false or throw to reject with 4403 */
@@ -127,7 +145,7 @@ export interface WSHandlerConfig<TConnect extends ConnectResult = ConnectResult>
         payload: unknown;
       }) => boolean | Promise<boolean>)
     | undefined;
-  /** Timeout in ms for token refresh after sending auth_required (default 30000) */
+  /** Timeout in ms for the credentials asked for with auth_required (default 30000) */
   authRequiredTimeoutMs?: number | undefined;
 }
 

@@ -254,13 +254,13 @@ describe("createProxyWSChannelFactory — dispatch", () => {
 
   it("playground rid coexists with other query params on the proxyPath.ws value", () => {
     const factory = createProxyWSChannelFactory("api", {
-      proxyPath: { ws: "ws://localhost:3001/api/ws?token=abc" },
+      proxyPath: { ws: "ws://localhost:3001/api/ws?region=eu" },
       playgroundRequestId: "rid-coexist",
     });
     factory("chat", "room", undefined, {});
 
     const callArg = mockedChannel.mock.calls[0]![0] as string;
-    expect(callArg).toContain("token=abc");
+    expect(callArg).toContain("region=eu");
     expect(callArg).toContain("_playground_rid=rid-coexist");
   });
 });
@@ -268,12 +268,15 @@ describe("createProxyWSChannelFactory — dispatch", () => {
 // ── Push factory dispatch ───────────────────────────────────────────────────
 
 describe("the caller's ws options", () => {
-  it("reach the channel's connection", () => {
-    const ws = { getAuthToken: () => "t" };
+  it("reach the channel's connection, auth as its credentials, the same for every channel", () => {
+    const ws = { auth: { token: "t" }, backoff: { initialMs: 50 } };
     const factory = createProxyWSChannelFactory("api", { proxyPath: { ws: "ws://x" }, ws });
     factory("chat", "room", undefined, {});
+    factory("chat", "lobby", undefined, {});
 
-    expect(mockedChannel).toHaveBeenCalledWith("ws://x", "api.chat.room", undefined, ws);
+    const [first, second] = mockedChannel.mock.calls.map((call) => call[3]);
+    expect(first).toEqual({ backoff: { initialMs: 50 }, credentials: expect.any(Function) });
+    expect(second).toBe(first);
   });
 
   it("reach the push subscription's connection", () => {

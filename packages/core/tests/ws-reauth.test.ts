@@ -1,12 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WSSocketContext } from "../src/adapter/ws-context";
+import { handleReauth, sendAuthRequired } from "../src/adapter/ws-reauth";
 import type { InternalConnectionRegistry, RegistryEntry } from "../src/adapter/ws-registry-types";
-import { handleTokenRefresh, sendAuthRequired } from "../src/adapter/ws-token-refresh";
 import { createMemoryPubSub } from "../src/realtime/memory-pubsub";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
+import type { WSCredentials } from "../src/realtime/ws/ws-credentials";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
 import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
+
+const HANDSHAKE = new Request("http://app.example.com/api/ws", {
+  headers: { cookie: "sid=a1", origin: "http://app.example.com" },
+});
 
 function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
   ctx: WSSocketContext;
@@ -16,8 +21,10 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
   const ctx = {
     connectionId: "conn-1",
     meta: { userId: "user-1" },
+    handshake: HANDSHAKE,
+    request: HANDSHAKE,
     sendMessage: (msg: WSMessage) => sent.push(msg),
-    onTokenRefresh: undefined,
+    onReauth: undefined,
     registry: { updateMeta: vi.fn(), getEntry: vi.fn(() => undefined) },
     ...overrides,
   } as unknown as WSSocketContext;
@@ -25,64 +32,83 @@ function createMockCtx(overrides: Partial<WSSocketContext> = {}): {
   return { ctx, sent };
 }
 
-describe("handleTokenRefresh", () => {
-  it("rejects missing token with 4400", async () => {
-    const { ctx, sent } = createMockCtx();
-    await handleTokenRefresh(ctx, { type: "auth", id: "1" });
-
-    expect(sent).toHaveLength(1);
-    expect(sent[0]!.error?.code).toBe(4400);
-  });
-
-  it("refuses a token when no onTokenRefresh can check it, and leaves meta alone", async () => {
+describe("handleReauth", () => {
+  it("refuses credentials when no onReauth can check them, and leaves meta alone", async () => {
     const output = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { ctx, sent } = createMockCtx();
-    await handleTokenRefresh(ctx, { type: "auth", id: "1", payload: "new-jwt" });
+    await handleReauth(ctx, { type: "auth", id: "1", payload: { auth: { token: "new-jwt" } } });
 
     expect(ctx.meta).toEqual({ userId: "user-1" });
     expect(sent).toEqual([
-      { type: "error", id: "1", error: { code: 4401, message: "Token rejected" } },
+      { type: "error", id: "1", error: { code: 4401, message: "Credentials rejected" } },
     ]);
-    expect(output.mock.calls.some((call) => String(call[1]).includes("no onTokenRefresh"))).toBe(
-      true,
-    );
+    expect(output.mock.calls.some((call) => String(call[1]).includes("no onReauth"))).toBe(true);
     output.mockRestore();
   });
 
-  it("calls onTokenRefresh and updates meta on success", async () => {
-    const onTokenRefresh = vi.fn().mockResolvedValue({ userId: "user-2", role: "admin" });
+  it("calls onReauth with the handshake and the frame, and keeps what it returns", async () => {
+    const onReauth = vi.fn().mockResolvedValue({ userId: "user-2", role: "admin" });
     const updateMeta = vi.fn();
     const { ctx, sent } = createMockCtx({
-      onTokenRefresh,
+      onReauth,
       registry: {
         updateMeta,
         getEntry: vi.fn(() => undefined),
       } as unknown as InternalConnectionRegistry,
     });
 
-    await handleTokenRefresh(ctx, { type: "auth", id: "2", payload: "fresh-jwt" });
+    await handleReauth(ctx, {
+      type: "auth",
+      id: "2",
+      payload: { headers: { authorization: "Bearer fresh-jwt" }, auth: { tenant: "t1" } },
+    });
 
-    expect(onTokenRefresh).toHaveBeenCalledOnce();
-    expect(onTokenRefresh.mock.calls[0]![0].token).toBe("fresh-jwt");
-    expect(onTokenRefresh.mock.calls[0]![0].connectionId).toBe("conn-1");
+    const info = onReauth.mock.calls[0]![0];
+    expect(info.connectionId).toBe("conn-1");
+    expect(info.auth).toEqual({ tenant: "t1" });
+    expect(info.request.headers.get("authorization")).toBe("Bearer fresh-jwt");
+    expect(info.request.headers.get("cookie")).toBe("sid=a1");
+    expect(ctx.request.headers.get("authorization")).toBe("Bearer fresh-jwt");
     expect(updateMeta).toHaveBeenCalledWith("conn-1", expect.objectContaining({ role: "admin" }));
     expect(sent[0]!.type).toBe("auth");
   });
 
-  it("bails out without mutating meta when ctx.closed flips during onTokenRefresh", async () => {
+  it("takes no cookie, origin or forwarding header from the frame", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const onReauth = vi.fn().mockResolvedValue({});
+    const { ctx } = createMockCtx({ onReauth });
+
+    await handleReauth(ctx, {
+      type: "auth",
+      payload: {
+        headers: {
+          cookie: "sid=mallory",
+          origin: "http://evil.example",
+          "x-forwarded-for": "1.2.3.4",
+        },
+      },
+    });
+
+    const request: Request = onReauth.mock.calls[0]![0].request;
+    expect(request.headers.get("cookie")).toBe("sid=a1");
+    expect(request.headers.get("origin")).toBe("http://app.example.com");
+    expect(request.headers.has("x-forwarded-for")).toBe(false);
+  });
+
+  it("bails out without mutating meta when ctx.closed flips during onReauth", async () => {
     let ctxRef!: WSSocketContext;
-    const onTokenRefresh = vi.fn(async () => {
+    const onReauth = vi.fn(async () => {
       (ctxRef as { closed: boolean }).closed = true;
       return { userId: "user-2", role: "admin" };
     });
     const updateMeta = vi.fn();
     const { ctx, sent } = createMockCtx({
-      onTokenRefresh,
+      onReauth,
       registry: { updateMeta } as unknown as InternalConnectionRegistry,
     });
     ctxRef = ctx;
 
-    await handleTokenRefresh(ctx, { type: "auth", id: "x", payload: "fresh-jwt" });
+    await handleReauth(ctx, { type: "auth", id: "x", payload: { auth: { token: "fresh" } } });
 
     expect(updateMeta).not.toHaveBeenCalled();
     expect(sent).toHaveLength(0);
@@ -91,38 +117,40 @@ describe("handleTokenRefresh", () => {
 
   it("bails out without sendMessage when ctx.closed flips and handler throws", async () => {
     let ctxRef!: WSSocketContext;
-    const onTokenRefresh = vi.fn(async () => {
+    const onReauth = vi.fn(async () => {
       (ctxRef as { closed: boolean }).closed = true;
       throw new Error("expired");
     });
-    const { ctx, sent } = createMockCtx({ onTokenRefresh });
+    const { ctx, sent } = createMockCtx({ onReauth });
     ctxRef = ctx;
 
-    await handleTokenRefresh(ctx, { type: "auth", id: "x", payload: "bad" });
+    await handleReauth(ctx, { type: "auth", id: "x", payload: { auth: { token: "bad" } } });
 
     expect(sent).toHaveLength(0);
   });
 
   it("sends 4401 and does not update meta when handler throws", async () => {
-    const onTokenRefresh = vi.fn().mockRejectedValue(new Error("expired"));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const onReauth = vi.fn().mockRejectedValue(new Error("expired"));
     const updateMeta = vi.fn();
     const { ctx, sent } = createMockCtx({
-      onTokenRefresh,
+      onReauth,
       registry: { updateMeta } as unknown as InternalConnectionRegistry,
     });
 
-    await handleTokenRefresh(ctx, { type: "auth", id: "3", payload: "bad-jwt" });
+    await handleReauth(ctx, { type: "auth", id: "3", payload: { auth: { token: "bad-jwt" } } });
 
     expect(sent).toHaveLength(1);
     expect(sent[0]!.error?.code).toBe(4401);
     expect(updateMeta).not.toHaveBeenCalled();
   });
 
-  it("rejects non-string payload with 4400", async () => {
+  it("answers a payload no client sends with 4400", async () => {
     const { ctx, sent } = createMockCtx();
-    await handleTokenRefresh(ctx, { type: "auth", id: "4", payload: { nested: true } });
+    await handleReauth(ctx, { type: "auth", id: "4", payload: "a-bare-token" });
+    await handleReauth(ctx, { type: "auth", id: "5", payload: { headers: { authorization: 1 } } });
 
-    expect(sent[0]!.error?.code).toBe(4400);
+    expect(sent.map((m) => m.error?.code)).toEqual([4400, 4400]);
   });
 });
 
@@ -169,7 +197,7 @@ describe("sendAuthRequired", () => {
     expect(cancel).toBeDefined();
 
     await new Promise((r) => setTimeout(r, 80));
-    expect(close).toHaveBeenCalledWith(4401, "Auth timeout — token not refreshed");
+    expect(close).toHaveBeenCalledWith(4401, "Auth timeout — credentials not sent again");
   });
 
   it("cancel function prevents timeout disconnect", async () => {
@@ -192,19 +220,20 @@ describe("sendAuthRequired", () => {
   });
 });
 
-describe("a token the server asks a connected client for", () => {
+describe("credentials the server asks a connected client for again", () => {
   let served: ServedWS | undefined;
   let client: WSConnection | undefined;
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     client?.close();
     client = undefined;
     await stopWS(served);
     served = undefined;
   });
 
-  async function connect(getAuthToken?: () => string): Promise<string> {
-    client = createWSConnection({ url: served!.url, getAuthToken });
+  async function connect(credentials?: () => WSCredentials): Promise<string> {
+    client = createWSConnection({ url: served!.url, credentials });
     await new Promise<void>((resolve) => {
       const stop = client!.onStatusChange((status) => {
         if (status !== "connected") return;
@@ -216,29 +245,31 @@ describe("a token the server asks a connected client for", () => {
     return served!.handler.connections.list()[0]!.connectionId;
   }
 
-  it("keeps the connection open once the client has answered with one the server accepts", async () => {
-    const refreshed: string[] = [];
+  it("keeps the connection open once the client has sent ones the server accepts", async () => {
+    const seen: unknown[] = [];
     served = await serveWS(
       {},
       {
-        onTokenRefresh: ({ token }) => {
-          refreshed.push(token);
-          return { user: token };
+        onReauth: ({ auth }) => {
+          seen.push(auth);
+          return { user: auth?.token };
         },
       },
     );
-    const connectionId = await connect(() => "fresh-token");
+    let issued = 0;
+    const connectionId = await connect(() => ({ frame: { auth: { token: `t${++issued}` } } }));
 
     sendAuthRequired(served.handler.connections, connectionId, 200);
     await settle(400);
 
-    expect(refreshed).toEqual(["fresh-token"]);
+    expect(seen).toEqual([{ token: "t2" }]);
     expect(client?.status).toBe("connected");
-    expect(served.handler.connections.get(connectionId)?.meta).toEqual({ user: "fresh-token" });
+    expect(served.handler.connections.get(connectionId)?.meta).toEqual({ user: "t2" });
   });
 
-  it("closes the connection when no token comes in time", async () => {
-    served = await serveWS({}, { onTokenRefresh: ({ token }) => ({ user: token }) });
+  it("closes the connection when no credentials come in time", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    served = await serveWS({}, { onReauth: ({ auth }) => ({ user: auth?.token }) });
     const connectionId = await connect();
 
     sendAuthRequired(served.handler.connections, connectionId, 100);
@@ -248,28 +279,27 @@ describe("a token the server asks a connected client for", () => {
     expect(client?.status).toBe("disconnected");
   });
 
-  it("closes the connection at the deadline when no onTokenRefresh can accept the token", async () => {
-    const output = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("closes the connection at the deadline when no onReauth can accept them", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     served = await serveWS({}, {});
-    const connectionId = await connect(() => "any-string");
+    const connectionId = await connect(() => ({ frame: { auth: { token: "any" } } }));
 
     sendAuthRequired(served.handler.connections, connectionId, 150);
     await settle(400);
 
     expect(served.handler.connections.count).toBe(0);
     expect(client?.status).toBe("disconnected");
-    output.mockRestore();
   });
 
   it("is asked for through the registry of a handler with a pub/sub adapter", async () => {
     const pubsub = createMemoryPubSub("replica");
     await pubsub.connect();
-    served = await serveWS({}, { pubsub, onTokenRefresh: ({ token }) => ({ user: token }) });
-    const connectionId = await connect(() => "fresh-token");
+    served = await serveWS({}, { pubsub, onReauth: ({ auth }) => ({ user: auth?.token }) });
+    const connectionId = await connect(() => ({ frame: { auth: { token: "fresh" } } }));
 
     sendAuthRequired(served.handler.connections, connectionId, 200);
     await settle(400);
 
-    expect(served.handler.connections.get(connectionId)?.meta).toEqual({ user: "fresh-token" });
+    expect(served.handler.connections.get(connectionId)?.meta).toEqual({ user: "fresh" });
   });
 });

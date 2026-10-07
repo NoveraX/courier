@@ -16,16 +16,16 @@ vi.mock("../src/adapter/ws-subscribe", () => ({
   handleSubscribe: vi.fn(),
 }));
 
-vi.mock("../src/adapter/ws-token-refresh", () => ({
-  handleTokenRefresh: vi.fn(),
+vi.mock("../src/adapter/ws-reauth", () => ({
+  handleReauth: vi.fn(),
 }));
 
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { holdFrames } from "../src/adapter/ws-inbox";
 import { wireEvents } from "../src/adapter/ws-lifecycle";
 import { handleMessage, handleUnsubscribe } from "../src/adapter/ws-message";
+import { handleReauth } from "../src/adapter/ws-reauth";
 import { handleSubscribe } from "../src/adapter/ws-subscribe";
-import { handleTokenRefresh } from "../src/adapter/ws-token-refresh";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import { encodeMessage } from "../src/realtime/ws/ws-protocol";
@@ -154,9 +154,9 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     expect(loggedWith("unsubscribe", boom)).toBe(true);
   });
 
-  it("logs and swallows handleTokenRefresh rejection", async () => {
+  it("logs and swallows handleReauth rejection", async () => {
     const boom = new Error("auth boom");
-    vi.mocked(handleTokenRefresh).mockRejectedValueOnce(boom);
+    vi.mocked(handleReauth).mockRejectedValueOnce(boom);
 
     const ws = createMockWs();
     wireEvents(
@@ -168,12 +168,13 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
       config,
       registry as never,
     );
+    ws._emit("message", { data: encodeMessage({ type: "ping" }) });
     ws._emit("message", {
-      data: encodeMessage({ type: "auth", token: "tok" } as never),
+      data: encodeMessage({ type: "auth", payload: { auth: { token: "tok" } } }),
     });
     await flushMicrotasks();
 
-    expect(handleTokenRefresh).toHaveBeenCalledOnce();
+    expect(handleReauth).toHaveBeenCalledOnce();
     expect(loggedWith("auth", boom)).toBe(true);
   });
 

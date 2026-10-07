@@ -39,7 +39,11 @@ let nextHeaders: Promise<NextHeaders | undefined> | undefined;
 /**
  * The request a Next.js App Router is serving — a page, a Server Action, a
  * Route Handler — for the APIs that keep a `session` or `forward` headers.
- * Register it once on the server, in `instrumentation.ts`.
+ *
+ * `createServerCaller` registers it for its calls. Registered by hand, it
+ * belongs in the module that makes the calls, not only in
+ * `instrumentation.ts`: `next build` does not run that file, and a page
+ * whose calls find no request is built once, without anyone's session.
  *
  * Reading the request is what makes Next.js render a page for each request,
  * so a page whose calls carry a session is never built ahead of time;
@@ -53,19 +57,19 @@ let nextHeaders: Promise<NextHeaders | undefined> | undefined;
  * so a cookie whose value is not already in that form cannot reach the
  * browser unchanged, and is not handed to it.
  *
- * Next.js tells no request's method; a Server Action's is POST, and any
- * other is read as a page's — its writes carry the session for the
- * application's own pages, as a browser marks them.
+ * Next.js tells no request's method. A Server Action's is POST; any other
+ * is read as a page's, its writes carrying the session for what a browser
+ * marks as the application's own — so a Route Handler's write for a client
+ * that is no browser, and marks nothing, goes without it.
  *
  * @example
  * ```ts
- * // instrumentation.ts
- * import { registerRequestContext } from "@noverax/courier";
+ * // lib/api.server.ts — the module the pages call through
+ * import { createProxyCaller, registerRequestContext } from "@noverax/courier";
  * import { nextRequestContext } from "@noverax/courier-next";
  *
- * export function register() {
- *   registerRequestContext(nextRequestContext);
- * }
+ * registerRequestContext(nextRequestContext);
+ * export const api = createProxyCaller<typeof definition>("api");
  * ```
  */
 export const nextRequestContext: RequestContextProvider = () => nextIncomingRequest();
@@ -86,7 +90,7 @@ export async function nextIncomingRequest(): Promise<IncomingRequest | undefined
   const store = await next.cookies();
   return {
     key: headers,
-    method: headers.has("next-action") ? "POST" : "GET",
+    method: headers.has("next-action") ? "POST" : undefined,
     origin: addressedOrigin(headers),
     headers,
     clientAddress: nearestHop(headers.get("x-forwarded-for")),

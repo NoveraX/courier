@@ -12,7 +12,10 @@ const next = vi.hoisted(() => ({
 
 vi.mock("next/headers", () => next);
 
+import { courier, defineApi } from "@noverax/courier/define";
+
 import { nextIncomingRequest, nextRequestContext } from "../src/request-context";
+import { createServerCaller } from "../src/server-caller";
 
 const cookieStore = { set: vi.fn() };
 
@@ -42,7 +45,7 @@ describe("nextRequestContext", () => {
     const incoming = await nextRequestContext();
 
     expect(incoming).toMatchObject({
-      method: "GET",
+      method: undefined,
       origin: "https://app.example.com",
       clientAddress: "203.0.113.9",
       fetchInit: { cache: "no-store" },
@@ -135,5 +138,27 @@ describe("a cookie the API sets, handed to Next.js", () => {
     expect(incoming?.setCookie?.(relayed)).toBe(
       "Next.js lets a Server Action or a Route Handler set cookies, not a page while it renders",
     );
+  });
+});
+
+describe("createServerCaller", () => {
+  it("registers the request context as it is made, so its calls carry the request's session", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() => Promise.resolve(Response.json({ ok: true })));
+    next.headers.mockResolvedValue(
+      new Headers({ host: "app.example.com", cookie: "sid=a1; theme=dark" }),
+    );
+    const api = defineApi({
+      name: "accounts",
+      baseURL: "https://api.example.com",
+      session: { cookies: ["sid"] },
+      endpoints: { me: courier().endpoint.get("me") },
+    });
+
+    await createServerCaller(api).me();
+
+    expect(new Headers(fetchSpy.mock.calls[0]?.[1]?.headers).get("cookie")).toBe("sid=a1");
+    fetchSpy.mockRestore();
   });
 });

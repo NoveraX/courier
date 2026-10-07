@@ -130,6 +130,13 @@ import { requestContext } from "@noverax/courier-remix/request-context"
 export const middleware = [requestContext()]
 ```
 
+```js title="Remix v2 — server.js, before Remix's handler"
+import { requestContext } from "@noverax/courier-express"
+
+app.use(requestContext())
+app.all("*", createRequestHandler({ build }))
+```
+
 ```tsx title="SolidStart 1 and 2 — src/entry-server.tsx"
 import { registerRequestContext } from "@noverax/courier"
 import { solidStartRequestContext } from "@noverax/courier-solid"

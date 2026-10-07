@@ -80,7 +80,7 @@ import { requestContext } from "@noverax/courier-remix/request-context"
 export const middleware = [requestContext()]
 ```
 
-React Router 7 needs `future: { v8_middleware: true }`. The session cookies the API sets reach the browser on the response. A server of your own wraps its handler with `withRequestContext`.
+React Router 7 needs `future: { v8_middleware: true }`. The session cookies the API sets reach the browser on the response. A server of your own wraps its handler with `withRequestContext`. Remix v2 has no middleware: its Express server mounts `requestContext` from `@noverax/courier-express` before Remix's handler.
 
 ## With Frontend
 

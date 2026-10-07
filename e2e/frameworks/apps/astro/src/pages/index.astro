@@ -1,0 +1,19 @@
+---
+import { accounts } from "../lib/accounts.mjs";
+
+/* The routes the SvelteKit application has, so one set of checks drives both. */
+if (Astro.request.method === "POST") {
+  if (Astro.url.search.endsWith("/login")) await accounts.login({ user: "ada" });
+  else await accounts.rename({ name: "Ada Lovelace" });
+  return Astro.redirect("/", 303);
+}
+const me = await accounts.me();
+---
+<!doctype html>
+<meta charset="utf-8" />
+<body>
+  <pre id="me">{JSON.stringify(me)}</pre>
+  <form method="post" action="/?/login"><button id="login">Sign in</button></form>
+  <form method="post" action="/?/rename"><button id="rename">Rename</button></form>
+  <a id="logout" href="/logout">Sign out</a>
+</body>

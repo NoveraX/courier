@@ -75,6 +75,30 @@ const caller = createProxyCaller<typeof api>("api", {
 const users = await caller.users.getAll()
 ```
 
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call a page's frontmatter, an endpoint, an action or a step it awaits makes, once the request is served with it at hand:
+
+```ts title="src/middleware.ts"
+import { requestContext } from "@noverax/courier-astro/request-context"
+
+export const onRequest = requestContext()
+```
+
+Put it in a `sequence` when the application has middleware of its own. The session cookies the API sets reach the browser through Astro's `cookies`, as a page's own do. The request is kept in `AsyncLocalStorage`, which Node provides, and Cloudflare with the `nodejs_compat` flag; the main entry imports none of it. A page built ahead of time has no request, and its calls carry no one's session.
+
+Astro reads the host a request was sent to only from a domain it is told to trust, and otherwise takes every request for `http://localhost`, where its own origin check refuses the application's forms and the session cannot tell your pages from another site's. Name your domains in `security.allowedDomains`:
+
+```js title="astro.config.mjs"
+export default defineConfig({
+  output: "server",
+  adapter: node({ mode: "standalone" }),
+  security: { allowedDomains: [{ hostname: "shop.example.com", protocol: "https" }] },
+})
+```
+
+Astro 5 is checked with `@astrojs/node`. See [User Sessions](/docs/server-side/session).
+
 ## Cancelled calls
 
 When the browser cancels a call — an aborted upload, a query it no longer needs — the proxy stops its own upstream request, following the request's signal. `@astrojs/node` fires that signal when the client leaves. The `astro dev` server does not, and exposes no connection to watch instead, so during development a cancelled call still runs to completion upstream.

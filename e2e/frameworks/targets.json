@@ -121,6 +121,12 @@
     "install": { "hono": "4", "@hono/node-server": "1" }
   },
   {
+    "id": "astro-5",
+    "app": "astro",
+    "packages": ["core", "astro"],
+    "install": { "astro": "5", "@astrojs/node": "9" }
+  },
+  {
     "id": "react-spa",
     "app": "spa",
     "packages": ["core", "react"],

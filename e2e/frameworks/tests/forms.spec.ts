@@ -1,7 +1,7 @@
 /**
  * An application whose server renders pages and takes form posts, calling an
  * API that keeps the user's session: SvelteKit with its loads, form actions
- * and endpoints, and Express with the same routes.
+ * and endpoints, and Express, Fastify, Hono and Astro with the same routes.
  */
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
@@ -133,6 +133,8 @@ test("signing out through a link clears the session cookie", async () => {
 });
 
 test("an endpoint's write for another site's request is refused", async () => {
+  await clearReceived();
+
   const response = await fetch(`${APP}/rename-route`, {
     method: "POST",
     headers: {
@@ -142,5 +144,9 @@ test("an endpoint's write for another site's request is refused", async () => {
     },
   });
 
-  expect(await response.text()).toBe("refused 403");
+  /* The session refuses it in the route; a framework that checks a write's
+     origin itself — Astro — refuses it with a 403 before the route runs. */
+  const answer = await response.text();
+  expect(answer === "refused 403" || response.status === 403).toBe(true);
+  expect(await received("POST", "/me/name")).toEqual([]);
 });

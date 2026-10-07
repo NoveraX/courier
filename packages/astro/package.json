@@ -35,6 +35,11 @@
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js",
       "default": "./lib/index.js"
+    },
+    "./request-context": {
+      "types": "./lib/request-context.d.ts",
+      "import": "./lib/request-context.js",
+      "default": "./lib/request-context.js"
     }
   },
   "files": [

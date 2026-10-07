@@ -1,0 +1,9 @@
+---
+import { accounts } from "../lib/accounts.mjs";
+
+const first = await accounts.me();
+const second = await accounts.me();
+---
+<!doctype html>
+<meta charset="utf-8" />
+<body><pre id="renew">{JSON.stringify({ first, second })}</pre></body>

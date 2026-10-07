@@ -2,7 +2,15 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /** The application templates the framework versions are built from. */
-export type AppKind = "next" | "sveltekit" | "nuxt" | "express" | "fastify" | "hono" | "spa";
+export type AppKind =
+  | "next"
+  | "sveltekit"
+  | "nuxt"
+  | "express"
+  | "fastify"
+  | "hono"
+  | "astro"
+  | "spa";
 
 /** A framework version the session is checked against, as an application installs it. */
 export interface Target {
@@ -28,6 +36,7 @@ const KINDS: ReadonlySet<string> = new Set([
   "express",
   "fastify",
   "hono",
+  "astro",
   "spa",
 ]);
 

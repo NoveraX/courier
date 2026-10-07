@@ -1,0 +1,6 @@
+---
+import { accounts } from "../lib/accounts.mjs";
+
+await accounts.logout();
+return Astro.redirect("/", 303);
+---

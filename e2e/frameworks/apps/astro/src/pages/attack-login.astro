@@ -1,0 +1,8 @@
+---
+import { accounts, outcome } from "../lib/accounts.mjs";
+
+const written = await outcome(accounts.login({ user: "mallory" }));
+---
+<!doctype html>
+<meta charset="utf-8" />
+<body><pre id="outcome">{written}</pre></body>

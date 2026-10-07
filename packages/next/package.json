@@ -43,6 +43,11 @@
       "types": "./lib/actions.d.ts",
       "import": "./lib/actions.js",
       "default": "./lib/actions.js"
+    },
+    "./pages": {
+      "types": "./lib/pages.d.ts",
+      "import": "./lib/pages.js",
+      "default": "./lib/pages.js"
     }
   },
   "files": [

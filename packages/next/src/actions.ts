@@ -1,11 +1,14 @@
 import {
   type Context,
   createLogger,
+  type IncomingRequest,
   type InferClient,
   type ValidationIssue,
 } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import { buildClientProxy, type ExecuteBackend, executeRequest } from "@noverax/courier/internal";
+
+import { nextIncomingRequest } from "./request-context";
 
 const log = createLogger("Next");
 
@@ -25,29 +28,23 @@ export type ActionDefaults = {
   headers?: boolean | undefined;
 };
 
-async function getRequestHeaders(): Promise<Headers | undefined> {
-  let headers: () => Promise<Headers>;
+/* The action's request, for its headers and the API's session; none outside one. */
+async function actionRequest(): Promise<IncomingRequest | undefined> {
   try {
-    /* With its extension: next ships no exports map, and Node's own loader
-       resolves no other form of it, so an unbundled server forwarded none. */
-    ({ headers } = await import("next/headers.js"));
+    return await nextIncomingRequest();
   } catch (error) {
-    log.warn("next/headers could not be loaded; request headers are not forwarded", error);
-    return undefined;
-  }
-  try {
-    return await headers();
-  } catch (error) {
-    /* Called outside a request — a script, a build step — there are simply
-       no headers to forward. */
-    log.debug("No request headers to forward", error);
+    /* An action runs for a request; what failed here leaves its call
+       without the request rather than failing it. */
+    log.debug("No request to take headers or a session from", error);
     return undefined;
   }
 }
 
 /**
  * Create a dot-notation server-side caller for Next.js Server Actions.
- * Automatically forwards request headers via `next/headers`.
+ * Automatically forwards request headers via `next/headers`, and carries the
+ * session of an API that keeps one, handing the browser the session cookies
+ * the API sets.
  *
  * The caller only forwards each call to the upstream, as `createCaller`
  * does; revalidation, form parsing and the state `useActionState` keeps are
@@ -86,10 +83,13 @@ export function createAction<TSources extends Sources, TKey extends string & key
   defaults: ActionDefaults = {},
 ): InferClient<TSources[TKey]> {
   const backend: ExecuteBackend = async (group, method, variables, options, raw) => {
-    const context: Context | undefined =
-      defaults.headers !== false
-        ? { headers: (await getRequestHeaders()) ?? undefined }
-        : undefined;
+    const incoming = await actionRequest();
+    /* The session an API keeps is its own to take; `headers: false` turns
+       off only the headers forwarded from the action's request. */
+    const context: Context | undefined = incoming && {
+      incoming,
+      ...(defaults.headers !== false && { headers: incoming.headers as Headers }),
+    };
 
     /* `.raw` and `.with({ ... })` compile here as on any caller, and are
        honoured: `.raw` returns the whole answer, and a per-call header or

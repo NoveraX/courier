@@ -20,6 +20,12 @@ export {
   type WebSocketUpgradeOptions,
   wsFrameLimit,
 } from "./node-websocket";
+export {
+  type WebRequestOptions,
+  webIncomingRequest,
+  withSetCookies,
+  withWebRequestContext,
+} from "./web-request-context";
 
 /**
  * Extract a canonical `http(s)://host[:port]` origin from a Node.js

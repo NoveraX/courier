@@ -2,7 +2,7 @@ import type { ProxyPath } from "../../proxy-caller/proxy-path";
 import type { ResolveOrigin } from "../../proxy-caller/resolve-path";
 import { resolveProxyPath } from "../../proxy-caller/resolve-path";
 import { socketOptions } from "../../realtime/ws/ws-credentials";
-import type { CallerWSOptions } from "../../realtime/ws/ws-types";
+import type { CallerWSOptions, WSConnectionConfig } from "../../realtime/ws/ws-types";
 import { buildWSTopic } from "../../realtime/ws-address";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";
@@ -48,6 +48,24 @@ export interface ProxyWSDefaults {
   playgroundRequestId?: string | undefined;
   /** Options of the socket the channels share, from the caller's `ws` */
   ws?: CallerWSOptions | undefined;
+  /**
+   * The caller's `headers`. A browser cannot put them on a WebSocket's
+   * handshake, so they go in the socket's first frame, which the proxy reads
+   * as the handshake's own — through `allowedHeaders` to the channel's
+   * upstream, as a call's headers go.
+   */
+  headers?: Record<string, string> | undefined;
+}
+
+const optionsOf = new WeakMap<ProxyWSDefaults, Partial<WSConnectionConfig> | undefined>();
+
+/* One set of options for the caller's channels and push subscriptions alike, so they share a socket. */
+function proxySocketOptions(defaults: ProxyWSDefaults): Partial<WSConnectionConfig> | undefined {
+  if (!optionsOf.has(defaults)) {
+    const { headers } = defaults;
+    optionsOf.set(defaults, socketOptions(defaults.ws, headers && (() => headers)));
+  }
+  return optionsOf.get(defaults);
 }
 
 /**
@@ -82,12 +100,12 @@ export function createProxyWSChannelFactory(
   source: string,
   defaults: ProxyWSDefaults = {},
 ): WSChannelFactory {
-  const { proxyPath, origin, playgroundRequestId, ws } = defaults;
+  const { proxyPath, origin, playgroundRequestId } = defaults;
 
   return function connectChannel(group, method, variables) {
     const wsUrl = withPlaygroundRid(resolveProxyPath("ws", proxyPath, origin), playgroundRequestId);
     const topic = buildWSTopic(source, group, method);
-    return executeWSChannel(wsUrl, topic, variables, socketOptions(ws));
+    return executeWSChannel(wsUrl, topic, variables, proxySocketOptions(defaults));
   };
 }
 
@@ -101,11 +119,11 @@ export function createProxyWSPushFactory(
   source: string,
   defaults: ProxyWSDefaults = {},
 ): WSPushFactory {
-  const { proxyPath, origin, playgroundRequestId, ws } = defaults;
+  const { proxyPath, origin, playgroundRequestId } = defaults;
 
   return function connectPush(group, method, variables) {
     const wsUrl = withPlaygroundRid(resolveProxyPath("ws", proxyPath, origin), playgroundRequestId);
     const topic = buildWSTopic(source, group, method);
-    return executeWSPush(wsUrl, topic, variables, socketOptions(ws));
+    return executeWSPush(wsUrl, topic, variables, proxySocketOptions(defaults));
   };
 }

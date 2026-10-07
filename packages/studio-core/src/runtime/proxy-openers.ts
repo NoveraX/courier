@@ -6,7 +6,9 @@ import type { ChannelOpener, StreamCall, StreamOpener } from "./responder-dispat
 
 /* The app's proxy route, as the app's own clients open it, each stream
    naming the row Studio follows it under: SSE in a header, a WebSocket —
-   whose upgrade carries none a browser could set — in its address. */
+   whose upgrade carries none a browser could set — in its address. A
+   socket carries the call's headers in its first frame, as a browser's
+   proxy caller sends its own. */
 function streamsThroughProxy(sources: Sources, call: StreamCall, requestId: string) {
   const definition: unknown = Reflect.get(sources, call.source);
   return proxyStreamingFactories(call.source, {
@@ -14,7 +16,11 @@ function streamsThroughProxy(sources: Sources, call: StreamCall, requestId: stri
       proxyPath: proxyPathFor(definition, "sse"),
       headers: { ...call.headers, [PLAYGROUND_RID_HEADER]: requestId },
     },
-    ws: { proxyPath: proxyPathFor(definition, "ws"), playgroundRequestId: requestId },
+    ws: {
+      proxyPath: proxyPathFor(definition, "ws"),
+      playgroundRequestId: requestId,
+      headers: call.headers,
+    },
   });
 }
 

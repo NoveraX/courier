@@ -1,3 +1,4 @@
+import { handshakeHeadersSupported } from "./handshake-headers";
 import type { CallerWSOptions, WSConnectionConfig } from "./ws-types";
 
 /**
@@ -35,14 +36,20 @@ export interface WSCredentials {
   readonly frame?: WSAuthFrame | undefined;
 }
 
-const fromCaller = new WeakMap<CallerWSOptions, Partial<WSConnectionConfig>>();
+/** The headers a socket's calls would send, as they are when it opens. */
+export type SocketHeaders = () =>
+  | Readonly<Record<string, string>>
+  | Promise<Readonly<Record<string, string>>>;
 
 /**
- * The connection options a caller's `ws` gives the sockets it opens: its
- * own, with `auth` sent in the first frame of every socket. The same `ws`
- * gives the same options, so the sockets a caller opens on one URL are one.
+ * The connection options a caller's sockets open with: its `ws`, and what
+ * each socket proves who it is with — the headers the caller's calls send
+ * and its `ws.auth`, both asked for anew before every connect. The caller
+ * makes them once and hands the same object to every channel, so its
+ * channels on one URL share a socket.
  *
  * @param ws - The caller's `ws`
+ * @param headers - The headers its sockets' calls would send, when there are any
  * @returns The options its sockets open with
  * @example
  * ```ts
@@ -51,18 +58,40 @@ const fromCaller = new WeakMap<CallerWSOptions, Partial<WSConnectionConfig>>();
  */
 export function socketOptions(
   ws: CallerWSOptions | undefined,
+  headers?: SocketHeaders,
 ): Partial<WSConnectionConfig> | undefined {
-  if (ws === undefined) return undefined;
-  let options = fromCaller.get(ws);
-  if (options === undefined) {
-    const { auth, ...rest } = ws;
-    options =
-      auth === undefined
-        ? rest
-        : { ...rest, credentials: async () => ({ frame: { auth: await authParams(auth) } }) };
-    fromCaller.set(ws, options);
-  }
-  return options;
+  const { auth, ...rest } = ws ?? {};
+  if (auth === undefined && headers === undefined) return ws === undefined ? undefined : rest;
+  return {
+    ...rest,
+    credentials: async () => {
+      const params = auth === undefined ? undefined : await authParams(auth);
+      return credentialsFor((await headers?.()) ?? {}, params);
+    },
+  };
+}
+
+/**
+ * What a socket opens with: the headers its calls would send on its
+ * handshake where the platform takes them there, in its first frame where
+ * it does not — a browser's — and the caller's `ws.auth` in that frame.
+ *
+ * @param headers - The headers its calls would send
+ * @param auth - The caller's `ws.auth`, as it is now
+ * @param onHandshake - Whether the handshake can carry them
+ * @returns The socket's credentials
+ * @example
+ * ```ts
+ * credentialsFor({ authorization: "Bearer t1" }, { tenant: "acme" });
+ * ```
+ */
+export function credentialsFor(
+  headers: Readonly<Record<string, string>>,
+  auth: WSAuthParams | undefined,
+  onHandshake: boolean = handshakeHeadersSupported(),
+): WSCredentials {
+  if (Object.keys(headers).length === 0) return { frame: { auth } };
+  return onHandshake ? { handshake: headers, frame: { auth } } : { frame: { headers, auth } };
 }
 
 /**

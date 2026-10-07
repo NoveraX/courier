@@ -62,7 +62,7 @@ type WSAuthParams = Record<string, unknown>
 - `deduplicate` — cancel a call still in flight when the same endpoint is called again. Defaults to the source's own setting when `source` is given.
 - `timeout` — how long the browser waits for the proxy, in milliseconds. It is not sent to the server, so the endpoint's own `.timeout()` still bounds the upstream call; a timeout given with `.with()` for one call is sent.
 - `credentials` — whether the browser sends its cookies to the proxy route. Defaults to `"include"`. The proxy forwards them to the backend only where the source or the endpoint names `cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
-- `headers` — default headers merged into every request.
+- `headers` — default headers merged into every request and stream, and sent in the first frame of every socket its channels open, which the proxy reads as the socket's own — a browser cannot put them on a WebSocket's handshake.
 - `onError` — global error handler invoked on every `HTTPError`.
 - `onSuccess` — global success handler invoked on every successful response.
 - `ws` — options of the sockets this caller's channels and push subscriptions open; see [Connection options](/docs/advanced/realtime#connection-options).

@@ -1,7 +1,7 @@
 import { createLogger } from "../logger";
-import { acquireConnection } from "./caller-ws";
+import { acquireConnection, type ConnectionLease, leaseWhenFound } from "./caller-ws";
 import { createConnectionState } from "./connection-state";
-import type { RealtimeError } from "./errors";
+import { RealtimeError } from "./errors";
 import { forwardConnectionStatus } from "./forward-status";
 import type { ConnectionStatus, WSChannel } from "./types";
 import { qualifyTopic } from "./ws/topic-key";
@@ -22,16 +22,19 @@ const log = createLogger("WS");
  * What is sent before the server has confirmed the subscription — right
  * after opening the channel, or while it rejoins after a reconnect — waits
  * for the confirmation, in order, instead of being refused as not subscribed.
+ *
+ * The socket's options may still be being found — whose session it opens
+ * with, on a server — and the channel takes its socket once they are.
  */
 export function executeWSChannel<TSend, TReceive>(
   url: string,
   topic: string,
   variables?: unknown,
-  config?: Partial<WSConnectionConfig>,
+  config?: Partial<WSConnectionConfig> | Promise<Partial<WSConnectionConfig> | undefined>,
 ): WSChannel<TSend, TReceive> {
   const qTopic = qualifyTopic(topic, variables);
-  const lease = acquireConnection(url, config);
-  const conn = lease.connection;
+  let lease: ConnectionLease | undefined =
+    config instanceof Promise ? undefined : acquireConnection(url, config);
   const state = createConnectionState();
   const dataHandlers = new Set<(data: TReceive) => void>();
   const errorHandlers = new Set<(error: RealtimeError) => void>();
@@ -44,7 +47,7 @@ export function executeWSChannel<TSend, TReceive>(
     ended = true;
     stop?.();
     stop = undefined;
-    lease.release();
+    lease?.release();
     if (early.length > 0) {
       log.warn(`${early.length} message(s) not sent: the channel ${qTopic} closed first`);
       early.length = 0;
@@ -61,6 +64,13 @@ export function executeWSChannel<TSend, TReceive>(
     await Promise.resolve();
     if (ended) return;
     state.set("connecting");
+    if (lease === undefined) {
+      const taken = await leaseWhenFound(url, Promise.resolve(config));
+      if (taken instanceof RealtimeError) return finish(taken);
+      if (ended) return taken.release();
+      lease = taken;
+    }
+    const conn = lease.connection;
 
     const forward = (s: ConnectionStatus): void => {
       if (!ended) forwardConnectionStatus(state, s);
@@ -103,11 +113,11 @@ export function executeWSChannel<TSend, TReceive>(
       }
       /* The subscribe goes out a microtask after the channel is made; sent
          before it, a message would reach the server first and be refused. */
-      if (!stop) {
+      if (!stop || !lease) {
         early.push(data);
         return true;
       }
-      return conn.send(qTopic, data);
+      return lease.connection.send(qTopic, data);
     },
     on(event: "data" | "status" | "error", handler: (arg: never) => void): () => void {
       if (event === "data") return addTo(dataHandlers, handler as (data: TReceive) => void);

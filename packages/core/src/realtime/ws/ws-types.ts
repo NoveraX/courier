@@ -89,6 +89,12 @@ export interface WSConnectionConfig {
   maxMessageSize?: number | undefined;
   /** WebSocket factory — override for testing */
   socketFactory?: WSSocketFactory | undefined;
+  /**
+   * What decides which subscriptions on one URL share a socket. Options with
+   * the same key share one, whatever object they came in; without one, the
+   * options object itself decides, so a caller's channels share its socket.
+   */
+  shareKey?: string | undefined;
 }
 
 /**

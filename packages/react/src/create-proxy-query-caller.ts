@@ -92,12 +92,12 @@ export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDef
   const httpExecutor = createProxyHTTPExecutor(source, effectiveDefaults);
   /* Their client code is loaded on the first subscription or channel, so an
      application that opens none does not carry it. A missing `proxyPath.ws`
-     is reported on the first `useChannel`. defaults.headers is not given to
-     the WS factory: a browser WebSocket cannot send headers on its upgrade
-     (see `ProxyWSDefaults` for what authenticates it). */
+     is reported on the first `useChannel`. A socket carries defaults.headers
+     in its first frame, which the proxy reads as its handshake's: a browser
+     WebSocket cannot send headers on its upgrade. */
   const streaming = proxyStreamingFactories(source, {
     sse: { proxyPath: mergedProxyPath, headers: defaults?.headers },
-    ws: { proxyPath: mergedProxyPath, ws: defaults?.ws },
+    ws: { proxyPath: mergedProxyPath, ws: defaults?.ws, headers: defaults?.headers },
   });
 
   const subscribeFn: SubscribeFn = (group, method, variables) =>

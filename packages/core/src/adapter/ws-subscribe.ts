@@ -80,8 +80,9 @@ async function openSubscription(
   const subscribedTopic = subscriptionTopic(ctx, msg, topic, variables, resolved.topicKey);
   if (subscribedTopic === undefined) return;
 
+  let headers: Headers;
   try {
-    await runTransportMiddleware({
+    headers = await runTransportMiddleware({
       transport: "ws",
       sources: ctx.sources,
       source: resolved.source,
@@ -125,7 +126,7 @@ async function openSubscription(
   try {
     if (!resolved.served) {
       const target = { api: resolved.api, group: resolved.group ?? "", method: resolved.method };
-      startRelay(ctx, subscribedTopic, target, variables);
+      startRelay(ctx, subscribedTopic, target, variables, headers);
     } else if (isChannelSchema(resolved.schema)) {
       await startChannel(
         ctx,

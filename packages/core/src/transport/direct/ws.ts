@@ -1,20 +1,22 @@
 import { getSourceName } from "../../define/api";
 import type { AnyDefinedApi } from "../../define/types";
-import { socketOptions } from "../../realtime/ws/ws-credentials";
-import type { CallerWSOptions } from "../../realtime/ws/ws-types";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
 import { executeWSPush } from "../../realtime/ws-subscription";
 import { instrumentWSChannel, instrumentWSPush } from "../instrument";
 import type { WSChannelFactory, WSPushFactory } from "../types";
 import { assertDirectlyReachable } from "./assert-reachable";
 import { channelAddress } from "./channel-address";
+import { type DirectSocketDefaults, directSocketOptions } from "./socket-config";
+import { sourceHeadersOf } from "./stream-request";
+import { streamSessionOf } from "./stream-session";
 import { studioRequestIdOption } from "./studio-request-option";
 
-/** What a direct caller says about the sockets its channels open. */
-export interface DirectWSDefaults {
-  /** Options of the socket the channels share, from the caller's `ws` */
-  ws?: CallerWSOptions | undefined;
-}
+/**
+ * What a direct caller says about the sockets its channels open: its `ws`,
+ * and its `headers`. The caller hands the same object to its channel and
+ * push factories, so its channels on one URL share a socket.
+ */
+export type DirectWSDefaults = DirectSocketDefaults;
 
 /**
  * Create a direct-mode bidirectional WS channel factory.
@@ -35,12 +37,14 @@ export function createDirectWSChannelFactory(
   defaults: DirectWSDefaults = {},
 ): WSChannelFactory {
   const sourceName = getSourceName(api) ?? "_";
+  const sourceHeaders = sourceHeadersOf(api);
 
   return function connectChannel(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
     const { url, topic } = channelAddress(api, group, method, variables);
+    const socket = directSocketOptions(defaults, sourceHeaders, streamSessionOf(options));
     return instrumentWSChannel(
-      executeWSChannel(url, topic, variables, socketOptions(defaults.ws)),
+      executeWSChannel(url, topic, variables, socket),
       { source: sourceName, group, method, transport: "ws", mode: "direct" },
       studioRequestIdOption(options),
     );
@@ -62,12 +66,14 @@ export function createDirectWSPushFactory(
   defaults: DirectWSDefaults = {},
 ): WSPushFactory {
   const sourceName = getSourceName(api) ?? "_";
+  const sourceHeaders = sourceHeadersOf(api);
 
   return function connectPush(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
     const { url, topic } = channelAddress(api, group, method, variables);
+    const socket = directSocketOptions(defaults, sourceHeaders, streamSessionOf(options));
     return instrumentWSPush(
-      executeWSPush(url, topic, variables, socketOptions(defaults.ws)),
+      executeWSPush(url, topic, variables, socket),
       { source: sourceName, group, method, transport: "ws", mode: "direct" },
       studioRequestIdOption(options),
     );

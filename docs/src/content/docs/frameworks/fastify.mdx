@@ -152,6 +152,18 @@ start()
 Fastify's schema-based validation and serialization make it one of the fastest Node.js frameworks. The Courier plugin benefits from Fastify's built-in JSON parsing, so no additional body parser setup is needed.
 </Callout>
 
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call a route, a service or a step it awaits makes, once the request is served with it at hand:
+
+```ts title="server.ts"
+import { requestContext } from "@noverax/courier-fastify"
+
+app.addHook("onRequest", requestContext())
+```
+
+Add the hook on the root instance, where it runs for every route whichever plugin registers it. The session cookies the API sets reach the browser on the reply, beside any your route sets, and the user's address follows the rule the proxy route follows. Fastify 4 and 5 are checked. See [User Sessions](/docs/server-side/session).
+
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
 Wire your Fastify server into Studio with a single `attachRuntime()` call. In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the app's own `registerSources()` call registers them. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).

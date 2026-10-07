@@ -103,6 +103,18 @@
     "install": { "express": "5" }
   },
   {
+    "id": "fastify-4",
+    "app": "fastify",
+    "packages": ["core", "fastify"],
+    "install": { "fastify": "4" }
+  },
+  {
+    "id": "fastify-5",
+    "app": "fastify",
+    "packages": ["core", "fastify"],
+    "install": { "fastify": "5" }
+  },
+  {
     "id": "react-spa",
     "app": "spa",
     "packages": ["core", "react"],

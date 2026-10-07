@@ -64,6 +64,18 @@ The plugin is zero-sources — sources are read at request time from the core gl
 
 The proxy reads a JSON call up to `config.maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to `config.maxUploadBytes`, 10 MB. Fastify's own `bodyLimit` does not apply: the plugin reads bodies itself.
 
+## The user's session
+
+An API that keeps the user's session describes it in `defineApi`, and every call a route makes — through every `await` — carries the session of the request being served, the cookies the session names and nothing else, once the request is served with it at hand:
+
+```ts
+import { requestContext } from "@noverax/courier-fastify"
+
+app.addHook("onRequest", requestContext())
+```
+
+The session cookies the API sets reach the browser on the reply, beside any the route sets. Add the hook on the root instance, so it runs for every route.
+
 ## Streaming
 
 The plugin's route serves SSE streams as well as calls. A separate stream route:

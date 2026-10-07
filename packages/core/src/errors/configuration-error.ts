@@ -181,7 +181,12 @@ export type ConfigurationErrorCode =
    */
   | "SESSION_HEADER_CONFLICT"
   /** An API's `forward` cannot work as written: an option it does not have, or a header it may not carry. */
-  | "FORWARD_OPTIONS_INVALID";
+  | "FORWARD_OPTIONS_INVALID"
+  /**
+   * A framework adapter was asked to serve requests with their session at
+   * hand, and the framework serves them some way the adapter cannot wrap.
+   */
+  | "REQUEST_CONTEXT_UNSUPPORTED";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

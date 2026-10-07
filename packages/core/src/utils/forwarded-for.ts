@@ -21,12 +21,30 @@ import { isLocalAddress, peerAddressOf } from "../adapter/peer-address";
  * ```
  */
 export function forwardedFor(request: Request): string | undefined {
-  const peer = peerAddressOf(request);
-  if (!peer) return undefined;
+  return forwardedChain(peerAddressOf(request), request.headers.get("x-forwarded-for"));
+}
 
+/**
+ * The same chain, from the parts a server that speaks in parts has: the
+ * socket's peer, and the `X-Forwarded-For` the request carried.
+ *
+ * @param peer - The socket's remote address, when known
+ * @param chain - The request's `X-Forwarded-For`, when it carried one
+ * @returns The chain, or `undefined` when the peer is not known
+ *
+ * @example
+ * ```ts
+ * forwardedChain("10.0.0.2", "198.51.100.4"); // → "198.51.100.4, 10.0.0.2"
+ * forwardedChain("203.0.113.9", "1.2.3.4"); // → "203.0.113.9"
+ * ```
+ */
+export function forwardedChain(
+  peer: string | undefined,
+  chain: string | null | undefined,
+): string | undefined {
+  if (!peer) return undefined;
   const address = peer.replace(/^::ffff:/i, "");
   if (!isLocalAddress(peer)) return address;
-
-  const chain = request.headers.get("x-forwarded-for")?.trim();
-  return chain ? `${chain}, ${address}` : address;
+  const forwarded = chain?.trim();
+  return forwarded ? `${forwarded}, ${address}` : address;
 }

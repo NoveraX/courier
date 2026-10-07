@@ -93,6 +93,8 @@ An API that keeps the user's session in cookies says so where it is defined, as 
 
 What a page reads from `document.cookie` — the double-submit token a write repeats, a bearer token the API did not set `HttpOnly` — an app cannot read: React Native keeps its cookies where no script reaches them. It hands a script the `Set-Cookie` headers of each answer instead, so Courier keeps those cookies from the answers its calls receive, for the host, domain and path they were set for, until they run out or the API deletes them, and repeats them as a page does.
 
+A token is kept for as long as the app runs. When the app starts again, the platform still sends the cookie it kept, but no write could repeat it until an answer set it again — so name where the API hands it out, and the first write that finds none asks there itself, with the user's session:
+
 ```ts title="src/account.ts"
 import { createCaller } from "@noverax/courier"
 import { courier, defineApi } from "@noverax/courier/define"
@@ -106,10 +108,9 @@ export const account = createCaller(
     baseURL: API_URL,
     session: {
       cookies: ["laravel_session"],
-      csrf: { cookie: "XSRF-TOKEN", header: "X-XSRF-TOKEN" },
+      csrf: { cookie: "XSRF-TOKEN", header: "X-XSRF-TOKEN", from: "/sanctum/csrf-cookie" },
     },
     endpoints: {
-      csrfCookie: endpoint.get("sanctum/csrf-cookie"),
       signIn: endpoint.post("login").variables<{ email: string; password: string }>(),
       rename: endpoint.post("user/name").variables<{ name: string }>(),
     },
@@ -117,16 +118,7 @@ export const account = createCaller(
 )
 ```
 
-A token is kept for as long as the app runs. When it starts again, the platform still sends the cookie it kept, but no write repeats it until an answer has set it again, so the app makes the call that sets it before its first write, as a single-page application does when it loads:
-
-```ts title="src/start.ts"
-import { account } from "./account"
-
-// Laravel Sanctum sets XSRF-TOKEN on this answer
-await account.csrfCookie()
-```
-
-With Django, a view decorated with `ensure_csrf_cookie` sets `csrftoken` the same way. Only the answers to Courier's own calls hand it the cookies: an answer to a plain `fetch` does not.
+`from` is a path under the API's address, such as `"csrf/"` for a Django view decorated with `ensure_csrf_cookie`, or one from the root of its origin, as Laravel Sanctum's is. Only the answers to Courier's own calls hand it the cookies: an answer to a plain `fetch` does not. See [When there is no token yet](/docs/server-side/session#when-there-is-no-token-yet).
 
 <Callout variant="info" title="Every call to the host carries its cookies">
 React Native sends the cookies it keeps for a host with every call to that host, whether the API describes a session or not; a browser sends them to another origin only when the call asks it to.

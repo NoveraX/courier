@@ -38,7 +38,7 @@ export const api = defineApi({
 | --- | --- |
 | `cookies` | The cookies the session is kept in: names, matched exactly as browsers keep them, or prefixes written with a trailing `*` — `"logto_*"` matches `logto_app` and `logto_ref`. Only these are sent. |
 | `bearer` | A cookie holding a token the API takes as `Authorization: Bearer <token>`. The cookie itself is sent only when `cookies` names it too. |
-| `csrf` | The double-submit token: the `cookie` it is kept in, sent with the session, and the `header` a write repeats it in. |
+| `csrf` | The double-submit token: the `cookie` it is kept in, sent with the session, the `header` a write repeats it in, and `from`, where the API hands it out — see [When there is no token yet](#when-there-is-no-token-yet). |
 | `relay` | Pass the session cookies the API sets back to the browser — default `true`. |
 | `allowedOrigins` | Pages on other origins whose requests may make writes with the session, written as the proxy's `allowedOrigins` are. |
 | `allowHttp` | Send the session over plain HTTP to a host on the public internet. Left unset, it travels only over HTTPS or to a private host. |
@@ -130,6 +130,33 @@ In every version, what Next.js stops a render with — a page found to be dynami
 
 A session travels only over HTTPS, or to a private host — the local machine, a private network, a cluster's `http://api:8080` — and its redirects stay on the API's origin, so the credentials never reach a host the API sent the call on to.
 
+## When there is no token yet
+
+A user the API has not handed the double-submit token yet — on a first visit, signing in, or in a React Native app started again — would send a write without it, and the API would refuse it. Name where the API hands the token out, and a write that finds none asks there first:
+
+```ts title="api/index.ts"
+import { courier, defineApi } from "@noverax/courier/define"
+
+const { endpoint } = courier()
+
+export const api = defineApi({
+  name: "api",
+  baseURL: process.env.API_URL!,
+  session: {
+    cookies: ["laravel_session"],
+    csrf: { cookie: "XSRF-TOKEN", header: "X-XSRF-TOKEN", from: "/sanctum/csrf-cookie" },
+  },
+  endpoints: {
+    signIn: endpoint.post("login").variables<{ email: string; password: string }>(),
+  },
+})
+```
+
+- `from` is a path under the API's `baseURL`, such as `"csrf/"` for a Django view decorated with `ensure_csrf_cookie`, or one from the root of its origin, such as Laravel Sanctum's `"/sanctum/csrf-cookie"`.
+- The `GET` goes as the API's calls go — its address, headers and `fetch` — with the user's session, and only before a write that finds no token: a read repeats none, and a write that finds one asks for nothing. The writes waiting on one user's token share one request.
+- On a server, the token reaches the write and the user's browser, as any cookie the API sets does; a browser keeps it itself; a React Native app keeps it from the answer.
+- A request that fails, or an answer that sets no token the call can read, leaves the write to go without it, and the log says so.
+
 ## The cookies the API sets
 
 When the API renews the session, or ends it on signing out, its cookies are carried on — from an error answer as from a success:
@@ -150,7 +177,7 @@ A page on another site can make the user's browser request one of your pages, wi
 - a form, a Server Action or a `fetch` — POST and the like — passes the proxy's origin rule: `Sec-Fetch-Site` says same-origin, or its `Origin` is your application's, or it is no browser's request at all;
 - a page — GET and the like, which any link can request — has to be one the browser says came from your application, or one the user opened themselves. A browser too old to send `Sec-Fetch-Site` has to name one of your pages as its `Referer`.
 
-An origin in `session.allowedOrigins` counts as your application's own; with none listed, so does another port of the local machine in development. A sign-in is guarded too, before anyone has a session: the double-submit token vouches for it.
+An origin in `session.allowedOrigins` counts as your application's own; with none listed, so does another port of the local machine in development. A sign-in is guarded too, before anyone has a session: the double-submit token vouches for it, and so does the token a write would ask for — such a write is refused before anything is asked.
 
 A write that does no harm when someone else sets it off — signing out from a link — says so with `session: "unguarded"`.
 

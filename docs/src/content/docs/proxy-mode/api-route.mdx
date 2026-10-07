@@ -123,7 +123,7 @@ The POST handler accepts two content types and rejects everything else:
 
 ## Cookies
 
-Cookies cross the proxy only where you name them, one direction at a time:
+An API that keeps the user's session describes it with [`session`](/docs/server-side/session): the proxy then sends it the cookies the session is kept in and nothing else of the browser's, repeats its double-submit token on writes, and hands the browser the session cookies it sets, made for your application's origin. For an API that keeps none, cookies cross the proxy only where you name them, one direction at a time:
 
 - `cookie` — the browser's cookies are forwarded to the backend.
 - `set-cookie` — the cookies the backend sets are passed back to the browser.

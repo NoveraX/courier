@@ -95,16 +95,28 @@ await caller.users.getAll()
 // With variables, no context
 await caller.users.getById({ id: 5 })
 
-// No variables, with context
-await caller.users.with({ headers: await headers() }).me()
+// No variables, with per-call options
+await caller.users.with({ timeout: 2_000 }).me()
 
-// With variables and context
-await caller.users.with({ headers: await headers() }).create({ name: "Jane" })
+// With variables and per-call options
+await caller.users.with({ headers: { "x-tenant": "acme" } }).create({ name: "Jane" })
+```
+
+## The user's session
+
+An API that keeps a session says so where it is defined, with `session`, and a call made while the server serves a user carries that user's session — the cookies the API keeps it in and nothing else — from the request being served. In a browser the platform sends its own cookies. See [User Sessions](/docs/server-side/session) for the options, the setup per framework, and how writes another site sets off are refused.
+
+```ts title="lib/api.server.ts"
+import { createServerCaller } from "@noverax/courier-next"
+import { api } from "@/api"
+
+// On Next.js: a caller whose calls carry the session of the request being served
+export const server = createServerCaller(api)
 ```
 
 ## Context parameter
 
-The request context is what makes direct mode different from proxy mode. In proxy mode, the browser's cookies reach the handler with each call, and the handler forwards them where the source or the endpoint names `cookie`. In direct mode, you pass them yourself: per call through `.with({ headers })`, or for every call of a caller through the `context` default of `createCaller`. A method takes its variables as its only argument; a second argument is not read.
+A caller can also be handed the request it serves, through the `context` default of `createCaller`: its session is then read from that request, and its headers pass the whitelist below. A method takes its variables as its only argument; a second argument is not read.
 
 ```ts
 // Exported from "@noverax/courier"
@@ -117,21 +129,20 @@ type RequestContext = {
 
 ### In React Server Components
 
-Use Next.js `headers()` from `next/headers` to get the incoming request headers. This includes cookies, authorization headers, and other browser-sent headers:
+A Server Component calls through the caller `createServerCaller` made: the session of the request Next.js is serving travels with each call, and the page is rendered per request.
 
 ```ts title="app/profile/page.tsx"
-import { headers } from "next/headers"
-import { caller } from "@/lib/caller"
+import { server } from "@/lib/api.server"
 
 export default async function ProfilePage() {
-  // headers() returns the incoming request headers (including cookies)
-  const profile = await caller.users
-    .with({ headers: await headers() })   // forward auth cookies to backend
-    .me()                                 // no variables needed
+  // The user's session cookies — and nothing else of theirs — reach the API
+  const profile = await server.users.me()
 
   return <h1>Welcome, {profile.name}</h1>
 }
 ```
+
+Handing a call `await headers()` whole — `.with({ headers: await headers() })` — sends the API every header the browser addressed to your application, every cookie of it included: its own session, analytics, preferences. Describe the session in the API instead.
 
 ### In API routes
 
@@ -152,9 +163,9 @@ export async function GET(req: Request) {
 ```
 
 <Callout variant="info" title="Header whitelist">
-Headers carried by a context — `context.req` or `context.headers` — are forwarded only when they are in a safe subset: `authorization`, `user-agent`, `referer`, `origin` and `x-request-id`, plus the names the source lists in `allowedHeaders` or the endpoint in `.headers()`. The user's `cookie` is forwarded from a context only where it is named that way. A client address the incoming request claims — `x-forwarded-for`, `x-real-ip` — is not copied; `X-Forwarded-For` is written from the connection where the runtime knows it. Headers you pass to `.with({ headers })` are sent as given, except the ones that describe the incoming connection rather than the request — `host`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `te`, `trailer`, `upgrade`, `expect` and any header `connection` names — which `fetch` sets for its own. Forwarding `await headers()` whole therefore works, but it passes on everything else the browser sent too; pick out the headers the backend should see when that matters.
+Headers carried by a context — `context.req` or `context.headers` — are forwarded only when they are in a safe subset: `authorization`, `user-agent`, `referer`, `origin` and `x-request-id`, plus the names the source lists in `allowedHeaders` or the endpoint in `.headers()`. The user's `cookie` is forwarded from a context only where it is named that way. A client address the incoming request claims — `x-forwarded-for`, `x-real-ip` — is not copied; `X-Forwarded-For` is written from the connection where the runtime knows it. Headers you pass to `.with({ headers })` are sent as given, except the ones that describe the incoming connection rather than the request — `host`, `connection`, `keep-alive`, `content-length`, `transfer-encoding`, `te`, `trailer`, `upgrade`, `expect` and any header `connection` names — which `fetch` sets for its own.
 
-A header you set yourself — in the caller's `headers` default or with `.with({ headers })` — wins over the forwarded copy of the same name, so a service token is not replaced by the end user's.
+A header you set yourself — in the caller's `headers` default or with `.with({ headers })` — wins over the forwarded copy of the same name, so a service token is not replaced by the end user's. For the user's session, describe it in the API — see [User Sessions](/docs/server-side/session) — rather than forwarding `cookie` or `await headers()` whole.
 </Callout>
 
 ## Raw data mode
@@ -172,28 +183,27 @@ console.log(result.data)     // User — still fully typed
 
 ## Difference from createProxyCaller
 
-The key difference is the request context. In proxy mode, the browser's cookies arrive with its request and cross to the backend where they are named. In direct mode, you pass them explicitly through `.with()`:
+The difference is where the call is made. A proxy caller sends the call to your proxy route, which makes it with the browser's request at hand. `createCaller` makes the call itself, with the request the server is serving at hand, or with the browser's own cookies in a browser:
 
 ```ts
-// Proxy mode (client components) — no context parameter
+// Proxy mode (client components): the proxy route makes the call
 const browserCaller = createProxyCaller<typeof api>("api")
 await browserCaller.users.getAll({ page: 1 })
-//                                ^ variables only
 
-// Direct mode (server components) — context named with .with()
-const serverCaller = createCaller(api)
-await serverCaller.users.with({ headers: await headers() }).getAll({ page: 1 })
-//                        ^ per-call options      ^ variables
+// Direct mode (server components): the server makes it, with the user's session
+const serverCaller = createServerCaller(api)
+await serverCaller.users.getAll({ page: 1 })
 ```
 
-Both functions use the same `executeRequest` core under the hood.
+Both use the same `executeRequest` core under the hood, and the same `session` the API describes.
 
 <Callout variant="warning" title="Server-only import">
-Never import `createCaller` or your caller in `"use client"` files. The API definition contains your `process.env.API_URL`, which would be exposed in the client bundle.
+In a Next.js app, never import your server caller in `"use client"` files: the API definition contains your `process.env.API_URL`, which would be exposed in the client bundle. A single-page app that calls its API from the browser uses `createCaller` there on purpose, with an address the browser may know — see [User Sessions](/docs/server-side/session).
 </Callout>
 
 ## Next Steps
 
 - [Server Actions](/docs/server-side/actions) — type-safe mutations with `createAction`
+- [User Sessions](/docs/server-side/session) — the user's session, carried to the API from wherever a call is made
 - [createProxyCaller](/docs/proxy-mode/proxy-caller) — the proxy mode equivalent for client components
 - [React Query useQuery](/docs/react-query/use-query) — use with proxy mode for client-side data fetching

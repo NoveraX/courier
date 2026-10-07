@@ -55,6 +55,18 @@ app.listen(3000, () => {
 
 `courierHandler()` is zero-arg — sources are read at request time from the core global registry populated by `registerSources()` (or by `attachRuntime()` auto-loading `courier.config.ts` in Studio-instrumented projects). The handler accepts any HTTP method. GET requests are routed to query-type endpoints, POST requests handle mutations and data payloads.
 
+## The user's session
+
+An API that keeps the user's session describes it in `defineApi`, and every call a route makes — through every `await` — carries the session of the request being served, the cookies the session names and nothing else, once the request is served with it at hand:
+
+```ts
+import { requestContext } from "@noverax/courier-express"
+
+app.use(requestContext())
+```
+
+The session cookies the API sets reach the browser on the response.
+
 ## Streaming and WebSockets
 
 ```ts

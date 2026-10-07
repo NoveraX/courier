@@ -101,20 +101,25 @@ type Context = {
 }
 ```
 
-```ts title="app/users/page.tsx"
-import { headers } from "next/headers"
+```ts title="app/api/profile/route.ts"
 import { createCaller } from "@noverax/courier"
 import { api } from "@/api"
 
-// The incoming request's headers travel with every call of this caller
-const caller = createCaller(api, { context: { headers: await headers() } })
-const profile = await caller.users.getProfile()
+export async function GET(req: Request) {
+  // The session the API describes is read from this request
+  const caller = createCaller(api, { context: { req } })
+  const profile = await caller.users.getProfile()
 
-// Headers of your own, for one call
-const user = await caller.users
-  .with({ headers: { "x-request-id": crypto.randomUUID() } })
-  .getById({ id: "123" })
+  // Headers of your own, for one call
+  const user = await caller.users
+    .with({ headers: { "x-tenant": "acme" } })
+    .getById({ id: "123" })
+
+  return Response.json({ profile, user })
+}
 ```
+
+An API that keeps a `session` takes the user's session from the request a context names, and a framework adapter finds that request without one — see [User Sessions](/docs/server-side/session). Handing a caller `await headers()` whole sends the API every header and every cookie the browser addressed to your application.
 
 ## Server Components
 

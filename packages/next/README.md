@@ -82,6 +82,22 @@ The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`mult
 
 <br />
 
+## The user's session
+
+An API that keeps the user's session describes it in `defineApi` — the cookies it is kept in, a bearer cookie, the double-submit token writes repeat — and server code calls it through `createServerCaller`:
+
+```ts
+// lib/api.server.ts
+import { createServerCaller } from "@noverax/courier-next"
+import { api } from "@/api"
+
+export const server = createServerCaller(api)
+```
+
+Every call a page, a layout, a Server Action or a Route Handler makes through it carries the session of the request Next.js is serving — the cookies the session names and nothing else of your application's — and a page that reads it is rendered per request, also when `next build` decides which pages it can build ahead of time. A write another site set off is refused with 403. The session cookies the API sets reach the browser from a Server Action and a Route Handler; Next.js lets no page set cookies while it renders. The Pages Router wraps `getServerSideProps` and API routes with `withRequestContext` from `@noverax/courier-next/pages`.
+
+<br />
+
 ## Server Actions
 
 ### Setup
@@ -119,6 +135,8 @@ createAction(sources, "api", {
   headers: true,  // forward request headers via next/headers (default: true)
 })
 ```
+
+An API that keeps a `session` gets the user's session from the action's request whichever `headers` says, and the session cookies it sets reach the browser with the action's response.
 
 `createAction` takes the same sources map you pass to `registerSources`, and the client it returns has the shape of the named source — grouped, flat, or both. It only forwards each call: revalidating, reading `FormData` and handling errors stay in your action, as above.
 
@@ -163,12 +181,17 @@ export async function saveUser(_: ActionState<User>, form: FormData): Promise<Ac
 
 ```ts
 // Main entry
-import { apiRoute, createAction } from "@noverax/courier-next"
+import { apiRoute, createAction, createServerCaller, nextRequestContext } from "@noverax/courier-next"
 ```
 
 ```ts
 // Actions-only entry (for "use server" files)
 import { createAction } from "@noverax/courier-next/actions"
+```
+
+```ts
+// Pages Router: getServerSideProps and API routes with their request at hand
+import { withRequestContext } from "@noverax/courier-next/pages"
 ```
 
 <br />

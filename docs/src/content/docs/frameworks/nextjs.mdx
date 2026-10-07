@@ -157,16 +157,18 @@ export default function UsersPage() {
 Wrap your app with `QueryClientProvider` in your root layout. See the [React Query setup](/docs/react-query/setup) page for details.
 </Callout>
 
-## Step 3: Server Components (createCaller)
+## Step 3: Server Components (createServerCaller)
 
-For React Server Components, use `createCaller` to call your backend directly without the proxy hop:
+For React Server Components, use `createServerCaller` to call your backend directly without the proxy hop:
 
 ```ts title="lib/server-caller.ts"
-import { createCaller } from "@noverax/courier"
+import { createServerCaller } from "@noverax/courier-next"
 import { api } from "@/lib/sources"
 
-export const caller = createCaller(api)
+export const caller = createServerCaller(api)
 ```
+
+It is `createCaller` that also finds the request Next.js is serving: an API that keeps a `session` gets the user's session from it, and a page whose calls carry one is rendered per request — see [the user's session](#the-users-session).
 
 ```tsx title="app/dashboard/page.tsx"
 import { caller } from "@/lib/server-caller"
@@ -191,12 +193,40 @@ export default async function DashboardPage() {
 ```
 
 <Callout variant="tip" title="No proxy overhead">
-`createCaller` calls your backend directly from the server. There is no round-trip through the API route, making it ideal for SSR and RSC.
+`createServerCaller` calls your backend directly from the server. There is no round-trip through the API route, making it ideal for SSR and RSC.
 </Callout>
+
+## The user's session
+
+Describe the session the API keeps where it is defined, and every server-side call made for a user carries that user's session, the cookies the API keeps it in and nothing else of your application's:
+
+```ts title="lib/sources.ts"
+import { courier, defineApi } from "@noverax/courier/define"
+
+const { endpoint } = courier()
+
+export const api = defineApi({
+  name: "myApi",
+  baseURL: process.env.API_URL!,
+  session: { cookies: ["sessionid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
+  endpoints: {
+    me: endpoint.get("me").response<{ id: number; name: string }>(),
+  },
+})
+```
+
+| Where | How it finds the request |
+| --- | --- |
+| Pages, layouts, Route Handlers | `createServerCaller(api)` registers `nextRequestContext` as its module loads |
+| Server Actions | `createAction` reads the action's own request; `createServerCaller` works too |
+| Pages Router | `withRequestContext` from `@noverax/courier-next/pages` wraps `getServerSideProps` and API routes |
+| Client components | A proxy caller: the proxy route reads the browser's request |
+
+The session cookies the API sets reach the browser from a Server Action and a Route Handler. Next.js lets no page set cookies while it renders, so a session the API renews during a render reaches that render's later calls only. [User Sessions](/docs/server-side/session) covers the options and the writes another site sets off.
 
 ## Step 4: Server Actions (createAction)
 
-Use `createAction` for type-safe server actions that automatically forward request headers:
+Use `createAction` for type-safe server actions that read the action's own request — its headers, and the session of an API that keeps one:
 
 ```ts title="lib/actions.ts"
 import { createAction } from "@noverax/courier-next"
@@ -264,14 +294,14 @@ app/
   api/request/route.ts    # apiRoute()
   actions/users.ts        # server actions with createAction
   users/page.tsx          # client component with useQuery
-  dashboard/page.tsx      # server component with createCaller
+  dashboard/page.tsx      # server component with createServerCaller
 lib/
   sources.ts              # defineApi + defineGroup + endpoint
   endpoint.ts             # createProxyQueryCaller<typeof api>("myApi")
-  server-caller.ts        # createCaller(api)
+  server-caller.ts        # createServerCaller(api)
   actions.ts              # createAction(sources, "myApi")
 ```
 
 <Callout variant="tip" title="Use both modes together">
-Most Next.js apps use all three: `createProxyQueryCaller` for client components, `createCaller` for server components, and `createAction` for server actions. They all share the same source definitions.
+Most Next.js apps use all three: `createProxyQueryCaller` for client components, `createServerCaller` for server components, and `createAction` for server actions. They all share the same source definitions, and the same session.
 </Callout>

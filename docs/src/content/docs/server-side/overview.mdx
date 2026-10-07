@@ -40,7 +40,7 @@ Use direct mode whenever your code runs on the server:
     ["Latency", "Extra HTTP hop", { label: "Single hop", highlight: true }],
     ["Client bundle", "Includes request code", { label: "Zero bytes", highlight: true }],
     ["React Query", { label: "Built-in hooks", highlight: true }, "Not needed (async/await)"],
-    ["Cookie forwarding", "Where the source or endpoint names it", "Via .with({ headers })"],
+    ["The user's session", "The API's session, from the browser's request", "The API's session, from the request being served"],
     ["Use case", "Client components", "RSC, Server Actions, API routes"],
     ["Requires proxy handler", "Yes", { label: "No", highlight: true }],
   ]}
@@ -79,41 +79,44 @@ export default async function DashboardPage() {
 
 ## Usage in Server Actions
 
-Server Actions use the same caller. Pass `headers()` as context to forward authentication cookies:
+Server Actions use the same caller. A write made from the application's own form carries the user's session, and the double-submit token the API asks for:
 
 ```ts title="app/actions/users.ts"
 "use server"
 
-import { headers } from "next/headers"
 import { revalidatePath } from "next/cache"
-import { createCaller } from "@noverax/courier"
-import { api } from "@/api"
+import { server } from "@/lib/api.server"
 
 export async function createUser(data: { name: string; email: string }) {
-  // The action's own request: its headers travel with the call
-  const caller = createCaller(api, { context: { headers: await headers() } })
-  const user = await caller.users.create(data)
+  const user = await server.users.create(data)
 
   revalidatePath("/dashboard")
   return user
 }
 ```
 
-## Context and cookie forwarding
+## The user's session
 
-In direct mode, the browser's cookies are not automatically available. To forward authentication headers, pass the current `headers()` with the call:
+The server's own `fetch` carries none of the user's cookies. An API that keeps a session describes it with `session` in `defineApi`, and a call made while the server serves a user carries that user's session from the request being served — the cookies the API keeps it in, and nothing else of the application's:
+
+```ts title="lib/api.server.ts"
+import { createServerCaller } from "@noverax/courier-next"
+import { api } from "@/api"
+
+export const server = createServerCaller(api)
+```
 
 ```ts title="app/profile/page.tsx"
-import { headers } from "next/headers"
-import { caller } from "@/lib/caller"
+import { server } from "@/lib/api.server"
 
 export default async function ProfilePage() {
-  // Pass headers so cookies (auth tokens) reach the backend
-  const profile = await caller.users.with({ headers: await headers() }).me()
+  const profile = await server.users.me()
 
   return <h1>Welcome, {profile.name}</h1>
 }
 ```
+
+[User Sessions](/docs/server-side/session) covers the options, the setup for each framework, the cookies the API sets, and the writes another site sets off.
 
 <Callout variant="tip" title="Header whitelist">
 Headers read from a context — `createCaller(api, { context: { req } })` — are forwarded only when they are safe: `authorization`, `user-agent`, `referer`, `origin` and `x-request-id`, plus the names a source lists in `allowedHeaders` or an endpoint in `.headers()` — `cookie` among them when the user's session should travel. A client address is not copied from the incoming request; `X-Forwarded-For` is written from the connection where the runtime knows it. Headers passed to `.with({ headers })` and custom headers from `defaults.headers` are always included, except those describing the incoming connection, such as `host`, `connection` and `content-length`.
@@ -121,7 +124,7 @@ Headers read from a context — `createCaller(api, { context: { req } })` — ar
 
 ## Security considerations
 
-Direct mode runs exclusively on the server. This means:
+Called from server code, direct mode keeps everything on the server:
 
 - Your backend URL (`API_URL`) is never sent to the browser
 - API keys and tokens in `defaults.headers` stay server-side
@@ -136,4 +139,5 @@ If you import your caller in a `"use client"` file, your bundler will try to inc
 
 - [createCaller](/docs/server-side/caller) — full API reference, defaults, and advanced usage
 - [Server Actions](/docs/server-side/actions) — type-safe mutations with `createAction`
+- [User Sessions](/docs/server-side/session) — the user's session, carried to the API
 - [Proxy Mode Overview](/docs/proxy-mode/overview) — client-side requests through the proxy handler

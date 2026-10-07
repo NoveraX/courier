@@ -21,6 +21,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Overview", href: "/docs/server-side/overview" },
       { title: "createCaller", href: "/docs/server-side/caller" },
       { title: "Server Actions", href: "/docs/server-side/actions" },
+      { title: "User Sessions", href: "/docs/server-side/session" },
     ],
   },
   {

@@ -136,8 +136,20 @@ app.listen(Number(process.env.PORT) || 3001)
 ```
 
 <Callout variant="info" title="Credentials">
-Set `credentials: true` in your CORS config if your backend uses cookies for authentication. The Courier proxy route forwards the browser's cookies to your backend, and your backend's `Set-Cookie` back, for the sources and endpoints that name `cookie` and `set-cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
+Set `credentials: true` in your CORS config if your backend uses cookies for authentication. The Courier proxy route sends your backend the session its source describes, and hands the browser the session cookies the backend sets — see [User Sessions](/docs/server-side/session).
 </Callout>
+
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call a route, a service or a step it awaits makes, once the request is served with it at hand:
+
+```ts title="app.ts"
+import { requestContext } from "@noverax/courier-express"
+
+app.use(requestContext())
+```
+
+Mount it before the routes that call APIs. The session cookies the API sets reach the browser on the response, and the user's address follows the rule the proxy route follows. See [User Sessions](/docs/server-side/session).
 
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 

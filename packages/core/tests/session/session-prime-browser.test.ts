@@ -201,21 +201,27 @@ describe("the request for the token", () => {
     expect(asked).toHaveLength(2);
   });
 
-  it("is told to Studio as a request the session makes, under an id of its own", async () => {
+  it("is told to Studio as a request the session makes, within the write's own time", async () => {
     const { studioHooks } = await import("../../src/studio");
-    const started: Array<{ id: string; method: string; purpose?: string; httpMethod?: string }> =
-      [];
-    studioHooks.onRequestStart = (event) => started.push(event);
+    const events: Array<{ event: string; id: string; method?: string; purpose?: string }> = [];
+    studioHooks.onRequestStart = (event) => events.push({ ...event, event: "start" });
+    studioHooks.onRequestEnd = (event) => events.push({ event: "end", id: event.id });
     try {
       await apiWith(SANCTUM).rename({ name: "Ada" });
     } finally {
       studioHooks.onRequestStart = undefined;
+      studioHooks.onRequestEnd = undefined;
     }
 
-    const [token, write] = [started.find((e) => e.purpose), started.find((e) => !e.purpose)];
-    expect(token).toMatchObject({ method: "csrf token", purpose: "csrf-token", httpMethod: "GET" });
-    expect(write?.method).toBe("rename");
+    const [write, token] = events;
+    expect(write).toMatchObject({ event: "start", method: "rename" });
+    expect(write?.purpose).toBeUndefined();
+    expect(token).toMatchObject({ event: "start", method: "csrf token", purpose: "csrf-token" });
     expect(token?.id).not.toBe(write?.id);
+    expect(events.slice(2)).toEqual([
+      { event: "end", id: token?.id },
+      { event: "end", id: write?.id },
+    ]);
   });
 });
 

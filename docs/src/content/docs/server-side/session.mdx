@@ -64,7 +64,8 @@ Courier finds the request being served as a call starts, before it first waits �
 | The proxy route, for a browser's call | The session from the browser's request to the proxy |
 | A proxy caller in server code, such as universal code rendering a page | The proxy in the same process, with the session of the user the page is for — no request leaves the server |
 | Server code that names a request: `createCaller(api, { context: { req } })` | The session from that request |
-| A browser or a React Native app | Its own cookies, sent by the platform: the call asks for them with `credentials: "include"`, so an API on another origin gets them too |
+| A browser | Its own cookies, sent by the browser: the call asks for them with `credentials: "include"`, so an API on another origin gets them too |
+| A React Native app | Its own cookies, sent by the platform as a browser sends them; what a page would read from `document.cookie` is kept from the API's answers — see [React Native](/docs/frameworks/react-native#the-users-session) |
 | Server code with no request — a script, a cron job, a build | Nothing |
 
 A header the call sets itself — in a caller's `headers`, or with `.with({ headers })` — wins over the one the session would send.

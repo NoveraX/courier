@@ -34,16 +34,23 @@ function* endpointHeaderLists(api: object): Generator<[string, readonly string[]
   const holders: Array<[string, object]> = [["", api]];
   for (const { path, group } of eachGroup(api)) holders.push([`${path}.`, group]);
   for (const [prefix, holder] of holders) {
-    for (const [name, endpoint] of Object.entries(holder)) {
+    for (const name of Object.keys(holder)) {
+      const endpoint: unknown = Reflect.get(holder, name);
       if (name === "options" || !isEndpointEntry(endpoint)) continue;
-      const options: unknown = Reflect.get(endpoint, "options");
-      const headers =
-        typeof options === "object" && options !== null
-          ? (Reflect.get(options, "allowedHeaders") as readonly string[] | undefined)
-          : undefined;
-      yield [`${prefix}${name}`, headers];
+      yield [`${prefix}${name}`, allowedHeadersOf(endpoint)];
     }
   }
+}
+
+function allowedHeadersOf(endpoint: object): readonly string[] | undefined {
+  const options: unknown = Reflect.get(endpoint, "options");
+  if (typeof options !== "object" || options === null) return undefined;
+  const headers: unknown = Reflect.get(options, "allowedHeaders");
+  return isStringList(headers) ? headers : undefined;
+}
+
+function isStringList(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((entry: unknown) => typeof entry === "string");
 }
 
 /**

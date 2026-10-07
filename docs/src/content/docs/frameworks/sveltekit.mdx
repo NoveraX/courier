@@ -55,6 +55,28 @@ const caller = createProxyCaller<typeof api>("api", {
 const users = await caller.users.getAll()
 ```
 
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call a hook, a `load` function, a form action or an endpoint makes, once the request being served can be found — and a proxy caller in universal code, rendered on the server, reaches the proxy in process with it:
+
+```ts title="src/hooks.server.ts — SvelteKit 2.20 and later"
+import { getRequestEvent } from "$app/server"
+import { registerRequestContext, registerSources } from "@noverax/courier"
+import { svelteKitRequestContext } from "@noverax/courier-sveltekit"
+import { sources } from "$lib/api"
+
+registerSources(sources)
+registerRequestContext(svelteKitRequestContext(getRequestEvent))
+```
+
+```ts title="src/hooks.server.ts — any SvelteKit 2"
+import { requestContextHandle } from "@noverax/courier-sveltekit/handle"
+
+export const handle = requestContextHandle()
+```
+
+`getRequestEvent` follows the request through every `await` where the platform has `AsyncLocalStorage`, and only until the first one where it has none. The `handle` hook needs `AsyncLocalStorage` itself — Node, Bun, Deno, Cloudflare with `nodejs_als`. Either way the session cookies the API sets go to `cookies.set()` exactly as the API wrote them, a `load` function's included. See [User Sessions](/docs/server-side/session).
+
 ## Cancelled calls
 
 When the browser cancels a call — an aborted upload, a query it no longer needs — the proxy stops its own upstream request. SvelteKit's request signal does not report a client that leaves after its body has arrived, so under `@sveltejs/adapter-node` the handler watches the client's socket, from `platform.req`, instead. The Vite dev server exposes no connection: during `vite dev` a cancelled call still runs to completion upstream.

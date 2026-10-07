@@ -38,6 +38,8 @@ type BaseOptions = {
   timeout?: number
   headers?: HeadersInit
   signal?: AbortSignal
+  session?: SessionOptions
+  forward?: ForwardOptions
 }
 ```
 
@@ -202,12 +204,35 @@ const users = defineGroup({
 })
 ```
 
-Cookies are named the same way, one direction at a time: `cookie` forwards the caller's cookies to the upstream, and `set-cookie` passes the upstream's back. Neither crosses where it is not named — see [Cookies](/docs/proxy-mode/api-route#cookies).
+Cookies are named the same way, one direction at a time: `cookie` forwards the caller's cookies to the upstream, and `set-cookie` passes the upstream's back. Neither crosses where it is not named — see [Cookies](/docs/proxy-mode/api-route#cookies). An API that keeps a [`session`](#session) names its cookies there instead, and refuses `cookie` and `set-cookie` in these lists with `SESSION_HEADER_CONFLICT`: they would carry every cookie past it.
 
 The headers that describe the body — `Content-Type`, `Content-Length`, `Content-Encoding` — are never taken from these lists, because the proxy sends a body of its own.
 
+### session
+
+How the API keeps the user's session: the cookies it is kept in, by name or by a prefix ending in `*`; a cookie holding a bearer token; the double-submit token a write repeats; whether the session cookies it sets reach the browser; the other origins whose pages may make writes with it. A call made while a server serves a user carries that user's session from the request being served; a call made in a browser lets the browser send its own cookies.
+
+```ts
+defineApi({
+  baseURL: "https://api.example.com",
+  session: {
+    cookies: ["sessionid", "logto_*"],
+    bearer: "access_token",
+    csrf: { cookie: "csrftoken", header: "x-csrftoken" },
+  },
+  endpoints,
+})
+```
+
+An endpoint takes it with `session: false` when it answers every user alike, and `session: "unguarded"` for a write that does no harm when another site sets it off, such as signing out. See [User Sessions](/docs/server-side/session).
+
+### forward
+
+The headers a call made while serving a request carries from it: `requestId`, `trace`, `clientAddress`, `userAgent`, `locale`, and further `headers` by name. An endpoint keeps them off its calls with `forward: false`. See [User Sessions](/docs/server-side/session#forward).
+
 ## Related
 
+- [User Sessions](/docs/server-side/session) — the session and the forwarded headers, end to end
 - [defineGroup](/docs/api/define-group) — defining endpoint groups
 - [Defining APIs Guide](/docs/core-concepts/defining-apis) — in-depth usage patterns
 - [Middleware](/docs/advanced/middleware) — middleware reference

@@ -53,8 +53,8 @@ type ActionDefaults = {
 }
 ```
 
-<Callout variant="info" title="Automatic headers">
-By default, `createAction` forwards the incoming request's headers to your backend via `next/headers()`, through the same allowlist a context goes through — so the user's cookies travel only where the source or the endpoint names `cookie`. Set `headers: false` to disable this behavior.
+<Callout variant="info" title="The action's request">
+`createAction` reads the action's own request through `next/headers`. An API that keeps a `session` gets the user's session from it — the cookies the session names, and the double-submit token a write repeats — and the session cookies the API sets reach the browser with the action's response; see [User Sessions](/docs/server-side/session). By default the request's headers are forwarded too, through the same allowlist a context goes through; `headers: false` turns that off, and leaves the session to the API that keeps one.
 </Callout>
 
 ## Basic usage
@@ -182,19 +182,18 @@ export function CreateUserForm() {
 
 Both `createAction` and `createCaller` return a `TypedClient` with dot-notation access. The difference:
 
-- **`createCaller(api)`** — takes a single `DefinedApi`, you must pass headers manually as context
-- **`createAction(sources, "api")`** — takes `Sources` map + source name, forwards headers automatically
+- **`createServerCaller(api)`** — takes a single `DefinedApi`; its calls carry the session of the request Next.js is serving, wherever they are made — a page, a layout, a Server Action, a Route Handler
+- **`createAction(sources, "api")`** — takes `Sources` map + source name; reads the action's own request, its headers forwarded through the allowlist
 
 ```ts
-// createCaller — manual header forwarding
-import { headers } from "next/headers"
-const created = await caller.users.with({ headers: await headers() }).create(data)
+// createServerCaller — the session of the request being served
+const created = await server.users.create(data)
 
-// createAction — automatic header forwarding
+// createAction — the action's request, its headers forwarded too
 const forwarded = await action.users.create(data)
 ```
 
-Use `createAction` in Server Actions where the incoming request's headers should always travel. Use `createCaller` in RSC or API routes where you may or may not need headers.
+Use either in Server Actions. Use `createServerCaller` in Server Components and Route Handlers.
 
 ## Server Actions vs useMutation
 

@@ -85,11 +85,41 @@ const users = await caller.users.getAll()
 
 When the browser cancels a call — an aborted upload, a query it no longer needs — the proxy stops its own upstream request. SvelteKit's request signal does not report a client that leaves after its body has arrived, so under `@sveltejs/adapter-node` the handler watches the client's socket, from `platform.req`, instead. The Vite dev server exposes no connection: during `vite dev` a cancelled call still runs to completion upstream.
 
+## The user's session
+
+An API that keeps the user's session describes it in `defineApi`, and every call a hook, a `load` function, a form action or an endpoint makes carries the session of the request being served — the cookies the session names and nothing else of your application's — once the request can be found:
+
+```ts
+// src/hooks.server.ts — SvelteKit 2.20 and later
+import { getRequestEvent } from "$app/server"
+import { registerRequestContext } from "@noverax/courier"
+import { svelteKitRequestContext } from "@noverax/courier-sveltekit"
+
+registerRequestContext(svelteKitRequestContext(getRequestEvent))
+```
+
+```ts
+// src/hooks.server.ts — any SvelteKit 2, where the platform has AsyncLocalStorage
+import { requestContextHandle } from "@noverax/courier-sveltekit/handle"
+
+export const handle = requestContextHandle()
+```
+
+The session cookies the API sets go to `cookies.set()` exactly as the API wrote them, a `load` function's included.
+
 ## API
 
 ### `courierHandler()`
 
 Creates a SvelteKit request handler. Returns a function compatible with SvelteKit's `GET`/`POST` server exports.
+
+### `svelteKitRequestContext(getRequestEvent)`
+
+The request SvelteKit 2.20 and later is serving, for `registerRequestContext`.
+
+### `requestContextHandle()`
+
+From `@noverax/courier-sveltekit/handle`: a `handle` hook that serves every request with its session at hand.
 
 ## License
 

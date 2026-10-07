@@ -221,8 +221,8 @@ In-memory response caching with configurable TTL.
 
 ```ts title="signature"
 declare function cacheMiddleware(options: {
-  /** How responses are partitioned between callers: "public", or a function naming the caller */
-  scope: "public" | ((ctx: MiddlewareContext) => string)
+  /** How responses are partitioned between callers: "public", "session", or a function naming the caller */
+  scope: "public" | "session" | ((ctx: MiddlewareContext) => string)
   /** Time-to-live in milliseconds (default: 60000) */
   ttl?: number
   /** Entries retained before the oldest are dropped (default: 1000) */
@@ -245,6 +245,12 @@ const api = defineApi({
 ```
 
 Every caller receives a copy of its own, made with `structuredClone`, so editing a result never changes what the next caller gets. An answer holding a value that cannot be copied, such as a function, is not cached; class instances come back as plain objects.
+
+A call that carries the user's [session](/docs/server-side/session) is never answered from a `"public"` cache, nor stored in it: its answer belongs to that user, and the endpoint is named once in the log. Give such an API's per-user reads a cache of their own with `scope: "session"` — one partition per set of credentials the call sends, its `Cookie` and its `Authorization`, named by their SHA-256 digest so the credentials never sit in a store's keys:
+
+```ts
+cacheMiddleware({ scope: "session", ttl: 10_000 })
+```
 
 ### Custom storage
 

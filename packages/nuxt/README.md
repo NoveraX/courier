@@ -76,11 +76,9 @@ import type { api } from "~/api/sources"
 // middleware — stays on the server. An API with streams or channels passes a
 // `boundary` from `defineBoundary` instead (see the proxy-mode docs).
 export function useCaller() {
-  // `useAsyncData` runs on the server first, where a bare "/api/request"
-  // has no page to resolve against — so it is made absolute with the origin
-  // of the request being rendered.
-  const { origin } = useRequestURL()
-  return createProxyCaller<typeof api>("api", { proxyPath: { http: `${origin}/api/request` } })
+  // `useAsyncData` runs on the server first, where the call reaches the proxy
+  // in the same process; in the browser the path goes to the route over HTTP.
+  return createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } })
 }
 ```
 
@@ -98,7 +96,16 @@ const { data: users } = await useAsyncData("users", () => caller.users.getAll())
 </template>
 ```
 
-During server rendering the call is a request from the server to itself, so it carries none of the browser's cookies. When the upstream needs the user's session, forward it: `createProxyCaller("api", { proxyPath, headers: useRequestHeaders(["cookie"]) })`. The proxy passes cookies on only to the sources and endpoints that name `cookie`, with `allowedHeaders` or `.headers()`.
+During server rendering the call does not leave the server: the proxy caller reaches the proxy in the same process, where the Nitro plugin registered the source. An API that keeps a `session` gets the session of the user the page is rendered for once Nitro serves each request with it at hand:
+
+```ts
+// server/plugins/courier-request.ts
+import { requestContextPlugin } from "@noverax/courier-nuxt"
+
+export default defineNitroPlugin(requestContextPlugin)
+```
+
+The session cookies the API sets then reach the browser on the response, during server rendering as from a server route.
 
 The same route serves SSE streams: point `proxyPath.sse` at it too. WebSocket channels need the standalone Courier server.
 

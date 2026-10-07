@@ -68,17 +68,13 @@ import { createProxyCaller } from "@noverax/courier"
 import type { api } from "~/lib/sources"
 
 export function useCaller() {
-  // `useAsyncData` runs on the server first, where a bare "/api/request"
-  // has no page to resolve against, so it is made absolute with the origin
-  // of the request being rendered.
-  const { origin } = useRequestURL()
   return createProxyCaller<typeof api>("api", {
-    proxyPath: { http: `${origin}/api/request` },
+    proxyPath: { http: "/api/request" },
   })
 }
 ```
 
-During server rendering the call is a request from the server to itself, so it carries none of the browser's cookies. When the upstream needs the user's session, forward it with `headers: useRequestHeaders(["cookie"])`; the proxy passes it on to the endpoints that name `cookie` — see [Cookies](/docs/proxy-mode/api-route#cookies).
+`useAsyncData` runs on the server first. There the call does not leave the server: the proxy caller reaches the proxy in the same process, where the source is registered, so the path needs no address to resolve against, and the call carries the session of the user the page is rendered for once each request is served with its session at hand — see [the user's session](#the-users-session). In the browser the same path goes to the route over HTTP.
 
 Use it in your pages and components:
 
@@ -202,6 +198,18 @@ async function handleSubmit() {
 For advanced caching and mutation management, consider using `@tanstack/vue-query` alongside `createProxyCaller`. Courier proxy callers return standard promises, so they work seamlessly with any data-fetching library.
 </Callout>
 
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call a page's setup, a `useAsyncData`, a plugin or a server route makes, through every `await`, once Nitro serves each request with it at hand:
+
+```ts title="server/plugins/courier-request.ts"
+import { requestContextPlugin } from "@noverax/courier-nuxt"
+
+export default defineNitroPlugin(requestContextPlugin)
+```
+
+The plugin wraps the handler Nitro serves every request with, as Nitro does for its own `asyncContext`. The session cookies the API sets reach the browser on the response, during server rendering as from a server route. See [User Sessions](/docs/server-side/session).
+
 ## Realtime (SSE & WebSocket)
 
 `courierHandler()` serves SSE streams as well as HTTP calls: a request that asks for `text/event-stream` gets a stream, and the stream ends when its client leaves. Point `proxyPath.sse` at the same route.
@@ -216,8 +224,8 @@ export function useCaller() {
   const { origin } = useRequestURL()
   return createProxyCaller<typeof api>("api", {
     proxyPath: {
-      http: `${origin}/api/request`,              // handled by Nuxt
-      sse: `${origin}/api/request`,               // handled by Nuxt
+      http: "/api/request",                       // handled by Nuxt — in process while rendering
+      sse: `${origin}/api/request`,               // handled by Nuxt — a stream always opens over HTTP
       ws: "ws://localhost:4400/api/ws",           // handled by standalone server
     },
   })

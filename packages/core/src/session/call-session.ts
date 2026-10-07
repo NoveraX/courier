@@ -1,7 +1,9 @@
 import type { Context } from "../http-client/types";
+import { isReactNative } from "../utils/is-react-native";
 import { servesOneUser } from "../utils/serves-one-user";
 import { browserSession } from "./browser-session";
 import type { IncomingRequest } from "./incoming-request";
+import type * as NativeSession from "./native-session";
 import { captureIncomingRequest } from "./request-context";
 import type * as ServerSession from "./server-session";
 import type { SessionTarget } from "./session-target";
@@ -27,6 +29,12 @@ export interface CallSession {
    * being served
    */
   readonly toResponse: boolean;
+  /**
+   * Where the call goes, when the cookies its answer sets are kept here for
+   * the calls to come: in a React Native app, whose platform keeps the
+   * user's cookies where no script reads them
+   */
+  readonly learnsFrom?: string | undefined;
 }
 
 /**
@@ -56,7 +64,7 @@ export function sessionFor(
   if (context !== undefined && namesRequest(context)) {
     return serverPart().then((server) => server.contextSession(context, target));
   }
-  if (servesOneUser()) return target.session ? browserSession(target, target.session) : undefined;
+  if (servesOneUser()) return oneUserSession(target);
   const found = captureIncomingRequest();
   if (found === undefined) return undefined;
   return Promise.all([found, serverPart()]).then(([incoming, server]) =>
@@ -64,11 +72,27 @@ export function sessionFor(
   );
 }
 
+/* A browser reads the cookies a page can; a React Native app keeps them from the API's answers,
+   with what a browser never loads. */
+function oneUserSession(target: SessionTarget): CallSession | Promise<CallSession> | undefined {
+  const session = target.session;
+  if (session === undefined) return undefined;
+  if (!isReactNative()) return browserSession(target, session);
+  return nativePart().then((native) => native.nativeSession(target, session));
+}
+
 /* A caller's context names the request it serves, or the proxy's own. */
 function namesRequest(context: Context): boolean {
   return (
     context.incoming !== undefined || context.req !== undefined || context.headers !== undefined
   );
+}
+
+let native: Promise<typeof NativeSession> | undefined;
+
+function nativePart(): Promise<typeof NativeSession> {
+  native ??= import("./native-session");
+  return native;
 }
 
 let server: Promise<typeof ServerSession> | undefined;

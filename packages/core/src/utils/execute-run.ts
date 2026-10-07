@@ -117,9 +117,15 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
 
 /* The session cookies the API set, carried on; the ones a Response of the
    call's own has to carry. A browser keeps its cookies itself, and never
-   loads what carries them on. */
+   loads what carries them on; a React Native app keeps the ones a page
+   could read for its calls to come. */
 async function relayOf(call: PreparedCall, upstream: Headers | undefined): Promise<string[]> {
   const session = call.session;
+  if (session?.learnsFrom !== undefined) {
+    const { learnCookies } = await import("../session/learned-cookies");
+    learnCookies(upstream, session.options, session.learnsFrom);
+    return [];
+  }
   if (session?.incoming === undefined) return [];
   const { relayCookies } = await import("../session/relay");
   return relayCookies(upstream, session, session.toResponse);

@@ -11,7 +11,14 @@ vi.mock("@noverax/courier/internal", async (importOriginal) => {
 });
 
 vi.mock("next/headers", () => ({
-  headers: vi.fn().mockResolvedValue(new Headers({ authorization: "Bearer test-token" })),
+  headers: vi.fn().mockResolvedValue(
+    new Headers({
+      authorization: "Bearer test-token",
+      "next-action": "a1",
+      host: "app.example.com",
+    }),
+  ),
+  cookies: vi.fn().mockResolvedValue({ set: vi.fn() }),
 }));
 
 import { executeRequest } from "@noverax/courier/internal";
@@ -102,14 +109,27 @@ describe("createAction", () => {
       expect(context.headers.get("authorization")).toBe("Bearer test-token");
     });
 
-    it("skips header forwarding when headers: false", async () => {
+    it("skips header forwarding when headers: false, and still serves the session", async () => {
       mockExecuteRequest.mockResolvedValue({ ok: true });
 
       const action = createAction(mockSources, "api", { headers: false }) as any;
       await action.users.getAll();
 
-      const context = mockExecuteRequest.mock.calls[0]?.[2];
-      expect(context).toBeUndefined();
+      const context = mockExecuteRequest.mock.calls[0]?.[2] as any;
+      expect(context.headers).toBeUndefined();
+      expect(context.incoming.method).toBe("POST");
+    });
+
+    it("describes the action's request for the session: a POST, from the application's origin", async () => {
+      mockExecuteRequest.mockResolvedValue({ ok: true });
+
+      const action = createAction(mockSources, "api") as any;
+      await action.users.getAll();
+
+      const incoming = (mockExecuteRequest.mock.calls[0]?.[2] as any)?.incoming;
+      expect(incoming.method).toBe("POST");
+      expect(incoming.origin).toBe("http://app.example.com");
+      expect(incoming.fetchInit).toEqual({ cache: "no-store" });
     });
   });
 });

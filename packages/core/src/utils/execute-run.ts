@@ -3,7 +3,6 @@ import type { Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware/index";
 import type { Middleware, MiddlewareContext } from "../middleware/types";
 import type { CallSession } from "../session/call-session";
-import { relayCookies } from "../session/relay";
 import type { SchemaMetadata } from "../validation";
 import { applyCacheHeaders } from "./cache-headers";
 import { handleExecuteError } from "./execute-error";
@@ -77,7 +76,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
       emitRequestEnd(studio, result, ctx.headers, timing, tMiddlewareTotal, context);
     }
 
-    const relayed = relayOf(call, result.headers);
+    const relayed = await relayOf(call, result.headers);
     const response = withCookies(
       buildResponse(context, {
         headers: result.headers,
@@ -99,7 +98,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
   } catch (error) {
     /* An error answer sets cookies as a success does: a sign-in refused
        clears the session it names, and a renewal can ride on a 401. */
-    const relayed = relayOf(call, error instanceof HTTPError ? error.headers : undefined);
+    const relayed = await relayOf(call, error instanceof HTTPError ? error.headers : undefined);
     return withCookies(
       handleExecuteError(error, {
         requestId: studio.requestId,
@@ -116,10 +115,14 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
   }
 }
 
-/* The session cookies the API set, carried on; the ones a Response of the call's own has to carry. */
-function relayOf(call: PreparedCall, upstream: Headers | undefined): string[] {
-  if (call.session === undefined) return [];
-  return relayCookies(upstream, call.session, call.session.toResponse);
+/* The session cookies the API set, carried on; the ones a Response of the
+   call's own has to carry. A browser keeps its cookies itself, and never
+   loads what carries them on. */
+async function relayOf(call: PreparedCall, upstream: Headers | undefined): Promise<string[]> {
+  const session = call.session;
+  if (session?.incoming === undefined) return [];
+  const { relayCookies } = await import("../session/relay");
+  return relayCookies(upstream, session, session.toResponse);
 }
 
 function withCookies(answer: unknown, cookies: readonly string[]): unknown {

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /** The application templates the framework versions are built from. */
-export type AppKind = "next" | "sveltekit" | "nuxt" | "express" | "spa";
+export type AppKind = "next" | "sveltekit" | "nuxt" | "express" | "fastify" | "spa";
 
 /** A framework version the session is checked against, as an application installs it. */
 export interface Target {
@@ -21,7 +21,14 @@ export interface Target {
 /** Where the framework checks live: templates, targets and tests. */
 export const FRAMEWORKS = join(import.meta.dirname, "..");
 
-const KINDS: ReadonlySet<string> = new Set(["next", "sveltekit", "nuxt", "express", "spa"]);
+const KINDS: ReadonlySet<string> = new Set([
+  "next",
+  "sveltekit",
+  "nuxt",
+  "express",
+  "fastify",
+  "spa",
+]);
 
 /**
  * Every framework version in the matrix, from `targets.json` — the list CI

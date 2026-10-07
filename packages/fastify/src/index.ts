@@ -4,6 +4,7 @@ import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 
+export { requestContext } from "./request-context";
 export { courierWSHandler } from "./ws-handler";
 
 /** Where the proxy caller sends its calls unless told otherwise. */

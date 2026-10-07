@@ -40,7 +40,7 @@ export function writeRefusal(
   const site = incoming.headers.get("sec-fetch-site")?.toLowerCase() ?? null;
   const origin = incoming.headers.get("origin");
   const self = incoming.origin ?? null;
-  if (!SAFE_METHODS.has(incoming.method.toUpperCase())) {
+  if (!SAFE_METHODS.has((incoming.method ?? "GET").toUpperCase())) {
     return isOriginAccepted(origin, self, allowedOrigins, site)
       ? undefined
       : `it came from ${origin ?? `a page the browser calls ${site}`}, not one of the application's pages`;

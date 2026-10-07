@@ -37,8 +37,12 @@ export interface IncomingRequest {
    * request's id — is kept against it, and goes when it goes.
    */
   readonly key: object;
-  /** The method the request was made with */
-  readonly method: string;
+  /**
+   * The method the request was made with. Where the framework does not tell
+   * it, the request is read as a page's — its writes carry the session only
+   * for what a browser marks as the application's own.
+   */
+  readonly method?: string | undefined;
   /**
    * The application's origin as the user addressed it — scheme, host and
    * port — which tells a page of its own from another site's, and whether a

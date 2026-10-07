@@ -4,6 +4,7 @@ import { createHandler } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/courier/node";
 
+export { requestContext } from "./request-context";
 export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
 
 /** An Express middleware for Courier. */

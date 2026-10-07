@@ -37,6 +37,7 @@ An API that keeps a `session` gets the user's session with every call server cod
 | SvelteKit | `registerRequestContext(svelteKitRequestContext(getRequestEvent))`, or `requestContextHandle()` | 2.19, 2 |
 | Astro | `export const onRequest = requestContext()` | 5 |
 | React Router | `export const middleware = [requestContext()]` | 7, 8 |
+| Remix | `app.use(requestContext())` from `@noverax/courier-express`, before Remix's handler | 2 |
 | SolidStart | `registerRequestContext(solidStartRequestContext(getRequestEvent))` | 1, 2 |
 | Express | `app.use(requestContext())` | 4, 5 |
 | Fastify | `app.addHook("onRequest", requestContext())` | 4, 5 |

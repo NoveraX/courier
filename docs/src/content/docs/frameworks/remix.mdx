@@ -80,7 +80,17 @@ import { withRequestContext } from "@noverax/courier-remix/request-context"
 const handle = withRequestContext(createRequestHandler(build, "production"))
 ```
 
-React Router 7 and 8 are checked with `react-router-serve`. See [User Sessions](/docs/server-side/session).
+Remix v2 has no middleware. Serve its handler from an Express server of your own — the one its Express template starts with — and mount `requestContext` from `@noverax/courier-express` before it:
+
+```js title="server.js"
+import { requestContext } from "@noverax/courier-express"
+import { createRequestHandler } from "@remix-run/express"
+
+app.use(requestContext())
+app.all("*", createRequestHandler({ build }))
+```
+
+React Router 7 and 8 are checked with `react-router-serve`, and Remix v2 with its Express template's server, `compression` included. See [User Sessions](/docs/server-side/session).
 
 ## Cancelled calls
 

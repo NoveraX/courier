@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
 import type { WSSocketContext } from "../src/adapter/ws-context";
 import { closeSubscriptionEntry } from "../src/adapter/ws-dispatch-helpers";
+import { holdFrames } from "../src/adapter/ws-inbox";
 import { wireEvents } from "../src/adapter/ws-lifecycle";
 import type { WSHandlerConfig } from "../src/adapter/ws-types";
 import { wsFrameLimit } from "../src/node";
@@ -99,7 +100,15 @@ describe("wireEvents", () => {
     const config = { sources: {} } as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     expect(ws._listeners.has("message")).toBe(true);
     expect(ws._listeners.has("close")).toBe(true);
@@ -126,7 +135,15 @@ describe("wireEvents", () => {
     const config = { sources: {} } as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     // Subscribe without a valid source triggers error from dispatch
     ws._emit("message", {
@@ -148,7 +165,15 @@ describe("wireEvents", () => {
     const config = { sources: {} } as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     // Send a message larger than 10 bytes
     ws._emit("message", { data: "x".repeat(20) });
@@ -166,7 +191,15 @@ describe("wireEvents", () => {
     const config = { sources: {} } as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     ws._emit("message", { data: "not-valid-json{{" });
 
@@ -183,7 +216,15 @@ describe("wireEvents", () => {
     const config = { sources: {} } as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     ws._emit("message", { data: encodeMessage({ type: "pong" }) });
 
@@ -205,7 +246,15 @@ describe("wireEvents", () => {
     const config = { sources: {} } as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     ws._emit("close", { code: 1000 });
     await new Promise((r) => setTimeout(r, 10));
@@ -245,7 +294,15 @@ describe("wireEvents", () => {
     const config = { sources: {} } as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
     ws._emit("close", { code: 1000 });
     await new Promise((r) => setTimeout(r, 10));
 
@@ -270,7 +327,15 @@ describe("wireEvents", () => {
     const config = { sources: {}, onDisconnect } as unknown as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     ws._emit("close", { code: 1001 });
     await new Promise((r) => setTimeout(r, 10));
@@ -293,7 +358,15 @@ describe("wireEvents", () => {
     const config = { sources: {}, onDisconnect } as unknown as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     // Should not throw
     ws._emit("close", { code: 1000 });
@@ -311,7 +384,15 @@ describe("wireEvents", () => {
     const config = { sources: {}, onError } as unknown as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     const errorEvent = new Error("socket error");
     ws._emit("error", errorEvent);
@@ -350,7 +431,15 @@ describe("wireEvents", () => {
     const config = { sources: {}, onError } as unknown as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     // Should not throw
     ws._emit("error", new Error("test"));
@@ -366,7 +455,15 @@ describe("wireEvents", () => {
     const config = { sources: {} } as WSHandlerConfig;
     const registry = { remove: vi.fn() } as never;
 
-    wireEvents(ws, ctx, heartbeat as never, topicManager as never, config, registry);
+    wireEvents(
+      ws,
+      holdFrames(ws, 10),
+      ctx,
+      heartbeat as never,
+      topicManager as never,
+      config,
+      registry,
+    );
 
     // Pass a Buffer-like that toString returns large content
     ws._emit("message", { data: Buffer.from("x".repeat(20)) });

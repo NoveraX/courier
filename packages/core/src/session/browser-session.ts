@@ -35,6 +35,7 @@ export function browserSession(target: SessionTarget, session: SessionOptions): 
     fetchInit: target.credentials === undefined ? { credentials: "include" } : undefined,
     carries: credentials.identifies,
     options: session,
+    toResponse: false,
   };
 }
 

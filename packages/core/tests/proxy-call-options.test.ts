@@ -33,6 +33,8 @@ const browserRequests: RequestInit[] = [];
 const upstreamHeaders: Headers[] = [];
 
 beforeEach(() => {
+  /* The proxy client as a browser runs it; a server's own reaches its proxy in process. */
+  vi.stubGlobal("document", {});
   registerSources({ api });
   const handler = createHandler();
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {

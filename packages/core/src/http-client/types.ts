@@ -1,6 +1,7 @@
 import type { ProxyBoundary } from "../define/boundary-types";
 import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
+import type { IncomingRequest } from "../session/incoming-request";
 import type { ForwardOptions, SessionOptions } from "../session/types";
 import type { WebBody } from "./web-types";
 
@@ -229,4 +230,10 @@ export type Context = RequestContext & {
   studioRequestId?: string | undefined;
   /** A direct caller's default timeout, for a call and an endpoint that name none */
   defaultTimeout?: number | undefined;
+  /**
+   * The request being served, as an adapter describes it for the session —
+   * where it can hand the browser a cookie, and what its framework asks of
+   * `fetch`. Set, it is read before `req` and `headers`.
+   */
+  incoming?: IncomingRequest | undefined;
 };

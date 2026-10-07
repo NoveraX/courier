@@ -222,7 +222,7 @@ export const api = defineApi({
 | Pages Router | `withRequestContext` from `@noverax/courier-next/pages` wraps `getServerSideProps` and API routes |
 | Client components | A proxy caller: the proxy route reads the browser's request |
 
-The session cookies the API sets reach the browser from a Server Action and a Route Handler. Next.js lets no page set cookies while it renders, so a session the API renews during a render reaches that render's later calls only. [User Sessions](/docs/server-side/session) covers the options and the writes another site sets off.
+The session cookies the API sets reach the browser from a Server Action and a Route Handler. Next.js lets no page set cookies while it renders, so a session the API renews during a render reaches that render's later calls only. With `cacheComponents`, put a component whose calls carry the session under `<Suspense>`, as you would one that reads `cookies()`, and keep such calls out of `"use cache"`; Next.js 14, 15 and 16 are covered alike. [User Sessions](/docs/server-side/session) covers the options and the writes another site sets off.
 
 ## Step 4: Server Actions (createAction)
 

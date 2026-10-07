@@ -111,6 +111,14 @@ app.use(requestContext())
 Reading the request is what tells Next.js that a page belongs to one user and has to be rendered per request. `next build` does not run `instrumentation.ts`, so a provider registered only there finds no request while pages are built: a page whose calls carry the session would be built once, without anyone's, and served to everyone. `createServerCaller` registers the provider where its caller is made, which a build loads.
 </Callout>
 
+| Next.js | What differs | How the session handles it |
+| --- | --- | --- |
+| 14 | `headers()` and `cookies()` answer synchronously; a server's `fetch` is kept in the data cache by default | Their answer is awaited, which takes either form; a call made for a request is fetched with `cache: "no-store"` |
+| 15 | Both answer with a promise | Awaited |
+| 16 | Both answer with a promise alone; with `cacheComponents`, request data is read under `<Suspense>` and never inside `"use cache"` | A component whose calls carry the session goes under `<Suspense>`, as one reading `cookies()` itself would, and becomes the page's dynamic part; inside `"use cache"` such a call fails with Next.js's own error, and an endpoint with `session: false` is cached as any other call |
+
+In every version, what Next.js stops a render with — a page found to be dynamic, a prerender postponed, a request read inside a cache — reaches Next.js as it came, and a build, a script or `generateStaticParams` finds no request and sends no session.
+
 ## What a call sends
 
 - The cookies `cookies` names, as the browser sent them, and the double-submit cookie — never the rest of your application's cookies.

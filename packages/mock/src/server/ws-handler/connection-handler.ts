@@ -1,21 +1,15 @@
 import { logger } from "@noverax/courier";
-import { describeFailure, type HeartbeatConfig } from "@noverax/courier/internal";
-import type { ChannelHandlers } from "@noverax/courier/realtime";
+import type { HeartbeatConfig, StreamFailure } from "@noverax/courier/internal";
 import type { WebSocket as NodeWebSocket } from "ws";
 
-import type { MockChannelFn, MockHistoryEntry, MockRequestContext } from "../../types";
+import type { MockChannelFn, MockHistoryEntry } from "../../types";
 import type { RequestHooks } from "../route-types";
 import { keepAlive } from "../ws-keep-alive";
-import { buildChannelContext, refuseOnSubscribe } from "./channel-context";
 import type { WSConnectionRegistry } from "./connection-registry";
-import {
-  type ConnectionState,
-  callOnLeaveOnce,
-  dispatchMessage,
-  parseMessage,
-} from "./message-router";
+import { dispatchMessage, parseMessage } from "./message-router";
 import { generateConnectionId } from "./protocol";
 import { parseVariablesFromUrl, requestPath, type WSRoute } from "./route-resolver";
+import { socketSubscriptions } from "./socket-subscriptions";
 
 /** Per-connection activation parameters */
 export interface ActivateConnectionParams {
@@ -35,18 +29,17 @@ export interface ActivateConnectionParams {
 /**
  * Activate a single mock WS connection.
  *
- * Runs the channel handler factory, wires `onJoin`/`onMessage`/`onLeave`,
- * tracks subscription state to prevent double-cleanup, registers the
- * connection in the broadcast registry, and ensures all cleanup paths
- * unregister exactly once.
+ * The socket serves any number of subscriptions to its channel, one per
+ * topic, each with handlers built for the variables it carries; when the
+ * socket closes, every subscription it still holds runs its `onLeave` once.
+ * Studio's mock logs see the connection open and end, with the first
+ * channel whose handlers could not be built as its error.
  */
 export function activateConnection(params: ActivateConnectionParams): void {
-  const { ws, route, channelFn, url, history, hooks, registry, scenarioState } = params;
-
+  const { ws, route, url, history, hooks, scenarioState } = params;
   const connectionId = generateConnectionId();
   const variables = { ...parseVariablesFromUrl(url), ...route.params };
   const startedAt = performance.now();
-  const topic = `${route.group}.${route.method}`;
 
   const historyEntry: MockHistoryEntry = {
     group: route.group,
@@ -61,53 +54,39 @@ export function activateConnection(params: ActivateConnectionParams): void {
   history.push(historyEntry);
   const path = requestPath(url) ?? url;
   hooks?.onStart?.(connectionId, "GET", path, route.group, route.method, variables);
-  const ended = (): number => {
-    historyEntry.duration = performance.now() - startedAt;
-    return historyEntry.duration;
-  };
+  let failure: StreamFailure | undefined;
 
-  // Build user channel handlers — failures here are fatal for the connection
-  let handlers: ChannelHandlers<unknown, unknown>;
-  try {
-    const ctx: MockRequestContext = {
-      variables,
-      headers: new Headers(),
-      callIndex: 0,
-      scenarioState,
-    };
-    handlers = channelFn(ctx);
-  } catch (err) {
-    logger.warn("MockWS", `channelFn threw (${connectionId})`, err);
-    const failure = describeFailure(err, "Subscription failed");
-    refuseOnSubscribe(ws, topic, failure);
-    ws.on("close", () => {
-      const duration = ended();
-      hooks?.onError?.(connectionId, failure.code, failure.message, duration);
-    });
-    return;
-  }
-
-  const state: ConnectionState = {
-    subscribed: false,
-    leaveCalled: false,
-    ended: new AbortController(),
-  };
-  const channelCtx = buildChannelContext(ws, topic, variables, connectionId, registry, state);
+  const socket = socketSubscriptions({
+    ws,
+    connectionId,
+    defaultTopic: `${route.group}.${route.method}`,
+    channelFn: params.channelFn,
+    registry: params.registry,
+    scenarioState,
+    variables,
+    failed: (reason) => {
+      failure ??= reason;
+    },
+  });
   const alive = keepAlive(ws, params.heartbeat);
 
   ws.on("message", (raw: Buffer | string) => {
     const msg = parseMessage(ws, raw);
     if (!msg) return;
     if (msg.type === "pong") return alive.receivedPong();
-    void dispatchMessage(msg, ws, handlers, channelCtx, state, registry).catch((error: unknown) =>
+    void dispatchMessage(msg, socket).catch((error: unknown) =>
       logger.warn("MockWS", `Message handling failed (${connectionId})`, error),
     );
   });
 
   ws.on("close", async () => {
-    await callOnLeaveOnce(state, handlers, channelCtx, registry, ws);
-    const duration = ended();
-    hooks?.onEnd?.(connectionId, 101, undefined, duration, 0, scenarioState);
+    await Promise.all([...socket.subscriptions.values()].map((each) => socket.leave(each)));
+    historyEntry.duration = performance.now() - startedAt;
+    if (failure) {
+      hooks?.onError?.(connectionId, failure.code, failure.message, historyEntry.duration);
+    } else {
+      hooks?.onEnd?.(connectionId, 101, undefined, historyEntry.duration, 0, scenarioState);
+    }
   });
 
   ws.on("error", (err: Error) => {

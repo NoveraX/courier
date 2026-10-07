@@ -5,8 +5,10 @@
  * with the `ws` package as a client, and exchange Courier WS protocol frames.
  * They cover the following lifecycle invariants:
  * - duration recording in history
- * - single onLeave invocation per connection
- * - error frames + socket close on onJoin / channelFn failure
+ * - single onLeave invocation per subscription
+ * - subscriptions taken again, and several at once, on one socket
+ * - a subscription ended by a `complete` frame on onJoin / channelFn failure,
+ *   the socket kept for the next
  * - real broadcast fan-out across connections
  * - origin allowlist enforcement
  * - subscribe-before-message ordering guard
@@ -87,28 +89,24 @@ function waitForFrame(ws: WebSocket): Promise<WSMessage> {
 }
 
 /**
- * Collect every frame the client receives before the socket closes.
- *
- * Used by tests where the server sends an error frame and then closes —
- * `ws.send(frame); ws.close()` doesn't guarantee per-frame ordering on
- * the client side, so a single `waitForFrame` call may race the close
- * event. This helper attaches both listeners up front and resolves with
- * everything that arrived before close.
+ * Every frame the client receives, read one at a time in order. Frames that
+ * arrive together are kept rather than missed by a listener added a moment
+ * too late, as `waitForFrame` would miss them.
  */
-function collectFramesUntilClose(
-  ws: WebSocket,
-): Promise<{ frames: WSMessage[]; closeCode: number }> {
-  return new Promise((resolve) => {
-    const frames: WSMessage[] = [];
-    ws.on("message", (raw: Buffer | string) => {
-      try {
-        frames.push(decodeMessage(raw.toString()));
-      } catch {
-        // ignore — malformed frame
-      }
-    });
-    ws.once("close", (code) => resolve({ frames, closeCode: code }));
+function frameQueue(ws: WebSocket): () => Promise<WSMessage> {
+  const arrived: WSMessage[] = [];
+  const waiting: Array<(frame: WSMessage) => void> = [];
+  ws.on("message", (raw: Buffer | string) => {
+    const frame = decodeMessage(raw.toString());
+    const waiter = waiting.shift();
+    if (waiter) waiter(frame);
+    else arrived.push(frame);
   });
+  return () => {
+    const frame = arrived.shift();
+    if (frame) return Promise.resolve(frame);
+    return new Promise((resolve) => waiting.push(resolve));
+  };
 }
 
 /** Wait for the socket to enter OPEN state */
@@ -153,7 +151,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     await server.stop();
   });
 
-  it("completes subscribe → onJoin → unsubscribe → onLeave lifecycle", async () => {
+  it("completes subscribe → onJoin → unsubscribe → onLeave, and keeps the socket open", async () => {
     const events: string[] = [];
     server.mock("chat", "room").channel(() => ({
       onJoin: () => {
@@ -178,10 +176,123 @@ describe("mock ws-handler — real HTTP upgrade", () => {
 
     send(ws, { type: "unsubscribe", topic: "chat.room", id: "u1" });
     const unsubFrame = await waitForFrame(ws);
-    expect(unsubFrame.type).toBe("unsubscribed");
-    await waitForClose(ws);
+    expect(unsubFrame).toMatchObject({ type: "unsubscribed", id: "u1", topic: "chat.room" });
 
     expect(events).toEqual(["join", "leave"]);
+    expect(ws.readyState).toBe(ws.OPEN);
+    ws.close();
+    await waitForClose(ws);
+  });
+
+  it("takes a subscription to the same topic again on the socket, as a component mounted anew makes one", async () => {
+    const events: string[] = [];
+    server.mock("chat", "room").channel(() => ({
+      onJoin: () => {
+        events.push("join");
+      },
+      onMessage(ctx, message) {
+        ctx.send({ echo: message });
+      },
+      onLeave: () => {
+        events.push("leave");
+      },
+    }));
+
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    const next = frameQueue(ws);
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
+    await next();
+    send(ws, { type: "unsubscribe", topic: "chat.room", id: "u1" });
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s2" });
+
+    expect(await next()).toMatchObject({ type: "unsubscribed", id: "u1" });
+    expect(await next()).toMatchObject({ type: "subscribed", id: "s2" });
+    send(ws, { type: "message", topic: "chat.room", payload: "hello" });
+    expect(await next()).toMatchObject({ type: "data", payload: { echo: "hello" } });
+    expect(events).toEqual(["join", "leave", "join"]);
+    ws.close();
+    await waitForClose(ws);
+  });
+
+  it("lets a subscription's onLeave finish before the next one to its topic joins", async () => {
+    const events: string[] = [];
+    server.mock("chat", "room").channel(() => ({
+      onJoin: () => {
+        events.push("join");
+      },
+      onMessage: () => {},
+      onLeave: async () => {
+        events.push("leave starts");
+        await new Promise((r) => setTimeout(r, 30));
+        events.push("leave ends");
+      },
+    }));
+
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    const next = frameQueue(ws);
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
+    await next();
+    send(ws, { type: "unsubscribe", topic: "chat.room", id: "u1" });
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s2" });
+    await next();
+    await next();
+
+    expect(events).toEqual(["join", "leave starts", "leave ends", "join"]);
+    ws.close();
+    await waitForClose(ws);
+  });
+
+  it("serves two subscriptions of the channel on one socket, each with the variables it sent", async () => {
+    server.mock("chat", "room").channel(() => ({
+      onMessage(ctx, message) {
+        ctx.send({ room: (ctx.variables as { room: string }).room, echo: message });
+      },
+    }));
+    const roomA = 'chat.room#{"room":"a"}';
+    const roomB = 'chat.room#{"room":"b"}';
+
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    const next = frameQueue(ws);
+    send(ws, { type: "subscribe", topic: roomA, id: "s1", payload: { room: "a" } });
+    expect(await next()).toMatchObject({ type: "subscribed", topic: roomA });
+    send(ws, { type: "subscribe", topic: roomB, id: "s2", payload: { room: "b" } });
+    expect(await next()).toMatchObject({ type: "subscribed", topic: roomB });
+    send(ws, { type: "unsubscribe", topic: roomA, id: "u1" });
+    await next();
+    send(ws, { type: "message", topic: roomB, payload: "hi" });
+
+    expect(await next()).toMatchObject({
+      type: "data",
+      topic: roomB,
+      payload: { room: "b", echo: "hi" },
+    });
+    ws.close();
+    await waitForClose(ws);
+  });
+
+  it("sends nothing a subscription's handlers try to send once it has ended", async () => {
+    server.mock("chat", "room").channel(() => ({
+      onJoin(ctx) {
+        setTimeout(() => ctx.send({ late: true }), 30);
+      },
+      onMessage: () => {},
+    }));
+
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
+    await waitForFrame(ws);
+    const frames: WSMessage[] = [];
+    ws.on("message", (raw: Buffer | string) => frames.push(decodeMessage(raw.toString())));
+    send(ws, { type: "unsubscribe", topic: "chat.room", id: "u1" });
+    await new Promise((r) => setTimeout(r, 80));
+
+    expect(frames.map((frame) => frame.type)).toEqual(["unsubscribed"]);
+    ws.close();
+    await waitForClose(ws);
   });
 
   it("calls onLeave exactly once when client closes abruptly", async () => {
@@ -311,16 +422,17 @@ describe("mock ws-handler — real HTTP upgrade", () => {
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
     await waitForOpen(ws);
-    const collected = collectFramesUntilClose(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
-    await collected;
+    await waitForFrame(ws);
 
     const line = warn.mock.calls.find((call) => String(call[1]).includes("onJoin threw"));
     expect(line?.at(-1)).toBe(refused);
     warn.mockRestore();
+    ws.close();
+    await waitForClose(ws);
   });
 
-  it("ends the subscription, then closes normally, when onJoin throws", async () => {
+  it("ends the subscription when onJoin throws, and keeps the socket for the next", async () => {
     server.mock("chat", "room").channel(() => ({
       onJoin: () => {
         throw new Error("connect ECONNREFUSED 10.0.0.5:5432");
@@ -330,17 +442,18 @@ describe("mock ws-handler — real HTTP upgrade", () => {
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
     await waitForOpen(ws);
-    const collected = collectFramesUntilClose(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
 
-    const { frames, closeCode } = await collected;
-    expect(closeCode).toBe(1000);
-    expect(frames.some((f) => f.type === "subscribed")).toBe(false);
-    expect(frames).toContainEqual({
+    expect(await waitForFrame(ws)).toEqual({
       type: "complete",
       topic: "chat.room",
+      id: "s1",
       error: { code: 5000, message: "Subscription failed" },
     });
+    await tick();
+    expect(ws.readyState).toBe(ws.OPEN);
+    ws.close();
+    await waitForClose(ws);
   });
 
   it("passes the RealtimeError onJoin threw to the client", async () => {
@@ -353,33 +466,34 @@ describe("mock ws-handler — real HTTP upgrade", () => {
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
     await waitForOpen(ws);
-    const collected = collectFramesUntilClose(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
 
-    const { frames } = await collected;
-    expect(frames.find((f) => f.type === "complete")?.error).toEqual({
-      code: 4403,
-      message: "Not a member of this room",
-    });
+    const frame = await waitForFrame(ws);
+    expect(frame.type).toBe("complete");
+    expect(frame.error).toEqual({ code: 4403, message: "Not a member of this room" });
+    ws.close();
+    await waitForClose(ws);
   });
 
-  it("refuses the subscription, then closes normally, when the channelFn factory throws", async () => {
+  it("refuses the subscription when the channelFn factory throws, and keeps the socket", async () => {
     server.mock("chat", "room").channel(() => {
       throw new Error("factory exploded");
     });
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
     await waitForOpen(ws);
-    const collected = collectFramesUntilClose(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
 
-    const { frames, closeCode } = await collected;
-    expect(closeCode).toBe(1000);
-    expect(frames).toContainEqual({
+    expect(await waitForFrame(ws)).toEqual({
       type: "complete",
       topic: "chat.room",
+      id: "s1",
       error: { code: 5000, message: "Subscription failed" },
     });
+    await tick();
+    expect(ws.readyState).toBe(ws.OPEN);
+    ws.close();
+    await waitForClose(ws);
   });
 
   it("reports a failed onMessage on the channel's topic, and the channel goes on", async () => {
@@ -412,43 +526,54 @@ describe("mock ws-handler — real HTTP upgrade", () => {
   });
 
   it("ends the subscription with the reason a handler gave when it closes the channel", async () => {
+    let left = 0;
     server.mock("chat", "room").channel(() => ({
       onJoin: (ctx: { close(code?: number, reason?: string): void }) => ctx.close(4001, "kicked"),
       onMessage: () => {},
+      onLeave: () => {
+        left++;
+      },
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
     await waitForOpen(ws);
-    const collected = collectFramesUntilClose(ws);
+    const frames: WSMessage[] = [];
+    ws.on("message", (raw: Buffer | string) => frames.push(decodeMessage(raw.toString())));
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
+    await new Promise((r) => setTimeout(r, 40));
 
-    const { frames, closeCode } = await collected;
-    expect(closeCode).toBe(1000);
-    expect(frames).toContainEqual({
-      type: "complete",
-      topic: "chat.room",
-      error: { code: 4001, message: "kicked" },
-    });
+    expect(frames).toEqual([
+      { type: "complete", topic: "chat.room", error: { code: 4001, message: "kicked" } },
+    ]);
+    expect(left).toBe(1);
+    expect(ws.readyState).toBe(ws.OPEN);
+    ws.close();
+    await waitForClose(ws);
   });
 
-  it("ignores duplicate subscribe frames (idempotent)", async () => {
+  it("replaces the subscription a second subscribe to its topic asks for, as a Courier server does", async () => {
     let joinCount = 0;
+    let leaveCount = 0;
     server.mock("chat", "room").channel(() => ({
       onJoin: () => {
         joinCount++;
       },
       onMessage: () => {},
+      onLeave: () => {
+        leaveCount++;
+      },
     }));
 
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
     await waitForOpen(ws);
+    const next = frameQueue(ws);
     send(ws, { type: "subscribe", topic: "chat.room", id: "s1" });
-    await waitForFrame(ws);
+    await next();
     send(ws, { type: "subscribe", topic: "chat.room", id: "s2" });
-    await tick();
-    await tick();
 
-    expect(joinCount).toBe(1);
+    expect(await next()).toMatchObject({ type: "subscribed", id: "s2" });
+    expect(joinCount).toBe(2);
+    expect(leaveCount).toBe(1);
 
     ws.close();
     await waitForClose(ws);

@@ -28,10 +28,10 @@ npm ci
 npm run build
 ```
 
-Then, in this directory:
+Then, in this directory, install the example from its lockfile:
 
 ```bash
-npm install
+npm ci
 npm run server
 ```
 
@@ -44,13 +44,15 @@ npm run ios
 
 The app opens in Expo Go on the iOS simulator; `npm run android` opens it
 on the Android emulator. The packages are installed packed, as the
-registry would ship them, so run `npm install` again after rebuilding them.
-Stop Metro before you do, and start it again with a clean cache: Metro
-keeps a map of `node_modules`, and a package replaced while it runs leaves
-the app unable to resolve files that are on disk.
+registry would ship them, so install them again with `npm ci` after
+rebuilding them: their version does not change, and `npm install` takes the
+copy it packed before for current. Stop Metro before you do, and start it
+again with a clean cache: Metro keeps a map of `node_modules`, and a
+package replaced while it runs leaves the app unable to resolve files that
+are on disk.
 
 ```bash
-npm install
+npm ci
 npm run ios -- --clear
 ```
 

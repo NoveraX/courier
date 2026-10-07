@@ -1,4 +1,4 @@
-export const metadata = { title: "NestJS", description: "NestJS adapter using courierMiddleware applied via MiddlewareConsumer for the Courier proxy route.", mode: "proxy" }
+export const metadata = { title: "NestJS", description: "NestJS adapter: courierMiddleware serves the Courier proxy route, and requestContext carries the user's session in server code.", mode: "proxy" }
 
 The `@noverax/courier-nestjs` adapter provides a middleware that integrates Courier into your NestJS application using the standard `MiddlewareConsumer`.
 
@@ -208,6 +208,24 @@ COURIER_APP_URL=http://localhost:3001 nest start
 <Callout variant="warning" title="No magic default">
 There is no `localhost:3001` auto-fallback. If `appOrigin` is missing, clicking "Subscribe" on an SSE/WS endpoint in Studio Playground proxy mode throws `ConfigurationError("APP_ORIGIN_NOT_CONFIGURED")` with a pointer back to this section. The correct value depends on your runtime — custom port, Docker host, HTTPS, reverse proxy — and a wrong guess would silently route requests to nowhere.
 </Callout>
+
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call a guard, an interceptor, a pipe, a controller, a service or a step it awaits makes, once the request is served with it at hand. Mount the middleware as the application is created:
+
+```ts title="src/main.ts"
+import { NestFactory } from "@nestjs/core"
+import { requestContext } from "@noverax/courier-nestjs"
+import { AppModule } from "./app.module"
+
+const app = await NestFactory.create(AppModule)
+app.use(requestContext())
+await app.listen(3000)
+```
+
+It runs before every module's own middleware, on the Express platform and on the Fastify platform alike. The session cookies the API sets reach the browser on the response, beside the ones the application sets — with `res.cookie()`, a `@Header()`, or a Fastify reply's headers. The user's address is taken from the socket, after the chain a proxy on a private network recorded. The request is kept in `AsyncLocalStorage`.
+
+NestJS 10, 11 and 12 are checked on the Express platform, and 10 and 12 on the Fastify platform. See [User Sessions](/docs/server-side/session).
 
 ## Client-side setup
 

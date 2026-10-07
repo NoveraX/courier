@@ -77,6 +77,23 @@ await app.listen(3000)
 
 Uploads (`multipart/form-data`) are not parsed by Nest and reach the proxy as a stream, up to its `maxUploadBytes` — 10 MB unless you pass another: `courierMiddleware({ maxUploadBytes: 50 * 1024 * 1024 })`.
 
+## The user's session
+
+An API that keeps the user's session describes it in `defineApi`, and every call a guard, an interceptor, a controller or a service makes — through every `await` — carries the session of the request being served, the cookies the session names and nothing else. Mount the middleware as the application is created:
+
+```ts
+// main.ts
+import { NestFactory } from "@nestjs/core"
+import { requestContext } from "@noverax/courier-nestjs"
+import { AppModule } from "./app.module"
+
+const app = await NestFactory.create(AppModule)
+app.use(requestContext())
+await app.listen(3000)
+```
+
+It runs before every module's own middleware, on the Express and the Fastify platform alike. The session cookies the API sets reach the browser on the response, beside the application's own.
+
 ## WebSockets
 
 ```ts

@@ -184,6 +184,78 @@
     }
   },
   {
+    "id": "nestjs-10",
+    "app": "nestjs",
+    "packages": ["core", "nestjs"],
+    "install": {
+      "@nestjs/core": "10",
+      "@nestjs/common": "10",
+      "@nestjs/platform-express": "10",
+      "reflect-metadata": "0.2",
+      "rxjs": "7",
+      "typescript": "5",
+      "@types/node": "24"
+    }
+  },
+  {
+    "id": "nestjs-11",
+    "app": "nestjs",
+    "packages": ["core", "nestjs"],
+    "install": {
+      "@nestjs/core": "11",
+      "@nestjs/common": "11",
+      "@nestjs/platform-express": "11",
+      "reflect-metadata": "0.2",
+      "rxjs": "7",
+      "typescript": "5",
+      "@types/node": "24"
+    }
+  },
+  {
+    "id": "nestjs-12",
+    "app": "nestjs",
+    "packages": ["core", "nestjs"],
+    "install": {
+      "@nestjs/core": "12",
+      "@nestjs/common": "12",
+      "@nestjs/platform-express": "12",
+      "reflect-metadata": "0.2",
+      "rxjs": "7",
+      "typescript": "6",
+      "@types/node": "24"
+    }
+  },
+  {
+    "id": "nestjs-10-fastify",
+    "app": "nestjs",
+    "overlays": ["nestjs-fastify"],
+    "packages": ["core", "nestjs"],
+    "install": {
+      "@nestjs/core": "10",
+      "@nestjs/common": "10",
+      "@nestjs/platform-fastify": "10",
+      "reflect-metadata": "0.2",
+      "rxjs": "7",
+      "typescript": "5",
+      "@types/node": "24"
+    }
+  },
+  {
+    "id": "nestjs-12-fastify",
+    "app": "nestjs",
+    "overlays": ["nestjs-fastify"],
+    "packages": ["core", "nestjs"],
+    "install": {
+      "@nestjs/core": "12",
+      "@nestjs/common": "12",
+      "@nestjs/platform-fastify": "12",
+      "reflect-metadata": "0.2",
+      "rxjs": "7",
+      "typescript": "6",
+      "@types/node": "24"
+    }
+  },
+  {
     "id": "react-spa",
     "app": "spa",
     "packages": ["core", "react"],

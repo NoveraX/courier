@@ -176,6 +176,18 @@ app.get("/api/stats", (c) => {
 export default app
 ```
 
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call a route, a service or a step it awaits makes, once the request is served with it at hand:
+
+```ts title="src/index.ts"
+import { requestContext } from "@noverax/courier-hono/request-context"
+
+app.use(requestContext())
+```
+
+Add it before the routes that call APIs. The session cookies the API sets reach the browser on the response the route answers with, beside the route's own — on a `fetch`'s response too. The request is kept in `AsyncLocalStorage`, which Node, Bun and Deno provide, and Cloudflare Workers with the `nodejs_compat` flag; the main entry imports none of it, so an application that keeps no session runs anywhere Hono does. The user's address is the connection's where the runtime reports one. Hono 4 is checked on `@hono/node-server`. See [User Sessions](/docs/server-side/session).
+
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
 Wire your Hono app into Studio with a single `attachRuntime()` call. In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the app's own `registerSources()` call registers them. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).

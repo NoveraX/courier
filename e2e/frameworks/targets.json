@@ -115,6 +115,12 @@
     "install": { "fastify": "5" }
   },
   {
+    "id": "hono-4",
+    "app": "hono",
+    "packages": ["core", "hono"],
+    "install": { "hono": "4", "@hono/node-server": "1" }
+  },
+  {
     "id": "react-spa",
     "app": "spa",
     "packages": ["core", "react"],

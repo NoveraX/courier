@@ -6,12 +6,21 @@ import type { HeartbeatConfig } from "@noverax/courier/internal";
 import type { WebSocketServer as WSServerType } from "ws";
 import type { MockRegistry } from "../../registry";
 import type { MockHistoryEntry } from "../../types";
+import {
+  acceptProxySocket,
+  activateChannelSocket,
+  headersOf,
+  PROXY_WS_PATH,
+} from "../channel-sockets";
 import type { PrefixMapping } from "../prefix-route-types";
-import { acceptProxySocket, PROXY_WS_PATH } from "../proxy-ws";
 import type { RequestHooks } from "../route-types";
-import { activateConnection } from "./connection-handler";
 import { WSConnectionRegistry } from "./connection-registry";
-import { isOriginAllowed, requestPath, resolveWSRoute } from "./route-resolver";
+import {
+  isOriginAllowed,
+  parseVariablesFromUrl,
+  requestPath,
+  resolveWSRoute,
+} from "./route-resolver";
 
 export { WSConnectionRegistry } from "./connection-registry";
 
@@ -62,15 +71,19 @@ const CLOSE_GRACE_MS = 1000;
  * - `/api/ws`, where a Courier proxy serves its channels: one socket carries
  *   every subscription a proxy caller makes, each by its topic.
  * - A channel's declared path under its group, `/{groupPrefix}/{path}`, where
- *   a direct caller connects (matches `buildDirectWSUrl`): one channel a socket.
+ *   a direct caller connects (matches `buildDirectWSUrl`): the socket serves
+ *   that channel, a subscription for each set of variables, the path's
+ *   parameters reaching the mock beside them.
  *
- * Both speak the Courier WS protocol, and a channel's broadcasts reach every
+ * Both serve each subscription alike, as a Courier server does — its
+ * variables checked, its topic keyed, its mock found in the scenario it is
+ * made in, logged on its own — and a channel's broadcasts reach every
  * subscriber to its topic on either. The first upgrade loads the `ws`
  * package, so a server that serves no channel never loads it.
  */
 export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
   const connections = new WSConnectionRegistry();
-  const proxyConfig = {
+  const channels = {
     registry: config.registry,
     mappings: config.mappings,
     history: config.history,
@@ -142,25 +155,19 @@ export function createMockWSHandler(config: WSHandlerConfig): MockWSHandler {
       return;
     }
 
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      activateConnection({
-        ws,
-        route,
-        channelFn,
-        url,
-        history: config.history,
-        hooks: config.hooks,
-        registry: connections,
-        scenarioState: config.getScenarioState(),
-        heartbeat: config.heartbeat,
-      });
-    });
+    const variables = { ...parseVariablesFromUrl(url), ...route.params };
+    const opening = {
+      headers: headersOf(req),
+      path: requestPath(url) ?? url,
+      route: { group: route.group, method: route.method, variables },
+    };
+    wss.handleUpgrade(req, socket, head, (ws) => activateChannelSocket(ws, channels, opening));
   }
 
   async function upgradeProxy(req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
     const wss = await loadWSServer();
     if (!wss) return reject(socket, 500);
-    acceptProxySocket(wss, { req, socket, head }, proxyConfig);
+    acceptProxySocket(wss, { req, socket, head }, channels);
   }
 
   return { handleUpgrade, close };

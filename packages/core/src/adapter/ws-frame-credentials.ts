@@ -92,19 +92,40 @@ export function frameCredentials(payload: unknown): FrameCredentials | undefined
  * ```
  */
 export function withFrameHeaders(handshake: Request, frame: FrameCredentials): Request | undefined {
+  const headers = frameHeadersOver(handshake.headers, frame);
+  if (headers === undefined) return undefined;
+  if (headers === handshake.headers) return handshake;
+  const request = new Request(handshake.url, { method: handshake.method, headers });
+  rememberPeerAddress(request, peerAddressOf(handshake));
+  return request;
+}
+
+/**
+ * A handshake's headers with those an `auth` frame adds, as
+ * `withFrameHeaders` takes them — for a server that keeps headers alone,
+ * such as a mock's.
+ *
+ * @param handshake - The upgrade request's headers
+ * @param frame - What the frame carries
+ * @returns The headers, the handshake's own when the frame adds nothing;
+ *   `undefined` when a header is not one HTTP can carry
+ * @example
+ * ```ts
+ * socket.headers = frameHeadersOver(socket.handshake, credentials) ?? socket.handshake;
+ * ```
+ */
+export function frameHeadersOver(handshake: Headers, frame: FrameCredentials): Headers | undefined {
   const added = frame.headers.filter(([name]) => takenFromFrame(name.toLowerCase()));
-  const fresh = added.filter(([name]) => !handshake.headers.has(name));
+  const fresh = added.filter(([name]) => !handshake.has(name));
   if (fresh.length === 0) return handshake;
-  const headers = new Headers(handshake.headers);
+  const headers = new Headers(handshake);
   try {
     for (const [name, value] of fresh) headers.set(name, value);
   } catch (error) {
     log.warn("An auth frame carried a header HTTP cannot", error);
     return undefined;
   }
-  const request = new Request(handshake.url, { method: handshake.method, headers });
-  rememberPeerAddress(request, peerAddressOf(handshake));
-  return request;
+  return headers;
 }
 
 const refused = new Set<string>();

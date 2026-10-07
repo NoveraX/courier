@@ -10,7 +10,7 @@ import type { WSChannelContext } from "@noverax/courier/realtime";
 import type { MockChannelFn, MockHistoryEntry } from "../../types";
 import type { ChannelShape } from "../prefix-route-types";
 import { sendEnd, sendFrame } from "./frames";
-import type { ProxySocket, ProxySubscription } from "./types";
+import type { ChannelSocket, ChannelSubscription } from "./types";
 
 /** What a subscription is opened with */
 export interface ChannelRequest {
@@ -37,9 +37,9 @@ export interface ChannelRequest {
  * ```
  */
 export function openSubscription(
-  socket: ProxySocket,
+  socket: ChannelSocket,
   request: ChannelRequest,
-): ProxySubscription | StreamFailure {
+): ChannelSubscription | StreamFailure {
   socket.opened += 1;
   const id = `${socket.id}_${socket.opened}`;
   const ended = new AbortController();
@@ -84,7 +84,7 @@ export function openSubscription(
  * ```
  */
 export async function endSubscription(
-  socket: ProxySocket,
+  socket: ChannelSocket,
   topic: string,
   failure?: StreamFailure,
 ): Promise<void> {
@@ -108,9 +108,9 @@ export async function endSubscription(
  * ```
  */
 export async function leaveSubscription(
-  socket: ProxySocket,
+  socket: ChannelSocket,
   topic: string,
-  subscription: ProxySubscription,
+  subscription: ChannelSubscription,
   failure?: StreamFailure,
 ): Promise<void> {
   if (subscription.left) return;
@@ -119,6 +119,15 @@ export async function leaveSubscription(
   if (socket.subscriptions.get(topic) === subscription) socket.subscriptions.delete(topic);
   socket.config.connections.unregister(topic, socket.ws);
   report(socket, subscription, failure);
+  /* The next subscription to the topic waits for this onLeave: a handler
+     keeping who is in a room hears the leave, then the join, as they came. */
+  const left = runOnLeave(subscription);
+  socket.leaving.set(topic, left);
+  await left;
+  if (socket.leaving.get(topic) === left) socket.leaving.delete(topic);
+}
+
+async function runOnLeave(subscription: ChannelSubscription): Promise<void> {
   try {
     await subscription.handlers.onLeave?.(subscription.ctx);
   } catch (error) {
@@ -127,8 +136,8 @@ export async function leaveSubscription(
 }
 
 function report(
-  socket: ProxySocket,
-  subscription: ProxySubscription,
+  socket: ChannelSocket,
+  subscription: ChannelSubscription,
   failure?: StreamFailure,
 ): void {
   const duration = performance.now() - subscription.startedAt;
@@ -154,7 +163,7 @@ function historyEntry({ group, method, variables }: ChannelRequest): MockHistory
 }
 
 function channelContext(
-  socket: ProxySocket,
+  socket: ChannelSocket,
   topic: string,
   variables: unknown,
   connectionId: string,

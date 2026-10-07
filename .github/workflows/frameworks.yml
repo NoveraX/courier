@@ -1,0 +1,88 @@
+name: Frameworks
+
+# The user's session in an application built with each framework version
+# Courier supports, as e2e/frameworks/targets.json lists them: each version
+# is installed from npm beside Courier's packages, packed as the registry
+# would ship them, then built, served and driven in Chromium against an API
+# that records every request it receives. A failure keeps its trace and
+# screenshots.
+on:
+  # Every push and pull request, called from CI
+  workflow_call:
+    inputs:
+      targets:
+        description: Framework versions to check, by id; all when empty
+        type: string
+        default: ""
+  # Some versions by hand, by id, separated by spaces; all when left empty
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: Framework versions to check, by id; all when empty
+        type: string
+        default: ""
+  # Each version is a range that resolves to its newest release, so a new
+  # release of a framework is checked within the week, whatever changes here
+  schedule:
+    - cron: "0 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  targets:
+    runs-on: ubuntu-latest
+    outputs:
+      ids: ${{ steps.list.outputs.ids }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: List the versions to check
+        id: list
+        env:
+          TARGETS: ${{ inputs.targets }}
+        # Split on purpose: one id per word
+        run: echo "ids=$(node scripts/test-frameworks.mjs --list $TARGETS)" >> "$GITHUB_OUTPUT"
+
+  session:
+    needs: targets
+    name: ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.targets.outputs.ids) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # The versions install the packages packed from their builds
+      - name: Build packages
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: The session in ${{ matrix.target }}
+        env:
+          TARGET: ${{ matrix.target }}
+        run: npm run test:frameworks -- "$TARGET"
+
+      - name: Keep what a failure left
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: frameworks-${{ matrix.target }}
+          path: node_modules/.cache/courier-frameworks/${{ matrix.target }}/
+          retention-days: 7

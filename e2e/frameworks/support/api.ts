@@ -11,9 +11,9 @@ export interface Received {
 
 /**
  * The API every application calls: it keeps a session in a cookie, asks a
- * write for a double-submit token, renews and ends sessions with cookies of
- * its own, and records every request it receives at `/__log`, which
- * `?clear=1` empties.
+ * write — a sign-in too — for a double-submit token it hands out at `/csrf`,
+ * renews and ends sessions with cookies of its own, and records every
+ * request it receives at `/__log`, which `?clear=1` empties.
  *
  * @param spaOrigin - The origin of the single-page application, which calls it with credentials
  * @returns The running API
@@ -74,7 +74,8 @@ function answer(
   if (route === "GET /me") send(res, 200, seen, jar.get("sid") === "expiring" ? [RENEWED] : []);
   else if (route === "GET /products") send(res, 200, [{ id: 1, title: "Notebook" }]);
   else if (route === "GET /b64") send(res, 200, seen, ["sid=YWJj+ZGVm/==; Path=/"]);
-  else if (route === "POST /login") signIn(res, body, fromSpa);
+  else if (route === "GET /csrf") send(res, 200, { ok: true }, ["csrftoken=t-fresh; Path=/"]);
+  else if (route === "POST /login") signIn(req, res, jar, body, fromSpa);
   else if (route === "POST /logout") send(res, 200, { ok: true }, ["sid=; Path=/; Max-Age=0"]);
   else if (route === "POST /me/name") rename(req, res, jar, { ...seen, renamed: nameOf(body) });
   else send(res, 404, { error: "not found", route });
@@ -97,8 +98,20 @@ function rename(
   } else send(res, 200, renamed);
 }
 
-/* A server that relays the session sets it for its own pages; a browser keeps it as the API names it. */
-function signIn(res: ServerResponse, body: string, fromSpa: boolean): void {
+/* A sign-in repeats the double-submit token, as Django's and Laravel Sanctum's do. A server
+   that relays the session sets it for its own pages; a browser keeps it as the API names it. */
+function signIn(
+  req: IncomingMessage,
+  res: ServerResponse,
+  jar: ReadonlyMap<string, string>,
+  body: string,
+  fromSpa: boolean,
+): void {
+  const token = jar.get("csrftoken");
+  if (token === undefined || req.headers["x-csrftoken"] !== token) {
+    send(res, 403, { error: "CSRF check failed" });
+    return;
+  }
   const user = userOf(body);
   send(res, 200, { ok: true, user }, [
     `sid=s%3A${user}.sig; Path=${fromSpa ? "/" : "/api"}; HttpOnly; SameSite=Lax`,

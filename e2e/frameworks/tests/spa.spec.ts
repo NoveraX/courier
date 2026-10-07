@@ -45,6 +45,14 @@ test("signing in from the page leaves the API's session cookie in the browser, o
   expect(await page.evaluate(() => document.cookie)).not.toContain("sid=");
 });
 
+test("the sign-in, finding no double-submit token, asked the API for one first", async () => {
+  const [asked] = await received("GET", "/csrf");
+  const [signIn] = await received("POST", "/login");
+
+  expect(asked?.headers.origin).toBe(APP);
+  expect(signIn?.headers["x-csrftoken"]).toBe("t-fresh");
+});
+
 test("a read sends the browser's own cookies to the API on another origin, and no token", async () => {
   await clearReceived();
 

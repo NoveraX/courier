@@ -57,3 +57,19 @@ function isReceived(value: unknown): value is Received {
 export function linkElsewhere(path: string): string {
   return `${ATTACKER}/link?to=${encodeURIComponent(`${APP}${path}`)}`;
 }
+
+/**
+ * The cookies a `Cookie` header carries, in name order. A browser lists them
+ * by how long it has kept each, which a check need not care about; which
+ * cookies were sent is what it reads.
+ *
+ * @param header - The header, as the API received it
+ * @returns Its `name=value` pairs, sorted
+ * @example
+ * ```ts
+ * cookiesIn("sid=a1; csrftoken=t1"); // ["csrftoken=t1", "sid=a1"]
+ * ```
+ */
+export function cookiesIn(header: string | undefined): string[] {
+  return (header ?? "").split("; ").filter(Boolean).sort();
+}

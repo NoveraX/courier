@@ -54,7 +54,7 @@ test("a page renders without a session, sending no cookie", async () => {
   expect((await json("#me")).cookie).toBeNull();
 });
 
-test("signing in with a Server Action hands the browser the API's session cookie", async () => {
+test("signing in with a Server Action hands the browser the API's session cookie beside the application's own", async () => {
   await hydrated();
   await page.click("#login");
   /* Next.js keeps the old render beside the new one while it swaps them. */
@@ -62,6 +62,7 @@ test("signing in with a Server Action hands the browser the API's session cookie
 
   expect(await cookie("sid")).toMatchObject({ value: "s%3Aada.sig", path: "/", httpOnly: true });
   expect((await cookie("csrftoken"))?.value).toBe("t-ada");
+  expect((await cookie("signed_in"))?.value).toBe("yes");
   expect(await cookie("vendor_tracking")).toBeUndefined();
 });
 

@@ -3,8 +3,10 @@ import { accounts } from "../lib/accounts.mjs";
 
 /* The routes the SvelteKit application has, so one set of checks drives both. */
 if (Astro.request.method === "POST") {
-  if (Astro.url.search.endsWith("/login")) await accounts.login({ user: "ada" });
-  else await accounts.rename({ name: "Ada Lovelace" });
+  if (Astro.url.search.endsWith("/login")) {
+    await accounts.login({ user: "ada" });
+    Astro.cookies.set("signed_in", "yes", { path: "/" });
+  } else await accounts.rename({ name: "Ada Lovelace" });
   return Astro.redirect("/", 303);
 }
 const me = await accounts.me();

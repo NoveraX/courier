@@ -3,6 +3,7 @@ import { createCaller } from "@noverax/courier";
 import { courier, defineApi } from "@noverax/courier/define";
 import { requestContext } from "@noverax/courier-hono/request-context";
 import { Hono } from "hono";
+import { setCookie } from "hono/cookie";
 
 import { API_URL } from "./api-url.mjs";
 
@@ -46,8 +47,10 @@ app.get("/", async (c) => {
   );
 });
 app.post("/", async (c) => {
-  if (c.req.url.endsWith("/login")) await accounts.login({ user: "ada" });
-  else await accounts.rename({ name: "Ada Lovelace" });
+  if (c.req.url.endsWith("/login")) {
+    await accounts.login({ user: "ada" });
+    setCookie(c, "signed_in", "yes", { path: "/" });
+  } else await accounts.rename({ name: "Ada Lovelace" });
   return c.redirect("/", 303);
 });
 app.get("/attack", async (c) =>

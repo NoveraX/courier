@@ -51,8 +51,10 @@ app.get("/", async (_request, reply) => {
   );
 });
 app.post("/", async (request, reply) => {
-  if (request.url.endsWith("/login")) await accounts.login({ user: "ada" });
-  else await accounts.rename({ name: "Ada Lovelace" });
+  if (request.url.endsWith("/login")) {
+    await accounts.login({ user: "ada" });
+    reply.header("set-cookie", "signed_in=yes; Path=/");
+  } else await accounts.rename({ name: "Ada Lovelace" });
   return seeOther(reply, "/");
 });
 app.get("/attack", async (_request, reply) => {

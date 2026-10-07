@@ -47,12 +47,13 @@ test("a page renders without a session, sending no cookie", async () => {
   expect((await json("#me")).cookie).toBeNull();
 });
 
-test("signing in with a form post hands the browser the API's session cookie", async () => {
+test("signing in with a form post hands the browser the API's session cookie beside the application's own", async () => {
   await page.click("#login");
   await expect.poll(async () => (await cookie("sid"))?.value).toBe("s%3Aada.sig");
 
   expect(await cookie("sid")).toMatchObject({ path: "/", httpOnly: true });
   expect((await cookie("csrftoken"))?.value).toBe("t-ada");
+  expect((await cookie("signed_in"))?.value).toBe("yes");
   expect(await cookie("vendor_tracking")).toBeUndefined();
 });
 

@@ -50,12 +50,13 @@ test("a page renders without a session, sending no cookie", async () => {
   expect((await json("#me")).cookie).toBeNull();
 });
 
-test("signing in through a server route hands the browser the API's session cookie", async () => {
+test("signing in through a server route hands the browser the API's session cookie beside the application's own", async () => {
   await page.click("#login");
   await page.waitForURL(`${APP}/`);
 
   expect(await cookie("sid")).toMatchObject({ value: "s%3Aada.sig", path: "/", httpOnly: true });
   expect((await cookie("csrftoken"))?.value).toBe("t-ada");
+  expect((await cookie("signed_in"))?.value).toBe("yes");
   expect(await cookie("vendor_tracking")).toBeUndefined();
 });
 

@@ -143,5 +143,9 @@ function guardRefusal(
   const reason = writeRefusal(incoming, session?.allowedOrigins);
   return reason === undefined
     ? undefined
-    : `${target.name} would write on the user's behalf while the application serves a ${incoming.method.toUpperCase()} request, and ${reason}. Make the write from the application's own form or Server Action, or give the endpoint { session: "unguarded" } if a stranger setting it off does no harm`;
+    : `${target.name} would write on the user's behalf while the application serves ${requestNamed(incoming)}, and ${reason}. Make the write from the application's own form or Server Action, or give the endpoint { session: "unguarded" } if a stranger setting it off does no harm`;
+}
+
+function requestNamed(incoming: IncomingRequest): string {
+  return incoming.method === undefined ? "a request" : `a ${incoming.method.toUpperCase()} request`;
 }

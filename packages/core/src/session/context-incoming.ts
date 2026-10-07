@@ -25,7 +25,7 @@ export function incomingFromContext(context: Context | undefined): IncomingReque
   if (headers === undefined) return undefined;
   return {
     key: request ?? headers,
-    method: request?.method ?? "GET",
+    method: request?.method,
     origin: request ? requestOrigin(request) : addressedOrigin(headers),
     headers,
     clientAddress: request ? forwardedFor(request) : undefined,

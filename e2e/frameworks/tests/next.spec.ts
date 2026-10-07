@@ -33,6 +33,9 @@ test.afterAll(async () => {
   await context.close();
 });
 
+/* A click before React hydrates the page may go unheard; the page marks when it has. */
+const hydrated = () => page.locator("html[data-hydrated]").waitFor({ state: "attached" });
+
 test("the build sends the API no session and no write", async () => {
   const sent = [
     ...(await received("GET", "/me")),
@@ -52,6 +55,7 @@ test("a page renders without a session, sending no cookie", async () => {
 });
 
 test("signing in with a Server Action hands the browser the API's session cookie", async () => {
+  await hydrated();
   await page.click("#login");
   /* Next.js keeps the old render beside the new one while it swaps them. */
   await expect(page.locator("#me").filter({ hasText: "s%3Aada.sig" })).toBeVisible();
@@ -85,6 +89,7 @@ test("a page sends the session's cookies alone, with the request's id and browse
 test("a write from the application's own form repeats the double-submit token", async () => {
   await clearReceived();
 
+  await hydrated();
   await page.click("#rename");
   await expect.poll(async () => (await received("POST", "/me/name")).length).toBe(1);
   const [write] = await received("POST", "/me/name");
@@ -163,6 +168,7 @@ test("a client component's calls through the proxy route carry the session it se
   await clearReceived();
 
   await page.goto(`${APP}/proxy`);
+  await hydrated();
   await page.click("#proxy-run");
   await expect(page.locator("#proxy")).toContainText("s%3Aproxy.sig");
   const [me] = await received("GET", "/me");

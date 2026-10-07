@@ -12,6 +12,7 @@ export type AppKind =
   | "astro"
   | "react-router"
   | "solid-start"
+  | "nestjs"
   | "spa";
 
 /** A framework version the session is checked against, as an application installs it. */
@@ -43,6 +44,7 @@ const KINDS: ReadonlySet<string> = new Set([
   "astro",
   "react-router",
   "solid-start",
+  "nestjs",
   "spa",
 ]);
 

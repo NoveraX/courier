@@ -120,6 +120,16 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     ready: /Listening on/i,
     address: onLocalhost,
   },
+  nestjs: {
+    /* It serves the routes the SvelteKit application has, so the same checks drive it. */
+    spec: "forms.spec.ts",
+    apiUrlModule: "src/api-url.ts",
+    build: ["npx", "tsc", "-p", "tsconfig.json"],
+    start: () => ["node", "dist/main.js"],
+    env: production,
+    ready: /Listening on/,
+    address: onLocalhost,
+  },
   spa: {
     spec: "spa.spec.ts",
     apiUrlModule: "src/api-url.ts",

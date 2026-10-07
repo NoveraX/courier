@@ -6,6 +6,7 @@ import { discoverNodeAppOrigin, sendWebResponse, toWebRequest } from "@noverax/c
 
 import { bodyNestParsed } from "./parsed-body";
 
+export { requestContext } from "./request-context";
 export { type CourierWSAttachOptions, courierWSAttach } from "./ws-attach";
 
 /**

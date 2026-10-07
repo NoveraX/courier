@@ -132,6 +132,8 @@ export function cacheMiddleware(options: CacheOptions): Middleware {
 /** A call whose answer could be shared with a later identical one. */
 function isCacheable(ctx: MiddlewareContext): boolean {
   if (ctx.kind === "mutation") return false;
+  /* A request the session makes is made for the cookies its answer sets. */
+  if (ctx.purpose !== undefined) return false;
   /* A multipart body has no stable textual form, so every upload to an
      endpoint would otherwise collide on one entry. */
   if (typeof FormData !== "undefined" && ctx.variables instanceof FormData) return false;

@@ -232,7 +232,7 @@ declare function cacheMiddleware(options: {
 }): Middleware
 ```
 
-Caches successful responses (2xx status) of endpoints that read, keyed by the scope's partition, `source:group:method` and the variables. Non-2xx responses are never cached.
+Caches successful responses (2xx status) of endpoints that read, keyed by the scope's partition, `source:group:method` and the variables. Non-2xx responses are never cached, nor the answers to a request the session makes for itself, such as the [double-submit token](/docs/server-side/session) a write asks for: it is made for the cookie its answer sets.
 
 ```ts title="lib/sources.ts"
 const api = defineApi({

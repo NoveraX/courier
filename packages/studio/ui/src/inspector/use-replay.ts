@@ -98,6 +98,13 @@ export function useReplay(): (r: RequestEntry) => Replay {
       if (sessionShown) {
         return { label, title: "Go back to the live requests to run it again", run: undefined };
       }
+      if (r.purpose === "csrf-token") {
+        return {
+          label,
+          title: "Courier asks for the token itself, before the write that needs it",
+          run: undefined,
+        };
+      }
       const name = endpointName(r);
       const failure = `Could not ${stream ? "reconnect" : "replay"} ${name}`;
       const send = (variables: unknown) => {

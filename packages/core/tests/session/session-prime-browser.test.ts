@@ -154,6 +154,71 @@ describe("a write in a browser that finds no double-submit token", () => {
   });
 });
 
+describe("the request for the token", () => {
+  it("goes through the API's middleware, which can tell it from an endpoint's call", async () => {
+    const { defineMiddleware } = await import("../../src/middleware/define");
+    const seen: Array<{ method: string; purpose: string | undefined }> = [];
+    const signed = defineMiddleware("api key", "before", (ctx) => {
+      seen.push({ method: ctx.method, purpose: ctx.purpose });
+      ctx.headers.set("x-api-key", "k1");
+    });
+    const api = createCaller(
+      defineApi({
+        name: "accounts",
+        baseURL: "https://api.example.com",
+        session: { cookies: ["sid"], csrf: SANCTUM },
+        middleware: [signed],
+        endpoints: { rename: endpoint.post("me/name").variables<{ name: string }>() },
+      }),
+    );
+
+    await api.rename({ name: "Ada" });
+
+    expect(seen).toEqual([
+      { method: "csrf token", purpose: "csrf-token" },
+      { method: "rename", purpose: undefined },
+    ]);
+    expect(new Headers(initOf(0).headers).get("x-api-key")).toBe("k1");
+  });
+
+  it("is never answered from a cache, being made for the cookie its answer sets", async () => {
+    const { cacheMiddleware } = await import("../../src/middleware/cache");
+    const api = createCaller(
+      defineApi({
+        name: "accounts",
+        baseURL: "https://api.example.com",
+        session: { cookies: ["sid"], csrf: SANCTUM },
+        middleware: [cacheMiddleware({ scope: "session" })],
+        endpoints: { rename: endpoint.post("me/name").variables<{ name: string }>() },
+      }),
+    );
+
+    await api.rename({ name: "Ada" });
+    jar = [];
+    await api.rename({ name: "Grace" });
+
+    const asked = fetchSpy.mock.calls.filter((_, index) => urlOf(index).includes("csrf"));
+    expect(asked).toHaveLength(2);
+  });
+
+  it("is told to Studio as a request the session makes, under an id of its own", async () => {
+    const { studioHooks } = await import("../../src/studio");
+    const started: Array<{ id: string; method: string; purpose?: string; httpMethod?: string }> =
+      [];
+    studioHooks.onRequestStart = (event) => started.push(event);
+    try {
+      await apiWith(SANCTUM).rename({ name: "Ada" });
+    } finally {
+      studioHooks.onRequestStart = undefined;
+    }
+
+    const [token, write] = [started.find((e) => e.purpose), started.find((e) => !e.purpose)];
+    expect(token).toMatchObject({ method: "csrf token", purpose: "csrf-token", httpMethod: "GET" });
+    expect(write?.method).toBe("rename");
+    expect(token?.id).not.toBe(write?.id);
+  });
+});
+
 describe("a browser asks for no token", () => {
   it("for a read, which repeats none", async () => {
     await apiWith(SANCTUM).me();

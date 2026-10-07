@@ -35,6 +35,8 @@ export interface RequestLifecycleHooks {
         httpMethod?: string;
         /** Whether the endpoint reads or writes. */
         endpointType?: "query" | "mutation";
+        /** What the call is when it is a request the session makes rather than an endpoint's. */
+        purpose?: "csrf-token";
         timestamp: number;
       }) => void)
     | undefined;

@@ -43,6 +43,7 @@ export function wireRequestHooks(
         hasValidation: e.hasValidation,
         ...(e.httpMethod && { httpMethod: e.httpMethod }),
         ...(e.endpointType && { endpointType: e.endpointType }),
+        ...(e.purpose && { purpose: e.purpose }),
       }),
     );
   };

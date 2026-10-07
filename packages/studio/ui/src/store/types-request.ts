@@ -16,6 +16,12 @@ export interface RequestEntry {
   group: string | undefined;
   method: string;
   httpMethod?: string | undefined;
+  /**
+   * What the request is when it is none of the API's endpoints but one the
+   * session makes for a call: `"csrf-token"`, the double-submit token asked
+   * for before a write. It names no endpoint to replay or to list.
+   */
+  purpose?: "csrf-token" | undefined;
   /** The variables, or a part of them when they were too large for their event; see `variablesCutFrom`. */
   variables: unknown;
   /** The size in bytes of the whole variables as JSON, when `variables` is a part of them. */

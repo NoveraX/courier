@@ -1,7 +1,7 @@
 import type { Context } from "../http-client/types";
 import { createLogger } from "../logger";
 import type { CallSession } from "../session/call-session";
-import { primeCsrfToken } from "./csrf-prime";
+import { type CallRunner, primeCsrfToken } from "./csrf-prime";
 import { buildErrorResponse } from "./execute-response";
 import type { CallTarget } from "./execute-target";
 
@@ -22,10 +22,11 @@ export type SettledSession =
  * @param target - The call
  * @param context - Its context
  * @param signal - The call's signal
+ * @param run - Runs a call as every call runs, for the token's
  * @returns The session to send the call with, and the cookies its token's answer set; or the refusal
  * @example
  * ```ts
- * const settled = await settleCallSession(pendingSession, target, context, callOptions.signal);
+ * const settled = await settleCallSession(pendingSession, target, context, signal, runPrime);
  * if ("refused" in settled) return settled.refused;
  * ```
  */
@@ -34,11 +35,15 @@ export async function settleCallSession(
   target: CallTarget,
   context: Context | undefined,
   signal: AbortSignal | null | undefined,
+  run: CallRunner,
 ): Promise<SettledSession> {
   const found = await pending;
   if (found?.refusal !== undefined) return refuse(context, found.refusal);
   if (found?.primeFrom === undefined) return { session: found, primed: [] };
-  const settled = await primeCsrfToken(target, context, found, signal ?? undefined);
+  const settled = await primeCsrfToken(
+    { target, context, session: found, run },
+    signal ?? undefined,
+  );
   const refusal = settled.session?.refusal;
   return refusal === undefined ? settled : refuse(context, refusal);
 }

@@ -284,8 +284,19 @@ type MiddlewareContext = {
   method: string
   variables?: unknown
   headers: Headers
+  transport?: "http" | "sse" | "ws"
+  request?: Request
+  kind?: "query" | "mutation"
+  carriesSession?: boolean
+  sessionPartition?: string
+  signal?: AbortSignal
+  purpose?: CallPurpose
 }
+
+type CallPurpose = "csrf-token"
 ```
+
+`purpose` is set on a request the session makes rather than an endpoint's call — `"csrf-token"` for the double-submit token a write asks for — whose `method` names no endpoint. See [Middleware](/docs/middleware/overview) for each field.
 
 ### MiddlewareResponse
 

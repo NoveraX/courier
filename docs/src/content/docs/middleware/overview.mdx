@@ -33,8 +33,14 @@ type MiddlewareContext = {
   request?: Request
   /** Whether the endpoint reads or writes */
   kind?: "query" | "mutation"
+  /** Whether the call carries the user's session: its answer is that user's alone */
+  carriesSession?: boolean
+  /** What tells one user's calls from the next in a browser or an app, which send the session's cookies themselves */
+  sessionPartition?: string
   /** Fires when the caller stops waiting: the call's own signal, or the incoming request's in a proxy */
   signal?: AbortSignal
+  /** Set on a request the session makes rather than an endpoint's call: "csrf-token" for the double-submit token a write asks for */
+  purpose?: "csrf-token"
 }
 
 type MiddlewareResponse = {

@@ -153,7 +153,8 @@ export const api = defineApi({
 ```
 
 - `from` is a path under the API's `baseURL`, such as `"csrf/"` for a Django view decorated with `ensure_csrf_cookie`, or one from the root of its origin, such as Laravel Sanctum's `"/sanctum/csrf-cookie"`.
-- The `GET` goes as the API's calls go — its address, headers and `fetch` — with the user's session, and only before a write that finds no token: a read repeats none, and a write that finds one asks for nothing. The writes waiting on one user's token share one request.
+- The `GET` goes as the API's calls go — its address, headers, `fetch` and middleware — with the user's session, and only before a write that finds no token: a read repeats none, and a write that finds one asks for nothing. The writes waiting on one user's token share one request.
+- Middleware sees the request with `purpose: "csrf-token"`, its `method` naming no endpoint, so a middleware that signs every call signs it too, and one meant for endpoints alone can pass it by. A cache keeps none of its answers, and Studio lists it as a request of its own, ahead of the write it was made for.
 - On a server, the token reaches the write and the user's browser, as any cookie the API sets does; a browser keeps it itself; a React Native app keeps it from the answer.
 - A request that fails, or an answer that sets no token the call can read, leaves the write to go without it, and the log says so.
 

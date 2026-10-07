@@ -1,5 +1,5 @@
 import type { Context } from "../http-client/types";
-import type { MiddlewareContext } from "../middleware/types";
+import type { CallPurpose, MiddlewareContext } from "../middleware/types";
 import { namedHeadersOf } from "./execute-resolve";
 import { forwardedFor } from "./forwarded-for";
 import { headersToObject } from "./helpers";
@@ -24,6 +24,8 @@ export interface MiddlewareContextInput {
   signal?: AbortSignal | undefined;
   /** The header the endpoint sends a key in, one per call, for the upstream to deduplicate by. */
   idempotencyHeader?: string | undefined;
+  /** What the call is, when it is a request the session makes rather than an endpoint's */
+  purpose?: CallPurpose | undefined;
 }
 
 /**
@@ -95,6 +97,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     request: nextRequest,
     kind,
     signal,
+    ...(input.purpose && { purpose: input.purpose }),
     _requestId: requestId || undefined,
   };
 }

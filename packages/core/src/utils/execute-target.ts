@@ -1,5 +1,6 @@
 import type { AnySource, Sources } from "../define/types";
 import type { CallOptions, Context } from "../http-client/types";
+import type { CallPurpose } from "../middleware/types";
 import { resolveEndpoint } from "./execute-resolve";
 import { buildErrorResponse } from "./execute-response";
 import { refuseWireCall } from "./wire-refusal";
@@ -30,6 +31,8 @@ export interface CallTarget extends CallRequest {
   endpointOptions: Resolved["options"];
   /** The verb the endpoint was addressed with, as HTTP spells it */
   httpMethod: Resolved["httpMethod"];
+  /** What the call is, when it is a request the session makes rather than an endpoint's */
+  purpose?: CallPurpose | undefined;
 }
 
 /** The target of a call, or the answer that refuses it. */

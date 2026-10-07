@@ -11,7 +11,8 @@ import type { SessionOptions } from "./types";
  * The call asks it to — `credentials: "include"`, so an API on another
  * origin gets them too — unless the API set `credentials` itself. A bearer
  * token, and a write's double-submit token, are read from `document.cookie`
- * where the page can read them. Nothing else is added: a page cannot set
+ * where the page can read them; a write that finds no token is to ask for
+ * it first, where the API names where it comes from. Nothing else is added: a page cannot set
  * `Cookie` or `Origin`, and a header it need not send would cost the call a
  * preflight.
  *
@@ -35,12 +36,14 @@ export function browserSession(
   if (credentials.csrf && session.csrf && target.unsafeMethod) {
     headers.push([session.csrf.header.toLowerCase(), credentials.csrf]);
   }
+  const unknownToken = target.unsafeMethod && credentials.csrf === undefined;
   return {
     headers,
     fetchInit: target.credentials === undefined ? { credentials: "include" } : undefined,
     carries: credentials.identifies,
     options: session,
     toResponse: false,
+    primeFrom: unknownToken ? session.csrf?.from : undefined,
   };
 }
 

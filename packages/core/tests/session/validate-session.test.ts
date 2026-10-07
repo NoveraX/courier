@@ -81,6 +81,35 @@ describe("a session", () => {
     expect(failure.message).toContain('csrf.header: "Cookie" is sent by the session alone');
   });
 
+  it("names where its double-submit token comes from by a path, under the API's address or from its root", () => {
+    for (const from of ["csrf/", "/sanctum/csrf-cookie"]) {
+      const csrf = { cookie: "XSRF-TOKEN", header: "X-XSRF-TOKEN", from };
+      expect(defineWith({ session: { cookies: ["sid"], csrf } })).not.toThrow();
+    }
+  });
+
+  it("refuses a place for its token that is no bare path of the API's", () => {
+    const messages = [
+      "https://other.example.com/csrf",
+      "//other.example.com/csrf",
+      "csrf?refresh=1",
+      "csrf#token",
+      "csrf/:id",
+      "csrf token",
+      "",
+      42,
+    ].map((from) => {
+      const csrf = { cookie: "XSRF-TOKEN", header: "X-XSRF-TOKEN", from };
+      return failureOf(defineWith({ session: { cookies: ["sid"], csrf } })).message;
+    });
+
+    expect(messages.every((message) => message.startsWith("accounts: session csrf.from: "))).toBe(
+      true,
+    );
+    expect(messages[0]).toContain("names an address of its own");
+    expect(messages[2]).toContain("is a bare path");
+  });
+
   it("lists origins as a browser sends them", () => {
     const failure = failureOf(
       defineWith({ session: { cookies: ["sid"], allowedOrigins: ["https://www.example.com/"] } }),

@@ -1,7 +1,6 @@
 import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
-import { createLogger } from "../logger";
 import { generateRequestId, studioHooks } from "../studio";
 import { clientForCall } from "./execute-helpers";
 import type { InnerExecuteDeps } from "./execute-inner";
@@ -20,9 +19,8 @@ import {
 import { type CallTarget, resolveCallTarget } from "./execute-target";
 import { idempotencyHeader } from "./idempotency-header";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
+import { settleCallSession } from "./settle-call-session";
 import { withStudioUploads } from "./studio-uploads";
-
-const log = createLogger("Session");
 
 /**
  * Run one call against the registered sources: the proxy's handler and a
@@ -137,11 +135,9 @@ async function prepareAndRun(
     signal: callOptions.signal ?? undefined,
     idempotencyHeader: idempotencyHeader(endpointOptions?.idempotencyKey),
   });
-  const session = await pendingSession;
-  if (session?.refusal !== undefined) {
-    log.warn(`Refused: ${session.refusal}`);
-    return buildErrorResponse(context, 403, session.refusal);
-  }
+  const settled = await settleCallSession(pendingSession, target, context, callOptions.signal);
+  if ("refused" in settled) return settled.refused;
+  const { session, primed } = settled;
   callOptions = applyCallSession(session, middlewareCtx, callOptions, dataSource.options);
   const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");
 
@@ -183,6 +179,7 @@ async function prepareAndRun(
     timing,
     context,
     session,
+    primed,
     answer: {
       rawData,
       stream,

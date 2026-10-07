@@ -35,6 +35,11 @@ export interface CallSession {
    * user's cookies where no script reads them
    */
   readonly learnsFrom?: string | undefined;
+  /**
+   * Where the double-submit token is asked for before the call: set for a
+   * write that finds none, of an API that names where it comes from
+   */
+  readonly primeFrom?: string | undefined;
 }
 
 /**
@@ -79,6 +84,29 @@ function oneUserSession(target: SessionTarget): CallSession | Promise<CallSessio
   if (session === undefined) return undefined;
   if (!isReactNative()) return browserSession(target, session);
   return nativePart().then((native) => native.nativeSession(target, session));
+}
+
+/**
+ * The context the calls made for the same request go in after a call has
+ * waited: the request it found, named, since a framework may know the
+ * request being served only until the first wait. A context that named the
+ * request already is kept as it was.
+ *
+ * @param context - The first call's context
+ * @param session - What it carried
+ * @returns The context to make the next call in
+ * @example
+ * ```ts
+ * const again = await sessionFor(sameRequestContext(context, session), target);
+ * ```
+ */
+export function sameRequestContext(
+  context: Context | undefined,
+  session: CallSession,
+): Context | undefined {
+  if (session.incoming === undefined) return context;
+  if (context !== undefined && namesRequest(context)) return context;
+  return { ...context, incoming: session.incoming };
 }
 
 /* A caller's context names the request it serves, or the proxy's own. */

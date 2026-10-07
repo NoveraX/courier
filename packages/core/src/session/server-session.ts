@@ -74,18 +74,27 @@ function serverSession(
   if (carries && session?.allowHttp !== true) assertSecureTransport(target);
   const vouched =
     session && credentials ? vouchedHeaders(incoming, target, session, credentials) : [];
-  /* The double-submit token vouches for a write as much as the session does:
-     a sign-in made with it for a page on another site signs the user in to
-     whatever account that page chose. */
-  const vouches = carries || vouched.some(([name]) => name === session?.csrf?.header.toLowerCase());
+  /* A write that finds no token asks for one first, where the API names where it comes from. */
+  const primeFrom =
+    target.unsafeMethod && credentials?.csrf === undefined ? session?.csrf?.from : undefined;
+  /* The double-submit token vouches for a write as much as the session does,
+     and so does the token the write would ask for: a sign-in made with it
+     for a page on another site signs the user in to whatever account that
+     page chose. */
+  const vouches =
+    carries ||
+    primeFrom !== undefined ||
+    vouched.some(([name]) => name === session?.csrf?.header.toLowerCase());
+  const refusal = vouches && !served.admitted ? guardRefusal(incoming, target, session) : undefined;
   return {
     incoming,
     headers: [...vouched, ...(target.forward ? forwardedHeaders(incoming, target.forward) : [])],
     fetchInit: incoming.fetchInit,
     carries,
     options: session,
-    refusal: vouches && !served.admitted ? guardRefusal(incoming, target, session) : undefined,
+    refusal,
     toResponse: served.toResponse,
+    primeFrom: refusal === undefined ? primeFrom : undefined,
   };
 }
 

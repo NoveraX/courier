@@ -192,9 +192,18 @@ A Server Action's request is POST; any other request a Next.js App Router serves
 
 An endpoint with `session: false` is called without the session, and a call to it does not read the request at all: a page that makes only such calls can be built once, and a call can run inside `"use cache"` or a build. `forward: false` keeps the forwarded headers off an endpoint's calls likewise.
 
-## Channels
+## Streams and channels
 
-A channel of an API with a `session` carries the user's session as a read over HTTP does — the cookies `cookies` names, the `bearer`, the headers `forward` names — and the API's own `headers`, on every socket it opens and every reconnect:
+A stream or a channel of an API with a `session` carries the user's session as a read over HTTP does — the cookies `cookies` names, the `bearer`, the headers `forward` names — and the API's own `headers`, read anew on every connection, so a reconnect sends the token the user has now.
+
+A stream:
+
+- From a server, its connections send the session taken from the request being served when the stream was opened, and the cookies its answer sets reach the browser as a call's do.
+- From a browser, its connections ask the browser to send its cookies — `credentials: "include"`, unless the API sets `credentials` itself — and send the bearer the page reads.
+- From a React Native app, its connections send the app's cookies and the bearer the app's calls have learned, and learn what the stream's answer sets.
+- A stream the proxy relays is opened upstream with the session of the browser that opened it. A proxy caller sends the browser's cookies to the proxy route with its streams as with its calls.
+
+A channel, on every socket it opens and every reconnect:
 
 - On a server, they go on the socket's handshake, taken from the request being served when the channel is opened. A socket is kept to that request: one request's channels share it, and two users' channels never share one.
 - In a browser, the platform sends the session's cookies on the handshake itself, as it sends them with a call. A page cannot put a header on a WebSocket's handshake, so the bearer and the API's headers go in the socket's first frame, which the server reads as the handshake's own — see [Who a connection is](/docs/advanced/realtime#who-a-connection-is).

@@ -96,7 +96,11 @@ export function createProxyQueryCaller(source: string, defaults?: ProxyCallerDef
      in its first frame, which the proxy reads as its handshake's: a browser
      WebSocket cannot send headers on its upgrade. */
   const streaming = proxyStreamingFactories(source, {
-    sse: { proxyPath: mergedProxyPath, headers: defaults?.headers },
+    sse: {
+      proxyPath: mergedProxyPath,
+      headers: defaults?.headers,
+      credentials: defaults?.credentials,
+    },
     ws: { proxyPath: mergedProxyPath, ws: defaults?.ws, headers: defaults?.headers },
   });
 

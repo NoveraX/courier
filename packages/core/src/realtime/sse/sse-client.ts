@@ -44,6 +44,7 @@ export function subscribeSSE<TData = unknown>(
       maxAttempts: options.maxAttempts ?? Infinity,
       parse: options.parse ?? JSON.parse,
       ...(options.onResponse && { onResponse: options.onResponse }),
+      ...(options.beforeConnect && { beforeConnect: options.beforeConnect }),
     },
     lastEventId: options.lastEventId,
     serverRetryMs: undefined,

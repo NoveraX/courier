@@ -71,10 +71,9 @@ describe("subscribeSSE", () => {
       string,
       RequestInit & { headers: Record<string, string> },
     ];
-    expect(init.headers).toMatchObject({
-      Accept: "text/event-stream",
-      Authorization: "Bearer token123",
-    });
+    const sent = new Headers(init.headers);
+    expect(sent.get("accept")).toBe("text/event-stream");
+    expect(sent.get("authorization")).toBe("Bearer token123");
   });
 
   it("sends Last-Event-ID on reconnect", async () => {
@@ -98,7 +97,7 @@ describe("subscribeSSE", () => {
       string,
       RequestInit & { headers: Record<string, string> },
     ];
-    expect(secondInit.headers["Last-Event-ID"]).toBe("evt-2");
+    expect(new Headers(secondInit.headers).get("last-event-id")).toBe("evt-2");
   });
 
   it("transitions through connected → disconnected statuses", async () => {

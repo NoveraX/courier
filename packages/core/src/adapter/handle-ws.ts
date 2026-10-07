@@ -10,6 +10,7 @@ import { LIMITS } from "./limits";
 import { rememberPeerAddress } from "./peer-address";
 import { admitSocket } from "./ws-admission";
 import { buildContext, type WSSocketContext } from "./ws-context";
+import { holdFrames, type WSInbox } from "./ws-inbox";
 import { createIPTracker } from "./ws-ip-tracker";
 import { wireEvents } from "./ws-lifecycle";
 import { createPubSubBridge } from "./ws-pubsub-bridge";
@@ -69,15 +70,22 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
 
     const ctx = buildContext(ws, config, topicManager, registry, bridge, request);
     ctx.clientIP = ip;
+    /* What the client sends while onConnect runs — the subscriptions it
+       makes as its socket opens — waits for the connection, in order. */
+    const inbox = holdFrames(ws, ctx.maxControlPerSecond);
 
     if (config.onConnect) {
-      void initConnection(ws, ctx);
+      void initConnection(ws, inbox, ctx);
     } else {
-      registerAndActivate(ws, ctx);
+      registerAndActivate(ws, inbox, ctx);
     }
   }
 
-  async function initConnection(ws: WebSocketLike, ctx: WSSocketContext): Promise<void> {
+  async function initConnection(
+    ws: WebSocketLike,
+    inbox: WSInbox,
+    ctx: WSSocketContext,
+  ): Promise<void> {
     /* Heard from the start, not once the connection is activated: a client
        that left while onConnect ran would otherwise keep its registry entry,
        a heartbeat timer and its per-address slot for good — enough of them
@@ -105,7 +113,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
       await notifyDisconnect(ctx, closedWith);
       return;
     }
-    registerAndActivate(ws, ctx);
+    registerAndActivate(ws, inbox, ctx);
   }
 
   /** Let the application undo what its onConnect set up. */
@@ -117,7 +125,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     }
   }
 
-  function registerAndActivate(ws: WebSocketLike, ctx: WSSocketContext): void {
+  function registerAndActivate(ws: WebSocketLike, inbox: WSInbox, ctx: WSSocketContext): void {
     registry.add({
       connectionId: ctx.connectionId,
       meta: ctx.meta,
@@ -136,7 +144,7 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     );
     hb.start();
     void bridge?.onConnectionOpen();
-    wireEvents(ws, ctx, hb, topicManager, config, registry, ipTracker);
+    wireEvents(ws, inbox, ctx, hb, topicManager, config, registry, ipTracker);
   }
 
   // Wire Studio playground WS send — allows playground to relay messages to active connections

@@ -21,6 +21,7 @@ vi.mock("../src/adapter/ws-token-refresh", () => ({
 }));
 
 import type { WSSocketContext } from "../src/adapter/ws-context";
+import { holdFrames } from "../src/adapter/ws-inbox";
 import { wireEvents } from "../src/adapter/ws-lifecycle";
 import { handleMessage, handleUnsubscribe } from "../src/adapter/ws-message";
 import { handleSubscribe } from "../src/adapter/ws-subscribe";
@@ -114,6 +115,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
+      holdFrames(ws as never, 10),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,
@@ -136,6 +138,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
+      holdFrames(ws as never, 10),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,
@@ -158,6 +161,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
+      holdFrames(ws as never, 10),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,
@@ -180,6 +184,7 @@ describe("ws-lifecycle dispatch — floating promise rejection handling", () => 
     const ws = createMockWs();
     wireEvents(
       ws as never,
+      holdFrames(ws as never, 10),
       createMockCtx(),
       heartbeat as never,
       topicManager as never,

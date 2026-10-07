@@ -5,6 +5,7 @@ import { registerPlaygroundAbort } from "../studio";
 import { socketError } from "../utils/socket-error";
 import type { WSSocketContext } from "./ws-context";
 import { closeSubscriptionEntry } from "./ws-dispatch-helpers";
+import type { WSInbox } from "./ws-inbox";
 import type { IPTracker } from "./ws-ip-tracker";
 import type { InternalConnectionRegistry } from "./ws-registry-types";
 import { routeMessage } from "./ws-route-message";
@@ -13,9 +14,10 @@ import type { WSHandlerConfig } from "./ws-types";
 
 const log = createLogger("WS");
 
-/** Wire message, close, and error event listeners on an active socket */
+/** Route the frames of an admitted socket, and wire its close and error events */
 export function wireEvents(
   ws: WebSocketLike,
+  inbox: WSInbox,
   ctx: WSSocketContext,
   heartbeat: ReturnType<typeof createHeartbeat>,
   topicManager: ReturnType<typeof createServerTopicManager>,
@@ -39,10 +41,7 @@ export function wireEvents(
       })
     : undefined;
 
-  ws.addEventListener("message", (event) => {
-    const raw = typeof event.data === "string" ? event.data : String(event.data);
-    routeMessage(ctx, raw, heartbeat);
-  });
+  inbox.open((raw) => routeMessage(ctx, raw, heartbeat));
 
   ws.addEventListener("close", async (event) => {
     // Mark closed FIRST so any in-flight `handleSubscribe` await chain bails

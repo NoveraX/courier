@@ -65,7 +65,7 @@ export function callSessionTarget(target: CallTarget): SessionTarget {
  */
 export function applyCallSession<TOptions extends object>(
   session: CallSession | undefined,
-  ctx: Pick<MiddlewareContext, "headers" | "carriesSession">,
+  ctx: Pick<MiddlewareContext, "headers" | "carriesSession" | "sessionPartition">,
   options: TOptions,
   sourceOptions: BaseOptions | undefined,
 ): TOptions {
@@ -74,6 +74,7 @@ export function applyCallSession<TOptions extends object>(
     if (!ctx.headers.has(name)) ctx.headers.set(name, value);
   }
   ctx.carriesSession = session.carries;
+  ctx.sessionPartition = session.partition;
   const init = Object.entries(session.fetchInit ?? {}).filter(
     ([key]) => sourceOptions === undefined || !(key in sourceOptions),
   );

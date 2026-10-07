@@ -191,14 +191,21 @@ async function buildKey(ctx: MiddlewareContext, scope: CacheScope): Promise<stri
 }
 
 /* The credentials themselves would sit in the store's keys — a Redis keyspace,
-   a log line — so a partition is named by their digest instead. */
+   a log line — so a partition is named by their digest instead. In a browser
+   or an app the session names the partition, the cookies being the
+   platform's to send. */
 async function credentialsOf(ctx: MiddlewareContext): Promise<string> {
-  const cookie = ctx.headers.get("cookie") ?? "";
-  const authorization = ctx.headers.get("authorization") ?? "";
-  if (cookie === "" && authorization === "") return "anonymous";
-  const bytes = new TextEncoder().encode(`${cookie}\u0000${authorization}`);
+  const material = ctx.sessionPartition ?? credentialHeaders(ctx);
+  if (material === "") return "anonymous";
+  const bytes = new TextEncoder().encode(material);
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return `session:${Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function credentialHeaders(ctx: MiddlewareContext): string {
+  const cookie = ctx.headers.get("cookie") ?? "";
+  const authorization = ctx.headers.get("authorization") ?? "";
+  return cookie === "" && authorization === "" ? "" : `${cookie}\u0000${authorization}`;
 }
 
 const warnedPublic = new Set<string>();

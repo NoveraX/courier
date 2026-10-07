@@ -1,5 +1,6 @@
 import type { CallSession } from "./call-session";
 import { cookieJarOf } from "./cookie-header";
+import { renewSessionPartition, sessionPartition } from "./one-user-partition";
 import { sessionCredentials } from "./session-credentials";
 import type { SessionTarget } from "./session-target";
 import type { SessionOptions } from "./types";
@@ -37,13 +38,18 @@ export function browserSession(
     headers.push([session.csrf.header.toLowerCase(), credentials.csrf]);
   }
   const unknownToken = target.unsafeMethod && credentials.csrf === undefined;
+  if (target.unsafeMethod) renewSessionPartition();
   return {
     headers,
     fetchInit: target.credentials === undefined ? { credentials: "include" } : undefined,
-    carries: credentials.identifies,
+    /* The platform sends the session's cookies itself, where no script sees
+       them: whatever this call can read, it carries the session. */
+    carries: target.credentials !== "omit" || credentials.identifies,
     options: session,
     toResponse: false,
     primeFrom: unknownToken ? session.csrf?.from : undefined,
+    partition: sessionPartition(credentials),
+    renewsPartition: target.unsafeMethod,
   };
 }
 

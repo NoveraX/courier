@@ -252,6 +252,8 @@ A call that carries the user's [session](/docs/server-side/session) is never ans
 cacheMiddleware({ scope: "session", ttl: 10_000 })
 ```
 
+In a browser or a React Native app, the platform sends the session's cookies itself, out of a script's reach. There, every call of an API with a `session` counts as carrying it, so a `"public"` cache keeps none of its answers, and `scope: "session"` partitions by what a script can read — a bearer token, the double-submit token an API renews with the session — and starts a new partition with every write made with the session, as it starts and once it is answered. A user who signs out and another who signs in on the same device, in the same tab or another, never share a cached answer, nor see one read while the sign-in was under way.
+
 ### Custom storage
 
 Provide your own `Map` instance to control the cache externally (e.g., for manual invalidation):

@@ -1,11 +1,13 @@
 import type { CallSession } from "../session/call-session";
+import { renewSessionPartition } from "../session/one-user-partition";
 
 /**
  * Keep the cookies an API's answer set, as the session the call took says.
  * A React Native app keeps the ones a page could read, for its calls to
  * come; a server keeps the session's for the rest of the request being
  * served, and carries them on to the browser. A browser keeps its cookies
- * itself, and never loads what carries them on.
+ * itself, and never loads what carries them on. A write answered in a
+ * browser or an app renews the partition the user's reads are cached in.
  *
  * @param session - What the call carried
  * @param upstream - The headers the API answered with
@@ -19,6 +21,7 @@ export async function keepAnswerCookies(
   session: CallSession | undefined,
   upstream: Headers | undefined,
 ): Promise<string[]> {
+  if (session?.renewsPartition) renewSessionPartition();
   if (session?.learnsFrom !== undefined) {
     const { learnCookies } = await import("../session/learned-cookies");
     learnCookies(upstream, session.options, session.learnsFrom);

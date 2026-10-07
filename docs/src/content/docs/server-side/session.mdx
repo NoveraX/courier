@@ -193,6 +193,8 @@ An endpoint with `session: false` is called without the session, and a call to i
 
 `cacheMiddleware({ scope: "public" })` never answers a call that carries the user's session from its shared copy, nor stores its answer, and names the endpoint once in the log. `scope: "session"` gives each set of credentials a call sends a partition of its own, named by their SHA-256 digest so the credentials never sit in a store's keys. On Next.js 14, calls made for a request are fetched with `cache: "no-store"`, so its data cache keeps no user's answer.
 
+In a browser or a React Native app, where the platform sends the session's cookies out of a script's reach, every call of an API with a `session` counts as carrying it, and `scope: "session"` partitions by the credentials a script can read and by the writes made with the session — so users taking turns on one device never share a cached answer. See [the cache middleware](/docs/middleware/built-in#cachemiddleware).
+
 ## Errors where the API is defined
 
 `defineApi` refuses a session that could not work as written, with a `ConfigurationError`:

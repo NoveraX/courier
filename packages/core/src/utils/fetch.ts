@@ -23,6 +23,11 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
    * `fetchWithinOrigin`. An explicit `redirect` takes precedence.
    */
   withinOrigin?: boolean | undefined;
+  /**
+   * Sends the request in place of `fetch`: the route a proxy caller takes
+   * to the proxy of the server it runs in, without leaving the process.
+   */
+  transport?: ((url: string, init: RequestInit) => Promise<Response>) | undefined;
 };
 
 export async function coreFetch(
@@ -40,6 +45,7 @@ export async function coreFetch(
     onUploadProgress,
     onDownloadProgress,
     withinOrigin,
+    transport,
     ...rest
   } = options;
 
@@ -85,8 +91,9 @@ export async function coreFetch(
   try {
     /* XMLHttpRequest reports an upload's progress, which fetch cannot, and
        reads a file a React Native form names by where it is, which expo/fetch refuses. */
-    response =
-      requestBody != null && (onUploadProgress || holdsDeviceFiles(requestBody))
+    response = transport
+      ? await transport(fullUrl, init)
+      : requestBody != null && (onUploadProgress || holdsDeviceFiles(requestBody))
         ? await sendWithUploadProgress(
             fullUrl,
             { ...init, body: requestBody },

@@ -2,6 +2,7 @@ import { isFormData, parseEndpointKey } from "../utils/helpers";
 import { assertCarriable } from "./assert-carriable";
 import { assertJsonVariables } from "./assert-json-variables";
 import { fitsInAddress, getProxyQuery, handleGetProxy } from "./get-proxy";
+import { inProcessRoute } from "./in-process";
 import { buildPostPayload } from "./post-payload";
 import { createProxyDedupe } from "./proxy-dedupe";
 import { proxyRouting } from "./proxy-routing";
@@ -55,17 +56,28 @@ export function createUntypedProxyCallerFn(defaults: ProxyCallerDefaults = {}): 
       assertCarriable(variables);
       if (!isFormData(variables)) assertJsonVariables(variables);
       const { group, method } = parseEndpointKey(endpoint);
+      /* Found before the call first waits, as some frameworks know the
+         request being served only until then. What finding it fails with —
+         a render a framework stops — is the call's failure, as it came. */
+      const route = inProcessRoute(proxyPath, source);
+      const served = route ? await route.incoming : undefined;
       // Lazy resolution: in SSR contexts the caller may be constructed in
       // Node where `globalThis.location` is undefined; resolving here guarantees
       // we read the live origin at the moment the request is actually sent.
-      const url = resolveProxyPath("http", proxyPath);
+      const url = route?.url ?? resolveProxyPath("http", proxyPath);
 
       const call = splitProxyOptions(options, {
         headers: defaultHeaders,
         credentials,
         timeout: defaultTimeout,
       });
-      const local = { ...call.init, cache: call.cache, next: call.next, signal };
+      const local = {
+        ...call.init,
+        cache: call.cache,
+        next: call.next,
+        signal,
+        ...(route && { transport: route.transport(served) }),
+      };
 
       if (goesAsGet(call, { url, source, group, method, variables, reads })) {
         return handleGetProxy({

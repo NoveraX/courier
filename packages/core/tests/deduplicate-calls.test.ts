@@ -94,6 +94,8 @@ describe("a direct call on a server", () => {
 
 describe("the proxy", () => {
   beforeEach(() => {
+    /* The proxy client as a browser runs it; a server's own reaches its proxy in process. */
+    vi.stubGlobal("document", {});
     const handler = createHandler();
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);

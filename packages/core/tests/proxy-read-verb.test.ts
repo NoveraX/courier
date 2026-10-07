@@ -42,6 +42,8 @@ beforeEach(async () => {
     res.end('{"ok":true}');
   });
   registerSources({ shop: api() });
+  /* The proxy client as a browser runs it; a server's own reaches its proxy in process. */
+  vi.stubGlobal("document", {});
   const handler = createHandler();
   proxied = [];
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {

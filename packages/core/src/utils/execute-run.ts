@@ -119,7 +119,7 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
 /* The session cookies the API set, carried on; the ones a Response of the call's own has to carry. */
 function relayOf(call: PreparedCall, upstream: Headers | undefined): string[] {
   if (call.session === undefined) return [];
-  return relayCookies(upstream, call.session, call.context?.res instanceof Response);
+  return relayCookies(upstream, call.session, call.session.toResponse);
 }
 
 function withCookies(answer: unknown, cookies: readonly string[]): unknown {

@@ -4,6 +4,7 @@ import { browserSession } from "./browser-session";
 import { incomingFromContext } from "./context-incoming";
 import { forwardedHeaders } from "./forward-headers";
 import type { IncomingRequest } from "./incoming-request";
+import { onBehalfOf } from "./on-behalf";
 import { captureIncomingRequest, isPromise } from "./request-context";
 import { cookieJarFor } from "./request-state";
 import { type SessionCredentials, sessionCredentials } from "./session-credentials";
@@ -26,7 +27,23 @@ export interface CallSession {
   readonly options?: SessionOptions | undefined;
   /** Why the call may not be made with the session, when it may not */
   readonly refusal?: string | undefined;
+  /**
+   * Whether the cookies the API sets go to the browser on the `Response`
+   * the call answers with — the proxy's — rather than through the request
+   * being served
+   */
+  readonly toResponse: boolean;
 }
+
+/** How the request a call is served from relates to the call. */
+interface Served {
+  /** It passed the proxy's origin rule, which the guard would apply again */
+  readonly admitted: boolean;
+  /** The call answers it with a `Response` of its own */
+  readonly toResponse: boolean;
+}
+
+const AMBIENT: Served = { admitted: false, toResponse: false };
 
 /**
  * What the session and `forward` give a call, found as the call starts.
@@ -50,21 +67,30 @@ export function sessionFor(
   target: SessionTarget,
 ): CallSession | Promise<CallSession | undefined> | undefined {
   if (target.session === undefined && target.forward === undefined) return undefined;
+  /* An adapter's description, or the request a proxy request was made in
+     process for, is the request the user made. */
+  const described = context?.incoming ?? onBehalfOf(context?.req);
+  if (described !== undefined) return serverSession(described, target, AMBIENT);
   const named = incomingFromContext(context);
   /* A request the proxy serves has passed its origin rule already, the one
      the guard applies, with the proxy's own list of origins. */
-  if (named !== undefined) return serverSession(named, target, context?.proxyMethod !== undefined);
+  if (named !== undefined) {
+    const admitted = context?.proxyMethod !== undefined;
+    return serverSession(named, target, { admitted, toResponse: context?.res instanceof Response });
+  }
   if (servesOneUser()) return target.session ? browserSession(target, target.session) : undefined;
   const found = captureIncomingRequest();
   if (found === undefined) return undefined;
-  if (!isPromise(found)) return serverSession(found, target);
-  return found.then((incoming) => (incoming ? serverSession(incoming, target) : undefined));
+  if (!isPromise(found)) return serverSession(found, target, AMBIENT);
+  return found.then((incoming) =>
+    incoming ? serverSession(incoming, target, AMBIENT) : undefined,
+  );
 }
 
 function serverSession(
   incoming: IncomingRequest,
   target: SessionTarget,
-  admitted = false,
+  served: Served,
 ): CallSession {
   const session = target.session;
   const credentials = session ? sessionCredentials(cookieJarFor(incoming), session) : undefined;
@@ -82,7 +108,8 @@ function serverSession(
     fetchInit: incoming.fetchInit,
     carries,
     options: session,
-    refusal: vouches && !admitted ? guardRefusal(incoming, target, session) : undefined,
+    refusal: vouches && !served.admitted ? guardRefusal(incoming, target, session) : undefined,
+    toResponse: served.toResponse,
   };
 }
 

@@ -5,8 +5,7 @@ import type { IncomingRequest } from "./incoming-request";
 
 /**
  * The request a caller named in its context, as the session reads it: the
- * one an adapter described, the proxy's own request, or one server code
- * passed with `context: { req }`.
+ * proxy's own request, or one server code passed with `context: { req }`.
  * Headers passed as `context.headers` lie over the request's own; passed
  * alone, they are all there is, and the method that brought them is not
  * known — so it is read as a page's.
@@ -19,7 +18,6 @@ import type { IncomingRequest } from "./incoming-request";
  * ```
  */
 export function incomingFromContext(context: Context | undefined): IncomingRequest | undefined {
-  if (context?.incoming !== undefined) return context.incoming;
   const request = context?.req;
   const extra = context?.headers;
   if (request === undefined && extra === undefined) return undefined;

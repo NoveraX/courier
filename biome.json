@@ -108,7 +108,7 @@
       }
     },
     {
-      "includes": ["e2e/frameworks/apps/**/*.{vue,svelte}"],
+      "includes": ["e2e/frameworks/apps/**/*.{vue,svelte,astro}"],
       "linter": {
         "rules": {
           "correctness": {

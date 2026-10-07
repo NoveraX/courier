@@ -43,7 +43,11 @@ export async function prepare(target: Target, apiUrl: string): Promise<string> {
   return root;
 }
 
-const TELEMETRY_OFF = { NEXT_TELEMETRY_DISABLED: "1", NUXT_TELEMETRY_DISABLED: "1" };
+const TELEMETRY_OFF = {
+  NEXT_TELEMETRY_DISABLED: "1",
+  NUXT_TELEMETRY_DISABLED: "1",
+  ASTRO_TELEMETRY_DISABLED: "1",
+};
 
 /* Each package packed from its build, as `npm publish` would pack it. */
 async function pack(packages: readonly string[], into: string): Promise<Map<string, string>> {

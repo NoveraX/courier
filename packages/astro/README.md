@@ -85,6 +85,19 @@ export default defineConfig({
 
 The proxy reads an upload up to its `maxUploadBytes` — 10 MB unless you pass another, as in `courierHandler({ maxUploadBytes: 50 * 1024 * 1024 })` — and a JSON call up to `maxBodyBytes`, 1 MB.
 
+## The user's session
+
+An API that keeps the user's session describes it in `defineApi`, and every call a page, an endpoint or an action makes — through every `await` — carries the session of the request being served, the cookies the session names and nothing else, once the request is served with it at hand:
+
+```ts
+// src/middleware.ts
+import { requestContext } from "@noverax/courier-astro/request-context"
+
+export const onRequest = requestContext()
+```
+
+The session cookies the API sets reach the browser through Astro's `cookies`. Name your domains in `security.allowedDomains`, or Astro takes every request for `http://localhost`. It needs `AsyncLocalStorage`: Node, or Cloudflare with `nodejs_compat`.
+
 ## With Frontend
 
 Pair with `createProxyCaller` on the client:

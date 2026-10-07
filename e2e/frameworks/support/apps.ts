@@ -84,6 +84,16 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     ready: /Listening on/,
     address: onLocalhost,
   },
+  astro: {
+    /* It serves the routes the SvelteKit application has, so the same checks drive it. */
+    spec: "forms.spec.ts",
+    apiUrlModule: "src/lib/api-url.mjs",
+    build: ["npx", "astro", "build"],
+    start: () => ["node", "dist/server/entry.mjs"],
+    env: production,
+    ready: /listening on/i,
+    address: onLocalhost,
+  },
   spa: {
     spec: "spa.spec.ts",
     apiUrlModule: "src/api-url.ts",

@@ -93,6 +93,27 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
+The user's session is checked in a browser as well, in an application built
+with each framework version Courier supports: Next.js 14, 15 and 16 (16 also
+with `cacheComponents`), SvelteKit 2.19 and the newest 2.x, Nuxt 3 and 4,
+Express 4 and 5, and a React single-page application. Each version
+`e2e/frameworks/targets.json` lists is installed from npm, in the system's
+temporary folder, beside the packages packed as the registry would ship
+them; then the application is built, served and driven in Chromium against
+an API that records every request it receives:
+
+```bash
+npm run build
+npx playwright install chromium
+npm run test:frameworks
+npm run test:frameworks -- next-15 nuxt-4
+```
+
+CI runs one job for each version on every push and pull request, and again
+every week: a version is a range that resolves to its newest release, so a
+framework's new release is checked even when nothing here changes. A version
+Courier starts to support goes into `targets.json`.
+
 ## Commits
 
 Conventional Commits, with an emoji after the colon:

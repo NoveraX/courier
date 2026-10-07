@@ -3,6 +3,7 @@ import type { CallPurpose, MiddlewareContext } from "../middleware/types";
 import { namedHeadersOf } from "./execute-resolve";
 import { forwardedFor } from "./forwarded-for";
 import { headersToObject } from "./helpers";
+import { keepBrowserCredentials } from "./keep-browser-credentials";
 import { filterHeaders, mergeHeaders } from "./merge-headers";
 import { randomId } from "./random-id";
 
@@ -73,6 +74,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
      set — a service token for a backend the end user may not reach — is its
      explicit choice, which the incoming request's copy must not replace. */
   const newHeaders = filterHeaders(mergedNextHeaders, allowedHeaders);
+  keepBrowserCredentials(newHeaders, allowedHeaders, String(source));
   mergeHeaders(baseHeaders as HeadersInit | Record<string, string | undefined> | undefined).forEach(
     (value, name) => {
       newHeaders.set(name, value);

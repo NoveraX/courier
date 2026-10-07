@@ -12,6 +12,12 @@
  * application's origin, its own session included, and forwarded by default
  * they reached whatever upstream a source points at — a third party's too.
  * A source, a base or an endpoint that owns the session names `cookie`.
+ *
+ * `Authorization` is, for the token a script sets — `Bearer`, or a scheme of
+ * the API's own. The credentials a browser sends by itself, in `Basic`,
+ * `Digest`, `Negotiate` or `NTLM`, answer the application's own login
+ * prompt, and go on only where a source or an endpoint names
+ * `authorization` (see `keepBrowserCredentials`).
  */
 export const ALLOWED_HEADERS = [
   "referer",

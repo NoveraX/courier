@@ -8,7 +8,7 @@ import { describeFailure, type WSMessage } from "@noverax/courier/internal";
 import { checkAgainst } from "./check-schema";
 import { sendFrame, sendRefusal } from "./frames";
 import { leaveSubscription } from "./subscription";
-import type { ProxySocket } from "./types";
+import type { ChannelSocket } from "./types";
 
 /**
  * Hand a message to the channel it is sent on, checked against what the
@@ -23,7 +23,7 @@ import type { ProxySocket } from "./types";
  * await handleMessage(socket, { type: "message", topic: served, payload: { text: "hi" } });
  * ```
  */
-export async function handleMessage(socket: ProxySocket, message: WSMessage): Promise<void> {
+export async function handleMessage(socket: ChannelSocket, message: WSMessage): Promise<void> {
   const topic = message.topic;
   const opening = topic === undefined ? undefined : socket.opening.get(topic);
   if (opening) await Promise.allSettled([opening]);
@@ -61,7 +61,7 @@ export async function handleMessage(socket: ProxySocket, message: WSMessage): Pr
  * await handleUnsubscribe(socket, { type: "unsubscribe", id: "2", topic: served });
  * ```
  */
-export async function handleUnsubscribe(socket: ProxySocket, message: WSMessage): Promise<void> {
+export async function handleUnsubscribe(socket: ChannelSocket, message: WSMessage): Promise<void> {
   const topic = message.topic;
   if (topic === undefined) return;
   const subscription = socket.subscriptions.get(topic);

@@ -1,12 +1,15 @@
 /**
- * A `subscribe` on the proxy's WebSocket route, answered as a Courier server
- * answers it: the variables checked against the channel's schema, the topic
- * keyed as its `.topic()` reader says — `renamed` first when that is not the
- * topic asked for — `subscribed` once `onJoin` has run, and `complete` with
- * the reason when the subscription cannot go on.
+ * A `subscribe` on a channel socket, answered as a Courier server answers
+ * it: the channel's mock found in the scenario it is made in, the variables
+ * checked against the channel's schema, the topic keyed as its `.topic()`
+ * reader says — `renamed` first when that is not the topic asked for —
+ * `subscribed` once `onJoin` has run, and `complete` with the reason when
+ * the subscription cannot go on.
  */
 
+import { logger } from "@noverax/courier";
 import { describeFailure, type StreamFailure, type WSMessage } from "@noverax/courier/internal";
+import { unqualifyTopic } from "@noverax/courier/realtime";
 import type { MockChannelFn } from "../../types";
 import type { ChannelShape } from "../prefix-route-types";
 import { checkAgainst } from "./check-schema";
@@ -14,7 +17,7 @@ import { findMappedEndpoint } from "./find-endpoint";
 import { sendEnd, sendFrame } from "./frames";
 import { parseProxyTopic, servedTopic } from "./proxy-topic";
 import { type ChannelRequest, leaveSubscription, openSubscription } from "./subscription";
-import type { ProxySocket } from "./types";
+import type { ChannelRoute, ChannelSocket } from "./types";
 
 /** The path a Courier proxy's WebSocket route is served at, which the mock stands in for */
 export const PROXY_WS_PATH = "/api/ws";
@@ -38,7 +41,7 @@ interface ResolvedChannel {
  * await handleSubscribe(socket, { type: "subscribe", id: "1", topic: "shop.chat.room", payload: { room: "r1" } });
  * ```
  */
-export async function handleSubscribe(socket: ProxySocket, message: WSMessage): Promise<void> {
+export async function handleSubscribe(socket: ChannelSocket, message: WSMessage): Promise<void> {
   const topic = message.topic;
   if (!topic) {
     const id = message.id !== undefined ? { id: message.id } : {};
@@ -54,7 +57,7 @@ export async function handleSubscribe(socket: ProxySocket, message: WSMessage): 
   }
 }
 
-async function subscribe(socket: ProxySocket, message: WSMessage, topic: string): Promise<void> {
+async function subscribe(socket: ChannelSocket, message: WSMessage, topic: string): Promise<void> {
   const channel = resolveChannel(socket, topic);
   if (!("channelFn" in channel)) return sendEnd(socket.ws, topic, message.id, channel);
   const checked = await checkAgainst(channel.shape?.variables, message.payload);
@@ -65,11 +68,14 @@ async function subscribe(socket: ProxySocket, message: WSMessage, topic: string)
   const served = keyedTopic(channel, checked.value);
   if (typeof served !== "string") return sendEnd(socket.ws, topic, message.id, served);
   if (socket.ws.readyState !== socket.ws.OPEN) return;
-  await join(socket, message, topic, { ...channel, topic: served, variables: checked.value });
+  const variables = withPathVariables(socket.route, checked.value);
+  await join(socket, message, topic, { ...channel, topic: served, variables });
 }
 
-function resolveChannel(socket: ProxySocket, topic: string): ResolvedChannel | StreamFailure {
-  const route = parseProxyTopic(topic);
+/* On a channel's own path the socket serves that channel, whatever its
+   topic is called; on the proxy's route the topic names the channel. */
+function resolveChannel(socket: ChannelSocket, topic: string): ResolvedChannel | StreamFailure {
+  const route = socket.route ? ownChannel(socket.route, topic) : parseProxyTopic(topic);
   if (!route) return { code: 4400, message: "Topic must include source name" };
   const state = socket.config.getScenarioState();
   const handler = socket.config.registry.get(route.group, route.method, state);
@@ -81,6 +87,20 @@ function resolveChannel(socket: ProxySocket, topic: string): ResolvedChannel | S
   return { ...route, channelFn: handler.channelFn, shape };
 }
 
+function ownChannel(route: ChannelRoute, topic: string) {
+  return { group: route.group, method: route.method, base: unqualifyTopic(topic).baseTopic };
+}
+
+/* What the channel's own path carries, under what the subscription sent:
+   the path's parameters reach the mock as they did before it sent them. */
+function withPathVariables(route: ChannelRoute | undefined, variables: unknown): unknown {
+  if (!route) return variables;
+  if (variables === undefined) return { ...route.variables };
+  if (typeof variables !== "object" || variables === null || Array.isArray(variables))
+    return variables;
+  return { ...route.variables, ...variables };
+}
+
 function keyedTopic(channel: ResolvedChannel, variables: unknown): string | StreamFailure {
   try {
     return servedTopic(channel.base, variables, channel.shape?.topicKey);
@@ -90,7 +110,7 @@ function keyedTopic(channel: ResolvedChannel, variables: unknown): string | Stre
 }
 
 async function join(
-  socket: ProxySocket,
+  socket: ChannelSocket,
   message: WSMessage,
   asked: string,
   request: ChannelRequest,
@@ -98,6 +118,7 @@ async function join(
   const { ws, config } = socket;
   const previous = socket.subscriptions.get(request.topic);
   if (previous) await leaveSubscription(socket, request.topic, previous);
+  await socket.leaving.get(request.topic);
   const id = message.id !== undefined ? { id: message.id } : {};
   if (request.topic !== asked)
     sendFrame(ws, { type: "renamed", ...id, topic: asked, payload: request.topic });
@@ -110,7 +131,7 @@ async function join(
   config.hooks?.onStart?.(
     opened.id,
     "GET",
-    PROXY_WS_PATH,
+    socket.path,
     request.group,
     request.method,
     request.variables,
@@ -119,6 +140,7 @@ async function join(
   try {
     await opened.handlers.onJoin?.(opened.ctx);
   } catch (error) {
+    logger.warn("MockWS", `onJoin threw (${opened.id})`, error);
     const failure = describeFailure(error, "Subscription failed");
     sendEnd(ws, request.topic, message.id, failure);
     return leaveSubscription(socket, request.topic, opened, failure);

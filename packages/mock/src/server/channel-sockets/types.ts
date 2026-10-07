@@ -1,6 +1,7 @@
 /**
- * What the proxy's WebSocket route keeps: its configuration, each socket,
- * and each subscription a socket holds.
+ * What the mock's channel sockets keep — on the proxy's WebSocket route and
+ * on each channel's own path alike: their configuration, each socket, and
+ * each subscription a socket holds.
  */
 
 import type { HeartbeatConfig } from "@noverax/courier/internal";
@@ -12,8 +13,8 @@ import type { ChannelShape, PrefixMapping } from "../prefix-route-types";
 import type { RequestHooks } from "../route-types";
 import type { WSConnectionRegistry } from "../ws-handler/connection-registry";
 
-/** What the proxy's WebSocket route serves subscriptions from */
-export interface ProxyWSConfig {
+/** What the channel sockets serve subscriptions from */
+export interface ChannelSocketConfig {
   /** The mocks, by group and endpoint */
   registry: MockRegistry;
   /** The source's groups and endpoints: each channel's schemas and `.topic()` reader */
@@ -30,7 +31,7 @@ export interface ProxyWSConfig {
 }
 
 /** One subscription a socket holds */
-export interface ProxySubscription {
+export interface ChannelSubscription {
   /** Names it in the history and to the hooks */
   readonly id: string;
   readonly group: string;
@@ -46,15 +47,37 @@ export interface ProxySubscription {
   left: boolean;
 }
 
+/** The channel a socket opened on a channel's own path serves. */
+export interface ChannelRoute {
+  readonly group: string;
+  readonly method: string;
+  /** What the path carries: its parameters, `:room` as `room`, and its query */
+  readonly variables: Readonly<Record<string, unknown>>;
+}
+
 /** One socket: the subscriptions it holds by topic, and those still opening */
-export interface ProxySocket {
+export interface ChannelSocket {
   readonly ws: NodeWebSocket;
-  readonly config: ProxyWSConfig;
-  /** The upgrade request's headers, which each channel's mock is called with */
-  readonly headers: Headers;
+  readonly config: ChannelSocketConfig;
+  /** The path it was opened on, which its subscriptions are logged under */
+  readonly path: string;
+  /**
+   * The channel it serves, opened on that channel's own path; none on the
+   * proxy's route, where each subscription's topic names its channel
+   */
+  readonly route: ChannelRoute | undefined;
+  /** The upgrade request's headers, as they came */
+  readonly handshake: Headers;
+  /**
+   * The upgrade request's headers with those of the client's `auth` frame,
+   * as a Courier server reads them — which each channel's mock is called with
+   */
+  headers: Headers;
   readonly id: string;
   /** How many subscriptions it has opened, for their ids */
   opened: number;
-  readonly subscriptions: Map<string, ProxySubscription>;
+  readonly subscriptions: Map<string, ChannelSubscription>;
   readonly opening: Map<string, Promise<void>>;
+  /** The `onLeave` still running for each topic, which the next subscription to it waits for */
+  readonly leaving: Map<string, Promise<void>>;
 }

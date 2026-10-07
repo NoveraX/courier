@@ -319,7 +319,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
     expect(leaveCount).toBe(1);
   });
 
-  it("tells the request hooks, which Studio's mock logs hear, of the channel as it opens and ends", async () => {
+  it("tells the request hooks, which Studio's mock logs hear, of each subscription as it opens and ends", async () => {
     server.mock("chat", "room").channel(() => ({ onMessage: () => {} }));
     const started = vi.fn();
     const ended = vi.fn();
@@ -341,6 +341,7 @@ describe("mock ws-handler — real HTTP upgrade", () => {
       "chat",
       "room",
       {},
+      expect.objectContaining({ upgrade: "websocket" }),
     );
     expect(ended).toHaveBeenCalledWith(
       started.mock.calls[0]?.[0],
@@ -651,12 +652,10 @@ describe("mock ws-handler — real broadcast", () => {
     await Promise.all([waitForClose(a), waitForClose(b)]);
   });
 
-  it("preserves the client-supplied qualified topic in outbound data frames", async () => {
-    // Real Courier clients subscribe with `{source}.{group}.{method}#{variables}`,
-    // the variables as canonical JSON
-    // The mock server must echo that exact topic in `subscribed` and outbound
-    // `data` frames so the client topic dispatcher resolves them. Without
-    // this, browser-side handlers silently drop every server message.
+  it("answers on the topic its variables key, renaming one the client keyed otherwise", async () => {
+    // A Courier server derives a subscription's key from the variables it
+    // validated, not from the topic the client sent: one caller cannot hear
+    // what another's variables subscribe to by naming their key.
     server.mock("chat", "room").channel(() => ({
       onJoin(ctx) {
         ctx.send({ greeting: "hello", topic: ctx.topic });
@@ -666,44 +665,45 @@ describe("mock ws-handler — real broadcast", () => {
         ctx.send({ echo: incoming.text });
       },
     }));
+    const asked = "api.chat.room#forged";
+    const served = 'api.chat.room#{"room":"r1"}';
 
-    const clientTopic = "api.chat.room#a1b2c3d4";
     const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
     await waitForOpen(ws);
+    const next = frameQueue(ws);
+    send(ws, { type: "subscribe", topic: asked, id: "s1", payload: { room: "r1" } });
 
-    // Persistent collector — `subscribed` and the onJoin `data` frame
-    // arrive back-to-back; using a one-shot waitForFrame loop would race
-    // and drop the second frame between listener detach/reattach.
-    const frames: WSMessage[] = [];
-    ws.on("message", (raw: Buffer | string) => {
-      try {
-        frames.push(decodeMessage(raw.toString()));
-      } catch {
-        // ignore
-      }
+    expect(await next()).toMatchObject({
+      type: "renamed",
+      id: "s1",
+      topic: asked,
+      payload: served,
     });
+    expect(await next()).toMatchObject({ type: "data", topic: served, payload: { topic: served } });
+    expect(await next()).toMatchObject({ type: "subscribed", id: "s1", topic: served });
+    send(ws, { type: "message", topic: served, payload: { text: "hi" } });
+    expect(await next()).toMatchObject({ type: "data", topic: served, payload: { echo: "hi" } });
 
-    send(ws, { type: "subscribe", topic: clientTopic, id: "s1" });
-    // Wait until we've collected the subscribed ack + the onJoin data frame
-    while (frames.length < 2) await tick();
+    ws.close();
+    await waitForClose(ws);
+  });
 
-    // The onJoin frame comes first: a Courier server confirms a channel once joined.
-    const subscribed = frames.find((f) => f.type === "subscribed")!;
-    expect((subscribed as { topic: string }).topic).toBe(clientTopic);
+  it("keeps the topic a Courier client sends, its key the variables' own", async () => {
+    server.mock("chat", "room").channel(() => ({
+      onJoin(ctx) {
+        ctx.send({ topic: ctx.topic });
+      },
+      onMessage: () => {},
+    }));
+    const topic = 'api.chat.room#{"room":"r1"}';
 
-    const greeting = frames.find((f) => f.type === "data")!;
-    expect(greeting.type).toBe("data");
-    expect((greeting as { topic: string }).topic).toBe(clientTopic);
-    expect((greeting as { payload: { topic: string } }).payload.topic).toBe(clientTopic);
+    const ws = new WebSocket(wsUrlFor(baseUrl, "/chat/room"));
+    await waitForOpen(ws);
+    const next = frameQueue(ws);
+    send(ws, { type: "subscribe", topic, id: "s1", payload: { room: "r1" } });
 
-    send(ws, { type: "message", topic: clientTopic, payload: { text: "hi" } });
-    while (frames.length < 3) await tick();
-
-    const echo = frames[2]!;
-    expect(echo.type).toBe("data");
-    expect((echo as { topic: string }).topic).toBe(clientTopic);
-    expect((echo as { payload: unknown }).payload).toEqual({ echo: "hi" });
-
+    expect(await next()).toMatchObject({ type: "data", topic, payload: { topic } });
+    expect(await next()).toMatchObject({ type: "subscribed", id: "s1", topic });
     ws.close();
     await waitForClose(ws);
   });

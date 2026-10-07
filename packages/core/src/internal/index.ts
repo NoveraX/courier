@@ -16,6 +16,11 @@
 export { discardBody } from "../adapter/discard-body";
 export { isOriginAccepted, isOriginAllowed } from "../adapter/origin-policy";
 export { type BoundedBody, readBoundedBody } from "../adapter/read-body";
+export {
+  type FrameCredentials,
+  frameCredentials,
+  frameHeadersOver,
+} from "../adapter/ws-frame-credentials";
 export { discoverAppOrigin, getAppOriginParsed } from "../app-origin";
 export {
   buildClientProxy,

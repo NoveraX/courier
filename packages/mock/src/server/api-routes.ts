@@ -7,7 +7,7 @@
  * - `/api/:group/:method` — REST-style addressing by name
  *
  * The proxy's WebSocket route, `/api/ws`, is served on the upgrade, in
- * `proxy-ws`.
+ * `channel-sockets`, as each channel's own path is.
  */
 
 import type { Hono, Context as HonoContext } from "hono";

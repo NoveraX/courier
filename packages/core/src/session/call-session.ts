@@ -40,6 +40,14 @@ export interface CallSession {
    * write that finds none, of an API that names where it comes from
    */
   readonly primeFrom?: string | undefined;
+  /**
+   * What tells the user's calls apart where the cookies the platform sends
+   * are out of the call's reach — in a browser or an app; a cache with
+   * scope `"session"` partitions by it
+   */
+  readonly partition?: string | undefined;
+  /** Whether the call is a write that renews that partition once it is answered */
+  readonly renewsPartition?: boolean | undefined;
 }
 
 /**

@@ -28,6 +28,13 @@ export type MiddlewareContext = {
    */
   carriesSession?: boolean | undefined;
   /**
+   * What tells the user's calls apart where the credentials the platform
+   * sends are out of the call's reach — in a browser or an app, which keep
+   * the session's cookies themselves. A cache with scope `"session"`
+   * partitions by it there, and by the call's own credentials elsewhere.
+   */
+  sessionPartition?: string | undefined;
+  /**
    * Fires when whoever made the call stops waiting for it: the signal given
    * to the call, or the incoming request's when a proxy runs it. Middleware
    * that waits — between retries, in a queue — should stop when it fires.

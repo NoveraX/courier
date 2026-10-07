@@ -26,6 +26,25 @@ The proxy is one route of your server.
 | Fastify | `@noverax/courier-fastify` | `app.register(courierPlugin, { prefix: "/api/request" })` | [Fastify](/docs/frameworks/fastify) |
 | NestJS | `@noverax/courier-nestjs` | `consumer.apply(courierMiddleware()).forRoutes("api/request")` | [NestJS](/docs/frameworks/nestjs) |
 
+## The user's session in server code
+
+An API that keeps a `session` gets the user's session with every call server code makes for a request, once the framework serves the request with it at hand. Each adapter does that in one line; the versions listed are the ones checked in a real application on every change.
+
+| Framework | Serve each request with the session | Checked |
+| --- | --- | --- |
+| Next.js | `createServerCaller(api)` | 14, 15, 16 |
+| Nuxt | `export default defineNitroPlugin(requestContextPlugin)` | 3, 4 |
+| SvelteKit | `registerRequestContext(svelteKitRequestContext(getRequestEvent))`, or `requestContextHandle()` | 2.19, 2 |
+| Astro | `export const onRequest = requestContext()` | 5 |
+| React Router | `export const middleware = [requestContext()]` | 7, 8 |
+| SolidStart | `registerRequestContext(solidStartRequestContext(getRequestEvent))` | 1, 2 |
+| Express | `app.use(requestContext())` | 4, 5 |
+| Fastify | `app.addHook("onRequest", requestContext())` | 4, 5 |
+| Hono | `app.use(requestContext())` | 4 |
+| NestJS | `app.use(requestContext())`, on the Express or the Fastify platform | 10, 11, 12 |
+
+Where each goes, and what each framework does differently, is in [User Sessions](/docs/server-side/session#framework-setup).
+
 ## The client side
 
 The adapters serve the proxy. The typed caller the browser calls it with has guides of its own: [React](/docs/frameworks/react), with React Query, and [Vue](/docs/frameworks/vue). A mobile app calls its API directly: see [React Native & Expo](/docs/frameworks/react-native).

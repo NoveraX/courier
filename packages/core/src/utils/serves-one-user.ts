@@ -1,3 +1,5 @@
+import { isReactNative } from "./is-react-native";
+
 /**
  * Whether this runtime serves one user: a browser, or a React Native app,
  * which has no `document` but sets `navigator.product` to `"ReactNative"`.
@@ -11,11 +13,5 @@
  * ```
  */
 export function servesOneUser(): boolean {
-  if (Reflect.get(globalThis, "document") !== undefined) return true;
-  const navigator: unknown = Reflect.get(globalThis, "navigator");
-  return (
-    typeof navigator === "object" &&
-    navigator !== null &&
-    Reflect.get(navigator, "product") === "ReactNative"
-  );
+  return Reflect.get(globalThis, "document") !== undefined || isReactNative();
 }

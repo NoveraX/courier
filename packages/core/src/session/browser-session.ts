@@ -17,14 +17,19 @@ import type { SessionOptions } from "./types";
  *
  * @param target - The call, as the session reads it
  * @param session - The API's session
+ * @param jar - The cookies a script can read, by name: the page's, unless given
  * @returns What the call carries
  * @example
  * ```ts
  * browserSession(target, { cookies: ["sid"], csrf: { cookie: "XSRF-TOKEN", header: "x-xsrf-token" } });
  * ```
  */
-export function browserSession(target: SessionTarget, session: SessionOptions): CallSession {
-  const credentials = sessionCredentials(cookieJarOf(documentCookie()), session);
+export function browserSession(
+  target: SessionTarget,
+  session: SessionOptions,
+  jar: ReadonlyMap<string, string> = cookieJarOf(documentCookie()),
+): CallSession {
+  const credentials = sessionCredentials(jar, session);
   const headers: Array<[string, string]> = [];
   if (credentials.bearer) headers.push(["authorization", `Bearer ${credentials.bearer}`]);
   if (credentials.csrf && session.csrf && target.unsafeMethod) {

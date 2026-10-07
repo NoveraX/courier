@@ -1,59 +1,60 @@
-import { encodeMessage, type StreamFailure } from "@noverax/courier/internal";
+import { encodeMessage } from "@noverax/courier/internal";
 import type { WebSocket as NodeWebSocket } from "ws";
 
 import type { WSConnectionRegistry } from "./connection-registry";
-import { type ConnectionState, type MessageRouterContext, parseMessage } from "./message-router";
-import { endSubscriptionAndClose } from "./protocol";
+import type { MessageRouterContext } from "./message-router";
+import { sendSubscriptionEnd } from "./protocol";
 
-/**
- * A channel whose handlers could not be built is refused when the client
- * subscribes — the one moment its topic is known — rather than with an error
- * it could not match and a close it would retry.
- */
-export function refuseOnSubscribe(ws: NodeWebSocket, topic: string, failure: StreamFailure): void {
-  ws.on("message", (raw: Buffer | string) => {
-    const msg = parseMessage(ws, raw);
-    if (msg?.type === "subscribe") endSubscriptionAndClose(ws, msg.topic ?? topic, failure);
-  });
+/** What one subscription's context is made from. */
+export interface ChannelContextInput {
+  readonly ws: NodeWebSocket;
+  /** The topic as the client subscribed to it, which every frame it is sent names */
+  readonly topic: string;
+  readonly variables: Record<string, unknown>;
+  readonly connectionId: string;
+  readonly registry: WSConnectionRegistry;
+  /** Fires when the subscription ends */
+  readonly signal: AbortSignal;
+  /** Ends the subscription, once the client has been told */
+  readonly end: () => void;
 }
 
-export function buildChannelContext(
-  ws: NodeWebSocket,
-  initialTopic: string,
-  variables: Record<string, unknown>,
-  connectionId: string,
-  registry: WSConnectionRegistry,
-  state: ConnectionState,
-): MessageRouterContext {
-  // `topic` is mutable: when the client subscribes with a fully qualified
-  // topic — `{source}.{group}.{method}`, then `#` and its variables as
-  // canonical JSON — the message router rewrites `ctx.topic` so outbound
-  // `data` frames echo the client's exact topic. Without this, clients
-  // dispatch frames by topic and would silently drop everything sent under
-  // the server-local short topic.
+/**
+ * The context a subscription's handlers receive. `send` answers on the
+ * topic the client subscribed to — the source name, then the variables as
+ * canonical JSON after `#` — which its client dispatches frames by; once
+ * the subscription has ended it sends nothing, so a timer the handlers left
+ * running cannot reach a subscription the socket took up again on the same
+ * topic. `close` ends this subscription alone: the socket serves the others.
+ *
+ * @param input - The socket, the subscription's topic and variables, and how it ends
+ * @returns The context
+ * @example
+ * ```ts
+ * const ctx = buildChannelContext({ ws, topic, variables, connectionId, registry, signal, end });
+ * ```
+ */
+export function buildChannelContext(input: ChannelContextInput): MessageRouterContext {
+  const { ws, registry, signal } = input;
   const ctx: MessageRouterContext = {
-    topic: initialTopic,
-    variables,
-    connectionId,
+    topic: input.topic,
+    variables: input.variables,
+    connectionId: input.connectionId,
     meta: emptyMeta(),
-    signal: state.ended.signal,
+    signal,
     send(data: unknown) {
-      if (ws.readyState === ws.OPEN) {
-        ws.send(encodeMessage({ type: "data", topic: ctx.topic, payload: data }));
-      }
+      if (signal.aborted || ws.readyState !== ws.OPEN) return;
+      ws.send(encodeMessage({ type: "data", topic: ctx.topic, payload: data }));
     },
     broadcast(targetTopic: string, data: unknown) {
       registry.broadcast(targetTopic, data, ws);
     },
     close(code?: number, reason?: string) {
-      if (state.ended.signal.aborted) return;
-      state.ended.abort();
+      if (signal.aborted) return;
       const failed = code !== undefined && code !== 1000;
-      endSubscriptionAndClose(
-        ws,
-        ctx.topic,
-        failed ? { code, message: reason ?? "Channel closed" } : undefined,
-      );
+      const failure = failed ? { code, message: reason ?? "Channel closed" } : undefined;
+      sendSubscriptionEnd(ws, ctx.topic, undefined, failure);
+      input.end();
     },
   };
   return ctx;

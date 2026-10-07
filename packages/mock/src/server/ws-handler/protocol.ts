@@ -14,23 +14,31 @@ export function sendError(ws: NodeWebSocket, failure: StreamFailure, topic?: str
 }
 
 /**
- * Tell the client the subscription to `topic` ended — failed with `failure`,
- * or finished — then close the socket once that frame is on the wire.
+ * Tell the client its subscription to `topic` ended — failed with `failure`,
+ * or finished. The socket stays open, as a Courier server's does: a client
+ * keeps one socket for the channels it reaches at an address, and the frame
+ * names the topic, so that channel alone ends rather than retrying a close.
  *
- * A mock channel has a socket of its own, so its end is the socket's. The
- * frame names the topic, so the client matches it to its channel rather than
- * retrying a bare 1011 close — and repeating the failure — forever.
+ * @param ws - The socket the subscription was on
+ * @param topic - The topic as the client subscribed to it
+ * @param id - The id of the client's subscribe, when the subscription ends as it opens
+ * @param failure - Why it ended, when it failed
  */
-export function endSubscriptionAndClose(
+export function sendSubscriptionEnd(
   ws: NodeWebSocket,
   topic: string,
+  id?: string,
   failure?: StreamFailure,
 ): void {
   if (ws.readyState !== ws.OPEN) return;
-  const frame = encodeMessage({ type: "complete", topic, ...(failure && { error: failure }) });
-  ws.send(frame, () => {
-    if (ws.readyState === ws.OPEN) ws.close(1000, "subscription ended");
-  });
+  ws.send(
+    encodeMessage({
+      type: "complete",
+      topic,
+      ...(id !== undefined && { id }),
+      ...(failure && { error: failure }),
+    }),
+  );
 }
 
 /** Cryptographically random connection ID — 8 random bytes → 16 hex chars */

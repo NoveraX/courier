@@ -1,5 +1,13 @@
 import type { BackoffConfig } from "../types";
 
+/** What one connection of a stream is opened with, besides the stream's own headers. */
+export interface SSEConnectInit {
+  /** Headers the stream's own `headers` override — the user's session's */
+  readonly headers?: Readonly<Record<string, string>> | undefined;
+  /** What `fetch` is given besides the headers and the signal — `credentials` */
+  readonly init?: Readonly<RequestInit> | undefined;
+}
+
 /** Options for subscribeSSE */
 export interface SubscribeSSEOptions {
   /** Custom headers (e.g. Authorization) — why we use fetch, not EventSource */
@@ -27,4 +35,11 @@ export interface SubscribeSSEOptions {
    * instrumentation layer to capture response headers in direct mode.
    */
   onResponse?: ((response: Response) => void) | undefined;
+  /**
+   * Asked before every connection — the first and each reconnect — for what
+   * it is opened with besides `headers`: the headers of the user's session,
+   * as they are now, and what `fetch` is given. A rejection is a failed
+   * connection, retried as a dropped one is.
+   */
+  beforeConnect?: (() => SSEConnectInit | Promise<SSEConnectInit>) | undefined;
 }

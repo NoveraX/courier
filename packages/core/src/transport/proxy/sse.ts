@@ -27,6 +27,12 @@ export interface ProxySSEDefaults {
   origin?: ResolveOrigin | undefined;
   /** Default headers merged into every SSE connection */
   headers?: Record<string, string> | undefined;
+  /**
+   * Whether the browser sends its cookies to the proxy route with a stream,
+   * as the caller's calls do: `"include"` unless the caller says otherwise,
+   * so a proxy route on another origin receives the user's session
+   */
+  credentials?: RequestCredentials | undefined;
 }
 
 /**
@@ -41,12 +47,12 @@ export interface ProxySSEDefaults {
  * avoid producing a duplicate Timeline entry.
  */
 export function createProxySSEFactory(source: string, defaults: ProxySSEDefaults = {}): SSEFactory {
-  const { proxyPath, origin, headers: defaultHeaders } = defaults;
+  const { proxyPath, origin, headers: defaultHeaders, credentials = "include" } = defaults;
 
   return function subscribeSSE(group, method, variables, options) {
     const headers = layerHeaders(defaultHeaders, options.headers);
     const sseBase = resolveProxyPath("sse", proxyPath, origin);
     const url = buildProxySSEUrl(sseBase, source, group, method, variables);
-    return executeSSE(url, headers);
+    return executeSSE(url, { headers, credentials });
   };
 }

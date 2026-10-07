@@ -1,5 +1,6 @@
 import { createLogger } from "../../logger";
 import { isFieldRecord } from "../../utils/body-kind";
+import { layerHeaders } from "../../utils/layer-headers";
 import type { StreamFailure } from "../describe-failure";
 import { ConnectionError, fromErrorCode, type RealtimeError } from "../errors";
 import { SSE_CONTROL_EVENTS } from "./control-events";
@@ -38,8 +39,10 @@ export async function readConnection<TData>(
   };
 
   try {
+    const opened = await ctx.config.beforeConnect?.();
     const response = await fetch(ctx.url, {
-      headers: requestHeaders(ctx),
+      ...opened?.init,
+      headers: layerHeaders(opened?.headers, requestHeaders(ctx)),
       signal: connection.signal,
     });
     if (!response.ok) throw await refusal(response);

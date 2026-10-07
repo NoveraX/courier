@@ -6,6 +6,7 @@ import type { BackoffConfig } from "../types";
 import type { EventQueue } from "./event-queue";
 import { type ConnectionEnd, readConnection } from "./sse-read";
 import { SSEResponseError } from "./sse-response";
+import type { SubscribeSSEOptions } from "./sse-types";
 
 const log = createLogger("SSE");
 
@@ -21,6 +22,8 @@ export interface SSEConnectionConfig {
   parse: (raw: string) => unknown;
   /** Optional callback fired once per successful fetch (used by studio instrumentation) */
   onResponse?: ((response: Response) => void) | undefined;
+  /** What each connection is opened with besides `headers`, asked for before it opens */
+  beforeConnect?: SubscribeSSEOptions["beforeConnect"];
 }
 
 /** Mutable context shared between connection loop and stream consumer */

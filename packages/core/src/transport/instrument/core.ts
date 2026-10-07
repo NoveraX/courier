@@ -28,7 +28,14 @@ export interface StreamInstrumentation {
    * (e.g. fetch response headers) becomes available after the initial
    * open. The store handler merges into the existing entry by requestId.
    */
-  updateMeta(patch: { responseHeaders?: Record<string, string> }): void;
+  /**
+   * Tell Studio what a connection of the stream sent — the session's headers
+   * read as it opened — and what its answer carried.
+   */
+  updateMeta(patch: {
+    requestHeaders?: Record<string, string>;
+    responseHeaders?: Record<string, string>;
+  }): void;
   /** Emit stream:close exactly once (idempotent across all paths) */
   emitClose(reason: "complete" | "error" | "disconnect"): void;
   /** Emit stream:error then close with reason "error" */
@@ -58,6 +65,8 @@ export function beginStream(
   let seq = 0;
   let totalBytes = 0;
   let closed = false;
+  let requestHeaders = meta.requestHeaders;
+  let responseHeaders: Record<string, string> | undefined;
 
   studioHooks.onStreamOpen({
     requestId,
@@ -89,6 +98,8 @@ export function beginStream(
     },
     updateMeta(patch) {
       if (closed) return;
+      requestHeaders = patch.requestHeaders ?? requestHeaders;
+      responseHeaders = patch.responseHeaders ?? responseHeaders;
       // Re-emit stream:open with the same requestId so the store handler
       // merges the new metadata into the existing entry.
       studioHooks.onStreamOpen?.({
@@ -99,8 +110,8 @@ export function beginStream(
         transport: meta.transport,
         mode: meta.mode,
         timestamp: startTime,
-        ...(meta.requestHeaders && { requestHeaders: meta.requestHeaders }),
-        ...(patch.responseHeaders && { responseHeaders: patch.responseHeaders }),
+        ...(requestHeaders && { requestHeaders }),
+        ...(responseHeaders && { responseHeaders }),
       });
     },
     emitClose(reason) {

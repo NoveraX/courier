@@ -170,6 +170,8 @@ A browser's WebSocket carries the page's cookies on its handshake, and nothing e
 - its `ws.auth`, which the server's `onConnect` reads as `auth`;
 - the headers it could not put on the handshake, which the server reads as the handshake's own: `onConnect`'s `request` carries them, and so does every subscription's middleware and session. A header the handshake has keeps its value, and none a browser or a proxy sets itself — `Cookie`, `Origin`, `Host`, the `Sec-` and forwarding headers — is taken from the frame.
 
+Those headers are the ones the caller's calls send: the API's `headers`, the caller's `headers`, and the user's [session](/docs/server-side/session#channels) — its bearer token, and on a server its cookies and `forward`'s headers. Where the platform's WebSocket takes headers on its handshake — on a server, in a React Native app — they go there instead, and the frame carries `auth` alone.
+
 ```ts title="server.ts"
 const server = await createCourierServer({
   sources,

@@ -1,5 +1,6 @@
-import { acquireConnection } from "./caller-ws";
+import { acquireConnection, type ConnectionLease, leaseWhenFound } from "./caller-ws";
 import { createConnectionState } from "./connection-state";
+import { RealtimeError } from "./errors";
 import { forwardConnectionStatus } from "./forward-status";
 import { createEventQueue } from "./sse/event-queue";
 import type { ConnectionStatus, SSESubscription } from "./types";
@@ -13,17 +14,19 @@ import type { WSConnectionConfig } from "./ws/ws-types";
  * Reads through the same bounded queue as an SSE subscription, so its
  * events are not kept for the subscription's life. Iteration ends when the
  * server finishes the subscription, rejects with the `RealtimeError` it
- * failed or was refused with, and leaving the loop early unsubscribes.
+ * failed or was refused with, and leaving the loop early unsubscribes. The
+ * socket's options may still be being found — whose session it opens with,
+ * on a server — and the subscription takes its socket once they are.
  */
 export function executeWSPush<TData>(
   url: string,
   topic: string,
   variables?: unknown,
-  config?: Partial<WSConnectionConfig>,
+  config?: Partial<WSConnectionConfig> | Promise<Partial<WSConnectionConfig> | undefined>,
 ): SSESubscription<TData> {
   const qTopic = qualifyTopic(topic, variables);
-  const lease = acquireConnection(url, config);
-  const conn = lease.connection;
+  let lease: ConnectionLease | undefined =
+    config instanceof Promise ? undefined : acquireConnection(url, config);
   const state = createConnectionState();
   const queue = createEventQueue<TData>();
   let stop: (() => void) | undefined;
@@ -34,7 +37,7 @@ export function executeWSPush<TData>(
     ended = true;
     stop?.();
     stop = undefined;
-    lease.release();
+    lease?.release();
     state.set("disconnected");
     if (error) queue.fail(error);
     else queue.finish();
@@ -46,6 +49,13 @@ export function executeWSPush<TData>(
     await Promise.resolve();
     if (ended) return;
     state.set("connecting");
+    if (lease === undefined) {
+      const taken = await leaseWhenFound(url, Promise.resolve(config));
+      if (taken instanceof RealtimeError) return finish(taken);
+      if (ended) return taken.release();
+      lease = taken;
+    }
+    const conn = lease.connection;
 
     const unsubStatus = conn.onStatusChange((s) => {
       if (!ended) forwardConnectionStatus(state, s);

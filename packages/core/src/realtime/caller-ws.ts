@@ -1,4 +1,6 @@
 import { LIMITS } from "../adapter/limits";
+import { createLogger } from "../logger";
+import { ConnectionError, RealtimeError } from "./errors";
 import { createWSConnection } from "./ws/ws-connection";
 import type { WSConnection, WSConnectionConfig } from "./ws/ws-types";
 
@@ -18,6 +20,8 @@ export interface ConnectionLease {
   release(): void;
 }
 
+const log = createLogger("WS");
+
 /** Shared WS connection pool — one connection per URL and caller options */
 const pool = new Map<string, PooledConnection>();
 
@@ -31,8 +35,9 @@ let lastOptionsId = 0;
  * have their own beside it, so a second caller's are not ignored for the
  * socket the first one opened.
  */
-function poolKey(url: string, config: object | undefined): string {
+function poolKey(url: string, config: Partial<WSConnectionConfig> | undefined): string {
   if (config === undefined) return url;
+  if (config.shareKey !== undefined) return `${config.shareKey} ${url}`;
   let id = optionsIds.get(config);
   if (id === undefined) {
     id = ++lastOptionsId;
@@ -95,6 +100,34 @@ export function acquireConnection(
       });
     },
   };
+}
+
+/**
+ * Take the shared connection once its options are found — on a server,
+ * whose session the socket opens with. Options that cannot be found, or a
+ * URL no connection opens, are what the subscription fails with.
+ *
+ * @param url - The WebSocket URL
+ * @param config - The options, still being found
+ * @returns The lease, or why there is none
+ * @example
+ * ```ts
+ * const taken = await leaseWhenFound(url, options);
+ * if (taken instanceof RealtimeError) finish(taken);
+ * ```
+ */
+export async function leaseWhenFound(
+  url: string,
+  config: Promise<Partial<WSConnectionConfig> | undefined>,
+): Promise<ConnectionLease | RealtimeError> {
+  try {
+    return acquireConnection(url, await config);
+  } catch (error) {
+    log.warn("A socket could not be opened", error);
+    if (error instanceof RealtimeError) return error;
+    const reason = error instanceof Error ? error.message : String(error);
+    return new ConnectionError(`The socket could not be opened: ${reason}`);
+  }
 }
 
 /** The live pooled connection for a pool key; one that closed for good is replaced. */

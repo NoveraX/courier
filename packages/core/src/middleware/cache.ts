@@ -1,6 +1,7 @@
 import { createLogger } from "../logger";
 import { studioHooks } from "../studio";
 import { cloneData } from "../utils/clone-data";
+import { sha256Hex } from "../utils/sha256-hex";
 import { defineMiddleware } from "./define";
 import type { Middleware, MiddlewareContext, MiddlewareResponse } from "./types";
 
@@ -199,9 +200,7 @@ async function buildKey(ctx: MiddlewareContext, scope: CacheScope): Promise<stri
 async function credentialsOf(ctx: MiddlewareContext): Promise<string> {
   const material = ctx.sessionPartition ?? credentialHeaders(ctx);
   if (material === "") return "anonymous";
-  const bytes = new TextEncoder().encode(material);
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-  return `session:${Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+  return `session:${await sha256Hex(material)}`;
 }
 
 function credentialHeaders(ctx: MiddlewareContext): string {

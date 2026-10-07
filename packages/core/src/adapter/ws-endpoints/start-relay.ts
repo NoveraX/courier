@@ -7,8 +7,13 @@
 
 import { describeFailure } from "../../realtime/describe-failure";
 import type { RealtimeError } from "../../realtime/errors";
+import { credentialsFor } from "../../realtime/ws/ws-credentials";
+import type { WSConnectionConfig } from "../../realtime/ws/ws-types";
 import { channelAddress } from "../../transport/direct/channel-address";
+import { sourceHeadersOf } from "../../transport/direct/stream-request";
 import { lazyChannel } from "../../transport/lazy-streams";
+import { layerHeaders } from "../../utils/layer-headers";
+import { sha256Hex } from "../../utils/sha256-hex";
 import type { WSSocketContext } from "../ws-context";
 import { closeSubscriptionEntry } from "../ws-dispatch-helpers";
 import { sendSubscriptionEnd } from "../ws-subscription-end";
@@ -28,19 +33,24 @@ export interface RelayTarget {
 /**
  * Relay a subscription to a channel another server serves.
  *
- * The upstream subscription is shared by every subscriber of this server
- * with the same variables, as a direct caller's are. An error the upstream
- * ends it with ends the client's, with the upstream's code; an error about
- * one message is passed on and the subscription goes on. The client leaving
- * lets go of the upstream subscription.
+ * The upstream is opened with the headers the subscription is relayed
+ * with — the source's `headers`, then what the proxy sends on every call:
+ * the request headers its policy lets through, the user's session and
+ * `forward`, whatever the middleware set — as a relayed stream is. The
+ * subscriptions relayed with the same headers share an upstream socket, as
+ * a direct caller's channels do; two users' never share one. An error the
+ * upstream ends it with ends the client's, with the upstream's code; an
+ * error about one message is passed on and the subscription goes on. The
+ * client leaving lets go of the upstream subscription.
  *
  * @param ctx - The client's socket
  * @param topic - The topic the client is subscribed under
  * @param target - The channel
  * @param variables - Its validated variables
+ * @param headers - What the subscription's middleware and session produced
  * @example
  * ```ts
- * startRelay(ctx, 'api.chat.room#{"room":"r1"}', { api, group: "chat", method: "room" }, { room: "r1" });
+ * startRelay(ctx, 'api.chat.room#{"room":"r1"}', { api, group: "chat", method: "room" }, { room: "r1" }, headers);
  * ```
  */
 export function startRelay(
@@ -48,12 +58,14 @@ export function startRelay(
   topic: string,
   target: RelayTarget,
   variables: unknown,
+  headers: Headers,
 ): void {
   const address = channelAddress(target.api, target.group, target.method, variables);
+  const options = upstreamOptions(layerHeaders(sourceHeadersOf(target.api), headers));
   /* The channel client loads with the first relayed channel. */
   const upstream = lazyChannel(
     import("../../realtime/ws-channel-client").then(({ executeWSChannel }) =>
-      executeWSChannel<unknown, unknown>(address.url, address.topic, variables),
+      executeWSChannel<unknown, unknown>(address.url, address.topic, variables, options),
     ),
   );
   let ended = false;
@@ -104,4 +116,12 @@ export function startRelay(
       ctx.sendMessage({ type: "error", topic, error: NOT_RELAYED });
     },
   });
+}
+
+/* An upstream socket opened with these headers on its handshake, shared by
+   the subscriptions relayed with the same: named by their digest, so the
+   credentials do not sit in the pool's keys. */
+async function upstreamOptions(sent: Record<string, string>): Promise<Partial<WSConnectionConfig>> {
+  const shareKey = await sha256Hex(JSON.stringify(Object.entries(sent).sort()));
+  return { shareKey, credentials: () => credentialsFor(sent, undefined) };
 }

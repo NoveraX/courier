@@ -46,6 +46,22 @@ export function streamRequest(
   const address = addressCall(definition, method, variables);
   return {
     url: buildDirectSSEUrl(textOf(options, "baseURL"), prefix, address.path, address.variables),
-    sourceHeaders: layerHeaders(fieldOf(options, "headers")),
+    sourceHeaders: sourceHeadersOf(api),
   };
+}
+
+/**
+ * The headers a source sends every call with, as its definition declares
+ * them in `headers` — an API key, an `Authorization`.
+ *
+ * @param api - The source
+ * @returns Its headers, under their lower-case names
+ * @example
+ * ```ts
+ * sourceHeadersOf(defineApi({ baseURL, headers: { "X-Api-Key": key }, endpoints }));
+ * // → { "x-api-key": "…" }
+ * ```
+ */
+export function sourceHeadersOf(api: object): Record<string, string> {
+  return layerHeaders(fieldOf(fieldOf(api, "options"), "headers"));
 }

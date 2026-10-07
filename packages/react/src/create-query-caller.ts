@@ -65,7 +65,11 @@ export function createQueryCaller<TApi extends DefinedApi>(
   const httpExecutor = createDirectHTTPExecutor(api, defaults);
   /* Their client code is loaded on the first subscription or channel, so an
      application that opens none does not carry it. */
-  const streaming = directStreamingFactories(api, { headers: defaults?.headers, ws: defaults?.ws });
+  const streaming = directStreamingFactories(api, {
+    headers: defaults?.headers,
+    ws: defaults?.ws,
+    context: defaults?.context,
+  });
 
   const subscribeFn: SubscribeFn = (group, method, variables) =>
     streaming.sse(group, method, variables, {});

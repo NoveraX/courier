@@ -94,13 +94,13 @@ export function createProxyCaller(source: string, defaults: ProxyCallerDefaults 
      client with no source sends every call as HTTP. Their client code is
      loaded on the first stream or channel, so an application that makes
      none does not carry it, and their proxy paths are resolved on the first
-     call, so a missing `proxyPath.ws` is reported there. defaults.headers is
-     not given to the WS factories: a browser WebSocket cannot send headers
-     on its upgrade (see `ProxyWSDefaults` for what authenticates it). */
+     call, so a missing `proxyPath.ws` is reported there. A socket carries
+     defaults.headers in its first frame, which the proxy reads as its
+     handshake's: a browser WebSocket cannot send headers on its upgrade. */
   const streaming: StreamingFactories = apiSource
     ? proxyStreamingFactories(source, {
         sse: { proxyPath: mergedProxyPath, headers: defaults.headers },
-        ws: { proxyPath: mergedProxyPath, ws: defaults.ws },
+        ws: { proxyPath: mergedProxyPath, ws: defaults.ws, headers: defaults.headers },
       })
     : {};
 

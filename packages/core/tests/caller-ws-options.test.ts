@@ -2,19 +2,18 @@
  * A caller's `ws` options reach the socket its channels share, end to end on
  * a real `ws` server.
  *
- * `getAuthToken`, the backoff, the heartbeat and the queue limits are
- * options of the connection, passed through the caller: without them a
- * server's `auth_required` would go unanswered — "no getAuthToken
- * configured" — and the connection close, however the application means to
- * refresh.
+ * `auth`, the backoff, the heartbeat and the queue limits are options of the
+ * connection, passed through the caller: `auth` is what `onConnect` reads,
+ * sent in the socket's first frame — never its URL — and sent again, asked
+ * for anew, when the server asks with `auth_required`.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocketServer } from "ws";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
-import { sendAuthRequired } from "../src/adapter/ws-token-refresh";
+import { sendAuthRequired } from "../src/adapter/ws-reauth";
 import type { WSHandler } from "../src/adapter/ws-types";
 import { createCaller } from "../src/caller";
 import { defineApi } from "../src/define/api";
@@ -57,10 +56,19 @@ afterEach(async () => {
   server = undefined;
 });
 
-/** Serve `api.live.room` on every path, refreshing tokens into the connection's meta. */
+const connected: Array<{ auth: unknown; url: string }> = [];
+
+/** Serve `api.live.room` on every path, keeping the `auth` a client connects and reconnects with. */
 async function serve(): Promise<string> {
   registerSources({ api: served } as never);
-  handler = createWSHandler({ onTokenRefresh: ({ token }) => ({ token }) });
+  connected.length = 0;
+  handler = createWSHandler({
+    onConnect: ({ auth, request }) => {
+      connected.push({ auth, url: request.url });
+      return { token: auth?.token };
+    },
+    onReauth: ({ auth }) => ({ token: auth?.token }),
+  });
   const ws = handler;
   server = createServer();
   attachWebSocketUpgrade(server, {
@@ -72,8 +80,9 @@ async function serve(): Promise<string> {
   return `127.0.0.1:${(server.address() as AddressInfo).port}`;
 }
 
-/** Ask the one open connection for a token, and read what it holds once the deadline passed. */
+/** Ask the one open connection for its credentials, and read what it holds once the deadline passed. */
 async function refreshRoundTrip(): Promise<{ meta: unknown; connections: number }> {
+  await vi.waitFor(() => expect(handler?.connections.count).toBe(1));
   const connections = handler?.connections;
   const [connection] = connections?.list() ?? [];
   if (!connections || !connection) throw new Error("no connection was opened");
@@ -83,19 +92,20 @@ async function refreshRoundTrip(): Promise<{ meta: unknown; connections: number 
 }
 
 describe("a proxy caller's ws options", () => {
-  it("answer the server's auth_required with a token from getAuthToken", async () => {
+  it("send auth in the socket's first frame, and again, asked for anew, when the server asks", async () => {
     const host = await serve();
     let issued = 0;
     const client = createProxyCaller<typeof served>("api", {
       source: served,
       proxyPath: { ws: `ws://${host}/api/ws` },
-      ws: { getAuthToken: () => `token-${++issued}` },
+      ws: { auth: () => ({ token: `token-${++issued}` }) },
     });
     const room = client.live.room();
     await settle(80);
 
     const after = await refreshRoundTrip();
 
+    expect(connected).toEqual([{ auth: { token: "token-1" }, url: `http://${host}/api/ws` }]);
     expect(after).toEqual({ meta: { token: "token-2" }, connections: 1 });
     expect(room.status).toBe("connected");
     room.close();
@@ -122,7 +132,7 @@ describe("a proxy caller's ws options", () => {
 });
 
 describe("a direct caller's ws options", () => {
-  it("answer the server's auth_required with a token from getAuthToken", async () => {
+  it("send auth in the socket's first frame, and again when the server asks", async () => {
     const host = await serve();
     const remote = defineApi({
       name: "api",
@@ -134,12 +144,13 @@ describe("a direct caller's ws options", () => {
         }),
       },
     });
-    const client = createCaller(remote, { ws: { getAuthToken: () => "direct-token" } });
+    const client = createCaller(remote, { ws: { auth: { token: "direct-token" } } });
     const room = client.live.room();
     await settle(80);
 
     const after = await refreshRoundTrip();
 
+    expect(connected.map((c) => c.auth)).toEqual([{ token: "direct-token" }]);
     expect(after).toEqual({ meta: { token: "direct-token" }, connections: 1 });
     room.close();
   });

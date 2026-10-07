@@ -1,6 +1,7 @@
 import { LIMITS } from "../../adapter/limits";
 import { createLogger } from "../../logger";
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
+import { isReactNative } from "../../utils/is-react-native";
 import { createConnectionState } from "../connection-state";
 import { createMessageQueue } from "./message-queue";
 import { createServerSilence } from "./server-silence";
@@ -43,6 +44,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
 
   const refs = {
     ws: null as WSClientSocket | null,
+    frame: undefined,
     attempt: 0,
     closed: false,
     reconnectTimer: null as ReturnType<typeof setTimeout> | null,
@@ -76,8 +78,16 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     sendRaw,
   };
 
-  const refreshToken = (token: string): void => {
-    sendControl(opsCtx, encodeMessage({ type: "auth", payload: token }));
+  /* Asked for anew, as before a reconnect: the token the frame carries is the current one. */
+  const authenticate = (): void => {
+    void (async () => {
+      try {
+        const credentials = await config.credentials?.();
+        sendControl(opsCtx, encodeMessage({ type: "auth", payload: credentials?.frame ?? {} }));
+      } catch (error) {
+        log.warn("The socket's credentials could not be had to send again", error);
+      }
+    })();
   };
 
   const lifecycleCtx: LifecycleContext = {
@@ -89,7 +99,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
     silence,
     factory,
     sendRaw,
-    refreshToken,
+    authenticate,
     refs,
   };
 
@@ -99,7 +109,7 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
   return {
     subscribe: (topic, handler, variables) => subscribeToTopic(opsCtx, topic, handler, variables),
     send: (topic, payload) => sendToTopic(opsCtx, topic, payload),
-    refreshToken,
+    authenticate,
     close: () => gracefulClose(lifecycleCtx, opsCtx),
     get status() {
       return state.current;
@@ -119,6 +129,17 @@ function gracefulClose(lifecycleCtx: LifecycleContext, opsCtx: TopicOpsContext):
   lifecycleCtx.state.set("disconnected");
 }
 
-function defaultFactory(url: string, protocols?: string[]): WSClientSocket {
-  return new WebSocket(url, protocols) as unknown as WSClientSocket;
+/* The platform's WebSocket, with what its handshake takes headers in where it takes them. */
+type HeaderedWebSocket = new (url: string, init?: unknown, options?: unknown) => WSClientSocket;
+
+function defaultFactory(
+  url: string,
+  protocols?: string[],
+  headers?: Readonly<Record<string, string>>,
+): WSClientSocket {
+  if (headers === undefined) return new WebSocket(url, protocols) as unknown as WSClientSocket;
+  const Socket = WebSocket as unknown as HeaderedWebSocket;
+  /* React Native takes them third; Node's WebSocket, undici's, in its options. */
+  if (isReactNative()) return new Socket(url, protocols, { headers });
+  return new Socket(url, { ...(protocols && { protocols }), headers });
 }

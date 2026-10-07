@@ -16,7 +16,7 @@ export interface NoConnectionMeta {
  * returns: `meta.userId` is a string where `onConnect` returned `{ userId }`.
  * For a connection the hook returned nothing for, it has no fields. Without
  * a connect hook its fields are not known: a WebSocket connection's may come
- * from `onTokenRefresh` alone.
+ * from `onReauth` alone.
  *
  * @example
  * ```ts

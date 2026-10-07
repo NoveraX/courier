@@ -1,6 +1,7 @@
 import type { ProxyPath } from "../../proxy-caller/proxy-path";
 import type { ResolveOrigin } from "../../proxy-caller/resolve-path";
 import { resolveProxyPath } from "../../proxy-caller/resolve-path";
+import { socketOptions } from "../../realtime/ws/ws-credentials";
 import type { CallerWSOptions } from "../../realtime/ws/ws-types";
 import { buildWSTopic } from "../../realtime/ws-address";
 import { executeWSChannel } from "../../realtime/ws-channel-client";
@@ -47,14 +48,6 @@ export interface ProxyWSDefaults {
   playgroundRequestId?: string | undefined;
   /** Options of the socket the channels share, from the caller's `ws` */
   ws?: CallerWSOptions | undefined;
-  // ⚠️ No `headers` field on purpose. Browser WebSocket (`new WebSocket(...)`)
-  // does NOT support arbitrary HTTP headers in the upgrade handshake — only
-  // sub-protocols. Adding a `headers` field here would be silently dropped
-  // and create exactly the kind of "looks like it works" footgun this
-  // package is built to eliminate. For auth, use one of:
-  //  • a query-string token in `proxyPath.ws`
-  //  • the `protocols` channel via a custom auth scheme
-  //  • a first `auth` message sent right after connect (canonical pattern)
 }
 
 /**
@@ -94,7 +87,7 @@ export function createProxyWSChannelFactory(
   return function connectChannel(group, method, variables) {
     const wsUrl = withPlaygroundRid(resolveProxyPath("ws", proxyPath, origin), playgroundRequestId);
     const topic = buildWSTopic(source, group, method);
-    return executeWSChannel(wsUrl, topic, variables, ws);
+    return executeWSChannel(wsUrl, topic, variables, socketOptions(ws));
   };
 }
 
@@ -113,6 +106,6 @@ export function createProxyWSPushFactory(
   return function connectPush(group, method, variables) {
     const wsUrl = withPlaygroundRid(resolveProxyPath("ws", proxyPath, origin), playgroundRequestId);
     const topic = buildWSTopic(source, group, method);
-    return executeWSPush(wsUrl, topic, variables, ws);
+    return executeWSPush(wsUrl, topic, variables, socketOptions(ws));
   };
 }

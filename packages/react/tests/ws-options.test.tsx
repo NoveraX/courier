@@ -3,10 +3,8 @@
  */
 
 /**
- * The React callers' `ws` option reaches the socket `useChannel` opens.
- *
- * Neither React caller took one, so a channel could not send a token on
- * connecting nor answer a server that asked for a fresh one.
+ * The React callers' `ws` option reaches the socket `useChannel` opens: its
+ * `auth` in the socket's first frame, never in its URL.
  */
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -29,7 +27,7 @@ const { channel } = courier();
 let server: Server;
 let host: string;
 let queryClient: QueryClient;
-const tokens: (string | null)[] = [];
+const connected: Array<{ auth: unknown; query: string }> = [];
 
 function wrapper({ children }: { children: ReactNode }) {
   return createElement(QueryClientProvider, { client: queryClient }, children);
@@ -40,8 +38,8 @@ beforeEach(async () => {
   registerSources({ api: liveApi });
   const ws = createWSHandler({
     allowedOrigins: [PAGE_ORIGIN],
-    onConnect: ({ request }) => {
-      tokens.push(new URL(request.url).searchParams.get("token"));
+    onConnect: ({ request, auth }) => {
+      connected.push({ auth, query: new URL(request.url).search });
       return {};
     },
   });
@@ -59,29 +57,30 @@ beforeEach(async () => {
 afterEach(async () => {
   queryClient.clear();
   clearWSConnectionPool();
-  tokens.length = 0;
+  connected.length = 0;
   server.closeAllConnections();
   await new Promise<void>((resolve) => server.close(() => resolve()));
   vi.unstubAllGlobals();
 });
 
 describe("the ws option of a React caller", () => {
-  it("sends the proxy caller's token when useChannel connects", async () => {
+  it("sends the proxy caller's auth when useChannel connects", async () => {
     const q = createProxyQueryCaller<typeof liveApi>("api", {
       source: liveApi,
       proxyPath: { ws: `ws://${host}/api/ws` },
-      ws: { getAuthToken: () => "proxy-token" },
+      ws: { auth: () => ({ token: "proxy-token" }) },
     });
 
     const { result } = renderHook(() => q.live.useChannel("room", { variables: { room: "r1" } }), {
       wrapper,
     });
 
+    await waitFor(() => expect(connected).toHaveLength(1));
     await waitFor(() => expect(result.current.status).toBe("connected"));
-    expect(tokens).toEqual(["proxy-token"]);
+    expect(connected).toEqual([{ auth: { token: "proxy-token" }, query: "" }]);
   });
 
-  it("sends the direct caller's token when useChannel connects", async () => {
+  it("sends the direct caller's auth when useChannel connects", async () => {
     const remote = defineApi({
       name: "api",
       baseURL: `http://${host}`,
@@ -98,13 +97,14 @@ describe("the ws option of a React caller", () => {
         }),
       },
     });
-    const q = createQueryCaller(remote, { ws: { getAuthToken: () => "direct-token" } });
+    const q = createQueryCaller(remote, { ws: { auth: { token: "direct-token" } } });
 
     const { result } = renderHook(() => q.live.useChannel("room", { variables: { room: "r1" } }), {
       wrapper,
     });
 
+    await waitFor(() => expect(connected).toHaveLength(1));
     await waitFor(() => expect(result.current.status).toBe("connected"));
-    expect(tokens).toEqual(["direct-token"]);
+    expect(connected).toEqual([{ auth: { token: "direct-token" }, query: "" }]);
   });
 });

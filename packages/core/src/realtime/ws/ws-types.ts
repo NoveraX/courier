@@ -2,6 +2,7 @@ import type { RealtimeError } from "../errors";
 import type { BackoffConfig, ConnectionStatus } from "../types";
 import type { HeartbeatConfig } from "./heartbeat";
 import type { MessageQueueConfig } from "./message-queue";
+import type { WSAuth, WSCredentials } from "./ws-credentials";
 
 // ---------------------------------------------------------------------------
 // Client-side WebSocket interface (browser-compatible)
@@ -42,8 +43,16 @@ export interface WSClientSocket {
   onerror: SocketHandler<unknown>;
 }
 
-/** Factory to create a WebSocket instance (allows DI for testing) */
-export type WSSocketFactory = (url: string, protocols?: string[]) => WSClientSocket;
+/**
+ * Opens a socket: the platform's WebSocket by default, another for a test.
+ * `headers` go on the handshake, given only where the platform lets a
+ * script set them — Node and React Native, never a browser.
+ */
+export type WSSocketFactory = (
+  url: string,
+  protocols?: string[],
+  headers?: Readonly<Record<string, string>>,
+) => WSClientSocket;
 
 // ---------------------------------------------------------------------------
 // Connection config
@@ -60,8 +69,14 @@ export interface WSConnectionConfig {
   backoff?: BackoffConfig | undefined;
   /** Outbound message queue configuration */
   messageQueue?: MessageQueueConfig | undefined;
-  /** Called to get a fresh auth token before connect/reconnect */
-  getAuthToken?: (() => string | Promise<string>) | undefined;
+  /**
+   * What each socket opens with — headers for its handshake, where the
+   * platform lets a script set them, and the frame it proves who it is with
+   * — asked for before every connect and reconnect, and again when the
+   * server asks for the frame anew. Never put in the URL, where proxies and
+   * servers log it.
+   */
+  credentials?: (() => WSCredentials | Promise<WSCredentials>) | undefined;
   /** Status change listener */
   onStatusChange?: ((status: ConnectionStatus) => void) | undefined;
   /** Max bufferedAmount before dropping sends (default 1MB) */
@@ -87,8 +102,17 @@ export interface WSConnectionConfig {
  */
 export type CallerWSOptions = Pick<
   WSConnectionConfig,
-  "getAuthToken" | "backoff" | "heartbeat" | "messageQueue" | "protocols" | "maxMessageSize"
->;
+  "backoff" | "heartbeat" | "messageQueue" | "protocols" | "maxMessageSize"
+> & {
+  /**
+   * What the client tells the server about itself — a token, a tenant —
+   * sent in the first frame of every socket, never in its URL, and read by
+   * the server's `onConnect` as `auth`. A function is called anew before
+   * every connect and reconnect, and when the server asks again with
+   * `sendAuthRequired`.
+   */
+  auth?: WSAuth | undefined;
+};
 
 // ---------------------------------------------------------------------------
 // Topic handler
@@ -133,8 +157,12 @@ export interface WSConnection {
    *   it was dropped
    */
   send(topic: string, payload: unknown): boolean;
-  /** Send a new auth token to the server without reconnecting. */
-  refreshToken(token: string): void;
+  /**
+   * Send the socket's credentials again, asked for anew, without
+   * reconnecting — as the server asks with `sendAuthRequired`, or once the
+   * application has renewed its token.
+   */
+  authenticate(): void;
   /** Close the connection gracefully. */
   close(): void;
   /** Current connection status. */

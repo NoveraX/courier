@@ -1,36 +1,29 @@
 import type { ScopedLogger } from "../../logger";
-import type { ConnectionState } from "../connection-state";
 import type { WSConnectionConfig } from "./ws-types";
 
-/** What answering the server's request for a fresh token needs. */
+/** What answering the server's request for fresh credentials needs. */
 export interface AuthRefreshContext {
-  config: Pick<WSConnectionConfig, "getAuthToken">;
-  state: ConnectionState;
+  config: Pick<WSConnectionConfig, "credentials">;
   log: ScopedLogger;
-  refreshToken(token: string): void;
+  /** Send the socket's credentials again, asked for anew */
+  authenticate(): void;
 }
 
 /**
- * Answer the server's `auth_required` with a fresh token from
- * `getAuthToken`, sent on the open socket without reconnecting.
+ * Answer the server's `auth_required` with the socket's credentials, asked
+ * for anew and sent on the open socket without reconnecting. A connection
+ * with none to send leaves it unanswered, and the server closes it at its
+ * deadline.
  *
- * @param ctx - The connection's token source, state, log and token sender
+ * @param ctx - The connection's credentials and how it sends them
  *
  * @example
- * answerAuthRequired({ config, state, log, refreshToken });
+ * answerAuthRequired({ config, log, authenticate });
  */
 export function answerAuthRequired(ctx: AuthRefreshContext): void {
-  const fetcher = ctx.config.getAuthToken;
-  if (!fetcher) {
-    ctx.log.warn("Server requested auth but no getAuthToken configured");
+  if (ctx.config.credentials === undefined) {
+    ctx.log.warn("The server asked for credentials, and this connection has none to send");
     return;
   }
-  void (async () => {
-    try {
-      const token = await fetcher();
-      if (ctx.state.current === "connected") ctx.refreshToken(token);
-    } catch (err) {
-      ctx.log.warn("Failed to get auth token for refresh", err);
-    }
-  })();
+  ctx.authenticate();
 }

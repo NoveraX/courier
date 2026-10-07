@@ -67,11 +67,12 @@ export function wsHandlerOptions(config: CourierServerOptions): WSHandlerConfig 
     clientIp: config.clientIp,
     authorize: config.authorize,
     onConnect: config.onConnect,
+    authTimeoutMs: config.authTimeoutMs,
     onDisconnect: config.onDisconnect,
     onError: config.onError,
     onMessageDrop: config.onMessageDrop,
     maxConsecutiveDrops: config.maxConsecutiveDrops,
-    onTokenRefresh: config.onTokenRefresh,
+    onReauth: config.onReauth,
     authorizeMessage: config.authorizeMessage,
     authRequiredTimeoutMs: config.authRequiredTimeoutMs,
   };

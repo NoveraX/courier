@@ -580,6 +580,7 @@ describe("createWSHandler — connections registry", () => {
 
     const ws = createMockSocket();
     handler.handleSocket(ws, new Request("http://localhost/ws"));
+    ws._emit("message", { data: JSON.stringify({ type: "auth", payload: {} }) });
     await new Promise((r) => setTimeout(r, 10));
 
     expect(handler.connections.count).toBe(1);

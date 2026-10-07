@@ -1,10 +1,11 @@
 import { createLogger } from "../logger";
 import type { createHeartbeat } from "../realtime/ws/heartbeat";
 import { decodeMessage, type WSMessage } from "../realtime/ws/ws-protocol";
+import { applyFrameCredentials } from "./ws-admit";
 import type { WSSocketContext } from "./ws-context";
 import { handleMessage, handleSubscribe, handleUnsubscribe } from "./ws-dispatch";
 import { consumeToken } from "./ws-rate-limit";
-import { handleTokenRefresh } from "./ws-token-refresh";
+import { handleReauth } from "./ws-reauth";
 
 const log = createLogger("WS");
 
@@ -34,6 +35,10 @@ export function routeMessage(
     ctx.sendMessage({ type: "error", error: { code: 4400, message: "Invalid message format" } });
     return;
   }
+  /* A connection admitted without waiting for it takes its first frame, when
+     it is an `auth` frame, as the credentials it was made with. */
+  const opening = !ctx.credentialed;
+  ctx.credentialed = true;
 
   // Control messages (ping/pong) are exempt from rate limiting
   if (msg.type === "ping") {
@@ -62,7 +67,8 @@ export function routeMessage(
       void handleUnsubscribe(ctx, msg).catch(dispatchFailed("unsubscribe"));
       return;
     case "auth":
-      void handleTokenRefresh(ctx, msg).catch(dispatchFailed("auth"));
+      if (opening) applyFrameCredentials(ctx, msg.payload);
+      else void handleReauth(ctx, msg).catch(dispatchFailed("auth"));
       return;
     default:
       break;

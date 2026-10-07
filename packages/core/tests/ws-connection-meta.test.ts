@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createWSHandler } from "../src/adapter/handle-ws";
 import type { WSSocketContext } from "../src/adapter/ws-context";
-import { handleTokenRefresh } from "../src/adapter/ws-token-refresh";
+import { handleReauth } from "../src/adapter/ws-reauth";
 import { createWSConnection } from "../src/realtime/ws/ws-connection";
 import type { WSMessage } from "../src/realtime/ws/ws-protocol";
 import type { WSConnection } from "../src/realtime/ws/ws-types";
@@ -11,7 +11,7 @@ import { type ServedWS, serveWS, settle, stopWS } from "./helpers/ws-server";
 /**
  * The metadata a WebSocket connection carries is what the handler's
  * `onConnect` returned, and every other hook is typed from that return. An
- * `onConnect` or `onTokenRefresh` that hands back anything but an object, or
+ * `onConnect` or `onReauth` that hands back anything but an object, or
  * nothing, breaks that promise, and is refused as a throw from it is.
  */
 describe("the metadata the WebSocket hooks receive", () => {
@@ -23,7 +23,10 @@ describe("the metadata the WebSocket hooks receive", () => {
         expect(userId).toBeTypeOf("string");
       },
       authorize: ({ meta }) => meta.roles.includes("admin"),
-      onTokenRefresh: ({ meta, token }) => ({ userId: `${meta.userId}:${token}`, roles: [] }),
+      onReauth: ({ meta, auth }) => ({
+        userId: `${meta.userId}:${String(auth?.token)}`,
+        roles: [],
+      }),
     });
 
     expect(handler.connections.count).toBe(0);
@@ -47,7 +50,7 @@ describe("the metadata the WebSocket hooks receive", () => {
 
   it("is a record of unknown fields where there is no onConnect", async () => {
     const handler = createWSHandler({
-      onTokenRefresh: ({ token }) => ({ role: token === "admin-token" ? "admin" : "user" }),
+      onReauth: ({ auth }) => ({ role: auth?.token === "admin-token" ? "admin" : "user" }),
       authorizeMessage: ({ meta }) => meta.role === "admin",
     });
 
@@ -95,7 +98,7 @@ describe("a connection whose onConnect returns something other than an object", 
   });
 });
 
-describe("a refreshed token whose onTokenRefresh returns something other than an object", () => {
+describe("credentials sent again whose onReauth returns something other than an object", () => {
   it("is refused, and leaves the metadata as it was", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const sent: WSMessage[] = [];
@@ -103,19 +106,20 @@ describe("a refreshed token whose onTokenRefresh returns something other than an
     const ctx = {
       connectionId: "conn-1",
       meta: { userId: "user-1" },
+      handshake: new Request("http://app.example.com/api/ws"),
       sendMessage: (message: WSMessage) => sent.push(message),
-      onTokenRefresh: async () => "user-2",
+      onReauth: async () => "user-2",
       registry,
     } as unknown as WSSocketContext;
 
-    await handleTokenRefresh(ctx, { type: "auth", id: "1", payload: "fresh" });
+    await handleReauth(ctx, { type: "auth", id: "1", payload: { auth: { token: "fresh" } } });
 
     expect(ctx.meta).toEqual({ userId: "user-1" });
     expect(registry.updateMeta).not.toHaveBeenCalled();
     expect(sent).toEqual([
-      { type: "error", id: "1", error: { code: 4401, message: "Token rejected" } },
+      { type: "error", id: "1", error: { code: 4401, message: "Credentials rejected" } },
     ]);
-    expect(String(warn.mock.calls[0]?.[2])).toContain("onTokenRefresh returned a string");
+    expect(String(warn.mock.calls[0]?.[2])).toContain("onReauth returned a string");
     warn.mockRestore();
   });
 });

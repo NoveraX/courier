@@ -1,21 +1,22 @@
 import type { ScopedLogger } from "../../logger";
 import { calculateBackoff } from "../backoff";
 import type { ConnectionState } from "../connection-state";
-import { fromErrorCode, type RealtimeError } from "../errors";
 import { answerAuthRequired } from "./auth-refresh";
-import { resolveAuthUrl } from "./auth-url";
+import { closeFailure, MESSAGE_TOO_BIG, tellOfOversizedMessage } from "./close-failure";
 import type { createMessageQueue } from "./message-queue";
 import { shouldReconnect } from "./reconnect-classifier";
 import type { ServerSilenceDetector } from "./server-silence";
 import { requestSubscription } from "./topic-operations";
 import type { TopicRegistry } from "./topic-registry-types";
+import type { WSAuthFrame, WSCredentials } from "./ws-credentials";
 import { dispatchIncomingMessage } from "./ws-message-handler";
-import { decodeMessage, type WSMessage } from "./ws-protocol";
+import { decodeMessage, encodeMessage, type WSMessage } from "./ws-protocol";
 import type {
   WSClientSocket,
   WSCloseEventLike,
   WSConnectionConfig,
   WSMessageEventLike,
+  WSSocketFactory,
 } from "./ws-types";
 
 /**
@@ -33,36 +34,60 @@ export interface LifecycleContext {
   topics: TopicRegistry;
   queue: ReturnType<typeof createMessageQueue>;
   silence: ServerSilenceDetector;
-  factory: (url: string, protocols?: string[]) => WSClientSocket;
+  factory: WSSocketFactory;
   sendRaw(data: string): boolean;
-  refreshToken(token: string): void;
+  /** Send the socket's credentials again, asked for anew */
+  authenticate(): void;
   /** Mutable refs — handlers reassign these */
   refs: {
     ws: WSClientSocket | null;
+    /** The frame the open socket proves who it is with */
+    frame: WSAuthFrame | undefined;
     attempt: number;
     closed: boolean;
     reconnectTimer: ReturnType<typeof setTimeout> | null;
   };
 }
 
-/** The close code of a socket closed over a frame larger than the server reads. */
-const MESSAGE_TOO_BIG = 1009;
-
 /** What handling a closed socket reads of its close event. */
 type SocketClosure = WSCloseEventLike;
 
-/** Open the underlying socket and wire lifecycle handlers */
+/**
+ * Open the underlying socket and wire lifecycle handlers. Its credentials
+ * are asked for first, so the frame that proves who it is with goes out as
+ * soon as it opens; credentials that cannot be had are tried for again, as
+ * a dropped socket is reopened.
+ */
 export function connect(ctx: LifecycleContext): void {
   if (ctx.refs.closed) return;
   ctx.state.set("connecting");
-  const maybeUrl = resolveAuthUrl(ctx.config.url, ctx.config.getAuthToken);
-  if (typeof maybeUrl === "string") openSocket(ctx, maybeUrl);
-  else void maybeUrl.then((url) => openSocket(ctx, url));
+  let credentials: WSCredentials | Promise<WSCredentials> | undefined;
+  try {
+    credentials = ctx.config.credentials?.();
+  } catch (error) {
+    credentialsFailed(ctx, error);
+    return;
+  }
+  if (!(credentials instanceof Promise)) {
+    openSocket(ctx, credentials);
+    return;
+  }
+  credentials.then(
+    (found) => openSocket(ctx, found),
+    (error: unknown) => credentialsFailed(ctx, error),
+  );
 }
 
-function openSocket(ctx: LifecycleContext, url: string): void {
+function credentialsFailed(ctx: LifecycleContext, error: unknown): void {
   if (ctx.refs.closed) return;
-  const ws = ctx.factory(url, ctx.config.protocols);
+  ctx.log.warn("The socket's credentials could not be had; trying again", error);
+  scheduleReconnect(ctx);
+}
+
+function openSocket(ctx: LifecycleContext, credentials: WSCredentials | undefined): void {
+  if (ctx.refs.closed) return;
+  ctx.refs.frame = credentials?.frame;
+  const ws = ctx.factory(ctx.config.url, ctx.config.protocols, credentials?.handshake);
   ctx.refs.ws = ws;
   ws.onopen = () => handleOpen(ctx);
   ws.onmessage = (ev) => handleMessage(ctx, ev);
@@ -74,6 +99,9 @@ function openSocket(ctx: LifecycleContext, url: string): void {
 
 function handleOpen(ctx: LifecycleContext): void {
   clearReconnectTimer(ctx);
+  /* Before anything else, whether it carries credentials or not: the server
+     admits the connection on it, holding what follows until it has. */
+  ctx.sendRaw(encodeMessage({ type: "auth", payload: ctx.refs.frame ?? {} }));
   ctx.state.set("connected");
   ctx.silence.start();
   for (const entry of ctx.topics.entries()) {
@@ -139,7 +167,11 @@ function handleClose(ctx: LifecycleContext, ev: SocketClosure): void {
     if (!ctx.refs.closed) ctx.topics.endAll(closeFailure(ev));
     return;
   }
-  if (ev.code === MESSAGE_TOO_BIG) tellOfOversizedMessage(ctx, ev);
+  if (ev.code === MESSAGE_TOO_BIG) tellOfOversizedMessage(ctx.topics, ctx.log, ev);
+  scheduleReconnect(ctx);
+}
+
+function scheduleReconnect(ctx: LifecycleContext): void {
   ctx.state.set("reconnecting");
   /* Whoever heard of the drop may have closed the connection for good. */
   if (ctx.refs.closed) return;
@@ -147,27 +179,6 @@ function handleClose(ctx: LifecycleContext, ev: SocketClosure): void {
   const delay = calculateBackoff(ctx.refs.attempt++, ctx.config.backoff);
   ctx.log.info(`Reconnecting in ${delay}ms (attempt ${ctx.refs.attempt})`);
   ctx.refs.reconnectTimer = setTimeout(() => connect(ctx), delay);
-}
-
-/**
- * The server closed the socket over one message larger than it reads. That
- * message is gone and the rest may go on, so the connection reconnects
- * rather than ending every subscription on it, and each subscription hears
- * why its socket closed under it.
- */
-function tellOfOversizedMessage(ctx: LifecycleContext, ev: SocketClosure): void {
-  const error = fromErrorCode(
-    MESSAGE_TOO_BIG,
-    ev.reason || "A message was too large for the server",
-  );
-  ctx.log.warn(`The server closed the connection over a message too large: ${error.message}`);
-  for (const topic of ctx.topics.topics()) ctx.topics.fail(topic, error);
-}
-
-/** Why a socket closed for good, as its subscriptions read it; none for a normal close. */
-function closeFailure(ev: SocketClosure): RealtimeError | undefined {
-  if (ev.code === 1000) return undefined;
-  return fromErrorCode(ev.code, ev.reason || "Connection closed");
 }
 
 export function clearReconnectTimer(ctx: LifecycleContext): void {

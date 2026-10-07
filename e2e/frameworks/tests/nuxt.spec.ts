@@ -5,7 +5,14 @@
  */
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
-import { APP, ATTACKER, clearReceived, linkElsewhere, received } from "../support/received";
+import {
+  APP,
+  ATTACKER,
+  clearReceived,
+  cookiesIn,
+  linkElsewhere,
+  received,
+} from "../support/received";
 
 test.describe.configure({ mode: "serial" });
 
@@ -52,6 +59,15 @@ test("signing in through a server route hands the browser the API's session cook
   expect(await cookie("vendor_tracking")).toBeUndefined();
 });
 
+test("the sign-in, finding no double-submit token, asked the API for one first", async () => {
+  const [asked] = await received("GET", "/csrf");
+  const [signIn] = await received("POST", "/login");
+
+  expect(asked).toBeDefined();
+  expect(signIn?.headers["x-csrftoken"]).toBe("t-fresh");
+  expect(signIn?.headers.cookie).toBe("csrftoken=t-fresh");
+});
+
 test("a rendered page sends the session's cookies alone, with the request's id, browser and address", async () => {
   await clearReceived();
 
@@ -59,7 +75,7 @@ test("a rendered page sends the session's cookies alone, with the request's id, 
   const [me] = await received("GET", "/me");
 
   expect((await json("#me")).sid).toBe("s%3Aada.sig");
-  expect(me?.headers.cookie).toBe("sid=s%3Aada.sig; csrftoken=t-ada");
+  expect(cookiesIn(me?.headers.cookie)).toEqual(["csrftoken=t-ada", "sid=s%3Aada.sig"]);
   expect(me?.headers["x-request-id"]).toMatch(/^[\da-f-]{36}$/);
   expect(me?.headers["user-agent"]).toContain("Chrome");
   expect(me?.headers["x-forwarded-for"]).toMatch(/127\.0\.0\.1|::1/);
@@ -73,7 +89,7 @@ test("a proxy caller in a rendering page calls in process, with the user's sessi
   const [me] = await received("GET", "/me");
 
   expect((await json("#proxy")).sid).toBe("s%3Aada.sig");
-  expect(me?.headers.cookie).toBe("sid=s%3Aada.sig; csrftoken=t-ada");
+  expect(cookiesIn(me?.headers.cookie)).toEqual(["csrftoken=t-ada", "sid=s%3Aada.sig"]);
   expect(await received("GET", "/me")).toHaveLength(1);
 });
 
@@ -97,6 +113,22 @@ test("a write set off by another site's link is refused before it reaches the AP
 
   await expect(page.locator("#outcome")).toHaveText("refused 403");
   expect(await received("POST", "/me/name")).toEqual([]);
+});
+
+test("a sign-in another site sets off for a visitor with no token is refused before one is asked for", async ({
+  browser,
+}) => {
+  const visitor = await browser.newContext();
+  const tab = await visitor.newPage();
+  await clearReceived();
+
+  await tab.goto(linkElsewhere("/attack-login"));
+  await tab.click("#go");
+
+  await expect(tab.locator("#outcome")).toHaveText("refused 403");
+  expect(await received("GET", "/csrf")).toEqual([]);
+  expect(await received("POST", "/login")).toEqual([]);
+  await visitor.close();
 });
 
 test("a render's later call sends the session its first call renewed, and the browser keeps it", async () => {
@@ -130,7 +162,7 @@ test("a browser's calls through the proxy route carry the session it set", async
   const [me] = await received("GET", "/me");
 
   expect((await cookie("sid"))?.value).toBe("s%3Aproxy.sig");
-  expect(me?.headers.cookie).toBe("sid=s%3Aproxy.sig; csrftoken=t-proxy");
+  expect(cookiesIn(me?.headers.cookie)).toEqual(["csrftoken=t-proxy", "sid=s%3Aproxy.sig"]);
   expect(await cookie("vendor_tracking")).toBeUndefined();
 });
 

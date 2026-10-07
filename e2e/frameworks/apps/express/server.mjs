@@ -10,7 +10,10 @@ const accounts = createCaller(
   defineApi({
     name: "accounts",
     baseURL: API_URL,
-    session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
+    session: {
+      cookies: ["sid"],
+      csrf: { cookie: "csrftoken", header: "x-csrftoken", from: "csrf" },
+    },
     forward: { requestId: true, userAgent: true, clientAddress: true },
     endpoints: {
       me: endpoint.get("me"),
@@ -48,6 +51,9 @@ app.post("/", async (req, res) => {
 });
 app.get("/attack", async (_req, res) => {
   res.send(page(`<pre id="outcome">${await outcome(accounts.rename({ name: "Mallory" }))}</pre>`));
+});
+app.get("/attack-login", async (_req, res) => {
+  res.send(page(`<pre id="outcome">${await outcome(accounts.login({ user: "mallory" }))}</pre>`));
 });
 app.get("/renew", async (_req, res) => {
   const first = await accounts.me();

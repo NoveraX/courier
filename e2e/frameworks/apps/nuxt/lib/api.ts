@@ -16,7 +16,7 @@ export interface Seen {
 export const accountsApi = defineApi({
   name: "accounts",
   baseURL: API_URL,
-  session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
+  session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken", from: "csrf" } },
   forward: { requestId: true, userAgent: true, clientAddress: true },
   endpoints: {
     me: endpoint.get("me").response<Seen>(),

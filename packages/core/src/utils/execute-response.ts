@@ -96,12 +96,14 @@ export const buildResponse = (
  * Answer a call refused before it runs — a name that resolves to nothing,
  * options a proxy client may not set, an endpoint the boundary withholds.
  *
- * A call the proxy announced to Studio on arrival is ended here with
- * `request:error`, or it would show as pending for good.
+ * A call Studio was told of — by the proxy on arrival, or by the call
+ * itself as it started — is ended here with `request:error`, or it would
+ * show as pending for good.
  *
  * @param context - The call's context
  * @param status - The refusal's status
  * @param message - Why the call was refused
+ * @param requestId - The id the call told Studio it started under; the proxy's, when it announced the call, otherwise
  * @returns The refusal: a Response for a proxied call; thrown otherwise
  *
  * @example
@@ -113,8 +115,9 @@ export const buildErrorResponse = (
   context: Context | undefined,
   status: number,
   message: string,
+  requestId?: string,
 ): unknown => {
-  const announced = context?.studioRequestId;
+  const announced = requestId ?? context?.studioRequestId;
   if (announced !== undefined) {
     studioHooks.onRequestError?.({
       id: announced,

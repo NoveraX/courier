@@ -154,7 +154,7 @@ export const api = defineApi({
 
 - `from` is a path under the API's `baseURL`, such as `"csrf/"` for a Django view decorated with `ensure_csrf_cookie`, or one from the root of its origin, such as Laravel Sanctum's `"/sanctum/csrf-cookie"`.
 - The `GET` goes as the API's calls go — its address, headers, `fetch` and middleware — with the user's session, and only before a write that finds no token: a read repeats none, and a write that finds one asks for nothing. The writes waiting on one user's token share one request.
-- Middleware sees the request with `purpose: "csrf-token"`, its `method` naming no endpoint, so a middleware that signs every call signs it too, and one meant for endpoints alone can pass it by. A cache keeps none of its answers, and Studio lists it as a request of its own, ahead of the write it was made for.
+- Middleware sees the request with `purpose: "csrf-token"`, its `method` naming no endpoint, so a middleware that signs every call signs it too, and one meant for endpoints alone can pass it by. A cache keeps none of its answers, and Studio lists it as a request of its own, made within the time of the write that waits for it.
 - On a server, the token reaches the write and the user's browser, as any cookie the API sets does; a browser keeps it itself; a React Native app keeps it from the answer.
 - A request that fails, or an answer that sets no token the call can read, leaves the write to go without it, and the log says so.
 
@@ -179,6 +179,8 @@ A page on another site can make the user's browser request one of your pages, wi
 - a page — GET and the like, which any link can request — has to be one the browser says came from your application, or one the user opened themselves. A browser too old to send `Sec-Fetch-Site` has to name one of your pages as its `Referer`.
 
 An origin in `session.allowedOrigins` counts as your application's own; with none listed, so does another port of the local machine in development. A sign-in is guarded too, before anyone has a session: the double-submit token vouches for it, and so does the token a write would ask for — such a write is refused before anything is asked.
+
+The log says why a write was refused, and Studio lists it, ended by its 403 and the reason.
 
 A write that does no harm when someone else sets it off — signing out from a link — says so with `session: "unguarded"`.
 

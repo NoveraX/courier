@@ -109,6 +109,7 @@ async function prepareAndRun(
     { source, group, method },
   );
 
+  const signal = callOptions.signal ?? undefined;
   const middlewareCtx = buildMiddlewareContext({
     source,
     group,
@@ -120,43 +121,42 @@ async function prepareAndRun(
     requestId: studio.requestId,
     endpointAllowedHeaders: endpointOptions?.allowedHeaders,
     kind: schema?.type,
-    signal: callOptions.signal ?? undefined,
+    signal,
     idempotencyHeader: idempotencyHeader(endpointOptions?.idempotencyKey),
     purpose: target.purpose,
   });
-  /* The token a write asks for first goes as calls go, under an id of its own. */
-  const runPrime = (prime: CallTarget, primeContext: Context | undefined) => {
-    const instruments = callInstruments(undefined);
-    return prepareAndRun(prime, instruments.studio, instruments.timing, primeContext);
-  };
-  const settled = await settleCallSession(
-    pendingSession,
-    target,
-    context,
-    callOptions.signal,
-    runPrime,
-  );
-  if ("refused" in settled) return settled.refused;
-  const { session, primed } = settled;
-  callOptions = applyCallSession(session, middlewareCtx, callOptions, dataSource.options);
-  const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");
 
   /* Source-level middleware wraps endpoint-level, so a concern declared once
      for the whole API still sees a request an endpoint also decorated. A
      retry policy is the outermost of the endpoint's own, so it re-runs them. */
   const middlewares = resolveMiddlewareChain(dataSource.options?.middleware, endpointOptions);
 
+  /* Told before the session settles: a write that asks for its token first
+     shows that request within its own time, and one the session refuses
+     ends with the refusal rather than never showing. */
   emitRequestStart(studio, {
-    source,
-    group,
-    method,
-    variables,
-    mode,
+    ...target,
+    mode: context?.mode ?? (context?.proxyMethod ? "proxy" : "direct"),
     middlewareCount: middlewares.length,
-    schema,
-    httpMethod: target.httpMethod,
-    purpose: target.purpose,
   });
+
+  /* The token a write asks for first goes as calls go, under an id of its own. */
+  const runPrime = (prime: CallTarget, primeContext: Context | undefined) => {
+    const instruments = callInstruments(undefined);
+    return prepareAndRun(prime, instruments.studio, instruments.timing, primeContext);
+  };
+  const settled = await settleCallSession(pendingSession, {
+    target,
+    context,
+    signal,
+    run: runPrime,
+    told: studio.hasStudio
+      ? { requestId: studio.requestId, dt: studio.dt, timing, context, signal }
+      : undefined,
+  });
+  if ("refused" in settled) return settled.refused;
+  const { session, primed } = settled;
+  callOptions = applyCallSession(session, middlewareCtx, callOptions, dataSource.options);
 
   const inner: PreparedInner = {
     endpoint: target.endpoint as PreparedInner["endpoint"],

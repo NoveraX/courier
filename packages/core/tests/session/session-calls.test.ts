@@ -15,6 +15,7 @@ import { courier } from "../../src/define/courier";
 import { HTTPError } from "../../src/errors/http-error";
 import type { IncomingRequest, RelayedCookie } from "../../src/session/incoming-request";
 import { registerRequestContext } from "../../src/session/request-context";
+import { studioHooks } from "../../src/studio";
 import { sendJson, startUpstream, type Upstream } from "../helpers/middleware-upstream";
 
 let upstream: Upstream;
@@ -173,6 +174,33 @@ describe("a write made while serving a user", () => {
       "accounts.rename would write on the user's behalf",
     );
     expect(upstream.seen).toHaveLength(0);
+  });
+
+  it("is shown in Studio, ended by its refusal", async () => {
+    serving = userRequest("GET", {
+      cookie: "sid=a1; csrftoken=c1",
+      "sec-fetch-site": "cross-site",
+    }).incoming;
+    const started: Array<{ id: string; method: string; httpMethod?: string }> = [];
+    const failed: Array<{ id: string; error: { status?: number | undefined; message: string } }> =
+      [];
+    studioHooks.onRequestStart = (event) => started.push(event);
+    studioHooks.onRequestError = (event) => failed.push(event);
+    try {
+      await client.rename({ name: "Mallory" }).catch(() => undefined);
+    } finally {
+      studioHooks.onRequestStart = undefined;
+      studioHooks.onRequestError = undefined;
+    }
+
+    expect(started).toEqual([expect.objectContaining({ method: "rename", httpMethod: "POST" })]);
+    expect(failed).toEqual([
+      expect.objectContaining({
+        id: started[0]?.id,
+        error: expect.objectContaining({ status: 403 }),
+      }),
+    ]);
+    expect(failed[0]?.error.message).toContain("accounts.rename would write on the user's behalf");
   });
 
   it("is refused for another site's form even before anyone has signed in", async () => {

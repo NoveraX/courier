@@ -69,6 +69,19 @@ On Remix v2, whose file-system routes serve `app/routes/api.request.ts` at `/api
 
 The proxy reads a JSON call up to its `maxBodyBytes`, 1 MB, and an upload (`multipart/form-data`) up to its `maxUploadBytes`, 10 MB; pass others to raise them: `courierHandler({ maxUploadBytes: 50 * 1024 * 1024 })`. In development, a client that declares an oversized upload can see the connection close before it has sent it all, rather than read the 413.
 
+## The user's session
+
+An API that keeps the user's session describes it in `defineApi`, and every call a loader or an action makes — through every `await` — carries the session of the request being served, the cookies the session names and nothing else, once the request is served with it at hand:
+
+```tsx
+// app/root.tsx
+import { requestContext } from "@noverax/courier-remix/request-context"
+
+export const middleware = [requestContext()]
+```
+
+React Router 7 needs `future: { v8_middleware: true }`. The session cookies the API sets reach the browser on the response. A server of your own wraps its handler with `withRequestContext`.
+
 ## With Frontend
 
 Pair with `createProxyCaller` on the client:

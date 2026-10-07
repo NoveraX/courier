@@ -124,6 +124,12 @@ import { requestContext } from "@noverax/courier-astro/request-context"
 export const onRequest = requestContext()
 ```
 
+```tsx title="React Router 7 and 8 — app/root.tsx"
+import { requestContext } from "@noverax/courier-remix/request-context"
+
+export const middleware = [requestContext()]
+```
+
 `createAction` takes the action's request itself, and `withRequestContext` from `@noverax/courier-next/pages` serves `getServerSideProps` and API routes of the Pages Router. Any other Node server serves a request with `withIncomingRequest(nodeIncomingRequest(req, res), next)` from `@noverax/courier/node`; another framework registers a provider of its own with `registerRequestContext`.
 
 <Callout variant="warning" title="Next.js builds pages ahead of time">

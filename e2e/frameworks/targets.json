@@ -127,6 +127,37 @@
     "install": { "astro": "5", "@astrojs/node": "9" }
   },
   {
+    "id": "react-router-7",
+    "app": "react-router",
+    "overlays": ["react-router-7"],
+    "packages": ["core", "remix"],
+    "install": {
+      "react-router": "7",
+      "@react-router/node": "7",
+      "@react-router/serve": "7",
+      "@react-router/dev": "7",
+      "react": "19",
+      "react-dom": "19",
+      "vite": "7",
+      "isbot": "5"
+    }
+  },
+  {
+    "id": "react-router-8",
+    "app": "react-router",
+    "packages": ["core", "remix"],
+    "install": {
+      "react-router": "8",
+      "@react-router/node": "8",
+      "@react-router/serve": "8",
+      "@react-router/dev": "8",
+      "react": "19",
+      "react-dom": "19",
+      "vite": "7",
+      "isbot": "5"
+    }
+  },
+  {
     "id": "react-spa",
     "app": "spa",
     "packages": ["core", "react"],

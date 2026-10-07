@@ -1,6 +1,7 @@
 import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
+import { createLogger } from "../logger";
 import { generateRequestId, studioHooks } from "../studio";
 import { clientForCall } from "./execute-helpers";
 import type { InnerExecuteDeps } from "./execute-inner";
@@ -9,6 +10,7 @@ import { resolveMiddlewareChain, withCallerSignal, withEndpointTimeout } from ".
 import { namedHeadersOf } from "./execute-resolve";
 import { buildErrorResponse } from "./execute-response";
 import { runCall } from "./execute-run";
+import { applyCallSession, startCallSession } from "./execute-session";
 import {
   attachFetchHook,
   emitRequestStart,
@@ -19,6 +21,8 @@ import { type CallTarget, resolveCallTarget } from "./execute-target";
 import { idempotencyHeader } from "./idempotency-header";
 import { parseRequestPayload, type RequestPayloadInput } from "./request-payload";
 import { withStudioUploads } from "./studio-uploads";
+
+const log = createLogger("Session");
 
 /**
  * Run one call against the registered sources: the proxy's handler and a
@@ -89,12 +93,16 @@ export async function executeRequest(
 
 /* The endpoint's own options — timeout, middleware, retry — are applied
    here, around the options the call itself gave. */
-function prepareAndRun(
+async function prepareAndRun(
   target: CallTarget,
   studio: StudioContext,
   timing: TimingState,
   context: Context | undefined,
 ): Promise<unknown> {
+  /* Before anything waits: a framework may know the request being served
+     only until then. What a provider fails with — a render a framework
+     stops — is the call's failure, as it came. */
+  const pendingSession = startCallSession(target, context);
   const { source, group, method, variables, dataSource, schema, endpointOptions } = target;
   const instance = clientForCall(dataSource, context, schema?.type);
   if (studio.hasStudio) attachFetchHook(instance, studio);
@@ -106,7 +114,7 @@ function prepareAndRun(
     stream = false,
     ...baseOptions
   } = target.options ?? {};
-  const callOptions = withStudioUploads(
+  let callOptions = withStudioUploads(
     withCallerSignal(
       withEndpointTimeout(baseOptions, endpointOptions, context?.defaultTimeout),
       context?.req,
@@ -129,6 +137,12 @@ function prepareAndRun(
     signal: callOptions.signal ?? undefined,
     idempotencyHeader: idempotencyHeader(endpointOptions?.idempotencyKey),
   });
+  const session = await pendingSession;
+  if (session?.refusal !== undefined) {
+    log.warn(`Refused: ${session.refusal}`);
+    return buildErrorResponse(context, 403, session.refusal);
+  }
+  callOptions = applyCallSession(session, middlewareCtx, callOptions, dataSource.options);
   const mode = context?.mode ?? (context?.proxyMethod ? "proxy" : "direct");
 
   /* Source-level middleware wraps endpoint-level, so a concern declared once
@@ -168,6 +182,7 @@ function prepareAndRun(
     studio,
     timing,
     context,
+    session,
     answer: {
       rawData,
       stream,

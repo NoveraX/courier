@@ -23,6 +23,11 @@ export type MiddlewareContext = {
   /** Whether the endpoint reads or writes, when its schema says. */
   kind?: "query" | "mutation" | undefined;
   /**
+   * Whether the call carries the user's session — the API's `session`, taken
+   * from the request being served. Its answer belongs to that user alone.
+   */
+  carriesSession?: boolean | undefined;
+  /**
    * Fires when whoever made the call stops waiting for it: the signal given
    * to the call, or the incoming request's when a proxy runs it. Middleware
    * that waits — between retries, in a queue — should stop when it fires.

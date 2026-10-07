@@ -55,6 +55,10 @@ export class HttpClient {
       searchParamsSerializer,
       deduplicate,
       middleware: _middleware,
+      /* Read by the executor, which builds what they send from the request
+         being served; neither is anything `fetch` knows. */
+      session: _session,
+      forward: _forward,
       timeout,
       headers,
       ...baseFetchInit
@@ -82,7 +86,7 @@ export class HttpClient {
     url: string,
     options: Partial<FetchOptions> = {},
   ): Promise<Response> {
-    const { prefixUrl: overridePrefixUrl, ...fetchOptions } = options;
+    const { prefixUrl: overridePrefixUrl, withinOrigin, ...fetchOptions } = options;
 
     const effectivePrefixUrl = overridePrefixUrl !== undefined ? overridePrefixUrl : this.prefixUrl;
     let fullUrl = url;
@@ -112,13 +116,14 @@ export class HttpClient {
        underneath instead, and a header the call names wins. Headers of the
        connection a forwarded set was copied from are fetch's own to set. A
        call that came through the proxy carries the server's credentials, and
-       a redirect must not take them to a host the source never named. */
+       a redirect must not take them to a host the source never named, nor
+       must one that carries the user's session. */
     return coreFetch(method, fullUrl, {
       ...this.baseFetchInit,
       ...fetchOptions,
       headers: withoutConnectionHeaders(overlayHeaders(this.baseHeaders, fetchOptions.headers)),
       timeout: fetchOptions.timeout ?? this.baseTimeout,
-      withinOrigin: this.context?.proxyMethod !== undefined,
+      withinOrigin: withinOrigin === true || this.context?.proxyMethod !== undefined,
     } as CoreFetchInit);
   }
 

@@ -1,6 +1,9 @@
+import { HTTPError } from "../errors";
 import type { Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware/index";
 import type { Middleware, MiddlewareContext } from "../middleware/types";
+import type { CallSession } from "../session/call-session";
+import { relayCookies } from "../session/relay";
 import type { SchemaMetadata } from "../validation";
 import { applyCacheHeaders } from "./cache-headers";
 import { handleExecuteError } from "./execute-error";
@@ -24,6 +27,8 @@ export interface PreparedCall {
   studio: StudioContext;
   timing: TimingState;
   context: Context | undefined;
+  /** What the user's session and `forward` gave the call, when they gave it anything */
+  session?: CallSession | undefined;
   answer: { rawData: boolean; stream: boolean; namedHeaders: string[] | undefined };
 }
 
@@ -72,12 +77,16 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
       emitRequestEnd(studio, result, ctx.headers, timing, tMiddlewareTotal, context);
     }
 
-    const response = buildResponse(context, {
-      headers: result.headers,
-      status: result.status,
-      data: result.data,
-      ...call.answer,
-    });
+    const relayed = relayOf(call, result.headers);
+    const response = withCookies(
+      buildResponse(context, {
+        headers: result.headers,
+        status: result.status,
+        data: result.data,
+        ...call.answer,
+      }),
+      relayed,
+    );
 
     if (context?.proxyMethod && response instanceof Response && studio.hasStudio) {
       injectTimingHeaders(response, studio.requestId, timing.t0);
@@ -88,15 +97,33 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
 
     return response;
   } catch (error) {
-    return handleExecuteError(error, {
-      requestId: studio.requestId,
-      dt: studio.dt,
-      context,
-      rawData: call.answer.rawData,
-      namedHeaders: call.answer.namedHeaders,
-      timing,
-      middlewareCount: middlewares.length,
-      signal: call.inner.baseOptions.signal ?? undefined,
-    });
+    /* An error answer sets cookies as a success does: a sign-in refused
+       clears the session it names, and a renewal can ride on a 401. */
+    const relayed = relayOf(call, error instanceof HTTPError ? error.headers : undefined);
+    return withCookies(
+      handleExecuteError(error, {
+        requestId: studio.requestId,
+        dt: studio.dt,
+        context,
+        rawData: call.answer.rawData,
+        namedHeaders: call.answer.namedHeaders,
+        timing,
+        middlewareCount: middlewares.length,
+        signal: call.inner.baseOptions.signal ?? undefined,
+      }),
+      relayed,
+    );
   }
+}
+
+/* The session cookies the API set, carried on; the ones a Response of the call's own has to carry. */
+function relayOf(call: PreparedCall, upstream: Headers | undefined): string[] {
+  if (call.session === undefined) return [];
+  return relayCookies(upstream, call.session, call.context?.res instanceof Response);
+}
+
+function withCookies(answer: unknown, cookies: readonly string[]): unknown {
+  if (answer instanceof Response)
+    for (const cookie of cookies) answer.headers.append("set-cookie", cookie);
+  return answer;
 }

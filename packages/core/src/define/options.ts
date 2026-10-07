@@ -1,4 +1,5 @@
 import type { Middleware, MiddlewareResponse } from "../middleware/types";
+import type { EndpointSession } from "../session/types";
 import type { CacheConfig } from "../validation";
 
 /** How an endpoint reads against a collection, used by mocks and codegen. */
@@ -50,6 +51,16 @@ export interface HttpEndpointOptions extends CommonEndpointOptions {
    * POST; the proxy refuses it over GET.
    */
   sensitiveVariables?: boolean | undefined;
+  /**
+   * How the endpoint takes its source's `session`: `false` for one that
+   * answers every user alike, which then never reads the request being
+   * served for it; `"unguarded"` for a write that may carry it whatever
+   * request the application serves — one whose harm is nil when another
+   * site sets it off, such as signing out.
+   */
+  session?: EndpointSession | undefined;
+  /** `false` keeps the headers the source's `forward` names off this endpoint's calls. */
+  forward?: false | undefined;
 }
 
 /**
@@ -132,6 +143,10 @@ export interface ResolvedEndpointOptions {
   readonly idempotencyKey?: string;
   /** Sent through the proxy as POST, its variables kept out of the address. */
   readonly sensitiveVariables?: boolean;
+  /** How it takes its source's session. */
+  readonly session?: EndpointSession;
+  /** `false` when it carries none of the headers its source forwards. */
+  readonly forward?: false;
   /** Reads the key a served channel's subscribers share a topic by, from `.topic()`. */
   readonly topicKey?: TopicKeyReader;
 }

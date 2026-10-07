@@ -87,6 +87,51 @@ export function Users() {
 }
 ```
 
+## The user's session
+
+An API that keeps the user's session in cookies says so where it is defined, as it does for a page — see [User Sessions](/docs/server-side/session). The platform keeps the cookies the API sets and sends them with the calls to its host, as a browser does; a call asks for them with `credentials: "include"`.
+
+What a page reads from `document.cookie` — the double-submit token a write repeats, a bearer token the API did not set `HttpOnly` — an app cannot read: React Native keeps its cookies where no script reaches them. It hands a script the `Set-Cookie` headers of each answer instead, so Courier keeps those cookies from the answers its calls receive, for the host, domain and path they were set for, until they run out or the API deletes them, and repeats them as a page does.
+
+```ts title="src/account.ts"
+import { createCaller } from "@noverax/courier"
+import { courier, defineApi } from "@noverax/courier/define"
+import { API_URL } from "./address"
+
+const { endpoint } = courier()
+
+export const account = createCaller(
+  defineApi({
+    name: "account",
+    baseURL: API_URL,
+    session: {
+      cookies: ["laravel_session"],
+      csrf: { cookie: "XSRF-TOKEN", header: "X-XSRF-TOKEN" },
+    },
+    endpoints: {
+      csrfCookie: endpoint.get("sanctum/csrf-cookie"),
+      signIn: endpoint.post("login").variables<{ email: string; password: string }>(),
+      rename: endpoint.post("user/name").variables<{ name: string }>(),
+    },
+  }),
+)
+```
+
+A token is kept for as long as the app runs. When it starts again, the platform still sends the cookie it kept, but no write repeats it until an answer has set it again, so the app makes the call that sets it before its first write, as a single-page application does when it loads:
+
+```ts title="src/start.ts"
+import { account } from "./account"
+
+// Laravel Sanctum sets XSRF-TOKEN on this answer
+await account.csrfCookie()
+```
+
+With Django, a view decorated with `ensure_csrf_cookie` sets `csrftoken` the same way. Only the answers to Courier's own calls hand it the cookies: an answer to a plain `fetch` does not.
+
+<Callout variant="info" title="Every call to the host carries its cookies">
+React Native sends the cookies it keeps for a host with every call to that host, whether the API describes a session or not; a browser sends them to another origin only when the call asks it to.
+</Callout>
+
 ## Streams and channels
 
 `useSubscription` reads server-sent events as they arrive, which takes a `fetch` that hands over a response's body as it comes. React Native's own `fetch` hands it over only once all of it has arrived; Expo replaces it with `expo/fetch`, which streams. Expo SDK 57 does so for every app unless `EXPO_PUBLIC_USE_RN_FETCH` is set. A channel needs nothing more: React Native has WebSocket.

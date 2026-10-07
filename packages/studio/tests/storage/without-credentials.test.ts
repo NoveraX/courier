@@ -35,6 +35,15 @@ describe("a header that carries a credential", () => {
     ).toEqual(["x-auth-token", "x_session_id", "x-csrf-token"]);
   });
 
+  it("includes the double-submit token a session repeats, written as one word", () => {
+    const tokens = ["X-CSRFToken", "x-xsrf-token", "X-XSRFToken", "csrf"];
+
+    expect(tokens.filter(isCredentialHeader)).toEqual(tokens);
+    expect(["x-csrf", "x-forwarded-for", "accept-language"].filter(isCredentialHeader)).toEqual([
+      "x-csrf",
+    ]);
+  });
+
   it("keeps its name, with its value replaced", () => {
     expect(headersWithoutCredentials({ authorization: "Bearer t", accept: "*/*" })).toEqual({
       authorization: REDACTED,

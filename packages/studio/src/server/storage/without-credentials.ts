@@ -22,9 +22,11 @@ const CREDENTIAL_HEADERS = new Set([
   "set-cookie",
 ]);
 
-/* A word of the name, between dashes or underscores: `x-api-key`, `x-auth-token`, `x_session_id`. */
+/* A word of the name, between dashes or underscores: `x-api-key`, `x-auth-token`,
+   `x_session_id` — and the double-submit tokens written as one word, Django's
+   `X-CSRFToken`, Angular's `X-XSRF-TOKEN`, that an API's session repeats. */
 const CREDENTIAL_WORDS =
-  /(?:^|[-_])(?:auth|token|secret|password|passwd|session|csrf|xsrf|api[-_]?key|apikey)(?:$|[-_])/i;
+  /(?:^|[-_])(?:auth|token|secret|password|passwd|session|csrf[a-z]*|xsrf[a-z]*|api[-_]?key|apikey)(?:$|[-_])/i;
 
 /** The fields of an event or a history entry that hold headers. */
 const HEADER_FIELDS = ["headers", "requestHeaders", "responseHeaders"] as const;

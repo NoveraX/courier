@@ -97,6 +97,20 @@ export {
   TimeoutError,
 } from "./realtime/errors";
 export type { CallerWSOptions } from "./realtime/ws/ws-types";
+export type {
+  HeaderReader,
+  IncomingRequest,
+  RelayedCookie,
+  RequestContextProvider,
+} from "./session/incoming-request";
+export { registerRequestContext } from "./session/request-context";
+export type { CookieAttributes, SetCookie } from "./session/set-cookie";
+export type {
+  CsrfOptions,
+  EndpointSession,
+  ForwardOptions,
+  SessionOptions,
+} from "./session/types";
 export { getSources, registerSources } from "./sources";
 export { type SmoothProgressOptions, smoothProgress } from "./utils/smooth-progress";
 export type {

@@ -12,11 +12,14 @@
 
 import { LIMITS } from "../adapter/limits";
 import type { Sources } from "../define/types";
-import type { Context } from "../http-client/types";
+import type { BaseOptions, Context } from "../http-client/types";
 import { composeMiddleware } from "../middleware";
+import { sessionFor } from "../session/call-session";
+import { sessionTargetOf } from "../session/session-target";
 import { buildMiddlewareContext } from "./execute-middleware-context";
 import { resolveMiddlewareChain } from "./execute-options";
 import { resolveEndpoint } from "./execute-resolve";
+import { applyCallSession } from "./execute-session";
 
 export interface TransportMiddlewareInput {
   /** Which transport is asking, so the context reports it accurately. */
@@ -53,18 +56,29 @@ export async function runTransportMiddleware(input: TransportMiddlewareInput): P
   const dataSource = sources[source] as unknown as Record<string, unknown>;
   const { options: endpointOptions, schema } = resolveEndpoint(dataSource, group, method);
 
+  const context: Context = { req: request, mode: "proxy" };
   const middlewareCtx = buildMiddlewareContext({
     source,
     group,
     method,
     variables,
-    context: { req: request, mode: "proxy" } as Context,
+    context,
     dataSource,
     requestId,
     transport,
     endpointAllowedHeaders: endpointOptions?.allowedHeaders,
     kind: schema?.type,
   });
+  /* A stream reads: it carries the session and the forwarded headers as a
+     read over HTTP does, for the upstream a relayed stream is opened on. */
+  const target = sessionTargetOf({
+    dataSource: dataSource as { options?: BaseOptions },
+    endpointOptions,
+    kind: "query",
+    httpMethod: "GET",
+    name: [source, group, method].filter(Boolean).join("."),
+  });
+  applyCallSession(await sessionFor(context, target), middlewareCtx, {}, undefined);
 
   const sourceMiddleware = (dataSource.options as { middleware?: unknown } | undefined)
     ?.middleware as Parameters<typeof composeMiddleware>[0] | undefined;

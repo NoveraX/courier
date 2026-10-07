@@ -48,6 +48,8 @@ export {
 } from "../realtime/ws/heartbeat";
 export { decodeMessage, encodeMessage, type WSMessage } from "../realtime/ws/ws-protocol";
 export { buildDirectWSUrl, parseWSTopic, type TopicEndpoint } from "../realtime/ws-address";
+export { addressedOrigin } from "../session/addressed-origin";
+export { isDeletion, parseSetCookie, serializeSetCookie } from "../session/set-cookie";
 export { getSourcesGeneration, onSourcesChange } from "../sources";
 export {
   abortPlayground,

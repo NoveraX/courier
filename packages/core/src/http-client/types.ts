@@ -1,6 +1,7 @@
 import type { ProxyBoundary } from "../define/boundary-types";
 import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
+import type { ForwardOptions, SessionOptions } from "../session/types";
 import type { WebBody } from "./web-types";
 
 export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head" | "options" | "query";
@@ -80,6 +81,13 @@ export type FetchOptions = Omit<RequestInit, "method" | "body" | "signal"> & {
    * read as the source reads it, since it explains the error in its own form.
    */
   responseType?: ResponseType | undefined;
+  /**
+   * Follow redirects only while they stay on the request's origin, so the
+   * credentials a call carries never reach a host the API sent it on to. A
+   * call carrying the user's session, or made through the proxy, always
+   * does; a browser follows redirects itself and ignores it.
+   */
+  withinOrigin?: boolean | undefined;
 };
 
 export type OptionsWithSearchParams = Omit<FetchOptions, "searchParams"> & {
@@ -146,6 +154,19 @@ export type BaseOptions = MergeOptions &
     deduplicate?: boolean | undefined;
     /** Middleware pipeline applied to every request in order */
     middleware?: Middleware[] | undefined;
+    /**
+     * How the API keeps the user's session: the cookies it is kept in, a
+     * cookie holding a bearer token, a double-submit token for writes. A
+     * call made while a server serves a user carries it from the request
+     * being served, and a call made in a browser lets the browser send its
+     * own cookies.
+     */
+    session?: SessionOptions | undefined;
+    /**
+     * The headers a call made while serving a request carries from it — the
+     * request's id, its trace, the user's address, browser and languages.
+     */
+    forward?: ForwardOptions | undefined;
     /**
      * Proxy endpoint paths for HTTP / SSE / WS transports. Carried as
      * deployment metadata on the source so Studio and `createProxyCaller`

@@ -162,7 +162,26 @@ export type ConfigurationErrorCode =
    * A request's address is a path, such as a `baseURL` of `/api`, in a
    * runtime with no page to resolve it against — React Native, Node.
    */
-  | "URL_NOT_ABSOLUTE";
+  | "URL_NOT_ABSOLUTE"
+  /**
+   * An API's `session` cannot work as written: an option it does not have, a
+   * cookie name no browser keeps, a header no request carries, or no
+   * credential named at all.
+   */
+  | "SESSION_OPTIONS_INVALID"
+  /**
+   * An API keeps a `session` and is reached over plain HTTP across the public
+   * internet, where the session could be read on the way; `allowHttp` sends
+   * it anyway.
+   */
+  | "SESSION_INSECURE_TRANSPORT"
+  /**
+   * An API keeps a `session`, and its header list — or an endpoint's — names
+   * `cookie` or `set-cookie`, which would carry every cookie past it.
+   */
+  | "SESSION_HEADER_CONFLICT"
+  /** An API's `forward` cannot work as written: an option it does not have, or a header it may not carry. */
+  | "FORWARD_OPTIONS_INVALID";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

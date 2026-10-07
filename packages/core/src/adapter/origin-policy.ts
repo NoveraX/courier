@@ -42,7 +42,7 @@ import { isDevelopment } from "../utils/development";
  * isOriginAllowed(request, ["https://studio.example.com", "https://*.example.com"]);
  * ```
  */
-export function isOriginAllowed(request: Request, allowedOrigins?: string[]): boolean {
+export function isOriginAllowed(request: Request, allowedOrigins?: readonly string[]): boolean {
   return isOriginAccepted(
     request.headers.get("Origin"),
     selfOrigin(request),
@@ -72,7 +72,7 @@ export function isOriginAllowed(request: Request, allowedOrigins?: string[]): bo
 export function isOriginAccepted(
   origin: string | null | undefined,
   self: string | null,
-  allowedOrigins?: string[],
+  allowedOrigins?: readonly string[],
   fetchSite?: string | null,
 ): boolean {
   const site = fetchSite?.toLowerCase();
@@ -104,7 +104,7 @@ export function isOriginListed(origin: string, allowedOrigins?: readonly string[
 }
 
 /** Whether a foreign origin was listed, or is a local port during development. */
-function isConfigured(origin: string, allowedOrigins?: string[]): boolean {
+function isConfigured(origin: string, allowedOrigins?: readonly string[]): boolean {
   if (allowedOrigins?.length) return isOriginListed(origin, allowedOrigins);
   return isDevelopment() && isLoopback(origin);
 }

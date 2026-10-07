@@ -1,4 +1,5 @@
 import type { BaseOptions } from "../http-client/types";
+import { assertSessionApi } from "../session/assert-session-api";
 import { studioHooks } from "../studio";
 import { isDevelopment } from "../utils/development";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
@@ -78,7 +79,10 @@ export function setSourceName(source: unknown, name: string): void {
  * @param config - The source's options, with its `groups`, its flat `endpoints`, or both
  * @returns The source: its endpoints, with its options beside them under `options`
  * @throws ConfigurationError `RESERVED_ENDPOINT_NAME` for a flat endpoint
- *   named `options`, `raw` or `with`, or a group named `raw` or `with`
+ *   named `options`, `raw` or `with`, or a group named `raw` or `with`;
+ *   `SESSION_OPTIONS_INVALID`, `SESSION_INSECURE_TRANSPORT`,
+ *   `SESSION_HEADER_CONFLICT` or `FORWARD_OPTIONS_INVALID` for a `session`
+ *   or a `forward` that cannot work as written
  *
  * @example
  * const { endpoint } = courier()
@@ -220,6 +224,7 @@ export function defineApi(
   // Store name for studio identification
   const sourceName = name ?? deriveSourceName(config.baseURL);
   (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
+  assertSessionApi(result, rest, sourceName);
 
   // Dev-only: notify studio of source (re)creation for HMR hot reload
   if (isDevelopment()) {

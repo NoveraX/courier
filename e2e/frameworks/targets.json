@@ -1,0 +1,117 @@
+[
+  {
+    "id": "next-14",
+    "app": "next",
+    "packages": ["core", "next"],
+    "install": {
+      "next": "14",
+      "react": "18",
+      "react-dom": "18",
+      "@types/react": "18",
+      "@types/node": "24",
+      "typescript": "5"
+    }
+  },
+  {
+    "id": "next-15",
+    "app": "next",
+    "packages": ["core", "next"],
+    "install": {
+      "next": "15",
+      "react": "19",
+      "react-dom": "19",
+      "@types/react": "19",
+      "@types/node": "24",
+      "typescript": "6"
+    }
+  },
+  {
+    "id": "next-16",
+    "app": "next",
+    "packages": ["core", "next"],
+    "install": {
+      "next": "16",
+      "react": "19",
+      "react-dom": "19",
+      "@types/react": "19",
+      "@types/node": "24",
+      "typescript": "6"
+    }
+  },
+  {
+    "id": "next-16-cache-components",
+    "app": "next",
+    "overlays": ["next-cache-components"],
+    "packages": ["core", "next"],
+    "install": {
+      "next": "16",
+      "react": "19",
+      "react-dom": "19",
+      "@types/react": "19",
+      "@types/node": "24",
+      "typescript": "6"
+    }
+  },
+  {
+    "id": "sveltekit-2.19",
+    "app": "sveltekit",
+    "overlays": ["sveltekit-handle"],
+    "packages": ["core", "sveltekit"],
+    "install": {
+      "@sveltejs/kit": "2.19",
+      "@sveltejs/adapter-node": "5",
+      "@sveltejs/vite-plugin-svelte": "5",
+      "svelte": "5",
+      "vite": "6"
+    }
+  },
+  {
+    "id": "sveltekit-2",
+    "app": "sveltekit",
+    "overlays": ["sveltekit-request-event"],
+    "packages": ["core", "sveltekit"],
+    "install": {
+      "@sveltejs/kit": "2",
+      "@sveltejs/adapter-node": "5",
+      "@sveltejs/vite-plugin-svelte": "5",
+      "svelte": "5",
+      "vite": "6"
+    }
+  },
+  {
+    "id": "nuxt-3",
+    "app": "nuxt",
+    "packages": ["core", "nuxt"],
+    "install": { "nuxt": "3", "vue": "3" }
+  },
+  {
+    "id": "nuxt-4",
+    "app": "nuxt",
+    "packages": ["core", "nuxt"],
+    "install": { "nuxt": "4", "vue": "3" }
+  },
+  {
+    "id": "express-4",
+    "app": "express",
+    "packages": ["core", "express"],
+    "install": { "express": "4" }
+  },
+  {
+    "id": "express-5",
+    "app": "express",
+    "packages": ["core", "express"],
+    "install": { "express": "5" }
+  },
+  {
+    "id": "react-spa",
+    "app": "spa",
+    "packages": ["core", "react"],
+    "install": {
+      "vite": "6",
+      "@vitejs/plugin-react": "4",
+      "react": "19",
+      "react-dom": "19",
+      "@tanstack/react-query": "5"
+    }
+  }
+]

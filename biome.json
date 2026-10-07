@@ -98,6 +98,49 @@
       }
     },
     {
+      "includes": ["e2e/frameworks/apps/**", "e2e/frameworks/support/global-setup.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["e2e/frameworks/apps/**/*.{vue,svelte}"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off",
+            "useHookAtTopLevel": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["e2e/frameworks/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUndeclaredEnvVars": {
+              "level": "error",
+              "options": {
+                "allowedEnvVars": [
+                  "COURIER_FRAMEWORK",
+                  "COURIER_APP_URL",
+                  "COURIER_API_URL",
+                  "COURIER_ATTACKER_URL",
+                  "PORT"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/studio/ui/src/routes/**"],
       "linter": {
         "rules": {

@@ -9,7 +9,7 @@
     "examples/demo-shop/courier.mocks.ts",
     "e2e/**/*"
   ],
-  "exclude": ["examples/expo"],
+  "exclude": ["examples/expo", "e2e/frameworks/apps"],
   "compilerOptions": {
     "paths": {
       "@noverax/courier": ["./packages/core/src/index.ts"],

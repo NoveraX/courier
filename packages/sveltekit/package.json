@@ -36,6 +36,11 @@
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js",
       "default": "./lib/index.js"
+    },
+    "./handle": {
+      "types": "./lib/handle.d.ts",
+      "import": "./lib/handle.js",
+      "default": "./lib/handle.js"
     }
   },
   "files": [

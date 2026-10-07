@@ -6,5 +6,6 @@ export default defineConfig({
   ...sharedBuild,
   entry: {
     index: "src/index.ts",
+    handle: "src/handle.ts",
   },
 });

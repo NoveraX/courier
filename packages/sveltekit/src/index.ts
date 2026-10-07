@@ -7,6 +7,12 @@ import {
 } from "@noverax/courier";
 import { announceWhenRegistered } from "@noverax/courier/announce";
 
+export {
+  type SvelteKitServerEvent,
+  svelteKitIncomingRequest,
+  svelteKitRequestContext,
+} from "./request-context";
+
 /**
  * The parts of SvelteKit's `RequestEvent` the handler reads. `platform.req`
  * is the Node request `@sveltejs/adapter-node` passes along.

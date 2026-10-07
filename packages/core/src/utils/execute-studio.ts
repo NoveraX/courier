@@ -1,5 +1,6 @@
 import type { Context } from "../http-client/types";
-import type { StudioHooks } from "../studio";
+import type { CallPurpose } from "../middleware/types";
+import { generateRequestId, type StudioHooks, studioHooks } from "../studio";
 import { describeFormData } from "../studio/describe-form-data";
 import type { SchemaMetadata } from "../validation";
 import { estimateResponseSize, headersToObject, isFormData, normalizeHttpMethod } from "./helpers";
@@ -28,6 +29,8 @@ export interface RequestStart {
   schema: SchemaMetadata | undefined;
   /** The endpoint's HTTP verb, when it declares one. */
   httpMethod: string | undefined;
+  /** What the call is, when it is a request the session makes rather than an endpoint's */
+  purpose?: CallPurpose | undefined;
 }
 
 /**
@@ -51,8 +54,40 @@ export function emitRequestStart(dCtx: StudioContext, start: RequestStart): void
     hasValidation: { variables: !!schema?.variables, response: !!schema?.response },
     ...(start.httpMethod && { httpMethod: start.httpMethod }),
     ...(schema?.type && { endpointType: schema.type }),
+    ...(start.purpose && { purpose: start.purpose }),
     timestamp: Date.now(),
   });
+}
+
+/**
+ * What a call is measured and told to Studio with: the id its events carry,
+ * a new one unless the proxy gave it one, and its timings.
+ *
+ * @param requestId - The id the proxy gave the call, if it did
+ * @returns The call's Studio context and timing
+ * @example
+ * ```ts
+ * const { studio, timing } = callInstruments(context?.studioRequestId);
+ * ```
+ */
+export function callInstruments(requestId: string | undefined): {
+  studio: StudioContext;
+  timing: TimingState;
+} {
+  const hasStudio = studioHooks.onRequestStart !== undefined;
+  return {
+    studio: {
+      hasStudio,
+      requestId: hasStudio ? (requestId ?? generateRequestId()) : "",
+      dt: studioHooks,
+    },
+    timing: {
+      t0: hasStudio ? performance.now() : 0,
+      tVarValidation: 0,
+      tRespValidation: 0,
+      tFetch: 0,
+    },
+  };
 }
 
 /** How a proxied call's time split between the proxy's own work and the upstream. */

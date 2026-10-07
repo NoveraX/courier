@@ -21,7 +21,8 @@ export function buildCatalogFromRequests(requests: readonly RequestEntry[]): Cat
   const catalog: Catalog = {};
 
   for (const req of requests) {
-    if (!req.source) continue;
+    /* A request the session makes is none of the API's endpoints. */
+    if (!req.source || req.purpose !== undefined) continue;
     const grpName = req.group ?? "";
     const source = ownValue(catalog, req.source) ?? {
       baseURL: extractBaseURL(req.url),

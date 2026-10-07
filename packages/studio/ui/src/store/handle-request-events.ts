@@ -25,6 +25,7 @@ export function requestFromStart(event: EventPayload): RequestEntry {
     group: optStr(event.group),
     method: str(event.method),
     httpMethod: optStr(event.httpMethod),
+    purpose: event.purpose === "csrf-token" ? "csrf-token" : undefined,
     variables: event.variables,
     variablesCutFrom: optNum(event.variablesCutFrom),
     mode: event.mode === "proxy" ? "proxy" : "direct",

@@ -1,7 +1,6 @@
 import { parseWireOptions } from "../adapter/wire-options";
 import type { Sources } from "../define/types";
 import type { Context } from "../http-client/types";
-import { generateRequestId, studioHooks } from "../studio";
 import { clientForCall } from "./execute-helpers";
 import type { InnerExecuteDeps } from "./execute-inner";
 import { buildMiddlewareContext } from "./execute-middleware-context";
@@ -12,6 +11,7 @@ import { runCall } from "./execute-run";
 import { applyCallSession, startCallSession } from "./execute-session";
 import {
   attachFetchHook,
+  callInstruments,
   emitRequestStart,
   type StudioContext,
   type TimingState,
@@ -70,19 +70,7 @@ export async function executeRequest(
     options = accepted.options;
   }
 
-  const hasStudio = studioHooks.onRequestStart !== undefined;
-  const studio: StudioContext = {
-    hasStudio,
-    requestId: hasStudio ? (context?.studioRequestId ?? generateRequestId()) : "",
-    dt: studioHooks,
-  };
-  const timing: TimingState = {
-    t0: hasStudio ? performance.now() : 0,
-    tVarValidation: 0,
-    tRespValidation: 0,
-    tFetch: 0,
-  };
-
+  const { studio, timing } = callInstruments(context?.studioRequestId);
   const call = { source, group, method, variables, options };
   const resolution = resolveCallTarget(sources, call, context);
   if ("refusal" in resolution) return resolution.refusal;
@@ -134,8 +122,20 @@ async function prepareAndRun(
     kind: schema?.type,
     signal: callOptions.signal ?? undefined,
     idempotencyHeader: idempotencyHeader(endpointOptions?.idempotencyKey),
+    purpose: target.purpose,
   });
-  const settled = await settleCallSession(pendingSession, target, context, callOptions.signal);
+  /* The token a write asks for first goes as calls go, under an id of its own. */
+  const runPrime = (prime: CallTarget, primeContext: Context | undefined) => {
+    const instruments = callInstruments(undefined);
+    return prepareAndRun(prime, instruments.studio, instruments.timing, primeContext);
+  };
+  const settled = await settleCallSession(
+    pendingSession,
+    target,
+    context,
+    callOptions.signal,
+    runPrime,
+  );
   if ("refused" in settled) return settled.refused;
   const { session, primed } = settled;
   callOptions = applyCallSession(session, middlewareCtx, callOptions, dataSource.options);
@@ -155,6 +155,7 @@ async function prepareAndRun(
     middlewareCount: middlewares.length,
     schema,
     httpMethod: target.httpMethod,
+    purpose: target.purpose,
   });
 
   const inner: PreparedInner = {

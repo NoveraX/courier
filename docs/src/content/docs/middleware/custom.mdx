@@ -31,7 +31,10 @@ type MiddlewareContext = {
   transport?: "http" | "sse" | "ws"    // What kind of call it is
   request?: Request                    // The incoming request, when a proxy runs the call
   kind?: "query" | "mutation"          // Whether the endpoint reads or writes
+  carriesSession?: boolean             // Whether the call carries the user's session
+  sessionPartition?: string            // Tells one user's calls from the next in a browser or an app
   signal?: AbortSignal                 // Fires when the caller stops waiting
+  purpose?: "csrf-token"               // A request the session makes, not an endpoint's call
 }
 ```
 

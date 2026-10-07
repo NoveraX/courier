@@ -72,6 +72,7 @@ export type {
   AfterMiddleware,
   BeforeHandler,
   BeforeMiddleware,
+  CallPurpose,
   Middleware,
   MiddlewareContext,
   MiddlewarePhase,

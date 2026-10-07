@@ -18,6 +18,12 @@ export interface RequestStartEvent extends StudioEvent {
   httpMethod?: string;
   /** Whether the endpoint reads or writes. */
   endpointType?: "query" | "mutation";
+  /**
+   * What the request is when it is none of the API's endpoints but one the
+   * session makes for a call: `"csrf-token"`, the double-submit token asked
+   * for before a write that found none.
+   */
+  purpose?: "csrf-token";
 }
 
 export interface RequestEndEvent extends StudioEvent {

@@ -1,16 +1,24 @@
-import { isHTTPError } from "../errors/http-error";
-import type { Context } from "../http-client/types";
+import type { Context, HttpMethods } from "../http-client/types";
 import { createLogger } from "../logger";
 import { type CallSession, sameRequestContext, sessionFor } from "../session/call-session";
 import { csrfSource } from "../session/csrf-source";
-import { sessionTargetOf } from "../session/session-target";
 import { abortReason } from "./abort-reason";
-import { keepAnswerCookies } from "./answer-cookies";
-import { clientForCall } from "./execute-helpers";
-import { applyCallSession, callSessionTarget } from "./execute-session";
+import { callSessionTarget } from "./execute-session";
 import type { CallTarget } from "./execute-target";
 
 const log = createLogger("Session");
+
+/** Runs a call as every call runs: its session, its API's middleware, and Studio's view of it. */
+export type CallRunner = (target: CallTarget, context: Context | undefined) => Promise<unknown>;
+
+/** A write that found no double-submit token, and what asks for one. */
+export interface PrimeCall {
+  readonly target: CallTarget;
+  readonly context: Context | undefined;
+  /** What the write carried, with `primeFrom` set */
+  readonly session: CallSession;
+  readonly run: CallRunner;
+}
 
 /** What a write goes on with once its token was asked for. */
 export interface PrimedSession {
@@ -27,29 +35,28 @@ const warned = new Set<string>();
 
 /**
  * Ask the API for the double-submit token a write found none of, where the
- * API says it comes from, then read the write's session again. The call
- * goes as the API's calls go — its address, headers and `fetch` — with the
- * user's session, and the cookies its answer sets are kept as any answer's
- * are. Writes waiting on the same user's token share one call; one that
+ * API says it comes from, then read the write's session again. The request
+ * is a call like any other — the user's session, the API's middleware,
+ * Studio's view of it — marked `purpose: "csrf-token"`, since it is none of
+ * the API's endpoints; the cookies its answer sets are kept as any answer's
+ * are. Writes waiting on the same user's token share one request, and one
+ * whose signal aborts stops waiting without stopping it. A request that
  * fails, or whose answer sets no token, leaves the write to go without, and
  * the API to refuse it as it would.
  *
- * @param target - The write
- * @param context - Its context
- * @param session - What it carried, with `primeFrom` set
+ * @param call - The write, and what runs the request for its token
  * @param signal - The write's signal: aborted, the write stops waiting for the token
  * @returns The write's session read again, and the cookies the answer set
  * @example
  * ```ts
- * const { session, primed } = await primeCsrfToken(target, context, found, signal);
+ * const { session, primed } = await primeCsrfToken({ target, context, session: found, run }, signal);
  * ```
  */
 export async function primeCsrfToken(
-  target: CallTarget,
-  context: Context | undefined,
-  session: CallSession,
+  call: PrimeCall,
   signal: AbortSignal | undefined,
 ): Promise<PrimedSession> {
+  const { target, session } = call;
   const from = session.primeFrom ?? "";
   const path = csrfSource(from, target.dataSource.options?.baseURL);
   if (path === undefined) {
@@ -59,10 +66,10 @@ export async function primeCsrfToken(
     );
     return { session, primed: [] };
   }
-  const again = sameRequestContext(context, session);
+  const again = sameRequestContext(call.context, session);
   const key = `${String(target.source)} ${path}`;
   const asked = once(session.incoming?.key ?? ONE_USER, key, () =>
-    askForToken(target, again, path),
+    askForToken(call.run(tokenCall(target, path), again), path),
   );
   const primed = await unlessAborted(asked, signal);
   const reread = await sessionFor(again, callSessionTarget(target));
@@ -75,31 +82,36 @@ export async function primeCsrfToken(
   return { session: reread, primed };
 }
 
-/* The writes waiting on it share the call, so none of their signals stops it. */
-async function askForToken(
-  target: CallTarget,
-  context: Context | undefined,
-  path: string,
-): Promise<readonly string[]> {
-  const read = sessionTargetOf({
+/* The request for the token: a GET of the API's, which none of its endpoints describes. */
+function tokenCall(target: CallTarget, path: string): CallTarget {
+  return {
+    source: target.source,
+    group: undefined,
+    method: "csrf token",
+    variables: undefined,
+    options: undefined,
     dataSource: target.dataSource,
-    kind: "query",
+    endpoint: (http: unknown) => (http as Pick<HttpMethods, "get">).get(path),
+    endpointGroup: undefined,
+    schema: undefined,
+    endpointOptions: undefined,
     httpMethod: "GET",
-    name: `${String(target.source)} csrf token`,
-  });
-  const session = await sessionFor(context, read);
-  const carrier = { headers: new Headers() };
-  const options = applyCallSession(session, carrier, {}, target.dataSource.options);
-  const methods = clientForCall(target.dataSource, context).createMethods({
-    ...options,
-    headers: carrier.headers,
-  });
+    purpose: "csrf-token",
+  };
+}
+
+/* The cookies the answer set that a Response of the write's own carries; the
+   call kept them already where nothing carries them on. */
+async function askForToken(answer: Promise<unknown>, path: string): Promise<readonly string[]> {
   try {
-    const answer = await methods.get(path);
-    return await keepAnswerCookies(session, answer.headers);
+    const answered = await answer;
+    if (!(answered instanceof Response)) return [];
+    if (!answered.ok)
+      log.warn(`Asking ${path} for the double-submit token was answered ${answered.status}`);
+    return answered.headers.getSetCookie();
   } catch (error) {
     log.warn(`Asking ${path} for the double-submit token failed; the write goes without it`, error);
-    return keepAnswerCookies(session, isHTTPError(error) ? error.headers : undefined);
+    return [];
   }
 }
 
@@ -120,7 +132,7 @@ function once(
   return started;
 }
 
-/* A write whose signal aborts stops waiting; the call it shared goes on for the others. */
+/* A write whose signal aborts stops waiting; the request it shared goes on for the others. */
 function unlessAborted<TValue>(
   work: Promise<TValue>,
   signal: AbortSignal | undefined,

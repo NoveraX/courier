@@ -1,3 +1,6 @@
+/** A request the session makes for an endpoint: the double-submit token asked for before a write. */
+export type CallPurpose = "csrf-token";
+
 /** Context available to middleware functions */
 export type MiddlewareContext = {
   /** Source name (e.g., "api") */
@@ -40,6 +43,13 @@ export type MiddlewareContext = {
    * that waits — between retries, in a queue — should stop when it fires.
    */
   signal?: AbortSignal | undefined;
+  /**
+   * What the call is when it is none of the API's endpoints but a request
+   * the session makes for one: `"csrf-token"`, the double-submit token asked
+   * for before a write that found none. Its `method` names no endpoint, and
+   * a cache keeps none of its answers.
+   */
+  purpose?: CallPurpose | undefined;
   /** Internal: Studio request ID for event correlation */
   _requestId?: string | undefined;
 };

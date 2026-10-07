@@ -177,9 +177,11 @@ A runnable version — a backend, the proxy in front of it, a page's caller and 
   <img alt="Server code, the browser and realtime clients call through Courier — types, validation, middleware, the proxy route and streams — to any REST backend; Studio and the mock servers work from the same definition" src=".github/assets/architecture-light.png" />
 </picture>
 
-**Direct mode** — code that holds the API definition, usually on your server, calls your backend itself: no extra hop, full type safety.
+**Direct mode** — code that holds the API definition, usually on your server, calls your backend itself: no extra hop, full type safety, and the session of the user the server is serving.
 
-**Proxy mode** — the browser sends requests through your server, which hides API keys, bypasses CORS, and carries the session cookies a source or an endpoint names: `allowedHeaders: ["cookie", "set-cookie"]` on a backend of your own, or `.headers(["set-cookie"])` on just its sign-in.
+**Proxy mode** — the browser sends requests through your server, which hides API keys, bypasses CORS, and carries the session the API describes — the cookies it keeps it in, and nothing else of your application's.
+
+An API says how it keeps the user's session where it is defined — `session: { cookies: ["sessionid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } }` — and every call made for a user carries it: from the page a server renders, through the proxy, or from the browser itself. A write another site set off is refused, and the cookies the API sets reach the user's browser.
 
 Both modes share the same API definition, the same middleware chain, and the same type inference.
 

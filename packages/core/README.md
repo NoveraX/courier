@@ -343,7 +343,17 @@ export const boundary = defineBoundary({
 export const api = defineApi({ baseURL: "https://api.example.com", boundary, groups: { users } })
 ```
 
-Cookies cross the proxy only where they are named: `cookie` in a source's `allowedHeaders`, a base's, or an endpoint's `.headers()` forwards the browser's cookies to the upstream, and `set-cookie` passes the upstream's back. Unnamed, neither crosses, so a source that points at a third party never receives your users' session and cannot set cookies on your origin. A backend-for-frontend sign-in names each where it travels:
+An API that keeps the user's session describes it, and the proxy — like a server rendering a page for the user — sends it the cookies the session is kept in and nothing else of the browser's, repeats its double-submit token on writes, refuses a write another site set off, and hands the browser the session cookies the API sets, made for your application's origin:
+
+```ts
+export const api = defineApi({
+  baseURL: "https://api.example.com",
+  session: { cookies: ["sessionid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
+  groups: { users },
+})
+```
+
+For an API that keeps none, cookies cross the proxy only where they are named: `cookie` in a source's `allowedHeaders`, a base's, or an endpoint's `.headers()` forwards the browser's cookies to the upstream, and `set-cookie` passes the upstream's back. Unnamed, neither crosses, so a source that points at a third party never receives your users' session and cannot set cookies on your origin. A backend-for-frontend sign-in names each where it travels:
 
 ```ts
 const auth = defineGroup({

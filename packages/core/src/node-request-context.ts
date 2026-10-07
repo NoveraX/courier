@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { addressedTo } from "./node-origin";
+import { appendSetCookie } from "./node-set-cookie";
 import type { IncomingRequest, RequestContextProvider } from "./session/incoming-request";
 import { registerRequestContext } from "./session/request-context";
 import { forwardedChain } from "./utils/forwarded-for";
@@ -78,7 +79,7 @@ export function nodeIncomingRequest(req: IncomingMessage, res?: ServerResponse):
     origin,
     headers: { get: (name) => headerOf(req, name) },
     clientAddress: forwardedChain(req.socket.remoteAddress, headerOf(req, "x-forwarded-for")),
-    setCookie: res ? ({ header }) => appendCookie(res, header) : undefined,
+    setCookie: res ? ({ header }) => appendSetCookie(res, header) : undefined,
   };
 }
 
@@ -105,10 +106,4 @@ function headerOf(req: IncomingMessage, name: string): string | null {
   const value = req.headers[name.toLowerCase()];
   if (value === undefined) return null;
   return Array.isArray(value) ? value.join(name.toLowerCase() === "cookie" ? "; " : ", ") : value;
-}
-
-function appendCookie(res: ServerResponse, header: string): true | string {
-  if (res.headersSent) return "the response had already been sent";
-  res.appendHeader("set-cookie", header);
-  return true;
 }

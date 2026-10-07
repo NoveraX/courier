@@ -14,7 +14,7 @@ export async function renewed(): Promise<{ first: unknown; second: unknown }> {
 
 export async function signIn(): Promise<never> {
   await accounts.login({ user: "ada" });
-  throw redirect("/");
+  throw redirect("/", { headers: { "Set-Cookie": "signed_in=yes; Path=/" } });
 }
 
 export async function rename(): Promise<never> {

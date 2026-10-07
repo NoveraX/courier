@@ -45,8 +45,10 @@ app.get("/", async (_req, res) => {
   );
 });
 app.post("/", async (req, res) => {
-  if (req.url.endsWith("/login")) await accounts.login({ user: "ada" });
-  else await accounts.rename({ name: "Ada Lovelace" });
+  if (req.url.endsWith("/login")) {
+    await accounts.login({ user: "ada" });
+    res.cookie("signed_in", "yes");
+  } else await accounts.rename({ name: "Ada Lovelace" });
   res.redirect(303, "/");
 });
 app.get("/attack", async (_req, res) => {

@@ -8,8 +8,11 @@ export async function loader() {
 
 export async function action({ request }: { request: Request }) {
   /* React Router 7 writes the query again, `?/login` as `?%2Flogin=`. */
-  if (new URL(request.url).searchParams.has("/login")) await accounts.login({ user: "ada" });
-  else await accounts.rename({ name: "Ada Lovelace" });
+  if (new URL(request.url).searchParams.has("/login")) {
+    await accounts.login({ user: "ada" });
+    return redirect("/", { status: 303, headers: { "Set-Cookie": "signed_in=yes; Path=/" } });
+  }
+  await accounts.rename({ name: "Ada Lovelace" });
   return redirect("/", 303);
 }
 

@@ -1,9 +1,9 @@
-import type { AdapterHandler } from "../adapter/create-handler";
 import type { IncomingRequest } from "../session/incoming-request";
 import { serveOnBehalf } from "../session/on-behalf";
 import { captureIncomingRequest } from "../session/request-context";
 import { getSources } from "../sources";
 import { servesOneUser } from "../utils/serves-one-user";
+import { inProcessProxy } from "./in-process-proxy";
 import type { ProxyPath } from "./proxy-path";
 
 /* An address that names no other server: the proxy reads a request's path
@@ -25,7 +25,7 @@ export interface InProcessRoute {
 /**
  * How a proxy caller on a server reaches its own application's proxy: in
  * the process, when the path is the application's own and the source is
- * registered here. A page rendered on the server — universal code in Nuxt,
+ * registered here — `registerSources` provides the proxy as it registers. A page rendered on the server — universal code in Nuxt,
  * SvelteKit or an App Router — then calls with the session of the user it
  * renders for, through the very checks a browser's call goes through, and
  * the cookies the API sets reach that user's response. Over HTTP, the call
@@ -47,28 +47,15 @@ export function inProcessRoute(
   const path = proxyPath?.http ?? "/api/request";
   if (!path.startsWith("/") || path.startsWith("//")) return undefined;
   if (getSources()?.[source] === undefined) return undefined;
+  const proxy = inProcessProxy();
+  if (proxy === undefined) return undefined;
   return {
     url: `${IN_PROCESS_ORIGIN}${path}`,
     incoming: captureIncomingRequest(),
-    transport: (served) => async (url, init) => {
+    transport: (served) => (url, init) => {
       const request = new Request(url, init);
       if (served !== undefined) serveOnBehalf(request, served);
-      return (await inProcessProxy()).handle(request);
+      return proxy.handle(request);
     },
   };
-}
-
-let proxy: Promise<AdapterHandler> | undefined;
-
-/* Loaded with the first call made in process: a browser bundle never loads
-   the proxy. The limits it puts on a browser's body are no limits on what
-   the server's own code sends it. */
-function inProcessProxy(): Promise<AdapterHandler> {
-  proxy ??= import("../adapter/create-handler").then(({ createHandler }) =>
-    createHandler({
-      maxBodyBytes: Number.MAX_SAFE_INTEGER,
-      maxUploadBytes: Number.MAX_SAFE_INTEGER,
-    }),
-  );
-  return proxy;
 }

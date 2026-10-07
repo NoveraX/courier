@@ -26,6 +26,7 @@
  * as `studioHooks` and `app-origin`.
  */
 
+import { provideInProcessProxy } from "./adapter/provide-in-process-proxy";
 import { stampSourceKeys } from "./define/stamp-source-keys";
 import type { Sources } from "./define/types";
 import { ConfigurationError } from "./errors/configuration-error";
@@ -114,6 +115,9 @@ export function prepareSources(sources: Sources, callee: string, usage: string):
  */
 export function registerSources(sources: Sources): void {
   prepareSources(sources, "registerSources", "registerSources({ api, billing })");
+  /* Sources are registered on a server: its own proxy callers can reach
+     the proxy that serves them in process from now on. */
+  provideInProcessProxy();
 
   const registry = getRegistry();
   registry.current = sources;

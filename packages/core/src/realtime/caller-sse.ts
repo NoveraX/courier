@@ -1,3 +1,4 @@
+import type { WebCredentials } from "../http-client/web-types";
 import { subscribeSSE } from "./sse/sse-client";
 import type { SSESubscription } from "./types";
 
@@ -6,7 +7,7 @@ export interface ProxiedStreamOptions {
   /** The caller's headers */
   readonly headers?: Record<string, string> | undefined;
   /** Whether the browser sends its cookies to the proxy route, as the caller's calls do */
-  readonly credentials?: RequestCredentials | undefined;
+  readonly credentials?: WebCredentials | undefined;
 }
 
 /**

@@ -1,3 +1,4 @@
+import type { WebCredentials } from "../../http-client/web-types";
 import type { ProxyPath } from "../../proxy-caller/proxy-path";
 import type { ResolveOrigin } from "../../proxy-caller/resolve-path";
 import { resolveProxyPath } from "../../proxy-caller/resolve-path";
@@ -32,7 +33,7 @@ export interface ProxySSEDefaults {
    * as the caller's calls do: `"include"` unless the caller says otherwise,
    * so a proxy route on another origin receives the user's session
    */
-  credentials?: RequestCredentials | undefined;
+  credentials?: WebCredentials | undefined;
 }
 
 /**

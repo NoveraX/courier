@@ -1,3 +1,4 @@
+import type { WebCredentials } from "../../http-client/web-types";
 import { createLogger } from "../../logger";
 import type { SSEConnectInit } from "../../realtime/sse/sse-types";
 import type { CallSession } from "../../session/call-session";
@@ -59,11 +60,11 @@ export function streamConnection(
   };
 }
 
-function credentialsOf(api: object): RequestCredentials | undefined {
+function credentialsOf(api: object): WebCredentials | undefined {
   const credentials = textOf(fieldOf(api, "options"), "credentials");
   return isCredentials(credentials) ? credentials : undefined;
 }
 
-function isCredentials(value: string): value is RequestCredentials {
+function isCredentials(value: string): value is WebCredentials {
   return CREDENTIALS.has(value);
 }

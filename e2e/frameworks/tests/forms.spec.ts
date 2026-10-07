@@ -1,10 +1,12 @@
 /**
  * An application whose server renders pages and takes form posts, calling an
  * API that keeps the user's session: SvelteKit with its loads, form actions
- * and endpoints, and Express, Fastify, Hono and Astro with the same routes.
+ * and endpoints, and Express, Fastify, Hono, Astro and React Router with the
+ * same routes.
  */
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
+import { APPS } from "../support/apps";
 import {
   APP,
   ATTACKER,
@@ -13,8 +15,12 @@ import {
   linkElsewhere,
   received,
 } from "../support/received";
+import { targetOf } from "../support/targets";
 
 test.describe.configure({ mode: "serial" });
+
+/* A server that hands the application a `Request` alone tells no client address. */
+const knowsClientAddress = APPS[targetOf(process.env.COURIER_FRAMEWORK).app].peerAddress !== false;
 
 let context: BrowserContext;
 let page: Page;
@@ -69,7 +75,9 @@ test("a page sends the session's cookies alone, with the request's id, browser a
   expect(cookiesIn(me?.headers.cookie)).toEqual(["csrftoken=t-ada", "sid=s%3Aada.sig"]);
   expect(me?.headers["x-request-id"]).toMatch(/^[\da-f-]{36}$/);
   expect(me?.headers["user-agent"]).toContain("Chrome");
-  expect(me?.headers["x-forwarded-for"]).toMatch(/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/);
+  if (knowsClientAddress)
+    expect(me?.headers["x-forwarded-for"]).toMatch(/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/);
+  else expect(me?.headers["x-forwarded-for"]).toBeUndefined();
   expect(me?.headers["x-csrftoken"]).toBeUndefined();
 });
 

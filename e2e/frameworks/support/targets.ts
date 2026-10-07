@@ -10,6 +10,7 @@ export type AppKind =
   | "fastify"
   | "hono"
   | "astro"
+  | "react-router"
   | "spa";
 
 /** A framework version the session is checked against, as an application installs it. */
@@ -37,6 +38,7 @@ const KINDS: ReadonlySet<string> = new Set([
   "fastify",
   "hono",
   "astro",
+  "react-router",
   "spa",
 ]);
 

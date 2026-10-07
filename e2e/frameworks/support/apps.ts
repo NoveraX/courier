@@ -16,6 +16,11 @@ export interface AppSettings {
   readonly ready: RegExp;
   /** Its address as a browser opens it */
   readonly address: (port: number) => string;
+  /**
+   * `false` where the server hands the application a `Request` alone, which
+   * carries no client address — `react-router-serve` does
+   */
+  readonly peerAddress?: false;
 }
 
 const production = (port: number): Record<string, string> => ({
@@ -93,6 +98,17 @@ export const APPS: Readonly<Record<AppKind, AppSettings>> = {
     env: production,
     ready: /listening on/i,
     address: onLocalhost,
+  },
+  "react-router": {
+    /* It serves the routes the SvelteKit application has, so the same checks drive it. */
+    spec: "forms.spec.ts",
+    apiUrlModule: "app/api-url.ts",
+    build: ["npx", "react-router", "build"],
+    start: () => ["npx", "react-router-serve", "build/server/index.js"],
+    env: production,
+    ready: /react-router-serve/,
+    address: onLocalhost,
+    peerAddress: false,
   },
   spa: {
     spec: "spa.spec.ts",

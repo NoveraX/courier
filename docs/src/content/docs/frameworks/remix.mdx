@@ -59,6 +59,29 @@ const caller = createProxyCaller<typeof api>("api", {
 const users = await caller.users.getAll()
 ```
 
+## The user's session
+
+An API that keeps a `session` gets the user's session with every call a loader, an action or a step it awaits makes, once the request is served with it at hand. List the middleware in the root route:
+
+```tsx title="app/root.tsx"
+import { requestContext } from "@noverax/courier-remix/request-context"
+
+export const middleware = [requestContext()]
+```
+
+React Router 8 runs route middleware as it is; React Router 7 runs it with `future: { v8_middleware: true }` in `react-router.config.ts`. The session cookies the API sets reach the browser on the response, a document's or a data request's. The request is kept in `AsyncLocalStorage`, which Node provides, and Cloudflare with the `nodejs_compat` flag; the main entry imports none of it.
+
+`react-router-serve` hands React Router a `Request` alone, so `forward`'s client address is not sent. An Express server of your own tells it: serve the requests with `requestContext` from `@noverax/courier-express` instead. A server of your own that calls the handler `createRequestHandler` makes — Bun's, Deno's, a Worker's — wraps it:
+
+```ts title="server.ts"
+import { createRequestHandler } from "react-router"
+import { withRequestContext } from "@noverax/courier-remix/request-context"
+
+const handle = withRequestContext(createRequestHandler(build, "production"))
+```
+
+React Router 7 and 8 are checked with `react-router-serve`. See [User Sessions](/docs/server-side/session).
+
 ## Cancelled calls
 
 When the browser cancels a call — an aborted upload, a query it no longer needs — the proxy stops its own upstream request, following the request's signal. React Router 7 hands a resource route a rebuilt copy of the request, and the copy's signal does not reliably follow the original: a cancelled upload to a slow upstream was seen to run to completion on both `react-router dev` and `react-router-serve`. The future flag that passes the request through unchanged keeps the cancellation:

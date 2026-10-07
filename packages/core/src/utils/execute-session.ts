@@ -1,7 +1,7 @@
 import type { BaseOptions, Context } from "../http-client/types";
 import type { MiddlewareContext } from "../middleware/types";
 import { type CallSession, sessionFor } from "../session/call-session";
-import { sessionTargetOf } from "../session/session-target";
+import { type SessionTarget, sessionTargetOf } from "../session/session-target";
 import type { CallTarget } from "./execute-target";
 
 /**
@@ -21,18 +21,30 @@ export function startCallSession(
   target: CallTarget,
   context: Context | undefined,
 ): CallSession | Promise<CallSession | undefined> | undefined {
+  return sessionFor(context, callSessionTarget(target));
+}
+
+/**
+ * A call as the session reads it: its API's session and `forward`, what its
+ * endpoint does, and where it goes.
+ *
+ * @param target - The call, resolved to its API and endpoint
+ * @returns The call as the session reads it
+ * @example
+ * ```ts
+ * const again = await sessionFor(context, callSessionTarget(target));
+ * ```
+ */
+export function callSessionTarget(target: CallTarget): SessionTarget {
   const { source, group, method } = target;
-  return sessionFor(
-    context,
-    sessionTargetOf({
-      dataSource: target.dataSource,
-      endpointOptions: target.endpointOptions,
-      kind: target.schema?.type,
-      httpMethod: target.httpMethod,
-      prefixUrl: target.options?.prefixUrl,
-      name: [source, group, method].filter((part) => part !== undefined && part !== "").join("."),
-    }),
-  );
+  return sessionTargetOf({
+    dataSource: target.dataSource,
+    endpointOptions: target.endpointOptions,
+    kind: target.schema?.type,
+    httpMethod: target.httpMethod,
+    prefixUrl: target.options?.prefixUrl,
+    name: [source, group, method].filter((part) => part !== undefined && part !== "").join("."),
+  });
 }
 
 /**
@@ -53,7 +65,7 @@ export function startCallSession(
  */
 export function applyCallSession<TOptions extends object>(
   session: CallSession | undefined,
-  ctx: MiddlewareContext,
+  ctx: Pick<MiddlewareContext, "headers" | "carriesSession">,
   options: TOptions,
   sourceOptions: BaseOptions | undefined,
 ): TOptions {

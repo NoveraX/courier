@@ -2,9 +2,11 @@ import { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
 import { ConfigurationError } from "../errors/configuration-error";
 import { isRecord } from "../utils/is-record";
 import { cookieNameProblem } from "./cookie-names";
+import { csrfSourceProblem } from "./csrf-source";
 import { headerNameProblem } from "./header-names";
 import { assertSecureTransport } from "./transport";
 
+const CSRF_KEYS: ReadonlySet<string> = new Set(["cookie", "header", "from"]);
 const SESSION_KEYS: ReadonlySet<string> = new Set([
   "cookies",
   "bearer",
@@ -78,12 +80,13 @@ function cookiesProblem(cookies: unknown): string | undefined {
 function csrfProblem(csrf: unknown): string | undefined {
   if (csrf === undefined) return undefined;
   if (!isRecord(csrf))
-    return 'csrf is { cookie, header }, such as { cookie: "csrftoken", header: "x-csrftoken" }';
-  const extra = Object.keys(csrf).find((key) => key !== "cookie" && key !== "header");
+    return 'csrf is { cookie, header, from? }, such as { cookie: "csrftoken", header: "x-csrftoken" }';
+  const extra = Object.keys(csrf).find((key) => !CSRF_KEYS.has(key));
   if (extra !== undefined) return `csrf has no option "${extra}"`;
   return (
     named("csrf.cookie", cookieNameProblem(csrf.cookie, false)) ??
-    named("csrf.header", headerNameProblem(csrf.header))
+    named("csrf.header", headerNameProblem(csrf.header)) ??
+    named("csrf.from", csrfSourceProblem(csrf.from))
   );
 }
 

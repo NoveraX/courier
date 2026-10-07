@@ -56,12 +56,20 @@ export interface SessionOptions {
   allowHttp?: boolean | undefined;
 }
 
-/** A double-submit token: the cookie that holds it and the header it is repeated in. */
+/** A double-submit token: the cookie that holds it, the header it is repeated in, and where it comes from. */
 export interface CsrfOptions {
   /** The cookie the API keeps the token in */
   cookie: string;
   /** The header a write repeats it in, such as `"x-csrftoken"` */
   header: string;
+  /**
+   * Where the API hands the token out: a path under its `baseURL`, such as
+   * `"csrf/"`, or one from the root of its origin, such as
+   * `"/sanctum/csrf-cookie"`. A write that finds no token asks there first,
+   * with the user's session, and repeats the token its answer set — once
+   * however many writes are waiting for it.
+   */
+  from?: string | undefined;
 }
 
 /**

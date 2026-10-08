@@ -98,12 +98,15 @@ The card lists every route the mock serves, each with a switch. Open a route to 
 
 A setting the route has none of its own for reads `global`, and a slider rests at the global value.
 
-- Setting one switches the override on. The route then takes that setting in place of the global one and keeps the others: a route given only a delay still fails as often as the rest, and a route set to 0% answers even while the mock is Down.
+- Setting one switches the override on. The route then takes that setting in place of the global one and keeps the others: a route given only a delay still fails as often as the rest, Down included.
+- A route set to 0% never fails while the mock fails the others, Down included. Its row reads `never fails`, the editor says what the rest of the mock fails, and a line under the chaos modes names every route with an error rate of its own, so a route that keeps answering, or fails while the mock is Stable, is never a surprise.
 - The download cap and the upload speed are always the global ones.
-- The reset beside a delay or rate takes it back to the global one; so do **Global**, an emptied types field and taking out the last fault. The override switches off once it sets nothing of its own. **Use the global settings** clears the override and switches it off.
-- Switching on a route with nothing of its own opens it, so you can set something.
+- The reset beside a delay or rate takes it back to the global one, which its tooltip names; so do **Global**, an emptied types field and taking out the last fault. The override switches off once it sets nothing of its own. **Use the global settings** clears the override and switches it off.
+- Switching a route off keeps what it sets, so it can be switched back on as it was. Switching on a route with nothing of its own opens it, so you can set something.
 
-The tag on each row sums up what the route sets of its own: `+300ms`, `50%`, `100% · 413, 429`, `≤ 1 MB · image/*`, or `global`.
+The mock holds every route's override, switched on or off, and Studio sends it one route at a time: every page shows the same overrides, a change made on another page to another route stays, and a reload shows them as they were.
+
+The tag on each row sums up what the route sets of its own: `+300ms`, `50%`, `never fails`, `100% · 413, 429`, `≤ 1 MB · image/*`, or `global`.
 
 ### Safety
 
@@ -115,7 +118,7 @@ The tag on each row sums up what the route sets of its own: `+300ms`, `50%`, `10
 | **P99 above** | the p99 of the durations over the last 60 s reaches it, once those 60 s hold 10 answers | 2000 ms |
 | **Run at most** | the run has lasted that many minutes, on time even if no call comes | no limit |
 
-A threshold set to 0 is off. Auto-halt itself is off until switched on, and the thresholds apply to any run, chaos or delay. A run starts when the mock begins to simulate anything, and lasts until it simulates nothing. A halt clears what the mock simulated, its chaos, its delay, its cap, its upload conditions and its route overrides, and keeps the thresholds for the next run.
+A threshold set to 0 is off. Auto-halt itself is off until switched on, and the thresholds apply to any run, chaos or delay. A run starts when the mock begins to simulate anything, and lasts until it simulates nothing. A halt clears what the mock simulated, its chaos, its delay, its cap and its upload conditions, switches every route override off, keeping what each one sets, as **Stop** does, and keeps the thresholds for the next run.
 
 **Runs** lists each start, stop and halt, newest first: what ran, when, how long it lasted, and which threshold ended a halted run.
 
@@ -129,7 +132,7 @@ The **Observed** card shows the latest 60 answers:
 
 ### When the mock starts again
 
-What the tab sets lives in the running mock. A mock that starts again, after **Restart**, an edit of `courier.mocks.ts` that changes it, or a crash, starts with the conditions its definition declares, or none, and the tab shows those.
+Studio keeps what the tab sets, the route overrides switched off included, and the scenario applied, in the project's database, `.courier/studio.db`. A mock that starts again, after **Restart**, a crash, a restart of Studio, or an edit of `courier.mocks.ts` that leaves the conditions it declares as they were, gets them back. An edit that declares other conditions is the newer word: the mock starts with those, and Studio forgets what it kept for it.
 
 ## In code
 
@@ -206,7 +209,7 @@ export default defineMocks({
 | `faultTypes` | The faults a failing call takes, each as likely: any error status from `"400"` to `"599"`, `"timeout"`, `"reset"` and `"interrupt"`. Unset, 500 and 503. |
 | `faultWeights` | `{ type, weight }` pairs, the weights relative to each other. When set, they are used in place of `faultTypes`. |
 | `timeout` | How long a `timeout` fault holds a call, in ms. A mock server holds it 30 000 ms unless set, or until the client gives up. A mock client waits this long, and fails at once unless set. |
-| `routeOverrides` | `{ routeId, enabled, latency?, errorRate?, faultTypes?, uploads? }` for one route, named `"group:endpoint"`. Each field an enabled override sets is used for that route in place of the global one. Faults it names replace the global mix, and its `uploads` take `maxBytes` and `accept`, each in place of the global one; the upload speed stays the global one. |
+| `routeOverrides` | `{ routeId, enabled, latency?, errorRate?, faultTypes?, uploads? }` for one route, named `"group:endpoint"`. Each field an enabled override sets is used for that route in place of the global one; a field it leaves unset stays the global one, and an `errorRate` of 0 keeps the route from failing whatever the global rate. Faults it names replace the global mix, and its `uploads` take `maxBytes` and `accept`, each in place of the global one; the upload speed stays the global one. An override with `enabled: false` keeps its settings and is not used. |
 | `stopConditions` | `{ enabled, errorRateThreshold, errorRateDurationSecs, p99Threshold, p99DurationSecs, maxDurationMins }`, every field given: thresholds in percent and ms, windows in seconds, the longest run in minutes. A threshold of 0 is off. |
 
 How each fault fails a call:
@@ -229,7 +232,7 @@ A mock client applies faults, latency, its distribution, route overrides and the
 
 ### Change them while the server runs
 
-A mock server from `createMockServer` holds its conditions in `server.networkState`. `mergeConfig` changes the fields it names, `setConfig` replaces them all, and `setConfig(undefined)` clears them. `onHalt` hears when a stop condition ends a run, with the reason and how long the run lasted in ms. The run's settings are cleared by then, and its stop conditions kept.
+A mock server from `createMockServer` holds its conditions in `server.networkState`. `mergeConfig` changes the fields it names, `setConfig` replaces them all, and `setConfig(undefined)` clears them. `onHalt` hears when a stop condition ends a run, with the reason and how long the run lasted in ms. The run's settings are cleared by then, its route overrides switched off with their settings, and its stop conditions kept.
 
 ```ts
 // mock-server.ts

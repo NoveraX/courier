@@ -74,6 +74,10 @@ export async function runCall(call: PreparedCall): Promise<unknown> {
       ? await composeMiddleware(middlewares)(ctx, execute)
       : await execute();
     const tMiddlewareTotal = studio.hasStudio && middlewares.length ? performance.now() - mt0 : 0;
+    /* An upstream's error answer reaches here thrown; one a middleware gave in the endpoint's
+       place — a refusal, a maintenance 503 — fails the call the same way, so a direct caller's
+       promise rejects as a proxy caller's does, and Studio shows the refusal as a failure. */
+    if (result.status < 200 || result.status > 299) throw new HTTPError(result);
 
     if (studio.hasStudio) {
       emitRequestEnd(studio, result, ctx.headers, timing, tMiddlewareTotal, context);

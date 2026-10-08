@@ -260,6 +260,30 @@ describe("integration: middleware in executeRequest", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("fails a call a middleware refuses, for a direct caller as for a proxied one", async () => {
+    /* A direct caller's promise resolved with the refusal's body as its data, while the proxy
+       answered with the status: the same refusal read as a success on one side. */
+    const refuse = defineMiddleware("maintenance", "wrap", async () => ({
+      status: 503,
+      data: { message: "Down for maintenance" },
+      headers: new Headers(),
+    }));
+    const api = createApi([refuse]);
+    const call = { source: "api", group: "users", method: "getAll" };
+
+    const direct = await executeRequest({ api }, call).catch((error: unknown) => error);
+    const proxied = (await executeRequest({ api }, call, {
+      res: new Response(),
+      proxyMethod: "POST",
+    })) as Response;
+
+    expect(direct).toBeInstanceOf(HTTPError);
+    expect(direct).toMatchObject({ status: 503, data: { message: "Down for maintenance" } });
+    expect(proxied.status).toBe(503);
+    expect(await proxied.json()).toEqual({ message: "Down for maintenance" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("multiple middleware compose correctly in executeRequest", async () => {
     const order: string[] = [];
 

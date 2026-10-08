@@ -6,6 +6,7 @@ import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT } from "@noverax/courier/confi
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
 import { type ArgsDef, defineCommand, runMain } from "citty";
 import { closeOnFatal } from "./close-on-fatal";
+import { OPENAPI_ARGS, openapiCommand } from "./commands/openapi-command";
 import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
@@ -58,6 +59,21 @@ async function printHelp(): Promise<void> {
     summary: SUMMARY,
     command: "courier-studio",
     options: helpOptions(ARGS),
+    commands: [
+      { name: "openapi", description: "Write the project's sources as OpenAPI documents" },
+    ],
+  };
+  console.log(formatHelp(help, styleFor(process.stdout)));
+}
+
+async function printOpenAPIHelp(): Promise<void> {
+  const help = {
+    product: "Courier Studio",
+    version: studioVersion(),
+    summary:
+      "Write the project's sources, as courier.config.ts declares them, as OpenAPI documents",
+    command: "courier-studio openapi",
+    options: helpOptions(OPENAPI_ARGS),
   };
   console.log(formatHelp(help, styleFor(process.stdout)));
 }
@@ -66,8 +82,8 @@ const main = defineCommand({
   meta: { name: "courier-studio", version: studioVersion(), description: SUMMARY },
   args: ARGS,
   run({ args }) {
-    /* Studio takes no command: an unknown word is refused rather than
-       ignored, so `courier-studio init` does not start the server. */
+    /* Its one command is dispatched before this runs: any other word is
+       refused rather than ignored, so `courier-studio init` does not start the server. */
     if (args._.length > 0) fail(`Unknown command "${args._[0]}". Run courier-studio --help.`);
 
     const projectRoot = resolve(args.cwd ?? process.cwd());
@@ -128,4 +144,9 @@ function closeOnSignals(server: { close: () => Promise<void> }): void {
   }
 }
 
-runMain(main, { showUsage: printHelp });
+/* A command is its own program: `courier-studio openapi` writes documents and starts no server. */
+if (process.argv[2] === "openapi") {
+  void runMain(openapiCommand, { rawArgs: process.argv.slice(3), showUsage: printOpenAPIHelp });
+} else {
+  void runMain(main, { showUsage: printHelp });
+}

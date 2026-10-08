@@ -41,6 +41,20 @@ describe("formatHelp", () => {
     expect(coloured.replace(ESCAPE, "")).toBe(formatHelp(help, createTerminalStyle(0, true)));
   });
 
+  it("lists the commands a CLI takes under its usage, each beside what it does", () => {
+    const withCommands = {
+      ...help,
+      commands: [{ name: "openapi", description: "Write the sources as OpenAPI documents" }],
+    };
+
+    const text = formatHelp(withCommands, createTerminalStyle(0, true));
+
+    expect(text).toContain(
+      "    courier-server [options]\n    courier-server <command> [options]\n\n  Commands\n    openapi    Write the sources as OpenAPI documents",
+    );
+    expect(formatHelp(help, createTerminalStyle(0, true))).not.toContain("Commands");
+  });
+
   it("dims the value a flag takes, and paints the flag", () => {
     const text = formatHelp(help, createTerminalStyle(8, true));
 

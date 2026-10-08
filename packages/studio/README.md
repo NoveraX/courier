@@ -351,6 +351,18 @@ A module Node runs itself stays as Node first ran it until Studio restarts, so a
 
 <br />
 
+## Export OpenAPI
+
+`courier-studio openapi` writes the sources `courier.config.ts` declares as OpenAPI documents, read as Studio reads the project:
+
+```bash
+npx courier-studio openapi --source billing --api-version 2.4.0 --out openapi.json
+```
+
+With no `--source`, every source goes to the folder `--out` names, one `<source>.openapi.json` each; with one source and no `--out`, the document is printed. `--openapi 3.2.0` writes OpenAPI 3.2, which has a place for QUERY, a stream's events and nested tags. An endpoint a document leaves out — a channel, say — is named in the log with why. See [OpenAPI Export](https://courier.noverax.cloud/docs/advanced/openapi).
+
+<br />
+
 ## Specifications on a private network
 
 **Import API** and the update checks fetch a specification by URL on your behalf, so Studio does not reach into a network you could not see from your own browser. It connects to public addresses, and to this machine when the URL you gave points there — a specification your own dev server serves — following redirects as long as every hop stays on this machine. This machine is its loopback addresses and every address of its own network interfaces, a global IPv6 address included; a public address your router sends back to this machine, by hairpin NAT, is on none of them, so Studio cannot tell it from another machine's. It reaches a host on a private network, or this machine once any hop has been elsewhere, only when `studio.allowedSpecHosts` in `courier.config.ts` names that host:

@@ -257,6 +257,8 @@ The log says why a write was refused, and Studio lists it, ended by its 403 and 
 
 A write that does no harm when someone else sets it off — signing out from a link — says so with `session: "unguarded"`.
 
+A read sent over POST — a GraphQL query, a search, an endpoint declared `.reads()` — is a read here: it goes with the double-submit token, which the API asks of every POST, and a page reached from another site's link still loads with it. Declare an endpoint a read only when it changes nothing: a write declared one is made for another site's link too, with the user's session and their token.
+
 <Callout variant="info" title="Next.js does not tell a request's method">
 A Server Action's request is POST; any other request a Next.js App Router serves is read as a page's. A Route Handler's write for a client that is no browser, and so marks nothing, is refused — such a client authenticates with its own token, not with your users' cookies.
 </Callout>

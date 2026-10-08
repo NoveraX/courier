@@ -10,6 +10,7 @@ import type { ScenarioMark } from "../scenario/scenario-state";
 import type { MockHistoryEntry, NetworkConfig } from "../types";
 import type { BodyLimits } from "./body-limits";
 import type { Elsewhere } from "./elsewhere";
+import type { IdempotentCalls } from "./idempotent-calls";
 
 /** How much of a request's body has arrived, reported while a slow one arrives. */
 export interface UploadProgress {
@@ -75,4 +76,6 @@ export interface RouteConfig {
   answersOwn?: ((group: string, method: string) => boolean) | undefined;
   /** The most of a request body the mock reads: JSON, and a form or an upload */
   bodyLimits?: BodyLimits | undefined;
+  /** The writes it carried out under an idempotency key, answered again rather than run twice */
+  idempotency?: IdempotentCalls | undefined;
 }

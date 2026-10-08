@@ -174,6 +174,7 @@ function createServer(
     overrides: definition.overrides,
     scenarios: definition.scenarios,
     network: definition.network,
+    idempotency: definition.idempotency,
   });
 }
 

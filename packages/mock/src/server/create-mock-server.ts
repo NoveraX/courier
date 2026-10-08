@@ -28,6 +28,7 @@ import { registerRequestRoutes } from "./api-routes";
 import { applyMiddleware } from "./app-middleware";
 import { bodyLimitsOf } from "./body-limits";
 import { generatedRoutes, routeKey } from "./generated-routes";
+import { idempotentCalls } from "./idempotent-calls";
 import type { MockServer, MockServerOptions } from "./mock-server-types";
 import { persistedStore } from "./persisted-store";
 import type { RequestHooks } from "./route-types";
@@ -86,6 +87,7 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     elsewhere: config?.elsewhere,
     answersOwn: (group: string, method: string) => ownSource(group, method) !== "auto",
     bodyLimits: bodyLimitsOf(config),
+    idempotency: config?.idempotency === false ? undefined : idempotentCalls(config?.idempotency),
   };
 
   registerRequestRoutes(app, routeConfig, config?.mappings);
@@ -118,13 +120,10 @@ export function createMockServer(config?: MockServerOptions): MockServer {
     activeScenario = config.scenario.name;
   }
 
-  const port = config?.port ?? 7001;
-  const hostname = config?.hostname ?? "localhost";
-
   const lifecycle = createServerLifecycle(
     app,
-    port,
-    hostname,
+    config?.port ?? 7001,
+    config?.hostname ?? "localhost",
     {
       registry,
       mappings: config?.mappings,

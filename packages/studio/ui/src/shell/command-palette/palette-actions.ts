@@ -2,6 +2,7 @@ import {
   CircleAlert,
   Download,
   FileInput,
+  FlaskConical,
   Pause,
   Play,
   RadioTower,
@@ -21,7 +22,7 @@ const RECORDING_LABEL: Readonly<Record<RecordingState, string>> = {
 
 /**
  * The palette's actions that work from anywhere: recording, the Timeline's
- * views, the theme, export, a session file shared or opened, and clearing
+ * views, the theme, export, a session file shared or opened, a test, and clearing
  * the requests — each with the shortcut that runs it outside the palette.
  *
  * @param recording - Whether Studio records, is paused, or shows a saved session
@@ -87,6 +88,14 @@ export function actionEntries(
       meta: "for a bug report",
       icon: Share,
       action: { kind: "share-session-file" },
+    },
+    {
+      id: "action:save-as-test",
+      group: "Actions",
+      label: "Save as a test",
+      meta: "each call checked in CI",
+      icon: FlaskConical,
+      action: { kind: "save-as-test" },
     },
     {
       id: "action:open-session-file",

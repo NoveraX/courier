@@ -178,6 +178,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
         }),
     },
     storage: storage.routes,
+    tests: { root, sessions, project },
     token,
     demo: serving && { limits: serving.limits },
   });

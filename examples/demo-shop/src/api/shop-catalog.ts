@@ -14,15 +14,24 @@ export const products = defineGroup({
     list: cached.endpoint
       .get("")
       .variables(z.object({ category: Product.shape.category.optional() }))
-      .response(z.array(Product)),
+      .response(z.array(Product))
+      .agent({
+        description: "Every product the shop sells, or the ones in a category",
+        access: "read",
+      }),
     search: endpoint
       .get("search")
       .variables(z.object({ q: z.string().min(1) }))
-      .response(z.array(Product)),
+      .response(z.array(Product))
+      .agent({ description: "Products whose name holds the words searched for", access: "read" }),
     get: cached.endpoint
       .get(":id")
       .variables(z.object({ id: z.string() }))
-      .response(Product),
+      .response(Product)
+      .agent({
+        description: "One product by its id, with its price and how many are in stock",
+        access: "read",
+      }),
     reviews: cached.endpoint
       .get(":id/reviews")
       .variables(z.object({ id: z.string() }))

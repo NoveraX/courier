@@ -35,7 +35,7 @@ const agent = {
 describe("an agent's call", () => {
   it("keeps the tool and the client from its event and from a saved session, and nothing malformed", () => {
     expect(requestFromStart({ ...start, agent }).agent).toEqual(agent);
-    expect(requestFromSaved({ ...start, startedAt: 1, agent }).agent).toEqual(agent);
+    expect(requestFromSaved({ ...start, startedAt: 1, agent })?.agent).toEqual(agent);
     expect(requestFromStart(start).agent).toBeUndefined();
     expect(
       requestFromStart({ ...start, agent: { tool: "x", access: "admin" } }).agent,

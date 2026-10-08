@@ -15,6 +15,8 @@ export interface PropertyContext {
   runtimeKind?: "browser" | "server" | undefined;
   /** The saved session the requests come from, while one is shown. */
   sessionName?: string | undefined;
+  /** Where the call stands among the calls sent with its idempotency key: the 2nd of 3. */
+  attempt?: { at: number; of: number } | undefined;
 }
 
 function operationOf(r: RequestEntry): string {
@@ -53,6 +55,11 @@ export function requestProperties(r: RequestEntry, context: PropertyContext): Re
     });
     if (r.agent.client)
       properties.push({ label: "Agent client", value: r.agent.client, mono: false });
+  }
+  if (r.idempotencyKey) {
+    const { attempt } = context;
+    const count = attempt && attempt.of > 1 ? ` · call ${attempt.at} of ${attempt.of}` : "";
+    properties.push({ label: "Idempotency key", value: `${r.idempotencyKey}${count}`, mono: true });
   }
   if (context.sessionName)
     properties.push({ label: "Session", value: context.sessionName, mono: false });

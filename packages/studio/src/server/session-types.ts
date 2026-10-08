@@ -58,6 +58,8 @@ export interface SavedRequest {
   callerRuntimeId?: string | undefined;
   /** The agent tool the call ran for, when an MCP server made it. */
   agent?: { tool: string; access: "read" | "write" | "destructive"; client?: string } | undefined;
+  /** The key the call sent in its endpoint's idempotency header. */
+  idempotencyKey?: string | undefined;
 }
 
 export interface SessionStats {

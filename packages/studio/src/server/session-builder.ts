@@ -69,6 +69,7 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     sessionId: String(raw.sessionId ?? ""),
     callerRuntimeId: optionalString(raw.callerRuntimeId),
     agent: agentOf(raw.agent),
+    idempotencyKey: optionalString(raw.idempotencyKey),
   };
 }
 

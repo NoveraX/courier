@@ -82,6 +82,7 @@ export function requestFromSaved(raw: unknown): RequestEntry | undefined {
     variablesCutFrom: optNum(raw.variablesCutFrom),
     mode: raw.mode === "proxy" ? "proxy" : "direct",
     agent: readAgent(raw.agent),
+    idempotencyKey: optStr(raw.idempotencyKey),
     type: raw.type === "query" || raw.type === "mutation" ? raw.type : undefined,
     status: isStatus(raw.status) ? raw.status : "success",
     statusCode: optNum(raw.statusCode),

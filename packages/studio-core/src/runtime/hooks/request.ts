@@ -45,6 +45,7 @@ export function wireRequestHooks(
         ...(e.endpointType && { endpointType: e.endpointType }),
         ...(e.purpose && { purpose: e.purpose }),
         ...(e.agent && { agent: e.agent }),
+        ...(e.idempotencyKey && { idempotencyKey: e.idempotencyKey }),
       }),
     );
   };

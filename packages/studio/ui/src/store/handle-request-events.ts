@@ -31,6 +31,7 @@ export function requestFromStart(event: EventPayload): RequestEntry {
     variablesCutFrom: optNum(event.variablesCutFrom),
     mode: event.mode === "proxy" ? "proxy" : "direct",
     agent: readAgent(event.agent),
+    idempotencyKey: optStr(event.idempotencyKey),
     type:
       event.endpointType === "query" || event.endpointType === "mutation"
         ? event.endpointType

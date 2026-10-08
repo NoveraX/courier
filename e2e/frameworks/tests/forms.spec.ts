@@ -7,6 +7,7 @@
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
 import { APPS } from "../support/apps";
+import { clickThrough } from "../support/click-through";
 import {
   APP,
   ATTACKER,
@@ -139,8 +140,7 @@ test("a page's later call sends the session its first call renewed, and the brow
 
 test("signing out through a link clears the session cookie", async () => {
   await page.goto(`${APP}/`);
-  await page.click("#logout");
-  await page.waitForURL(`${APP}/`);
+  await clickThrough(page, "#logout");
 
   expect(await cookie("sid")).toBeUndefined();
 });

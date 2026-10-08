@@ -7,6 +7,8 @@ const CALL_URL = "courier:";
 
 /** A single fixture entry with courier metadata */
 export interface Fixture {
+  /** The source the call was made to, when the recordings hold several APIs' calls */
+  source?: string;
   group: string;
   method: string;
   variables?: unknown;
@@ -19,14 +21,25 @@ export interface Fixture {
   };
   duration: number;
   recordedAt: string;
+  /**
+   * Where a value was replaced because its name says it holds a secret —
+   * `variables.password`, `response.user.accessToken`, `url?token` — so a
+   * check of the recording leaves those places alone.
+   */
+  redacted?: string[];
+  /** The parts kept only in part, being larger than Studio keeps whole: their schemas go unchecked. */
+  partial?: Array<"variables" | "response">;
 }
 
 /** Convert HAR entries to Courier fixtures */
 export function harToFixtures(har: HarLog): Fixture[] {
   return har.log.entries.map((entry) => ({
+    ...(entry._courier.source !== undefined && { source: entry._courier.source }),
     group: entry._courier.group,
     method: entry._courier.method,
     variables: entry._courier.variables,
+    ...(entry._courier.redacted !== undefined && { redacted: entry._courier.redacted }),
+    ...(entry._courier.partial !== undefined && { partial: entry._courier.partial }),
     ...(!entry.request.url.startsWith(CALL_URL) && {
       request: { method: entry.request.method, url: entry.request.url },
     }),
@@ -77,9 +90,12 @@ export function fixturesToHar(fixtures: Fixture[]): HarLog {
         },
       },
       _courier: {
+        ...(fixture.source !== undefined && { source: fixture.source }),
         group: fixture.group,
         method: fixture.method,
         variables: fixture.variables,
+        ...(fixture.redacted !== undefined && { redacted: fixture.redacted }),
+        ...(fixture.partial !== undefined && { partial: fixture.partial }),
       },
     };
     har.log.entries.push(entry);

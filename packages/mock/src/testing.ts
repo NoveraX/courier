@@ -31,9 +31,11 @@ export type {
 export {
   createRecorder,
   diffFixtures,
+  FixtureFileError,
   fixturesToHar,
   harToFixtures,
   RecorderError,
+  readRecordings,
   replayFixtures,
   replayHar,
   sanitizeFixture,
@@ -62,7 +64,6 @@ export {
   resolveMany,
   resolveOne,
 } from "./store";
-
 // Handler & builder types
 export type {
   ApiGroups,
@@ -79,3 +80,12 @@ export type {
   MockStreamFn,
   ResolvedHandler,
 } from "./types";
+// Recorded traffic, checked against the definition as it is now
+export type {
+  RecordingCheck,
+  RecordingProblem,
+  RecordingProblemKind,
+  SchemaIssue,
+  VerifyOptions,
+} from "./verify";
+export { verifyRecordings } from "./verify";

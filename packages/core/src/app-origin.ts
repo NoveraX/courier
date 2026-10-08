@@ -44,6 +44,7 @@
 
 import { ConfigurationError } from "./errors";
 import type { ResolveOrigin } from "./proxy-caller";
+import { isDevelopment } from "./utils/development";
 
 const APP_ORIGIN_KEY = Symbol.for("courier.app-origin");
 const g = globalThis as Record<symbol, unknown>;
@@ -65,12 +66,16 @@ export function setAppOrigin(origin: string | undefined): void {
  * host-less probe that arrives first does not leave the origin unset for the
  * life of the process, and Studio Playground proxy mode with it.
  *
+ * Only in development, where Studio reads it: a deployed server never takes
+ * its origin from a request, whose `Host` whoever sends the first one
+ * chooses — and would keep for the life of the process.
+ *
  * @param origin - `scheme://host[:port]` the request was addressed to, if known
  * @example
  * discoverAppOrigin(new URL(request.url).origin);
  */
 export function discoverAppOrigin(origin: string | undefined): void {
-  if (!origin || origin === "null" || getAppOrigin()) return;
+  if (!origin || origin === "null" || getAppOrigin() || !isDevelopment()) return;
   setAppOrigin(origin);
 }
 

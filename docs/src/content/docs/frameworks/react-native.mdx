@@ -91,7 +91,7 @@ export function Users() {
 
 An API that keeps the user's session in cookies says so where it is defined, as it does for a page — see [User Sessions](/docs/server-side/session). The platform keeps the cookies the API sets and sends them with the calls to its host, as a browser does; a call asks for them with `credentials: "include"`.
 
-What a page reads from `document.cookie` — the double-submit token a write repeats, a bearer token the API did not set `HttpOnly` — an app cannot read: React Native keeps its cookies where no script reaches them. It hands a script the `Set-Cookie` headers of each answer instead, so Courier keeps those cookies from the answers its calls receive, for the host, domain and path they were set for, until they run out or the API deletes them, and repeats them as a page does.
+What a page reads from `document.cookie` — the double-submit token a write repeats, a bearer token the API did not set `HttpOnly` — an app cannot read: React Native keeps its cookies where no script reaches them. It hands a script the `Set-Cookie` headers of each answer instead, so Courier keeps those cookies from the answers its calls receive, for the host, domain and path they were set for, until they run out or the API deletes them, and repeats them as a page does. A `Domain` of one label, such as `com`, would reach every other API of the app and is not taken; a browser refuses every public suffix by its list, `co.uk` too, which an app does not ship.
 
 A token is kept for as long as the app runs. When the app starts again, the platform still sends the cookie it kept, but no write could repeat it until an answer set it again — so name where the API hands it out, and the first write that finds none asks there itself, with the user's session:
 

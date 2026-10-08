@@ -180,3 +180,51 @@ describe("a client that drops the connection", () => {
     warn.mockRestore();
   });
 });
+
+/** The status line a hand-written upgrade request is answered with. */
+async function rawStatus(url: string, target: string, host: string): Promise<string> {
+  const { hostname, port } = new URL(url);
+  const socket = connect(Number(port), hostname);
+  await new Promise((resolve) => socket.once("connect", resolve));
+  socket.write(
+    `GET ${target} HTTP/1.1\r\nHost: ${host}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n` +
+      "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n",
+  );
+  const answer = await new Promise<string>((resolve) => {
+    socket.once("data", (chunk) => resolve(String(chunk).split("\r\n")[0] ?? ""));
+    socket.once("close", () => resolve("closed"));
+  });
+  socket.destroy();
+  return answer;
+}
+
+describe("an upgrade request no URL reads", () => {
+  it("is refused 400 for a target, and the server goes on serving", async () => {
+    const url = await listen((s) => courier(s));
+
+    expect(await rawStatus(url, "http://[::1/api/ws", "127.0.0.1")).toBe(
+      "HTTP/1.1 400 Bad Request",
+    );
+    expect(await outcome(`${url}/api/ws`)).toBe("message:courier");
+  });
+
+  it("is refused 400 for a Host, before the protocol is switched", async () => {
+    const url = await listen((s) => courier(s));
+
+    expect(await rawStatus(url, "/api/ws", "exa mple.com")).toBe("HTTP/1.1 400 Bad Request");
+    expect(await outcome(`${url}/api/ws`)).toBe("message:courier");
+  });
+
+  it("is left to another listener the application attached", async () => {
+    const url = await listen((s) => {
+      courier(s);
+      s.on("upgrade", (_req, socket) => {
+        socket.end("HTTP/1.1 418 I'm a teapot\r\nConnection: close\r\nContent-Length: 0\r\n\r\n");
+      });
+    });
+
+    expect(await rawStatus(url, "http://[::1/elsewhere", "127.0.0.1")).toBe(
+      "HTTP/1.1 418 I'm a teapot",
+    );
+  });
+});

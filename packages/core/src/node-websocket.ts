@@ -112,10 +112,21 @@ export function attachWebSocketUpgrade(
   let wss: Promise<UpgradeServer> | undefined;
 
   const onUpgrade = (req: IncomingMessage, socket: Duplex, head: Buffer): void => {
-    if (options.path !== undefined && pathnameOf(req) !== options.path) {
+    /* A target no URL reads, a Host none can name, is the client's mistake:
+       answered, never thrown in here, where it would end the process. */
+    const pathname = pathnameOf(req);
+    if (options.path !== undefined && pathname !== options.path) {
       /* Someone else may answer it; if nobody can, the client is told so
          instead of waiting for a timeout. */
-      if (server.listenerCount("upgrade") === 1) refuse(socket, 404, "Not Found");
+      if (server.listenerCount("upgrade") === 1) {
+        if (pathname === undefined) refuse(socket, 400, "Bad Request");
+        else refuse(socket, 404, "Not Found");
+      }
+      return;
+    }
+    const request = webRequestOf(req);
+    if (request === undefined) {
+      refuse(socket, 400, "Bad Request");
       return;
     }
 
@@ -129,12 +140,13 @@ export function attachWebSocketUpgrade(
     /* One server for every connection, even when two upgrades arrive before
        the first has finished loading `ws`. */
     wss ??= Promise.resolve().then(() => options.createServer({ noServer: true, maxPayload }));
-    void accept(wss, req, socket, head);
+    void accept(wss, req, request, socket, head);
   };
 
   async function accept(
     ready: Promise<UpgradeServer>,
     req: IncomingMessage,
+    request: Request,
     socket: Duplex,
     head: Buffer,
   ): Promise<void> {
@@ -152,7 +164,7 @@ export function attachWebSocketUpgrade(
         ws.addEventListener("error", (event) => log.warn("WebSocket error", socketError(event)));
         accepted.add(ws);
         ws.addEventListener("close", () => accepted.delete(ws));
-        options.onSocket(ws, toWebRequest(req));
+        options.onSocket(ws, request);
       });
     } catch (error) {
       /* The socket is answered rather than left open; the process stays up. */
@@ -178,8 +190,19 @@ function onUpgradeError(error: Error): void {
   log.warn("WS upgrade socket error", error);
 }
 
-function pathnameOf(req: IncomingMessage): string {
-  return new URL(req.url ?? "/", "http://localhost").pathname;
+function pathnameOf(req: IncomingMessage): string | undefined {
+  const target = req.url ?? "/";
+  return URL.canParse(target, "http://localhost")
+    ? new URL(target, "http://localhost").pathname
+    : undefined;
+}
+
+function webRequestOf(req: IncomingMessage): Request | undefined {
+  try {
+    return toWebRequest(req);
+  } catch {
+    return undefined;
+  }
 }
 
 function refuse(socket: Duplex, status: number, reason: string): void {

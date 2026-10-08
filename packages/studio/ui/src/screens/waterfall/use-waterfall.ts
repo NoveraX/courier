@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-
+import { useSessionEnd } from "@/features/sessions/use-session-end";
 import { barOf } from "@/features/waterfall/bar-segments";
 import type { GapMark, TimeTick } from "@/features/waterfall/time-ticks";
 import { gapMarksOf, timeTicksOf } from "@/features/waterfall/time-ticks";
@@ -56,7 +56,8 @@ export interface WaterfallInput {
 export function useWaterfall(input: WaterfallInput): WaterfallModel {
   const { view, held, zoom: asked, width, closed } = input;
   const requests = useStudioStore((s) => s.requests);
-  const now = useNow();
+  const clock = useNow();
+  const now = useSessionEnd() ?? clock;
   return useMemo(() => {
     const scope = { q: view.q, mode: view.mode, held };
     const items = requestsInView(requests, scope).map((request) => ({

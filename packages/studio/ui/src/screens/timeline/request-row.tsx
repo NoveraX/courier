@@ -38,7 +38,7 @@ export function RequestRow({
 }: RequestRowProps): React.ReactNode {
   const state = requestStateOf(r);
   const { prefix, name } = endpointParts(r);
-  const pulse = state === "pending" || state === "streaming";
+  const pulse = context.endedAt === undefined && (state === "pending" || state === "streaming");
   const counting = useSecondNow(pulse);
   const rowContext = counting === null ? context : { ...context, now: counting };
   const duration = durationOf(r, state, rowContext);

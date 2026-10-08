@@ -5,6 +5,7 @@ import { CodeLines } from "@/design/code/code-lines";
 import { tokenizeJsonLine } from "@/design/code/tokenize-json-line";
 import { streamEnding, streamSparkline } from "@/features/requests/stream-activity";
 import { streamMessages, streamStats } from "@/features/requests/stream-summary";
+import { useSessionEnd } from "@/features/sessions/use-session-end";
 import { useNow } from "@/hooks/use-tick";
 import { formatAbsoluteTime, formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,8 @@ function pretty(preview: string): string {
  * ```
  */
 export function MessagesTab({ request }: { request: RequestEntry }): React.ReactNode {
-  const now = useNow();
+  const clock = useNow();
+  const now = useSessionEnd() ?? clock;
   const [chosen, setChosen] = useState<number | undefined>(undefined);
   const messages = streamMessages(request);
   const message = messages.find((m) => m.seq === chosen) ?? messages[0];

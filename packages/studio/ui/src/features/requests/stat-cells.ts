@@ -19,6 +19,8 @@ export interface StatCell {
 /** What the figures need beyond the request. */
 export interface StatContext {
   now: number;
+  /** When the saved session shown ended: a stream open then is read against it. */
+  endedAt?: number | undefined;
   slowMs: number;
   /** The p95 of the request's endpoint, when any call to it finished. */
   p95: number | null;
@@ -65,7 +67,7 @@ function statusCell(r: RequestEntry): StatCell {
  * ```
  */
 export function statCellsOf(r: RequestEntry, context: StatContext): StatCell[] {
-  const { now, slowMs, p95 } = context;
+  const { now, endedAt, slowMs, p95 } = context;
   const state = requestStateOf(r);
   const started: StatCell = {
     label: "Started",
@@ -75,16 +77,21 @@ export function statCellsOf(r: RequestEntry, context: StatContext): StatCell[] {
     mono: true,
   };
   if (isStreamRequest(r)) {
-    const open = streamEnd(r, now) - r.startedAt;
+    const open = streamEnd(r, endedAt ?? now) - r.startedAt;
     const count = Math.max(r.streamEventCount ?? 0, r.streamEvents?.length ?? 0);
     const bytes = r.streamTotalBytes ?? (r.streamEvents ?? []).reduce((s, e) => s + e.dataSize, 0);
-    const closed = formatRelativeTime(streamEnd(r, now), now);
+    const closed = formatRelativeTime(streamEnd(r, endedAt ?? now), now);
     return [
       statusCell(r),
       {
         label: "Open for",
         value: formatDuration(open),
-        sub: state === "streaming" ? "live" : `closed ${closed}`,
+        sub:
+          state !== "streaming"
+            ? `closed ${closed}`
+            : endedAt === undefined
+              ? "live"
+              : "open when saved",
         tone: "normal",
         mono: true,
       },

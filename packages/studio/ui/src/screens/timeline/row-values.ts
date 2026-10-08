@@ -8,6 +8,8 @@ import type { RequestEntry, TimestampFormat } from "@/store/types";
 /** What a row needs beyond its request. */
 export interface RowContext {
   now: number;
+  /** When the saved session shown ended: what was unfinished then stays unfinished. */
+  endedAt?: number | undefined;
   slowMs: number;
   timestamps: TimestampFormat;
   /** Whether the list is wide enough for the Mode and Size columns. */
@@ -66,17 +68,20 @@ export interface DurationCell {
 export function durationOf(
   r: RequestEntry,
   state: RequestState,
-  { now, slowMs }: RowContext,
+  { now, endedAt, slowMs }: RowContext,
 ): DurationCell {
   if (isStreamRequest(r)) {
-    const open = formatDuration(streamEnd(r, now) - r.startedAt);
-    const live = state === "streaming";
+    const open = formatDuration(streamEnd(r, endedAt ?? now) - r.startedAt);
+    const live = state === "streaming" && endedAt === undefined;
     return {
       text: live ? `live ${open}` : open,
       tone: live ? "text-brand" : "text-fg-muted",
       bar: 100,
       fill: live ? "bg-brand" : "bg-line-strong",
     };
+  }
+  if (state === "pending" && endedAt !== undefined) {
+    return { text: "unfinished", tone: "text-warn", bar: 0, fill: "bg-warn" };
   }
   if (state === "pending") {
     const elapsed = now - r.startedAt;

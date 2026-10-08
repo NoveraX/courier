@@ -142,6 +142,33 @@ describe("a client's auth frame", () => {
     expect(onConnect).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["with an onConnect", { onConnect: () => ({}) }],
+    ["without one", {}],
+  ])(
+    "refuses a frame whose header HTTP cannot carry, and goes on serving the rest (%s)",
+    async (_label, config) => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      served = await serveWS({ room }, config);
+      const socket = new WebSocket(served.url);
+      const answered = new Promise<string>((resolve) => {
+        socket.onmessage = (event) => resolve(String(event.data));
+        socket.onclose = (event) => resolve(`closed ${event.code}`);
+      });
+      await new Promise((resolve) => {
+        socket.onopen = resolve;
+      });
+
+      socket.send(JSON.stringify({ type: "auth", payload: { headers: { "x-bad name": "1" } } }));
+
+      expect(await answered).toMatch(/^closed 4401$|"code":4400/);
+      const { ch, heard } = openRoom(served.url, () => ({}));
+      await vi.waitFor(() => expect(heard).toEqual(["welcome"]));
+      ch.close();
+      socket.close();
+    },
+  );
+
   it("is sent before every subscription, again on every reconnect", async () => {
     const frames: unknown[] = [];
     served = await serveWS({ room }, { onConnect: ({ auth }) => void frames.push(auth) });

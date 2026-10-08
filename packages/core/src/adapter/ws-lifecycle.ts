@@ -41,7 +41,16 @@ export function wireEvents(
       })
     : undefined;
 
-  inbox.open((raw) => routeMessage(ctx, raw, heartbeat));
+  inbox.open((raw) => {
+    /* A frame that fails where nothing expected it ends its own connection,
+       never the process the other connections live in. */
+    try {
+      routeMessage(ctx, raw, heartbeat);
+    } catch (error) {
+      log.error(`A frame of connection ${ctx.connectionId} could not be handled`, error);
+      ws.close(1011, "Internal error");
+    }
+  });
 
   ws.addEventListener("close", async (event) => {
     // Mark closed FIRST so any in-flight `handleSubscribe` await chain bails

@@ -18,6 +18,8 @@ export interface EndpointNode extends EndpointRef {
   middleware: string[];
   hasVariablesSchema: boolean;
   hasResponseSchema: boolean;
+  /** Known only by its traffic: courier.config does not declare its source. */
+  trafficOnly: boolean;
   /** Whether any of its calls went through Courier's proxy. */
   proxied: boolean;
   /** Its calls, newest first. */

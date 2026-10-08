@@ -15,6 +15,7 @@ import { EndpointDefinition } from "./endpoint-definition";
 import { EndpointFigures } from "./endpoint-figures";
 import { EndpointLatency } from "./endpoint-latency";
 import { EndpointName } from "./endpoint-name";
+import { EndpointTrafficOnly } from "./endpoint-traffic-only";
 import { methodChipOf } from "./method-class";
 
 const ACTION =
@@ -117,6 +118,7 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
         className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto px-4.5 pt-4.5 pb-7"
       >
         <EndpointLatency endpoint={e} slowMs={slowMs} />
+        <EndpointTrafficOnly endpoint={e} />
         <EndpointDefinition endpoint={e} now={now} />
         <EndpointContract endpoint={e} now={now} />
         <EndpointCalls endpoint={e} slowMs={slowMs} onOpen={onOpenCall} />

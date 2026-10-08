@@ -2,6 +2,7 @@
   {
     "id": "next-14",
     "app": "next",
+    "overlays": ["next-middleware"],
     "packages": ["core", "next"],
     "install": {
       "next": "14",
@@ -15,6 +16,7 @@
   {
     "id": "next-15",
     "app": "next",
+    "overlays": ["next-middleware"],
     "packages": ["core", "next"],
     "install": {
       "next": "15",
@@ -28,6 +30,7 @@
   {
     "id": "next-16",
     "app": "next",
+    "overlays": ["next-proxy"],
     "packages": ["core", "next"],
     "install": {
       "next": "16",
@@ -41,7 +44,7 @@
   {
     "id": "next-16-cache-components",
     "app": "next",
-    "overlays": ["next-cache-components"],
+    "overlays": ["next-cache-components", "next-proxy"],
     "packages": ["core", "next"],
     "install": {
       "next": "16",

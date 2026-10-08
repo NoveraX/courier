@@ -1,7 +1,8 @@
 /**
  * A Next.js application whose server calls an API that keeps the user's
  * session: in its pages, Server Actions, Route Handlers and the Pages
- * Router, and through its proxy route from a client component.
+ * Router, through its proxy route from a client component, and in a page
+ * that writes while it renders, whose token its middleware hands over.
  */
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
@@ -170,6 +171,32 @@ test("signing out through a link clears the session cookie", async () => {
   await page.waitForURL(`${APP}/`);
 
   expect(await cookie("sid")).toBeUndefined();
+});
+
+test("a page that writes while it renders is handed the token with the page, asked once, and the browser keeps it", async ({
+  browser,
+}) => {
+  const visitor = await browser.newContext();
+  const tab = await visitor.newPage();
+  await clearReceived();
+
+  await tab.goto(`${APP}/visit`);
+  await expect(tab.locator("#visit")).toHaveText("written");
+  const asked = await received("GET", "/csrf");
+  const [write] = await received("POST", "/login");
+
+  expect(asked).toHaveLength(1);
+  expect(write?.headers["x-csrftoken"]).toBe("t-fresh");
+  expect((await visitor.cookies(APP)).find((each) => each.name === "csrftoken")?.value).toBe(
+    "t-fresh",
+  );
+
+  /* The browser sends it with the next visit, and nothing is asked for again. */
+  await clearReceived();
+  await tab.goto(`${APP}/visit`);
+  await expect(tab.locator("#visit")).toHaveText("written");
+  expect(await received("GET", "/csrf")).toEqual([]);
+  await visitor.close();
 });
 
 test("a client component's calls through the proxy route carry the session it set", async () => {

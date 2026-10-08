@@ -18,7 +18,7 @@ vi.mock("next/headers", () => ({
       host: "app.example.com",
     }),
   ),
-  cookies: vi.fn().mockResolvedValue({ set: vi.fn() }),
+  cookies: vi.fn().mockResolvedValue({ set: vi.fn(), getAll: () => [] }),
 }));
 
 import { executeRequest } from "@noverax/courier/internal";

@@ -8,5 +8,6 @@ export default defineConfig({
     index: "src/index.ts",
     actions: "src/actions.ts",
     pages: "src/pages.ts",
+    middleware: "src/middleware.ts",
   },
 });

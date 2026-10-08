@@ -224,6 +224,35 @@ export const api = defineApi({
 
 The session cookies the API sets reach the browser from a Server Action and a Route Handler. Next.js lets no page set cookies while it renders, so a session the API renews during a render reaches that render's later calls only. With `cacheComponents`, put a component whose calls carry the session under `<Suspense>`, as you would one that reads `cookies()`, and keep such calls out of `"use cache"`; Next.js 14, 15 and 16 are covered alike. [User Sessions](/docs/server-side/session) covers the options and the writes another site sets off.
 
+### A page that writes while it renders
+
+A write the API guards with a double-submit token asks for the token first when the user has none, and a page that renders cannot hand it to the browser: the next render asks again. A middleware hands it over with the page instead, where the request does not carry it, and gives it to the render too:
+
+```ts title="proxy.ts"
+import { csrfTokenMiddleware } from "@noverax/courier-next/middleware"
+import { api } from "@/lib/sources"
+
+export const proxy = csrfTokenMiddleware(api)
+export const config = { matcher: ["/account/:path*"] }
+```
+
+Before Next.js 16 the file is `middleware.ts` and the export `middleware`. Import the API's definition alone there, not a module that makes a server caller. Match the pages that write while they render, or every page whose later writes should find the token waiting. A middleware of your own composes it with `handCsrfTokens`:
+
+```ts title="proxy.ts"
+import { handCsrfTokens } from "@noverax/courier-next/middleware"
+import { type NextRequest, NextResponse } from "next/server"
+import { api } from "@/lib/sources"
+
+export async function proxy(request: NextRequest) {
+  const tokens = await handCsrfTokens(request, api)
+  const response = NextResponse.next({ request: { headers: tokens.headers } })
+  response.headers.set("x-frame-options", "DENY")
+  return tokens.handTo(response)
+}
+```
+
+Next.js 14, 15 and 16 are checked with it: the token is asked once, the render's write repeats it, and the next visit asks nothing.
+
 ## Step 4: Server Actions (createAction)
 
 Use `createAction` for type-safe server actions that read the action's own request — its headers, and the session of an API that keeps one:

@@ -96,6 +96,17 @@ export const server = createServerCaller(api)
 
 Every call a page, a layout, a Server Action or a Route Handler makes through it carries the session of the request Next.js is serving — the cookies the session names and nothing else of your application's — and a page that reads it is rendered per request, also when `next build` decides which pages it can build ahead of time. A write another site set off is refused with 403. The session cookies the API sets reach the browser from a Server Action and a Route Handler; Next.js lets no page set cookies while it renders. The Pages Router wraps `getServerSideProps` and API routes with `withRequestContext` from `@noverax/courier-next/pages`.
 
+A page that writes while it renders cannot hand the browser the double-submit token its write asks for, so a middleware hands it over with the page, and gives it to the render too:
+
+```ts
+// proxy.ts (middleware.ts, exporting middleware, before Next.js 16)
+import { csrfTokenMiddleware } from "@noverax/courier-next/middleware"
+import { api } from "@/api"
+
+export const proxy = csrfTokenMiddleware(api)
+export const config = { matcher: ["/account/:path*"] }
+```
+
 <br />
 
 ## Server Actions
@@ -192,6 +203,11 @@ import { createAction } from "@noverax/courier-next/actions"
 ```ts
 // Pages Router: getServerSideProps and API routes with their request at hand
 import { withRequestContext } from "@noverax/courier-next/pages"
+```
+
+```ts
+// Middleware: hand the double-submit token to the browser with the page
+import { csrfTokenMiddleware, handCsrfTokens } from "@noverax/courier-next/middleware"
 ```
 
 <br />

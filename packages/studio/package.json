@@ -132,6 +132,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@noverax/courier-mcp": "*",
     "@noverax/courier-studio-core": "*",
     "citty": "^0.2.2",
     "compression": "^1.8.2",
@@ -159,6 +160,8 @@
     }
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@noverax/courier": "*",
     "@noverax/courier-mock": "*",
     "@rollup/plugin-commonjs": "^29.0.3",

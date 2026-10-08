@@ -363,6 +363,16 @@ With no `--source`, every source goes to the folder `--out` names, one `<source>
 
 <br />
 
+## Your editor's agent
+
+`courier-studio mcp` serves the running Studio to the agent you code with, over MCP: the requests Studio recorded, the one that failed in full, the mocks it runs and their scenarios — every credential and body field named like a secret replaced. It reads the project's Studio token itself.
+
+```bash
+claude mcp add courier-studio -- npx courier-studio mcp
+```
+
+<br />
+
 ## Specifications on a private network
 
 **Import API** and the update checks fetch a specification by URL on your behalf, so Studio does not reach into a network you could not see from your own browser. It connects to public addresses, and to this machine when the URL you gave points there — a specification your own dev server serves — following redirects as long as every hop stays on this machine. This machine is its loopback addresses and every address of its own network interfaces, a global IPv6 address included; a public address your router sends back to this machine, by hairpin NAT, is on none of them, so Studio cannot tell it from another machine's. It reaches a host on a private network, or this machine once any hop has been elsewhere, only when `studio.allowedSpecHosts` in `courier.config.ts` names that host:

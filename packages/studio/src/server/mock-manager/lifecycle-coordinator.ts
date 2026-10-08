@@ -46,6 +46,8 @@ export interface LifecycleCoordinator {
   /** Send a page that connects every mock's state and the mocks file's status. */
   sendSnapshot(socket: Socket): void;
   summarizeServers(): MockSummary[];
+  /** Every mock Studio tracks, as it stands now, for a reader outside the UI — an agent's tool. */
+  describeServers(): readonly ServerState[];
   /** How many records a mock's collection holds, as Studio's copy of its store has it. */
   recordsIn(serverId: string, collection: string): number | undefined;
   setMocksFile(next: MocksFileStatus): void;
@@ -173,6 +175,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
 
   return {
     stop,
+    describeServers: () => [...servers.values()],
     handleCommand,
     forwardStoreCommand,
     sendSnapshot,

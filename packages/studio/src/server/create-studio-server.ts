@@ -11,6 +11,7 @@ import { closeStudio } from "./close-studio";
 import { DEMO_REPLAY_BYTES, demoServing } from "./demo/demo-serving";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
+import { mountStudioMcp } from "./mcp/mount-studio-mcp";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { mockStoreFile } from "./mock-store-file";
@@ -28,6 +29,7 @@ import { wireStorage } from "./storage-space/storage-wiring";
 import { createStudioOriginPolicy } from "./studio-origin";
 import { createStudioStartup } from "./studio-startup";
 import { studioToken } from "./studio-token";
+import { studioVersion } from "./studio-version";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
 
@@ -171,6 +173,9 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     token,
     demo: serving && { limits: serving.limits },
   });
+  /* Not on a public demo: its visitors have no token, and its recorded requests are no agent's. */
+  if (!serving)
+    mountStudioMcp(app, { token, version: studioVersion(), requestLog, mocks: mockManager });
   serveStudioUi(app);
 
   startup.start();

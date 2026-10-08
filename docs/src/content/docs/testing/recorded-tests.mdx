@@ -1,0 +1,98 @@
+export const metadata = { title: "Tests from Recorded Traffic", description: "Turn the calls Studio recorded into a test that checks each one against your API definition — before you change it, on your machine and in CI, with a report for the pull request.", mode: "both" }
+
+Studio records every call your app makes: the endpoint, the variables, the route it went to and the answer it got. One button turns them into a test. Change a route, make a field required, narrow an enum — and the calls your app really made, which the change would break, fail in CI before anyone deploys it.
+
+## Save a session as a test
+
+Choose **Save as test** in the Timeline's toolbar — on the live requests or a saved session it shows — or on a saved session in **Settings → Session history**, or **Save as a test** in the command palette. Name the test and its folder, `tests/recorded` unless you choose another, and Studio writes:
+
+- `checkout.shop.har` — the calls made to each source, one HAR file per source. Each call is kept once: a call repeated with the same variables and the same answer is left out, and so is one with no answer to check — still in flight, aborted, a stream.
+- `checkout.test.ts` — a [vitest](https://vitest.dev) test that reads them and checks each call against the definition `courier.config.ts` declares.
+
+Before it writes anything, Studio checks every call against the definition as it is now and shows the ones that no longer fit, each with what broke it: a call that already fails is one the test fails on from its first run. The test shows as it will be written, laid out by the project's own Biome, ESLint or Prettier; Studio names the command that installs vitest or `@noverax/courier-mock` when the project does not list them yet. A file already there is replaced only when you tick **Replace the files already there**. Writing needs the page opened from Studio's link, with the token, as every change does.
+
+The test Studio writes:
+
+```ts
+import { readRecordings, verifyRecordings } from "@noverax/courier-mock/testing"
+import { describe, expect, it } from "vitest"
+
+import config from "../../courier.config"
+
+const recordings = [
+  ...readRecordings(new URL("./checkout.shop.har", import.meta.url)),
+  ...readRecordings(new URL("./checkout.payments.har", import.meta.url)),
+]
+const checks = await verifyRecordings((await config).sources, recordings)
+
+describe("Checkout, as recorded", () => {
+  it.each(checks)("$label", ({ problems }) => {
+    expect(problems).toEqual([])
+  })
+})
+```
+
+Each call is a test of its own, named after it: `shop orders.get · GET /orders/o_1 → 200`.
+
+## What each call is checked for
+
+| Problem | When |
+| --- | --- |
+| `endpoint-removed` | The definition no longer has the endpoint, or the source it was in |
+| `method-changed` | The endpoint now sends another HTTP method than the call was recorded with |
+| `path-changed` | The route no longer matches the path the call went to |
+| `variables-refused` | The endpoint's variables schema refuses the variables the call was made with |
+| `answer-refused` | The endpoint's response schema refuses the answer the call got |
+
+- **Read from the definition alone.** Nothing is sent anywhere: a check needs no server, no network and no credentials, so it runs in any CI.
+- **Routes read from their end.** A route's parameter matches any segment, and the recorded path is matched from its last segment, so calls recorded against staging, a mock or another base path still line up with their routes.
+- **As the client checks a call.** A call made with no variables is checked with what "no variables" means to the schema — an empty object for one whose fields are all optional — as the client sends it. Only an answer of 2xx is checked against the response schema.
+
+## What a check leaves alone
+
+- **Secrets.** Studio keeps no credential header, and replaces every body field and query parameter named like a secret with `[redacted]`, as a [session file](/docs/studio/session-files) does. Each recording names the places it replaced, and a schema's refusal there does not count: `[redacted]` is not a UUID, and says nothing of what the call sent.
+- **Bodies kept in part.** A body larger than 16 KB is recorded as a part of it, which no schema can be checked against; the check says so instead.
+- **Schemas that reshape what they read.** A response schema with a `.transform()`, or a pipe into another type, answers with something other than what it was given — and Studio records what the app got. When such a schema refuses a recorded answer, the check says the reshaping may be all that differs, rather than failing the call. A default, an optional field or a coercion reshape nothing.
+
+## In CI
+
+The test runs with the rest of your tests. To check every recording at once, with a report, run:
+
+```bash
+npx courier-studio verify
+```
+
+It reads every HAR file of recordings in `tests/recorded` — or the files and folders you name — checks each call, and exits with `1` when one no longer fits. A browser's own HAR in a folder is passed over; one you name that is not a recording is an error.
+
+| Option | What it does |
+| --- | --- |
+| `--format <text\|markdown\|json>` | How the report is written (default: `text`). Markdown groups the broken calls by endpoint and by how they broke, for a pull request |
+| `--out <path>` | Write the report to this file too |
+| `--ignore <endpoints>` | Endpoints left unchecked, comma-separated: `orders.get`, `admin.*`, or `payments:charges.create` for one source of several |
+| `--cwd <dir>` | The project's root (default: the working directory) |
+
+In GitHub Actions, the Markdown report goes to the job's summary:
+
+```yaml
+- name: Check recorded calls against the API definition
+  run: npx courier-studio verify --format markdown --out "$GITHUB_STEP_SUMMARY"
+```
+
+## The recordings as a mock
+
+A recordings file is a mock's answers too. Point a mock at it in `courier.mocks.ts`, and it answers each call it has a recording of with the answer recorded — see [Mock Servers](/docs/studio/mock-servers#mock-only-some-endpoints-or-answer-with-recordings):
+
+```ts
+import { defineMockServer, defineMocks } from "@noverax/courier-mock"
+import { api } from "@/api/sources"
+
+export default defineMocks({
+  shop: defineMockServer({ source: api, fixtures: "./tests/recorded/checkout.shop.har" }),
+})
+```
+
+In a unit test, `replayFixtures(readRecordings(file))` answers a mock client's calls with the same recordings.
+
+## In code
+
+`verifyRecordings(sources, recordings, options)` is the check the test and the command run, from `@noverax/courier-mock/testing`. It takes one API, or the APIs by name as `config.sources` holds them, and returns one check per recording, in order: `{ at, source, endpoint, label, status, problems, unchecked }`. `problems` is empty while the call still fits; `unchecked` says what could not be checked, and why. `readRecordings(file)` reads a HAR file of recordings — a path, or a `URL` beside the test — and refuses a file that does not exist rather than reading none.

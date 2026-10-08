@@ -8,7 +8,7 @@ export interface FooterColumn {
 const REPO = "https://github.com/NoveraX/courier"
 
 /**
- * The landing page's footer links, in four columns.
+ * The footer links of the landing page and the MCP server's page, in four columns.
  *
  * @example
  * ```ts
@@ -22,6 +22,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       { label: "Quick start", href: "/docs/quick-start" },
       { label: "API reference", href: "/reference" },
       { label: "Middleware", href: "/docs/middleware/overview" },
+      { label: "AI agents", href: "/docs/agents/overview" },
       { label: "Testing", href: "/docs/testing/test-client" },
     ],
   },
@@ -42,7 +43,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
       { label: "Changelog", href: `${REPO}/releases` },
       { label: "Issues", href: `${REPO}/issues` },
       { label: "Discussions", href: `${REPO}/discussions` },
-      { label: "Compare", href: "#compare" },
+      { label: "Compare", href: "/#compare" },
     ],
   },
   {

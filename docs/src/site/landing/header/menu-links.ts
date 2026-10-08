@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import { Activity, BookOpen, Boxes, Brackets, Columns3, Layers, Scissors } from "lucide-react"
+import { Activity, BookOpen, Bot, Boxes, Brackets, Columns3, Layers, Scissors } from "lucide-react"
 
 /** A place the landing page's menu leads to. */
 export interface MenuLink {
@@ -13,7 +13,7 @@ export interface MenuLink {
 }
 
 /**
- * The landing page's menu on a narrow screen, Studio first.
+ * The landing page's menu on a narrow screen, Studio and the MCP server first.
  *
  * @example
  * ```ts
@@ -27,6 +27,14 @@ export const MENU_LINKS: readonly MenuLink[] = [
     href: "/studio",
     icon: Activity,
     tone: "blue",
+    isNew: true,
+  },
+  {
+    label: "MCP server",
+    desc: "Your API as tools for AI agents",
+    href: "/mcp",
+    icon: Bot,
+    tone: "violet",
     isNew: true,
   },
   {
@@ -78,12 +86,13 @@ export const MENU_LINKS: readonly MenuLink[] = [
  *
  * @example
  * ```ts
- * NAV_LINKS.map((l) => l.label) // ["Why", "Features", "Compare", "Frameworks", "Docs"]
+ * NAV_LINKS.map((l) => l.label) // ["Why", "Features", "Agents", "Compare", "Frameworks", "Docs"]
  * ```
  */
 export const NAV_LINKS: readonly { label: string; href: string }[] = [
   { label: "Why", href: "#delete" },
   { label: "Features", href: "#features" },
+  { label: "Agents", href: "#agents" },
   { label: "Compare", href: "#compare" },
   { label: "Frameworks", href: "#frameworks" },
   { label: "Docs", href: "/docs/introduction" },

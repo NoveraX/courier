@@ -75,7 +75,7 @@ test("a page sends the session's cookies alone, with the request's id, browser a
   expect((await json("#me")).sid).toBe("s%3Aada.sig");
   expect(cookiesIn(me?.headers.cookie)).toEqual(["csrftoken=t-ada", "sid=s%3Aada.sig"]);
   expect(me?.headers["x-request-id"]).toMatch(/^[\da-f-]{36}$/);
-  expect(me?.headers["user-agent"]).toContain("Chrome");
+  expect(me?.headers["user-agent"]).toBe(await page.evaluate(() => navigator.userAgent));
   if (knowsClientAddress)
     expect(me?.headers["x-forwarded-for"]).toMatch(/^(127\.0\.0\.1|::1|::ffff:127\.0\.0\.1)$/);
   else expect(me?.headers["x-forwarded-for"]).toBeUndefined();
@@ -120,7 +120,11 @@ test("a sign-in another site sets off for a visitor with no token is refused bef
 });
 
 test("a page's later call sends the session its first call renewed, and the browser keeps it", async () => {
-  await context.addCookies([{ name: "sid", value: "expiring", url: APP }]);
+  /* Planted as the browser holds the session's cookie: WebKit lets no plain cookie replace a Secure one. */
+  const held = await cookie("sid");
+  await context.addCookies([
+    held ? { ...held, value: "expiring" } : { name: "sid", value: "expiring", url: APP },
+  ]);
   await clearReceived();
 
   await page.goto(`${APP}/renew`);

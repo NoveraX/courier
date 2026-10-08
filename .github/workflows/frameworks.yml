@@ -3,9 +3,9 @@ name: Frameworks
 # The user's session in an application built with each framework version
 # Courier supports, as e2e/frameworks/targets.json lists them: each version
 # is installed from npm beside Courier's packages, packed as the registry
-# would ship them, then built, served and driven in Chromium against an API
-# that records every request it receives. A failure keeps its trace and
-# screenshots.
+# would ship them, then built, served and driven in Chromium, WebKit and
+# Firefox against an API that records every request it receives. A failure
+# keeps its trace and screenshots.
 on:
   # Every push and pull request, called from CI
   workflow_call:
@@ -71,8 +71,9 @@ jobs:
       - name: Build packages
         run: npm run build
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      # Each version is driven in Chrome's, Safari's and Firefox's engines
+      - name: Install the browsers
+        run: npx playwright install --with-deps chromium webkit firefox
 
       - name: The session in ${{ matrix.target }}
         env:

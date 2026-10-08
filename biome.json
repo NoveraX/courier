@@ -135,7 +135,7 @@
       }
     },
     {
-      "includes": ["e2e/frameworks/**"],
+      "includes": ["e2e/frameworks/**", "e2e/support/browsers.ts"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -147,6 +147,7 @@
                   "COURIER_APP_URL",
                   "COURIER_API_URL",
                   "COURIER_ATTACKER_URL",
+                  "COURIER_BROWSERS",
                   "PORT"
                 ]
               }

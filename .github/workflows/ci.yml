@@ -190,8 +190,9 @@ jobs:
       - name: Build packages
         run: npm run build
 
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      # Chrome's, Safari's and Firefox's engines, as developers open Studio in them
+      - name: Install the browsers
+        run: npx playwright install --with-deps chromium webkit firefox
 
       - name: Studio in a browser
         run: npm run test:e2e

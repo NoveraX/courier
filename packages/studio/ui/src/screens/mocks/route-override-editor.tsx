@@ -1,5 +1,5 @@
 import { RotateCcw } from "lucide-react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 
 import { RangeSlider } from "@/design/range-slider";
 import { delayOf } from "@/features/mocks/latency-window";
@@ -54,6 +54,12 @@ const FIELDS: readonly {
   },
 ];
 
+/* What the route keeps to while the rest of the mock fails: said, so the shield is never a surprise. */
+function exemption(rate: number): string {
+  const others = rate === 100 ? "every other request" : `${rate}% of the others`;
+  return `This route never fails, while the mock fails ${others}.`;
+}
+
 function ownValue(override: RouteOverride, field: OverrideField): number | undefined {
   if (field === "delay") return override.latency && (delayOf(override.latency)?.base ?? 0);
   return override.errorRate === undefined ? undefined : Math.round(override.errorRate * 100);
@@ -66,6 +72,8 @@ function ownValue(override: RouteOverride, field: OverrideField): number | undef
  * A setting's reset — or `Global`, or an empty field — takes it back to the
  * global one, and the last one taken back switches the override off.
  * Faults given to a route that nothing would fail come with a rate of 100%.
+ * A rate of its own of 0% keeps the route answering while the mock fails
+ * the others — Down included — and the editor says so.
  *
  * @param props - The route's override, the global settings, and what follows a settled change
  * @returns The editor
@@ -89,42 +97,49 @@ export function RouteOverrideEditor({
     <div className="flex flex-col gap-3.5 border-b border-line bg-bg-subtle px-4.5 py-3.5 pl-[74px]">
       {FIELDS.map((f) => {
         const own = draft?.field === f.field ? draft.value : ownValue(override, f.field);
-        const value = own ?? (f.field === "delay" ? global.delay : global.rate);
+        const fallback = f.field === "delay" ? global.delay : global.rate;
+        const value = own ?? fallback;
+        const reset = `Use the global ${f.label.toLowerCase()} (${f.format(fallback)})`;
+        const shielded = f.field === "rate" && own === 0 && global.rate > 0;
         return (
-          <div
-            key={f.field}
-            className="grid grid-cols-[72px_minmax(0,1fr)_56px_24px] items-center gap-3"
-          >
-            <span className="text-small text-fg-subtle">{f.label}</span>
-            <RangeSlider
-              label={f.name}
-              tone={f.tone}
-              value={value}
-              max={f.max}
-              step={f.step}
-              onChange={(next) => setDraft({ field: f.field, value: next })}
-              onCommit={(next) => settle(f.field, next)}
-            />
-            <span
-              className={cn(
-                "text-right font-mono text-small",
-                own === undefined && "text-fg-subtle",
-              )}
-            >
-              {own === undefined ? "global" : f.format(own)}
-            </span>
-            {own !== undefined && (
-              <button
-                type="button"
-                aria-label={`Use the global ${f.label.toLowerCase()}`}
-                title={`Use the global ${f.label.toLowerCase()}`}
-                onClick={() => onCommit(withGlobalField(override, f.field))}
-                className="flex size-6 cursor-pointer items-center justify-center rounded-[6px] text-fg-subtle hover:bg-raised hover:text-fg"
+          <Fragment key={f.field}>
+            <div className="grid grid-cols-[72px_minmax(0,1fr)_56px_24px] items-center gap-3">
+              <span className="text-small text-fg-subtle">{f.label}</span>
+              <RangeSlider
+                label={f.name}
+                tone={f.tone}
+                value={value}
+                max={f.max}
+                step={f.step}
+                onChange={(next) => setDraft({ field: f.field, value: next })}
+                onCommit={(next) => settle(f.field, next)}
+              />
+              <span
+                className={cn(
+                  "text-right font-mono text-small",
+                  own === undefined && "text-fg-subtle",
+                )}
               >
-                <RotateCcw aria-hidden="true" className="size-3" />
-              </button>
+                {own === undefined ? "global" : f.format(own)}
+              </span>
+              {own !== undefined && (
+                <button
+                  type="button"
+                  aria-label={reset}
+                  title={reset}
+                  onClick={() => onCommit(withGlobalField(override, f.field))}
+                  className="flex size-6 cursor-pointer items-center justify-center rounded-[6px] text-fg-subtle hover:bg-raised hover:text-fg"
+                >
+                  <RotateCcw aria-hidden="true" className="size-3" />
+                </button>
+              )}
+            </div>
+            {shielded && (
+              <p className="-mt-1.5 pl-[84px] text-small text-fg-subtle">
+                {exemption(global.rate)}
+              </p>
             )}
-          </div>
+          </Fragment>
         );
       })}
       <RouteFaultsRow

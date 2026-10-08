@@ -157,6 +157,27 @@ describe("the network condition of a mock that only caps or overrides", () => {
     expect(within(condition()).getByText("512 Kbps cap · 1 route overridden")).toBeTruthy();
     expect(within(condition()).getByRole("button", { name: /Stop/ })).toBeTruthy();
   });
+
+  it("names under the chaos modes each route at an error rate of its own", async () => {
+    serve({
+      chaosPreset: "down",
+      networkConfig: {
+        latency: 0,
+        errorRate: 1,
+        routeOverrides: [
+          { routeId: "users:list", enabled: true, errorRate: 0 },
+          { routeId: "orders:create", enabled: false, errorRate: 0 },
+        ],
+      },
+    });
+
+    await openShell("/mocks/network");
+
+    const note = screen.getByText(/With an error rate of their own/);
+    expect(note.textContent).toBe(
+      "With an error rate of their own: users.list never fails. Per-route overrides set them.",
+    );
+  });
 });
 
 describe("the status timeline", () => {
@@ -516,7 +537,7 @@ describe("a route's own override", () => {
     });
     await drag("Route error rate", 0);
     await settle(() =>
-      fireEvent.click(screen.getByRole("button", { name: "Use the global delay" })),
+      fireEvent.click(screen.getByRole("button", { name: "Use the global delay (+600ms)" })),
     );
 
     expect(sent("mock:network:set").at(-1)).toEqual({
@@ -524,7 +545,13 @@ describe("a route's own override", () => {
       serverId: "api-mock",
       config: { routeOverride: { routeId: "users:list", enabled: true, errorRate: 0 } },
     });
-    expect(screen.getByRole("button", { name: /users\.list/ }).textContent).toContain("0%");
+    expect(screen.getByRole("button", { name: /users\.list/ }).textContent).toContain(
+      "never fails",
+    );
+    expect(
+      screen.getByText("This route never fails, while the mock fails 40% of the others."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Use the global error rate (40%)" })).toBeTruthy();
   });
 
   it("opens a route switched on with nothing of its own", async () => {

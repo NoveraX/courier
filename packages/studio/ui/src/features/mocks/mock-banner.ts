@@ -1,6 +1,7 @@
 import type { MockServerInfo } from "@/store/mock-slice";
 import type { MocksFileStatus } from "@/store/mocks-file-status";
 import { mockFailureReason } from "./mock-failure-reason";
+import { ownRates } from "./route-overrides";
 import { HAPPY_PATH } from "./scenario-view";
 
 /** What the Mocks page's banner says, in what tone, and what its button does. */
@@ -21,6 +22,14 @@ const CHAOS_LABELS: Readonly<Record<MockServerInfo["chaosPreset"], string>> = {
 
 function fileNameOf(path: string | null): string {
   return path?.split(/[\\/]/).pop() || "courier.mocks.ts";
+}
+
+/* The routes chaos does not fail as it fails the rest: said, so the banner never overstates. */
+function ownRatesNote(routes: number): string {
+  if (routes === 0) return "";
+  return routes === 1
+    ? " · 1 route at a rate of its own"
+    : ` · ${routes} routes at rates of their own`;
 }
 
 function serverBanner(server: MockServerInfo): MockBanner | undefined {
@@ -46,7 +55,7 @@ function serverBanner(server: MockServerInfo): MockBanner | undefined {
     return {
       tone: "err",
       title: `Chaos · ${CHAOS_LABELS[server.chaosPreset]}`,
-      detail: `${rate}% of responses are faulted`,
+      detail: `${rate}% of responses are faulted${ownRatesNote(ownRates(server).length)}`,
       action: { label: "Stop chaos", kind: "stop-chaos" },
     };
   }

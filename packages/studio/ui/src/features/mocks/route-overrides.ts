@@ -9,7 +9,7 @@ export interface OverrideRow {
   path: string;
   name: string;
   override: RouteOverride;
-  /** What the override sets of its own, short: `+300ms · 50% · 413`, `≤ 1 MB`, or `global` when it sets nothing. */
+  /** What the override sets of its own, short: `+300ms · 50% · 413`, `never fails`, `≤ 1 MB`, or `global` when it sets nothing. */
   tag: string;
   tone: "err" | "brand" | "subtle";
 }
@@ -137,11 +137,17 @@ export function withGlobalField(override: RouteOverride, field: OverrideField): 
   return { ...kept, enabled: override.enabled && setsAnything(kept) };
 }
 
+/* A route's own rate; one of 0 keeps it from failing whatever the mock's rate. */
+function rateTag(errorRate: number | undefined): string {
+  if (errorRate === undefined) return "";
+  return errorRate === 0 ? "never fails" : `${Math.round(errorRate * 100)}%`;
+}
+
 function tagOf(override: RouteOverride): Pick<OverrideRow, "tag" | "tone"> {
   const { latency, errorRate, faultTypes, uploads } = override;
   const parts = [
     latency === undefined ? "" : `+${delayLabel(delayOf(latency)?.base ?? 0)}`,
-    errorRate === undefined ? "" : `${Math.round(errorRate * 100)}%`,
+    rateTag(errorRate),
     faultTypes?.join(", ") ?? "",
     uploads?.maxBytes === undefined ? "" : `≤ ${sizeLimitLabel(uploads.maxBytes)}`,
     uploads?.accept === undefined ? "" : uploads.accept.join(", ") || "any type",
@@ -176,5 +182,34 @@ export function overrideRows(
       override,
       ...tagOf(override),
     };
+  });
+}
+
+/** A route answered at an error rate of its own, in percent — 0 when it never fails. */
+export interface OwnRate {
+  routeId: string;
+  name: string;
+  rate: number;
+}
+
+/**
+ * The routes whose override, switched on, gives them an error rate other
+ * than the mock's: what a chaos mode leaves alone, or fails on its own.
+ *
+ * @param server - The mock server
+ * @returns The routes, in the mock's order of overrides
+ * @example
+ * ```ts
+ * ownRates(server); // [{ routeId: "users:list", name: "users.list", rate: 0 }]
+ * ```
+ */
+export function ownRates(server: Pick<MockServerInfo, "networkConfig">): OwnRate[] {
+  const global = Math.round((server.networkConfig?.errorRate ?? 0) * 100);
+  return routeOverridesOf(server).flatMap((override) => {
+    if (!override.enabled || override.errorRate === undefined) return [];
+    const rate = Math.round(override.errorRate * 100);
+    if (rate === global) return [];
+    const [group = "", endpoint = ""] = override.routeId.split(":");
+    return [{ routeId: override.routeId, name: group ? `${group}.${endpoint}` : endpoint, rate }];
   });
 }

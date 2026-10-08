@@ -95,6 +95,55 @@ test("fails every request while the network is down, and recovers", async ({ pag
   await expect.poll(async () => (await users()).status).toBe(200);
 });
 
+/* What the mock answers on another of its routes: one user the store holds. */
+async function oneUser(id: string): Promise<number> {
+  const res = await fetch(`http://127.0.0.1:${studio.mockPort}/users/${id}`).catch(() => null);
+  return res?.status ?? 0;
+}
+
+test("keeps a route set never to fail answering while the network is down, and keeps it switched off", async ({
+  page,
+}) => {
+  const [first] = (await users()).body as Array<{ id: string | number }>;
+  const user = () => oneUser(String(first?.id));
+  await openMocks(page, "Network");
+  const overrides = page.getByRole("region", { name: "Per-route overrides" });
+  const route = (name: RegExp) => overrides.getByRole("button", { name });
+  /* users.get: a delay of its own only, so it fails as the rest do. */
+  await route(/users\.get/).click();
+  await overrides.getByRole("slider", { name: "Route delay" }).press("ArrowRight");
+  await route(/users\.get/).click();
+  /* users.list: an error rate of its own of 0%. */
+  await route(/users\.list/).click();
+  await overrides.getByRole("slider", { name: "Route error rate" }).press("Home");
+  await expect(route(/users\.list/)).toContainText("never fails");
+
+  await page.locator("main").getByText("Down", { exact: true }).first().click();
+
+  await expect.poll(user).toBe(503);
+  expect((await users()).status).toBe(200);
+  await expect(
+    page.getByText(/With an error rate of their own: users\.list never fails/),
+  ).toBeVisible();
+  await expect(
+    overrides.getByText("This route never fails, while the mock fails every other request."),
+  ).toBeVisible();
+
+  await overrides.getByRole("switch", { name: "Override users.list" }).click();
+  await expect.poll(async () => (await users()).status).toBe(503);
+  await page.reload();
+  await expect(route(/users\.list/)).toContainText("never fails");
+  await expect(overrides.getByRole("switch", { name: "Override users.list" })).toHaveAttribute(
+    "aria-checked",
+    "false",
+  );
+
+  await overrides.getByRole("switch", { name: "Override users.list" }).click();
+  await expect.poll(async () => (await users()).status).toBe(200);
+  await page.locator("main").getByText("Stable", { exact: true }).first().click();
+  await expect.poll(user).toBe(200);
+});
+
 test("takes uploads as the Uploads card says, and shows a slow one in the log as it arrives", async ({
   page,
 }) => {

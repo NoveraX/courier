@@ -131,6 +131,19 @@ describe("the banner", () => {
       detail: "100% of responses are faulted",
       action: { kind: "stop-chaos" },
     });
+    expect(
+      mockBannerOf(
+        mockServer({
+          chaosPreset: "down",
+          networkConfig: {
+            latency: 0,
+            errorRate: 1,
+            routeOverrides: [{ routeId: "users:list", enabled: true, errorRate: 0 }],
+          },
+        }),
+        null,
+      )?.detail,
+    ).toBe("100% of responses are faulted · 1 route at a rate of its own");
     expect(mockBannerOf(mockServer({ activeScenario: "empty" }), null)).toMatchObject({
       title: "Scenario · empty",
       action: { kind: "reset-scenario" },

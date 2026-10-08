@@ -20,6 +20,7 @@ import { MocksSkeleton } from "./mocks-skeleton";
 import { NetworkHero } from "./network-hero";
 import { ObservedPanel } from "./observed-panel";
 import { RouteOverridesPanel } from "./route-overrides-panel";
+import { RouteRatesNote } from "./route-rates-note";
 import { SafetyPanel } from "./safety-panel";
 import { UploadsPanel } from "./uploads-panel";
 import { useMockServer } from "./use-mock-server";
@@ -62,6 +63,7 @@ function NetworkTab({ server }: { server: MockServerInfo }): React.ReactNode {
         disabled={disabled}
         onPick={(next) => pickChaos(server, next, current)}
       />
+      <RouteRatesNote server={server} />
       <div className="grid grid-cols-[repeat(auto-fit,minmax(380px,1fr))] items-start gap-4">
         <div className="flex min-w-0 flex-col gap-4">
           <FaultPanel

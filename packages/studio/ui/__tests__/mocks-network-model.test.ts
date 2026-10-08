@@ -18,12 +18,13 @@ import { faultsByType, latencyHistogram, statusStrip } from "@/features/mocks/ob
 import {
   hasOwnSettings,
   overrideRows,
+  ownRates,
   routeOverridesOf,
   withGlobalField,
   withOwnField,
   withRouteOverride,
 } from "@/features/mocks/route-overrides";
-import type { ExperimentEvent, MockRequestLog } from "@/store/mock-slice";
+import type { ExperimentEvent, MockRequestLog, RouteOverride } from "@/store/mock-slice";
 import { mockLog, mockServer } from "./mock-server-fixture";
 
 const NOW = 1_000_000;
@@ -307,7 +308,39 @@ describe("a route override's own settings", () => {
 
     expect(hasOwnSettings(shielded)).toBe(true);
     expect(hasOwnSettings({ ...shielded, enabled: false })).toBe(false);
-    expect(overrideRows(server)[0]).toMatchObject({ tag: "0%", tone: "brand" });
+    expect(overrideRows(server)[0]).toMatchObject({ tag: "never fails", tone: "brand" });
+  });
+});
+
+describe("the routes answered at an error rate of their own", () => {
+  const config = (errorRate: number, routeOverrides: RouteOverride[]) =>
+    mockServer({ networkConfig: { latency: 0, errorRate, routeOverrides } });
+
+  it("name a route that never fails while the mock is down, and one that fails while it is stable", () => {
+    const overrides: RouteOverride[] = [
+      { routeId: "users:list", enabled: true, errorRate: 0 },
+      { routeId: "orders:create", enabled: true, errorRate: 0.5 },
+    ];
+
+    expect(ownRates(config(1, overrides))).toEqual([
+      { routeId: "users:list", name: "users.list", rate: 0 },
+      { routeId: "orders:create", name: "orders.create", rate: 50 },
+    ]);
+    expect(ownRates(config(0, overrides))).toEqual([
+      { routeId: "orders:create", name: "orders.create", rate: 50 },
+    ]);
+  });
+
+  it("leave out a route switched off, one with no rate of its own, and one at the mock's rate", () => {
+    expect(
+      ownRates(
+        config(0.5, [
+          { routeId: "users:list", enabled: false, errorRate: 0 },
+          { routeId: "users:get", enabled: true, latency: { min: 300, max: 300, jitter: 0 } },
+          { routeId: "orders:create", enabled: true, errorRate: 0.5 },
+        ]),
+      ),
+    ).toEqual([]);
   });
 });
 

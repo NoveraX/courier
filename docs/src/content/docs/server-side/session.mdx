@@ -251,7 +251,7 @@ A page on another site can make the user's browser request one of your pages, wi
 - a form, a Server Action or a `fetch` — POST and the like — passes the proxy's origin rule: `Sec-Fetch-Site` says same-origin, or its `Origin` is your application's, or it is no browser's request at all;
 - a page — GET and the like, which any link can request — has to be one the browser says came from your application, or one the user opened themselves. A browser too old to send `Sec-Fetch-Site` has to name one of your pages as its `Referer`.
 
-An origin in `session.allowedOrigins` counts as your application's own; with none listed, so does another port of the local machine in development. A sign-in is guarded too, before anyone has a session: the double-submit token vouches for it, and so does the token a write would ask for — such a write is refused before anything is asked.
+An origin in `session.allowedOrigins` counts as your application's own; with none listed, so does another port of the local machine in development, while your application is served from that machine too. A sign-in is guarded too, before anyone has a session: the double-submit token vouches for it, and so does the token a write would ask for — such a write is refused before anything is asked.
 
 The log says why a write was refused, and Studio lists it, ended by its 403 and the reason.
 

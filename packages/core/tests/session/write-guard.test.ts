@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { IncomingRequest } from "../../src/session/incoming-request";
 import { writeRefusal } from "../../src/session/write-guard";
@@ -38,6 +38,32 @@ describe("writeRefusal — a form, a Server Action or a fetch", () => {
     });
 
     expect(writeRefusal(request, ["https://www.example.com"])).toBeUndefined();
+  });
+
+  it("refuses a page on the user's own machine for an app on a public address, NODE_ENV or not", () => {
+    vi.stubEnv("NODE_ENV", "");
+    const fromLocalPage = incoming("POST", {
+      "sec-fetch-site": "cross-site",
+      origin: "http://127.0.0.1:9000",
+    });
+
+    expect(writeRefusal(fromLocalPage)).toBe(
+      "it came from http://127.0.0.1:9000, not one of the application's pages",
+    );
+    vi.unstubAllEnvs();
+  });
+
+  it("admits another port of the machine an app in development is served from", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const fromStudio: IncomingRequest = {
+      key: {},
+      method: "POST",
+      origin: "http://localhost:3000",
+      headers: new Headers({ "sec-fetch-site": "same-site", origin: "http://localhost:6280" }),
+    };
+
+    expect(writeRefusal(fromStudio)).toBeUndefined();
+    vi.unstubAllEnvs();
   });
 });
 

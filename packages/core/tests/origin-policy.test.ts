@@ -107,6 +107,35 @@ describe("isOriginAllowed — development", () => {
       ]),
     ).toBe(false);
   });
+
+  it("admits it for an app served from the local machine under any of its names", () => {
+    expect(isOriginAccepted("http://127.0.0.1:6280", "http://app.localhost:3000")).toBe(true);
+    expect(
+      isOriginAccepted("http://[::1]:6280", "http://127.0.0.2:3000", undefined, "cross-site"),
+    ).toBe(true);
+  });
+});
+
+/**
+ * A server started without `NODE_ENV` is read as in development, and an app
+ * deployed on a public address is still never one a page on the visitor's
+ * own machine may drive: what runs there — a local tool, a dev server, an
+ * installed app — is not the application's.
+ */
+describe("isOriginAllowed — the local allowance on a public address", () => {
+  beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "");
+  });
+
+  it("refuses a page on the visitor's own machine, whatever the browser marks", () => {
+    expect(isOriginAllowed(request("http://localhost:8080"))).toBe(false);
+    expect(isOriginAccepted("http://127.0.0.1:9000", APP, undefined, "cross-site")).toBe(false);
+    expect(isOriginAccepted("http://[::1]:9000", APP, undefined, "same-site")).toBe(false);
+  });
+
+  it("refuses it where the app's own address is unknown", () => {
+    expect(isOriginAccepted("http://localhost:8080", null, undefined, "cross-site")).toBe(false);
+  });
 });
 
 /**

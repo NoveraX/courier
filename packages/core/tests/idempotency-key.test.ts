@@ -72,6 +72,51 @@ describe("an endpoint with an idempotency key", () => {
   });
 });
 
+describe("a retry policy and an idempotency key", () => {
+  function caller(options: { key: boolean; mutations?: boolean }) {
+    return createCaller(
+      defineApi({
+        baseURL: upstream.url,
+        endpoints: {
+          order: endpoint
+            .post("orders", options.key ? { idempotencyKey: "header:Idempotency-Key" } : {})
+            .retry({
+              limit: 2,
+              backoff: "fixed",
+              retryOn: [503],
+              ...(options.mutations !== undefined && { mutations: options.mutations }),
+            })
+            .variables<{ item: string }>(),
+        },
+      }),
+    );
+  }
+
+  it("retries a write whose endpoint declares a key, which the upstream applies once", async () => {
+    failFirst = true;
+
+    await caller({ key: true }).order({ item: "lamp" });
+
+    expect(upstream.received).toHaveLength(2);
+    expect(keys()[1]).toBe(keys()[0]);
+  });
+
+  it("sends a write with no key once, and one told mutations: false once despite its key", async () => {
+    failFirst = true;
+    await expect(caller({ key: false }).order({ item: "lamp" })).rejects.toMatchObject({
+      status: 503,
+    });
+    failFirst = true;
+    await expect(
+      caller({ key: true, mutations: false }).order({ item: "lamp" }),
+    ).rejects.toMatchObject({
+      status: 503,
+    });
+
+    expect(upstream.received).toHaveLength(2);
+  });
+});
+
 describe("an idempotency key that names no header", () => {
   it("is refused where the endpoint is defined", () => {
     expect(() => endpoint.post("orders", { idempotencyKey: "body:key" })).toThrow(

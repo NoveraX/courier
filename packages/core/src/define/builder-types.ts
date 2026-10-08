@@ -72,7 +72,10 @@ export interface NeutralMethods<TSelf> {
    */
   headers(names: readonly string[]): TSelf;
   timeout(ms: number): TSelf;
-  /** Retry policy; an endpoint that writes is retried only with `mutations: true`. */
+  /**
+   * Retry policy; an endpoint that writes is retried when it declares an
+   * `idempotencyKey`, or with `mutations: true`.
+   */
   retry(options: RetryOptions): TSelf;
   /** Arbitrary values for tooling; ignored by the runtime. */
   meta(values: Record<string, unknown>): TSelf;

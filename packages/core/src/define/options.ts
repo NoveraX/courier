@@ -104,8 +104,10 @@ export type CacheArg<TKind extends "query" | "mutation"> = TKind extends "query"
  * `retryMiddleware` — one vocabulary for all three.
  *
  * Without `retryOn`, a 5xx and a request that got no answer are retried. An
- * endpoint that writes is sent once unless `mutations` is set, since a write
- * whose answer was lost may already have been carried out.
+ * endpoint that writes is sent once, since a write whose answer was lost may
+ * already have been carried out — unless it declares an `idempotencyKey`,
+ * whose one key on every attempt lets the upstream apply it once, or
+ * `mutations` is set.
  *
  * @example
  * ```ts
@@ -124,7 +126,11 @@ export interface RetryOptions {
    * request that got no answer, or a test of the answer (default: 0 and 5xx).
    */
   retryOn?: readonly number[] | ((response: MiddlewareResponse) => boolean) | undefined;
-  /** Retry an endpoint that writes as well as one that reads (default: false) */
+  /**
+   * Retry an endpoint that writes as well as one that reads (default: only
+   * a write whose endpoint declares an `idempotencyKey`, which the upstream
+   * applies once however many times it arrives; `false` retries no write).
+   */
   mutations?: boolean | undefined;
 }
 

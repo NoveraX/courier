@@ -98,6 +98,7 @@ export async function coreFetch(
             fullUrl,
             { ...init, body: requestBody },
             onUploadProgress ?? ignoreProgress,
+            { withinOrigin: withinOrigin === true && rest.redirect === undefined },
           )
         : withinOrigin && rest.redirect === undefined
           ? await fetchWithinOrigin(fullUrl, init)

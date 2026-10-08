@@ -30,6 +30,9 @@ interface Hop {
  * @param init - The request as fetch would take it; its body is `source`
  * @param source - The body
  * @param wrap - Turns a stream of the body into the one sent, e.g. to count it
+ * @param options - `withinOrigin`: a redirect to another origin is answered
+ *   with as it came rather than followed — a call that carries the user's
+ *   session from a server never leaves the API's origin
  * @returns The final answer
  *
  * @example
@@ -42,8 +45,12 @@ export async function sendUpload(
   init: RequestInit & { method: string },
   source: UploadSource,
   wrap: (stream: ReadableStream<Uint8Array>) => ReadableStream<Uint8Array>,
+  { withinOrigin = false }: { withinOrigin?: boolean } = {},
 ): Promise<Response> {
   const follows = source.replayable && (init.redirect ?? "follow") === "follow";
+  /* Followed by hand, or not at all: fetch's own following goes to any origin. */
+  const manual = follows || withinOrigin;
+  const origin = new URL(url).origin;
   let hop: Hop = { url, method: init.method, headers: new Headers(init.headers), withBody: true };
 
   for (let count = 0; ; count++) {
@@ -52,11 +59,12 @@ export async function sendUpload(
       method: hop.method,
       headers: hop.headers,
       body: hop.withBody ? wrap(source.open()) : null,
-      redirect: follows ? "manual" : init.redirect,
+      redirect: manual ? "manual" : init.redirect,
       duplex: "half",
     } as RequestInit);
     const location = follows && REDIRECTS.has(response.status) && response.headers.get("location");
     if (!location) return response;
+    if (withinOrigin && new URL(location, hop.url).origin !== origin) return response;
 
     await response.body?.cancel();
     if (count === MAX_REDIRECTS) throw new TypeError("Too many redirects");

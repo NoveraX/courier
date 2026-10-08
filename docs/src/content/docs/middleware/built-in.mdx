@@ -31,7 +31,7 @@ interface RetryOptions {
   backoff?: "fixed" | "exponential"
   /** Which answers deserve another attempt: statuses, or a test (default: 0 and >= 500) */
   retryOn?: readonly number[] | ((response: MiddlewareResponse) => boolean)
-  /** Retry endpoints that write as well as those that read (default: false) */
+  /** Retry endpoints that write as well as those that read (default: only a write with an idempotency key) */
   mutations?: boolean
 }
 ```
@@ -64,15 +64,25 @@ retryMiddleware({
 A non-2xx answer rejects the call with an `HTTPError`; `retryOn` is shown the answer it carries — its status, body and headers. A request that got no answer is shown as status 0, so a condition that should also retry network failures has to accept it. Errors that are not HTTP failures — a response that fails its schema, a middleware that throws — are never retried. After the last attempt, its error is re-thrown.
 </Callout>
 
-### Writes are sent once
+### Writes are sent once — unless they carry a key
 
-An endpoint that writes — a `post`, `put`, `patch` or `del` not declared a read with `.reads()`, or a `.via()` endpoint, which counts as a write until `.reads()` says otherwise — is not retried by default. A write whose answer was lost may already have been carried out, and sending it again can charge a card twice. Pass `mutations: true` only when the upstream recognises a repeated write, for example by an idempotency key:
+An endpoint that writes — a `post`, `put`, `patch` or `del` not declared a read with `.reads()`, or a `.via()` endpoint, which counts as a write until `.reads()` says otherwise — is not retried by default. A write whose answer was lost may already have been carried out, and sending it again can charge a card twice.
+
+An endpoint that declares an `idempotencyKey` is retried: each call sends one key in that header, the same on every attempt, and an upstream that deduplicates by it applies the write once however many times it arrives.
+
+```ts title="api/orders.ts"
+place: endpoint
+  .post("orders", { idempotencyKey: "header:Idempotency-Key" })
+  .retry({ limit: 3 }) // retried: the key makes a repeated write safe
+```
+
+`mutations: true` retries every write, for an upstream that recognises a repeated one some other way; `mutations: false` retries none, keys included:
 
 ```ts title="lib/sources.ts"
 retryMiddleware({ limit: 3, mutations: true })
 ```
 
-A `retry` policy on a `courier()` base or an endpoint's `.retry()` follows the same rule and takes the same `mutations` flag.
+A `retry` policy on a `courier()` base or an endpoint's `.retry()` follows the same rule and takes the same `mutations` flag. Middleware reads a call's key as `ctx.idempotencyKey`, and Studio lists it with the call, and where it stands among the calls sent with the same key.
 
 ### Cancellations
 

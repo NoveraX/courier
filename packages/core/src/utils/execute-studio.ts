@@ -1,3 +1,4 @@
+import type { AgentCall } from "../agent/types";
 import type { Context } from "../http-client/types";
 import type { CallPurpose } from "../middleware/types";
 import { generateRequestId, type StudioHooks, studioHooks } from "../studio";
@@ -31,6 +32,8 @@ export interface RequestStart {
   httpMethod: string | undefined;
   /** What the call is, when it is a request the session makes rather than an endpoint's */
   purpose?: CallPurpose | undefined;
+  /** The agent the call comes from, when an MCP server made it for one */
+  agent?: AgentCall | undefined;
 }
 
 /**
@@ -55,8 +58,20 @@ export function emitRequestStart(dCtx: StudioContext, start: RequestStart): void
     ...(start.httpMethod && { httpMethod: start.httpMethod }),
     ...(schema?.type && { endpointType: schema.type }),
     ...(start.purpose && { purpose: start.purpose }),
+    ...(start.agent && { agent: agentShown(start.agent) }),
     timestamp: Date.now(),
   });
+}
+
+/* Who the server let in stays out of Studio: it is the application's to show, and may hold a token. */
+function agentShown(agent: AgentCall): {
+  tool: string;
+  access: AgentCall["access"];
+  client?: string;
+} {
+  const client =
+    agent.client && [agent.client.name, agent.client.version].filter(Boolean).join(" ");
+  return { tool: agent.tool, access: agent.access, ...(client && { client }) };
 }
 
 /**

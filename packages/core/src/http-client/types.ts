@@ -1,3 +1,4 @@
+import type { AgentCall } from "../agent/types";
 import type { ProxyBoundary } from "../define/boundary-types";
 import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
@@ -236,4 +237,6 @@ export type Context = RequestContext & {
    * `fetch`. Set, it is read before `req` and `headers`.
    */
   incoming?: IncomingRequest | undefined;
+  /** The agent the call comes from, when an MCP server made it for one. */
+  agent?: AgentCall | undefined;
 };

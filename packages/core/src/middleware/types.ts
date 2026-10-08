@@ -1,3 +1,5 @@
+import type { AgentCall } from "../agent/types";
+
 /** A request the session makes for an endpoint: the double-submit token asked for before a write. */
 export type CallPurpose = "csrf-token";
 
@@ -50,6 +52,12 @@ export type MiddlewareContext = {
    * a cache keeps none of its answers.
    */
   purpose?: CallPurpose | undefined;
+  /**
+   * The agent the call comes from, when an MCP server made it for one: the
+   * tool it called, what the endpoint declared that does, and who the server
+   * let in. Absent on every call the application makes itself.
+   */
+  agent?: AgentCall | undefined;
   /** Internal: Studio request ID for event correlation */
   _requestId?: string | undefined;
 };

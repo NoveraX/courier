@@ -1,3 +1,4 @@
+export type { AgentAccess, AgentOptions } from "../agent/types";
 export { defineApi, deriveSourceName, getSourceName, setSourceName } from "./api";
 export { type BoundaryConfig, defineBoundary } from "./boundary";
 export type {

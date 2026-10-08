@@ -1,3 +1,4 @@
+import type { AgentOptions } from "../agent/types";
 import type { Middleware, MiddlewareResponse } from "../middleware/types";
 import type { EndpointSession } from "../session/types";
 import type { CacheConfig } from "../validation";
@@ -149,6 +150,8 @@ export interface ResolvedEndpointOptions {
   readonly forward?: false;
   /** Reads the key a served channel's subscribers share a topic by, from `.topic()`. */
   readonly topicKey?: TopicKeyReader;
+  /** How it is offered to AI agents, from `.agent()`; absent, no agent reaches it. */
+  readonly agent?: AgentOptions;
 }
 
 /** Reads a topic key from a subscriber's validated variables. */

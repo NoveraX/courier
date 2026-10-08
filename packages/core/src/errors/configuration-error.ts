@@ -154,6 +154,26 @@ export type ConfigurationErrorCode =
   | "STREAM_IMPLEMENTATION_INVALID"
   /** `.reads()` was named on an endpoint addressed with a verb that changes what it addresses. */
   | "READS_ON_CHANGING_VERB"
+  /**
+   * `.agent()` was given what cannot describe a tool: no description, an
+   * access other than `read`, `write` or `destructive`, an option it does
+   * not have, or a name a client cannot take.
+   */
+  | "AGENT_OPTIONS_INVALID"
+  /**
+   * An endpoint that writes was offered to agents as a read, which a client
+   * would let an agent call without asking; a read over POST says so with
+   * `.reads()` first.
+   */
+  | "AGENT_READ_ON_WRITE"
+  /** Two endpoints were offered to agents under one tool name. */
+  | "AGENT_TOOL_NAME_TAKEN"
+  /**
+   * An MCP handler was created without what it cannot work without — an
+   * `authorize` deciding who may call the application's tools — or with an
+   * option it does not have.
+   */
+  | "AGENT_HANDLER_INVALID"
   /** An endpoint's `idempotencyKey` is not `header:<name>`. */
   | "INVALID_IDEMPOTENCY_KEY"
   /** An `allowedOrigins` entry is not an origin a browser can send, or admits every sandboxed page. */

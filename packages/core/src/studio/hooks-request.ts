@@ -37,6 +37,8 @@ export interface RequestLifecycleHooks {
         endpointType?: "query" | "mutation";
         /** What the call is when it is a request the session makes rather than an endpoint's. */
         purpose?: "csrf-token";
+        /** The agent tool the call ran for, when an MCP server made it, and the client as it named itself. */
+        agent?: { tool: string; access: "read" | "write" | "destructive"; client?: string };
         timestamp: number;
       }) => void)
     | undefined;

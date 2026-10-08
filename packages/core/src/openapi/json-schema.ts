@@ -44,6 +44,33 @@ export function jsonSchemaOf(
   return converted === undefined ? undefined : hoisted(converted, context);
 }
 
+/**
+ * A schema as JSON Schema 2020-12, as its library writes it, for a document
+ * of its own — an MCP tool's input or output — rather than an OpenAPI one:
+ * its `$defs` stay where its references point, and its `$schema` is left
+ * out, 2020-12 being the dialect such a schema is read in when it names none.
+ *
+ * @param schema - The schema, or `undefined` for one declared by its type alone
+ * @param side - `input` for what a call sends, `output` for what it answers with
+ * @param fallback - A converter for a library without Standard JSON Schema
+ * @returns The schema, or `undefined` where none can be written
+ * @example
+ * ```ts
+ * standardJsonSchema(z.object({ id: z.string() }), "input"); // { type: "object", … }
+ * ```
+ */
+export function standardJsonSchema(
+  schema: StandardSchemaV1 | undefined,
+  side: SchemaSide,
+  fallback?: JSONSchemaFallback,
+): JSONSchema | undefined {
+  if (schema === undefined) return undefined;
+  const converted = convertedBy(schema, side) ?? fallback?.(schema, side);
+  if (converted === undefined) return undefined;
+  const { $schema: _dialect, ...rest } = converted;
+  return rest;
+}
+
 function convertedBy(schema: StandardSchemaV1, side: SchemaSide): JSONSchema | undefined {
   const converter = (schema["~standard"] as Partial<StandardJSONSchemaV1.Props>).jsonSchema;
   if (typeof converter?.[side] !== "function") return undefined;

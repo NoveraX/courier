@@ -105,6 +105,7 @@ describe("setupUiNamespace", () => {
       },
       sendSnapshot: () => {},
       summarizeServers: () => [],
+      describeServers: () => [],
       recordsIn: () => undefined,
       setMocksFile: () => {},
     };

@@ -76,7 +76,12 @@ export function createWSHandler(config: WSHandlerConfig = {}): WSHandler {
     const inbox = holdFrames(ws, ctx.maxControlPerSecond);
 
     if (config.onConnect) {
-      void initConnection(ws, inbox, ctx);
+      /* What fails while a connection is admitted ends that connection, never the process. */
+      initConnection(ws, inbox, ctx).catch((error: unknown) => {
+        log.error(`Connection ${ctx.connectionId} could not be admitted`, error);
+        ipTracker.release(ctx.clientIP);
+        ws.close(1011, "Internal error");
+      });
     } else {
       registerAndActivate(ws, inbox, ctx);
     }

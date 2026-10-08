@@ -43,6 +43,12 @@ const NOT_FROM_A_FRAME: ReadonlySet<string> = new Set([
 ]);
 const NOT_FROM_A_FRAME_PREFIXES = ["sec-", "proxy-", "x-forwarded-", "access-control-"];
 
+/* RFC 9110's field-name and field-value: what a header can carry, read before
+   `Headers` is handed one — it throws on anything else. */
+const FIELD_NAME = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are what it refuses
+const FIELD_VALUE = /^[^\u0000-\u0008\u000a-\u001f\u007f]*$/;
+
 /** What a client's `auth` frame proves who it is with. */
 export interface FrameCredentials {
   /** Headers the client could not put on its handshake */
@@ -56,7 +62,8 @@ export interface FrameCredentials {
  *
  * @param payload - The frame's payload
  * @returns Its credentials; `undefined` for a payload no client sends — not
- *   an object, headers that are not strings, more of them than the server reads
+ *   an object, headers that are not strings or that HTTP cannot carry, more
+ *   of them than the server reads
  * @example
  * ```ts
  * frameCredentials({ headers: { authorization: "Bearer t1" }, auth: { tenant: "t1" } });
@@ -71,8 +78,13 @@ export function frameCredentials(payload: unknown): FrameCredentials | undefined
   if (!isFieldRecord(headers)) return undefined;
   const pairs = Object.entries(headers);
   if (pairs.length > MAX_FRAME_HEADERS) return undefined;
-  const named = pairs.filter((pair): pair is [string, string] => typeof pair[1] === "string");
+  const named = pairs.filter(isHeaderPair);
   return named.length === pairs.length ? { headers: named, auth } : undefined;
+}
+
+function isHeaderPair(pair: readonly [string, unknown]): pair is [string, string] {
+  const [name, value] = pair;
+  return typeof value === "string" && FIELD_NAME.test(name) && FIELD_VALUE.test(value);
 }
 
 /**
@@ -115,27 +127,43 @@ export function withFrameHeaders(handshake: Request, frame: FrameCredentials): R
  * ```
  */
 export function frameHeadersOver(handshake: Headers, frame: FrameCredentials): Headers | undefined {
+  if (!frame.headers.every(isHeaderPair)) return refusedUnreadable();
   const added = frame.headers.filter(([name]) => takenFromFrame(name.toLowerCase()));
-  const fresh = added.filter(([name]) => !handshake.has(name));
-  if (fresh.length === 0) return handshake;
-  const headers = new Headers(handshake);
   try {
+    const fresh = added.filter(([name]) => !handshake.has(name));
+    if (fresh.length === 0) return handshake;
+    const headers = new Headers(handshake);
     for (const [name, value] of fresh) headers.set(name, value);
-  } catch (error) {
-    log.warn("An auth frame carried a header HTTP cannot", error);
-    return undefined;
+    return headers;
+  } catch {
+    return refusedUnreadable();
   }
-  return headers;
 }
 
-const refused = new Set<string>();
+/* The error `Headers` throws quotes what the client wrote, which a log line should not carry. */
+function refusedUnreadable(): undefined {
+  warnOnce("unreadable", "An auth frame carried a header HTTP cannot, and was refused");
+  return undefined;
+}
+
+/* Said once a refused name or prefix, never per name a client makes up: every
+   `sec-…` a frame invents would otherwise be kept, and logged, for good. */
+const warned = new Set<string>();
 
 function takenFromFrame(name: string): boolean {
-  const forbidden =
-    NOT_FROM_A_FRAME.has(name) || NOT_FROM_A_FRAME_PREFIXES.some((p) => name.startsWith(p));
-  if (forbidden && !refused.has(name)) {
-    refused.add(name);
-    log.warn(`An auth frame's ${name} header is not taken: only a browser or a proxy sets it`);
-  }
-  return !forbidden;
+  const refused = NOT_FROM_A_FRAME.has(name)
+    ? name
+    : NOT_FROM_A_FRAME_PREFIXES.find((prefix) => name.startsWith(prefix))?.concat("*");
+  if (refused === undefined) return true;
+  warnOnce(
+    refused,
+    `An auth frame's ${refused} header is not taken: only a browser or a proxy sets it`,
+  );
+  return false;
+}
+
+function warnOnce(key: string, message: string): void {
+  if (warned.has(key)) return;
+  warned.add(key);
+  log.warn(message);
 }

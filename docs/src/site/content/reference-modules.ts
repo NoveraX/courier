@@ -28,6 +28,7 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
     module: "@noverax/courier/realtime",
     note: "createMemoryPubSub, createMemoryStream, createMemoryPresence, subscribeSSE, tracked",
   },
+  { module: "@noverax/courier/openapi", note: "toOpenAPI — the definition as an OpenAPI document" },
   {
     module: "@noverax/courier/testing",
     note: "createTestClient, findRequests, createMockSSESubscription, createMockWSChannel",

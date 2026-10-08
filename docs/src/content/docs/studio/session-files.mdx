@@ -1,0 +1,65 @@
+export const metadata = { title: "Session Files", description: "Share what Studio recorded as one file — the requests, their answers and timings, and the environment they ran in, with secrets left out — and open a colleague's in your own Studio.", mode: "both" }
+
+A session file is a bug report Studio writes for you: every request on the Timeline with its variables, its answer, its headers and its timing, and the environment it was recorded in — Studio's and Node.js's versions, the platform, the version of each package that bears on a request, and a fingerprint of each API definition. Credentials and values named like secrets are left out, and you look the file over before it is saved. A colleague drops it on their Timeline and sees what you saw, set beside their own environment.
+
+## Share what you saw
+
+Choose **Share** in the Timeline's toolbar. Studio writes the file for the requests the Timeline shows — the live ones, or the saved session it shows — and opens it for you to look over:
+
+- its name, from the session's: `checkout-fails.courier-session.json`;
+- how many requests it holds, and how many of them failed;
+- what was left out: each value replaced, by the request it was in and where, such as `#3 auth.login · variables.password`;
+- the environment it names.
+
+**Download** saves exactly the file shown. A saved session is shared the same way, from its **Share** button in **Settings → Session history**; **Share as a session file** in the command palette (⌘K) shares the requests the Timeline shows.
+
+## What it holds
+
+| Part | What it is |
+| --- | --- |
+| Requests | Each request as a saved session keeps it: the endpoint, its method and mode, the variables, the answer, the request and response headers, the status, the timing, the size, the failure, the HTTP version, the agent tool an MCP call ran for and the idempotency key it sent. A body larger than 16 KB is kept as a part of it, with the size of the whole. |
+| Environment | Studio's version, Node.js's version and the platform; the installed version of each Courier package, framework, schema library and TanStack Query your `package.json` depends on; and each source's definition as a fingerprint — a hash of its OpenAPI document. |
+| What was replaced | The place of every value Studio replaced, such as `requests[2].variables.password` or `requests[0].url?token`. |
+
+Like a saved session, a file holds no middleware trail and no stream messages: those stay with the live view.
+
+A session saved in **Settings → Session history** keeps the environment it was saved in, so a file shared from it later names that environment, not today's; a file of the live requests names the environment they are being recorded in.
+
+## What is left out
+
+- **Credentials.** The value of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, and of any header whose name has a word such as `auth`, `token`, `secret`, `password`, `session`, `csrf`, `xsrf` or `api-key` in it is never saved, so no file carries it — see [Studio](/docs/studio/overview).
+- **Values named like secrets.** Every field of the variables or the answer whose name reads as such a header's would — `password`, `accessToken`, `client_secret`, `sessionId` — at any depth, and every such parameter in a request's query string, is replaced with `[redacted]`. Each one is listed before you save, by request and place.
+- **Not a secret under an ordinary name.** A token in a field called `value` or `data` stays in: the list shows what was replaced, and the bodies are yours to look over before you share the file.
+
+## Open a colleague's file
+
+Drop the file on the Timeline, or choose **Open a session file** — in **Settings → Session history**, on an empty Timeline, or in the command palette. Studio keeps it as a session of its own, named as it was with *(opened from a file)*, and shows it in place of the live requests, recording paused. It is read-only: nothing runs again while a saved session shows, and **Back to live** returns to your own requests.
+
+A bar over the Timeline says where the session was recorded and how that differs from your environment — *the same environment as yours*, or how many lines differ. **Environment** lists it line by line, each line that differs beside yours: `yours: 1.0.0`, `yours: not a dependency`, `yours: no such source`. A definition whose fingerprint differs from yours was a different API: the difference may be the bug.
+
+A call still in flight when the session was saved reads *unfinished*, and a stream open then shows how long it had been open, rather than counting on from the clock.
+
+## The file
+
+A session file is JSON:
+
+```json
+{
+  "format": "courier-session",
+  "version": 1,
+  "exportedAt": 1791504000000,
+  "environment": {
+    "studio": "1.0.0",
+    "node": "v24.21.0",
+    "platform": "darwin-arm64",
+    "packages": { "@noverax/courier": "1.0.0", "zod": "4.1.0" },
+    "definitions": { "shop": "sha256:93574b69643b7561" }
+  },
+  "redactions": ["requests[0].variables.password"],
+  "session": { "name": "Checkout fails", "requests": [] }
+}
+```
+
+Studio opens a file of version 1 and refuses a newer one, saying which version it is. A file is read as anything sent to Studio is: each request checked and rebuilt as a save is, the environment's parts kept only as text, at most 10,000 requests and 64 MB. Opening one is a change, so it needs the page opened from Studio's link, with the token.
+
+A [public demo](/docs/studio/overview) shares a file to any visitor; its environment names no Node.js version or platform, which describe the machine serving the demo. Opening a file there takes the host's token.

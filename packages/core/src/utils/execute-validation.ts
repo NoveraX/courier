@@ -82,12 +82,24 @@ export async function validateResponse(
   }
 }
 
-/* A schema whose fields are all optional makes the argument optional in the
-   call signature, so "no variables" has to mean an empty object — handed
-   `undefined`, every such schema rejected the call it invited. A schema that
-   takes `undefined` itself, a body the operation does not require, is
-   handed that: an empty object is not a list or a scalar. */
-async function absentAs(schema: StandardSchemaV1, variables: unknown): Promise<unknown> {
+/**
+ * The variables a call's schema is handed: those given, or for a call made
+ * with none, what "no variables" means to that schema. A schema whose fields
+ * are all optional makes the argument optional in the call signature, so
+ * "no variables" has to mean an empty object — handed `undefined`, every
+ * such schema rejected the call it invited. A schema that takes `undefined`
+ * itself, a body the operation does not require, is handed that: an empty
+ * object is not a list or a scalar.
+ *
+ * @param schema - The endpoint's variables schema
+ * @param variables - The variables the call was made with
+ * @returns What the schema validates
+ * @example
+ * ```ts
+ * await absentAs(z.object({ page: z.number().optional() }), undefined); // → {}
+ * ```
+ */
+export async function absentAs(schema: StandardSchemaV1, variables: unknown): Promise<unknown> {
   if (variables !== undefined && variables !== null) return variables;
   const none = await schema["~standard"].validate(undefined);
   return none.issues ? {} : undefined;

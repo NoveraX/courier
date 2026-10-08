@@ -52,6 +52,7 @@ const KNOWN: Partial<Record<FilterDimension, Known>> = {
   mode: [
     ["direct", "Direct"],
     ["proxy", "Proxy"],
+    ["agent", "Agent"],
   ],
   type: [
     ["query", "Query"],

@@ -59,7 +59,11 @@ export function InspectorHeader({
             {transport === "ws" ? "WS" : transport.toUpperCase()}
           </Chip>
           <span className="ml-0.5 text-label text-fg-subtle">
-            {request.mode === "proxy" ? "via proxy" : "direct"}
+            {request.agent
+              ? `agent tool ${request.agent.tool}`
+              : request.mode === "proxy"
+                ? "via proxy"
+                : "direct"}
           </span>
         </div>
         <h2 className="m-0 truncate font-mono text-heading font-medium tracking-[-0.015em]">

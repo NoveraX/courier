@@ -10,6 +10,13 @@ export type ValidationTarget = "variables" | "response";
 /** The HTTP version a request went over, as a protocol's name for it. */
 export type HttpVersion = "HTTP/1.0" | "HTTP/1.1" | "HTTP/2" | "HTTP/3";
 
+/** The agent tool a call ran for, when an MCP server made it, and the client as it named itself. */
+export interface RequestAgent {
+  tool: string;
+  access: "read" | "write" | "destructive";
+  client?: string | undefined;
+}
+
 export interface RequestEntry {
   id: string;
   source: string;
@@ -27,6 +34,8 @@ export interface RequestEntry {
   /** The size in bytes of the whole variables as JSON, when `variables` is a part of them. */
   variablesCutFrom?: number | undefined;
   mode: "direct" | "proxy";
+  /** The agent the call ran for, when an MCP server made it; absent on the application's own calls. */
+  agent?: RequestAgent | undefined;
   type?: "query" | "mutation" | undefined;
   status: RequestStatus;
   statusCode?: number | undefined;

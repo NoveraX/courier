@@ -6,7 +6,7 @@ import { isStreamRequest, requestStateOf, STATE_META } from "@/features/requests
 import { useSecondNow } from "@/hooks/use-tick";
 import { formatAbsoluteTime, formatRelativeTime } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import type { RequestEntry } from "@/store/types";
+import type { RequestAgent, RequestEntry } from "@/store/types";
 import type { RowContext } from "./row-values";
 import { codeTone, durationOf, sizeOf } from "./row-values";
 import { columnsOf } from "./table-columns";
@@ -73,12 +73,17 @@ export function RequestRow({
       </span>
       {context.wide && (
         <span
+          title={r.agent ? agentTitle(r.agent) : undefined}
           className={cn(
             "justify-self-start rounded-chip px-1.5 py-px font-sans text-meta font-strong",
-            r.mode === "proxy" ? "bg-syntax-type/12 text-syntax-type" : "bg-raised text-fg-subtle",
+            r.agent
+              ? "bg-syntax-function/12 text-syntax-function"
+              : r.mode === "proxy"
+                ? "bg-syntax-type/12 text-syntax-type"
+                : "bg-raised text-fg-subtle",
           )}
         >
-          {r.mode}
+          {r.agent ? "agent" : r.mode}
         </span>
       )}
       <span className={cn("tabular-nums", codeTone(r, state))}>{codeLabel(r, state)}</span>
@@ -108,4 +113,9 @@ export function RequestRow({
       </span>
     </button>
   );
+}
+
+/* What the chip says on hover: the tool an agent called, and the client it called through. */
+function agentTitle(agent: RequestAgent): string {
+  return `Agent tool ${agent.tool}${agent.client ? ` · ${agent.client}` : ""}`;
 }

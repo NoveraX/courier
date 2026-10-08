@@ -9,6 +9,7 @@ import {
   readStringListRecord,
   readStringRecord,
 } from "./payload";
+import { readAgent } from "./read-agent";
 import type { ProxyTiming, RequestEntry, RequestStatus, ValidationIssue } from "./types";
 
 type EventPayload = Record<string, unknown>;
@@ -29,6 +30,7 @@ export function requestFromStart(event: EventPayload): RequestEntry {
     variables: event.variables,
     variablesCutFrom: optNum(event.variablesCutFrom),
     mode: event.mode === "proxy" ? "proxy" : "direct",
+    agent: readAgent(event.agent),
     type:
       event.endpointType === "query" || event.endpointType === "mutation"
         ? event.endpointType

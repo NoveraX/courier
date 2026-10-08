@@ -13,6 +13,7 @@ import type { MockStore } from "../store";
 import type { StorePersistOptions } from "../store/store-persistence";
 import type { AnyMockScenario, MockHistoryEntry, NetworkConfig, UntypedMockFn } from "../types";
 import type { Elsewhere } from "./elsewhere";
+import type { IdempotencyOptions } from "./idempotent-calls";
 import type { PrefixMapping } from "./prefix-route-types";
 import type { MockLogMode } from "./request-logger";
 import type { RequestHooks } from "./route-types";
@@ -42,6 +43,12 @@ export interface MockServerOptions {
   /** Request logging level (default: "normal") */
   log?: MockLogMode | boolean | undefined;
   /** Default network simulation */
+  /**
+   * How a write's idempotency key is honoured: a write sent again with its
+   * key gets the first answer back instead of running twice, as an API that
+   * deduplicates by the key answers. `false` runs every write.
+   */
+  idempotency?: IdempotencyOptions | false | undefined;
   network?: NetworkConfig | undefined;
   /** Initial scenario */
   scenario?: AnyMockScenario | undefined;

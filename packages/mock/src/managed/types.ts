@@ -2,6 +2,7 @@ import type { AnySource } from "@noverax/courier/define";
 import type { KeptBodies } from "@noverax/courier/internal";
 import type { AutoScenarioOptions } from "../auto/auto-seed";
 import type { RouteInfo } from "../auto/route-types";
+import type { IdempotencyOptions } from "../server/idempotent-calls";
 import type { MockServer } from "../server/mock-server-types";
 import type { MockStore } from "../store";
 import type { EndpointName, TypedMockFn } from "../typed-mock-fn";
@@ -84,6 +85,11 @@ export interface MockServerDefinition<TSource extends AnySource = AnySource>
   maxBodyBytes?: number | undefined;
   /** The largest form or upload the mock reads, in bytes (default: 10 MB, as a Courier server); a larger one is answered with 413 */
   maxUploadBytes?: number | undefined;
+  /**
+   * How a write's idempotency key is honoured: one sent again gets the first
+   * answer back instead of running twice; `false` runs every write.
+   */
+  idempotency?: IdempotencyOptions | false | undefined;
   /**
    * Keep the mock's records in the project's `.courier/mocks/`, so they
    * survive a restart of the mock — an edit that changes it included — and

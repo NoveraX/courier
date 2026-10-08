@@ -116,11 +116,17 @@ export async function handleMockRequest(
   }
 
   try {
-    const data = await handler.fn(ctx);
-
-    if (handler.newState) config.transitionScenario(mark, handler.newState);
-
-    const status = handler.isError ? handler.status : handler.status || 200;
+    const run = async () => {
+      const result = await handler.fn(ctx);
+      if (handler.newState) config.transitionScenario(mark, handler.newState);
+      return { data: result, status: handler.isError ? handler.status : handler.status || 200 };
+    };
+    /* A read is answered afresh whatever it carries; a write under a key, once. */
+    const keyed =
+      config.idempotency && c.req.method !== "GET" && c.req.method !== "HEAD"
+        ? await config.idempotency.answer(c.req.raw.headers, { group, method, variables }, run)
+        : { ...(await run()), replayed: false };
+    const { data, status } = keyed;
 
     const bwDelay = computeBandwidthDelay(netConfig?.bandwidth, data);
     if (bwDelay) await sleep(bwDelay);
@@ -138,7 +144,9 @@ export async function handleMockRequest(
       handler.headers,
     );
 
-    return buildResponse(c, handler, status, data, raw);
+    const response = buildResponse(c, handler, status, data, raw);
+    if (keyed.replayed) response.headers.set("Idempotent-Replayed", "true");
+    return response;
   } catch (err) {
     const duration = performance.now() - start;
     config.networkState?.trackRequest(duration, true);

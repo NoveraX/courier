@@ -3,6 +3,7 @@ import type { MockServer, MockServerOptions } from "../server/create-mock-server
 import { createMockServer } from "../server/create-mock-server";
 import type { Elsewhere } from "../server/elsewhere";
 import { generatedRoutes } from "../server/generated-routes";
+import type { IdempotencyOptions } from "../server/idempotent-calls";
 import type { MockStore } from "../store";
 import type { AnyMockScenario, NetworkConfig, UntypedMockFn } from "../types";
 import { seedAllCollections } from "./auto-seed";
@@ -12,6 +13,7 @@ import { checkedMock, withCheckedMock } from "./checked-mock-targets";
 import { composeScenarios } from "./compose-scenarios";
 import { createElsewhere } from "./create-elsewhere";
 import { isApiDefinition } from "./is-api-definition";
+import { keyHeadersOf } from "./key-headers";
 import type { SeedConfig } from "./prefix-mappings";
 import { buildPrefixMappings } from "./prefix-mappings";
 import { buildPresetScenarios } from "./preset-scenarios";
@@ -55,6 +57,12 @@ export interface AutoMockServerConfig {
   scenarios?: Record<string, AnyMockScenario> | undefined;
   /** Default network simulation (latency, errorRate, faultTypes) */
   network?: NetworkConfig | undefined;
+  /**
+   * How a write's idempotency key is honoured: one sent again gets the first
+   * answer back, read from `Idempotency-Key` and every header the source's
+   * endpoints name in their `idempotencyKey`; `false` runs every write.
+   */
+  idempotency?: IdempotencyOptions | false | undefined;
   /**
    * Keep the store in a file, so its records survive a restart: each
    * collection the source serves takes the file's records for it when the
@@ -142,6 +150,13 @@ export function createAutoMockServer(config: AutoMockServerConfig): MockServer {
     admin: config.admin,
     log: config.log,
     network: config.network,
+    idempotency:
+      config.idempotency === false
+        ? false
+        : {
+            ...config.idempotency,
+            headers: config.idempotency?.headers ?? keyHeadersOf(config.source),
+          },
     maxBodyBytes: config.maxBodyBytes,
     maxUploadBytes: config.maxUploadBytes,
     mappings,

@@ -1,3 +1,4 @@
+import { agentOptions } from "../agent/agent-options";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { HttpMethod } from "../http-client/types";
 import type { CacheConfig } from "../validation";
@@ -72,6 +73,7 @@ export function makeAddressed(
       }
       return next({ ...state, kind: "query" });
     },
+    agent: (given: unknown) => next({ ...state, agent: agentOptions(given, addressOf(wire)) }),
   };
 
   for (const [name, method] of Object.entries(methods)) {

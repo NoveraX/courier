@@ -100,6 +100,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     kind,
     signal,
     ...(input.purpose && { purpose: input.purpose }),
+    ...(context?.agent && { agent: context.agent }),
     _requestId: requestId || undefined,
   };
 }

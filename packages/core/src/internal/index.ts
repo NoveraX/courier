@@ -13,6 +13,7 @@
  * this entry carries them only when it opens one.
  */
 
+export { assertAllowedOrigins } from "../adapter/assert-allowed-origins";
 export { discardBody } from "../adapter/discard-body";
 export { isOriginAccepted, isOriginAllowed } from "../adapter/origin-policy";
 export { type BoundedBody, readBoundedBody } from "../adapter/read-body";
@@ -42,6 +43,8 @@ export {
   subGroupsOf,
 } from "../define/group-tree";
 export { readLogFormat } from "../logger/log-format";
+export { eachEndpoint, type PlacedEndpoint } from "../openapi/endpoints";
+export { standardJsonSchema } from "../openapi/json-schema";
 export { mergeProxyPath, type ResolveOrigin, resolveProxyPath } from "../proxy-caller";
 export { type ConnectionState, createConnectionState } from "../realtime/connection-state";
 export { describeFailure, type StreamFailure } from "../realtime/describe-failure";
@@ -55,9 +58,10 @@ export { decodeMessage, encodeMessage, type WSMessage } from "../realtime/ws/ws-
 export { buildDirectWSUrl, parseWSTopic, type TopicEndpoint } from "../realtime/ws-address";
 export { addressedOrigin } from "../session/addressed-origin";
 export { isDeletion, parseSetCookie, serializeSetCookie } from "../session/set-cookie";
-export { getSourcesGeneration, onSourcesChange } from "../sources";
+export { getSourcesGeneration, onSourcesChange, prepareSources } from "../sources";
 export {
   abortPlayground,
+  generateRequestId,
   PLAYGROUND_RID_HEADER,
   STUDIO_REQUEST_HEADER,
   type StudioHooks,

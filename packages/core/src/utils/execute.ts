@@ -138,6 +138,7 @@ export async function prepareAndRun(
     ...target,
     mode: context?.mode ?? (context?.proxyMethod ? "proxy" : "direct"),
     middlewareCount: middlewares.length,
+    agent: context?.agent,
   });
 
   /* The token a write asks for first goes as calls go, under an id of its own. */

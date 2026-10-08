@@ -1,4 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { AgentAccess, AgentOptions } from "../agent/types";
 import type { Middleware } from "../middleware/types";
 import type {
   ChannelHandlers,
@@ -212,6 +213,27 @@ export interface HttpAddressed<
    * `READS_ON_CHANGING_VERB`.
    */
   reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query", TParams>;
+  /**
+   * Offer the endpoint to AI agents, as a tool of the application's MCP
+   * server. An endpoint that does not name it is out of every agent's reach.
+   *
+   * The description is what the model reads to decide when to call the tool.
+   * `access` says what a call does: an endpoint that writes cannot be offered
+   * as a read — a read over POST says so with `.reads()` first — and a
+   * `destructive` one runs only once a person has confirmed the call. The
+   * agent's call goes through the endpoint's middleware, its schemas and
+   * Studio as the application's own calls do, with `ctx.agent` set.
+   *
+   * @example
+   * ```ts
+   * endpoint
+   *   .del("orders/:id")
+   *   .agent({ description: "Cancel an order that has not shipped", access: "destructive" });
+   * ```
+   */
+  agent(
+    options: AgentOptions<TKind extends "query" ? AgentAccess : Exclude<AgentAccess, "read">>,
+  ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>;
 }
 
 /** What naming a verb and a path gives: the endpoint, with its path's parameters. */

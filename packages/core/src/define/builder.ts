@@ -1,4 +1,5 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
+import type { AgentOptions } from "../agent/types";
 import { ConfigurationError } from "../errors/configuration-error";
 import type { Middleware } from "../middleware/types";
 import { assertEndpointSession } from "../session/assert-session-api";
@@ -30,6 +31,8 @@ export interface BuilderState {
   readonly meta: Readonly<Record<string, unknown>>;
   /** What a served channel's subscribers share a topic by, from `.topic()`. */
   readonly topicKey?: TopicKeyReader | undefined;
+  /** How the endpoint is offered to AI agents, from `.agent()`. */
+  readonly agent?: AgentOptions | undefined;
 }
 
 /** Start a builder state for a head. */
@@ -124,6 +127,7 @@ export function resolveOptions(
     ...(state.retry !== undefined && { retry: state.retry }),
     ...(state.cache !== undefined && { cache: state.cache }),
     ...(state.topicKey !== undefined && { topicKey: state.topicKey }),
+    ...(state.agent !== undefined && { agent: state.agent }),
     meta: state.meta,
     tags,
     inherit,

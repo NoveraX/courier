@@ -5,6 +5,7 @@
  */
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
+import { clickThrough } from "../support/click-through";
 import {
   APP,
   ATTACKER,
@@ -51,8 +52,7 @@ test("a page renders without a session, sending no cookie", async () => {
 });
 
 test("signing in through a server route hands the browser the API's session cookie beside the application's own", async () => {
-  await page.click("#login");
-  await page.waitForURL(`${APP}/`);
+  await clickThrough(page, "#login");
 
   expect(await cookie("sid")).toMatchObject({ value: "s%3Aada.sig", path: "/", httpOnly: true });
   expect((await cookie("csrftoken"))?.value).toBe("t-ada");
@@ -98,8 +98,7 @@ test("a write from the application's own form repeats the double-submit token", 
   await page.goto(`${APP}/`);
   await clearReceived();
 
-  await page.click("#rename");
-  await page.waitForURL(`${APP}/`);
+  await clickThrough(page, "#rename");
   const [write] = await received("POST", "/me/name");
 
   expect(write?.headers["x-csrftoken"]).toBe("t-ada");
@@ -152,8 +151,7 @@ test("a render's later call sends the session its first call renewed, and the br
 
 test("signing out through a link clears the session cookie", async () => {
   await page.goto(`${APP}/`);
-  await page.click("#logout");
-  await page.waitForURL(`${APP}/`);
+  await clickThrough(page, "#logout");
 
   expect(await cookie("sid")).toBeUndefined();
 });

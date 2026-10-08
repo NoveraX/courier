@@ -7,6 +7,7 @@
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
 import { browsers } from "../../support/browsers";
+import { clickThrough } from "../support/click-through";
 import {
   APP,
   ATTACKER,
@@ -167,8 +168,7 @@ test("a cookie value Next.js would change on the way still reaches the render's 
 
 test("signing out through a link clears the session cookie", async () => {
   await page.goto(`${APP}/`);
-  await page.click("#logout");
-  await page.waitForURL(`${APP}/`);
+  await clickThrough(page, "#logout");
 
   expect(await cookie("sid")).toBeUndefined();
 });

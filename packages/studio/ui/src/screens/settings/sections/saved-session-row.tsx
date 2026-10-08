@@ -1,4 +1,4 @@
-import { Archive, Download, FolderOpen, Share, Trash2 } from "lucide-react";
+import { Archive, Download, FlaskConical, FolderOpen, Share, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { shortAgo } from "@/features/explorer/endpoint-key";
@@ -15,18 +15,20 @@ interface SavedSessionRowProps {
   onExport: () => void;
   /** Share it as a session file, looked over first. */
   onShare: () => void;
+  /** Save it as a test, planned first. */
+  onTest: () => void;
   onDelete: () => void;
 }
 
 /**
  * A saved session: its name, how many requests and when it was saved, its
- * errors, and Load, Export, Share and Delete — Delete asking first.
+ * errors, and Load, Export, Share, Save as a test and Delete — Delete asking first.
  *
- * @param props - The session, the time now, and what loads, exports, shares and deletes it
+ * @param props - The session, the time now, and what loads, exports, shares, tests and deletes it
  * @returns The row
  * @example
  * ```tsx
- * <SavedSessionRow session={s} now={Date.now()} onLoad={load} onExport={exp} onShare={share} onDelete={del} />
+ * <SavedSessionRow session={s} now={Date.now()} onLoad={load} onExport={exp} onShare={share} onTest={test} onDelete={del} />
  * ```
  */
 export function SavedSessionRow({
@@ -35,6 +37,7 @@ export function SavedSessionRow({
   onLoad,
   onExport,
   onShare,
+  onTest,
   onDelete,
 }: SavedSessionRowProps): React.ReactNode {
   const [asking, setAsking] = useState(false);
@@ -104,6 +107,15 @@ export function SavedSessionRow({
           className={cn(ICON_BUTTON, "border border-line")}
         >
           <Share aria-hidden="true" className="size-3" />
+        </button>
+        <button
+          type="button"
+          title="Save as a test"
+          aria-label={`Save ${session.name} as a test`}
+          onClick={onTest}
+          className={cn(ICON_BUTTON, "border border-line")}
+        >
+          <FlaskConical aria-hidden="true" className="size-3" />
         </button>
         <button
           type="button"

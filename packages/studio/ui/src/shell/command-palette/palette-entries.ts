@@ -16,6 +16,7 @@ export type PaletteAction =
   | { kind: "show-streams" }
   | { kind: "export" }
   | { kind: "share-session-file" }
+  | { kind: "save-as-test" }
   | { kind: "open-session-file" }
   | { kind: "toggle-recording" }
   | { kind: "toggle-theme" }

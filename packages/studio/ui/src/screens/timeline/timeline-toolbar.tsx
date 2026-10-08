@@ -1,17 +1,14 @@
-import { Download, History, Pin, Share, SlidersHorizontal, Trash2 } from "lucide-react";
+import { History, Pin, SlidersHorizontal, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { SearchField } from "@/design/search-field";
 import { Skeleton } from "@/design/skeleton";
-import { exportShownRequests } from "@/features/sessions/export-requests";
-import { shareSessionFile } from "@/features/sessions/session-file-dialog-store";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
-
-const TOOL =
-  "flex h-7.5 shrink-0 cursor-pointer items-center gap-1.75 rounded-control border px-2.5 text-control transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand";
+import { TimelineOutputs } from "./timeline-outputs";
+import { TOOL } from "./toolbar-tool";
 
 interface TimelineToolbarProps {
   search: string;
@@ -24,7 +21,8 @@ interface TimelineToolbarProps {
 
 /**
  * The bar over the Timeline: the search, the filters' switch, Preserve log
- * and Clear, how many requests show, Export, and Share as a session file.
+ * and Clear, how many requests show, and what the requests become — an
+ * export, a session file, a test.
  *
  * @param props - The search, the filters' state, and how many requests show
  * @returns The bar
@@ -116,32 +114,7 @@ export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
           )}
         </span>
       )}
-      <button
-        type="button"
-        title={`Export the requests as ${format.toUpperCase()}`}
-        disabled={total === 0}
-        onClick={() => void exportShownRequests(format)}
-        className={cn(
-          TOOL,
-          "border-line text-fg-muted hover:text-fg disabled:cursor-default disabled:opacity-50",
-        )}
-      >
-        <Download aria-hidden="true" className="size-3.25" />
-        <span className="max-[1100px]:hidden">Export</span>
-      </button>
-      <button
-        type="button"
-        title="Share the requests as a session file a colleague opens in their Studio"
-        disabled={total === 0}
-        onClick={() => shareSessionFile({ kind: "shown" })}
-        className={cn(
-          TOOL,
-          "border-line text-fg-muted hover:text-fg disabled:cursor-default disabled:opacity-50",
-        )}
-      >
-        <Share aria-hidden="true" className="size-3.25" />
-        <span className="max-[1100px]:hidden">Share</span>
-      </button>
+      <TimelineOutputs total={total} format={format} />
     </div>
   );
 }

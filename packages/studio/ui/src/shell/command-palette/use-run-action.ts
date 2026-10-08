@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { exportShownRequests } from "@/features/sessions/export-requests";
 import { pickSessionFile } from "@/features/sessions/open-session-file";
 import { shareSessionFile } from "@/features/sessions/session-file-dialog-store";
+import { saveAsTest } from "@/features/tests/recorded-test-store";
 import { useBackToLive } from "@/hooks/use-back-to-live";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import { useStudioStore } from "@/store";
@@ -44,6 +45,9 @@ export function useRunAction(): (action: PaletteAction) => void {
         return;
       case "share-session-file":
         shareSessionFile({ kind: "shown" });
+        return;
+      case "save-as-test":
+        saveAsTest({ kind: "shown" });
         return;
       case "open-session-file":
         pickSessionFile();

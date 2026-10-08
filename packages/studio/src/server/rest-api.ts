@@ -13,6 +13,10 @@ import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
 import { createOriginGuard } from "./origin-guard";
+import {
+  type RecordedTestRouteDeps,
+  registerRecordedTestRoutes,
+} from "./recorded-tests/recorded-test-routes";
 import type { RouteRequest } from "./route-types";
 import {
   registerSessionFileRoutes,
@@ -36,6 +40,8 @@ export interface RestApiDeps {
   sessions: SessionRouteDeps & Pick<SessionFileDeps, "environment">;
   /** What Studio keeps, which the Storage settings size and clear. */
   storage: StorageRouteDeps;
+  /** The project and the sessions a session's calls are saved as a test from. */
+  tests: RecordedTestRouteDeps;
   /** The token a writing route asks for. */
   token: StudioToken;
   /** The visitors' counts, when Studio serves a public demo. */
@@ -61,7 +67,7 @@ export interface RestApiDeps {
 export function registerRestApi(
   app: ReturnType<typeof express>,
   policy: StudioOriginPolicy,
-  { apis, configEdit, mocksEdit, sessions, storage, token, demo }: RestApiDeps,
+  { apis, configEdit, mocksEdit, sessions, storage, tests, token, demo }: RestApiDeps,
 ): void {
   app.use(compression());
   /* Before anything reads a body: the API is for the Studio UI, not for every
@@ -80,6 +86,7 @@ export function registerRestApi(
   registerApisRoutes(app, demo ? { ...apis, isDemoVisitor } : apis);
   registerSessionRoutes(app, sessions);
   registerSessionFileRoutes(app, sessions);
+  registerRecordedTestRoutes(app, tests);
   registerStorageRoutes(app, storage);
   registerMockDeclareRoutes(app, mocksEdit);
   registerConfigDeclareRoutes(app, configEdit);

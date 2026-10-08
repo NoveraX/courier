@@ -2,6 +2,7 @@ import { FileInput, History, Save } from "lucide-react";
 import { useState } from "react";
 import { pickSessionFile } from "@/features/sessions/open-session-file";
 import { shareSessionFile } from "@/features/sessions/session-file-dialog-store";
+import { saveAsTest } from "@/features/tests/recorded-test-store";
 import { useNow } from "@/hooks/use-tick";
 import { formatClockTime } from "@/lib/formatters";
 import type { useSessionHistory } from "@/settings/use-session-history";
@@ -104,6 +105,7 @@ export function SessionsSection({ history }: SessionsSectionProps): React.ReactN
                 onLoad={() => void history.loadSession(session.id)}
                 onExport={() => void history.exportSession(session.id, format)}
                 onShare={() => shareSessionFile({ kind: "saved", id: session.id })}
+                onTest={() => saveAsTest({ kind: "saved", id: session.id })}
                 onDelete={() => void history.deleteSession(session.id)}
               />
             ))}

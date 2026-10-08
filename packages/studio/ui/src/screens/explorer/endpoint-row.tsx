@@ -1,3 +1,4 @@
+import { contractKey, useContractStore } from "@/features/contract/contract-store";
 import { lastCallLabel } from "@/features/explorer/endpoint-key";
 import type { EndpointTag } from "@/features/explorer/endpoint-tags";
 import { endpointTags } from "@/features/explorer/endpoint-tags";
@@ -29,6 +30,26 @@ function errorsOf(e: EndpointNode): { text: string; className: string } {
   if (!calls) return { text: "—", className: "text-fg-subtle" };
   const className = errorRate >= 20 ? "text-err" : errorRate >= 5 ? "text-warn" : "text-fg-subtle";
   return { text: `${errorRate.toFixed(1)}%`, className };
+}
+
+/* An endpoint whose real answers differ from its response schema says so in its row. */
+function DriftTag({ endpoint: e }: { endpoint: EndpointNode }): React.ReactNode {
+  const id = e.group ? `${e.group}.${e.method}` : e.method;
+  const drifted = useContractStore(
+    (s) => s.byEndpoint.get(contractKey(e.source, id))?.state === "drifted",
+  );
+  if (!drifted) return null;
+  return (
+    <span
+      title="Its answers differ from its response schema"
+      className={cn(
+        "flex h-4.75 items-center rounded-[5px] px-1.5 text-meta font-strong whitespace-nowrap",
+        TAG_CLASS.warn,
+      )}
+    >
+      drifted
+    </span>
+  );
 }
 
 interface EndpointRowProps {
@@ -86,6 +107,7 @@ export function EndpointRow(props: EndpointRowProps): React.ReactNode {
         </span>
       </span>
       <span className="flex flex-wrap gap-1.25">
+        <DriftTag endpoint={e} />
         {endpointTags(e).map((tag) => (
           <span
             key={tag.label}

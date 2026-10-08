@@ -21,6 +21,7 @@ import { attributeEvent } from "./attribute-event";
 import { broadcastRuntimeEvent } from "./broadcast-runtime-event";
 import type { BindingTable } from "./catalog/binding-table";
 import type { ConfigSourceNamer } from "./catalog/config-source-names";
+import type { AnswerObserver } from "./contract-drift/answer-observer";
 import { emitLiveEvent } from "./live-events";
 import { isRecord } from "./mocks-edit/is-record";
 import type { RequestLog } from "./request-log";
@@ -54,6 +55,11 @@ export interface SetupRuntimeNamespaceDeps {
    * disconnects are ended.
    */
   requestLog?: RequestLog;
+  /**
+   * Counts each answer's shape for its endpoint's contract. The shapes go to
+   * no page and no log.
+   */
+  answers?: AnswerObserver | undefined;
   /**
    * This project's Studio token. A runtime that presents it when it connects
    * is sent Playground calls; any other is only heard.
@@ -123,7 +129,10 @@ function handleRuntimeEvent(
   deps: SetupRuntimeNamespaceDeps,
 ): Record<string, unknown> | undefined {
   if (!isRecord(raw) || Array.isArray(raw)) return undefined;
-  return broadcastRuntimeEvent(deps.uiNamespace, attributeEvent(raw, deps.nameSource), log);
+  const event = attributeEvent(raw, deps.nameSource);
+  /* An answer's shape is counted for its endpoint's contract, and goes no further. */
+  if (deps.answers?.see(event)) return undefined;
+  return broadcastRuntimeEvent(deps.uiNamespace, event, log);
 }
 
 /**

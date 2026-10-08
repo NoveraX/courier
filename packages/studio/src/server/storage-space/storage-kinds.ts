@@ -4,6 +4,7 @@ export const STORAGE_KINDS = [
   "mockLogs",
   "playground",
   "sessions",
+  "observations",
   "mockStores",
   "backups",
 ] as const;

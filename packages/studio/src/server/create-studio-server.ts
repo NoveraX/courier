@@ -8,6 +8,7 @@ import express from "express";
 import { BindingTable } from "./catalog/binding-table";
 import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { closeStudio } from "./close-studio";
+import { createAnswerObserver } from "./contract-drift/answer-observer";
 import { DEMO_REPLAY_BYTES, demoServing } from "./demo/demo-serving";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
@@ -22,7 +23,7 @@ import { setupRuntimeNamespace } from "./runtime-namespace";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { securityHeaders } from "./security-headers";
 import { serveStudioUi } from "./serve-ui";
-import { sessionEnvironment } from "./session-file/session-environment";
+import { projectEnvironment } from "./session-file/project-environment";
 import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
 import { openStudioStores } from "./storage/studio-stores";
@@ -99,6 +100,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     playgroundRouter,
     nameSource,
     requestLog,
+    answers: createAnswerObserver(stores.answers),
     token,
     maxMessageBytes: serving?.sockets.maxMessageBytes ?? MAX_MESSAGE_BYTES,
   });
@@ -172,13 +174,11 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     sessions: {
       sessions,
       view,
-      environment: () =>
-        sessionEnvironment(root, project.snapshot().running?.config.sources ?? {}, {
-          host: !serving,
-        }),
+      environment: projectEnvironment(root, project, { host: !serving }),
     },
     storage: storage.routes,
     tests: { root, sessions, project },
+    contract: { project, answers: stores.answers },
     token,
     demo: serving && { limits: serving.limits },
   });

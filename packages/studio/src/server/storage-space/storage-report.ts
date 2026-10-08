@@ -38,6 +38,9 @@ function rows(db: DatabaseSync, sql: string): { bytes: number; count: number } {
 
 /* The bytes of a table's rows, as SQLite stores their text. */
 const BODY_BYTES = "COALESCE(SUM(LENGTH(CAST(body AS BLOB))), 0)";
+/* A field seen in answers: its place, its type, its hosts, and the numbers beside them. */
+const FIELD_BYTES =
+  "COALESCE(SUM(LENGTH(CAST(path AS BLOB)) + LENGTH(type) + LENGTH(CAST(places AS BLOB)) + 24), 0)";
 
 /* Each kind kept in the database: its rows' bytes, and how many it holds. */
 function databaseKinds(db: DatabaseSync): KindReport[] {
@@ -55,6 +58,10 @@ function databaseKinds(db: DatabaseSync): KindReport[] {
   const entries: unknown =
     typeof playground?.value === "string" ? JSON.parse(playground.value) : [];
   const sessions = rows(db, `SELECT COUNT(*) AS count, ${BODY_BYTES} AS bytes FROM sessions`);
+  const observations = rows(
+    db,
+    `SELECT (SELECT COUNT(*) FROM answered_calls) AS count, ${FIELD_BYTES} AS bytes FROM answer_fields`,
+  );
   return [
     { kind: "requests", ...requests, limit: MAX_REQUESTS },
     { kind: "mockLogs", ...mockLogs, limit: MOCK_LOG_REQUESTS },
@@ -64,6 +71,7 @@ function databaseKinds(db: DatabaseSync): KindReport[] {
       count: Array.isArray(entries) ? entries.length : 0,
     },
     { kind: "sessions", ...sessions },
+    { kind: "observations", ...observations },
   ];
 }
 

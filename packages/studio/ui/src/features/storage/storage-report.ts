@@ -6,6 +6,7 @@ export type StorageKind =
   | "mockLogs"
   | "playground"
   | "sessions"
+  | "observations"
   | "mockStores"
   | "backups";
 
@@ -31,6 +32,7 @@ export const STORAGE_KINDS: readonly StorageKind[] = [
   "mockLogs",
   "playground",
   "sessions",
+  "observations",
   "mockStores",
   "backups",
 ];
@@ -41,6 +43,10 @@ export const KIND_INFO: Readonly<Record<StorageKind, { label: string; what: stri
   mockLogs: { label: "Mock logs", what: "The requests each mock answered" },
   playground: { label: "Playground history", what: "The calls sent from the Playground" },
   sessions: { label: "Saved sessions", what: "The sessions saved to load again" },
+  observations: {
+    label: "Answer observations",
+    what: "The fields seen in each endpoint's answers, set beside its schema",
+  },
   mockStores: { label: "Mock stores", what: "The records each mock keeps; reset to its seeds" },
   backups: {
     label: "Import backups",

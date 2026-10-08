@@ -52,6 +52,7 @@ function report(onDisk: number, fields: Partial<StorageReport> = {}): StorageRep
       { kind: "mockLogs", bytes: 3 * MB, count: 480, limit: 500 },
       { kind: "playground", bytes: 2048, count: 12 },
       { kind: "sessions", bytes: 0, count: 0 },
+      { kind: "observations", bytes: 2048, count: 3 },
       { kind: "mockStores", bytes: 6 * MB, count: 2 },
       { kind: "backups", bytes: 4096, count: 3 },
     ],
@@ -129,7 +130,15 @@ describe("Settings → Storage", () => {
     await settle(() => fireEvent.click(storage().getByRole("button", { name: "Compact" })));
 
     expect(post).toHaveBeenCalledWith("/api/storage/clear", {
-      kinds: ["requests", "mockLogs", "playground", "sessions", "mockStores", "backups"],
+      kinds: [
+        "requests",
+        "mockLogs",
+        "playground",
+        "sessions",
+        "observations",
+        "mockStores",
+        "backups",
+      ],
     });
     expect(post).toHaveBeenCalledWith("/api/storage/compact", {});
   });

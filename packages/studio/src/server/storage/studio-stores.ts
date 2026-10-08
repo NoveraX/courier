@@ -1,5 +1,6 @@
 import { createRequestLog, type RequestLog } from "../request-log";
 import { trimFreedRoom } from "../storage-space/compact-db";
+import { type AnswerObservations, createAnswerObservations } from "./answer-observations";
 import { createMockConditionsStore, type MockConditionsStore } from "./mock-conditions-store";
 import { createMockLog, type MockLog } from "./mock-log";
 import { createPageState, type PageState } from "./page-state";
@@ -25,6 +26,8 @@ export interface StudioStores {
   pins: RequestPins;
   /** The conditions set on each mock: its network conditions and the scenario applied */
   mockConditions: MockConditionsStore;
+  /** The fields seen in each endpoint's answers, set beside its response schema */
+  answers: AnswerObservations;
   /** The database they are kept in */
   storage: StudioDb;
   close(): void;
@@ -48,6 +51,7 @@ export function openStudioStores(root: string, replayBytes?: number): StudioStor
   const pins = createRequestPins(storage.db);
   const requestLog = createRequestLog(storage.db, replayBytes, pins.has);
   const mockLog = createMockLog(storage.db, replayBytes);
+  const answers = createAnswerObservations(storage.db);
   /* The logs let their oldest requests go as new ones come: the room they took goes back to the disk. */
   const trim = setInterval(() => trimFreedRoom(storage.db), TRIM_EVERY_MS);
   trim.unref();
@@ -60,9 +64,11 @@ export function openStudioStores(root: string, replayBytes?: number): StudioStor
     pageState: createPageState(storage.db),
     pins,
     mockConditions: createMockConditionsStore(storage.db),
+    answers,
     storage,
     close() {
       clearInterval(trim);
+      answers.close();
       requestLog.close();
       mockLog.close();
       storage.close();

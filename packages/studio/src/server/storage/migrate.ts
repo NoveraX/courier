@@ -38,6 +38,26 @@ const STEPS: readonly string[] = [
      body TEXT NOT NULL
    );
    CREATE INDEX mock_events_request ON mock_events (request_id);`,
+  `CREATE TABLE answered_calls (
+     source TEXT NOT NULL,
+     endpoint TEXT NOT NULL,
+     calls INTEGER NOT NULL,
+     first_seen INTEGER NOT NULL,
+     last_seen INTEGER NOT NULL,
+     cut INTEGER NOT NULL,
+     PRIMARY KEY (source, endpoint)
+   );
+   CREATE TABLE answer_fields (
+     source TEXT NOT NULL,
+     endpoint TEXT NOT NULL,
+     path TEXT NOT NULL,
+     type TEXT NOT NULL,
+     first_seen INTEGER NOT NULL,
+     last_seen INTEGER NOT NULL,
+     count INTEGER NOT NULL,
+     places TEXT NOT NULL,
+     PRIMARY KEY (source, endpoint, path, type)
+   );`,
 ];
 
 /** A database a newer Studio made, which this one cannot read. */

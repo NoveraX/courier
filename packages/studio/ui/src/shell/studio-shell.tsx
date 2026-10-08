@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useHotkeys } from "@/hooks/use-hotkeys";
 import { MockRequestInspector } from "@/inspector/mock-request-inspector";
 import { RequestInspector } from "@/inspector/request-inspector";
+import { SessionFileDialog } from "@/screens/session-file/session-file-dialog";
 import { CommandPalette } from "./command-palette/command-palette";
 import { useRunAction } from "./command-palette/use-run-action";
 import { ConnectionBanner } from "./connection-banner";
@@ -17,7 +18,8 @@ import { StorageBanner } from "./storage-banner";
  * Studio's frame around every view: the sidebar, the header, a banner while
  * Studio cannot be reached and one for a visitor of a public demo, the view,
  * the status bar, the request inspector
- * over the view while a request is open, and the command palette — ⌘K
+ * over the view while a request is open, the session file looked over
+ * before it is shared, and the command palette — ⌘K
  * opens it, ⌘. pauses or resumes recording, ⇧⌘L changes the theme, ⌘E
  * exports the requests and ⌘⌫ clears them.
  *
@@ -57,6 +59,7 @@ export function StudioShell(): React.ReactNode {
       <RequestInspector />
       <MockRequestInspector />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <SessionFileDialog />
     </div>
   );
 }

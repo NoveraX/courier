@@ -21,6 +21,7 @@ import {
 } from "./session-body";
 import { buildSession } from "./session-builder";
 import { exportAsHar, exportAsJson, exportAsPostman } from "./session-export";
+import type { SessionEnvironment } from "./session-file/session-environment";
 import type { SessionStore } from "./storage/session-rows";
 import type { StudioView } from "./storage/studio-view";
 
@@ -29,6 +30,8 @@ export interface SessionRouteDeps {
   sessions: SessionStore;
   /** What the pages show: a session loaded is shown until they go back to the live requests */
   view: StudioView;
+  /** The environment Studio runs in, kept with a session saved: the one it was recorded in. */
+  environment?: (() => SessionEnvironment) | undefined;
 }
 
 const EXPORTERS = { har: exportAsHar, json: exportAsJson, postman: exportAsPostman } as const;
@@ -59,12 +62,15 @@ function answer(res: JsonResponse, fallback: string, run: () => unknown): void {
  * registerSessionRoutes(app, { sessions: createSessionStore(db), view: createStudioView(db) });
  * ```
  */
-export function registerSessionRoutes(app: RouteApp, { sessions, view }: SessionRouteDeps): void {
+export function registerSessionRoutes(
+  app: RouteApp,
+  { sessions, view, environment }: SessionRouteDeps,
+): void {
   app.post("/api/sessions/save", (req, res) => {
     const read = readSaveBody(req.body);
     if ("error" in read) return refuse(res, read);
     answer(res, "Failed to save the session", () => {
-      const session = buildSession(read);
+      const session = { ...buildSession(read), ...(environment && { environment: environment() }) };
       sessions.save(session);
       return { id: session.id, name: session.name };
     });

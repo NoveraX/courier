@@ -30,7 +30,18 @@ export function withoutSecrets(value: unknown, depth = 0): unknown {
   return copy;
 }
 
-/* A body names its fields in camelCase as often as a header uses dashes: `accessToken` is `access-token`. */
-function isSecretName(key: string): boolean {
+/**
+ * Whether a body field's name says it holds a secret — `password`,
+ * `accessToken`, `client_secret`, `sessionId` — read as a header name is,
+ * a camelCase name as its dashed form.
+ *
+ * @param key - The field's name
+ * @returns Whether its value is kept out of sight
+ * @example
+ * ```ts
+ * isSecretName("accessToken"); // true
+ * ```
+ */
+export function isSecretName(key: string): boolean {
   return isCredentialHeader(key.replace(/([a-z0-9])([A-Z])/g, "$1-$2"));
 }

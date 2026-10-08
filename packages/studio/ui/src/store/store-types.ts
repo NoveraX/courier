@@ -1,4 +1,5 @@
 import type { ScannedSource, SourceSummary } from "@/features/apis/types";
+import type { SessionEnvironment } from "@/features/sessions/session-environment";
 import type { ConfigStatusPayload } from "./config-status";
 import type { MocksFileStatus } from "./mocks-file-status";
 import type { StudioInfo } from "./studio-info";
@@ -19,6 +20,8 @@ import type {
 export interface ShownSession {
   id: string;
   name: string;
+  /** What it was recorded on, when it was opened from a session file. */
+  environment?: SessionEnvironment | undefined;
 }
 
 export interface StudioState {

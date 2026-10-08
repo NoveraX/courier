@@ -1,9 +1,10 @@
-import { Download, History, Pin, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Download, History, Pin, Share, SlidersHorizontal, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { SearchField } from "@/design/search-field";
 import { Skeleton } from "@/design/skeleton";
 import { exportShownRequests } from "@/features/sessions/export-requests";
+import { shareSessionFile } from "@/features/sessions/session-file-dialog-store";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,7 @@ interface TimelineToolbarProps {
 
 /**
  * The bar over the Timeline: the search, the filters' switch, Preserve log
- * and Clear, how many requests show, and Export.
+ * and Clear, how many requests show, Export, and Share as a session file.
  *
  * @param props - The search, the filters' state, and how many requests show
  * @returns The bar
@@ -127,6 +128,19 @@ export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
       >
         <Download aria-hidden="true" className="size-3.25" />
         <span className="max-[1100px]:hidden">Export</span>
+      </button>
+      <button
+        type="button"
+        title="Share the requests as a session file a colleague opens in their Studio"
+        disabled={total === 0}
+        onClick={() => shareSessionFile({ kind: "shown" })}
+        className={cn(
+          TOOL,
+          "border-line text-fg-muted hover:text-fg disabled:cursor-default disabled:opacity-50",
+        )}
+      >
+        <Share aria-hidden="true" className="size-3.25" />
+        <span className="max-[1100px]:hidden">Share</span>
       </button>
     </div>
   );

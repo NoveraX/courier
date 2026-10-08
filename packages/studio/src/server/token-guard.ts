@@ -24,6 +24,7 @@ export const WRITING_ROUTES: ReadonlySet<string> = new Set([
   "/api/sessions/save",
   "/api/sessions/load",
   "/api/sessions/delete",
+  "/api/sessions/import",
   "/api/storage/clear",
   "/api/storage/compact",
 ]);

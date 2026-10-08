@@ -14,6 +14,10 @@ import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
 import { createOriginGuard } from "./origin-guard";
 import type { RouteRequest } from "./route-types";
+import {
+  registerSessionFileRoutes,
+  type SessionFileDeps,
+} from "./session-file/session-file-routes";
 import { registerSessionRoutes, type SessionRouteDeps } from "./session-routes";
 import { registerStorageRoutes, type StorageRouteDeps } from "./storage-space/storage-routes";
 import type { StudioOriginPolicy } from "./studio-origin";
@@ -29,7 +33,7 @@ export interface RestApiDeps {
   /** The running Studio the mock wizard's edits read and change. */
   mocksEdit: MocksEditContext;
   /** The saved sessions, and what the pages show. */
-  sessions: SessionRouteDeps;
+  sessions: SessionRouteDeps & Pick<SessionFileDeps, "environment">;
   /** What Studio keeps, which the Storage settings size and clear. */
   storage: StorageRouteDeps;
   /** The token a writing route asks for. */
@@ -75,6 +79,7 @@ export function registerRestApi(
   const isDemoVisitor = (req: RouteRequest) => !token.matches(req.get?.(TOKEN_HEADER));
   registerApisRoutes(app, demo ? { ...apis, isDemoVisitor } : apis);
   registerSessionRoutes(app, sessions);
+  registerSessionFileRoutes(app, sessions);
   registerStorageRoutes(app, storage);
   registerMockDeclareRoutes(app, mocksEdit);
   registerConfigDeclareRoutes(app, configEdit);

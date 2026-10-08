@@ -80,6 +80,8 @@ With Studio running, the server joins it as the application's runtime does, and 
 npx courier-studio
 ```
 
+Studio serves the other direction too: the agent you code with can read what Studio recorded — the failed requests, the mocks — through `courier-studio mcp`. See [Studio for Your Agent](/docs/agents/studio).
+
 ## stdout is the protocol's
 
 Over stdio, every byte on stdout is read as an MCP message. The server keeps it for the protocol: whatever else writes there — a `console.log` in your config, a library's banner — goes to stderr, which the editor shows as the server's log.

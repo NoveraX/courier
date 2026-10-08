@@ -31,6 +31,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "MCP Server", href: "/docs/agents/overview" },
       { title: "In Your Editor", href: "/docs/agents/editor" },
       { title: "In Your App", href: "/docs/agents/app" },
+      { title: "Studio for Your Agent", href: "/docs/agents/studio" },
     ],
   },
   {

@@ -6,8 +6,7 @@ import { STUDIO_DEFAULT_HOST, STUDIO_DEFAULT_PORT } from "@noverax/courier/confi
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
 import { type ArgsDef, defineCommand, runMain } from "citty";
 import { closeOnFatal } from "./close-on-fatal";
-import { MCP_ARGS, mcpCommand } from "./commands/mcp-command";
-import { OPENAPI_ARGS, openapiCommand } from "./commands/openapi-command";
+import { runSubcommand, SUBCOMMANDS } from "./commands/subcommands";
 import { checkNodeVersion } from "./node-version";
 import { createStudioServer } from "./server";
 import { printBanner } from "./server/banner";
@@ -60,34 +59,7 @@ async function printHelp(): Promise<void> {
     summary: SUMMARY,
     command: "courier-studio",
     options: helpOptions(ARGS),
-    commands: [
-      { name: "openapi", description: "Write the project's sources as OpenAPI documents" },
-      { name: "mcp", description: "Serve the running Studio to an editor's agent over stdio" },
-    ],
-  };
-  console.log(formatHelp(help, styleFor(process.stdout)));
-}
-
-async function printOpenAPIHelp(): Promise<void> {
-  const help = {
-    product: "Courier Studio",
-    version: studioVersion(),
-    summary:
-      "Write the project's sources, as courier.config.ts declares them, as OpenAPI documents",
-    command: "courier-studio openapi",
-    options: helpOptions(OPENAPI_ARGS),
-  };
-  console.log(formatHelp(help, styleFor(process.stdout)));
-}
-
-async function printMcpHelp(): Promise<void> {
-  const help = {
-    product: "Courier Studio",
-    version: studioVersion(),
-    summary:
-      "Serve the running Studio to an editor's agent over stdio: its recorded requests, its mocks and their scenarios",
-    command: "courier-studio mcp",
-    options: helpOptions(MCP_ARGS),
+    commands: SUBCOMMANDS.map(({ name, description }) => ({ name, description })),
   };
   console.log(formatHelp(help, styleFor(process.stdout)));
 }
@@ -158,12 +130,6 @@ function closeOnSignals(server: { close: () => Promise<void> }): void {
   }
 }
 
-/* A command is its own program: `courier-studio openapi` writes documents and starts no server,
-   and `courier-studio mcp` carries an editor's agent to the Studio already running. */
-if (process.argv[2] === "openapi") {
-  void runMain(openapiCommand, { rawArgs: process.argv.slice(3), showUsage: printOpenAPIHelp });
-} else if (process.argv[2] === "mcp") {
-  void runMain(mcpCommand, { rawArgs: process.argv.slice(3), showUsage: printMcpHelp });
-} else {
-  void runMain(main, { showUsage: printHelp });
-}
+/* A command is its own program: `courier-studio openapi` writes documents, `verify` checks
+   recordings, and `mcp` carries an editor's agent to the Studio already running. */
+if (!runSubcommand(process.argv)) void runMain(main, { showUsage: printHelp });

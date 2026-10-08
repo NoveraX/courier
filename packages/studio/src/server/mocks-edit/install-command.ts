@@ -29,7 +29,23 @@ const INSTALLERS: ReadonlyArray<readonly [lockfile: string, installer: string]> 
  * ```
  */
 export function installCommand(directory: string): string {
-  return `${installerFor(directory)} ${MOCK_PACKAGES}`;
+  return devInstallCommand(directory, MOCK_PACKAGES);
+}
+
+/**
+ * The command that adds packages as dev dependencies with the project's own
+ * package manager, told by the nearest lockfile, as `installCommand` tells it.
+ *
+ * @param directory - The project root
+ * @param packages - The packages, separated by spaces
+ * @returns The command to run there
+ * @example
+ * ```ts
+ * devInstallCommand("/work/app", "vitest"); // "pnpm add -D vitest"
+ * ```
+ */
+export function devInstallCommand(directory: string, packages: string): string {
+  return `${installerFor(directory)} ${packages}`;
 }
 
 function installerFor(directory: string): string {

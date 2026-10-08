@@ -88,7 +88,7 @@ Every call the proxy serves — GET and POST here, and the SSE and WebSocket rou
 - **`Sec-Fetch-Site`** decides when the browser sends it, and a current browser sends it on every request to a secure origin: `same-origin`, and `none` for what the user typed, pass; `same-site` and `cross-site` pass only from an origin listed in `allowedOrigins`.
 - **`Origin`** is compared with the origin the request was addressed to where the browser says nothing else; a foreign origin passes only when listed.
 - A request with **neither header** — a server, a CDN, a script — is not a browser's cross-origin request, and is served.
-- In **development**, while `allowedOrigins` is empty, another port on the local machine is admitted, so Studio can inspect the app. Configuring `allowedOrigins` replaces the allowance with the list.
+- In **development**, while `allowedOrigins` is empty, a page on another port of the local machine is admitted when the app itself is served from that machine, so Studio can inspect the app. An app on any other address never admits one — a server started without `NODE_ENV` counts as in development, and a page on a visitor's own machine, a local tool or another dev server, is not the application's. Configuring `allowedOrigins` replaces the allowance with the list.
 
 A refused call is answered `403` with `{ "success": false, "message": "Origin not allowed" }`; a refused socket is closed with `4403`. A pattern is an exact origin, `https://*.example.com` for the sub-domains of a host over one scheme and port, or `*.example.com` for them over any scheme on its default port:
 

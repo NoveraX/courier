@@ -24,8 +24,8 @@ const SAFE_METHODS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "TR
  *
  * An origin in `allowedOrigins` counts as the application's own; with none
  * configured, so does another port of the local machine in development,
- * whose form posts with an `Origin` — the proxy's own allowance, for a
- * front end its developer serves from one.
+ * while the application is served from that machine too — the proxy's own
+ * allowance, for a front end its developer serves from one.
  *
  * @param incoming - The request being served
  * @param allowedOrigins - Other origins whose pages may make writes

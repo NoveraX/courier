@@ -21,8 +21,10 @@
  * Development makes one narrow allowance, and only while nothing is
  * configured: another port **on the local machine** is admitted, because the
  * Studio serves itself from one and inspects an app on another. It is scoped
- * to loopback rather than opened to everything, so a page on the public
- * internet is refused in development exactly as it is in production.
+ * to loopback on both sides — a page on the local machine, calling an app
+ * served from it — so a page on the public internet is refused in
+ * development exactly as it is in production, and an app deployed on a
+ * public address never makes it, even started without `NODE_ENV`.
  * Configuring `allowedOrigins` replaces the allowance with the list. A runtime
  * with no `process` to say it is in development never makes it.
  */
@@ -79,11 +81,11 @@ export function isOriginAccepted(
   if (site === "same-origin" || site === "none") return true;
   /* The browser says another page made this request, and only a configured
      page may; without an `Origin` there is nothing to find in the list. */
-  if (site) return !!origin && isConfigured(origin, allowedOrigins);
+  if (site) return !!origin && isConfigured(origin, self, allowedOrigins);
 
   if (!origin) return true;
   if (origin === self) return true;
-  return isConfigured(origin, allowedOrigins);
+  return isConfigured(origin, self, allowedOrigins);
 }
 
 /**
@@ -103,19 +105,28 @@ export function isOriginListed(origin: string, allowedOrigins?: readonly string[
   return allowedOrigins?.some((pattern) => matchesOrigin(origin, pattern)) ?? false;
 }
 
-/** Whether a foreign origin was listed, or is a local port during development. */
-function isConfigured(origin: string, allowedOrigins?: readonly string[]): boolean {
+/**
+ * Whether a foreign origin was listed, or — during development — is another
+ * port of the machine the app itself is served from.
+ */
+function isConfigured(
+  origin: string,
+  self: string | null,
+  allowedOrigins?: readonly string[],
+): boolean {
   if (allowedOrigins?.length) return isOriginListed(origin, allowedOrigins);
-  return isDevelopment() && isLoopback(origin);
+  return isDevelopment() && isLoopback(origin) && self !== null && isLoopback(self);
 }
 
-/** True for another port on the developer's own machine. */
+/** True for an origin on the developer's own machine. */
 function isLoopback(origin: string): boolean {
-  const parsed = parseOrigin(origin);
+  const host = parseOrigin(origin)?.hostname;
+  if (host === undefined) return false;
   return (
-    parsed?.hostname === "localhost" ||
-    parsed?.hostname === "127.0.0.1" ||
-    parsed?.hostname === "[::1]"
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host === "[::1]" ||
+    /^127(\.\d{1,3}){3}$/.test(host)
   );
 }
 

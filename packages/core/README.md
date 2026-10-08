@@ -96,6 +96,12 @@ import {
 } from "@noverax/courier/testing"
 ```
 
+### `@noverax/courier/openapi` — OpenAPI Export
+
+```ts
+import { toOpenAPI } from "@noverax/courier/openapi" // An API's definition as an OpenAPI 3.1 or 3.2 document
+```
+
 ### `@noverax/courier/node` — Node.js Helpers
 
 ```ts

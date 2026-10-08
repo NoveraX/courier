@@ -71,6 +71,11 @@
       "import": "./lib/testing/index.js",
       "default": "./lib/testing/index.js"
     },
+    "./openapi": {
+      "types": "./lib/openapi/index.d.ts",
+      "import": "./lib/openapi/index.js",
+      "default": "./lib/openapi/index.js"
+    },
     "./realtime": {
       "types": "./lib/realtime/index.d.ts",
       "import": "./lib/realtime/index.js",

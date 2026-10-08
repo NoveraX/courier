@@ -1,4 +1,4 @@
-import type { AgentTool } from "../tools/agent-tool";
+import type { ServedTool } from "./served-tool";
 import type { McpServerOptions } from "./server-options";
 
 /**
@@ -14,8 +14,8 @@ import type { McpServerOptions } from "./server-options";
  * visibleTools(options, principal).map((tool) => tool.name);
  * ```
  */
-export function visibleTools(options: McpServerOptions, principal: unknown): readonly AgentTool[] {
-  const { tools } = options.catalog();
+export function visibleTools(options: McpServerOptions, principal: unknown): readonly ServedTool[] {
+  const { tools } = options.tools();
   const { allow } = options;
   return allow === undefined ? tools : tools.filter((tool) => allow(tool, principal));
 }
@@ -36,8 +36,8 @@ export function visibleTool(
   options: McpServerOptions,
   name: string,
   principal: unknown,
-): AgentTool | undefined {
-  const tool = options.catalog().byName.get(name);
+): ServedTool | undefined {
+  const tool = options.tools().byName.get(name);
   if (tool === undefined || (options.allow !== undefined && !options.allow(tool, principal)))
     return undefined;
   return tool;

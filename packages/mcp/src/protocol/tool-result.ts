@@ -1,7 +1,7 @@
 import type { JSONSchema } from "@noverax/courier/openapi";
 
 import { isRecord } from "../is-record";
-import type { ToolOutcome } from "./run-tool";
+import type { ToolOutcome } from "./served-tool";
 
 /** How a revision carries a call's answer as data, beside its text. */
 export type StructuredOutput = "any" | "object" | "none";

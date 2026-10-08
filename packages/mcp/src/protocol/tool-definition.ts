@@ -1,10 +1,8 @@
 import type { JSONSchema } from "@noverax/courier/openapi";
 
-import { hasStructuredOutput, type LegacyVersion, type ModernVersion } from "../protocol/versions";
-import type { AgentTool } from "./agent-tool";
+import type { ServedTool } from "./served-tool";
 import type { StructuredOutput } from "./tool-result";
-
-const IDEMPOTENT_VERBS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "PUT", "DELETE"]);
+import { hasStructuredOutput, type LegacyVersion, type ModernVersion } from "./versions";
 
 /**
  * How a revision carries a call's answer as data: any JSON since 2026-07-28,
@@ -36,7 +34,7 @@ export function structuredOutputOf(version: LegacyVersion | ModernVersion): Stru
  * ```
  */
 export function shownOutputSchema(
-  tool: AgentTool,
+  tool: ServedTool,
   structured: StructuredOutput,
 ): JSONSchema | undefined {
   if (structured === "none" || tool.outputSchema === undefined) return undefined;
@@ -58,26 +56,22 @@ export function shownOutputSchema(
  * ```
  */
 export function toolDefinition(
-  tool: AgentTool,
+  tool: ServedTool,
   version: LegacyVersion | ModernVersion,
 ): Record<string, unknown> {
-  const { title, access } = tool.agent;
+  const { title, access } = tool;
   const outputSchema = shownOutputSchema(tool, structuredOutputOf(version));
-  const description =
-    tool.deprecated === undefined
-      ? tool.agent.description
-      : `${tool.agent.description}\n\nDeprecated: ${tool.deprecated}`;
   return {
     name: tool.name,
     ...(title !== undefined && hasStructuredOutput(version) && { title }),
-    description,
+    description: tool.description,
     inputSchema: tool.inputSchema,
     ...(outputSchema !== undefined && { outputSchema }),
     annotations: {
       ...(title !== undefined && { title }),
       readOnlyHint: access === "read",
       destructiveHint: access === "destructive",
-      idempotentHint: IDEMPOTENT_VERBS.has(tool.verb),
+      idempotentHint: tool.idempotent,
       openWorldHint: true,
     },
   };

@@ -6,8 +6,9 @@ export default defineConfig({
   ...sharedBuild,
   entry: {
     index: "src/index.ts",
+    internal: "src/internal.ts",
     cli: "src/cli.ts",
   },
   /* The CLI is an executable, not an importable surface — no declarations. */
-  dts: { ...sharedBuild.dts, entry: "src/index.ts" },
+  dts: { ...sharedBuild.dts, entry: ["src/index.ts", "src/internal.ts"] },
 });

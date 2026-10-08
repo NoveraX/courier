@@ -1,13 +1,12 @@
 import { createLogger } from "@noverax/courier";
 
 import { isRecord } from "../is-record";
-import type { AgentTool } from "../tools/agent-tool";
 import { CONFIRM_INPUT, canAsk, confirmationParams, decisionOf, notRun } from "./confirmation";
 import type { Connection } from "./connection";
 import type { Era } from "./era";
 import { ERROR_CODE } from "./json-rpc";
 import { McpProtocolError } from "./protocol-error";
-import type { RefusalKind } from "./report-refusal";
+import type { Refusal, ServedTool } from "./served-tool";
 import type { McpServerOptions } from "./server-options";
 
 const log = createLogger("MCP");
@@ -17,7 +16,7 @@ type Gate = "run" | Record<string, unknown>;
 
 /** A destructive call at the gate: what it is, what it came over, and how a refusal is answered. */
 export interface GatedCall {
-  readonly tool: AgentTool;
+  readonly tool: ServedTool;
   readonly args: Record<string, unknown>;
   readonly params: Record<string, unknown>;
   readonly era: Era;
@@ -25,7 +24,7 @@ export interface GatedCall {
   readonly signal: AbortSignal;
   readonly options: McpServerOptions;
   /** Answers with a refusal, and shows it in Studio. */
-  readonly refuse: (kind: RefusalKind, message: string) => Record<string, unknown>;
+  readonly refuse: (kind: Refusal["kind"], message: string) => Record<string, unknown>;
 }
 
 /**

@@ -1,7 +1,6 @@
 import { createLogger } from "@noverax/courier";
 
 import { isRecord } from "../is-record";
-import { toolDefinition } from "../tools/tool-definition";
 import type { Connection } from "./connection";
 import { clientOf, type Era, eraOf, legacyVersionFor } from "./era";
 import {
@@ -13,6 +12,7 @@ import {
 } from "./json-rpc";
 import { McpProtocolError } from "./protocol-error";
 import type { McpServerOptions } from "./server-options";
+import { toolDefinition } from "./tool-definition";
 import { callTool } from "./tools-call";
 import { META, MODERN_VERSIONS } from "./versions";
 import { visibleTools } from "./visible-tools";

@@ -24,6 +24,7 @@
       "@noverax/courier/openapi": ["./packages/core/src/openapi/index.ts"],
       "@noverax/courier/realtime": ["./packages/core/src/realtime/index.ts"],
       "@noverax/courier/testing": ["./packages/core/src/testing/index.ts"],
+      "@noverax/courier-mcp/internal": ["./packages/mcp/src/internal.ts"],
       "@/*": ["./packages/studio/ui/src/*"]
     }
   }

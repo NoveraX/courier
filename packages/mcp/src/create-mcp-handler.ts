@@ -5,9 +5,10 @@ import type { JSONSchemaFallback } from "@noverax/courier/openapi";
 
 import { createMcpServer } from "./protocol/mcp-server";
 import { requestStates } from "./protocol/request-state";
-import type { AgentTool, ToolSummary } from "./tools/agent-tool";
-import { runTool } from "./tools/run-tool";
-import { toolSource } from "./tools/tool-source";
+import type { ServedTool } from "./protocol/served-tool";
+import type { ToolSummary } from "./tools/agent-tool";
+import { courierTools } from "./tools/courier-tools";
+import { type ToolSource, toolSource } from "./tools/tool-source";
 import { handleHttp } from "./transport/handle-http";
 import { refusal } from "./transport/http-responses";
 
@@ -97,17 +98,11 @@ export function createMcpHandler<TPrincipal>(options: McpHandlerOptions<TPrincip
   const server = createMcpServer({
     info: { name: options.name ?? "courier", version: options.version ?? applicationVersion() },
     instructions: options.instructions,
-    catalog: tools.catalog,
+    tools: courierTools(tools, options.timeoutMs ?? 60_000),
     ...(allow !== undefined && {
-      allow: (tool: AgentTool, principal: unknown) =>
-        allow(summaryOf(tool), principal as TPrincipal),
+      allow: (tool: ServedTool, principal: unknown) =>
+        allow(summaryOf(tools, tool), principal as TPrincipal),
     }),
-    run: (tool, args, caller) =>
-      runTool(tool, args, {
-        ...caller,
-        sources: tools.sources(),
-        timeoutMs: options.timeoutMs ?? 60_000,
-      }),
     allowDestructive: options.allowDestructive === true,
     states: requestStates(secretOf(options.confirmSecret)),
     maxResultChars: options.maxResultChars ?? 100_000,
@@ -150,12 +145,13 @@ function secretOf(given: string | undefined): Uint8Array {
     : new TextEncoder().encode(given);
 }
 
-function summaryOf(tool: AgentTool): ToolSummary {
+function summaryOf(tools: ToolSource, tool: ServedTool): ToolSummary {
+  const placed = tools.catalog().byName.get(tool.name);
   return {
     name: tool.name,
-    access: tool.agent.access,
-    path: tool.path,
-    description: tool.agent.description,
+    access: tool.access,
+    path: placed?.path ?? tool.name,
+    description: tool.description,
   };
 }
 

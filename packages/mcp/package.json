@@ -40,6 +40,11 @@
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js",
       "default": "./lib/index.js"
+    },
+    "./internal": {
+      "types": "./lib/internal.d.ts",
+      "import": "./lib/internal.js",
+      "default": "./lib/internal.js"
     }
   },
   "files": [

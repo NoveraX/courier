@@ -1,14 +1,13 @@
 import { isRecord } from "../is-record";
-import { argumentsProblem } from "../tools/arguments-problem";
-import { shownOutputSchema, structuredOutputOf } from "../tools/tool-definition";
-import { toolResult } from "../tools/tool-result";
 import type { Connection } from "./connection";
 import { destructiveGate } from "./destructive-gate";
 import type { Era } from "./era";
 import { ERROR_CODE } from "./json-rpc";
 import { McpProtocolError } from "./protocol-error";
-import { type RefusalKind, reportRefusal } from "./report-refusal";
+import type { Refusal, ToolCaller } from "./served-tool";
 import type { McpServerOptions } from "./server-options";
+import { shownOutputSchema, structuredOutputOf } from "./tool-definition";
+import { toolResult } from "./tool-result";
 import { visibleTool } from "./visible-tools";
 
 /**
@@ -46,13 +45,14 @@ export async function callTool(
   const args = params.arguments ?? {};
   if (!isRecord(args))
     throw new McpProtocolError(ERROR_CODE.invalidParams, "A tool's arguments are an object");
-  if (tool.agent.access === "destructive" && !options.allowDestructive) {
-    /* A refusal is told to the agent, and shown in Studio as a call that did not run. */
-    const refuse = (kind: RefusalKind, message: string) => {
-      reportRefusal(tool, args, era.client, { kind, message });
+  const caller: ToolCaller = { principal: connection.principal, client: era.client, signal };
+  if (tool.access === "destructive" && !options.allowDestructive) {
+    /* A refusal is told to the agent, and to whoever records the tool's calls. */
+    const refuse = (kind: Refusal["kind"], message: string) => {
+      tool.refused?.(args, caller, { kind, message });
       return { content: [{ type: "text", text: message }], isError: true };
     };
-    const problem = await argumentsProblem(tool, args);
+    const problem = await tool.check?.(args);
     if (problem !== undefined) return refuse("validation", problem);
     const gate = await destructiveGate({
       tool,
@@ -66,11 +66,7 @@ export async function callTool(
     });
     if (gate !== "run") return gate;
   }
-  const outcome = await options.run(tool, args, {
-    principal: connection.principal,
-    client: era.client,
-    signal,
-  });
+  const outcome = await tool.run(args, caller);
   const structured = structuredOutputOf(era.version);
   return toolResult(
     outcome,

@@ -4,7 +4,7 @@ import { createLogger, getSources } from "@noverax/courier";
 
 import { createMcpServer } from "./protocol/mcp-server";
 import { requestStates } from "./protocol/request-state";
-import { runTool } from "./tools/run-tool";
+import { courierTools } from "./tools/courier-tools";
 import { toolSource } from "./tools/tool-source";
 import { serveStdio } from "./transport/serve-stdio";
 
@@ -73,9 +73,7 @@ export async function serveProject(options: ProjectServer): Promise<void> {
   );
   const server = createMcpServer({
     info: options.info,
-    catalog: tools.catalog,
-    run: (tool, args, caller) =>
-      runTool(tool, args, { ...caller, sources: tools.sources(), timeoutMs: options.timeoutMs }),
+    tools: courierTools(tools, options.timeoutMs),
     allowDestructive: options.allowDestructive,
     states: requestStates(crypto.getRandomValues(new Uint8Array(32))),
     maxResultChars: 100_000,

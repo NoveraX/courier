@@ -112,6 +112,7 @@ export {
   type WSChannelFactory,
 } from "../transport";
 export { executeRequest } from "../utils/execute";
+export { absentAs } from "../utils/execute-validation";
 export {
   isReadingMethod,
   normalizeHttpMethod,

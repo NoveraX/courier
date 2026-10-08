@@ -73,6 +73,36 @@ describe("the cookies kept from an answer", () => {
     expect(store.learnedJar("https://api.example.com/v10", NOW).has("csrftoken")).toBe(false);
   });
 
+  it("are not kept for a domain of one label, which would reach every other API of the app", () => {
+    store.learnCookies(
+      joined("csrftoken=planted; Domain=com; Path=/"),
+      SESSION,
+      "https://api-b.com/session",
+      NOW,
+    );
+
+    expect(store.learnedJar("https://api-a.com/orders", NOW).has("csrftoken")).toBe(false);
+    expect(store.learnedJar("https://api-b.com/orders", NOW).has("csrftoken")).toBe(false);
+  });
+
+  it("are kept for a domain above the host of more than one label, and for the host itself", () => {
+    store.learnCookies(
+      joined("csrftoken=t1; Domain=example.com; Path=/, sid=s1; Domain=localhost; Path=/"),
+      { ...SESSION, cookies: ["sid"] },
+      "https://api.example.com/session",
+      NOW,
+    );
+    store.learnCookies(
+      joined("sid=s2; Domain=localhost; Path=/"),
+      SESSION,
+      "http://localhost:8000",
+      NOW,
+    );
+
+    expect(store.learnedJar("https://files.example.com/", NOW).get("csrftoken")).toBe("t1");
+    expect(store.learnedJar("http://localhost:8000/", NOW).get("sid")).toBe("s2");
+  });
+
   it("are not kept for a domain an address made of digits would only end with", () => {
     store.learnCookies(
       joined("csrftoken=t1; Domain=0.0.1; Path=/"),

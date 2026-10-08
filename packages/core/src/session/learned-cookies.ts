@@ -60,7 +60,7 @@ export function learnCookies(
   for (const header of setCookieHeaders(upstream)) {
     const cookie = parseSetCookie(header);
     if (cookie === undefined || !kept(cookie.name)) continue;
-    if (cookie.domain !== undefined && !domainMatches(at.host, cookie.domain)) continue;
+    if (cookie.domain !== undefined && !domainTaken(at.host, cookie.domain)) continue;
     const domain = cookie.domain ?? at.host;
     const path = cookie.path ?? "/";
     const key = `${cookie.name}\u0000${domain}\u0000${path}`;
@@ -131,6 +131,13 @@ function appliesTo(cookie: LearnedCookie, at: Address): boolean {
     ? at.host === cookie.domain
     : domainMatches(at.host, cookie.domain);
   return inScope && (pathWithin(at.path, cookie.path) || pathWithin(cookie.path, at.path));
+}
+
+/* A `Domain` the answer may set: its own host, or a domain above it of more than one label. One
+   label — `com`, `localhost` — would reach every API of the app under it, a public suffix a
+   browser refuses by its list; the list itself, `co.uk` and the like, is more than an app ships. */
+function domainTaken(host: string, domain: string): boolean {
+  return domainMatches(host, domain) && (domain === host || domain.includes("."));
 }
 
 /* RFC 6265 domain matching: the host itself, or a host below the domain, never an address's digits. */

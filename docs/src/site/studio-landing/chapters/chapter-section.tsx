@@ -1,13 +1,14 @@
-import { ArrowUpRight, Check } from "lucide-react"
+import { ArrowRight, ArrowUpRight, Check } from "lucide-react"
+import Link from "next/link"
 import type { ReactNode } from "react"
 
 import { cn } from "@/site/cn"
-import type { Chapter } from "./chapters"
+import type { ChapterContent } from "./chapters"
 
 /**
- * One of Studio's chapters: what it does, three things it does well and
- * the view in the live demo that does them, beside a visual of it running —
- * the sides swapping from one chapter to the next.
+ * A chapter of a product page — one of Studio's, one of the MCP server's:
+ * what it does, three things it does well and where to go next, beside a
+ * visual of it running, the sides swapping from one chapter to the next.
  *
  * @param props - The chapter, and its visual
  * @returns The section
@@ -16,7 +17,13 @@ import type { Chapter } from "./chapters"
  * <ChapterSection chapter={CHAPTERS[0]}><WaterfallViz /></ChapterSection>
  * ```
  */
-export function ChapterSection({ chapter, children }: { chapter: Chapter; children: ReactNode }) {
+export function ChapterSection({
+  chapter,
+  children,
+}: {
+  chapter: ChapterContent
+  children: ReactNode
+}) {
   const Icon = chapter.icon
   const left = chapter.visual === "left"
   return (
@@ -52,15 +59,7 @@ export function ChapterSection({ chapter, children }: { chapter: Chapter; childr
               </li>
             ))}
           </ul>
-          <a
-            href={chapter.cta.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 flex items-center gap-1.75 self-start text-[14px] font-[550] text-(--tone) hover:text-(--tone) hover:underline"
-          >
-            {chapter.cta.label}
-            <ArrowUpRight aria-hidden="true" className="size-3.25" />
-          </a>
+          <ChapterLink cta={chapter.cta} />
         </div>
         <div className="relative min-w-0">
           <div
@@ -71,5 +70,26 @@ export function ChapterSection({ chapter, children }: { chapter: Chapter; childr
         </div>
       </div>
     </section>
+  )
+}
+
+const CTA_LOOK =
+  "mt-2 flex items-center gap-1.75 self-start text-[14px] font-[550] text-(--tone) hover:text-(--tone) hover:underline"
+
+/* Another site opens in a tab of its own; a page of this one stays in the tab. */
+function ChapterLink({ cta }: { cta: ChapterContent["cta"] }) {
+  if (cta.external === false) {
+    return (
+      <Link href={cta.href} className={CTA_LOOK}>
+        {cta.label}
+        <ArrowRight aria-hidden="true" className="size-3.25" />
+      </Link>
+    )
+  }
+  return (
+    <a href={cta.href} target="_blank" rel="noopener noreferrer" className={CTA_LOOK}>
+      {cta.label}
+      <ArrowUpRight aria-hidden="true" className="size-3.25" />
+    </a>
   )
 }

@@ -3,18 +3,25 @@ import { Activity, Flame, Network, ShieldCheck } from "lucide-react"
 
 import { STUDIO_DEMO_URL } from "@/site/site-url"
 
-/** One of Studio's chapters: what a group of its views does, and where to see it in the live demo. */
-export interface Chapter {
-  id: "inspect" | "explore" | "mock" | "audit"
+/** A chapter of a product page: what one part does, three things it does well, and where to go next. */
+export interface ChapterContent {
+  id: string
   eyebrow: string
   icon: LucideIcon
-  tone: "blue" | "teal" | "red" | "amber"
+  tone: "blue" | "teal" | "red" | "amber" | "violet" | "green"
   title: string
   text: string
   points: readonly { title: string; detail: string }[]
-  cta: { label: string; href: string }
+  /** Where to go next: another site — the live demo — opens in a tab of its own. */
+  cta: { label: string; href: string; external?: boolean }
   /** Which side the visual sits on, from 900 px. */
   visual: "right" | "left"
+}
+
+/** One of Studio's chapters: what a group of its views does, and where to see it in the live demo. */
+export interface Chapter extends ChapterContent {
+  id: "inspect" | "explore" | "mock" | "audit"
+  tone: "blue" | "teal" | "red" | "amber"
 }
 
 /**

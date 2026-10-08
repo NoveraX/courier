@@ -13,7 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }))
 
-  const pages: MetadataRoute.Sitemap = ["/reference", "/studio"].map((path) => ({
+  const pages: MetadataRoute.Sitemap = ["/reference", "/studio", "/mcp"].map((path) => ({
     url: `${BASE_URL}${path}`,
     lastModified: new Date(),
     changeFrequency: "monthly",

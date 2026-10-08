@@ -212,7 +212,7 @@ The same settings follow any head, in any order, and a base built with `courier(
 | `.use(...middleware)` | middleware for this endpoint, run after the base's |
 | `.headers(names)` | the headers it carries across the proxy, each way — see [Headers](/docs/advanced/options#headers) |
 | `.timeout(ms)` | how long the upstream call may take |
-| `.retry({ limit, delay, backoff, retryOn, mutations })` | its retry policy, in `retryMiddleware`'s terms; a write is retried only with `mutations: true` |
+| `.retry({ limit, delay, backoff, retryOn, mutations })` | its retry policy, in `retryMiddleware`'s terms; a write is retried when it declares an `idempotencyKey`, or with `mutations: true` |
 | `.meta(values)` | values for your own tooling; the runtime ignores them |
 | `.cache({ revalidate, tags })` | how long a read's answer keeps — offered on a read alone |
 | `.reads()` | a read sent with a body, over POST; refused on `.put()`, `.patch()` and `.del()`. A write declared one loses what guards a write — see [User Sessions](/docs/server-side/session#writes-another-site-sets-off) |
@@ -228,7 +228,7 @@ endpoint.get("customers", { sensitiveVariables: true })
 endpoint.get("legacy", { deprecated: "Use /v2/legacy", inherit: false })
 ```
 
-- `idempotencyKey` — the header each call sends a key of its own in, the same on every attempt a retry makes, so an upstream that deduplicates by it applies a write once: this is what makes `.retry({ mutations: true })` safe. A key the caller sends is kept. Anything but `header:<name>` is refused where the endpoint is defined.
+- `idempotencyKey` — the header each call sends a key of its own in, the same on every attempt a retry makes, so an upstream that deduplicates by it applies a write once: a retry policy retries such a write without `mutations: true`, and the mock server answers a repeated key with its first answer. A key the caller sends is kept. Anything but `header:<name>` is refused where the endpoint is defined.
 - `sensitiveVariables` — a read whose variables stay out of the address: it goes to the proxy as POST — see [GET or POST](/docs/api/create-proxy-caller#get-or-post).
 - `inherit: false` — skip the base's middleware; the endpoint's own `.use()` and the source's `middleware` still run.
 - `tags`, `deprecated`, `operation` — read by Studio and the mock server, not by the runtime.

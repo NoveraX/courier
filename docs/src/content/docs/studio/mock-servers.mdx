@@ -183,6 +183,14 @@ export default defineMocks({
 })
 ```
 
+### Repeated writes
+
+A write sent again with its idempotency key — a client's retry, a double click — gets the mock's first answer back, marked `Idempotent-Replayed: true`, and creates nothing twice, as an API that deduplicates by the key answers. The key is read from `Idempotency-Key` and from every header the source's endpoints name in their `idempotencyKey`. The same key sent with other variables is refused with `422`, and one whose first call is still running with `409`; a call that failed is not remembered, so its retry runs again. Keys are kept for a day, the last 1 000 of them.
+
+```ts
+defineMockServer({ source: api, idempotency: false }) // runs every write, keyed or not
+```
+
 ## Add mocks from Studio
 
 **Generate mocks** in the Mocks view opens a wizard: pick the sources to mock — a source a mock already serves says which — set each mock's key, its port — assigned by Studio or fixed — its records per collection, whether it starts with Studio, which endpoints it answers — every one, or those ticked, the rest going to the source's own server — and whether its data is generated or recorded, then review. Studio shows the exact change to `courier.mocks.ts` as a diff, with what the diff does not show — that it creates the file, which running mocks it restarts, that a port is taken or assigned — and writes it on one click. It creates `courier.mocks.ts` when there is none (`courier.mocks.mts` beside a `courier.config.mts`), formatted as the project formats its code — with its Biome, ESLint and Prettier, as [the files of an import](/docs/studio/import-api#how-studio-formats-the-files) are — and changes an existing file only by inserting text, in the file's own style: the new entries in the object `defineMocks` takes, and the imports they need. It imports the config by its default export — or, for a config of named exports alone, as a namespace (`import * as courierConfig`) — and imports a `courier.config.ts` the way the project resolves modules: as `./courier.config.js` when the tsconfig, or a project it lists under `references`, resolves them as Node does (`node16` or `nodenext`) in a `"type": "module"` package, or when the config's or the mocks file's own relative imports end in `.js` or `.mjs`, and as `./courier.config` otherwise. A key another mock has, in any letter case, a port that is Studio's own or that another mock declares, or a source the config does not declare is marked on its field instead. A port Studio assigned to another mock may be taken: the review warns that the other mock moves to another port. **Generate mocks** is turned off, and says why, while Studio's first load of `courier.config` runs, while the config does not load, and while it is missing. During a later reload it stays on: the wizard waits for the reload before it plans the change, and answers `STUDIO_BUSY` when the reload outlasts that wait.

@@ -99,6 +99,18 @@ Studio loads ESLint and Prettier once, from your project, in threads of their ow
 
 A file you edited is formatted whole when Studio merges a change into it, as your editor would format it when you save it; a `courier.mocks.ts` Studio creates is formatted the same way. The change says which tools ran, with their versions. When a tool fails on a file — an ESLint configuration with no TypeScript parser cannot read TypeScript, say — the other tools still run on it, and the change says why; a tool the project configures but did not install is named the same way. A file no tool formats is still correct code.
 
+## From traffic, for an API with no specification
+
+An API with no specification can be declared from the calls your app makes to it. A source the app defines in its own code, which `courier.config.ts` does not list, shows in the Explorer with what its traffic tells — and its endpoints' panels say they are **known only by their traffic**. **Declare `<source>` from traffic** reads an OpenAPI 3.1 document from the calls Studio recorded and opens **Import API** on it, as though it were pasted; from there it is imported as any specification is: pick the endpoints, choose the options, preview the files, write them, and the source is declared.
+
+- **Routes.** A segment every call shares is written as it is; one that differs between calls, or that was a variable's value, is a parameter named after that variable — `/products/{id}` — or `param1` when no variable carried it. The segments every endpoint's paths start with are the API's base path.
+- **Requests.** A read's query is the keys its calls sent, required when every call sent them, typed by the variables they carried; a write's body is its variables less those in its path.
+- **Answers.** The answer's schema is merged from every answer that came whole with the status most calls got: a field is required when every answer held it, nullable when it came as `null`, of every type it came as; a string has a format — `date-time`, `uuid`, `email` — when every string there had it. Numbers stay numbers: a few answers cannot tell a price of `12` from an integer. No value goes into the document.
+- **Names.** An endpoint keeps the name and the group the app gave it, as its operation id and tag.
+- **What is left out.** A stream or a channel, a call with no answer, and an answer kept only in part; an endpoint whose route and method another already took is named rather than written twice.
+
+The document is only as complete as the traffic: an endpoint the app never called is not in it, and a field no answer held is not in its schema. Call what you want declared first — or declare it now and [follow its contract](/docs/studio/contract-drift) as traffic shows more.
+
 ## Specifications on a private network
 
 **Import API** and the update checks fetch a specification by URL on your behalf, so Studio does not reach into a network you could not see from your own browser. It connects to public addresses, and to this machine when the URL you gave points there — a specification your own dev server serves — following redirects as long as every hop stays on this machine. This machine is its loopback addresses and every address of its own network interfaces, a global IPv6 address included; a public address your router sends back to this machine, by hairpin NAT, is on none of them, so Studio cannot tell it from another machine's. It reaches a host on a private network, or this machine once any hop has been elsewhere, only when `studio.allowedSpecHosts` in `courier.config.ts` names that host:

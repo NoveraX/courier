@@ -11,6 +11,7 @@
 
 import type { Server } from "node:http";
 
+import { logger } from "@noverax/courier";
 import type { HeartbeatConfig } from "@noverax/courier/internal";
 import type { MockRegistry } from "../registry";
 import type { MockHistoryEntry } from "../types";
@@ -64,6 +65,10 @@ export function createWSUpgrade(options: WSUpgradeOptions): MockWSHandler {
  */
 export function attachWSUpgrade(nodeServer: Server, wsUpgrade: MockWSHandler): void {
   nodeServer.on("upgrade", (req, socket, head) => {
-    void wsUpgrade.handleUpgrade(req, socket, head);
+    /* An upgrade that fails ends its own socket, never the mock's process. */
+    wsUpgrade.handleUpgrade(req, socket, head).catch((error: unknown) => {
+      logger.error("MockWS", "A WebSocket upgrade could not be handled", error);
+      socket.destroy();
+    });
   });
 }

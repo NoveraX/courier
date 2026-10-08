@@ -1,4 +1,4 @@
-import { Cloud, Globe, Monitor, Server, Settings, TestTube } from "lucide-react"
+import { Cloud, Globe, LockKeyhole, Monitor, Server, Settings, TestTube } from "lucide-react"
 
 import type { NavSection } from "./nav-types"
 
@@ -23,6 +23,11 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Server Actions", href: "/docs/server-side/actions" },
       { title: "User Sessions", href: "/docs/server-side/session" },
     ],
+  },
+  {
+    label: "Security",
+    icon: LockKeyhole,
+    items: [{ title: "Security Model", href: "/docs/security/overview" }],
   },
   {
     label: "Advanced",

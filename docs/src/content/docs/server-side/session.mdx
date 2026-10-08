@@ -4,7 +4,7 @@ export const metadata = { title: "User Sessions", description: "Carry the user's
 
 A server that renders a page for a user calls the API on that user's behalf, and its own `fetch` carries none of the user's cookies. Handing the call the incoming headers whole sends too much: every cookie of your application — its own session, analytics, preferences — and the headers the browser addressed to your application rather than to the API, whatever host the API is on.
 
-An API that keeps a session says so where it is defined. Courier then sends each call made for a user the cookies that hold the session and nothing else, repeats the double-submit token a write needs, refuses a write another site set off, and carries the cookies the API sets back to the user's browser.
+An API that keeps a session says so where it is defined. Courier then sends each call made for a user the cookies that hold the session and nothing else, repeats the double-submit token a write needs, refuses a write another site set off, and carries the cookies the API sets back to the user's browser. [Security Model](/docs/security/overview) shows where these credentials travel through every layer, and what Courier refuses and keeps out of its logs.
 
 ## Describe the session
 

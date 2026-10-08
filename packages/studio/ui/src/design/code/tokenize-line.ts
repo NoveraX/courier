@@ -39,12 +39,15 @@ const KEYWORDS: ReadonlySet<string> = new Set([
 
 const PIECES = /("(?:[^"\\]|\\.)*"|'[^']*'|`[^`]*`)|([A-Za-z_$][\w$]*)|(\s+)|([^\sA-Za-z_$"'`]+)/g;
 
+/* A line of a comment block or a line comment: `/**`, ` * text`, ` */ `, `; // text`. */
+const COMMENT_LINE = /^(\s*)((?:\/\/|\/\*|\*).*)$/;
+
 /**
  * Split a line of TypeScript or a shell command into pieces to colour:
  * strings, keywords and a command's flags, a name followed by `(` as a
- * call, a capitalised name as a type, the rest as plain names and
- * punctuation. A light pass — the snippets Studio shows are short and well
- * formed.
+ * call, a capitalised name as a type, a comment — a line of a comment
+ * block, or what follows `//` — the rest as plain names and punctuation.
+ * A light pass — the snippets Studio shows are short and well formed.
  *
  * @param line - One line of code
  * @returns Its pieces, in order
@@ -54,6 +57,14 @@ const PIECES = /("(?:[^"\\]|\\.)*"|'[^']*'|`[^`]*`)|([A-Za-z_$][\w$]*)|(\s+)|([^
  * ```
  */
 export function tokenizeLine(line: string): CodeToken[] {
+  const comment = COMMENT_LINE.exec(line);
+  if (comment) {
+    const [, indent = "", text = ""] = comment;
+    return [
+      ...(indent ? [{ text: indent, tone: "space" as const }] : []),
+      { text, tone: "comment" },
+    ];
+  }
   const tokens: CodeToken[] = [];
   for (const match of line.matchAll(PIECES)) {
     const [text, quoted, name, space] = match;
@@ -71,7 +82,12 @@ export function tokenizeLine(line: string): CodeToken[] {
               : "plain";
       tokens.push({ text, tone });
     } else if (space) tokens.push({ text, tone: "space" });
-    else tokens.push({ text, tone: "punctuation" });
+    else if (text.includes("//")) {
+      const at = text.indexOf("//");
+      if (at > 0) tokens.push({ text: text.slice(0, at), tone: "punctuation" });
+      tokens.push({ text: line.slice((match.index ?? 0) + at), tone: "comment" });
+      break;
+    } else tokens.push({ text, tone: "punctuation" });
   }
   return tokens;
 }

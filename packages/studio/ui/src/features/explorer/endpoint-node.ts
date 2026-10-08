@@ -68,6 +68,7 @@ export function endpointOf(
     middleware: def.middleware ?? [],
     hasVariablesSchema: def.hasVariablesSchema,
     hasResponseSchema: def.hasResponseSchema,
+    trafficOnly: def.origin === "runtime",
     proxied: requests.some((r) => r.mode === "proxy"),
     requests,
     metrics,

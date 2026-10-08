@@ -28,6 +28,7 @@ import { registerStorageRoutes, type StorageRouteDeps } from "./storage-space/st
 import type { StudioOriginPolicy } from "./studio-origin";
 import type { StudioToken } from "./studio-token";
 import { TOKEN_HEADER, tokenGuard } from "./token-guard";
+import { registerTrafficSpecRoutes } from "./traffic-spec/traffic-spec-routes";
 
 /** What the REST API's routes read and change in the running Studio. */
 export interface RestApiDeps {
@@ -91,6 +92,7 @@ export function registerRestApi(
   registerSessionFileRoutes(app, sessions);
   registerRecordedTestRoutes(app, tests);
   registerContractRoutes(app, contract);
+  registerTrafficSpecRoutes(app);
   registerStorageRoutes(app, storage);
   registerMockDeclareRoutes(app, mocksEdit);
   registerConfigDeclareRoutes(app, configEdit);

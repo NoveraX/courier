@@ -1,5 +1,6 @@
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useAskedImport } from "@/apis/use-asked-import";
 import { useImport } from "@/apis/use-import";
 import { useManage } from "@/apis/use-manage";
 import { useRegistry } from "@/apis/use-registry";
@@ -56,6 +57,7 @@ export function ApisScreen(): React.ReactNode {
   const registry = useRegistry();
   const now = useNow();
   const importWizard = useImport((message) => toast.success(message));
+  useAskedImport(importWizard.openWizard, registry.page.importBlocked === null);
   const manageFlow = useManage((message) => toast.success(message));
   const removal = useRemoveImport((name, message) => {
     registry.forget(name);

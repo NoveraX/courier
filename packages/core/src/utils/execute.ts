@@ -79,7 +79,7 @@ export async function executeRequest(
 
 /* The endpoint's own options — timeout, middleware, retry — are applied
    here, around the options the call itself gave. */
-async function prepareAndRun(
+export async function prepareAndRun(
   target: CallTarget,
   studio: StudioContext,
   timing: TimingState,

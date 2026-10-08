@@ -17,5 +17,20 @@ import type { RequestEntry } from "@/store/types";
  */
 export function shownNow(requests: readonly RequestEntry[], now: number, saved: boolean): number {
   if (!saved || requests.length === 0) return now;
+  return sessionEnd(requests);
+}
+
+/**
+ * When a saved session ended: the moment its last call finished — or began,
+ * for one still in flight when it was saved.
+ *
+ * @param requests - The session's requests
+ * @returns The moment, in milliseconds since the epoch
+ * @example
+ * ```ts
+ * sessionEnd([{ startedAt: 1000, timing: { total: 250 } }]); // 1250
+ * ```
+ */
+export function sessionEnd(requests: readonly RequestEntry[]): number {
   return requests.reduce((end, r) => Math.max(end, r.startedAt + (r.timing?.total ?? 0)), 0);
 }

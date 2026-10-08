@@ -8,6 +8,7 @@ import type { InspectorTab } from "@/features/requests/inspector-tabs";
 import { inspectorTabsOf, shownTab } from "@/features/requests/inspector-tabs";
 import { statCellsOf } from "@/features/requests/stat-cells";
 import { endpointLatency } from "@/features/requests/throughput";
+import { useSessionEnd } from "@/features/sessions/use-session-end";
 import { useNow } from "@/hooks/use-tick";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
@@ -86,6 +87,7 @@ interface HeadProps {
 
 function Head({ request, current, onTab, onClose, opening }: HeadProps): React.ReactNode {
   const now = useNow();
+  const endedAt = useSessionEnd();
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const p95 = useStudioStore((s) => endpointLatency(s.requests, request)?.p95 ?? null);
   const replay = useReplay();
@@ -106,7 +108,7 @@ function Head({ request, current, onTab, onClose, opening }: HeadProps): React.R
         />
       </Reveal>
       <Reveal step={1} play={opening}>
-        <StatCellGrid cells={statCellsOf(request, { now, slowMs, p95 })} />
+        <StatCellGrid cells={statCellsOf(request, { now, endedAt, slowMs, p95 })} />
       </Reveal>
       <Reveal step={2} play={opening}>
         <TabBar tabs={inspectorTabsOf(request)} current={current} onSelect={onTab} />

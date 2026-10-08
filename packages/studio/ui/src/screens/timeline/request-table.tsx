@@ -1,6 +1,6 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useMemo, useRef } from "react";
-
+import { useSessionEnd } from "@/features/sessions/use-session-end";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { useElementWidth } from "@/hooks/use-element-width";
 import { useNow } from "@/hooks/use-tick";
@@ -37,6 +37,7 @@ export function RequestTable({ requests }: { requests: readonly RequestEntry[] }
   const scrollRef = useRef<HTMLDivElement>(null);
   const following = useRef(true);
   const now = useNow();
+  const endedAt = useSessionEnd();
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const timestamps = useStudioStore((s) => s.settings.timestampFormat);
   const { requestId, open, close } = useInspector();
@@ -68,7 +69,7 @@ export function RequestTable({ requests }: { requests: readonly RequestEntry[] }
     [items, open, virtualizer],
   );
   useRowKeys(ids, requestId, move);
-  const context = { now, slowMs, timestamps, wide };
+  const context = { now, endedAt, slowMs, timestamps, wide };
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       <div

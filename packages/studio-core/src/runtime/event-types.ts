@@ -13,6 +13,7 @@ export const RUNTIME_EVENT_TYPES: readonly string[] = [
   "request:end",
   "request:error",
   "request:abort",
+  "request:shape",
   "http:fetch:start",
   "http:fetch:end",
   "http:fetch:error",

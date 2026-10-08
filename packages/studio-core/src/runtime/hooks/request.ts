@@ -5,6 +5,7 @@ import type {
   RequestAbortEvent,
   RequestEndEvent,
   RequestErrorEvent,
+  RequestShapeEvent,
   RequestStartEvent,
 } from "../../events";
 
@@ -104,6 +105,19 @@ export function wireRequestHooks(
         timestamp: e.timestamp,
         requestId: e.id,
         reason: e.reason,
+      }),
+    );
+  };
+
+  studioHooks.onAnswerShape = (e) => {
+    bus.emit(
+      createEvent<RequestShapeEvent>(sessionId, {
+        id: e.requestId,
+        type: "request:shape",
+        timestamp: e.timestamp,
+        requestId: e.requestId,
+        shape: e.shape,
+        cut: e.cut,
       }),
     );
   };

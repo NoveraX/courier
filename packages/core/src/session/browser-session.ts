@@ -1,6 +1,7 @@
 import type { CallSession } from "./call-session";
 import { cookieJarOf } from "./cookie-header";
 import { renewSessionPartition, sessionPartition } from "./one-user-partition";
+import { warnIfOtherSite } from "./other-site";
 import { sessionCredentials } from "./session-credentials";
 import type { SessionTarget } from "./session-target";
 import type { SessionOptions } from "./types";
@@ -10,7 +11,9 @@ import type { SessionOptions } from "./types";
  * where the platform keeps the user's cookies and sends them itself.
  *
  * The call asks it to — `credentials: "include"`, so an API on another
- * origin gets them too — unless the API set `credentials` itself. A bearer
+ * origin of the page's site gets them too — unless the API set
+ * `credentials` itself; an API on another site gets them only where the
+ * browser lets it, which is said once. A bearer
  * token, and a write's double-submit token, are read from `document.cookie`
  * where the page can read them; a write that finds no token is to ask for
  * it first, where the API names where it comes from. Nothing else is added: a page cannot set
@@ -32,6 +35,7 @@ export function browserSession(
   jar: ReadonlyMap<string, string> = cookieJarOf(documentCookie()),
 ): CallSession {
   const credentials = sessionCredentials(jar, session);
+  warnIfOtherSite(target, session);
   const headers: Array<[string, string]> = [];
   if (credentials.bearer) headers.push(["authorization", `Bearer ${credentials.bearer}`]);
   if (credentials.csrf && session.csrf && target.unsafeMethod) {

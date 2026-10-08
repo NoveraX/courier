@@ -64,7 +64,7 @@ Courier finds the request being served as a call starts, before it first waits �
 | The proxy route, for a browser's call | The session from the browser's request to the proxy |
 | A proxy caller in server code, such as universal code rendering a page | The proxy in the same process, with the session of the user the page is for — no request leaves the server |
 | Server code that names a request: `createCaller(api, { context: { req } })` | The session from that request |
-| A browser | Its own cookies, sent by the browser: the call asks for them with `credentials: "include"`, so an API on another origin gets them too |
+| A browser | Its own cookies, sent by the browser: the call asks for them with `credentials: "include"`, so an API on another origin of the page's site gets them too; one on another site gets them only where the browser lets it — see [an API on another site](#an-api-on-another-site) |
 | A React Native app | Its own cookies, sent by the platform as a browser sends them; what a page would read from `document.cookie` is kept from the API's answers — see [React Native](/docs/frameworks/react-native#the-users-session) |
 | Server code with no request — a script, a cron job, a build | Nothing |
 
@@ -228,6 +228,17 @@ When the API renews the session, or ends it on signing out, its cookies are carr
 - The browser is handed them on the response being prepared, made for your application's origin: set for every path, since the API's path names its own routes; a `Domain` kept only where it covers your host; `Secure` over HTTPS and on the local machine. A `__Host-` or `__Secure-` cookie your origin cannot keep is not handed over, and the log says why.
 
 Cookies the session does not name stay with the API. Set `relay: false` to keep even the session's own within the request.
+
+### An API on another site
+
+A page's calls go with the cookies the browser keeps for the API, as far as the page's site lets them. An API on another origin of the page's site, `api.example.com` for a page on `app.example.com` or another port of the same host, gets them in every browser. An API on another site, another domain or `127.0.0.1` for a page on `localhost`, gets them only where the browser lets a third party keep cookies:
+
+- Safari keeps none for it.
+- Chrome and Firefox keep the ones it sets `SameSite=None; Secure`, none where the user blocks third-party cookies, and Firefox keeps them apart for each site that calls it.
+
+Either way, the API answers the page's origin with `Access-Control-Allow-Origin` naming it and `Access-Control-Allow-Credentials: true`. A double-submit token is a cookie the page reads, so the API sets it where the page can read it, for its host or a parent domain such as `Domain=example.com`; a page cannot read another site's cookies, and a write then goes without its token, which the log says.
+
+Courier says once, in the browser's console, when an API that keeps its session in cookies is on another site than the page. Serve the API on the page's site, under a subdomain, or call it through the [proxy](/docs/proxy-mode/overview), which carries the session with the application's own requests.
 
 <Callout variant="info" title="What a framework lets a response carry">
 Next.js lets a Server Action or a Route Handler set cookies, not a page while it renders; a session the API renews during a render reaches the calls of that render only, and the log says so. Next.js also URL-encodes the value it writes, so a cookie whose value is not already URL-encoded is not handed over through it — relay it through the proxy route instead, which passes cookies on byte for byte. SvelteKit, Nuxt and Express hand every cookie over as the API wrote it.

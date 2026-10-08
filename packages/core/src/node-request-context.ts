@@ -4,7 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { addressedTo } from "./node-origin";
 import { appendSetCookie } from "./node-set-cookie";
 import type { IncomingRequest, RequestContextProvider } from "./session/incoming-request";
-import { registerRequestContext } from "./session/request-context";
+import { preferRequestContext } from "./session/request-context";
 import { forwardedChain } from "./utils/forwarded-for";
 
 /* One store and one provider for the process, however many copies of this
@@ -46,7 +46,9 @@ export function withIncomingRequest<TResult>(
   incoming: IncomingRequest,
   run: () => TResult,
 ): TResult {
-  registerRequestContext(provider());
+  /* The request code is given to serve is the one it serves, whatever a framework's provider
+     registered since answers: a middleware's own, say, in a process that renders pages too. */
+  preferRequestContext(provider());
   return store().run(incoming, run);
 }
 

@@ -6,26 +6,14 @@ import {
 } from "@noverax/courier";
 import { addressedOrigin } from "@noverax/courier/internal";
 
+import { type NextCookie, nextCookieOf } from "./next-cookie";
+
 const log = createLogger("Next");
 
 /** The cookies `next/headers` hands a Server Action, a Route Handler or a page. */
 interface NextCookieStore {
   set(cookie: NextCookie): unknown;
-}
-
-/** A cookie as `cookies().set()` takes it. */
-interface NextCookie {
-  name: string;
-  value: string;
-  path?: string;
-  domain?: string;
-  expires?: Date;
-  maxAge?: number;
-  secure?: boolean;
-  httpOnly?: boolean;
-  sameSite?: "strict" | "lax" | "none";
-  partitioned?: boolean;
-  priority?: "low" | "medium" | "high";
+  getAll(): Array<{ name: string; value: string }>;
 }
 
 /** What `next/headers` exports, from Next.js 14, where both are synchronous, on. */
@@ -92,7 +80,7 @@ export async function nextIncomingRequest(): Promise<IncomingRequest | undefined
     key: headers,
     method: headers.has("next-action") ? "POST" : undefined,
     origin: addressedOrigin(headers),
-    headers,
+    headers: withMiddlewareCookies(headers, store),
     clientAddress: nearestHop(headers.get("x-forwarded-for")),
     setCookie: (cookie) => setCookieIn(store, cookie),
     /* Next.js 14 keeps what a server's fetch answers in its data cache
@@ -127,18 +115,33 @@ async function headersOf(next: NextHeaders): Promise<Headers | undefined> {
   }
 }
 
+/* Next.js 16 gives a page the cookies its middleware set through `cookies()` alone, not the
+   request's `Cookie`: each one the browser did not send is added, the browser's own kept as sent. */
+function withMiddlewareCookies(headers: Headers, store: NextCookieStore): Headers {
+  const sent = headers.get("cookie");
+  const names = new Set((sent ?? "").split(";").map((pair) => pair.split("=", 1)[0]?.trim()));
+  const added = store
+    .getAll()
+    .filter(({ name }) => !names.has(name))
+    .map(({ name, value }) => `${name}=${encodeURIComponent(value)}`);
+  if (added.length === 0) return headers;
+  const merged = new Headers(headers);
+  merged.set("cookie", [sent, ...added].filter(Boolean).join("; "));
+  return merged;
+}
+
 /* The address the proxy nearest the application recorded, or Next.js itself where none is in front. */
 function nearestHop(chain: string | null): string | undefined {
   return chain?.split(",").at(-1)?.trim() || undefined;
 }
 
-function setCookieIn(store: NextCookieStore, { cookie }: RelayedCookie): true | string {
-  const value = decodedExactly(cookie.value);
-  if (value === undefined) {
+function setCookieIn(store: NextCookieStore, relayed: RelayedCookie): true | string {
+  const cookie = nextCookieOf(relayed);
+  if (cookie === undefined) {
     return "Next.js URL-encodes a cookie's value, and this one would arrive changed; let the API URL-encode its cookies, or relay them through the proxy route";
   }
   try {
-    store.set({ ...attributesOf(cookie), name: cookie.name, value });
+    store.set(cookie);
     return true;
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Cookies can only be modified")) {
@@ -146,33 +149,4 @@ function setCookieIn(store: NextCookieStore, { cookie }: RelayedCookie): true | 
     }
     throw error;
   }
-}
-
-/* The value `encodeURIComponent` turns back into exactly the one the API sent, if one does. */
-function decodedExactly(raw: string): string | undefined {
-  try {
-    const decoded = decodeURIComponent(raw);
-    return encodeURIComponent(decoded) === raw ? decoded : undefined;
-  } catch {
-    /* A `%` that starts no escape: no decoded value encodes back to it. */
-    return undefined;
-  }
-}
-
-function attributesOf(cookie: RelayedCookie["cookie"]): Omit<NextCookie, "name" | "value"> {
-  return {
-    path: cookie.path ?? "/",
-    ...(cookie.domain !== undefined && { domain: cookie.domain }),
-    ...(cookie.expires !== undefined && { expires: new Date(cookie.expires) }),
-    ...(cookie.maxAge !== undefined && { maxAge: cookie.maxAge }),
-    secure: cookie.secure === true,
-    httpOnly: cookie.httpOnly === true,
-    ...(cookie.sameSite !== undefined && { sameSite: lower(cookie.sameSite) }),
-    ...(cookie.partitioned && { partitioned: true }),
-    ...(cookie.priority !== undefined && { priority: lower(cookie.priority) }),
-  };
-}
-
-function lower<TValue extends string>(value: TValue): Lowercase<TValue> {
-  return value.toLowerCase() as Lowercase<TValue>;
 }

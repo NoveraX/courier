@@ -17,7 +17,11 @@ import { courier, defineApi } from "@noverax/courier/define";
 import { nextIncomingRequest, nextRequestContext } from "../src/request-context";
 import { createServerCaller } from "../src/server-caller";
 
-const cookieStore = { set: vi.fn() };
+/* Next.js's cookies: the ones the request sent, until a middleware or the code sets more. */
+const cookieStore = {
+  set: vi.fn(),
+  getAll: vi.fn(() => [] as Array<{ name: string; value: string }>),
+};
 
 beforeEach(() => {
   next.headers.mockResolvedValue(
@@ -31,6 +35,17 @@ afterEach(() => {
 });
 
 describe("nextRequestContext", () => {
+  it("takes the cookies a middleware set, which Next.js 16 gives a page through cookies() alone", async () => {
+    cookieStore.getAll.mockReturnValueOnce([
+      { name: "sid", value: "a1" },
+      { name: "csrftoken", value: "t-fresh" },
+    ]);
+
+    const incoming = await nextIncomingRequest();
+
+    expect(incoming?.headers.get("cookie")).toBe("sid=a1; csrftoken=t-fresh");
+  });
+
   it("reads a page's request: its origin, its cookies, the user's nearest address", async () => {
     next.headers.mockResolvedValue(
       new Headers({

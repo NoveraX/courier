@@ -48,6 +48,11 @@
       "types": "./lib/pages.d.ts",
       "import": "./lib/pages.js",
       "default": "./lib/pages.js"
+    },
+    "./middleware": {
+      "types": "./lib/middleware.d.ts",
+      "import": "./lib/middleware.js",
+      "default": "./lib/middleware.js"
     }
   },
   "files": [

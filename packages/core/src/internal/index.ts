@@ -83,6 +83,7 @@ export {
   type Glyphs,
   glyphsFor,
   type Help,
+  type HelpCommand,
   type HelpOption,
   helpOptions,
   type OutputStream,

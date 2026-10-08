@@ -17,6 +17,15 @@ export interface Help {
   /** The command a user types: `courier-studio`. */
   readonly command: string;
   readonly options: readonly HelpOption[];
+  /** The commands it takes besides its own work, each with what it does. */
+  readonly commands?: readonly HelpCommand[] | undefined;
+}
+
+/** A command a CLI takes, as its `--help` lists it. */
+export interface HelpCommand {
+  /** What a user types after the CLI's name: `openapi`. */
+  readonly name: string;
+  readonly description: string;
 }
 
 /* A flag in the accent colour; the value it takes, `<port>`, dimmed. */
@@ -52,9 +61,26 @@ export function formatHelp(help: Help, style: TerminalStyle): string {
     "",
     `  ${bold("Usage")}`,
     `    ${help.command} ${dim("[options]")}`,
+    ...commandLines(help, style),
     "",
     `  ${bold("Options")}`,
     ...options,
     "",
   ].join("\n");
+}
+
+/* The commands under the usage line, each named as it is typed. */
+function commandLines(help: Help, { bold, cyan, dim }: TerminalStyle): string[] {
+  const commands = help.commands ?? [];
+  if (commands.length === 0) return [];
+  const width = Math.max(...commands.map(({ name }) => name.length)) + 4;
+  return [
+    `    ${help.command} ${dim("<command> [options]")}`,
+    "",
+    `  ${bold("Commands")}`,
+    ...commands.map(
+      ({ name, description }) =>
+        `    ${cyan(name)}${" ".repeat(width - name.length)}${description}`,
+    ),
+  ];
 }

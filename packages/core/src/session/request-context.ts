@@ -46,6 +46,25 @@ export function registerRequestContext(provider: RequestContextProvider): () => 
 }
 
 /**
+ * Ask a provider before every other: the one that knows the request code
+ * was explicitly given to serve, as `withIncomingRequest` gives it, which
+ * a framework's provider registered after it must not hide.
+ *
+ * @param provider - Finds the request being served, or answers `undefined`
+ * @example
+ * ```ts
+ * preferRequestContext(() => store.getStore());
+ * ```
+ */
+export function preferRequestContext(provider: RequestContextProvider): void {
+  const list = providers();
+  if (list[0] === provider) return;
+  const at = list.indexOf(provider);
+  if (at >= 0) list.splice(at, 1);
+  list.unshift(provider);
+}
+
+/**
  * The request being served, asked of the registered providers in turn and
  * synchronously — some frameworks know it only until the calling code first
  * waits. The first provider that answers wins; one that answers with a

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-
+import { withIncomingRequest } from "../../src/node-request-context";
 import type { IncomingRequest, RequestContextProvider } from "../../src/session/incoming-request";
 import { captureIncomingRequest, registerRequestContext } from "../../src/session/request-context";
 
@@ -75,5 +75,17 @@ describe("captureIncomingRequest", () => {
     removals.pop()?.();
 
     expect(captureIncomingRequest()).toBeUndefined();
+  });
+
+  it("finds the request code is given to serve, though an adapter was registered after it", () => {
+    const given = request("POST");
+    const ambient = request("GET");
+    withIncomingRequest(request("GET"), () => undefined);
+    register(() => ambient);
+
+    const found = withIncomingRequest(given, () => captureIncomingRequest());
+
+    expect(found).toBe(given);
+    expect(captureIncomingRequest()).toBe(ambient);
   });
 });

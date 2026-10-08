@@ -20,7 +20,8 @@
       "examples/*/*.{ts,json}",
       "e2e/**",
       "!**/package.json",
-      "!**/package-lock.json"
+      "!**/package-lock.json",
+      "!packages/core/tests/fixtures/openapi"
     ]
   },
   "formatter": {

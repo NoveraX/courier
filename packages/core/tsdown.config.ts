@@ -12,6 +12,7 @@ export default defineConfig({
     node: "src/node.ts",
     "fetch/index": "src/fetch/index.ts",
     "testing/index": "src/testing/index.ts",
+    "openapi/index": "src/openapi/index.ts",
     "realtime/index": "src/realtime/index.ts",
     "internal-streams/index": "src/internal-streams/index.ts",
     "internal/index": "src/internal/index.ts",

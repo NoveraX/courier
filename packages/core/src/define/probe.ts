@@ -110,6 +110,8 @@ export interface WireCallRecord {
   readonly path: string;
   /** What it passed after the path. */
   readonly variables: unknown;
+  /** The request's options it passed after those — its body, for one it writes itself. */
+  readonly options?: unknown;
 }
 
 /**
@@ -148,6 +150,7 @@ export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRec
             name: property,
             path: typeof args[0] === "string" ? args[0] : "",
             variables: args[1],
+            options: args[2],
           };
           return {};
         };
@@ -171,6 +174,30 @@ export function recordWireCall(probe: AnyProbe, variables: unknown): WireCallRec
     "ENDPOINT_NO_WIRE_CALL",
     '[courier] endpoint closure made no wire call — it must call exactly one of the wire methods, for example (http, vars) => http.get(":id", vars)',
   );
+}
+
+/**
+ * The request's options an endpoint's closure hands the wire — its body
+ * among them, for one that writes it itself — read from one call with
+ * stand-ins for its variables, as `probeWire` reads its method and path. A
+ * closure that fails before addressing the wire hands nothing.
+ *
+ * @param probe - the wire closure supplied to a builder terminal
+ * @returns the options the closure passed, or `undefined`
+ *
+ * @example
+ * ```ts
+ * probeOptions((http, fields) => http.post("charges", undefined, { body: formBody(fields) }));
+ * // → { body: URLSearchParams { … } }
+ * ```
+ */
+export function probeOptions(probe: AnyProbe): unknown {
+  try {
+    return recordWireCall(probe, standIn()).options;
+  } catch {
+    /* No wire call to read, so nothing to say about its body. */
+    return undefined;
+  }
 }
 
 /**

@@ -13,6 +13,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createCaller } from "../src/caller";
 import { courier, defineApi } from "../src/define/index";
 import type { UploadProgress } from "../src/http-client/types";
+import { withIncomingRequest } from "../src/node-request-context";
+import type { IncomingRequest } from "../src/session/incoming-request";
 import { countedStream } from "../src/utils/counted-stream";
 import { startUpstream, type Upstream } from "./helpers/upstream";
 
@@ -123,6 +125,71 @@ describe("an upload that follows a redirect", () => {
       true,
     );
     expect(events.at(-1)?.percent).toBe(1);
+  });
+});
+
+describe("an upload made with the user's session from a server", () => {
+  let elsewhere: Upstream | undefined;
+
+  afterEach(async () => {
+    await elsewhere?.close();
+    elsewhere = undefined;
+  });
+
+  function sessionApi(baseURL: string) {
+    return defineApi({
+      name: "files",
+      baseURL,
+      session: { cookies: ["sid"], csrf: { cookie: "csrftoken", header: "x-csrftoken" } },
+      endpoints: { start: endpoint.post("start").variables<FormData>() },
+    });
+  }
+
+  const served: IncomingRequest = {
+    key: {},
+    method: "POST",
+    origin: "https://app.example.com",
+    headers: new Headers({ cookie: "sid=s1; csrftoken=t1", "sec-fetch-site": "same-origin" }),
+  };
+
+  it("is not sent on to another origin the API redirects it to, token, address and file", async () => {
+    elsewhere = await startUpstream((_request, res) => {
+      res.writeHead(200);
+      res.end("taken");
+    });
+    const target = `${elsewhere.url}/landing`;
+    upstream = await startUpstream((_request, res) => {
+      res.writeHead(307, { location: target });
+      res.end();
+    });
+    const client = createCaller(sessionApi(upstream.url));
+
+    const sent = withIncomingRequest(served, () =>
+      client.with({ onUploadProgress: () => {} }).start(formWith(50_000)),
+    );
+
+    await expect(sent).rejects.toMatchObject({ status: 307 });
+    expect(upstream.received[0]?.headers["x-csrftoken"]).toBe("t1");
+    expect(elsewhere.received).toEqual([]);
+  });
+
+  it("follows a redirect that stays on the API's origin, the file sent again", async () => {
+    upstream = await startUpstream((request, res) => {
+      if (request.url === "/start") {
+        res.writeHead(307, { location: "/upload" });
+        res.end();
+        return;
+      }
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ url: request.url, bytes: request.body.byteLength }));
+    });
+    const client = createCaller(sessionApi(upstream.url));
+
+    const answer = await withIncomingRequest(served, () =>
+      client.with({ onUploadProgress: () => {} }).start(formWith(50_000)),
+    );
+
+    expect(answer).toEqual({ url: "/upload", bytes: upstream.received[0]?.body.byteLength });
   });
 });
 

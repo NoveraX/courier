@@ -23,12 +23,14 @@ import { type XhrRequestInit, xhrRequest } from "./xhr-request";
  * @param url - Where to send it
  * @param init - The request, as it would be given to fetch; its body is set
  * @param onProgress - Called as the body is sent
+ * @param options - `withinOrigin`: redirects are followed on the request's origin alone
  * @returns The answer
  */
 export async function sendWithUploadProgress(
   url: string,
   init: XhrRequestInit & { body: WebBody },
   onProgress: (progress: UploadProgress) => void,
+  { withinOrigin = false }: { withinOrigin?: boolean } = {},
 ): Promise<Response> {
   if (typeof XMLHttpRequest !== "undefined") return xhrRequest(url, init, onProgress);
 
@@ -41,8 +43,12 @@ export async function sendWithUploadProgress(
   if (source.replayable) headers.set("content-length", String(source.size));
 
   const request = { ...(init as RequestInit), method: init.method, headers };
-  return sendUpload(url, request, source, (stream) =>
-    countedStream(stream, source.size, onProgress, init.signal),
+  return sendUpload(
+    url,
+    request,
+    source,
+    (stream) => countedStream(stream, source.size, onProgress, init.signal),
+    { withinOrigin },
   );
 }
 

@@ -62,10 +62,12 @@ function NoMatches(): React.ReactNode {
  */
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): React.ReactNode {
   const requests = useStudioStore((s) => s.requests);
-  const paused = useStudioStore((s) => s.paused);
+  const recording = useStudioStore((s) =>
+    s.shownSession ? "session" : s.paused ? "paused" : "recording",
+  );
   const run = useRunAction();
   const exportFormat = useStudioStore((s) => s.settings.defaultExportFormat);
-  const entries = paletteEntries(requests, paused, exportFormat);
+  const entries = paletteEntries(requests, recording, exportFormat);
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>

@@ -163,15 +163,19 @@ describe("a route's own faults and upload rules", () => {
           avgLatency: 0,
         },
       ],
-      routeOverrides: [
-        {
-          routeId: "users:avatar",
-          enabled: true,
-          errorRate: 1,
-          faultTypes: ["413", "415"],
-          uploads: { maxBytes: 1_048_576, accept: ["image/*"] },
-        },
-      ],
+      networkConfig: {
+        latency: 0,
+        errorRate: 0,
+        routeOverrides: [
+          {
+            routeId: "users:avatar",
+            enabled: true,
+            errorRate: 1,
+            faultTypes: ["413", "415"],
+            uploads: { maxBytes: 1_048_576, accept: ["image/*"] },
+          },
+        ],
+      },
     });
 
     expect(overrideRows(server)[0]).toMatchObject({

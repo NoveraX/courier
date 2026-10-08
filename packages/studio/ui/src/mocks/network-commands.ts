@@ -1,7 +1,7 @@
 import type { ChaosFormValues, ChaosMode } from "@/features/mocks/chaos-config";
 import { stopConditionsOf } from "@/features/mocks/chaos-config";
 import { LATENCY_DEFAULTS } from "@/features/mocks/latency-config";
-import { routeOverridesOf } from "@/features/mocks/route-overrides";
+import { routeOverridesOf, withRouteOverride } from "@/features/mocks/route-overrides";
 import { getSocket } from "@/socket";
 import type {
   LatencyDistribution,
@@ -141,9 +141,11 @@ export function setStopConditions(server: MockServerInfo, stop: StopCondition): 
 }
 
 /**
- * Set a route's own delay and failure rate, which take priority over the
- * mock's; the mock is sent every route override switched on, the ones it
- * already held included.
+ * Set one route's override — its own delay, rate, faults and upload rules,
+ * on or off — which takes priority over the mock's settings for that
+ * route. The mock is sent that route's alone, so a change on another page
+ * to another route stays; it keeps a switched-off override with its
+ * settings.
  *
  * @param server - The mock server
  * @param override - The route's override, its rate a share 0–1
@@ -153,11 +155,9 @@ export function setStopConditions(server: MockServerInfo, stop: StopCondition): 
  * ```
  */
 export function setRouteOverride(server: MockServerInfo, override: RouteOverride): void {
-  const others = routeOverridesOf(server).filter((r) => r.routeId !== override.routeId);
-  const enabled = [...others, override].filter((r) => r.enabled);
-  useMockStore.getState().setRouteOverride(server.serverId, override);
+  const routeOverrides = withRouteOverride(routeOverridesOf(server), override);
   useMockStore.getState().updateServer(server.serverId, {
-    networkConfig: configWith(server, { routeOverrides: enabled }),
+    networkConfig: configWith(server, { routeOverrides }),
   });
-  send(server.serverId, "mock:network:set", { config: { routeOverrides: enabled } });
+  send(server.serverId, "mock:network:set", { config: { routeOverride: override } });
 }

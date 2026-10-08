@@ -72,7 +72,7 @@ const user = await caller.users.getById({ id: 5 })
 
 ## Security
 
-Proxy mode includes three built-in security layers: host validation, origin validation and header whitelisting.
+Proxy mode includes three built-in security layers: host validation, origin validation and header whitelisting. [Security Model](/docs/security/overview) follows the user's credentials through every layer — the proxy, your server, streams and channels — and what Courier writes down.
 
 ### Host validation
 
@@ -179,4 +179,5 @@ Both modes share the same `defineApi` and `defineGroup` definitions. You define 
 
 - [createProxyCaller](/docs/proxy-mode/proxy-caller) — set up the browser-side proxy client
 - [Server Handler](/docs/proxy-mode/api-route) — configure the server-side proxy endpoint
+- [Security Model](/docs/security/overview) — where credentials travel, and what each layer refuses
 - [Path Parameters](/docs/advanced/path-params) — dynamic URL segments with `:param` syntax

@@ -80,3 +80,33 @@ describe("tokenizeJsonLine", () => {
     ).toBe(line);
   });
 });
+
+describe("a comment in a code snippet", () => {
+  const tones = (line: string) =>
+    tokenizeLine(line)
+      .filter((token) => token.tone !== "space")
+      .map((token) => [token.text, token.tone]);
+
+  it("colours each line of a comment block whole, not its words as names", () => {
+    expect(tones("/**")).toEqual([["/**", "comment"]]);
+    expect(tones(" * Calls recorded in Courier Studio")).toEqual([
+      ["* Calls recorded in Courier Studio", "comment"],
+    ]);
+    expect(tones(" */")).toEqual([["*/", "comment"]]);
+  });
+
+  it("colours what follows // as a comment, and keeps every character", () => {
+    const line = "const a = 1; // the answer";
+
+    expect(tones(line).at(-1)).toEqual(["// the answer", "comment"]);
+    expect(
+      tokenizeLine(line)
+        .map((token) => token.text)
+        .join(""),
+    ).toBe(line);
+    expect(tones('const url = "https://example.com";')).toContainEqual([
+      '"https://example.com"',
+      "string",
+    ]);
+  });
+});

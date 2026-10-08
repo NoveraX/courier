@@ -51,12 +51,14 @@ const CLIENT_CLOSED_REQUEST = 499;
  * ```
  */
 export function retryMiddleware(options: RetryOptions = {}): Middleware {
-  const { limit = 3, delay = 300, backoff = "exponential", mutations = false } = options;
+  const { limit = 3, delay = 300, backoff = "exponential", mutations } = options;
   const retryOn = conditionOf(options.retryOn);
   const waitFor = (attempt: number): number => (backoff === "fixed" ? delay : delay * 2 ** attempt);
 
   return defineMiddleware("retry", "wrap", async (ctx, next) => {
-    const retries = ctx.kind === "mutation" && !mutations ? 0 : limit;
+    /* A write is retried when asked to, or when its idempotency key lets the upstream apply it once. */
+    const writes = mutations ?? ctx.idempotencyKey !== undefined;
+    const retries = ctx.kind === "mutation" && !writes ? 0 : limit;
     for (let attempt = 0; ; attempt++) {
       const outcome = await settle(next);
       const retry =

@@ -139,6 +139,7 @@ export async function prepareAndRun(
     mode: context?.mode ?? (context?.proxyMethod ? "proxy" : "direct"),
     middlewareCount: middlewares.length,
     agent: context?.agent,
+    idempotencyKey: middlewareCtx.idempotencyKey,
   });
 
   /* The token a write asks for first goes as calls go, under an id of its own. */

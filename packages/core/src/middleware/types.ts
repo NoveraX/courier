@@ -58,6 +58,12 @@ export type MiddlewareContext = {
    * let in. Absent on every call the application makes itself.
    */
   agent?: AgentCall | undefined;
+  /**
+   * The key this call sends in its endpoint's idempotency header, the same
+   * on every attempt: an upstream that deduplicates by it applies the write
+   * once however many times it arrives — so a retry policy retries it.
+   */
+  idempotencyKey?: string | undefined;
   /** Internal: Studio request ID for event correlation */
   _requestId?: string | undefined;
 };

@@ -34,6 +34,8 @@ export interface RequestStart {
   purpose?: CallPurpose | undefined;
   /** The agent the call comes from, when an MCP server made it for one */
   agent?: AgentCall | undefined;
+  /** The key the call sends in its endpoint's idempotency header, the same on every attempt */
+  idempotencyKey?: string | undefined;
 }
 
 /**
@@ -59,6 +61,7 @@ export function emitRequestStart(dCtx: StudioContext, start: RequestStart): void
     ...(schema?.type && { endpointType: schema.type }),
     ...(start.purpose && { purpose: start.purpose }),
     ...(start.agent && { agent: agentShown(start.agent) }),
+    ...(start.idempotencyKey && { idempotencyKey: start.idempotencyKey }),
     timestamp: Date.now(),
   });
 }

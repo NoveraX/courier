@@ -88,6 +88,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
      carries it, so the upstream applies the write once. A caller's own key —
      server code's, or the browser's through the proxy — is kept. */
   if (keyHeader && !newHeaders.has(keyHeader)) newHeaders.set(keyHeader, randomId());
+  const idempotencyKey = keyHeader ? (newHeaders.get(keyHeader) ?? undefined) : undefined;
 
   return {
     source: String(source),
@@ -101,6 +102,7 @@ export function buildMiddlewareContext(input: MiddlewareContextInput): Middlewar
     signal,
     ...(input.purpose && { purpose: input.purpose }),
     ...(context?.agent && { agent: context.agent }),
+    ...(idempotencyKey && { idempotencyKey }),
     _requestId: requestId || undefined,
   };
 }

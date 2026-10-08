@@ -39,6 +39,8 @@ export interface RequestLifecycleHooks {
         purpose?: "csrf-token";
         /** The agent tool the call ran for, when an MCP server made it, and the client as it named itself. */
         agent?: { tool: string; access: "read" | "write" | "destructive"; client?: string };
+        /** The key the call sends in its endpoint's idempotency header, the same on every attempt. */
+        idempotencyKey?: string;
         timestamp: number;
       }) => void)
     | undefined;

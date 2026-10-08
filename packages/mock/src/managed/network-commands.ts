@@ -5,6 +5,7 @@
 import { networkCommandPatch } from "../network/command-patch";
 import { networkConfigOnWire } from "../network/network-config-on-wire";
 import { recordPresets } from "../network/record-presets";
+import { routeOverridePatch } from "../network/route-override-list";
 import type { MockServer } from "../server/create-mock-server";
 import { send } from "./worker-ipc";
 
@@ -12,7 +13,9 @@ type CmdResult = { ok: boolean; data?: unknown; error?: string };
 
 /**
  * Apply a `mock:network:set` command: latency, bandwidth, distribution,
- * per-route overrides — whichever of them the command names.
+ * per-route overrides — whichever of them the command names. A command
+ * naming one route's override as `routeOverride` changes that route's
+ * alone; one naming `routeOverrides` sets them all.
  *
  * @param server The worker's mock server
  * @param cmd    The command Studio sent
@@ -25,7 +28,9 @@ type CmdResult = { ok: boolean; data?: unknown; error?: string };
 export function handleNetworkCommand(server: MockServer, cmd: Record<string, unknown>): CmdResult {
   const state = server.networkState;
   const prev = { preset: state.latencyPreset, startedAt: state.latencyStartedAt };
-  const patch = networkCommandPatch(cmd.config);
+  const named = networkCommandPatch(cmd.config);
+  const current = named.routeOverrides ?? state.getGlobalConfig()?.routeOverrides;
+  const patch = { ...named, ...routeOverridePatch(cmd.config, current) };
 
   state.mergeConfig(patch);
   recordPresets(state, patch, { latency: presetOf(cmd.preset) });

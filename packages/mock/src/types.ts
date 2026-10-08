@@ -120,10 +120,15 @@ export interface UploadConditions {
   accept?: string[] | undefined;
 }
 
-/** Per-route network override */
+/**
+ * A route's own network settings, each in place of the global one; a
+ * setting it leaves unset stays the global one. An error rate of 0 keeps
+ * the route from failing whatever the global rate — Down included.
+ */
 export interface RouteNetworkOverride {
   /** "group:endpoint" key */
   routeId: string;
+  /** Whether the route takes its settings now; switched off, it keeps them and takes the global ones */
   enabled: boolean;
   latency?: { min: number; max: number; jitter?: number | undefined } | undefined;
   /** The share of this route's requests that fail, from 0 (none) to 1 (every one) */
@@ -170,7 +175,7 @@ export interface NetworkConfig {
   faultTypes?: FaultType[] | undefined;
   /** Weighted fault distribution — overrides faultTypes when present */
   faultWeights?: FaultWeight[] | undefined;
-  /** Per-route overrides — checked before global config */
+  /** Each route's own settings, on or off; an enabled one takes the place of the global ones it sets */
   routeOverrides?: RouteNetworkOverride[] | undefined;
   /** Latency distribution model (default: "uniform") */
   distribution?: LatencyDistribution | undefined;

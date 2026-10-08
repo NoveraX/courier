@@ -118,3 +118,89 @@ describe("a managed mock whose run a stop condition halts", () => {
     expect((await fetch(`${url}/users`)).status).toBe(200);
   });
 });
+
+const STOP = {
+  enabled: true,
+  errorRateThreshold: 50,
+  errorRateDurationSecs: 30,
+  p99Threshold: 0,
+  p99DurationSecs: 60,
+  maxDurationMins: 0,
+};
+
+describe("a managed mock's route overrides", () => {
+  it("changes the one route a command names, and leaves the others as they were", async () => {
+    await worker.command({
+      action: "mock:network:set",
+      config: {
+        routeOverrides: [
+          { routeId: "users:list", enabled: true, errorRate: 1 },
+          { routeId: "orders:create", enabled: true, latency: { min: 300, max: 300 } },
+        ],
+      },
+    });
+
+    await worker.command({
+      action: "mock:network:set",
+      config: { routeOverride: { routeId: "users:list", enabled: false, errorRate: 1 } },
+    });
+
+    expect(lastNetworkConfig(worker.sent)).toMatchObject({
+      routeOverrides: [
+        { routeId: "users:list", enabled: false, errorRate: 1 },
+        { routeId: "orders:create", enabled: true, latency: { min: 300, max: 300 } },
+      ],
+    });
+    expect((await fetch(`${url}/users`)).status).toBe(200);
+  });
+
+  it("keeps an override switched off with its settings, and drops one that sets nothing", async () => {
+    await worker.command({
+      action: "mock:network:set",
+      config: { routeOverride: { routeId: "users:list", enabled: true, errorRate: 0.5 } },
+    });
+    await worker.command({
+      action: "mock:network:set",
+      config: { routeOverride: { routeId: "users:list", enabled: false } },
+    });
+
+    expect(lastNetworkConfig(worker.sent)).toMatchObject({ routeOverrides: [] });
+  });
+
+  it("keeps a route that never fails answering while the mock is down", async () => {
+    await worker.command({
+      action: "mock:network:set",
+      config: { routeOverride: { routeId: "users:list", enabled: true, errorRate: 0 } },
+    });
+    await worker.command({
+      action: "mock:chaos:set",
+      preset: "down",
+      config: { errorRate: 1, faultWeights: [{ type: "503", weight: 100 }] },
+    });
+
+    expect((await fetch(`${url}/users`)).status).toBe(200);
+    expect((await fetch(`${url}/users/unknown`)).status).not.toBe(200);
+  });
+
+  it("switches them off through a halt, each keeping its settings, so they can be switched back on", async () => {
+    await worker.command({
+      action: "mock:network:set",
+      config: { routeOverride: { routeId: "users:list", enabled: true, errorRate: 1 } },
+    });
+    await worker.command({
+      action: "mock:chaos:set",
+      preset: "down",
+      config: { errorRate: 1, faultWeights: [{ type: "500", weight: 100 }], stopConditions: STOP },
+    });
+
+    for (let i = 0; i < 5; i++) await fetch(`${url}/users`);
+    await worker.next(isHalt);
+
+    expect(lastNetworkConfig(worker.sent)).toMatchObject({
+      errorRate: 0,
+      routeOverrides: [{ routeId: "users:list", enabled: false, errorRate: 1 }],
+      stopConditions: { enabled: true, errorRateThreshold: 50 },
+    });
+    expect((await fetch(`${url}/users`)).status).toBe(200);
+  });
+});

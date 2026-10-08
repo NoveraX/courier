@@ -113,6 +113,7 @@ export type {
   SessionOptions,
 } from "./session/types";
 export { getSources, registerSources } from "./sources";
+export { ensureCsrfToken } from "./utils/ensure-csrf-token";
 export { type SmoothProgressOptions, smoothProgress } from "./utils/smooth-progress";
 export type {
   CacheConfig,

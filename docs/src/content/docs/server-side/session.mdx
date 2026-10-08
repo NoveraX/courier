@@ -204,6 +204,22 @@ export const api = defineApi({
 - On a server, the token reaches the write and the user's browser, as any cookie the API sets does; a browser keeps it itself; a React Native app keeps it from the answer.
 - A request that fails, or an answer that sets no token the call can read, leaves the write to go without it, and the log says so.
 
+### Up front
+
+A page whose writes come later — from the browser, or while it renders — can ask for the token as it is served, as Django's `ensure_csrf_cookie` does. `ensureCsrfToken(api)` asks once, as a write would, where the request does not carry the token, and the token reaches the browser with the response being prepared:
+
+```ts title="server.ts"
+import { ensureCsrfToken } from "@noverax/courier"
+import { api } from "./api"
+
+app.get("/account", async (_req, res) => {
+  await ensureCsrfToken(api)
+  res.send(renderAccountPage())
+})
+```
+
+It needs a request being served, as every server-side call does, and answers whether the request carries the token then; served for another site's link, it asks too, since a token decides no write. A Next.js page cannot set cookies while it renders, so Next.js asks in a middleware: see [Next.js](/docs/frameworks/nextjs#a-page-that-writes-while-it-renders).
+
 ## The cookies the API sets
 
 When the API renews the session, or ends it on signing out, its cookies are carried on — from an error answer as from a success:

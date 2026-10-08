@@ -68,7 +68,7 @@ export async function primeCsrfToken(
   }
   const again = sameRequestContext(call.context, session);
   const key = `${String(target.source)} ${path}`;
-  const asked = once(session.incoming?.key ?? ONE_USER, key, () =>
+  const asked = askOnce(session.incoming?.key ?? ONE_USER, key, () =>
     askForToken(call.run(tokenCall(target, path), again), path),
   );
   const primed = await unlessAborted(asked, signal);
@@ -82,8 +82,22 @@ export async function primeCsrfToken(
   return { session: reread, primed };
 }
 
-/* The request for the token: a GET of the API's, which none of its endpoints describes. */
-function tokenCall(target: CallTarget, path: string): CallTarget {
+/**
+ * The request for the token: a GET of the API's, which none of its
+ * endpoints describes, made as the API's calls are made.
+ *
+ * @param target - A call of the API's, whose source and options it takes
+ * @param path - Where the API hands the token out
+ * @returns The call
+ * @example
+ * ```ts
+ * tokenCall(target, "https://api.example.com/csrf");
+ * ```
+ */
+export function tokenCall(
+  target: Pick<CallTarget, "source" | "dataSource">,
+  path: string,
+): CallTarget {
   return {
     source: target.source,
     group: undefined,
@@ -100,9 +114,25 @@ function tokenCall(target: CallTarget, path: string): CallTarget {
   };
 }
 
-/* The cookies the answer set that a Response of the write's own carries; the
-   call kept them already where nothing carries them on. */
-async function askForToken(answer: Promise<unknown>, path: string): Promise<readonly string[]> {
+/**
+ * The cookies the answer for the token set that a `Response` of the write's
+ * own carries; the call kept them already where nothing carries them on. A
+ * failure is logged, and what waited for the token goes without it.
+ *
+ * @param answer - The token call's answer
+ * @param path - Where it was asked
+ * @param waiting - What waited for it, as the log names it
+ * @returns The `Set-Cookie` headers for a `Response` to carry
+ * @example
+ * ```ts
+ * await askForToken(run(tokenCall(target, path), context), path);
+ * ```
+ */
+export async function askForToken(
+  answer: Promise<unknown>,
+  path: string,
+  waiting = "the write",
+): Promise<readonly string[]> {
   try {
     const answered = await answer;
     if (!(answered instanceof Response)) return [];
@@ -110,12 +140,28 @@ async function askForToken(answer: Promise<unknown>, path: string): Promise<read
       log.warn(`Asking ${path} for the double-submit token was answered ${answered.status}`);
     return answered.headers.getSetCookie();
   } catch (error) {
-    log.warn(`Asking ${path} for the double-submit token failed; the write goes without it`, error);
+    log.warn(
+      `Asking ${path} for the double-submit token failed; ${waiting} goes without it`,
+      error,
+    );
     return [];
   }
 }
 
-function once(
+/**
+ * The one request for a token a user's writes share: the one in flight for
+ * the same request served and address, or a new one.
+ *
+ * @param scope - Who it is asked for: the request served, or the one user
+ * @param key - The API and the address
+ * @param ask - Starts the request
+ * @returns The request's cookies
+ * @example
+ * ```ts
+ * await askOnce(incoming.key, `${source} ${path}`, () => askForToken(answer, path));
+ * ```
+ */
+export function askOnce(
   scope: object,
   key: string,
   ask: () => Promise<readonly string[]>,

@@ -1,5 +1,6 @@
 import { highlightTokens } from "@/site/code/highlight-tokens"
 import { coreVersion } from "@/site/content/version"
+import { AgentsSection } from "./agents/agents-section"
 import { CompareSection } from "./compare/compare-section"
 import { CtaSection } from "./cta-section"
 import { FeaturesSection } from "./features/features-section"
@@ -14,7 +15,8 @@ import { RouteSection } from "./route/route-section"
 
 /**
  * The landing page: what Courier is, what it replaces, what it does on
- * install, how it compares, the frameworks it serves, and the way in.
+ * install, the agents it serves, how it compares, the frameworks it
+ * serves, and the way in.
  *
  * @returns The page
  * @example
@@ -39,6 +41,7 @@ export async function LandingPage() {
         <RefactorSection lines={refactorLines} />
         <FeaturesSection />
         <RouteSection />
+        <AgentsSection />
         <CompareSection />
         <FrameworksSection />
         <CtaSection />

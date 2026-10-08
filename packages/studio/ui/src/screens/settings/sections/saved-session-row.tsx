@@ -1,4 +1,4 @@
-import { Archive, Download, FolderOpen, Trash2 } from "lucide-react";
+import { Archive, Download, FolderOpen, Share, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { shortAgo } from "@/features/explorer/endpoint-key";
@@ -13,18 +13,20 @@ interface SavedSessionRowProps {
   now: number;
   onLoad: () => void;
   onExport: () => void;
+  /** Share it as a session file, looked over first. */
+  onShare: () => void;
   onDelete: () => void;
 }
 
 /**
  * A saved session: its name, how many requests and when it was saved, its
- * errors, and Load, Export and Delete — Delete asking first.
+ * errors, and Load, Export, Share and Delete — Delete asking first.
  *
- * @param props - The session, the time now, and what loads, exports and deletes it
+ * @param props - The session, the time now, and what loads, exports, shares and deletes it
  * @returns The row
  * @example
  * ```tsx
- * <SavedSessionRow session={s} now={Date.now()} onLoad={load} onExport={exp} onDelete={del} />
+ * <SavedSessionRow session={s} now={Date.now()} onLoad={load} onExport={exp} onShare={share} onDelete={del} />
  * ```
  */
 export function SavedSessionRow({
@@ -32,6 +34,7 @@ export function SavedSessionRow({
   now,
   onLoad,
   onExport,
+  onShare,
   onDelete,
 }: SavedSessionRowProps): React.ReactNode {
   const [asking, setAsking] = useState(false);
@@ -92,6 +95,15 @@ export function SavedSessionRow({
           className={cn(ICON_BUTTON, "border border-line")}
         >
           <Download aria-hidden="true" className="size-3" />
+        </button>
+        <button
+          type="button"
+          title="Share as a session file"
+          aria-label={`Share ${session.name} as a session file`}
+          onClick={onShare}
+          className={cn(ICON_BUTTON, "border border-line")}
+        >
+          <Share aria-hidden="true" className="size-3" />
         </button>
         <button
           type="button"

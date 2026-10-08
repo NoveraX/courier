@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { requestFromSaved, savedRequestOf } from "@/features/sessions/saved-request";
+import { savedRequestOf } from "@/features/sessions/saved-request";
+import { showSavedSession } from "@/features/sessions/show-saved-session";
 import type { SessionSummary } from "@/features/settings/session-summary";
 import { sessionSummariesOf } from "@/features/settings/session-summary";
 import { apiClient, post } from "@/lib/api-client";
 import { useStudioStore } from "@/store";
-import { isRecord } from "@/store/event-helpers";
-import type { ExportFormat, RequestEntry } from "@/store/types";
+import type { ExportFormat } from "@/store/types";
 
 // ── Session history hook ─────────────────────────────────────────────────────
 
@@ -70,19 +70,9 @@ export function useSessionHistory(): SessionHistory {
   }
 
   async function loadSession(id: string): Promise<void> {
-    const session = await attempt("load the session", () =>
-      post<unknown>("/api/sessions/load", { id }),
-    );
-    if (!isRecord(session) || !Array.isArray(session.requests)) return;
-    const requests = session.requests
-      .map(requestFromSaved)
-      .filter((r): r is RequestEntry => r !== undefined);
-    /* Recording pauses, so live traffic does not mix into the session shown;
-       Studio keeps it shown, across a reload, until the page goes back to live. */
-    useStudioStore.getState().showSession({ id, name: String(session.name) }, requests);
-    toast.success(
-      `Loaded ${requests.length} requests from "${String(session.name)}"; recording paused`,
-    );
+    const shown = await attempt("load the session", () => showSavedSession(id));
+    if (!shown) return;
+    toast.success(`Loaded ${shown.requests} requests from "${shown.name}"; recording paused`);
   }
 
   async function deleteSession(id: string): Promise<void> {

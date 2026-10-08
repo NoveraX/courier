@@ -1,21 +1,12 @@
 import type { LinkProps } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import {
-  Activity,
-  CircleAlert,
-  Download,
-  Pause,
-  Play,
-  RadioTower,
-  Rocket,
-  SunMoon,
-  Trash2,
-} from "lucide-react";
+import { Activity, RadioTower, Rocket } from "lucide-react";
 
 import { formatDuration } from "@/lib/formatters";
 import type { RequestEntry } from "@/store";
 import type { ExportFormat } from "@/store/types";
 import { SHELL_NAV } from "../nav";
+import { actionEntries } from "./palette-actions";
 
 /** What an entry does when it is chosen. */
 export type PaletteAction =
@@ -24,6 +15,8 @@ export type PaletteAction =
   | { kind: "show-errors" }
   | { kind: "show-streams" }
   | { kind: "export" }
+  | { kind: "share-session-file" }
+  | { kind: "open-session-file" }
   | { kind: "toggle-recording" }
   | { kind: "toggle-theme" }
   | { kind: "clear-requests" };
@@ -85,63 +78,6 @@ function goToEntries(): PaletteEntry[] {
     action: { kind: "go", to: "/" },
   };
   return [setup, ...views];
-}
-
-function actionEntries(paused: boolean, exportFormat: ExportFormat): PaletteEntry[] {
-  return [
-    {
-      id: "action:recording",
-      group: "Actions",
-      label: paused ? "Resume recording" : "Pause recording",
-      meta: "",
-      icon: paused ? Play : Pause,
-      hint: "⌘ .",
-      action: { kind: "toggle-recording" },
-    },
-    {
-      id: "action:errors",
-      group: "Actions",
-      label: "Show only errors",
-      meta: "Timeline",
-      icon: CircleAlert,
-      action: { kind: "show-errors" },
-    },
-    {
-      id: "action:streams",
-      group: "Actions",
-      label: "Show streams",
-      meta: "SSE · WebSocket",
-      icon: RadioTower,
-      action: { kind: "show-streams" },
-    },
-    {
-      id: "action:theme",
-      group: "Actions",
-      label: "Toggle theme",
-      meta: "Dark · Light · Auto",
-      icon: SunMoon,
-      hint: "⇧ ⌘ L",
-      action: { kind: "toggle-theme" },
-    },
-    {
-      id: "action:export",
-      group: "Actions",
-      label: "Export the requests",
-      meta: `as ${exportFormat.toUpperCase()}`,
-      icon: Download,
-      hint: "⌘ E",
-      action: { kind: "export" },
-    },
-    {
-      id: "action:clear",
-      group: "Actions",
-      label: "Clear captured requests",
-      meta: "",
-      icon: Trash2,
-      hint: "⌘ ⌫",
-      action: { kind: "clear-requests" },
-    },
-  ];
 }
 
 /**

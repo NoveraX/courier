@@ -2,6 +2,8 @@
  * Session persistence types.
  */
 
+import type { SessionEnvironment } from "./session-file/session-environment";
+
 export interface SavedSession {
   /** Unique session ID */
   id: string;
@@ -19,6 +21,8 @@ export interface SavedSession {
   requests: SavedRequest[];
   /** Session summary stats */
   stats: SessionStats;
+  /** What it was recorded on, when it was opened from a session file. */
+  environment?: SessionEnvironment | undefined;
 }
 
 export interface SavedSessionApp {

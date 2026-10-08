@@ -22,6 +22,7 @@ import { setupRuntimeNamespace } from "./runtime-namespace";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { securityHeaders } from "./security-headers";
 import { serveStudioUi } from "./serve-ui";
+import { sessionEnvironment } from "./session-file/session-environment";
 import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
 import { openStudioStores } from "./storage/studio-stores";
@@ -168,7 +169,14 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
       studioPort: startup.port,
       mockSummaries: mockManager.summarizeServers,
     },
-    sessions: { sessions, view },
+    sessions: {
+      sessions,
+      view,
+      environment: () =>
+        sessionEnvironment(root, project.snapshot().running?.config.sources ?? {}, {
+          host: !serving,
+        }),
+    },
     storage: storage.routes,
     token,
     demo: serving && { limits: serving.limits },

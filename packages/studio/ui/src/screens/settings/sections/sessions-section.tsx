@@ -1,6 +1,7 @@
-import { History, Save } from "lucide-react";
+import { FileInput, History, Save } from "lucide-react";
 import { useState } from "react";
-
+import { pickSessionFile } from "@/features/sessions/open-session-file";
+import { shareSessionFile } from "@/features/sessions/session-file-dialog-store";
 import { useNow } from "@/hooks/use-tick";
 import { formatClockTime } from "@/lib/formatters";
 import type { useSessionHistory } from "@/settings/use-session-history";
@@ -15,8 +16,9 @@ interface SessionsSectionProps {
 
 /**
  * Settings → Session history: the requests on this page saved as a named
- * session, and the sessions Studio keeps — loaded back, exported in the
- * default format, or deleted.
+ * session, a session file a colleague sent opened, and the sessions Studio
+ * keeps — loaded back, exported in the default format, shared as a session
+ * file, or deleted.
  *
  * @param props - The session history
  * @returns The section
@@ -72,6 +74,20 @@ export function SessionsSection({ history }: SessionsSectionProps): React.ReactN
         }
       />
       <SettingRow
+        label="Session file"
+        description="One a colleague shared — opened read-only, with the environment it was recorded in"
+        control={
+          <button
+            type="button"
+            onClick={pickSessionFile}
+            className="flex h-7.5 cursor-pointer items-center gap-1.75 rounded-card border border-line bg-panel px-3 text-control font-strong whitespace-nowrap text-fg hover:border-line-strong"
+          >
+            <FileInput aria-hidden="true" className="size-3.25" />
+            Open a session file
+          </button>
+        }
+      />
+      <SettingRow
         label="Saved"
         description={`${history.sessions.length} session${history.sessions.length === 1 ? "" : "s"} · kept in .courier/studio.db`}
       >
@@ -87,6 +103,7 @@ export function SessionsSection({ history }: SessionsSectionProps): React.ReactN
                 now={now}
                 onLoad={() => void history.loadSession(session.id)}
                 onExport={() => void history.exportSession(session.id, format)}
+                onShare={() => shareSessionFile({ kind: "saved", id: session.id })}
                 onDelete={() => void history.deleteSession(session.id)}
               />
             ))}

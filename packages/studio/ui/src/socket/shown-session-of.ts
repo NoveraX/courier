@@ -1,4 +1,5 @@
 import { requestFromSaved } from "@/features/sessions/saved-request";
+import { environmentOf } from "@/features/sessions/session-environment";
 import type { ShownSession } from "@/store/store-types";
 import type { RequestEntry } from "@/store/types";
 
@@ -12,7 +13,8 @@ export interface ShownSessionPayload {
 
 /**
  * Read the saved session Studio sends a page that connects while the pages
- * show one; each request Studio cannot read is left out.
+ * show one, with the environment it was recorded in when it was opened from
+ * a session file; each request Studio cannot read is left out.
  *
  * @param data - What Studio sent with `view:session`
  * @returns The session and its requests, or `undefined` for anything else
@@ -28,5 +30,9 @@ export function shownSessionOf(data: unknown): ShownSessionPayload | undefined {
   const requests = data.requests
     .map(requestFromSaved)
     .filter((request): request is RequestEntry => request !== undefined);
-  return { session: { id: data.id, name: data.name }, requests };
+  const environment = environmentOf(data.environment);
+  return {
+    session: { id: data.id, name: data.name, ...(environment && { environment }) },
+    requests,
+  };
 }

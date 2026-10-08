@@ -1,7 +1,8 @@
 /**
  * A single-page application whose browser calls an API on another origin
- * itself: the browser sends its own cookies, and the page adds only the
- * double-submit token a write repeats.
+ * of its site itself: the browser sends its own cookies, and the page adds
+ * only the double-submit token a write repeats. Served from another site,
+ * the page is told the browser keeps the API's cookies from it.
  */
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
@@ -90,4 +91,23 @@ test("signing out from the page ends the session in the browser", async () => {
   await page.click("#sign-out");
 
   await expect.poll(async () => await cookie("sid")).toBeUndefined();
+});
+
+test("a page on another site than its API is told once, in the console, that the browser keeps its cookies from it", async ({
+  browser,
+}) => {
+  const visitor = await browser.newContext();
+  const tab = await visitor.newPage();
+  const said: string[] = [];
+  tab.on("console", (message) => {
+    if (message.type() === "warning") said.push(message.text());
+  });
+
+  /* The same page from localhost: its API, on 127.0.0.1, is then another site. */
+  await tab.goto(`${APP.replace("//127.0.0.1:", "//localhost:")}/`);
+
+  const told = () => said.filter((line) => line.includes("on another site than this page"));
+  await expect.poll(() => told().length).toBe(1);
+  expect(told()[0]).toContain("Safari sends an API on another site none of its cookies");
+  await visitor.close();
 });

@@ -80,23 +80,26 @@ function goToEntries(): PaletteEntry[] {
   return [setup, ...views];
 }
 
+/** Where recording stands, as the palette's first action reads it. */
+export type RecordingState = "recording" | "paused" | "session";
+
 /**
  * Everything the palette offers: the latest calls, every view, and the
  * actions that work from anywhere.
  *
  * @param requests - The captured requests, newest first
- * @param paused - Whether recording is paused
+ * @param recording - Whether Studio records, is paused, or shows a saved session
  * @param exportFormat - The format an export downloads in
  * @returns The entries, grouped in order
  * @example
  * ```ts
- * paletteEntries(useStudioStore.getState().requests, false, "har");
+ * paletteEntries(useStudioStore.getState().requests, "recording", "har");
  * ```
  */
 export function paletteEntries(
   requests: readonly RequestEntry[],
-  paused: boolean,
+  recording: RecordingState,
   exportFormat: ExportFormat,
 ): PaletteEntry[] {
-  return [...recentEntries(requests), ...goToEntries(), ...actionEntries(paused, exportFormat)];
+  return [...recentEntries(requests), ...goToEntries(), ...actionEntries(recording, exportFormat)];
 }

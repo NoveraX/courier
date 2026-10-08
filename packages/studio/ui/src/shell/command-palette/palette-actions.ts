@@ -11,29 +11,38 @@ import {
 } from "lucide-react";
 
 import type { ExportFormat } from "@/store/types";
-import type { PaletteEntry } from "./palette-entries";
+import type { PaletteEntry, RecordingState } from "./palette-entries";
+
+const RECORDING_LABEL: Readonly<Record<RecordingState, string>> = {
+  recording: "Pause recording",
+  paused: "Resume recording",
+  session: "Back to live requests",
+};
 
 /**
  * The palette's actions that work from anywhere: recording, the Timeline's
  * views, the theme, export, a session file shared or opened, and clearing
  * the requests — each with the shortcut that runs it outside the palette.
  *
- * @param paused - Whether recording is paused
+ * @param recording - Whether Studio records, is paused, or shows a saved session
  * @param exportFormat - The format an export downloads in
  * @returns The entries, in order
  * @example
  * ```ts
- * actionEntries(false, "har");
+ * actionEntries("recording", "har");
  * ```
  */
-export function actionEntries(paused: boolean, exportFormat: ExportFormat): PaletteEntry[] {
+export function actionEntries(
+  recording: RecordingState,
+  exportFormat: ExportFormat,
+): PaletteEntry[] {
   return [
     {
       id: "action:recording",
       group: "Actions",
-      label: paused ? "Resume recording" : "Pause recording",
+      label: RECORDING_LABEL[recording],
       meta: "",
-      icon: paused ? Play : Pause,
+      icon: recording === "recording" ? Pause : Play,
       hint: "⌘ .",
       action: { kind: "toggle-recording" },
     },

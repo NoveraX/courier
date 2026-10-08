@@ -1,5 +1,5 @@
+import { isCredentialHeader } from "@noverax/courier/internal";
 import type { RequestEntry } from "@/store/types";
-import { isCredentialHeader } from "./credential-headers";
 
 /** A header as the Headers tab lists it. */
 export interface HeaderRow {

@@ -113,3 +113,4 @@ export {
   sendsVariablesInQuery,
   toInternalMethod,
 } from "../utils/helpers";
+export { isCredentialHeader } from "../utils/is-credential-header";

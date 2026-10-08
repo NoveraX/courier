@@ -5,34 +5,37 @@
  * its shell tool and browser API, with the credentials' values left out.
  */
 import { describe, expect, it } from "vitest";
-import { isCredentialHeader } from "@/features/requests/credential-headers";
 import { headerCount, headerGroupsOf, headersAsText } from "@/features/requests/header-groups";
 import { requestSnippet, snippetLabels } from "@/features/requests/request-snippets";
-import { isCredentialHeader as serverRule } from "../../src/server/storage/without-credentials";
 import { requestEntry } from "./request-entry-fixture";
 
 describe("a credential header", () => {
-  it("is told the way Studio's server tells it", () => {
-    const names = [
-      "Authorization",
-      "proxy-authorization",
-      "Cookie",
-      "set-cookie",
-      "X-Api-Key",
-      "x-auth-token",
-      "x_session_id",
-      "X-CSRF-Token",
-      "content-type",
-      "accept",
-      "x-request-id",
-      "author",
-      "authority",
-    ];
+  const tokens = requestEntry({
+    httpMethod: "POST",
+    requestHeaders: {
+      "X-CSRFToken": "c5rf",
+      "X-XSRF-TOKEN": "x5rf",
+      "x-api-key": "k3y",
+      accept: "application/json",
+    },
+  });
 
-    for (const name of names)
-      expect([name, isCredentialHeader(name)]).toEqual([name, serverRule(name)]);
-    expect(isCredentialHeader("Authorization")).toBe(true);
-    expect(isCredentialHeader("content-type")).toBe(false);
+  it("is marked by the rule Studio's server keeps it out of what it writes down by", () => {
+    const rows = headerGroupsOf(tokens, "").find((group) => group.key === "request")?.rows ?? [];
+
+    expect(rows.map((row) => [row.name, row.secret])).toEqual([
+      ["X-CSRFToken", true],
+      ["X-XSRF-TOKEN", true],
+      ["x-api-key", true],
+      ["accept", false],
+    ]);
+  });
+
+  it("leaves a snippet without its value, a double-submit token written as one word too", () => {
+    const curl = requestSnippet(tokens, "shell").code;
+
+    expect(curl).toContain("-H 'X-CSRFToken: <redacted>'");
+    expect(curl).not.toMatch(/c5rf|x5rf|k3y/);
   });
 });
 

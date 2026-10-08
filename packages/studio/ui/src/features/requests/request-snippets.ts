@@ -1,6 +1,6 @@
+import { isCredentialHeader } from "@noverax/courier/internal";
 import { buildCurlSnippet, buildFetchSnippet, safeStringify, wholeBodyNote } from "@/lib/snippets";
 import type { RequestEntry } from "@/store/types";
-import { isCredentialHeader } from "./credential-headers";
 import { requestBodyFile } from "./request-body-file";
 import { httpMethodOf } from "./request-parts";
 

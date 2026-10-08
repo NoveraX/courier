@@ -12,36 +12,29 @@ import { exportAsHar } from "../../src/server/session-export-har";
 import { exportAsPostman } from "../../src/server/session-export-postman";
 import {
   headersWithoutCredentials,
-  isCredentialHeader,
   REDACTED,
   withoutCredentials,
 } from "../../src/server/storage/without-credentials";
 
 describe("a header that carries a credential", () => {
-  it("is told by its name, in any case", () => {
-    const credentials = [
-      "Authorization",
-      "proxy-authorization",
-      "Cookie",
-      "Set-Cookie",
-      "X-Api-Key",
-      "api-key",
-    ];
-    const others = ["accept", "content-type", "x-request-id", "user-agent", "x-trace"];
+  it("is told by its name, the double-submit token's written as one word too", () => {
+    const written = headersWithoutCredentials({
+      Authorization: "Bearer t",
+      "X-Api-Key": "k",
+      "X-CSRFToken": "c",
+      x_session_id: "s",
+      "x-request-id": "r1",
+      accept: "*/*",
+    });
 
-    expect(credentials.filter(isCredentialHeader)).toEqual(credentials);
-    expect(
-      [...others, "x-auth-token", "x_session_id", "x-csrf-token"].filter(isCredentialHeader),
-    ).toEqual(["x-auth-token", "x_session_id", "x-csrf-token"]);
-  });
-
-  it("includes the double-submit token a session repeats, written as one word", () => {
-    const tokens = ["X-CSRFToken", "x-xsrf-token", "X-XSRFToken", "csrf"];
-
-    expect(tokens.filter(isCredentialHeader)).toEqual(tokens);
-    expect(["x-csrf", "x-forwarded-for", "accept-language"].filter(isCredentialHeader)).toEqual([
-      "x-csrf",
-    ]);
+    expect(written).toEqual({
+      Authorization: REDACTED,
+      "X-Api-Key": REDACTED,
+      "X-CSRFToken": REDACTED,
+      x_session_id: REDACTED,
+      "x-request-id": "r1",
+      accept: "*/*",
+    });
   });
 
   it("keeps its name, with its value replaced", () => {

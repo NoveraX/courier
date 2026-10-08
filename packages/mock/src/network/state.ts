@@ -1,5 +1,6 @@
 import type { NetworkConfig } from "../types";
 import { isActive, routeConfigOf } from "./config-shape";
+import { switchedOff } from "./route-override-list";
 import type { NetworkHalt, TrackedAnswer } from "./stop-conditions";
 import { crossedStopCondition } from "./stop-conditions";
 
@@ -16,8 +17,8 @@ export interface NetworkState {
   /**
    * Track an answer for the stop conditions. An answer that brings the run
    * across one halts it: every setting it simulates is cleared, presets
-   * included, the stop conditions stay for the next run, and `onHalt` is
-   * told why.
+   * included, the route overrides are switched off keeping their settings,
+   * the stop conditions stay for the next run, and `onHalt` is told why.
    */
   trackRequest(duration: number, isError: boolean): void;
   /** Check if stop conditions have been met — returns reason or undefined */
@@ -64,12 +65,13 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
     if (!config?.stopConditions?.enabled || !startedAt) return undefined;
     return crossedStopCondition(config.stopConditions, startedAt, recentRequests, Date.now());
   };
-  /* A halt clears what the mock simulates and keeps what halts it, so the next run halts too. */
+  /* A halt clears what the mock simulates and keeps what halts it, so the next run halts too;
+     the route overrides stay, switched off, so they can be switched back on as they were. */
   const halt = (reason: string): void => {
     const ran = startedAt === null ? undefined : Date.now() - startedAt;
-    const stopConditions = config?.stopConditions;
+    const kept = keptThroughHalt(config);
     clear();
-    if (stopConditions) config = { stopConditions };
+    config = kept;
     recentRequests.length = 0;
     onHalt?.({ reason, durationMs: ran });
   };
@@ -161,4 +163,14 @@ export function createNetworkState(initial?: NetworkConfig): NetworkState {
       recentRequests.length = 0;
     },
   };
+}
+
+/* What a halt leaves of a config: its stop conditions, and its route overrides switched off. */
+function keptThroughHalt(config: NetworkConfig | undefined): NetworkConfig | undefined {
+  const { stopConditions, routeOverrides } = config ?? {};
+  const kept: NetworkConfig = {
+    ...(stopConditions && { stopConditions }),
+    ...(routeOverrides?.length && { routeOverrides: switchedOff(routeOverrides) }),
+  };
+  return Object.keys(kept).length > 0 ? kept : undefined;
 }

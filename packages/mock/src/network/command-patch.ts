@@ -30,7 +30,7 @@ const READERS: Array<[string, (value: unknown) => Patch]> = [
   ["uploads", (value) => ({ uploads: readUploads(value) })],
   ["errorRate", (value) => ({ errorRate: numberOr(value, 0) })],
   ["faultWeights", (value) => ({ faultWeights: listOf(value, faultWeightOf) })],
-  ["routeOverrides", (value) => ({ routeOverrides: listOf(value, routeOverrideOf) })],
+  ["routeOverrides", (value) => ({ routeOverrides: listOf(value, readRouteOverride) })],
   ["stopConditions", (value) => ({ stopConditions: stopConditionOf(value) })],
 ];
 
@@ -82,7 +82,19 @@ function faultWeightOf(value: unknown): FaultWeight | undefined {
   return { type: value.type, weight: numberOr(value.weight, 0) };
 }
 
-function routeOverrideOf(value: unknown): RouteNetworkOverride | undefined {
+/**
+ * A route override as a command sends it, read for its shape: its route
+ * and whether it is on, and each setting of its own the command gives —
+ * a delay range, a rate, faults the mock knows, upload rules.
+ *
+ * @param value - The override as the command carried it
+ * @returns The override, or `undefined` when it names no route
+ * @example
+ * ```ts
+ * readRouteOverride({ routeId: "users:list", enabled: true, errorRate: 0 });
+ * ```
+ */
+export function readRouteOverride(value: unknown): RouteNetworkOverride | undefined {
   if (!isFields(value) || typeof value.routeId !== "string") return undefined;
   const override: RouteNetworkOverride = {
     routeId: value.routeId,

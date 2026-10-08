@@ -109,6 +109,29 @@ describe("a run that crosses a stop condition", () => {
     expect(state.chaosPreset).toBe("none");
   });
 
+  it("switches the route overrides off, each keeping its settings", () => {
+    const state = createNetworkState({
+      errorRate: 0.5,
+      routeOverrides: [
+        { routeId: "users:list", enabled: true, errorRate: 1 },
+        { routeId: "files:upload", enabled: false, uploads: { maxBytes: 1024 } },
+      ],
+      stopConditions: { ...OFF, p99Threshold: 100 },
+    });
+
+    for (let i = 0; i < 10; i++) state.trackRequest(250, false);
+
+    expect(state.getGlobalConfig()).toEqual({
+      stopConditions: { ...OFF, p99Threshold: 100 },
+      routeOverrides: [
+        { routeId: "users:list", enabled: false, errorRate: 1 },
+        { routeId: "files:upload", enabled: false, uploads: { maxBytes: 1024 } },
+      ],
+    });
+    expect(state.getConfig("users", "list")?.errorRate).toBeUndefined();
+    expect(state.startedAt).toBeNull();
+  });
+
   it("ends at its longest length on time, though no answer comes", () => {
     vi.useFakeTimers();
     const state = createNetworkState({
@@ -170,7 +193,10 @@ describe("a run that crosses a stop condition", () => {
     for (let i = 0; i < 5; i++) failing.trackRequest(5, true);
     for (let i = 0; i < 10; i++) capped.trackRequest(250, false);
 
-    expect(failing.getGlobalConfig()?.routeOverrides).toBeUndefined();
+    expect(failing.getGlobalConfig()?.routeOverrides).toEqual([
+      { routeId: "users:list", enabled: false, errorRate: 1 },
+    ]);
+    expect(failing.getConfig("users", "list")?.errorRate).toBeUndefined();
     expect(capped.getGlobalConfig()?.bandwidth).toBeUndefined();
   });
 

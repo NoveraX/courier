@@ -1,6 +1,5 @@
-import { sendsVariablesInQuery } from "@noverax/courier/internal";
+import { isCredentialHeader, sendsVariablesInQuery } from "@noverax/courier/internal";
 
-import { isCredentialHeader } from "@/features/requests/credential-headers";
 import type { HeaderGroup, HeaderRow } from "@/features/requests/header-groups";
 import type { InspectorTabInfo } from "@/features/requests/inspector-tabs";
 import type { PayloadView } from "@/features/requests/payload-view";

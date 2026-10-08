@@ -1,3 +1,5 @@
+import { isCredentialHeader } from "@noverax/courier/internal";
+
 import { isPlainObject } from "../is-plain-object";
 /**
  * What Studio writes down holds no credentials.
@@ -15,36 +17,8 @@ import { isPlainObject } from "../is-plain-object";
 /** What a credential's value is replaced with. */
 export const REDACTED = "[redacted]";
 
-const CREDENTIAL_HEADERS = new Set([
-  "authorization",
-  "proxy-authorization",
-  "cookie",
-  "set-cookie",
-]);
-
-/* A word of the name, between dashes or underscores: `x-api-key`, `x-auth-token`,
-   `x_session_id` — and the double-submit tokens written as one word, Django's
-   `X-CSRFToken`, Angular's `X-XSRF-TOKEN`, that an API's session repeats. */
-const CREDENTIAL_WORDS =
-  /(?:^|[-_])(?:auth|token|secret|password|passwd|session|csrf[a-z]*|xsrf[a-z]*|api[-_]?key|apikey)(?:$|[-_])/i;
-
 /** The fields of an event or a history entry that hold headers. */
 const HEADER_FIELDS = ["headers", "requestHeaders", "responseHeaders"] as const;
-
-/**
- * Whether a header carries a credential.
- *
- * @param name - The header's name, in any case
- * @returns Whether its value is kept out of what Studio writes down
- * @example
- * ```ts
- * isCredentialHeader("X-Api-Key"); // true
- * isCredentialHeader("content-type"); // false
- * ```
- */
-export function isCredentialHeader(name: string): boolean {
-  return CREDENTIAL_HEADERS.has(name.toLowerCase()) || CREDENTIAL_WORDS.test(name);
-}
 
 /**
  * A set of headers with each credential's value replaced.

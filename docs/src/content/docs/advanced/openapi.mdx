@@ -1,0 +1,73 @@
+export const metadata = { title: "OpenAPI Export", description: "Write an API's definition as an OpenAPI 3.1 or 3.2 document — for a documentation portal, an API gateway, another team's SDK generator or a contract test.", mode: "both" }
+
+## One definition, one document
+
+The definition your client is typed from also describes the API to everyone else. `toOpenAPI` writes it as an OpenAPI document — for a documentation portal, an API gateway, another team's SDK generator, a contract test — and Courier's own import reads such a document back, so an API can go from a specification to code and back again.
+
+```ts title="scripts/openapi.ts"
+import { writeFile } from "node:fs/promises"
+import { toOpenAPI } from "@noverax/courier/openapi"
+
+import { billing } from "../api/billing"
+
+const document = toOpenAPI(billing, { info: { title: "Billing", version: "2.4.0" } })
+await writeFile("openapi.json", JSON.stringify(document, null, 2))
+```
+
+Studio's command writes the sources `courier.config.ts` declares, without a script:
+
+```bash
+npx courier-studio openapi --source billing --api-version 2.4.0 --out openapi.json
+```
+
+With no `--source`, every source is written to the folder `--out` names, one `<source>.openapi.json` each. With one source and no `--out`, the document is printed, ready for a pipe.
+
+## What becomes what
+
+| In the definition | In the document |
+| --- | --- |
+| An endpoint | An operation, whose `operationId` is its call in the client: `billing.invoices.list` |
+| A group | A tag; a nested group's tag names its parent in OpenAPI 3.2 |
+| A path parameter, `:id` | A required path parameter, `{id}` |
+| Variables of a GET, HEAD, OPTIONS or DELETE | Query parameters, required as the schema says |
+| Variables of the other verbs | The request body: JSON, or url-encoded or multipart where the endpoint's closure sends `formBody` or `FormData` |
+| A query written into the path, `models?beta=true` | A required query parameter with its one value |
+| An absolute path | The operation's own server |
+| The answer's schema | The `200` response |
+| A stream | A `text/event-stream` response: its events as `itemSchema` in 3.2, as `x-courier-event-schema` in 3.1 |
+| `session` | Security schemes: each cookie it is kept in, its `bearer` cookie as a bearer token, its double-submit header required on writes; an endpoint with `session: false` requires none |
+| `.headers()` and `idempotencyKey` | Header parameters |
+| `.meta({ summary, description })` | The operation's summary and description |
+| `deprecated` | `deprecated: true`, the reason in the description |
+
+## Schemas
+
+Schemas are written as JSON Schema 2020-12, the dialect OpenAPI 3.1 and 3.2 take, through [Standard JSON Schema](https://standardschema.dev): Zod 4 and ArkType describe their own schemas. A library without it is described by a converter you pass — Valibot's, for one:
+
+```ts
+import { toJsonSchema } from "@valibot/to-json-schema"
+
+toOpenAPI(api, { jsonSchema: (schema) => toJsonSchema(schema as never) })
+```
+
+An endpoint declared by its types alone, `.response<User>()`, has no schema at run time, and its input and answer are left unspecified. A value JSON cannot hold — a `Date` field, say — is left unspecified rather than failing its whole schema. The definitions a recursive schema carries move to the document's `components`, its references with them.
+
+## What is left out
+
+Three kinds of endpoint have no operation, and `onSkip` hears each one and why — the command says them in its log:
+
+- A channel: OpenAPI has no form for a WebSocket.
+- An endpoint the application serves itself with `.implement()`: it has no address of its own.
+- A QUERY endpoint in OpenAPI 3.1, which has no place for the method — write `openapi: "3.2.0"`.
+
+## Options
+
+| Option | What it does |
+| --- | --- |
+| `openapi` | `"3.1.0"`, the default, or `"3.2.0"` for QUERY, a stream's event schema and nested tags |
+| `info` | The document's `title`, `version` and `description`; the title defaults to the API's name, the version to `0.0.0` |
+| `servers` | Where the API is served; its absolute `baseURL` by default |
+| `jsonSchema` | A converter for schemas whose library has no Standard JSON Schema |
+| `onSkip` | Told of each endpoint the document leaves out, and why |
+
+Every document the export writes is checked in Courier's tests against the OpenAPI Initiative's own schema for its version, and read back by Courier's import.

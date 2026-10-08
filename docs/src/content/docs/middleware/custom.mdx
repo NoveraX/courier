@@ -35,6 +35,7 @@ type MiddlewareContext = {
   sessionPartition?: string            // Tells one user's calls from the next in a browser or an app
   signal?: AbortSignal                 // Fires when the caller stops waiting
   purpose?: "csrf-token"               // A request the session makes, not an endpoint's call
+  agent?: AgentCall                    // The agent the call comes from, when an MCP server made it
 }
 ```
 
@@ -104,6 +105,8 @@ export const maintenanceMiddleware = defineMiddleware("maintenance", "wrap", asy
   return next()
 })
 ```
+
+An answer whose status is not a success fails the call as the upstream's own error answer would: a caller's promise rejects with an `HTTPError` carrying that status and body, whether it called directly or through the proxy, and Studio shows the call as failed. A `2xx` answer is the call's data — a cache hit, a stub.
 
 ### Retry
 

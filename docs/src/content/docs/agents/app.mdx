@@ -1,0 +1,111 @@
+export const metadata = { title: "In Your App", description: "Mount an MCP endpoint in your application with createMcpHandler: Streamable HTTP for the agents your users and services run, behind your own authorization.", mode: "both" }
+
+## The handler
+
+`createMcpHandler` serves the endpoints marked `.agent()` over Streamable HTTP — the transport remote MCP clients connect with — as a function from a request to a response, which every framework can mount:
+
+```ts title="app/mcp/route.ts"
+import { createMcpHandler } from "@noverax/courier-mcp"
+
+const mcp = createMcpHandler({
+  authorize: (request) => apiKeys.verify(request.headers.get("authorization")),
+})
+
+export const POST = mcp.handle
+export const GET = mcp.handle
+export const OPTIONS = mcp.handle
+```
+
+It answers POST, and OPTIONS for a browser-based client; GET is answered with `405`, as the protocol expects of a server that keeps no stream open. The sources are the ones your app registered — pass `sources` to name them yourself.
+
+**Hono**:
+
+```ts
+app.all("/mcp", (c) => mcp.handle(c.req.raw))
+```
+
+**Express**, through the request and response adapters:
+
+```ts
+import { sendWebResponse, toWebRequest } from "@noverax/courier/node"
+
+app.all("/mcp", async (req, res) => {
+  await sendWebResponse(await mcp.handle(toWebRequest(req, res)), res)
+})
+```
+
+## Who may call
+
+`authorize` is required: the tools run with your app's credentials, and an MCP endpoint is reachable by anything that reaches your app. It receives the request and returns who the caller is — whatever your app knows a caller by — or turns it away:
+
+| It returns | The request |
+| --- | --- |
+| A principal — a user, a service, an API key's owner | is served, the principal reaching your middleware as `ctx.agent.principal` |
+| `null` or `undefined` | is answered `401` with `WWW-Authenticate: Bearer` |
+| A `Response` | is answered with it — an OAuth challenge naming your authorization server, for one |
+
+```ts
+const mcp = createMcpHandler({
+  authorize: async (request) => {
+    const token = request.headers.get("authorization")?.replace(/^Bearer /, "")
+    const key = token ? await db.apiKeys.find(token) : undefined
+    return key ? { team: key.team, role: key.role } : null
+  },
+})
+```
+
+A thrown `authorize` is logged, and the client is told only that it failed.
+
+## Who sees which tools
+
+`allow` decides, per caller, which tools exist for it: one it keeps from a caller is absent from its list and answered as an unknown tool when called, so its name is never confirmed. Lists that vary by caller are marked private, so a shared cache does not hand one caller's list to another.
+
+```ts
+createMcpHandler({
+  authorize,
+  allow: (tool, principal) => tool.access === "read" || principal.role === "admin",
+})
+```
+
+`allow` sees each tool's `name`, `access`, `path` and `description`. What a tool may do once called is your middleware's to decide, through `ctx.agent` — see [Who may do what](/docs/agents/overview#who-may-do-what-middleware).
+
+## From the browser
+
+A request with an `Origin` header comes from a browser page, and is served only from your app's own origin or one of `allowedOrigins` — the protocol's defence against a page on another site reaching a local server by DNS rebinding. A client that is not a browser sends no `Origin`, and is decided by `authorize` alone.
+
+```ts
+createMcpHandler({ authorize, allowedOrigins: ["https://console.example.com"] })
+```
+
+## Confirming over HTTP
+
+Under the 2026-07-28 revision a destructive call's confirmation travels inside the result, with a state the server signs: the client asks the person, then calls again with the answer. Nothing is kept between the two requests, so any replica can take the second — when every replica signs with the same `confirmSecret`:
+
+```ts
+createMcpHandler({ authorize, confirmSecret: process.env.MCP_CONFIRM_SECRET })
+```
+
+Without it, each process signs with a key of its own, which holds for a single process. The confirmation counts for that tool with those arguments, for five minutes.
+
+A client on the 2025 handshake cannot be asked over HTTP — that revision put the question on a stream a stateless server does not keep — so its destructive calls are refused, unless `allowDestructive` leaves the decision to its own approval prompt.
+
+## Options
+
+| Option | What it does |
+| --- | --- |
+| `authorize` | Who the caller is, or a refusal — required |
+| `sources` | The sources to offer; the registered ones, read per request, by default |
+| `allow` | Whether a caller may see and call a tool |
+| `allowedOrigins` | Browser origins beside your app's own |
+| `allowDestructive` | Run destructive tools without asking a person |
+| `confirmSecret` | The key confirmations are signed with, the same on every replica — 32 characters at least |
+| `instructions` | What the model is told about the tools as a whole |
+| `name`, `version` | How the server names itself (default: `courier`, and your app's version) |
+| `maxResultChars` | The longest answer handed to a model (default: 100 000) |
+| `timeoutMs` | How long a call may take when its endpoint names no timeout (default: 60 000) |
+| `maxBodyBytes` | The largest request body taken (default: 1 MiB) |
+| `jsonSchema` | A converter for schemas whose library has no Standard JSON Schema |
+
+## What it checks
+
+Every request is checked before anything runs: a body that is not JSON (`415`, `400`), a client that reads no JSON back (`406`), a body over `maxBodyBytes` (`413`), and under 2026-07-28 headers that contradict the body — `MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name` — answered `-32020`, since a gateway may have routed by the header the body contradicts. A request that names a revision the server does not speak is told which ones it does (`-32022`).

@@ -7,13 +7,14 @@
  * not another.
  */
 import type { IncomingMessage } from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { discoverAppOrigin, getAppOrigin, setAppOrigin } from "../src/app-origin";
 import { discoverNodeAppOrigin } from "../src/node";
 
 afterEach(() => {
   setAppOrigin(undefined);
+  vi.unstubAllEnvs();
 });
 
 function nodeRequest(host: string | undefined): IncomingMessage {
@@ -40,6 +41,15 @@ describe("discoverAppOrigin", () => {
 
   it("ignores an opaque origin", () => {
     discoverAppOrigin("null");
+
+    expect(getAppOrigin()).toBeUndefined();
+  });
+
+  it("takes none from a request in production, whose Host its first sender chooses", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    discoverAppOrigin("http://evil.example");
+    discoverNodeAppOrigin(nodeRequest("evil.example"));
 
     expect(getAppOrigin()).toBeUndefined();
   });

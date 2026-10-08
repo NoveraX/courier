@@ -79,4 +79,4 @@ What `attachRuntime()` needs in the application's process.
 
 | Field | |
 | --- | --- |
-| `appOrigin` | The origin the application listens on, such as `http://localhost:3000`. Studio's Playground resolves a relative `proxyPath.sse` or `proxyPath.ws` against it. Looked up in turn: this field, `COURIER_APP_URL`, `APP_URL`, then the origin the framework adapter sees on the first request. With none of them, a Playground stream or channel in proxy mode fails with `APP_ORIGIN_NOT_CONFIGURED` |
+| `appOrigin` | The origin the application listens on, such as `http://localhost:3000`. Studio's Playground resolves a relative `proxyPath.sse` or `proxyPath.ws` against it. Looked up in turn: this field, `COURIER_APP_URL`, `APP_URL`, then, in development, the origin the framework adapter sees on the first request — a deployed server never takes one from a request, whose `Host` its sender chooses. With none of them, a Playground stream or channel in proxy mode fails with `APP_ORIGIN_NOT_CONFIGURED` |

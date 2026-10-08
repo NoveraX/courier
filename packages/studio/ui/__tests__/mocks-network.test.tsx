@@ -6,9 +6,10 @@
  * fault mix grown from the catalogue and cut back, a latency preset and a
  * base and jitter of one's own, a download cap, an upload speed, size limit
  * and types, a route's own override — its faults and upload rules included —
- * sent with the ones the mock already held, the thresholds that halt a run,
- * the log of runs, Stop — which switches the route overrides off and clears
- * the upload conditions too — and a stopped mock.
+ * sent one route at a time and shown as the mock holds them — through a
+ * halt and another page's change — the thresholds that halt a run, the
+ * log of runs, Stop — which switches the route overrides off, keeping what
+ * they set, and clears the upload conditions too — and a stopped mock.
  */
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,6 +28,7 @@ vi.mock("@/socket", () => ({
 
 import { DEFAULT_STOP, PRESET_CONFIG } from "@/features/mocks/chaos-config";
 import { useStudioStore } from "@/store";
+import { handleMockEvent } from "@/store/handle-mock-events";
 import type { MockRouteEntry, MockServerInfo } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
 import { mockLog, mockServer } from "./mock-server-fixture";
@@ -474,12 +476,17 @@ describe("a route's own override", () => {
     expect(sent("mock:network:set").at(-1)).toEqual({
       action: "mock:network:set",
       serverId: "api-mock",
-      config: { routeOverrides: [{ routeId: "users:list", enabled: true, errorRate: 0.5 }] },
+      config: { routeOverride: { routeId: "users:list", enabled: true, errorRate: 0.5 } },
     });
     const toggle = screen.getByRole("switch", { name: "Override users.list" });
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     await settle(() => fireEvent.click(toggle));
-    expect(sent("mock:network:set").at(-1)).toMatchObject({ config: { routeOverrides: [] } });
+    /* Switched off, the route keeps its rate, to switch back on as it was. */
+    expect(sent("mock:network:set").at(-1)).toMatchObject({
+      config: { routeOverride: { routeId: "users:list", enabled: false, errorRate: 0.5 } },
+    });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByRole("button", { name: /users\.list/ }).textContent).toContain("50%");
   });
 
   it("keeps the global setting it was given none of, and takes one back on its reset", async () => {
@@ -496,14 +503,17 @@ describe("a route's own override", () => {
       screen.getByRole("slider", { name: "Route error rate" }),
     );
     await drag("Route delay", 300);
-    expect(sent("mock:network:set").at(-1)).toMatchObject({
+    expect(sent("mock:network:set").at(-1)).toEqual({
+      action: "mock:network:set",
+      serverId: "api-mock",
       config: {
-        routeOverrides: [
-          { routeId: "users:list", enabled: true, latency: { min: 300, max: 300, jitter: 0 } },
-        ],
+        routeOverride: {
+          routeId: "users:list",
+          enabled: true,
+          latency: { min: 300, max: 300, jitter: 0 },
+        },
       },
     });
-    expect(sent("mock:network:set").at(-1)).not.toHaveProperty("config.routeOverrides.0.errorRate");
     await drag("Route error rate", 0);
     await settle(() =>
       fireEvent.click(screen.getByRole("button", { name: "Use the global delay" })),
@@ -512,7 +522,7 @@ describe("a route's own override", () => {
     expect(sent("mock:network:set").at(-1)).toEqual({
       action: "mock:network:set",
       serverId: "api-mock",
-      config: { routeOverrides: [{ routeId: "users:list", enabled: true, errorRate: 0 }] },
+      config: { routeOverride: { routeId: "users:list", enabled: true, errorRate: 0 } },
     });
     expect(screen.getByRole("button", { name: /users\.list/ }).textContent).toContain("0%");
   });
@@ -527,7 +537,7 @@ describe("a route's own override", () => {
     expect(screen.getByRole("slider", { name: "Route delay" })).toBeTruthy();
   });
 
-  it("keeps the overrides the mock already held when another route changes", async () => {
+  it("sends the one route it changes, so the overrides the mock holds for others stay", async () => {
     const held = {
       routeId: "orders:create",
       enabled: true,
@@ -540,8 +550,72 @@ describe("a route's own override", () => {
       fireEvent.click(screen.getByRole("switch", { name: "Override users.list" })),
     );
 
-    expect(sent("mock:network:set").at(-1)).toMatchObject({
-      config: { routeOverrides: [held, { routeId: "users:list", enabled: true }] },
+    expect(sent("mock:network:set").at(-1)).toEqual({
+      action: "mock:network:set",
+      serverId: "api-mock",
+      config: { routeOverride: { routeId: "users:list", enabled: true } },
+    });
+    expect(
+      screen.getByRole("switch", { name: "Override orders.create" }).getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("shows what another page changed, and does not undo it with its own next change", async () => {
+    const mine = { routeId: "users:list", enabled: true, errorRate: 0.5 };
+    serve({ networkConfig: { latency: 0, errorRate: 0, routeOverrides: [mine] } });
+    await openShell("/mocks/network");
+
+    /* Another page switched users.list off; the mock says so to every page. */
+    await settle(() =>
+      handleMockEvent({
+        type: "mock:network:config",
+        serverId: "api-mock",
+        config: { latency: 0, errorRate: 0, routeOverrides: [{ ...mine, enabled: false }] },
+      }),
+    );
+    await settle(() =>
+      fireEvent.click(screen.getByRole("switch", { name: "Override orders.create" })),
+    );
+
+    expect(
+      screen.getByRole("switch", { name: "Override users.list" }).getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(sent("mock:network:set").at(-1)).toEqual({
+      action: "mock:network:set",
+      serverId: "api-mock",
+      config: { routeOverride: { routeId: "orders:create", enabled: true } },
+    });
+  });
+
+  it("shows the overrides switched off after the mock halted its run, and does not bring them back", async () => {
+    const failing = { routeId: "users:list", enabled: true, errorRate: 1 };
+    serve({ networkConfig: { latency: 0, errorRate: 1, routeOverrides: [failing] } });
+    await openShell("/mocks/network");
+
+    await settle(() => {
+      handleMockEvent({
+        type: "mock:network:config",
+        serverId: "api-mock",
+        config: { autoHalted: true, haltReason: "error rate 100% > 50%" },
+      });
+      handleMockEvent({
+        type: "mock:network:config",
+        serverId: "api-mock",
+        config: { latency: 0, errorRate: 0, routeOverrides: [{ ...failing, enabled: false }] },
+      });
+    });
+    await settle(() =>
+      fireEvent.click(screen.getByRole("switch", { name: "Override orders.create" })),
+    );
+
+    expect(
+      screen.getByRole("switch", { name: "Override users.list" }).getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(screen.getByRole("button", { name: /users\.list/ }).textContent).toContain("100%");
+    expect(sent("mock:network:set").at(-1)).toEqual({
+      action: "mock:network:set",
+      serverId: "api-mock",
+      config: { routeOverride: { routeId: "orders:create", enabled: true } },
     });
   });
 
@@ -556,17 +630,22 @@ describe("a route's own override", () => {
       action: "mock:network:set",
       serverId: "api-mock",
       config: {
-        routeOverrides: [
-          { routeId: "orders:create", enabled: true, faultTypes: ["413"], errorRate: 1 },
-        ],
+        routeOverride: {
+          routeId: "orders:create",
+          enabled: true,
+          faultTypes: ["413"],
+          errorRate: 1,
+        },
       },
     });
     expect(screen.getByRole("button", { name: /orders\.create/ }).textContent).toContain(
       "100% · 413",
     );
     await settle(() => fireEvent.click(screen.getByRole("button", { name: "Take HTTP 413 out" })));
-    expect(sent("mock:network:set").at(-1)).toMatchObject({
-      config: { routeOverrides: [{ routeId: "orders:create", enabled: true, errorRate: 1 }] },
+    expect(sent("mock:network:set").at(-1)).toEqual({
+      action: "mock:network:set",
+      serverId: "api-mock",
+      config: { routeOverride: { routeId: "orders:create", enabled: true, errorRate: 1 } },
     });
   });
 
@@ -587,13 +666,11 @@ describe("a route's own override", () => {
       action: "mock:network:set",
       serverId: "api-mock",
       config: {
-        routeOverrides: [
-          {
-            routeId: "orders:create",
-            enabled: true,
-            uploads: { maxBytes: 102_400, accept: [".csv"] },
-          },
-        ],
+        routeOverride: {
+          routeId: "orders:create",
+          enabled: true,
+          uploads: { maxBytes: 102_400, accept: [".csv"] },
+        },
       },
     });
   });
@@ -685,11 +762,14 @@ describe("Stop and a stopped mock", () => {
     await settle(() => fireEvent.click(within(condition()).getByRole("button", { name: /Stop/ })));
 
     expect(sent("mock:network:set")).toMatchObject([
-      { config: { latency: 0, bandwidth: 0, routeOverrides: [] }, preset: "none" },
+      {
+        config: { latency: 0, bandwidth: 0, routeOverrides: [{ ...override, enabled: false }] },
+        preset: "none",
+      },
     ]);
     const toggle = screen.getByRole("switch", { name: "Override users.list" });
     expect(toggle.getAttribute("aria-checked")).toBe("false");
-    expect(useMockStore.getState().servers["api-mock"]?.routeOverrides).toEqual([
+    expect(useMockStore.getState().servers["api-mock"]?.networkConfig?.routeOverrides).toEqual([
       { ...override, enabled: false },
     ]);
   });

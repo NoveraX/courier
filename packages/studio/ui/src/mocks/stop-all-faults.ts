@@ -1,12 +1,13 @@
 import { routeOverridesOf } from "@/features/mocks/route-overrides";
 import { getSocket } from "@/socket";
-import type { MockServerInfo } from "@/store/mock-slice";
+import type { MockServerInfo, NetworkConfig } from "@/store/mock-slice";
 import { useMockStore } from "@/store/mock-slice";
 
 /**
  * Stop everything the mock simulates: its chaos, its delay, its bandwidth
- * cap, its upload conditions, and every route override, which keeps its
- * values but is switched off.
+ * cap, its upload conditions, and every route override, which the mock
+ * keeps switched off with its settings — as a halt leaves them — so a
+ * route can be switched back on as it was.
  *
  * @param server - The mock server
  * @example
@@ -16,15 +17,23 @@ import { useMockStore } from "@/store/mock-slice";
  */
 export function stopAllFaults(server: MockServerInfo): void {
   const { serverId } = server;
-  const store = useMockStore.getState();
-  for (const override of routeOverridesOf(server)) {
-    if (override.enabled) store.setRouteOverride(serverId, { ...override, enabled: false });
-  }
-  store.updateServer(serverId, {
+  const routeOverrides = routeOverridesOf(server).map((override) => ({
+    ...override,
+    enabled: false,
+  }));
+  const stopped = { latency: 0, bandwidth: 0, uploads: {}, routeOverrides };
+  const networkConfig: NetworkConfig = {
+    ...server.networkConfig,
+    ...stopped,
+    errorRate: 0,
+    faultWeights: [],
+  };
+  useMockStore.getState().updateServer(serverId, {
     latencyPreset: "none",
     latencyStartedAt: null,
     chaosPreset: "none",
     chaosStartedAt: null,
+    networkConfig,
   });
 
   const socket = getSocket();
@@ -33,7 +42,7 @@ export function stopAllFaults(server: MockServerInfo): void {
   socket.emit("mock:command", {
     action: "mock:network:set",
     serverId,
-    config: { latency: 0, bandwidth: 0, uploads: {}, routeOverrides: [] },
+    config: stopped,
     preset: "none",
   });
   socket.emit("mock:command", {

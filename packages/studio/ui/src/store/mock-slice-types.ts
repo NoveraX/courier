@@ -14,7 +14,6 @@ import type {
   LatencyPreset,
   NetworkConfig,
   NetworkPreset,
-  RouteOverride,
   StopCondition,
 } from "./mock-slice-network-types";
 
@@ -55,7 +54,6 @@ export interface MockServerInfo {
   chaosPreset: ChaosPreset;
   chaosStartedAt?: number | null;
   stopConditions?: StopCondition;
-  routeOverrides?: RouteOverride[];
   /** Managed lifecycle */
   managed: boolean;
   processStatus: ProcessStatus;
@@ -178,5 +176,4 @@ export interface MockSliceState {
   toggleLogsPaused: () => void;
   resetMockState: () => void;
   addExperimentEvent: (event: ExperimentEvent) => void;
-  setRouteOverride: (serverId: string, override: RouteOverride) => void;
 }

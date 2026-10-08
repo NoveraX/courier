@@ -21,6 +21,7 @@ import {
   routeOverridesOf,
   withGlobalField,
   withOwnField,
+  withRouteOverride,
 } from "@/features/mocks/route-overrides";
 import type { ExperimentEvent, MockRequestLog } from "@/store/mock-slice";
 import { mockLog, mockServer } from "./mock-server-fixture";
@@ -198,36 +199,54 @@ describe("the route overrides", () => {
     },
   ];
 
-  it("include the ones the mock already held when the page opened", () => {
+  it("are the ones the mock holds, switched on and off alike", () => {
     const server = mockServer({
-      routeOverrides: [{ routeId: "users:list", enabled: false, errorRate: 0.5 }],
       networkConfig: {
         latency: 0,
         errorRate: 0,
         routeOverrides: [
-          { routeId: "users:list", enabled: true },
+          { routeId: "users:list", enabled: false, errorRate: 0.5 },
           { routeId: "orders:create", enabled: true, latency: { min: 300, max: 300, jitter: 0 } },
         ],
       },
     });
 
-    expect(routeOverridesOf(server).map((o) => [o.routeId, o.enabled])).toEqual([
-      ["users:list", false],
-      ["orders:create", true],
+    expect(routeOverridesOf(server).map((o) => [o.routeId, o.enabled, o.errorRate])).toEqual([
+      ["users:list", false, 0.5],
+      ["orders:create", true, undefined],
+    ]);
+  });
+
+  it("take one route's in place of the one it had, as the mock does, dropping one with nothing to keep", () => {
+    const held = [
+      { routeId: "users:list", enabled: true, errorRate: 1 },
+      { routeId: "orders:create", enabled: true, latency: { min: 300, max: 300, jitter: 0 } },
+    ];
+
+    expect(
+      withRouteOverride(held, { routeId: "users:list", enabled: false, errorRate: 1 }),
+    ).toEqual([{ routeId: "users:list", enabled: false, errorRate: 1 }, held[1]]);
+    expect(withRouteOverride(held, { routeId: "users:list", enabled: false })).toEqual([held[1]]);
+    expect(withRouteOverride([], { routeId: "files:upload", enabled: true })).toEqual([
+      { routeId: "files:upload", enabled: true },
     ]);
   });
 
   it("list every route with what its override does", () => {
     const server = mockServer({
       routes,
-      routeOverrides: [
-        {
-          routeId: "orders:create",
-          enabled: true,
-          latency: { min: 300, max: 300, jitter: 0 },
-          errorRate: 0.5,
-        },
-      ],
+      networkConfig: {
+        latency: 0,
+        errorRate: 0,
+        routeOverrides: [
+          {
+            routeId: "orders:create",
+            enabled: true,
+            latency: { min: 300, max: 300, jitter: 0 },
+            errorRate: 0.5,
+          },
+        ],
+      },
     });
 
     expect(
@@ -283,7 +302,7 @@ describe("a route override's own settings", () => {
           avgLatency: 0,
         },
       ],
-      routeOverrides: [shielded],
+      networkConfig: { latency: 0, errorRate: 1, routeOverrides: [shielded] },
     });
 
     expect(hasOwnSettings(shielded)).toBe(true);

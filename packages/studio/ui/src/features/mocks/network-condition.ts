@@ -31,7 +31,7 @@ export interface NetworkCondition {
  * ```
  */
 export function networkConditionOf(
-  server: Pick<MockServerInfo, "networkConfig" | "routeOverrides">,
+  server: Pick<MockServerInfo, "networkConfig">,
 ): NetworkCondition {
   const config = server.networkConfig;
   return {

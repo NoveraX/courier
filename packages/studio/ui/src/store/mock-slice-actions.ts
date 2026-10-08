@@ -8,7 +8,6 @@
 
 import type { StoreApi } from "zustand";
 import { mockServerOf } from "./mock-server-of";
-import type { RouteOverride } from "./mock-slice-network-types";
 import type {
   MockCollectionEntry,
   MockRequestLog,
@@ -134,17 +133,6 @@ export function createMockSliceActions(set: Setter, get: Getter): MockActions {
       set((state) => ({
         experimentHistory: [event, ...state.experimentHistory].slice(0, MAX_EXPERIMENT_HISTORY),
       }));
-    },
-
-    setRouteOverride(serverId: string, override: RouteOverride) {
-      set((state) =>
-        patchServer(state, serverId, (server) => ({
-          routeOverrides: [
-            ...(server.routeOverrides ?? []).filter((r) => r.routeId !== override.routeId),
-            override,
-          ],
-        })),
-      );
     },
   };
 }

@@ -15,8 +15,8 @@ export interface OverrideRow {
 }
 
 /**
- * Every route override the mock knows of: the ones set on this page, and
- * the ones the mock already held when the page opened.
+ * Every route override the mock holds, switched on or off — the mock keeps
+ * them all, so every page, a reload and a restart of Studio show the same.
  *
  * @param server - The mock server
  * @returns The overrides, one per route
@@ -25,15 +25,32 @@ export interface OverrideRow {
  * routeOverridesOf(server).filter((o) => o.enabled);
  * ```
  */
-export function routeOverridesOf(
-  server: Pick<MockServerInfo, "routeOverrides" | "networkConfig">,
+export function routeOverridesOf(server: Pick<MockServerInfo, "networkConfig">): RouteOverride[] {
+  return server.networkConfig?.routeOverrides ?? [];
+}
+
+/**
+ * The overrides with one route's in place of the one it had, or added, as
+ * the mock takes a route's override: one switched off with nothing of its
+ * own leaves the list.
+ *
+ * @param overrides - The overrides
+ * @param override - The route's override
+ * @returns The overrides
+ * @example
+ * ```ts
+ * withRouteOverride(routeOverridesOf(server), { routeId: "users:list", enabled: true, errorRate: 0 });
+ * ```
+ */
+export function withRouteOverride(
+  overrides: readonly RouteOverride[],
+  override: RouteOverride,
 ): RouteOverride[] {
-  const local = server.routeOverrides ?? [];
-  const known = new Set(local.map((o) => o.routeId));
-  return [
-    ...local,
-    ...(server.networkConfig?.routeOverrides ?? []).filter((o) => !known.has(o.routeId)),
-  ];
+  const keep = override.enabled || setsAnything(override);
+  const at = overrides.findIndex((each) => each.routeId === override.routeId);
+  if (at === -1) return keep ? [...overrides, override] : [...overrides];
+  if (!keep) return overrides.filter((_, index) => index !== at);
+  return overrides.map((each, index) => (index === at ? override : each));
 }
 
 /** A setting a route override can take over from the global ones. */
@@ -145,7 +162,7 @@ function tagOf(override: RouteOverride): Pick<OverrideRow, "tag" | "tone"> {
  * ```
  */
 export function overrideRows(
-  server: Pick<MockServerInfo, "routes" | "routeOverrides" | "networkConfig">,
+  server: Pick<MockServerInfo, "routes" | "networkConfig">,
 ): OverrideRow[] {
   const overrides = new Map(routeOverridesOf(server).map((o) => [o.routeId, o]));
   return server.routes.map((route) => {

@@ -10,6 +10,7 @@ import type { EndpointNode } from "@/features/explorer/explorer-model";
 import { methodLabelOf } from "@/features/explorer/method-label";
 import { cn } from "@/lib/utils";
 import { EndpointCalls } from "./endpoint-calls";
+import { EndpointContract } from "./endpoint-contract";
 import { EndpointDefinition } from "./endpoint-definition";
 import { EndpointFigures } from "./endpoint-figures";
 import { EndpointLatency } from "./endpoint-latency";
@@ -30,7 +31,8 @@ interface EndpointSheetProps {
 /**
  * An endpoint's panel: its method, health, name and URL, four figures, the
  * way to its calls in the Timeline and to the Playground, its latency
- * chart, its definition and its newest calls — arriving one after another
+ * chart, its definition, its contract against its real answers and its
+ * newest calls — arriving one after another
  * as the sheet springs in, as the inspector's parts do.
  *
  * @param props - The endpoint, the time, the slow threshold, and what closes the panel and opens a call
@@ -116,6 +118,7 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
       >
         <EndpointLatency endpoint={e} slowMs={slowMs} />
         <EndpointDefinition endpoint={e} now={now} />
+        <EndpointContract endpoint={e} now={now} />
         <EndpointCalls endpoint={e} slowMs={slowMs} onOpen={onOpenCall} />
       </Reveal>
     </SheetFrame>

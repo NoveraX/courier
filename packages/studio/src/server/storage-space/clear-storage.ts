@@ -7,7 +7,14 @@ import type { StorageKind } from "./storage-kinds";
 export interface ClearDeps {
   stores: Pick<
     StudioStores,
-    "requestLog" | "mockLog" | "playgroundHistory" | "sessions" | "view" | "storage" | "pins"
+    | "requestLog"
+    | "mockLog"
+    | "playgroundHistory"
+    | "sessions"
+    | "view"
+    | "storage"
+    | "pins"
+    | "answers"
   >;
   root: string;
   resetMockStores: () => Promise<void>;
@@ -27,6 +34,8 @@ async function clearKind(kind: StorageKind, { stores, root, resetMockStores }: C
     case "sessions":
       stores.sessions.clear();
       return stores.view.showLive();
+    case "observations":
+      return stores.answers.clear();
     case "mockStores":
       return resetMockStores();
     case "backups":

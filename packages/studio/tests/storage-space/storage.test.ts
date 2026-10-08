@@ -41,6 +41,15 @@ function filled(root: string): StudioStores {
     stats: { totalRequests: 0, successCount: 0, errorCount: 0, avgDuration: 0, sources: [] },
     apps: [],
   } as never);
+  stores.answers.observe({
+    source: "shop",
+    endpoint: "products.get",
+    shape: { "": "object", id: "string" },
+    cut: false,
+    place: "api.example.com",
+    at: 1,
+  });
+  stores.answers.flush();
   mkdirSync(join(root, ".courier", "mocks"), { recursive: true });
   writeFileSync(join(root, ".courier", "mocks", "shop-1234abcd.sqlite"), "x".repeat(4096));
   mkdirSync(join(root, ".courier", "backups", "1791173744326-00eb02a8"), { recursive: true });
@@ -71,6 +80,7 @@ describe("the storage report", () => {
       ["mockLogs", 1, 500],
       ["playground", 3, undefined],
       ["sessions", 1, undefined],
+      ["observations", 1, undefined],
       ["mockStores", 1, undefined],
       ["backups", 1, undefined],
     ]);
@@ -95,14 +105,20 @@ describe("clearing the storage", () => {
     expect(resetMockStores).not.toHaveBeenCalled();
   });
 
-  it("resets the mocks' stores, the mocks' logs and the Playground's history when named", async () => {
+  it("resets the mocks' stores, the mocks' logs, the Playground's history and the answer observations when named", async () => {
     const root = project();
     const stores = filled(root);
     const resetMockStores = vi.fn(async () => {});
 
-    await clearStorage(["mockLogs", "playground", "mockStores"], { stores, root, resetMockStores });
+    await clearStorage(["mockLogs", "playground", "mockStores", "observations"], {
+      stores,
+      root,
+      resetMockStores,
+    });
 
     expect(kindOf(stores, root, "mockLogs")?.count).toBe(0);
+    expect(kindOf(stores, root, "observations")).toMatchObject({ count: 0, bytes: 0 });
+    expect(stores.answers.all()).toEqual([]);
     expect(stores.playgroundHistory.entries()).toEqual([]);
     expect(resetMockStores).toHaveBeenCalledOnce();
   });

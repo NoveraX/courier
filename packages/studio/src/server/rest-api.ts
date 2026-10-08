@@ -6,6 +6,7 @@ import { apiNotFound } from "./api-not-found";
 import { type ApisRouteDeps, registerApisRoutes } from "./apis-routes";
 import { registerConfigDeclareRoutes } from "./config-declare-routes";
 import type { ConfigEditDeps } from "./config-edit/declare-alone";
+import { type ContractRouteDeps, registerContractRoutes } from "./contract-drift/contract-routes";
 import type { DemoLimits } from "./demo/demo-limits";
 import { DEMO_WRITE_REFUSAL } from "./demo/demo-refusals";
 import { DEMO_MAX_BODY, demoRestGuard } from "./demo/demo-rest-guard";
@@ -42,6 +43,8 @@ export interface RestApiDeps {
   storage: StorageRouteDeps;
   /** The project and the sessions a session's calls are saved as a test from. */
   tests: RecordedTestRouteDeps;
+  /** The project, and what its endpoints' answers were seen to hold. */
+  contract: ContractRouteDeps;
   /** The token a writing route asks for. */
   token: StudioToken;
   /** The visitors' counts, when Studio serves a public demo. */
@@ -67,7 +70,7 @@ export interface RestApiDeps {
 export function registerRestApi(
   app: ReturnType<typeof express>,
   policy: StudioOriginPolicy,
-  { apis, configEdit, mocksEdit, sessions, storage, tests, token, demo }: RestApiDeps,
+  { apis, configEdit, mocksEdit, sessions, storage, tests, contract, token, demo }: RestApiDeps,
 ): void {
   app.use(compression());
   /* Before anything reads a body: the API is for the Studio UI, not for every
@@ -87,6 +90,7 @@ export function registerRestApi(
   registerSessionRoutes(app, sessions);
   registerSessionFileRoutes(app, sessions);
   registerRecordedTestRoutes(app, tests);
+  registerContractRoutes(app, contract);
   registerStorageRoutes(app, storage);
   registerMockDeclareRoutes(app, mocksEdit);
   registerConfigDeclareRoutes(app, configEdit);

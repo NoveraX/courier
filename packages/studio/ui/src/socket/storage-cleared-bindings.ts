@@ -1,5 +1,5 @@
 import type { Socket } from "socket.io-client";
-
+import { useContractStore } from "@/features/contract/contract-store";
 import { useStudioStore } from "@/store";
 import { useMockStore } from "@/store/mock-slice";
 import type { StudioState } from "@/store/store-types";
@@ -39,6 +39,7 @@ export function bindStorageCleared(socket: Socket, store: () => ClearedStore): (
     else if (kinds.has("requests") && studio.shownSession === null) studio.clearRequests();
     if (kinds.has("mockLogs")) useMockStore.setState({ logs: [] });
     if (kinds.has("playground")) studio.clearPlaygroundHistory();
+    if (kinds.has("observations")) useContractStore.setState({ byEndpoint: new Map() });
   };
   /* The room the database takes, as Studio says it on connecting, every so often, and after a clear. */
   const onSize = (raw: unknown): void => {

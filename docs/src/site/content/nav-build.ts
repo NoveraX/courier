@@ -75,6 +75,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Mock Servers", href: "/docs/studio/mock-servers" },
       { title: "Network Conditions", href: "/docs/studio/network-conditions" },
       { title: "Session Files", href: "/docs/studio/session-files" },
+      { title: "Contract Drift", href: "/docs/studio/contract-drift" },
       { title: "How Studio Loads the Project", href: "/docs/studio/project-loading" },
     ],
   },

@@ -1,0 +1,43 @@
+export const metadata = { title: "Contract Drift", description: "Studio sets each endpoint's real answers beside its response schema: confirmed by traffic, drifted from it, or not observed yet — each difference with when it was first seen, how often and from where, and the fields to declare.", mode: "both" }
+
+A response schema says what an endpoint answers. Its real answers say what it does. Studio watches both: each endpoint with a response schema is **confirmed by traffic** while every answer fits its schema, **drifted from its schema** once an answer does not, or **not observed yet** while no answer was seen. A field the backend started sending, a number that became a string, a field that stopped coming — each shows in the Explorer the moment it happens, before it becomes a bug report.
+
+## What Studio watches
+
+Before the response schema reads an answer, Courier tells Studio its shape: each place in it — `user.id`, `items[].price` — with the JSON types it came as. That is the answer as it came, so Studio sees a field even when the schema drops it; it never sees a value. Studio counts each shape for its endpoint, and sets it beside what the response schema declares:
+
+| Difference | When |
+| --- | --- |
+| Not in the schema | A field the schema does not name, under an object that takes no unnamed keys. A Zod object drops it, so the app never sees it. Only the outermost such field is named: what lies inside it is part of it. |
+| Another type | A field that came as a type the schema does not take there: a number where it declares a string, `null` where it is not nullable. |
+| Missing | A field the schema requires — under required objects — that some answers lacked. |
+
+A record's keys are data, not names: `z.record(z.string(), z.number())` takes any key, and its values are checked against the record's value. An object that takes unnamed keys — `z.looseObject`, `.passthrough()` — takes any field. A place the schema leaves unconstrained takes anything.
+
+## In the Explorer
+
+An endpoint whose answers differ from its schema is marked **drifted** in **Explorer → Endpoints**. Its panel's **Contract** section says how it stands, and for each difference: the field, how it differs, when it was first and last seen, in how many of the answers seen, and the hosts that sent them — your staging API, a mock, production behind a tunnel.
+
+**Declare in its response schema** writes the fields the schema should declare so the answers fit it, for Zod when the schema is Zod's, under the object each goes in; **Copy** takes them to paste into the schema. For a list of products whose items came with a `rating` and a numeric `stock`, they go in the item's object:
+
+```ts
+import { z } from "zod"
+
+export const Product = z.object({
+  id: z.string(),
+  rating: z.number().optional(),
+  stock: z.number(),
+})
+```
+
+- A field not every answer held is optional; one that came as `null` too is nullable.
+- A field that came as another type is that type — or the union with the declared one, when some answers still came as it.
+- A required field some answers lacked is made optional, an object or a list kept as it is declared: `seller: ….optional()`.
+
+Once the schema is fixed, **Forget what was seen** clears what Studio counted for the endpoint, so its next answers are set beside the schema afresh. Studio checks every answer against the schema that is loaded now: fix the schema, and the differences it settles are gone at once.
+
+## How much Studio keeps
+
+What Studio counts stays small however heavy the traffic: an answer's first 1000 places at most, 16 levels deep, an array's first 20 items; 500 fields per endpoint, 10 hosts per field, 1000 endpoints. An answer larger than that is counted as cut, and the Contract section says how many were. Studio counts in memory and writes to `.courier/studio.db` every two seconds, so it costs one write per endpoint, not one per answer.
+
+The counts are kept across restarts, as the rest of what Studio shows is. **Settings → Storage** sizes them as **Answer observations** and clears them with the rest. A stream and a channel have no response schema to set their answers beside, and an endpoint without a response schema has no contract to check.

@@ -30,6 +30,7 @@ import type {
   RequestAbortEvent,
   RequestEndEvent,
   RequestErrorEvent,
+  RequestShapeEvent,
   RequestStartEvent,
 } from "./request";
 import type {
@@ -46,6 +47,7 @@ export type AnyStudioEvent =
   | RequestEndEvent
   | RequestErrorEvent
   | RequestAbortEvent
+  | RequestShapeEvent
   | HttpFetchStartEvent
   | HttpFetchEndEvent
   | HttpFetchErrorEvent

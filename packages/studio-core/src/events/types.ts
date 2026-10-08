@@ -13,6 +13,7 @@ export type EventType =
   | "request:end"
   | "request:error"
   | "request:abort"
+  | "request:shape"
   // HTTP layer
   | "http:fetch:start"
   | "http:fetch:end"

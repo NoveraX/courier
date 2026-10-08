@@ -37,6 +37,20 @@ export interface RequestAgent {
   client?: string;
 }
 
+/**
+ * The shape of a 2xx answer as it came back, before the endpoint's response
+ * schema read it: each place — `user.id`, `items[].price` — with the JSON
+ * types seen there. Studio's server sets it beside the schema to follow the
+ * contract's drift; it goes to no page.
+ */
+export interface RequestShapeEvent extends StudioEvent {
+  type: "request:shape";
+  requestId: string;
+  shape: Readonly<Record<string, string>>;
+  /** The answer was larger or deeper than a shape walks */
+  cut: boolean;
+}
+
 export interface RequestEndEvent extends StudioEvent {
   type: "request:end";
   requestId: string;

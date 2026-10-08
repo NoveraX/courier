@@ -50,6 +50,7 @@ export type {
   RequestAgent,
   RequestEndEvent,
   RequestErrorEvent,
+  RequestShapeEvent,
   RequestStartEvent,
   RequestTiming,
   SourceMap,

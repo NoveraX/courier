@@ -215,7 +215,7 @@ The same settings follow any head, in any order, and a base built with `courier(
 | `.retry({ limit, delay, backoff, retryOn, mutations })` | its retry policy, in `retryMiddleware`'s terms; a write is retried only with `mutations: true` |
 | `.meta(values)` | values for your own tooling; the runtime ignores them |
 | `.cache({ revalidate, tags })` | how long a read's answer keeps — offered on a read alone |
-| `.reads()` | a read sent with a body, over POST; refused on `.put()`, `.patch()` and `.del()` |
+| `.reads()` | a read sent with a body, over POST; refused on `.put()`, `.patch()` and `.del()`. A write declared one loses what guards a write — see [User Sessions](/docs/server-side/session#writes-another-site-sets-off) |
 
 A verb also takes options for that endpoint alone:
 

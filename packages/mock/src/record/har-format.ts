@@ -25,9 +25,15 @@ export interface HarEntry {
   };
   /** Courier-specific metadata */
   _courier: {
+    /** The source the call was made to, in a log of several APIs' calls */
+    source?: string;
     group: string;
     method: string;
     variables?: unknown;
+    /** Where a value was replaced because its name says it holds a secret */
+    redacted?: string[];
+    /** The parts kept only in part, being larger than the recording kept whole */
+    partial?: Array<"variables" | "response">;
   };
 }
 

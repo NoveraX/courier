@@ -54,5 +54,8 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
+  },
+  "overrides": {
+    "shell-quote": "^1.12.0"
   }
 }

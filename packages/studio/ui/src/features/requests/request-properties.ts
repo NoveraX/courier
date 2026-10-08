@@ -45,6 +45,15 @@ export function requestProperties(r: RequestEntry, context: PropertyContext): Re
     { label: "Request ID", value: r.id, mono: true },
     { label: "Runtime", value: runtime, mono: false },
   ];
+  if (r.agent) {
+    properties.push({
+      label: "Agent tool",
+      value: `${r.agent.tool} · ${r.agent.access}`,
+      mono: true,
+    });
+    if (r.agent.client)
+      properties.push({ label: "Agent client", value: r.agent.client, mono: false });
+  }
   if (context.sessionName)
     properties.push({ label: "Session", value: context.sessionName, mono: false });
   properties.push({ label: "Started at", value: formatAbsoluteTime(r.startedAt), mono: true });

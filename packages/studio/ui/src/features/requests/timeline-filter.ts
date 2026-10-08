@@ -75,7 +75,8 @@ export function dimensionValue(r: RequestEntry, dimension: FilterDimension): str
     case "group":
       return r.group ?? "";
     case "mode":
-      return r.mode;
+      /* An agent's call runs in-process, as a direct one does; who asked is what tells it apart. */
+      return r.agent ? "agent" : r.mode;
     case "type":
       return r.type ?? "query";
   }
@@ -100,6 +101,7 @@ function matchesSearch(r: RequestEntry, state: RequestState, search: string): bo
     httpMethodOf(r),
     STATE_META[state].label,
     r.transport ?? "http",
+    r.agent ? `agent ${r.agent.tool} ${r.agent.client ?? ""}` : "",
   ];
   return haystack.join(" ").toLowerCase().includes(query);
 }

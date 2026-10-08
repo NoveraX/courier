@@ -10,6 +10,7 @@ export type {
 
 export type {
   HttpVersion,
+  RequestAgent,
   RequestEntry,
   RequestStatus,
   StreamEventRecord,

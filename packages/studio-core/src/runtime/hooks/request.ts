@@ -44,6 +44,7 @@ export function wireRequestHooks(
         ...(e.httpMethod && { httpMethod: e.httpMethod }),
         ...(e.endpointType && { endpointType: e.endpointType }),
         ...(e.purpose && { purpose: e.purpose }),
+        ...(e.agent && { agent: e.agent }),
       }),
     );
   };

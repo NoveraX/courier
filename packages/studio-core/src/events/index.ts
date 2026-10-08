@@ -52,6 +52,7 @@ export type {
 export type {
   ProxyClientTimingEvent,
   RequestAbortEvent,
+  RequestAgent,
   RequestEndEvent,
   RequestErrorEvent,
   RequestStartEvent,

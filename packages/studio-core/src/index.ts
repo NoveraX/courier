@@ -47,6 +47,7 @@ export type {
   ProxyReceiveEvent,
   ProxyRespondEvent,
   RequestAbortEvent,
+  RequestAgent,
   RequestEndEvent,
   RequestErrorEvent,
   RequestStartEvent,

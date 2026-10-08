@@ -68,6 +68,22 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     httpVersion: httpVersionOf(raw.httpVersion),
     sessionId: String(raw.sessionId ?? ""),
     callerRuntimeId: optionalString(raw.callerRuntimeId),
+    agent: agentOf(raw.agent),
+  };
+}
+
+const ACCESS: ReadonlySet<string> = new Set(["read", "write", "destructive"]);
+
+/* The agent a request ran for, kept only when the page says it in the shape Studio gave it. */
+function agentOf(value: unknown): SavedRequest["agent"] {
+  if (typeof value !== "object" || value === null) return undefined;
+  const { tool, access, client } = value as Record<string, unknown>;
+  if (typeof tool !== "string" || typeof access !== "string" || !ACCESS.has(access))
+    return undefined;
+  return {
+    tool,
+    access: access as "read" | "write" | "destructive",
+    ...(typeof client === "string" && { client }),
   };
 }
 

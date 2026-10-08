@@ -56,6 +56,8 @@ export interface SavedRequest {
   sessionId: string;
   /** The runtime that made a proxied call, when it said so. */
   callerRuntimeId?: string | undefined;
+  /** The agent tool the call ran for, when an MCP server made it. */
+  agent?: { tool: string; access: "read" | "write" | "destructive"; client?: string } | undefined;
 }
 
 export interface SessionStats {

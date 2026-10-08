@@ -1,5 +1,6 @@
 import { isRecord, optNum, optStr, str } from "@/store/event-helpers";
 import { httpVersionOf } from "@/store/http-version";
+import { readAgent } from "@/store/read-agent";
 import type { RequestEntry, RequestStatus, RequestTiming } from "@/store/types";
 
 const STATUSES: ReadonlySet<string> = new Set<RequestStatus>([
@@ -80,6 +81,7 @@ export function requestFromSaved(raw: unknown): RequestEntry | undefined {
     variables: raw.variables,
     variablesCutFrom: optNum(raw.variablesCutFrom),
     mode: raw.mode === "proxy" ? "proxy" : "direct",
+    agent: readAgent(raw.agent),
     type: raw.type === "query" || raw.type === "mutation" ? raw.type : undefined,
     status: isStatus(raw.status) ? raw.status : "success",
     statusCode: optNum(raw.statusCode),

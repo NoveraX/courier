@@ -24,6 +24,15 @@ export interface RequestStartEvent extends StudioEvent {
    * for before a write that found none.
    */
   purpose?: "csrf-token";
+  /** The agent tool the call ran for, when an MCP server made it, and the client as it named itself. */
+  agent?: RequestAgent;
+}
+
+/** An agent's call, as Studio shows it: the tool, what it declared it does, and the client. */
+export interface RequestAgent {
+  tool: string;
+  access: "read" | "write" | "destructive";
+  client?: string;
 }
 
 export interface RequestEndEvent extends StudioEvent {

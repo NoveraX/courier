@@ -1,0 +1,71 @@
+{
+  "name": "@noverax/courier-mcp",
+  "version": "0.0.0",
+  "description": "MCP server for @noverax/courier — the endpoints you mark .agent(), offered as tools to AI agents over stdio and Streamable HTTP",
+  "keywords": [
+    "courier",
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "tools"
+  ],
+  "author": "NoveraX",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoveraX/courier.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://courier.noverax.cloud",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "sideEffects": false,
+  "bin": {
+    "courier-mcp": "lib/cli.js"
+  },
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsdown --watch"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@noverax/courier-studio-core": "*",
+    "citty": "^0.2.2"
+  },
+  "peerDependencies": {
+    "@noverax/courier": "*"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.3.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@noverax/courier": "*"
+  }
+}

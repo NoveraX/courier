@@ -1,0 +1,35 @@
+export const metadata = { title: "Studio for Your Agent", description: "Let the agent in your editor read what Studio recorded — the failed requests with their bodies, the mocks and their scenarios — and switch a mock's scenario, over MCP.", mode: "both" }
+
+## Debugging without copying
+
+The agent you code with can read Studio for itself. `courier-studio mcp` serves the running Studio over MCP: the requests it recorded, the one that failed in full, the mocks it runs. Ask *why does checkout fail?* and the agent lists the failed requests, reads the one that broke — its variables, the answer, the middleware it went through — and finds the cause, with nothing pasted from Studio into the chat.
+
+```bash
+claude mcp add courier-studio -- npx courier-studio mcp
+```
+
+In Cursor or VS Code, add the same command to `.cursor/mcp.json` or `.vscode/mcp.json`, as [In Your Editor](/docs/agents/editor#add-it-to-your-editor) shows for `courier-mcp`. Start Studio as you always do; the command carries the agent to it.
+
+## The tools
+
+| Tool | What it does |
+| --- | --- |
+| `requests` | The requests Studio recorded, newest first: endpoint, method, mode, status, duration, error, and the agent tool a call ran for. Narrowed to the failed ones (`failed: true`), to an endpoint (`endpoint: "orders.cancel"`), or to fewer (`limit`, 20 by default, at most 50). |
+| `request` | One request in full, by the id `requests` gave: its variables, its answer, its request and response headers, its timing, its failure and the events it raised. |
+| `mocks` | The mock servers Studio runs: each one's id, the source it serves, its status and address, its scenarios and the active one, its network conditions. |
+| `mock_scenario` | Switch a mock to one of its scenarios — the one change an agent may make, as the Mocks view makes it. |
+
+The agent's own calls through [`courier-mcp`](/docs/agents/editor) show in the same list, marked with the tool they ran for — a call a person declined included — so the agent you code with can read what another agent did.
+
+## What it shows, and to whom
+
+- **Studio's token, or nothing.** The command reads `.courier/studio-token` from the project, so no token is written into an editor's settings; a request to Studio's `/mcp` without it is answered `401`. A page on another origin is refused.
+- **No credential, no secret.** Every header that carries a credential — `Authorization`, `Cookie`, `Set-Cookie`, an API key's — is replaced with `[redacted]`, and so is every field of a body named like a secret: `password`, `accessToken`, `client_secret`, `sessionId`. What an agent reads leaves your machine with its model's provider; those values stay behind.
+- **Not on a public demo.** A Studio serving a public demo has no MCP endpoint.
+
+| Option | What it does |
+| --- | --- |
+| `--cwd <dir>` | The project's root, where Studio keeps its token (default: the working directory) |
+| `--url <url>` | Studio's address (default: the one `courier.config.ts` gives Studio, else `http://localhost:6280`) |
+
+When Studio is not running, the agent is told so — and to start it — rather than left waiting.

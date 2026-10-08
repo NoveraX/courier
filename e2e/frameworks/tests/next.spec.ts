@@ -5,6 +5,7 @@
  */
 import { type BrowserContext, expect, type Page, test } from "@playwright/test";
 
+import { browsers } from "../../support/browsers";
 import {
   APP,
   ATTACKER,
@@ -37,6 +38,8 @@ test.afterAll(async () => {
 const hydrated = () => page.locator("html[data-hydrated]").waitFor({ state: "attached" });
 
 test("the build sends the API no session and no write", async () => {
+  /* What the build sent is the same whatever the browser; the first engine reads it, before any page. */
+  test.skip(test.info().project.name !== browsers()[0], "read once, by the first browser");
   const sent = [
     ...(await received("GET", "/me")),
     ...(await received("GET", "/csrf")),
@@ -83,7 +86,7 @@ test("a page sends the session's cookies alone, with the request's id and browse
 
   expect(cookiesIn(me?.headers.cookie)).toEqual(["csrftoken=t-ada", "sid=s%3Aada.sig"]);
   expect(me?.headers["x-request-id"]).toMatch(/^[\da-f-]{36}$/);
-  expect(me?.headers["user-agent"]).toContain("Chrome");
+  expect(me?.headers["user-agent"]).toBe(await page.evaluate(() => navigator.userAgent));
   expect(me?.headers["x-csrftoken"]).toBeUndefined();
 });
 
@@ -138,7 +141,11 @@ test("a Pages Router page served by withRequestContext carries the session", asy
 });
 
 test("a render's later call sends the session its first call renewed, under one request id", async () => {
-  await context.addCookies([{ name: "sid", value: "expiring", url: APP }]);
+  /* Planted as the browser holds the session's cookie: WebKit lets no plain cookie replace a Secure one. */
+  const held = await cookie("sid");
+  await context.addCookies([
+    held ? { ...held, value: "expiring" } : { name: "sid", value: "expiring", url: APP },
+  ]);
   await clearReceived();
 
   await page.goto(`${APP}/renew`);

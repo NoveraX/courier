@@ -85,29 +85,35 @@ A bug fix should come with the test that would have caught it.
 Studio's flows also run in a real browser: `e2e/` starts Studio from its
 command line over a copy of a fixture project, and drives importing,
 updating and removing an API, the mock wizard and the mocks, and the
-Playground as a developer does. It runs on the built packages, in Chromium:
+Playground as a developer does. It runs on the built packages, in Chromium,
+WebKit and Firefox:
 
 ```bash
 npm run build
-npx playwright install chromium
+npx playwright install chromium webkit firefox
 npm run test:e2e
 ```
 
 The user's session is checked in a browser as well, in an application built
 with each framework version Courier supports: Next.js 14, 15 and 16 (16 also
 with `cacheComponents`), SvelteKit 2.19 and the newest 2.x, Nuxt 3 and 4,
-Express 4 and 5, and a React single-page application. Each version
+Express 4 and 5, Fastify 4 and 5, Hono 4, Astro 5, React Router 7 and 8,
+Remix 2, SolidStart 1 and 2, NestJS 10, 11 and 12 (10 and 12 on Fastify too),
+and a React single-page application. Each version
 `e2e/frameworks/targets.json` lists is installed from npm, in the system's
 temporary folder, beside the packages packed as the registry would ship
-them; then the application is built, served and driven in Chromium against
-an API that records every request it receives:
+them; then the application is built, served and driven in Chromium, WebKit
+and Firefox against an API that records every request it receives:
 
 ```bash
 npm run build
-npx playwright install chromium
+npx playwright install chromium webkit firefox
 npm run test:frameworks
 npm run test:frameworks -- next-15 nuxt-4
 ```
+
+`COURIER_BROWSERS` picks the engines either check runs in, such as
+`COURIER_BROWSERS=chromium,webkit`.
 
 CI runs one job for each version on every push and pull request, and again
 every week: a version is a range that resolves to its newest release, so a

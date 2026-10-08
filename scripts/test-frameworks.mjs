@@ -4,7 +4,8 @@
  * Check the user's session in an application built with each framework
  * version `e2e/frameworks/targets.json` names, or with the ones given: each
  * is installed from npm beside Courier's packages, packed as the registry
- * would ship them, then built, served and driven in Chromium, one version
+ * would ship them, then built, served and driven in Chromium, WebKit and
+ * Firefox — or the engines `COURIER_BROWSERS` names — one version
  * after another.
  *
  *   npm run test:frameworks                     every version

@@ -1,12 +1,15 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
 
+import { browserProjects } from "../support/browsers";
 import { APPS } from "./support/apps";
 import { targetOf } from "./support/targets";
 
 /**
  * The user's session in an application built with one framework version:
  * `COURIER_FRAMEWORK` names the version, the global setup builds and serves
- * its application, and the checks of its kind drive it in a browser.
+ * its application, and the checks of its kind drive it in each browser
+ * engine — Chromium, WebKit and Firefox, or the ones `COURIER_BROWSERS`
+ * names — one after another.
  */
 const target = targetOf(process.env.COURIER_FRAMEWORK);
 
@@ -34,8 +37,8 @@ export default defineConfig({
     : "list",
   outputDir: `../../node_modules/.cache/courier-frameworks/${target.id}/results`,
   use: {
-    ...devices["Desktop Chrome"],
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
+  projects: browserProjects(),
 });

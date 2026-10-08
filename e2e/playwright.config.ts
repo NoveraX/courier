@@ -1,9 +1,12 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
+
+import { browserProjects } from "./support/browsers";
 
 /**
  * Studio in a real browser, over a real project: each test file starts its
  * own Studio from the command line, over its own copy of the fixture
- * project, and drives the pages as a developer does.
+ * project, and drives the pages as a developer does — in Chromium, WebKit
+ * and Firefox, or the engines `COURIER_BROWSERS` names.
  */
 export default defineConfig({
   testDir: "./tests",
@@ -19,9 +22,8 @@ export default defineConfig({
     : "list",
   outputDir: "../node_modules/.cache/courier-e2e/results",
   use: {
-    ...devices["Desktop Chrome"],
-    viewport: { width: 1440, height: 900 },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
+  projects: browserProjects({ viewport: { width: 1440, height: 900 } }),
 });

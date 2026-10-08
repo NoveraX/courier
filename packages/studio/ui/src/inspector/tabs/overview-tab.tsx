@@ -30,7 +30,9 @@ export function OverviewTab({ request }: { request: RequestEntry }): React.React
     (s) => s.bindingSnapshot.runtimes.find((r) => r.runtimeId === runtimeId)?.kind,
   );
   const sessionName = useStudioStore((s) => s.shownSession?.name);
-  const properties = requestProperties(request, { runtimeKind, sessionName });
+  const requests = useStudioStore((s) => s.requests);
+  const attempt = attemptOf(request, requests);
+  const properties = requestProperties(request, { runtimeKind, sessionName, attempt });
   return (
     <div className="flex flex-col gap-5 px-4.5 pt-4.5 pb-7">
       <UrlBox request={request} />
@@ -87,4 +89,16 @@ function CheckRow({ check }: { check: RequestCheck }): React.ReactNode {
       )}
     </li>
   );
+}
+
+/* The calls sent with this one's idempotency key, oldest first: a retry, a second click. */
+function attemptOf(
+  request: RequestEntry,
+  requests: readonly RequestEntry[],
+): { at: number; of: number } | undefined {
+  const key = request.idempotencyKey;
+  if (!key) return undefined;
+  const same = requests.filter((other) => other.idempotencyKey === key);
+  const ordered = [...same].sort((a, b) => a.startedAt - b.startedAt);
+  return { at: ordered.findIndex((other) => other.id === request.id) + 1, of: ordered.length };
 }

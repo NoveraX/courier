@@ -36,6 +36,8 @@ export interface RequestEntry {
   mode: "direct" | "proxy";
   /** The agent the call ran for, when an MCP server made it; absent on the application's own calls. */
   agent?: RequestAgent | undefined;
+  /** The key the call sent in its endpoint's idempotency header, the same on every attempt. */
+  idempotencyKey?: string | undefined;
   type?: "query" | "mutation" | undefined;
   status: RequestStatus;
   statusCode?: number | undefined;

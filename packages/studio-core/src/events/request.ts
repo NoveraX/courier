@@ -26,6 +26,8 @@ export interface RequestStartEvent extends StudioEvent {
   purpose?: "csrf-token";
   /** The agent tool the call ran for, when an MCP server made it, and the client as it named itself. */
   agent?: RequestAgent;
+  /** The key the call sends in its endpoint's idempotency header, the same on every attempt. */
+  idempotencyKey?: string;
 }
 
 /** An agent's call, as Studio shows it: the tool, what it declared it does, and the client. */

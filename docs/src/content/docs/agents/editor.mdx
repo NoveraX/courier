@@ -1,0 +1,85 @@
+export const metadata = { title: "In Your Editor", description: "Give the agent you code with your API as tools: npx @noverax/courier-mcp serves your project's courier.config.ts over stdio to Claude Code, Cursor, VS Code or Codex.", mode: "both" }
+
+## The command
+
+`courier-mcp` serves the endpoints your project marks `.agent()` over stdio, the transport an editor's agent starts a local MCP server with. It loads `courier.config.ts` the way your app's runtime and Studio load it — TypeScript, extensionless imports and tsconfig path aliases included — and offers every source it declares:
+
+```bash
+npm install -D @noverax/courier-mcp
+npx courier-mcp --dotenv .env.local
+```
+
+Started by hand it waits for a client on stdin; an editor starts it for you.
+
+## Add it to your editor
+
+**Claude Code** — from the project's root; `--scope project` writes `.mcp.json` for everyone who works on it:
+
+```bash
+claude mcp add courier --scope project -- npx courier-mcp --dotenv .env.local
+```
+
+**Cursor** — in `.cursor/mcp.json`:
+
+```json title=".cursor/mcp.json"
+{
+  "mcpServers": {
+    "courier": { "command": "npx", "args": ["courier-mcp", "--dotenv", ".env.local"] }
+  }
+}
+```
+
+**VS Code** — in `.vscode/mcp.json`:
+
+```json title=".vscode/mcp.json"
+{
+  "servers": {
+    "courier": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["courier-mcp", "--cwd", "${workspaceFolder}", "--dotenv", ".env.local"]
+    }
+  }
+}
+```
+
+**Codex** — in `~/.codex/config.toml`:
+
+```toml title="~/.codex/config.toml"
+[mcp_servers.courier]
+command = "npx"
+args = ["courier-mcp", "--cwd", "/path/to/project", "--dotenv", ".env.local"]
+```
+
+An editor that starts servers somewhere other than the project names it with `--cwd`.
+
+## Options
+
+| Option | What it does |
+| --- | --- |
+| `--cwd <dir>` | The project's root, where `courier.config.*` is (default: the working directory) |
+| `--source <names>` | The sources to offer, comma-separated (default: every source). With one, tool names carry no source prefix |
+| `--dotenv <files>` | `.env` files to load before the config, comma-separated, relative to the root |
+| `--allow-destructive` | Run a destructive tool without asking when the client cannot ask a person |
+| `--timeout <ms>` | How long a call may take when its endpoint names no timeout (default: 60 000) |
+| `--name <name>` | The name the server gives its client (default: `courier`) |
+
+Node's own `--env-file` is not one of them: Node takes that flag for itself wherever it appears.
+
+## What the agent gets
+
+The tools are your endpoints, called with the credentials your config gives them — the API keys your middleware reads from the environment, for one. The agent can do what those credentials allow, through the endpoints you marked and no others; a `destructive` one asks you first, in the editor, with the exact call.
+
+On start, the server lists the tools it offers in its log — which an editor shows as the server's output — and stops with one line when the config cannot be loaded or names no source it was asked for. A project whose endpoints name no `.agent()` gets a server with no tools, and a line saying so.
+
+## Watch it in Studio
+
+With Studio running, the server joins it as the application's runtime does, and every call an agent makes shows in the timeline marked **agent** — its tool, the client, the variables, the answer, the middleware it ran through. Choose **Agent** in the Mode filter to see them alone. A call that did not run — declined by you, or refused for its arguments — is there too.
+
+```bash
+npx courier-studio
+```
+
+## stdout is the protocol's
+
+Over stdio, every byte on stdout is read as an MCP message. The server keeps it for the protocol: whatever else writes there — a `console.log` in your config, a library's banner — goes to stderr, which the editor shows as the server's log.

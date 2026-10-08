@@ -1,8 +1,8 @@
-import { Cloud, Globe, LockKeyhole, Monitor, Server, Settings, TestTube } from "lucide-react"
+import { Bot, Cloud, Globe, LockKeyhole, Monitor, Server, Settings, TestTube } from "lucide-react"
 
 import type { NavSection } from "./nav-types"
 
-/** The sections about building with Courier: proxy mode, server-side calls, the advanced topics, testing, Studio and deployment. */
+/** The sections about building with Courier: proxy mode, server-side calls, AI agents, security, the advanced topics, testing, Studio and deployment. */
 export const BUILD_SECTIONS: NavSection[] = [
   {
     label: "Proxy Mode",
@@ -22,6 +22,15 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "createCaller", href: "/docs/server-side/caller" },
       { title: "Server Actions", href: "/docs/server-side/actions" },
       { title: "User Sessions", href: "/docs/server-side/session" },
+    ],
+  },
+  {
+    label: "AI Agents",
+    icon: Bot,
+    items: [
+      { title: "MCP Server", href: "/docs/agents/overview" },
+      { title: "In Your Editor", href: "/docs/agents/editor" },
+      { title: "In Your App", href: "/docs/agents/app" },
     ],
   },
   {

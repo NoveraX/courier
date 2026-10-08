@@ -41,6 +41,8 @@ type MiddlewareContext = {
   signal?: AbortSignal
   /** Set on a request the session makes rather than an endpoint's call: "csrf-token" for the double-submit token a write asks for */
   purpose?: "csrf-token"
+  /** The agent the call comes from, when an MCP server made it: its tool, access, principal and client */
+  agent?: AgentCall
 }
 
 type MiddlewareResponse = {

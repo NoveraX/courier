@@ -50,6 +50,7 @@ type MiddlewareContext = {
   sessionPartition?: string            // Tells one user's calls from the next in a browser or an app
   signal?: AbortSignal                 // Fires when the caller stops waiting
   purpose?: "csrf-token"               // A request the session makes, not an endpoint's call
+  agent?: AgentCall                    // The agent the call comes from, when an MCP server made it
 }
 
 type MiddlewareResponse = {

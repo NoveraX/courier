@@ -17,7 +17,7 @@
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud/docs/agents/mcp"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/docs/agents/overview"><strong>Documentation</strong></a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
@@ -50,17 +50,19 @@ endpoint
 ## Install
 
 ```bash
-npm install @noverax/courier-mcp @noverax/courier
+npm install @noverax/courier-mcp
 ```
+
+The command runs from your project's own install, so it loads your config with the same Courier your app runs; for the command alone, a dev dependency is enough.
 
 <br />
 
 ## In your editor, over stdio
 
-The command serves the `courier.config.*` of the project it is started in. For Claude Code:
+The command serves the `courier.config.*` of the project it is installed in. For Claude Code:
 
 ```bash
-claude mcp add courier -- npx @noverax/courier-mcp --dotenv .env.local
+claude mcp add courier --scope project -- npx courier-mcp --dotenv .env.local
 ```
 
 For Cursor, in `.cursor/mcp.json`:
@@ -68,7 +70,7 @@ For Cursor, in `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "courier": { "command": "npx", "args": ["@noverax/courier-mcp", "--dotenv", ".env.local"] }
+    "courier": { "command": "npx", "args": ["courier-mcp", "--dotenv", ".env.local"] }
   }
 }
 ```

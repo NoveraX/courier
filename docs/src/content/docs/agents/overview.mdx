@@ -1,0 +1,125 @@
+export const metadata = { title: "MCP Server", description: "Offer your API's endpoints to AI agents as MCP tools — from the definition your typed client is built from, through the same middleware, schemas and Studio as your app.", mode: "both" }
+
+## One definition, one more client
+
+The definition your typed client is built from also describes your API to an AI agent. Mark an endpoint `.agent()` and it becomes a tool of an MCP server — the protocol Claude Code, Cursor, Codex, VS Code and every other MCP client speak — with the schemas the endpoint already has:
+
+```ts title="api/orders.ts"
+import { courier, defineGroup } from "@noverax/courier/define"
+import { z } from "zod"
+
+const { endpoint } = courier()
+
+export const orders = defineGroup({
+  prefix: "orders",
+  endpoints: {
+    get: endpoint
+      .get(":id")
+      .variables(z.object({ id: z.string() }))
+      .response(Order)
+      .agent({ description: "One order by its id: its items, total and status", access: "read" }),
+    cancel: endpoint
+      .post(":id/cancel")
+      .variables(z.object({ id: z.string() }))
+      .response(Order)
+      .agent({ description: "Cancel an order that has not shipped yet", access: "destructive" }),
+    export: endpoint.get("export"),
+  },
+})
+```
+
+`orders.get` and `orders.cancel` are tools; `orders.export` is out of every agent's reach. Nothing is offered unless it is marked.
+
+The server comes in two forms, from the same package:
+
+- **In your editor** — `npx @noverax/courier-mcp` serves your project's `courier.config.ts` over stdio, for the agent you code with. See [In Your Editor](/docs/agents/editor).
+- **In your app** — `createMcpHandler` mounts an MCP endpoint next to your routes, for agents your users or your services run, behind an `authorize` you write. See [In Your App](/docs/agents/app).
+
+```bash
+npm install @noverax/courier-mcp
+```
+
+## .agent()
+
+| option | what it says |
+| --- | --- |
+| `description` | What the tool does, for the model deciding when to call it: what it needs, what it answers with, what it changes. Required. |
+| `access` | `"read"` — changes nothing; `"write"` — changes what it addresses; `"destructive"` — removes or overwrites what cannot be restored, so a person confirms each call. Required. |
+| `name` | The tool's name, when its call in the client is not the one to give it: letters, digits, `_` and `-`, at most 64. |
+| `title` | A name for people, which a client shows in place of the tool's. |
+
+An endpoint that writes cannot be offered as a read: the type of `access` excludes `"read"` after `.post()`, `.put()`, `.patch()`, `.del()` and `.via()`, and the server refuses to start on one written in plain JavaScript. A read sent over POST says so with `.reads()` first. `.agent()` is named on an HTTP endpoint, after its verb — it describes that one endpoint, so a base made with `courier()` does not pass it on.
+
+## What becomes what
+
+| In the definition | In the tool |
+| --- | --- |
+| The endpoint's call in the client, `orders.get` | Its name, `orders_get` — led by the source's name, `shop_orders_get`, when the server offers several sources |
+| `.variables()` | Its input schema, as JSON Schema; variables that are not an object — a string, a list — go as `{ value }` |
+| A path's `:id`, with no variables schema | A required argument, `id` |
+| `.response()` | Its output schema, and the answer as structured data beside its text |
+| `access` | The hints a client asks a person by: `readOnlyHint`, `destructiveHint` |
+| `title` | Its title |
+| `deprecated` | A line in its description |
+
+Schemas are written as [Standard JSON Schema](https://standardschema.dev): Zod 4 and ArkType describe their own, and `createMcpHandler({ jsonSchema })` takes a converter for any other library, as [the OpenAPI export](/docs/advanced/openapi#schemas) does.
+
+## How a call runs
+
+An agent's call goes where your app's own calls go: through the source's middleware and the endpoint's, its variables validated by its schema and its answer by its response schema, and into Studio's timeline marked **agent**, with the tool and the client that called it. There is no second path to forget to protect.
+
+What the agent is told:
+
+- **An answer** — as JSON text, and as structured data where the client takes it.
+- **Arguments its schema refuses** — which fields, and why, so the model corrects them: `- qty: Too big: expected number to be <=9`.
+- **An error status** — the status and the body, cut to 2 000 characters; never a response header, which may carry a credential.
+- **An answer too long for a model** — more than 100 000 characters is refused rather than cut, with a request to ask for less: half a JSON document reads as a whole one.
+
+An agent's call carries no browser session: whatever a browser's cookies would give a user, an agent gets only what your middleware gives the principal it runs for.
+
+## A person confirms what cannot be undone
+
+A `destructive` tool runs once the person at the client has confirmed that exact call — the tool, what it does and its arguments:
+
+```text
+An agent asks to run orders_cancel: Cancel an order that has not shipped yet
+
+POST shop.orders.cancel with {"id":"o_7f2a"}
+
+This cannot be undone. Run it?
+```
+
+The question goes to the person, not the model: a prompt injected into the conversation cannot answer it. A call whose arguments the schema refuses is never put to anyone. A declined call does not run, and shows in Studio as a call that did not.
+
+A client that cannot ask a person — one that supports no MCP elicitation, or the 2025 handshake over HTTP, which cannot carry the question — gets the destructive tool refused, with a sentence saying why. `--allow-destructive` on the command and `allowDestructive` on the handler leave the decision to the client's own approval prompt instead.
+
+## Who may do what: middleware
+
+Every call an agent makes carries `ctx.agent` through your middleware — the tool, its `access`, the principal `authorize` let in, and the client as it named itself. Absent on every call your app makes itself, it is how a policy tells the two apart:
+
+```ts title="api/middleware/agents.ts"
+import { defineMiddleware } from "@noverax/courier/middleware"
+
+export const agents = defineMiddleware("agents", "wrap", async (ctx, next) => {
+  if (!ctx.agent) return next()
+  if (ctx.agent.access !== "read" && !canWrite(ctx.agent.principal)) {
+    return { status: 403, data: { message: "This agent reads only" }, headers: new Headers() }
+  }
+  return next()
+})
+```
+
+A refusal fails the call as an upstream's error would: the agent is told the status and the message, and Studio shows the failed call. To hide tools from a caller altogether — absent from its list, unknown to its calls — use the handler's [`allow`](/docs/agents/app#who-sees-which-tools).
+
+`ctx.agent.client` is what the client says it is. Show it, log it — never decide by it.
+
+## Protocol versions
+
+The server speaks both eras of the Model Context Protocol: the **2026-07-28** revision, whose every request names its version and capabilities, and the **2025** revisions (2025-11-25, 2025-06-18, 2025-03-26) a client opens with `initialize` — what most clients speak by default today. Each is tested against the official MCP clients of both SDK generations.
+
+| | 2026-07-28 | 2025 handshake, stdio | 2025 handshake, HTTP |
+| --- | --- | --- | --- |
+| Tools and their schemas | ✓ | ✓ | ✓ |
+| Structured answers | any JSON | an object, from 2025-06-18 | an object, from 2025-06-18 |
+| Confirming a destructive call | asked inside the result, signed | asked as a request of its own | not possible: refused |
+| Session between requests | none | the process | none |

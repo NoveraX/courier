@@ -216,6 +216,7 @@ The same settings follow any head, in any order, and a base built with `courier(
 | `.meta(values)` | values for your own tooling; the runtime ignores them |
 | `.cache({ revalidate, tags })` | how long a read's answer keeps — offered on a read alone |
 | `.reads()` | a read sent with a body, over POST; refused on `.put()`, `.patch()` and `.del()`. A write declared one loses what guards a write — see [User Sessions](/docs/server-side/session#writes-another-site-sets-off) |
+| `.agent({ description, access })` | offers the endpoint to AI agents as a tool of your MCP server — named on an HTTP endpoint after its verb, and not passed on by a base; see [MCP Server](/docs/agents/overview) |
 
 A verb also takes options for that endpoint alone:
 

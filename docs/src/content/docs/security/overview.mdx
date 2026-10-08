@@ -83,6 +83,16 @@ Your server makes calls with the user's session while it serves a request, and a
 
 A channel's socket passes the origin rule as it opens, so a page on another site cannot open one with the user's cookies. Its first frame may add the headers a browser could not put on the handshake, and never those a browser or a proxy sets: `Cookie`, `Origin`, `Host`, `Referer`, `Forwarded`, `X-Forwarded-*`, `Sec-*`, `Proxy-*` and the headers that claim a client address. A frame's header names and values must be ones HTTP can carry, at most 64 of them; a frame that breaks those rules is refused, and with `onConnect` the connection is closed with `4401`.
 
+## AI agents
+
+An endpoint reaches an agent only when it is marked `.agent()`, and then as an MCP tool whose call runs through the endpoint's middleware and schemas like any other — see [MCP Server](/docs/agents/overview).
+
+- **No browser session.** An agent's call carries none of the request it arrived on: no cookie, no forwarded header. It runs with what your middleware gives the principal `authorize` let in, and middleware tells it apart by `ctx.agent`.
+- **Callers you authorize.** `createMcpHandler` cannot be created without `authorize`. A tool `allow` keeps from a caller is answered as an unknown one, and a request from a browser page is served only from your app's origin or one of `allowedOrigins`.
+- **A person confirms what cannot be undone.** A `destructive` tool runs once the person at the client confirmed that exact call; the question goes to the person, out of the model's reach. A confirmation counts for one tool with the same arguments for five minutes, signed with `confirmSecret`.
+- **What reaches the model.** An error answer's status and body, cut short; never a response header. An answer longer than `maxResultChars` is refused.
+- **What Studio keeps.** An agent's calls show with the tool and the client; the principal never leaves your server.
+
 ## Caches
 
 `cacheMiddleware({ scope: "public" })` never stores or serves an answer to a call that carries a session, and says so once per endpoint. `scope: "session"` keeps one partition per set of credentials a call sends, named by their SHA-256 digest so that no credential sits in a cache key, a Redis keyspace or a log line. In a browser or a React Native app, where the platform sends the cookies, a session's calls count as carrying it and are partitioned on the device.
@@ -127,6 +137,7 @@ Courier counts as in development wherever `NODE_ENV` is not `production`, so set
 - Forward the client's address only behind a proxy on the local machine or a private network.
 - Print the log as JSON wherever it leaves the machine, with `COURIER_LOG_FORMAT=json`.
 - Keep Studio on your own machine: it is a development tool, and its port is never one to expose.
+- Give an MCP endpoint an `authorize` that identifies each caller, a `confirmSecret` shared by its replicas, and offer `.agent()` only on endpoints you would hand to an agent.
 
 ## Reporting a vulnerability
 

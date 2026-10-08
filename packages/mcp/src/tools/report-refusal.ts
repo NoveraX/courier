@@ -1,10 +1,8 @@
 import type { AgentClient } from "@noverax/courier";
 import { generateRequestId, studioHooks } from "@noverax/courier/internal";
 
-import type { AgentTool } from "../tools/agent-tool";
-
-/** Why a call did not run: its arguments, or the person's answer — or the absence of one. */
-export type RefusalKind = "validation" | "aborted";
+import type { Refusal } from "../protocol/served-tool";
+import type { AgentTool } from "./agent-tool";
 
 /**
  * Show in Studio a call an agent asked for that never ran — its arguments
@@ -25,7 +23,7 @@ export function reportRefusal(
   tool: AgentTool,
   args: Record<string, unknown>,
   client: AgentClient | undefined,
-  refusal: { kind: RefusalKind; message: string },
+  refusal: Refusal,
 ): void {
   if (studioHooks.onRequestStart === undefined) return;
   const id = generateRequestId();

@@ -1,5 +1,5 @@
 import { isRecord } from "../is-record";
-import type { AgentTool } from "../tools/agent-tool";
+import type { ServedTool } from "./served-tool";
 
 /** The key a confirmation goes out under in `inputRequests`, and comes back under in `inputResponses`. */
 export const CONFIRM_INPUT = "confirm";
@@ -25,15 +25,15 @@ const SHOWN_ARGUMENTS = 600;
  * ```
  */
 export function confirmationParams(
-  tool: AgentTool,
+  tool: ServedTool,
   args: Record<string, unknown>,
   named: boolean,
 ): Record<string, unknown> {
   const shown = JSON.stringify(args);
   const cut = shown.length > SHOWN_ARGUMENTS ? `${shown.slice(0, SHOWN_ARGUMENTS)}…` : shown;
   const message = [
-    `An agent asks to run ${tool.agent.title ?? tool.name}: ${tool.agent.description}`,
-    `${tool.verb} ${tool.path} with ${cut}`,
+    `An agent asks to run ${tool.title ?? tool.name}: ${tool.description}`,
+    `${tool.action} with ${cut}`,
     "This cannot be undone. Run it?",
   ].join("\n\n");
   return {
@@ -90,7 +90,7 @@ export function canAsk(capabilities: Record<string, unknown> | undefined): boole
  * ```
  */
 export function notRun(
-  tool: AgentTool,
+  tool: ServedTool,
   reason: Decision | "unasked" | "unanswered",
   transport: "stdio" | "http",
 ): string {

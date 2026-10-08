@@ -12,7 +12,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 
 import { createMcpServer } from "../src/protocol/mcp-server";
 import { requestStates } from "../src/protocol/request-state";
-import { runTool } from "../src/tools/run-tool";
+import { courierTools } from "../src/tools/courier-tools";
 import { toolSource } from "../src/tools/tool-source";
 import { type ShopUpstream, seenByMiddleware, shopApi, startShopUpstream } from "./support/shop";
 import { type StdioPair, stdioPair } from "./support/stdio-pair";
@@ -33,13 +33,11 @@ afterEach(async () => {
 });
 
 function serve(allowDestructive = false) {
-  const sources = { shop: shopApi(upstream.baseURL) };
-  const tools = toolSource(sources, {});
+  const tools = toolSource({ shop: shopApi(upstream.baseURL) }, {});
   pair = stdioPair(
     createMcpServer({
       info: { name: "courier", version: "test" },
-      catalog: tools.catalog,
-      run: (tool, args, caller) => runTool(tool, args, { ...caller, sources, timeoutMs: 5_000 }),
+      tools: courierTools(tools, 5_000),
       allowDestructive,
       states: requestStates(new Uint8Array(32).fill(7)),
       maxResultChars: 100_000,

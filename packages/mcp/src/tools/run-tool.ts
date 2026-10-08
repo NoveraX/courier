@@ -2,13 +2,9 @@ import type { AgentCall, AgentClient } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import { executeRequest } from "@noverax/courier/internal";
 
+import type { ToolOutcome } from "../protocol/served-tool";
 import type { AgentTool } from "./agent-tool";
 import { failureMessage } from "./failure-message";
-
-/** What came of a tool's call: the endpoint's answer, or the sentence saying why there is none. */
-export type ToolOutcome =
-  | { readonly ok: true; readonly data: unknown }
-  | { readonly ok: false; readonly message: string };
 
 /** What a tool's call runs against, and on whose behalf. */
 export interface ToolRun {

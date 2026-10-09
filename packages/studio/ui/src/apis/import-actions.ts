@@ -78,6 +78,7 @@ export function importBody(state: ImportState): ImportBody {
     spec: state.spec,
     specUrl: state.source === "url" ? state.content : "",
     importType: state.source,
+    ...(state.source === "raw" && state.fromTraffic && { origin: "traffic" as const }),
     options: { ...state.options, selectedEndpoints: state.selectedEndpoints },
   };
 }

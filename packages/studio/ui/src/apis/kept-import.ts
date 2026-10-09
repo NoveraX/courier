@@ -10,6 +10,8 @@ const KEPT_TEXT_CHARS = 64 * 1024;
 export interface KeptImport {
   source: ImportSource;
   content: string;
+  /** Read from the calls Studio recorded, pasted as raw. */
+  fromTraffic?: boolean | undefined;
 }
 
 /**
@@ -36,10 +38,14 @@ export const useKeptImport = create<{ kept: KeptImport | null }>(() => ({ kept: 
  * keptImport("file", "openapi: 3.1.0"); // → null
  * ```
  */
-export function keptImport(source: ImportSource, content: string): KeptImport | null {
+export function keptImport(
+  source: ImportSource,
+  content: string,
+  fromTraffic = false,
+): KeptImport | null {
   if (source === "file" || content.trim() === "") return null;
   if (source === "raw" && content.length > KEPT_TEXT_CHARS) return null;
-  return { source, content };
+  return { source, content, ...(source === "raw" && fromTraffic && { fromTraffic: true }) };
 }
 
 /**
@@ -55,5 +61,5 @@ export function keptImport(source: ImportSource, content: string): KeptImport | 
 export function readKeptImport(raw: unknown): KeptImport | null {
   if (!isPlainObject(raw) || typeof raw.content !== "string") return null;
   if (raw.source !== "url" && raw.source !== "raw") return null;
-  return keptImport(raw.source, raw.content);
+  return keptImport(raw.source, raw.content, raw.fromTraffic === true);
 }

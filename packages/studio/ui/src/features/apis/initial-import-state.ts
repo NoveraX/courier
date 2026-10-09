@@ -5,6 +5,7 @@ export const INITIAL_IMPORT_STATE: ImportState = {
   step: "import",
   source: "url",
   content: "",
+  fromTraffic: false,
   spec: null,
   options: {
     sourceName: "api",

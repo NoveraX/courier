@@ -1,6 +1,7 @@
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAskedImport } from "@/apis/use-asked-import";
+import { useAskedManage } from "@/apis/use-asked-manage";
 import { useImport } from "@/apis/use-import";
 import { useManage } from "@/apis/use-manage";
 import { useOpenApiExport } from "@/apis/use-openapi-export";
@@ -69,6 +70,10 @@ export function ApisScreen(): React.ReactNode {
   });
   const exporter = useOpenApiExport();
   const { page, imported, handWritten, statuses } = registry;
+  useAskedManage(
+    manageFlow.start,
+    imported.flatMap((source) => source.registry ?? []),
+  );
   const names = [...imported, ...handWritten].map((source) => source.name);
   const loading = page.kind === "connecting" || page.kind === "loading";
   const checking = Object.values(statuses).some((s) => s.status === "checking");

@@ -20,6 +20,8 @@ export interface ImportBody {
   spec: ParsedSpec;
   specUrl: string;
   importType: string;
+  /** `traffic` for a specification Studio read from the calls it recorded. */
+  origin?: "traffic";
   options: GenerateOptions;
 }
 

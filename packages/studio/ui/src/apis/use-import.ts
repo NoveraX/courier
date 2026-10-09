@@ -67,6 +67,7 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
       ...INITIAL_IMPORT_STATE,
       source: resume ? kept.source : (source ?? "url"),
       content: resume ? kept.content : "",
+      fromTraffic: resume && kept.fromTraffic === true,
     });
     setError(null);
     setOpen(true);
@@ -74,8 +75,9 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
 
   /* What is typed is kept until a write ends the import. */
   useEffect(() => {
-    if (open) useKeptImport.setState({ kept: keptImport(state.source, state.content) });
-  }, [open, state.source, state.content]);
+    if (open)
+      useKeptImport.setState({ kept: keptImport(state.source, state.content, state.fromTraffic) });
+  }, [open, state.source, state.content, state.fromTraffic]);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -83,7 +85,7 @@ export function useImport(onWritten?: (message: string) => void): UseImportRetur
   }, []);
 
   const setSource = useCallback((source: ImportSource) => {
-    setState((s) => ({ ...s, source, content: "" }));
+    setState((s) => ({ ...s, source, content: "", fromTraffic: false }));
     setError(null);
   }, []);
 

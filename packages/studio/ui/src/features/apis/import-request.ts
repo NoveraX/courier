@@ -4,6 +4,8 @@ import { create } from "zustand";
 export interface ImportRequest {
   /** The specification's text, pasted as the wizard's raw source */
   content: string;
+  /** Read from the calls Studio recorded: the import stays tied to its traffic. */
+  fromTraffic?: boolean | undefined;
 }
 
 /**

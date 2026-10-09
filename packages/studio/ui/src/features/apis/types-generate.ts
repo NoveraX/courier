@@ -50,6 +50,8 @@ export interface SourceSummary {
   options: Partial<PersistedGenerateOptions>;
   /** The import's last update check, from any page, while Studio runs; absent before one. */
   check?: ImportCheck | undefined;
+  /** Its specification was read from the calls Studio recorded, which managing it reads again. */
+  fromTraffic?: boolean | undefined;
 }
 
 /** What an import's last update check found, as Studio keeps it for every page. */
@@ -185,6 +187,8 @@ export interface ImportState {
   step: ImportStep;
   source: ImportSource;
   content: string;
+  /** The raw specification was read from the calls Studio recorded: the import stays tied to them. */
+  fromTraffic: boolean;
   spec: ParsedSpec | null;
   options: GenerateOptions;
   selectedEndpoints: Record<string, string[]>;

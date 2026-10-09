@@ -34,6 +34,7 @@ const WRITTEN: ImportState = {
   step: "declare",
   source: "url",
   content: "https://specs.example/pets.json",
+  fromTraffic: false,
   spec: SPEC,
   options: {
     sourceName: "pets",

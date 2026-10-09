@@ -28,6 +28,8 @@ export interface ImportSummary {
   options: Record<string, unknown>;
   /** The import's last update check, while it still says something of the import. */
   check?: ImportCheck | undefined;
+  /** Its specification was read from the calls Studio recorded, which managing it reads again. */
+  fromTraffic?: true | undefined;
 }
 
 /**
@@ -78,6 +80,8 @@ export function summarizeImports(
       outputDir: entry.outputDir,
       options: extractOptions(entry),
       check: checks?.of(name, entry, getImportState(snapshot, name)?.specHash),
+      ...(entry.importType === "raw" &&
+        getImportState(snapshot, name)?.origin === "traffic" && { fromTraffic: true as const }),
     });
   }
   for (const name of Object.keys(snapshot.state.imports)) {

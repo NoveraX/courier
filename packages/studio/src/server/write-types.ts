@@ -15,6 +15,8 @@ export interface WriteBody {
   spec: ParsedSpec;
   specUrl?: string;
   importType?: CourierImportType;
+  /** `traffic` for a specification Studio read from the calls it recorded, pasted as raw. */
+  origin?: "traffic";
   options: GenerateOptions;
   /** The digest of the plan the user was shown, once a plan was shown. */
   planDigest?: string;

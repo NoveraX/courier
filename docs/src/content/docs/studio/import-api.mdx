@@ -99,6 +99,26 @@ Studio loads ESLint and Prettier once, from your project, in threads of their ow
 
 A file you edited is formatted whole when Studio merges a change into it, as your editor would format it when you save it; a `courier.mocks.ts` Studio creates is formatted the same way. The change says which tools ran, with their versions. When a tool fails on a file — an ESLint configuration with no TypeScript parser cannot read TypeScript, say — the other tools still run on it, and the change says why; a tool the project configures but did not install is named the same way. A file no tool formats is still correct code.
 
+## From the command line
+
+`courier-studio import` imports a specification as **Import API** does — the same files, written into the same folder and recorded the same way — from a terminal, a script or a CI job, without Studio running:
+
+```bash
+npx @noverax/courier-studio import https://petstore3.swagger.io/api/v3/openapi.json
+```
+
+It takes a URL, a file, or `-` for standard input, and names the import after the specification, as the wizard does, unless `--name` names it. It shows the plan first — every file it creates, updates, replaces or removes, and the lines that declare the import in `courier.config.ts` — and asks before it writes anything. Then it declares the import as **Add to courier.config.ts** does: the lines added, written like the rest of the file, the config loaded, and put back as it was when it no longer loads.
+
+- `--yes` writes without asking, taking the plan as the wizard offers it: a step that waits for you — replacing a file you changed, say — is taken only when the wizard offers it ticked, or when `--confirm` names its path. Every other file stays as it is, and the command says how to allow it. Where no one can answer, as in a CI job, nothing is written without `--yes`.
+- `--dry-run` shows the plan and writes nothing.
+- `--include` and `--exclude` pick endpoints by tag, by path as the specification writes it, or by operationId — `--include tag:pets,op:getUser` — and the import's `imports` entry records them, so an update keeps the selection. Once the config declares the import, a selector other than the one it declares is refused: change it in the config.
+- `--out`, `--validation`, `--group-by`, `--client`, `--no-types`, `--no-schemas`, `--no-comments` and `--auth-middleware` are the wizard's options, with its defaults.
+- `--no-declare` writes the files only, and prints the lines to add to `courier.config.ts`.
+- A URL is fetched by the wizard's rules — see [Specifications on a private network](/docs/studio/import-api#specifications-on-a-private-network).
+- The project needs a `courier.config.ts`: without one, the command prints the config to start from.
+
+It exits 0 once the import is written and declared, or its plan shown with `--dry-run`, and 1 when it writes nothing or something fails.
+
 ## From traffic, for an API with no specification
 
 An API with no specification can be declared from the calls your app makes to it. A source the app defines in its own code, which `courier.config.ts` does not list, shows in the Explorer with what its traffic tells — and its endpoints' panels say they are **known only by their traffic**. **Declare `<source>` from traffic** reads an OpenAPI 3.1 document from the calls Studio recorded and opens **Import API** on it, as though it were pasted; from there it is imported as any specification is: pick the endpoints, choose the options, preview the files, write them, and the source is declared.

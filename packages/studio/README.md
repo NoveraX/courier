@@ -202,6 +202,26 @@ export default defineConfig({
 - A part the config declares already is left out, and once it declares both, the wizard closes after the write and says only what it wrote.
 - The generated files are application code. A project that emits declarations compiles them, since every type their exports carry is one the packages export, but not one under `isolatedDeclarations`, which asks for a written type on every export: the type of a group or a source is the whole chain of its endpoints.
 
+### From the command line
+
+`courier-studio import` imports a specification as **Import API** does — the same files, written into the same folder and recorded the same way — from a terminal, a script or a CI job, without Studio running:
+
+```bash
+npx @noverax/courier-studio import https://petstore3.swagger.io/api/v3/openapi.json
+```
+
+It takes a URL, a file, or `-` for standard input, and names the import after the specification, as the wizard does, unless `--name` names it. It shows the plan first — every file it creates, updates, replaces or removes, and the lines that declare the import in `courier.config.ts` — and asks before it writes anything. Then it declares the import as **Add to courier.config.ts** does: the lines added, written like the rest of the file, the config loaded, and put back as it was when it no longer loads.
+
+- `--yes` writes without asking, taking the plan as the wizard offers it: a step that waits for you — replacing a file you changed, say — is taken only when the wizard offers it ticked, or when `--confirm` names its path. Every other file stays as it is, and the command says how to allow it. Where no one can answer, as in a CI job, nothing is written without `--yes`.
+- `--dry-run` shows the plan and writes nothing.
+- `--include` and `--exclude` pick endpoints by tag, by path as the specification writes it, or by operationId — `--include tag:pets,op:getUser` — and the import's `imports` entry records them, so an update keeps the selection. Once the config declares the import, a selector other than the one it declares is refused: change it in the config.
+- `--out`, `--validation`, `--group-by`, `--client`, `--no-types`, `--no-schemas`, `--no-comments` and `--auth-middleware` are the wizard's options, with its defaults.
+- `--no-declare` writes the files only, and prints the lines to add to `courier.config.ts`.
+- A URL is fetched by the wizard's rules — see [Specifications on a private network](#specifications-on-a-private-network).
+- The project needs a `courier.config.ts`: without one, the command prints the config to start from.
+
+It exits 0 once the import is written and declared, or its plan shown with `--dry-run`, and 1 when it writes nothing or something fails.
+
 ### Which files Studio changes
 
 Studio changes an import's files — when it writes the import, updates it, adds or removes endpoints, or removes the import — only inside the import's folder, and decides for each file by who it belongs to. It records every file it writes, with a hash of its content, in `.courier/imports-state.json`, and starts each with two lines that say so:

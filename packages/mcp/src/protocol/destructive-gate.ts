@@ -1,7 +1,14 @@
 import { createLogger } from "@noverax/courier";
 
 import { isRecord } from "../is-record";
-import { CONFIRM_INPUT, canAsk, confirmationParams, decisionOf, notRun } from "./confirmation";
+import {
+  CONFIRM_INPUT,
+  canAsk,
+  confirmationParams,
+  decisionOf,
+  notRun,
+  shownCall,
+} from "./confirmation";
 import type { Connection } from "./connection";
 import type { Era } from "./era";
 import { ERROR_CODE } from "./json-rpc";
@@ -51,10 +58,15 @@ export async function destructiveGate(call: GatedCall): Promise<Gate> {
   const { tool, args, era, connection, signal, options } = call;
   if (era.kind === "modern") return confirmedByRetry(call);
   if (connection.ask === undefined || !canAsk(era.capabilities)) {
-    return call.refuse("aborted", notRun(tool, "unasked", options.transport));
+    return call.refuse("aborted", notRun(tool, "unasked", options));
   }
+  const question = confirmationParams(
+    tool,
+    await shownCall(tool, args),
+    era.version === "2025-11-25",
+  );
   const answer = await connection
-    .ask("elicitation/create", confirmationParams(tool, args, era.version === "2025-11-25"), signal)
+    .ask("elicitation/create", question, signal)
     .catch((error: unknown) => {
       if (signal.aborted) throw error;
       log.warn(`The confirmation for ${tool.name} failed; the call does not run`, error);
@@ -63,7 +75,7 @@ export async function destructiveGate(call: GatedCall): Promise<Gate> {
   const decision = decisionOf(answer);
   return decision === "accept"
     ? "run"
-    : call.refuse("aborted", notRun(tool, decision ?? "unanswered", options.transport));
+    : call.refuse("aborted", notRun(tool, decision ?? "unanswered", options));
 }
 
 async function confirmedByRetry(call: GatedCall): Promise<Gate> {
@@ -79,8 +91,7 @@ async function confirmedByRetry(call: GatedCall): Promise<Gate> {
     const responses = isRecord(params.inputResponses) ? params.inputResponses : {};
     const decision = problem === undefined ? decisionOf(responses[CONFIRM_INPUT]) : undefined;
     if (decision === "accept") return "run";
-    if (decision !== undefined)
-      return call.refuse("aborted", notRun(tool, decision, options.transport));
+    if (decision !== undefined) return call.refuse("aborted", notRun(tool, decision, options));
   }
   if (!canAsk(era.capabilities)) {
     const message = `${tool.name} cannot be undone, so a person confirms each call, and this request declares no elicitation`;
@@ -94,7 +105,7 @@ async function confirmedByRetry(call: GatedCall): Promise<Gate> {
     inputRequests: {
       [CONFIRM_INPUT]: {
         method: "elicitation/create",
-        params: confirmationParams(tool, args, true),
+        params: confirmationParams(tool, await shownCall(tool, args), true),
       },
     },
     requestState: await options.states.seal(tool.name, args),

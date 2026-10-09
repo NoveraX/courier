@@ -1,5 +1,6 @@
 import { ArrowRight, Bot } from "lucide-react"
 import Link from "next/link"
+import type { ReactNode } from "react"
 
 import { CodeLines } from "@/site/code/code-lines"
 import { highlightTokens } from "@/site/code/highlight-tokens"
@@ -29,13 +30,14 @@ const AGENTS_DO = [
  * agent's tools — what it guarantees and the line that turns it on, beside
  * an agent at work with Studio watching.
  *
+ * @param props - The agent at work: the page's own session unless another is shown in its place
  * @returns The section
  * @example
  * ```tsx
  * <AgentsSection />
  * ```
  */
-export async function AgentsSection() {
+export async function AgentsSection({ session }: { session?: ReactNode } = {}) {
   const code = await highlightTokens(AGENT_CODE, "ts")
   return (
     <section id="agents" data-tone="violet" className="relative pt-26">
@@ -89,9 +91,11 @@ export async function AgentsSection() {
             aria-hidden="true"
             className="pointer-events-none absolute inset-y-[8%] inset-x-[4%] bg-[radial-gradient(ellipse_at_center,rgb(var(--tone-rgb)/0.18),transparent_70%)] blur-[34px]"
           />
-          <div className="relative rounded-[15px] bg-[linear-gradient(180deg,rgb(var(--tone-rgb)/0.5),var(--color-line)_40%,transparent)] p-px">
-            <AgentSession />
-          </div>
+          {session ?? (
+            <div className="relative rounded-[15px] bg-[linear-gradient(180deg,rgb(var(--tone-rgb)/0.5),var(--color-line)_40%,transparent)] p-px">
+              <AgentSession />
+            </div>
+          )}
         </div>
       </div>
     </section>

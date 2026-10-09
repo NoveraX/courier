@@ -17,14 +17,20 @@ const ACCESS_TONE = {
  * What a call passes through before the API answers it: the agent's
  * principal, each middleware, then the API — each lit as the call reaches it.
  *
- * @param props - How far the call has gone
+ * @param props - How far the call has gone, and where the trail starts
  * @returns The trail
  * @example
  * ```tsx
  * <MiddlewareTrail progress={2} />
  * ```
  */
-export function MiddlewareTrail({ progress }: { progress: CallProgress }) {
+export function MiddlewareTrail({
+  progress,
+  className = "pl-5.5",
+}: {
+  progress: CallProgress
+  className?: string
+}) {
   const reached =
     progress === "done"
       ? SESSION_MIDDLEWARE.length + 1
@@ -33,7 +39,7 @@ export function MiddlewareTrail({ progress }: { progress: CallProgress }) {
         : 0
   const stages = ["ctx.agent", ...SESSION_MIDDLEWARE, "api"]
   return (
-    <div className="flex flex-wrap items-center gap-1 pl-5.5 font-mono text-[10.5px]">
+    <div className={cn("flex flex-wrap items-center gap-1 font-mono text-[10.5px]", className)}>
       {stages.map((stage, at) => (
         <span key={stage} className="flex items-center gap-1">
           {at > 0 && (

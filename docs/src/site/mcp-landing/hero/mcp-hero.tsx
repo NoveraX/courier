@@ -1,6 +1,6 @@
 import { ArrowRight, Bot } from "lucide-react"
 
-import { AgentSession } from "@/site/landing/agents/agent-session"
+import { TerminalSession } from "@/site/landing/agents/terminal-session"
 import { InstallButton } from "@/site/landing/install-button"
 import { PageLink } from "@/site/landing/page-link"
 
@@ -9,7 +9,8 @@ export const MCP_INSTALL = "npm i @noverax/courier-mcp"
 
 /**
  * The top of the MCP server's page: what it is in one line, the guide and
- * its install command, and an agent at work on an API through it.
+ * its install command, and an agent at work on an API through it, in its
+ * terminal, with Studio recording each call.
  *
  * @returns The section
  * @example
@@ -54,8 +55,8 @@ export function McpHero() {
           aria-hidden="true"
           className="pointer-events-none absolute -bottom-17.5 left-1/2 h-60 w-4/5 -translate-x-1/2 bg-[radial-gradient(ellipse_at_center,rgb(var(--tone-rgb)/0.2),transparent_70%)] blur-[24px]"
         />
-        <div className="relative animate-rise rounded-[15px] bg-[linear-gradient(180deg,rgb(var(--tone-rgb)/0.55),var(--color-line)_38%,transparent)] p-px">
-          <AgentSession />
+        <div className="relative animate-rise">
+          <TerminalSession />
         </div>
       </div>
     </section>

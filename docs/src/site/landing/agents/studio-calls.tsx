@@ -1,7 +1,7 @@
 import { Activity } from "lucide-react"
 
 import { cn } from "@/site/cn"
-import { MiddlewareTrail } from "./session-parts"
+import { MiddlewareTrail } from "./middleware-trail"
 import type { CallProgress, ScriptCall } from "./session-script"
 
 const VERB_TONE = { GET: "text-verb-get", POST: "text-verb-post" } as const

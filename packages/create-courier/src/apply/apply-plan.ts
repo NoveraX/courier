@@ -44,6 +44,13 @@ async function reportTypes(root: string, touched: Touched, terminal: Terminal): 
   const outcome = await typecheckTouched(root, touched);
   if (outcome.kind === "clean") {
     terminal.print(["", "The files Courier added type-check against the project's tsconfig."]);
+  } else if (outcome.kind === "no-typescript") {
+    terminal.print([
+      "",
+      style.yellow(
+        "TypeScript is not installed in the project, so the files Courier added were not type-checked.",
+      ),
+    ]);
   } else if (outcome.kind === "unchecked") {
     terminal.print(["", style.yellow(`TypeScript could not check the project: ${outcome.reason}`)]);
   } else if (outcome.kind === "errors") {

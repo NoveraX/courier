@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { isAbsolute, join, relative } from "node:path";
 
-import { resolveInProject } from "./resolve-in-project";
+import { resolveBin } from "./resolve-in-project";
 import { runTool } from "./run-tool";
 import { baseProject, tsProjects } from "./ts-projects";
 
@@ -104,8 +104,8 @@ function uncoveredConfig(root: string, base: string, files: readonly string[]): 
  */
 export async function typecheckTouched(root: string, touched: Touched): Promise<TypecheckOutcome> {
   /* vue-tsc is tsc that reads .vue files too, where a Vue project has it. */
-  const vueTsc = resolveInProject(root, "vue-tsc/bin/vue-tsc.js");
-  const tsc = vueTsc ?? resolveInProject(root, "typescript/bin/tsc");
+  const vueTsc = resolveBin(root, "vue-tsc", "vue-tsc");
+  const tsc = vueTsc ?? resolveBin(root, "typescript", "tsc");
   if (tsc === undefined) return { kind: "no-typescript" };
   const checked = (path: string) =>
     TS_FILE.test(path) || (vueTsc !== undefined && VUE_FILE.test(path));

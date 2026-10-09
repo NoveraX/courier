@@ -4,7 +4,9 @@
  * Declaring a source known only by its traffic: the Explorer offers it for
  * an endpoint courier.config does not declare, sends the source's calls —
  * and only that source's — for Studio to read an OpenAPI document from,
- * and the APIs page opens the import wizard on it.
+ * and the APIs page opens the import wizard on it. For an endpoint of a
+ * source the config does declare, it says the app runs another version of
+ * that source instead, and where the one Studio read is.
  */
 import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -41,6 +43,7 @@ beforeEach(() => {
   });
   useImportRequest.setState({ request: null });
   useKeptImport.setState({ kept: null });
+  useStudioStore.setState({ scanSources: [] });
 });
 
 afterEach(() => {
@@ -63,6 +66,32 @@ describe("declaring a source from its traffic", () => {
     expect(screen.getByRole("button", { name: "Declare billing from traffic" })).toBeTruthy();
 
     rerender(<EndpointTrafficOnly endpoint={endpoint(false)} />);
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("says the app runs another version of a source the config declares, offering nothing to declare", () => {
+    useStudioStore.setState({
+      scanSources: [
+        {
+          name: "Billing",
+          baseURL: "https://billing.test",
+          filePath: "src/api/billing.ts",
+          groups: [],
+          isImported: false,
+          hasClient: true,
+        },
+      ],
+    });
+
+    render(<EndpointTrafficOnly endpoint={endpoint(true)} />);
+
+    const section = screen.getByRole("region", { name: "Called, but not declared" });
+    expect(section.textContent).toBe(
+      "Called, but not declaredcourier.config declares billing in src/api/billing.ts, but not " +
+        "invoices.get. The app called it, so the app runs another version of billing than the " +
+        "one Studio read: one built before a change to that file, or a definition the config " +
+        "does not import. Restart the app, or point the config at the definition the app uses.",
+    );
     expect(screen.queryByRole("button")).toBeNull();
   });
 

@@ -49,7 +49,7 @@ export function replayPlan(requests: readonly RequestEntry[], id: unknown): Repl
 
 function refusalOf(r: RequestEntry): string | undefined {
   if (r.mode === "webhook") {
-    return `${r.id} is a webhook delivery, which came to the app from its sender: deliver it again from a mock (deliverWebhook) or with the sender's own tools`;
+    return `${r.id} is a webhook delivery, which came to the app from its sender: deliver it again from Studio's inspector (Deliver again), which has the app sign it afresh, from a mock (deliverWebhook), or with the sender's own tools`;
   }
   if (r.purpose === "csrf-token") {
     return `${r.id} is the CSRF token Courier asks for before a write: it is asked for again with the write that needs it`;

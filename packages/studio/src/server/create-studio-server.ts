@@ -32,6 +32,7 @@ import { createStudioStartup } from "./studio-startup";
 import { studioToken } from "./studio-token";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
+import { createWebhookDirectory } from "./webhooks/webhook-directory";
 
 /**
  * Start Courier Studio for a project: load and watch the project, serve the
@@ -89,6 +90,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   const bindingTable = new BindingTable();
   const playgroundRouter = createRuntimePlaygroundRouter({ bindingTable, uiNamespace });
   const agentCalls = createAgentCalls();
+  const webhooks = createWebhookDirectory();
   /* Read on each event, by which time the project below exists. */
   const nameSource = createConfigSourceNamer(() => project.snapshot().running?.config);
   /* The loader resolves links; every path shown is relative to the same root. */
@@ -104,6 +106,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     requestLog,
     answers: createAnswerObserver(stores.answers),
     agentCalls,
+    webhooks,
     token,
     maxMessageBytes: serving?.sockets.maxMessageBytes ?? MAX_MESSAGE_BYTES,
   });
@@ -175,6 +178,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     token,
     playgroundRouter,
     agentCalls,
+    webhooks,
     serving,
   };
   mountStudioHttp(app, policy, http);

@@ -33,6 +33,7 @@ export const WRITING_ROUTES: ReadonlySet<string> = new Set([
   "/api/contract/fix/undo",
   "/api/storage/clear",
   "/api/storage/compact",
+  "/api/webhooks/deliver",
 ]);
 
 /** What a caller without the token is told. */

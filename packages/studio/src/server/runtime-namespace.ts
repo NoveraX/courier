@@ -8,6 +8,8 @@
  *   - `runtime:hello`    — once on connect, identifies the runtime
  *   - `runtime:announce` — possibly many times, declares which sources it
  *                          hosts on which transports
+ *   - `runtime:webhooks` — the webhooks its application defines, which a
+ *                          trusted runtime is asked to deliver
  *
  * Studio updates the `BindingTable` on every announce and detaches the
  * runtime from the table on disconnect. The playground router reads
@@ -30,6 +32,7 @@ import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import { handleAnnounce, handleDisconnect, handleHello } from "./runtime-registration";
 import { admitRuntimeSocket } from "./runtime-trust";
 import type { StudioToken } from "./studio-token";
+import type { WebhookDirectory } from "./webhooks/webhook-directory";
 
 const log = createLogger("Studio");
 
@@ -63,6 +66,11 @@ export interface SetupRuntimeNamespaceDeps {
   answers?: AnswerObserver | undefined;
   /** The requests Studio runs for an agent, whose start events are made to name it. */
   agentCalls?: AgentCalls | undefined;
+  /**
+   * The webhooks each trusted runtime says its application defines: such a
+   * runtime is asked to deliver one, signed with the application's secret.
+   */
+  webhooks?: WebhookDirectory | undefined;
   /**
    * This project's Studio token. A runtime that presents it when it connects
    * is sent Playground calls; any other is only heard.
@@ -101,6 +109,10 @@ export function setupRuntimeNamespace(
       );
     });
 
+    socket.on("runtime:webhooks", (raw: unknown) => {
+      if (trusted && ref.runtimeId) deps.webhooks?.announce(socket, ref.runtimeId, raw);
+    });
+
     if (deps.playgroundRouter) {
       const router = deps.playgroundRouter;
       socket.on("playground:chunk", (raw: unknown) => router.forwardChunk(raw, socket.id));
@@ -114,6 +126,7 @@ export function setupRuntimeNamespace(
     });
 
     socket.on("disconnect", () => {
+      deps.webhooks?.forget(socket);
       endOpenRequests(socket, deps);
       handleDisconnect(socket, ref, deps);
     });

@@ -10,6 +10,20 @@ export interface ClientConnection {
   off(event: "close", listener: () => void): unknown;
 }
 
+/* The request again, with a signal of its own. It is built from its parts:
+   a request the runtime made its own way — srvx's, which Nitro 3 serves
+   SolidStart 2 with — passes for a Request but cannot be copied as one. */
+function withSignal(request: Request, signal: AbortSignal): Request {
+  const init: RequestInit & { duplex?: "half" } = {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    signal,
+  };
+  if (request.body) init.duplex = "half";
+  return new Request(request.url, init);
+}
+
 /**
  * Run a proxy handler with a request that is aborted when the client leaves.
  *
@@ -50,7 +64,7 @@ export async function handleWhileConnected(
   if (request.signal.aborted || connection.destroyed) abort();
 
   try {
-    return await handle(new Request(request, { signal: controller.signal }));
+    return await handle(withSignal(request, controller.signal));
   } finally {
     connection.off("close", abort);
     request.signal.removeEventListener("abort", abort);

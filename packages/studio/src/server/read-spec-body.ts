@@ -5,8 +5,8 @@ import { errnoCode } from "./errno-code";
 import { messageOf } from "./message-of";
 import { SpecFetchError } from "./spec-fetch-error";
 
-/* Far past the largest public specification seen (Stripe's is 8 MB). */
-const MAX_BYTES = 64 * 1024 * 1024;
+/** The most a specification's text may be: far past the largest public one seen (Stripe's is 8 MB). */
+export const SPEC_MAX_BYTES = 64 * 1024 * 1024;
 
 const DECODERS: ReadonlyMap<string, () => Transform> = new Map([
   ["gzip", createGunzip],
@@ -60,10 +60,10 @@ async function collect(body: Readable, url: URL): Promise<Buffer[]> {
   for await (const chunk of read) {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
     size += bytes.length;
-    if (size > MAX_BYTES) {
+    if (size > SPEC_MAX_BYTES) {
       throw new SpecFetchError(
         "SPEC_TOO_LARGE",
-        `${url.href} is larger than ${MAX_BYTES / 1024 / 1024} MB.`,
+        `${url.href} is larger than ${SPEC_MAX_BYTES / 1024 / 1024} MB.`,
       );
     }
     chunks.push(bytes);

@@ -42,6 +42,14 @@ describe("nuxtRecipe", () => {
     expect(byPath.get("app/pages/index.vue")).toContain("<NuxtWelcome />");
   });
 
+  it("imports the browser's client into the page through #shared, which a production build resolves", () => {
+    const recipe = nuxtRecipe(contextOf(app(), "nuxt"));
+    const page = recipe.files.find((file) => file.path === "app/pages/courier.vue")?.content;
+
+    expect(page).toContain('import { courier } from "#shared/courier/caller";');
+    expect(page).not.toContain("../../shared/courier/caller");
+  });
+
   it("renders the app's pages where app.vue showed the welcome, and adds Studio's module", () => {
     const ctx = contextOf(app(), "nuxt");
     const edits = new Map(
@@ -72,5 +80,9 @@ describe("nuxtRecipe", () => {
 
     expect(paths).toContain("lib/courier/api.ts");
     expect(paths).toContain("pages/courier.vue");
+    expect(
+      nuxtRecipe(contextOf(root, "nuxt")).files.find((file) => file.path === "pages/courier.vue")
+        ?.content,
+    ).toContain('import { courier } from "../lib/courier/caller";');
   });
 });

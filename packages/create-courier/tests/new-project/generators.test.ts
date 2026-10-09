@@ -20,6 +20,17 @@ describe("generatorFor", () => {
     ]);
   });
 
+  it("adds Node's server adapter to a new Astro site once installed, which its build needs for Courier's route", () => {
+    expect(generatorFor("astro", "shop", "npm")?.afterInstall).toEqual([
+      expect.objectContaining({ bin: "astro", args: ["add", "node", "--yes"] }),
+    ]);
+    expect(
+      FRAMEWORKS.filter((framework) => framework.id !== "astro").map(
+        (framework) => generatorFor(framework.id, "shop", "npm")?.afterInstall,
+      ),
+    ).toEqual(FRAMEWORKS.filter((framework) => framework.id !== "astro").map(() => undefined));
+  });
+
   it("has a generator for every framework but Express, whose server the command writes", () => {
     const without = FRAMEWORKS.filter(
       (framework) => generatorFor(framework.id, "shop", "npm") === undefined,

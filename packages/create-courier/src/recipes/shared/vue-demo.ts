@@ -11,7 +11,7 @@ import { DEMO_CSS } from "./demo-style";
  *
  * @param ctx - The project, and what is set up in it
  * @param path - Where the page goes, relative to the root
- * @param caller - The `caller.ts` module, relative to the root
+ * @param caller - The `caller.ts` module: relative to the root, or as an alias the framework resolves, `#shared/courier/caller`
  * @param variable - The environment variable the API's address is read from
  * @returns The page
  * @example
@@ -30,7 +30,7 @@ export function vueDemo(
   const content = `<script setup lang="ts">
 import { onMounted, ref } from "vue";
 
-import { courier } from "${importSpecifier(path, caller, ctx.extension)}";
+import { courier } from "${caller.startsWith("#") ? caller : importSpecifier(path, caller, ctx.extension)}";
 
 type User = Awaited<ReturnType<typeof courier.users.list>>[number];
 

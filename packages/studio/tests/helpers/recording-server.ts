@@ -57,7 +57,11 @@ export async function startRecordingServer(
     requests.push(recorded);
 
     const answer = reply(recorded);
-    const headers = answer.contentType ? { "content-type": answer.contentType } : undefined;
+    /* No connection is kept for the next call: a client reusing one the server closes as idle meets ECONNRESET, which a busy machine's late timers make likely. */
+    const headers = {
+      connection: "close",
+      ...(answer.contentType ? { "content-type": answer.contentType } : {}),
+    };
     res.writeHead(answer.status ?? 200, headers);
     res.end(answer.body ?? "");
   });

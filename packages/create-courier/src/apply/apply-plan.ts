@@ -4,10 +4,10 @@ import { changedLines } from "../edit/line-diff";
 import type { Plan, PlannedEdit } from "../plan/build-plan";
 import { manualLines, nextLines } from "../plan/plan-lines";
 import type { RecipeContext } from "../recipes/recipe-types";
+import { prepare, reportTypes, writeAfterImport } from "./after-install";
 import { importSpecification } from "./import-specification";
 import { install, installCommands } from "./install";
-import { runTool } from "./run-tool";
-import { type Touched, typecheckTouched } from "./typecheck";
+import type { Touched } from "./typecheck";
 import { checkEditsCurrent, writePlannedEdits, writePlannedFiles } from "./write-plan";
 
 /* What is left to the person, and what to run next. */
@@ -38,42 +38,6 @@ function changedByEdits(edits: readonly PlannedEdit[]): Map<string, Set<number>>
   );
 }
 
-/* Check the types of what the setup touched, and say how it went: 1 when its own code has errors. */
-async function reportTypes(root: string, touched: Touched, terminal: Terminal): Promise<number> {
-  const { style } = terminal;
-  const outcome = await typecheckTouched(root, touched);
-  if (outcome.kind === "clean") {
-    terminal.print(["", "The files Courier added type-check against the project's tsconfig."]);
-  } else if (outcome.kind === "no-typescript") {
-    terminal.print([
-      "",
-      style.yellow(
-        "TypeScript is not installed in the project, so the files Courier added were not type-checked.",
-      ),
-    ]);
-  } else if (outcome.kind === "unchecked") {
-    terminal.print(["", style.yellow(`TypeScript could not check the project: ${outcome.reason}`)]);
-  } else if (outcome.kind === "errors") {
-    terminal.print([
-      "",
-      style.red("TypeScript finds errors in what Courier added:"),
-      ...outcome.lines,
-    ]);
-    return 1;
-  }
-  return 0;
-}
-
-/* The programs that write the types the added files read; one that fails leaves the check to say what is missing. */
-async function prepare(ctx: RecipeContext, plan: Plan, terminal: Terminal): Promise<void> {
-  for (const { bin, args } of plan.prepare) {
-    const command = ctx.manager.exec(bin, args);
-    const { status } = await runTool(command, ctx.project.root, true);
-    if (status !== 0)
-      terminal.print([terminal.style.yellow(`${command.join(" ")} failed (exit ${status})`)]);
-  }
-}
-
 /* Install, then import the specification and check the types, which need the packages. */
 async function installAndCheck(
   ctx: RecipeContext,
@@ -96,6 +60,12 @@ async function installAndCheck(
   if (run.openapi !== undefined) {
     const status = await importSpecification(ctx.project.root, run.openapi, run.name);
     if (status !== 0) return status;
+    const after = writeAfterImport(ctx.project.root, plan, terminal);
+    return reportTypes(
+      ctx.project.root,
+      { ...touched, added: [...touched.added, ...after] },
+      terminal,
+    );
   }
   return reportTypes(ctx.project.root, touched, terminal);
 }

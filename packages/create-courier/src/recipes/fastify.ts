@@ -5,6 +5,7 @@ import { devStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { serverDir, serverFiles } from "./shared/server-files";
+import { sourcesAfterImport } from "./shared/sources-after-import";
 
 /* `fastify start -w` restarts the server on any change in the project, Studio's own data in .courier/ among them. */
 function watchesAll(command: string): boolean {
@@ -26,36 +27,9 @@ function autoloads(ctx: RecipeContext): boolean {
   return ctx.project.lists("@fastify/autoload") && ctx.project.exists("src/plugins");
 }
 
-function plugin(ctx: RecipeContext, path: string, dir: string): RecipeFile {
-  const from = (file: string) => importSpecifier(path, `${dir}/${file}`, ctx.extension);
-  /* Fastify 5 takes the address first; 4 took the status first. */
-  const redirect =
-    (majorOf(ctx.project.version("fastify")) ?? 5) >= 5
-      ? 'reply.redirect("/courier", 303)'
-      : 'reply.redirect(303, "/courier")';
-  const studio = ctx.choices.studio
-    ? `
-  if (process.env.NODE_ENV !== "production") {
-    const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
-    await attachRuntime();
-  }`
-    : "";
-  const content = `import { registerSources } from "@noverax/courier";
-import { courierPlugin } from "@noverax/courier-fastify";
-import fp from "fastify-plugin";
-
-import { emailOf, failure, usersPage } from "${from("page.ts")}";
-import { caller } from "${from("server-caller.ts")}";
-import { sources } from "${from("sources.ts")}";
-
-registerSources(sources);
-
-/**
- * Courier's routes: /api/request, which browsers call your API through,
- * and /courier, a page that shows it at work${ctx.choices.studio ? ". While you develop, the\n * server's calls show in Courier Studio" : ""}.
- */
-export default fp(async (fastify) => {${studio}
-  await fastify.register(courierPlugin, { prefix: "/api/request" });
+/* The demo page's routes, in a plugin of their own: the form posts URL-encoded, which only it parses. */
+function pageRoutes(redirect: string): string {
+  return `
   /* The page's form posts URL-encoded, which only this plugin parses. */
   await fastify.register(async (page) => {
     page.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, (_request, body, done) => {
@@ -69,14 +43,47 @@ export default fp(async (fastify) => {${studio}
       await caller.users.create({ name, email: emailOf(name) });
       return ${redirect};
     });
-  });
+  });`;
+}
+
+function plugin(ctx: RecipeContext, path: string, dir: string, withPage: boolean): RecipeFile {
+  const from = (file: string) => importSpecifier(path, `${dir}/${file}`, ctx.extension);
+  /* Fastify 5 takes the address first; 4 took the status first. */
+  const redirect =
+    (majorOf(ctx.project.version("fastify")) ?? 5) >= 5
+      ? 'reply.redirect("/courier", 303)'
+      : 'reply.redirect(303, "/courier")';
+  const studio = ctx.choices.studio
+    ? `
+  if (process.env.NODE_ENV !== "production") {
+    const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
+    await attachRuntime();
+  }`
+    : "";
+  const pageImports = withPage
+    ? `import { emailOf, failure, usersPage } from "${from("page.ts")}";
+import { caller } from "${from("server-caller.ts")}";
+`
+    : "";
+  const content = `import { registerSources } from "@noverax/courier";
+import { courierPlugin } from "@noverax/courier-fastify";
+import fp from "fastify-plugin";
+
+${pageImports}import { sources } from "${from("sources.ts")}";
+
+registerSources(sources);
+
+/**
+ * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}${ctx.choices.studio ? ". While you develop, the\n * server's calls show in Courier Studio" : ""}.
+ */
+export default fp(async (fastify) => {${studio}
+  await fastify.register(courierPlugin, { prefix: "/api/request" });${withPage ? pageRoutes(redirect) : ""}
 });
 `;
-  return {
-    path,
-    content,
-    purpose: "Courier's routes: the proxy, and a page that shows it at work",
-  };
+  const purpose = withPage
+    ? "Courier's routes: the proxy, and a page that shows it at work"
+    : "Courier's proxy route";
+  return { path, content, purpose };
 }
 
 /**
@@ -96,25 +103,24 @@ export function fastifyRecipe(ctx: RecipeContext): Recipe {
   const example = ctx.choices.openapi === undefined;
   const dir = serverDir(ctx);
   const path = autoloads(ctx) ? "src/plugins/courier.ts" : `${dir}/plugin.ts`;
-  const register: ManualStep[] =
-    example && !autoloads(ctx)
-      ? [
-          {
-            file: "your server",
-            what: "Register Courier's plugin on your Fastify app",
-            lines: [
-              `import courier from "./${path.replace(/\.ts$/, ctx.extension === ".js" ? ".js" : "")}";`,
-              "await app.register(courier);",
-            ],
-          },
-        ]
-      : [];
+  const register: ManualStep[] = !autoloads(ctx)
+    ? [
+        {
+          file: "your server",
+          what: "Register Courier's plugin on your Fastify app",
+          lines: [
+            `import courier from "./${path.replace(/\.ts$/, ctx.extension === ".js" ? ".js" : "")}";`,
+            "await app.register(courier);",
+          ],
+        },
+      ]
+    : [];
   const packages = courierPackages(ctx, { adapter: "@noverax/courier-fastify" });
   return {
-    files: [...serverFiles(ctx, dir), ...(example ? [plugin(ctx, path, dir)] : [])],
+    files: [...serverFiles(ctx, dir), plugin(ctx, path, dir, example)],
     edits: [],
     ...packages,
-    dependencies: [...packages.dependencies, ...(example ? ["fastify-plugin"] : [])],
+    dependencies: [...packages.dependencies, "fastify-plugin"],
     scripts: studioScripts(ctx),
     rewrites: ctx.choices.studio
       ? Object.entries(ctx.project.manifest.scripts)
@@ -127,5 +133,6 @@ export function fastifyRecipe(ctx: RecipeContext): Recipe {
       : [],
     manual: register,
     next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    ...(example ? {} : { afterImport: sourcesAfterImport(dir) }),
   };
 }

@@ -8,29 +8,18 @@ import { devStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { serverDir, serverFiles, studioAttachLater } from "./shared/server-files";
+import { sourcesAfterImport } from "./shared/sources-after-import";
 
-function routes(ctx: RecipeContext, dir: string): RecipeFile {
+function routes(ctx: RecipeContext, dir: string, withPage: boolean): RecipeFile {
   const path = `${dir}/routes.ts`;
   const from = (file: string) => importSpecifier(path, `${dir}/${file}`, ctx.extension);
-  const content = `import { registerSources } from "@noverax/courier";
-import { courierHandler } from "@noverax/courier-express";
-import express, { Router } from "express";
-
-import { emailOf, failure, usersPage } from "${from("page.ts")}";
+  const pageImports = withPage
+    ? `import { emailOf, failure, usersPage } from "${from("page.ts")}";
 import { caller } from "${from("server-caller.ts")}";
-import { sources } from "${from("sources.ts")}";
-
-registerSources(sources);
-${ctx.choices.studio ? `\n${studioAttachLater()}\n` : ""}
-/**
- * Courier's routes: /api/request, which browsers call your API through,
- * and /courier, a page that shows it at work. Mount them before any body
- * parser: the proxy reads the request's body itself.
- */
-export const courier = Router();
-
-courier.all("/api/request", courierHandler());
-
+`
+    : "";
+  const page = withPage
+    ? `
 courier.get("/courier", async (_request, response) => {
   response.type("html").send(usersPage(await caller.users.list().catch(failure)));
 });
@@ -40,11 +29,30 @@ courier.post("/courier", express.urlencoded({ extended: false }), async (request
   await caller.users.create({ name, email: emailOf(name) });
   response.redirect(303, "/courier");
 });
-`;
+`
+    : "";
+  const content = `import { registerSources } from "@noverax/courier";
+import { courierHandler } from "@noverax/courier-express";
+import ${withPage ? "express, { Router }" : "{ Router }"} from "express";
+
+${pageImports}import { sources } from "${from("sources.ts")}";
+
+registerSources(sources);
+${ctx.choices.studio ? `\n${studioAttachLater()}\n` : ""}
+/**
+ * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}. Mount them before any body
+ * parser: the proxy reads the request's body itself.
+ */
+export const courier = Router();
+
+courier.all("/api/request", courierHandler());
+${page}`;
   return {
     path,
     content,
-    purpose: "Courier's routes: the proxy, and a page that shows it at work",
+    purpose: withPage
+      ? "Courier's routes: the proxy, and a page that shows it at work"
+      : "Courier's proxy route",
   };
 }
 
@@ -104,11 +112,12 @@ export function expressRecipe(ctx: RecipeContext): Recipe {
   const example = ctx.choices.openapi === undefined;
   const dir = serverDir(ctx);
   return {
-    files: [...serverFiles(ctx, dir), ...(example ? [routes(ctx, dir)] : [])],
-    edits: example ? [mountEdit(ctx, dir)] : [],
+    files: [...serverFiles(ctx, dir), routes(ctx, dir, example)],
+    edits: [mountEdit(ctx, dir)],
     ...courierPackages(ctx, { adapter: "@noverax/courier-express" }),
     scripts: studioScripts(ctx),
     manual: [],
     next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    ...(example ? {} : { afterImport: sourcesAfterImport(dir) }),
   };
 }

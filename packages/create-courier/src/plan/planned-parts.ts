@@ -22,7 +22,7 @@ export function packageName(spec: string): string {
  *
  * @param project - The project
  * @param file - The file
- * @returns It, to create where nothing is there; `same` where the project has it already; `kept` where a file of the project's is there
+ * @returns It, to create where nothing is there; `same` where the project has it already; `courier` where a file of Courier's is there, the project's own way — an earlier setup's, or one written by hand; `kept` where another file of the project's is there
  * @example
  * ```ts
  * plannedFile(project, { path: "courier.config.ts", content, purpose }).state; // "create"
@@ -31,7 +31,8 @@ export function packageName(spec: string): string {
 export function plannedFile(project: Project, file: RecipeFile): PlannedFile {
   const there = project.read(file.path);
   if (there === undefined) return { ...file, state: "create" };
-  return { ...file, state: there === file.content ? "same" : "kept" };
+  if (there === file.content) return { ...file, state: "same" };
+  return { ...file, state: there.includes("@noverax/courier") ? "courier" : "kept" };
 }
 
 /**

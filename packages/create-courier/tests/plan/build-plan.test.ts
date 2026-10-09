@@ -41,6 +41,18 @@ describe("buildPlan", () => {
     expect(plan.edits.map((edit) => edit.path)).toEqual(["package.json"]);
   });
 
+  it("leaves a file of Courier's the project has already as it is, without listing its lines", () => {
+    const root = projectWith({
+      "package.json": manifest({ zod: "^4.0.0", typescript: "^6.0.0" }),
+      "tsconfig.json": "{}",
+      "src/api.ts": 'import { defineApi } from "@noverax/courier/define";\n// the project\'s own\n',
+    });
+    const plan = buildPlan(contextOf(root, "zod"), RECIPE);
+
+    expect(plan.files.find((file) => file.path === "src/api.ts")?.state).toBe("courier");
+    expect(plan.manual.map((step) => step.file)).not.toContain("src/api.ts");
+  });
+
   it("adds TypeScript to a project without it", () => {
     const root = projectWith({
       "package.json": manifest({ nuxt: "^4.6.0" }),

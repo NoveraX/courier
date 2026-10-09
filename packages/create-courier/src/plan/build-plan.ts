@@ -10,8 +10,13 @@ import { keptStep, packageName, plannedEdit, plannedFile, typescriptOf } from ".
 
 /** A file of the setup, and what the project already has there. */
 export interface PlannedFile extends RecipeFile {
-  /** `create` while nothing is there; `same` when it already holds this; `kept` when a file of the project's is there. */
-  readonly state: "create" | "same" | "kept";
+  /**
+   * `create` while nothing is there; `same` when it already holds this;
+   * `courier` when a file of Courier's is there, written its own way — by an
+   * earlier setup, or by hand — which is left as it is; `kept` when another
+   * file of the project's is there, and the person is shown what it lacks.
+   */
+  readonly state: "create" | "same" | "courier" | "kept";
 }
 
 /** A change to a file of the project's, worked out against the file as it is now. */

@@ -34,6 +34,31 @@ describe("withAgents", () => {
     expect(recipe.manual.some((step) => step.what.includes(".agent()"))).toBe(false);
   });
 
+  it("asks to mark the endpoints of an API the project has already, where none is marked", () => {
+    const root = projectWith({
+      "package.json": manifest({ hono: "^4.13.13" }, { type: "module" }),
+      "tsconfig.json": "{}",
+      "src/index.ts": "import { Hono } from 'hono'\n\nconst app = new Hono()\n",
+      "src/courier/api.ts": 'import { defineApi } from "@noverax/courier/define";\n',
+    });
+    const marked = projectWith({
+      "package.json": manifest({ hono: "^4.13.13" }, { type: "module" }),
+      "tsconfig.json": "{}",
+      "src/index.ts": "import { Hono } from 'hono'\n\nconst app = new Hono()\n",
+      "src/courier/api.ts": 'endpoint.get("").agent({ description: "All", access: "read" })\n',
+    });
+    const unmarked = contextOf(root, "hono", { mcp: true });
+    const done = contextOf(marked, "hono", { mcp: true });
+
+    expect(withAgents(unmarked, honoRecipe(unmarked)).manual.at(-1)).toMatchObject({
+      file: "src/courier/api.ts",
+      lines: ['.agent({ description: "What it answers, for the agent", access: "read" })'],
+    });
+    expect(
+      withAgents(done, honoRecipe(done)).manual.some((step) => step.what.includes(".agent()")),
+    ).toBe(false);
+  });
+
   it("leaves an imported API's endpoints for the person to mark, and says so in the plan", () => {
     const ctx = contextOf(honoProject(), "hono", { mcp: true, openapi: "./openapi.json" });
 

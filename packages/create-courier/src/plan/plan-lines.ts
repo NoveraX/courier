@@ -8,6 +8,7 @@ function fileLine(file: PlannedFile, width: number, style: TerminalStyle): strin
   const path = file.path.padEnd(width);
   if (file.state === "create") return `  ${style.green("+")} ${path}  ${style.dim(file.purpose)}`;
   if (file.state === "same") return style.dim(`  = ${path}  already there`);
+  if (file.state === "courier") return style.dim(`  = ${path}  Courier's already, yours to change`);
   return `  ${style.yellow("!")} ${path}  ${style.dim("a file of yours is here: kept, see below")}`;
 }
 

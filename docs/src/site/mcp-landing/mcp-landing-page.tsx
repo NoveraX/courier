@@ -1,5 +1,3 @@
-import { coreVersion } from "@/site/content/version"
-import { LandingFooter } from "@/site/landing/landing-footer"
 import { ChapterSection } from "@/site/studio-landing/chapters/chapter-section"
 import { ConfirmViz } from "./chapters/confirm-viz"
 import { MCP_CHAPTERS } from "./chapters/mcp-chapters"
@@ -9,6 +7,7 @@ import { ScopeViz } from "./chapters/scope-viz"
 import { McpHeader } from "./header/mcp-header"
 import { McpHero } from "./hero/mcp-hero"
 import { McpCta } from "./mcp-cta"
+import { McpFooter } from "./mcp-footer"
 import { McpSetupSection } from "./setup/mcp-setup-section"
 import { StepsSection } from "./steps/steps-section"
 
@@ -46,7 +45,7 @@ export function McpLandingPage() {
         <McpSetupSection />
         <McpCta />
       </main>
-      <LandingFooter version={coreVersion()} />
+      <McpFooter />
     </div>
   )
 }

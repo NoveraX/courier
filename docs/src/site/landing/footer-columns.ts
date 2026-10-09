@@ -8,9 +8,9 @@ export interface FooterColumn {
 const REPO = "https://github.com/NoveraX/courier"
 
 /**
- * The footer links of the landing page and the MCP server's page, in four
- * columns: Courier's products, the docs most read, the frameworks, and the
- * project's places on GitHub and npm.
+ * The footer links of the landing page, in four columns: Courier's
+ * products, the docs most read, the frameworks, and the project's places
+ * on GitHub and npm. The product pages have footers of their own.
  *
  * @example
  * ```ts

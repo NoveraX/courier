@@ -501,6 +501,42 @@ describe("courier-studio mcp", () => {
     expect(JSON.stringify(failed.content)).toContain("Order 8 has shipped");
   });
 
+  it("asks the client's person to confirm a write, and sends it again only once they do", async () => {
+    sent.length = 0;
+    stamped.length = 0;
+    questions.length = 0;
+
+    const accepting = await bridged("accept");
+    const confirmed = await accepting.client.callTool({
+      name: "replay_write",
+      arguments: { id: "r2" },
+    });
+    await accepting.close();
+    const declining = await bridged("decline");
+    const declined = await declining.client.callTool({
+      name: "replay_write",
+      arguments: { id: "r2" },
+    });
+    await declining.close();
+
+    expect(questions).toHaveLength(2);
+    expect(questions[0]).toContain("POST shop.orders.cancel again, as request r2 sent it");
+    expect(confirmed.isError).toBe(false);
+    expect(confirmed).not.toHaveProperty("resultType");
+    expect(confirmed.structuredContent).toMatchObject({ replayed: "r2", status: 200 });
+    expect(declined.isError).toBe(true);
+    expect(JSON.stringify(declined.content)).toContain("Not run: the person declined replay_write");
+    expect(sent).toHaveLength(1);
+    expect(stamped[0]).toEqual([
+      expect.any(String),
+      {
+        tool: "replay_write",
+        access: "destructive",
+        client: "editor 1",
+      },
+    ]);
+  });
+
   it("tells a client that cannot ask its person how else the write is sent", async () => {
     sent.length = 0;
     const { client, close } = await bridged();

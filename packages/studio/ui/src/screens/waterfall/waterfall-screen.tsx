@@ -95,7 +95,7 @@ export function WaterfallScreen(): React.ReactNode {
           />
         </>
       )}
-      <WaterfallLegend />
+      <WaterfallLegend webhooks={model.webhooks} />
     </div>
   );
 }

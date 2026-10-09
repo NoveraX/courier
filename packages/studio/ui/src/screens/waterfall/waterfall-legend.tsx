@@ -1,20 +1,23 @@
 import { cn } from "@/lib/utils";
-import { LEGEND_SEGMENTS, SEGMENT_STYLE } from "./segment-style";
+import { LEGEND_SEGMENTS, SEGMENT_STYLE, WEBHOOK_LEGEND_SEGMENTS } from "./segment-style";
 
 /**
- * The key under the Waterfall: the colour of each part of a bar, and how
- * an idle gap is drawn.
+ * The key under the Waterfall: the colour of each part of a bar — a
+ * webhook's checks and handler too while one is in view — and how an idle
+ * gap is drawn.
  *
+ * @param props - Whether a webhook delivered to the app is in view
  * @returns The legend
  * @example
  * ```tsx
- * <WaterfallLegend />
+ * <WaterfallLegend webhooks={false} />
  * ```
  */
-export function WaterfallLegend(): React.ReactNode {
+export function WaterfallLegend({ webhooks }: { webhooks: boolean }): React.ReactNode {
+  const segments = webhooks ? [...LEGEND_SEGMENTS, ...WEBHOOK_LEGEND_SEGMENTS] : LEGEND_SEGMENTS;
   return (
     <div className="flex min-h-8.5 shrink-0 flex-wrap items-center gap-x-3.5 gap-y-1.5 border-t border-line bg-bg-subtle py-2 pr-4 pl-5">
-      {LEGEND_SEGMENTS.map((key) => (
+      {segments.map((key) => (
         <span
           key={key}
           className="flex items-center gap-1.5 text-label whitespace-nowrap text-fg-muted"

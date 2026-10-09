@@ -63,7 +63,9 @@ export function InspectorHeader({
               ? `agent tool ${request.agent.tool}`
               : request.mode === "proxy"
                 ? "via proxy"
-                : "direct"}
+                : request.mode === "webhook"
+                  ? "webhook delivered to the app"
+                  : "direct"}
           </span>
         </div>
         <h2 className="m-0 truncate font-mono text-heading font-medium tracking-[-0.015em]">

@@ -41,7 +41,7 @@ export interface SavedRequest {
   variables: unknown;
   /** The size in bytes of the whole variables, when `variables` is a part of them. */
   variablesCutFrom?: number | undefined;
-  mode: "direct" | "proxy";
+  mode: "direct" | "proxy" | "webhook";
   type?: "query" | "mutation" | undefined;
   status: string;
   statusCode?: number | undefined;

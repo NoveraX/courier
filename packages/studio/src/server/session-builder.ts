@@ -52,7 +52,7 @@ function toSavedRequest(raw: Record<string, unknown>): SavedRequest {
     httpMethod: optionalString(raw.httpMethod),
     variables: raw.variables,
     variablesCutFrom: optionalNumber(raw.variablesCutFrom),
-    mode: raw.mode === "proxy" ? "proxy" : "direct",
+    mode: raw.mode === "proxy" || raw.mode === "webhook" ? raw.mode : "direct",
     type: raw.type === "mutation" ? "mutation" : raw.type === "query" ? "query" : undefined,
     status: String(raw.status ?? "pending"),
     statusCode: optionalNumber(raw.statusCode),

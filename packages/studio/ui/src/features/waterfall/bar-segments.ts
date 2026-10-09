@@ -10,6 +10,8 @@ export type SegmentKey =
   | "fetch"
   | "validation"
   | "middleware-out"
+  | "checks"
+  | "handler"
   | "other"
   | "proxy-to-client"
   | "in-flight"
@@ -33,6 +35,8 @@ const PHASE_SEGMENT: Readonly<Record<string, SegmentKey>> = {
   validation: "validation",
   "middleware-out": "middleware-out",
   overhead: "other",
+  checks: "checks",
+  handler: "handler",
 };
 
 /**

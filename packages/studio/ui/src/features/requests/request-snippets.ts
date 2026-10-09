@@ -1,6 +1,8 @@
 import { isCredentialHeader } from "@noverax/courier/internal";
-import { buildCurlSnippet, buildFetchSnippet, safeStringify, wholeBodyNote } from "@/lib/snippets";
+import { buildCurlSnippet, buildFetchSnippet, wholeBodyNote } from "@/lib/snippets";
 import type { RequestEntry } from "@/store/types";
+import { courierArgs } from "./courier-args";
+import { deliverySnippet } from "./delivery-snippet";
 import { requestBodyFile } from "./request-body-file";
 import { httpMethodOf } from "./request-parts";
 
@@ -51,7 +53,7 @@ export type SnippetRequest = Pick<
   | "variables"
   | "variablesCutFrom"
   | "streamEvents"
->;
+> & { mode?: RequestEntry["mode"] | undefined };
 
 function redactedHeaders(
   headers: RequestEntry["requestHeaders"],
@@ -68,12 +70,6 @@ function redactedHeaders(
     return [name, REDACTED_VALUE];
   });
   return { headers: Object.fromEntries(entries), redacted };
-}
-
-function courierArgs(variables: unknown): string {
-  if (variables === undefined || variables === null) return "";
-  if (typeof variables === "object" && Object.keys(variables).length === 0) return "";
-  return safeStringify(variables, 2).replace(/"([A-Za-z_$][\w$]*)":/g, "$1:");
 }
 
 function courierCall(r: SnippetRequest): string {
@@ -110,7 +106,8 @@ function streamBrowser(r: SnippetRequest, url: string): string {
 /**
  * A request written out in a flavour, with the values of credential
  * headers left out — the Headers tab shows them, on request — unless the
- * headers are the caller's own, as the Playground's are.
+ * headers are the caller's own, as the Playground's are. A webhook
+ * delivered to the app is written in Courier as a mock delivers one again.
  *
  * @param r - The request
  * @param flavor - The flavour
@@ -128,7 +125,12 @@ export function requestSnippet(
 ): Snippet {
   const url = r.url ?? `/${[r.source, r.group, r.method].filter(Boolean).join("/")}`;
   const { headers, redacted } = redactedHeaders(r.requestHeaders, redact);
-  if (flavor === "courier") return { code: courierCall(r), redacted: false };
+  if (flavor === "courier") {
+    return {
+      code: r.mode === "webhook" ? deliverySnippet(r, url) : courierCall(r),
+      redacted: false,
+    };
+  }
   if (r.transport === "sse" || r.transport === "ws") {
     return flavor === "shell"
       ? { code: streamShell(r, url, headers), redacted }

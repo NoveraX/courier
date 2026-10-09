@@ -7,7 +7,7 @@ export const WATERFALL_GROUPS = ["none", "source", "group"] as const;
 export type WaterfallGroup = (typeof WATERFALL_GROUPS)[number];
 
 /** Which requests the Waterfall shows by how they were made. */
-export const WATERFALL_MODES = ["all", "direct", "proxy"] as const;
+export const WATERFALL_MODES = ["all", "direct", "proxy", "webhook"] as const;
 export type WaterfallMode = (typeof WATERFALL_MODES)[number];
 
 /** The Waterfall's own part of its address: each left out while it is the default. */

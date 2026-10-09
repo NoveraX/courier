@@ -98,6 +98,14 @@ export function useReplay(): (r: RequestEntry) => Replay {
       if (sessionShown) {
         return { label, title: "Go back to the live requests to run it again", run: undefined };
       }
+      if (r.mode === "webhook") {
+        return {
+          label,
+          title:
+            "A webhook came to the app from its sender: deliver it again from a mock, or the sender's own tools",
+          run: undefined,
+        };
+      }
       if (r.purpose === "csrf-token") {
         return {
           label,

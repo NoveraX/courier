@@ -4,6 +4,8 @@ import type { ValidationIssue } from "@/store/types-events";
 import { failureHint } from "./failure-hints";
 import { endpointParts } from "./request-parts";
 import { isFailedState, isStreamRequest, requestStateOf } from "./request-state";
+import { deliveryFailureOf, deliveryStopOf } from "./webhook-delivery";
+import { deliveryStages } from "./webhook-parts";
 
 /** A stage a failed request went through, and how it ended there. */
 export interface FailureStage {
@@ -69,6 +71,15 @@ function whereItFailed(r: RequestEntry, refused: boolean, broken: boolean): stri
   return `Failed at the fetch${after}`;
 }
 
+/* A delivery made to the app fails in its own parts — its signature, its body, its handler — not in a call's. */
+function webhookParts(r: RequestEntry): Pick<FailureView, "where" | "stages" | "hint"> {
+  const stop = deliveryStopOf(r);
+  const stages = deliveryStages(r);
+  return stop
+    ? { ...deliveryFailureOf(stop, r.timing?.total), stages }
+    : { where: r.error?.message ?? "The delivery failed", stages, hint: undefined };
+}
+
 function streamStages(r: RequestEntry): FailureStage[] {
   const count = r.streamEventCount ?? r.streamEvents?.length ?? 0;
   return [
@@ -109,15 +120,21 @@ export function failureOf(r: RequestEntry): FailureView | null {
     null,
     2,
   );
+  const parts =
+    r.mode === "webhook"
+      ? webhookParts(r)
+      : {
+          where: stream ? "The stream ended with an error" : whereItFailed(r, refused, broken),
+          stages: stream ? streamStages(r) : httpStages(r, refused, broken),
+          hint: failureHint(r),
+        };
   return {
     severity: state === "validation_error" ? "warn" : "err",
     type: error.type.toUpperCase(),
     code,
     message: error.message,
-    where: stream ? "The stream ended with an error" : whereItFailed(r, refused, broken),
-    stages: stream ? streamStages(r) : httpStages(r, refused, broken),
+    ...parts,
     issues: error.validationIssues ?? [],
-    hint: failureHint(r),
     raw,
   };
 }

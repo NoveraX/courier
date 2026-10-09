@@ -1,4 +1,4 @@
-import { ArrowRight, Database, RadioTower, Shuffle, Tag } from "lucide-react";
+import { ArrowRight, Database, RadioTower, Shuffle, Tag, Webhook } from "lucide-react";
 
 import { urlParts } from "@/features/requests/request-parts";
 import { isStreamRequest } from "@/features/requests/request-state";
@@ -7,9 +7,16 @@ import type { RequestEntry } from "@/store/types";
 
 const PROTOCOL = { http: "HTTP", sse: "Server-Sent Events", ws: "WebSocket" } as const;
 
+const MODE_CHIP = {
+  direct: { icon: ArrowRight, label: "Direct", tone: undefined },
+  proxy: { icon: Shuffle, label: "Proxy", tone: "text-syntax-type" },
+  webhook: { icon: Webhook, label: "Webhook", tone: "text-syntax-keyword" },
+} as const;
+
 /**
  * The request's URL, its parts coloured, over chips for its source, its
- * mode, its operation and its protocol.
+ * mode, its operation — none for a webhook delivered to the app — and its
+ * protocol.
  *
  * @param props - The request
  * @returns The box
@@ -21,7 +28,7 @@ const PROTOCOL = { http: "HTTP", sse: "Server-Sent Events", ws: "WebSocket" } as
 export function UrlBox({ request }: { request: RequestEntry }): React.ReactNode {
   const parts = urlParts(request.url);
   const stream = isStreamRequest(request);
-  const proxy = request.mode === "proxy";
+  const mode = MODE_CHIP[request.mode];
   return (
     <div className="flex flex-col gap-3 rounded-panel border border-line bg-inset px-3.5 py-3.25">
       {parts && (
@@ -41,10 +48,12 @@ export function UrlBox({ request }: { request: RequestEntry }): React.ReactNode 
       )}
       <div className="flex flex-wrap gap-1.5">
         <UrlChip icon={Database}>{request.source}</UrlChip>
-        <UrlChip icon={proxy ? Shuffle : ArrowRight} tone={proxy ? "text-syntax-type" : undefined}>
-          {proxy ? "Proxy" : "Direct"}
+        <UrlChip icon={mode.icon} tone={mode.tone}>
+          {mode.label}
         </UrlChip>
-        {!stream && <UrlChip icon={Tag}>{request.type ?? "query"}</UrlChip>}
+        {!stream && request.mode !== "webhook" && (
+          <UrlChip icon={Tag}>{request.type ?? "query"}</UrlChip>
+        )}
         <UrlChip icon={RadioTower} tone={stream ? "text-brand" : undefined}>
           {stream ? PROTOCOL[request.transport ?? "http"] : (request.httpVersion ?? PROTOCOL.http)}
         </UrlChip>

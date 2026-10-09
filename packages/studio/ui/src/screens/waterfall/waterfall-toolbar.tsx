@@ -30,6 +30,7 @@ const MODES = [
   { value: "all", label: "All" },
   { value: "direct", label: "Direct" },
   { value: "proxy", label: "Proxy" },
+  { value: "webhook", label: "Webhook" },
 ] as const satisfies readonly { value: WaterfallMode; label: string }[];
 
 const ZOOM_BUTTON =

@@ -23,6 +23,8 @@ export const SEGMENT_STYLE: Readonly<Record<SegmentKey, SegmentStyle>> = {
   fetch: { label: "Fetch", hop: "To the upstream and back", fill: "bg-brand" },
   validation: { label: "Validation", hop: "Schema check", fill: "bg-syntax-number" },
   "middleware-out": { label: "Middleware out", hop: "After the fetch", fill: KEYWORD_SOFT },
+  checks: { label: "Checks", hop: "A webhook's signature and schema", fill: "bg-syntax-number" },
+  handler: { label: "Handler", hop: "The app's webhook handler", fill: "bg-brand" },
   other: { label: "Other", hop: "Time no phase accounts for", fill: "bg-fg-subtle/45" },
   "proxy-to-client": { label: "Proxy → Client", hop: "Courier proxy → caller", fill: TYPE_SOFT },
   "in-flight": {
@@ -41,4 +43,10 @@ export const LEGEND_SEGMENTS = [
   "validation",
   "middleware-out",
   "proxy-to-client",
+] as const satisfies readonly SegmentKey[];
+
+/** The parts a webhook delivered to the app adds to the legend while one is in view. */
+export const WEBHOOK_LEGEND_SEGMENTS = [
+  "checks",
+  "handler",
 ] as const satisfies readonly SegmentKey[];

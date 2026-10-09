@@ -29,7 +29,7 @@ export function requestFromStart(event: EventPayload): RequestEntry {
     purpose: event.purpose === "csrf-token" ? "csrf-token" : undefined,
     variables: event.variables,
     variablesCutFrom: optNum(event.variablesCutFrom),
-    mode: event.mode === "proxy" ? "proxy" : "direct",
+    mode: event.mode === "proxy" || event.mode === "webhook" ? event.mode : "direct",
     agent: readAgent(event.agent),
     idempotencyKey: optStr(event.idempotencyKey),
     type:
@@ -65,8 +65,9 @@ export function withRequestEnd(r: RequestEntry, event: EventPayload): RequestEnt
 /**
  * A request that failed keeps what its caller received — the proxy's own
  * status where the upstream gave none — the upstream's headers, error body
- * and its size, how long it ran and, for a proxied call, how that time split.
- * Issues a `validation:fail` recorded stay with it.
+ * and its size, the headers it came with when the runtime has them, how
+ * long it ran and, for a proxied call, how that time split. Issues a
+ * `validation:fail` recorded stay with it.
  */
 export function withRequestError(r: RequestEntry, event: EventPayload): RequestEntry {
   const rawError = isPlainObject(event.error) ? event.error : undefined;
@@ -90,6 +91,7 @@ export function withRequestError(r: RequestEntry, event: EventPayload): RequestE
     proxyTiming: mergeProxyTiming(readProxyTiming(event.proxyTiming), r.proxyTiming),
     size: optNum(event.size) ?? r.size,
     headers: readStringRecord(event.headers) ?? r.headers,
+    requestHeaders: readStringRecord(event.requestHeaders) ?? r.requestHeaders,
     ...(event.data !== undefined && { data: event.data, dataCutFrom: optNum(event.dataCutFrom) }),
   };
 }

@@ -33,7 +33,7 @@ function peakOf(items: readonly RequestItem[]): number {
  * What the Waterfall's figures say of the requests in view: how long the
  * window lasts and how many idle gaps it compresses, how many requests ran
  * at once at most, the slowest one finished, and how much of a finished
- * request's time went on its fetch.
+ * call's time went on its fetch — a webhook delivered to the app makes none.
  *
  * @param items - The requests in view, with their bars
  * @param window - The window they are drawn over
@@ -55,9 +55,10 @@ export function waterfallInsights(
     (top, i) => (!top || i.bar.total > top.bar.total ? i : top),
     undefined,
   );
-  const shares = done.map(
-    (i) => (i.bar.segments.find((s) => s.key === "fetch")?.duration ?? 0) / i.bar.total,
-  );
+  /* A webhook delivered to the app makes no fetch: its time would only thin out the calls' share. */
+  const shares = done
+    .filter((i) => i.request.mode !== "webhook")
+    .map((i) => (i.bar.segments.find((s) => s.key === "fetch")?.duration ?? 0) / i.bar.total);
   return {
     windowMs: window.end - window.start,
     gaps: window.gaps.length,

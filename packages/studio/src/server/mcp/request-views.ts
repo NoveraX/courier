@@ -109,7 +109,7 @@ export function detailOf(id: string, gathered: Gathered): Record<string, unknown
     ...summaryOf(id, gathered),
     variables: gathered.start.variables,
     answer: end?.data ?? error?.data,
-    requestHeaders: end?.requestHeaders,
+    requestHeaders: end?.requestHeaders ?? error?.requestHeaders,
     headers: end?.headers ?? error?.headers,
     timing: end?.timing ?? error?.timing,
     failure: error?.error,

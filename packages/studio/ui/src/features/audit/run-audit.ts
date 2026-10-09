@@ -55,7 +55,8 @@ export function runAudit(
   catalog: Catalog,
   context: AuditContext,
 ): AuditResult {
-  const completed = requests.filter((r) => r.status !== "pending");
+  /* The audit weighs the calls the app makes; a webhook is a call made to it, by its sender. */
+  const completed = requests.filter((r) => r.status !== "pending" && r.mode !== "webhook");
   const stats = computeEndpointStats(completed);
 
   const found = [

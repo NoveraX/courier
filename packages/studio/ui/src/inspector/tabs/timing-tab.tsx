@@ -20,6 +20,8 @@ const PHASE_FILL: Readonly<Record<TimingPhase["key"], string>> = {
   validation: "bg-syntax-type",
   "middleware-out": "bg-syntax-keyword",
   overhead: "bg-fg-subtle",
+  checks: "bg-syntax-type",
+  handler: "bg-brand",
 };
 
 const TREND = {

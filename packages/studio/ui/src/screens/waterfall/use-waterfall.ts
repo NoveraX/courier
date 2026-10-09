@@ -29,6 +29,8 @@ export interface WaterfallModel {
   zoom: number;
   /** The ids of the requests in view, which the Waterfall holds when it stops following. */
   inView: string[];
+  /** Whether a webhook delivered to the app is in view, whose bar has parts of its own. */
+  webhooks: boolean;
   now: number;
 }
 
@@ -86,6 +88,7 @@ export function useWaterfall(input: WaterfallInput): WaterfallModel {
       labelPx,
       zoom,
       inView: items.map((i) => i.request.id),
+      webhooks: items.some((i) => i.request.mode === "webhook"),
       now,
     };
   }, [requests, now, view, held, asked, width, closed]);

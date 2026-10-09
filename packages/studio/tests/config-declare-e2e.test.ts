@@ -72,14 +72,21 @@ afterEach(async () => {
   if (root && existsSync(root)) rmSync(root, { recursive: true, force: true });
 });
 
-function project(config = CONFIG): string {
+function project(config = CONFIG, files: Record<string, string> = {}): string {
   mkdirSync(CACHE, { recursive: true });
   root = realpathSync(mkdtempSync(join(CACHE, "config-declare ")));
   mkdirSync(join(root, "src"));
   writeFileSync(join(root, "src", "api.ts"), API);
   writeFileSync(join(root, "courier.config.ts"), config);
+  for (const [path, text] of Object.entries(files)) {
+    mkdirSync(join(root, path, ".."), { recursive: true });
+    writeFileSync(join(root, path), text);
+  }
   return root;
 }
+
+/* A server compiled from src/ alone: the config's object lives where the server imports it. */
+const IN_SRC = 'import { api } from "../api";\n\nexport default {\n  sources: { api },\n};\n';
 
 function start(projectRoot: string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
@@ -135,6 +142,36 @@ describe("declaring an import in courier.config.ts through Studio", () => {
     const after = await post(url, "/api/apis/declare/preview", IMPORT);
     expect(after.body).toEqual({ status: "declared" });
   });
+
+  it.each([
+    ["passes on the module's default export", 'export { default } from "./src/courier/config";\n'],
+    [
+      "imports the module's default and exports it",
+      'import config from "./src/courier/config";\n\nexport default config;\n',
+    ],
+  ])(
+    "declares the import where the config's object is written, when the config %s",
+    async (_, passing) => {
+      const url = await start(project(passing, { "src/courier/config.ts": IN_SRC }));
+      await writeImport(url);
+
+      const preview = await post(url, "/api/apis/declare/preview", IMPORT);
+      expect(preview.body).toMatchObject({ status: "ready", configFile: "src/courier/config.ts" });
+      const applied = await post(url, "/api/apis/declare/apply", {
+        ...IMPORT,
+        baseHash: preview.body.baseHash,
+      });
+
+      const written = readFileSync(join(root, "src/courier/config.ts"), "utf8");
+      expect(applied.body).toEqual({ status: "applied", configFile: "src/courier/config.ts" });
+      expect(written).toContain('import { petstore } from "../gen/petstore/source";');
+      expect(written).toContain("sources: { api, petstore },");
+      expect(config()).toBe(passing);
+      expect((await post(url, "/api/apis/declare/preview", IMPORT)).body).toEqual({
+        status: "declared",
+      });
+    },
+  );
 
   it("changes nothing when the config was saved after the preview, and shows the change against it", async () => {
     const url = await start(project());

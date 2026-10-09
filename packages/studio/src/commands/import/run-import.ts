@@ -46,7 +46,7 @@ function planShown(
     "",
     ...planLines(planned.plan, style),
     ...(declaration
-      ? ["", "Then courier.config.ts declares it:", ...declarationLines(declaration)]
+      ? ["", `Then ${declaration.configFile} declares it:`, ...declarationLines(declaration)]
       : []),
   ];
 }

@@ -2,6 +2,7 @@ import { relative, sep } from "node:path";
 import type { LoadedCourierConfig } from "../config-loader";
 import { configReads } from "../config-reads";
 import { ConfigEditRefusal } from "./config-edit-refusal";
+import { configObjectFile } from "./config-object-file";
 import type { ConfigUndeclarationPlan } from "./config-undeclaration-types";
 import { planConfigUndeclaration } from "./plan-config-undeclaration";
 import { readConfigFile } from "./read-config-file";
@@ -56,7 +57,7 @@ export function prepareConfigUndeclaration(
     Object.hasOwn(loaded.config.sources ?? {}, name) &&
     configReads(loaded, root, mayTake).length > 0;
   if (!importEntry && !source) return null;
-  const configPath = loaded.configFile;
+  const configPath = configObjectFile(loaded.configFile, root);
   const configFile = relative(root, configPath).split(sep).join("/");
   const prepared = { name, configFile, configPath, source, importEntry };
   const read = readConfigFile(configPath, configFile, root);

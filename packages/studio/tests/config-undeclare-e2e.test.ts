@@ -73,12 +73,20 @@ afterEach(async () => {
   if (root && existsSync(root)) rmSync(root, { recursive: true, force: true });
 });
 
-function start(): Promise<string> {
+/* A server compiled from src/ alone: the config passes on the object written where the server imports it. */
+const PASSING_ON = 'export { default } from "./src/courier/config";\n';
+const IN_SRC = 'import { api } from "../api";\n\nexport default {\n  sources: { api },\n};\n';
+
+function start(layout: "plain" | "in-src" = "plain"): Promise<string> {
   mkdirSync(CACHE, { recursive: true });
   root = realpathSync(mkdtempSync(join(CACHE, "config-undeclare ")));
   mkdirSync(join(root, "src"));
   writeFileSync(join(root, "src", "api.ts"), API);
-  writeFileSync(join(root, "courier.config.ts"), CONFIG);
+  writeFileSync(join(root, "courier.config.ts"), layout === "plain" ? CONFIG : PASSING_ON);
+  if (layout === "in-src") {
+    mkdirSync(join(root, "src", "courier"));
+    writeFileSync(join(root, "src", "courier", "config.ts"), IN_SRC);
+  }
   return new Promise<string>((resolve, reject) => {
     studio = createStudioServer({
       port: 0,
@@ -105,8 +113,8 @@ async function post(url: string, path: string, body: unknown, origin: string | n
 }
 
 /* The import written and declared, as the wizard leaves it. */
-async function declared(): Promise<string> {
-  const url = await start();
+async function declared(layout: "plain" | "in-src" = "plain"): Promise<string> {
+  const url = await start(layout);
   expect((await post(url, "/api/apis/write", IMPORT)).status).toBe(200);
   const preview = await post(url, "/api/apis/declare/preview", IMPORT);
   const applied = await post(url, "/api/apis/declare/apply", {
@@ -150,6 +158,26 @@ describe("removing an import courier.config.ts declares", () => {
     expect(existsSync(join(root, SOURCE))).toBe(false);
     const after = await post(url, "/api/apis/imports/remove/preview", { name: "petstore" });
     expect(after.status).toBe(404);
+  }, 30_000);
+
+  it("takes the import out where the config's object is written, when the config passes it on", async () => {
+    const url = await declared("in-src");
+    const { plan, change } = await preview(url);
+    expect(change).toMatchObject({ status: "ready", configFile: "src/courier/config.ts" });
+
+    const removed = await post(url, "/api/apis/imports/remove", {
+      name: "petstore",
+      planDigest: plan.digest,
+      configBaseHash: change?.baseHash,
+    });
+
+    expect(removed.body).toMatchObject({
+      undeclaredFrom: "src/courier/config.ts",
+      importDeclared: false,
+    });
+    expect(readFileSync(join(root, "src/courier/config.ts"), "utf8")).toBe(IN_SRC);
+    expect(config()).toBe(PASSING_ON);
+    expect(existsSync(join(root, SOURCE))).toBe(false);
   }, 30_000);
 
   it("removes nothing when the config was saved after the preview", async () => {

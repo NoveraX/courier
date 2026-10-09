@@ -9,7 +9,7 @@
 export const PACKAGE_MANAGERS = [
   {
     id: "npm",
-    setup: ["npx", "@noverax/create-courier@latest"],
+    setup: ["npx", "@noverax/create-courier"],
     studio: "npm run studio",
     dev: "npm run dev",
     add: "npm install -D",

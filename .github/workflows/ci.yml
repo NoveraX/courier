@@ -246,7 +246,7 @@ jobs:
   frameworks:
     uses: ./.github/workflows/frameworks.yml
 
-  # The one-command setup, npx @noverax/create-courier@latest, creating a
+  # The one-command setup, npx @noverax/create-courier, creating a
   # project with each framework's own generator: see quickstart.yml, which
   # also runs weekly and by hand.
   quickstart:

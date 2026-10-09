@@ -8,7 +8,7 @@ Run it in the project's folder:
 
 <CodeGroup
   items={[
-    { label: "npm", code: "npx @noverax/create-courier@latest", language: "bash" },
+    { label: "npm", code: "npx @noverax/create-courier", language: "bash" },
     { label: "pnpm", code: "pnpm create @noverax/courier", language: "bash" },
     { label: "yarn", code: "yarn create @noverax/courier", language: "bash" },
     { label: "bun", code: "bun create @noverax/courier", language: "bash" },
@@ -54,7 +54,7 @@ Open `/courier`: the users the mock answers with, and a form that creates one, e
 Point it at a folder that does not exist yet, and name the framework:
 
 ```bash
-npx @noverax/create-courier@latest shop --framework next
+npx @noverax/create-courier shop --framework next
 ```
 
 It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages with your package manager, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out, and whether to offer the API to [AI agents](#ai-agents), all before it makes anything.
@@ -91,7 +91,7 @@ Every setup adds `courier.config.ts`, the list of your APIs that your server, St
 ## Your own API
 
 ```bash
-npx @noverax/create-courier@latest --openapi https://petstore3.swagger.io/api/v3/openapi.json
+npx @noverax/create-courier --openapi https://petstore3.swagger.io/api/v3/openapi.json
 ```
 
 Imports an OpenAPI, Swagger or Postman specification in place of the example, with Studio's own importer: the typed code is written and the API is declared in `courier.config.ts`. See [Import an API](/docs/studio/import-api).
@@ -99,7 +99,7 @@ Imports an OpenAPI, Swagger or Postman specification in place of the example, wi
 ## AI agents
 
 ```bash
-npx @noverax/create-courier@latest --mcp
+npx @noverax/create-courier --mcp
 ```
 
 Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Code reads, so your editor's agent can call your API — through the same middleware as your app. With `--openapi`, which of the imported endpoints agents may call is yours to say: the plan shows how to mark them. In a terminal, it asks, for a project you have and for one it creates; with `--yes`, or without a terminal, it leaves agents out unless `--mcp` is passed.

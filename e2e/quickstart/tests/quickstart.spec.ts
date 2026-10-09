@@ -28,7 +28,7 @@ test.beforeAll(async () => {
     [
       "npx",
       "--yes",
-      "@noverax/create-courier@latest",
+      "@noverax/create-courier",
       name,
       "--framework",
       target.id,

@@ -77,7 +77,7 @@ export function mountStudioHttp(
     },
     storage: storage.routes,
     tests: { root, sessions, project },
-    contract: { project, answers: stores.answers },
+    contract: { project, answers: stores.answers, root },
     editor: serving ? undefined : { project, requestLog, root },
     token,
     demo: serving && { limits: serving.limits },

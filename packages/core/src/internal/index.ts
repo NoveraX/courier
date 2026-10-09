@@ -89,6 +89,7 @@ export {
   glyphsFor,
   type Help,
   type HelpCommand,
+  type HelpExample,
   type HelpOption,
   helpOptions,
   type OutputStream,

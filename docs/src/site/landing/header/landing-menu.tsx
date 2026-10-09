@@ -5,8 +5,8 @@ import { Dialog } from "radix-ui"
 import { cn } from "@/site/cn"
 import { GitHubMark } from "@/site/github-mark"
 import { InstallButton } from "@/site/landing/install-button"
+import { NewBadge } from "@/site/landing/new-badge"
 import { PageLink } from "@/site/landing/page-link"
-import { NewBadge } from "@/site/landing/studio-pill"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
 import { MENU_LINKS } from "./menu-links"
 
@@ -17,8 +17,8 @@ interface LandingMenuProps {
 
 /**
  * The landing page's menu on a narrow screen: a sheet below the header
- * with every place to go, Studio first, then the install command, the
- * docs, the repository and the colour theme.
+ * with every place to go, Studio and the MCP server first, then the install
+ * command, the way in, the repository and the colour theme.
  *
  * @param props - Whether the sheet is open, and what opens or closes it
  * @returns The sheet
@@ -51,7 +51,12 @@ export function LandingMenu({ open, onOpenChange }: LandingMenuProps) {
                   className={cn(
                     "grid min-h-15.5 animate-rise-quick grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3.5 py-2.5 text-fg hover:bg-panel hover:text-fg",
                     link.isNew
-                      ? "my-2.5 mb-1.5 rounded-panel border-b border-brand/30 bg-brand/8 px-3"
+                      ? cn(
+                          "my-2.5 mb-1.5 rounded-panel border-b px-3",
+                          link.tone === "violet"
+                            ? "border-tone-violet/30 bg-tone-violet/8"
+                            : "border-brand/30 bg-brand/8"
+                        )
                       : "border-b border-line px-0.5"
                   )}
                 >
@@ -67,7 +72,7 @@ export function LandingMenu({ open, onOpenChange }: LandingMenuProps) {
                     </span>
                     <span className="truncate text-small text-fg-subtle">{link.desc}</span>
                   </span>
-                  {link.isNew && <NewBadge />}
+                  {link.isNew && <NewBadge tone={link.tone === "violet" ? "violet" : "brand"} />}
                 </PageLink>
               ))}
             </nav>

@@ -5,17 +5,17 @@ import { useState } from "react"
 import { CourierMark } from "@/site/courier-mark"
 import { GitHubMark } from "@/site/github-mark"
 import { PageLink } from "@/site/landing/page-link"
-import { StudioPill } from "@/site/landing/studio-pill"
+import { PRODUCTS, ProductPill } from "@/site/landing/product-pill"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
 import { TopLink } from "@/site/top-link"
 import { Burger } from "./burger"
 import { LandingMenu } from "./landing-menu"
-import { NAV_LINKS } from "./menu-links"
 
 /**
  * The bar across the top of the landing page: Courier's mark and version,
- * the sections and the docs with Studio marked new, the menu on a narrow
- * screen, the colour theme, the repository and the way in.
+ * the docs and Courier's two products with pages of their own — Studio and
+ * the MCP server, marked new — the menu on a narrow screen, the colour
+ * theme, the repository and the way in.
  *
  * @param props - The version of Courier released
  * @returns The header and its menu
@@ -36,24 +36,21 @@ export function LandingHeader({ version }: { version: string }) {
             {version}
           </span>
         </TopLink>
-        <nav aria-label="Courier" className="hidden gap-5.5 text-nav min-[940px]:flex">
-          {NAV_LINKS.map(({ label, href }) => (
-            <PageLink key={href} href={href} className="text-fg-muted hover:text-brand">
-              {label}
-            </PageLink>
+        <nav aria-label="Courier" className="hidden items-center gap-4.5 text-nav min-[820px]:flex">
+          <PageLink href="/docs/introduction" className="text-fg-muted hover:text-brand">
+            Docs
+          </PageLink>
+          {PRODUCTS.map((product) => (
+            <ProductPill key={product.href} product={product} />
           ))}
-          <StudioPill size="nav" />
         </nav>
         <div className="flex-1" />
-        <div className="hidden min-[640px]:max-[939px]:flex">
-          <StudioPill size="bar" />
-        </div>
         <button
           type="button"
           aria-label="Menu"
           aria-expanded={menu}
           onClick={() => setMenu((open) => !open)}
-          className="flex size-8.5 shrink-0 cursor-pointer items-center justify-center rounded-control border border-line bg-panel text-fg-muted hover:border-line-strong hover:text-fg min-[940px]:hidden"
+          className="flex size-8.5 shrink-0 cursor-pointer items-center justify-center rounded-control border border-line bg-panel text-fg-muted hover:border-line-strong hover:text-fg min-[820px]:hidden"
         >
           <Burger open={menu} />
         </button>

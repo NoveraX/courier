@@ -1,11 +1,11 @@
 import type { LucideIcon } from "lucide-react"
-import { Activity, BookOpen, Bot, Boxes, Brackets, Columns3, Layers, Scissors } from "lucide-react"
+import { Activity, BookOpen, Bot, Boxes, Brackets } from "lucide-react"
 
 /** A place the landing page's menu leads to. */
 export interface MenuLink {
   label: string
   desc: string
-  /** A section of this page (`#features`) or a page of the site. */
+  /** A page of the site. */
   href: string
   icon: LucideIcon
   tone: "blue" | "red" | "amber" | "green" | "violet" | "teal"
@@ -13,7 +13,9 @@ export interface MenuLink {
 }
 
 /**
- * The landing page's menu on a narrow screen, Studio and the MCP server first.
+ * The landing page's menu on a narrow screen: Courier's two products with
+ * pages of their own first, then the docs, the frameworks and the API
+ * reference — pages, not sections of this one, as in the header.
  *
  * @example
  * ```ts
@@ -38,39 +40,18 @@ export const MENU_LINKS: readonly MenuLink[] = [
     isNew: true,
   },
   {
-    label: "Why courier",
-    desc: "The code you get to delete",
-    href: "#delete",
-    icon: Scissors,
-    tone: "red",
-  },
-  {
-    label: "Features",
-    desc: "Uploads, streaming, retries, cancel",
-    href: "#features",
-    icon: Layers,
-    tone: "blue",
-  },
-  {
-    label: "Compare",
-    desc: "vs fetch, axios, tRPC",
-    href: "#compare",
-    icon: Columns3,
-    tone: "amber",
-  },
-  {
-    label: "Frameworks",
-    desc: "Next, Nuxt, SvelteKit, Express…",
-    href: "#frameworks",
-    icon: Boxes,
-    tone: "green",
-  },
-  {
     label: "Documentation",
     desc: "Guides from install to production",
     href: "/docs/introduction",
     icon: BookOpen,
     tone: "violet",
+  },
+  {
+    label: "Frameworks",
+    desc: "Next, Nuxt, SvelteKit, Express, React Native…",
+    href: "/docs/frameworks/overview",
+    icon: Boxes,
+    tone: "green",
   },
   {
     label: "API reference",
@@ -79,21 +60,4 @@ export const MENU_LINKS: readonly MenuLink[] = [
     icon: Brackets,
     tone: "teal",
   },
-]
-
-/**
- * The sections of the page the header links to on a wide screen.
- *
- * @example
- * ```ts
- * NAV_LINKS.map((l) => l.label) // ["Why", "Features", "Agents", "Compare", "Frameworks", "Docs"]
- * ```
- */
-export const NAV_LINKS: readonly { label: string; href: string }[] = [
-  { label: "Why", href: "#delete" },
-  { label: "Features", href: "#features" },
-  { label: "Agents", href: "#agents" },
-  { label: "Compare", href: "#compare" },
-  { label: "Frameworks", href: "#frameworks" },
-  { label: "Docs", href: "/docs/introduction" },
 ]

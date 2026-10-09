@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useAskedImport } from "@/apis/use-asked-import";
 import { useImport } from "@/apis/use-import";
 import { useManage } from "@/apis/use-manage";
+import { useOpenApiExport } from "@/apis/use-openapi-export";
 import { useRegistry } from "@/apis/use-registry";
 import { useRemoveImport } from "@/apis/use-remove-import";
 import { Skeleton } from "@/design/skeleton";
@@ -13,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { ApiCard } from "./api-card";
 import { ApisSkeleton } from "./apis-skeleton";
 import { ConfigNoticeBar, NoConfig, NoSources } from "./apis-states";
+import { ExportOpenApiButton } from "./export-openapi-button";
+import { ExportOpenApiDialog } from "./export-openapi-dialog";
 import { HandWrittenTable } from "./hand-written-table";
 import { ImportDialog } from "./import/import-dialog";
 import { ManageDialog } from "./manage/manage-dialog";
@@ -45,7 +48,8 @@ function plural(count: number, word: string): string {
 /**
  * The APIs page: the sources the project declares — imported from a spec,
  * each a card with its state and how typed it is, and written by hand, a
- * table — with a check for newer specs and Import API.
+ * table — with a check for newer specs, a source's export as an OpenAPI
+ * document, and Import API.
  *
  * @returns The page
  * @example
@@ -63,7 +67,9 @@ export function ApisScreen(): React.ReactNode {
     registry.forget(name);
     toast.success(message);
   });
+  const exporter = useOpenApiExport();
   const { page, imported, handWritten, statuses } = registry;
+  const names = [...imported, ...handWritten].map((source) => source.name);
   const loading = page.kind === "connecting" || page.kind === "loading";
   const checking = Object.values(statuses).some((s) => s.status === "checking");
   const endpoints = [...imported, ...handWritten].reduce(
@@ -96,6 +102,7 @@ export function ApisScreen(): React.ReactNode {
             <RefreshCw aria-hidden="true" className={cn("size-3.25", checking && "animate-spin")} />
             {checking ? "Checking…" : "Check for updates"}
           </button>
+          <ExportOpenApiButton exporter={exporter} sources={names} />
           <button
             type="button"
             disabled={page.importBlocked !== null}
@@ -138,6 +145,7 @@ export function ApisScreen(): React.ReactNode {
       <ImportDialog wizard={importWizard} />
       <ManageDialog manage={manageFlow} />
       <RemoveImportDialog removal={removal} />
+      <ExportOpenApiDialog exporter={exporter} sources={names} />
     </>
   );
 }

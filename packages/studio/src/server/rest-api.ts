@@ -14,6 +14,7 @@ import { type EditorRouteDeps, registerEditorRoutes } from "./editor/editor-rout
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
+import { registerOpenApiExportRoutes } from "./openapi-export/openapi-export-routes";
 import { createOriginGuard } from "./origin-guard";
 import {
   type RecordedTestRouteDeps,
@@ -107,6 +108,7 @@ export function registerRestApi(
   registerRecordedTestRoutes(app, tests);
   registerContractRoutes(app, contract);
   registerTrafficSpecRoutes(app);
+  registerOpenApiExportRoutes(app, { project: apis.project });
   if (editor) registerEditorRoutes(app, editor);
   registerStorageRoutes(app, storage);
   registerMockDeclareRoutes(app, mocksEdit);

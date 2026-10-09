@@ -1,3 +1,4 @@
+import { nameListItems } from "./list-items";
 import { type CalledPath, pathTemplate } from "./path-template";
 import type { JsonSchema } from "./sample-schema";
 import { endpointOperation } from "./traffic-operation";
@@ -88,6 +89,7 @@ export function openapiFromTraffic(source: string, calls: readonly TrafficCall[]
     route[verb] = endpointOperation(endpointCalls, template, verb);
   }
   const groups = [...new Set(placed.map((one) => one.call.group).filter((group) => group !== ""))];
+  const schemas = nameListItems(paths);
   return {
     document: {
       openapi: "3.1.0",
@@ -101,6 +103,7 @@ export function openapiFromTraffic(source: string, calls: readonly TrafficCall[]
       ],
       tags: groups.map((name) => ({ name })),
       paths,
+      ...(Object.keys(schemas).length > 0 && { components: { schemas } }),
     },
     endpoints: Object.values(paths).reduce((sum, route) => sum + Object.keys(route).length, 0),
     calls: placed.length,

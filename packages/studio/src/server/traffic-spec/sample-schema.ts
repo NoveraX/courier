@@ -38,18 +38,24 @@ const FORMATS: ReadonlyArray<readonly [string, RegExp]> = [
  * since a few samples cannot tell a price of 12 from an integer; no value is
  * written into the schema.
  *
+ * A schema read from a few samples can be stricter than the API, so each
+ * field says it was inferred, and from how many of them: `Inferred from
+ * traffic: in 7 of 12 answers.` The code generated from it carries that on
+ * the field, where a person reviewing it finds it.
+ *
  * @param samples - The values seen
+ * @param noun - What the samples are, for the fields' notes: `answers`, `requests`
  * @returns The schema
  * @example
  * ```ts
- * schemaOfSamples([{ id: "a", tags: [] }, { id: "b", note: null }]);
+ * schemaOfSamples([{ id: "a", tags: [] }, { id: "b", note: null }], "answers");
  * // { type: "object", properties: { id: …, tags: …, note: … }, required: ["id"] }
  * ```
  */
-export function schemaOfSamples(samples: readonly unknown[]): JsonSchema {
+export function schemaOfSamples(samples: readonly unknown[], noun = "samples"): JsonSchema {
   const seen = emptySeen();
   for (const sample of samples) add(seen, sample, 0);
-  return schemaOf(seen);
+  return schemaOf(seen, noun);
 }
 
 function emptySeen(): Seen {
@@ -92,11 +98,11 @@ function add(seen: Seen, value: unknown, depth: number): void {
   else if (typeof value === "boolean") seen.types.add("boolean");
 }
 
-function schemaOf(seen: Seen): JsonSchema {
+function schemaOf(seen: Seen, noun: string): JsonSchema {
   const nullable = seen.types.has("null");
   const kinds = [...seen.types]
     .filter((type) => type !== "null")
-    .map((type) => typedOf(type, seen));
+    .map((type) => typedOf(type, seen, noun));
   if (kinds.length === 0) return nullable ? { type: "null" } : {};
   if (kinds.length === 1) {
     const [only] = kinds;
@@ -108,12 +114,18 @@ function schemaOf(seen: Seen): JsonSchema {
   return { anyOf: nullable ? [...kinds, { type: "null" }] : kinds };
 }
 
-function typedOf(type: Exclude<ValueType, "null">, seen: Seen): JsonSchema {
+function typedOf(type: Exclude<ValueType, "null">, seen: Seen, noun: string): JsonSchema {
   if (type === "array")
-    return { type: "array", ...(seen.items && { items: schemaOf(seen.items) }) };
+    return { type: "array", ...(seen.items && { items: schemaOf(seen.items, "items") }) };
   if (type === "object") {
     const properties = Object.fromEntries(
-      [...seen.fields].map(([key, field]) => [key, schemaOf(field)]),
+      [...seen.fields].map(([key, field]) => [
+        key,
+        {
+          ...schemaOf(field, key === "" ? "objects" : `${key} objects`),
+          description: inferredNote(seen.fieldCounts.get(key) ?? 0, seen.objects, noun),
+        },
+      ]),
     );
     const required = [...seen.fieldCounts]
       .filter(([, count]) => count === seen.objects)
@@ -125,4 +137,11 @@ function typedOf(type: Exclude<ValueType, "null">, seen: Seen): JsonSchema {
     return { type: "string", ...(format && { format }) };
   }
   return { type };
+}
+
+/* How many of the objects at its place held a field: `in 7 of 12 answers`, `in all 5 seller objects`. */
+function inferredNote(held: number, of: number, noun: string): string {
+  if (of === 1) return `Inferred from traffic: from the one ${noun.replace(/s$/, "")} seen.`;
+  if (held === of) return `Inferred from traffic: in ${of === 2 ? "both" : `all ${of}`} ${noun}.`;
+  return `Inferred from traffic: in ${held} of ${of} ${noun}.`;
 }

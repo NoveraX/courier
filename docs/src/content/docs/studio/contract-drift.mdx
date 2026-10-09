@@ -1,4 +1,4 @@
-export const metadata = { title: "Contract Drift", description: "Studio sets each endpoint's real answers beside its response schema: confirmed by traffic, drifted from it, or not observed yet — each difference with when it was first seen, how often and from where, and the fields to declare.", mode: "both" }
+export const metadata = { title: "Contract Drift", description: "Studio sets each endpoint's real answers beside its response schema: confirmed by traffic, drifted from it, or not observed yet — each difference with when it was first seen, how often and from where — and fixes a Zod schema where it is written, with one reviewed change.", mode: "both" }
 
 A response schema says what an endpoint answers. Its real answers say what it does. Studio watches both: each endpoint with a response schema is **confirmed by traffic** while every answer fits its schema, **drifted from its schema** once an answer does not, or **not observed yet** while no answer was seen. A field the backend started sending, a number that became a string, a field that stopped coming — each shows in the Explorer the moment it happens, before it becomes a bug report.
 
@@ -10,7 +10,7 @@ Before the response schema reads an answer, Courier tells Studio its shape: each
 | --- | --- |
 | Not in the schema | A field the schema does not name, under an object that takes no unnamed keys. A Zod object drops it, so the app never sees it. Only the outermost such field is named: what lies inside it is part of it. |
 | Another type | A field that came as a type the schema does not take there: a number where it declares a string, `null` where it is not nullable. |
-| Missing | A field the schema requires — under required objects — that some answers lacked. |
+| Missing | A field the schema requires — under required objects — that some answers lacked. A field absent because its object was is not named: the object is. |
 
 A record's keys are data, not names: `z.record(z.string(), z.number())` takes any key, and its values are checked against the record's value. An object that takes unnamed keys — `z.looseObject`, `.passthrough()` — takes any field. A place the schema leaves unconstrained takes anything.
 
@@ -35,6 +35,31 @@ export const Product = z.object({
 - A required field some answers lacked is made optional, an object or a list kept as it is declared: `seller: ….optional()`.
 
 Once the schema is fixed, **Forget what was seen** clears what Studio counted for the endpoint, so its next answers are set beside the schema afresh. Studio checks every answer against the schema that is loaded now: fix the schema, and the differences it settles are gone at once.
+
+## Fix the schema
+
+For a Zod schema, **Fix the schema…** makes the change itself, where the schema is written. Studio follows the endpoint from `courier.config.ts` — through `sources`, its groups and `.response(…)` — to the `z.object({…})` each field belongs in, across the imports between them and `tsconfig` path aliases, through `.extend()`, `z.array()`, `.array()` and the modifiers that keep an object's fields where they are written. It shows the change as a diff of each file it touches:
+
+```diff
+ export const Product = z.object({
+   id: z.string(),
+-  price: z.number().int().optional(),
+-  stock: z.number(),
+-  seller: Seller,
++  price: z.union([z.number().int(), z.string()]).optional(),
++  stock: z.string(),
++  seller: Seller.optional(),
++  rating: z.number().optional(),
+ })
+```
+
+- A field the schema does not name is added to its object, optional when not every answer held it.
+- A field that came as another type takes it beside its own — `.int()` and the rest of what it constrains kept — or in its place when no answer came as the declared one. Its modifiers stay at its end.
+- A required field some answers lacked becomes optional.
+
+**Apply the change** writes it only while it is still the change shown — a file saved since, or answers that changed the fix, show the new change instead — and then runs the config again. A config that does not load, or a change that settles none of the differences it was for, is put back, and Studio says why. The toast that says it was written carries **Undo**, which writes the files back while they still hold what Studio wrote: an edit you made since is yours, and Studio leaves it alone.
+
+A file that follows the project's formatter — Biome, Prettier or ESLint — is formatted once changed; one that does not keeps its layout, so the diff holds the fix alone. Studio changes only files the config loads, inside the project, and only for a page that holds Studio's token. A difference it cannot place — in a schema built by a function, or a field declared through a spread — is listed with why, for you to change; so is a schema written with another library, whose fields **Copy** takes instead.
 
 ## How much Studio keeps
 

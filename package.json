@@ -79,6 +79,7 @@
     "format": "biome format --write .",
     "check": "biome check .",
     "check:names": "node scripts/check-name-conflicts.mjs",
+    "check:npx": "node scripts/check-npx-commands.mjs",
     "check:biome": "node scripts/check-biome-config.mjs",
     "check:lines": "node scripts/check-file-lines.mjs",
     "check:exports": "node scripts/check-exports.mjs",

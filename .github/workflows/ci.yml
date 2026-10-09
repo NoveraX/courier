@@ -60,6 +60,13 @@ jobs:
       - name: Check file and directory names
         run: npm run check:names
 
+      # npx runs a package from npm under a command's bare name wherever the
+      # project has no copy, and npm keeps other people's packages under
+      # Courier's bare command names: every command we tell people to run
+      # names its package in full.
+      - name: Check commands name their package
+        run: npm run check:npx
+
       # 150 lines of code a file; comments, blank lines and files of types alone are free.
       - name: Check file length
         run: npm run check:lines

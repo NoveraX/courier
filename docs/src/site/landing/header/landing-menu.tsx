@@ -8,26 +8,40 @@ import { InstallButton } from "@/site/landing/install-button"
 import { NewBadge } from "@/site/landing/new-badge"
 import { PageLink } from "@/site/landing/page-link"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
-import { MENU_LINKS } from "./menu-links"
+import { type HeaderAction, type HeaderPage, menuLinksFor } from "./menu-links"
 
 interface LandingMenuProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** The page it is on, whose own link it marks. */
+  page: HeaderPage
+  /** The page's call to action, beside the repository and the theme. */
+  action: HeaderAction
+  /** The install command it offers to copy. */
+  install: string
 }
 
 /**
- * The landing page's menu on a narrow screen: a sheet below the header
- * with every place to go, Studio and the MCP server first, then the install
- * command, the way in, the repository and the colour theme.
+ * The landing pages' menu on a narrow screen: a sheet below the header with
+ * every place to go — Studio and the MCP server first, the page it is on
+ * marked, and from a product's page the way back to the library — then the
+ * page's install command, its call to action, the repository and the
+ * colour theme.
  *
- * @param props - Whether the sheet is open, and what opens or closes it
+ * @param props - Whether the sheet is open and what opens or closes it, the page, its call to action and install command
  * @returns The sheet
  * @example
  * ```tsx
- * <LandingMenu open={open} onOpenChange={setOpen} />
+ * <LandingMenu
+ *   open={open}
+ *   onOpenChange={setOpen}
+ *   page="/"
+ *   action={{ label: "Get started", href: "/docs/quick-start" }}
+ *   install={INSTALL_COMMAND}
+ * />
  * ```
  */
-export function LandingMenu({ open, onOpenChange }: LandingMenuProps) {
+export function LandingMenu({ open, onOpenChange, page, action, install }: LandingMenuProps) {
   const close = () => onOpenChange(false)
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -42,10 +56,11 @@ export function LandingMenu({ open, onOpenChange }: LandingMenuProps) {
               NAVIGATE
             </Dialog.Title>
             <nav aria-label="Courier" className="flex flex-col border-t border-line">
-              {MENU_LINKS.map((link, at) => (
+              {menuLinksFor(page).map((link, at) => (
                 <PageLink
                   key={link.href}
                   href={link.href}
+                  current={link.href === page}
                   onClick={close}
                   style={{ animationDelay: `${40 + at * 35}ms` }}
                   className={cn(
@@ -55,16 +70,21 @@ export function LandingMenu({ open, onOpenChange }: LandingMenuProps) {
                           "my-2.5 mb-1.5 rounded-panel border-b px-3",
                           link.tone === "violet"
                             ? "border-tone-violet/30 bg-tone-violet/8"
-                            : "border-brand/30 bg-brand/8"
+                            : "border-brand/30 bg-brand/8",
+                          link.href === page &&
+                            (link.tone === "violet"
+                              ? "border border-tone-violet/70"
+                              : "border border-brand/70")
                         )
                       : "border-b border-line px-0.5"
                   )}
                 >
                   <span
+                    aria-hidden="true"
                     data-tone={link.tone}
                     className="grid size-8.5 place-items-center rounded-[9px] border border-line bg-bg-subtle text-(--tone)"
                   >
-                    <link.icon aria-hidden="true" className="size-3.75" />
+                    <link.icon className="size-3.75" />
                   </span>
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="text-[15.5px] font-medium tracking-[-0.015em]">
@@ -77,15 +97,15 @@ export function LandingMenu({ open, onOpenChange }: LandingMenuProps) {
               ))}
             </nav>
             <div className="mt-4.5 animate-rise-quick [animation-delay:280ms]">
-              <InstallButton look="menu" />
+              <InstallButton look="menu" command={install} />
             </div>
             <div className="mt-2.5 grid animate-rise-quick grid-cols-[minmax(0,1fr)_auto_auto] gap-2 [animation-delay:320ms]">
               <PageLink
-                href="/docs/quick-start"
+                href={action.href}
                 onClick={close}
                 className="flex h-11 items-center justify-center rounded-[10px] bg-fg text-[14px] font-medium text-bg hover:text-bg hover:opacity-86"
               >
-                Get started
+                {action.label}
               </PageLink>
               <a
                 href="https://github.com/NoveraX/courier"

@@ -1,14 +1,22 @@
+import { cn } from "@/site/cn"
+
 /**
  * Courier's mark, drawn in the colour of the text around it.
  *
- * @param props - Its width in pixels; the height follows
+ * @param props - Its width in pixels, the height following; or classes that size it
  * @returns The mark
  * @example
  * ```tsx
  * <CourierMark width={19} />
  * ```
  */
-export function CourierMark({ width = 19 }: { width?: number }) {
+export function CourierMark({
+  width = 19,
+  className,
+}: {
+  width?: number
+  className?: string | undefined
+}) {
   return (
     <svg
       width={width}
@@ -16,7 +24,7 @@ export function CourierMark({ width = 19 }: { width?: number }) {
       viewBox="0 0 212 180"
       aria-hidden="true"
       focusable="false"
-      className="block"
+      className={cn("block", className)}
     >
       <path
         fill="currentColor"

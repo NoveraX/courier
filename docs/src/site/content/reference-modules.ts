@@ -30,6 +30,10 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
   },
   { module: "@noverax/courier/openapi", note: "toOpenAPI — the definition as an OpenAPI document" },
   {
+    module: "@noverax/courier/webhooks",
+    note: "defineWebhook and the signature schemes — typed incoming webhooks",
+  },
+  {
     module: "@noverax/courier-mcp",
     note: "createMcpHandler, and the courier-mcp command — endpoints marked .agent() as MCP tools",
   },

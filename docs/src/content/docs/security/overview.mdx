@@ -93,6 +93,15 @@ An endpoint reaches an agent only when it is marked `.agent()`, and then as an M
 - **What reaches the model.** An error answer's status and body, cut short; never a response header. An answer longer than `maxResultChars` is refused.
 - **What Studio keeps.** An agent's calls show with the tool and the client; the principal never leaves your server. Studio's own MCP endpoint answers only with Studio's token, and replaces every credential and every body field named like a secret in what it hands an agent.
 
+## Webhooks
+
+A webhook is a call made to your app by its sender, and [`defineWebhook`](/docs/advanced/webhooks) checks each delivery before your handler sees it:
+
+- **Its size.** The body is counted as it arrives and refused at the chunk that crosses `maxBodyBytes` (1 MB by default), never held whole first.
+- **Its signature.** It is checked over the body exactly as it came, in time that does not depend on where it differs, under a secret read when the delivery comes. A webhook without a secret refuses every delivery rather than take an unsigned one.
+- **Its age.** Stripe's scheme and Standard Webhooks sign the time a delivery was sent; one older than five minutes is refused as a replay. GitHub's scheme and one of your own sign no time: keep the ids of the deliveries you have handled where a replay matters.
+- **Its body.** It must be JSON and pass the webhook's schema; a refusal tells the sender what failed and nothing more.
+
 ## Caches
 
 `cacheMiddleware({ scope: "public" })` never stores or serves an answer to a call that carries a session, and says so once per endpoint. `scope: "session"` keeps one partition per set of credentials a call sends, named by their SHA-256 digest so that no credential sits in a cache key, a Redis keyspace or a log line. In a browser or a React Native app, where the platform sends the cookies, a session's calls count as carrying it and are partitioned on the device.
@@ -100,7 +109,7 @@ An endpoint reaches an agent only when it is marked `.agent()`, and then as an M
 ## What Courier writes down
 
 - **Its log.** An `HTTPError` carries the API's answer whole. Printed — by Courier's log, `console.error`, or Node's report of an uncaught error — it shows every header with each credential's value hidden: a cookie the API set keeps its name and attributes, an `Authorization` its scheme. `error.headers` still holds them all for the code that reads them. `COURIER_LOG_FORMAT=json` prints an error's name, message, code and status alone. `logMiddleware` logs a failed call's status, never the answer it carried. A warning about something a client sent names it by what the server knows, never in the client's own words.
-- **Studio.** Studio keeps what it captured in `.courier/studio.db`, readable by your account alone, in a folder that keeps itself out of Git. The value of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, and of any header whose name has a word such as `auth`, `token`, `secret`, `password`, `session`, `csrf`, `xsrf` or `api-key` in it is written as `[redacted]`. The inspector hides those values until asked, and a request copied as cURL or `fetch` leaves them out. Studio makes changes only for a page opened with the token in `.courier/studio-token` — see [Studio](/docs/studio/overview). A [session file](/docs/studio/session-files) shared for a bug report carries no credential either, and replaces every body field and query parameter named like a secret, listing each one before it is saved. To follow [contract drift](/docs/studio/contract-drift), Studio keeps the shape of each answer — its fields' names and JSON types, never a value.
+- **Studio.** Studio keeps what it captured in `.courier/studio.db`, readable by your account alone, in a folder that keeps itself out of Git. The value of `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, and of any header whose name has a word such as `auth`, `token`, `secret`, `password`, `session`, `csrf`, `xsrf`, `api-key` or `signature` in it is written as `[redacted]` — a webhook's signature among them, which with its body would let anyone deliver it again. The inspector hides those values until asked, and a request copied as cURL or `fetch` leaves them out. Studio makes changes only for a page opened with the token in `.courier/studio-token` — see [Studio](/docs/studio/overview). A [session file](/docs/studio/session-files) shared for a bug report carries no credential either, and replaces every body field and query parameter named like a secret, listing each one before it is saved. To follow [contract drift](/docs/studio/contract-drift), Studio keeps the shape of each answer — its fields' names and JSON types, never a value.
 
 ## Limits at the edge
 

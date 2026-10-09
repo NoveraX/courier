@@ -52,6 +52,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Abort & Deduplication", href: "/docs/advanced/abort" },
       { title: "Raw Data Mode", href: "/docs/advanced/raw-data" },
       { title: "OpenAPI Export", href: "/docs/advanced/openapi" },
+      { title: "Webhooks", href: "/docs/advanced/webhooks" },
       { title: "Options Reference", href: "/docs/advanced/options" },
       { title: "Singleton Pattern", href: "/docs/advanced/singleton" },
     ],

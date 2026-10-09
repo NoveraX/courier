@@ -32,6 +32,7 @@ function stats(type: "query" | "mutation", method: string): EndpointStats {
     type,
     requestIds: ["r1"],
     cached: false,
+    keyed: false,
   };
 }
 

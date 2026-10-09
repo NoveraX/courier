@@ -1,4 +1,5 @@
 import type { Catalog } from "@/store/types-ui";
+import { IDEMPOTENCY_SUGGESTION } from "./code-suggestions";
 import type { AuditItem, EndpointStats } from "./types";
 
 /** Same endpoint called in both direct and proxy mode. */
@@ -25,18 +26,24 @@ function mixedModeUsage(stats: Map<string, EndpointStats>): AuditItem[] {
   ];
 }
 
-/** Mutation with retry middleware — dangerous without idempotency. */
-function retryWithoutIdempotency(catalog: Catalog): AuditItem[] {
+/*
+ * A write that runs retry middleware with no idempotency key. Courier sends
+ * such a write once — unless the middleware sets `mutations: true`, which
+ * sends it again where the upstream cannot tell a repeat. A write whose
+ * calls carry a key is retried safely, and is left out.
+ */
+function retryWithoutIdempotency(stats: Map<string, EndpointStats>, catalog: Catalog): AuditItem[] {
   const risky: { key: string; label: string }[] = [];
   for (const [src, entry] of Object.entries(catalog)) {
     for (const [grp, group] of Object.entries(entry.groups)) {
       for (const [ep, cfg] of Object.entries(group.endpoints)) {
+        const key = `${src}:${grp}:${ep}`;
         if (
           cfg.type === "mutation" &&
-          cfg.middleware?.some((m) => m.toLowerCase().includes("retry"))
+          cfg.middleware?.some((m) => m.toLowerCase().includes("retry")) &&
+          stats.get(key)?.keyed !== true
         ) {
-          const label = grp ? `${src}.${grp}.${ep}` : `${src}.${ep}`;
-          risky.push({ key: `${src}:${grp}:${ep}`, label });
+          risky.push({ key, label: grp ? `${src}.${grp}.${ep}` : `${src}.${ep}` });
         }
       }
     }
@@ -46,11 +53,14 @@ function retryWithoutIdempotency(catalog: Catalog): AuditItem[] {
   return [
     {
       id: "courier-retry-mutation",
-      severity: "warning",
+      severity: "hint",
       category: "reliability",
-      title: "Retry on non-idempotent mutation",
-      description: "Mutation endpoints with retry middleware may cause duplicate side effects.",
-      suggestion: "Remove retry from mutations, or ensure the backend is idempotent.",
+      title: "Retried writes without an idempotency key",
+      description:
+        "These writes run retry middleware, and their calls carry no idempotency key. Courier sends each once, so a write whose answer was lost is not tried again — unless the middleware sets mutations: true, which sends it again where the upstream cannot tell a repeat.",
+      suggestion:
+        "Declare an idempotencyKey on these endpoints: each call sends one key on every attempt, so the upstream applies a retried write once.",
+      codeSuggestion: IDEMPOTENCY_SUGGESTION,
       endpoints: risky,
     },
   ];
@@ -61,5 +71,5 @@ export function collectCourierRules(
   stats: Map<string, EndpointStats>,
   catalog: Catalog,
 ): AuditItem[] {
-  return [...mixedModeUsage(stats), ...retryWithoutIdempotency(catalog)];
+  return [...mixedModeUsage(stats), ...retryWithoutIdempotency(stats, catalog)];
 }

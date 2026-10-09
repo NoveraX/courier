@@ -14,6 +14,7 @@ import { join } from "node:path";
 
 import * as ts from "typescript";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { IDEMPOTENCY_SUGGESTION } from "@/features/audit/code-suggestions";
 import { runAudit } from "@/features/audit/run-audit";
 import type { RequestEntry } from "@/store";
 
@@ -119,6 +120,13 @@ describe("the code Studio suggests for a fix", () => {
         errors: [],
       });
     }
+  }, 60_000);
+});
+
+describe("the fix for a retried write without an idempotency key", () => {
+  it("compiles as it is copied, and declares the key", () => {
+    expect(diagnosticsOf("courier-retry-mutation", IDEMPOTENCY_SUGGESTION)).toEqual([]);
+    expect(IDEMPOTENCY_SUGGESTION).toContain('idempotencyKey: "header:Idempotency-Key"');
   }, 60_000);
 });
 

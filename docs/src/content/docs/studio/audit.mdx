@@ -46,7 +46,7 @@ The severity filter and the search narrow the list. **Copy report** puts it on t
 | Errors without response validation | Error | An endpoint fails and has no response schema to read its errors |
 | Repeated validation failures | Warning | The same validation error, again and again |
 | Inconsistent response sizes | Warning | One endpoint's answers vary wildly in size |
-| Retry on non-idempotent mutation | Warning | A write's endpoint runs retry middleware |
+| Retried writes without an idempotency key | Hint | A write runs retry middleware and its calls carry no idempotency key: Courier sends it once, or with `mutations: true` sends it again where the upstream cannot tell a repeat |
 
 ### Security
 

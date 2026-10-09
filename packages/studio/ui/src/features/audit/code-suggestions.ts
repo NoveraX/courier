@@ -29,6 +29,16 @@ export const listOrders = endpoint
   .response<{ id: string }[]>();
 `;
 
+export const IDEMPOTENCY_SUGGESTION = `import { courier } from "@noverax/courier/define";
+
+const { endpoint } = courier();
+
+export const placeOrder = endpoint
+  .post("orders", { idempotencyKey: "header:Idempotency-Key" })
+  .retry({ limit: 3 })
+  .response<{ id: string }>();
+`;
+
 export const TIMEOUT_SUGGESTION = `import { courier } from "@noverax/courier/define";
 
 const { endpoint } = courier();

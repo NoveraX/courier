@@ -2,6 +2,7 @@
 const FIX_CALLS = [
   ".timeout(",
   ".retry(",
+  "idempotencyKey",
   "cacheMiddleware(",
   "authMiddleware(",
   ".response(z.",

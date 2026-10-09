@@ -79,9 +79,9 @@ const CHECKS: readonly Check[] = [
     id: "pass-mutation-retry",
     category: "reliability",
     finds: ["courier-retry-mutation"],
-    title: "Mutations are not retried",
+    title: "Retried writes carry an idempotency key",
     applies: mutations,
-    description: "No mutation runs retry middleware that could repeat its side effects.",
+    description: "No write runs retry middleware without an idempotency key to make a repeat safe.",
   },
   {
     id: "pass-mutation-auth",

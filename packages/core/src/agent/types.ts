@@ -37,6 +37,35 @@ export interface AgentOptions<TAccess extends AgentAccess = AgentAccess> {
   readonly name?: string | undefined;
   /** A name for people, which a client shows in place of the tool's. */
   readonly title?: string | undefined;
+  /**
+   * How often a caller may call the tool. A call beyond it is refused at
+   * once — before a person is asked to confirm it — with when the caller may
+   * call again, and shows in Studio as refused. The model is told the limit
+   * with the tool. Counted per caller the MCP server tells apart: per
+   * `limitPer` over HTTP, one count for the one client over stdio.
+   */
+  readonly limit?: AgentLimit | undefined;
+}
+
+/**
+ * At most `maxCalls` calls in any `window` milliseconds.
+ *
+ * @example
+ * ```ts
+ * endpoint
+ *   .post("orders/:id/refund")
+ *   .agent({
+ *     description: "Refund an order in full",
+ *     access: "destructive",
+ *     limit: { maxCalls: 3, window: 60_000 },
+ *   });
+ * ```
+ */
+export interface AgentLimit {
+  /** How many calls a window takes: a whole number, at least 1 */
+  readonly maxCalls: number;
+  /** How long a window is, in milliseconds: a whole number, at least 1000 */
+  readonly window: number;
 }
 
 /** The client an agent works through, as it named itself — for display, never for a decision. */

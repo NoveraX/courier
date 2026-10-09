@@ -92,10 +92,12 @@ function wikiApi(origin: string) {
   });
 }
 
-async function proxyOf(sources: Record<string, object>): Promise<string> {
+/* `deaf`: the host hands over a request whose signal never fires, as one let go of and collected does. */
+async function proxyOf(sources: Record<string, object>, { deaf = false } = {}): Promise<string> {
   const handler = createHandler({ sources });
   const server = createServer(async (req, res) => {
-    await sendWebResponse(await handler.handle(toWebRequest(req, res)), res);
+    const request = deaf ? toWebRequest(req) : toWebRequest(req, res);
+    await sendWebResponse(await handler.handle(request), res);
   });
   return listen(server);
 }
@@ -125,6 +127,21 @@ describe("a stream another server serves, through the proxy", () => {
     expect(upstream.seen[0]?.url).toBe("/v1/feed/r1?since=2026");
     expect(upstream.seen[0]?.headers.authorization).toBe("Bearer k1");
     expect(upstream.seen[0]?.closed).toBe(true);
+  });
+
+  it("closes the upstream when its client leaves, though the request never says so", async () => {
+    const upstream = await thirdParty();
+    const api = wikiApi(upstream.origin);
+    const proxy = await proxyOf({ wiki: api }, { deaf: true });
+    const caller = createProxyCaller<typeof api>("wiki", {
+      source: api,
+      proxyPath: { sse: `${proxy}/api/sse` },
+    });
+
+    const subscription = await caller.live.room({ room: "r1" });
+    for await (const _event of subscription) break;
+
+    await expect.poll(() => upstream.seen[0]?.closed, { timeout: 2000 }).toBe(true);
   });
 
   it("resumes the upstream from the id the client resumes from", async () => {

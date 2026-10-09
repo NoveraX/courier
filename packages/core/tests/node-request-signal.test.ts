@@ -5,10 +5,14 @@
  * The signal fires when the client leaves, so an SSE stream behind express,
  * fastify or nestjs learns of it: otherwise the generator, the upstream
  * subscription and the connection slot would live on until the lifetime
- * cap.
+ * cap. It does so after the request itself was let go of and collected,
+ * as it is once a handler has returned a streamed answer.
  */
+import { spawnSync } from "node:child_process";
 import { createServer, type Server } from "node:http";
+import { createRequire } from "node:module";
 import type { AddressInfo } from "node:net";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { toWebRequest } from "../src/node";
@@ -57,5 +61,18 @@ describe("toWebRequest with its response", () => {
     await (await fetch(`http://127.0.0.1:${(server.address() as AddressInfo).port}`)).text();
 
     expect(signal?.aborted).toBe(false);
+  });
+
+  it("still hears the client leave once the request was let go of and collected", () => {
+    const tsx = createRequire(import.meta.url).resolve("tsx");
+    const script = join(__dirname, "fixtures/request-signal-after-collection.ts");
+
+    const run = spawnSync(process.execPath, ["--expose-gc", "--import", tsx, script], {
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+
+    expect(run.status, run.stderr).toBe(0);
+    expect(JSON.parse(run.stdout)).toEqual({ heard: 10, clients: 10, kept: 10 });
   });
 });

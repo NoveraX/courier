@@ -135,6 +135,11 @@ export function createSSEStream(
         }
       },
       cancel() {
+        /* The reader stopped — its client left. The stream's work stops with
+           it whatever the request's own signal says: a host may let go of its
+           request, and then that signal never fires, leaving a stream relayed
+           from another server open for nobody. */
+        forceAbort.abort();
         runCleanupStep("unregisterPlaygroundAbort", unregisterPlaygroundAbort);
         runCleanupStep("clearHeartbeat", () => clearInterval(heartbeatTimer));
         runCleanupStep("cleanupSSEStream", () =>

@@ -17,6 +17,7 @@ import { portsOf } from "./project/ports";
 import { type Project, readProject } from "./project/read-project";
 import { askYesNo } from "./prompt";
 import type { RecipeContext, SetupChoices } from "./recipes/recipe-types";
+import { wantsMcp } from "./wants-mcp";
 
 /** Where the command writes, and whether a person can answer its questions. */
 export interface Terminal {
@@ -51,15 +52,14 @@ function managerOf(root: string, asked: string | undefined): PackageManager {
 }
 
 async function choicesOf(run: CreateRun, terminal: Terminal): Promise<SetupChoices> {
-  const studio = run.studio !== false;
-  if (run.openapi !== undefined && !studio)
-    throw new Error("--openapi imports with Studio's command: leave out --no-studio");
-  const mcp =
-    run.mcp ??
-    (terminal.interactive && run.yes !== true && run["dry-run"] !== true
-      ? await askYesNo("Offer the API's reads to AI agents in your editor, over MCP?", false)
-      : false);
-  return { studio, mocks: run.mocks !== false, mcp, openapi: run.openapi, name: run.name };
+  const mcp = await wantsMcp(run, terminal);
+  return {
+    studio: run.studio !== false,
+    mocks: run.mocks !== false,
+    mcp,
+    openapi: run.openapi,
+    name: run.name,
+  };
 }
 
 /**
@@ -128,7 +128,10 @@ export async function addCourier(
       ]);
       return 1;
     }
-    if (!(await askYesNo("Set Courier up?", true))) return 1;
+    if (!(await askYesNo("Set Courier up?", true))) {
+      terminal.print(["Nothing was changed."]);
+      return 1;
+    }
   }
   return applyPlan(ctx, plan, run, terminal);
 }

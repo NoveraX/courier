@@ -96,7 +96,7 @@ describe("create-courier", () => {
     expect(again.out).toContain("Courier is set up here already.");
   }, 60_000);
 
-  it("names the install commands with --no-install", () => {
+  it("names the install commands with --no-install, and does not call Courier set up before they run", () => {
     const root = projectWith(NEXT);
 
     const { status, out } = run([root, "--yes", "--no-install", "--no-mcp"]);
@@ -104,6 +104,8 @@ describe("create-courier", () => {
     expect(status).toBe(0);
     expect(out).toContain("Install the packages to finish:");
     expect(out).toContain("npm install @noverax/courier @noverax/courier-next");
+    expect(out).not.toContain("Courier is set up.");
+    expect(out).toContain("npm run studio");
   }, 60_000);
 
   it("adds the MCP server's entry for the editor with --mcp", () => {
@@ -149,6 +151,35 @@ describe("create-courier", () => {
 
     expect(status).toBe(1);
     expect(out).toContain("Name the framework to create the project with: --framework next|nuxt");
+  }, 60_000);
+
+  it("refuses a specification file that is not there before it creates anything", () => {
+    const root = join(projectWith({ "README.md": "" }), "shop");
+
+    const { status, out } = run([
+      root,
+      "--framework",
+      "express",
+      "--yes",
+      "--openapi",
+      "./no-such-spec.json",
+    ]);
+
+    expect(status).toBe(1);
+    expect(out).toContain("--openapi: there is no ./no-such-spec.json here");
+    expect(existsSync(root)).toBe(false);
+  }, 60_000);
+
+  it("explains the folder it takes and shows how it is run in its help", () => {
+    const { status, out } = run(["--help"]);
+
+    expect(status).toBe(0);
+    expect(out).toContain("Usage\n    create-courier [dir] [options]");
+    expect(out).toMatch(/Arguments\n {4}\[dir\] +The project's folder, or a new one to create/);
+    expect(out).toMatch(
+      /Examples\n {4}create-courier +Set Courier up in the project in this folder/,
+    );
+    expect(out).toMatch(/create-courier shop +Create shop with the framework you pick/);
   }, 60_000);
 
   it("refuses options it cannot follow", () => {

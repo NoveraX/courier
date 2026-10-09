@@ -4,6 +4,7 @@ import { createLogger } from "@noverax/courier";
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
 import { type ArgsDef, defineCommand, runMain } from "citty";
 
+import { CancelledError } from "./cancelled-error";
 import { createCourier } from "./create";
 import { createCourierVersion } from "./create-courier-version";
 import { FRAMEWORKS } from "./frameworks";
@@ -11,7 +12,23 @@ import { FRAMEWORKS } from "./frameworks";
 const log = createLogger("Create");
 
 const SUMMARY =
-  "Set Courier up in one command: your typed API, the route the browser calls it through, Studio and mock data";
+  "Set Courier up in one command, in your project or a new one: your typed API, the route the browser calls it through, Studio and mock data";
+
+const EXAMPLES = [
+  { command: "create-courier", description: "Set Courier up in the project in this folder" },
+  {
+    command: "create-courier shop",
+    description: "Create shop with the framework you pick, then set Courier up in it",
+  },
+  {
+    command: "create-courier --openapi ./openapi.json",
+    description: "Set Courier up with your API in place of the example",
+  },
+  {
+    command: "create-courier --yes --mcp",
+    description: "Go ahead without asking, and offer the API's reads to agents over MCP",
+  },
+] as const;
 
 const ARGS = {
   dir: {
@@ -70,7 +87,9 @@ async function printHelp(): Promise<void> {
     version: createCourierVersion(),
     summary: SUMMARY,
     command: "create-courier [dir]",
+    arguments: [{ flags: "[dir]", description: ARGS.dir.description }],
     options: helpOptions(ARGS),
+    examples: EXAMPLES,
   };
   console.log(formatHelp(help, styleFor(process.stdout)));
 }
@@ -88,6 +107,11 @@ const main = defineCommand({
     try {
       process.exitCode = await createCourier(args, terminal);
     } catch (error) {
+      if (error instanceof CancelledError) {
+        process.stderr.write(`\n${error.message}.\n`);
+        process.exitCode = error.status;
+        return;
+      }
       log.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;
     }

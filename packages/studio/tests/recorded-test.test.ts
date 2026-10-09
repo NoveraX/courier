@@ -196,6 +196,9 @@ describe("saving a session as a test", () => {
     const failing = run();
 
     expect(existsSync(join(root, "tests/recorded/checkout-flow.test.ts"))).toBe(true);
+    expect(readFileSync(join(root, "tests/recorded/checkout-flow.test.ts"), "utf8")).toContain(
+      "`npx @noverax/courier-studio verify`",
+    );
     expect(passing.status, passing.stdout + passing.stderr).toBe(0);
     expect(failing.status).toBe(1);
     expect(failing.stdout + failing.stderr).toContain("path-changed");

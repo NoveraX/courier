@@ -33,7 +33,7 @@ export function testFileText(parts: TestFileParts): string {
  * API definition as it is now. A call fails its test when its endpoint is
  * gone, its method or route changed, or its schemas refuse the variables it
  * was sent with or the answer it got. Run it in CI with the rest, or check
- * every recording at once with \`npx courier-studio verify\`.
+ * every recording at once with \`npx @noverax/courier-studio verify\`.
  */
 import { readRecordings, verifyRecordings } from "@noverax/courier-mock/testing";
 import { describe, expect, it } from "vitest";

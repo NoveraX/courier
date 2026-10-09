@@ -105,7 +105,7 @@ async function openInStudio(
   const address = studio ?? (await studioInFront(studioFor));
   if (!address) {
     void vscode.window.showInformationMessage(
-      "Courier Studio is not running for this project: start it with `npx courier-studio`.",
+      "Courier Studio is not running for this project: start it with `npx @noverax/courier-studio`.",
     );
     return;
   }

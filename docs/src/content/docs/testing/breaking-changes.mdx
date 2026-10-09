@@ -37,13 +37,29 @@ With [recorded tests](/docs/testing/recorded-tests) in `tests/recorded` — or t
 ## In a pull request
 
 ```yaml
-- uses: actions/checkout@v4
-  with:
-    fetch-depth: 0
-- run: npm ci
-- name: Report what the API change breaks
-  run: npx courier-studio diff --base origin/${{ github.base_ref }} --format markdown --out "$GITHUB_STEP_SUMMARY"
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  api-changes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: npm ci
+      - name: Report what the API change breaks
+        run: npx courier-studio diff --base origin/${{ github.base_ref }} --format markdown --out "$GITHUB_STEP_SUMMARY" --comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+`--comment` posts the report in the pull request's conversation, where its reviewers read it, as one comment: the next run edits that comment rather than adding another, and leaves it alone when the report is the same. A pull request that leaves the definition alone gets no comment, and one whose breaking change was taken back sees its comment say so. Each project in a repository keeps a comment of its own, named by its folder.
+
+Posting takes a token that may write to pull requests — `permissions: pull-requests: write` — which a pull request from a fork does not get. On GitHub Enterprise Server the job names the server's API, and the report goes there. Posting is a report, not the check: when the report cannot be posted, the job's log says why, and the command passes or fails as it would without `--comment`.
 
 | Option | What it does |
 | --- | --- |
@@ -53,4 +69,5 @@ With [recorded tests](/docs/testing/recorded-tests) in `tests/recorded` — or t
 | `--format <text\|markdown\|json>` | How the report is written (default: `text`). Markdown lists what breaks and what may in a table, the safe changes folded away |
 | `--out <path>` | Write the report to this file too |
 | `--fail-on <breaking\|warning\|never>` | What fails the command (default: `breaking`) |
+| `--comment` | Post the report on the pull request the GitHub Actions job runs for, as one comment later runs keep current |
 | `--cwd <dir>` | The project's root (default: the working directory) |

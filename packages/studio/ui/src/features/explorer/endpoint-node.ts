@@ -13,10 +13,14 @@ function methodOf(def: CatalogEndpoint, calls: readonly RequestEntry[]): string 
   ).toUpperCase();
 }
 
-/* The path of the newest call that has a URL Studio can read. */
-function lastCalledPath(calls: readonly RequestEntry[]): string | null {
+/* The path of the newest call that has a URL Studio can read, under its source's base URL. */
+function lastCalledPath(calls: readonly RequestEntry[], baseURL: string): string | null {
   const url = calls.find((call) => call.url !== undefined && URL.canParse(call.url))?.url;
-  return url === undefined ? null : new URL(url).pathname;
+  if (url === undefined) return null;
+  const path = new URL(url).pathname;
+  const base = URL.canParse(baseURL) ? new URL(baseURL).pathname.replace(/\/+$/, "") : "";
+  if (base === "" || (path !== base && !path.startsWith(`${base}/`))) return path;
+  return path.slice(base.length) || "/";
 }
 
 /** What building an endpoint's node reads beside its definition. */
@@ -31,7 +35,8 @@ export interface NodeContext {
  * An endpoint's node: its definition — method, transport, path and URL,
  * middleware, schemas — with its calls, their metrics and its health. An
  * endpoint only traffic showed, whose path nothing declares, shows the path
- * it was last called at.
+ * it was last called at — even in a group the config declares, whose prefix
+ * says nothing of where an endpoint it does not declare is served.
  *
  * @param ref - Where the endpoint is
  * @param prefix - Its group's path prefix
@@ -54,9 +59,9 @@ export function endpointOf(
   const key = endpointKey(ref);
   const requests = ctx.byKey.get(key) ?? [];
   const metrics = metricsOf(requests, ctx.now, ctx.since);
-  /* An endpoint only traffic showed has no declared path: it shows where it was last called. */
-  const declared = def.path !== undefined || prefix !== "";
-  const path = (!declared && lastCalledPath(requests)) || joinPath(prefix, def.path ?? "");
+  const path =
+    (def.origin === "runtime" && lastCalledPath(requests, baseURL)) ||
+    joinPath(prefix, def.path ?? "");
   return {
     ...ref,
     key,

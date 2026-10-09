@@ -11,6 +11,8 @@
  *    reported before the socket connected
  *  - `playground-responder` setup so the Studio playground can dispatch
  *    `playground:execute` to this runtime via the rid-keyed wire
+ *  - `runtime:webhooks` for the webhooks the app defines, and
+ *    `webhook:deliver` answered by delivering one, signed here
  *
  * Best-effort: if `socket.io-client` fails to load, this warns and returns
  * without throwing — the runtime stays locally attached. Synchronous throws
@@ -31,6 +33,7 @@ import { setupPlaygroundResponder } from "./playground-responder";
 import { timersCanUnref } from "./runtime-environment";
 import { studioMessageLimit } from "./studio-message-limit";
 import { keepUnsentEvents } from "./unsent-events";
+import { answerWebhookDeliveries } from "./webhook-responder";
 
 const log = createLogger("Studio");
 
@@ -151,6 +154,7 @@ export async function connectRuntimeSocket(
   };
 
   const unsent = keepUnsentEvents();
+  const webhooks = answerWebhookDeliveries(socket);
   /* Studio says it in answer to hello. An event is small by design — its
      bodies cut, a stream's messages previewed — but a Playground answer or
      a whole body is as large as the app made it. */
@@ -169,6 +173,7 @@ export async function connectRuntimeSocket(
       socket.emit("runtime:announce", buildAnnouncePayload(entry));
     }
     drain();
+    webhooks.announce();
     for (const event of unsent.take()) socket.emit("event", event);
   });
 
@@ -203,6 +208,7 @@ export async function connectRuntimeSocket(
   handle.setDisposer(() => {
     unsubBus?.();
     disposeResponder();
+    webhooks.stop();
     socket.removeAllListeners();
     socket.disconnect();
   });

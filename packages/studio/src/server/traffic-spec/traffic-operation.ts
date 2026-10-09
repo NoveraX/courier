@@ -34,6 +34,7 @@ export function endpointOperation(
     schema: schemaOfSamples(
       calls.map((one) => variableOf(one.variables, name) ?? segmentAt(one, template, at)),
     ),
+    description: `Inferred from traffic: in the address of ${callsText(calls.length)}.`,
   }));
   const body = WITHOUT_BODY.has(verb) ? undefined : requestBody(calls, consumed);
   return {
@@ -57,6 +58,7 @@ function queryParameters(calls: readonly PlacedCall[]): JsonSchema[] {
       in: "query",
       required: sent.length === calls.length,
       schema: typed.length > 0 ? schemaOfSamples(typed) : { type: "string" },
+      description: `Inferred from traffic: sent in ${sent.length === calls.length ? callsText(calls.length) : `${sent.length} of ${calls.length} calls`}.`,
     };
   });
 }
@@ -71,7 +73,7 @@ function requestBody(
   if (bodies.length === 0) return undefined;
   return {
     required: bodies.length === calls.length,
-    content: { "application/json": { schema: schemaOfSamples(bodies) } },
+    content: { "application/json": { schema: schemaOfSamples(bodies, "requests") } },
   };
 }
 
@@ -89,7 +91,7 @@ function responsesOf(calls: readonly PlacedCall[]): JsonSchema {
   return {
     [status]: {
       description,
-      content: { "application/json": { schema: schemaOfSamples(answers) } },
+      content: { "application/json": { schema: schemaOfSamples(answers, "answers") } },
     },
   };
 }
@@ -124,4 +126,10 @@ function mostCommon(values: readonly number[]): number {
   const counts = new Map<number, number>();
   for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
   return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 200;
+}
+
+/* Every one of a number of calls: `the one call`, `both calls`, `all 4 calls`. */
+function callsText(count: number): string {
+  if (count === 1) return "the one call";
+  return count === 2 ? "both calls" : `all ${count} calls`;
 }

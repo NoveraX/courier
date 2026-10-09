@@ -60,21 +60,68 @@ const TRAFFIC: TrafficCall[] = [
 describe("a schema read from samples", () => {
   it("merges every sample: fields required when all held them, null as nullable, formats all strings had", () => {
     expect(
-      schemaOfSamples([
-        { id: "a", at: "2026-10-09T01:00:00Z", tags: ["x"] },
-        { id: "b", at: "2026-10-10T02:00:00Z", note: null, tags: [1] },
-      ]),
+      schemaOfSamples(
+        [
+          { id: "a", at: "2026-10-09T01:00:00Z", tags: ["x"], seller: { name: "Ada" } },
+          {
+            id: "b",
+            at: "2026-10-10T02:00:00Z",
+            note: null,
+            tags: [1],
+            seller: { name: "Bo", rating: 4 },
+          },
+        ],
+        "answers",
+      ),
     ).toEqual({
       type: "object",
       properties: {
-        id: { type: "string" },
-        at: { type: "string", format: "date-time" },
-        tags: { type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] } },
-        note: { type: "null" },
+        id: { type: "string", description: "Inferred from traffic: in both answers." },
+        at: {
+          type: "string",
+          format: "date-time",
+          description: "Inferred from traffic: in both answers.",
+        },
+        tags: {
+          type: "array",
+          items: { anyOf: [{ type: "string" }, { type: "number" }] },
+          description: "Inferred from traffic: in both answers.",
+        },
+        seller: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Inferred from traffic: in both seller objects." },
+            rating: {
+              type: "number",
+              description: "Inferred from traffic: in 1 of 2 seller objects.",
+            },
+          },
+          required: ["name"],
+          description: "Inferred from traffic: in both answers.",
+        },
+        note: { type: "null", description: "Inferred from traffic: in 1 of 2 answers." },
       },
-      required: ["id", "at", "tags"],
+      required: ["id", "at", "tags", "seller"],
     });
     expect(schemaOfSamples(["a", null])).toEqual({ type: ["string", "null"] });
+    expect(schemaOfSamples([{ id: "a" }], "requests")).toMatchObject({
+      properties: { id: { description: "Inferred from traffic: from the one request seen." } },
+    });
+    expect(
+      schemaOfSamples([{ lines: [{ sku: "a" }, { sku: "b", qty: 2 }, { sku: "c" }] }], "answers"),
+    ).toMatchObject({
+      properties: {
+        lines: {
+          description: "Inferred from traffic: from the one answer seen.",
+          items: {
+            properties: {
+              sku: { description: "Inferred from traffic: in all 3 items." },
+              qty: { description: "Inferred from traffic: in 1 of 3 items." },
+            },
+          },
+        },
+      },
+    });
   });
 });
 
@@ -110,8 +157,20 @@ describe("an OpenAPI document read from traffic", () => {
     const paths = spec.document.paths as Record<string, Record<string, Record<string, unknown>>>;
 
     expect(paths["/products"]?.get?.parameters).toEqual([
-      { name: "category", in: "query", required: true, schema: { type: "string" } },
-      { name: "page", in: "query", required: true, schema: { type: "number" } },
+      {
+        name: "category",
+        in: "query",
+        required: true,
+        schema: { type: "string" },
+        description: "Inferred from traffic: sent in the one call.",
+      },
+      {
+        name: "page",
+        in: "query",
+        required: true,
+        schema: { type: "number" },
+        description: "Inferred from traffic: sent in the one call.",
+      },
     ]);
     expect(paths["/cart/{shopper}/items"]?.post).toMatchObject({
       operationId: "add",
@@ -144,5 +203,13 @@ describe("an OpenAPI document read from traffic", () => {
     );
     expect(code).toContain("updatedAt");
     expect(code).toMatch(/note[^\n]*nullable|note[^\n]*null/);
+    expect(code).toMatch(/\/\*\* Inferred from traffic: in \d+ of \d+ answers\. \*\/\s*\n\s*note/);
+    expect(spec.document.components).toMatchObject({
+      schemas: { ProductsListItem: { type: "object", properties: { id: { type: "string" } } } },
+    });
+    expect(code).toMatch(
+      /export type ProductsListItem = \{\s*\n\s*\/\*\* Inferred from traffic: [^*]+ \*\/\s*\n\s*id: string;/,
+    );
+    expect(code).toContain("z.array(ProductsListItemSchema)");
   });
 });

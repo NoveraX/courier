@@ -69,6 +69,19 @@ createMcpHandler({
 
 `allow` sees each tool's `name`, `access`, `path` and `description`. What a tool may do once called is your middleware's to decide, through `ctx.agent` — see [Who may do what](/docs/agents/overview#who-may-do-what-middleware).
 
+## How often each caller may call
+
+A tool's `limit` is counted per caller when `limitPer` names who each caller is, from what `authorize` returned — one key per agent, user or API key:
+
+```ts
+createMcpHandler({
+  authorize,
+  limitPer: (principal) => principal.id,
+})
+```
+
+Without it every caller shares one count, which protects the API but lets one busy agent use up the others' calls. Each process counts its own: behind a load balancer, three replicas take up to three times the calls between them.
+
 ## From the browser
 
 A request with an `Origin` header comes from a browser page, and is served only from your app's own origin or one of `allowedOrigins` — the protocol's defence against a page on another site reaching a local server by DNS rebinding. A client that is not a browser sends no `Origin`, and is decided by `authorize` alone.
@@ -96,6 +109,7 @@ A client on the 2025 handshake cannot be asked over HTTP — that revision put t
 | `authorize` | Who the caller is, or a refusal — required |
 | `sources` | The sources to offer; the registered ones, read per request, by default |
 | `allow` | Whether a caller may see and call a tool |
+| `limitPer` | Who each caller is, for the tools' limits: one key per caller; every caller shares one count without it |
 | `allowedOrigins` | Browser origins beside your app's own |
 | `allowDestructive` | Run destructive tools without asking a person |
 | `confirmSecret` | The key confirmations are signed with, the same on every replica — 32 characters at least |

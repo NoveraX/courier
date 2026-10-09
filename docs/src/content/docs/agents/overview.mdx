@@ -47,6 +47,7 @@ npm install @noverax/courier-mcp
 | `access` | `"read"` — changes nothing; `"write"` — changes what it addresses; `"destructive"` — removes or overwrites what cannot be restored, so a person confirms each call. Required. |
 | `name` | The tool's name, when its call in the client is not the one to give it: letters, digits, `_` and `-`, at most 64. |
 | `title` | A name for people, which a client shows in place of the tool's. |
+| `limit` | How often a caller may call it: `{ maxCalls, window }`, at most `maxCalls` calls in any `window` milliseconds. See [How often an agent may call](#how-often-an-agent-may-call). |
 
 An endpoint that writes cannot be offered as a read: the type of `access` excludes `"read"` after `.post()`, `.put()`, `.patch()`, `.del()` and `.via()`, and the server refuses to start on one written in plain JavaScript. A read sent over POST says so with `.reads()` first. `.agent()` is named on an HTTP endpoint, after its verb — it describes that one endpoint, so a base made with `courier()` does not pass it on.
 
@@ -60,6 +61,7 @@ An endpoint that writes cannot be offered as a read: the type of `access` exclud
 | `.response()` | Its output schema, and the answer as structured data beside its text |
 | `access` | The hints a client asks a person by: `readOnlyHint`, `destructiveHint` |
 | `title` | Its title |
+| `limit` | A line in its description: `Takes at most 3 calls an hour from each caller` |
 | `deprecated` | A line in its description |
 
 Schemas are written as [Standard JSON Schema](https://standardschema.dev): Zod 4 and ArkType describe their own, and `createMcpHandler({ jsonSchema })` takes a converter for any other library, as [the OpenAPI export](/docs/advanced/openapi#schemas) does.
@@ -92,6 +94,34 @@ This cannot be undone. Run it?
 The question goes to the person, not the model: a prompt injected into the conversation cannot answer it. A call whose arguments the schema refuses is never put to anyone. A declined call does not run, and shows in Studio as a call that did not.
 
 A client that cannot ask a person — one that supports no MCP elicitation, or the 2025 handshake over HTTP, which cannot carry the question — gets the destructive tool refused, with a sentence saying why. `--allow-destructive` on the command and `allowDestructive` on the handler leave the decision to the client's own approval prompt instead.
+
+## How often an agent may call
+
+An agent in a loop calls the same tool again and again. `limit` bounds it, per tool:
+
+```ts title="api/orders.ts"
+import { courier } from "@noverax/courier/define"
+import { z } from "zod"
+
+const { endpoint } = courier()
+
+export const refund = endpoint
+  .post("orders/:id/refund")
+  .variables(z.object({ id: z.string() }))
+  .agent({
+    description: "Refund an order in full",
+    access: "destructive",
+    limit: { maxCalls: 3, window: 3_600_000 },
+  })
+```
+
+A call beyond it is refused at once, before anything runs and before a person is asked to confirm it, and the agent is told when it may call again:
+
+```text
+Not run: shop_orders_refund takes 3 calls an hour from each caller, and this caller made them; it may call again in 41 min.
+```
+
+The model is told the limit with the tool, so it can plan around it, and a refused call shows in Studio as one that did not run. Over stdio there is one caller, the agent the command serves. Over HTTP every caller shares one count unless the handler's `limitPer` tells them apart — see [In Your App](/docs/agents/app#how-often-each-caller-may-call). A limit counts the calls one process takes; a policy across replicas, or one that waits rather than refuses, belongs in your middleware, which sees `ctx.agent` below.
 
 ## Who may do what: middleware
 

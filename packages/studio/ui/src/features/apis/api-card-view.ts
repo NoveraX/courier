@@ -49,6 +49,7 @@ function row(
 }
 
 function originOf(registry: SourceSummary | undefined): string {
+  if (registry?.fromTraffic) return "read from traffic";
   if (registry?.importType === "raw") return "pasted spec";
   return registry?.specUrl || "uploaded spec";
 }

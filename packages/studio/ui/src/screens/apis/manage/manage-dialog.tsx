@@ -111,7 +111,7 @@ export function ManageDialog({ manage }: { manage: UseManageReturn }): React.Rea
             !applying &&
             (key === "endpoints"
               ? stepIndex(manage.step) === 2
-              : stepIndex(manage.step) === 1 && manage.importType !== "url")
+              : stepIndex(manage.step) === 1 && manage.importType !== "url" && !manage.fromTraffic)
           }
           onBack={() => manage.back()}
         />

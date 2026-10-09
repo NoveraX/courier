@@ -23,7 +23,9 @@ export function useAskedImport(
   const request = useImportRequest((s) => s.request);
   useEffect(() => {
     if (!request || !allowed) return;
-    useKeptImport.setState({ kept: { source: "raw", content: request.content } });
+    useKeptImport.setState({
+      kept: { source: "raw", content: request.content, fromTraffic: request.fromTraffic },
+    });
     openWizard("raw");
     useImportRequest.setState({ request: null });
   }, [request, allowed, openWizard]);

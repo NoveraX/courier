@@ -66,7 +66,8 @@ export function ManageFooter({ manage, reupload, onReupload }: ManageFooterProps
   const applying = manage.step === "applying";
   const reviewing = manage.step === "preview" || applying;
   const canGoBack =
-    manage.step === "preview" || (manage.step === "inventory" && manage.importType !== "url");
+    manage.step === "preview" ||
+    (manage.step === "inventory" && manage.importType !== "url" && !manage.fromTraffic);
   const blocked = (manage.consent?.plan.blocked.length ?? 0) > 0;
   return (
     <div className="flex shrink-0 items-center gap-2 border-t border-line bg-panel-subtle px-5 py-3">

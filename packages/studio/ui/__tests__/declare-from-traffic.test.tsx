@@ -119,7 +119,7 @@ describe("declaring a source from its traffic", () => {
         }),
       ],
     });
-    expect(useImportRequest.getState().request).toEqual({ content: DOCUMENT });
+    expect(useImportRequest.getState().request).toEqual({ content: DOCUMENT, fromTraffic: true });
   });
 
   it("says so when no call could be read into an endpoint, asking nothing", async () => {
@@ -132,7 +132,7 @@ describe("declaring a source from its traffic", () => {
 
   it("opens the wizard on the raw document once the page may import, and takes the ask", () => {
     const openWizard = vi.fn();
-    useImportRequest.setState({ request: { content: DOCUMENT } });
+    useImportRequest.setState({ request: { content: DOCUMENT, fromTraffic: true } });
 
     const { rerender } = renderHook(({ allowed }) => useAskedImport(openWizard, allowed), {
       initialProps: { allowed: false },
@@ -141,7 +141,11 @@ describe("declaring a source from its traffic", () => {
     act(() => rerender({ allowed: true }));
 
     expect(openWizard).toHaveBeenCalledWith("raw");
-    expect(useKeptImport.getState().kept).toEqual({ source: "raw", content: DOCUMENT });
+    expect(useKeptImport.getState().kept).toEqual({
+      source: "raw",
+      content: DOCUMENT,
+      fromTraffic: true,
+    });
     expect(useImportRequest.getState().request).toBeNull();
   });
 });

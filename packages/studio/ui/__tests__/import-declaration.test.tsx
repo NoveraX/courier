@@ -37,6 +37,7 @@ const PREVIEWED: ImportState = {
   step: "preview",
   source: "url",
   content: "https://specs.example/pets.json",
+  fromTraffic: false,
   spec: null,
   options: {
     sourceName: "pets",

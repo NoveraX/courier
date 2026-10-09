@@ -1,10 +1,8 @@
 import { toast } from "sonner";
 
 import { useImportRequest } from "@/features/apis/import-request";
-import { post } from "@/lib/api-client";
 import { isPlainObject } from "@/socket/is-plain-object";
-import { useStudioStore } from "@/store";
-import type { RequestEntry } from "@/store/types";
+import { readTrafficDocument } from "./traffic-document";
 
 /**
  * Read an OpenAPI document from a source's recorded calls and hand it to
@@ -20,19 +18,13 @@ import type { RequestEntry } from "@/store/types";
  * ```
  */
 export async function declareFromTraffic(source: string): Promise<boolean> {
-  const calls = useStudioStore
-    .getState()
-    .requests.filter((r) => r.source === source && r.purpose === undefined)
-    .map(callOf);
   try {
-    const answer = await post<unknown>("/api/apis/traffic-spec", { source, calls });
-    if (!isPlainObject(answer) || typeof answer.text !== "string")
-      throw new Error("Studio read no document");
+    const answer = await readTrafficDocument(source);
     if (answer.endpoints === 0) {
       toast.error(`No call of ${source} had an answer and an address to read an endpoint from`);
       return false;
     }
-    useImportRequest.setState({ request: { content: answer.text } });
+    useImportRequest.setState({ request: { content: answer.text, fromTraffic: true } });
     const leftOut = leftOutText(answer.leftOut);
     if (leftOut) toast.info(`Read ${source} from its traffic. Left out: ${leftOut}.`);
     return true;
@@ -42,20 +34,6 @@ export async function declareFromTraffic(source: string): Promise<boolean> {
     );
     return false;
   }
-}
-
-function callOf(r: RequestEntry): Record<string, unknown> {
-  return {
-    group: r.group ?? "",
-    method: r.method,
-    httpMethod: r.httpMethod,
-    url: r.url,
-    variables: r.variables,
-    status: r.statusCode,
-    data: r.data,
-    dataCut: r.dataCutFrom !== undefined,
-    transport: r.transport ?? "http",
-  };
 }
 
 /* What the document could not hold, said once the wizard opens. */

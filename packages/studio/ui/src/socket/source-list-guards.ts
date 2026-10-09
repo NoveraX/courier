@@ -48,7 +48,8 @@ export function isSourceSummary(item: unknown): item is SourceSummary {
     IMPORT_TYPES.has(item.importType) &&
     typeof item.outputDir === "string" &&
     isPlainObject(item.options) &&
-    (item.check === undefined || isImportCheck(item.check))
+    (item.check === undefined || isImportCheck(item.check)) &&
+    (item.fromTraffic === undefined || typeof item.fromTraffic === "boolean")
   );
 }
 

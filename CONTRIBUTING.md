@@ -94,6 +94,20 @@ npx playwright install chromium webkit firefox
 npm run test:e2e
 ```
 
+The VS Code extension runs inside VS Code itself: a stand-in Studio answers
+as the real one does, and a suite opens a project's file and reads the hints
+the editor shows over its calls. It runs the VS Code at `VSCODE_PATH`; or
+the version `VSCODE_VERSION` names — `stable`, a version number, or
+`minimum`, the oldest the extension's `engines` field takes — downloaded for
+the run; or else the one installed on a Mac, or the latest stable. CI runs
+both `minimum` and `stable`, under a virtual display:
+
+```bash
+npm run build
+npm run test:editor -w courier-vscode
+VSCODE_VERSION=minimum npm run test:editor -w courier-vscode
+```
+
 The user's session is checked in a browser as well, in an application built
 with each framework version Courier supports: Next.js 14, 15 and 16 (16 also
 with `cacheComponents`), SvelteKit 2.19 and the newest 2.x, Nuxt 3 and 4,

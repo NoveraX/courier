@@ -27,10 +27,12 @@ const CLIENT_CLOSED_REQUEST = 499;
  * caller that cancels while the middleware waits between attempts is answered
  * at once with its signal's reason.
  *
- * An endpoint that writes is sent once unless `mutations` is set. A write
- * whose answer was lost may still have been carried out, and sending it again
- * charges a card twice; set it only when the upstream recognises a repeated
- * write, for example by an idempotency key. An endpoint declared a read with
+ * An endpoint that writes is sent once, since a write whose answer was lost
+ * may still have been carried out, and sending it again charges a card
+ * twice — unless it declares an `idempotencyKey`, whose one key on every
+ * attempt lets the upstream apply it once, or `mutations` is set: `true`
+ * for an upstream that recognises a repeated write some other way, `false`
+ * to retry no write, keys included. An endpoint declared a read with
  * `.reads()` is retried whatever verb carries it.
  *
  * @param options - How many attempts, how far apart, and which answers deserve one
@@ -46,7 +48,7 @@ const CLIENT_CLOSED_REQUEST = 499;
  * // Also retry a rate-limited request
  * retryMiddleware({ retryOn: [0, 429, 500, 502, 503, 504] });
  *
- * // Writes too: the upstream deduplicates them by their Idempotency-Key
+ * // Every write too: the upstream recognises a repeated one by its own means
  * retryMiddleware({ mutations: true });
  * ```
  */

@@ -1,4 +1,6 @@
 export type { AgentAccess, AgentOptions } from "../agent/types";
+/* Named by the types an API's definition infers, so a project that emits declarations can name them too. */
+export type { WebBody, WebCredentials } from "../http-client/web-types";
 export { defineApi, deriveSourceName, getSourceName, setSourceName } from "./api";
 export { type BoundaryConfig, defineBoundary } from "./boundary";
 export type {

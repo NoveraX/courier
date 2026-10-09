@@ -35,6 +35,8 @@ export function defineConfig<TSources extends Record<string, AnySource>>(
   return config;
 }
 
+/* Named by the types an API's definition infers, so a project that emits declarations can name them too. */
+export type { WebBody, WebCredentials } from "../http-client/web-types";
 export type {
   CourierConfig,
   CourierFileImport,

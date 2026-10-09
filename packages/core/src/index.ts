@@ -61,11 +61,14 @@ export type {
   BaseOptions,
   CallOptions,
   Context,
+  GroupOptions,
   HttpResponse,
   RequestContext,
   SearchParamsSerializer,
   UploadProgress,
 } from "./http-client/types";
+/* Named by the types an API's definition infers, so a project that emits declarations can name them too. */
+export type { WebBody, WebCredentials } from "./http-client/web-types";
 export {
   createLogger,
   type Logger,

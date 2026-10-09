@@ -9,7 +9,7 @@ import { flatNavItems } from "./docs-nav"
  * @returns The page before and the page after, where there are any
  * @example
  * ```ts
- * neighbors("/docs/quick-start") // { previous: Installation, next: Project Setup }
+ * neighbors("/docs/quick-start") // { previous: Installation, next: Create Courier }
  * ```
  */
 export function neighbors(href: string): { previous?: NavItem; next?: NavItem } {

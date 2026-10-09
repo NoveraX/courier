@@ -2,6 +2,14 @@ export const metadata = { title: "Vue", description: "Use Courier with Vue via c
 
 For Vue apps (with Vite), Courier provides `createProxyCaller` for type-safe API calls. Since Vue apps don't have a built-in server, you need a separate backend (Express, Hono, or Fastify) to host the proxy route.
 
+## In one command
+
+```bash
+npx @noverax/create-courier@latest
+```
+
+In a Vue app Vite builds, it sets Courier up in direct mode — a client that calls your API straight from the browser, and Studio's plugin — with a typed example API, its mock, and a page of its own at `/courier.html`. In Nuxt it sets up the proxy route instead: see [Nuxt](/docs/frameworks/nuxt). See [Create Courier](/docs/create-courier).
+
 ## Installation
 
 ```bash

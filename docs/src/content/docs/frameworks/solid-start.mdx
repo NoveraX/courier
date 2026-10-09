@@ -2,6 +2,14 @@ export const metadata = { title: "SolidStart", description: "Serve Courier's pro
 
 `@noverax/courier-solid` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call: one route answers every endpoint, reads over `GET` and writes over `POST`, and streams server-sent events.
 
+## In one command
+
+```bash
+npx @noverax/create-courier@latest
+```
+
+In a SolidStart app it adds what this page sets up by hand — the API route that registers your APIs, and Studio's plugin — with a typed example API, its mock, and a page at `/courier`. See [Create Courier](/docs/create-courier).
+
 ## Install
 
 ```bash

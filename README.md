@@ -103,6 +103,14 @@ Courier starts from the other end. You **define your API once**, as plain TypeSc
 ## Quick start
 
 ```bash
+npx @noverax/create-courier@latest
+```
+
+Run in your project — Next.js, Nuxt, SvelteKit, Astro, React Router, SolidStart, React or Vue with Vite, Expo, Express, Hono, Fastify or NestJS — it shows the plan, then adds a typed example API, the route the browser calls it through, `courier.config.ts`, a mock and a page at `/courier`, installs the packages and type-checks what it added. `npm run studio` starts Studio with the mock; `npm run dev` starts your app. Name a folder and a framework for a new project: `npx @noverax/create-courier@latest shop --framework next`. See [Create Courier](https://courier.noverax.cloud/docs/create-courier).
+
+By hand:
+
+```bash
 npm install @noverax/courier
 ```
 
@@ -767,6 +775,7 @@ See [`@noverax/courier-studio`](./packages/studio) for setup and [How Studio loa
 
 | Package | | |
 | --- | --- | --- |
+| [`@noverax/create-courier`](./packages/create-courier) | Courier in your project, or a new one, in one command | [![npm](https://img.shields.io/npm/v/@noverax/create-courier?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/create-courier) |
 | [`@noverax/courier-studio`](./packages/studio) | Studio — request inspector, playground, OpenAPI import, mock servers | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-studio) |
 | [`@noverax/courier-studio-core`](./packages/studio-core) | Studio runtime — `attachRuntime` for your instrumentation | [![npm](https://img.shields.io/npm/v/@noverax/courier-studio-core?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-studio-core) |
 | [`@noverax/courier-mock`](./packages/mock) | Mock servers, test utilities, contract testing and fixtures | [![npm](https://img.shields.io/npm/v/@noverax/courier-mock?style=flat-square&label=&labelColor=08090a&color=1c63d6)](https://www.npmjs.com/package/@noverax/courier-mock) |

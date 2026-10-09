@@ -31,6 +31,10 @@ describe("a page's neighbours", () => {
   it("are the pages before and after it in the navigation, none past either end", () => {
     expect(neighbors("/docs/quick-start")).toMatchObject({
       previous: { href: "/docs/installation" },
+      next: { href: "/docs/create-courier" },
+    })
+    expect(neighbors("/docs/create-courier")).toMatchObject({
+      previous: { href: "/docs/quick-start" },
       next: { href: "/docs/project-setup" },
     })
     expect(neighbors("/docs/introduction").previous).toBeUndefined()

@@ -6,6 +6,14 @@ Courier has first-class Next.js support through the `@noverax/courier-next` pack
 Next.js App Router cannot host WebSocket upgrades in-process — neither RSC nor route handlers expose the underlying TCP socket. If your API uses WS endpoints, run [`@noverax/courier-server`](/docs/deployment/standalone-server) alongside Next.js and point `proxyPath.ws` at it (e.g. `ws://localhost:3001` in dev, `wss://realtime.example.com` in prod). HTTP and SSE continue to work in-process via the App Router.
 </Callout>
 
+## In one command
+
+```bash
+npx @noverax/create-courier@latest
+```
+
+In a Next.js app it adds what this page sets up by hand — the API route, the registration in `instrumentation.ts` and Studio's connection on both sides — with a typed example API, its mock, and a page at `/courier`. See [Create Courier](/docs/create-courier).
+
 ## Studio integration & `appOrigin` <a id="studio-app-origin"></a>
 
 Wire your Next.js app into Studio with an `attachRuntime()` call in the `register()` of `instrumentation.ts` — the same function that registers your sources ([Step 1](#step-1-api-route)). In development it loads `courier.config.ts` from disk, registers its sources, and opens the connection to Studio; in production the `registerSources()` call before it registers them. The `appOrigin` field for Playground proxy SSE/WS resolution lives in `courier.config.ts.runtime.appOrigin` (or set the `COURIER_APP_URL` env var to override per-environment).

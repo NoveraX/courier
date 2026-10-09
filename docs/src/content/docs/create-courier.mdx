@@ -79,7 +79,7 @@ A project it creates is moved to TypeScript 6 where its template came with an ol
 | Fastify | a plugin on `/api/request` and `/courier` | `.courier/` kept out of `fastify start -w` |
 | NestJS | a module on `/api/request` and `/courier` | the module imported into your root module |
 
-Every setup adds `courier.config.ts`, the list of your APIs that your server, Studio and the [MCP server](/docs/agents/overview) read; `courier.mocks.ts`, the mock Studio starts with itself; and your API's definition, with its Zod schemas and the [boundary](/docs/proxy-mode/boundary) that holds the browser to the endpoints it may call. A server compiled by `tsc` from `src/` — Express, Hono, Fastify, NestJS — cannot import a file at the project's root, so it registers the APIs from `src/courier/sources.ts`, which lists the same ones.
+Every setup adds `courier.config.ts`, the list of your APIs that your server, Studio and the [MCP server](/docs/agents/overview) read; `courier.mocks.ts`, the mock Studio starts with itself; and your API's definition, with its Zod schemas and the [boundary](/docs/proxy-mode/boundary) that holds the browser to the endpoints it may call. A server compiled by `tsc` from `src/` — Express, Hono, Fastify, NestJS — cannot import a file at the project's root, so its list lives in `src/courier/config.ts`, which the server registers from, and `courier.config.ts` passes it on to Studio and agents. It is still one list: an API Studio imports is declared where the list is written.
 
 ## What it will not do
 

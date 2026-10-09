@@ -1,3 +1,4 @@
+import { posix } from "node:path";
 import type { SetupChoices } from "../recipes/recipe-types";
 import { firstFreePort } from "./free-port";
 import type { Project } from "./read-project";
@@ -19,6 +20,16 @@ function portIn(text: string | undefined, pattern: RegExp): number | undefined {
   return found === undefined ? undefined : Number(found);
 }
 
+/* The config as the project writes it: courier.config.ts, and the module it passes its list on from, where it does. */
+function configText(project: Project): string | undefined {
+  const config = project.read("courier.config.ts");
+  const from =
+    config && /export\s*\{\s*default\s*\}\s*from\s*["'](\.{1,2}\/[^"']+)["']/.exec(config)?.[1];
+  if (!from) return config;
+  const module = posix.normalize(from).replace(/\.js$/, "");
+  return `${config}\n${project.read(`${module}.ts`) ?? project.read(module) ?? ""}`;
+}
+
 /**
  * The ports Studio and the example's mock take. A project set up before
  * keeps the ones its files name; a new setup takes the defaults, or the
@@ -34,7 +45,7 @@ function portIn(text: string | undefined, pattern: RegExp): number | undefined {
  * ```
  */
 export async function portsOf(project: Project, choices: SetupChoices): Promise<Ports> {
-  const config = project.read("courier.config.ts");
+  const config = configText(project);
   const mocks = project.read("courier.mocks.ts");
   const studio =
     portIn(config, /studio:\s*\{\s*port:\s*(\d+)/) ??

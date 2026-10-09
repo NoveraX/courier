@@ -8,7 +8,6 @@ import { devStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { serverDir, serverFiles, studioAttachLater } from "./shared/server-files";
-import { sourcesAfterImport } from "./shared/sources-after-import";
 
 function routes(ctx: RecipeContext, dir: string, withPage: boolean): RecipeFile {
   const path = `${dir}/routes.ts`;
@@ -40,9 +39,9 @@ courier.post("/courier", express.urlencoded({ extended: false }), async (request
 import { courierHandler } from "@noverax/courier-express";
 import ${withPage ? "express, { Router }" : "{ Router }"} from "express";
 
-${pageImports}import { sources } from "${from("sources.ts")}";
+${pageImports}import config from "${from("config.ts")}";
 
-registerSources(sources);
+registerSources(config.sources);
 ${ctx.choices.studio ? `\n${studioAttachLater()}\n` : ""}
 /**
  * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}. Mount them before any body
@@ -123,6 +122,5 @@ export function expressRecipe(ctx: RecipeContext): Recipe {
     scripts: studioScripts(ctx),
     manual: [],
     next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
-    ...(example ? {} : { afterImport: sourcesAfterImport(dir) }),
   };
 }

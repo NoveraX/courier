@@ -1,12 +1,8 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-
 import type { Terminal } from "../add-courier";
 import type { Plan } from "../plan/build-plan";
 import type { RecipeContext } from "../recipes/recipe-types";
 import { runTool } from "./run-tool";
 import { type Touched, typecheckTouched } from "./typecheck";
-import { writePlannedFiles } from "./write-plan";
 
 /**
  * Check the types of what the setup touched, and say how it went.
@@ -69,31 +65,4 @@ export async function prepare(ctx: RecipeContext, plan: Plan, terminal: Terminal
     if (status !== 0)
       terminal.print([terminal.style.yellow(`${command.join(" ")} failed (exit ${status})`)]);
   }
-}
-
-/**
- * Write the files the import's declarations call for — a server's list of
- * the APIs it registers — each created only where nothing is there.
- *
- * @param root - The project's folder
- * @param plan - The plan
- * @param terminal - Where to write
- * @returns The files written, relative to the root
- * @example
- * ```ts
- * const written = writeAfterImport(root, plan, terminal);
- * ```
- */
-export function writeAfterImport(root: string, plan: Plan, terminal: Terminal): string[] {
-  const files = plan.afterImport?.(root) ?? [];
-  const written = writePlannedFiles(
-    root,
-    files.map((file) => ({
-      ...file,
-      state: existsSync(join(root, file.path)) ? "kept" : "create",
-    })),
-  );
-  if (written.length > 0)
-    terminal.print(["", `Wrote ${written.join(", ")}, from what the import declared.`]);
-  return written;
 }

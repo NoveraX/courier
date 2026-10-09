@@ -20,6 +20,18 @@ describe("portsOf", () => {
     expect(await portsOf(readProject(root), CHOICES)).toEqual({ studio: 6291, mock: 7011 });
   });
 
+  it("reads Studio's port where the config passes its list on from, as a server's setup writes it", async () => {
+    const root = projectWith({
+      "package.json": "{}",
+      "courier.config.ts": 'export { default } from "./src/courier/config.js";\n',
+      "src/courier/config.ts":
+        "export default defineConfig({ sources: { api },\n  studio: { port: 6293 },\n});\n",
+      "courier.mocks.ts": "defineMockServer({ source: api, port: 7013, autoStart: true })\n",
+    });
+
+    expect(await portsOf(readProject(root), CHOICES)).toEqual({ studio: 6293, mock: 7013 });
+  });
+
   it("keeps the defaults for a project whose config names none", async () => {
     const root = projectWith({
       "package.json": "{}",

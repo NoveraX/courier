@@ -7,7 +7,6 @@ import { devStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { SERVER_DIR, serverFiles, studioAttachLater } from "./shared/server-files";
-import { sourcesAfterImport } from "./shared/sources-after-import";
 import { rootDirIncludeEdit } from "./shared/tsconfig-include";
 
 function routes(ctx: RecipeContext, withPage: boolean): RecipeFile {
@@ -34,9 +33,9 @@ courier.post("/courier", async (c) => {
 import { courierHandler } from "@noverax/courier-hono";
 import { Hono } from "hono";
 
-${pageImports}import { sources } from "${from("sources.ts")}";
+${pageImports}import config from "${from("config.ts")}";
 
-registerSources(sources);
+registerSources(config.sources);
 ${ctx.choices.studio ? `\n${studioAttachLater()}\n` : ""}
 /**
  * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}.
@@ -107,6 +106,5 @@ export function honoRecipe(ctx: RecipeContext): Recipe {
     scripts: studioScripts(ctx),
     manual: [],
     next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
-    ...(example ? {} : { afterImport: sourcesAfterImport(SERVER_DIR) }),
   };
 }

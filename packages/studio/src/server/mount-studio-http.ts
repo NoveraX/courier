@@ -17,6 +17,7 @@ import type { StudioStartup } from "./studio-startup";
 import type { StudioToken } from "./studio-token";
 import { studioVersion } from "./studio-version";
 import { wholeBodyOf } from "./ui-bodies";
+import type { WebhookDirectory } from "./webhooks/webhook-directory";
 
 /** What Studio's HTTP side reads and drives. */
 export interface StudioHttpParts {
@@ -34,6 +35,8 @@ export interface StudioHttpParts {
   playgroundRouter: Pick<RuntimePlaygroundRouter, "run">;
   /** The requests Studio runs for an agent, whose records name it */
   agentCalls: AgentCalls;
+  /** The webhooks the attached applications define */
+  webhooks: WebhookDirectory;
   /** How a public demo serves its visitors, when Studio is one */
   serving?: DemoServing | undefined;
 }
@@ -79,6 +82,7 @@ export function mountStudioHttp(
     tests: { root, sessions, project },
     contract: { project, answers: stores.answers, root },
     editor: serving ? undefined : { project, requestLog, root },
+    webhooks: serving ? undefined : parts.webhooks,
     token,
     demo: serving && { limits: serving.limits },
   });

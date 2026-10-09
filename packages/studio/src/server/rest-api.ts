@@ -31,6 +31,8 @@ import type { StudioOriginPolicy } from "./studio-origin";
 import type { StudioToken } from "./studio-token";
 import { TOKEN_HEADER, tokenGuard } from "./token-guard";
 import { registerTrafficSpecRoutes } from "./traffic-spec/traffic-spec-routes";
+import type { WebhookDirectory } from "./webhooks/webhook-directory";
+import { registerWebhookRoutes } from "./webhooks/webhook-routes";
 
 /** What the REST API's routes read and change in the running Studio. */
 export interface RestApiDeps {
@@ -50,6 +52,8 @@ export interface RestApiDeps {
   contract: ContractRouteDeps;
   /** The project and its requests an editor reads beside its calls; none on a public demo. */
   editor?: EditorRouteDeps | undefined;
+  /** The webhooks the attached applications define, which a page has delivered; none on a public demo. */
+  webhooks?: WebhookDirectory | undefined;
   /** The token a writing route asks for. */
   token: StudioToken;
   /** The visitors' counts, when Studio serves a public demo. */
@@ -84,6 +88,7 @@ export function registerRestApi(
     tests,
     contract,
     editor,
+    webhooks,
     token,
     demo,
   }: RestApiDeps,
@@ -110,6 +115,7 @@ export function registerRestApi(
   registerTrafficSpecRoutes(app);
   registerOpenApiExportRoutes(app, { project: apis.project });
   if (editor) registerEditorRoutes(app, editor);
+  if (webhooks) registerWebhookRoutes(app, webhooks);
   registerStorageRoutes(app, storage);
   registerMockDeclareRoutes(app, mocksEdit);
   registerConfigDeclareRoutes(app, configEdit);

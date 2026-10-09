@@ -65,7 +65,9 @@ describe("what a replay refuses", () => {
       return "refusal" in plan ? plan.refusal : undefined;
     };
 
-    expect(refusal({ mode: "webhook" })).toContain("deliver it again from a mock");
+    expect(refusal({ mode: "webhook" })).toContain(
+      "deliver it again from Studio's inspector (Deliver again), which has the app sign it afresh",
+    );
     expect(refusal({ purpose: "csrf-token" })).toContain(
       "asked for again with the write that needs it",
     );

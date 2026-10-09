@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useHotkeys } from "@/hooks/use-hotkeys";
 import { MockRequestInspector } from "@/inspector/mock-request-inspector";
 import { RequestInspector } from "@/inspector/request-inspector";
+import { SchemaFixDialog } from "@/screens/explorer/schema-fix-dialog";
 import { RecordedTestDialog } from "@/screens/recorded-test/recorded-test-dialog";
 import { SessionFileDialog } from "@/screens/session-file/session-file-dialog";
 import { CommandPalette } from "./command-palette/command-palette";
@@ -63,6 +64,7 @@ export function StudioShell(): React.ReactNode {
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <SessionFileDialog />
       <RecordedTestDialog />
+      <SchemaFixDialog />
     </div>
   );
 }

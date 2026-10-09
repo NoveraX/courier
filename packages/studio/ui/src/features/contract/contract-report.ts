@@ -26,6 +26,8 @@ export interface EndpointContract {
   cut: number;
   drift: Drift[];
   fix: Array<{ within: string; line: string }>;
+  /** The library its response schema is written with, as Standard Schema names it: `zod` */
+  vendor: string | undefined;
 }
 
 const STATES: readonly ContractState[] = ["confirmed", "drifted", "unobserved"];
@@ -65,6 +67,7 @@ export function contractsOf(value: unknown): EndpointContract[] {
               .filter(isPlainObject)
               .map((fix) => ({ within: String(fix.within), line: String(fix.line) }))
           : [],
+        vendor: typeof entry.vendor === "string" ? entry.vendor : undefined,
       },
     ];
   });

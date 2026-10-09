@@ -2,6 +2,7 @@ import { toast } from "sonner";
 
 import type { EndpointContract as Contract } from "@/features/contract/contract-report";
 import { contractKey, refreshContract, useContractStore } from "@/features/contract/contract-store";
+import { openSchemaFix } from "@/features/contract/schema-fix-store";
 import type { EndpointNode } from "@/features/explorer/explorer-model";
 import { post } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -99,6 +100,22 @@ export function EndpointContract({
           <pre className="m-0 overflow-auto font-mono text-small text-fg-muted">
             {fixText(contract)}
           </pre>
+          {contract.vendor === "zod" ? (
+            <button
+              type="button"
+              onClick={() =>
+                openSchemaFix({ source: contract.source, endpoint: contract.endpoint })
+              }
+              className="h-7 w-max cursor-pointer rounded-control bg-brand px-2.5 text-small font-semibold text-bg hover:bg-brand/90"
+            >
+              Fix the schema…
+            </button>
+          ) : (
+            <p className="m-0 text-small text-fg-subtle">
+              Studio writes the change itself for a Zod schema; this one is{" "}
+              {contract.vendor ?? "another library's"}.
+            </p>
+          )}
         </div>
       )}
       {contract.calls > 0 && (

@@ -57,6 +57,36 @@ describe(".agent()", () => {
     ).toBe("list-orders_2");
   });
 
+  it("keeps a limit of whole calls in a window of at least a second, and refuses any other", () => {
+    const refund = endpoint.post("orders/:id/refund").agent({
+      description: "Refund an order",
+      access: "destructive",
+      limit: { maxCalls: 3, window: 60_000 },
+    });
+    const refused = [
+      5,
+      { maxCalls: 3 },
+      { maxCalls: 0, window: 60_000 },
+      { maxCalls: 1.5, window: 60_000 },
+      { maxCalls: 3, window: 999 },
+      { maxCalls: 3, window: "1m" },
+      { maxCalls: 3, window: 60_000, per: "agent" },
+    ];
+
+    expect(refund.options.agent?.limit).toEqual({ maxCalls: 3, window: 60_000 });
+    expect(Object.isFrozen(refund.options.agent?.limit)).toBe(true);
+    for (const limit of refused) {
+      expect(() =>
+        endpoint.post("orders").agent({ description: "Places", access: "write", limit } as never),
+      ).toThrow(
+        expect.objectContaining({
+          code: "AGENT_OPTIONS_INVALID",
+          message: expect.stringContaining("limit"),
+        }),
+      );
+    }
+  });
+
   it("offers an endpoint that writes as a read only once it says it reads", () => {
     const search = endpoint.post("search").reads().agent({ description: "Search", access: "read" });
     expect(search.options.agent?.access).toBe("read");

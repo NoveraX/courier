@@ -21,7 +21,13 @@ export {
   type WSHandler,
   type WSHandlerConfig,
 } from "./adapter";
-export type { AgentAccess, AgentCall, AgentClient, AgentOptions } from "./agent/types";
+export type {
+  AgentAccess,
+  AgentCall,
+  AgentClient,
+  AgentLimit,
+  AgentOptions,
+} from "./agent/types";
 export {
   detectAppOrigin,
   getAppOrigin,

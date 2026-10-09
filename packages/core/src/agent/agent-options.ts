@@ -1,6 +1,6 @@
 import { ConfigurationError } from "../errors/configuration-error";
 import { isRecord } from "../utils/is-record";
-import type { AgentAccess, AgentOptions } from "./types";
+import type { AgentAccess, AgentLimit, AgentOptions } from "./types";
 
 const ACCESS: ReadonlySet<string> = new Set<AgentAccess>(["read", "write", "destructive"]);
 /* Narrower than MCP's own rule: the model APIs a client passes tools to take these characters alone. */
@@ -26,7 +26,7 @@ const TOOL_NAME = /^[A-Za-z0-9_-]{1,64}$/;
  */
 export function agentOptions(value: unknown, where: string): AgentOptions {
   if (!isRecord(value)) refuse(where, "takes an object: { description, access }");
-  const { description, access, name, title, ...unknown } = value;
+  const { description, access, name, title, limit, ...unknown } = value;
   const extra = Object.keys(unknown);
   if (extra.length > 0) refuse(where, `has no option ${extra.map((key) => `"${key}"`).join(", ")}`);
   if (typeof description !== "string" || description.trim() === "") {
@@ -46,7 +46,29 @@ export function agentOptions(value: unknown, where: string): AgentOptions {
     access: access as AgentAccess,
     ...(name !== undefined && { name }),
     ...(title !== undefined && { title: title.trim() }),
+    ...(limit !== undefined && { limit: limitOf(limit, where) }),
   });
+}
+
+/* A whole number of calls, at least one, in a window of at least a second. */
+function limitOf(value: unknown, where: string): AgentLimit {
+  if (!isRecord(value)) {
+    refuse(
+      where,
+      "takes a limit of { maxCalls, window }: at most maxCalls calls in any window of milliseconds",
+    );
+  }
+  const { maxCalls, window, ...unknown } = value;
+  const extra = Object.keys(unknown);
+  if (extra.length > 0)
+    refuse(where, `has no limit option ${extra.map((key) => `"${key}"`).join(", ")}`);
+  if (typeof maxCalls !== "number" || !Number.isInteger(maxCalls) || maxCalls < 1) {
+    refuse(where, "takes a limit whose maxCalls is a whole number, at least 1");
+  }
+  if (typeof window !== "number" || !Number.isInteger(window) || window < 1000) {
+    refuse(where, "takes a limit whose window is a whole number of milliseconds, at least 1000");
+  }
+  return Object.freeze({ maxCalls, window });
 }
 
 function refuse(where: string, problem: string): never {

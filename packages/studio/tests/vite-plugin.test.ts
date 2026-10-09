@@ -91,6 +91,18 @@ describe("courierStudio() for Vite", () => {
     expect(snippet?.code).toContain('"http://localhost:7126"');
   });
 
+  it("has Vite pre-bundle Courier's browser modules the app has, so the first page that imports one is not reloaded", async () => {
+    const server = await serve(project());
+
+    expect(server.config.optimizeDeps.include).toEqual(
+      expect.arrayContaining([
+        "@noverax/courier",
+        "@noverax/courier/define",
+        "@noverax/courier-react",
+      ]),
+    );
+  });
+
   it("injects nothing when disabled", async () => {
     const server = await serve(project(), false);
 

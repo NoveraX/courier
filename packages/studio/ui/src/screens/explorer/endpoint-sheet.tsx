@@ -8,6 +8,7 @@ import { TONE_TEXT } from "@/design/tone";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type { EndpointNode } from "@/features/explorer/explorer-model";
 import { methodLabelOf } from "@/features/explorer/method-label";
+import { CalledFrom } from "@/inspector/tabs/called-from";
 import { cn } from "@/lib/utils";
 import { EndpointCalls } from "./endpoint-calls";
 import { EndpointContract } from "./endpoint-contract";
@@ -121,6 +122,9 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
         <EndpointTrafficOnly endpoint={e} />
         <EndpointDefinition endpoint={e} now={now} />
         <EndpointContract endpoint={e} now={now} />
+        {!e.trafficOnly && (
+          <CalledFrom source={e.source} endpoint={e.group ? `${e.group}.${e.method}` : e.method} />
+        )}
         <EndpointCalls endpoint={e} slowMs={slowMs} onOpen={onOpenCall} />
       </Reveal>
     </SheetFrame>

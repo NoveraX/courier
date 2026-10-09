@@ -22,6 +22,7 @@ const CHECKS: { [TKey in keyof Settings]: Check<Settings[TKey]> } = {
   ignorePatterns: isTextList,
   timestampFormat: oneOf("relative", "absolute"),
   jsonIndent: oneOf(2, 4),
+  codeEditor: oneOf("vscode", "cursor", "windsurf", "vscodium", "zed", "webstorm", "idea", "off"),
   toastOnError: isBoolean,
   toastOnSlowRequest: isBoolean,
   slowRequestThreshold: isCount,

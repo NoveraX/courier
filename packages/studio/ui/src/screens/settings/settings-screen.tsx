@@ -7,6 +7,7 @@ import { AppearanceSection } from "./sections/appearance-section";
 import { ConnectionSection } from "./sections/connection-section";
 import { DangerSection } from "./sections/danger-section";
 import { DisplaySection } from "./sections/display-section";
+import { EditorSection } from "./sections/editor-section";
 import { ExportSection } from "./sections/export-section";
 import { NotificationsSection } from "./sections/notifications-section";
 import { RecordingSection } from "./sections/recording-section";
@@ -36,6 +37,7 @@ export function SettingsScreen(): React.ReactNode {
       <div className="flex min-w-0 flex-col gap-4">
         <AppearanceSection settings={settings} />
         <ConnectionSection settings={settings} />
+        <EditorSection settings={settings} />
         <RecordingSection settings={settings} />
         <DisplaySection settings={settings} />
         <NotificationsSection settings={settings} />

@@ -9,6 +9,7 @@ import {
   FileOutput,
   History,
   Palette,
+  SquareCode,
   TriangleAlert,
 } from "lucide-react";
 
@@ -42,6 +43,13 @@ export const SECTION_GROUPS: readonly { label: string; sections: readonly Sectio
         icon: Cable,
         tone: "text-brand",
         keys: ["autoReconnect", "reconnectDelay"],
+      },
+      {
+        id: "editor",
+        label: "Editor",
+        icon: SquareCode,
+        tone: "text-syntax-function",
+        keys: ["codeEditor"],
       },
     ],
   },

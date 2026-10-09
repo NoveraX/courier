@@ -77,7 +77,14 @@ Opened, a delivery is told in its own parts rather than a call's:
 | Timing | The checks — reading the body, the signature, the schema — then your handler |
 | Snippets | The delivery as a mock makes it again, with `deliverWebhook` and the webhook's own secret |
 
-A delivery is a call made to your app, not one it makes, so the Audit leaves deliveries out, and Studio does not replay one: its sender made it, and a delivery sent again from Studio would carry no fresh signature.
+A delivery is a call made to your app, not one it makes, so the Audit leaves deliveries out.
+
+### Delivering one from Studio
+
+**Deliver again** in a delivery's inspector — or **Deliver a webhook** in the command palette, for one the Timeline has not shown — opens the delivery to send: the webhook, the route it goes to, and the event, which you can change first. Studio asks the app that defines the webhook to deliver it: the app signs the body with the webhook's own secret and sends it to the route as its sender would, so the handler checks it as it checks a real one, and it shows in the Timeline like every delivery. The secret never leaves the app.
+
+- Only an app attached with this project's Studio token is asked — a server runtime reads it from `.courier/studio-token` — and it delivers only to a route its deliveries already came to, or to an address on this machine: a body signed there and sent elsewhere would let that host deliver it to your app.
+- An app knows a webhook once the module that defines it has loaded. One that loads a route when it is first requested, as Next.js does in development, knows its webhooks once their routes have been requested.
 
 ## Delivering one locally
 

@@ -205,6 +205,34 @@ jobs:
           path: node_modules/.cache/courier-e2e/
           retention-days: 7
 
+  # The VS Code extension inside VS Code itself, at both ends of what it
+  # supports: the oldest version its engines field takes, and the latest
+  # stable. Each is downloaded for the run, with a virtual display for its
+  # window; the suite reads the hints the editor shows over a call.
+  editor:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        vscode: [minimum, stable]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      - name: The extension in VS Code (${{ matrix.vscode }})
+        env:
+          VSCODE_VERSION: ${{ matrix.vscode }}
+        run: xvfb-run -a npm run test:editor -w courier-vscode
+
   # The user's session in an application built with each framework version
   # Courier supports, from Next.js 14 to a React single-page application:
   # see frameworks.yml, which also runs weekly and by hand.

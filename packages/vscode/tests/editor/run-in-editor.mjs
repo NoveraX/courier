@@ -3,8 +3,10 @@
  * one does, a workspace's project says where it runs, and the suite opens a
  * file there and reads the hints the editor shows over its calls.
  *
- * Runs the VS Code at VSCODE_PATH, or the one installed on a Mac, or else
- * the version @vscode/test-electron downloads, as CI does.
+ * Runs the VS Code at VSCODE_PATH; or the version VSCODE_VERSION names, which
+ * @vscode/test-electron downloads — `stable`, `insiders`, a version number, or
+ * `minimum`, the oldest the extension's engines field takes, as CI runs both
+ * ends; or else the one installed on a Mac, or the latest stable.
  */
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
@@ -16,6 +18,20 @@ import { runTests } from "@vscode/test-electron";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const extension = join(here, "../..");
 const MAC_CODE = "/Applications/Visual Studio Code.app/Contents/MacOS/Code";
+
+/* Which VS Code to run, as runTests takes it. */
+function editorToRun() {
+  if (process.env.VSCODE_PATH) return { vscodeExecutablePath: process.env.VSCODE_PATH };
+  const asked = process.env.VSCODE_VERSION;
+  if (asked === "minimum") {
+    const { engines } = JSON.parse(readFileSync(join(extension, "package.json"), "utf8"));
+    const oldest = /\d+\.\d+\.\d+/.exec(engines.vscode)?.[0];
+    if (!oldest) throw new Error(`engines.vscode names no version: ${engines.vscode}`);
+    return { version: oldest };
+  }
+  if (asked) return { version: asked };
+  return existsSync(MAC_CODE) ? { vscodeExecutablePath: MAC_CODE } : {};
+}
 
 const stats = [
   {
@@ -61,9 +77,7 @@ const report = join(scratch, "report.json");
 
 try {
   await runTests({
-    ...(process.env.VSCODE_PATH || existsSync(MAC_CODE)
-      ? { vscodeExecutablePath: process.env.VSCODE_PATH || MAC_CODE }
-      : {}),
+    ...editorToRun(),
     extensionDevelopmentPath: extension,
     extensionTestsPath: join(here, "suite.cjs"),
     extensionTestsEnv: { COURIER_EDITOR_REPORT: report, COURIER_EDITOR_STUDIO: url },

@@ -112,7 +112,9 @@ An API with no specification can be declared from the calls your app makes to it
 
 The document is only as complete as the traffic: an endpoint the app never called is not in it, and a field no answer held is not in its schema. Call what you want declared first — or declare it now and [follow its contract](/docs/studio/contract-drift) as traffic shows more.
 
-An endpoint of a source the config does declare can show up in traffic too, when the app calls an endpoint the definition Studio read does not have. Its panel says it was **called, but not declared**, rather than offering to declare the source again: the app runs another version of that source — one built before a change to its definition, or a definition the config does not import. Restart the app, or point the config at the definition the app uses.
+A source declared this way stays tied to its traffic. The APIs page says it was **read from traffic**, and **Manage endpoints** reads the calls Studio recorded again rather than asking for a specification: an endpoint the app has called since is there to add, and one the traffic no longer shows stays until you remove it.
+
+An endpoint of a declared source can show up in traffic too, when the app calls one the declaration does not have; its panel says it was **called, but not declared**. For a source declared from its traffic — while the app still calls its own definition — the panel offers **Add `<endpoint>` from traffic**, which opens **Manage endpoints** on the source with that endpoint picked, and the change is shown before it is written. For any other source it means the app runs another version of it than the one Studio read — one built before a change to its definition, or a definition the config does not import — so restart the app, or point the config at the definition the app uses.
 
 ## Specifications on a private network
 

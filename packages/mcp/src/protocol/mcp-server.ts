@@ -1,6 +1,7 @@
 import { createLogger } from "@noverax/courier";
 
 import { isRecord } from "../is-record";
+import { type CallLimits, callLimits } from "./call-limits";
 import type { Connection } from "./connection";
 import { clientOf, type Era, eraOf, legacyVersionFor } from "./era";
 import {
@@ -50,10 +51,12 @@ export interface McpServer {
  * ```
  */
 export function createMcpServer(options: McpServerOptions): McpServer {
+  /* The calls its limited tools took, per caller, for as long as the server runs. */
+  const limits = callLimits();
   return {
     async request(message, connection, signal) {
       try {
-        const result = await answer(message, connection, signal, options);
+        const result = await answer(message, connection, signal, options, limits);
         return resultOf(message.id, result);
       } catch (error) {
         if (signal.aborted) return undefined;
@@ -71,10 +74,11 @@ async function answer(
   connection: Connection,
   signal: AbortSignal,
   options: McpServerOptions,
+  limits: CallLimits,
 ): Promise<Record<string, unknown>> {
   if (message.method === "initialize") return initialize(message.params, connection, options);
   const era = eraOf(message.params, connection);
-  const result = await methodResult(message, era, connection, signal, options);
+  const result = await methodResult(message, era, connection, signal, options, limits);
   if (era.kind === "legacy") return result;
   return { resultType: "complete", ...result, _meta: { [META.serverInfo]: options.info } };
 }
@@ -85,9 +89,10 @@ async function methodResult(
   connection: Connection,
   signal: AbortSignal,
   options: McpServerOptions,
+  limits: CallLimits,
 ): Promise<Record<string, unknown>> {
   const { method, params } = message;
-  if (method === "tools/call") return callTool(params, era, connection, signal, options);
+  if (method === "tools/call") return callTool(params, era, connection, signal, options, limits);
   if (method === "tools/list") return toolsList(params, era, connection, options);
   if (method === "server/discover" && era.kind === "modern") return discover(options);
   if (method === "ping" && era.kind === "legacy") return {};

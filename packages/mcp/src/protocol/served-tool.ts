@@ -1,4 +1,4 @@
-import type { AgentAccess, AgentClient } from "@noverax/courier";
+import type { AgentAccess, AgentClient, AgentLimit } from "@noverax/courier";
 import type { JSONSchema } from "@noverax/courier/openapi";
 
 /** What came of a tool's call: its answer, or the sentence saying why there is none. */
@@ -13,9 +13,9 @@ export interface ToolCaller {
   readonly signal: AbortSignal;
 }
 
-/** Why a call the server was asked for did not run: its arguments, or the person's answer. */
+/** Why a call the server was asked for did not run: its arguments, the person's answer, or its tool's limit. */
 export interface Refusal {
-  readonly kind: "validation" | "aborted";
+  readonly kind: "validation" | "aborted" | "limited";
   readonly message: string;
 }
 
@@ -45,6 +45,8 @@ export interface ServedTool {
    * without it is confirmed as its `action` with the arguments it was given.
    */
   readonly confirming?: ((args: Record<string, unknown>) => Promise<string>) | undefined;
+  /** How often a caller may call it; a call beyond it is refused before anything runs. */
+  readonly limit?: AgentLimit | undefined;
   /** Make the call. */
   readonly run: (args: Record<string, unknown>, caller: ToolCaller) => Promise<ToolOutcome>;
   /** Told of a call the server refused to make. */

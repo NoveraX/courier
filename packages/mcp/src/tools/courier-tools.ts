@@ -37,7 +37,7 @@ export function courierTools(source: ToolSource, timeoutMs: number): () => ToolS
 }
 
 function servedOf(tool: AgentTool, source: ToolSource, timeoutMs: number): ServedTool {
-  const { description, title, access } = tool.agent;
+  const { description, title, access, limit } = tool.agent;
   return {
     name: tool.name,
     title,
@@ -46,6 +46,7 @@ function servedOf(tool: AgentTool, source: ToolSource, timeoutMs: number): Serve
         ? description
         : `${description}\n\nDeprecated: ${tool.deprecated}`,
     access,
+    limit,
     inputSchema: tool.inputSchema,
     outputSchema: tool.outputSchema,
     idempotent: IDEMPOTENT_VERBS.has(tool.verb),

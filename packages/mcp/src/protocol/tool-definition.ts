@@ -1,5 +1,6 @@
 import type { JSONSchema } from "@noverax/courier/openapi";
 
+import { limitText } from "./limit-text";
 import type { ServedTool } from "./served-tool";
 import type { StructuredOutput } from "./tool-result";
 import { hasStructuredOutput, type LegacyVersion, type ModernVersion } from "./versions";
@@ -64,7 +65,10 @@ export function toolDefinition(
   return {
     name: tool.name,
     ...(title !== undefined && hasStructuredOutput(version) && { title }),
-    description: tool.description,
+    description:
+      tool.limit === undefined
+        ? tool.description
+        : `${tool.description}\n\nTakes at most ${limitText(tool.limit)} from each caller; a call beyond that is refused, with when to call again.`,
     inputSchema: tool.inputSchema,
     ...(outputSchema !== undefined && { outputSchema }),
     annotations: {

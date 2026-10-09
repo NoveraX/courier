@@ -35,6 +35,13 @@ export interface McpHandlerOptions<TPrincipal> {
   readonly sources?: Sources | undefined;
   /** Whether a caller may see and call a tool: one it may not is unknown to it. Every tool, when absent. */
   readonly allow?: ((tool: ToolSummary, principal: TPrincipal) => boolean) | undefined;
+  /**
+   * Names the caller a tool's `limit` is counted for: one key per agent,
+   * user or API key, from what `authorize` returned. Every caller shares one
+   * count when absent. Counted in this process: each replica behind a load
+   * balancer counts its own calls.
+   */
+  readonly limitPer?: ((principal: TPrincipal) => string) | undefined;
   /** Origins a browser-based client may call from; the endpoint's own always may. */
   readonly allowedOrigins?: readonly string[] | undefined;
   /**
@@ -94,7 +101,7 @@ export function createMcpHandler<TPrincipal>(options: McpHandlerOptions<TPrincip
     );
   }
   const tools = toolSource(options.sources, { jsonSchema: options.jsonSchema });
-  const { allow } = options;
+  const { allow, limitPer } = options;
   const server = createMcpServer({
     info: { name: options.name ?? "courier", version: options.version ?? applicationVersion() },
     instructions: options.instructions,
@@ -102,6 +109,9 @@ export function createMcpHandler<TPrincipal>(options: McpHandlerOptions<TPrincip
     ...(allow !== undefined && {
       allow: (tool: ServedTool, principal: unknown) =>
         allow(summaryOf(tools, tool), principal as TPrincipal),
+    }),
+    ...(limitPer !== undefined && {
+      limitPer: (principal: unknown) => limitPer(principal as TPrincipal),
     }),
     allowDestructive: options.allowDestructive === true,
     states: requestStates(secretOf(options.confirmSecret)),

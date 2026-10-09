@@ -51,7 +51,11 @@ export function reportRefusal(
   });
   studioHooks.onRequestError?.({
     id,
-    error: { type: refusal.kind, message: refusal.message },
+    /* A call over its limit never ran, as a declined one never did: Studio shows both stopped, with why. */
+    error: {
+      type: refusal.kind === "limited" ? "aborted" : refusal.kind,
+      message: refusal.message,
+    },
     timestamp: Date.now(),
   });
 }

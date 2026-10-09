@@ -16,6 +16,12 @@ export interface McpServerOptions {
   readonly tools: () => ToolSet;
   /** Whether a caller may see and call a tool; every tool, for every caller, when absent. */
   readonly allow?: ((tool: ServedTool, principal: unknown) => boolean) | undefined;
+  /**
+   * Names the caller a tool's limit is counted for, from what `authorize`
+   * returned: one key per agent, user or API key. Every caller shares one
+   * count when absent.
+   */
+  readonly limitPer?: ((principal: unknown) => string) | undefined;
   /** Run a destructive tool without asking a person, leaving the decision to the client. */
   readonly allowDestructive: boolean;
   /** Seals the state a question for a person goes out with. */

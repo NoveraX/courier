@@ -1,4 +1,6 @@
 import type { Drift } from "./endpoint-drift";
+import { splitFieldPath } from "./field-path";
+import { zodOfTypes } from "./zod-of-types";
 
 /** A change a response schema needs to take its endpoint's real answers. */
 export interface SchemaFix {
@@ -7,14 +9,6 @@ export interface SchemaFix {
   /** The field's declaration, as the schema's library writes it: `rating: z.number().optional()` */
   line: string;
 }
-
-const ZOD: Readonly<Record<string, string>> = {
-  string: "z.string()",
-  number: "z.number()",
-  boolean: "z.boolean()",
-  object: "z.object({})",
-  array: "z.array(z.unknown())",
-};
 
 /**
  * The fields a response schema should declare so its endpoint's answers fit
@@ -41,7 +35,7 @@ export function schemaFix(
   vendor: string | undefined,
 ): SchemaFix[] {
   return drift.flatMap((difference) => {
-    const { within, key } = splitPath(difference.path);
+    const { within, key } = splitFieldPath(difference.path);
     if (key === undefined) return [];
     const types =
       difference.kind === "type" && difference.alsoFits
@@ -65,27 +59,9 @@ export function schemaFix(
 }
 
 function zodOf(types: readonly string[], optional: boolean): string {
-  const values = types.filter((type) => type !== "null" && type !== "any");
-  const nullable = types.includes("null");
-  const written = values.map((type) => ZOD[type] ?? "z.unknown()");
-  const base =
-    written.length === 0
-      ? "z.null()"
-      : written.length === 1
-        ? (written[0] ?? "z.unknown()")
-        : `z.union([${written.join(", ")}])`;
-  return `${base}${nullable && written.length > 0 ? ".nullable()" : ""}${optional ? ".optional()" : ""}`;
+  return `${zodOfTypes(types)}${optional ? ".optional()" : ""}`;
 }
 
 function jsonOf(types: readonly string[], optional: boolean): string {
   return `${types.filter((type) => type !== "any").join(" | ") || "unknown"}${optional ? ", optional" : ""}`;
-}
-
-/* `seller.rating` → within `seller`, key `rating`; an array's items are an object's place too. */
-function splitPath(path: string): { within: string; key: string | undefined } {
-  if (path === "" || path.endsWith("[]")) return { within: path, key: undefined };
-  const dot = path.lastIndexOf(".");
-  return dot === -1
-    ? { within: "", key: path }
-    : { within: path.slice(0, dot), key: path.slice(dot + 1) };
 }

@@ -20,6 +20,8 @@ export interface EndpointContract {
   drift: Drift[];
   /** The fields its schema should declare so the answers fit it */
   fix: SchemaFix[];
+  /** The library its response schema is written with, as Standard Schema names it: `zod` */
+  vendor: string;
 }
 
 /** An endpoint's response schema. */
@@ -66,6 +68,7 @@ export function contractReport(
         cut: seen?.cut ?? 0,
         drift,
         fix: schemaFix(drift, seen?.calls ?? 0, schema["~standard"].vendor),
+        vendor: schema["~standard"].vendor,
       });
     }
   }

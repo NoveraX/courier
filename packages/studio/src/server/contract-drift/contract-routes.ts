@@ -1,13 +1,16 @@
 import { isRecord } from "../mocks-edit/is-record";
-import type { ProjectReads } from "../project-state/types";
+import type { ProjectState } from "../project-state/types";
 import type { RouteApp } from "../route-types";
 import type { AnswerObservations } from "../storage/answer-observations";
 import { contractReport } from "./contract-report";
+import { registerSchemaFixRoutes } from "./schema-edit/schema-fix-routes";
 
 /** What the contract routes read and change. */
 export interface ContractRouteDeps {
-  project: Pick<ProjectReads, "snapshot">;
+  project: ProjectState;
   answers: AnswerObservations;
+  /** The project's root, links resolved */
+  root: string;
 }
 
 /**
@@ -16,12 +19,13 @@ export interface ContractRouteDeps {
  *
  * POST /api/contract/report — every endpoint with a response schema: confirmed, drifted or not yet observed
  * POST /api/contract/forget — forget what was seen of one endpoint (`{ source, endpoint }`), once its schema is fixed
+ * POST /api/contract/fix/preview|apply|undo — change an endpoint's Zod schema to take its answers (see `registerSchemaFixRoutes`)
  *
  * @param app - The Studio server's Express app
  * @param deps - The project, and what its answers were seen to hold
  * @example
  * ```ts
- * registerContractRoutes(app, { project, answers: stores.answers });
+ * registerContractRoutes(app, { project, answers: stores.answers, root });
  * ```
  */
 export function registerContractRoutes(app: RouteApp, deps: ContractRouteDeps): void {
@@ -39,4 +43,6 @@ export function registerContractRoutes(app: RouteApp, deps: ContractRouteDeps): 
     deps.answers.forget(source, endpoint);
     res.json({ forgotten: true });
   });
+
+  registerSchemaFixRoutes(app, deps);
 }

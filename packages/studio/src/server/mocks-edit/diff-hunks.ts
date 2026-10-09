@@ -1,34 +1,11 @@
 import { diffLines } from "./diff-lines";
 import { findLineChanges } from "./line-changes";
+import { sliceHunks } from "./slice-hunks";
 import { type LinedText, splitLines } from "./split-lines";
-import type { DiffHunk, DiffLine, TextEdit } from "./types";
-
-/** Unchanged lines shown on each side of a change. */
-const CONTEXT_LINES = 3;
+import type { DiffHunk, TextEdit } from "./types";
 
 function linedText(text: string): LinedText {
   return { text, lines: splitLines(text) };
-}
-
-/**
- * Cuts a whole-text diff into hunks: each changed line with the context
- * around it, two changes sharing a hunk when their context would touch.
- */
-function sliceHunks(lines: readonly DiffLine[]): DiffHunk[] {
-  const hunks: DiffHunk[] = [];
-  let first = -1;
-  let last = -1;
-  for (const [index, line] of lines.entries()) {
-    if (line.kind === "context") continue;
-    if (first !== -1 && index - last - 1 > 2 * CONTEXT_LINES) {
-      hunks.push({ lines: lines.slice(first, last + CONTEXT_LINES + 1) });
-      first = -1;
-    }
-    if (first === -1) first = Math.max(0, index - CONTEXT_LINES);
-    last = index;
-  }
-  if (first !== -1) hunks.push({ lines: lines.slice(first, last + CONTEXT_LINES + 1) });
-  return hunks;
 }
 
 /**

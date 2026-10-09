@@ -9,11 +9,15 @@ import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { vueDemo } from "./shared/vue-demo";
 
-/* Nuxt 4 keeps the app in `app/` and code both sides use in `shared/`; Nuxt 3 keeps the app at the root. */
-function layoutOf(ctx: RecipeContext): { app: string; dir: string } {
+/*
+ * Nuxt 4 keeps the app in `app/` and code both sides use in `shared/`, which
+ * the app imports as `#shared`: a production build cannot resolve a relative
+ * import from `app/` into `shared/` (Nuxt 4.6). Nuxt 3 keeps the app at the root.
+ */
+function layoutOf(ctx: RecipeContext): { app: string; dir: string; caller: string } {
   return ctx.project.exists("app/app.vue") || ctx.project.exists("app/pages")
-    ? { app: "app/", dir: "shared/courier" }
-    : { app: "", dir: "lib/courier" };
+    ? { app: "app/", dir: "shared/courier", caller: "#shared/courier/caller" }
+    : { app: "", dir: "lib/courier", caller: "lib/courier/caller.ts" };
 }
 
 function serverPlugin(ctx: RecipeContext): RecipeFile {
@@ -94,7 +98,7 @@ function pages(ctx: RecipeContext, app: string): { files: RecipeFile[]; edits: R
  * ```
  */
 export function nuxtRecipe(ctx: RecipeContext): Recipe {
-  const { app, dir } = layoutOf(ctx);
+  const { app, dir, caller } = layoutOf(ctx);
   const example = ctx.choices.openapi === undefined;
   const routing = example ? pages(ctx, app) : { files: [], edits: [] };
   return {
@@ -108,9 +112,7 @@ export function nuxtRecipe(ctx: RecipeContext): Recipe {
         content: ROUTE,
         purpose: "the route the browser calls your API through",
       },
-      ...(example
-        ? [proxyCaller(ctx, dir), vueDemo(ctx, `${app}pages/courier.vue`, `${dir}/caller.ts`)]
-        : []),
+      ...(example ? [proxyCaller(ctx, dir), vueDemo(ctx, `${app}pages/courier.vue`, caller)] : []),
       ...routing.files,
     ],
     edits: [...routing.edits, ...(ctx.choices.studio ? [nuxtStudioEdit(ctx.project)] : [])],

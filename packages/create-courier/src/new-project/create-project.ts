@@ -1,7 +1,6 @@
 import { basename, dirname } from "node:path";
 
 import { addCourier, type Terminal } from "../add-courier";
-import { install } from "../apply/install";
 import { runTool } from "../apply/run-tool";
 import type { CreateRun } from "../create-run";
 import { FRAMEWORKS, type Framework, frameworkById } from "../frameworks";
@@ -11,9 +10,8 @@ import {
   packageManager,
 } from "../project/package-manager";
 import { askChoice, askYesNo } from "../prompt";
-import { writeExpressTemplate } from "./express-template";
-import { fixFreshProject } from "./fresh-fixes";
 import { generatorFor } from "./generators";
+import { prepareTemplate } from "./prepare-template";
 
 /* Remix continues as React Router's framework mode, which its new projects are made with. */
 const CREATABLE = FRAMEWORKS.filter((framework) => framework.id !== "remix");
@@ -105,15 +103,7 @@ export async function createProject(
         `${framework.label}'s generator failed (exit ${status}); nothing of Courier's was added`,
       );
   }
-  const express = generator ? undefined : writeExpressTemplate(root, name);
-  const fixed = fixFreshProject(root, framework.id, manager.name);
-  if (fixed.length > 0) terminal.print(["", ...fixed]);
-  if (express) {
-    await install(root, [
-      manager.add(express.dependencies, false),
-      manager.add(express.devDependencies, true),
-    ]);
-  } else if (generator?.install) await install(root, [manager.install()]);
+  await prepareTemplate({ root, name, framework: framework.id, manager, generator }, terminal);
   terminal.print([""]);
   return addCourier(
     root,

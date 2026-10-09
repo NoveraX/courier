@@ -1,5 +1,6 @@
 import type { FrameworkId } from "../frameworks";
 import type { PackageManagerName } from "../project/package-manager";
+import { ASTRO_NODE_ADAPTER, type TemplateStep } from "./template-steps";
 
 /** How a framework's own generator makes a new project, run without a question. */
 export interface Generator {
@@ -7,6 +8,8 @@ export interface Generator {
   readonly args: readonly string[];
   /** Whether it leaves the install to the command, which installs with the person's package manager. */
   readonly install: boolean;
+  /** What the project still needs once installed, for what Courier adds to it to build. */
+  readonly afterInstall?: readonly TemplateStep[] | undefined;
 }
 
 /**
@@ -91,6 +94,7 @@ export function generatorFor(
           "--skip-houston",
         ],
         install: true,
+        afterInstall: [ASTRO_NODE_ADAPTER],
       };
     case "react-router":
     case "remix":

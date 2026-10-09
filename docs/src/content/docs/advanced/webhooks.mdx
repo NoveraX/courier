@@ -1,0 +1,109 @@
+export const metadata = { title: "Webhooks", description: "Declare incoming webhooks as you declare endpoints: a schema for the body and the sender's signature checked before your handler runs — Stripe, GitHub, Standard Webhooks or your own — shown in Studio's Timeline and delivered by a mock.", mode: "both" }
+
+## Declaring a webhook
+
+A webhook is a call made to your app. Declare it as you declare an endpoint: the schema its body must pass, and the signature its sender signs it with. `defineWebhook` checks both before your handler sees the delivery.
+
+```ts title="lib/webhooks.ts"
+import { defineWebhook, stripeSignature } from "@noverax/courier/webhooks"
+import { z } from "zod"
+
+export const stripeEvents = defineWebhook({
+  name: "stripe",
+  signature: stripeSignature({ secret: () => process.env.STRIPE_WEBHOOK_SECRET }),
+  body: z.object({
+    id: z.string(),
+    type: z.string(),
+    data: z.object({ object: z.record(z.string(), z.unknown()) }),
+  }),
+  event: (body) => body.type,
+})
+```
+
+`handler` turns it into the function a route mounts — a delivery in, the answer out — with the body typed by its schema:
+
+```ts title="app/api/webhooks/stripe/route.ts"
+import { stripeEvents } from "@/lib/webhooks"
+
+export const POST = stripeEvents.handler(async (event) => {
+  if (event.type === "invoice.paid") await markPaid(event.data.object)
+})
+
+async function markPaid(invoice: Record<string, unknown>) {
+  console.log("paid", invoice.id)
+}
+```
+
+In Hono, `app.post("/webhooks/stripe", (c) => POST(c.req.raw))`; in Express, through `toWebRequest` and `sendWebResponse` from `@noverax/courier/node`, as [the MCP handler](/docs/agents/app) mounts. Mount it where the body reaches it untouched: the signature is checked over the body exactly as it came, so a framework must not parse it first.
+
+## What a delivery passes
+
+In order, and nothing reaches your handler until all of it has:
+
+| Check | Refused with |
+| --- | --- |
+| The body is no larger than `maxBodyBytes` (default: 1 MB), counted as it arrives — a larger one is refused at the chunk that crosses the limit, never held whole | `413` |
+| The signature matches the body under the webhook's secret, and the delivery is recent | `401` |
+| The body is JSON | `400` |
+| The body passes the schema | `422`, with each place the schema refused |
+
+The signature is compared in time that does not depend on where it differs, so a caller learns nothing from how long a refusal takes. A refusal says what failed and nothing more. A webhook whose secret is missing — or, for Standard Webhooks, not `whsec_` and base64 — refuses every delivery with `500` and says why in the log, rather than take an unsigned one.
+
+Your handler answering nothing answers `204`. A `Response` it returns is answered as it is — `202` for work queued. One that throws is answered `500`, which the sender retries.
+
+## Signatures
+
+| Scheme | Senders | What is checked |
+| --- | --- | --- |
+| `stripeSignature({ secret })` | Stripe | `Stripe-Signature`: each `v1` HMAC-SHA-256 of `<timestamp>.<body>`; older than five minutes is a replay |
+| `githubSignature({ secret })` | GitHub | `X-Hub-Signature-256`: `sha256=` and the HMAC-SHA-256 of the body |
+| `standardWebhookSignature({ secret })` | Svix, Clerk, Resend and every Standard Webhooks sender | `webhook-id`, `webhook-timestamp`, `webhook-signature` — or Svix's `svix-id`, `svix-timestamp`, `svix-signature`: base64 HMAC-SHA-256 of `<id>.<timestamp>.<body>` under the `whsec_` key, several while a secret rotates; older than five minutes is a replay |
+| `hmacSignature({ secret, header, encoding, prefix })` | A service of your own | One header with the HMAC-SHA-256 of the body, in hex or base64, after a prefix |
+
+`secret` is the text itself, or a function that reads it when a delivery comes — from the environment, a secret store. Every scheme runs on Web Crypto, so a webhook works on Node.js, Bun, Deno and an edge runtime alike. GitHub's scheme and one of your own sign no timestamp: keep the delivery ids you have handled if a replay matters. For a service you write, prefer Standard Webhooks.
+
+## In Studio
+
+Each delivery shows in the Timeline as a call made to your app, marked `webhook`: the webhook's name as its source, the event as its method, the body as its variables once it has passed its signature, how your handler answered — or why the delivery was refused. **Mode → Webhook** shows them alone, in the Timeline and on the Waterfall.
+
+Opened, a delivery is told in its own parts rather than a call's:
+
+| Tab | What it shows |
+| --- | --- |
+| Overview | The webhook and the event, and three checks: the signature, the body against the schema, the handler's answer |
+| Error | Where a refused delivery stopped — over the size limit, a signature that does not match, no secret to check one, a body that is not JSON, one the schema refused with each place, a handler that threw — and what usually fixes it |
+| Response | What the sender was answered: your handler's answer, or the refusal |
+| Headers | The headers the delivery came with, the signature hidden as a credential is: with the body, it would let anyone deliver it again |
+| Timing | The checks — reading the body, the signature, the schema — then your handler |
+| Snippets | The delivery as a mock makes it again, with `deliverWebhook` and the webhook's own secret |
+
+A delivery is a call made to your app, not one it makes, so the Audit leaves deliveries out, and Studio does not replay one: its sender made it, and a delivery sent again from Studio would carry no fresh signature.
+
+## Delivering one locally
+
+`deliverWebhook` sends a delivery as its sender would — the body signed with the webhook's own secret and scheme — so the whole flow runs on your machine, with no provider and no tunnel. A mock delivers one when it answers the call that would make the provider send it:
+
+```ts title="courier.mocks.ts"
+import { defineMocks, defineMockServer, deliverWebhook } from "@noverax/courier-mock"
+import { api } from "@/api/sources"
+import { stripeEvents } from "@/lib/webhooks"
+
+export default defineMocks({
+  payments: defineMockServer({
+    source: api,
+    overrides: (mock) => {
+      mock("invoices", "pay").handler(async ({ variables }) => {
+        setTimeout(() => {
+          void deliverWebhook(stripeEvents, {
+            to: "http://localhost:3000/api/webhooks/stripe",
+            body: { id: "evt_1", type: "invoice.paid", data: { object: { id: variables } } },
+          })
+        }, 100)
+        return { status: "processing" }
+      })
+    },
+  }),
+})
+```
+
+In a test, give `deliverWebhook` a `fetch` that calls the handler directly, and check what it did. `webhook.sign(body)` gives the signing headers alone, for a client of your own.

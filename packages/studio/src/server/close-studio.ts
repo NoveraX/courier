@@ -14,25 +14,29 @@ export interface OpenStudio {
   io: { close(): void };
   storage: { stop(): void };
   stores: { close(): void };
+  /** The file that tells editors where Studio runs. */
+  address: { forget(): void };
   httpServer: Server;
 }
 
 /**
- * Close a running Studio: it stops listening first, lets an edit it is
- * writing finish, stops the mocks, the formatter threads and the watchers,
- * closes the sockets and the stores, and then the server.
+ * Close a running Studio: it stops telling editors where it runs and stops
+ * listening first, lets an edit it is writing finish, stops the mocks, the
+ * formatter threads and the watchers, closes the sockets and the stores,
+ * and then the server.
  *
  * @param studio - What it holds open
  * @returns Once the server has closed
  * @throws {Error} When the HTTP server fails to close
  * @example
  * ```ts
- * await closeStudio({ root, startup, project, mockManager, playgroundRouter, io, storage, stores, httpServer });
+ * await closeStudio({ root, startup, project, mockManager, playgroundRouter, io, storage, stores, address, httpServer });
  * ```
  */
 export async function closeStudio(studio: OpenStudio): Promise<void> {
   const { startup, project, mockManager, playgroundRouter, io, storage, stores, httpServer } =
     studio;
+  studio.address.forget();
   await startup.close();
   await project.finishEdits(EDIT_FINISH_BUDGET_MS);
   await mockManager.stop();

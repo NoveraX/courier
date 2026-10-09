@@ -2,6 +2,7 @@ import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
 import { runMain } from "citty";
 
 import { studioVersion } from "../server/studio-version";
+import { DIFF_ARGS, diffCommand } from "./diff-command";
 import { MCP_ARGS, mcpCommand } from "./mcp-command";
 import { OPENAPI_ARGS, openapiCommand } from "./openapi-command";
 import { VERIFY_ARGS, verifyCommand } from "./verify-command";
@@ -35,6 +36,14 @@ export const SUBCOMMANDS: readonly Subcommand[] = [
       "Serve the running Studio to an editor's agent over stdio: its recorded requests, its mocks and their scenarios",
     args: MCP_ARGS,
     run: (rawArgs, showUsage) => void runMain(mcpCommand, { rawArgs, showUsage }),
+  },
+  {
+    name: "diff",
+    description: "Report what a change to the API definition breaks",
+    summary:
+      "Report what a change to the API definition does to its callers, against a git ref or OpenAPI documents written before, with the recorded calls each change touches, and fail on a breaking one",
+    args: DIFF_ARGS,
+    run: (rawArgs, showUsage) => void runMain(diffCommand, { rawArgs, showUsage }),
   },
   {
     name: "verify",

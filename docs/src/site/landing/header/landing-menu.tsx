@@ -24,9 +24,9 @@ interface LandingMenuProps {
 /**
  * The landing pages' menu on a narrow screen: a sheet below the header with
  * every place to go — Studio and the MCP server first, the page it is on
- * marked, and from a product's page the way back to the library — then the
- * page's install command, its call to action, the repository and the
- * colour theme.
+ * marked, the page's docs, and from a product's page the way back to the
+ * library — then the page's install command, its call to action, the
+ * repository and the colour theme.
  *
  * @param props - Whether the sheet is open and what opens or closes it, the page, its call to action and install command
  * @returns The sheet

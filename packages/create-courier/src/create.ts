@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { addCourier, type Terminal } from "./add-courier";
+import { checkRun } from "./check-run";
 import type { CreateRun } from "./create-run";
 import { createProject } from "./new-project/create-project";
 
@@ -23,6 +24,7 @@ function isFree(root: string): boolean {
  * ```
  */
 export async function createCourier(run: CreateRun, terminal: Terminal): Promise<number> {
+  checkRun(run);
   const root = resolve(run.dir ?? process.cwd());
   if (existsSync(join(root, "package.json"))) return addCourier(root, run, terminal);
   if (!isFree(root)) {

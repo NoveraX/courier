@@ -10,6 +10,7 @@ import {
   packageManager,
 } from "../project/package-manager";
 import { askChoice, askYesNo } from "../prompt";
+import { wantsMcp } from "../wants-mcp";
 import { generatorFor } from "./generators";
 import { prepareTemplate } from "./prepare-template";
 
@@ -48,10 +49,14 @@ function packageNameOf(root: string): string {
 
 async function agreed(run: CreateRun, terminal: Terminal): Promise<boolean> {
   if (run.yes === true) return true;
-  if (terminal.interactive) return askYesNo("Create it, and set Courier up in it?", true);
-  terminal.print([
-    "Nothing was created: run it again with --yes to create it, or --dry-run to only show the plan.",
-  ]);
+  if (!terminal.interactive) {
+    terminal.print([
+      "Nothing was created: run it again with --yes to create it, or --dry-run to only show the plan.",
+    ]);
+    return false;
+  }
+  if (await askYesNo("Create it, and set Courier up in it?", true)) return true;
+  terminal.print(["Nothing was created."]);
   return false;
 }
 
@@ -60,7 +65,8 @@ async function agreed(run: CreateRun, terminal: Terminal): Promise<boolean> {
  * framework's own generator, run without a question at the major the setup
  * is checked against, or, for Express, a minimal server of the command's
  * own — put right what the template gets wrong, install its packages with
- * the person's package manager, and set Courier up in it.
+ * the person's package manager, and set Courier up in it. Every question
+ * is asked before anything is made.
  *
  * @param root - The new project's folder
  * @param run - What the command line asked for
@@ -77,8 +83,9 @@ export async function createProject(
   terminal: Terminal,
 ): Promise<number> {
   const name = packageNameOf(root);
-  const framework = await frameworkToCreate(run, terminal);
   const manager = packageManager(managerName(run));
+  const framework = await frameworkToCreate(run, terminal);
+  const mcp = await wantsMcp(run, terminal);
   const generator = generatorFor(framework.id, name, manager.name);
   const how = generator
     ? `npx --yes ${generator.args.join(" ")}`
@@ -107,7 +114,14 @@ export async function createProject(
   terminal.print([""]);
   return addCourier(
     root,
-    { ...run, framework: framework.id, "package-manager": manager.name, yes: true, fresh: true },
+    {
+      ...run,
+      framework: framework.id,
+      "package-manager": manager.name,
+      mcp,
+      yes: true,
+      fresh: true,
+    },
     terminal,
   );
 }

@@ -102,6 +102,7 @@ export async function applyPlan(
   const touched: Touched = { added: written, changed: changedByEdits(plan.edits) };
   const status = await installAndCheck(ctx, plan, run, touched, terminal);
   if (status !== 0) return status;
-  terminal.print(["", terminal.style.green("Courier is set up."), ...closingLines(plan, terminal)]);
+  const done = run.install === false ? [] : ["", terminal.style.green("Courier is set up.")];
+  terminal.print([...done, ...closingLines(plan, terminal)]);
   return 0;
 }

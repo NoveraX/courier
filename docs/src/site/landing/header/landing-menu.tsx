@@ -37,7 +37,7 @@ interface LandingMenuProps {
  *   onOpenChange={setOpen}
  *   page="/"
  *   action={{ label: "Get started", href: "/docs/quick-start" }}
- *   install={INSTALL_COMMAND}
+ *   install={START_COMMAND}
  * />
  * ```
  */

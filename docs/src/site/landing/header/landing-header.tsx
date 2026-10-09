@@ -1,5 +1,5 @@
 import { CourierMark } from "@/site/courier-mark"
-import { INSTALL_COMMAND } from "@/site/landing/install-button"
+import { START_COMMAND } from "@/site/landing/install-button"
 import { PageHeader } from "./page-header"
 
 /**
@@ -29,7 +29,7 @@ export function LandingHeader({ version }: { version: string }) {
         </>
       }
       action={{ label: "Get started", href: "/docs/quick-start" }}
-      install={INSTALL_COMMAND}
+      install={START_COMMAND}
     />
   )
 }

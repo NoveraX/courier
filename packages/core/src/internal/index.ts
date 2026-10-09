@@ -121,3 +121,8 @@ export {
   toInternalMethod,
 } from "../utils/helpers";
 export { isCredentialHeader } from "../utils/is-credential-header";
+export {
+  type KnownWebhook,
+  knownWebhooks,
+  onKnownWebhooks,
+} from "../webhooks/webhook-registry";

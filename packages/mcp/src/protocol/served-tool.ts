@@ -39,6 +39,12 @@ export interface ServedTool {
   readonly action: string;
   /** What is wrong with a call's arguments, found before a person is asked about it. */
   readonly check?: ((args: Record<string, unknown>) => Promise<string | undefined>) | undefined;
+  /**
+   * The call as a person is asked to confirm it, for a tool whose arguments
+   * decide what it does: `POST shop.orders.create with {"sku":"A1"}`. A tool
+   * without it is confirmed as its `action` with the arguments it was given.
+   */
+  readonly confirming?: ((args: Record<string, unknown>) => Promise<string>) | undefined;
   /** Make the call. */
   readonly run: (args: Record<string, unknown>, caller: ToolCaller) => Promise<ToolOutcome>;
   /** Told of a call the server refused to make. */

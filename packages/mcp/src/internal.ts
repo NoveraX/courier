@@ -6,6 +6,7 @@
  * guarantee for anyone else. An application uses the root entry.
  */
 
+export { CONFIRM_INPUT, canAsk } from "./protocol/confirmation";
 export type { Connection } from "./protocol/connection";
 export { createMcpServer, type McpServer } from "./protocol/mcp-server";
 export { requestStates } from "./protocol/request-state";
@@ -18,4 +19,5 @@ export {
   toolSet,
 } from "./protocol/served-tool";
 export type { McpServerOptions, ServerInfo } from "./protocol/server-options";
+export { isLegacyVersion, META, MODERN_VERSIONS } from "./protocol/versions";
 export { type HttpEndpoint, handleHttp } from "./transport/handle-http";

@@ -24,4 +24,10 @@ export interface McpServerOptions {
   readonly maxResultChars: number;
   /** What the server runs over, for the sentence that says how to lift a rule. */
   readonly transport: "stdio" | "http";
+  /**
+   * What a refusal tells a client that cannot ask a person to do instead,
+   * when the server's operator does not lift the rule: how a person still
+   * gets the call made. By default, how the operator lifts it.
+   */
+  readonly unasked?: string | undefined;
 }

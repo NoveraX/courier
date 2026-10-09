@@ -7,7 +7,7 @@ import type { CodeToken } from "@/site/code/highlight-tokens"
 import { copyText } from "@/site/copy-text"
 import { BrandIcon } from "@/site/landing/brand-icon"
 import { useFlash } from "@/site/use-flash"
-import { CONNECTIONS, PACKAGE_MANAGERS, STUDIO_PACKAGE } from "./setup-data"
+import { CONNECTIONS, managerOf, STUDIO_PACKAGE } from "./setup-data"
 import { CodePanel, InstallPanel, RunPanel } from "./setup-panels"
 import { SetupSteps } from "./setup-steps"
 
@@ -28,9 +28,8 @@ const HINTS = [
 ]
 
 function copyFor(step: number, manager: string, connection: ShownConnection | undefined): string {
-  if (step === 0)
-    return `${PACKAGE_MANAGERS.find((m) => m.id === manager)?.add ?? "npm install -D"} ${STUDIO_PACKAGE}`
-  return step === 1 ? (connection?.code ?? "") : "npx courier-studio"
+  if (step === 0) return `${managerOf(manager).add} ${STUDIO_PACKAGE}`
+  return step === 1 ? (connection?.code ?? "") : managerOf(manager).run.join(" ")
 }
 
 /**
@@ -113,7 +112,7 @@ export function SetupWizard({ connections }: { connections: readonly ShownConnec
           {step === 1 && connection && (
             <CodePanel lines={connection.lines} code={connection.code} />
           )}
-          {step === 2 && <RunPanel />}
+          {step === 2 && <RunPanel manager={manager} />}
         </div>
         <div className="flex h-12 items-center gap-2.5 border-t border-line bg-bg-subtle px-4">
           <span className="text-label text-fg-subtle">{HINTS[step]}</span>

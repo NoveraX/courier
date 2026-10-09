@@ -3,7 +3,7 @@ export const metadata = { title: "Breaking Changes in CI", description: "Report 
 Inside one repository the compiler already stops a change that breaks a call site. The API's other callers — a mobile app on last month's release, a partner's integration, another team's service — have no compiler to stop it. `courier-studio diff` is that check: it sets the definition in your branch against the one at a git ref, says what each change does to the callers, counts the recorded calls each changed endpoint has, and fails on a change that breaks them.
 
 ```bash
-npx courier-studio diff --base origin/main
+npx @noverax/courier-studio diff --base origin/main
 ```
 
 ## What breaks a caller
@@ -52,7 +52,7 @@ jobs:
           fetch-depth: 0
       - run: npm ci
       - name: Report what the API change breaks
-        run: npx courier-studio diff --base origin/${{ github.base_ref }} --format markdown --out "$GITHUB_STEP_SUMMARY" --comment
+        run: npx @noverax/courier-studio diff --base origin/${{ github.base_ref }} --format markdown --out "$GITHUB_STEP_SUMMARY" --comment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```

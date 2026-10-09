@@ -698,7 +698,7 @@ A development server for the project's API: every call your app makes, live, wit
 
 ```bash
 npm install --save-dev @noverax/courier-studio
-npx courier-studio
+npx @noverax/courier-studio
 ```
 
 See [`@noverax/courier-studio`](./packages/studio) for setup and [How Studio loads the project](https://courier.noverax.cloud/docs/studio/project-loading).

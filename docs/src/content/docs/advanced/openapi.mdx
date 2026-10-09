@@ -17,7 +17,7 @@ await writeFile("openapi.json", JSON.stringify(document, null, 2))
 Studio's command writes the sources `courier.config.ts` declares, without a script:
 
 ```bash
-npx courier-studio openapi --source billing --api-version 2.4.0 --out openapi.json
+npx @noverax/courier-studio openapi --source billing --api-version 2.4.0 --out openapi.json
 ```
 
 With no `--source`, every source is written to the folder `--out` names, one `<source>.openapi.json` each. With one source and no `--out`, the document is printed, ready for a pipe.

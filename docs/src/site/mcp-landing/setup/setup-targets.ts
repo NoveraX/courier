@@ -24,7 +24,7 @@ export const SETUP_TARGETS: readonly SetupTarget[] = [
     label: "Claude Code",
     file: "terminal · project root",
     lang: "bash",
-    code: "claude mcp add courier --scope project -- npx courier-mcp --dotenv .env.local",
+    code: "claude mcp add courier --scope project -- npx @noverax/courier-mcp --dotenv .env.local",
     note: "Writes .mcp.json, so everyone who works on the project gets the tools.",
   },
   {
@@ -35,7 +35,7 @@ export const SETUP_TARGETS: readonly SetupTarget[] = [
     code: JSON.stringify(
       {
         mcpServers: {
-          courier: { command: "npx", args: ["courier-mcp", "--dotenv", ".env.local"] },
+          courier: { command: "npx", args: ["@noverax/courier-mcp", "--dotenv", ".env.local"] },
         },
       },
       null,
@@ -55,7 +55,7 @@ export const SETUP_TARGETS: readonly SetupTarget[] = [
             type: "stdio",
             command: "npx",
             // biome-ignore lint/suspicious/noTemplateCurlyInString: VS Code fills in ${workspaceFolder} itself
-            args: ["courier-mcp", "--cwd", "${workspaceFolder}", "--dotenv", ".env.local"],
+            args: ["@noverax/courier-mcp", "--cwd", "${workspaceFolder}", "--dotenv", ".env.local"],
           },
         },
       },
@@ -72,7 +72,7 @@ export const SETUP_TARGETS: readonly SetupTarget[] = [
     code: [
       "[mcp_servers.courier]",
       'command = "npx"',
-      'args = ["courier-mcp", "--cwd", "/path/to/project", "--dotenv", ".env.local"]',
+      'args = ["@noverax/courier-mcp", "--cwd", "/path/to/project", "--dotenv", ".env.local"]',
     ].join("\n"),
     note: "One entry per project, named by --cwd.",
   },

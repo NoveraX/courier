@@ -48,7 +48,7 @@ Studio needs Node.js 22.13 or newer. Studio is a development tool, so it is a de
 ## Start Studio
 
 ```bash
-npx courier-studio
+npx @noverax/courier-studio
 ```
 
 Studio listens on `http://localhost:6280` — at both `127.0.0.1` and `::1`, so it answers whichever one a client dials — or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it: a server runtime reads the nearest config at or above its working directory, and a build plugin the nearest at or above Vite's root — or, for webpack, esbuild and Rollup, the working directory. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Studio keeps its working files — imported API state, copies of the files it replaced or removed, saved sessions — in `.courier/`, which ignores itself in git.
@@ -356,7 +356,7 @@ A module Node runs itself stays as Node first ran it until Studio restarts, so a
 `courier-studio openapi` writes the sources `courier.config.ts` declares as OpenAPI documents, read as Studio reads the project:
 
 ```bash
-npx courier-studio openapi --source billing --api-version 2.4.0 --out openapi.json
+npx @noverax/courier-studio openapi --source billing --api-version 2.4.0 --out openapi.json
 ```
 
 With no `--source`, every source goes to the folder `--out` names, one `<source>.openapi.json` each; with one source and no `--out`, the document is printed. `--openapi 3.2.0` writes OpenAPI 3.2, which has a place for QUERY, a stream's events and nested tags. An endpoint a document leaves out — a channel, say — is named in the log with why. See [OpenAPI Export](https://courier.noverax.cloud/docs/advanced/openapi).
@@ -368,7 +368,7 @@ With no `--source`, every source goes to the folder `--out` names, one `<source>
 `courier-studio mcp` serves the running Studio to the agent you code with, over MCP: the requests Studio recorded, the one that failed in full, the Audit's findings, the mocks it runs and their scenarios — every credential and body field named like a secret replaced. After a fix the agent sends a request again: a read at once, a write once you confirm it in the editor. It reads the project's Studio token itself.
 
 ```bash
-claude mcp add courier-studio -- npx courier-studio mcp
+claude mcp add courier-studio -- npx @noverax/courier-studio mcp
 ```
 
 <br />

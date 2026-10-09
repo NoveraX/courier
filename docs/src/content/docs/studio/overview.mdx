@@ -161,7 +161,7 @@ Past a limit, the visitor is told which one and when to try again: a request is 
 Studio counts a visitor by the address the proxy in front of it reports last in `X-Forwarded-For`, believed only from a proxy on this machine or a private network. Traefik, Caddy and nginx's usual configuration send it. Behind a proxy that does not, every visitor shares the proxy's address and its limits.
 </Callout>
 
-The Playground calls the project's own sources only, through the runtime that serves them, so point those sources at servers anyone may call. `resetsAt` is when you start the demo again from a clean state; each page counts down to it. `extraCorsOrigins` names the address visitors open when Studio sits behind a proxy on a domain of its own. [`examples/demo-shop`](https://github.com/NoveraX/courier/tree/main/examples/demo-shop) is a complete demo: two backends, a server, traffic, two mocks, a reset every hour, and the container it runs in.
+The Playground calls the project's own sources only, through the runtime that serves them, so point those sources at servers anyone may call. `resetsAt` is when you start the demo again from a clean state; each page counts down to it. `extraCorsOrigins` names the address visitors open when Studio sits behind a proxy on a domain of its own. [`examples/demo-shop`](https://github.com/NoveraX/courier/tree/master/examples/demo-shop) is a complete demo: two backends, a server, traffic, two mocks, a reset every hour, and the container it runs in.
 
 ## Next steps
 

@@ -24,10 +24,15 @@ courier.get("/courier", async (_request, response) => {
   response.type("html").send(usersPage(await caller.users.list().catch(failure)));
 });
 
-courier.post("/courier", express.urlencoded({ extended: false }), async (request, response) => {
-  const name = typeof request.body?.name === "string" ? request.body.name : "";
-  await caller.users.create({ name, email: emailOf(name) });
-  response.redirect(303, "/courier");
+/* Express 4 does not catch what an async handler throws, so the error goes to next() by hand. */
+courier.post("/courier", express.urlencoded({ extended: false }), async (request, response, next) => {
+  try {
+    const name = typeof request.body?.name === "string" ? request.body.name : "";
+    await caller.users.create({ name, email: emailOf(name) });
+    response.redirect(303, "/courier");
+  } catch (error) {
+    next(error);
+  }
 });
 `
     : "";

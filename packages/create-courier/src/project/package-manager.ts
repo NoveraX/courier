@@ -13,6 +13,8 @@ export interface PackageManager {
   run(script: string): string;
   /** The command that runs a program the project installed: `npm exec -- astro sync`. */
   exec(bin: string, args: readonly string[]): string[];
+  /** The command that installs what package.json lists. */
+  install(): string[];
 }
 
 /** Each lockfile, and the package manager it belongs to. */
@@ -106,6 +108,7 @@ export function packageManager(name: PackageManagerName): PackageManager {
         add: (p, dev) => ["pnpm", "add", ...(dev ? ["-D"] : []), ...p],
         run: (s) => `pnpm ${s}`,
         exec: (bin, args) => ["pnpm", "exec", bin, ...args],
+        install: () => ["pnpm", "install"],
       };
     case "yarn":
       return {
@@ -113,6 +116,7 @@ export function packageManager(name: PackageManagerName): PackageManager {
         add: (p, dev) => ["yarn", "add", ...(dev ? ["-D"] : []), ...p],
         run: (s) => `yarn ${s}`,
         exec: (bin, args) => ["yarn", bin, ...args],
+        install: () => ["yarn", "install"],
       };
     case "bun":
       return {
@@ -120,6 +124,7 @@ export function packageManager(name: PackageManagerName): PackageManager {
         add: (p, dev) => ["bun", "add", ...(dev ? ["-d"] : []), ...p],
         run: (s) => `bun run ${s}`,
         exec: (bin, args) => ["bun", "x", bin, ...args],
+        install: () => ["bun", "install"],
       };
     default:
       return {
@@ -127,6 +132,7 @@ export function packageManager(name: PackageManagerName): PackageManager {
         add: (p, dev) => ["npm", "install", ...(dev ? ["--save-dev"] : []), ...p],
         run: (s) => `npm run ${s}`,
         exec: (bin, args) => ["npm", "exec", "--", bin, ...args],
+        install: () => ["npm", "install"],
       };
   }
 }

@@ -77,6 +77,7 @@ export interface Property {
 }
 
 const KEY = /^(?:([A-Za-z_$][\w$]*)|"([^"]*)"|'([^']*)')\s*:/;
+const LEAD = /^(?:\s|\/\/[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)*/;
 
 /**
  * The properties written directly in an object literal, in order; a
@@ -100,8 +101,10 @@ export function properties(scan: SourceScan, object: Literal): Property[] {
       continue;
     }
     if (at !== object.close && (scan.code[at] !== 1 || scan.text[at] !== ",")) continue;
-    const first = nextCode(scan, start);
-    if (first !== -1 && first < at) {
+    /* A quoted key is a string, so the property starts at the first character past white space and comments, code or not. */
+    const lead = LEAD.exec(scan.text.slice(start, at))?.[0].length ?? 0;
+    const first = start + lead < at ? start + lead : -1;
+    if (first !== -1) {
       const key = KEY.exec(scan.text.slice(first, at));
       const name = key ? (key[1] ?? key[2] ?? key[3] ?? "") : "";
       const value = key ? nextCode(scan, first + key[0].length) : first;

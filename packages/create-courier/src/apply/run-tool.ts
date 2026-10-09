@@ -14,6 +14,7 @@ export interface ToolResult {
  * @param command - The program and its arguments
  * @param cwd - Where it runs
  * @param keep - Keep the output rather than show it
+ * @param input - Whether the person at the terminal can answer it: a generator run without questions cannot
  * @returns The exit status, and the output when kept
  * @example
  * ```ts
@@ -24,13 +25,14 @@ export function runTool(
   command: readonly string[],
   cwd: string,
   keep: boolean,
+  input: "inherit" | "ignore" = "inherit",
 ): Promise<ToolResult> {
   const [program = "", ...args] = command;
   return new Promise((done, fail) => {
     /* Windows starts npm, pnpm, yarn and bun through their .cmd shims, which only a shell finds. */
     const child = spawn(program, args, {
       cwd,
-      stdio: keep ? ["ignore", "pipe", "pipe"] : "inherit",
+      stdio: keep ? ["ignore", "pipe", "pipe"] : [input, "inherit", "inherit"],
       shell: process.platform === "win32",
     });
     let output = "";

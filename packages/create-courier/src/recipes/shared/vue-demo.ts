@@ -4,20 +4,29 @@ import { DEMO_TEXT, EMAIL_FROM_NAME, unreachableText } from "./demo-parts";
 import { DEMO_CSS } from "./demo-style";
 
 /**
- * A Nuxt page that shows Courier at work: the users the API answers with —
- * from the mock until API_URL names a backend — and a form that creates
- * one, called from the browser through the app's route.
+ * A Vue page that shows Courier at work: the users the API answers with —
+ * from the mock until the API's address names a backend — and a form that
+ * creates one: in Nuxt through the app's route, in an app of Vite's
+ * straight to the API.
  *
  * @param ctx - The project, and what is set up in it
  * @param path - Where the page goes, relative to the root
  * @param caller - The `caller.ts` module, relative to the root
+ * @param variable - The environment variable the API's address is read from
  * @returns The page
  * @example
  * ```ts
  * vueDemo(ctx, "app/pages/courier.vue", "shared/courier/caller.ts");
  * ```
  */
-export function vueDemo(ctx: RecipeContext, path: string, caller: string): RecipeFile {
+export function vueDemo(
+  ctx: RecipeContext,
+  path: string,
+  caller: string,
+  variable = "API_URL",
+): RecipeFile {
+  /* Nuxt names the page through useHead; a page of Vite's has its own <title>. */
+  const head = ctx.project.lists("nuxt") ? `\nuseHead({ title: "${DEMO_TEXT.title}" });` : "";
   const content = `<script setup lang="ts">
 import { onMounted, ref } from "vue";
 
@@ -52,15 +61,14 @@ async function add() {
   }
 }
 
-onMounted(load);
-useHead({ title: "${DEMO_TEXT.title}" });
+onMounted(load);${head}
 </script>
 
 <template>
   <main class="courier-demo">
     <h1>${DEMO_TEXT.title}</h1>
     <p>${DEMO_TEXT.lead}</p>
-    <p v-if="failure" role="alert">Could not load users: {{ failure }}. ${unreachableText(ctx, "API_URL")}</p>
+    <p v-if="failure" role="alert">Could not load users: {{ failure }}. ${unreachableText(ctx, variable)}</p>
     <p v-else-if="users === undefined">${DEMO_TEXT.loading}</p>
     <template v-else>
       <ul>

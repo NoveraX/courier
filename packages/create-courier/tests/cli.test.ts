@@ -131,6 +131,26 @@ describe("create-courier", () => {
     expect(loose.out).toContain("holds files but no package.json");
   }, 60_000);
 
+  it("shows how a new project would be made in an empty folder, and makes nothing with --dry-run", () => {
+    const root = join(projectWith({ "README.md": "" }), "shop");
+
+    const { status, out } = run([root, "--framework", "next", "--dry-run"]);
+
+    expect(status).toBe(0);
+    expect(out).toContain("Create shop with Next.js, then set Courier up in it");
+    expect(out).toContain("npx --yes create-next-app@16 shop --yes --use-npm");
+    expect(existsSync(root)).toBe(false);
+  }, 60_000);
+
+  it("asks for the framework of a new project where no one can answer", () => {
+    const root = join(projectWith({ "README.md": "" }), "shop");
+
+    const { status, out } = run([root, "--yes"]);
+
+    expect(status).toBe(1);
+    expect(out).toContain("Name the framework to create the project with: --framework next|nuxt");
+  }, 60_000);
+
   it("refuses options it cannot follow", () => {
     const root = projectWith(NEXT);
 

@@ -12,6 +12,7 @@ import { reactViteRecipe } from "./recipes/react-vite";
 import type { Recipe, RecipeContext } from "./recipes/recipe-types";
 import { solidStartRecipe } from "./recipes/solid-start";
 import { svelteKitRecipe } from "./recipes/sveltekit";
+import { vueViteRecipe } from "./recipes/vue-vite";
 
 /** The frameworks the command sets Courier up in. */
 export type FrameworkId =
@@ -27,7 +28,8 @@ export type FrameworkId =
   | "fastify"
   | "hono"
   | "express"
-  | "react";
+  | "react"
+  | "vue";
 
 /** A framework, how the command tells a project uses it, and its recipe. */
 export interface Framework {
@@ -60,6 +62,7 @@ export const FRAMEWORKS: readonly Framework[] = [
   { id: "hono", label: "Hono", marker: "hono", recipe: honoRecipe },
   { id: "express", label: "Express", marker: "express", recipe: expressRecipe },
   { id: "react", label: "React with Vite", marker: "vite", also: "react", recipe: reactViteRecipe },
+  { id: "vue", label: "Vue with Vite", marker: "vite", also: "vue", recipe: vueViteRecipe },
 ];
 
 /**

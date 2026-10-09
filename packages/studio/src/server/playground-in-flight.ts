@@ -1,7 +1,19 @@
 import { createLogger } from "@noverax/courier";
 import type { Socket } from "socket.io";
 
+import type {
+  SanitizedChunkPayload,
+  SanitizedEndPayload,
+  SanitizedErrorPayload,
+} from "./runtime-playground-chunk-sanitize";
+
 const log = createLogger("Studio");
+
+/** What a request's sender is handed, from its runtime or from the router: each answer, by its event. */
+export type PlaygroundAnswer =
+  | { event: "playground:chunk"; payload: SanitizedChunkPayload }
+  | { event: "playground:end"; payload: SanitizedEndPayload }
+  | { event: "playground:error"; payload: SanitizedErrorPayload };
 
 /** A playground request a runtime is serving. */
 export interface InFlightEntry {
@@ -11,7 +23,10 @@ export interface InFlightEntry {
    * runtime id; only this one answers the request, and its disconnect ends it.
    */
   runtimeSocket: Socket;
-  uiSocketId: string;
+  /** Who sent it: a page's socket id, or the id of a call Studio makes itself. */
+  sender: string;
+  /** Hands the request's answers to whoever sent it. */
+  deliver: (answer: PlaygroundAnswer) => void;
   transport: "http" | "sse" | "ws";
   /** Armed for HTTP requests only — cleared on terminal event or cancel. */
   timeout?: NodeJS.Timeout;
@@ -47,7 +62,7 @@ export function settle(inFlight: InFlight, rid: string): InFlightEntry | undefin
  * @returns The requests taken, with their rids
  * @example
  * ```ts
- * for (const [rid, entry] of settleWhere(inFlight, (e) => e.uiSocketId === id)) cancel(rid, entry);
+ * for (const [rid, entry] of settleWhere(inFlight, (e) => e.sender === id)) cancel(rid, entry);
  * ```
  */
 export function settleWhere(

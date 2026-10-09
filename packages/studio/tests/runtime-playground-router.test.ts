@@ -567,3 +567,117 @@ describe("createRuntimePlaygroundRouter", () => {
     expect(router._inFlightSize()).toBe(0);
   });
 });
+
+describe("a call Studio runs itself", () => {
+  const call = {
+    rid: "r-agent",
+    source: "api",
+    group: "users",
+    method: "list",
+    transport: "http" as const,
+    mode: "direct" as const,
+  };
+
+  it("settles with the runtime's result and how long the call took", async () => {
+    const { runtimeSock, router } = setupRouter();
+
+    const outcome = router.run(call);
+    const result = { kind: "http-result", status: 200, data: [{ id: 1 }] };
+    router.forwardChunk({ rid: "r-agent", chunk: result }, "rt-sock-1");
+    router.forwardEnd({ rid: "r-agent", summary: { durationMs: 12 } }, "rt-sock-1");
+
+    expect(runtimeSock.emit).toHaveBeenCalledWith(
+      "playground:execute",
+      expect.objectContaining({ rid: "r-agent", source: "api" }),
+    );
+    await expect(outcome).resolves.toEqual({ ok: true, chunks: [result], durationMs: 12 });
+    expect(router._inFlightSize()).toBe(0);
+  });
+
+  it("takes no answer from a runtime socket the call did not go to", async () => {
+    const { router } = setupRouter();
+
+    const outcome = router.run(call);
+    router.forwardEnd({ rid: "r-agent", summary: { durationMs: 1 } }, "rt-sock-other");
+    router.forwardError({ rid: "r-agent", error: { message: "spoofed" } }, "rt-sock-other");
+    router.forwardEnd({ rid: "r-agent", summary: { durationMs: 5 } }, "rt-sock-1");
+
+    await expect(outcome).resolves.toEqual({ ok: true, chunks: [], durationMs: 5 });
+  });
+
+  it("settles with why no runtime can take the call", async () => {
+    const router = createRuntimePlaygroundRouter({
+      bindingTable: new BindingTable(),
+      uiNamespace: makeUiNamespace(new Map()) as never,
+    });
+
+    await expect(router.run(call)).resolves.toEqual({
+      ok: false,
+      message: "No runtime hosts api on HTTP",
+    });
+  });
+
+  it("cancels the call at the runtime when its signal aborts", async () => {
+    const { runtimeSock, router } = setupRouter();
+    const controller = new AbortController();
+
+    const outcome = router.run(call, controller.signal);
+    controller.abort();
+
+    await expect(outcome).resolves.toEqual({ ok: false, message: "The call was cancelled" });
+    expect(runtimeSock.emit).toHaveBeenCalledWith("playground:cancel", { rid: "r-agent" });
+    expect(router._inFlightSize()).toBe(0);
+  });
+
+  it("sends nothing for a signal that aborted already", async () => {
+    const { runtimeSock, router } = setupRouter();
+
+    const outcome = router.run(call, AbortSignal.abort());
+
+    await expect(outcome).resolves.toMatchObject({ ok: false });
+    expect(runtimeSock.emit).not.toHaveBeenCalled();
+  });
+
+  it("settles when its runtime disconnects, when Studio closes, and when the runtime is silent", async () => {
+    vi.useFakeTimers();
+    try {
+      const { router } = setupRouter();
+
+      const dropped = router.run({ ...call, rid: "r-dropped" });
+      router.onRuntimeDisconnect("rt-sock-1");
+      await expect(dropped).resolves.toEqual({
+        ok: false,
+        message: "Runtime disconnected mid-request",
+      });
+
+      const closing = router.run({ ...call, rid: "r-closing" });
+      router.dispose();
+      await expect(closing).resolves.toEqual({
+        ok: false,
+        message: "Studio closed before the runtime answered",
+      });
+
+      const silent = router.run({ ...call, rid: "r-silent" });
+      vi.advanceTimersByTime(30_000);
+      await expect(silent).resolves.toEqual({
+        ok: false,
+        message: "Runtime did not respond within 30s",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("is not cancelled when a page disconnects, nor counted as the page's", async () => {
+    const { runtimeSock, router } = setupRouter();
+
+    const outcome = router.run(call);
+    router.onUiDisconnect("ui-1");
+
+    expect(router.callsInFlight("ui-1")).toBe(0);
+    expect(router.callsInFlight()).toBe(1);
+    expect(runtimeSock.emit).not.toHaveBeenCalledWith("playground:cancel", expect.anything());
+    router.forwardEnd({ rid: "r-agent", summary: { durationMs: 3 } }, "rt-sock-1");
+    await expect(outcome).resolves.toMatchObject({ ok: true });
+  });
+});

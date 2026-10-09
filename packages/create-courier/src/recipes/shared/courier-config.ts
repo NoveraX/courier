@@ -59,7 +59,10 @@ export function courierConfig(
   if (ctx.choices.openapi !== undefined) {
     const content = `import { defineConfig } from "@noverax/courier/config";
 
-/** The APIs this project calls. Courier's server route registers them from here, and Studio reads them. */
+/**
+ * The APIs this project calls. Studio and the MCP server read them here,
+ * and an API Studio imports is declared here too.
+ */
 export default defineConfig({
   sources: {},${studioBlock(ctx)}
 });
@@ -70,7 +73,10 @@ export default defineConfig({
 
 import { ${source.name} } from "${importSpecifier("courier.config.ts", api, ctx.extension)}";
 
-/** The APIs this project calls. Courier's server route registers them from here, and Studio reads them. */
+/**
+ * The APIs this project calls. Studio and the MCP server read them here,
+ * and an API Studio imports is declared here too.
+ */
 export default defineConfig({
   sources: { ${source.name === "api" ? "api" : `api: ${source.expression}`} },${studioBlock(ctx)}
 });

@@ -30,7 +30,7 @@ export default function CourierScreen() {
   const ink = useColorScheme() === "dark" ? "#f4f4f5" : "#18181b";
   return (
     <QueryClientProvider client={client}>
-      <ScrollView contentContainerStyle={styles.screen}>
+      <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: ink }]}>${DEMO_TEXT.title}</Text>
         <Text style={[styles.lead, { color: ink }]}>${DEMO_TEXT.lead}</Text>
         <Users ink={ink} />
@@ -43,6 +43,10 @@ function Users({ ink }: { ink: string }) {
   const users = q.users.useQuery("list");
   const create = q.users.useMutation("create", { onSuccess: () => users.refetch() });
   const [name, setName] = useState("");
+  const add = () => {
+    if (create.isPending || name.trim() === "") return;
+    create.mutate({ name, email: ${EMAIL_FROM_NAME} }, { onSuccess: () => setName("") });
+  };
 
   if (users.isPending) return <Text style={{ color: ink }}>${DEMO_TEXT.loading}</Text>;
   if (users.error) {
@@ -67,12 +71,14 @@ function Users({ ink }: { ink: string }) {
           onChangeText={setName}
           placeholder="Name"
           placeholderTextColor="#71717a"
+          returnKeyType="done"
+          onSubmitEditing={add}
           style={[styles.input, { color: ink, borderColor: ink }]}
         />
         <Pressable
           accessibilityRole="button"
           disabled={create.isPending || name.trim() === ""}
-          onPress={() => create.mutate({ name, email: ${EMAIL_FROM_NAME} }, { onSuccess: () => setName("") })}
+          onPress={add}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         >
           <Text style={styles.buttonText}>${DEMO_TEXT.add}</Text>

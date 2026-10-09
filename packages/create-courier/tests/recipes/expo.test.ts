@@ -26,6 +26,8 @@ describe("expoRecipe", () => {
       'Platform.OS === "android" ? "http://10.0.2.2:7001"',
     );
     expect(byPath.get("src/app/courier.tsx")).toContain("export default function CourierScreen()");
+    expect(byPath.get("src/app/courier.tsx")).toContain('keyboardShouldPersistTaps="handled"');
+    expect(byPath.get("src/app/courier.tsx")).toContain("onSubmitEditing={add}");
     expect(recipe.next.at(-1)).toEqual({
       command: "",
       what: "In the simulator or on a phone, open expoapp://courier",

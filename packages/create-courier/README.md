@@ -45,7 +45,7 @@ npm run dev      # your app: open /courier
 
 `/courier` shows a page of users your API answers with — from the mock until `API_URL` names your backend — and a form that creates one, typed end to end, every call visible in Studio.
 
-- **A plan first.** Nothing changes until you agree, or pass `--yes`; `--dry-run` shows the plan and stops.
+- **A plan first.** Nothing changes until you agree, or pass `--yes`; `--dry-run` shows the plan and stops, and Ctrl+C at a question stops it with nothing changed.
 - **Nothing of yours is replaced.** A file is only ever added. Where a file of yours stands where Courier's would go, it is left as it is and its lines are listed for you.
 - **Your files change only where their shape is known.** A plugin in `vite.config.ts`, a route in `app/routes.ts`: each change is shown line by line, made only where the file is in a shape the command knows, and checked against the file as you had it right before it is written. Elsewhere it is left to you, with the lines to add.
 - **It works before you have a backend.** The example API answers from a mock Studio runs, seeded with five users, on the first free port from 7001.
@@ -61,7 +61,7 @@ Point it at a folder that does not exist yet, and name the framework:
 npx @noverax/create-courier@latest shop --framework next
 ```
 
-It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out.
+It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out, and whether to offer the API to AI agents over MCP, all before it makes anything.
 
 <br />
 
@@ -114,7 +114,7 @@ Imports an OpenAPI, Swagger or Postman specification in place of the example, wi
 npx @noverax/create-courier@latest --mcp
 ```
 
-Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Code reads: your editor's agent can call your API, through the same middleware as your app.
+Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Code reads: your editor's agent can call your API, through the same middleware as your app. With `--openapi`, which of the imported endpoints agents may call is yours to say: the plan shows how to mark them.
 
 <br />
 

@@ -3,6 +3,7 @@ import type { Namespace } from "socket.io";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BindingTable } from "../src/server/catalog/binding-table";
 import { TOKEN_PAGES } from "../src/server/live-events";
+import { createAgentCalls } from "../src/server/mcp/agent-calls";
 import { setupRuntimeNamespace } from "../src/server/runtime-namespace";
 import { clearStudioServerState, getRuntimeEntry } from "../src/server/runtime-namespace-state";
 import { FIXED_TOKEN, FIXED_TOKEN_VALUE } from "./helpers/fixed-token";
@@ -235,6 +236,34 @@ describe("setupRuntimeNamespace", () => {
 
     const sent = ui.emit.mock.calls.filter(([name]) => name === "event").map(([, event]) => event);
     expect(sent).toEqual([expect.objectContaining({ type: "request:start", id: "r1" })]);
+  });
+
+  it("names the agent on a request Studio runs for one, in what the pages see and the log keeps", () => {
+    const ns = makeNamespace();
+    const ui = { emit: vi.fn() };
+    const pages = { ...ui, to: (room: string) => (room === TOKEN_PAGES ? ui : { emit: vi.fn() }) };
+    const kept: Record<string, unknown>[] = [];
+    const agentCalls = createAgentCalls();
+    setupRuntimeNamespace(ns as unknown as Namespace, {
+      token: FIXED_TOKEN,
+      bindingTable: new BindingTable(),
+      uiNamespace: pages as unknown as Namespace,
+      requestLog: { record: (event: Record<string, unknown>) => kept.push(event) } as never,
+      agentCalls,
+    });
+    const agent = { tool: "replay_write", access: "destructive" as const, client: "editor 1" };
+    agentCalls.expect("pg_1", agent);
+
+    const socket = makeSocket();
+    ns.connect(socket);
+    socket.emit("event", { type: "request:start", id: "pg_1", source: "api" });
+    socket.emit("event", { type: "request:start", id: "r2", source: "api" });
+    agentCalls.forget("pg_1");
+    socket.emit("event", { type: "request:start", id: "pg_1", source: "api" });
+
+    const sent = ui.emit.mock.calls.filter(([name]) => name === "event").map(([, event]) => event);
+    expect(sent.map((event) => event.agent)).toEqual([agent, undefined, undefined]);
+    expect(kept.map((event) => event.agent)).toEqual([agent, undefined, undefined]);
   });
 
   it("counts distinct runtimes and sources across bound rows", () => {

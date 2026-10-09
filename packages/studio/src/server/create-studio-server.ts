@@ -13,6 +13,7 @@ import { DEMO_REPLAY_BYTES, demoServing } from "./demo/demo-serving";
 import { studioAddressFile } from "./editor/studio-address-file";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
+import { createAgentCalls } from "./mcp/agent-calls";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { mockStoreFile } from "./mock-store-file";
@@ -87,6 +88,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   const bindingTable = new BindingTable();
   const playgroundRouter = createRuntimePlaygroundRouter({ bindingTable, uiNamespace });
+  const agentCalls = createAgentCalls();
   /* Read on each event, by which time the project below exists. */
   const nameSource = createConfigSourceNamer(() => project.snapshot().running?.config);
   /* The loader resolves links; every path shown is relative to the same root. */
@@ -101,6 +103,7 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     nameSource,
     requestLog,
     answers: createAnswerObserver(stores.answers),
+    agentCalls,
     token,
     maxMessageBytes: serving?.sockets.maxMessageBytes ?? MAX_MESSAGE_BYTES,
   });
@@ -170,6 +173,8 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
     stores,
     storage,
     token,
+    playgroundRouter,
+    agentCalls,
     serving,
   };
   mountStudioHttp(app, policy, http);

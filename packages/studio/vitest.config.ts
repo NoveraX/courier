@@ -7,9 +7,12 @@ import { sharedTestOptions } from "../../vitest.shared.ts";
 /**
  * Vitest harness for `@noverax/courier-studio`.
  *
- * Some suites put what the server sends through the UI's own guards and
- * reducers, which import one another as `@/...`: the alias mirrors the UI's
- * `vite.config.ts`, so they load here as they do in the UI's build.
+ * The server folds the requests it recorded and audits them with the UI's
+ * own modules, so an agent reads what a page shows; some suites put what the
+ * server sends through the UI's guards and reducers too. Those modules
+ * import one another as `@/...`: the alias mirrors the UI's
+ * `vite.config.ts`, so they load here as they do in the UI's build — and
+ * the server's build resolves them by the same path in `tsconfig.json`.
  */
 export default defineProject({
   test: { ...sharedTestOptions },

@@ -1,31 +1,50 @@
 import { type ServedTool, type ToolSet, toolSet } from "@noverax/courier-mcp/internal";
 
 import type { RequestLog } from "../request-log";
+import type { AgentCalls } from "./agent-calls";
+import { auditTool, type StudioAuditInputs } from "./audit-tool";
 import { mockScenarioTool, mocksTool, type StudioMocks } from "./mock-tools";
+import type { StudioReplays } from "./replay-run";
+import { replayTool, replayWriteTool } from "./replay-tools";
 import { detailOf, gatherRequests, summaryOf } from "./request-views";
 
-/** What Studio's tools read and change. */
+/** What Studio's tools read, run and change. */
 export interface StudioToolDeps {
   readonly requestLog: Pick<RequestLog, "events">;
   readonly mocks: StudioMocks;
+  /** Runs a replay in the app's runtime, with the whole variables when its record cut them. */
+  readonly replays: Pick<StudioReplays, "run" | "wholeBody">;
+  /** The requests Studio runs for an agent, whose records name it. */
+  readonly agentCalls: AgentCalls;
+  /** What the audit reads besides the requests. */
+  readonly audit: Pick<StudioAuditInputs, "declared" | "runtimes">;
 }
 
 /**
  * Studio's views as an agent's tools: the requests it recorded, one of
- * them in full, the mocks it runs — and switching a mock's scenario, the one
- * thing an agent may change.
+ * them in full, its audit of them, the mocks it runs — and what an agent
+ * may do: send a recorded read again, send a recorded write again once a
+ * person confirms it, and switch a mock's scenario.
  *
- * @param deps - The request log and the mocks
+ * @param deps - The request log, the mocks, the replays and the audit's inputs
  * @returns The tool set
  * @example
  * ```ts
- * const tools = studioTools({ requestLog, mocks: mockManager });
+ * const tools = studioTools({ requestLog, mocks: mockManager, replays, agentCalls, audit });
  * ```
  */
 export function studioTools(deps: StudioToolDeps): ToolSet {
+  const replays: StudioReplays = {
+    ...deps.replays,
+    requestLog: deps.requestLog,
+    agentCalls: deps.agentCalls,
+  };
   return toolSet([
     requestsTool(deps),
     requestTool(deps),
+    auditTool({ ...deps.audit, requestLog: deps.requestLog }),
+    replayTool(replays),
+    replayWriteTool(replays),
     mocksTool(deps.mocks),
     mockScenarioTool(deps.mocks),
   ]);

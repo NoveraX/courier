@@ -32,7 +32,7 @@ export const MCP_ARGS = {
  *
  * @example
  * ```sh
- * claude mcp add courier-studio -- npx courier-studio mcp
+ * claude mcp add courier-studio -- npx @noverax/courier-studio mcp
  * ```
  */
 export const mcpCommand = defineCommand({
@@ -48,7 +48,7 @@ export const mcpCommand = defineCommand({
       const tokenFile = join(root, ".courier", "studio-token");
       if (!existsSync(tokenFile))
         throw new Error(
-          `No Studio token in ${root}: start Studio there first, with npx courier-studio`,
+          `No Studio token in ${root}: start Studio there first, with npx @noverax/courier-studio`,
         );
       const token = readFileSync(tokenFile, "utf8").trim();
       const url = `${(args.url ?? (await configuredUrl(root))).replace(/\/$/, "")}/mcp`;

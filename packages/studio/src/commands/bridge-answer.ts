@@ -34,12 +34,12 @@ export function answerFor(
   if (status === 401) {
     return failure(
       message.id,
-      `Studio at ${url} did not take the token in this project's .courier/studio-token: the Studio answering there runs another project, or started before the token changed. Start this project's Studio with npx courier-studio, or point --url at it`,
+      `Studio at ${url} did not take the token in this project's .courier/studio-token: the Studio answering there runs another project, or started before the token changed. Start this project's Studio with npx @noverax/courier-studio, or point --url at it`,
     );
   }
   return failure(
     message.id,
-    `No Studio answered at ${url} (HTTP ${status}): start this project's Studio with npx courier-studio, or point --url at the address it prints`,
+    `No Studio answered at ${url} (HTTP ${status}): start this project's Studio with npx @noverax/courier-studio, or point --url at the address it prints`,
   );
 }
 
@@ -63,7 +63,7 @@ export function unreachable(
   if (message?.id === undefined) return undefined;
   return failure(
     message.id,
-    `Studio could not be reached at ${url} (${reason}): start it with npx courier-studio`,
+    `Studio could not be reached at ${url} (${reason}): start it with npx @noverax/courier-studio`,
   );
 }
 

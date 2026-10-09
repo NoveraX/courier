@@ -22,6 +22,8 @@ describe("installCommand", () => {
   });
 
   it("leaves a line that is no npm install as it is", () => {
-    expect(installCommand("npx courier-studio", "pnpm")).toBe("npx courier-studio");
+    expect(installCommand("npx @noverax/courier-studio", "pnpm")).toBe(
+      "npx @noverax/courier-studio",
+    );
   });
 });

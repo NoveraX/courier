@@ -613,7 +613,7 @@ describe("courier-studio mcp", () => {
 
     expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({
       id: 1,
-      error: { code: -32603, message: expect.stringContaining("npx courier-studio") },
+      error: { code: -32603, message: expect.stringContaining("npx @noverax/courier-studio") },
     });
   });
 });

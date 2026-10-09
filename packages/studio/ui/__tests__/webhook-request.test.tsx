@@ -7,7 +7,8 @@
  * handler — where it stopped and what fixes it, its time as its checks and
  * its handler — on the Waterfall too, outside the calls' time in fetch;
  * written out as a mock delivers it again; left out of the Audit — and
- * never replayed from Studio, since its sender, not the app, made it.
+ * delivered again from Studio through the app that defines its webhook,
+ * which signs it afresh, once the send dialog has shown it.
  */
 import { render, renderHook, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -24,6 +25,7 @@ import { timingPhasesOf } from "@/features/requests/timing-phases";
 import { requestFromSaved } from "@/features/sessions/saved-request";
 import { barOf } from "@/features/waterfall/bar-segments";
 import { waterfallInsights } from "@/features/waterfall/waterfall-insights";
+import { useWebhookSend } from "@/features/webhooks/webhook-send-store";
 import { useReplay } from "@/inspector/use-replay";
 import { RequestRow } from "@/screens/timeline/request-row";
 import { requestFromStart } from "@/store/handle-request-events";
@@ -66,13 +68,27 @@ describe("a webhook delivery", () => {
     expect(screen.getByText("webhook")).toBeTruthy();
   });
 
-  it("is not replayed from Studio", () => {
+  it("is delivered again through the app, once the send dialog has shown it", () => {
     const { result } = renderHook(() => useReplay());
 
-    const replay = result.current(requestEntry({ mode: "webhook" }));
+    const replay = result.current(
+      requestEntry({
+        mode: "webhook",
+        source: "stripe",
+        method: "invoice.paid",
+        url: "http://localhost:3000/api/webhooks/stripe",
+        variables: { id: "evt_1", type: "invoice.paid" },
+      }),
+    );
+    replay.run?.();
 
-    expect(replay.run).toBeUndefined();
-    expect(replay.title).toMatch(/deliver it again from a mock/);
+    expect(replay.label).toBe("Deliver again");
+    expect(replay.title).toMatch(/signed afresh by the app/);
+    expect(useWebhookSend.getState().ask).toEqual({
+      webhook: "stripe",
+      to: "http://localhost:3000/api/webhooks/stripe",
+      body: { id: "evt_1", type: "invoice.paid" },
+    });
   });
 
   it("names its webhook and event, and checks its signature, its body and its handler — not a call's schemas", () => {

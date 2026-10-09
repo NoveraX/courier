@@ -9,6 +9,7 @@ import {
   Share,
   SunMoon,
   Trash2,
+  Webhook,
 } from "lucide-react";
 
 import type { ExportFormat } from "@/store/types";
@@ -22,8 +23,9 @@ const RECORDING_LABEL: Readonly<Record<RecordingState, string>> = {
 
 /**
  * The palette's actions that work from anywhere: recording, the Timeline's
- * views, the theme, export, a session file shared or opened, a test, and clearing
- * the requests — each with the shortcut that runs it outside the palette.
+ * views, the theme, export, a session file shared or opened, a test, a
+ * webhook delivered to the app, and clearing the requests — each with the
+ * shortcut that runs it outside the palette.
  *
  * @param recording - Whether Studio records, is paused, or shows a saved session
  * @param exportFormat - The format an export downloads in
@@ -104,6 +106,14 @@ export function actionEntries(
       meta: "one a colleague shared",
       icon: FileInput,
       action: { kind: "open-session-file" },
+    },
+    {
+      id: "action:deliver-webhook",
+      group: "Actions",
+      label: "Deliver a webhook",
+      meta: "signed by the app",
+      icon: Webhook,
+      action: { kind: "deliver-webhook" },
     },
     {
       id: "action:clear",

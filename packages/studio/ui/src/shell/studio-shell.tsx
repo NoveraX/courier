@@ -7,6 +7,7 @@ import { RequestInspector } from "@/inspector/request-inspector";
 import { SchemaFixDialog } from "@/screens/explorer/schema-fix-dialog";
 import { RecordedTestDialog } from "@/screens/recorded-test/recorded-test-dialog";
 import { SessionFileDialog } from "@/screens/session-file/session-file-dialog";
+import { WebhookSendDialog } from "@/screens/webhooks/webhook-send-dialog";
 import { CommandPalette } from "./command-palette/command-palette";
 import { useRunAction } from "./command-palette/use-run-action";
 import { ConnectionBanner } from "./connection-banner";
@@ -65,6 +66,7 @@ export function StudioShell(): React.ReactNode {
       <SessionFileDialog />
       <RecordedTestDialog />
       <SchemaFixDialog />
+      <WebhookSendDialog />
     </div>
   );
 }

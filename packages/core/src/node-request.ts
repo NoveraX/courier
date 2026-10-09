@@ -98,8 +98,18 @@ export function toWebRequest(
 
   const request = new Request(url, init);
   rememberPeerAddress(request, nodeReq.socket.remoteAddress);
+  if (nodeRes) HELD_UNTIL_ANSWERED.set(nodeRes, request);
   return request;
 }
+
+/*
+ * Each request, held for as long as its response lives. undici's Request
+ * follows the signal it was given through a weak reference to its own
+ * controller: once a handler has returned a streamed answer and let the
+ * Request go, a garbage collection leaves `request.signal` deaf to its
+ * client leaving, and the work behind the answer runs on for nobody.
+ */
+const HELD_UNTIL_ANSWERED = new WeakMap<ServerResponse, Request>();
 
 /**
  * A signal that fires when the client goes away before the response is done.

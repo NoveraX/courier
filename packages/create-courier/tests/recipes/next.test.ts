@@ -1,0 +1,93 @@
+import { afterAll, describe, expect, it } from "vitest";
+
+import { buildPlan } from "../../src/plan/build-plan";
+import { nextRecipe } from "../../src/recipes/next";
+import { contextOf, manifest, projectWith, removeProjects } from "./project-fixture";
+
+afterAll(removeProjects);
+
+const NEXT_CONFIG = `import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+  cacheComponents: true,
+};
+
+export default nextConfig;
+`;
+
+function app(extra: Record<string, string> = {}, next = "16.4.0") {
+  return projectWith({
+    "package.json": manifest({ next, react: "19.2.0" }),
+    "tsconfig.json": "{}",
+    "next.config.ts": NEXT_CONFIG,
+    "src/app/page.tsx": "export default function Home() { return null; }\n",
+    ...extra,
+  });
+}
+
+describe("nextRecipe", () => {
+  it("registers the APIs in instrumentation.ts and serves them from the route", () => {
+    const recipe = nextRecipe(contextOf(app(), "next"));
+    const byPath = new Map(recipe.files.map((file) => [file.path, file.content]));
+
+    expect([...byPath.keys()]).toEqual([
+      "src/courier/api.ts",
+      "src/courier/boundary.ts",
+      "courier.config.ts",
+      "courier.mocks.ts",
+      "src/app/api/request/route.ts",
+      "src/courier/query.ts",
+      "src/app/courier/page.tsx",
+      "src/instrumentation.ts",
+      "src/instrumentation-client.ts",
+    ]);
+    expect(byPath.get("src/instrumentation.ts")).toContain('await import("../courier.config")');
+    expect(byPath.get("src/instrumentation.ts")).toContain("registerSources(config.sources);");
+    expect(byPath.get("src/instrumentation.ts")).toContain("await attachRuntime();");
+    expect(byPath.get("src/app/api/request/route.ts")).not.toContain("registerSources");
+    expect(byPath.get("src/app/courier/page.tsx")?.startsWith('"use client";')).toBe(true);
+    expect(recipe.edits).toEqual([]);
+  });
+
+  it("leaves the lines to the person where the app has an instrumentation file of its own", () => {
+    const recipe = nextRecipe(
+      contextOf(app({ "src/instrumentation.ts": "export function register() {}\n" }), "next"),
+    );
+
+    expect(recipe.files.map((file) => file.path)).not.toContain("src/instrumentation.ts");
+    expect(recipe.manual[0]?.file).toBe("src/instrumentation.ts");
+    expect(recipe.manual[0]?.lines.join("\n")).toContain("registerSources(config.sources);");
+  });
+
+  it("names Studio's port in next.config's env where Studio could not take the default", () => {
+    const ctx = contextOf(app(), "next", {}, { studio: 6281, mock: 7001 });
+    const plan = buildPlan(ctx, nextRecipe(ctx));
+    const edit = plan.edits.find((planned) => planned.path === "next.config.ts");
+
+    expect(edit?.state).toBe("edit");
+    expect(edit?.after).toContain(
+      'cacheComponents: true,\n  env: { COURIER_STUDIO_URL: "http://localhost:6281" },\n};',
+    );
+  });
+
+  it("connects the browser through the config's wrapper before Next.js 16", () => {
+    const recipe = nextRecipe(contextOf(app({}, "15.5.0"), "next"));
+
+    expect(recipe.files.map((file) => file.path)).not.toContain("src/instrumentation-client.ts");
+    expect(recipe.manual.map((step) => step.lines.join("\n")).join("\n")).toContain(
+      "withCourierStudio()(nextConfig)",
+    );
+  });
+
+  it("adds neither Studio's files nor its script without Studio", () => {
+    const recipe = nextRecipe(contextOf(app(), "next", { studio: false }));
+
+    expect(recipe.files.map((file) => file.path)).not.toContain("src/instrumentation-client.ts");
+    expect(
+      recipe.files.find((file) => file.path === "src/instrumentation.ts")?.content,
+    ).not.toContain("attachRuntime");
+    expect(recipe.scripts).toEqual({});
+    expect(recipe.devDependencies).not.toContain("@noverax/courier-studio");
+  });
+});

@@ -76,6 +76,11 @@
       "import": "./lib/openapi/index.js",
       "default": "./lib/openapi/index.js"
     },
+    "./webhooks": {
+      "types": "./lib/webhooks/index.d.ts",
+      "import": "./lib/webhooks/index.js",
+      "default": "./lib/webhooks/index.js"
+    },
     "./realtime": {
       "types": "./lib/realtime/index.d.ts",
       "import": "./lib/realtime/index.js",

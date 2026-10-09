@@ -22,6 +22,7 @@
       "@noverax/courier/middleware": ["./packages/core/src/middleware/index.ts"],
       "@noverax/courier/node": ["./packages/core/src/node.ts"],
       "@noverax/courier/openapi": ["./packages/core/src/openapi/index.ts"],
+      "@noverax/courier/webhooks": ["./packages/core/src/webhooks/index.ts"],
       "@noverax/courier/realtime": ["./packages/core/src/realtime/index.ts"],
       "@noverax/courier/testing": ["./packages/core/src/testing/index.ts"],
       "@noverax/courier-mcp/internal": ["./packages/mcp/src/internal.ts"],

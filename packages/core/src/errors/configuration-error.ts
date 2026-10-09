@@ -174,6 +174,12 @@ export type ConfigurationErrorCode =
    * option it does not have.
    */
   | "AGENT_HANDLER_INVALID"
+  /** A webhook's secret reads as nothing when a delivery comes, so no delivery can be checked. */
+  | "WEBHOOK_SECRET_MISSING"
+  /** A Standard Webhooks secret is not `whsec_` and base64, so no signature could ever match. */
+  | "WEBHOOK_SECRET_INVALID"
+  /** `defineWebhook` was given no name, no signature or no schema for the body. */
+  | "WEBHOOK_OPTIONS_INVALID"
   /** An endpoint's `idempotencyKey` is not `header:<name>`. */
   | "INVALID_IDEMPOTENCY_KEY"
   /** An `allowedOrigins` entry is not an origin a browser can send, or admits every sandboxed page. */

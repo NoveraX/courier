@@ -22,6 +22,8 @@ npx courier-studio openapi --source billing --api-version 2.4.0 --out openapi.js
 
 With no `--source`, every source is written to the folder `--out` names, one `<source>.openapi.json` each. With one source and no `--out`, the document is printed, ready for a pipe.
 
+Studio itself writes the same document from its APIs page: **Export OpenAPI** picks a source, the OpenAPI version, the document's title and the API's version, shows the document and every endpoint it leaves out, and downloads it as `<source>.openapi.json` or copies it. It is written from the definition Studio runs, so it follows the code as you change it.
+
 ## What becomes what
 
 | In the definition | In the document |
@@ -54,7 +56,7 @@ An endpoint declared by its types alone, `.response<User>()`, has no schema at r
 
 ## What is left out
 
-Three kinds of endpoint have no operation, and `onSkip` hears each one and why — the command says them in its log:
+Three kinds of endpoint have no operation, and `onSkip` hears each one and why — the command says them in its log, and Studio's export lists them beside the document:
 
 - A channel: OpenAPI has no form for a WebSocket.
 - An endpoint the application serves itself with `.implement()`: it has no address of its own.

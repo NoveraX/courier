@@ -88,6 +88,7 @@ export function wireRequestHooks(
         },
         ...(e.status !== undefined && { status: e.status }),
         ...(e.headers && { headers: e.headers }),
+        ...(e.requestHeaders && { requestHeaders: e.requestHeaders }),
         ...(answered && { data: answered.value }),
         ...(answered?.whole && { dataCutFrom: answered.whole.bytes }),
         ...(e.size !== undefined && { size: e.size }),

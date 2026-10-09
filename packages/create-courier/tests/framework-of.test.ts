@@ -1,0 +1,45 @@
+import { afterAll, describe, expect, it } from "vitest";
+
+import { frameworkOf } from "../src/framework-of";
+import { readProject } from "../src/project/read-project";
+import { manifest, projectWith, removeProjects } from "./recipes/project-fixture";
+
+afterAll(removeProjects);
+
+function projectListing(dependencies: Record<string, string>) {
+  return readProject(
+    projectWith({ "package.json": manifest(dependencies), "tsconfig.json": "{}" }),
+  );
+}
+
+describe("frameworkOf", () => {
+  it("finds the framework the project lists, and takes --framework where the project lists it", () => {
+    const next = projectListing({ next: "16.4.0", react: "19.2.0" });
+
+    expect(frameworkOf(next, undefined).id).toBe("next");
+    expect(frameworkOf(next, "next").id).toBe("next");
+  });
+
+  it("refuses a --framework the project is not built with, naming the one it is", () => {
+    const express = projectListing({ express: "^5.2.1" });
+
+    expect(() => frameworkOf(express, "next")).toThrow(
+      "--framework next sets Next.js up, but this project is built with Express: leave out --framework",
+    );
+  });
+
+  it("refuses a framework the project lists only for its tools, as Studio's mock lists Hono", () => {
+    const next = projectListing({ next: "16.4.0", react: "19.2.0", hono: "^4.13.13" });
+
+    expect(() => frameworkOf(next, "hono")).toThrow("but this project is built with Next.js");
+  });
+
+  it("says when the project lists no framework it knows", () => {
+    const plain = projectListing({ lodash: "^4.17.0" });
+
+    expect(() => frameworkOf(plain, "react")).toThrow(
+      "but this project lists no framework Courier sets up",
+    );
+    expect(() => frameworkOf(plain, undefined)).toThrow("No framework Courier sets up was found");
+  });
+});

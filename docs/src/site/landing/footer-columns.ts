@@ -1,29 +1,41 @@
 /** A column of the landing page's footer: its heading and links. */
 export interface FooterColumn {
   heading: string
-  /** A page of the site (`/docs/…`), a section of this page (`#…`) or an outside address. */
+  /** A page of the site (`/docs/…`), a section of the landing page (`/#…`) or an outside address. */
   links: readonly { label: string; href: string }[]
 }
 
 const REPO = "https://github.com/NoveraX/courier"
 
 /**
- * The footer links of the landing page and the MCP server's page, in four columns.
+ * The footer links of the landing page and the MCP server's page, in four
+ * columns: Courier's products, the docs most read, the frameworks, and the
+ * project's places on GitHub and npm.
  *
  * @example
  * ```ts
- * FOOTER_COLUMNS.map((c) => c.heading) // ["DOCUMENTATION", "FRAMEWORKS", "RESOURCES", "COMMUNITY"]
+ * FOOTER_COLUMNS.map((c) => c.heading) // ["PRODUCT", "DOCUMENTATION", "FRAMEWORKS", "COMMUNITY"]
  * ```
  */
 export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   {
+    heading: "PRODUCT",
+    links: [
+      { label: "Courier Studio", href: "/studio" },
+      { label: "MCP server", href: "/mcp" },
+      { label: "Studio in your editor", href: "/docs/studio/editor" },
+      { label: "Compare", href: "/#compare" },
+    ],
+  },
+  {
     heading: "DOCUMENTATION",
     links: [
       { label: "Quick start", href: "/docs/quick-start" },
-      { label: "API reference", href: "/reference" },
       { label: "Middleware", href: "/docs/middleware/overview" },
       { label: "AI agents", href: "/docs/agents/overview" },
       { label: "Testing", href: "/docs/testing/test-client" },
+      { label: "Security model", href: "/docs/security/overview" },
+      { label: "API reference", href: "/reference" },
     ],
   },
   {
@@ -31,19 +43,11 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     links: [
       { label: "Next.js", href: "/docs/frameworks/nextjs" },
       { label: "Nuxt", href: "/docs/frameworks/nuxt" },
-      { label: "Hono", href: "/docs/frameworks/hono" },
+      { label: "SvelteKit", href: "/docs/frameworks/sveltekit" },
       { label: "Express", href: "/docs/frameworks/express" },
-      { label: "Fastify", href: "/docs/frameworks/fastify" },
-      { label: "NestJS", href: "/docs/frameworks/nestjs" },
-    ],
-  },
-  {
-    heading: "RESOURCES",
-    links: [
-      { label: "Changelog", href: `${REPO}/releases` },
-      { label: "Issues", href: `${REPO}/issues` },
-      { label: "Discussions", href: `${REPO}/discussions` },
-      { label: "Compare", href: "/#compare" },
+      { label: "Hono", href: "/docs/frameworks/hono" },
+      { label: "React Native", href: "/docs/frameworks/react-native" },
+      { label: "All frameworks", href: "/docs/frameworks/overview" },
     ],
   },
   {
@@ -51,7 +55,10 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     links: [
       { label: "GitHub", href: REPO },
       { label: "npm", href: "https://www.npmjs.com/package/@noverax/courier" },
-      { label: "Contributing", href: `${REPO}/blob/main/CONTRIBUTING.md` },
+      { label: "Changelog", href: `${REPO}/releases` },
+      { label: "Issues", href: `${REPO}/issues` },
+      { label: "Discussions", href: `${REPO}/discussions` },
+      { label: "Contributing", href: `${REPO}/blob/master/CONTRIBUTING.md` },
     ],
   },
 ]

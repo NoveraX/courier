@@ -2,7 +2,8 @@ import Link from "next/link"
 
 /**
  * The foot of every docs and reference page: the licence, and the way
- * home, to the docs, to the API reference and to the repository.
+ * home, to the docs, to the API reference, to Studio's and the MCP
+ * server's pages and to the repository.
  *
  * @returns The footer
  * @example
@@ -24,6 +25,12 @@ export function SiteFooter() {
           </Link>
           <Link href={"/reference"} className="hover:text-fg">
             API
+          </Link>
+          <Link href={"/studio"} className="hover:text-fg">
+            Studio
+          </Link>
+          <Link href={"/mcp"} className="hover:text-fg">
+            MCP
           </Link>
           <a
             href="https://github.com/NoveraX/courier"

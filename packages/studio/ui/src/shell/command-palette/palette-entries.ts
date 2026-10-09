@@ -18,6 +18,7 @@ export type PaletteAction =
   | { kind: "share-session-file" }
   | { kind: "save-as-test" }
   | { kind: "open-session-file" }
+  | { kind: "deliver-webhook" }
   | { kind: "toggle-recording" }
   | { kind: "toggle-theme" }
   | { kind: "clear-requests" };

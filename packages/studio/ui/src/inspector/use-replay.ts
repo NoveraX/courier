@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { endpointName } from "@/features/requests/request-parts";
 import { isStreamRequest } from "@/features/requests/request-state";
 import { streamMessages } from "@/features/requests/stream-summary";
+import { openWebhookSend } from "@/features/webhooks/webhook-send-store";
 import { getSocket } from "@/socket";
 import { isPlaygroundErrorPayload } from "@/socket/playground-guards";
 import { useStudioStore } from "@/store";
@@ -46,6 +47,22 @@ function titleOf(r: RequestEntry, label: string): string {
   return sent ? `${label} · the messages it sent are not sent again` : label;
 }
 
+/* A delivery goes again through the app that defines its webhook, signed afresh there,
+   once the send dialog has shown it — as it came, or changed. */
+function deliverAgain(r: RequestEntry): Replay {
+  const open = (body: unknown) =>
+    openWebhookSend({ webhook: r.source ?? "", to: r.url ?? "", body: body ?? {} });
+  return {
+    label: "Deliver again",
+    title: "Deliver again · signed afresh by the app, with the webhook's own secret",
+    run: () => {
+      if (r.variablesCutFrom === undefined) open(r.variables);
+      else
+        void replayWhole(r, open, `Could not read ${r.source ?? "the webhook"}'s delivery whole`);
+    },
+  };
+}
+
 /* Follow a run: open its request once it arrives — held while recording
    pauses — or say why the runtime could not run it. */
 function follow(rid: string, failure: string, onArrive: (requestId: string) => void): void {
@@ -78,9 +95,10 @@ function follow(rid: string, failure: string, onArrive: (requestId: string) => v
  * headers afresh — and opens the new request in the
  * inspector once it arrives, held while recording pauses, or says why the
  * runtime could not run it. A stream reconnects the same way, and stays
- * open until its server ends it or it is stopped from here. Nothing runs
- * while a saved session shows, since the live requests are left out
- * meanwhile.
+ * open until its server ends it or it is stopped from here. A webhook's
+ * delivery opens the send dialog on it, to deliver it again through the
+ * app that defines the webhook. Nothing runs while a saved session shows,
+ * since the live requests are left out meanwhile.
  *
  * @returns What makes a request's replay
  * @example
@@ -98,14 +116,7 @@ export function useReplay(): (r: RequestEntry) => Replay {
       if (sessionShown) {
         return { label, title: "Go back to the live requests to run it again", run: undefined };
       }
-      if (r.mode === "webhook") {
-        return {
-          label,
-          title:
-            "A webhook came to the app from its sender: deliver it again from a mock, or the sender's own tools",
-          run: undefined,
-        };
-      }
+      if (r.mode === "webhook") return deliverAgain(r);
       if (r.purpose === "csrf-token") {
         return {
           label,

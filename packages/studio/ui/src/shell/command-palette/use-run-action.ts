@@ -4,6 +4,7 @@ import { exportShownRequests } from "@/features/sessions/export-requests";
 import { pickSessionFile } from "@/features/sessions/open-session-file";
 import { shareSessionFile } from "@/features/sessions/session-file-dialog-store";
 import { saveAsTest } from "@/features/tests/recorded-test-store";
+import { openWebhookSend } from "@/features/webhooks/webhook-send-store";
 import { useBackToLive } from "@/hooks/use-back-to-live";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import { useStudioStore } from "@/store";
@@ -51,6 +52,9 @@ export function useRunAction(): (action: PaletteAction) => void {
         return;
       case "open-session-file":
         pickSessionFile();
+        return;
+      case "deliver-webhook":
+        openWebhookSend();
         return;
       case "toggle-recording":
         if (state.shownSession) backToLive();

@@ -2,9 +2,10 @@ import type { ParsedSpec } from "@/features/apis/types";
 
 /**
  * Name an import after its spec: the spec's title, else the most telling
- * part of its base URL, else of the URL it was fetched from.
+ * part of its base URL, else of the URL it was fetched from. Import API
+ * names an import this way, and so does `courier-studio import`.
  *
- * @param spec - The parsed spec
+ * @param spec - The parsed spec: its title and base URL
  * @param url - Where the spec was fetched from, for a URL import
  * @returns A camel-case name
  * @example
@@ -12,7 +13,10 @@ import type { ParsedSpec } from "@/features/apis/types";
  * deriveSourceName({ ...spec, title: "Pet Store" }); // → "petStore"
  * ```
  */
-export function deriveSourceName(spec: ParsedSpec, url?: string): string {
+export function deriveSourceName(
+  spec: Pick<ParsedSpec, "title" | "baseURL">,
+  url?: string,
+): string {
   const fromTitle = sanitize(spec.title);
   if (isUsable(fromTitle)) return toCamelCase(fromTitle);
 

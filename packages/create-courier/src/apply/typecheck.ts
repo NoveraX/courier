@@ -19,6 +19,7 @@ export type TypecheckOutcome =
   | { readonly kind: "unchecked"; readonly reason: string };
 
 const TS_FILE = /\.[cm]?tsx?$/;
+const VUE_FILE = /\.vue$/;
 const ERROR = /^(.+?)\((\d+),\d+\): error TS\d+:/;
 const CHECK_DIR = "node_modules/.cache/create-courier";
 
@@ -53,7 +54,10 @@ function read(output: string, root: string, touched: Touched, findings: Findings
     } else if (/^error TS\d+:/.test(line)) {
       findings.global.push(line);
       keeping = false;
-    } else if (isAbsolute(line.trim()) && TS_FILE.test(line.trim())) {
+    } else if (
+      isAbsolute(line.trim()) &&
+      (TS_FILE.test(line.trim()) || VUE_FILE.test(line.trim()))
+    ) {
       findings.listed.add(canonical(line.trim()));
       keeping = false;
     } else if (!line.startsWith(" ")) keeping = false;
@@ -85,9 +89,9 @@ function uncoveredConfig(root: string, base: string, files: readonly string[]): 
 
 /**
  * Check what the setup touched against the project's own TypeScript and
- * configs: each project its tsconfig stands for, and — for a file none of
- * them includes, a config at the root say — a check that extends one of
- * them. Errors count in the files it added and on the lines it changed;
+ * configs — with vue-tsc where the project has it, which reads .vue files
+ * too: each project its tsconfig stands for, and — for a file none of them
+ * includes, a config at the root say — a check that extends one of them. Errors count in the files it added and on the lines it changed;
  * the rest of the project is the person's to check.
  *
  * @param root - The project's folder
@@ -99,9 +103,13 @@ function uncoveredConfig(root: string, base: string, files: readonly string[]): 
  * ```
  */
 export async function typecheckTouched(root: string, touched: Touched): Promise<TypecheckOutcome> {
-  const tsc = resolveInProject(root, "typescript/bin/tsc");
+  /* vue-tsc is tsc that reads .vue files too, where a Vue project has it. */
+  const vueTsc = resolveInProject(root, "vue-tsc/bin/vue-tsc.js");
+  const tsc = vueTsc ?? resolveInProject(root, "typescript/bin/tsc");
   if (tsc === undefined) return { kind: "no-typescript" };
-  const ours = [...touched.added, ...touched.changed.keys()].filter((path) => TS_FILE.test(path));
+  const checked = (path: string) =>
+    TS_FILE.test(path) || (vueTsc !== undefined && VUE_FILE.test(path));
+  const ours = [...touched.added, ...touched.changed.keys()].filter(checked);
   const findings: Findings = { listed: new Set(), errors: [], global: [] };
   const projects = tsProjects(root);
   const check = async (project: string) => {
@@ -115,8 +123,8 @@ export async function typecheckTouched(root: string, touched: Touched): Promise<
     uncovered.length > 0 ? uncoveredConfig(root, baseProject(projects), uncovered) : undefined;
   if (extra !== undefined) await check(extra);
   if (findings.errors.length > 0) return { kind: "errors", lines: findings.errors };
-  const checked = ours.some((path) => findings.listed.has(canonical(join(root, path))));
-  if (!checked && findings.global.length > 0)
+  const covered = ours.some((path) => findings.listed.has(canonical(join(root, path))));
+  if (!covered && findings.global.length > 0)
     return { kind: "unchecked", reason: findings.global[0] ?? "" };
   return { kind: "clean" };
 }

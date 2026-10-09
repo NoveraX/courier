@@ -49,7 +49,19 @@ npm run dev      # your app: open /courier
 - **Nothing of yours is replaced.** A file is only ever added. Where a file of yours stands where Courier's would go, it is left as it is and its lines are listed for you.
 - **Your files change only where their shape is known.** A plugin in `vite.config.ts`, a route in `app/routes.ts`: each change is shown line by line, made only where the file is in a shape the command knows, and checked against the file as you had it right before it is written. Elsewhere it is left to you, with the lines to add.
 - **It works before you have a backend.** The example API answers from a mock Studio runs, seeded with five users, on the first free port from 7001.
-- **Your toolchain stays yours.** It installs with the package manager your lockfile names, keeps the TypeScript your project has, and says how to move to 6.0 when you are ready.
+- **Your toolchain stays yours.** It installs with the package manager your lockfile names, keeps the TypeScript your project has, and says how to move to 6.0 when you are ready; a project it creates is moved to 6.0 for you.
+
+<br />
+
+## In a new project
+
+Point it at a folder that does not exist yet, and name the framework:
+
+```bash
+npx @noverax/create-courier@latest shop --framework next
+```
+
+It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out.
 
 <br />
 
@@ -75,6 +87,7 @@ bun create @noverax/courier
 | React Router, Remix | `app/routes/api.request.ts` | the routes in `app/routes.ts`; Studio's plugin in `vite.config` |
 | SolidStart | `src/routes/api/request.ts` | Studio's plugin in `vite.config` |
 | React with Vite | no server: the browser calls your API directly | Studio's plugin in `vite.config` |
+| Vue with Vite | no server: the browser calls your API directly | Studio's plugin in `vite.config` |
 | Expo | no server: the app calls your API directly | a Courier tab in the template's tabs |
 | Express | a router on `/api/request` and `/courier` | the router mounted after `express()` |
 | Hono | routes on `/api/request` and `/courier` | the routes mounted after `new Hono()`; `include` in a `tsconfig` that compiles `src/` |
@@ -109,8 +122,8 @@ Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Cod
 
 | Option | |
 |---|---|
-| `[dir]` | The project's folder (default: the working directory) |
-| `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix`, `solid-start`, `expo`, `nestjs`, `fastify`, `hono`, `express`, `react` (default: found in `package.json`) |
+| `[dir]` | The project's folder, or a new one to create (default: the working directory) |
+| `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix`, `solid-start`, `expo`, `nestjs`, `fastify`, `hono`, `express`, `react`, `vue` (default: found in `package.json`) |
 | `--openapi <spec>` | Import your API from a specification, a URL or a file, in place of the example |
 | `--name <name>` | The imported API's name (default: from the specification) |
 | `--no-studio` | Leave Studio out |

@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 
 import { addCourier, type Terminal } from "./add-courier";
 import type { CreateRun } from "./create-run";
+import { createProject } from "./new-project/create-project";
 
 /* A folder a new project can be created in: there is nothing there, or nothing but dotfiles a clone brings. */
 function isFree(root: string): boolean {
@@ -29,5 +30,5 @@ export async function createCourier(run: CreateRun, terminal: Terminal): Promise
       `${root} holds files but no package.json: point the command at a project, or at a new folder`,
     );
   }
-  throw new Error("Creating a new project is not in this command yet");
+  return createProject(root, run, terminal);
 }

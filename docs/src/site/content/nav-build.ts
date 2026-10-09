@@ -64,6 +64,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Mocking Responses", href: "/docs/testing/mocking" },
       { title: "Mock Utilities", href: "/docs/testing/mock-utilities" },
       { title: "Tests from Recorded Traffic", href: "/docs/testing/recorded-tests" },
+      { title: "Breaking Changes in CI", href: "/docs/testing/breaking-changes" },
     ],
   },
   {

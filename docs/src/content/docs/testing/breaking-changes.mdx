@@ -1,0 +1,56 @@
+export const metadata = { title: "Breaking Changes in CI", description: "Report on every pull request what a change to the API definition does to its callers — an endpoint removed, a field the calls must now send, one gone from the answer — with the recorded calls each change touches.", mode: "both" }
+
+Inside one repository the compiler already stops a change that breaks a call site. The API's other callers — a mobile app on last month's release, a partner's integration, another team's service — have no compiler to stop it. `courier-studio diff` is that check: it sets the definition in your branch against the one at a git ref, says what each change does to the callers, counts the recorded calls each changed endpoint has, and fails on a change that breaks them.
+
+```bash
+npx courier-studio diff --base origin/main
+```
+
+## What breaks a caller
+
+Each endpoint is matched by its name in the client — `orders.get` — so a route that moved is a route changed, not one endpoint removed and another added.
+
+| Change | For what a call sends | For what a call gets back |
+| --- | --- | --- |
+| An endpoint removed, or its route or method changed | Breaking | Breaking |
+| A field or parameter that must now be sent | Breaking | — |
+| A field that must now be sent, optional before | Breaking | — |
+| A value it may no longer send: a type dropped, an enum value gone, a bound tightened, an integer where a number was taken | Breaking | — |
+| A field gone from the answer | — | Breaking |
+| A field that may now be missing from the answer | — | Breaking |
+| A value it did not get before: `null`, a new enum value, another type | — | May break |
+| A different success status, `201` where it was `200` | — | May break |
+| A new endpoint, a new optional field, a field no longer read, a value it may now send | Safe | Safe |
+
+A type that changed to another altogether — a string that became a number — breaks callers on both sides.
+
+## The base to compare with
+
+`--base <ref>` reads the definition at a git ref — `origin/main`, a tag, a commit; `origin/main` by default. The ref is checked out in a worktree of its own inside `.courier`, which keeps itself out of git, so its `courier.config.ts` loads with the project's installed packages; the worktree is removed when the command ends. In CI, fetch the base branch first: `actions/checkout` with `fetch-depth: 0`.
+
+`--base-openapi <path>` compares with OpenAPI documents written before instead — a folder of `<source>.openapi.json`, as [`courier-studio openapi --out <folder>`](/docs/advanced/openapi) writes them, or one file — for a base kept as documents, or one from another repository.
+
+## The recorded calls each change touches
+
+With [recorded tests](/docs/testing/recorded-tests) in `tests/recorded` — or the recordings `--recordings <path>` names — each changed endpoint says how many recorded calls it has, and the summary how many of them the new definition no longer fits. A breaking change on an endpoint your app calls a thousand times a day reads differently from one on an endpoint nobody calls.
+
+## In a pull request
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0
+- run: npm ci
+- name: Report what the API change breaks
+  run: npx courier-studio diff --base origin/${{ github.base_ref }} --format markdown --out "$GITHUB_STEP_SUMMARY"
+```
+
+| Option | What it does |
+| --- | --- |
+| `--base <ref>` | The git ref to compare with (default: `origin/main`) |
+| `--base-openapi <path>` | Compare with OpenAPI documents written before |
+| `--recordings <path>` | Recorded calls to count against each change (default: `tests/recorded`, when it exists) |
+| `--format <text\|markdown\|json>` | How the report is written (default: `text`). Markdown lists what breaks and what may in a table, the safe changes folded away |
+| `--out <path>` | Write the report to this file too |
+| `--fail-on <breaking\|warning\|never>` | What fails the command (default: `breaking`) |
+| `--cwd <dir>` | The project's root (default: the working directory) |

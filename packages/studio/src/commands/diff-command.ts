@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { type ArgsDef, defineCommand } from "citty";
 import { loadCourierConfig } from "../server/config-loader";
+import { commentOnPullRequest } from "./diff/comment-on-pull-request";
 import { diffDefinitions } from "./diff/definition-diff";
 import { documentsAtRef, documentsInFiles, documentsOf } from "./diff/definition-documents";
 import { diffMarkdown, diffText, diffTotals } from "./diff/diff-report";
@@ -44,6 +45,11 @@ export const DIFF_ARGS = {
     valueHint: "breaking|warning|never",
     description: "What fails the command (default: breaking)",
   },
+  comment: {
+    type: "boolean",
+    description:
+      "Post the report on the pull request the GitHub Actions job runs for, as one comment later runs keep current",
+  },
   cwd: {
     type: "string",
     valueHint: "dir",
@@ -57,11 +63,12 @@ export const DIFF_ARGS = {
  * send, one gone from the answer, a type narrowed — set against the
  * definition at a git ref or in OpenAPI documents written before, with how
  * many recorded calls each changed endpoint has and how many no longer fit.
- * It fails on a breaking change, the CI step for a pull request.
+ * It fails on a breaking change, the CI step for a pull request; with
+ * `--comment` the report is posted on the pull request too.
  *
  * @example
  * ```sh
- * courier-studio diff --base origin/main --format markdown --out "$GITHUB_STEP_SUMMARY"
+ * courier-studio diff --base origin/main --format markdown --out "$GITHUB_STEP_SUMMARY" --comment
  * ```
  */
 export const diffCommand = defineCommand({
@@ -84,6 +91,7 @@ async function diff(args: {
   format?: string | undefined;
   out?: string | undefined;
   "fail-on"?: string | undefined;
+  comment?: boolean | undefined;
   cwd?: string | undefined;
 }): Promise<boolean> {
   const format = args.format ?? "text";
@@ -110,6 +118,8 @@ async function diff(args: {
     mkdirSync(dirname(resolve(args.out)), { recursive: true });
     writeFileSync(resolve(args.out), report);
   }
+  if (args.comment)
+    await commentOnPullRequest(root, diffMarkdown(changed, impact), changed.length > 0);
   const { breaking, warnings } = diffTotals(changed);
   return failOn === "never" || (breaking === 0 && (failOn !== "warning" || warnings === 0));
 }

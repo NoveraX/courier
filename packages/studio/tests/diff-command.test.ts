@@ -4,9 +4,9 @@
  * worktree inside `.courier`, removed afterwards — or in OpenAPI documents
  * written before. It fails on a breaking change, says what breaks and how
  * many recorded calls each changed endpoint has, and passes when asked to
- * fail on nothing.
+ * fail on nothing; asked to, it posts the report on the pull request.
  */
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFile, execFileSync, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -17,7 +17,9 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { createServer } from "node:http";
 import { createRequire } from "node:module";
+import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -49,6 +51,19 @@ function studio(...args: string[]) {
     encoding: "utf8",
     timeout: 60_000,
     env: { ...process.env, NO_COLOR: "1" },
+  });
+}
+
+/* The CLI in a child process, while this one answers for GitHub. */
+function studioBeside(env: Record<string, string>, ...args: string[]) {
+  return new Promise<{ status: number; stdout: string; stderr: string }>((done) => {
+    execFile(
+      process.execPath,
+      ["--import", TSX, CLI, ...args, "--cwd", root],
+      { encoding: "utf8", timeout: 60_000, env: { ...process.env, NO_COLOR: "1", ...env } },
+      (error, stdout, stderr) =>
+        done({ status: typeof error?.code === "number" ? error.code : 0, stdout, stderr }),
+    );
   });
 }
 
@@ -131,5 +146,57 @@ describe("courier-studio diff", () => {
     expect(readFileSync(summary, "utf8")).toContain(
       "| Breaking | `shop order` | answer.total is no longer in the answer | 2 |",
     );
+  });
+
+  it("posts the report on the pull request the job runs for, its verdict unchanged", async () => {
+    const posted: string[] = [];
+    const github = createServer(async (req, res) => {
+      let text = "";
+      for await (const chunk of req) text += chunk;
+      if (req.method === "POST") posted.push(JSON.parse(text).body);
+      res.writeHead(req.method === "POST" ? 201 : 200, { "content-type": "application/json" });
+      res.end(req.method === "POST" ? JSON.stringify({ id: 1 }) : "[]");
+    });
+    await new Promise<void>((done) => github.listen(0, "127.0.0.1", done));
+    const event = join(root, ".courier", "event.json");
+    writeFileSync(event, JSON.stringify({ pull_request: { number: 12 } }));
+
+    try {
+      const run = await studioBeside(
+        {
+          GITHUB_TOKEN: "job-token",
+          GITHUB_REPOSITORY: "acme/shop",
+          GITHUB_EVENT_PATH: event,
+          GITHUB_API_URL: `http://127.0.0.1:${(github.address() as AddressInfo).port}`,
+          GITHUB_WORKSPACE: root,
+        },
+        "diff",
+        "--base",
+        "HEAD",
+        "--comment",
+      );
+      const unposted = await studioBeside(
+        { GITHUB_TOKEN: "" },
+        "diff",
+        "--base",
+        "HEAD",
+        "--comment",
+      );
+
+      expect(run.status, run.stderr).toBe(1);
+      expect(run.stdout).toContain("BREAKING  answer.total is no longer in the answer");
+      expect(`${run.stdout}${run.stderr}`).toContain("Posted the report on pull request #12");
+      expect(posted).toHaveLength(1);
+      expect(posted[0]).toMatch(/^<!-- courier-studio diff: \. -->\n## API definition changes\n/);
+      expect(posted[0]).toContain(
+        "| Breaking | `shop order` | answer.total is no longer in the answer | 2 |",
+      );
+      expect(unposted.status).toBe(1);
+      expect(`${unposted.stdout}${unposted.stderr}`).toContain(
+        "The report is not posted on a pull request: no token — pass the job's token to the step as GITHUB_TOKEN",
+      );
+    } finally {
+      await new Promise((done) => github.close(done));
+    }
   });
 });

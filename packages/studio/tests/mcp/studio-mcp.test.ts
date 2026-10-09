@@ -549,6 +549,56 @@ describe("courier-studio mcp", () => {
     expect(sent).toEqual([]);
   });
 
+  it("tells the client its token was refused, rather than leaving it waiting", async () => {
+    const input = new PassThrough();
+    const lines: string[] = [];
+    const bridged = bridgeToStudio({
+      input,
+      write: (line) => lines.push(line),
+      url,
+      token: "another project's token",
+    });
+    input.end(`${JSON.stringify({ jsonrpc: "2.0", id: 7, method: "tools/list", params: {} })}\n`);
+    await bridged;
+
+    expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({
+      id: 7,
+      error: { code: -32603, message: expect.stringContaining("did not take the token") },
+    });
+  });
+
+  it("tells the client no Studio answers where it was pointed, rather than handing it a page", async () => {
+    const page = createServer((_request, response) => {
+      response
+        .writeHead(404, { "content-type": "text/html" })
+        .end("<!doctype html><p>Not here</p>");
+    });
+    await new Promise<void>((resolve) => page.listen(0, "127.0.0.1", resolve));
+    const input = new PassThrough();
+    const lines: string[] = [];
+    const bridged = bridgeToStudio({
+      input,
+      write: (line) => lines.push(line),
+      url: `http://127.0.0.1:${(page.address() as AddressInfo).port}/mcp`,
+      token: TOKEN,
+    });
+    input.end(
+      [
+        JSON.stringify({ jsonrpc: "2.0", id: "a", method: "tools/list", params: {} }),
+        JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+        "",
+      ].join("\n"),
+    );
+    await bridged;
+    await new Promise<void>((resolve) => page.close(() => resolve()));
+
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0] ?? "{}")).toMatchObject({
+      id: "a",
+      error: { message: expect.stringContaining("No Studio answered at") },
+    });
+  });
+
   it("tells the client Studio is not running, rather than hanging", async () => {
     const input = new PassThrough();
     const lines: string[] = [];

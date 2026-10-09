@@ -1,6 +1,7 @@
 import { createInterface } from "node:readline";
 import { META } from "@noverax/courier-mcp/internal";
 
+import { answerFor, unreachable } from "./bridge-answer";
 import { type BridgedClient, callConfirming, confirmsThroughBridge } from "./bridge-confirmation";
 import { createClientAsks } from "./client-asks";
 
@@ -78,18 +79,9 @@ export async function bridgeToStudio(ends: BridgeEnds): Promise<void> {
       if (response.status === 202 || response.status === 204) return undefined;
       const text = await response.text();
       if (message?.method === "initialize") client.version = versionIn(text) ?? client.version;
-      return text.replace(/\n/g, "");
+      return answerFor(message, response.status, text, ends.url);
     } catch (error) {
-      if (message?.id === undefined) return undefined;
-      const reason = error instanceof Error ? error.message : String(error);
-      return JSON.stringify({
-        jsonrpc: "2.0",
-        id: message.id,
-        error: {
-          code: -32603,
-          message: `Studio could not be reached at ${ends.url} (${reason}): start it with npx courier-studio`,
-        },
-      });
+      return unreachable(message, ends.url, error instanceof Error ? error.message : String(error));
     }
   }
 }

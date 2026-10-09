@@ -1,0 +1,49 @@
+export const metadata = { title: "Studio in Your Editor", description: "Above each call to an endpoint in your code, how its calls went in Studio — how many, how many failed, how long they took — and from Studio, the code that calls an endpoint, opened in your editor.", mode: "both" }
+
+Studio knows how every call to each endpoint went; your editor knows where the code makes them. The Courier extension for VS Code puts the two together, above the call itself:
+
+```ts title="src/checkout.ts"
+// orders.place · 34 calls · 1 failed · p95 210 ms
+const order = await api.orders.place({ sku, quantity })
+```
+
+And the other way round, Studio's inspector and Explorer list the code that calls an endpoint, each call site opening in your editor at its line.
+
+## The extension
+
+Install **Courier** from the extensions view of VS Code, or of Cursor, Windsurf and VSCodium from Open VSX, and start Studio for your project as you always do:
+
+```bash
+npx courier-studio
+```
+
+Above each call to an endpoint, the extension shows how that endpoint's calls went in this session: how many there were, how many failed and how many are still in flight, and how long nineteen in twenty took. A stream or a channel counts its connections, and how many are still open. A click on the line opens the endpoint in Studio's Explorer. Hover over the call for the rest: the median and the 95th percentile, the statuses the calls ended with, and the latest failure with its reason. The figures move as your app runs, every few seconds while the editor has focus.
+
+| Setting | What it does |
+| --- | --- |
+| `courier.hints.enabled` | Show the hints above endpoint calls (default: on) |
+| `courier.hints.refreshSeconds` | How often the figures are brought up to date (default: 5) |
+| `courier.studio.url` | Studio's address, when it runs for a project outside the workspace |
+
+**Courier: Open in Courier Studio** opens Studio for the project of the file in front, and the status bar shows **Studio** while one answers for it.
+
+## How a call is found
+
+Studio writes where it runs to `.courier/studio.json` in your project while it runs, and takes it away when it stops; the extension reads the nearest one above the file you are in, so each project of a monorepo finds its own Studio. The extension sends Studio the file as it stands in the editor, saved or not, and Studio reads the calls in it against the endpoints your config defines:
+
+| A call | Is read as |
+| --- | --- |
+| `api.orders.place({ sku })` | `orders.place`: a call that ends with an endpoint's names, after whatever it is made on |
+| `backend.payments.account.me()` | `payments`' `account.me`: the source's name written before the endpoint's settles which source |
+| `const shop = createProxyCaller<typeof api>("shop")` then `shop.account.me()` | `shop`'s `account.me`: a caller the file creates names its source |
+| `q.orders.useQuery("list")` | `orders.list`: a query hook names its endpoint as its first argument |
+
+When two sources define an endpoint of the same name and nothing settles which one a call reaches, the extension shows both. A top-level endpoint is matched only through a caller the file creates or its source's name — its one name, `get` or `list`, is too common to tell a call by. TypeScript and JavaScript files are read, and the scripts of Vue, Svelte and Astro components.
+
+## From Studio to the code
+
+Every request's **Overview** in the inspector, and every endpoint in the Explorer, has a **Called from** section: the files and lines that call the endpoint, each with its line of code. A click opens the file at that line in your editor — choose which in **Settings → Editor**: VS Code, Cursor, Windsurf, VSCodium, Zed, WebStorm or IntelliJ IDEA. Studio looks through the files Git tracks, so whatever `.gitignore` leaves out is left out; outside Git, everything but dependencies, builds and caches.
+
+## What stays on your machine
+
+The extension talks only to Studio, on this machine: it reads what any page of Studio's reads, and changes nothing, so it needs no token. Studio reads the files you send it and your project's own, and keeps nothing of them. A Studio serving a [public demo](/docs/studio/overview) writes no address file and answers neither the extension nor **Called from**: it reads no project's code for its visitors.

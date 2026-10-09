@@ -11,7 +11,8 @@ export interface ExampleSource {
   readonly expression: string;
 }
 
-const PLAIN: ExampleSource = { name: "api", expression: "api" };
+/** The example API as its module exports it. */
+export const PLAIN_SOURCE: ExampleSource = { name: "api", expression: "api" };
 
 /**
  * The example API built for Studio, where its module exports a factory:
@@ -35,53 +36,94 @@ function studioBlock(ctx: RecipeContext): string {
     : `\n  studio: { port: ${ctx.ports.studio} },`;
 }
 
+/* Where the list is kept: the project's root, or — for a server TypeScript compiles from `src/` alone — beside the server's code. */
+function listComment(path: string): string {
+  return path === "courier.config.ts"
+    ? `/**
+ * The APIs this project calls. Studio and the MCP server read them here,
+ * and an API Studio imports is declared here too.
+ */`
+    : `/**
+ * The APIs this project calls: the server registers them from here as it
+ * starts, and courier.config.ts passes the list on to Studio and the MCP
+ * server — an API Studio imports is declared here too.
+ */`;
+}
+
 /**
- * `courier.config.ts`, the one list of the APIs the project calls: the
- * app's server route registers them from it, and Studio and the MCP server
- * read them there. With a specification to import it starts empty, and the
- * import declares the API in it.
+ * The project's one list of the APIs it calls — `courier.config.ts`, or
+ * a module the server compiles, which `courier.config.ts` passes on: the
+ * app registers them from it, and Studio and the MCP server read them
+ * there. With a specification to import it starts empty, and the import
+ * declares the API in it.
  *
  * @param ctx - The project, and what is set up in it
  * @param api - The example API's module, relative to the root
  * @param source - How the module gives the API
+ * @param path - Where the list goes, relative to the root
  * @returns The file
  * @example
  * ```ts
  * courierConfig(ctx, "src/courier/api.ts");
+ * courierConfig(ctx, "src/courier/api.ts", PLAIN_SOURCE, "src/courier/config.ts");
  * ```
  */
 export function courierConfig(
   ctx: RecipeContext,
   api: string,
-  source: ExampleSource = PLAIN,
+  source: ExampleSource = PLAIN_SOURCE,
+  path = "courier.config.ts",
 ): RecipeFile {
-  const purpose = "lists your APIs for the app, Studio and agents";
-  if (ctx.choices.openapi !== undefined) {
-    const content = `import { defineConfig } from "@noverax/courier/config";
-
-/**
- * The APIs this project calls. Studio and the MCP server read them here,
- * and an API Studio imports is declared here too.
- */
-export default defineConfig({
-  sources: {},${studioBlock(ctx)}
-});
-`;
-    return { path: "courier.config.ts", content, purpose };
-  }
+  const purpose =
+    path === "courier.config.ts"
+      ? "lists your APIs for the app, Studio and agents"
+      : "lists your APIs: the server registers them from here";
+  const sources =
+    ctx.choices.openapi !== undefined
+      ? "{}"
+      : `{ ${source.name === "api" ? "api" : `api: ${source.expression}`} }`;
+  const example =
+    ctx.choices.openapi !== undefined
+      ? ""
+      : `\nimport { ${source.name} } from "${importSpecifier(path, api, ctx.extension)}";\n`;
   const content = `import { defineConfig } from "@noverax/courier/config";
-
-import { ${source.name} } from "${importSpecifier("courier.config.ts", api, ctx.extension)}";
-
-/**
- * The APIs this project calls. Studio and the MCP server read them here,
- * and an API Studio imports is declared here too.
- */
+${example}
+${listComment(path)}
 export default defineConfig({
-  sources: { ${source.name === "api" ? "api" : `api: ${source.expression}`} },${studioBlock(ctx)}
+  sources: ${sources},${studioBlock(ctx)}
 });
 `;
-  return { path: "courier.config.ts", content, purpose };
+  return { path, content, purpose };
+}
+
+/**
+ * `courier.config.ts` for a server TypeScript compiles from `src/` alone,
+ * which cannot import a file at the project's root: the list lives in a
+ * module beside the server's code, and the config at the root passes it on
+ * to Studio and the MCP server — one list, which Studio edits where it is
+ * written.
+ *
+ * @param ctx - The project, and what is set up in it
+ * @param list - The module that holds the list, relative to the root
+ * @returns The file
+ * @example
+ * ```ts
+ * passOnConfig(ctx, "src/courier/config.ts").content; // 'export { default } from "./src/courier/config";' …
+ * ```
+ */
+export function passOnConfig(ctx: RecipeContext, list: string): RecipeFile {
+  const content = `/**
+ * The APIs this project calls, as ${list} lists them: the server compiles
+ * src/ alone, so the list lives there, and Studio and the MCP server read
+ * it through this file.
+ */
+export { default } from "${importSpecifier("courier.config.ts", list, ctx.extension)}";
+`;
+  return {
+    path: "courier.config.ts",
+    content,
+    purpose: `passes ${list}'s list on to Studio and agents`,
+  };
 }
 
 /**
@@ -101,7 +143,7 @@ export default defineConfig({
 export function courierMocks(
   ctx: RecipeContext,
   api: string,
-  source: ExampleSource = PLAIN,
+  source: ExampleSource = PLAIN_SOURCE,
 ): RecipeFile {
   const content = `import { defineMocks, defineMockServer } from "@noverax/courier-mock";
 

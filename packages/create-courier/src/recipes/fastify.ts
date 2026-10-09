@@ -5,7 +5,6 @@ import { devStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { serverDir, serverFiles } from "./shared/server-files";
-import { sourcesAfterImport } from "./shared/sources-after-import";
 
 /* `fastify start -w` restarts the server on any change in the project, Studio's own data in .courier/ among them. */
 function watchesAll(command: string): boolean {
@@ -69,9 +68,9 @@ import { caller } from "${from("server-caller.ts")}";
 import { courierPlugin } from "@noverax/courier-fastify";
 import fp from "fastify-plugin";
 
-${pageImports}import { sources } from "${from("sources.ts")}";
+${pageImports}import config from "${from("config.ts")}";
 
-registerSources(sources);
+registerSources(config.sources);
 
 /**
  * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}${ctx.choices.studio ? ". While you develop, the\n * server's calls show in Courier Studio" : ""}.
@@ -133,6 +132,5 @@ export function fastifyRecipe(ctx: RecipeContext): Recipe {
       : [],
     manual: register,
     next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
-    ...(example ? {} : { afterImport: sourcesAfterImport(dir) }),
   };
 }

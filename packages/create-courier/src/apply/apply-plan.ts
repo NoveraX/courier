@@ -4,7 +4,7 @@ import { changedLines } from "../edit/line-diff";
 import type { Plan, PlannedEdit } from "../plan/build-plan";
 import { manualLines, nextLines } from "../plan/plan-lines";
 import type { RecipeContext } from "../recipes/recipe-types";
-import { prepare, reportTypes, writeAfterImport } from "./after-install";
+import { prepare, reportTypes } from "./after-install";
 import { importSpecification } from "./import-specification";
 import { install, installCommands } from "./install";
 import type { Touched } from "./typecheck";
@@ -60,12 +60,6 @@ async function installAndCheck(
   if (run.openapi !== undefined) {
     const status = await importSpecification(ctx.project.root, run.openapi, run.name);
     if (status !== 0) return status;
-    const after = writeAfterImport(ctx.project.root, plan, terminal);
-    return reportTypes(
-      ctx.project.root,
-      { ...touched, added: [...touched.added, ...after] },
-      terminal,
-    );
   }
   return reportTypes(ctx.project.root, touched, terminal);
 }

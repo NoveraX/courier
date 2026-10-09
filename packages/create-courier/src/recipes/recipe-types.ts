@@ -102,9 +102,4 @@ export interface Recipe {
    * files are checked.
    */
   readonly prepare?: ReadonlyArray<{ readonly bin: string; readonly args: readonly string[] }>;
-  /**
-   * Files written once a specification is imported, from what the import
-   * declared: a server's list of the APIs it registers.
-   */
-  readonly afterImport?: (root: string) => RecipeFile[];
 }

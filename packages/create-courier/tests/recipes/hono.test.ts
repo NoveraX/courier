@@ -56,7 +56,25 @@ describe("honoRecipe", () => {
       (file) => file.path === "src/courier/routes.ts",
     );
 
-    expect(routes?.content).toContain('import { sources } from "./sources.js";');
+    expect(routes?.content).toContain('import config from "./config.js";');
+    expect(routes?.content).toContain("registerSources(config.sources);");
     expect(routes?.content).toContain('courier.all("/api/request", courierHandler());');
+  });
+
+  it("keeps one list of APIs beside the server's code, which courier.config.ts passes on to Studio", () => {
+    const root = projectWith({
+      "package.json": manifest({ hono: "^4.13.13" }),
+      "tsconfig.json": TSCONFIG,
+    });
+    const files = new Map(
+      honoRecipe(contextOf(root, "hono")).files.map((file) => [file.path, file.content]),
+    );
+
+    expect(files.get("courier.config.ts")).toContain(
+      'export { default } from "./src/courier/config.js";',
+    );
+    expect(files.get("src/courier/config.ts")).toContain('import { api } from "./api.js";');
+    expect(files.get("src/courier/config.ts")).toContain("sources: { api },");
+    expect([...files.keys()]).not.toContain("src/courier/sources.ts");
   });
 });

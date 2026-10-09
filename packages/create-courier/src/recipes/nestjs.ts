@@ -8,7 +8,6 @@ import { studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { SERVER_DIR, serverFiles } from "./shared/server-files";
-import { sourcesAfterImport } from "./shared/sources-after-import";
 
 const APP_MODULE = "src/app.module.ts";
 
@@ -31,9 +30,9 @@ function courierModule(ctx: RecipeContext, withPage: boolean): RecipeFile[] {
 import { registerSources } from "@noverax/courier";
 import { courierMiddleware } from "@noverax/courier-nestjs";
 
-${withPage ? `import { CourierController } from "${from(path, "courier.controller.ts")}";\n` : ""}import { sources } from "${from(path, "sources.ts")}";
+${withPage ? `import { CourierController } from "${from(path, "courier.controller.ts")}";\n` : ""}import config from "${from(path, "config.ts")}";
 
-registerSources(sources);
+registerSources(config.sources);
 
 /**
  * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}.
@@ -140,6 +139,5 @@ export function nestRecipe(ctx: RecipeContext): Recipe {
     scripts: studioScripts(ctx),
     manual: [],
     next: [...studioStep(ctx), startStep(ctx, example)],
-    ...(example ? {} : { afterImport: sourcesAfterImport(SERVER_DIR) }),
   };
 }

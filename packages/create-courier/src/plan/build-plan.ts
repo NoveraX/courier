@@ -46,8 +46,6 @@ export interface Plan {
   readonly next: readonly NextStep[];
   /** Programs of the project's to run once the packages are installed: they write the types the added files read. */
   readonly prepare: NonNullable<Recipe["prepare"]>;
-  /** Files written once the specification is imported, from what it declared. */
-  readonly afterImport: Recipe["afterImport"];
 }
 
 /**
@@ -89,7 +87,6 @@ export function buildPlan(ctx: RecipeContext, recipe: Recipe): Plan {
     ],
     next: recipe.next,
     prepare: recipe.prepare ?? [],
-    afterImport: recipe.afterImport,
   };
 }
 

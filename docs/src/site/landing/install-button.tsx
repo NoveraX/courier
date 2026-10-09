@@ -2,6 +2,7 @@
 
 import { cn } from "@/site/cn"
 import { copyText } from "@/site/copy-text"
+import { CommandWords } from "@/site/landing/command-words"
 import { START_COMMAND } from "@/site/landing/start-command"
 import { useFlash } from "@/site/use-flash"
 
@@ -30,8 +31,8 @@ const LOOK = {
 
 /**
  * An install command as a button: a click copies it, and the button says
- * so for a moment. A command too long for a narrow screen wraps rather
- * than hide its end — the flag that makes it the right one.
+ * so for a moment. A command too long for a narrow screen wraps between
+ * its words rather than hide its end — the flag that makes it the right one.
  *
  * @param props - Where it sits, which sets its size; and the command, the one that sets Courier up by default
  * @returns The button
@@ -59,8 +60,8 @@ export function InstallButton({
       )}
     >
       <span className="text-fg-subtle">$</span>
-      <span className={cn("min-w-0 [overflow-wrap:anywhere]", look === "menu" && "flex-1")}>
-        {command}
+      <span className={cn("min-w-0", look === "menu" && "flex-1")}>
+        <CommandWords command={command} />
       </span>
       <span aria-live="polite" className={style.label}>
         {copied ? "copied" : "copy"}

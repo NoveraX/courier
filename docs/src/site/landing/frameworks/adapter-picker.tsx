@@ -3,6 +3,7 @@
 import { useState } from "react"
 import type { CodeToken } from "@/site/code/highlight-tokens"
 import { copyText } from "@/site/copy-text"
+import { CommandWords } from "@/site/landing/command-words"
 import { PageLink } from "@/site/landing/page-link"
 import { START_COMMAND } from "@/site/landing/start-command"
 import { useInView } from "@/site/landing/use-in-view"
@@ -100,8 +101,11 @@ export function AdapterPicker({
         <AdapterCode adapter={adapter} lines={adapter.lines} />
         <div className="flex min-h-11.5 min-w-0 items-center gap-3 border-t border-line py-2 pr-2 pl-4 font-mono text-label tracking-normal">
           <span className="text-fg-subtle">$</span>
-          <span className="min-w-0 flex-1 text-fg-muted [overflow-wrap:anywhere]">
-            {START_COMMAND} --framework <span className="text-fg">{adapter.framework}</span>
+          <span className="min-w-0 flex-1 text-fg-muted">
+            <CommandWords
+              command={command}
+              toneOf={(_, at, words) => (at === words.length - 1 ? "text-fg" : undefined)}
+            />
           </span>
           <button
             type="button"

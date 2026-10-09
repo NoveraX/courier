@@ -11,7 +11,8 @@ export interface RequestStartEvent extends StudioEvent {
   variables: unknown;
   /** The size in bytes of the whole variables as JSON, when `variables` is a part of them. */
   variablesCutFrom?: number;
-  mode: "direct" | "proxy";
+  /** How the call came: made by the app directly, through Courier's proxy, or delivered to it as a webhook. */
+  mode: "direct" | "proxy" | "webhook";
   middlewareCount: number;
   hasValidation: { variables: boolean; response: boolean };
   /** The endpoint's HTTP verb (`"GET"`, `"DELETE"`), when it declares one. */
@@ -93,6 +94,8 @@ export interface RequestErrorEvent extends StudioEvent {
   status?: number;
   /** The upstream's response headers, when it answered. */
   headers?: Record<string, string>;
+  /** The headers the call came with, when the runtime has them: a refused webhook delivery's. */
+  requestHeaders?: Record<string, string>;
   /** The upstream's error body, when it answered: a part of it when it is too large for an event. */
   data?: unknown;
   /** The size in bytes of the whole error body as JSON, when `data` is a part of it. */

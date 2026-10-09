@@ -11,7 +11,12 @@ const RUNTIME_TIMEOUT_MS = 10_000;
 /** A request's whole body as JSON, or why there is none. */
 export type BodyAnswer = { ok: true; data: string } | { ok: false; error: string };
 
-type Asked = { owner: string; requestId: string; part: "request" | "response" };
+/** Which body is asked for: of which request, made or answered by whom. */
+export interface Asked {
+  readonly owner: string;
+  readonly requestId: string;
+  readonly part: "request" | "response";
+}
 
 /* What a page asked for: the mock or app that made the request, the request, and which body. */
 function askedOf(raw: unknown, ownerKey: "serverId" | "sessionId"): Asked | undefined {
@@ -33,24 +38,35 @@ function answer(ack: unknown, body: BodyAnswer): void {
   if (typeof ack === "function") ack(body);
 }
 
-/* An app's request: asked of the runtime that made it, which keeps its latest bodies whole. */
-function askRuntime({ owner, requestId, part }: Asked, ack: unknown): void {
+/**
+ * A request's whole body, asked of the runtime that made it, which keeps
+ * its latest bodies whole: what a replay sends again when the request's
+ * event carried only a part of its variables.
+ *
+ * @param asked - The runtime's session, the request, and which body
+ * @returns The body as JSON, or why there is none
+ * @example
+ * ```ts
+ * const body = await wholeBodyOf({ owner: r.sessionId, requestId: r.id, part: "request" });
+ * ```
+ */
+export function wholeBodyOf({ owner, requestId, part }: Asked): Promise<BodyAnswer> {
   const runtime = runtimeRegistry.get(owner)?.socket;
   if (!runtime?.connected) {
-    answer(ack, {
+    return Promise.resolve({
       ok: false,
       error: "The app that made this request is not attached to Studio now.",
     });
-    return;
   }
-  runtime
-    .timeout(RUNTIME_TIMEOUT_MS)
-    .emit("runtime:body", { requestId, part }, (error: Error | null, reply: unknown) => {
-      answer(
-        ack,
-        error ? { ok: false, error: "The app did not send the body." } : bodyAnswerOf(reply),
-      );
-    });
+  return new Promise((resolve) => {
+    runtime
+      .timeout(RUNTIME_TIMEOUT_MS)
+      .emit("runtime:body", { requestId, part }, (error: Error | null, reply: unknown) => {
+        resolve(
+          error ? { ok: false, error: "The app did not send the body." } : bodyAnswerOf(reply),
+        );
+      });
+  });
 }
 
 /**
@@ -80,10 +96,10 @@ export function bindBodies(
     if (!reply) return answer(ack, { ok: false, error: `No mock is named "${serverId}".` });
     answer(ack, bodyAnswerOf(await reply));
   });
-  socket.on("request:body", (raw: unknown, ack?: unknown) => {
+  socket.on("request:body", async (raw: unknown, ack?: unknown) => {
     const asked = askedOf(raw, "sessionId");
     if (!asked)
       return answer(ack, { ok: false, error: "Studio could not read which body to send." });
-    askRuntime(asked, ack);
+    answer(ack, await wholeBodyOf(asked));
   });
 }

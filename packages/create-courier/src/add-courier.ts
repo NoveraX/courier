@@ -3,7 +3,7 @@ import type { TerminalStyle } from "@noverax/courier/internal";
 import { withAgents } from "./agents";
 import { applyPlan } from "./apply/apply-plan";
 import type { CreateRun } from "./create-run";
-import { detectFramework, FRAMEWORKS, type Framework, frameworkById } from "./frameworks";
+import { frameworkOf } from "./framework-of";
 import { buildPlan, changesAnything } from "./plan/build-plan";
 import { nextLines, planLines } from "./plan/plan-lines";
 import { importExtension } from "./project/module-style";
@@ -14,7 +14,7 @@ import {
   projectManager,
 } from "./project/package-manager";
 import { portsOf } from "./project/ports";
-import { type Project, readProject } from "./project/read-project";
+import { readProject } from "./project/read-project";
 import { askYesNo } from "./prompt";
 import type { RecipeContext, SetupChoices } from "./recipes/recipe-types";
 import { wantsMcp } from "./wants-mcp";
@@ -24,23 +24,6 @@ export interface Terminal {
   readonly interactive: boolean;
   readonly style: TerminalStyle;
   print(lines: readonly string[]): void;
-}
-
-function frameworkOf(
-  project: Project,
-  asked: string | undefined,
-): Framework & Required<Pick<Framework, "recipe">> {
-  const framework = asked === undefined ? detectFramework(project) : frameworkById(asked);
-  if (framework === undefined) {
-    const known = FRAMEWORKS.map((known) => known.label).join(", ");
-    throw new Error(
-      `No framework Courier sets up was found in package.json; it knows ${known}. Name one with --framework.`,
-    );
-  }
-  const { recipe } = framework;
-  if (recipe === undefined)
-    throw new Error(`Setting Courier up in ${framework.label} is not in this command yet`);
-  return { ...framework, recipe };
 }
 
 function managerOf(root: string, asked: string | undefined): PackageManager {

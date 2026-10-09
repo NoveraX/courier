@@ -1,0 +1,81 @@
+export const metadata = { title: "Audit", description: "How Studio's Audit reads the requests your app made — performance, reliability, security and best practices — what each finding means, how the score is counted, and how an agent reads the same findings.", mode: "both" }
+
+## What it reads
+
+The Audit page reads the requests Studio recorded — the calls your app made, in the session it shows — and says what they reveal: an endpoint that fails one call in four, a list call followed by forty detail calls, a write sent without credentials, a response that arrives without the headers that protect it. It reads traffic, not code, so a finding names the calls behind it, and a fix is checked by making the calls again.
+
+It runs when the page opens and keeps its findings still while you read them. The header says when it ran and how many requests arrived since; **Re-run** reads them. A webhook delivery is left out — your app was called, it made no call — and so is a request still in flight.
+
+## Findings
+
+Each finding has a severity and a category, says what was seen and why it matters, and suggests a fix — often as code. **Affected endpoints** lists each endpoint with what was seen there; **View calls** opens the Timeline searched for it.
+
+| Severity | Meaning |
+| --- | --- |
+| Error | Will hurt users or leak data: fix before release |
+| Warning | Costs time, money or resilience: worth fixing |
+| Hint | A practice that would make the API sturdier |
+| Pass | A check the traffic passed |
+
+The severity filter and the search narrow the list. **Copy report** puts it on the clipboard as Markdown; **Export .md** saves it.
+
+### Performance
+
+| Finding | Severity | When |
+| --- | --- | --- |
+| N+1 request pattern | Error | A list call followed by detail calls to one endpoint, one per item |
+| Timeout risk | Error | The 95th percentile of an endpoint's duration passes 5 s |
+| Oversized responses | Error | An endpoint's answers average more than 1 MB |
+| Slow endpoints | Warning | The 95th percentile passes 1 s |
+| Sequential waterfall | Warning | Independent requests wait for one another |
+| Duplicate requests | Warning | The same call, with the same variables, within 2 s |
+| High middleware overhead | Warning | Middleware takes more than 30% of a call's time |
+| Slow middleware detected | Warning | One middleware takes more than 50 ms |
+| Large request payloads | Warning | A request body passes 100 KB |
+| No caching detected | Hint | The same reads, answered again and again, none through a cache |
+| High proxy overhead | Hint | The trips to and from the proxy take more than a third of a call |
+| High validation overhead | Hint | Schema validation takes more than 20% of a call's time |
+| No response compression | Hint | Answers over 1 KB without `Content-Encoding` |
+| Empty array responses | Hint | An endpoint answered `[]` |
+
+### Reliability
+
+| Finding | Severity | When |
+| --- | --- | --- |
+| High error rate | Error | More than 20% of an endpoint's calls fail |
+| Errors without response validation | Error | An endpoint fails and has no response schema to read its errors |
+| Repeated validation failures | Warning | The same validation error, again and again |
+| Inconsistent response sizes | Warning | One endpoint's answers vary wildly in size |
+| Retry on non-idempotent mutation | Warning | A write's endpoint runs retry middleware |
+
+### Security
+
+| Finding | Severity | When |
+| --- | --- | --- |
+| Mutations without authentication | Error | A write sent with no credential header |
+| Sensitive data in URL | Error | A token, a password or a key in a query string |
+| Cookies forwarded via proxy | Warning | The proxy carries the browser's cookies upstream |
+| Server version disclosure | Warning | `Server` or `X-Powered-By` names the software |
+| Missing security headers | Hint | No answer carries `Strict-Transport-Security`, `X-Content-Type-Options` or `X-Frame-Options` |
+| No response validation | Hint | An endpoint with no response schema |
+| No input validation | Hint | An endpoint sends variables no schema checked |
+
+### Best practices
+
+| Finding | Severity | When |
+| --- | --- | --- |
+| All requests use direct mode | Warning | The browser calls upstreams directly, so their secrets reach the page |
+| Mixed mode usage | Warning | One endpoint is called directly and through the proxy |
+| HTTP method mismatch | Warning | A write sent over GET |
+| Inconsistent status codes | Hint | One endpoint answers success with different statuses |
+| No schemas at all | Hint | An endpoint declares neither schema |
+
+## The score
+
+The score starts at 100. Each error takes 15, each warning 5, each hint 2, and each check passed adds 1; errors take at most 60 in all, warnings 30 and hints 10, so one kind of finding cannot empty the score alone. 90 and above reads **Excellent**, 80 **Good**, 70 **Needs attention**, and below it **At risk**. Each category has a score of its own, counted the same way.
+
+The score reflects the traffic it read: an endpoint never called is not judged slow, and a quiet session scores well. Exercise the app — or [replay a recorded session](/docs/studio/session-files) — before reading it as a verdict.
+
+## For your agent
+
+The agent in your editor reads the same audit, by the same rules, through [Studio's MCP server](/docs/agents/studio): the `audit` tool answers with the score and each finding — errors first, with the endpoints it concerns, a few of the requests behind it and the suggested fix. Ask it to *fix what the audit found in checkout*, and it reads the findings, changes the code, and sends the requests again to see them pass.

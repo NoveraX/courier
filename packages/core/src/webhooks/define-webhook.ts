@@ -5,6 +5,7 @@ import { readBoundedBody } from "../adapter/read-body";
 import { ConfigurationError } from "../errors/configuration-error";
 import { createLogger } from "../logger";
 import type { WebhookDelivery, WebhookSignature } from "./types";
+import { rememberWebhook } from "./webhook-registry";
 import { type WebhookStudio, webhookStudio } from "./webhook-studio";
 
 const log = createLogger("Webhook");
@@ -54,7 +55,8 @@ export interface Webhook<TBody> {
  * body must pass, and the signature its sender signs with — checked over
  * the body exactly as it came, in time that leaks nothing, before anything
  * is parsed. A delivery shows in Studio's Timeline like a call, marked as
- * a webhook, with the event it was and how it was answered.
+ * a webhook, with the event it was and how it was answered; and Studio can
+ * have one delivered to the application, signed here with its own secret.
  *
  * @param options - Its name, its signature, its body's schema and how to read its event
  * @returns The webhook
@@ -80,6 +82,11 @@ export function defineWebhook<TBody>(options: WebhookOptions<TBody>): Webhook<TB
     );
   }
   const limit = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
+  rememberWebhook({
+    name: options.name,
+    scheme: options.signature.scheme,
+    sign: (raw) => options.signature.sign(raw, Date.now()),
+  });
   return {
     name: options.name,
     scheme: options.signature.scheme,

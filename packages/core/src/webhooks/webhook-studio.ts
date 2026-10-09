@@ -3,6 +3,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { createLogger } from "../logger";
 import { generateRequestId, studioHooks } from "../studio";
 import { reportAnswer, reportRefusal, reportSchema, reportStart } from "./webhook-events";
+import { rememberRoute } from "./webhook-registry";
 
 const log = createLogger("Webhook");
 
@@ -36,6 +37,8 @@ export interface WebhookStudio {
  */
 export function webhookStudio(name: string, request: Request): WebhookStudio {
   const attached = studioHooks.onRequestStart !== undefined;
+  /* Where the application mounts the webhook, for a delivery Studio has sent. */
+  if (attached) rememberRoute(name, request.url);
   const id = attached ? generateRequestId() : "";
   const t0 = performance.now();
   let started = false;

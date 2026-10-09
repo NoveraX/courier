@@ -1,0 +1,94 @@
+{
+  "name": "courier-vscode",
+  "displayName": "Courier",
+  "description": "Courier Studio in your editor: above each call to an endpoint, how its calls went — how many, how many failed, how long they took — and the call opens in Studio.",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "noverax",
+  "author": "NoveraX",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NoveraX/courier.git",
+    "directory": "packages/vscode"
+  },
+  "homepage": "https://courier.noverax.cloud/docs/studio/editor",
+  "bugs": {
+    "url": "https://github.com/NoveraX/courier/issues"
+  },
+  "keywords": [
+    "courier",
+    "api",
+    "http",
+    "typescript",
+    "latency",
+    "codelens"
+  ],
+  "categories": [
+    "Visualization",
+    "Debuggers"
+  ],
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "activationEvents": [
+    "workspaceContains:**/.courier/studio.json",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:vue",
+    "onLanguage:svelte",
+    "onLanguage:astro"
+  ],
+  "main": "./dist/extension.cjs",
+  "contributes": {
+    "commands": [
+      {
+        "command": "courier.openInStudio",
+        "title": "Open in Courier Studio",
+        "category": "Courier"
+      },
+      {
+        "command": "courier.refreshHints",
+        "title": "Refresh Endpoint Hints",
+        "category": "Courier"
+      }
+    ],
+    "configuration": {
+      "title": "Courier",
+      "properties": {
+        "courier.hints.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show above each call to an endpoint how its calls went in Courier Studio."
+        },
+        "courier.hints.refreshSeconds": {
+          "type": "number",
+          "default": 5,
+          "minimum": 2,
+          "description": "How often the hints are brought up to date while the window has focus, in seconds."
+        },
+        "courier.studio.url": {
+          "type": "string",
+          "default": "",
+          "description": "Courier Studio's address, when it runs for a project outside this workspace: http://localhost:6280. Left empty, the extension finds the Studio a project in the workspace runs."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsdown --watch",
+    "test:editor": "node tests/editor/run-in-editor.mjs",
+    "prepackage": "node -e \"require('node:fs').copyFileSync('../../LICENSE', 'LICENSE')\"",
+    "package": "vsce package --no-dependencies --out dist/courier.vsix"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.95.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0"
+  }
+}

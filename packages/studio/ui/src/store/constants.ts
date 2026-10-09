@@ -28,6 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ignorePatterns: [],
   timestampFormat: "relative",
   jsonIndent: 2,
+  codeEditor: "vscode",
   toastOnError: true,
   toastOnSlowRequest: true,
   slowRequestThreshold: 500,

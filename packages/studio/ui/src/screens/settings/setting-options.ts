@@ -1,9 +1,11 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 
+import type { Choice } from "@/design/choice-menu";
 import type { SegmentedOption } from "@/design/segmented";
 import type {
   ApisClient,
   ApisGroupBy,
+  CodeEditor,
   ExportFormat,
   Theme,
   TimestampFormat,
@@ -55,6 +57,17 @@ export const STORAGE_WARNINGS = numbers([
 export const TIMESTAMPS: readonly SegmentedOption<TimestampFormat>[] = [
   { value: "relative", label: "2s ago" },
   { value: "absolute", label: "14:23:05" },
+];
+
+export const CODE_EDITORS: readonly Choice<CodeEditor>[] = [
+  { value: "vscode", label: "VS Code" },
+  { value: "cursor", label: "Cursor" },
+  { value: "windsurf", label: "Windsurf" },
+  { value: "vscodium", label: "VSCodium" },
+  { value: "zed", label: "Zed" },
+  { value: "webstorm", label: "WebStorm" },
+  { value: "idea", label: "IntelliJ IDEA" },
+  { value: "off", label: "None" },
 ];
 
 export const INDENTS: readonly SegmentedOption<"2" | "4">[] = [

@@ -8,6 +8,7 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
+import { CalledFrom } from "./called-from";
 import { UrlBox } from "./url-box";
 
 const CHECK_ICON = { ok: Check, warn: TriangleAlert, err: X, idle: Minus } as const;
@@ -15,7 +16,8 @@ const CHECK_TONE = { ok: "ok", warn: "warn", err: "err", idle: "muted" } as cons
 
 /**
  * The request at a glance: its URL and chips, its properties — a click
- * copies one — and the checks Courier ran.
+ * copies one — the checks Courier ran, and where the project's code calls
+ * its endpoint.
  *
  * @param props - The request
  * @returns The tab
@@ -62,6 +64,13 @@ export function OverviewTab({ request }: { request: RequestEntry }): React.React
           ))}
         </ul>
       </section>
+      {/* A webhook is called by its sender, not by the project's code. */}
+      {request.mode !== "webhook" && (
+        <CalledFrom
+          source={request.source}
+          endpoint={request.group ? `${request.group}.${request.method}` : request.method}
+        />
+      )}
     </div>
   );
 }

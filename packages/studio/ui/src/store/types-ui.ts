@@ -209,6 +209,17 @@ export type WaterfallGroupBy = "none" | "source" | "group";
 // ── Settings ────────────────────────────────────────────────────────────────
 
 export type TimestampFormat = "relative" | "absolute";
+
+/** The editor a call site opens in, from the inspector and the Explorer; `off` opens none. */
+export type CodeEditor =
+  | "vscode"
+  | "cursor"
+  | "windsurf"
+  | "vscodium"
+  | "zed"
+  | "webstorm"
+  | "idea"
+  | "off";
 export type JsonIndent = 2 | 4;
 export type ValidationLib = "zod" | "valibot" | "arktype" | "none";
 export type ApisGroupBy = "tag" | "path" | "single";
@@ -227,6 +238,10 @@ export interface Settings {
   // Display
   timestampFormat: TimestampFormat;
   jsonIndent: JsonIndent;
+
+  // Editor
+  /** Where a call site of an endpoint opens. */
+  codeEditor: CodeEditor;
 
   // Notifications
   toastOnError: boolean;

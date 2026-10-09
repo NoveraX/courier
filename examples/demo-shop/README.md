@@ -19,7 +19,7 @@ npm run demo
 
 `npm run demo` starts the backends, Studio, the shop's server and the traffic, each in a process of its own, and starts them all again from a clean state every hour. Studio listens on port 6280, and prints the link that carries its token — the host's link. A page opened without it is a visitor's.
 
-Each part also runs on its own: `npm run upstream`, `npm run app`, `npm run traffic`, beside `npx courier-studio`.
+Each part also runs on its own: `npm run upstream`, `npm run app`, `npm run traffic`, beside `npx @noverax/courier-studio`.
 
 | Variable | Default | What it sets |
 | --- | --- | --- |

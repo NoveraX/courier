@@ -6,17 +6,21 @@ export const metadata = { title: "In Your Editor", description: "Give the agent 
 
 ```bash
 npm install -D @noverax/courier-mcp
-npx courier-mcp --dotenv .env.local
+npx @noverax/courier-mcp --dotenv .env.local
 ```
 
 Started by hand it waits for a client on stdin; an editor starts it for you.
+
+<Callout variant="warning" title="Write the package's full name">
+npx runs the project's own copy of a command. Where it finds none — an editor that starts servers outside the project, or before `npm install` — it fetches the package the command names from npm, and with no terminal to ask in, it does not ask. Under the bare name `courier-mcp`, npm keeps a package that is not Courier's; `@noverax/courier-mcp` runs your project's copy, or Courier's own.
+</Callout>
 
 ## Add it to your editor
 
 **Claude Code** — from the project's root; `--scope project` writes `.mcp.json` for everyone who works on it:
 
 ```bash
-claude mcp add courier --scope project -- npx courier-mcp --dotenv .env.local
+claude mcp add courier --scope project -- npx @noverax/courier-mcp --dotenv .env.local
 ```
 
 **Cursor** — in `.cursor/mcp.json`:
@@ -24,7 +28,7 @@ claude mcp add courier --scope project -- npx courier-mcp --dotenv .env.local
 ```json title=".cursor/mcp.json"
 {
   "mcpServers": {
-    "courier": { "command": "npx", "args": ["courier-mcp", "--dotenv", ".env.local"] }
+    "courier": { "command": "npx", "args": ["@noverax/courier-mcp", "--dotenv", ".env.local"] }
   }
 }
 ```
@@ -37,7 +41,7 @@ claude mcp add courier --scope project -- npx courier-mcp --dotenv .env.local
     "courier": {
       "type": "stdio",
       "command": "npx",
-      "args": ["courier-mcp", "--cwd", "${workspaceFolder}", "--dotenv", ".env.local"]
+      "args": ["@noverax/courier-mcp", "--cwd", "${workspaceFolder}", "--dotenv", ".env.local"]
     }
   }
 }
@@ -48,7 +52,7 @@ claude mcp add courier --scope project -- npx courier-mcp --dotenv .env.local
 ```toml title="~/.codex/config.toml"
 [mcp_servers.courier]
 command = "npx"
-args = ["courier-mcp", "--cwd", "/path/to/project", "--dotenv", ".env.local"]
+args = ["@noverax/courier-mcp", "--cwd", "/path/to/project", "--dotenv", ".env.local"]
 ```
 
 An editor that starts servers somewhere other than the project names it with `--cwd`.
@@ -77,7 +81,7 @@ On start, the server lists the tools it offers in its log — which an editor sh
 With Studio running, the server joins it as the application's runtime does, and every call an agent makes shows in the timeline marked **agent** — its tool, the client, the variables, the answer, the middleware it ran through. Choose **Agent** in the Mode filter to see them alone. A call that did not run — declined by you, or refused for its arguments — is there too.
 
 ```bash
-npx courier-studio
+npx @noverax/courier-studio
 ```
 
 Studio serves the other direction too: the agent you code with can read what Studio recorded — the failed requests, the Audit's findings, the mocks — and send a request again after a fix, through `courier-studio mcp`. See [Studio for Your Agent](/docs/agents/studio).

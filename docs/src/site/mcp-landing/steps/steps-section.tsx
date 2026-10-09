@@ -11,13 +11,13 @@ const STEPS = [
   {
     title: "Add it to the agent",
     text: "Your editor's agent starts it over stdio. Your app serves it over HTTP to the rest.",
-    code: "claude mcp add courier -- npx courier-mcp",
+    code: "claude mcp add courier -- npx @noverax/courier-mcp",
     lang: "bash",
   },
   {
     title: "Watch every call",
     text: "Each call runs through your middleware and lands in Studio, marked agent.",
-    code: "npx courier-studio",
+    code: "npx @noverax/courier-studio",
     lang: "bash",
   },
 ] as const

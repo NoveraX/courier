@@ -5,7 +5,7 @@ export const metadata = { title: "Studio for Your Agent", description: "Let the 
 The agent you code with can read Studio for itself. `courier-studio mcp` serves the running Studio over MCP: the requests it recorded, the one that failed in full, the audit's findings, the mocks it runs. Ask *why does checkout fail?* and the agent lists the failed requests, reads the one that broke — its variables, the answer, the middleware it went through — finds the cause, fixes it, and sends the request again to see it pass, with nothing pasted from Studio into the chat.
 
 ```bash
-claude mcp add courier-studio -- npx courier-studio mcp
+claude mcp add courier-studio -- npx @noverax/courier-studio mcp
 ```
 
 In Cursor or VS Code, add the same command to `.cursor/mcp.json` or `.vscode/mcp.json`, as [In Your Editor](/docs/agents/editor#add-it-to-your-editor) shows for `courier-mcp`. Start Studio as you always do; the command carries the agent to it.

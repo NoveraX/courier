@@ -62,7 +62,7 @@ The command runs from your project's own install, so it loads your config with t
 The command serves the `courier.config.*` of the project it is installed in. For Claude Code:
 
 ```bash
-claude mcp add courier --scope project -- npx courier-mcp --dotenv .env.local
+claude mcp add courier --scope project -- npx @noverax/courier-mcp --dotenv .env.local
 ```
 
 For Cursor, in `.cursor/mcp.json`:
@@ -70,7 +70,7 @@ For Cursor, in `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "courier": { "command": "npx", "args": ["courier-mcp", "--dotenv", ".env.local"] }
+    "courier": { "command": "npx", "args": ["@noverax/courier-mcp", "--dotenv", ".env.local"] }
   }
 }
 ```

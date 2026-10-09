@@ -1,9 +1,32 @@
-/** A package manager, with the words that add a dev dependency. */
+/**
+ * A package manager: the words that add a dev dependency; how it runs
+ * Studio once added — npx and bunx by the package's full name, which finds
+ * the project's own copy and never another package npm keeps under the bare
+ * command, while pnpm only ever runs what the project installed; and how it
+ * starts the app's dev server.
+ */
 export const PACKAGE_MANAGERS = [
-  { id: "npm", add: "npm install -D" },
-  { id: "pnpm", add: "pnpm add -D" },
-  { id: "bun", add: "bun add -d" },
+  { id: "npm", add: "npm install -D", run: ["npx", "@noverax/courier-studio"], dev: "npm run dev" },
+  { id: "pnpm", add: "pnpm add -D", run: ["pnpm exec", "courier-studio"], dev: "pnpm dev" },
+  { id: "bun", add: "bun add -d", run: ["bunx", "@noverax/courier-studio"], dev: "bun run dev" },
 ] as const
+
+/** One of the package managers the setup offers. */
+export type PackageManager = (typeof PACKAGE_MANAGERS)[number]
+
+/**
+ * The package manager picked, or npm for one the setup does not offer.
+ *
+ * @param id - The package manager's name
+ * @returns Its words
+ * @example
+ * ```ts
+ * managerOf("pnpm").run.join(" ") // "pnpm exec courier-studio"
+ * ```
+ */
+export function managerOf(id: string): PackageManager {
+  return PACKAGE_MANAGERS.find((manager) => manager.id === id) ?? PACKAGE_MANAGERS[0]
+}
 
 /** Studio's package. */
 export const STUDIO_PACKAGE = "@noverax/courier-studio"
@@ -72,6 +95,6 @@ export const SETUP_STEPS = [
   { title: "Connect your app", text: "Add courierStudio() to your bundler config." },
   {
     title: "Start Studio",
-    text: "Run npx courier-studio next to your dev server; your app connects on its own.",
+    text: "Run it next to your dev server; your app connects on its own.",
   },
 ] as const

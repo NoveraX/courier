@@ -2,7 +2,7 @@ import { ArrowRight, ArrowUpRight, Circle, CircleCheck, Sparkles, Zap } from "lu
 import { cn } from "@/site/cn"
 import type { CodeToken } from "@/site/code/highlight-tokens"
 import { TokenLine } from "@/site/code/token-line"
-import { PACKAGE_MANAGERS, STUDIO_PACKAGE } from "./setup-data"
+import { managerOf, PACKAGE_MANAGERS, STUDIO_PACKAGE } from "./setup-data"
 
 /**
  * The install step: the command for each package manager, the picked one
@@ -81,7 +81,8 @@ export function CodePanel({ lines, code }: { lines: readonly CodeToken[][]; code
   )
 }
 
-const OUTPUT = [
+/* What Studio prints when it is up, the app started as the package manager starts it. */
+const outputFor = (dev: string) => [
   {
     icon: Zap,
     tone: "text-warn",
@@ -100,30 +101,33 @@ const OUTPUT = [
     icon: Sparkles,
     tone: "text-brand",
     key: "Your app",
-    value: "npm run dev — it connects on its own",
+    value: `${dev} — it connects on its own`,
     valueTone: "text-fg",
   },
 ]
 
 /**
- * The start step: the command, what Studio prints when it is up, and the
- * way to open it.
+ * The start step: the picked package manager's command, what Studio prints
+ * when it is up, and the way to open it.
  *
+ * @param props - The package manager picked
  * @returns The panel
  * @example
  * ```tsx
- * <RunPanel />
+ * <RunPanel manager="pnpm" />
  * ```
  */
-export function RunPanel() {
+export function RunPanel({ manager }: { manager: string }) {
+  const { run, dev } = managerOf(manager)
+  const [runner, target] = run
   return (
     <div className="flex flex-col gap-3.5 px-4.5 py-1 font-mono text-[12.5px]">
       <span>
         <span className="text-fg-subtle">$ </span>
-        <span className="text-code-keyword">npx</span> courier-studio
+        <span className="text-code-keyword">{runner}</span> {target}
       </span>
       <div className="flex flex-col gap-2 rounded-panel border border-line bg-inset p-3.5">
-        {OUTPUT.map(({ icon: Icon, tone, key, value, valueTone }) => (
+        {outputFor(dev).map(({ icon: Icon, tone, key, value, valueTone }) => (
           <div
             key={key}
             className="grid grid-cols-[18px_minmax(88px,120px)_minmax(0,1fr)] items-baseline gap-2.5"

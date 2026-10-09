@@ -14,7 +14,7 @@ And the other way round, Studio's inspector and Explorer list the code that call
 Install **Courier** from the extensions view of VS Code, or of Cursor, Windsurf and VSCodium from Open VSX, and start Studio for your project as you always do:
 
 ```bash
-npx courier-studio
+npx @noverax/courier-studio
 ```
 
 Above each call to an endpoint, the extension shows how that endpoint's calls went in this session: how many there were, how many failed and how many are still in flight, and how long nineteen in twenty took. A stream or a channel counts its connections, and how many are still open. A click on the line opens the endpoint in Studio's Explorer. Hover over the call for the rest: the median and the 95th percentile, the statuses the calls ended with, and the latest failure with its reason. The figures move as your app runs, every few seconds while the editor has focus.

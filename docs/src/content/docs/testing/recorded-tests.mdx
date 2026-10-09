@@ -59,7 +59,7 @@ Each call is a test of its own, named after it: `shop orders.get · GET /orders/
 The test runs with the rest of your tests. To check every recording at once, with a report, run:
 
 ```bash
-npx courier-studio verify
+npx @noverax/courier-studio verify
 ```
 
 It reads every HAR file of recordings in `tests/recorded` — or the files and folders you name — checks each call, and exits with `1` when one no longer fits. A browser's own HAR in a folder is passed over; one you name that is not a recording is an error.
@@ -75,7 +75,7 @@ In GitHub Actions, the Markdown report goes to the job's summary:
 
 ```yaml
 - name: Check recorded calls against the API definition
-  run: npx courier-studio verify --format markdown --out "$GITHUB_STEP_SUMMARY"
+  run: npx @noverax/courier-studio verify --format markdown --out "$GITHUB_STEP_SUMMARY"
 ```
 
 ## The recordings as a mock

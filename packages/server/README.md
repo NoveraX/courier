@@ -71,8 +71,8 @@ Without `onReady` the server logs `Listening on <url>` once it listens; with it,
 ### CLI
 
 ```bash
-npx courier-server
-npx courier-server --config ./deploy/courier.config.ts --port 3001 --allowed-origins https://app.example.com --allowed-hosts api.example.com
+npx @noverax/courier-server
+npx @noverax/courier-server --config ./deploy/courier.config.ts --port 3001 --allowed-origins https://app.example.com --allowed-hosts api.example.com
 ```
 
 Without `--config` it serves the `courier.config.*` in the working directory; a `--config` path is relative to it. TypeScript configs load as they are, extensionless imports and tsconfig path aliases included. The config needs `sources`, and its `server` block supplies what the flags leave out:

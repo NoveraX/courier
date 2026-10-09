@@ -16,7 +16,7 @@ Studio needs Node.js 22.13 or newer. Studio is a development tool, so it is a de
 ## Start Studio
 
 ```bash
-npx courier-studio
+npx @noverax/courier-studio
 ```
 
 Studio listens on `http://localhost:6280` — at both `127.0.0.1` and `::1`, so it answers whichever one a client dials — or on the `studio.host` and `studio.port` of your `courier.config.ts`. Server runtimes and the build plugins read the same block, so moving Studio there moves them with it: a server runtime reads the nearest config at or above its working directory, and a build plugin the nearest at or above Vite's root — or, for webpack, esbuild and Rollup, the working directory. Flags: `--port`, `--host`, `--cwd` (project root), `--open` (open a browser), `--version`. Its commands run without the server: `courier-studio openapi` writes the sources as [OpenAPI documents](/docs/advanced/openapi), `courier-studio verify` checks [recorded calls](/docs/testing/recorded-tests) against the definition, `courier-studio diff` reports what a change to the definition [breaks for its callers](/docs/testing/breaking-changes), and `courier-studio mcp` serves Studio to [an editor's agent](/docs/agents/studio). Studio keeps its working files — imported API state, copies of the files it replaced or removed, saved sessions — in `.courier/`, which ignores itself in git.

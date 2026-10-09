@@ -43,4 +43,4 @@ The server connects to Studio through `attachRuntime()` in
 serves, and its Playground sends the `users` endpoints, subscribes to
 `live.ticks` and joins `live.chat`, through the proxy or directly. In
 production the same proxy runs from [`courier.config.ts`](courier.config.ts)
-with `npx courier-server`.
+with `npx @noverax/courier-server`.

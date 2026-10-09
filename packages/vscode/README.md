@@ -14,7 +14,7 @@ Hover over the call for the rest: the median and the 95th percentile, the status
 Start Courier Studio for your project, as you always do:
 
 ```bash
-npx courier-studio
+npx @noverax/courier-studio
 ```
 
 Studio writes where it runs to `.courier/studio.json` in your project, and the extension reads it — for a monorepo, each project's own Studio, the one nearest the file you are in. Studio finds the calls in the file as it stands in the editor, saved or not, the same way it finds them for **Called from** in its inspector: a member chain that ends with an endpoint's name, `api.orders.place()`, and a query hook that names one, `q.orders.useQuery("list")`, in TypeScript, JavaScript, and the scripts of Vue, Svelte and Astro components.

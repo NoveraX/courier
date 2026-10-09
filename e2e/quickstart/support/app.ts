@@ -1,8 +1,8 @@
-import { type ChildProcess, spawn } from "node:child_process";
-import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join } from "node:path";
 
+import { startLogged, stopTree } from "./processes";
 import type { QuickstartTarget } from "./targets";
 
 /** An app the check started, with Studio beside it, and how to stop both. */
@@ -10,43 +10,6 @@ export interface RunningApp {
   readonly url: string;
   /** Stops both, and resolves once their processes have exited. */
   stop(): Promise<void>;
-}
-
-/* A command in its own process group, so stopping it stops what it started; its output kept in a log. */
-function start(
-  command: readonly string[],
-  cwd: string,
-  env: NodeJS.ProcessEnv,
-  log: string,
-): ChildProcess {
-  const [program = "npx", ...args] = command;
-  const child = spawn(program, args, {
-    cwd,
-    env,
-    detached: true,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const out = createWriteStream(log);
-  child.stdout?.pipe(out);
-  child.stderr?.pipe(out);
-  return child;
-}
-
-/* Stop a command and what it started, and wait for it to exit: what is still writing must not race the cleanup. */
-async function stopGroup(child: ChildProcess): Promise<void> {
-  if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) return;
-  const exited = new Promise<void>((done) => child.once("exit", () => done()));
-  const signal = (name: NodeJS.Signals) => {
-    try {
-      process.kill(-(child.pid ?? 0), name);
-    } catch {
-      /* The group had ended already. */
-    }
-  };
-  signal("SIGTERM");
-  const late = setTimeout(() => signal("SIGKILL"), 10_000);
-  await exited;
-  clearTimeout(late);
 }
 
 /**
@@ -69,7 +32,7 @@ export function runToEnd(
   log: string,
 ): Promise<{ status: number; output: string }> {
   return new Promise((done) => {
-    const child = start(command, cwd, env, log);
+    const child = startLogged(command, cwd, env, log);
     let output = "";
     child.stdout?.on("data", (chunk: Buffer) => {
       output += chunk;
@@ -81,16 +44,8 @@ export function runToEnd(
   });
 }
 
-/**
- * A port nothing listens on.
- *
- * @returns The port
- * @example
- * ```ts
- * const port = await freePort();
- * ```
- */
-export function freePort(): Promise<number> {
+/* A port the system gives out on IPv4's loopback. */
+function loopbackPort(): Promise<number> {
   return new Promise((done) => {
     const server = createServer();
     server.listen(0, "127.0.0.1", () => {
@@ -99,6 +54,34 @@ export function freePort(): Promise<number> {
       server.close(() => done(port));
     });
   });
+}
+
+/* Whether nothing holds a port on an address; an address the machine does not have, as IPv6's may be, holds nothing. */
+function freeOn(port: number, host: string): Promise<boolean> {
+  return new Promise((done) => {
+    const server = createServer();
+    server.once("error", (error: NodeJS.ErrnoException) => done(error.code !== "EADDRINUSE"));
+    server.listen(port, host, () => server.close(() => done(true)));
+  });
+}
+
+/**
+ * A port nothing listens on, on IPv4's loopback or IPv6's: a dev server
+ * that listens on `localhost` may take either.
+ *
+ * @returns The port
+ * @throws {Error} When twenty ports in a row are taken on IPv6's loopback
+ * @example
+ * ```ts
+ * const port = await freePort();
+ * ```
+ */
+export async function freePort(): Promise<number> {
+  for (let tries = 0; tries < 20; tries += 1) {
+    const port = await loopbackPort();
+    if (await freeOn(port, "::1")) return port;
+  }
+  throw new Error("No port was free on both loopback addresses");
 }
 
 /* Ask an address until it answers 200, or the time runs out. */
@@ -147,21 +130,21 @@ export async function startApp(
     const file = join(root, target.port.file);
     writeFileSync(file, readFileSync(file, "utf8").replace(target.port.from, target.port.to));
   }
-  const studio = start(["npm", "run", "studio"], root, env, join(logs, "studio.log"));
+  const studio = startLogged(["npm", "run", "studio"], root, env, join(logs, "studio.log"));
   const mocks = join(root, "courier.mocks.ts");
   const mockPort = existsSync(mocks)
     ? /port:\s*(\d+)/.exec(readFileSync(mocks, "utf8"))?.[1]
     : undefined;
   if (mockPort && !(await answers(`http://127.0.0.1:${mockPort}/users`, 120_000))) {
-    await stopGroup(studio);
+    await stopTree(studio, root);
     throw new Error(`The mock did not answer: see ${join(logs, "studio.log")}`);
   }
   const port = await freePort();
   const command = target.start.map((part) => part.replace("{port}", String(port)));
-  const app = start(command, root, { ...env, PORT: String(port) }, join(logs, "app.log"));
+  const app = startLogged(command, root, { ...env, PORT: String(port) }, join(logs, "app.log"));
   const url = `http://localhost:${port}`;
   const stop = async () => {
-    await Promise.all([stopGroup(app), stopGroup(studio)]);
+    await Promise.all([stopTree(app, root), stopTree(studio, root)]);
   };
   const steady =
     (await answers(`${url}${target.page}`, 300_000)) && (await settled(`${url}${target.page}`));

@@ -108,6 +108,42 @@ describe("handleWhileConnected", () => {
     expect(await body.text()).toBe('{"source":"api","method":"list"}');
   });
 
+  it("copies a request the runtime made its own way, which passes for one but is not", async () => {
+    /* srvx, which Nitro 3 serves SolidStart 2 with, hands over such a request:
+       the platform's Request cannot be built from it. */
+    const real = post();
+    const lookalike = Object.create(Request.prototype, {
+      url: { get: () => real.url },
+      method: { get: () => real.method },
+      headers: { get: () => real.headers },
+      body: { get: () => real.body },
+      signal: { get: () => real.signal },
+    });
+    expect(() => new Request(lookalike)).toThrow(TypeError);
+    let seen: { method: string; url: string; type: string | null; body: string } | undefined;
+
+    await handleWhileConnected(
+      async (request) => {
+        seen = {
+          method: request.method,
+          url: request.url,
+          type: request.headers.get("content-type"),
+          body: await request.text(),
+        };
+        return new Response("{}");
+      },
+      lookalike,
+      new Connection(),
+    );
+
+    expect(seen).toEqual({
+      method: "POST",
+      url: "http://app.test/api/request",
+      type: "application/json",
+      body: '{"source":"api","method":"list"}',
+    });
+  });
+
   it("passes the request through when there is no connection to watch", async () => {
     const request = post();
     let received: Request | undefined;

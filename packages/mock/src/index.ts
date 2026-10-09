@@ -7,6 +7,9 @@
 
 export { MockEndpointsError } from "./auto/mock-endpoints-error";
 export { MockTargetError, type MockTargetErrorCode } from "./auto/mock-target-error";
+// Webhooks delivered to the app, signed as their sender signs them
+export type { WebhookDeliveryOptions } from "./deliver-webhook";
+export { deliverWebhook } from "./deliver-webhook";
 // Factory (test data generation helpers)
 export type { FactoryConfig, ResponseFactory } from "./factory";
 export { defineFactory } from "./factory";

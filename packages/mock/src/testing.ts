@@ -10,6 +10,9 @@ export { createEnhancedMockBuilder } from "./builder";
 // Test client
 export type { MockClient, MockClientConfig } from "./create-mock-client";
 export { createMockClient } from "./create-mock-client";
+// Webhooks delivered to the app, signed as their sender signs them
+export type { WebhookDeliveryOptions } from "./deliver-webhook";
+export { deliverWebhook } from "./deliver-webhook";
 // Forms, as a handler receives them
 export type { MockFormFields, MockFormValue } from "./form-fields";
 // Network utils

@@ -246,6 +246,12 @@ jobs:
   frameworks:
     uses: ./.github/workflows/frameworks.yml
 
+  # The one-command setup, npx @noverax/create-courier@latest, creating a
+  # project with each framework's own generator: see quickstart.yml, which
+  # also runs weekly and by hand.
+  quickstart:
+    uses: ./.github/workflows/quickstart.yml
+
   # The commit-msg hook runs only where it is installed and can be skipped, so
   # the same rules run here. A pull request is checked from its merge base; a
   # push, from the last release tag, so a cancelled or skipped run leaves
@@ -303,7 +309,7 @@ jobs:
         working-directory: docs
 
   release:
-    needs: [ci, platforms, react-native, browser, frameworks]
+    needs: [ci, platforms, react-native, browser, frameworks, quickstart]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     concurrency:

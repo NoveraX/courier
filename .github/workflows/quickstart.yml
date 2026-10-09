@@ -1,0 +1,88 @@
+name: Quick start
+
+# The one-command setup, as a person meets it, with each framework
+# e2e/quickstart/targets.json lists: Courier's packages, built, are served
+# as the @noverax scope's registry, a new project is created with
+# npx @noverax/create-courier@latest and the framework's own generator,
+# and Studio and the app are started and the page the setup added is used
+# in Chromium. A failure keeps the project's logs and the trace.
+on:
+  # Every push and pull request, called from CI
+  workflow_call:
+    inputs:
+      targets:
+        description: Frameworks to check, by id; all when empty
+        type: string
+        default: ""
+  # Some frameworks by hand, by id, separated by spaces; all when left empty
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: Frameworks to check, by id; all when empty
+        type: string
+        default: ""
+  # Each generator is pinned to a major, and resolves to its newest release
+  # within it: a new release of a framework is checked within the week
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  targets:
+    runs-on: ubuntu-latest
+    outputs:
+      ids: ${{ steps.list.outputs.ids }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: List the frameworks to check
+        id: list
+        env:
+          TARGETS: ${{ inputs.targets }}
+        # Split on purpose: one id per word
+        run: echo "ids=$(node scripts/test-quickstart.mjs --list $TARGETS)" >> "$GITHUB_OUTPUT"
+
+  quickstart:
+    needs: targets
+    name: ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(needs.targets.outputs.ids) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # The registry serves the packages packed from their builds
+      - name: Build packages
+        run: npm run build
+
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+
+      - name: The quick start with ${{ matrix.target }}
+        env:
+          TARGET: ${{ matrix.target }}
+        run: npm run test:quickstart -- "$TARGET"
+
+      - name: Keep what a failure left
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quickstart-${{ matrix.target }}
+          path: node_modules/.cache/courier-quickstart/${{ matrix.target }}/
+          retention-days: 7

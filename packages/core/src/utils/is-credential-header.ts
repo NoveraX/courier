@@ -7,10 +7,12 @@ const CREDENTIAL_HEADERS: ReadonlySet<string> = new Set([
 ]);
 
 /* A word of the name, between dashes or underscores: `x-api-key`, `x-auth-token`,
-   `x_session_id` — and the double-submit tokens written as one word, Django's
-   `X-CSRFToken`, Angular's `X-XSRF-TOKEN`, that an API's session repeats. */
+   `x_session_id` — the double-submit tokens written as one word, Django's
+   `X-CSRFToken`, Angular's `X-XSRF-TOKEN`, that an API's session repeats — and
+   a webhook's `Stripe-Signature` or `X-Hub-Signature-256`, which with its body
+   lets anyone deliver it again. */
 const CREDENTIAL_WORDS =
-  /(?:^|[-_])(?:auth|token|secret|password|passwd|session|csrf[a-z]*|xsrf[a-z]*|api[-_]?key|apikey)(?:$|[-_])/i;
+  /(?:^|[-_])(?:auth|token|secret|password|passwd|session|signature|csrf[a-z]*|xsrf[a-z]*|api[-_]?key|apikey)(?:$|[-_])/i;
 
 /**
  * Whether a header's value is a credential — the user's cookies, a token,
@@ -23,6 +25,7 @@ const CREDENTIAL_WORDS =
  * ```ts
  * isCredentialHeader("Set-Cookie"); // true
  * isCredentialHeader("x-csrftoken"); // true
+ * isCredentialHeader("Stripe-Signature"); // true
  * isCredentialHeader("content-type"); // false
  * ```
  */

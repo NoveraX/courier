@@ -32,4 +32,19 @@ describe("a header that carries a credential", () => {
       "x-csrf",
     ]);
   });
+
+  it("includes a webhook's signature, which with its body would let anyone deliver it again", () => {
+    const signatures = [
+      "Stripe-Signature",
+      "X-Hub-Signature-256",
+      "webhook-signature",
+      "svix-signature",
+      "x-billing-signature",
+    ];
+
+    expect(signatures.filter(isCredentialHeader)).toEqual(signatures);
+    expect(["webhook-id", "webhook-timestamp", "x-signed-at"].filter(isCredentialHeader)).toEqual(
+      [],
+    );
+  });
 });

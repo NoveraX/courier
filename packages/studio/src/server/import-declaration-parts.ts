@@ -129,9 +129,23 @@ function specifierOf(sourcePath: string, configFile: string): string {
   return specifier.startsWith("../") ? specifier : `./${specifier}`;
 }
 
+/**
+ * The type an import of a parsed specification is declared with.
+ *
+ * @param spec - The specification as Studio parsed it
+ * @returns `openapi`, `swagger` or `postman`
+ * @example
+ * ```ts
+ * specTypeOf(parseSpec(swagger2Text)); // "swagger"
+ * ```
+ */
+export function specTypeOf(spec: ParsedSpec): CourierImportSpecType {
+  return SPEC_TYPES.get(spec.format) ?? DEFAULT_OPTIONS.type;
+}
+
 function entryOf(body: WriteBody, spec: ParsedSpec, options: GenerateOptions): CourierImportEntry {
   const base: CourierImportBase = {
-    type: SPEC_TYPES.get(spec.format) ?? DEFAULT_OPTIONS.type,
+    type: specTypeOf(spec),
     outputDir: options.outputDir,
     sourceName: options.sourceName,
     ...codegenChoices(options),
@@ -151,6 +165,8 @@ function codegenChoices(options: GenerateOptions): Partial<CourierImportBase> {
     generateClient: differs(options.generateClient, DEFAULT_OPTIONS.generateClient),
     addAuthMiddleware: differs(options.addAuthMiddleware, DEFAULT_OPTIONS.addAuthMiddleware),
     includeComments: differs(options.includeComments, DEFAULT_OPTIONS.includeComments),
+    include: options.include,
+    exclude: options.exclude,
   };
 }
 

@@ -1,7 +1,8 @@
-import type { CourierImportEntry } from "@noverax/courier/config";
+import type { CourierImportEntry, CourierImportSelector } from "@noverax/courier/config";
 
 import { quoteString } from "../mocks-edit/plan/quote-string";
 import type { FileStyle } from "../mocks-edit/plan/types";
+import { selectorText } from "../selector-text";
 
 /** Writes one entry at an indentation, on its own lines when `block`. */
 export type RenderEntry = (indent: string, block: boolean) => string;
@@ -23,7 +24,11 @@ const FIELDS = [
   "generateClient",
   "addAuthMiddleware",
   "includeComments",
+  "include",
+  "exclude",
 ] as const;
+
+type FieldValue = string | boolean | CourierImportSelector;
 
 /**
  * A key as the config writes it: bare when it is an identifier, quoted in
@@ -113,15 +118,22 @@ export function objectEntry(
   };
 }
 
-function fieldsOf(entry: CourierImportEntry): Array<[string, string | boolean]> {
-  const fields: Array<[string, string | boolean]> = [];
+function fieldsOf(entry: CourierImportEntry): Array<[string, FieldValue]> {
+  const fields: Array<[string, FieldValue]> = [];
   for (const key of FIELDS) {
+    if (key === "include" || key === "exclude") {
+      const selector = entry[key];
+      if (selector !== undefined) fields.push([key, selector]);
+      continue;
+    }
     const value: unknown = key in entry ? Reflect.get(entry, key) : undefined;
     if (typeof value === "string" || typeof value === "boolean") fields.push([key, value]);
   }
   return fields;
 }
 
-function valueText(value: string | boolean, style: FileStyle): string {
-  return typeof value === "string" ? quoteString(value, style.quote) : String(value);
+function valueText(value: FieldValue, style: FileStyle): string {
+  if (typeof value === "string") return quoteString(value, style.quote);
+  if (typeof value === "boolean") return String(value);
+  return selectorText(value, (text) => quoteString(text, style.quote));
 }

@@ -1,5 +1,7 @@
 import type { CourierImportEntry } from "@noverax/courier/config";
 
+import { selectorText } from "./selector-text";
+
 /* The codegen choices a declaration carries, in the order they are written. */
 const CODEGEN_FIELDS = [
   "validation",
@@ -16,7 +18,8 @@ const CODEGEN_FIELDS = [
  * `courier.config.ts`. URL imports carry `from` / `auth` / `pinHash`; file and
  * raw imports are supplied through the UI each time and therefore have no
  * `from`. Every codegen choice the entry sets is written too, since Studio
- * regenerates an import's code from its declaration.
+ * regenerates an import's code from its declaration, and so are the
+ * endpoints its `include` and `exclude` name.
  *
  * @param name - The import's key under `imports`
  * @param entry - Its declaration
@@ -42,6 +45,11 @@ export function formatImportSnippet(name: string, entry: CourierImportEntry): st
   for (const field of CODEGEN_FIELDS) {
     const value = entry[field];
     if (value !== undefined) lines.push(`    ${field}: ${JSON.stringify(value)},`);
+  }
+  for (const field of ["include", "exclude"] as const) {
+    const selector = entry[field];
+    if (selector !== undefined)
+      lines.push(`    ${field}: ${selectorText(selector, JSON.stringify)},`);
   }
   lines.push("  },");
   return lines.join("\n");

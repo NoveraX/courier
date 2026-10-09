@@ -9,6 +9,7 @@ import type {
 import type { GenerateOptions, ParsedSpec } from "../apis";
 import { DEFAULT_OPTIONS } from "../apis/generator/types";
 import { resolveImportLayout } from "../apis/layout";
+import { configObjectFile } from "./config-edit/config-object-file";
 import type { LoadedCourierConfig } from "./config-loader";
 import { writesExplicitExtensions } from "./mocks-edit/writes-explicit-extensions";
 import { NameTakenError } from "./name-taken-error";
@@ -84,21 +85,20 @@ export function importDeclarationParts({
   const binding = layout.sourceBinding;
   const declared = sourceDeclared(name, join(root, layout.sourceFile), loaded);
   if (declared === "another") throw new NameTakenError(name, layout.sourceFile);
-  /* The config imports the source as it imports its other files. */
-  const configName = relative(root, loaded.configFile);
+  /* The config imports the source as it imports its other files, from the file that holds its lists. */
+  const configPath = configObjectFile(loaded.configFile, root);
+  const configName = relative(root, configPath);
   const extension = writesExplicitExtensions(root, configName, configName) ? ".js" : "";
   const sourcePath = join(root, layout.sourceFile.replace(/\.ts$/, extension));
   const source =
-    declared === "no"
-      ? { binding, specifier: specifierOf(sourcePath, loaded.configFile) }
-      : undefined;
+    declared === "no" ? { binding, specifier: specifierOf(sourcePath, configPath) } : undefined;
   const importEntry = Object.hasOwn(loaded.config.imports ?? {}, name)
     ? undefined
     : entryOf(body, spec, { ...options, sourceName: binding });
   if (!source && !importEntry) return undefined;
   const leftOut = importEntry ? countLeftOut(spec, options.selectedEndpoints) : 0;
   const configFile = posixPath(configName);
-  return { configFile, configPath: loaded.configFile, source, importEntry, leftOut };
+  return { configFile, configPath, source, importEntry, leftOut };
 }
 
 /* Whether `sources` names the import, and whether what it names is the

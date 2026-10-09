@@ -12,7 +12,7 @@ import { managerOf, PACKAGE_MANAGERS } from "@/site/studio-landing/setup/setup-d
 describe("Studio's setup for a package manager", () => {
   it("sets Studio up with the one command, and starts it and the app with the scripts it adds", () => {
     expect(managerOf("npm")).toMatchObject({
-      setup: ["npx", "@noverax/create-courier@latest"],
+      setup: ["npx", "@noverax/create-courier"],
       studio: "npm run studio",
       dev: "npm run dev",
     })

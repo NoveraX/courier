@@ -4,7 +4,7 @@
  * Check the one-command setup with each framework `e2e/quickstart/targets.json`
  * names, or with the ones given: Courier's packages, built, are served as
  * the `@noverax` scope's registry, a new project is created with
- * `npx @noverax/create-courier@latest` and built for production, and
+ * `npx @noverax/create-courier` and built for production, and
  * Studio and the app are started and the page the setup added is used in
  * Chromium — one framework after another.
  *

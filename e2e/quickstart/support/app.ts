@@ -22,7 +22,7 @@ export interface RunningApp {
  * @returns What it printed, and how it exited
  * @example
  * ```ts
- * const { status, output } = await runToEnd(["npx", "--yes", "@noverax/create-courier@latest"], dir, env, log);
+ * const { status, output } = await runToEnd(["npx", "--yes", "@noverax/create-courier"], dir, env, log);
  * ```
  */
 export function runToEnd(

@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * `${START_COMMAND} --mcp` // "npx @noverax/create-courier@latest --mcp"
+ * `${START_COMMAND} --mcp` // "npx @noverax/create-courier --mcp"
  * ```
  */
-export const START_COMMAND = "npx @noverax/create-courier@latest"
+export const START_COMMAND = "npx @noverax/create-courier"

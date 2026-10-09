@@ -3,7 +3,7 @@ name: Quick start
 # The one-command setup, as a person meets it, with each framework
 # e2e/quickstart/targets.json lists: Courier's packages, built, are served
 # as the @noverax scope's registry, a new project is created with
-# npx @noverax/create-courier@latest and the framework's own generator and
+# npx @noverax/create-courier and the framework's own generator and
 # built for production, and Studio and the app are started and the page
 # the setup added is used in Chromium. A failure keeps the project's logs
 # and the trace.

@@ -6,7 +6,7 @@ import { quickstartTarget } from "./support/targets";
  * The one-command setup, as a person meets it: `COURIER_QUICKSTART` names
  * the framework, the global setup serves Courier's packages as a
  * registry, and the check creates a project with
- * `npx @noverax/create-courier@latest`, starts Studio and the app, and
+ * `npx @noverax/create-courier`, starts Studio and the app, and
  * uses the page the setup added, in Chromium.
  */
 const target = quickstartTarget(process.env.COURIER_QUICKSTART);

@@ -40,7 +40,7 @@ This cannot be undone. Run it?
 
 Clients that support MCP elicitation — Claude Code, Cursor, VS Code — show the question in the editor; `courier-studio mcp` puts it to them over their own connection. A client that cannot ask is told to send the write again from Studio's inspector instead, and nothing runs. Each tool takes what it is for: `replay` refuses a write and names `replay_write`, `replay_write` refuses a read.
 
-Some requests are not sent again: a [webhook](/docs/advanced/webhooks) came to the app from its sender — deliver it again from a mock — a CSRF token is asked for again with the write that needs it, and a stream stays open rather than answering once, so it is reconnected from the inspector.
+Some requests are not sent again: a [webhook](/docs/advanced/webhooks) came to the app from its sender — deliver it again from Studio's inspector, which has the app sign it afresh — a CSRF token is asked for again with the write that needs it, and a stream stays open rather than answering once, so it is reconnected from the inspector.
 
 ## What it shows, and to whom
 

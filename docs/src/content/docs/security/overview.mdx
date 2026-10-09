@@ -103,6 +103,8 @@ A webhook is a call made to your app by its sender, and [`defineWebhook`](/docs/
 - **Its age.** Stripe's scheme and Standard Webhooks sign the time a delivery was sent; one older than five minutes is refused as a replay. GitHub's scheme and one of your own sign no time: keep the ids of the deliveries you have handled where a replay matters.
 - **Its body.** It must be JSON and pass the webhook's schema; a refusal tells the sender what failed and nothing more.
 
+Studio can have a delivery sent to your app — **Deliver again** in a delivery's inspector — and the app signs it, so the secret stays where it is. Only an app attached with the project's Studio token is asked, and it delivers only to a route its deliveries came to or to an address on its own machine.
+
 ## Caches
 
 `cacheMiddleware({ scope: "public" })` never stores or serves an answer to a call that carries a session, and says so once per endpoint. `scope: "session"` keeps one partition per set of credentials a call sends, named by their SHA-256 digest so that no credential sits in a cache key, a Redis keyspace or a log line. In a browser or a React Native app, where the platform sends the cookies, a session's calls count as carrying it and are partitioned on the device.

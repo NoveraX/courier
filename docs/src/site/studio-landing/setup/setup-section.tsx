@@ -55,7 +55,8 @@ export async function SetupSection() {
             Running in under a minute
           </h2>
           <p className="m-0 max-w-[52ch] text-[16px] leading-[1.6] text-fg-muted">
-            Install it, connect your app, start Studio. It opens next to your app.
+            One command sets it up and connects your app; start Studio, and it opens next to your
+            app.
           </p>
         </div>
         <div className="relative">

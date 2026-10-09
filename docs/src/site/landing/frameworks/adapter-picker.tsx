@@ -4,6 +4,7 @@ import { useState } from "react"
 import type { CodeToken } from "@/site/code/highlight-tokens"
 import { copyText } from "@/site/copy-text"
 import { PageLink } from "@/site/landing/page-link"
+import { START_COMMAND } from "@/site/landing/start-command"
 import { useInView } from "@/site/landing/use-in-view"
 import { useReducedMotion } from "@/site/landing/use-reduced-motion"
 import { useTicker } from "@/site/landing/use-ticker"
@@ -25,8 +26,8 @@ const TURN = 52
  * The adapters beside one adapter's code. The list moves on by itself every
  * few seconds while it is on screen — holding still while the pointer or
  * the focus is on it — until the reader picks one. The code shows the
- * mount, its length, the guide to its framework, and the command that
- * installs it.
+ * mount, its length, the guide to its framework, and the one command that
+ * sets Courier up with it — in a project of that framework, or a new one.
  *
  * @param props - The adapters shown, and how many official adapters there are in all
  * @returns The picker
@@ -54,6 +55,7 @@ export function AdapterPicker({
   const adapter = adapters[picked] ?? adapters[0]
   const [copied, flash] = useFlash()
   if (!adapter) return null
+  const command = `${START_COMMAND} --framework ${adapter.framework}`
   return (
     <section
       ref={ref}
@@ -98,12 +100,12 @@ export function AdapterPicker({
         <AdapterCode adapter={adapter} lines={adapter.lines} />
         <div className="flex min-h-11.5 min-w-0 items-center gap-3 border-t border-line py-2 pr-2 pl-4 font-mono text-label tracking-normal">
           <span className="text-fg-subtle">$</span>
-          <span className="min-w-0 flex-1 truncate text-fg-muted">
-            npm i <span className="text-fg">{adapter.pkg}</span>
+          <span className="min-w-0 flex-1 text-fg-muted [overflow-wrap:anywhere]">
+            {START_COMMAND} --framework <span className="text-fg">{adapter.framework}</span>
           </span>
           <button
             type="button"
-            onClick={async () => flash(await copyText(`npm i ${adapter.pkg}`))}
+            onClick={async () => flash(await copyText(command))}
             className="h-7.5 shrink-0 cursor-pointer rounded-control border border-line bg-bg-subtle px-3 font-mono text-[11px] text-fg-muted transition-colors hover:border-line-strong hover:text-fg"
           >
             {copied ? "copied" : "copy"}

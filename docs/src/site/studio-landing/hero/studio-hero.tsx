@@ -1,15 +1,16 @@
 import { ArrowUpRight, ShieldCheck } from "lucide-react"
 
 import { InstallButton } from "@/site/landing/install-button"
+import { START_COMMAND } from "@/site/landing/start-command"
 import { STUDIO_DEMO_URL } from "@/site/site-url"
 import { StudioWindow } from "./studio-window"
 
-/** The command that installs Studio. */
-export const STUDIO_INSTALL = "npm i -D @noverax/courier-studio"
+/** The command that sets Studio up: Courier's one command, which adds Studio with its plugin, a mock and the scripts. */
+export const STUDIO_INSTALL = START_COMMAND
 
 /**
  * The top of Studio's page: what Studio is in one line, the live demo to
- * try it in, its install command, and Studio itself, streaming calls.
+ * try it in, the one command that sets it up, and Studio itself, streaming calls.
  *
  * @returns The section
  * @example

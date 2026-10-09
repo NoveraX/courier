@@ -4,6 +4,7 @@ import Link from "next/link"
 import { CodeLines } from "@/site/code/code-lines"
 import { highlightTokens } from "@/site/code/highlight-tokens"
 import { InstallButton } from "@/site/landing/install-button"
+import { START_COMMAND } from "@/site/landing/start-command"
 import { TerminalSession } from "./terminal-session"
 
 const AGENT_CODE = [
@@ -81,7 +82,7 @@ export async function AgentsSection() {
               Explore the MCP server
               <ArrowRight aria-hidden="true" className="size-3.5" />
             </Link>
-            <InstallButton look="hero" command="npm i @noverax/courier-mcp" />
+            <InstallButton look="hero" command={`${START_COMMAND} --mcp`} />
           </div>
         </div>
         <div className="relative min-w-0">

@@ -7,7 +7,7 @@ import type { CodeToken } from "@/site/code/highlight-tokens"
 import { copyText } from "@/site/copy-text"
 import { BrandIcon } from "@/site/landing/brand-icon"
 import { useFlash } from "@/site/use-flash"
-import { CONNECTIONS, managerOf, STUDIO_PACKAGE } from "./setup-data"
+import { CONNECTIONS, managerOf } from "./setup-data"
 import { CodePanel, InstallPanel, RunPanel } from "./setup-panels"
 import { SetupSteps } from "./setup-steps"
 
@@ -23,19 +23,19 @@ export interface ShownConnection {
 
 const HINTS = [
   "Pick your package manager",
-  "Highlighted lines are all you add",
+  "The command writes the highlighted lines",
   "Keep it running while you work",
 ]
 
 function copyFor(step: number, manager: string, connection: ShownConnection | undefined): string {
-  if (step === 0) return `${managerOf(manager).add} ${STUDIO_PACKAGE}`
-  return step === 1 ? (connection?.code ?? "") : managerOf(manager).run.join(" ")
+  if (step === 0) return managerOf(manager).setup.join(" ")
+  return step === 1 ? (connection?.code ?? "") : managerOf(manager).studio
 }
 
 /**
- * Studio's setup, a step at a time: install it, connect your app — five
- * frameworks to pick from — and start it. Each step's text copies in one
- * click.
+ * Studio's setup, a step at a time: set it up with Courier's one command,
+ * see what it connects in your app — five frameworks to pick from — and
+ * start it. Each step's text copies in one click.
  *
  * @param props - The frameworks' connections
  * @returns The wizard

@@ -36,6 +36,14 @@ describe("the adapters on the landing page", () => {
     ])
   })
 
+  it("names each framework as the one command's --framework takes it, as its page documents", () => {
+    const row = docsPage("/docs/create-courier")
+      .split("\n")
+      .find((line) => line.startsWith("| `--framework <name>`"))
+
+    for (const adapter of ADAPTERS) expect(row).toContain(`\`${adapter.framework}\``)
+  })
+
   it.each(ADAPTERS)("imports $label's handler from its own package, on two lines", (adapter) => {
     const { own, last } = ownLines(adapter)
 

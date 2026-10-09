@@ -77,6 +77,7 @@ async function writeImport(
       ...(await declaredSpec(entry, name, body.spec)),
       options: body.options,
       entry: getImportState(imports, name),
+      origin: body.origin ?? "given",
     },
     body,
     "when-shown",

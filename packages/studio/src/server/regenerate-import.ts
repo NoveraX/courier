@@ -29,6 +29,8 @@ export interface Regeneration {
   options: GenerateOptions;
   /** What Studio recorded about the import, if anything. */
   entry: ImportStateEntry | undefined;
+  /** Where the specification came from; the import's own when left out. */
+  origin?: "traffic" | "given" | undefined;
 }
 
 /**
@@ -75,8 +77,8 @@ export async function applyRegeneration(
   quoting: PlanQuoting,
 ): Promise<{ report: ApplyReport; leftBehind: string[] }> {
   const { plan, leftBehind } = await planRegeneration(regeneration);
-  const { root, name, spec, specHash, entry } = regeneration;
-  const applied = { specHash, digest: createSpecDigest(spec) };
+  const { root, name, spec, specHash, entry, origin } = regeneration;
+  const applied = { specHash, digest: createSpecDigest(spec), ...(origin && { origin }) };
   const now = new Date().toISOString();
   const report = await runPlan(
     root,

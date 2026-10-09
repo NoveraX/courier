@@ -35,6 +35,12 @@ export interface ImportStateEntry {
   files: Record<string, RecordedFile>;
   /** The apply that saved this record, which an unfinished apply of the import compares with */
   applyId?: string;
+  /**
+   * Where its specification comes from when Studio read it rather than was
+   * given it: `traffic`, the calls Studio recorded, which managing the
+   * import reads again.
+   */
+  origin?: "traffic";
 }
 
 /** Top-level shape of `.courier/imports-state.json` */

@@ -26,6 +26,9 @@ export function readWriteBody(value: unknown): WriteBody | null {
   const importType = IMPORT_TYPES.find((type) => type === value.importType);
   if (value.importType !== undefined && importType === undefined) return null;
   if (value.specUrl !== undefined && typeof value.specUrl !== "string") return null;
+  /* Read from traffic, a specification reaches the wizard as pasted text. */
+  if (value.origin !== undefined && (value.origin !== "traffic" || importType !== "raw"))
+    return null;
   if (value.planDigest !== undefined && typeof value.planDigest !== "string") return null;
   const confirm = value.confirm;
   if (
@@ -39,6 +42,7 @@ export function readWriteBody(value: unknown): WriteBody | null {
     spec: value.spec,
     options,
     ...(importType !== undefined && { importType }),
+    ...(value.origin === "traffic" && { origin: "traffic" as const }),
     ...(typeof value.specUrl === "string" && { specUrl: value.specUrl }),
     ...(typeof value.planDigest === "string" && { planDigest: value.planDigest }),
     ...(confirm !== undefined && { confirm }),

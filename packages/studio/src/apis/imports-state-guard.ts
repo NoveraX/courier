@@ -26,6 +26,7 @@ export function isImportStateEntry(value: unknown): value is ImportStateEntry {
   if (typeof value.fetchedAt !== "string") return false;
   if (typeof value.lastSyncedAt !== "string") return false;
   if (value.applyId !== undefined && typeof value.applyId !== "string") return false;
+  if (value.origin !== undefined && value.origin !== "traffic") return false;
   /* A folder an import is written to: never the project itself, nor one Studio keeps out of. */
   if (typeof value.dir !== "string" || value.dir === "." || !isCanonicalPath(value.dir))
     return false;

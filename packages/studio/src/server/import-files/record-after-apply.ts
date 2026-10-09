@@ -7,6 +7,12 @@ import type { RecordedFile } from "./recorded-file";
 export interface AppliedSpec {
   specHash: string;
   digest?: ImportStateEntry["digest"];
+  /**
+   * Where the specification came from: `traffic` when Studio read it from
+   * the calls it recorded, `given` when it was given; the import's own
+   * when left out, as adding or removing endpoints leaves it.
+   */
+  origin?: "traffic" | "given";
 }
 
 /**
@@ -45,6 +51,7 @@ export function recordAfterApply(
       ...endpoints,
     });
   }
+  const origin = spec.origin === undefined ? previous?.origin : spec.origin;
   return {
     specHash: spec.specHash,
     ...(spec.digest !== undefined && { digest: spec.digest }),
@@ -52,5 +59,6 @@ export function recordAfterApply(
     lastSyncedAt: now,
     dir: applied.dir,
     files: Object.fromEntries(files),
+    ...(origin === "traffic" && { origin }),
   };
 }

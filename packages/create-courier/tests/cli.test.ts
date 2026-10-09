@@ -119,6 +119,22 @@ describe("create-courier", () => {
     expect(readFileSync(join(root, "src/courier/api.ts"), "utf8")).toContain('access: "read"');
   }, 60_000);
 
+  it("adds agents to a project set up already: the MCP server's entry, and the step that marks its endpoints, without the example's lines", () => {
+    const root = projectWith(NEXT_WITH_PACKAGES);
+    run([root, "--yes", "--no-install", "--no-mcp"]);
+
+    const { status, out } = run([root, "--yes", "--no-install", "--mcp"]);
+
+    expect(status).toBe(0);
+    expect(out).toMatch(/= src\/courier\/api\.ts +Courier's already, yours to change/);
+    expect(out).toContain(
+      "src/courier/api.ts: the MCP server offers only endpoints marked .agent()",
+    );
+    expect(out).not.toContain("const users = defineGroup(");
+    expect(out).toContain("Your editor's agent can call the endpoints you mark .agent()");
+    expect(existsSync(join(root, ".mcp.json"))).toBe(true);
+  }, 60_000);
+
   it("refuses a project without TypeScript, a framework it does not know, and a folder of files without package.json", () => {
     const noTs = run([projectWith({ "package.json": manifest({ next: "16.4.0" }) }), "--dry-run"]);
     const unknown = run([

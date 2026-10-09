@@ -1,0 +1,123 @@
+export const metadata = { title: "Create Courier", description: "Set Courier up in one command, in your project or a new one: the typed API, the route the browser calls it through, Studio and mock data.", mode: "both" }
+
+`@noverax/create-courier` sets Courier up in one command. It finds your framework, shows what it is about to do, and once you agree writes the files, installs the packages with your package manager and type-checks what it added. You get a working page at `/courier` before you have a backend: the example API answers from a mock that Studio runs.
+
+## In your project
+
+Run it in the project's folder:
+
+<CodeGroup
+  items={[
+    { label: "npm", code: "npx @noverax/create-courier@latest", language: "bash" },
+    { label: "pnpm", code: "pnpm create @noverax/courier", language: "bash" },
+    { label: "yarn", code: "yarn create @noverax/courier", language: "bash" },
+    { label: "bun", code: "bun create @noverax/courier", language: "bash" },
+  ]}
+/>
+
+It prints the plan and asks before it changes anything:
+
+```text
+Set Courier up in shop (Next.js 16.4.0, npm)
+
+Files
+  + src/courier/api.ts              your API, typed, with an example to start from
+  + src/courier/boundary.ts         the endpoints the browser may call
+  + courier.config.ts               lists your APIs for the app, Studio and agents
+  + courier.mocks.ts                the mock Studio runs on port 7001
+  + src/app/api/request/route.ts    the route the browser calls your API through
+  + src/courier/query.ts            React Query hooks for your API
+  + src/app/courier/page.tsx        a page that shows Courier at work
+  + src/instrumentation.ts          registers your APIs as the server starts
+  + src/instrumentation-client.ts   the browser's connection to Studio
+
+Changes to your files
+  ~ package.json                    adds Courier's scripts
+      +     "studio": "courier-studio"
+
+Packages
+  + @noverax/courier @noverax/courier-next @noverax/courier-react @tanstack/react-query zod @noverax/courier-studio-core
+  + @noverax/courier-studio @noverax/courier-mock hono @hono/node-server  (dev)
+```
+
+Then start Studio, which runs the mock, and your app:
+
+```bash
+npm run studio
+npm run dev
+```
+
+Open `/courier`: the users the mock answers with, and a form that creates one, each call in Studio's timeline.
+
+## In a new project
+
+Point it at a folder that does not exist yet, and name the framework:
+
+```bash
+npx @noverax/create-courier@latest shop --framework next
+```
+
+It creates the project with the framework's own generator — `create-next-app`, `sv`, `create-astro` and the others, run without a question at the major the setup is checked against — puts right what a template gets wrong for the project it makes, installs its packages with your package manager, and sets Courier up in it. Express has no generator of its own: the command writes a minimal server in TypeScript. In a terminal, it asks for the framework when `--framework` is left out.
+
+A project it creates is moved to TypeScript 6 where its template came with an older one. A project you already have keeps the TypeScript it has, and the plan says how to move when you are ready.
+
+## What it sets up
+
+| Framework | Where your API is served | What it changes in your files |
+|---|---|---|
+| Next.js | `app/api/request/route.ts`, registered from `instrumentation.ts` | `next.config` only when Studio's default port is taken |
+| Nuxt | `server/api/request.ts`, registered from a Nitro plugin | Studio's module in `nuxt.config`; `app.vue` renders pages where it showed the welcome |
+| SvelteKit | `src/routes/api/request/+server.ts`, registered from `hooks.server.ts` | Studio's plugin in `vite.config` |
+| Astro | `src/pages/api/request.ts`, on demand, registered from the middleware | Studio's integration in `astro.config` |
+| React Router, Remix | `app/routes/api.request.ts` | the routes in `app/routes.ts`; Studio's plugin in `vite.config` |
+| SolidStart | `src/routes/api/request.ts` | Studio's plugin in `vite.config` |
+| React with Vite | no server: the browser calls your API directly | Studio's plugin in `vite.config` |
+| Vue with Vite | no server: the browser calls your API directly | Studio's plugin in `vite.config` |
+| Expo | no server: the app calls your API directly | a Courier tab in the template's tabs |
+| Express | a router on `/api/request` and `/courier` | the router mounted after `express()` |
+| Hono | routes on `/api/request` and `/courier` | the routes mounted after `new Hono()`; `include` in a `tsconfig` that compiles `src/` |
+| Fastify | a plugin on `/api/request` and `/courier` | `.courier/` kept out of `fastify start -w` |
+| NestJS | a module on `/api/request` and `/courier` | the module imported into your root module |
+
+Every setup adds `courier.config.ts`, the list of your APIs that your server, Studio and the [MCP server](/docs/agents/overview) read; `courier.mocks.ts`, the mock Studio starts with itself; and your API's definition, with its Zod schemas and the [boundary](/docs/proxy-mode/boundary) that holds the browser to the endpoints it may call. A server compiled by `tsc` from `src/` — Express, Hono, Fastify, NestJS — cannot import a file at the project's root, so it registers the APIs from `src/courier/sources.ts`, which lists the same ones.
+
+## What it will not do
+
+- **Change anything you have not seen.** The plan comes first; without a terminal to answer, in CI or for an agent, nothing changes unless `--yes` is passed. `--dry-run` shows the plan and stops.
+- **Replace a file of yours.** A file is only ever added. Where a file of yours stands where Courier's would go — your own `instrumentation.ts`, say — it is kept, and the lines it would hold are listed for you.
+- **Edit a file it cannot read.** A change to a file of yours is made only where the file has a shape the command knows: one default export of a config object, one `const app = express()`. It is shown line by line in the plan and checked against the file right before it is written; a file that changed meanwhile stops the setup with its name. Anywhere else, the change is left to you, with the lines to add.
+- **Take a port that is taken.** Studio takes 6280 and the mock 7001 unless something listens there already, another project's Studio say; then the next free one, written in `courier.config.ts` and `courier.mocks.ts`.
+
+## Your own API
+
+```bash
+npx @noverax/create-courier@latest --openapi https://petstore3.swagger.io/api/v3/openapi.json
+```
+
+Imports an OpenAPI, Swagger or Postman specification in place of the example, with Studio's own importer: the typed code is written and the API is declared in `courier.config.ts`. See [Import an API](/docs/studio/import-api).
+
+## AI agents
+
+```bash
+npx @noverax/create-courier@latest --mcp
+```
+
+Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Code reads, so your editor's agent can call your API — through the same middleware as your app. In a terminal, it asks; without one, it leaves agents out unless `--mcp` is passed.
+
+## Options
+
+| Option | |
+|---|---|
+| `[dir]` | The project's folder, or a new one to create (default: the working directory) |
+| `--framework <name>` | `next`, `nuxt`, `sveltekit`, `astro`, `react-router`, `remix`, `solid-start`, `expo`, `nestjs`, `fastify`, `hono`, `express`, `react`, `vue` (default: found in `package.json`) |
+| `--openapi <spec>` | Import your API from a specification, a URL or a file, in place of the example |
+| `--name <name>` | The imported API's name (default: from the specification) |
+| `--no-studio` | Leave Studio out |
+| `--no-mocks` | Leave the example's mock out |
+| `--mcp` | Offer the API's reads to AI agents in your editor |
+| `--package-manager <name>` | `npm`, `pnpm`, `yarn` or `bun` (default: the project's, or the one that started the command) |
+| `--no-install` | Write the files, and name the install commands |
+| `--yes`, `-y` | Go ahead without asking |
+| `--dry-run` | Show the plan, and change nothing |
+
+It needs Node.js 22 or later, and a project with a `tsconfig.json`: Courier is typed end to end.

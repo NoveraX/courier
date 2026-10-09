@@ -21,6 +21,7 @@ export const LEARN_SECTIONS: NavSection[] = [
     items: [
       { title: "Installation", href: "/docs/installation" },
       { title: "Quick Start", href: "/docs/quick-start" },
+      { title: "Create Courier", href: "/docs/create-courier" },
       { title: "Project Setup", href: "/docs/project-setup" },
     ],
   },

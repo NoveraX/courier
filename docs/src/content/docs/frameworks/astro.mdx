@@ -2,6 +2,14 @@ export const metadata = { title: "Astro", description: "Serve Courier's proxy fr
 
 `@noverax/courier-astro` serves the proxy that `createProxyCaller` and `createProxyQueryCaller` call: one route answers every endpoint, reads over `GET` and writes over `POST`, and streams server-sent events.
 
+## In one command
+
+```bash
+npx @noverax/create-courier@latest
+```
+
+In an Astro site it adds what this page sets up by hand — the route rendered on demand, the middleware that registers your APIs, and Studio's integration — with a typed example API, its mock, and a page at `/courier`. See [Create Courier](/docs/create-courier).
+
 ## Install
 
 ```bash

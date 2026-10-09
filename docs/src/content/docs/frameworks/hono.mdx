@@ -2,6 +2,14 @@ export const metadata = { title: "Hono", description: "Hono server adapter using
 
 The `@noverax/courier-hono` adapter lets you host the Courier proxy route on any Hono-supported runtime: Node.js, Bun, Deno, and Cloudflare Workers.
 
+## In one command
+
+```bash
+npx @noverax/create-courier@latest
+```
+
+In a Hono server it adds routes for the proxy and a page at `/courier`, mounted on your app, with a typed example API and its mock. See [Create Courier](/docs/create-courier).
+
 ## Installation
 
 ```bash

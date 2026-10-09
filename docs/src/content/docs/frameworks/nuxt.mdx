@@ -2,6 +2,14 @@ export const metadata = { title: "Nuxt", description: "Nuxt integration with cou
 
 Courier works with Nuxt through the `@noverax/courier-nuxt` adapter. Use `courierHandler` for the server proxy route, `createProxyCaller` for client-side requests, and `createCaller` for server-side data fetching.
 
+## In one command
+
+```bash
+npx @noverax/create-courier@latest
+```
+
+In a Nuxt app it adds what this page sets up by hand — the server route, the Nitro plugin that registers your APIs, and Studio's module — with a typed example API, its mock, and a page at `/courier`. See [Create Courier](/docs/create-courier).
+
 ## Installation
 
 ```bash

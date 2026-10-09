@@ -2,6 +2,14 @@ export const metadata = { title: "React (Vite / CRA)", description: "Use Courier
 
 For React apps built with Vite or Create React App, Courier provides `createProxyQueryCaller` for type-safe data fetching with React Query. Since these apps don't have a built-in server, you need a separate backend (Express, Hono, or Fastify) to host the proxy route.
 
+## In one command
+
+```bash
+npx @noverax/create-courier@latest
+```
+
+In a React app Vite builds, it sets Courier up in direct mode — React Query hooks that call your API straight from the browser, and Studio's plugin — with a typed example API, its mock, and a page of its own at `/courier.html`. For a backend proxy, as this page sets up, add one of the server guides. See [Create Courier](/docs/create-courier).
+
 ## Installation
 
 ```bash

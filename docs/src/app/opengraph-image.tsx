@@ -110,7 +110,7 @@ export default async function OGImage() {
             fontSize: 22,
           }}
         >
-          $&nbsp;<span style={{ color: "#f7f8f8" }}>npm i @noverax/courier</span>
+          $&nbsp;<span style={{ color: "#f7f8f8" }}>npx @noverax/create-courier@latest</span>
         </div>
       </div>
     </div>,

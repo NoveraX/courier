@@ -4,8 +4,8 @@ import { cn } from "@/site/cn"
 import { copyText } from "@/site/copy-text"
 import { useFlash } from "@/site/use-flash"
 
-/** The command that installs Courier. */
-export const INSTALL_COMMAND = "npm i @noverax/courier"
+/** The one command that sets Courier up in a project, or in a new one. */
+export const START_COMMAND = "npx @noverax/create-courier@latest"
 
 const LOOK = {
   studio: {
@@ -14,7 +14,8 @@ const LOOK = {
     label: "min-w-10 text-right text-[11px] text-brand",
   },
   hero: {
-    button: "h-10.5 gap-3 rounded-[9px] bg-panel px-3.5 text-control text-fg-muted hover:text-fg",
+    button:
+      "h-10.5 max-w-full gap-3 rounded-[9px] bg-panel px-3.5 text-control text-fg-muted hover:text-fg max-[560px]:gap-2 max-[560px]:text-[12px]",
     label: "min-w-8.5 text-right text-[11px] text-brand",
   },
   footer: {
@@ -32,7 +33,7 @@ const LOOK = {
  * An install command as a button: a click copies it, and the button says
  * so for a moment.
  *
- * @param props - Where it sits, which sets its size; and the command, Courier's by default
+ * @param props - Where it sits, which sets its size; and the command, the one that sets Courier up by default
  * @returns The button
  * @example
  * ```tsx
@@ -41,7 +42,7 @@ const LOOK = {
  */
 export function InstallButton({
   look,
-  command = INSTALL_COMMAND,
+  command = START_COMMAND,
 }: {
   look: keyof typeof LOOK
   command?: string

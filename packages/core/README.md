@@ -102,6 +102,18 @@ import {
 import { toOpenAPI } from "@noverax/courier/openapi" // An API's definition as an OpenAPI 3.1 or 3.2 document
 ```
 
+### `@noverax/courier/webhooks` — Incoming Webhooks
+
+```ts
+import {
+  defineWebhook,             // A webhook's body schema and its sender's signature, checked before your handler
+  stripeSignature,           // Stripe-Signature: HMAC-SHA-256 of <timestamp>.<body>
+  githubSignature,           // X-Hub-Signature-256
+  standardWebhookSignature,  // Standard Webhooks: Svix, Clerk, Resend
+  hmacSignature,             // One header with an HMAC-SHA-256 of the body, for a service of your own
+} from "@noverax/courier/webhooks"
+```
+
 ### `@noverax/courier/node` — Node.js Helpers
 
 ```ts

@@ -7,29 +7,19 @@ import { devStep, studioStep } from "./shared/next-steps";
 import { courierPackages } from "./shared/packages";
 import { studioScripts } from "./shared/recipe-parts";
 import { SERVER_DIR, serverFiles, studioAttachLater } from "./shared/server-files";
+import { sourcesAfterImport } from "./shared/sources-after-import";
 import { rootDirIncludeEdit } from "./shared/tsconfig-include";
 
-function routes(ctx: RecipeContext): RecipeFile {
+function routes(ctx: RecipeContext, withPage: boolean): RecipeFile {
   const path = `${SERVER_DIR}/routes.ts`;
   const from = (file: string) => importSpecifier(path, `${SERVER_DIR}/${file}`, ctx.extension);
-  const content = `import { registerSources } from "@noverax/courier";
-import { courierHandler } from "@noverax/courier-hono";
-import { Hono } from "hono";
-
-import { emailOf, failure, usersPage } from "${from("page.ts")}";
+  const pageImports = withPage
+    ? `import { emailOf, failure, usersPage } from "${from("page.ts")}";
 import { caller } from "${from("server-caller.ts")}";
-import { sources } from "${from("sources.ts")}";
-
-registerSources(sources);
-${ctx.choices.studio ? `\n${studioAttachLater()}\n` : ""}
-/**
- * Courier's routes: /api/request, which browsers call your API through,
- * and /courier, a page that shows it at work.
- */
-export const courier = new Hono();
-
-courier.all("/api/request", courierHandler());
-
+`
+    : "";
+  const page = withPage
+    ? `
 courier.get("/courier", async (c) => c.html(usersPage(await caller.users.list().catch(failure))));
 
 courier.post("/courier", async (c) => {
@@ -38,11 +28,29 @@ courier.post("/courier", async (c) => {
   await caller.users.create({ name: person, email: emailOf(person) });
   return c.redirect("/courier", 303);
 });
-`;
+`
+    : "";
+  const content = `import { registerSources } from "@noverax/courier";
+import { courierHandler } from "@noverax/courier-hono";
+import { Hono } from "hono";
+
+${pageImports}import { sources } from "${from("sources.ts")}";
+
+registerSources(sources);
+${ctx.choices.studio ? `\n${studioAttachLater()}\n` : ""}
+/**
+ * Courier's routes: /api/request, which browsers call your API through${withPage ? ",\n * and /courier, a page that shows it at work" : ""}.
+ */
+export const courier = new Hono();
+
+courier.all("/api/request", courierHandler());
+${page}`;
   return {
     path,
     content,
-    purpose: "Courier's routes: the proxy, and a page that shows it at work",
+    purpose: withPage
+      ? "Courier's routes: the proxy, and a page that shows it at work"
+      : "Courier's proxy route",
   };
 }
 
@@ -93,11 +101,12 @@ function mountEdit(ctx: RecipeContext): RecipeEdit {
 export function honoRecipe(ctx: RecipeContext): Recipe {
   const example = ctx.choices.openapi === undefined;
   return {
-    files: [...serverFiles(ctx, SERVER_DIR), ...(example ? [routes(ctx)] : [])],
-    edits: [...(example ? [mountEdit(ctx)] : []), ...rootDirIncludeEdit(ctx)],
+    files: [...serverFiles(ctx, SERVER_DIR), routes(ctx, example)],
+    edits: [mountEdit(ctx), ...rootDirIncludeEdit(ctx)],
     ...courierPackages(ctx, { adapter: "@noverax/courier-hono" }),
     scripts: studioScripts(ctx),
     manual: [],
     next: [...studioStep(ctx), devStep(ctx, example ? "/courier" : undefined)],
+    ...(example ? {} : { afterImport: sourcesAfterImport(SERVER_DIR) }),
   };
 }

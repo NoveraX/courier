@@ -70,4 +70,6 @@ export interface EndpointStats {
   requestIds: string[];
   /** Whether any call went through a cache, hit or miss */
   cached: boolean;
+  /** Whether any call sent an idempotency key, so a retried write of it is applied once */
+  keyed: boolean;
 }

@@ -35,6 +35,7 @@ function createEmptyStats(r: RequestEntry, key: string): EndpointStats {
     type: r.type,
     requestIds: [],
     cached: false,
+    keyed: false,
   };
 }
 
@@ -60,6 +61,7 @@ export function computeEndpointStats(requests: RequestEntry[]): Map<string, Endp
     if (r.size != null) s.sizes.push(r.size);
     if (r.statusCode != null) s.statusCodes.push(r.statusCode);
     if (r.cache) s.cached = true;
+    if (r.idempotencyKey !== undefined) s.keyed = true;
   }
 
   for (const [key, s] of map) {

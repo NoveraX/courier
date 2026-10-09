@@ -7,27 +7,32 @@ interface TopLinkProps {
   href: string
   className?: string
   /** What a screen reader calls it, when its content does not say. */
-  label?: string
+  label?: string | undefined
+  /** It is the page's own entry in the site's navigation, marked as the current page. */
+  current?: boolean
   children: ReactNode
 }
 
 /**
- * A logo's way back to the top of the page it is on. A click glides up —
- * or jumps, for a reader who asks for less motion — and leaves the address
- * as it is; a click that opens a new tab or window opens the page itself.
+ * A link to the page it is on — a logo, or the page's own entry in the
+ * site's navigation — which takes the reader back to its top. A click
+ * glides up — or jumps, for a reader who asks for less motion — and leaves
+ * the address as it is; a click that opens a new tab or window opens the
+ * page itself.
  *
- * @param props - The page, the link's classes and name, and its content
+ * @param props - The page, the link's classes and name, whether it is the page's navigation entry, and its content
  * @returns The link
  * @example
  * ```tsx
  * <TopLink href="/"><CourierMark width={19} /></TopLink>
  * ```
  */
-export function TopLink({ href, className, label, children }: TopLinkProps) {
+export function TopLink({ href, className, label, current = false, children }: TopLinkProps) {
   return (
     <a
       href={href}
       aria-label={label}
+      aria-current={current ? "page" : undefined}
       className={className}
       onClick={(event) => {
         if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)

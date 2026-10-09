@@ -1,0 +1,44 @@
+[
+  { "id": "next", "start": ["npx", "next", "dev", "-p", "{port}"], "page": "/courier" },
+  { "id": "nuxt", "start": ["npx", "nuxt", "dev", "--port", "{port}"], "page": "/courier" },
+  {
+    "id": "sveltekit",
+    "start": ["npx", "vite", "dev", "--port", "{port}", "--strictPort"],
+    "page": "/courier"
+  },
+  { "id": "astro", "start": ["npx", "astro", "dev", "--port", "{port}"], "page": "/courier" },
+  {
+    "id": "react-router",
+    "start": ["npx", "react-router", "dev", "--port", "{port}", "--strictPort"],
+    "page": "/courier"
+  },
+  {
+    "id": "solid-start",
+    "start": ["npx", "vite", "dev", "--port", "{port}", "--strictPort"],
+    "page": "/courier"
+  },
+  {
+    "id": "react",
+    "start": ["npx", "vite", "--port", "{port}", "--strictPort"],
+    "page": "/courier.html"
+  },
+  {
+    "id": "vue",
+    "start": ["npx", "vite", "--port", "{port}", "--strictPort"],
+    "page": "/courier.html"
+  },
+  {
+    "id": "expo",
+    "start": ["npx", "expo", "start", "--web", "--port", "{port}"],
+    "page": "/courier"
+  },
+  { "id": "express", "start": ["npm", "run", "dev"], "page": "/courier" },
+  {
+    "id": "hono",
+    "start": ["npm", "run", "dev"],
+    "page": "/courier",
+    "port": { "file": "src/index.ts", "from": "port: 3000", "to": "port: Number(process.env.PORT)" }
+  },
+  { "id": "fastify", "start": ["npm", "run", "dev"], "page": "/courier" },
+  { "id": "nestjs", "start": ["npm", "run", "start:dev"], "page": "/courier" }
+]

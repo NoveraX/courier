@@ -104,7 +104,11 @@
       }
     },
     {
-      "includes": ["e2e/frameworks/apps/**", "e2e/frameworks/support/global-setup.ts"],
+      "includes": [
+        "e2e/frameworks/apps/**",
+        "e2e/frameworks/support/global-setup.ts",
+        "e2e/quickstart/support/global-setup.ts"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -131,6 +135,21 @@
             "noUnusedVariables": "off",
             "noUnusedImports": "off",
             "useHookAtTopLevel": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["e2e/quickstart/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUndeclaredEnvVars": {
+              "level": "error",
+              "options": {
+                "allowedEnvVars": ["COURIER_QUICKSTART", "COURIER_QUICKSTART_WORK"]
+              }
+            }
           }
         }
       }

@@ -1,6 +1,7 @@
 import { formatDuration } from "@/lib/formatters";
 import type { RequestEntry, ValidationIssue } from "@/store/types";
 import { isStreamRequest, requestStateOf } from "./request-state";
+import { deliveryChecks } from "./webhook-parts";
 
 /** A check the Overview lists: what Courier verified of the request, and how it went. */
 export interface RequestCheck {
@@ -120,8 +121,10 @@ function streamChecks(r: RequestEntry): RequestCheck[] {
  * What Courier checked of a request, in the order it ran the checks: the
  * variables against the input schema, the answer against the response
  * schema, the middleware chain and — when it took part — the cache; for a
- * stream, its handshake, its connection and its middleware. Each title
- * says what happened, so a check that did not run never reads as passed.
+ * stream, its handshake, its connection and its middleware; for a webhook
+ * delivered to the app, its signature, its body and its handler's answer.
+ * Each title says what happened, so a check that did not run never reads
+ * as passed.
  *
  * @param r - The request
  * @returns The checks
@@ -131,6 +134,7 @@ function streamChecks(r: RequestEntry): RequestCheck[] {
  * ```
  */
 export function requestChecks(r: RequestEntry): RequestCheck[] {
+  if (r.mode === "webhook") return deliveryChecks(r);
   if (isStreamRequest(r)) return streamChecks(r);
   const checks = [variablesCheck(r), responseCheck(r), middlewareCheck(r)];
   return r.cache ? [...checks, cacheCheck(r.cache)] : checks;

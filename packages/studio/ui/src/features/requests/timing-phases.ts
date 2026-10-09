@@ -1,9 +1,18 @@
 import { formatDuration } from "@/lib/formatters";
 import type { RequestEntry } from "@/store/types";
+import { type DeliveryStop, deliveryStopOf } from "./webhook-delivery";
 
 /** A phase of a request's time, placed from its start. */
 export interface TimingPhase {
-  key: "middleware-in" | "middleware" | "fetch" | "validation" | "middleware-out" | "overhead";
+  key:
+    | "middleware-in"
+    | "middleware"
+    | "fetch"
+    | "validation"
+    | "middleware-out"
+    | "overhead"
+    | "checks"
+    | "handler";
   label: string;
   /** When it began, in ms from the request's start. */
   start: number;
@@ -20,7 +29,8 @@ const sum = (values: readonly (number | undefined)[]): number =>
  * How a request spent its time, phase after phase in the order Courier runs
  * them: the middleware before the call, the fetch, the validation, the
  * middleware after — or the middleware as one phase when its steps do not
- * say how they split — and what Courier itself took between them.
+ * say how they split — and what Courier itself took between them. A
+ * webhook delivered to the app spends it on its checks, then its handler.
  *
  * @param r - The request
  * @returns The total and the phases, or `null` before the request has timings
@@ -30,9 +40,13 @@ const sum = (values: readonly (number | undefined)[]): number =>
  * ```
  */
 export function timingPhasesOf(
-  r: Pick<RequestEntry, "timing" | "middlewareEntries">,
+  r: Pick<
+    RequestEntry,
+    "timing" | "middlewareEntries" | "mode" | "error" | "statusCode" | "variables"
+  >,
 ): { total: number; phases: TimingPhase[] } | null {
   if (!r.timing) return null;
+  if (r.mode === "webhook") return deliveryPhases(r.timing, deliveryStopOf(r));
   const { total, middleware, fetch, validation } = r.timing;
   const before = sum(r.middlewareEntries.map((e) => e.beforeDuration));
   const after = sum(r.middlewareEntries.map((e) => e.afterDuration));
@@ -61,6 +75,23 @@ export function timingPhasesOf(
       start += p.duration;
       return phase;
     });
+  return { total, phases };
+}
+
+/* A delivery made to the app spends its time on its checks — read, signature, body — then in its handler. */
+function deliveryPhases(
+  timing: NonNullable<RequestEntry["timing"]>,
+  stop: DeliveryStop | undefined,
+): { total: number; phases: TimingPhase[] } {
+  const { total } = timing;
+  const checks = Math.min(timing.validation, total);
+  const reachedHandler = stop === undefined || stop === "handler";
+  const phases: TimingPhase[] = reachedHandler
+    ? [
+        { key: "checks", label: "Checks", start: 0, duration: checks },
+        { key: "handler", label: "Handler", start: checks, duration: total - checks },
+      ]
+    : [{ key: "checks", label: "Checks", start: 0, duration: total }];
   return { total, phases };
 }
 

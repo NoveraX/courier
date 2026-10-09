@@ -80,7 +80,7 @@ export function requestFromSaved(raw: unknown): RequestEntry | undefined {
     httpMethod: optStr(raw.httpMethod),
     variables: raw.variables,
     variablesCutFrom: optNum(raw.variablesCutFrom),
-    mode: raw.mode === "proxy" ? "proxy" : "direct",
+    mode: raw.mode === "proxy" || raw.mode === "webhook" ? raw.mode : "direct",
     agent: readAgent(raw.agent),
     idempotencyKey: optStr(raw.idempotencyKey),
     type: raw.type === "query" || raw.type === "mutation" ? raw.type : undefined,

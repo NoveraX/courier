@@ -33,7 +33,8 @@ export interface RequestEntry {
   variables: unknown;
   /** The size in bytes of the whole variables as JSON, when `variables` is a part of them. */
   variablesCutFrom?: number | undefined;
-  mode: "direct" | "proxy";
+  /** How the call came: made by the app directly, through Courier's proxy, or delivered to it as a webhook. */
+  mode: "direct" | "proxy" | "webhook";
   /** The agent the call ran for, when an MCP server made it; absent on the application's own calls. */
   agent?: RequestAgent | undefined;
   /** The key the call sent in its endpoint's idempotency header, the same on every attempt. */

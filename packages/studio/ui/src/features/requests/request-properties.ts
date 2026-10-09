@@ -26,7 +26,8 @@ function operationOf(r: RequestEntry): string {
 }
 
 /**
- * The properties the Overview lists of a request: its endpoint, its id, the
+ * The properties the Overview lists of a request: its endpoint — for a
+ * webhook delivered to the app, the webhook and its event — its id, the
  * app that made it, the saved session it comes from while one is shown,
  * when it started, and its operation — or, for a stream, its protocol.
  *
@@ -43,7 +44,7 @@ export function requestProperties(r: RequestEntry, context: PropertyContext): Re
   const id = r.callerRuntimeId ?? r.sessionId;
   const runtime = kind && kind !== id ? `${id} · ${kind}` : id;
   const properties: RequestProperty[] = [
-    { label: "Endpoint", value: endpointName(r), mono: true },
+    ...namesOf(r),
     { label: "Request ID", value: r.id, mono: true },
     { label: "Runtime", value: runtime, mono: false },
   ];
@@ -67,8 +68,18 @@ export function requestProperties(r: RequestEntry, context: PropertyContext): Re
   if (isStreamRequest(r)) {
     const protocol = r.transport === "ws" ? "WebSocket" : "text/event-stream";
     properties.push({ label: "Protocol", value: protocol, mono: true });
-  } else {
+  } else if (r.mode !== "webhook") {
     properties.push({ label: "Operation", value: operationOf(r), mono: false });
   }
   return properties;
+}
+
+/* A webhook delivered to the app is named by the webhook and its event, which only a body that passed its checks tells. */
+function namesOf(r: RequestEntry): RequestProperty[] {
+  if (r.mode !== "webhook") return [{ label: "Endpoint", value: endpointName(r), mono: true }];
+  const read = r.method !== "delivery";
+  return [
+    { label: "Webhook", value: r.source, mono: true },
+    { label: "Event", value: read ? r.method : "not read", mono: read },
+  ];
 }

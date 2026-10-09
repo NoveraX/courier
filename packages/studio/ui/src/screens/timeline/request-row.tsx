@@ -80,7 +80,9 @@ export function RequestRow({
               ? "bg-syntax-function/12 text-syntax-function"
               : r.mode === "proxy"
                 ? "bg-syntax-type/12 text-syntax-type"
-                : "bg-raised text-fg-subtle",
+                : r.mode === "webhook"
+                  ? "bg-syntax-keyword/12 text-syntax-keyword"
+                  : "bg-raised text-fg-subtle",
           )}
         >
           {r.agent ? "agent" : r.mode}

@@ -10,6 +10,7 @@ import { type ContractRouteDeps, registerContractRoutes } from "./contract-drift
 import type { DemoLimits } from "./demo/demo-limits";
 import { DEMO_WRITE_REFUSAL } from "./demo/demo-refusals";
 import { DEMO_MAX_BODY, demoRestGuard } from "./demo/demo-rest-guard";
+import { type EditorRouteDeps, registerEditorRoutes } from "./editor/editor-routes";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
 import { registerMockDeclareRoutes } from "./mock-declare-routes";
 import type { MocksEditContext } from "./mocks-edit/mocks-edit-context";
@@ -46,6 +47,8 @@ export interface RestApiDeps {
   tests: RecordedTestRouteDeps;
   /** The project, and what its endpoints' answers were seen to hold. */
   contract: ContractRouteDeps;
+  /** The project and its requests an editor reads beside its calls; none on a public demo. */
+  editor?: EditorRouteDeps | undefined;
   /** The token a writing route asks for. */
   token: StudioToken;
   /** The visitors' counts, when Studio serves a public demo. */
@@ -71,7 +74,18 @@ export interface RestApiDeps {
 export function registerRestApi(
   app: ReturnType<typeof express>,
   policy: StudioOriginPolicy,
-  { apis, configEdit, mocksEdit, sessions, storage, tests, contract, token, demo }: RestApiDeps,
+  {
+    apis,
+    configEdit,
+    mocksEdit,
+    sessions,
+    storage,
+    tests,
+    contract,
+    editor,
+    token,
+    demo,
+  }: RestApiDeps,
 ): void {
   app.use(compression());
   /* Before anything reads a body: the API is for the Studio UI, not for every
@@ -93,6 +107,7 @@ export function registerRestApi(
   registerRecordedTestRoutes(app, tests);
   registerContractRoutes(app, contract);
   registerTrafficSpecRoutes(app);
+  if (editor) registerEditorRoutes(app, editor);
   registerStorageRoutes(app, storage);
   registerMockDeclareRoutes(app, mocksEdit);
   registerConfigDeclareRoutes(app, configEdit);

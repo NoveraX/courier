@@ -10,20 +10,18 @@ import { createConfigSourceNamer } from "./catalog/config-source-names";
 import { closeStudio } from "./close-studio";
 import { createAnswerObserver } from "./contract-drift/answer-observer";
 import { DEMO_REPLAY_BYTES, demoServing } from "./demo/demo-serving";
+import { studioAddressFile } from "./editor/studio-address-file";
 import { undoUnfinishedImportWrites } from "./import-files/undo-unfinished-import-writes";
 import { MAX_MESSAGE_BYTES } from "./max-message-bytes";
-import { mountStudioMcp } from "./mcp/mount-studio-mcp";
 import { createLifecycleCoordinator } from "./mock-manager";
 import { createMockRegistry, type MockRegistry } from "./mock-registry";
 import { mockStoreFile } from "./mock-store-file";
+import { mountStudioHttp } from "./mount-studio-http";
 import { createProjectState } from "./project-state/create-project-state";
 import { resolvedRoot } from "./resolved-root";
-import { registerRestApi } from "./rest-api";
 import { setupRuntimeNamespace } from "./runtime-namespace";
 import { createRuntimePlaygroundRouter } from "./runtime-playground-router";
 import { securityHeaders } from "./security-headers";
-import { serveStudioUi } from "./serve-ui";
-import { projectEnvironment } from "./session-file/project-environment";
 import { setupUiNamespace } from "./socket-handlers";
 import { createStudioSockets } from "./socket-server";
 import { openStudioStores } from "./storage/studio-stores";
@@ -31,7 +29,6 @@ import { wireStorage } from "./storage-space/storage-wiring";
 import { createStudioOriginPolicy } from "./studio-origin";
 import { createStudioStartup } from "./studio-startup";
 import { studioToken } from "./studio-token";
-import { studioVersion } from "./studio-version";
 import type { StudioServer, StudioServerOptions } from "./types";
 import { createWatcherStatus } from "./watcher-status";
 
@@ -71,7 +68,10 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
   if (serving) app.use(serving.httpGuard);
   const httpServer = createServer(serving?.serverOptions ?? {}, app);
   serving?.holdServer(httpServer);
-  const startup = createStudioStartup(httpServer, startupOptions);
+  /* An editor finds the project's Studio by a file in `.courier`. */
+  const address = studioAddressFile(() => root, !demo);
+  const onReady = address.announcing(startupOptions.onReady);
+  const startup = createStudioStartup(httpServer, { ...startupOptions, onReady });
   const policy = createStudioOriginPolicy({
     bindHost: startup.host,
     /* The UI's own dev server proxies to Studio under its own host, which Studio takes as its page. */
@@ -161,36 +161,23 @@ export function createStudioServer(options: StudioServerOptions = {}): StudioSer
 
   undoUnfinishedImportWrites(root);
 
-  registerRestApi(app, policy, {
-    apis: { project, projectRoot: root },
-    configEdit: { project, projectRoot: root },
-    mocksEdit: {
-      projectRoot,
-      mockBasePort: startup.mockBasePort,
-      project,
-      studioPort: startup.port,
-      mockSummaries: mockManager.summarizeServers,
-    },
-    sessions: {
-      sessions,
-      view,
-      environment: projectEnvironment(root, project, { host: !serving }),
-    },
-    storage: storage.routes,
-    tests: { root, sessions, project },
-    contract: { project, answers: stores.answers },
+  const http = {
+    project,
+    root,
+    projectRoot,
+    startup,
+    mockManager,
+    stores,
+    storage,
     token,
-    demo: serving && { limits: serving.limits },
-  });
-  /* Not on a public demo: its visitors have no token, and its recorded requests are no agent's. */
-  if (!serving)
-    mountStudioMcp(app, { token, version: studioVersion(), requestLog, mocks: mockManager });
-  serveStudioUi(app);
+    serving,
+  };
+  mountStudioHttp(app, policy, http);
 
   startup.start();
 
   const held = { root, startup, project, mockManager, playgroundRouter, io, storage, stores };
-  const close = () => closeStudio({ ...held, httpServer });
+  const close = () => closeStudio({ ...held, address, httpServer });
 
   return {
     get url() {

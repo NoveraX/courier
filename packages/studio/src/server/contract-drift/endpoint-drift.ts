@@ -85,7 +85,7 @@ function differenceAt(
   };
 }
 
-/* A required field, under required objects only, that fewer answers held than were seen. */
+/* A required field, under required objects only, that fewer answers held than held the object it is in: one absent with its object is its object's to be missing. */
 function missingFields(
   seen: EndpointSeen,
   declared: DeclaredShape,
@@ -96,18 +96,27 @@ function missingFields(
     if (path === "" || !place.required || path.includes("[]") || path.includes("*")) continue;
     if (!requiredAncestors(path, declared)) continue;
     const held = (byPath.get(path) ?? []).reduce((sum, field) => sum + field.count, 0);
-    if (held >= seen.calls) continue;
+    const holders = holdersOf(parentOf(path) ?? "", seen, byPath);
+    if (held >= holders) continue;
     missing.push({
       path,
       kind: "missing",
       observed: (byPath.get(path) ?? []).map((field) => field.type).sort(),
       firstSeen: seen.firstSeen,
       lastSeen: seen.lastSeen,
-      count: seen.calls - held,
+      count: holders - held,
       places: [],
     });
   }
   return missing;
+}
+
+/* The answers a field could have been in: every one for a field of the answer, those that held its object for one inside it. */
+function holdersOf(parent: string, seen: EndpointSeen, byPath: Map<string, FieldSeen[]>): number {
+  if (parent === "") return seen.calls;
+  return (byPath.get(parent) ?? [])
+    .filter((field) => field.type === "object")
+    .reduce((sum, field) => sum + field.count, 0);
 }
 
 function requiredAncestors(path: string, declared: DeclaredShape): boolean {

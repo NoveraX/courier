@@ -96,6 +96,15 @@ describe("an endpoint's drift", () => {
     expect(endpointDrift(undefined, declared(Product))).toEqual({ state: "unobserved", drift: [] });
   });
 
+  it("names an object missing when some answers lack it, and not the fields that went with it", () => {
+    const { drift } = driftOf([fits, withoutSeller, { ...fits, seller: {} }]);
+
+    expect(drift.filter((difference) => difference.kind === "missing")).toEqual([
+      expect.objectContaining({ path: "seller", count: 1 }),
+      expect.objectContaining({ path: "seller.name", count: 1 }),
+    ]);
+  });
+
   it("names a field the schema does not name — the outermost only — a type it does not take, and a field some answers lack", () => {
     const { state, drift } = driftOf([
       { ...fits, rating: { stars: 4 }, price: "12.00", seller: { name: "Ada", verified: true } },

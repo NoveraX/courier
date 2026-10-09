@@ -1,8 +1,8 @@
-export const metadata = { title: "Studio for Your Agent", description: "Let the agent in your editor read what Studio recorded — the failed requests with their bodies, the mocks and their scenarios — and switch a mock's scenario, over MCP.", mode: "both" }
+export const metadata = { title: "Studio for Your Agent", description: "Let the agent in your editor read what Studio recorded — the failed requests with their bodies, the audit's findings, the mocks — replay a request after a fix, and switch a mock's scenario, over MCP.", mode: "both" }
 
 ## Debugging without copying
 
-The agent you code with can read Studio for itself. `courier-studio mcp` serves the running Studio over MCP: the requests it recorded, the one that failed in full, the mocks it runs. Ask *why does checkout fail?* and the agent lists the failed requests, reads the one that broke — its variables, the answer, the middleware it went through — and finds the cause, with nothing pasted from Studio into the chat.
+The agent you code with can read Studio for itself. `courier-studio mcp` serves the running Studio over MCP: the requests it recorded, the one that failed in full, the audit's findings, the mocks it runs. Ask *why does checkout fail?* and the agent lists the failed requests, reads the one that broke — its variables, the answer, the middleware it went through — finds the cause, fixes it, and sends the request again to see it pass, with nothing pasted from Studio into the chat.
 
 ```bash
 claude mcp add courier-studio -- npx courier-studio mcp
@@ -16,15 +16,37 @@ In Cursor or VS Code, add the same command to `.cursor/mcp.json` or `.vscode/mcp
 | --- | --- |
 | `requests` | The requests Studio recorded, newest first: endpoint, method, mode, status, duration, error, and the agent tool a call ran for. Narrowed to the failed ones (`failed: true`), to an endpoint (`endpoint: "orders.cancel"`), or to fewer (`limit`, 20 by default, at most 50). |
 | `request` | One request in full, by the id `requests` gave: its variables, its answer, its request and response headers, its timing, its failure and the events it raised. |
+| `audit` | [Studio's audit](/docs/studio/audit) of the requests it recorded, by the Audit page's own rules: the score out of 100 and each finding — errors first — with the endpoints it concerns, a few of the requests behind it and the suggested fix, often as code. Narrowed to the more severe (`severity: "error"` or `"warning"`) or to an endpoint (`endpoint: "orders.create"`); `passed: true` adds the checks that passed. |
+| `replay` | Send a recorded read — a query, such as `GET shop.products.list` — again, as the inspector's Replay button does, and answer with what came back now: the new request's id, its status, its duration and its answer. |
+| `replay_write` | Send a recorded write — such as `POST shop.orders.create` — again, once a person confirms it. It does again what the request did. |
 | `mocks` | The mock servers Studio runs: each one's id, the source it serves, its status and address, its scenarios and the active one, its network conditions. |
-| `mock_scenario` | Switch a mock to one of its scenarios — the one change an agent may make, as the Mocks view makes it. |
+| `mock_scenario` | Switch a mock to one of its scenarios, as the Mocks view does. |
 
 The agent's own calls through [`courier-mcp`](/docs/agents/editor) show in the same list, marked with the tool they ran for — a call a person declined included — so the agent you code with can read what another agent did.
+
+## Replaying after a fix
+
+A replay is the inspector's: the runtime that made the request runs it again, in the same mode, with the same variables — whole, even when Studio's record of them was cut for size — and its middleware sets the headers afresh, so a token is the one the app holds now, not the one recorded. The new request appears in the Timeline marked with the agent and the tool, as the agent's calls through `courier-mcp` are.
+
+A read goes at once. A write does again what it did — another order, another charge — so `replay_write` runs only once a person confirms it, with the call and its variables in front of them:
+
+```text
+An agent asks to run Replay a write: …
+
+POST shop.orders.create again, as request req_41 sent it, with {"sku":"A1","quantity":2,"card":"[redacted]"}
+
+This cannot be undone. Run it?
+```
+
+Clients that support MCP elicitation — Claude Code, Cursor, VS Code — show the question in the editor; `courier-studio mcp` puts it to them over their own connection. A client that cannot ask is told to send the write again from Studio's inspector instead, and nothing runs. Each tool takes what it is for: `replay` refuses a write and names `replay_write`, `replay_write` refuses a read.
+
+Some requests are not sent again: a [webhook](/docs/advanced/webhooks) came to the app from its sender — deliver it again from a mock — a CSRF token is asked for again with the write that needs it, and a stream stays open rather than answering once, so it is reconnected from the inspector.
 
 ## What it shows, and to whom
 
 - **Studio's token, or nothing.** The command reads `.courier/studio-token` from the project, so no token is written into an editor's settings; a request to Studio's `/mcp` without it is answered `401`. A page on another origin is refused.
-- **No credential, no secret.** Every header that carries a credential — `Authorization`, `Cookie`, `Set-Cookie`, an API key's — is replaced with `[redacted]`, and so is every field of a body named like a secret: `password`, `accessToken`, `client_secret`, `sessionId`. What an agent reads leaves your machine with its model's provider; those values stay behind.
+- **No credential, no secret.** Every header that carries a credential — `Authorization`, `Cookie`, `Set-Cookie`, an API key's — is replaced with `[redacted]`, and so is every field of a body named like a secret: `password`, `accessToken`, `client_secret`, `sessionId`. What an agent reads leaves your machine with its model's provider; those values stay behind. A replay's answer, and the variables a confirmation shows, are cleaned the same way; the request itself is sent with its values.
+- **A person confirms each write.** `replay_write` runs nothing a person has not confirmed, whatever the client's own approval settings allow.
 - **Not on a public demo.** A Studio serving a public demo has no MCP endpoint.
 
 | Option | What it does |

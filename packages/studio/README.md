@@ -365,7 +365,7 @@ With no `--source`, every source goes to the folder `--out` names, one `<source>
 
 ## Your editor's agent
 
-`courier-studio mcp` serves the running Studio to the agent you code with, over MCP: the requests Studio recorded, the one that failed in full, the mocks it runs and their scenarios — every credential and body field named like a secret replaced. It reads the project's Studio token itself.
+`courier-studio mcp` serves the running Studio to the agent you code with, over MCP: the requests Studio recorded, the one that failed in full, the Audit's findings, the mocks it runs and their scenarios — every credential and body field named like a secret replaced. After a fix the agent sends a request again: a read at once, a write once you confirm it in the editor. It reads the project's Studio token itself.
 
 ```bash
 claude mcp add courier-studio -- npx courier-studio mcp

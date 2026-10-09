@@ -7,6 +7,8 @@ export interface QuickstartTarget {
   readonly id: string;
   /** The command that starts the app while you develop; `{port}` stands for its port, which PORT carries too. */
   readonly start: readonly string[];
+  /** The command that builds it for production, as its user ships it. */
+  readonly build: readonly string[];
   /** The page Courier's setup adds. */
   readonly page: string;
   /** Where a template writes its port down, for the check to run the app on its own. */
@@ -21,6 +23,8 @@ function isTarget(value: unknown): value is QuickstartTarget {
     typeof value.id === "string" &&
     "start" in value &&
     Array.isArray(value.start) &&
+    "build" in value &&
+    Array.isArray(value.build) &&
     "page" in value &&
     typeof value.page === "string"
   );

@@ -5,8 +5,8 @@ import { TokenLine } from "@/site/code/token-line"
 import { managerOf, PACKAGE_MANAGERS, STUDIO_PACKAGE } from "./setup-data"
 
 /**
- * The install step: the command for each package manager, the picked one
- * marked.
+ * The setup step: Courier's one command for each package manager, the
+ * picked one marked, and the words for adding Studio by hand.
  *
  * @param props - The package manager picked, and what picks one
  * @returns The rows
@@ -35,8 +35,8 @@ export function InstallPanel({ picked, onPick }: { picked: string; onPick: (id: 
             <span className="w-9 shrink-0 text-[11px] text-fg-subtle">{manager.id}</span>
             <span className="min-w-0 flex-1 leading-normal [overflow-wrap:anywhere]">
               <span className="text-fg-subtle">$ </span>
-              <span className="text-code-keyword">{manager.add}</span>{" "}
-              <span className="text-code-plain">{STUDIO_PACKAGE}</span>
+              <span className="text-code-keyword">{manager.setup[0]}</span>{" "}
+              <span className="text-code-plain">{manager.setup[1]}</span>
             </span>
             <Mark
               aria-hidden="true"
@@ -45,6 +45,9 @@ export function InstallPanel({ picked, onPick }: { picked: string; onPick: (id: 
           </button>
         )
       })}
+      <p className="m-0 pt-0.5 font-mono text-label text-fg-subtle [overflow-wrap:anywhere]">
+        By hand: {managerOf(picked).add} {STUDIO_PACKAGE}
+      </p>
     </div>
   )
 }
@@ -107,7 +110,8 @@ const outputFor = (dev: string) => [
 ]
 
 /**
- * The start step: the picked package manager's command, what Studio prints
+ * The start step: the script the one command adds, as the picked package
+ * manager runs it — and how to start Studio by hand — what Studio prints
  * when it is up, and the way to open it.
  *
  * @param props - The package manager picked
@@ -118,13 +122,16 @@ const outputFor = (dev: string) => [
  * ```
  */
 export function RunPanel({ manager }: { manager: string }) {
-  const { run, dev } = managerOf(manager)
-  const [runner, target] = run
+  const { studio, run, dev } = managerOf(manager)
+  const [runner, ...script] = studio.split(" ")
   return (
     <div className="flex flex-col gap-3.5 px-4.5 py-1 font-mono text-[12.5px]">
-      <span>
-        <span className="text-fg-subtle">$ </span>
-        <span className="text-code-keyword">{runner}</span> {target}
+      <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span>
+          <span className="text-fg-subtle">$ </span>
+          <span className="text-code-keyword">{runner}</span> {script.join(" ")}
+        </span>
+        <span className="text-label text-fg-subtle">by hand: {run.join(" ")}</span>
       </span>
       <div className="flex flex-col gap-2 rounded-panel border border-line bg-inset p-3.5">
         {outputFor(dev).map(({ icon: Icon, tone, key, value, valueTone }) => (

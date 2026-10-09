@@ -1,6 +1,8 @@
 /** An official server adapter: where it mounts, what it is called, the code that mounts it, and its guide. */
 export interface Adapter {
   label: string
+  /** The framework, as Courier's one command names it with `--framework`. */
+  framework: string
   /** The file the mount lives in. */
   file: string
   pkg: string
@@ -42,6 +44,7 @@ export const LANDING_ADAPTERS: readonly string[] = [
 export const ADAPTERS: readonly Adapter[] = [
   {
     label: "Next.js",
+    framework: "next",
     file: "app/api/request/route.ts",
     pkg: "@noverax/courier-next",
     guide: "/docs/frameworks/nextjs",
@@ -50,6 +53,7 @@ export const ADAPTERS: readonly Adapter[] = [
   },
   {
     label: "Nuxt",
+    framework: "nuxt",
     file: "server/api/request.ts",
     pkg: "@noverax/courier-nuxt",
     guide: "/docs/frameworks/nuxt",
@@ -58,6 +62,7 @@ export const ADAPTERS: readonly Adapter[] = [
   },
   {
     label: "SvelteKit",
+    framework: "sveltekit",
     file: "src/routes/api/request/+server.ts",
     pkg: "@noverax/courier-sveltekit",
     guide: "/docs/frameworks/sveltekit",
@@ -66,6 +71,7 @@ export const ADAPTERS: readonly Adapter[] = [
   },
   {
     label: "Astro",
+    framework: "astro",
     file: "src/pages/api/request.ts",
     pkg: "@noverax/courier-astro",
     guide: "/docs/frameworks/astro",
@@ -74,6 +80,7 @@ export const ADAPTERS: readonly Adapter[] = [
   },
   {
     label: "Remix",
+    framework: "remix",
     file: "app/routes/api.request.ts",
     pkg: "@noverax/courier-remix",
     guide: "/docs/frameworks/remix",
@@ -82,6 +89,7 @@ export const ADAPTERS: readonly Adapter[] = [
   },
   {
     label: "SolidStart",
+    framework: "solid-start",
     file: "src/routes/api/request.ts",
     pkg: "@noverax/courier-solid",
     guide: "/docs/frameworks/solid-start",
@@ -90,6 +98,7 @@ export const ADAPTERS: readonly Adapter[] = [
   },
   {
     label: "Hono",
+    framework: "hono",
     file: "src/index.ts",
     pkg: "@noverax/courier-hono",
     guide: "/docs/frameworks/hono",
@@ -98,6 +107,7 @@ export const ADAPTERS: readonly Adapter[] = [
   },
   {
     label: "Express",
+    framework: "express",
     file: "src/server.ts",
     pkg: "@noverax/courier-express",
     guide: "/docs/frameworks/express",
@@ -106,6 +116,7 @@ export const ADAPTERS: readonly Adapter[] = [
   },
   {
     label: "Fastify",
+    framework: "fastify",
     file: "src/server.ts",
     pkg: "@noverax/courier-fastify",
     guide: "/docs/frameworks/fastify",
@@ -114,6 +125,7 @@ export const ADAPTERS: readonly Adapter[] = [
   },
   {
     label: "NestJS",
+    framework: "nestjs",
     file: "src/app.module.ts",
     pkg: "@noverax/courier-nestjs",
     guide: "/docs/frameworks/nestjs",

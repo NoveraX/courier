@@ -1,5 +1,5 @@
 import { CourierMark } from "@/site/courier-mark"
-import { START_COMMAND } from "@/site/landing/install-button"
+import { START_COMMAND } from "@/site/landing/start-command"
 import { PageHeader } from "./page-header"
 
 /**

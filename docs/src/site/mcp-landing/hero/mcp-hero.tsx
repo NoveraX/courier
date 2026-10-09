@@ -3,13 +3,14 @@ import { ArrowRight, Bot } from "lucide-react"
 import { TerminalSession } from "@/site/landing/agents/terminal-session"
 import { InstallButton } from "@/site/landing/install-button"
 import { PageLink } from "@/site/landing/page-link"
+import { START_COMMAND } from "@/site/landing/start-command"
 
-/** The command that installs the MCP server. */
-export const MCP_INSTALL = "npm i @noverax/courier-mcp"
+/** The command that sets the MCP server up: Courier's one command, with agents asked for. */
+export const MCP_INSTALL = `${START_COMMAND} --mcp`
 
 /**
  * The top of the MCP server's page: what it is in one line, the guide and
- * its install command, and an agent at work on an API through it, in its
+ * the one command that sets it up, and an agent at work on an API through it, in its
  * terminal, with Studio recording each call.
  *
  * @returns The section

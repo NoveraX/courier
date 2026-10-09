@@ -1,14 +1,44 @@
 /**
- * A package manager: the words that add a dev dependency; how it runs
- * Studio once added — npx and bunx by the package's full name, which finds
- * the project's own copy and never another package npm keeps under the bare
- * command, while pnpm only ever runs what the project installed; and how it
- * starts the app's dev server.
+ * A package manager: how it runs Courier's one command, which sets Studio
+ * up with its plugin, a mock and the scripts; how it starts Studio and the
+ * app through the scripts the command adds; and the words for doing it by
+ * hand — adding the dev dependency, and starting Studio by the package's
+ * full name wherever the runner would fetch from npm, while pnpm only ever
+ * runs what the project installed.
  */
 export const PACKAGE_MANAGERS = [
-  { id: "npm", add: "npm install -D", run: ["npx", "@noverax/courier-studio"], dev: "npm run dev" },
-  { id: "pnpm", add: "pnpm add -D", run: ["pnpm exec", "courier-studio"], dev: "pnpm dev" },
-  { id: "bun", add: "bun add -d", run: ["bunx", "@noverax/courier-studio"], dev: "bun run dev" },
+  {
+    id: "npm",
+    setup: ["npx", "@noverax/create-courier@latest"],
+    studio: "npm run studio",
+    dev: "npm run dev",
+    add: "npm install -D",
+    run: ["npx", "@noverax/courier-studio"],
+  },
+  {
+    id: "pnpm",
+    setup: ["pnpm create", "@noverax/courier"],
+    studio: "pnpm studio",
+    dev: "pnpm dev",
+    add: "pnpm add -D",
+    run: ["pnpm exec", "courier-studio"],
+  },
+  {
+    id: "yarn",
+    setup: ["yarn create", "@noverax/courier"],
+    studio: "yarn studio",
+    dev: "yarn dev",
+    add: "yarn add -D",
+    run: ["yarn", "courier-studio"],
+  },
+  {
+    id: "bun",
+    setup: ["bun create", "@noverax/courier"],
+    studio: "bun run studio",
+    dev: "bun run dev",
+    add: "bun add -d",
+    run: ["bunx", "@noverax/courier-studio"],
+  },
 ] as const
 
 /** One of the package managers the setup offers. */
@@ -21,7 +51,7 @@ export type PackageManager = (typeof PACKAGE_MANAGERS)[number]
  * @returns Its words
  * @example
  * ```ts
- * managerOf("pnpm").run.join(" ") // "pnpm exec courier-studio"
+ * managerOf("pnpm").setup.join(" ") // "pnpm create @noverax/courier"
  * ```
  */
 export function managerOf(id: string): PackageManager {
@@ -87,12 +117,18 @@ export const CONNECTIONS: readonly Connection[] = [
  *
  * @example
  * ```ts
- * SETUP_STEPS[2].title // "Start Studio"
+ * SETUP_STEPS[0].title // "Set it up"
  * ```
  */
 export const SETUP_STEPS = [
-  { title: "Install", text: "One dev dependency; production builds leave it out." },
-  { title: "Connect your app", text: "Add courierStudio() to your bundler config." },
+  {
+    title: "Set it up",
+    text: "One command adds Studio, its plugin and a mock to work against — after showing the plan.",
+  },
+  {
+    title: "Connect your app",
+    text: "The command adds courierStudio() to your bundler config; by hand, it is all you add.",
+  },
   {
     title: "Start Studio",
     text: "Run it next to your dev server; your app connects on its own.",

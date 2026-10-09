@@ -2,6 +2,7 @@ import { ArrowRight, ArrowUpRight, Circle, CircleCheck, Sparkles, Zap } from "lu
 import { cn } from "@/site/cn"
 import type { CodeToken } from "@/site/code/highlight-tokens"
 import { TokenLine } from "@/site/code/token-line"
+import { CommandWords } from "@/site/landing/command-words"
 import { managerOf, PACKAGE_MANAGERS, STUDIO_PACKAGE } from "./setup-data"
 
 /**
@@ -32,11 +33,13 @@ export function InstallPanel({ picked, onPick }: { picked: string; onPick: (id: 
               on ? "border-brand/45 bg-brand/6" : "border-line bg-inset"
             )}
           >
-            <span className="w-9 shrink-0 text-[11px] text-fg-subtle">{manager.id}</span>
-            <span className="min-w-0 flex-1 leading-normal [overflow-wrap:anywhere]">
+            <span className="w-9 shrink-0 text-[11px] text-fg-subtle max-[560px]:hidden">{manager.id}</span>
+            <span className="min-w-0 flex-1 leading-normal">
               <span className="text-fg-subtle">$ </span>
-              <span className="text-code-keyword">{manager.setup[0]}</span>{" "}
-              <span className="text-code-plain">{manager.setup[1]}</span>
+              <CommandWords
+                command={manager.setup.join(" ")}
+                toneOf={(_, at) => (at === 0 ? "text-code-keyword" : "text-code-plain")}
+              />
             </span>
             <Mark
               aria-hidden="true"
@@ -45,8 +48,8 @@ export function InstallPanel({ picked, onPick }: { picked: string; onPick: (id: 
           </button>
         )
       })}
-      <p className="m-0 pt-0.5 font-mono text-label text-fg-subtle [overflow-wrap:anywhere]">
-        By hand: {managerOf(picked).add} {STUDIO_PACKAGE}
+      <p className="m-0 pt-0.5 font-mono text-label text-fg-subtle">
+        <CommandWords command={`By hand: ${managerOf(picked).add} ${STUDIO_PACKAGE}`} />
       </p>
     </div>
   )
@@ -123,15 +126,19 @@ const outputFor = (dev: string) => [
  */
 export function RunPanel({ manager }: { manager: string }) {
   const { studio, run, dev } = managerOf(manager)
-  const [runner, ...script] = studio.split(" ")
   return (
     <div className="flex flex-col gap-3.5 px-4.5 py-1 font-mono text-[12.5px]">
       <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span>
           <span className="text-fg-subtle">$ </span>
-          <span className="text-code-keyword">{runner}</span> {script.join(" ")}
+          <CommandWords
+            command={studio}
+            toneOf={(_, at) => (at === 0 ? "text-code-keyword" : undefined)}
+          />
         </span>
-        <span className="text-label text-fg-subtle">by hand: {run.join(" ")}</span>
+        <span className="text-label text-fg-subtle">
+          <CommandWords command={`by hand: ${run.join(" ")}`} />
+        </span>
       </span>
       <div className="flex flex-col gap-2 rounded-panel border border-line bg-inset p-3.5">
         {outputFor(dev).map(({ icon: Icon, tone, key, value, valueTone }) => (

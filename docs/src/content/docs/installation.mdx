@@ -83,8 +83,9 @@ export default defineConfig({ sources: {} });
 
 Start Studio with `npx @noverax/courier-studio`, and **Import API** on its APIs page
 writes the project's first API — under `src/api/<source name>/` by default,
-where `source.ts` exports the source. Add it to `sources` under its source
-name, and Studio lists it:
+where `source.ts` exports the source; `npx @noverax/courier-studio import <spec>`
+does the same [from the command line](/docs/studio/import-api#from-the-command-line).
+Add it to `sources` under its source name, and Studio lists it:
 
 ```ts title="courier.config.ts"
 import { defineConfig } from "@noverax/courier/config";

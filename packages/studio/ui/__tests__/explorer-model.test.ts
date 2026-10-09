@@ -175,6 +175,41 @@ describe("the tree", () => {
     expect(endpoint).toMatchObject({ path: "/users/5", url: "http://127.0.0.1:4401/users/5" });
   });
 
+  it("shows where an endpoint the config does not declare was called, in a group it does, under a base path", () => {
+    const catalog: Catalog = {
+      shop: {
+        baseURL: "http://127.0.0.1:4401/api/",
+        groups: {
+          products: {
+            prefix: "products",
+            endpoints: {
+              list: def({ origin: "scan", path: "" }),
+              bestsellers: def({ origin: "runtime" }),
+            },
+          },
+        },
+      },
+    };
+    const calls = [
+      requestEntry({
+        id: "b1",
+        source: "shop",
+        group: "products",
+        method: "bestsellers",
+        url: "http://127.0.0.1:4401/api/products/search?q=audio",
+      }),
+    ];
+
+    const endpoints = explorerModelOf(catalog, calls, NOW, 500).endpoints;
+
+    expect(endpoints.find((e) => e.method === "bestsellers")).toMatchObject({
+      path: "/products/search",
+      url: "http://127.0.0.1:4401/api/products/search",
+      trafficOnly: true,
+    });
+    expect(endpoints.find((e) => e.method === "list")).toMatchObject({ path: "/products" });
+  });
+
   it("names an endpoint outside any group by its source and method", () => {
     expect(endpointKey({ source: "api", group: "", method: "health" })).toBe("api.health");
   });

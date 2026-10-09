@@ -1,5 +1,6 @@
 import type { Plugin } from "vite";
 import { RESOLVED_ID, RUNTIME_SPECIFIER, VIRTUAL_ID } from "./constants";
+import { courierClientDeps } from "./courier-client-deps";
 import { isInjectionEnabled } from "./options";
 import { resolveSnippet } from "./resolve-snippet";
 import { RUNTIME_IMPORTER } from "./runtime-importer";
@@ -41,14 +42,17 @@ export function createStudioVitePlugin(framework: string, options?: StudioPlugin
     /* Ahead of Vite's resolver, which would look for the runtime from the app
        root first and so behave differently under npm and pnpm. */
     enforce: "pre",
-    config() {
+    config(config) {
       if (!isInjectionEnabled(options, DEV_SERVER)) return undefined;
       /* The runtime reaches socket.io-client, whose development build imports
          `debug`, a CommonJS module a browser cannot run until Vite pre-bundles
          it. Vite pre-bundles nothing that a package in node_modules imports,
          so without this the page failed wherever the runtime was not hoisted
-         to the app root. The nested form finds it through this package. */
-      return { optimizeDeps: { include: [`${PACKAGE_NAME} > ${RUNTIME_SPECIFIER}`] } };
+         to the app root. The nested form finds it through this package.
+         Courier's own browser modules go with it, so the first page that
+         imports them is not reloaded. */
+      const app = courierClientDeps(config.root ?? process.cwd());
+      return { optimizeDeps: { include: [`${PACKAGE_NAME} > ${RUNTIME_SPECIFIER}`, ...app] } };
     },
     /* The app's config is found from Vite's root, not from wherever Vite was
        started. */

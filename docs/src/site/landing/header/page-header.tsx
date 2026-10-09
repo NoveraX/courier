@@ -10,7 +10,7 @@ import { TopLink } from "@/site/top-link"
 import { Burger } from "./burger"
 import { LandingMenu } from "./landing-menu"
 import { LibraryPill } from "./library-pill"
-import type { HeaderAction, HeaderPage } from "./menu-links"
+import { documentationFor, type HeaderAction, type HeaderPage } from "./menu-links"
 
 interface PageHeaderProps {
   /** The page it is on: the library's, or one of its products'. */
@@ -27,10 +27,11 @@ interface PageHeaderProps {
 
 /**
  * The bar across the top of the library's page and its products' pages
- * alike: the page's name; the docs and Courier's two products, the one it is
- * on marked; on a product's page, the way back to the library; the menu on
- * a narrow screen; the colour theme, the repository and the page's call to
- * action.
+ * alike: the page's name; its docs — the library's guides, or on a
+ * product's page the product's own — and Courier's two products, the one
+ * it is on marked; on a product's page, the way back to the library; the
+ * menu on a narrow screen; the colour theme, the repository and the page's
+ * call to action.
  *
  * @param props - The page, its name, its call to action and its install command
  * @returns The header and its menu
@@ -58,7 +59,7 @@ export function PageHeader({ page, brand, brandLabel, action, install }: PageHea
           {brand}
         </TopLink>
         <nav aria-label="Courier" className="hidden items-center gap-4.5 text-nav min-[820px]:flex">
-          <PageLink href="/docs/introduction" className="text-fg-muted hover:text-brand">
+          <PageLink href={documentationFor(page).href} className="text-fg-muted hover:text-brand">
             Docs
           </PageLink>
           {PRODUCTS.map((product) => (

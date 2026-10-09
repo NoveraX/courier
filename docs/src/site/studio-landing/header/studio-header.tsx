@@ -4,7 +4,7 @@ import { STUDIO_INSTALL } from "@/site/studio-landing/hero/studio-hero"
 import { StudioWordmark } from "./studio-wordmark"
 
 /**
- * The bar across the top of Studio's page: its name, the docs and
+ * The bar across the top of Studio's page: its name, its docs and
  * Courier's two products with Studio marked as this page, the way back to
  * the Courier library, the menu on a narrow screen, the colour theme, the
  * repository and the live demo.

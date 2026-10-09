@@ -21,6 +21,12 @@ import { describe, expect, it } from "vitest";
 import manifest from "../package.json" with { type: "json" };
 
 const CLI = join(__dirname, "../src/cli.ts");
+/* The server runs the UI's own modules, imported as `@/...`; run from another directory, tsx finds that path in Studio's tsconfig only when told where it is. */
+const ENV = {
+  ...process.env,
+  NO_COLOR: "1",
+  TSX_TSCONFIG_PATH: join(__dirname, "../tsconfig.json"),
+};
 /* What the banner says of a first load given up after COURIER_CONFIG_LOAD_TIMEOUT_MS=500. */
 const GIVEN_UP = "took longer than 500 ms, so Studio stopped waiting for it";
 const TSX = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
@@ -29,7 +35,7 @@ function run(...args: string[]) {
   return spawnSync(process.execPath, ["--import", TSX, CLI, ...args], {
     encoding: "utf8",
     timeout: 20_000,
-    env: { ...process.env, NO_COLOR: "1" },
+    env: ENV,
   });
 }
 
@@ -136,7 +142,7 @@ describe("courier-studio", () => {
       ["--import", TSX, CLI, "--port", String(port), "--host", "127.0.0.1"],
       {
         cwd,
-        env: { ...process.env, NO_COLOR: "1" },
+        env: ENV,
       },
     );
     for (let waited = 0; waited < 15_000; waited += 100) {
@@ -171,7 +177,7 @@ describe("courier-studio", () => {
       ["--import", TSX, CLI, "--port", String(port), "--host", "127.0.0.1"],
       {
         cwd,
-        env: { ...process.env, NO_COLOR: "1", COURIER_CONFIG_LOAD_TIMEOUT_MS: "500" },
+        env: { ...ENV, COURIER_CONFIG_LOAD_TIMEOUT_MS: "500" },
       },
     );
     let output = "";
@@ -204,7 +210,7 @@ describe("courier-studio", () => {
     );
     const child = spawn(process.execPath, ["--import", TSX, CLI], {
       cwd,
-      env: { ...process.env, NO_COLOR: "1" },
+      env: ENV,
     });
     const exited = new Promise<number | null>((resolve) =>
       child.once("exit", (code) => resolve(code)),
@@ -233,7 +239,7 @@ describe("courier-studio", () => {
     const port = await freePort();
     const child = spawn(process.execPath, ["--import", TSX, CLI, "--port", String(port)], {
       cwd,
-      env: { ...process.env, NO_COLOR: "1", COURIER_CONFIG_LOAD_TIMEOUT_MS: "500" },
+      env: { ...ENV, COURIER_CONFIG_LOAD_TIMEOUT_MS: "500" },
     });
     let output = "";
     child.stdout.on("data", (chunk: Buffer) => {

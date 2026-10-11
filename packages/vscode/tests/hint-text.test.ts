@@ -6,8 +6,9 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { endpointPage, formatMs, hintTitle, hoverText } from "../src/hints/hint-text";
-import type { EndpointStats } from "../src/studio/studio-api";
+import { formatMs, hintTitle, hoverText } from "../src/hints/hint-text";
+import { endpointPage } from "../src/studio/studio-pages";
+import type { EndpointStats } from "../src/studio/studio-types";
 
 const STATS: EndpointStats = {
   source: "shop",
@@ -70,6 +71,16 @@ describe("a hint", () => {
 
     expect(text).toContain("Last failure 27 s ago: 409 Conflict");
     expect(text).not.toContain("409 HTTP 409");
+  });
+
+  it("links the latest failure to the request Studio's inspector opens", () => {
+    const failure = { at: 1_000, status: 500, message: "Ledger down", request: "req_9" };
+
+    const text = hoverText({ ...STATS, lastFailure: failure }, "http://localhost:6280", 2_000);
+
+    expect(text).toContain(
+      "[Open in Studio](http://localhost:6280/explorer/endpoints?endpoint=shop.orders.place) · [Open the latest failure](http://localhost:6280/timeline?req=req_9)",
+    );
   });
 
   it("writes durations as a person reads them", () => {

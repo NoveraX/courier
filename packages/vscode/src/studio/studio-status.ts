@@ -1,20 +1,29 @@
 import * as vscode from "vscode";
 
-/** The item in the status bar that says whether a Studio runs for the file in front. */
+import type { CourierProject } from "../projects/courier-projects";
+
+/** What the status bar says about the project of the file in front. */
+export type StudioState =
+  | { readonly studio: string }
+  | { readonly stopped: CourierProject }
+  | undefined;
+
+/** The status bar item for the Studio of the file in front. */
 export interface StudioStatus extends vscode.Disposable {
-  /** Show the Studio the file in front belongs to, or hide the item when none runs */
-  show(studio: string | undefined): void;
+  show(state: StudioState): void;
 }
 
 /**
- * The status bar item for Courier Studio: shown while the file in front
- * belongs to a project whose Studio runs, a click opening Studio.
+ * The status bar item for the project of the file in front: **Studio** while
+ * its Studio answers, a click opening it; **Start Studio** for a Courier
+ * project whose Studio does not run, a click starting it; nothing for a file
+ * outside any Courier project.
  *
- * @returns The item
+ * @returns The item, hidden until shown
  * @example
  * ```ts
  * const status = createStudioStatus();
- * status.show("http://localhost:6280");
+ * status.show({ studio: "http://localhost:6280" });
  * ```
  */
 export function createStudioStatus(): StudioStatus {
@@ -24,15 +33,25 @@ export function createStudioStatus(): StudioStatus {
     100,
   );
   item.name = "Courier Studio";
-  item.command = "courier.openInStudio";
   return {
-    show(studio) {
-      if (!studio) {
+    show(state) {
+      if (!state) {
         item.hide();
         return;
       }
-      item.text = "$(pulse) Studio";
-      item.tooltip = `Courier Studio runs at ${studio}: open it`;
+      if ("studio" in state) {
+        item.text = "$(pulse) Studio";
+        item.tooltip = `Courier Studio runs at ${state.studio}: open it`;
+        item.command = "courier.openInStudio";
+      } else {
+        item.text = "$(play) Start Studio";
+        item.tooltip = `Courier Studio is not running for ${state.stopped.name}: start it`;
+        item.command = {
+          title: "Start Courier Studio",
+          command: "courier.startStudio",
+          arguments: [state.stopped.root],
+        };
+      }
       item.show();
     },
     dispose: () => item.dispose(),

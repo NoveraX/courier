@@ -1,8 +1,8 @@
-import { dirname } from "node:path";
 import * as vscode from "vscode";
 
-import type { EndpointCall } from "../studio/studio-api";
-import type { HintDocument, HintStore } from "./hint-store";
+import type { EndpointCall } from "../studio/studio-types";
+import { hintDocument } from "./hint-document";
+import type { HintStore } from "./hint-store";
 import { hintTitle, hoverText } from "./hint-text";
 
 /** The hints over endpoint calls: a line above each, and a hover over it. */
@@ -61,12 +61,6 @@ export function createCallHints(store: HintStore, enabled: () => boolean): CallH
       return new vscode.Hover(new vscode.MarkdownString(texts.join("\n\n---\n\n")), rangeOf(call));
     },
   };
-}
-
-function hintDocument(document: vscode.TextDocument): HintDocument {
-  const file = document.uri.fsPath;
-  const folder = vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath ?? dirname(file);
-  return { file, version: document.version, text: document.getText(), workspace: folder };
 }
 
 function rangeOf(call: EndpointCall): vscode.Range {

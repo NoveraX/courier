@@ -1,6 +1,6 @@
 **
 !dist/extension.cjs
-!media/icon.png
+!media/**
 !package.json
 !README.md
 !LICENSE

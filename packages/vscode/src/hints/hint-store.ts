@@ -1,4 +1,4 @@
-import type { EndpointCall, EndpointStats } from "../studio/studio-api";
+import type { EndpointCall, EndpointStats } from "../studio/studio-types";
 
 /** How the hints reach Studio: what finds it, and what asks it. */
 export interface HintSources {
@@ -28,6 +28,8 @@ export interface HintStore {
   callsIn(document: HintDocument): Promise<PlacedCalls | undefined>;
   /** How an endpoint's calls went in a Studio, as last asked */
   statsOf(studio: string, source: string, endpoint: string): EndpointStats | undefined;
+  /** Every endpoint's stats as a Studio told them last, in its order; `undefined` for one not asked or not answering */
+  statsFor(studio: string): readonly EndpointStats[] | undefined;
   /** Ask each Studio known again; whether anything a hint shows changed */
   refresh(): Promise<boolean>;
   /** Whether a Studio answers: a file left by one that stopped without cleaning up names one that does not */
@@ -96,6 +98,10 @@ export function createHintStore(sources: HintSources): HintStore {
     },
     statsOf(studio, source, endpoint) {
       return stats.get(studio)?.get(statsKey(source, endpoint));
+    },
+    statsFor(studio) {
+      const known = stats.get(studio);
+      return known && [...known.values()];
     },
     async answers(studio) {
       await refreshStudio(studio);

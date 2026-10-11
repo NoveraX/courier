@@ -1,29 +1,25 @@
-import { dirname } from "node:path";
 import * as vscode from "vscode";
 
+import { openInStudio } from "./commands/open-in-studio";
+import { setUpCourier, startStudio } from "./commands/project-commands";
 import { createCallHints } from "./hints/call-hints";
+import { CALL_LANGUAGES } from "./hints/hint-document";
 import { createHintStore } from "./hints/hint-store";
-import { endpointPage } from "./hints/hint-text";
+import { keepFresh } from "./keep-fresh";
+import { createCourierProjects } from "./projects/courier-projects";
 import { createConfiguredStudio } from "./studio/configured-studio";
 import { findStudio } from "./studio/find-studio";
-import { fetchCalls, fetchEndpointStats } from "./studio/studio-api";
+import { fetchCalls, fetchEndpointStats, fetchSites } from "./studio/studio-api";
+import { stateInFront } from "./studio/studio-in-front";
 import { createStudioStatus } from "./studio/studio-status";
-
-const LANGUAGES = [
-  "typescript",
-  "typescriptreact",
-  "javascript",
-  "javascriptreact",
-  "vue",
-  "svelte",
-  "astro",
-];
+import { createCourierView } from "./view/courier-view";
+import { registerViewCommands } from "./view/view-commands";
 
 /**
  * Start the extension: the hints over each endpoint call, kept up to date
- * while the window has focus; the Studio a file belongs to in the status
- * bar; and the commands that open an endpoint in Studio and bring the
- * hints up to date.
+ * while the window has focus; the Courier view of each project's endpoints;
+ * the Studio of the file in front in the status bar; and the commands that
+ * start Studio and set Courier up.
  *
  * @param context - The extension's context, which disposes what it holds
  * @example
@@ -41,89 +37,62 @@ export function activate(context: vscode.ExtensionContext): void {
     fetchStats: fetchEndpointStats,
     fetchCalls,
   });
+  const answers = async (studio: string) =>
+    store.statsFor(studio) !== undefined || store.answers(studio);
+  const projects = createCourierProjects();
   const hints = createCallHints(store, () => settings().get<boolean>("hints.enabled", true));
+  const view = createCourierView({
+    projects: projects.list,
+    configured,
+    statsFor: store.statsFor,
+    answers: store.answers,
+    fetchSites,
+  });
   const status = createStudioStatus();
-  const selector = LANGUAGES.map((language) => ({ language, scheme: "file" }));
   const showStatus = () =>
-    void studioInFront(studioFor).then(async (studio) =>
-      status.show(studio && (await store.answers(studio)) ? studio : undefined),
-    );
+    void stateInFront({ studioFor, projects, answers, targets: view.targets }).then(status.show);
+  const redraw = () => {
+    hints.refreshed();
+    void view.refresh().then(showStatus);
+  };
   const restart = () => {
     store.forgetCalls();
-    void store.refresh().finally(() => hints.refreshed());
-    showStatus();
+    void store.refresh().finally(redraw);
   };
+  const selector = CALL_LANGUAGES.map((language) => ({ language, scheme: "file" }));
   const addresses = vscode.workspace.createFileSystemWatcher("**/.courier/studio.json");
   context.subscriptions.push(
+    projects,
+    view,
+    status,
+    addresses,
     vscode.languages.registerCodeLensProvider(selector, hints),
     vscode.languages.registerHoverProvider(selector, hints),
     vscode.commands.registerCommand(
       "courier.openInStudio",
       (studio?: string, source?: string, endpoint?: string) =>
-        openInStudio(studioFor, studio, source, endpoint),
+        openInStudio(studioFor, projects, { studio, source, endpoint }),
     ),
     vscode.commands.registerCommand("courier.refreshHints", restart),
-    addresses,
+    vscode.commands.registerCommand("courier.startStudio", (root?: string) =>
+      startStudio(projects, typeof root === "string" ? root : undefined),
+    ),
+    vscode.commands.registerCommand("courier.setUp", setUpCourier),
+    registerViewCommands(projects, view.refresh),
     addresses.onDidCreate(restart),
     addresses.onDidChange(restart),
     addresses.onDidDelete(restart),
+    projects.onDidChange(restart),
     vscode.window.onDidChangeActiveTextEditor(showStatus),
     vscode.workspace.onDidChangeConfiguration((change) => {
       if (change.affectsConfiguration("courier")) restart();
     }),
-    status,
-    keepFresh(
-      () => settings().get<number>("hints.refreshSeconds", 5),
-      store.refresh,
-      hints.refreshed,
-    ),
+    keepFresh(() => settings().get<number>("hints.refreshSeconds", 5), store.refresh, redraw),
   );
-  showStatus();
+  restart();
 }
 
 /**
  * Stop the extension: everything it started is disposed with its context.
  */
 export function deactivate(): void {}
-
-type StudioFinder = (file: string, workspace: string) => Promise<string | undefined>;
-
-async function studioInFront(studioFor: StudioFinder): Promise<string | undefined> {
-  const document = vscode.window.activeTextEditor?.document;
-  if (document?.uri.scheme !== "file") return undefined;
-  const folder =
-    vscode.workspace.getWorkspaceFolder(document.uri)?.uri.fsPath ?? dirname(document.uri.fsPath);
-  return studioFor(document.uri.fsPath, folder);
-}
-
-async function openInStudio(
-  studioFor: StudioFinder,
-  studio?: string,
-  source?: string,
-  endpoint?: string,
-): Promise<void> {
-  const address = studio ?? (await studioInFront(studioFor));
-  if (!address) {
-    void vscode.window.showInformationMessage(
-      "Courier Studio is not running for this project: start it with `npx @noverax/courier-studio`.",
-    );
-    return;
-  }
-  const page = source && endpoint ? endpointPage(address, source, endpoint) : address;
-  await vscode.env.openExternal(vscode.Uri.parse(page));
-}
-
-/* The figures move while the app runs: asked again every few seconds, only while the window has focus. */
-function keepFresh(
-  seconds: () => number,
-  refresh: () => Promise<boolean>,
-  refreshed: () => void,
-): vscode.Disposable {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const tick = async () => {
-    if (vscode.window.state.focused && (await refresh())) refreshed();
-    timer = setTimeout(tick, Math.max(2, seconds()) * 1000);
-  };
-  timer = setTimeout(tick, Math.max(2, seconds()) * 1000);
-  return { dispose: () => clearTimeout(timer) };
-}

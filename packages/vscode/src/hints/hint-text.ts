@@ -1,6 +1,7 @@
 import { STATUS_CODES } from "node:http";
 
-import type { EndpointStats } from "../studio/studio-api";
+import { endpointPage, requestPage } from "../studio/studio-pages";
+import type { EndpointStats } from "../studio/studio-types";
 
 /* A stream's or a channel's calls are its connections, still open or ended. */
 const WORDS = {
@@ -51,9 +52,25 @@ export function formatMs(ms: number): string {
  */
 export function hintTitle(stats: EndpointStats, withSource: boolean): string {
   const name = withSource ? `${stats.source} ${stats.endpoint}` : stats.endpoint;
+  return `${name} · ${figuresOf(stats)}`;
+}
+
+/**
+ * How an endpoint's calls went, without its name: how many, how many failed
+ * and are still waiting, and how long nineteen in twenty took — as the
+ * Courier view writes it beside the endpoint.
+ *
+ * @param stats - How the endpoint's calls went
+ * @returns The figures
+ * @example
+ * ```ts
+ * figuresOf(stats); // "34 calls · 1 failed · p95 210 ms"
+ * ```
+ */
+export function figuresOf(stats: EndpointStats): string {
   const words = wordsOf(stats);
-  if (stats.calls === 0) return `${name} · no ${words.many} yet`;
-  const parts = [name, counted(stats.calls, words)];
+  if (stats.calls === 0) return `no ${words.many} yet`;
+  const parts = [counted(stats.calls, words)];
   if (stats.failed > 0) parts.push(`${stats.failed} failed`);
   if (stats.pending > 0) parts.push(`${stats.pending} ${words.waiting}`);
   if (stats.p95 !== undefined) parts.push(`p95 ${formatMs(stats.p95)}`);
@@ -62,8 +79,8 @@ export function hintTitle(stats: EndpointStats, withSource: boolean): string {
 
 /**
  * The hover over a call: the endpoint, its calls, how long they took, the
- * statuses they ended with, the latest failure and why, and a link to the
- * endpoint in Studio.
+ * statuses they ended with, the latest failure and why, and links to the
+ * endpoint in Studio and to the failed request in its inspector.
  *
  * @param stats - How the endpoint's calls went
  * @param studio - Studio's address
@@ -93,26 +110,11 @@ export function hoverText(stats: EndpointStats, studio: string, now: number): st
         `Last failure ${ago(now - stats.lastFailure.at)}: ${failureText(stats.lastFailure)}`,
       );
   }
-  lines.push("", `[Open in Studio](${endpointPage(studio, stats.source, stats.endpoint)})`);
+  const links = [`[Open in Studio](${endpointPage(studio, stats.source, stats.endpoint)})`];
+  const failed = stats.lastFailure?.request;
+  if (failed) links.push(`[Open the latest failure](${requestPage(studio, failed)})`);
+  lines.push("", links.join(" · "));
   return lines.join("\n");
-}
-
-/**
- * The endpoint's page in Studio: the Explorer, with the endpoint open.
- *
- * @param studio - Studio's address
- * @param source - The endpoint's source
- * @param endpoint - Its call in the client
- * @returns The address
- * @example
- * ```ts
- * endpointPage("http://localhost:6280", "shop", "orders.place"); // ".../explorer/endpoints?endpoint=shop.orders.place"
- * ```
- */
-export function endpointPage(studio: string, source: string, endpoint: string): string {
-  const page = new URL("/explorer/endpoints", studio);
-  page.searchParams.set("endpoint", `${source}.${endpoint}`);
-  return page.toString();
 }
 
 /*

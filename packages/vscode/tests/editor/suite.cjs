@@ -1,7 +1,8 @@
 /*
  * Runs inside VS Code: opens the workspace's file, waits for the extension's
- * hints over its call, and checks the line above it and the hover over it.
- * What it saw is written to COURIER_EDITOR_REPORT; a mismatch fails the run.
+ * hints over its call, and checks the line above it, the hover over it and
+ * the commands the extension offers. What it saw is written to
+ * COURIER_EDITOR_REPORT; a mismatch fails the run.
  */
 const assert = require("node:assert/strict");
 const { writeFileSync } = require("node:fs");
@@ -37,12 +38,16 @@ exports.run = async function run() {
     .flatMap((h) => h.contents)
     .map((content) => (typeof content === "string" ? content : content.value))
     .join("\n");
+  const commands = (await vscode.commands.getCommands(true)).filter((name) =>
+    name.startsWith("courier."),
+  );
   const report = {
     version: vscode.version,
     titles,
     command: lenses[0]?.command?.command,
     arguments: lenses[0]?.command?.arguments,
     hover,
+    commands,
   };
   writeFileSync(process.env.COURIER_EDITOR_REPORT, JSON.stringify(report, null, 2));
 
@@ -50,4 +55,13 @@ exports.run = async function run() {
   assert.equal(report.command, "courier.openInStudio");
   assert.deepEqual(report.arguments, [process.env.COURIER_EDITOR_STUDIO, "shop", "orders.place"]);
   assert.match(hover, /3 calls, 1 failed/);
+  assert.ok(
+    hover.includes(
+      `[Open the latest failure](${process.env.COURIER_EDITOR_STUDIO}/timeline?req=req_9)`,
+    ),
+    "the hover links the latest failure to Studio's inspector",
+  );
+  for (const name of ["courier.startStudio", "courier.setUp", "courier.view.openLatestFailure"]) {
+    assert.ok(commands.includes(name), `${name} is registered`);
+  }
 };

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { hintDocument, readsCalls } from "../hints/hint-document";
 import type { HintStore } from "../hints/hint-store";
+import { loggedAs } from "../log/courier-log";
 import { fetchFindings } from "../studio/studio-api";
 import { auditPage } from "../studio/studio-pages";
 import type { Finding } from "../studio/studio-types";
@@ -43,7 +44,9 @@ export function createAuditDiagnostics(store: HintStore, enabled: () => boolean)
   const findingsOf = (studio: string): Promise<Finding[]> => {
     const known = asked.get(studio);
     if (known && Date.now() - known.at < FRESH_MS) return known.findings;
-    const findings = fetchFindings(studio).catch(() => []);
+    const findings = fetchFindings(studio).catch(
+      loggedAs<Finding[]>(`Studio at ${studio} did not list the audit's findings`, []),
+    );
     asked.set(studio, { at: Date.now(), findings });
     return findings;
   };

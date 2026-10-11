@@ -1,3 +1,4 @@
+import { loggedAs } from "../log/courier-log";
 import type { EndpointDefinition } from "../studio/studio-types";
 import { realPath } from "./real-path";
 
@@ -34,7 +35,9 @@ export function createDefinitionStore(
   const definitionsFor = (studio: string) => {
     const known = asked.get(studio);
     if (known && Date.now() - known.at < FRESH_MS) return known.definitions;
-    const definitions = fetchDefinitions(studio).catch((): EndpointDefinition[] => []);
+    const definitions = fetchDefinitions(studio).catch(
+      loggedAs<EndpointDefinition[]>(`Studio at ${studio} did not list the declarations`, []),
+    );
     asked.set(studio, { at: Date.now(), definitions });
     return definitions;
   };

@@ -4,6 +4,7 @@ import { hintDocument, readsCalls } from "../hints/hint-document";
 import type { HintStore } from "../hints/hint-store";
 import { figuresOf, hoverText } from "../hints/hint-text";
 import { studioMarkdown } from "../hints/studio-markdown";
+import { loggedAs } from "../log/courier-log";
 import type { CallSite, EndpointDefinition } from "../studio/studio-types";
 import type { DefinitionStore } from "./definition-store";
 import { rangeOf, siteLocation } from "./ranges";
@@ -79,7 +80,7 @@ export function createDefinitionLenses(
       if (!(lens instanceof SitesLens)) return lens;
       const { studio, definition } = lens;
       const sites = await fetchSites(studio, definition.source, definition.endpoint).catch(
-        (): CallSite[] => [],
+        loggedAs<CallSite[]>(`Studio at ${studio} did not list the call sites`, []),
       );
       lens.command =
         sites.length === 0

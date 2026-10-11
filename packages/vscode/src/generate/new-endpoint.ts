@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-
+import { loggedAs } from "../log/courier-log";
 import type { StudioTarget } from "../projects/studio-targets";
 import { studioAtHand } from "../studio/studio-at-hand";
 import type { StudioFinder } from "../studio/studio-in-front";
@@ -68,7 +68,9 @@ export async function newEndpoint(
     if (start) await vscode.commands.executeCommand("courier.startStudio");
     return;
   }
-  const groups = await deps.fetchGroups(studio).catch((): GroupPlace[] => []);
+  const groups = await deps
+    .fetchGroups(studio)
+    .catch(loggedAs<GroupPlace[]>(`Studio at ${studio} did not list the groups`, []));
   const place = await pickGroup(groups, known);
   if (!place) return;
   const name = known.name ?? (await askName(place));

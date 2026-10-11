@@ -3,21 +3,26 @@
   <a href="https://courier.noverax.cloud">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
-      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="44" />
     </picture>
   </a>
 
-  <h1>@noverax/courier-studio-core</h1>
+  <h1>Courier Studio Core</h1>
 
-  <p><strong>Instrumentation core for Courier Studio — `attachRuntime`, EventBus, event types, and Socket.IO connector.</strong></p>
+  <p><strong>The runtime that connects your app to Courier Studio.</strong></p>
+
+  <p><code>attachRuntime()</code> registers your config's sources and, in development, streams every call your server and browser make — requests, answers, cache hits, validation, streams — to Studio. In production it registers the sources, and nothing else.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-studio-core"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-studio-core?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a" /></a>
     <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/docs/studio/overview"><strong>Studio overview</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
@@ -30,7 +35,24 @@
 
 ## Overview
 
-This package connects a running Courier application to Courier Studio and streams what it does — requests, responses, cache hits, validation, streams — to the Studio UI over Socket.IO.
+This package connects a running Courier application to Courier Studio: one call at startup on the server, and the build plugins on the browser side. It never keeps a process alive on its own, and its Socket.IO client is loaded only outside production.
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>One call</h4>
+      <code>attachRuntime()</code> at startup — from <code>instrumentation.ts</code>, a Nitro plugin, <code>hooks.server.ts</code> or before <code>listen()</code>.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Kept in step</h4>
+      Outside production, the registered sources follow your edits as your dev server reloads.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Safe in production</h4>
+      It registers the config's sources and connects to nothing; a browser bundle gets no config loader.
+    </td>
+  </tr>
+</table>
 
 <br />
 
@@ -95,6 +117,33 @@ Browser bundlers pick a build of `./runtime` without the config loader (the `bro
 | `isSafeHttpOrigin(value)` | root | Whether a value is a plain HTTP(S) origin |
 
 The app origin registry (`setAppOrigin`, `getAppOrigin`, `detectAppOrigin`) lives in `@noverax/courier`.
+
+<br />
+
+## Part of Courier
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/studio"><strong>@noverax/courier-studio</strong></a><br />
+      See every request your app makes, live.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/core"><strong>@noverax/courier</strong></a><br />
+      Define your API once; call it typed from server code and the browser.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/mcp"><strong>@noverax/courier-mcp</strong></a><br />
+      Your API, as tools for AI agents.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/create-courier"><strong>@noverax/create-courier</strong></a><br />
+      All of it in your project, in one command.
+    </td>
+  </tr>
+</table>
 
 <br />
 

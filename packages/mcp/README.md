@@ -3,26 +3,38 @@
   <a href="https://courier.noverax.cloud">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
-      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="44" />
     </picture>
   </a>
 
-  <h1>@noverax/courier-mcp</h1>
+  <h1>Courier MCP</h1>
 
-  <p><strong>Your API, as tools for AI agents — through the same middleware as your app.</strong></p>
+  <p><strong>Your API, as tools for AI agents.</strong></p>
+
+  <p>The definition your typed client is built from becomes an MCP server. Mark an endpoint <code>.agent()</code>, and Claude Code, Cursor, Codex or any MCP client can call it — with your schemas, through your middleware, watched in Studio.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-mcp"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-mcp?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a" /></a>
     <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud/docs/agents/overview"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/mcp"><strong>AI agents</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier/tree/master/packages/mcp">Source</a>
   </p>
+
+  <br />
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/mcp-dark.png" />
+    <img alt="courier-mcp --list in a shop project: ten tools offered to agents, each with its access — read, write, or destructive with a person confirming — and the eight endpoints kept from agents, with why" src="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/mcp-light.png" width="880" />
+  </picture>
   <br />
 </div>
 
@@ -30,7 +42,42 @@
 
 ## Overview
 
-The definition your typed client is built from becomes an MCP server. Mark an endpoint `.agent()` and Claude Code, Cursor, Codex or any MCP client can call it — with the schemas your endpoint already has, through the middleware your app already runs, visible in Studio like every other call.
+An endpoint becomes a tool with the description, schemas and access you give it, and nothing reaches an agent that you did not offer. Over stdio for your editor's agent, over Streamable HTTP from a route of your app, the same policy decides what each client sees.
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>Nothing you did not offer</h4>
+      Only what you mark <code>.agent()</code>, unless the project's <code>agents</code> policy offers more; <code>deny</code> wins over everything.
+    </td>
+    <td width="33%" valign="top">
+      <h4>A person confirms</h4>
+      A destructive tool runs only once the person at the client confirms that exact call — every write too, if you ask.
+    </td>
+    <td width="33%" valign="top">
+      <h4>One path</h4>
+      Agents' calls run through the same middleware, schemas and Studio as your app's; <code>ctx.agent</code> says who asked.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Read-only in one flag</h4>
+      <code>--read-only</code> and <code>--deny</code> narrow what the config offers, never widen it.
+    </td>
+    <td valign="top">
+      <h4>What is offered, and why</h4>
+      <code>--list</code>, Studio's Explorer and <code>courier-studio diff</code> show each tool and what offered it.
+    </td>
+    <td valign="top">
+      <h4>Both eras of MCP</h4>
+      The 2026-07-28 revision, and the <code>initialize</code> handshake clients still speak by default.
+    </td>
+  </tr>
+</table>
+
+<br />
+
+## Mark an endpoint
 
 ```ts
 endpoint
@@ -40,11 +87,7 @@ endpoint
   .agent({ description: "One order by its id, with its status and total", access: "read" })
 ```
 
-- **Nothing you did not offer.** By default only an endpoint marked `.agent()` reaches an agent. The project's `agents` policy in `courier.config.ts` offers more in one line — every read, a group by pattern — or keeps out what a mark would offer: `deny` wins over everything, `access` caps what any tool may do, `.agent(false)` keeps one endpoint out.
-- **One path for people and agents.** A tool's call runs through the source's and the endpoint's middleware, its schemas and Studio; `ctx.agent` tells a middleware who asked.
-- **A person confirms what cannot be undone.** A `destructive` tool runs only once the person at the client has confirmed that exact call — every write too, with `confirm: "write"`.
-- **What is offered, and why.** `courier-mcp --list`, Studio's Explorer and `courier-studio diff` on a pull request show each tool, its access and what offered it.
-- **Both eras of MCP.** The 2026-07-28 revision, and the `initialize` handshake clients still speak by default.
+The tool takes its name from the endpoint, its input schema from the variables, and its description and access from the mark. An agent calls it as your app would: through the source's and the endpoint's middleware, with its schemas checked, and shown in Studio's Timeline.
 
 <br />
 
@@ -130,6 +173,39 @@ export const OPTIONS = mcp.handle
 
 <br />
 
+## Part of Courier
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/core"><strong>@noverax/courier</strong></a><br />
+      Define your API once; call it typed from server code and the browser.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/studio"><strong>@noverax/courier-studio</strong></a><br />
+      See every request your app makes, live.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/create-courier"><strong>@noverax/create-courier</strong></a><br />
+      All of it in your project, in one command.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/react"><strong>@noverax/courier-react</strong></a><br />
+      React Query hooks typed from the same definition.
+    </td>
+  </tr>
+</table>
+
+<br />
+
 ## License
 
-MIT
+[MIT](https://github.com/NoveraX/courier/blob/master/LICENSE)
+
+<br />
+
+<div align="center">
+  <sub>Part of <a href="https://github.com/NoveraX/courier">Courier</a> · built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

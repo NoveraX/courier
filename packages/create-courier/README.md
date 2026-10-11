@@ -3,26 +3,38 @@
   <a href="https://courier.noverax.cloud">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
-      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="44" />
     </picture>
   </a>
 
-  <h1>@noverax/create-courier</h1>
+  <h1>Create Courier</h1>
 
-  <p><strong>Courier in your project, in one command: your typed API, the route the browser calls it through, Studio and mock data.</strong></p>
+  <p><strong>Courier in your project — or a new one — in one command.</strong></p>
+
+  <p>It finds your framework, shows what it is about to do, and once you agree writes a typed API layer, its proxy route, Studio, a mock and a page that shows it at work — then installs the packages and type-checks the result.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/create-courier"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/create-courier?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a" /></a>
     <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud/docs/quick-start"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/docs/create-courier"><strong>Create Courier guide</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier/tree/master/packages/create-courier">Source</a>
   </p>
+
+  <br />
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/create-dark.png" />
+    <img alt="create-courier in an Express project: the files it adds, the lines it changes in the project's own files and the packages it installs, and the question that sets it all up" src="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/create-light.png" width="880" />
+  </picture>
   <br />
 </div>
 
@@ -30,13 +42,48 @@
 
 ## Overview
 
-Run it in your project:
+One command for thirteen frameworks: Next.js, Nuxt, SvelteKit, Astro, React Router and Remix, SolidStart, React and Vue with Vite, Expo, Express, Hono, Fastify and NestJS. It never replaces a file of yours, changes yours only where their shape is known, and works before you have a backend.
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>A plan first</h4>
+      Every file, every changed line and every package, shown before anything is written.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Nothing replaced</h4>
+      A file is only ever added; where one of yours stands, its lines are listed for you instead.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Works without a backend</h4>
+      The example answers from a mock Studio runs, seeded with five users.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Your own API</h4>
+      <code>--openapi</code> imports an OpenAPI, Swagger or Postman specification in place of the example.
+    </td>
+    <td valign="top">
+      <h4>AI agents</h4>
+      <code>--mcp</code> offers the API's reads to your editor's agent and adds <code>.mcp.json</code>.
+    </td>
+    <td valign="top">
+      <h4>Your toolchain</h4>
+      Your package manager, your TypeScript, your <code>tsconfig</code> — checked against, not replaced.
+    </td>
+  </tr>
+</table>
+
+<br />
+
+## Quick start
 
 ```bash
 npx @noverax/create-courier
 ```
 
-It finds the framework in your `package.json`, shows what it is about to do — the files it adds, the lines it changes in files of yours, the packages it installs — and once you agree writes them, installs the packages with your package manager, and type-checks what it added against your own `tsconfig`. Then:
+Run it in your project. It finds the framework in your `package.json`, shows the plan, and once you agree writes it, installs the packages with your package manager, and type-checks what it added against your own `tsconfig`. Then:
 
 ```bash
 npm run studio   # Courier Studio, and the mock API it runs
@@ -44,12 +91,6 @@ npm run dev      # your app: open /courier
 ```
 
 `/courier` shows a page of users your API answers with — from the mock until `API_URL` names your backend — and a form that creates one, typed end to end, every call visible in Studio.
-
-- **A plan first.** Nothing changes until you agree, or pass `--yes`; `--dry-run` shows the plan and stops, and Ctrl+C at a question stops it with nothing changed.
-- **Nothing of yours is replaced.** A file is only ever added. Where a file of yours stands where Courier's would go, it is left as it is and its lines are listed for you.
-- **Your files change only where their shape is known.** A plugin in `vite.config.ts`, a route in `app/routes.ts`: each change is shown line by line, made only where the file is in a shape the command knows, and checked against the file as you had it right before it is written. Elsewhere it is left to you, with the lines to add.
-- **It works before you have a backend.** The example API answers from a mock Studio runs, seeded with five users, on the first free port from 7001.
-- **Your toolchain stays yours.** It installs with the package manager your lockfile names, keeps the TypeScript your project has, and says how to move to 6.0 when you are ready; a project it creates is moved to 6.0 for you.
 
 <br />
 
@@ -144,6 +185,39 @@ Node.js 22 or later, and a project with a `tsconfig.json`: Courier is typed end 
 
 <br />
 
+## Part of Courier
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/core"><strong>@noverax/courier</strong></a><br />
+      Define your API once; call it typed from server code and the browser.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/studio"><strong>@noverax/courier-studio</strong></a><br />
+      See every request your app makes, live.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/mcp"><strong>@noverax/courier-mcp</strong></a><br />
+      Your API, as tools for AI agents.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/react"><strong>@noverax/courier-react</strong></a><br />
+      React Query hooks typed from the same definition.
+    </td>
+  </tr>
+</table>
+
+<br />
+
 ## License
 
-MIT
+[MIT](https://github.com/NoveraX/courier/blob/master/LICENSE)
+
+<br />
+
+<div align="center">
+  <sub>Part of <a href="https://github.com/NoveraX/courier">Courier</a> · built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

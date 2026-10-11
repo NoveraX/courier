@@ -3,26 +3,38 @@
   <a href="https://courier.noverax.cloud">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
-      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="44" />
     </picture>
   </a>
 
-  <h1>@noverax/courier-react</h1>
+  <h1>Courier for React</h1>
 
-  <p><strong>React integration for Courier — query hooks, streams and channels, query keys, zero boilerplate.</strong></p>
+  <p><strong>React Query hooks, typed from your API definition.</strong></p>
+
+  <p>Every group of your API becomes hooks — <code>useQuery</code>, <code>useMutation</code>, <code>useSuspenseQuery</code>, <code>useInfiniteQuery</code> — and every stream and channel a live one. Names, variables and answers inferred: no generics, no query keys by hand.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-react"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-react?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
-    <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a&color=1c63d6" /></a>
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/docs/react-query/setup"><strong>React Query guide</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier/tree/master/packages/react">Source</a>
   </p>
+
+  <br />
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/react-dark.png" />
+    <img alt="An editor completing q.users.useQuery with the group's two reads, getAll and getById, each with its variables and answer typed from the API's definition" src="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/react-light.png" width="880" />
+  </picture>
   <br />
 </div>
 
@@ -30,7 +42,38 @@
 
 ## Overview
 
-Wraps `@tanstack/react-query` with full Courier type inference. Group names, method names, variables, and response types are inferred automatically — no manual generics.
+Wraps `@tanstack/react-query` with Courier's type inference. Group names, method names, variables and response types come from the API definition, so a hook knows what it returns before you run it — and an endpoint renamed in the definition is a compile error at every hook that named it.
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>Typed to the answer</h4>
+      <code>q.users.useQuery("getAll")</code> is a <code>User[]</code>; <code>select</code> reshapes it, and the type follows.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Keys you never write</h4>
+      Hierarchical keys — source, group, method, variables — so one line invalidates an endpoint, a group or the whole API.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Optimistic updates</h4>
+      <code>optimisticOptions</code> shows a change at once and puts the cache back when the mutation fails.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Live data</h4>
+      <code>useSubscription</code> follows a stream, <code>useChannel</code> joins a WebSocket channel, <code>useComputedQuery</code> merges a stream into a query.
+    </td>
+    <td valign="top">
+      <h4>Server Components</h4>
+      Prefetch on the server with the same keys and hydrate on the client; no module is marked <code>"use client"</code>.
+    </td>
+    <td valign="top">
+      <h4>Proxy or direct</h4>
+      A proxy caller keeps the definition on the server; a direct one serves single-page apps and React Native.
+    </td>
+  </tr>
+</table>
 
 <br />
 
@@ -317,6 +360,33 @@ For convenience, this package re-exports `QueryClient`, `QueryClientProvider`, `
 ```tsx
 import { QueryClient, QueryClientProvider } from "@noverax/courier-react"
 ```
+
+<br />
+
+## Part of Courier
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/core"><strong>@noverax/courier</strong></a><br />
+      Define your API once; call it typed from server code and the browser.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/next"><strong>@noverax/courier-next</strong></a><br />
+      One route, Server Actions and the session in Next.js.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/studio"><strong>@noverax/courier-studio</strong></a><br />
+      See every request your app makes, live.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/create-courier"><strong>@noverax/create-courier</strong></a><br />
+      All of it in your project, in one command.
+    </td>
+  </tr>
+</table>
 
 <br />
 

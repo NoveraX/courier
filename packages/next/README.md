@@ -3,26 +3,38 @@
   <a href="https://courier.noverax.cloud">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
-      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="44" />
     </picture>
   </a>
 
-  <h1>@noverax/courier-next</h1>
+  <h1>Courier for Next.js</h1>
 
-  <p><strong>Next.js adapter — API route handler + Server Actions.</strong></p>
+  <p><strong>Your API in the App Router — one route, Server Actions and the user's session.</strong></p>
+
+  <p>One route proxies every endpoint a page may call. Server Components, Route Handlers and Server Actions call your backend directly, with the session of the user they serve — typed end to end, from one definition.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-next"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-next?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a" /></a>
     <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/docs/frameworks/nextjs"><strong>Next.js guide</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier/tree/master/packages/next">Source</a>
   </p>
+
+  <br />
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/architecture-dark.png" />
+    <img alt="Server code, the browser and realtime clients call through Courier — types, validation, middleware, the proxy route and streams — to any REST backend; Studio and the mock servers work from the same definition" src="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/architecture-light.png" width="880" />
+  </picture>
   <br />
 </div>
 
@@ -30,10 +42,50 @@
 
 ## Overview
 
-Next.js App Router integration with two features:
+The Next.js App Router integration. `apiRoute` serves every endpoint the browser may call from one route; `createServerCaller` and `createAction` call your backend from Server Components, Route Handlers and Server Actions with the session of the request Next.js is serving; and a middleware hands a page the double-submit token its write repeats.
 
-1. **`apiRoute`** — single route handler that exposes all your endpoints via GET and POST
-2. **`createAction`** — a typed caller for Server Actions that forwards the incoming request's headers
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>One route</h4>
+      <code>apiRoute()</code> answers every endpoint the boundary exposes, in the Node.js and the Edge runtime alike.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Server Actions</h4>
+      <code>createAction</code> calls your API from a Server Action, typed and ready for <code>useActionState</code>.
+    </td>
+    <td width="33%" valign="top">
+      <h4>The user's session</h4>
+      Every call a page, a layout, an action or a route makes carries the session of the request being served.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>CSRF handled</h4>
+      A write another site set off is refused with 403; a middleware hands a page the token its write repeats.
+    </td>
+    <td valign="top">
+      <h4>Rendered per request</h4>
+      A page that reads the session renders per request — also when <code>next build</code> decides what it can build ahead of time.
+    </td>
+    <td valign="top">
+      <h4>Pages Router too</h4>
+      <code>withRequestContext</code> gives <code>getServerSideProps</code> and API routes their request at hand.
+    </td>
+  </tr>
+</table>
+
+<br />
+
+## Quick start
+
+In your Next.js project:
+
+```bash
+npx @noverax/create-courier
+```
+
+It adds the proxy route, registered from `instrumentation.ts`, a typed example API, Studio and a mock — showing each change to your files before it makes it — installs the packages and type-checks the result. For a new project: `npx @noverax/create-courier my-app --framework next`. The steps below do the same by hand.
 
 <br />
 
@@ -209,6 +261,33 @@ import { withRequestContext } from "@noverax/courier-next/pages"
 // Middleware: hand the double-submit token to the browser with the page
 import { csrfTokenMiddleware, handCsrfTokens } from "@noverax/courier-next/middleware"
 ```
+
+<br />
+
+## Part of Courier
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/core"><strong>@noverax/courier</strong></a><br />
+      Define your API once; call it typed from server code and the browser.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/react"><strong>@noverax/courier-react</strong></a><br />
+      React Query hooks typed from the same definition.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/studio"><strong>@noverax/courier-studio</strong></a><br />
+      See every request your app makes, live.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/mcp"><strong>@noverax/courier-mcp</strong></a><br />
+      Your API, as tools for AI agents.
+    </td>
+  </tr>
+</table>
 
 <br />
 

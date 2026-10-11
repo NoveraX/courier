@@ -3,21 +3,26 @@
   <a href="https://courier.noverax.cloud">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
-      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="44" />
     </picture>
   </a>
 
-  <h1>@noverax/courier-hono</h1>
+  <h1>Courier for Hono</h1>
 
-  <p><strong>Hono adapter for Courier.</strong></p>
+  <p><strong>Typed calls to any backend, on every runtime Hono runs on.</strong></p>
+
+  <p>Hono speaks Web Standards, so Courier's proxy runs on it with no conversion at all — on Node.js, Bun, Deno, Cloudflare Workers, Vercel Edge and AWS Lambda.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-hono"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-hono?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a" /></a>
     <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/docs/frameworks/hono"><strong>Hono guide</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
@@ -28,11 +33,62 @@
 
 <br />
 
+## Overview
+
+Hono hands the adapter the Web `Request` as it is, and the core handler answers with a Web `Response`: the same proxy, with no conversion, everywhere Hono runs.
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>Every runtime</h4>
+      Node.js, Bun, Deno, Cloudflare Workers, Vercel Edge and AWS Lambda — one handler for all of them.
+    </td>
+    <td width="33%" valign="top">
+      <h4>The user's session</h4>
+      <code>requestContext()</code> carries the session through every <code>await</code>, wherever <code>AsyncLocalStorage</code> runs.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Streams and sockets</h4>
+      <code>courierSSEHandler()</code> for SSE and <code>courierWSHandler()</code> through your runtime's own <code>upgradeWebSocket</code>.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Fair limits</h4>
+      WebSockets per caller, counted by the runtime's address or a trusted proxy's <code>X-Forwarded-For</code>.
+    </td>
+    <td valign="top">
+      <h4>Bounded frames</h4>
+      <code>wsFrameLimit()</code> caps a frame before Courier reads it; an oversized message is refused on its own.
+    </td>
+    <td valign="top">
+      <h4>Secure by default</h4>
+      Another site's page is refused, an unknown host gets 421, and only the cookies the API's session names cross the proxy.
+    </td>
+  </tr>
+</table>
+
+<br />
+
+## Quick start
+
+In your Hono project:
+
+```bash
+npx @noverax/create-courier
+```
+
+It adds the routes on `/api/request`, a typed example API, Studio and a mock — showing each change to your files before it makes it — installs the packages and type-checks the result. For a new project: `npx @noverax/create-courier my-app --framework hono`. The steps below do the same by hand.
+
+<br />
+
 ## Install
 
 ```bash
 npm install @noverax/courier-hono @noverax/courier hono
 ```
+
+<br />
 
 ## Usage
 
@@ -52,6 +108,8 @@ export default app
 ```
 
 `courierHandler()` is zero-arg — sources are read at request time from the core global registry. Works on any Hono runtime — Node.js, Bun, Deno, Cloudflare Workers, Vercel Edge, AWS Lambda.
+
+<br />
 
 ## Options
 
@@ -73,6 +131,8 @@ courierHandler({
 | `sseHeaders` | `Record<string, string>` | — | Extra headers on SSE responses (CORS, for instance) |
 | `sseMaxLifetimeMs` | `number` | 30 min | How long one SSE connection may live before the client reconnects and resumes |
 
+<br />
+
 ## The user's session
 
 An API that keeps the user's session describes it in `defineApi`, and every call a route makes — through every `await` — carries the session of the request being served, the cookies the session names and nothing else, once the request is served with it at hand:
@@ -84,6 +144,8 @@ app.use(requestContext())
 ```
 
 The session cookies the API sets reach the browser on the response, beside the route's own. It needs `AsyncLocalStorage`: Node, Bun, Deno, or Cloudflare Workers with `nodejs_compat`.
+
+<br />
 
 ## Streaming and WebSockets
 
@@ -110,9 +172,13 @@ Each caller may hold up to `maxConnectionsPerIP` WebSockets (50 by default). The
 
 The runtime's WebSocket server reads each frame before Courier sees it, so bound it with `wsFrameLimit(maxMessageSize)` from `@noverax/courier/node`, as `maxPayload` does above: a message somewhat over the handler's `maxMessageSize` (64 KB by default) is refused with 4413 for that message alone, and a frame larger still with 1009 before it is read.
 
+<br />
+
 ## How It Works
 
 Hono uses Web Standard `Request`/`Response` natively, so the adapter simply passes `c.req.raw` directly to the core handler — zero conversion overhead.
+
+<br />
 
 ## With Frontend
 
@@ -126,6 +192,35 @@ import type { api } from "./api/sources"
 const caller = createProxyCaller<typeof api>("api", { proxyPath: { http: "/api/request" } })
 const users = await caller.users.getAll()
 ```
+
+<br />
+
+## Part of Courier
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/core"><strong>@noverax/courier</strong></a><br />
+      Define your API once; call it typed from server code and the browser.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/studio"><strong>@noverax/courier-studio</strong></a><br />
+      See every request your app makes, live.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/mcp"><strong>@noverax/courier-mcp</strong></a><br />
+      Your API, as tools for AI agents.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/create-courier"><strong>@noverax/create-courier</strong></a><br />
+      All of it in your project, in one command.
+    </td>
+  </tr>
+</table>
+
+<br />
 
 ## License
 

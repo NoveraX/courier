@@ -3,21 +3,26 @@
   <a href="https://courier.noverax.cloud">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
-      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="44" />
     </picture>
   </a>
 
-  <h1>@noverax/courier-server</h1>
+  <h1>Courier Server</h1>
 
-  <p><strong>Standalone HTTP + WebSocket server for Courier.</strong></p>
+  <p><strong>Your API's proxy, its streams and its channels — on a port of their own.</strong></p>
+
+  <p>A standalone server for front ends with no server of their own — a static site, a mobile app, a serverless deploy: HTTP, SSE and WebSockets, with CORS, health checks and a graceful shutdown, from one command.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-server"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-server?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a" /></a>
     <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/docs/deployment/standalone-server"><strong>Standalone server guide</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
@@ -30,7 +35,38 @@
 
 ## Overview
 
-A zero-config standalone server that handles HTTP (GET/POST), SSE streams, and WebSocket upgrades. Includes CORS, health checks, and graceful shutdown out of the box.
+`courier-server` serves the proxy for the sources in your `courier.config.ts` — calls, SSE streams and WebSocket channels — on its own port, ready for a container, a Kubernetes pod or a process manager.
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>One command</h4>
+      <code>npx @noverax/courier-server</code> serves your config's sources; flags or its <code>server</code> block set the rest.
+    </td>
+    <td width="33%" valign="top">
+      <h4>HTTP, SSE, WebSockets</h4>
+      Every transport your API defines, with per-address, per-connection and per-second limits.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Scale out</h4>
+      A Redis Pub/Sub adapter carries channels across replicas.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Graceful shutdown</h4>
+      On SIGTERM it drains streams and sockets, telling each client when to come back, then exits.
+    </td>
+    <td valign="top">
+      <h4>Fails loudly</h4>
+      A taken port or a config that will not load exits with status 1, for supervisors and deploy scripts.
+    </td>
+    <td valign="top">
+      <h4>Secure by default</h4>
+      Allowed origins and hosts, a WebSocket origin check, and a 421 for a DNS-rebinding host.
+    </td>
+  </tr>
+</table>
 
 <br />
 
@@ -130,7 +166,7 @@ A page on an allowed origin may send the headers its preflight asks for; which o
 
 ### Logs
 
-Info lines go to stdout, warnings and errors to stderr, with the error's stack and cause chain. `COURIER_LOG_LEVEL` sets the lowest level printed — `debug`, `info` (default), `warn`, `error` or `silent` — and `COURIER_LOG_FORMAT=json` writes one JSON object per line, for a log pipeline. Colour appears on a terminal only; `NO_COLOR` turns it off and `FORCE_COLOR=1` on. Started in a terminal, `courier-server` prints a banner with its version, address, config and sources; anywhere else — a container, a pipe — it logs one `Courier Server v… ready at …` line instead. See [Logging](../core/README.md#logging).
+Info lines go to stdout, warnings and errors to stderr, with the error's stack and cause chain. `COURIER_LOG_LEVEL` sets the lowest level printed — `debug`, `info` (default), `warn`, `error` or `silent` — and `COURIER_LOG_FORMAT=json` writes one JSON object per line, for a log pipeline. Colour appears on a terminal only; `NO_COLOR` turns it off and `FORCE_COLOR=1` on. Started in a terminal, `courier-server` prints a banner with its version, address, config and sources; anywhere else — a container, a pipe — it logs one `Courier Server v… ready at …` line instead. See [Logging](https://github.com/NoveraX/courier/tree/master/packages/core#logging).
 
 <br />
 
@@ -139,6 +175,33 @@ Info lines go to stdout, warnings and errors to stderr, with the error's stack a
 ### `createCourierServer(options: CourierServerOptions): CourierServer`
 
 Creates and starts the server. Returns an object with `url`, `ready` (resolves once listening, rejects when the server cannot start), `stop()`, `sseConnections`, and `wsConnections`.
+
+<br />
+
+## Part of Courier
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/core"><strong>@noverax/courier</strong></a><br />
+      Define your API once; call it typed from server code and the browser.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/redis"><strong>@noverax/courier-redis</strong></a><br />
+      Channels, presence and stream history across replicas.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/studio"><strong>@noverax/courier-studio</strong></a><br />
+      See every request your app makes, live.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/create-courier"><strong>@noverax/create-courier</strong></a><br />
+      All of it in your project, in one command.
+    </td>
+  </tr>
+</table>
 
 <br />
 

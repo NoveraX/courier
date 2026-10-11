@@ -3,21 +3,26 @@
   <a href="https://courier.noverax.cloud">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
-      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="44" />
     </picture>
   </a>
 
-  <h1>@noverax/courier-mock</h1>
+  <h1>Courier Mock</h1>
 
-  <p><strong>Type-safe mock server with stateful store, scenarios, and test utilities for Courier.</strong></p>
+  <p><strong>A backend before you have one — typed, stateful and as unreliable as you ask.</strong></p>
+
+  <p>Mock servers generated from your API's definition, with records that pass its schemas and survive restarts, scenarios and network faults — plus an in-memory client, factories, recordings and contract tests for your test suite.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-mock"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-mock?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a" /></a>
     <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/docs/studio/mock-servers"><strong>Mock servers guide</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
@@ -25,6 +30,43 @@
   </p>
   <br />
 </div>
+
+<br />
+
+## Overview
+
+Declare mocks in `courier.mocks.ts`, beside `courier.config.ts`, and Studio runs them: routes and records generated from each endpoint's schemas, overrides checked against the source's own types, and a SQLite store that keeps what your app created. The same package gives your tests a mock client, factories, recordings of a real API and contract tests.
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>Generated from the definition</h4>
+      Routes and records from each endpoint's response schema — bounds, formats and patterns all hold.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Records that last</h4>
+      One SQLite database per mock, in <code>.courier/mocks/</code>, kept across restarts with no migrations.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Typed overrides</h4>
+      <code>mock("users", "getById").rejects(404)</code>, checked against the source's group and endpoint names.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Network conditions</h4>
+      Latency, bandwidth, upload limits and a share of failures — 429, 503, timeouts, cut connections.
+    </td>
+    <td valign="top">
+      <h4>Test utilities</h4>
+      An in-memory client with history, factories, and recordings of a real API replayed without the network.
+    </td>
+    <td valign="top">
+      <h4>Contract checks</h4>
+      Every endpoint's data — mock answers or recorded ones — validated against its schemas, with a report of what broke.
+    </td>
+  </tr>
+</table>
 
 <br />
 
@@ -46,7 +88,7 @@ Leave out any the app already lists under `dependencies`: `--save-dev` would mov
 
 ## Mock servers in Studio
 
-Declare mocks in `courier.mocks.ts`, beside `courier.config.ts`: its default export is `defineMocks({ ... })`, with one `defineMockServer(...)` under each key. Studio lists each mock by its key, generates its routes and data from its source, and runs it — at launch when `autoStart` is set, or when you start it from the Mocks view. Studio's mock wizard can write the declarations for you; see [Add mocks from Studio](../studio/README.md#add-mocks-from-studio).
+Declare mocks in `courier.mocks.ts`, beside `courier.config.ts`: its default export is `defineMocks({ ... })`, with one `defineMockServer(...)` under each key. Studio lists each mock by its key, generates its routes and data from its source, and runs it — at launch when `autoStart` is set, or when you start it from the Mocks view. Studio's mock wizard can write the declarations for you; see [Add mocks from Studio](https://github.com/NoveraX/courier/tree/master/packages/studio#add-mocks-from-studio).
 
 The mocks have a file of their own because `courier.config.ts` is also loaded in production — by the standalone server, and by `attachRuntime()` — where this package is not installed. Only Studio reads `courier.mocks.ts`. `courier.config.ts` has no `mocks` key: `defineConfig` does not type-check with one, and Studio reads mocks from nowhere else.
 
@@ -242,6 +284,33 @@ const { client: replayed } = createMockClient<typeof api>({ scenario: replayFixt
 | `@noverax/courier-mock/server` | `createMockServer` — a standalone Hono-based mock server; `persist: { file }` keeps its store across restarts in an SQLite database it creates and migrates itself |
 | `@noverax/courier-mock/contract` | Contract testing utilities |
 | `@noverax/courier-mock/managed` | `runMockWorker` — the process Studio starts for each mock it runs |
+
+<br />
+
+## Part of Courier
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/core"><strong>@noverax/courier</strong></a><br />
+      Define your API once; call it typed from server code and the browser.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/studio"><strong>@noverax/courier-studio</strong></a><br />
+      See every request your app makes, live.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/react"><strong>@noverax/courier-react</strong></a><br />
+      React Query hooks typed from the same definition.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/create-courier"><strong>@noverax/create-courier</strong></a><br />
+      All of it in your project, in one command.
+    </td>
+  </tr>
+</table>
 
 <br />
 

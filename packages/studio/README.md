@@ -3,26 +3,38 @@
   <a href="https://courier.noverax.cloud">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-light.svg" />
-      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="40" />
+      <img alt="Courier" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/logos/courier-mark-dark.svg" height="44" />
     </picture>
   </a>
 
-  <h1>@noverax/courier-studio</h1>
+  <h1>Courier Studio</h1>
 
-  <p><strong>Visual debugging studio for Courier — inspect requests, explore endpoints, and monitor your API in real time.</strong></p>
+  <p><strong>See every request your app makes.</strong></p>
+
+  <p>A visual debugger for your API layer, running beside your dev server: every call from server code and the browser, live, with its timing, middleware and checks — plus a playground, OpenAPI import, an audit and mock servers. Off in production builds.</p>
 
   <p>
     <a href="https://www.npmjs.com/package/@noverax/courier-studio"><img alt="npm" src="https://img.shields.io/npm/v/@noverax/courier-studio?style=flat-square&label=npm&labelColor=08090a&color=1c63d6" /></a>
+    <a href="https://www.typescriptlang.org/"><img alt="TypeScript strict" src="https://img.shields.io/badge/typescript-strict-1c63d6?style=flat-square&labelColor=08090a" /></a>
     <a href="https://github.com/NoveraX/courier/blob/master/LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-1c63d6?style=flat-square&labelColor=08090a" /></a>
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud"><strong>Documentation</strong></a>
+    <a href="https://courier.noverax.cloud/studio"><strong>Studio</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier#readme">Courier</a>
     &nbsp;·&nbsp;
     <a href="https://github.com/NoveraX/courier/tree/master/packages/studio">Source</a>
   </p>
+
+  <br />
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/studio-timeline-dark.png" />
+    <img alt="Courier Studio's Timeline for a shop and its payments provider: calls through the proxy and direct, their statuses, durations and sizes, live SSE and WebSocket streams, and the requests per minute, p95 and error rate above them" src="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/studio-timeline-light.png" width="880" />
+  </picture>
   <br />
 </div>
 
@@ -30,7 +42,49 @@
 
 ## Overview
 
-Courier Studio is a development server with a web UI: a request inspector, an endpoint explorer, an API playground, mock servers, and more. You run it next to your app, and your app connects to it — the server side through `attachRuntime()`, the browser side through one of the build integrations below.
+Studio is a development server with a web UI. You run it next to your app, and your app connects to it — the server side through `attachRuntime()`, the browser side through one of the build integrations — so it shows the calls both make, as they happen, from the same definition your code is typed from.
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h4>Inspect</h4>
+      A live Timeline, a Waterfall of each request's phases, Analytics per endpoint, and an inspector for every call.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Build</h4>
+      An Explorer of every endpoint, a Playground that calls any of them, and OpenAPI or Postman import that writes the code.
+    </td>
+    <td width="33%" valign="top">
+      <h4>Mock</h4>
+      The mock servers from <code>courier.mocks.ts</code>, with records that last, scenarios and network conditions.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Audit</h4>
+      What your app's calls reveal — an N+1 pattern, a failing or slow endpoint, a write without credentials — with fixes.
+    </td>
+    <td valign="top">
+      <h4>Share</h4>
+      Session files saved and opened again, a call saved as a test, two calls compared side by side.
+    </td>
+    <td valign="top">
+      <h4>Your agent and your editor</h4>
+      <code>courier-studio mcp</code> serves Studio to your coding agent; the VS Code extension puts its figures in your code.
+    </td>
+  </tr>
+</table>
+
+<br />
+
+## The inspector
+
+Open a call and Studio shows it whole: its status, duration and size against the endpoint's p95, its URL and transport, the variables and the response checked against their schemas, the middleware it passed through, its headers, its timing, and snippets that send it again.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/studio-inspector-dark.png" />
+  <img alt="Studio's inspector open on a payments.charges.create call beside the Timeline: status 201, its duration against the endpoint's p95, the variables and the response validated, and the requestId, auth and retry middleware it passed through" src="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/studio-inspector-light.png" width="880" />
+</picture>
 
 <br />
 
@@ -164,7 +218,7 @@ import { attachRuntime } from "@noverax/courier-studio-core/runtime"
 await attachRuntime()
 ```
 
-Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin in Nuxt, `hooks.server.ts` in SvelteKit, or before `listen()` in a Node server. See [`@noverax/courier-studio-core`](../studio-core/README.md).
+Call it once at startup — from `instrumentation.ts` in Next.js, a Nitro plugin in Nuxt, `hooks.server.ts` in SvelteKit, or before `listen()` in a Node server. See [`@noverax/courier-studio-core`](https://github.com/NoveraX/courier/tree/master/packages/studio-core).
 
 Studio keeps the latest 2000 requests your app makes in memory, so a Studio page that opens or reloads shows the ones made before it; clearing the Timeline clears them there too, except the pinned ones when **Preserve log** is on. A request or stream still open when its app stops, or loses its connection to Studio, is shown as failed: the app can no longer say how it ended.
 
@@ -268,7 +322,7 @@ A request Studio refuses changes nothing. It is answered with `{ error }` — `4
 
 ## Mock servers
 
-Studio runs the mock servers declared in `courier.mocks.ts`, beside `courier.config.ts`. `defineMocks` and `defineMockServer` come from [`@noverax/courier-mock`](../mock/README.md), a development dependency installed with the server it runs on:
+Studio runs the mock servers declared in `courier.mocks.ts`, beside `courier.config.ts`. `defineMocks` and `defineMockServer` come from [`@noverax/courier-mock`](https://github.com/NoveraX/courier/tree/master/packages/mock), a development dependency installed with the server it runs on:
 
 ```bash
 npm install --save-dev @noverax/courier-mock hono @hono/node-server
@@ -397,6 +451,11 @@ claude mcp add courier-studio -- npx @noverax/courier-studio mcp
 
 The Courier extension for VS Code shows above each call to an endpoint how its calls went in Studio — how many, how many failed, how long nineteen in twenty took — and a click opens the endpoint in Studio. The other way round, the inspector and the Explorer list the code that calls an endpoint, each call site opening in the editor chosen in **Settings → Editor**. While it runs, Studio writes where it answers to `.courier/studio.json`, which the extension reads. See [Studio in Your Editor](https://courier.noverax.cloud/docs/studio/editor).
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/codelens-dark.png" />
+  <img alt="An editor showing, above each call to an endpoint, its calls in Studio: cart.get 128 calls, p95 32 ms; orders.place 34 calls, 1 failed, p95 210 ms; payments.charge 33 calls, 2 in flight, p95 1.4 s; orders.live 3 streams, 1 open" src="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/codelens-light.png" width="880" />
+</picture>
+
 <br />
 
 ## Specifications on a private network
@@ -442,6 +501,33 @@ await studio.close()
 Starts Studio and returns at once with `url`, `token` — the project's token, which a page opened at `` `${url}/#token=${token}` `` presents to make changes — and `close()`. Options: `port`, `host`, `projectRoot`, `mockBasePort`, `extraCorsOrigins` (more origins that may act as the Studio UI), `demo`, `onReady`, `onStarted`, `onError`. `port`, `host` and `mockBasePort` left out are read from the `studio` block of the project's config, then default to 6280, `localhost` and 7001. Given both `port` and `host`, Studio listens at once; otherwise once its first load of the config has an outcome. `onReady` fires once it listens, with the URL a browser opens — a wildcard host reads as `localhost`, and with `port: 0` the URL carries the port the system picked. `onStarted` fires once it listens and that first load has an outcome, with `{ url, host, port, studio }`, where `studio` is the config's `studio` block — empty when there is none or the load failed. `onError` fires instead when it cannot listen — the port is taken, or out of range, or the host cannot be bound.
 
 `demo: { resetsAt? }` serves Studio as a public demo of the project: a page without the token may also send from the Playground and drive the mocks, within limits that keep one visitor from crowding out the rest, while Studio writes no file and clears nothing every visitor sees; each page says it is a demo, and counts down to `resetsAt` when it is given. See [Host a public demo](https://courier.noverax.cloud/docs/studio/overview#host-a-public-demo).
+
+<br />
+
+## Part of Courier
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/core"><strong>@noverax/courier</strong></a><br />
+      Define your API once; call it typed from server code and the browser.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/studio-core"><strong>@noverax/courier-studio-core</strong></a><br />
+      The runtime that reports your app's calls to Studio.
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/mock"><strong>@noverax/courier-mock</strong></a><br />
+      Mock servers and test utilities from the same definition.
+    </td>
+    <td width="50%" valign="top">
+      <a href="https://github.com/NoveraX/courier/tree/master/packages/mcp"><strong>@noverax/courier-mcp</strong></a><br />
+      Your API, as tools for AI agents.
+    </td>
+  </tr>
+</table>
 
 <br />
 

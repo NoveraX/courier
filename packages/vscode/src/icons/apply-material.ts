@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import * as vscode from "vscode";
 
 import { isRecord } from "../studio/studio-guards";
@@ -11,12 +12,14 @@ import {
   withCourier,
   withoutCourier,
 } from "./material-icons";
-import { userSetting, writeUserSetting } from "./user-settings";
+import { changeThemeSettings, type RebuiltTheme } from "./theme-rewrites";
+import { userSetting } from "./user-settings";
 
 /**
  * Put Courier's icons into Material Icon Theme: associations to the icons
  * Courier ships, by file and by folder, the user's own kept. The theme
- * reads its settings again by itself.
+ * reads its settings again by itself, each change once it has rebuilt
+ * itself for the one before.
  *
  * @param iconsDir - Courier's `media/icons` folder
  * @returns Why the theme cannot take them, or `undefined` once they are in
@@ -30,11 +33,10 @@ export async function applyMaterial(iconsDir: string): Promise<string | undefine
   if (!material) return `${ICON_THEMES.material.label} is not installed.`;
   const plan = materialPlan(iconsDir, material.extensionPath);
   if ("why" in plan) return plan.why;
-  await writeUserSetting(MATERIAL_FILES, withCourier(associations(MATERIAL_FILES), plan.files));
-  await writeUserSetting(
-    MATERIAL_FOLDERS,
-    withCourier(associations(MATERIAL_FOLDERS), plan.folders),
-  );
+  await changeThemeSettings(materialTheme(material.extensionPath), [
+    [MATERIAL_FILES, withCourier(associations(MATERIAL_FILES), plan.files)],
+    [MATERIAL_FOLDERS, withCourier(associations(MATERIAL_FOLDERS), plan.folders)],
+  ]);
   return undefined;
 }
 
@@ -47,13 +49,17 @@ export async function applyMaterial(iconsDir: string): Promise<string | undefine
  * ```
  */
 export async function removeMaterial(): Promise<void> {
-  await writeUserSetting(MATERIAL_FILES, withoutCourier(associations(MATERIAL_FILES)));
-  await writeUserSetting(MATERIAL_FOLDERS, withoutCourier(associations(MATERIAL_FOLDERS)));
+  const material = vscode.extensions.getExtension(ICON_THEMES.material.extension);
+  await changeThemeSettings(materialTheme(material?.extensionPath), [
+    [MATERIAL_FILES, withoutCourier(associations(MATERIAL_FILES))],
+    [MATERIAL_FOLDERS, withoutCourier(associations(MATERIAL_FOLDERS))],
+  ]);
 }
 
 /**
  * Move Courier's associations to the folder of the Courier installed now:
- * the paths name the folder of the version that set them. What the user
+ * the paths name the folder of the version that set them, and an older
+ * Courier may have written a path the theme reads otherwise. What the user
  * took out stays out.
  *
  * @param iconsDir - Courier's `media/icons` folder
@@ -65,20 +71,28 @@ export async function removeMaterial(): Promise<void> {
 export async function keepMaterialCurrent(iconsDir: string): Promise<void> {
   const material = vscode.extensions.getExtension(ICON_THEMES.material.extension);
   const plan = material && materialPlan(iconsDir, material.extensionPath);
-  if (!plan || "why" in plan) return;
-  for (const [key, ours] of [
-    [MATERIAL_FILES, plan.files],
-    [MATERIAL_FOLDERS, plan.folders],
-  ] as const) {
-    const current = associations(key);
-    const moved = Object.entries(ours).filter(
-      ([name, icon]) => isCourierIcon(current?.[name]) && current?.[name] !== icon,
-    );
-    if (moved.length > 0) await writeUserSetting(key, { ...current, ...Object.fromEntries(moved) });
-  }
+  if (!material || !plan || "why" in plan) return;
+  await changeThemeSettings(materialTheme(material.extensionPath), [
+    moved(MATERIAL_FILES, plan.files),
+    moved(MATERIAL_FOLDERS, plan.folders),
+  ]);
+}
+
+/* A setting with each association Courier set and the plan names otherwise moved to the plan's path. */
+function moved(key: string, ours: Readonly<Record<string, string>>): [string, unknown] {
+  const current = associations(key);
+  const stale = Object.entries(ours).filter(
+    ([name, icon]) => isCourierIcon(current?.[name]) && current?.[name] !== icon,
+  );
+  return [key, stale.length > 0 ? { ...current, ...Object.fromEntries(stale) } : current];
 }
 
 function associations(key: string): Associations | undefined {
   const value = userSetting(key);
   return isRecord(value) ? value : undefined;
+}
+
+/* Material Icon Theme's theme as it rewrites it; it reads its settings again on its own. */
+function materialTheme(materialDir: string | undefined): RebuiltTheme {
+  return { files: materialDir ? [join(materialDir, "dist", "material-icons.json")] : [] };
 }

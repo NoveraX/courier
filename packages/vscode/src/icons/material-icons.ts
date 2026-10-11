@@ -44,8 +44,8 @@ export function materialPlan(
   const path = (icon: string) => relative(from, join(iconsDir, icon)).split(sep).join("/");
   return {
     files: Object.fromEntries([
-      ...CONFIG_FILES.map((name) => [name, path(ICONS.config)]),
-      ...MOCKS_FILES.map((name) => [name, path(ICONS.mocks)]),
+      ...CONFIG_FILES.map((name): [string, string] => [name, path(ICONS.config)]),
+      ...MOCKS_FILES.map((name): [string, string] => [name, path(ICONS.mocks)]),
     ]),
     folders: { [STATE_FOLDER]: path(ICONS.folder) },
   };

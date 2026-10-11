@@ -1,0 +1,37 @@
+{
+  "Courier query": {
+    "prefix": "courier-query",
+    "description": "Read an endpoint with React Query",
+    "body": ["const { data: ${3:data}, isLoading } = ${1:q}.${2:users}.useQuery(\"${4:getAll}\")"]
+  },
+  "Courier mutation": {
+    "prefix": "courier-mutation",
+    "description": "Write through an endpoint with React Query",
+    "body": [
+      "const { mutate: ${3:create} } = ${1:q}.${2:users}.useMutation(\"${4:create}\", {",
+      "\tonSuccess: (${5:result}) => {",
+      "\t\t$0",
+      "\t},",
+      "})"
+    ]
+  },
+  "Courier subscription": {
+    "prefix": "courier-subscription",
+    "description": "Follow a stream for as long as the component is mounted",
+    "body": [
+      "const { data, status, error } = ${1:q}.${2:prices}.useSubscription(\"${3:ticks}\", { variables: { ${4:symbol} } })"
+    ]
+  },
+  "Courier channel": {
+    "prefix": "courier-channel",
+    "description": "Join a channel: its last message, and send to send one back",
+    "body": [
+      "const { lastMessage, status, send } = ${1:q}.${2:chat}.useChannel(\"${3:room}\", { variables: { ${4:room} } })"
+    ]
+  },
+  "Courier call": {
+    "prefix": "courier-call",
+    "description": "Call an endpoint directly, on the server or in a script",
+    "body": ["const ${4:result} = await ${1:caller}.${2:users}.${3:getById}(${5:{ id: \"1\" \\}})"]
+  }
+}

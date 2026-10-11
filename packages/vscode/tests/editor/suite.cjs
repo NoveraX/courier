@@ -1,8 +1,9 @@
 /*
  * Runs inside VS Code: opens the workspace's file, waits for the extension's
  * hints over its call, and checks the line above it, the hover over it, the
- * audit's finding marked at it and the commands the extension offers. What
- * it saw is written to COURIER_EDITOR_REPORT; a mismatch fails the run.
+ * audit's finding marked at it, the commands the extension offers and its
+ * snippets. What it saw is written to COURIER_EDITOR_REPORT; a mismatch
+ * fails the run.
  */
 const assert = require("node:assert/strict");
 const { writeFileSync } = require("node:fs");
@@ -30,6 +31,22 @@ async function auditMarks(file) {
     await sleep(200);
   }
   return [];
+}
+
+async function snippetLabels() {
+  const document = await vscode.workspace.openTextDocument({
+    language: "typescript",
+    content: "courier-",
+  });
+  const list = await vscode.commands.executeCommand(
+    "vscode.executeCompletionItemProvider",
+    document.uri,
+    new vscode.Position(0, 8),
+  );
+  return (list?.items ?? [])
+    .map((item) => (typeof item.label === "string" ? item.label : item.label.label))
+    .filter((label) => label.startsWith("courier-"))
+    .sort();
 }
 
 exports.run = async function run() {
@@ -66,6 +83,7 @@ exports.run = async function run() {
       code: typeof mark.code === "object" ? String(mark.code.target) : mark.code,
     })),
     commands,
+    snippets: await snippetLabels(),
   };
   writeFileSync(process.env.COURIER_EDITOR_REPORT, JSON.stringify(report, null, 2));
 
@@ -90,4 +108,15 @@ exports.run = async function run() {
   for (const name of ["courier.startStudio", "courier.setUp", "courier.view.openLatestFailure"]) {
     assert.ok(commands.includes(name), `${name} is registered`);
   }
+  assert.deepEqual(report.snippets, [
+    "courier-api",
+    "courier-boundary",
+    "courier-call",
+    "courier-channel",
+    "courier-endpoint",
+    "courier-group",
+    "courier-mutation",
+    "courier-query",
+    "courier-subscription",
+  ]);
 };

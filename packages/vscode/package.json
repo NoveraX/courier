@@ -1,7 +1,7 @@
 {
   "name": "courier-vscode",
   "displayName": "Courier",
-  "description": "Courier Studio in your editor: above each call to an endpoint, how its calls went — how many, how many failed, how long they took — and the call opens in Studio.",
+  "description": "Courier Studio in your editor: every endpoint and how its calls went, above each call and in a view of their own; the audit's findings where the code calls; Studio started in a click; and your API offered to VS Code's agent.",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#08090a",
@@ -34,11 +34,15 @@
     "latency",
     "observability",
     "devtools",
-    "studio"
+    "studio",
+    "mcp",
+    "agent"
   ],
   "categories": [
     "Visualization",
-    "Debuggers"
+    "Debuggers",
+    "Snippets",
+    "AI"
   ],
   "engines": {
     "vscode": "^1.95.0"
@@ -253,6 +257,97 @@
         }
       }
     },
+    "snippets": [
+      {
+        "language": "typescript",
+        "path": "./snippets/define.json"
+      },
+      {
+        "language": "typescriptreact",
+        "path": "./snippets/define.json"
+      },
+      {
+        "language": "typescript",
+        "path": "./snippets/call.json"
+      },
+      {
+        "language": "typescriptreact",
+        "path": "./snippets/call.json"
+      },
+      {
+        "language": "javascript",
+        "path": "./snippets/call.json"
+      },
+      {
+        "language": "javascriptreact",
+        "path": "./snippets/call.json"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "courier.start",
+        "title": "Get Started with Courier",
+        "description": "From a project without Courier to every endpoint's calls in your editor, and your API in your agent's hands.",
+        "steps": [
+          {
+            "id": "setUp",
+            "title": "Set Courier up",
+            "description": "Create Courier adds a typed example API, a mock, and a page that calls it, with the route your framework serves it through. It shows the plan first, and changes nothing until you agree.\n[Set Up Courier](command:courier.setUp)",
+            "media": {
+              "markdown": "media/walkthrough/set-up.md"
+            },
+            "completionEvents": [
+              "onContext:courier.hasProject"
+            ]
+          },
+          {
+            "id": "startStudio",
+            "title": "Start Courier Studio",
+            "description": "Studio records every call your app makes, and runs the mocks. It starts in a terminal of its own, through your project's package manager.\n[Start Studio](command:courier.startStudio)",
+            "media": {
+              "image": {
+                "light": "media/walkthrough/view-light.png",
+                "dark": "media/walkthrough/view-dark.png",
+                "hc": "media/walkthrough/view-dark.png",
+                "hcLight": "media/walkthrough/view-light.png"
+              },
+              "altText": "The Courier view: the shop's endpoints grouped as the client names them, each with its calls, failures and p95."
+            },
+            "completionEvents": [
+              "onContext:courier.studioRunning"
+            ]
+          },
+          {
+            "id": "hints",
+            "title": "See how each call went",
+            "description": "Above each call to an endpoint: how many calls it had, how many failed and how long nineteen in twenty took. Hover it for the statuses and the latest failure, and open that request in Studio's inspector.",
+            "media": {
+              "image": {
+                "light": "media/walkthrough/hover-light.png",
+                "dark": "media/walkthrough/hover-dark.png",
+                "hc": "media/walkthrough/hover-dark.png",
+                "hcLight": "media/walkthrough/hover-light.png"
+              },
+              "altText": "A hover over a call: the endpoint's calls, p50 and p95, statuses and its latest failure, with links into Studio."
+            },
+            "completionEvents": [
+              "onView:courier.endpoints"
+            ]
+          },
+          {
+            "id": "agents",
+            "title": "Give your agent the API",
+            "description": "Each project that has @noverax/courier-mcp installed is offered to VS Code's agent: the endpoints its agents policy allows, as tools. With Studio installed, the agent reads the requests Studio recorded too.\n[Read about agents in your editor](https://courier.noverax.cloud/docs/agents/editor)",
+            "media": {
+              "markdown": "media/walkthrough/agent-servers.md"
+            },
+            "completionEvents": [
+              "onLink:https://courier.noverax.cloud/docs/agents/editor"
+            ]
+          }
+        ]
+      }
+    ],
     "mcpServerDefinitionProviders": [
       {
         "id": "courier",

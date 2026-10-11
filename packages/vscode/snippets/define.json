@@ -1,0 +1,41 @@
+{
+  "Courier endpoint": {
+    "prefix": "courier-endpoint",
+    "description": "An endpoint of a group: its method, path, variables and response",
+    "body": [
+      "${1:name}: endpoint.${2|get,post,put,patch,del,query|}(\"${3::id}\").variables<${4:{ id: string \\}}>().response<${5:Item}>(),"
+    ]
+  },
+  "Courier group": {
+    "prefix": "courier-group",
+    "description": "A group of endpoints under one path",
+    "body": [
+      "const ${1:users} = defineGroup({",
+      "\tprefix: \"${2:$1}\",",
+      "\tendpoints: {",
+      "\t\t$0",
+      "\t},",
+      "})"
+    ]
+  },
+  "Courier API": {
+    "prefix": "courier-api",
+    "description": "An API: its base address and its groups",
+    "body": [
+      "export const ${1:api} = defineApi({",
+      "\tbaseURL: process.env.${2:API_URL}!,",
+      "\tgroups: { ${3:users} },",
+      "})"
+    ]
+  },
+  "Courier boundary": {
+    "prefix": "courier-boundary",
+    "description": "The endpoints the browser may call through your server, and how",
+    "body": [
+      "export const ${1:boundary} = defineBoundary({",
+      "\tsource: \"${2:api}\",",
+      "\texpose: { \"${3:users.getAll}\": \"${4|query,mutation|}\" },",
+      "})"
+    ]
+  }
+}

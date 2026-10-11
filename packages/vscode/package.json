@@ -548,6 +548,19 @@
           "minimum": 2,
           "description": "How often the hints are brought up to date while the window has focus, in seconds."
         },
+        "courier.hints.style": {
+          "type": "string",
+          "enum": [
+            "codeLens",
+            "inlay"
+          ],
+          "enumDescriptions": [
+            "A line of its own above each call.",
+            "At the end of the call's line, in the code's own lines; the editor's inlay hints must be on."
+          ],
+          "default": "codeLens",
+          "description": "Where the hints over each call to an endpoint go."
+        },
         "courier.studio.url": {
           "type": "string",
           "default": "",

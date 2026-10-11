@@ -10,10 +10,10 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { createCallHints } from "../src/hints/call-hints";
+import { createCallHints, type HintStyle } from "../src/hints/call-hints";
 import { createHintStore } from "../src/hints/hint-store";
 import { fetchCalls, fetchEndpointStats } from "../src/studio/studio-api";
-import { Position } from "./vscode-stand-in";
+import { type InlayHintLabelPart, Position, Range } from "./vscode-stand-in";
 
 const place = { source: "shop", endpoint: "orders.place" };
 let stats = [
@@ -68,18 +68,30 @@ beforeAll(async () => {
 afterAll(() => server.close());
 
 function document(version: number, file = "/work/shop/src/cart.ts") {
-  return { uri: { scheme: "file", fsPath: file }, version, getText: () => "// cart\n…" };
+  return {
+    uri: { scheme: "file", fsPath: file },
+    version,
+    getText: () => "// cart\n…",
+    lineAt: (line: number) => ({ range: { end: new Position(line, 40) } }),
+  };
 }
 
 const token = { isCancellationRequested: false };
 
-function hintsFor(found: () => string | undefined) {
+function hintsFor(found: () => string | undefined, style: HintStyle = "codeLens") {
   const store = createHintStore({
     findStudio: async () => found(),
     fetchStats: fetchEndpointStats,
     fetchCalls,
   });
-  return { store, hints: createCallHints(store, () => true) };
+  return {
+    store,
+    hints: createCallHints(
+      store,
+      () => true,
+      () => style,
+    ),
+  };
 }
 
 describe("the hints over endpoint calls", () => {
@@ -98,6 +110,32 @@ describe("the hints over endpoint calls", () => {
       arguments: [studio, "shop", "orders.place"],
     });
     expect(lenses[0]?.range.start).toEqual({ line: 1, character: 17 });
+  });
+
+  it("put the figures at the end of each call's line instead, when the settings say so", async () => {
+    const { hints } = hintsFor(() => studio, "inlay");
+    const all = new Range(0, 0, 99, 0);
+
+    const lenses = await hints.provideCodeLenses(document(1) as never, token as never);
+    const inlays =
+      (await hints.provideInlayHints(document(1) as never, all as never, token as never)) ?? [];
+    const [first] = inlays;
+    const [part] = (first?.label ?? []) as InlayHintLabelPart[];
+
+    expect(lenses).toEqual([]);
+    expect(inlays.map((hint) => (hint.label as InlayHintLabelPart[])[0]?.value)).toEqual([
+      "orders.place · 3 calls · 1 failed · p95 40 ms",
+      "shop account.me · 1 call · p95 9 ms",
+      "payments account.me · no calls yet",
+    ]);
+    expect(first?.position).toEqual({ line: 1, character: 40 });
+    expect(part?.command).toMatchObject({
+      command: "courier.openInStudio",
+      arguments: [studio, "shop", "orders.place"],
+    });
+    expect(String((part?.tooltip as { value: string } | undefined)?.value)).toContain(
+      "3 calls, 1 failed",
+    );
   });
 
   it("tell the figures in full over a call", async () => {

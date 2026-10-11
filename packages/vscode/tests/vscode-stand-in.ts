@@ -266,6 +266,20 @@ export class LanguageModelChatMessage {
   ) {}
 }
 
+export class InlayHintLabelPart {
+  tooltip?: unknown;
+  command?: unknown;
+  constructor(readonly value: string) {}
+}
+
+export class InlayHint {
+  paddingLeft?: boolean;
+  constructor(
+    readonly position: Position,
+    readonly label: string | InlayHintLabelPart[],
+  ) {}
+}
+
 export class ChatResponseMarkdownPart {
   constructor(readonly value: MarkdownString) {}
 }

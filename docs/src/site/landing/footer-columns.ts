@@ -23,7 +23,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
     links: [
       { label: "Courier Studio", href: "/studio" },
       { label: "MCP server", href: "/mcp" },
-      { label: "Studio in your editor", href: "/docs/studio/editor" },
+      { label: "VS Code extension", href: "/docs/studio/editor" },
       { label: "Compare", href: "/#compare" },
     ],
   },

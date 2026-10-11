@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { createWriteStream } from "node:fs";
 
 /** A process a test started, with what it printed. */
 export interface Started {
@@ -8,10 +9,12 @@ export interface Started {
 
 /**
  * Start a process in a directory and wait until it prints what says it is
- * ready, or fail with everything it printed.
+ * ready, or fail with everything it printed. Given a log, everything it
+ * prints is written there as well, as it prints it, so a check that fails
+ * long after it started can be read beside what the process said.
  *
  * @param command - The program and its arguments
- * @param options - Where it runs, its environment, and what it prints once ready
+ * @param options - Where it runs, its environment, what it prints once ready, and the log its output also goes to
  * @returns The process, and the text that said it is ready
  * @example
  * ```ts
@@ -20,7 +23,13 @@ export interface Started {
  */
 export async function startProcess(
   command: readonly string[],
-  options: { cwd: string; env: Record<string, string>; ready: RegExp; timeoutMs?: number },
+  options: {
+    cwd: string;
+    env: Record<string, string>;
+    ready: RegExp;
+    timeoutMs?: number;
+    log?: string;
+  },
 ): Promise<Started & { ready: string }> {
   const [program = process.execPath, ...args] = command;
   const child = spawn(program, args, {
@@ -30,6 +39,12 @@ export async function startProcess(
   let output = "";
   child.stdout?.on("data", (chunk: Buffer) => (output += chunk.toString()));
   child.stderr?.on("data", (chunk: Buffer) => (output += chunk.toString()));
+  if (options.log !== undefined) {
+    const log = createWriteStream(options.log);
+    child.stdout?.pipe(log, { end: false });
+    child.stderr?.pipe(log, { end: false });
+    child.once("close", () => log.end());
+  }
   const started = { output: () => output, stop: () => stop(child) };
   const deadline = Date.now() + (options.timeoutMs ?? 60_000);
   while (Date.now() < deadline) {

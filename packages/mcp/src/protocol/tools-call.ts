@@ -5,7 +5,7 @@ import { destructiveGate } from "./destructive-gate";
 import type { Era } from "./era";
 import { ERROR_CODE } from "./json-rpc";
 import { McpProtocolError } from "./protocol-error";
-import type { Refusal, ToolCaller } from "./served-tool";
+import { confirmsEachCall, type Refusal, type ToolCaller } from "./served-tool";
 import type { McpServerOptions } from "./server-options";
 import { shownOutputSchema, structuredOutputOf } from "./tool-definition";
 import { limitedCall, notNow } from "./tool-limit";
@@ -14,8 +14,8 @@ import { visibleTool } from "./visible-tools";
 
 /**
  * Answer `tools/call`: find the tool the caller may see, refuse a call over
- * its limit, confirm a destructive one with a person — once its limit would
- * take it — run it, and write what came of it.
+ * its limit, confirm one a person confirms — once its limit would take it —
+ * run it, and write what came of it.
  *
  * @param params - The request's params: `name`, `arguments`, and on a retry
  *   `inputResponses` and `requestState`
@@ -57,7 +57,7 @@ export async function callTool(
     return { content: [{ type: "text", text: message }], isError: true };
   };
   const limited = limitedCall(tool, limits, options, connection.principal);
-  if (tool.access === "destructive" && !options.allowDestructive) {
+  if (confirmsEachCall(tool) && !options.allowDestructive) {
     const problem = await tool.check?.(args);
     if (problem !== undefined) return refuse("validation", problem);
     /* No person is asked about a call its limit would refuse. */

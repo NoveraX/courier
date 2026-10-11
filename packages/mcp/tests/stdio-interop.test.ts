@@ -10,6 +10,7 @@ import { Client as LegacyClient } from "@modelcontextprotocol/sdk/client/index.j
 import { studioHooks } from "@noverax/courier/internal";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { checkedPolicy } from "../src/policy/checked-policy";
 import { createMcpServer } from "../src/protocol/mcp-server";
 import { requestStates } from "../src/protocol/request-state";
 import { courierTools } from "../src/tools/courier-tools";
@@ -32,8 +33,15 @@ afterEach(async () => {
   pair = undefined;
 });
 
-function serve(allowDestructive = false) {
-  const tools = toolSource({ shop: shopApi(upstream.baseURL) }, {});
+/** How a test starts the server: whether the operator lets a client decide, and the project's policy. */
+interface Started {
+  readonly allowDestructive?: boolean;
+  readonly agents?: unknown;
+}
+
+function serve({ allowDestructive = false, agents }: Started = {}) {
+  const policy = checkedPolicy(agents);
+  const tools = toolSource({ shop: shopApi(upstream.baseURL) }, { policy: () => policy });
   pair = stdioPair(
     createMcpServer({
       info: { name: "courier", version: "test" },
@@ -49,7 +57,7 @@ function serve(allowDestructive = false) {
 
 type Answer = "accept" | "decline";
 
-async function modern(answer?: Answer) {
+async function modern(answer?: Answer, started: Started = {}) {
   const client = new ModernClient(
     { name: "modern-client", version: "2.3.1" },
     {
@@ -59,11 +67,11 @@ async function modern(answer?: Answer) {
   );
   if (answer)
     client.setRequestHandler("elicitation/create", async () => ({ action: answer, content: {} }));
-  await client.connect(serve() as never);
+  await client.connect(serve(started) as never);
   return client;
 }
 
-async function legacy(answer?: Answer, allowDestructive = false) {
+async function legacy(answer?: Answer, started: Started = {}) {
   const client = new LegacyClient(
     { name: "legacy-client", version: "1.32.1" },
     { capabilities: answer ? { elicitation: {} } : {} },
@@ -72,7 +80,7 @@ async function legacy(answer?: Answer, allowDestructive = false) {
     const { ElicitRequestSchema } = await import("@modelcontextprotocol/sdk/types.js");
     client.setRequestHandler(ElicitRequestSchema, async () => ({ action: answer, content: {} }));
   }
-  await client.connect(serve(allowDestructive) as never);
+  await client.connect(serve(started) as never);
   return client;
 }
 
@@ -257,10 +265,55 @@ describe("a destructive tool", () => {
     expect(upstream.received).toEqual([]);
     await pair?.transport.close();
 
-    const allowed = await legacy(undefined, true);
+    const allowed = await legacy(undefined, { allowDestructive: true });
     expect(
       (await allowed.callTool({ name: "orders_cancel", arguments: { id: "7" } })).isError,
     ).toBe(false);
     expect(upstream.received).toEqual(["DELETE /orders/7"]);
+  });
+});
+
+describe("the project's agents policy", () => {
+  it("offers what the policy offers, an unmarked read describing itself from its call", async () => {
+    const client = await legacy(undefined, { agents: { offer: "reads" } });
+    const { tools } = await client.listTools();
+
+    expect(tools.map((tool) => tool.name)).toEqual([
+      "orders_get",
+      "orders_list",
+      "orders_create",
+      "orders_cancel",
+      "orders_report",
+    ]);
+    expect(tools.find((tool) => tool.name === "orders_report")).toMatchObject({
+      description: "GET orders/report — shop.orders.report",
+      annotations: { readOnlyHint: true, destructiveHint: false },
+    });
+  });
+
+  it("keeps out what is beyond its access, and has a person confirm each write when confirm says so", async () => {
+    const reads = await legacy(undefined, { agents: { access: "read" } });
+    expect((await reads.listTools()).tools.map((tool) => tool.name)).toEqual([
+      "orders_get",
+      "orders_list",
+    ]);
+    await pair?.transport.close();
+
+    const accepted = await legacy("accept", { agents: { confirm: "write" } });
+    const created = await accepted.callTool({ name: "orders_create", arguments: { total: 10 } });
+    const question =
+      (pair?.written ?? []).find((line) => line.includes("elicitation/create")) ?? "";
+    expect(created.isError).toBe(false);
+    expect(question).toContain("This changes data. Run it?");
+    expect(question).toContain('POST shop.orders.create with {\\"total\\":10}');
+    await pair?.transport.close();
+
+    const unasked = await legacy(undefined, { agents: { confirm: "write" } });
+    const refused = await unasked.callTool({ name: "orders_create", arguments: { total: 10 } });
+    expect(refused.isError).toBe(true);
+    expect(JSON.stringify(refused.content)).toContain(
+      "orders_create changes data, so a person confirms each call",
+    );
+    expect(upstream.received).toEqual(["POST /orders"]);
   });
 });

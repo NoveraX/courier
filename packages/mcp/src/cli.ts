@@ -5,13 +5,16 @@ import { createLogger } from "@noverax/courier";
 import { formatHelp, helpOptions, styleFor } from "@noverax/courier/internal";
 import { type ArgsDef, defineCommand, runMain } from "citty";
 
+import { listProject } from "./list-project";
+import { formatToolList } from "./listing/format-tool-list";
 import { mcpVersion } from "./mcp-version";
 import { serveProject } from "./serve-project";
 import { guardStdout } from "./transport/guard-stdout";
 
 const log = createLogger("MCP");
 
-const SUMMARY = "Your API's endpoints marked .agent(), as tools for AI agents over stdio";
+const SUMMARY =
+  "Your API as tools for AI agents over stdio: the endpoints marked .agent(), and those courier.config's agents offers";
 
 const ARGS = {
   cwd: {
@@ -30,9 +33,23 @@ const ARGS = {
     valueHint: "files",
     description: "Comma-separated .env files to load first, such as .env.local",
   },
+  "read-only": {
+    type: "boolean",
+    description: "Offer reads alone, whatever courier.config's agents allows",
+  },
+  deny: {
+    type: "string",
+    valueHint: "patterns",
+    description: "Comma-separated endpoints to keep from agents as well: billing.**,shop.users.*",
+  },
+  list: {
+    type: "boolean",
+    description: "Print what is offered to agents and why, and exit without serving",
+  },
   "allow-destructive": {
     type: "boolean",
-    description: "Run destructive tools without asking a person when the client cannot ask one",
+    description:
+      "Leave a call a person confirms to the client's own approval when the client cannot ask a person",
   },
   timeout: {
     type: "string",
@@ -70,6 +87,7 @@ const main = defineCommand({
   meta: { name: "courier-mcp", version: mcpVersion(), description: SUMMARY },
   args: ARGS,
   async run({ args }) {
+    /* Taken before the config loads: what it prints goes to stderr, not the protocol or the listing. */
     const write = guardStdout();
     const timeoutMs = args.timeout === undefined ? 60_000 : Number(args.timeout);
     try {
@@ -77,10 +95,18 @@ const main = defineCommand({
         throw new Error(`Unknown command "${args._[0]}". Run courier-mcp --help.`);
       if (!Number.isInteger(timeoutMs) || timeoutMs <= 0)
         throw new Error(`--timeout takes milliseconds, not ${args.timeout}`);
-      await serveProject({
+      const project = {
         root: resolve(args.cwd ?? process.cwd()),
         only: list(args.source),
         envFiles: list(args.dotenv),
+        narrowing: { readOnly: args["read-only"] === true, deny: list(args.deny) },
+      };
+      if (args.list === true) {
+        write(formatToolList(await listProject(project), styleFor(process.stdout)).trimEnd());
+        process.exit(0);
+      }
+      await serveProject({
+        ...project,
         allowDestructive: args["allow-destructive"] === true,
         timeoutMs,
         info: { name: args.name ?? "courier", version: mcpVersion() },

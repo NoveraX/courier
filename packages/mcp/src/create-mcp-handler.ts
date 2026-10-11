@@ -1,8 +1,9 @@
-import { ConfigurationError, createLogger } from "@noverax/courier";
+import { type AgentPolicy, ConfigurationError, createLogger } from "@noverax/courier";
 import type { Sources } from "@noverax/courier/define";
 import { assertAllowedOrigins, prepareSources } from "@noverax/courier/internal";
 import type { JSONSchemaFallback } from "@noverax/courier/openapi";
 
+import { checkedPolicy } from "./policy/checked-policy";
 import { createMcpServer } from "./protocol/mcp-server";
 import { requestStates } from "./protocol/request-state";
 import type { ServedTool } from "./protocol/served-tool";
@@ -31,8 +32,15 @@ export interface McpHandlerOptions<TPrincipal> {
   readonly authorize: (
     request: Request,
   ) => TPrincipal | Response | null | undefined | Promise<TPrincipal | Response | null | undefined>;
-  /** The sources whose `.agent()` endpoints are offered; the registered ones, read per request, when absent. */
+  /** The sources whose endpoints are offered; the registered ones, read per request, when absent. */
   readonly sources?: Sources | undefined;
+  /**
+   * What the endpoint offers to agents: the project's `agents` policy, as
+   * `courier.config.ts` writes it — pass `config.agents`, so the endpoint
+   * offers what the editor's server and Studio show. The endpoints marked
+   * `.agent()` alone when absent.
+   */
+  readonly agents?: AgentPolicy | undefined;
   /** Whether a caller may see and call a tool: one it may not is unknown to it. Every tool, when absent. */
   readonly allow?: ((tool: ToolSummary, principal: TPrincipal) => boolean) | undefined;
   /**
@@ -73,19 +81,26 @@ export interface McpHandlerOptions<TPrincipal> {
 }
 
 /**
- * The application's MCP endpoint: its endpoints marked `.agent()`, offered
- * as tools over Streamable HTTP to the agents `authorize` lets in. A tool's
+ * The application's MCP endpoint: its endpoints marked `.agent()` — and
+ * those the `agents` policy offers — as tools over Streamable HTTP to the
+ * agents `authorize` lets in. A tool's
  * call runs as the application's own calls do — through the source's and
  * the endpoint's middleware, its schemas and Studio — with `ctx.agent`
  * saying which agent asked; a destructive one runs once a person confirmed.
  *
  * @param options - Who may call, and how the tools are offered
  * @returns The handler
- * @throws ConfigurationError `AGENT_HANDLER_INVALID` without `authorize`
+ * @throws ConfigurationError `AGENT_HANDLER_INVALID` without `authorize`,
+ *   `AGENT_POLICY_INVALID` for an `agents` policy it cannot decide by
  * @example
  * ```ts
  * // app/mcp/route.ts
- * const mcp = createMcpHandler({ authorize: (request) => apiKeys.verify(request.headers.get("authorization")) });
+ * import config from "../../courier.config";
+ *
+ * const mcp = createMcpHandler({
+ *   agents: config.agents,
+ *   authorize: (request) => apiKeys.verify(request.headers.get("authorization")),
+ * });
  * export const POST = mcp.handle;
  * export const GET = mcp.handle;
  * export const OPTIONS = mcp.handle;
@@ -100,7 +115,11 @@ export function createMcpHandler<TPrincipal>(options: McpHandlerOptions<TPrincip
       "createMcpHandler({ sources: { api }, authorize })",
     );
   }
-  const tools = toolSource(options.sources, { jsonSchema: options.jsonSchema });
+  const policy = checkedPolicy(options.agents);
+  const tools = toolSource(options.sources, {
+    jsonSchema: options.jsonSchema,
+    policy: () => policy,
+  });
   const { allow, limitPer } = options;
   const server = createMcpServer({
     info: { name: options.name ?? "courier", version: options.version ?? applicationVersion() },

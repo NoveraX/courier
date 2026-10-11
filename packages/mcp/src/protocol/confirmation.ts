@@ -33,7 +33,8 @@ export async function shownCall(tool: ServedTool, args: Record<string, unknown>)
 
 /**
  * The `elicitation/create` params that ask a person to confirm one call: the
- * tool, what it does, the call as it goes out, and that it cannot be undone.
+ * tool, what it does, the call as it goes out, and that it cannot be undone
+ * — or, for a write the project has a person confirm, that it changes data.
  * The form asks for nothing beyond the answer itself.
  *
  * @param tool - The tool about to run
@@ -53,7 +54,7 @@ export function confirmationParams(
   const message = [
     `An agent asks to run ${tool.title ?? tool.name}: ${tool.description}`,
     shown,
-    "This cannot be undone. Run it?",
+    tool.access === "destructive" ? "This cannot be undone. Run it?" : "This changes data. Run it?",
   ].join("\n\n");
   return {
     ...(named && { mode: "form" }),
@@ -96,7 +97,7 @@ export function canAsk(capabilities: Record<string, unknown> | undefined): boole
 }
 
 /**
- * Why a destructive tool did not run: the person said no, closed the
+ * Why a call a person confirms did not run: the person said no, closed the
  * question, or the client cannot ask one — which says what to do instead.
  *
  * @param tool - The tool
@@ -124,7 +125,23 @@ export function notRun(
       : "set the handler's allowDestructive";
   const instead = options.unasked ?? `${lift} to leave the decision to the client's own approval`;
   return (
-    `Not run: ${tool.name} cannot be undone, so a person confirms each call, and this client cannot ask one. ` +
+    `Not run: ${tool.name} ${whatItDoes(tool)}, so a person confirms each call, and this client cannot ask one. ` +
     `Use a client that supports MCP elicitation, or ${instead}.`
   );
+}
+
+/**
+ * Why a person confirms a tool's calls, as the messages about it say:
+ * it cannot be undone, or it changes data where the project has a person
+ * confirm every write.
+ *
+ * @param tool - The tool
+ * @returns The clause
+ * @example
+ * ```ts
+ * whatItDoes({ ...tool, access: "write" }); // "changes data"
+ * ```
+ */
+export function whatItDoes(tool: Pick<ServedTool, "access">): string {
+  return tool.access === "destructive" ? "cannot be undone" : "changes data";
 }

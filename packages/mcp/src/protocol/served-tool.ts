@@ -29,6 +29,11 @@ export interface ServedTool {
   readonly title?: string | undefined;
   readonly description: string;
   readonly access: AgentAccess;
+  /**
+   * Whether a person confirms each call before it runs: a destructive tool
+   * always is, and a write too where the project's policy says so.
+   */
+  readonly confirm?: boolean | undefined;
   /** What it takes, as JSON Schema: always an object. */
   readonly inputSchema: JSONSchema;
   /** What it answers with, as JSON Schema, when that is known. */
@@ -73,4 +78,19 @@ export interface ToolSet {
  */
 export function toolSet(tools: readonly ServedTool[]): ToolSet {
   return { tools, byName: new Map(tools.map((tool) => [tool.name, tool])) };
+}
+
+/**
+ * Whether a person confirms each call of a tool before it runs: as the tool
+ * says, or — for a tool that does not say — when it cannot be undone.
+ *
+ * @param tool - The tool
+ * @returns Whether a call waits for a person
+ * @example
+ * ```ts
+ * confirmsEachCall({ ...tool, access: "destructive" }); // true
+ * ```
+ */
+export function confirmsEachCall(tool: ServedTool): boolean {
+  return tool.confirm ?? tool.access === "destructive";
 }

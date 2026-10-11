@@ -2,6 +2,8 @@ import type { AgentOptions } from "@noverax/courier";
 import type { JSONSchema } from "@noverax/courier/openapi";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import type { OfferedBy } from "../policy/agent-decision";
+
 /** Where an agent tool's call goes: the source, the group path and the endpoint's name. */
 export interface ToolCallTarget {
   readonly source: string;
@@ -16,8 +18,15 @@ export interface ToolCallTarget {
 export interface AgentTool {
   /** The tool's name: its call in the client, `orders_cancel`, or the name `.agent()` gave it. */
   readonly name: string;
-  /** What the endpoint offered itself as. */
+  /**
+   * What the endpoint offered itself as with `.agent()` — or, offered by the
+   * project's policy, its description and the access its verb implies.
+   */
   readonly agent: AgentOptions;
+  /** What offered it: its `.agent()`, an `allow` pattern, or the policy's `offer`. */
+  readonly offeredBy: OfferedBy;
+  /** Whether a person confirms each call, as the policy's `confirm` decides. */
+  readonly confirm: boolean;
   /** Where its call goes. */
   readonly target: ToolCallTarget;
   /** Its call in the client, for messages: `shop.orders.cancel`. */

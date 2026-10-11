@@ -9,7 +9,7 @@ import type { ToolSource } from "./tool-source";
 const IDEMPOTENT_VERBS: ReadonlySet<string> = new Set(["GET", "HEAD", "OPTIONS", "PUT", "DELETE"]);
 
 /**
- * The endpoints marked `.agent()`, as tools a protocol server offers: each
+ * The endpoints offered to agents, as tools a protocol server offers: each
  * one's call runs through the endpoint, its arguments are checked by its
  * variables schema before a person is asked, and a call refused shows in
  * Studio. The set is rebuilt when the sources it comes from change.
@@ -46,6 +46,7 @@ function servedOf(tool: AgentTool, source: ToolSource, timeoutMs: number): Serve
         ? description
         : `${description}\n\nDeprecated: ${tool.deprecated}`,
     access,
+    confirm: tool.confirm,
     limit,
     inputSchema: tool.inputSchema,
     outputSchema: tool.outputSchema,

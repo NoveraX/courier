@@ -110,6 +110,47 @@ describe("courier-mcp", () => {
 
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("courier-mcp [options]");
-    expect(run.stdout).toContain("--allow-destructive");
+    for (const option of ["--allow-destructive", "--read-only", "--deny", "--list"]) {
+      expect(run.stdout).toContain(option);
+    }
+  });
+
+  it("lists what is offered to agents and why on --list, without serving", () => {
+    const calls = upstream.received.length;
+    const run = spawnSync(
+      process.execPath,
+      [CLI, "--cwd", dir, "--dotenv", ".env.test", "--list"],
+      {
+        env: ENV,
+        encoding: "utf8",
+      },
+    );
+
+    expect(run.status).toBe(0);
+    expect(run.stdout.split("\n")).toEqual([
+      "1 of 2 endpoints offered to agents",
+      'agents: offer "marked", access "destructive", confirm "destructive"',
+      "",
+      "  order  read  shop.order  marked .agent()",
+      "",
+      "Kept from agents",
+      "  shop.purge  DELETE orders  not marked .agent()",
+      "",
+    ]);
+    expect(run.stderr).toContain("a config that prints while it loads");
+    expect(upstream.received).toHaveLength(calls);
+  });
+
+  it("narrows what is offered on --read-only and --deny, never widening it", () => {
+    const run = spawnSync(
+      process.execPath,
+      [CLI, "--cwd", dir, "--dotenv", ".env.test", "--list", "--read-only", "--deny", "shop.ord*"],
+      { env: ENV, encoding: "utf8" },
+    );
+
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain("0 of 2 endpoints offered to agents");
+    expect(run.stdout).toContain('access "read"');
+    expect(run.stdout).toContain("shop.order  GET orders/:id  denied by shop.ord*");
   });
 });

@@ -72,3 +72,17 @@ describe("why a destructive call did not run", () => {
     );
   });
 });
+
+describe("a write the project has a person confirm", () => {
+  it("is put to the person as a change of data, not as something that cannot be undone", async () => {
+    const create = tool({ name: "orders_create", access: "write", confirm: true });
+
+    const question = confirmationParams(create, await shownCall(create, { total: 10 }), true);
+
+    expect(question.message).toContain("This changes data. Run it?");
+    expect(question.message).not.toContain("cannot be undone");
+    expect(notRun(create, "unasked", { transport: "stdio" })).toContain(
+      "Not run: orders_create changes data, so a person confirms each call",
+    );
+  });
+});

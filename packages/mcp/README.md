@@ -40,9 +40,10 @@ endpoint
   .agent({ description: "One order by its id, with its status and total", access: "read" })
 ```
 
-- **Only what you mark.** An endpoint without `.agent()` is out of every agent's reach.
+- **Nothing you did not offer.** By default only an endpoint marked `.agent()` reaches an agent. The project's `agents` policy in `courier.config.ts` offers more in one line — every read, a group by pattern — or keeps out what a mark would offer: `deny` wins over everything, `access` caps what any tool may do, `.agent(false)` keeps one endpoint out.
 - **One path for people and agents.** A tool's call runs through the source's and the endpoint's middleware, its schemas and Studio; `ctx.agent` tells a middleware who asked.
-- **A person confirms what cannot be undone.** A `destructive` tool runs only once the person at the client has confirmed that exact call.
+- **A person confirms what cannot be undone.** A `destructive` tool runs only once the person at the client has confirmed that exact call — every write too, with `confirm: "write"`.
+- **What is offered, and why.** `courier-mcp --list`, Studio's Explorer and `courier-studio diff` on a pull request show each tool, its access and what offered it.
 - **Both eras of MCP.** The 2026-07-28 revision, and the `initialize` handshake clients still speak by default.
 
 <br />
@@ -80,11 +81,28 @@ For Cursor, in `.cursor/mcp.json`:
 | `--cwd <dir>` | The project root, where `courier.config.*` is |
 | `--source <names>` | The sources to offer, comma-separated; every one by default |
 | `--dotenv <files>` | `.env` files to load first, comma-separated |
-| `--allow-destructive` | Run destructive tools without asking when the client cannot ask a person |
+| `--read-only` | Offer reads alone, whatever the config's `agents` allows |
+| `--deny <patterns>` | Endpoints to keep from agents as well, comma-separated: `billing.**` |
+| `--list` | Print what is offered to agents and why, and exit |
+| `--allow-destructive` | For a client that cannot ask a person, leave a call a person confirms to the client's own approval |
 | `--timeout <ms>` | How long a call may take when its endpoint names no timeout (60 000) |
 | `--name <name>` | The name the server gives its client (`courier`) |
 
-With Studio running, every call an agent makes shows in its timeline.
+`--read-only` and `--deny` only narrow what the config offers. With Studio running, every call an agent makes shows in its timeline.
+
+<br />
+
+## What agents may call
+
+```ts
+// courier.config.ts
+export default defineConfig({
+  sources: { shop, billing },
+  agents: { offer: "reads", deny: ["billing.**"], confirm: "write" },
+})
+```
+
+`offer` — `"marked"` (default), `"reads"` or `"all"`; `allow` and `deny` — patterns of calls, `*` within a name, `**` across names; `access` — the most a tool may do; `confirm` — from which access a person confirms each call. An endpoint is decided by the first rule that speaks: `deny`, `.agent(false)`, `access`, `.agent()`, `allow`, `offer`.
 
 <br />
 
@@ -94,7 +112,10 @@ With Studio running, every call an agent makes shows in its timeline.
 // app/mcp/route.ts
 import { createMcpHandler } from "@noverax/courier-mcp"
 
+import config from "../../courier.config"
+
 const mcp = createMcpHandler({
+  agents: config.agents,
   authorize: (request) => apiKeys.verify(request.headers.get("authorization")),
   allow: (tool, principal) => tool.access === "read" || principal.role === "admin",
 })
@@ -104,7 +125,7 @@ export const GET = mcp.handle
 export const OPTIONS = mcp.handle
 ```
 
-`authorize` is required: the tools run with your app's credentials. It returns whoever the caller is — middleware reads it as `ctx.agent.principal` — `null` for a 401, or a `Response` of its own for an OAuth challenge. A tool `allow` keeps from a principal is absent from its list and unknown to its calls.
+`agents` is the project's policy — pass the config's, so the endpoint offers what the editor's server and Studio show. `authorize` is required: the tools run with your app's credentials. It returns whoever the caller is — middleware reads it as `ctx.agent.principal` — `null` for a 401, or a `Response` of its own for an OAuth challenge. A tool `allow` keeps from a principal is absent from its list and unknown to its calls.
 
 <br />
 

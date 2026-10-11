@@ -17,7 +17,7 @@ import { type InlayHintLabelPart, Position, Range } from "./vscode-stand-in";
 
 const place = { source: "shop", endpoint: "orders.place" };
 let stats = [
-  { ...place, calls: 3, failed: 1, pending: 0, statuses: { "201": 2, "500": 1 }, p50: 20, p95: 40 },
+  { ...place, calls: 3, failed: 1, pending: 1, statuses: { "201": 2, "500": 1 }, p50: 20, p95: 40 },
   {
     source: "shop",
     endpoint: "account.me",
@@ -101,7 +101,7 @@ describe("the hints over endpoint calls", () => {
     const lenses = (await hints.provideCodeLenses(document(1) as never, token as never)) ?? [];
 
     expect(lenses.map((lens) => lens.command?.title)).toEqual([
-      "orders.place · 3 calls · 1 failed · p95 40 ms",
+      "orders.place · 3 calls · 1 failed · 1 in flight · p95 40 ms",
       "shop account.me · 1 call · p95 9 ms",
       "payments account.me · no calls yet",
     ]);
@@ -112,7 +112,7 @@ describe("the hints over endpoint calls", () => {
     expect(lenses[0]?.range.start).toEqual({ line: 1, character: 17 });
   });
 
-  it("put the figures alone at the end of each call's line instead, when the settings say so", async () => {
+  it("put the figures alone at the end of each call's line instead, a request's calls in flight left to the tooltip", async () => {
     const { hints } = hintsFor(() => studio, "inlay");
     const all = new Range(0, 0, 99, 0);
 

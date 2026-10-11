@@ -92,7 +92,7 @@ You find out an endpoint is slow, or failing, where you are already looking: in 
     </td>
     <td width="33%" valign="top">
       <h4>Stays on your machine</h4>
-      It talks only to Studio on <code>localhost</code>, sends nothing anywhere else, keeps no telemetry, and stays off in Restricted Mode.
+      It talks only to Studio on <code>localhost</code> — a question to <code>@courier</code> in words goes to the model you picked in the chat — keeps no telemetry, and stays off in Restricted Mode.
     </td>
   </tr>
 </table>

@@ -1,10 +1,12 @@
 import type { StudioAuditInputs } from "../mcp/audit-tool";
+import type { StudioMocks } from "../mcp/mock-tools";
 import { isRecord } from "../mocks-edit/is-record";
 import type { ProjectReads } from "../project-state/types";
 import type { RequestLog } from "../request-log";
 import type { RouteApp } from "../route-types";
 import { codeCalls } from "./calls-in-text";
 import { editorFindings } from "./editor-findings";
+import { registerEditorLiveRoutes } from "./editor-live-routes";
 import { type CatalogEndpoint, endpointCatalog } from "./endpoint-catalog";
 import { endpointDefinitions } from "./endpoint-definitions";
 import { endpointStats } from "./endpoint-stats";
@@ -18,6 +20,8 @@ export interface EditorRouteDeps {
   root: string;
   /** The sources the project declares and the runtimes attached, which Studio's audit reads */
   audit?: Pick<StudioAuditInputs, "declared" | "runtimes"> | undefined;
+  /** The mocks Studio runs, which an editor's views list and switch */
+  mocks?: StudioMocks | undefined;
 }
 
 /* A file an editor sends to be read: larger ones are generated, and hold no call worth a hint. */
@@ -32,6 +36,7 @@ const LARGEST_TEXT = 1024 * 1024;
  * POST /api/editor/findings — the findings of Studio's audit that concern endpoints, to place at their calls
  * POST /api/editor/definitions — where the project's files declare each endpoint
  * POST /api/editor/sites — where the project's code calls one endpoint (`{ source, endpoint }`)
+ * and those of an editor's live views, the requests and the mocks: see `registerEditorLiveRoutes`
  *
  * They read and change nothing else, so they need no token: a process on
  * this machine reads them as the Studio page does.
@@ -86,4 +91,6 @@ export function registerEditorRoutes(app: RouteApp, deps: EditorRouteDeps): void
     }
     res.json({ sites: await sites.sitesOf(source, endpoint) });
   });
+
+  registerEditorLiveRoutes(app, deps);
 }

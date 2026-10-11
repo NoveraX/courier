@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Courier — create-courier README image</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=block">
+<style>
+  :root {
+    --ground: #fbfbfa; --dots: rgba(12, 13, 15, .06);
+    --card: #ffffff; --chrome: #f4f4f2; --border: #e2e2df; --hairline: #ececea;
+    --text: #0c0d0f; --muted: #474c54; --faint: #646a73;
+    --accent: #1c63d6; --accent-soft: rgba(28, 99, 214, .08);
+    --add: #1d7338; --change: #9a5b00; --remove: #c4314b;
+    --shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 40px 90px -20px rgba(24, 26, 32, .22), 0 12px 28px -8px rgba(24, 26, 32, .12);
+  }
+  :root[data-theme="dark"] {
+    --ground: #08090a; --dots: rgba(255, 255, 255, .045);
+    --card: #101114; --chrome: #0b0c0e; --border: #26272b; --hairline: #18191c;
+    --text: #f7f8f8; --muted: #a8aeb7; --faint: #858b95;
+    --accent: #7db9ff; --accent-soft: rgba(125, 185, 255, .1);
+    --add: #9bd68c; --change: #f2c66d; --remove: #ff8a9b;
+    --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 40px 90px -20px rgba(0, 0, 0, .7), 0 12px 28px -8px rgba(0, 0, 0, .5);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1200px; height: 820px; background: var(--ground); overflow: hidden; }
+  body {
+    display: grid; place-items: center;
+    background-image: radial-gradient(var(--dots) 1.1px, transparent 1.2px);
+    background-size: 20px 20px;
+    font-family: "Geist", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .glow { position: absolute; inset: 0; background: radial-gradient(640px 320px at 50% 46%, var(--accent-soft), transparent 70%); }
+  .window { position: relative; width: 960px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+  .bar { height: 42px; display: flex; align-items: center; gap: 8px; padding: 0 16px; background: var(--chrome); border-bottom: 1px solid var(--border); border-radius: 14px 14px 0 0; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
+  .title { margin-left: auto; margin-right: auto; padding-right: 50px; font: 500 12.5px/1 "Geist", sans-serif; color: var(--faint); }
+  pre { margin: 0; padding: 20px 26px 24px; font: 400 13.5px/1.6 "Geist Mono", ui-monospace, monospace; color: var(--muted); font-variant-ligatures: none; white-space: pre; }
+  .prompt { color: var(--accent); }
+  .cmd { color: var(--text); }
+  .head { color: var(--text); font-weight: 500; }
+  .section { color: var(--text); font-weight: 500; }
+  .add { color: var(--add); } .change { color: var(--change); } .remove { color: var(--remove); }
+  .path { color: var(--text); }
+  .why { color: var(--faint); }
+  .ask { color: var(--text); }
+  .ask b { color: var(--accent); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="window">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">shop-api — zsh</span></div>
+<pre><span class="prompt">$</span> <span class="cmd">npx @noverax/create-courier --mcp</span>
+<span class="head">Set Courier up in shop-api (Express 5.1.0, npm)</span>
+
+<span class="section">Files</span>
+  <span class="add">+</span> <span class="path">src/courier/api.ts           </span>  <span class="why">your API, typed, with an example to start from</span>
+  <span class="add">+</span> <span class="path">src/courier/boundary.ts      </span>  <span class="why">the endpoints the browser may call</span>
+  <span class="add">+</span> <span class="path">src/courier/config.ts        </span>  <span class="why">lists your APIs: the server registers them from here</span>
+  <span class="add">+</span> <span class="path">courier.config.ts            </span>  <span class="why">passes src/courier/config.ts's list on to Studio and agents</span>
+  <span class="add">+</span> <span class="path">courier.mocks.ts             </span>  <span class="why">the mock Studio runs on port 7001</span>
+  <span class="add">+</span> <span class="path">src/courier/server-caller.ts </span>  <span class="why">your API's client for server code</span>
+  <span class="add">+</span> <span class="path">src/courier/page.ts          </span>  <span class="why">the page that shows Courier at work</span>
+  <span class="add">+</span> <span class="path">src/courier/routes.ts        </span>  <span class="why">Courier's routes: the proxy, and a page that shows it at work</span>
+  <span class="add">+</span> <span class="path">.mcp.json                    </span>  <span class="why">the MCP server your editor's agent starts</span>
+
+<span class="section">Changes to your files</span>
+  <span class="change">~</span> <span class="path">src/index.ts                 </span>  <span class="why">mounts Courier's routes on the app, before its body parsers</span>
+      <span class="add">+ import { courier } from "./courier/routes.js";</span>
+      <span class="add">+ app.use(courier);</span>
+  <span class="change">~</span> <span class="path">package.json                 </span>  <span class="why">adds Courier's scripts</span>
+      <span class="remove">-     "build": "tsc"</span>
+      <span class="add">+     "build": "tsc",</span>
+      <span class="add">+     "studio": "courier-studio"</span>
+
+<span class="section">Packages</span>
+  <span class="add">+</span> @noverax/courier @noverax/courier-express zod @noverax/courier-studio-core
+  <span class="add">+</span> @noverax/courier-studio @noverax/courier-mock hono @hono/node-server @noverax/courier-mcp  <span class="why">(dev)</span>
+
+<span class="ask">Set Courier up? <b>[Y/n]</b></span></pre>
+</div>
+<script>
+  document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") ?? "dark";
+</script>
+</body>
+</html>

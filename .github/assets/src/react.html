@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Courier — React README image</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=block">
+<style>
+  :root {
+    --ground: #fbfbfa; --dots: rgba(12, 13, 15, .06);
+    --card: #ffffff; --chrome: #f4f4f2; --border: #e2e2df; --hairline: #ececea;
+    --text: #0c0d0f; --muted: #474c54; --faint: #646a73;
+    --accent: #1c63d6; --accent-soft: rgba(28, 99, 214, .08);
+    --kw: #7a3bd6; --fn: #1c63d6; --str: #1d7338; --type: #0b6f68; --punct: #5e646d; --tag: #b4232f;
+    --shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 40px 90px -20px rgba(24, 26, 32, .22), 0 12px 28px -8px rgba(24, 26, 32, .12);
+  }
+  :root[data-theme="dark"] {
+    --ground: #08090a; --dots: rgba(255, 255, 255, .045);
+    --card: #101114; --chrome: #0b0c0e; --border: #26272b; --hairline: #18191c;
+    --text: #f7f8f8; --muted: #a8aeb7; --faint: #9096a0;
+    --accent: #7db9ff; --accent-soft: rgba(125, 185, 255, .1);
+    --kw: #b8a1f5; --fn: #7db9ff; --str: #9bd68c; --type: #6fd3c7; --punct: #878d97; --tag: #ff9b8f;
+    --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 40px 90px -20px rgba(0, 0, 0, .7), 0 12px 28px -8px rgba(0, 0, 0, .5);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1200px; height: 600px; background: var(--ground); overflow: hidden; }
+  body {
+    display: grid; place-items: center;
+    background-image: radial-gradient(var(--dots) 1.1px, transparent 1.2px);
+    background-size: 20px 20px;
+    font-family: "Geist", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .glow { position: absolute; inset: 0; background: radial-gradient(600px 300px at 50% 46%, var(--accent-soft), transparent 70%); }
+  .window { position: relative; width: 900px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+  .bar { height: 46px; display: flex; align-items: center; gap: 8px; padding: 0 16px; background: var(--chrome); border-bottom: 1px solid var(--border); border-radius: 14px 14px 0 0; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
+  .tabs { display: flex; gap: 4px; margin-left: 14px; }
+  .tab { font: 500 13px/1 "Geist", sans-serif; color: var(--faint); padding: 8px 12px; border-radius: 7px; border: 1px solid transparent; }
+  .tab.on { color: var(--text); background: var(--card); border-color: var(--border); }
+  pre { margin: 0; padding: 24px 30px 30px; font: 400 15.5px/1.8 "Geist Mono", ui-monospace, monospace; color: var(--text); tab-size: 2; font-variant-ligatures: none; }
+  .ln { display: inline-block; width: 28px; color: var(--faint); user-select: none; }
+  .kw { color: var(--kw); } .fn { color: var(--fn); } .str { color: var(--str); } .ty { color: var(--type); } .p { color: var(--punct); } .tag { color: var(--tag); }
+  .cursor { display: inline-block; width: 2px; height: 20px; background: var(--accent); vertical-align: -5px; margin-left: 1px; border-radius: 1px; }
+  .suggest { position: absolute; left: 420px; top: 216px; width: 470px; border: 1px solid var(--border); border-radius: 11px; background: var(--card); box-shadow: var(--shadow); overflow: hidden; }
+  .item { display: grid; grid-template-columns: 20px auto 1fr; align-items: center; gap: 12px; padding: 0 14px; height: 38px; font: 400 14.5px/1 "Geist Mono", monospace; color: var(--text); font-variant-ligatures: none; }
+  .item.on { background: var(--accent-soft); }
+  .item.on .name { color: var(--accent); font-weight: 500; }
+  .glyph { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--accent); position: relative; }
+  .glyph::after { content: ""; position: absolute; inset: 3px; border-radius: 1.5px; background: var(--accent); opacity: .55; }
+  .sig { text-align: right; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sig .ty { color: var(--type); }
+  .foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-top: 1px solid var(--hairline); font: 400 12px/1 "Geist", sans-serif; color: var(--faint); }
+  .foot b { font-weight: 500; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="window">
+  <div class="bar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <div class="tabs"><span class="tab on">users.tsx</span><span class="tab">lib/query.ts</span><span class="tab">api/sources.ts</span></div>
+  </div>
+<pre><span class="ln">1</span><span class="str">"use client"</span>
+<span class="ln">2</span><span class="kw">import</span> <span class="p">{</span> q <span class="p">}</span> <span class="kw">from</span> <span class="str">"@/lib/query"</span>
+<span class="ln">3</span>
+<span class="ln">4</span><span class="kw">export function</span> <span class="fn">Users</span><span class="p">() {</span>
+<span class="ln">5</span>  <span class="kw">const</span> <span class="p">{</span> data<span class="p">:</span> users <span class="p">}</span> <span class="p">=</span> q<span class="p">.</span>users<span class="p">.</span><span class="fn">useQuery</span><span class="p">(</span><span class="str">"</span><span class="cursor"></span>
+<span class="ln">6</span>  <span class="kw">const</span> <span class="p">{</span> mutate<span class="p">:</span> create <span class="p">}</span> <span class="p">=</span> q<span class="p">.</span>users<span class="p">.</span><span class="fn">useMutation</span><span class="p">(</span><span class="str">"create"</span><span class="p">)</span>
+<span class="ln">7</span>
+<span class="ln">8</span>  <span class="kw">return</span> users<span class="p">?.</span><span class="fn">map</span><span class="p">((</span>user<span class="p">) =&gt;</span> <span class="p">&lt;</span><span class="tag">li</span> key<span class="p">={</span>user<span class="p">.</span>id<span class="p">}&gt;{</span>user<span class="p">.</span>name<span class="p">}&lt;/</span><span class="tag">li</span><span class="p">&gt;)</span>
+<span class="ln">9</span><span class="p">}</span></pre>
+  <div class="suggest">
+    <div class="item on"><span class="glyph"></span><span class="name">getAll</span><span class="sig">() =&gt; <span class="ty">User</span>[]</span></div>
+    <div class="item"><span class="glyph"></span><span class="name">getById</span><span class="sig">(variables: { id: string }) =&gt; <span class="ty">User</span></span></div>
+    <div class="foot"><span><b>2 reads</b> · writes go through useMutation</span><span>typed from api/sources.ts</span></div>
+  </div>
+</div>
+<script>
+  document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") ?? "dark";
+</script>
+</body>
+</html>

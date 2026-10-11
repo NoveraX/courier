@@ -138,7 +138,7 @@ describe("the editor routes", () => {
         p50: 20,
         p95: 40,
         lastAt: 3,
-        lastFailure: { at: 2, status: 500, message: "Ledger unavailable" },
+        lastFailure: { at: 2, status: 500, message: "Ledger unavailable", request: "r2" },
       },
       {
         source: "shop",
@@ -158,7 +158,7 @@ describe("the editor routes", () => {
         pending: 1,
         statuses: {},
         lastAt: 8,
-        lastFailure: { at: 8, message: "Upstream closed the stream" },
+        lastFailure: { at: 8, message: "Upstream closed the stream", request: "s3" },
       },
     ]);
   });

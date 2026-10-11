@@ -9,8 +9,9 @@ export type PanelContent =
  * The page frames Studio, and passes on what each side tells the other:
  * Studio's requests to open a file or a page, and the page it shows — kept
  * so the tab opens on it again — to the extension; the extension's request
- * to show a page, to Studio, which shows it without loading again. Only
- * Studio's frame is heard as Studio; anything else is the extension.
+ * to show a page, to Studio, which shows it without loading again; and the
+ * editor's theme, each time it changes, to Studio. Only Studio's frame is
+ * heard as Studio; anything else is the extension.
  */
 const SCRIPT = `
 const vscode = acquireVsCodeApi();
@@ -31,6 +32,9 @@ addEventListener("message", (event) => {
   if (frame && data.type === "navigate" && typeof data.path === "string")
     frame.contentWindow.postMessage({ source: "courier-vscode", type: "navigate", path: data.path }, shown);
 });
+const themeOf = () => ((document.body.dataset.vscodeThemeKind || "").includes("light") ? "light" : "dark");
+if (frame) new MutationObserver(() => frame.contentWindow.postMessage({ source: "courier-vscode", type: "theme", theme: themeOf() }, shown))
+  .observe(document.body, { attributes: true, attributeFilter: ["data-vscode-theme-kind"] });
 for (const button of document.querySelectorAll("button[data-command]"))
   button.addEventListener("click", () => vscode.postMessage({ source: "courier-panel", type: "command", command: button.dataset.command }));
 `;

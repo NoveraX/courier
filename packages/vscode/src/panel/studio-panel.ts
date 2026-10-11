@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 import { isLocalStudio } from "../studio/local-address";
+import { frameAddress } from "./frame-address";
 import { panelHtml } from "./panel-html";
 import { type PanelMessage, panelMessage } from "./panel-message";
 
@@ -53,10 +54,9 @@ export function createStudioPanel(deps: StudioPanelDeps): StudioPanel {
       return;
     }
     const outside = await vscode.env.asExternalUri(vscode.Uri.parse(studio));
-    const frame = new URL(page.slice(studio.length) || "/", outside.toString(true));
     const token = await deps.tokenFor(studio);
-    if (token) frame.hash = `token=${token}`;
-    target.webview.html = panelHtml({ kind: "studio", frame: frame.toString(), page }, cspSource);
+    const frame = frameAddress(page, studio, outside.toString(true), token, editorTheme());
+    target.webview.html = panelHtml({ kind: "studio", frame, page }, cspSource);
   }
 
   function adopt(target: vscode.WebviewPanel): vscode.WebviewPanel {
@@ -131,4 +131,12 @@ function pageIn(state: unknown): string | undefined {
   if (typeof state !== "object" || state === null) return undefined;
   const page: unknown = Reflect.get(state, "page");
   return typeof page === "string" && isLocalStudio(page) ? page : undefined;
+}
+
+/* Studio's theme for the editor's: a light or high-contrast light theme is light, every other dark. */
+function editorTheme(): "dark" | "light" {
+  const { kind } = vscode.window.activeColorTheme;
+  return kind === vscode.ColorThemeKind.Light || kind === vscode.ColorThemeKind.HighContrastLight
+    ? "light"
+    : "dark";
 }

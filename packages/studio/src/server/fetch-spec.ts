@@ -40,6 +40,12 @@ const DEADLINE_MS = 60_000;
  * origin: a redirect elsewhere is followed without them, so a server that
  * redirects cannot hand a private token to another host.
  *
+ * Studio goes through the proxy Node's own requests use, once Node is told
+ * to use one — `NODE_USE_ENV_PROXY=1` — for every host `NO_PROXY` does not
+ * name, checking each host as this machine resolves it first; this machine
+ * is always reached directly. A public demo's visitor never goes through it:
+ * what this machine cannot check, the visitor cannot reach.
+ *
  * A URL Studio refuses is the request's fault: its error is `refused`.
  * Everything that goes wrong once a request is sent is the host's — no
  * answer, an error status, a redirect Studio cannot follow, a body cut off,
@@ -80,7 +86,7 @@ export async function fetchSpec(
       current,
       hopPolicy(current, loopback, reach === "public" ? null : allowlist, hop === 0 ? null : url),
       remaining,
-      current.origin === origin ? headers : {},
+      { headers: current.origin === origin ? headers : {}, proxy: reach === "project" },
     );
     if (answer.kind === "body") return answer.text;
     /* A redirect may lead to this machine only from this machine: once a hop

@@ -11,6 +11,8 @@ export interface RequestClock {
   answered: boolean;
   /** The time is up: the error the request fails with. */
   expire(): Error;
+  /** The error the request failed with when its time ran out; `undefined` while it runs. */
+  readonly expired: Error | undefined;
 }
 
 /**
@@ -56,6 +58,9 @@ export function requestClock(url: URL, policy: LookupPolicy, timeoutMs: number):
         admitting === undefined
           ? timedOut(url, timeoutMs, clock.answered)
           : SpecHostsUnavailableError.reloading(admitting);
+      return expired;
+    },
+    get expired() {
       return expired;
     },
   };

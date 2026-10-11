@@ -273,14 +273,16 @@ describe("fetchSpec", () => {
     });
   });
 
-  it("reports a host it cannot reach, pointing a developer behind a proxy at the file import", async () => {
+  it("reports a host it cannot reach, pointing a developer whose proxy Node does not use at the switch and the file import", async () => {
     const base = await serve(() => ({ status: 200 }));
     servers.pop()?.close();
     vi.stubEnv("HTTPS_PROXY", "http://proxy.example:3128");
 
     await expect(fetchSpec(`${base}/spec.json`, NOTHING_LISTED)).rejects.toMatchObject({
       code: "SPEC_UNREACHABLE",
-      message: expect.stringContaining("download the file and import it from disk"),
+      message: expect.stringContaining(
+        "Node sends requests through it only when started with NODE_USE_ENV_PROXY=1: start Studio with it to fetch through the proxy, or download the file and import it from disk.",
+      ),
     });
     vi.unstubAllEnvs();
   });

@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import type { EndpointCall } from "../studio/studio-types";
 import { hintDocument } from "./hint-document";
 import type { HintStore } from "./hint-store";
-import { hintTitle, hoverText } from "./hint-text";
+import { figuresOf, hintTitle, hoverText } from "./hint-text";
 import { studioMarkdown } from "./studio-markdown";
 
 /** The hints over endpoint calls: a line above each, or at the end of its line, and a hover over it. */
@@ -74,7 +74,9 @@ export function createCallHints(
         return lensesOf(call).flatMap(({ source, endpoint, withSource }) => {
           const stats = store.statsOf(placed.studio, source, endpoint);
           if (!stats) return [];
-          const part = new vscode.InlayHintLabelPart(hintTitle(stats, withSource));
+          /* The call names its endpoint; the editor cuts a hint past 43 characters, so the figures go alone. */
+          const label = withSource ? `${stats.source} · ${figuresOf(stats)}` : figuresOf(stats);
+          const part = new vscode.InlayHintLabelPart(label);
           part.tooltip = studioMarkdown(hoverText(stats, placed.studio, Date.now()));
           part.command = {
             title: "Open in Courier Studio",

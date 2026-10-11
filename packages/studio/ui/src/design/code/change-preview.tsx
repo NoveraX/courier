@@ -81,7 +81,9 @@ export function ChangePreview({
         </span>
         <span className="flex h-7 items-center gap-1.75 rounded-[6px] bg-brand-dim pr-2 pl-5.5 text-fg">
           <FileCode2 aria-hidden="true" className="size-3 text-fg-subtle" />
-          <span className="flex-1 truncate">{name}</span>
+          <span className="flex-1 truncate" title={target}>
+            {name}
+          </span>
           {added > 0 && <span className="text-micro text-ok">+{added}</span>}
           {removed > 0 && <span className="text-micro text-err">−{removed}</span>}
         </span>

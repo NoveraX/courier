@@ -330,6 +330,7 @@ describe("the declare step", () => {
     );
     expect(html).toContain('aria-label="Change to lib/sources.ts"');
     expect(html).toContain('aria-label="Change to courier.config.ts"');
+    expect(html).toContain('title="courier.config.ts"');
     expect(html).toContain(
       "The config takes its sources from lib/sources.ts, so the API is listed there and the import declared in courier.config.ts. Studio writes both files or neither, and changes nothing else in them.",
     );

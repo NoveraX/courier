@@ -5,13 +5,20 @@
  * Explorer: each call site opens in the editor Settings names — through the
  * address that editor answers — none opens when Settings names none, a
  * public demo shows no such section, and a setting kept from before stays
- * only while it names an editor.
+ * only while it names an editor. Shown inside an editor's own tab, Studio
+ * asks that editor to open the file.
  */
 import { HTTPError } from "@noverax/courier";
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/api-client", () => ({ post: vi.fn(), get: vi.fn(), apiClient: { post: vi.fn() } }));
+
+const host = vi.hoisted(() => ({ inside: false }));
+vi.mock("@/features/editor/editor-host", async (importOriginal) => ({
+  ...((await importOriginal()) as object),
+  insideEditor: () => host.inside,
+}));
 
 import { editorLink } from "@/features/editor/editor-link";
 import { CalledFrom } from "@/inspector/tabs/called-from";
@@ -30,6 +37,8 @@ const SITE = {
 
 afterEach(() => {
   vi.mocked(post).mockReset();
+  vi.restoreAllMocks();
+  host.inside = false;
   useStudioStore.setState({ settings: DEFAULT_SETTINGS });
 });
 
@@ -98,5 +107,23 @@ describe("Called from", () => {
 
     const { container } = render(<CalledFrom source="shop" endpoint="account.me" />);
     await vi.waitFor(() => expect(container.textContent).toBe(""));
+  });
+});
+
+describe("Called from, inside an editor's own tab", () => {
+  it("asks that editor to open the call site, whatever editor Settings names", async () => {
+    host.inside = true;
+    vi.mocked(post).mockResolvedValue({ sites: [SITE] });
+    useStudioStore.setState({ settings: { ...DEFAULT_SETTINGS, codeEditor: "off" } });
+    const sent = vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
+
+    render(<CalledFrom source="shop" endpoint="orders.place" />);
+    (await screen.findByRole("link", { name: /src\/checkout\.ts:12/ })).click();
+
+    expect(sent).toHaveBeenCalledWith(
+      { source: "courier-studio", type: "open-file", path: SITE.path, line: 12, column: 9 },
+      "*",
+    );
+    expect(screen.queryByText(/Choose an editor/)).toBeNull();
   });
 });

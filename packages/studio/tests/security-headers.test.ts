@@ -1,7 +1,8 @@
 /**
  * Studio's page drives the project — it writes files, starts mock servers,
- * sends requests on the developer's behalf — so every answer forbids
- * framing, which would let any site lure a click onto it, and says the type
+ * sends requests on the developer's behalf — so no site may frame it, which
+ * would let it lure a click onto it: only VS Code and the editors built on
+ * it, which show Studio in a tab of their own. Every answer says the type
  * of what it sends is the one it names.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -67,7 +68,8 @@ afterAll(async () => {
 function expectGuarded(response: Response): void {
   expect(response.headers.get("x-frame-options")).toBe("DENY");
   const policy = response.headers.get("content-security-policy") ?? "";
-  expect(policy).toContain("frame-ancestors 'none'");
+  /* Only an editor's own window or webview, which no web page can be, may frame it. */
+  expect(policy).toContain("frame-ancestors vscode-webview: vscode-file:");
   /* Only Studio's own scripts run, and nothing loads, calls out or posts a form elsewhere. */
   expect(policy).toContain("script-src 'self'");
   expect(policy).toContain("connect-src 'self'");
@@ -94,5 +96,19 @@ describe.each(["/", "/timeline", "/assets/app-1a2b.js"])("the UI's answer to %s"
 
     expect(response.status).toBe(200);
     expectGuarded(response);
+  });
+});
+
+describe("Studio loaded into a frame", () => {
+  it("leaves the frame to the policy, which admits only VS Code's windows and webviews", async () => {
+    const response = await fetch(`${uiOrigin}/timeline`, {
+      headers: { "sec-fetch-dest": "iframe" },
+    });
+    const policy = response.headers.get("content-security-policy") ?? "";
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-frame-options")).toBeNull();
+    expect(policy).toContain("frame-ancestors vscode-webview: vscode-file:");
+    expect(policy).not.toMatch(/frame-ancestors[^;]*(\*|https?:)/);
   });
 });

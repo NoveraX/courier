@@ -30,10 +30,11 @@ export function SetupTabs({ targets }: { targets: readonly ShownTarget[] }) {
   if (!target) return null
   return (
     <div className="relative overflow-hidden rounded-2xl border border-line bg-panel shadow-(--studio-shadow)">
+      {/* The rule under the tabs is a shadow inside the strip, which the chosen tab covers: a border the tab overlapped would make the strip scroll. */}
       <div
         role="tablist"
         aria-label="Where to set it up"
-        className="flex gap-1 overflow-x-auto border-b border-line bg-bg-subtle px-2.5 pt-2"
+        className="flex gap-1 overflow-x-auto overflow-y-hidden bg-bg-subtle px-2.5 pt-2 shadow-[inset_0_-1px_0_var(--color-line)] [scrollbar-width:none]"
       >
         {targets.map((option, at) => (
           <button
@@ -43,7 +44,7 @@ export function SetupTabs({ targets }: { targets: readonly ShownTarget[] }) {
             aria-selected={at === chosen}
             onClick={() => setChosen(at)}
             className={cn(
-              "-mb-px shrink-0 cursor-pointer rounded-t-[8px] border border-b-0 px-3.5 py-2 text-[13px] transition-colors",
+              "shrink-0 cursor-pointer rounded-t-[8px] border border-b-0 px-3.5 py-2 text-[13px] transition-colors focus-visible:-outline-offset-2",
               at === chosen
                 ? "border-line bg-panel text-fg"
                 : "border-transparent text-fg-muted hover:text-fg"

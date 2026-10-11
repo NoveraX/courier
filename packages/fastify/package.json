@@ -1,25 +1,33 @@
 {
   "name": "@noverax/courier-fastify",
   "version": "0.0.0",
-  "description": "Fastify adapter for @noverax/courier — proxy plugin handler",
+  "description": "Fastify plugin for Courier: one route that proxies typed calls to any backend, with the user's session, CSRF protection, SSE, WebSockets and graceful shutdown",
   "keywords": [
     "courier",
+    "fastify",
+    "fastify-plugin",
+    "nodejs",
+    "proxy",
+    "bff",
     "typescript",
     "type-safe",
     "api-client",
-    "fastify",
-    "nodejs",
-    "adapter",
-    "plugin"
+    "session",
+    "csrf",
+    "sse",
+    "websocket"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/fastify"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/frameworks/fastify",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

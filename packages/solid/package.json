@@ -1,25 +1,31 @@
 {
   "name": "@noverax/courier-solid",
   "version": "0.0.0",
-  "description": "Solid Start adapter for @noverax/courier — Web Standard proxy handler",
+  "description": "SolidStart adapter for Courier: an API route that proxies typed calls to any backend, with the user's session in queries, server functions and actions",
   "keywords": [
     "courier",
+    "solid",
+    "solidjs",
+    "solid-start",
+    "ssr",
+    "proxy",
+    "bff",
     "typescript",
     "type-safe",
     "api-client",
-    "solid",
-    "solidjs",
-    "signals",
-    "data-fetching"
+    "session"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/solid"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/frameworks/solid-start",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

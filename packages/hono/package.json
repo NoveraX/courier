@@ -1,24 +1,35 @@
 {
   "name": "@noverax/courier-hono",
   "version": "0.0.0",
-  "description": "Hono adapter for @noverax/courier — Web Standard proxy handler",
+  "description": "Hono adapter for Courier on Web Standards: proxy typed calls to any backend from Node.js, Bun, Deno or Cloudflare Workers, with the user's session, SSE and WebSockets",
   "keywords": [
     "courier",
+    "hono",
+    "web-standards",
+    "edge",
+    "cloudflare-workers",
+    "bun",
+    "deno",
+    "proxy",
+    "bff",
     "typescript",
     "type-safe",
     "api-client",
-    "hono",
-    "edge",
-    "adapter"
+    "session",
+    "sse",
+    "websocket"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/hono"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/frameworks/hono",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

@@ -1,26 +1,37 @@
 {
   "name": "@noverax/create-courier",
   "version": "0.0.0",
-  "description": "Set Courier up in one command: the typed API layer, its proxy route, Studio and mock data, in a new project or an existing one",
+  "description": "Set Courier up in one command: a typed API layer, its proxy route, Studio, mock data and AI agent access, in a new project or an existing one, for 13 frameworks",
   "keywords": [
     "courier",
     "create",
+    "create-app",
     "scaffold",
+    "cli",
     "init",
     "typescript",
-    "api-client",
     "nextjs",
     "nuxt",
-    "sveltekit"
+    "sveltekit",
+    "astro",
+    "react-router",
+    "express",
+    "hono",
+    "fastify",
+    "nestjs",
+    "expo"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/create-courier"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/create-courier",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

@@ -1,25 +1,32 @@
 {
   "name": "@noverax/courier-redis",
   "version": "0.0.0",
-  "description": "Redis adapters for @noverax/courier realtime — Pub/Sub broadcast + Streams persistence",
+  "description": "Redis for Courier realtime: Pub/Sub that carries WebSocket channels across replicas, presence shared between them, and Streams that keep the events a reconnecting client resumes from",
   "keywords": [
     "courier",
-    "typescript",
-    "type-safe",
-    "api-client",
     "redis",
     "pubsub",
+    "redis-streams",
+    "presence",
+    "websocket",
+    "sse",
+    "realtime",
     "scaling",
-    "websocket"
+    "replicas",
+    "typescript",
+    "type-safe"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/redis"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/deployment/redis",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

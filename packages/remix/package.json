@@ -1,24 +1,32 @@
 {
   "name": "@noverax/courier-remix",
   "version": "0.0.0",
-  "description": "Remix adapter for @noverax/courier — Web Standard proxy handler",
+  "description": "React Router and Remix adapter for Courier: a resource route that proxies typed calls to any backend, with the user's session in loaders and actions",
   "keywords": [
     "courier",
+    "react-router",
+    "remix",
+    "loaders",
+    "actions",
+    "ssr",
+    "proxy",
+    "bff",
     "typescript",
     "type-safe",
     "api-client",
-    "remix",
-    "react-router",
-    "adapter"
+    "session"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/remix"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/frameworks/remix",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

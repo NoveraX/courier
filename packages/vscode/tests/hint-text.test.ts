@@ -6,7 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { formatMs, hintTitle, hoverText } from "../src/hints/hint-text";
+import { formatMs, hintTitle, hoverText, studioLink } from "../src/hints/hint-text";
 import { endpointPage } from "../src/studio/studio-pages";
 import type { EndpointStats } from "../src/studio/studio-types";
 
@@ -60,7 +60,7 @@ describe("a hint", () => {
       "Last failure 2 min ago: 500 Ledger \\[down\\]\\(https://evil\\.example\\)",
     );
     expect(text).toContain(
-      "[Open in Studio](http://localhost:6280/explorer/endpoints?endpoint=shop.orders.place)",
+      `[Open in Studio](${studioLink("http://localhost:6280/explorer/endpoints?endpoint=shop.orders.place")})`,
     );
   });
 
@@ -79,7 +79,7 @@ describe("a hint", () => {
     const text = hoverText({ ...STATS, lastFailure: failure }, "http://localhost:6280", 2_000);
 
     expect(text).toContain(
-      "[Open in Studio](http://localhost:6280/explorer/endpoints?endpoint=shop.orders.place) · [Open the latest failure](http://localhost:6280/timeline?req=req_9)",
+      `[Open in Studio](${studioLink("http://localhost:6280/explorer/endpoints?endpoint=shop.orders.place")}) · [Open the latest failure](${studioLink("http://localhost:6280/timeline?req=req_9")})`,
     );
   });
 
@@ -88,5 +88,16 @@ describe("a hint", () => {
     expect(endpointPage("http://localhost:6280/", "shop", "live.orders")).toBe(
       "http://localhost:6280/explorer/endpoints?endpoint=shop.live.orders",
     );
+  });
+});
+
+describe("a link to one of Studio's pages", () => {
+  it("runs the command that opens the page where the settings say, the address its one argument", () => {
+    const link = studioLink("http://localhost:6280/timeline?req=req_9");
+
+    expect(link.startsWith("command:courier.openStudioPage?")).toBe(true);
+    expect(JSON.parse(decodeURIComponent(link.split("?").slice(1).join("?")))).toEqual([
+      "http://localhost:6280/timeline?req=req_9",
+    ]);
   });
 });

@@ -7,7 +7,7 @@
  * open as the figures move.
  */
 import { describe, expect, it } from "vitest";
-
+import { studioLink } from "../src/hints/hint-text";
 import type { EndpointStats } from "../src/studio/studio-types";
 import { groupEndpoints } from "../src/view/endpoint-groups";
 import { treeItemOf } from "../src/view/tree-items";
@@ -39,7 +39,9 @@ describe("the Courier view's rows, drawn", () => {
     expect(item.iconPath).toEqual(new ThemeIcon("error", { id: "testing.iconFailed" }));
     expect(item.contextValue).toBe("courier.endpoint.failed.latest");
     expect(item.tooltip).toBeInstanceOf(MarkdownString);
-    expect((item.tooltip as MarkdownString).value).toContain(`${STUDIO}/timeline?req=req_1`);
+    expect((item.tooltip as MarkdownString).value).toContain(
+      studioLink(`${STUDIO}/timeline?req=req_1`),
+    );
   });
 
   it("draws an answered endpoint green, and one not called yet as not run", () => {

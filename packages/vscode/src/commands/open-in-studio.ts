@@ -13,21 +13,24 @@ export interface OpenTarget {
 }
 
 /**
- * Open an endpoint in Courier Studio — or Studio itself — in the browser.
- * With no Studio running for the file in front, offer to start it.
+ * Open an endpoint in Courier Studio — or Studio itself — where the
+ * settings say: the editor's own tab, or the browser. With no Studio
+ * running for the file in front, offer to start it.
  *
  * @param studioFor - What finds a file's Studio
  * @param projects - The workspace's Courier projects
  * @param target - The Studio and the endpoint, when a hint names them
+ * @param open - What opens a page of Studio's
  * @example
  * ```ts
- * await openInStudio(studioFor, projects, { studio, source: "shop", endpoint: "orders.place" });
+ * await openInStudio(studioFor, projects, { studio, source: "shop", endpoint: "orders.place" }, pages.open);
  * ```
  */
 export async function openInStudio(
   studioFor: StudioFinder,
   projects: CourierProjects,
   target: OpenTarget,
+  open: (page: string) => Promise<void>,
 ): Promise<void> {
   const address = target.studio ?? (await studioInFront(studioFor));
   if (!address) {
@@ -40,5 +43,5 @@ export async function openInStudio(
   }
   const { source, endpoint } = target;
   const page = source && endpoint ? endpointPage(address, source, endpoint) : address;
-  await vscode.env.openExternal(vscode.Uri.parse(page));
+  await open(page);
 }

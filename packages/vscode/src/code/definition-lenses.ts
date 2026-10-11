@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { hintDocument, readsCalls } from "../hints/hint-document";
 import type { HintStore } from "../hints/hint-store";
 import { figuresOf, hoverText } from "../hints/hint-text";
+import { studioMarkdown } from "../hints/studio-markdown";
 import type { CallSite, EndpointDefinition } from "../studio/studio-types";
 import type { DefinitionStore } from "./definition-store";
 import { rangeOf, siteLocation } from "./ranges";
@@ -101,7 +102,7 @@ export function createDefinitionLenses(
       if (!declared || !definition) return undefined;
       const stats = store.statsOf(declared.studio, definition.source, definition.endpoint);
       if (!stats) return undefined;
-      const text = new vscode.MarkdownString(hoverText(stats, declared.studio, Date.now()));
+      const text = studioMarkdown(hoverText(stats, declared.studio, Date.now()));
       return new vscode.Hover(text, rangeOf(definition));
     },
   };

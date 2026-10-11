@@ -1,31 +1,60 @@
-export const metadata = { title: "Studio in Your Editor", description: "Above each call to an endpoint in your code, how its calls went in Studio — how many, how many failed, how long they took — and from Studio, the code that calls an endpoint, opened in your editor.", mode: "both" }
+export const metadata = { title: "VS Code Extension", description: "The Courier extension for VS Code, Cursor, Windsurf and VSCodium: above each call to an endpoint, how its calls went in Studio — how many, how many failed, how long they took — the rest in a hover, Studio one click away; and from Studio, the code that calls an endpoint, opened in your editor.", mode: "both" }
 
-Studio knows how every call to each endpoint went; your editor knows where the code makes them. The Courier extension for VS Code puts the two together, above the call itself:
+Studio knows how every call to each endpoint went; your editor knows where the code makes them. The Courier extension puts the two together, above the call itself, and the figures move as your app runs:
 
-```ts title="src/checkout.ts"
-// orders.place · 34 calls · 1 failed · p95 210 ms
-const order = await api.orders.place({ sku, quantity })
-```
+<Screenshot
+  src="/images/vscode/lens"
+  alt="VS Code with a shop's checkout code open: above each call to an endpoint, a line saying how many calls it had in Courier Studio, how many failed and how long nineteen in twenty took"
+  width={940}
+  height={620}
+/>
 
 And the other way round, Studio's inspector and Explorer list the code that calls an endpoint, each call site opening in your editor at its line.
 
-## The extension
+## Install
 
-Install **Courier** from the extensions view of VS Code, or of Cursor, Windsurf and VSCodium from Open VSX, and start Studio for your project as you always do:
+| Editor | Where |
+| --- | --- |
+| VS Code | **Courier** in the Extensions view, or the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=noverax.courier-vscode) |
+| Cursor, Windsurf, VSCodium | **Courier** in the Extensions view, from [Open VSX](https://open-vsx.org/extension/noverax/courier-vscode) |
+
+Or from a terminal:
+
+```bash
+code --install-extension noverax.courier-vscode
+```
+
+Then start Studio for your project as you always do — the extension finds it on its own:
 
 ```bash
 npx @noverax/courier-studio
 ```
 
-Above each call to an endpoint, the extension shows how that endpoint's calls went in this session: how many there were, how many failed and how many are still in flight, and how long nineteen in twenty took. A stream or a channel counts its connections, and how many are still open. A click on the line opens the endpoint in Studio's Explorer. Hover over the call for the rest: the median and the 95th percentile, the statuses the calls ended with, and the latest failure with its reason. The figures move as your app runs, every few seconds while the editor has focus.
+## What you see
+
+Above each call to an endpoint, how that endpoint's calls went in this session: how many there were, how many failed and how many are still in flight, and how long nineteen in twenty took. A stream or a channel counts its connections, and how many are still open. The figures come up to date every few seconds while the editor has focus, and a click on the line opens the endpoint in Studio's Explorer.
+
+Hover over the call for the rest: the median and the 95th percentile, the statuses the calls ended with, the latest failure with its reason, and a link to the endpoint in Studio.
+
+<Screenshot
+  src="/images/vscode/hover"
+  alt="The hover over a call to orders.place: its calls and failures in Courier Studio, the median and the 95th percentile, the statuses the calls ended with, the latest failure — a 409 Conflict — and a link that opens the endpoint in Studio"
+  width={940}
+  height={620}
+/>
+
+The status bar shows **Studio** while a Studio answers for the project of the file in front; a click opens it.
+
+| Command | What it does |
+| --- | --- |
+| **Courier: Open in Courier Studio** | Opens Studio for the project of the file in front |
+| **Courier: Refresh Endpoint Hints** | Finds the calls again and brings the figures up to date |
 
 | Setting | What it does |
 | --- | --- |
-| `courier.hints.enabled` | Show the hints above endpoint calls (default: on) |
-| `courier.hints.refreshSeconds` | How often the figures are brought up to date (default: 5) |
+| `courier.hints.enabled` | Show the figures above endpoint calls (default: on) |
+| `courier.hints.refreshSeconds` | How often the figures are brought up to date while the window has focus (default: 5) |
 | `courier.studio.url` | Studio's address, when it runs for a project outside the workspace |
-
-**Courier: Open in Courier Studio** opens Studio for the project of the file in front, and the status bar shows **Studio** while one answers for it.
 
 ## How a call is found
 

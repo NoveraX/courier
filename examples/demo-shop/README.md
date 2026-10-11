@@ -32,7 +32,7 @@
 
 ## What is in it
 
-It runs on its own, and in a container on a public address. The Studio screenshots in Courier's READMEs are taken from it, with `node scripts/render-studio-shot.mjs` from the repository's root while `npm run demo` runs.
+It runs on its own, and in a container on a public address. The Studio screenshots in Courier's READMEs are taken from it, with `node scripts/render-studio-shot.mjs` from the repository's root while `npm run demo` runs; so are the VS Code extension's, with `node scripts/render-editor-shots.mjs` while its parts run beside a project's own Studio, as the script describes — the public demo answers no editor.
 
 - **Two backends** in `src/upstream` that know nothing of Courier: the shop — a catalog, carts, orders behind a service key that lasts 45 seconds, and a stream of orders as they move — and a payments provider whose charges take their time and now and then fail.
 - **One definition of each** in `src/api`, with middleware Studio shows in its chains: a request id on every call, the shop's key issued again when it expires, the catalog cached, failed charges retried.

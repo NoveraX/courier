@@ -32,8 +32,9 @@ const SIZES = "(min-width: 1280px) 760px, (min-width: 768px) 70vw, 100vw"
  */
 export function Screenshot({ src, alt, width, height, caption }: ScreenshotProps) {
   const image = "h-auto w-full"
+  /* A shot narrower than the page shows at its own size, centred; a wider one fills the page. */
   return (
-    <figure className="my-6">
+    <figure className="mx-auto my-6" style={{ maxWidth: width }}>
       <div className="overflow-hidden rounded-panel border border-line bg-panel shadow-panel">
         <Image
           src={`${src}-dark.png`}

@@ -1,8 +1,8 @@
 /*
  * Runs inside VS Code: opens the workspace's file, waits for the extension's
- * hints over its call, and checks the line above it, the hover over it and
- * the commands the extension offers. What it saw is written to
- * COURIER_EDITOR_REPORT; a mismatch fails the run.
+ * hints over its call, and checks the line above it, the hover over it, the
+ * audit's finding marked at it and the commands the extension offers. What
+ * it saw is written to COURIER_EDITOR_REPORT; a mismatch fails the run.
  */
 const assert = require("node:assert/strict");
 const { writeFileSync } = require("node:fs");
@@ -19,6 +19,17 @@ async function lensTitles(file) {
     await sleep(200);
   }
   return { titles: [], lenses: [] };
+}
+
+async function auditMarks(file) {
+  for (let attempt = 0; attempt < 75; attempt++) {
+    const marks = vscode.languages
+      .getDiagnostics(file)
+      .filter((diagnostic) => diagnostic.source === "Courier audit");
+    if (marks.length > 0) return marks;
+    await sleep(200);
+  }
+  return [];
 }
 
 exports.run = async function run() {
@@ -38,6 +49,7 @@ exports.run = async function run() {
     .flatMap((h) => h.contents)
     .map((content) => (typeof content === "string" ? content : content.value))
     .join("\n");
+  const marks = await auditMarks(file);
   const commands = (await vscode.commands.getCommands(true)).filter((name) =>
     name.startsWith("courier."),
   );
@@ -47,6 +59,12 @@ exports.run = async function run() {
     command: lenses[0]?.command?.command,
     arguments: lenses[0]?.command?.arguments,
     hover,
+    marks: marks.map((mark) => ({
+      message: mark.message,
+      severity: mark.severity,
+      line: mark.range.start.line,
+      code: typeof mark.code === "object" ? String(mark.code.target) : mark.code,
+    })),
     commands,
   };
   writeFileSync(process.env.COURIER_EDITOR_REPORT, JSON.stringify(report, null, 2));
@@ -61,6 +79,14 @@ exports.run = async function run() {
     ),
     "the hover links the latest failure to Studio's inspector",
   );
+  assert.deepEqual(report.marks, [
+    {
+      message: "Timeout risk — P95 = 6.4s. Add a timeout option to the endpoint.",
+      severity: vscode.DiagnosticSeverity.Warning,
+      line: 1,
+      code: `${process.env.COURIER_EDITOR_STUDIO}/audit`,
+    },
+  ]);
   for (const name of ["courier.startStudio", "courier.setUp", "courier.view.openLatestFailure"]) {
     assert.ok(commands.includes(name), `${name} is registered`);
   }

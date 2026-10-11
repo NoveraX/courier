@@ -1,5 +1,5 @@
-import { isCall, isRecord, isSite, isStats } from "./studio-guards";
-import type { CallSite, EndpointCall, EndpointStats } from "./studio-types";
+import { isCall, isFinding, isRecord, isSite, isStats } from "./studio-guards";
+import type { CallSite, EndpointCall, EndpointStats, Finding } from "./studio-types";
 
 /* Studio answers on this machine at once; one that takes longer is not answering. */
 const TIMEOUT_MS = 4_000;
@@ -62,13 +62,36 @@ export async function fetchSites(
   return listOf(await postTo(studio, "/api/editor/sites", { source, endpoint }), "sites", isSite);
 }
 
-async function postTo(studio: string, path: string, body: unknown): Promise<unknown> {
+/**
+ * Ask Studio for its audit's findings that concern endpoints. A Studio
+ * older than the route answers 404, which reads as no finding.
+ *
+ * @param studio - Studio's address
+ * @returns The findings, errors first
+ * @throws {Error} When Studio does not answer
+ * @example
+ * ```ts
+ * const findings = await fetchFindings(studio);
+ * ```
+ */
+export async function fetchFindings(studio: string): Promise<Finding[]> {
+  const answer = await postTo(studio, "/api/editor/findings", {}, [404]);
+  return listOf(answer, "findings", isFinding);
+}
+
+async function postTo(
+  studio: string,
+  path: string,
+  body: unknown,
+  absent: readonly number[] = [],
+): Promise<unknown> {
   const response = await fetch(new URL(path, studio), {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
+  if (absent.includes(response.status)) return {};
   if (!response.ok) throw new Error(`Courier Studio answered ${response.status} to ${path}`);
   return response.json();
 }

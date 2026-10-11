@@ -252,7 +252,12 @@ function runNode(script: string, env: Record<string, string>): Promise<string> {
     execFile(
       process.execPath,
       ["--import", TSX, script],
-      { env: { PATH: process.env.PATH, ...env }, encoding: "utf8", timeout: 25_000 },
+      /* Only what the test names: the developer's own proxy variables must not reach it. */
+      {
+        env: { NODE_ENV: "test", PATH: process.env.PATH, ...env },
+        encoding: "utf8",
+        timeout: 25_000,
+      },
       (error, stdout, stderr) =>
         error ? reject(new Error(`${error.message}\n${stderr}`)) : resolve(stdout),
     );

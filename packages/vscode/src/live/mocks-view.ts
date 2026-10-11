@@ -106,6 +106,10 @@ function mockItem(node: MockNode): vscode.TreeItem {
     .join("\n");
   const color = mock.status === "running" ? "testing.iconPassed" : "disabledForeground";
   item.iconPath = new vscode.ThemeIcon("server-process", new vscode.ThemeColor(color));
+  item.accessibilityInformation = {
+    label: `Mock ${mock.name}: ${item.description}${mock.activeScenario ? `, scenario ${mock.activeScenario}` : ""}`,
+    role: "treeitem",
+  };
   item.contextValue = faulty ? "courier.mock.faulty" : "courier.mock";
   return item;
 }
@@ -117,6 +121,10 @@ function scenarioItem(node: Extract<MockNode, { kind: "scenario" }>): vscode.Tre
   item.id = `scenario:${node.studio}:${mock.id}:${scenario.name}`;
   item.description = [active && "in force", scenario.description].filter(Boolean).join(" · ");
   item.iconPath = new vscode.ThemeIcon(active ? "pass-filled" : "circle-large-outline");
+  item.accessibilityInformation = {
+    label: `Scenario ${scenario.name} of ${mock.name}${active ? ", in force" : ""}${scenario.description ? `: ${scenario.description}` : ""}`,
+    role: "treeitem",
+  };
   item.contextValue = active ? "courier.scenario.active" : "courier.scenario";
   if (!active)
     item.command = {

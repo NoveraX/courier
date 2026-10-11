@@ -88,6 +88,11 @@ function endpointItem(studio: string, stats: EndpointStats, now: number): vscode
   item.description = figuresOf(stats);
   item.tooltip = studioMarkdown(hoverText(stats, studio, now));
   item.iconPath = stateIcon(stats);
+  const state = stats.failed > 0 ? "failing" : stats.calls > 0 ? "succeeding" : "not called yet";
+  item.accessibilityInformation = {
+    label: `${stats.source}.${stats.endpoint}, ${state}: ${figuresOf(stats)}`,
+    role: "treeitem",
+  };
   const flags = [stats.failed > 0 && "failed", stats.lastFailure?.request && "latest"];
   item.contextValue = ["courier.endpoint", ...flags.filter(Boolean)].join(".");
   return item;

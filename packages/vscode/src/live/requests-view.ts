@@ -116,6 +116,11 @@ function requestItem(node: RequestNode, now: number): vscode.TreeItem {
     .filter(Boolean)
     .join("\n");
   item.iconPath = stateIcon(request.state);
+  const verdict = { error: "failed", pending: "in flight", success: "succeeded" }[request.state];
+  item.accessibilityInformation = {
+    label: `${[request.method, `${request.source}.${request.endpoint}`, verdict].filter(Boolean).join(" ")}: ${item.description}${request.error ? `, ${request.error}` : ""}`,
+    role: "treeitem",
+  };
   item.contextValue = "courier.request";
   item.command = { title: "Open in Studio", command: "courier.request.open", arguments: [node] };
   return item;

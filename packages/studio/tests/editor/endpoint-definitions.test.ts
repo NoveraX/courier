@@ -27,11 +27,12 @@ const SHOP = `import { courier, defineApi, defineGroup } from "@noverax/courier/
 import { orders } from "./orders";
 
 const { endpoint } = courier();
+const cached = courier();
 
 const admin = defineGroup({
   prefix: "admin",
   groups: { orders },
-  endpoints: { stats: endpoint.get("stats").response<unknown>() },
+  endpoints: { stats: cached.endpoint.get("stats").response<unknown>() },
 });
 
 export const shop = defineApi({
@@ -103,8 +104,8 @@ describe("where an editor goes to an endpoint", () => {
       line: 8,
       column: 5,
     });
-    expect(of("admin.stats")).toMatchObject({ file: "src/api/shop.ts", line: 10, column: 16 });
-    expect(of("health")).toMatchObject({ file: "src/api/shop.ts", line: 16, column: 16 });
+    expect(of("admin.stats")).toMatchObject({ file: "src/api/shop.ts", line: 11, column: 16 });
+    expect(of("health")).toMatchObject({ file: "src/api/shop.ts", line: 17, column: 16 });
   });
 
   it("gives no place to an endpoint no file declares", () => {
@@ -142,7 +143,11 @@ describe("where an editor adds an endpoint", () => {
       names: ["health"],
       builder: "endpoint",
     });
-    expect(of("admin")).toMatchObject({ file: "src/api/shop.ts", names: ["stats"] });
+    expect(of("admin")).toMatchObject({
+      file: "src/api/shop.ts",
+      names: ["stats"],
+      builder: "cached.endpoint",
+    });
     expect(of("admin.orders")).toMatchObject({
       file: "src/api/orders.ts",
       names: ["list", "place"],

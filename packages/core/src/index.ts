@@ -64,6 +64,7 @@ export type {
   SourceSocketOptions,
   SourceWebSocket,
 } from "./http-client/source-transport";
+export type { TransportOptions } from "./http-client/transport-options";
 export type {
   BaseOptions,
   CallOptions,

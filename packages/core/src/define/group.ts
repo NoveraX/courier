@@ -1,3 +1,4 @@
+import { assertTransportOptions } from "../http-client/assert-transport-options";
 import type { GroupOptions } from "../http-client/types";
 import { assertNoReservedGroupName, assertNoReservedName } from "./assert-no-reserved-name";
 import type {
@@ -27,6 +28,9 @@ import type {
  *   accessors
  * @throws ConfigurationError `DOTTED_NAME` for a group or an endpoint whose
  *   name holds a dot, which separates the groups of a path
+ * @throws ConfigurationError `SOURCE_TRANSPORT_INVALID` for a `fetch` or a
+ *   `webSocket` that is not a function, or a `dispatcher` that is no undici
+ *   `Dispatcher`
  *
  * @example
  * ```ts
@@ -64,5 +68,6 @@ export function defineGroup(
   const { endpoints = {}, ...groupOptions } = config;
   assertNoReservedName(endpoints, "group");
   if (groupOptions.groups) assertNoReservedGroupName(groupOptions.groups);
+  assertTransportOptions(groupOptions, "group");
   return Object.assign({ options: groupOptions }, endpoints);
 }

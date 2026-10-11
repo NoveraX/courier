@@ -1,3 +1,4 @@
+import { assertNoProxyTransport } from "../../proxy-caller/assert-no-transport";
 import type { ProxyPath } from "../../proxy-caller/proxy-path";
 import type { ResolveOrigin } from "../../proxy-caller/resolve-path";
 import { resolveProxyPath } from "../../proxy-caller/resolve-path";
@@ -102,7 +103,8 @@ export function createProxyWSChannelFactory(
 ): WSChannelFactory {
   const { proxyPath, origin, playgroundRequestId } = defaults;
 
-  return function connectChannel(group, method, variables) {
+  return function connectChannel(group, method, variables, options) {
+    assertNoProxyTransport(options);
     const wsUrl = withPlaygroundRid(resolveProxyPath("ws", proxyPath, origin), playgroundRequestId);
     const topic = buildWSTopic(source, group, method);
     return executeWSChannel(wsUrl, topic, variables, proxySocketOptions(defaults));
@@ -121,7 +123,8 @@ export function createProxyWSPushFactory(
 ): WSPushFactory {
   const { proxyPath, origin, playgroundRequestId } = defaults;
 
-  return function connectPush(group, method, variables) {
+  return function connectPush(group, method, variables, options) {
+    assertNoProxyTransport(options);
     const wsUrl = withPlaygroundRid(resolveProxyPath("ws", proxyPath, origin), playgroundRequestId);
     const topic = buildWSTopic(source, group, method);
     return executeWSPush(wsUrl, topic, variables, proxySocketOptions(defaults));

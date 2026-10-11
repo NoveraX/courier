@@ -5,6 +5,7 @@ export type {
   SourceSocketOptions,
   SourceWebSocket,
 } from "../http-client/source-transport";
+export type { TransportOptions } from "../http-client/transport-options";
 /* Named by the types an API's definition infers, so a project that emits declarations can name them too. */
 export type { WebBody, WebCredentials } from "../http-client/web-types";
 export { defineApi, deriveSourceName, getSourceName, setSourceName } from "./api";

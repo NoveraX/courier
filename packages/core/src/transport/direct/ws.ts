@@ -7,6 +7,7 @@ import type { WSChannelFactory, WSPushFactory } from "../types";
 import { assertDirectlyReachable } from "./assert-reachable";
 import { channelAddress } from "./channel-address";
 import { type DirectSocketDefaults, directSocketOptions } from "./socket-config";
+import { transportOf } from "./source-transport";
 import { streamSessionOf } from "./stream-session";
 import { studioRequestIdOption } from "./studio-request-option";
 
@@ -40,7 +41,8 @@ export function createDirectWSChannelFactory(
   return function connectChannel(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
     const { url, topic } = channelAddress(api, group, method, variables);
-    const socket = directSocketOptions(api, defaults, streamSessionOf(options));
+    const transport = transportOf(api, group, options);
+    const socket = directSocketOptions(api, defaults, streamSessionOf(options), transport);
     return instrumentWSChannel(
       executeWSChannel(url, topic, variables, socket),
       { source: sourceName, group, method, transport: "ws", mode: "direct" },
@@ -68,7 +70,8 @@ export function createDirectWSPushFactory(
   return function connectPush(group, method, variables, options) {
     assertDirectlyReachable(api, group, method);
     const { url, topic } = channelAddress(api, group, method, variables);
-    const socket = directSocketOptions(api, defaults, streamSessionOf(options));
+    const transport = transportOf(api, group, options);
+    const socket = directSocketOptions(api, defaults, streamSessionOf(options), transport);
     return instrumentWSPush(
       executeWSPush(url, topic, variables, socket),
       { source: sourceName, group, method, transport: "ws", mode: "direct" },

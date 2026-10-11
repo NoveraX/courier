@@ -1,4 +1,5 @@
-import { eachGroup, GROUP_PATH_SEPARATOR, groupOptionsOf } from "../define/group-tree";
+import { groupOptionsOf } from "../define/group-options-of";
+import { eachGroup, GROUP_PATH_SEPARATOR } from "../define/group-tree";
 import type { ResolvedEndpointOptions } from "../define/options";
 import type { AnyProbe } from "../define/probe";
 import { isEndpointEntry } from "../utils/execute-helpers";

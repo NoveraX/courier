@@ -99,42 +99,26 @@ export function platformFetchOf(send: SourceFetch): PlatformFetch {
 }
 
 /**
- * The error for a source's `fetch` or `webSocket` that is not a function.
+ * The error for a `fetch` or a `webSocket` that is not a function.
  *
  * @param option - Which of the two
- * @param value - What the source gave
+ * @param value - What was given
+ * @param owner - Whose it is: the source's, a group's or a call's
  * @returns The error
  * @example
  * ```ts
- * if (typeof own !== "function") throw notAFunction("webSocket", own);
+ * if (typeof own !== "function") throw notAFunction("webSocket", own, "group");
  * ```
  */
-export function notAFunction(option: "fetch" | "webSocket", value: unknown): ConfigurationError {
+export function notAFunction(
+  option: "fetch" | "webSocket",
+  value: unknown,
+  owner: "source" | "group" | "call" = "source",
+): ConfigurationError {
   return new ConfigurationError(
     "SOURCE_TRANSPORT_INVALID",
-    `[courier] A source's ${option} must be a function; it is ${value === null ? "null" : typeof value}.`,
+    `[courier] A ${owner}'s ${option} must be a function; it is ${value === null ? "null" : typeof value}.`,
   );
-}
-
-/**
- * Refuse, where a source is defined, a `fetch` or a `webSocket` given as
- * something other than a function.
- *
- * @param options - The source's options
- * @throws {ConfigurationError} `SOURCE_TRANSPORT_INVALID` for either that is not a function
- * @example
- * ```ts
- * assertSourceTransport({ fetch: undiciFetch, webSocket: UndiciWebSocket });
- * ```
- */
-export function assertSourceTransport(options: {
-  readonly fetch?: unknown;
-  readonly webSocket?: unknown;
-}): void {
-  for (const option of ["fetch", "webSocket"] as const) {
-    const value = options[option];
-    if (value !== undefined && typeof value !== "function") throw notAFunction(option, value);
-  }
 }
 
 function isResponse(value: object): value is Response {

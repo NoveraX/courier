@@ -1,15 +1,12 @@
-import {
-  notAFunction,
-  type PlatformFetch,
-  platformFetchOf,
-  type SourceFetch,
-  type SourceWebSocket,
-} from "../../http-client/source-transport";
+import { groupOptionsOf } from "../../define/group-options-of";
+import { groupChain } from "../../define/group-tree";
+import { type ResolvedTransport, resolveTransport } from "../../http-client/resolve-transport";
+import type { SourceWebSocket } from "../../http-client/source-transport";
+import { SOCKET_CONNECTION_KEYS } from "../../http-client/transport-options";
 import { fieldOf } from "./read-definition";
 
-/* What a source's options give a stream's `fetch`: the standard options a request that stays open takes, and
-   those a runtime adds — undici's `dispatcher` on Node, `proxy` and `tls` on Bun, `client` on Deno. */
-const STREAM_INIT = [
+/* What a source's options give a stream's `fetch` besides its transport: the standard options of a request that stays open. */
+const STREAM_REQUEST_INIT = [
   "credentials",
   "mode",
   "cache",
@@ -18,91 +15,81 @@ const STREAM_INIT = [
   "referrerPolicy",
   "integrity",
   "priority",
-  "dispatcher",
-  "proxy",
-  "tls",
-  "client",
 ] as const;
 
-/* What a socket's options take of them: the connection's own, never what describes a request. */
-const SOCKET_INIT = ["dispatcher", "proxy", "tls"] as const;
-
-/** How a source's channels open their sockets: the class, and what its options carry besides headers. */
+/** How a channel opens its socket: the class, and what its options carry besides headers. */
 export interface SocketTransport {
   readonly webSocket?: SourceWebSocket | undefined;
   readonly socketInit?: Readonly<Record<string, unknown>> | undefined;
 }
 
 /**
- * What a source's options give the `fetch` its streams open with — the
- * options a request that stays open takes, as its calls are given them.
+ * The transport a call of a source goes through: each of `fetch`,
+ * `webSocket`, `dispatcher`, Bun's `proxy` and `tls` and Deno's `client`
+ * from the call's options when they set it, else from the nearest of the
+ * groups its path names, else from the source's.
  *
  * @param api - The source
- * @returns The options; empty when it sets none
+ * @param group - The call's group path; empty for the source's own endpoints
+ * @param call - The call's options, as `.with()` gave them; absent for a relay, which no caller's options reach
+ * @returns The transport
+ * @throws {ConfigurationError} `SOURCE_TRANSPORT_INVALID` for a `fetch` or a `webSocket` that is not a function, or a `dispatcher` that is no undici `Dispatcher`
+ * @example
+ * ```ts
+ * transportOf(api, "settlement", { dispatcher: rotated }).connection.dispatcher === rotated; // → true
+ * ```
+ */
+export function transportOf(api: object, group: string, call?: object): ResolvedTransport {
+  const chain = group === "" ? [] : groupChain(api, group);
+  const groupOptions = chain?.length ? groupOptionsOf(chain) : undefined;
+  const source = fieldOf(api, "options");
+  return resolveTransport(typeof source === "object" && source !== null ? source : undefined, [
+    groupOptions,
+    call,
+  ]);
+}
+
+/**
+ * What a stream's `fetch` is given besides its headers — the options a
+ * request that stays open takes from its source, as its calls are given
+ * them, and its transport's `dispatcher`, `proxy`, `tls` and `client`.
+ *
+ * @param api - The source
+ * @param transport - The stream's transport; the source's own when absent
+ * @returns The options; empty when they set none
  * @example
  * ```ts
  * streamInitOf(defineApi({ baseURL, credentials: "include" })); // { credentials: "include" }
  * ```
  */
-export function streamInitOf(api: object): RequestInit {
-  return picked(api, STREAM_INIT) as RequestInit;
+export function streamInitOf(
+  api: object,
+  transport: ResolvedTransport = transportOf(api, ""),
+): RequestInit {
+  return { ...picked(fieldOf(api, "options"), STREAM_REQUEST_INIT), ...transport.connection };
 }
 
 /**
- * The `fetch` a source sends its requests and opens its streams with, when
- * it names one of its own.
+ * How a channel opens its socket: the `WebSocket` class its transport
+ * names, and the connection options a socket takes of it — never what
+ * describes a request.
  *
- * @param api - The source
- * @returns Its `fetch`, its answers checked to be responses, or `undefined` for the platform's
- * @throws {ConfigurationError} `SOURCE_TRANSPORT_INVALID` when what it names is not a function
- * @example
- * ```ts
- * sourceFetchOf(defineApi({ baseURL, fetch: undiciFetch })); // undiciFetch
- * ```
- */
-export function sourceFetchOf(api: object): PlatformFetch | undefined {
-  const own = ownTransport<SourceFetch>(api, "fetch");
-  return own && platformFetchOf(own);
-}
-
-/**
- * How a source's channels open their sockets: the `WebSocket` class it
- * names, and the options a connection takes from its options.
- *
- * @param api - The source
+ * @param transport - The channel's transport
  * @returns The class and those options; empty for the platform's socket as it is
- * @throws {ConfigurationError} `SOURCE_TRANSPORT_INVALID` when its `webSocket` is not a function
  * @example
  * ```ts
- * socketTransportOf(defineApi({ baseURL, webSocket: WebSocket, dispatcher })); // { webSocket, socketInit: { dispatcher } }
+ * socketTransportOf(transportOf(api, "live")); // { webSocket, socketInit: { dispatcher } }
  * ```
  */
-export function socketTransportOf(api: object): SocketTransport {
-  const webSocket = ownTransport<SourceWebSocket>(api, "webSocket");
-  const socketInit = picked(api, SOCKET_INIT);
+export function socketTransportOf(transport: ResolvedTransport): SocketTransport {
+  const socketInit = picked(transport.connection, SOCKET_CONNECTION_KEYS);
   return {
-    ...(webSocket && { webSocket }),
+    ...(transport.webSocket && { webSocket: transport.webSocket }),
     ...(Object.keys(socketInit).length > 0 && { socketInit }),
   };
 }
 
-/* The source's own fetch or WebSocket class: nothing when it names none, an error for what is no function. */
-function ownTransport<TFunction>(
-  api: object,
-  option: "fetch" | "webSocket",
-): TFunction | undefined {
-  const own = fieldOf(fieldOf(api, "options"), option);
-  if (own === undefined) return undefined;
-  if (isFunction<TFunction>(own)) return own;
-  throw notAFunction(option, own);
-}
-
-function isFunction<TFunction>(value: unknown): value is TFunction {
-  return typeof value === "function";
-}
-
-function picked(api: object, keys: readonly string[]): Record<string, unknown> {
-  const options = fieldOf(api, "options");
+function picked(options: unknown, keys: readonly string[]): Record<string, unknown> {
   const found: Record<string, unknown> = {};
   for (const key of keys) {
     const value = fieldOf(options, key);

@@ -1,3 +1,4 @@
+import { assertNoProxyTransport } from "../proxy-caller/assert-no-transport";
 import { resolveProxyPath } from "../proxy-caller/resolve-path";
 import { buildProxySSEUrl } from "../realtime/sse-address";
 import type { StreamingFactories } from "./compose-backend";
@@ -8,8 +9,9 @@ import type { ProxyWSDefaults } from "./proxy/ws";
 /**
  * The stream and channel factories of a proxy client. Their client code is
  * loaded on the first stream or channel, so an application that opens none
- * does not carry it; a proxy path that cannot be resolved, or variables that
- * cannot be sent, still refuse the call where it is made.
+ * does not carry it; a proxy path that cannot be resolved, variables that
+ * cannot be sent, or a transport the server's own decides, still refuse the
+ * call where it is made.
  *
  * @param source - The source's name, as the server's adapters serve it
  * @param defaults - What the SSE factory and the WS factories are made with
@@ -25,7 +27,13 @@ export function proxyStreamingFactories(
   defaults: { sse: ProxySSEDefaults; ws: ProxyWSDefaults },
 ): Required<StreamingFactories> {
   const { sse, ws } = defaults;
-  const streamRefused = (group: string, method: string, variables: unknown): void => {
+  const streamRefused = (
+    group: string,
+    method: string,
+    variables: unknown,
+    options: Readonly<Record<string, unknown>>,
+  ): void => {
+    assertNoProxyTransport(options);
     buildProxySSEUrl(
       resolveProxyPath("sse", sse.proxyPath, sse.origin),
       source,
@@ -34,7 +42,13 @@ export function proxyStreamingFactories(
       variables,
     );
   };
-  const channelRefused = (): void => {
+  const channelRefused = (
+    _group: string,
+    _method: string,
+    _variables: unknown,
+    options: Readonly<Record<string, unknown>>,
+  ): void => {
+    assertNoProxyTransport(options);
     resolveProxyPath("ws", ws.proxyPath, ws.origin);
   };
   return {

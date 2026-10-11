@@ -1,4 +1,5 @@
-import { groupChain, groupOptionsOf } from "../define/group-tree";
+import { groupOptionsOf } from "../define/group-options-of";
+import { groupChain } from "../define/group-tree";
 import type { ResolvedEndpointOptions } from "../define/options";
 import type { GroupOptions } from "../http-client/types";
 import { ENDPOINT_SCHEMA, type SchemaMetadata } from "../validation";

@@ -1,4 +1,5 @@
-import { groupChain, groupOptionsOf } from "../../define/group-tree";
+import { groupOptionsOf } from "../../define/group-options-of";
+import { groupChain } from "../../define/group-tree";
 import { fieldOf } from "./read-definition";
 
 /** An endpoint as a direct caller addresses it. */

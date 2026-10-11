@@ -1,4 +1,5 @@
 import type { AnyDefinedApi } from "../define";
+import { assertTransportOptions } from "../http-client/assert-transport-options";
 import type { RequestContext } from "../http-client/types";
 import type { CallerWSOptions } from "../realtime/ws/ws-types";
 import type { StreamingFactories } from "./compose-backend";
@@ -12,7 +13,8 @@ import { lazySSEFactory, lazyWSChannelFactory } from "./lazy-streams";
  * The stream and channel factories of a direct client. Their client code is
  * loaded on the first stream or channel, so an application that opens none
  * does not carry it; what refuses a call — an endpoint this process serves,
- * variables its path cannot be filled from — still does so where it is made.
+ * variables its path cannot be filled from, a transport of its own that
+ * cannot send — still does so where it is made.
  *
  * @param source - The API the client calls
  * @param defaults - The headers every stream sends, how channels' sockets behave, and the
@@ -57,6 +59,7 @@ export function directStreamingFactories(
     (check: typeof streamRefused) =>
     (group: string, method: string, variables: unknown, options: Record<string, unknown>) => {
       check(group, method, variables);
+      assertTransportOptions(options, "call");
       return withStreamSession(options, startStreamSession(source, group, method, context));
     };
   const streamOptions = opening(streamRefused);

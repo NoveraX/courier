@@ -1,0 +1,186 @@
+export const metadata = { title: "Proxies & Certificates", description: "Reach APIs through a corporate proxy, trust an internal certificate authority and present a client certificate — for the whole process from the environment it starts with, or for one API in its definition — and how Studio, the MCP server and create-courier take the same settings.", mode: "both" }
+
+## Where they are set
+
+Courier sends every request with the platform's own `fetch` and opens every socket with its own `WebSocket` — Node's, Bun's, Deno's, the browser's — and brings no HTTP client of its own. A proxy and a certificate are set where that platform takes them: for the whole process, in the environment it starts with; or for one API, in its definition.
+
+| You need | Set |
+| --- | --- |
+| Every request through the corporate proxy | [The environment](#the-whole-process): `NODE_USE_ENV_PROXY=1` and `HTTPS_PROXY` |
+| An internal certificate authority trusted, or a TLS-inspecting proxy's | [The environment](#the-whole-process): `NODE_EXTRA_CA_CERTS`, or `NODE_USE_SYSTEM_CA=1` |
+| A client certificate for one API — mutual TLS | [The API's definition](#one-api): a `dispatcher`, with undici's `fetch` and `WebSocket` |
+| A proxy, or an authority, for one API alone | [The API's definition](#one-api): a `ProxyAgent`, or an `Agent` with its `ca` |
+
+## The whole process
+
+Node reads these when the process starts:
+
+| Variable | What it does | Node |
+| --- | --- | --- |
+| `NODE_USE_ENV_PROXY=1` | Sends requests through the proxy `HTTPS_PROXY` and `HTTP_PROXY` name, except to the hosts `NO_PROXY` names | 22.21 and 24.5 on; 24.0–24.4 for `fetch` alone |
+| `HTTPS_PROXY`, `HTTP_PROXY` | The proxy for `https://` and for `http://` requests — with credentials, `http://user:password@proxy.corp:3128` | |
+| `NO_PROXY` | The hosts reached directly — [how it is read](#no_proxy) | |
+| `NODE_EXTRA_CA_CERTS` | A PEM file of certificate authorities trusted besides Node's own | every version |
+| `NODE_USE_SYSTEM_CA=1` | Trusts the authorities the operating system trusts as well | 22.19 and 24.6 on |
+
+`--use-env-proxy` and `--use-system-ca` are the same switches as flags. Where a lowercase name and an uppercase one are both set, the lowercase one is read.
+
+```bash
+NODE_USE_ENV_PROXY=1 \
+HTTPS_PROXY=http://proxy.corp:3128 \
+NO_PROXY=localhost,127.0.0.1,.corp.internal \
+NODE_EXTRA_CA_CERTS=/etc/ssl/certs/corp-root.pem \
+node server.js
+```
+
+Every request Courier makes from that process goes through the proxy — calls, streams and channels alike — with nothing in an API's definition. Set the variables where the process is started: the shell, the service's unit, the container, the editor's `env` for [an MCP server](#the-mcp-server). A `.env` file the application loads is read too late, after Node has set up its proxy and the authorities it trusts.
+
+### NO_PROXY
+
+Entries are separated by commas, and case does not matter.
+
+| Entry | Reached directly | |
+| --- | --- | --- |
+| `*` | Every host | |
+| `api.corp.internal` | That host | |
+| `api.corp.internal:8443` | That host on that port | |
+| `.corp.internal` | `corp.internal` and every name under it | |
+| `*.corp.internal` | Every name under `corp.internal` | `fetch` and `WebSocket` take `corp.internal` itself too |
+| `10.0.0.7` | That address | |
+| `10.0.0.1-10.0.0.255` | A range of IPv4 addresses | `node:http` alone, which Studio fetches with; `fetch` and `WebSocket` read no ranges |
+
+Name hosts exactly, by address, or as a `.domain` suffix, and every client in the process reads the list the same way.
+
+## One API
+
+A client certificate, a proxy or an authority for one API alone is undici's `dispatcher`. Give the API's definition the dispatcher, and the `fetch` and `WebSocket` of the same undici:
+
+```ts title="lib/sources.ts"
+import { readFileSync } from "node:fs"
+import { courier, defineApi } from "@noverax/courier/define"
+import { Agent, fetch, WebSocket } from "undici"
+
+const { endpoint } = courier()
+
+export const payments = defineApi({
+  name: "payments",
+  baseURL: "https://payments.internal/v1",
+  dispatcher: new Agent({
+    connect: {
+      ca: readFileSync("/etc/payments/ca.pem"),
+      cert: readFileSync("/etc/payments/client.pem"),
+      key: readFileSync("/etc/payments/client.key"),
+    },
+  }),
+  fetch,
+  webSocket: WebSocket,
+  endpoints: {
+    charge: endpoint.post("charges"),
+  },
+})
+```
+
+The dispatcher reaches everything the API sends: its calls and uploads, its streams, its channels' sockets, and what a [proxy route](/docs/proxy-mode/api-route) relays to it for the browser. Two APIs with dispatchers of their own never share a socket, though they reach the same host.
+
+`fetch` and `webSocket` are what hand it on. Node's own refuse a dispatcher from another major version of undici with `UND_ERR_INVALID_ARG` — Node 24 is built on undici 7, while `npm install undici` installs 8 — so all three come from the same `undici`.
+
+Through a proxy of its own:
+
+```ts title="lib/sources.ts"
+import { readFileSync } from "node:fs"
+import { courier, defineApi } from "@noverax/courier/define"
+import { fetch, ProxyAgent, WebSocket } from "undici"
+
+const { endpoint } = courier()
+
+export const partner = defineApi({
+  name: "partner",
+  baseURL: "https://api.partner.example/v2",
+  dispatcher: new ProxyAgent({
+    uri: "http://proxy.corp:3128",
+    requestTls: { ca: readFileSync("/etc/ssl/certs/corp-root.pem") },
+  }),
+  fetch,
+  webSocket: WebSocket,
+  endpoints: {
+    orders: endpoint.get("orders"),
+  },
+})
+```
+
+`requestTls` is the TLS to the API through the proxy's tunnel; `proxyTls`, the TLS to a proxy reached over `https://`. `EnvHttpProxyAgent` follows `HTTPS_PROXY` and `NO_PROXY` for one API, without turning Node's proxy on for the whole process.
+
+<Callout variant="warning" title="Keep the key on the server">
+A definition that reads a key from disk runs wherever it is imported. In proxy mode the browser imports the API as a type and receives a [boundary](/docs/proxy-mode/boundary) instead, so `node:fs`, undici and the key never reach its bundle.
+</Callout>
+
+### Another fetch
+
+`fetch` takes any function called as `fetch` is that answers with a `Response`: the `fetch` of a Cloudflare `mtls_certificates` binding, which presents the certificate the binding holds; that of a `Bun.FetchSession`, which keeps a proxy and an authority of its own; one that signs or records each request. It is typed to take undici's as it is, whose `RequestInit` and `Response` are undici's own types. What a `fetch` answers is checked: anything but a `Response` is refused with `ConfigurationError("SOURCE_TRANSPORT_INVALID")`.
+
+In a browser and in React Native, an upload that reports its progress goes through `XMLHttpRequest`, which can report it, rather than through an API's `fetch`.
+
+## Bun and Deno
+
+**Bun** reads `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` by itself, with no switch to turn on. Its `proxy` and `tls` options (`ca`, `cert`, `key`), set in an API's definition, reach the API's calls and streams, and its sockets, whose `WebSocket` takes them too.
+
+**Deno** reads `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`, and trusts the authorities in `DENO_CERT` (or `--cert`), the system's with `DENO_TLS_CA_STORE=system`, and from Deno 2.8 those in `NODE_EXTRA_CA_CERTS`. A `client` from `Deno.createHttpClient()` in an API's definition reaches its calls and its streams; its channels open with Deno's `WebSocket` as it is.
+
+## Browsers and React Native
+
+A browser sends Courier's requests with its own proxy settings and its own trust store, and presents a client certificate itself when a server asks for one — the user picks which. There is nothing to set in Courier: a browser's sockets open without an API's `dispatcher`, `proxy` or `tls`, and its `fetch` ignores them.
+
+React Native goes through the device's networking: its proxy, and the authorities it trusts — on Android, an authority the user installed only where the app's network security configuration allows it.
+
+## Studio
+
+Studio fetches a specification imported by URL itself — in the import dialog, with `courier-studio import`, when it checks an import for changes, and for `create-courier --openapi`. Started with Node's proxy turned on, it fetches through the proxy, as the project's own requests go:
+
+```bash
+NODE_USE_ENV_PROXY=1 HTTPS_PROXY=http://proxy.corp:3128 NODE_EXTRA_CA_CERTS=/etc/ssl/certs/corp-root.pem npx @noverax/courier-studio
+```
+
+It still checks each host before the proxy is asked, as it checks a host it connects to itself: a private address the project does not name in `studio.allowedSpecHosts` is refused, and this machine is always reached directly — a proxy asked for `localhost` would reach its own. A name this machine cannot resolve is left to the proxy. An answer through a proxy does not show where it came from, so a redirect in it never leads back to this machine; a public demo's visitors never go through the proxy at all.
+
+When a host cannot be reached, the error says what to set: `NODE_USE_ENV_PROXY=1`, when a proxy is set in the environment but Node was not told to use it; `NODE_EXTRA_CA_CERTS` or `NODE_USE_SYSTEM_CA=1`, when Node does not trust the host's certificate; the proxy's credentials, when the proxy answers `407`. A proxy is named by its origin, never with the credentials in its URL.
+
+Calls Studio's playground sends to your APIs go through their definitions, `dispatcher` and `fetch` included.
+
+## The MCP server
+
+The editor starts the MCP server, so the variables go in the server's `env`:
+
+```json title=".cursor/mcp.json"
+{
+  "mcpServers": {
+    "courier": {
+      "command": "npx",
+      "args": ["@noverax/courier-mcp", "--dotenv", ".env.local"],
+      "env": {
+        "NODE_USE_ENV_PROXY": "1",
+        "HTTPS_PROXY": "http://proxy.corp:3128",
+        "NODE_EXTRA_CA_CERTS": "/etc/ssl/certs/corp-root.pem"
+      }
+    }
+  }
+}
+```
+
+VS Code's `.vscode/mcp.json` takes the same `env`. The file `--dotenv` names is loaded too late for these, as an application's `.env` is. The server's tools call your APIs as their definitions say, so an API's `dispatcher` applies to an agent's calls as it does to your app's.
+
+## create-courier
+
+`npx @noverax/create-courier` installs packages with npm, which takes its own settings — `npm config set https-proxy http://proxy.corp:3128` and `npm config set cafile /etc/ssl/certs/corp-root.pem`, or the `HTTPS_PROXY` variable — and imports a specification given with `--openapi` as [Studio](#studio) does.
+
+## Security
+
+- Use only proxies trusted and authorized for the deployment. A proxy sees where every request goes, and reads what it carries wherever TLS ends at the proxy — a TLS-inspecting proxy reads all of it.
+- Keep a client certificate's key where only the server reads it, and out of the repository.
+- `rejectUnauthorized: false` and `NODE_TLS_REJECT_UNAUTHORIZED=0` stop the server's certificate from being checked at all. Trust its authority instead, with `ca` or `NODE_EXTRA_CA_CERTS`.
+
+## Next steps
+
+- [Options](/docs/advanced/options) — every option an API's definition takes
+- [Security Model](/docs/security/overview) — what the proxy route lets through, and what it never does
+- [Importing an API](/docs/studio/import-api) — Studio's import, and which hosts it reaches
+- [Agents in your editor](/docs/agents/editor) — the MCP server's configuration

@@ -96,6 +96,8 @@ npx @noverax/create-courier --openapi https://petstore3.swagger.io/api/v3/openap
 
 Imports an OpenAPI, Swagger or Postman specification in place of the example, with Studio's own importer: the typed code is written and the API is declared in `courier.config.ts`. See [Import an API](/docs/studio/import-api).
 
+Behind a corporate proxy, npm installs through the proxy its own settings or `HTTPS_PROXY` name, and the specification is fetched through it once `NODE_USE_ENV_PROXY=1` is set — see [Proxies & Certificates](/docs/advanced/proxies-and-certificates#create-courier).
+
 ## AI agents
 
 ```bash

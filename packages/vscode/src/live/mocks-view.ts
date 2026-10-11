@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-
+import { loggedAs } from "../log/courier-log";
 import type { CourierProject } from "../projects/courier-projects";
 import type { StudioTarget } from "../projects/studio-targets";
 import type { MockScenario, StudioMock } from "../studio/live-types";
@@ -41,7 +41,9 @@ export function createMocksView(
 ): MocksView {
   const changed = new vscode.EventEmitter<undefined>();
   const mocksOf = async (studio: string): Promise<MockNode[]> => {
-    const mocks = await fetchMocks(studio).catch(() => undefined);
+    const mocks = await fetchMocks(studio).catch(
+      loggedAs(`Studio at ${studio} did not list its mocks`, undefined),
+    );
     const note = (text: string): MockNode[] => [{ kind: "note", id: `note:${studio}`, text }];
     if (mocks === undefined) return note("Courier Studio did not answer");
     if (mocks.length === 0) return note("No mock: Studio runs those courier.mocks.ts declares");

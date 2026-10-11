@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 import { ago, formatMs } from "../hints/hint-text";
+import { loggedAs } from "../log/courier-log";
 import type { CourierProject } from "../projects/courier-projects";
 import type { StudioTarget } from "../projects/studio-targets";
 import type { RecordedRequest } from "../studio/live-types";
@@ -48,7 +49,9 @@ export function createRequestsView(
   const changed = new vscode.EventEmitter<undefined>();
   let failed = false;
   const requestsOf = async (studio: string): Promise<RequestNode[]> => {
-    const requests = await fetchRequests(studio, { failed, limit: SHOWN }).catch(() => undefined);
+    const requests = await fetchRequests(studio, { failed, limit: SHOWN }).catch(
+      loggedAs(`Studio at ${studio} did not list its requests`, undefined),
+    );
     const note = (text: string): RequestNode[] => [{ kind: "note", id: `note:${studio}`, text }];
     if (requests === undefined) return note("Courier Studio did not answer");
     if (requests.length === 0)

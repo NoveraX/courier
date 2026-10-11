@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-
+import { logFailure } from "../log/courier-log";
 import type { StudioTarget } from "../projects/studio-targets";
 import type { CallSite, EndpointStats } from "../studio/studio-types";
 import { treeItemOf } from "./tree-items";
@@ -53,7 +53,8 @@ export function createEndpointTree(sources: EndpointTreeSources): EndpointTree {
     const sites = sources
       .fetchSites(node.studio, node.stats.source, node.stats.endpoint)
       .then((found) => siteNodes(node, found))
-      .catch((): CourierNode[] => {
+      .catch((error: unknown): CourierNode[] => {
+        logFailure(`Studio at ${node.studio} did not list the call sites`, error);
         asked.delete(key);
         const id = `silent:${node.studio}:${node.stats.source}.${node.stats.endpoint}`;
         return [{ kind: "note", id, text: "Courier Studio did not answer" }];

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 import type { HintStore } from "../hints/hint-store";
+import { loggedAs } from "../log/courier-log";
 import type { CallSite } from "../studio/studio-types";
 import type { DefinitionStore } from "./definition-store";
 import { endpointAt, endpointsNamed } from "./endpoint-at";
@@ -43,7 +44,9 @@ export function createReferenceProvider(
         : [];
       const sites = await Promise.all(
         named.map(({ source, endpoint }) =>
-          fetchSites(at.studio, source, endpoint).catch((): CallSite[] => []),
+          fetchSites(at.studio, source, endpoint).catch(
+            loggedAs<CallSite[]>(`Studio at ${at.studio} did not list the call sites`, []),
+          ),
         ),
       );
       return [...declared, ...sites.flat().map(siteLocation)];

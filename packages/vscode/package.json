@@ -265,6 +265,12 @@
         "command": "courier.view.newEndpoint",
         "title": "New Endpoint…",
         "icon": "$(add)"
+      },
+      {
+        "command": "courier.showLog",
+        "title": "Show Log",
+        "category": "Courier",
+        "icon": "$(output)"
       }
     ],
     "menus": {
@@ -410,6 +416,11 @@
           "command": "courier.openStudioInBrowser",
           "when": "view == courier.endpoints",
           "group": "courier@5"
+        },
+        {
+          "command": "courier.showLog",
+          "when": "view == courier.endpoints",
+          "group": "courier@7"
         }
       ],
       "view/item/context": [

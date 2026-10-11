@@ -160,6 +160,9 @@ export const shown = { warnings: [] as string[], opened: [] as string[] };
 /** What the code showed as errors, and the picks a test makes for the user. */
 export const asked = { errors: [] as string[], picks: [] as unknown[] };
 
+/** What the code wrote to its log, level and line. */
+export const logged: [string, string][] = [];
+
 export const window = {
   activeTextEditor: undefined as { document: { uri: Uri } } | undefined,
   showWarningMessage: async (message: string) => {
@@ -174,6 +177,14 @@ export const window = {
     const wanted = asked.picks.shift();
     return items.find((item) => JSON.stringify(item).includes(String(wanted)));
   },
+  createOutputChannel: () => ({
+    trace: (line: string) => logged.push(["trace", line]),
+    info: (line: string) => logged.push(["info", line]),
+    warn: (line: string) => logged.push(["warn", line]),
+    error: (line: string) => logged.push(["error", line]),
+    show: () => undefined,
+    dispose: () => undefined,
+  }),
 };
 
 export const env = {

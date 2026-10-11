@@ -1,3 +1,5 @@
+import { STATUS_CODES } from "node:http";
+
 import type { EndpointStats } from "../studio/studio-api";
 
 /* A stream's or a channel's calls are its connections, still open or ended. */
@@ -113,13 +115,21 @@ export function endpointPage(studio: string, source: string, endpoint: string): 
   return page.toString();
 }
 
-/* The API wrote the message: it is shown as text, never as Markdown that could link anywhere. */
+/*
+ * The API wrote the message: it is shown as text, never as Markdown that
+ * could link anywhere. An error that says no more than its status, as
+ * `HTTP 409` does, is named by the status and its reason phrase instead.
+ */
 function failureText(failure: NonNullable<EndpointStats["lastFailure"]>): string {
+  const { status } = failure;
+  if (status !== undefined && failure.message.trim() === `HTTP ${status}`) {
+    return [status, STATUS_CODES[status]].filter(Boolean).join(" ");
+  }
   const message = failure.message
     .replace(/[\r\n]+/g, " ")
     .slice(0, 160)
     .replace(/[\\`*_{}[\]()#+\-.!|<>~]/g, "\\$&");
-  return failure.status === undefined ? message : `${failure.status} ${message}`;
+  return status === undefined ? message : `${status} ${message}`;
 }
 
 function ago(ms: number): string {

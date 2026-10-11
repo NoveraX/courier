@@ -63,6 +63,15 @@ describe("a hint", () => {
     );
   });
 
+  it("names a failure that says no more than its status by the status and its reason", () => {
+    const failure = { at: 1_000, status: 409, message: "HTTP 409" };
+
+    const text = hoverText({ ...STATS, lastFailure: failure }, "http://localhost:6280", 28_000);
+
+    expect(text).toContain("Last failure 27 s ago: 409 Conflict");
+    expect(text).not.toContain("409 HTTP 409");
+  });
+
   it("writes durations as a person reads them", () => {
     expect([formatMs(0.4), formatMs(210.4), formatMs(1430)]).toEqual(["<1 ms", "210 ms", "1.4 s"]);
     expect(endpointPage("http://localhost:6280/", "shop", "live.orders")).toBe(

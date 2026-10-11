@@ -32,7 +32,8 @@ export const MCP_CHAPTERS: readonly McpChapter[] = [
       },
       {
         title: "Checked at start:",
-        detail: "a policy it cannot read, or a write offered as a read, stops the server, not a model.",
+        detail:
+          "a policy it cannot read, or a write offered as a read, stops the server, not a model.",
       },
     ],
     cta: {

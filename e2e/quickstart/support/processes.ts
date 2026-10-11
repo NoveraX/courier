@@ -115,3 +115,32 @@ export async function stopTree(child: ChildProcess, folder: string): Promise<voi
   signal(child.pid, pids.filter(alive), "SIGKILL");
   await goneWithin(pids, 5_000);
 }
+
+/**
+ * Stop every process that runs from a folder, and resolve once they have
+ * exited: SIGTERM, then SIGKILL for what is left after ten seconds. The
+ * last word for what a check that ended early left running — Studio would
+ * hold its port into the next check, and a dev server would race the
+ * folder's removal.
+ *
+ * @param folder - The folder the check made its projects in
+ * @example
+ * ```ts
+ * await stopRunningFrom(work);
+ * ```
+ */
+export async function stopRunningFrom(folder: string): Promise<void> {
+  const pids = runningFrom(folder);
+  for (const pid of pids) signalOne(pid, "SIGTERM");
+  if (await goneWithin(pids, 10_000)) return;
+  for (const pid of pids.filter(alive)) signalOne(pid, "SIGKILL");
+  await goneWithin(pids, 5_000);
+}
+
+function signalOne(pid: number, name: NodeJS.Signals): void {
+  try {
+    process.kill(pid, name);
+  } catch {
+    /* It has exited already. */
+  }
+}

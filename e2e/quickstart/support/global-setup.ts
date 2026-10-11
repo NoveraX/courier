@@ -2,13 +2,15 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { stopRunningFrom } from "./processes";
 import { serveRegistry } from "./registry";
 
 /**
  * Serve Courier's packages, built and packed, as the `@noverax` scope's
  * registry for every command the check runs — npx, the install, the
  * generator's — with a cache of its own, so nothing a run before left
- * is taken for a package of this build.
+ * is taken for a package of this build. When the check ends, whatever
+ * still runs from its projects is stopped before they are removed.
  *
  * @returns How to stop the registry and remove what it served
  */
@@ -22,6 +24,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   process.env.npm_config_update_notifier = "false";
   process.env.COURIER_QUICKSTART_WORK = work;
   return async () => {
+    await stopRunningFrom(work);
     await registry.close();
     /* A dev server's last writes may still be landing as its process exits. */
     rmSync(work, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });

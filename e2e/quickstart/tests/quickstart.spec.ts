@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 
 import { REPO } from "../../support/project";
-import { type RunningApp, runToEnd, startApp } from "../support/app";
+import { type RunningApp, runToEnd, startApp, stopStarted } from "../support/app";
 import { quickstartTarget } from "../support/targets";
 
 const target = quickstartTarget(process.env.COURIER_QUICKSTART);
@@ -43,9 +43,8 @@ test.beforeAll(async () => {
   expect(status, `create-courier failed: see ${join(logs, "create.log")}`).toBe(0);
 });
 
-test.afterAll(async () => {
-  await app?.stop();
-});
+/* Also what a test that ended before startApp returned left running: no app names it. */
+test.afterAll(stopStarted);
 
 test(`${target.id}: the setup type-checks what it added`, () => {
   expect(created).toContain("Courier is set up.");

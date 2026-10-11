@@ -1,12 +1,15 @@
 /**
  * Studio in a tab of the editor's own: the tab's page frames only the
- * Studio it names and runs only its own script; while Studio does not run
+ * Studio it names and runs only its own script, at the address the editor
+ * reaches it by, with its token and the editor's theme in the fragment —
+ * and passes the theme on again as it changes; while Studio does not run
  * it says so and offers to start it; and what the page passes on from
  * Studio is read as data — a file by its absolute path at a place from 1,
  * a page by its web address, nothing else.
  */
 import { describe, expect, it } from "vitest";
 
+import { frameAddress } from "../src/panel/frame-address";
 import { panelHtml } from "../src/panel/panel-html";
 import { panelMessage } from "../src/panel/panel-message";
 
@@ -24,6 +27,27 @@ describe("the tab's page", () => {
     expect(policy).toContain("frame-src http://localhost:6280;");
     expect(policy).toMatch(/script-src 'nonce-[^']+'$/);
     expect(html).toContain('src="http://localhost:6280/audit#token=abc"');
+  });
+
+  it("loads the page at the address the editor reaches Studio by, the token and the theme in the fragment", () => {
+    const local = "http://localhost:6280";
+
+    expect(frameAddress(`${local}/timeline?req=r7`, local, `${local}/`, "abc", "light")).toBe(
+      "http://localhost:6280/timeline?req=r7#token=abc&theme=light",
+    );
+    expect(frameAddress(local, local, "https://forwarded.example/", undefined, "dark")).toBe(
+      "https://forwarded.example/#theme=dark",
+    );
+  });
+
+  it("passes the editor's theme on to Studio as it changes", () => {
+    const html = panelHtml(
+      { kind: "studio", frame: "http://localhost:6280/#theme=dark", page: PAGE },
+      "vscode-webview://x",
+    );
+
+    expect(html).toContain('attributeFilter: ["data-vscode-theme-kind"]');
+    expect(html).toContain('type: "theme"');
   });
 
   it("says Studio is not running and offers to start it, framing nothing", () => {

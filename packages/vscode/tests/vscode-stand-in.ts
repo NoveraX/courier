@@ -185,8 +185,11 @@ export const asked = { errors: [] as string[], picks: [] as unknown[], buttons: 
 /** What the code wrote to its log, level and line. */
 export const logged: [string, string][] = [];
 
+export const ColorThemeKind = { Light: 1, Dark: 2, HighContrast: 3, HighContrastLight: 4 } as const;
+
 export const window = {
   activeTextEditor: undefined as { document: { uri: Uri } } | undefined,
+  activeColorTheme: { kind: ColorThemeKind.Dark as number },
   showWarningMessage: async (message: string) => {
     shown.warnings.push(message);
     return undefined;

@@ -18,7 +18,7 @@ const AGENT_CODE = [
 ].join("\n")
 
 const AGENTS_DO = [
-  "Only the endpoints you mark — every other one stays out of reach",
+  "Only the endpoints you offer — every other one stays out of reach",
   "Arguments and answers typed from the schemas you already wrote",
   "Every call through your middleware: auth, limits, audit",
   "A person confirms anything that cannot be undone",

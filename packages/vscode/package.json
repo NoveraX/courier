@@ -36,13 +36,15 @@
     "devtools",
     "studio",
     "mcp",
-    "agent"
+    "agent",
+    "chat"
   ],
   "categories": [
     "Visualization",
     "Debuggers",
     "Snippets",
-    "AI"
+    "AI",
+    "Chat"
   ],
   "engines": {
     "vscode": "^1.95.0"
@@ -645,6 +647,45 @@
       {
         "id": "courier",
         "label": "Courier"
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "noverax.courier",
+        "name": "courier",
+        "fullName": "Courier",
+        "description": "Ask about your API's calls: what fails, what is slow, what the audit found",
+        "when": "courier.hasProject || courier.studioRunning",
+        "sampleRequest": "Which endpoints fail, and why?",
+        "commands": [
+          {
+            "name": "status",
+            "description": "How every endpoint is doing: its calls, failures and latency"
+          },
+          {
+            "name": "failures",
+            "description": "The latest failed requests, and why they failed"
+          },
+          {
+            "name": "audit",
+            "description": "What the audit found in the requests, gravest first"
+          },
+          {
+            "name": "endpoint",
+            "description": "One endpoint, named or under the cursor: its figures, latest calls, declaration and callers"
+          }
+        ],
+        "disambiguation": [
+          {
+            "category": "courier_api_calls",
+            "description": "The user asks about the calls their app made to its API in this session, as Courier Studio recorded them: endpoints that fail or are slow, recent errors and status codes, or what Courier's audit found in the requests.",
+            "examples": [
+              "Why does the orders.place call keep failing?",
+              "Which of my API endpoints are the slowest?",
+              "What did the audit find in my requests?"
+            ]
+          }
+        ]
       }
     ],
     "taskDefinitions": [

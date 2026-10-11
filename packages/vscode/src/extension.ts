@@ -1,6 +1,7 @@
 import type * as vscode from "vscode";
 
 import { offerMcpServers } from "./agents/mcp-servers";
+import { registerChat } from "./chat/register-chat";
 import { registerCodeFeatures } from "./code/register-code-features";
 import { createCourierCore } from "./core/courier-core";
 import { registerCommands } from "./core/register-commands";
@@ -20,7 +21,8 @@ import { fetchSites } from "./studio/studio-api";
  * own; the Studio of the file in front in the status bar; the commands
  * that start Studio, set Courier up, add an endpoint, import an API and
  * check what a change breaks; Courier's tasks, and the recorded calls in
- * the Test Explorer; and the MCP servers offered to VS Code's agent.
+ * the Test Explorer; `@courier` in the chat; and the MCP servers offered
+ * to VS Code's agent.
  *
  * @param context - The extension's context, which disposes what it holds
  * @example
@@ -48,6 +50,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerLiveViews(core),
     registerCliCommands(core),
     registerWorkflows(core),
+    registerChat(core),
     offerMcpServers(core.projects, () => core.settings().get<boolean>("agents.mcpServers", true)),
   );
   core.start();

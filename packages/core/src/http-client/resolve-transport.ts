@@ -61,7 +61,7 @@ export function resolveTransport(
   layers.forEach((layer, at) => {
     if (layer !== undefined) assertTransportOptions(layer, OWNERS[at] ?? "call");
     for (const key of TRANSPORT_KEYS) {
-      const value = layer === undefined ? undefined : Reflect.get(layer, key);
+      const value = valueAt(layer, key);
       if (value === undefined) continue;
       chosen.set(key, value);
       if (at > 0) overridden = true;
@@ -102,6 +102,11 @@ export function sendingFetch(send: SourceFetch): PlatformFetch {
     wrapped.set(send, platform);
   }
   return platform;
+}
+
+/* One option of a layer, read as nothing in particular until it is checked. */
+function valueAt(layer: object | undefined, key: TransportKey): unknown {
+  return layer === undefined ? undefined : Reflect.get(layer, key);
 }
 
 /* The same options give the same key: objects and functions by identity, strings as written. */

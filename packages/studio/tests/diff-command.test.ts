@@ -31,7 +31,7 @@ const TSX = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
 
 let root: string;
 
-function config(answer: string): string {
+function config(answer: string, agents = ""): string {
   return `import { courier, defineApi } from "@noverax/courier/define";
 import { z } from "zod";
 const { endpoint } = courier();
@@ -41,7 +41,7 @@ export default {
       baseURL: "https://shop.example",
       endpoints: { order: endpoint.get("orders/:id").variables(z.object({ id: z.string() })).response(${answer}) },
     }),
-  },
+  },${agents}
 };
 `;
 }
@@ -85,7 +85,10 @@ beforeAll(() => {
   git("init", "--quiet");
   git("add", ".");
   git("commit", "--quiet", "-m", "base");
-  writeFileSync(join(root, "courier.config.ts"), config("z.object({ id: z.string() })"));
+  writeFileSync(
+    join(root, "courier.config.ts"),
+    config("z.object({ id: z.string() })", '\n  agents: { offer: "reads" },'),
+  );
   mkdirSync(join(root, "tests/recorded"), { recursive: true });
   const recording = {
     source: "shop",
@@ -115,6 +118,8 @@ describe("courier-studio diff", () => {
     expect(run.stdout).toContain(
       "1 endpoints changed: 1 breaking, 0 that may break, 0 safe; 0 recorded calls no longer fit",
     );
+    expect(run.stdout).toContain("Agent access: 1 tool added: agents may call 1 tool");
+    expect(run.stdout).toContain('  + shop.order  order  read  offer: "reads"');
     expect(
       readdirSync(join(root, ".courier")).filter((name) => name.startsWith("diff-base-")),
     ).toEqual([]);
@@ -145,6 +150,9 @@ describe("courier-studio diff", () => {
     expect(run.status, run.stderr).toBe(0);
     expect(readFileSync(summary, "utf8")).toContain(
       "| Breaking | `shop order` | answer.total is no longer in the answer | 2 |",
+    );
+    expect(readFileSync(summary, "utf8")).toContain(
+      "## Agent access\n\n**agents may call 1 tool; the base, OpenAPI documents written before, does not record what agents could call**",
     );
   });
 

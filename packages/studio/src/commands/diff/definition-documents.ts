@@ -8,22 +8,31 @@ import { toOpenAPI } from "@noverax/courier/openapi";
 import { loadCourierConfig } from "../../server/config-loader";
 import { ensureCourierDir } from "../../server/courier-dir";
 import { messageOf } from "../../server/message-of";
+import { type AgentSurface, agentSurfaceOf } from "./agent-access";
 import type { Schema } from "./schema-relation";
+
+/** A project's definition at one side of the diff: its documents, and what it offers to agents. */
+export interface Definition {
+  readonly documents: Record<string, Schema>;
+  /** What agents may call; `undefined` where the base is OpenAPI documents, which do not record it. */
+  readonly agents: AgentSurface | undefined;
+}
 
 /**
  * The project's definition as OpenAPI documents, one per source, read from
- * `courier.config.ts` as Studio reads it.
+ * `courier.config.ts` as Studio reads it, with what its `agents` policy
+ * offers.
  *
  * @param root - The project root
- * @returns The documents, by source
+ * @returns The documents, by source, and the tools agents may call
  * @example
  * ```ts
- * const head = await definitionDocuments(process.cwd());
+ * const head = await definitionAt(process.cwd());
  * ```
  */
-export async function definitionDocuments(root: string): Promise<Record<string, Schema>> {
+export async function definitionAt(root: string): Promise<Definition> {
   const { config } = await loadCourierConfig(root);
-  return documentsOf(config.sources);
+  return { documents: documentsOf(config.sources), agents: agentSurfaceOf(config) };
 }
 
 /**
@@ -49,28 +58,27 @@ export function documentsOf(sources: Readonly<Record<string, unknown>>): Record<
 
 /**
  * The definition at a git ref — `origin/main`, a tag, a commit — as OpenAPI
- * documents: the ref is checked out in a worktree of its own inside
- * `.courier`, which keeps itself out of git, so its config resolves the
- * project's installed packages; the worktree is removed afterwards.
+ * documents, with what its `agents` policy offered: the ref is checked out
+ * in a worktree of its own inside `.courier`, which keeps itself out of
+ * git, so its config resolves the project's installed packages; the
+ * worktree is removed afterwards.
  *
  * @param root - The project root, inside a git repository
  * @param ref - The ref to read the base definition at
- * @returns Its documents, by source
+ * @returns Its documents, by source, and the tools agents could call
  * @throws {Error} When git cannot check the ref out, or its config does not load
  * @example
  * ```ts
- * const base = await documentsAtRef(process.cwd(), "origin/main");
+ * const base = await definitionAtRef(process.cwd(), "origin/main");
  * ```
  */
-export async function documentsAtRef(root: string, ref: string): Promise<Record<string, Schema>> {
+export async function definitionAtRef(root: string, ref: string): Promise<Definition> {
   const repository = git(root, ["rev-parse", "--show-toplevel"]).trim();
   const worktree = join(ensureCourierDir(root), `diff-base-${randomBytes(4).toString("hex")}`);
   git(root, ["worktree", "add", "--detach", "--quiet", worktree, ref]);
   try {
     /* git names the repository by its real path: `/private/var/…` for a project under `/var/…` on macOS. */
-    return await definitionDocuments(
-      join(worktree, relative(repository, realpathSync(resolve(root)))),
-    );
+    return await definitionAt(join(worktree, relative(repository, realpathSync(resolve(root)))));
   } finally {
     git(root, ["worktree", "remove", "--force", worktree]);
   }

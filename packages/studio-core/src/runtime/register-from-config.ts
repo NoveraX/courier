@@ -1,6 +1,7 @@
 import { dirname } from "node:path";
 
 import { createLogger, detectAppOrigin, registerSources, setAppOrigin } from "@noverax/courier";
+import type { CourierConfig } from "@noverax/courier/config";
 import type { ServerRuntimeSetup } from "./attach-runtime-core";
 import type { LoadedCourierConfig } from "./load-config";
 import { readStudioToken } from "./read-studio-token";
@@ -31,9 +32,18 @@ export async function registerFromConfig(): Promise<ServerRuntimeSetup | undefin
          load, and neither may end the host's startup. */
       registerSources(loaded.config.sources);
       setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());
-      if (process.env.NODE_ENV !== "production") await followConfig(loadCourierConfig);
+      let current = loaded.config;
+      if (process.env.NODE_ENV !== "production") {
+        await followConfig(loadCourierConfig, (config) => {
+          current = config;
+        });
+      }
       const projectRoot = dirname(loaded.configFile);
-      return { studio: loaded.config.studio ?? {}, readToken: () => readStudioToken(projectRoot) };
+      return {
+        studio: loaded.config.studio ?? {},
+        readToken: () => readStudioToken(projectRoot),
+        config: () => current,
+      };
     }
   } catch (err) {
     /* A config that exists and will not load leaves the app with no sources at
@@ -45,7 +55,10 @@ export async function registerFromConfig(): Promise<ServerRuntimeSetup | undefin
   return undefined;
 }
 
-async function followConfig(load: () => Promise<LoadedCourierConfig | null>): Promise<void> {
+async function followConfig(
+  load: () => Promise<LoadedCourierConfig | null>,
+  reloaded: (config: CourierConfig) => void,
+): Promise<void> {
   const { followConfigSources } = await import("./follow-config-sources");
   followConfigSources(async () => {
     try {
@@ -54,6 +67,8 @@ async function followConfig(load: () => Promise<LoadedCourierConfig | null>): Pr
         log.warn("courier.config is gone; the sources registered from it stay in force");
         return;
       }
+      /* The config before the sources: what reads it on their change finds it current. */
+      reloaded(loaded.config);
       registerSources(loaded.config.sources);
     } catch (err) {
       /* An edit caught half-way through, or one that breaks the config, must

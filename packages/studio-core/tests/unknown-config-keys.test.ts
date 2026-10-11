@@ -37,9 +37,16 @@ describe("unknownConfigKeys", () => {
         allowedSpecHosts: [],
       },
       server: { allowedOrigins: [], allowedHosts: [], maxBodyBytes: 1, maxUploadBytes: 1 },
+      agents: { offer: "reads", allow: [], deny: [], access: "write", confirm: "write" },
     };
 
     expect(unknownConfigKeys(config)).toEqual([]);
+  });
+
+  it("names a misspelt key of the agents policy", () => {
+    expect(unknownConfigKeys({ sources: {}, agents: { ofer: "reads", deny: [] } })).toEqual([
+      "agents.ofer",
+    ]);
   });
 
   it("reads nothing into a value that is not an object", () => {

@@ -1,4 +1,5 @@
 import type {
+  AgentPolicy,
   CourierConfig,
   CourierRuntimeConfig,
   CourierServerConfig,
@@ -12,6 +13,7 @@ const TOP_LEVEL = {
   studio: true,
   server: true,
   runtime: true,
+  agents: true,
 } satisfies Record<keyof CourierConfig, true>;
 
 const STUDIO = {
@@ -33,10 +35,19 @@ const SERVER = {
 
 const RUNTIME = { appOrigin: true } satisfies Record<keyof CourierRuntimeConfig, true>;
 
+const AGENTS = {
+  offer: true,
+  allow: true,
+  deny: true,
+  access: true,
+  confirm: true,
+} satisfies Record<keyof AgentPolicy, true>;
+
 const BLOCKS = new Map<string, Readonly<Record<string, true>>>([
   ["studio", STUDIO],
   ["server", SERVER],
   ["runtime", RUNTIME],
+  ["agents", AGENTS],
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -45,7 +56,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /**
  * The keys of a courier.config that Courier does not read, at the top and
- * in its `studio`, `server` and `runtime` blocks — a misspelt `studo:` say
+ * in its `studio`, `server`, `runtime` and `agents` blocks — a misspelt `studo:` say
  * — so a load can name them rather than ignore them in silence.
  *
  * @param config - The config, as its module exported it

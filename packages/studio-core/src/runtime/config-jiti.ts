@@ -19,6 +19,12 @@ export interface ConfigJitiOptions {
    * module's own bytes transform to.
    */
   transformCache?: TransformCache | undefined;
+  /**
+   * Told the file of each module the load transforms — the config and every
+   * TypeScript or ES module of the project it reaches — so whoever follows
+   * the project knows which files its config depends on.
+   */
+  onModule?: ((filename: string) => void) | undefined;
 }
 
 type CreateJiti = (id: string, options?: JitiOptions) => Jiti;
@@ -88,7 +94,7 @@ function jitiOwnTransform(createJiti: CreateJiti): Transform {
  */
 export async function createConfigJiti(
   file: string,
-  { aliases = true, transformCache }: ConfigJitiOptions = {},
+  { aliases = true, transformCache, onModule }: ConfigJitiOptions = {},
 ): Promise<Jiti> {
   const { createJiti } = await import("jiti");
   const options: JitiOptions = {
@@ -98,9 +104,16 @@ export async function createConfigJiti(
     fsCache: false,
     tryNative: false,
   };
-  if (!transformCache) return createJiti(file, options);
+  if (!transformCache && !onModule) return createJiti(file, options);
   const compute = jitiOwnTransform(createJiti);
-  const transform: Transform = (transformOptions) =>
-    transformCache.transform(transformOptions, compute);
+  const cached: Transform = transformCache
+    ? (transformOptions) => transformCache.transform(transformOptions, compute)
+    : compute;
+  const transform: Transform = onModule
+    ? (transformOptions) => {
+        if (transformOptions.filename !== undefined) onModule(transformOptions.filename);
+        return cached(transformOptions);
+      }
+    : cached;
   return createJiti(file, { ...options, transform });
 }

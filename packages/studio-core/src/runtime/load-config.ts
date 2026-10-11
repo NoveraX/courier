@@ -99,6 +99,8 @@ export interface LoadCourierConfigOptions {
    * bytes changed; without one, every module is transformed on every load.
    */
   transformCache?: TransformCache | undefined;
+  /** Told the file of each module the load transforms; see `createConfigJiti`. */
+  onModule?: ((filename: string) => void) | undefined;
 }
 
 /**
@@ -157,7 +159,12 @@ export async function loadCourierConfig(
   const startDir = resolve(options.cwd ?? process.cwd());
 
   const found = options.requireAtCwd ? findConfigFileAt(startDir) : findConfigFile(startDir);
-  return found ? loadCourierConfigFile(found, { transformCache: options.transformCache }) : null;
+  return found
+    ? loadCourierConfigFile(found, {
+        transformCache: options.transformCache,
+        onModule: options.onModule,
+      })
+    : null;
 }
 
 /**

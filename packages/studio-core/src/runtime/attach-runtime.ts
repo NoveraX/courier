@@ -50,7 +50,7 @@
 import { attachRuntimeUsing } from "./attach-runtime-core";
 import type { RuntimeHandle, RuntimeKind } from "./attach-runtime-types";
 import { observeNodeHttpVersions } from "./http-versions/node-http-versions";
-import { registerFromConfig } from "./register-from-config";
+import { type ConfigRegistration, registerFromConfig } from "./register-from-config";
 
 /**
  * Connect this runtime to a Studio dev server.
@@ -58,15 +58,21 @@ import { registerFromConfig } from "./register-from-config";
  * @param id - Optional explicit runtime id. Defaults to a framework-derived
  *   value (`next-server`, `nuxt-server`, `browser`, …). Two calls with the
  *   same resolved id return the same handle (idempotent).
+ * @param registration - How the config is loaded: `followFiles` loads it
+ *   again whenever a file it depends on is saved, for a process no dev
+ *   server reloads, such as the MCP server in an editor
  *
  * @returns A handle whose `.detach()` method tears down the socket and
  *   cleans up announcement subscriptions. Returning a Promise lets the
  *   server path await the disk-loaded config; the browser path resolves
  *   immediately.
  */
-export function attachRuntime(id?: string): Promise<RuntimeHandle> {
-  return attachRuntimeUsing(registerFromConfig, id, observeNodeHttpVersions);
+export function attachRuntime(
+  id?: string,
+  registration: ConfigRegistration = {},
+): Promise<RuntimeHandle> {
+  return attachRuntimeUsing(() => registerFromConfig(registration), id, observeNodeHttpVersions);
 }
 
 export { _resetRuntimeHandlesForTests } from "./attach-runtime-core";
-export type { RuntimeHandle, RuntimeKind };
+export type { ConfigRegistration, RuntimeHandle, RuntimeKind };

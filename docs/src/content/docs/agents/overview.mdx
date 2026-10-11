@@ -28,7 +28,7 @@ export const orders = defineGroup({
 })
 ```
 
-`orders.get` and `orders.cancel` are tools; `orders.export` is out of every agent's reach. Nothing is offered unless it is marked.
+`orders.get` and `orders.cancel` are tools; `orders.export` is out of every agent's reach. By default nothing is offered unless it is marked — the project's `agents` policy can offer more in one line, or keep a marked endpoint out: see [What agents may call](#what-agents-may-call).
 
 The server comes in two forms, from the same package:
 
@@ -50,6 +50,57 @@ npm install @noverax/courier-mcp
 | `limit` | How often a caller may call it: `{ maxCalls, window }`, at most `maxCalls` calls in any `window` milliseconds. See [How often an agent may call](#how-often-an-agent-may-call). |
 
 An endpoint that writes cannot be offered as a read: the type of `access` excludes `"read"` after `.post()`, `.put()`, `.patch()`, `.del()` and `.via()`, and the server refuses to start on one written in plain JavaScript. A read sent over POST says so with `.reads()` first. `.agent()` is named on an HTTP endpoint, after its verb — it describes that one endpoint, so a base made with `courier()` does not pass it on.
+
+`.agent(false)` keeps an endpoint from every agent, whatever the project's policy offers — a payout, an export of every customer:
+
+```ts
+import { courier } from "@noverax/courier/define"
+
+const { endpoint } = courier()
+
+export const payouts = endpoint.post("payouts").agent(false)
+```
+
+## What agents may call
+
+The `agents` block of `courier.config.ts` says what the project offers, once, for the server in your editor, Studio and the pull request report:
+
+```ts title="courier.config.ts"
+export default defineConfig({
+  sources: { shop, billing },
+  agents: {
+    offer: "reads",
+    allow: ["shop.orders.cancel"],
+    deny: ["billing.**"],
+    access: "write",
+    confirm: "write",
+  },
+})
+```
+
+| option | what it says |
+| --- | --- |
+| `offer` | Which endpoints are offered without `.agent()`: `"marked"` — none, the default; `"reads"` — every read as well; `"all"` — every endpoint |
+| `allow` | Endpoints to offer although `offer` leaves them out, by pattern |
+| `deny` | Endpoints no agent sees, whatever offers them — `.agent()` included |
+| `access` | The most a tool may do: `"read"`, `"write"` or `"destructive"`, the default. An endpoint that does more is offered to no agent, marked or not |
+| `confirm` | From which access a person confirms each call: `"destructive"`, the default, or `"write"` for every call that changes something |
+
+Each endpoint is decided by the first rule that speaks, in this order: a `deny` pattern it matches; its `.agent(false)`; access beyond `access`; its `.agent()`; an `allow` pattern; `offer`. Nothing else offers it. Streams and channels are never tools.
+
+A pattern names an endpoint by its call under its source — `shop.orders.cancel` — where `*` stands for any part of one name and `**` for any number of names: `shop.orders.*` is every endpoint of the group, `billing.**` everything in `billing`, `shop.*.list` the `list` of each group of `shop`.
+
+An endpoint offered without `.agent()` takes the access its verb implies — a read for a query, `"destructive"` for DELETE, `"write"` for the rest — and describes itself by its definition's `.meta({ description })`, which an imported specification's summary becomes, or else by its verb, path and call: `GET orders/:id — shop.orders.get`. Its tool's name follows its call, as a marked one's does; one whose name a marked tool holds, or one longer than the 64 characters a client takes, is left out with a warning, since nobody chose it by name. `.agent()` stays the way to give a tool a description written for the model.
+
+What is offered, and why, is never a guess:
+
+- `courier-mcp --list` prints every tool with its access and what offered it, every endpoint kept out and what kept it — see [In Your Editor](/docs/agents/editor#what-is-offered).
+- Studio marks each offered endpoint **agent** in its Explorer, and its panel says the tool, the access and the reason.
+- `courier-studio diff` reports, on the pull request, the tools a change adds, removes or offers differently — see [Breaking Changes](/docs/testing/breaking-changes#agent-access).
+
+A `deny` or `allow` pattern that names no endpoint is warned of where the server starts — a misspelt `deny` protects nothing — and so are more than 40 tools, past which some clients slow down or leave tools out.
+
+The server in your editor reads the policy when it starts: after an edit, reconnect it, as your editor offers — `/mcp` in Claude Code. An application's own endpoint takes it as `createMcpHandler({ agents: config.agents })` — see [In Your App](/docs/agents/app#what-it-offers).
 
 ## What becomes what
 
@@ -81,7 +132,7 @@ An agent's call carries no browser session: whatever a browser's cookies would g
 
 ## A person confirms what cannot be undone
 
-A `destructive` tool runs once the person at the client has confirmed that exact call — the tool, what it does and its arguments:
+A `destructive` tool runs once the person at the client has confirmed that exact call — the tool, what it does and its arguments — and so does every write where the policy says `confirm: "write"`:
 
 ```text
 An agent asks to run orders_cancel: Cancel an order that has not shipped yet
@@ -91,9 +142,9 @@ POST shop.orders.cancel with {"id":"o_7f2a"}
 This cannot be undone. Run it?
 ```
 
-The question goes to the person, not the model: a prompt injected into the conversation cannot answer it. A call whose arguments the schema refuses is never put to anyone. A declined call does not run, and shows in Studio as a call that did not.
+A write the policy has a person confirm is asked the same way, ending `This changes data. Run it?`. The question goes to the person, not the model: a prompt injected into the conversation cannot answer it. A call whose arguments the schema refuses is never put to anyone. A declined call does not run, and shows in Studio as a call that did not.
 
-A client that cannot ask a person — one that supports no MCP elicitation, or the 2025 handshake over HTTP, which cannot carry the question — gets the destructive tool refused, with a sentence saying why. `--allow-destructive` on the command and `allowDestructive` on the handler leave the decision to the client's own approval prompt instead.
+A client that cannot ask a person — one that supports no MCP elicitation, or the 2025 handshake over HTTP, which cannot carry the question — gets the call refused, with a sentence saying why. `--allow-destructive` on the command and `allowDestructive` on the handler leave the decision to that client's own approval prompt instead; a client that can ask a person is asked all the same.
 
 ## How often an agent may call
 

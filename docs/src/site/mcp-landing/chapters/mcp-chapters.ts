@@ -22,8 +22,8 @@ export const MCP_CHAPTERS: readonly McpChapter[] = [
     eyebrow: "SCOPE",
     icon: ListChecks,
     tone: "teal",
-    title: "Only what you mark becomes a tool",
-    text: "An agent sees the endpoints you offered with .agent() and nothing else — not the export your nightly job calls, not the admin purge.",
+    title: "Only what you offer becomes a tool",
+    text: "An agent sees the endpoints you offered — each marked .agent(), or every read in one line of config — and never what your config denies: not the export your nightly job calls, not the admin purge.",
     points: [
       { title: "Typed tools", detail: "from the schemas each endpoint already has." },
       {
@@ -32,12 +32,12 @@ export const MCP_CHAPTERS: readonly McpChapter[] = [
       },
       {
         title: "Checked at start:",
-        detail: "a write offered as a read stops the server, not a model.",
+        detail: "a policy it cannot read, or a write offered as a read, stops the server, not a model.",
       },
     ],
     cta: {
-      label: "What becomes what",
-      href: "/docs/agents/overview#what-becomes-what",
+      label: "What agents may call",
+      href: "/docs/agents/overview#what-agents-may-call",
       external: false,
     },
     visual: "right",

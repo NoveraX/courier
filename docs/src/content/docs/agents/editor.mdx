@@ -2,7 +2,7 @@ export const metadata = { title: "In Your Editor", description: "Give the agent 
 
 ## The command
 
-`courier-mcp` serves the endpoints your project marks `.agent()` over stdio, the transport an editor's agent starts a local MCP server with. It loads `courier.config.ts` the way your app's runtime and Studio load it — TypeScript, extensionless imports and tsconfig path aliases included — and offers every source it declares:
+`courier-mcp` serves the endpoints your project offers to agents — those marked `.agent()`, and those its [`agents` policy](/docs/agents/overview#what-agents-may-call) offers — over stdio, the transport an editor's agent starts a local MCP server with. It loads `courier.config.ts` the way your app's runtime and Studio load it — TypeScript, extensionless imports and tsconfig path aliases included — and offers every source it declares:
 
 ```bash
 npm install -D @noverax/courier-mcp
@@ -12,7 +12,7 @@ npx @noverax/courier-mcp --dotenv .env.local
 Started by hand it waits for a client on stdin; an editor starts it for you.
 
 <Callout variant="tip" title="In one command">
-`npx @noverax/create-courier --mcp` sets Courier up with this done: the example API's reads marked `.agent()`, the package installed, and `.mcp.json` written for Claude Code. See [Create Courier](/docs/create-courier).
+`npx @noverax/create-courier --mcp` sets Courier up with this done: `agents: { offer: "reads" }` in the config, the example API's reads described with `.agent()`, the package installed, and `.mcp.json` written for Claude Code. See [Create Courier](/docs/create-courier).
 </Callout>
 
 <Callout variant="warning" title="Write the package's full name">
@@ -68,17 +68,45 @@ An editor that starts servers somewhere other than the project names it with `--
 | `--cwd <dir>` | The project's root, where `courier.config.*` is (default: the working directory) |
 | `--source <names>` | The sources to offer, comma-separated (default: every source). With one, tool names carry no source prefix |
 | `--dotenv <files>` | `.env` files to load before the config, comma-separated, relative to the root |
-| `--allow-destructive` | Run a destructive tool without asking when the client cannot ask a person |
+| `--read-only` | Offer reads alone, whatever the config's `agents` allows |
+| `--deny <patterns>` | Endpoints to keep from agents as well as the config's own `deny`, comma-separated: `billing.**,shop.users.*` |
+| `--list` | Print what is offered to agents and why, and exit without serving |
+| `--allow-destructive` | For a client that cannot ask a person, leave a call a person confirms to the client's own approval; a client that can ask is asked all the same |
 | `--timeout <ms>` | How long a call may take when its endpoint names no timeout (default: 60 000) |
 | `--name <name>` | The name the server gives its client (default: `courier`) |
 
 Node's own `--env-file` is not one of them: Node takes that flag for itself wherever it appears.
 
+`--read-only` and `--deny` only ever narrow what the config offers: what an agent may call is widened in code and config, which go through review, never on a command line.
+
+## What is offered
+
+`--list` reads the project as the server would and prints what it decided, without serving or reaching Studio:
+
+```text
+$ npx @noverax/courier-mcp --list
+3 of 6 endpoints offered to agents
+agents: offer "reads", access "destructive", confirm "destructive", deny billing.**
+
+  orders_get     read                            shop.orders.get     marked .agent()
+  orders_list    read                            shop.orders.list    offer: "reads"
+  orders_cancel  destructive, a person confirms  shop.orders.cancel  marked .agent()
+
+Kept from agents
+  shop.orders.create  POST orders        a write not marked .agent()
+  shop.orders.export  GET orders/export  .agent(false)
+  billing.charge      POST charge        denied by billing.**
+```
+
+It takes `--source`, `--read-only` and `--deny` as the server does, so it shows what a start with them would offer — a step a CI job can run, too. Warnings follow the list: a pattern that names no endpoint, a tool left out for its name, more than 40 tools.
+
+The server reads the policy when it starts. After an edit to `agents`, reconnect it — `/mcp` in Claude Code, the server's restart in Cursor's or VS Code's MCP settings.
+
 ## What the agent gets
 
-The tools are your endpoints, called with the credentials your config gives them — the API keys your middleware reads from the environment, for one. The agent can do what those credentials allow, through the endpoints you marked and no others; a `destructive` one asks you first, in the editor, with the exact call.
+The tools are your endpoints, called with the credentials your config gives them — the API keys your middleware reads from the environment, for one. The agent can do what those credentials allow, through the endpoints the project offers and no others; a `destructive` one asks you first, in the editor, with the exact call — and so does every write where the policy says `confirm: "write"`.
 
-On start, the server lists the tools it offers in its log — which an editor shows as the server's output — and stops with one line when the config cannot be loaded or names no source it was asked for. A project whose endpoints name no `.agent()` gets a server with no tools, and a line saying so.
+On start, the server lists the tools it offers in its log — which an editor shows as the server's output — with the policy's warnings, and stops with one line when the config cannot be loaded, its `agents` policy cannot be decided by, or it names no source it was asked for. A project that offers nothing gets a server with no tools, and a line saying so.
 
 ## Watch it in Studio
 

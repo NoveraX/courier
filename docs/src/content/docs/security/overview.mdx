@@ -85,12 +85,13 @@ A channel's socket passes the origin rule as it opens, so a page on another site
 
 ## AI agents
 
-An endpoint reaches an agent only when it is marked `.agent()`, and then as an MCP tool whose call runs through the endpoint's middleware and schemas like any other — see [MCP Server](/docs/agents/overview).
+An endpoint reaches an agent only when it is marked `.agent()` or the project's `agents` policy offers it, and then as an MCP tool whose call runs through the endpoint's middleware and schemas like any other — see [MCP Server](/docs/agents/overview).
 
+- **Nothing offered by default.** A project that sets no policy offers the endpoints marked `.agent()` alone. The policy lives in `courier.config.ts`, under review: a `deny` pattern wins over everything, `.agent(false)` over anything that would offer an endpoint, and an `access` ceiling over the endpoints' own marks. A server's start can narrow it — `--read-only`, `--deny` — and never widen it. `courier-mcp --list`, Studio and the pull request report show what is offered and why, and a pattern that names no endpoint is warned of.
 - **No browser session.** An agent's call carries none of the request it arrived on: no cookie, no forwarded header. It runs with what your middleware gives the principal `authorize` let in, and middleware tells it apart by `ctx.agent`.
 - **Callers you authorize.** `createMcpHandler` cannot be created without `authorize`. A tool `allow` keeps from a caller is answered as an unknown one, and a request from a browser page is served only from your app's origin or one of `allowedOrigins`.
 - **A tool's limit.** `.agent({ limit })` bounds how often a caller may call a tool — counted per caller with `limitPer` — and a call beyond it is refused before anything runs or anyone is asked.
-- **A person confirms what cannot be undone.** A `destructive` tool runs once the person at the client confirmed that exact call; the question goes to the person, out of the model's reach. A confirmation counts for one tool with the same arguments for five minutes, signed with `confirmSecret`.
+- **A person confirms what cannot be undone.** A `destructive` tool runs once the person at the client confirmed that exact call — and so does every write where the policy says `confirm: "write"`; the question goes to the person, out of the model's reach. A confirmation counts for one tool with the same arguments for five minutes, signed with `confirmSecret`. `allowDestructive` stands in for the person only where the client cannot ask one.
 - **What reaches the model.** An error answer's status and body, cut short; never a response header. An answer longer than `maxResultChars` is refused.
 - **What Studio keeps.** An agent's calls show with the tool and the client; the principal never leaves your server. Studio's own MCP endpoint answers only with Studio's token, and replaces every credential and every body field named like a secret in what it hands an agent. Its `replay_write`, which sends a recorded write again, runs only once the person confirms the call shown to them — see [Studio for Your Agent](/docs/agents/studio#replaying-after-a-fix).
 

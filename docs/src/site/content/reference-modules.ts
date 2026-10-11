@@ -35,7 +35,7 @@ export const ENTRY_POINTS: readonly EntryPoint[] = [
   },
   {
     module: "@noverax/courier-mcp",
-    note: "createMcpHandler, and the courier-mcp command — endpoints marked .agent() as MCP tools",
+    note: "createMcpHandler, and the courier-mcp command — the endpoints a project offers to agents, as MCP tools",
   },
   {
     module: "@noverax/courier/testing",

@@ -34,6 +34,18 @@ A type that changed to another altogether — a string that became a number — 
 
 With [recorded tests](/docs/testing/recorded-tests) in `tests/recorded` — or the recordings `--recordings <path>` names — each changed endpoint says how many recorded calls it has, and the summary how many of them the new definition no longer fits. A breaking change on an endpoint your app calls a thousand times a day reads differently from one on an endpoint nobody calls.
 
+## Agent access
+
+The report ends with what the change does to the tools AI agents may call, by the project's [`agents` policy](/docs/agents/overview#what-agents-may-call) at the base and in the branch: each tool added, each kept from agents, each offered under another name, access or confirmation — a new endpoint `offer: "all"` hands to agents, a `deny` that now keeps a group out, a write that now needs a person:
+
+```text
+Agent access: 1 tool added, 1 tool kept from agents: agents may call 4 tools
+  + shop.orders.refund  orders_refund  destructive, a person confirms  marked .agent()
+  - billing.charge  billing_charge  write
+```
+
+In Markdown it is a table a reviewer reads beside the definition's changes, and a pull request that changes only what agents may call gets its comment too. A config whose policy the MCP server would refuse is named where it fails, before the change or after it. It reports, and fails nothing: `--fail-on` counts the definition's changes alone. A base given as OpenAPI documents records no policy, so the report then says how many tools agents may call in the branch, and nothing about the base.
+
 ## In a pull request
 
 ```yaml
@@ -57,7 +69,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-`--comment` posts the report in the pull request's conversation, where its reviewers read it, as one comment: the next run edits that comment rather than adding another, and leaves it alone when the report is the same. A pull request that leaves the definition alone gets no comment, and one whose breaking change was taken back sees its comment say so. Each project in a repository keeps a comment of its own, named by its folder.
+`--comment` posts the report in the pull request's conversation, where its reviewers read it, as one comment: the next run edits that comment rather than adding another, and leaves it alone when the report is the same. A pull request that leaves the definition and what agents may call alone gets no comment, and one whose breaking change was taken back sees its comment say so. Each project in a repository keeps a comment of its own, named by its folder.
 
 Posting takes a token that may write to pull requests — `permissions: pull-requests: write` — which a pull request from a fork does not get. On GitHub Enterprise Server the job names the server's API, and the report goes there. Posting is a report, not the check: when the report cannot be posted, the job's log says why, and the command passes or fails as it would without `--comment`.
 
@@ -66,7 +78,7 @@ Posting takes a token that may write to pull requests — `permissions: pull-req
 | `--base <ref>` | The git ref to compare with (default: `origin/main`) |
 | `--base-openapi <path>` | Compare with OpenAPI documents written before |
 | `--recordings <path>` | Recorded calls to count against each change (default: `tests/recorded`, when it exists) |
-| `--format <text\|markdown\|json>` | How the report is written (default: `text`). Markdown lists what breaks and what may in a table, the safe changes folded away |
+| `--format <text\|markdown\|json>` | How the report is written (default: `text`). Markdown lists what breaks and what may in a table, the safe changes folded away, and the tools agents gain or lose in another; JSON carries them as `agents` |
 | `--out <path>` | Write the report to this file too |
 | `--fail-on <breaking\|warning\|never>` | What fails the command (default: `breaking`) |
 | `--comment` | Post the report on the pull request the GitHub Actions job runs for, as one comment later runs keep current |

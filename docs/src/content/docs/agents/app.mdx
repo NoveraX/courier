@@ -2,12 +2,14 @@ export const metadata = { title: "In Your App", description: "Mount an MCP endpo
 
 ## The handler
 
-`createMcpHandler` serves the endpoints marked `.agent()` over Streamable HTTP — the transport remote MCP clients connect with — as a function from a request to a response, which every framework can mount:
+`createMcpHandler` serves the endpoints your project offers to agents over Streamable HTTP — the transport remote MCP clients connect with — as a function from a request to a response, which every framework can mount:
 
 ```ts title="app/mcp/route.ts"
 import { createMcpHandler } from "@noverax/courier-mcp"
+import config from "../../courier.config"
 
 const mcp = createMcpHandler({
+  agents: config.agents,
   authorize: (request) => apiKeys.verify(request.headers.get("authorization")),
 })
 
@@ -17,6 +19,16 @@ export const OPTIONS = mcp.handle
 ```
 
 It answers POST, and OPTIONS for a browser-based client; GET is answered with `405`, as the protocol expects of a server that keeps no stream open. The sources are the ones your app registered — pass `sources` to name them yourself.
+
+## What it offers
+
+`agents` is the project's [`agents` policy](/docs/agents/overview#what-agents-may-call): pass the config's, as above, and the endpoint offers what the server in your editor, Studio and the pull request report show. Without it the endpoint offers the endpoints marked `.agent()` alone — the safe default, but not your `deny` patterns, your `access` ceiling or your `confirm`. A policy it cannot decide by stops the handler where it is created, with `AGENT_POLICY_INVALID`.
+
+The endpoint can be narrower than the project, never by accident wider — a read-only endpoint for one integration, say:
+
+```ts
+createMcpHandler({ agents: { ...config.agents, access: "read" }, authorize })
+```
 
 **Hono**:
 
@@ -100,7 +112,7 @@ createMcpHandler({ authorize, confirmSecret: process.env.MCP_CONFIRM_SECRET })
 
 Without it, each process signs with a key of its own, which holds for a single process. The confirmation counts for that tool with those arguments, for five minutes.
 
-A client on the 2025 handshake cannot be asked over HTTP — that revision put the question on a stream a stateless server does not keep — so its destructive calls are refused, unless `allowDestructive` leaves the decision to its own approval prompt.
+A client on the 2025 handshake cannot be asked over HTTP — that revision put the question on a stream a stateless server does not keep — so a call a person confirms is refused, unless `allowDestructive` leaves the decision to its own approval prompt. A client that can be asked is asked all the same.
 
 ## Options
 
@@ -108,10 +120,11 @@ A client on the 2025 handshake cannot be asked over HTTP — that revision put t
 | --- | --- |
 | `authorize` | Who the caller is, or a refusal — required |
 | `sources` | The sources to offer; the registered ones, read per request, by default |
+| `agents` | The project's `agents` policy — `config.agents`; the endpoints marked `.agent()` alone by default |
 | `allow` | Whether a caller may see and call a tool |
 | `limitPer` | Who each caller is, for the tools' limits: one key per caller; every caller shares one count without it |
 | `allowedOrigins` | Browser origins beside your app's own |
-| `allowDestructive` | Run destructive tools without asking a person |
+| `allowDestructive` | For a client that cannot be asked, leave a call a person confirms to its own approval prompt |
 | `confirmSecret` | The key confirmations are signed with, the same on every replica — 32 characters at least |
 | `instructions` | What the model is told about the tools as a whole |
 | `name`, `version` | How the server names itself (default: `courier`, and your app's version) |

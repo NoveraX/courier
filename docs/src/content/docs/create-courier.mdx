@@ -102,7 +102,7 @@ Imports an OpenAPI, Swagger or Postman specification in place of the example, wi
 npx @noverax/create-courier --mcp
 ```
 
-Marks the example's reads with `.agent()` and adds `.mcp.json`, which Claude Code reads, so your editor's agent can call your API — through the same middleware as your app. With `--openapi`, which of the imported endpoints agents may call is yours to say: the plan shows how to mark them. In a terminal, it asks, for a project you have and for one it creates; with `--yes`, or without a terminal, it leaves agents out unless `--mcp` is passed.
+Writes `agents: { offer: "reads" }` into the config — every read is offered to agents, a write once you mark it `.agent()` — describes the example's reads with `.agent()`, and adds `.mcp.json`, which Claude Code reads, so your editor's agent can call your API through the same middleware as your app. An imported API's reads are offered the same way, each described by its specification's summary. In a project set up before, it adds the policy to the config you have, unless the config says already what agents may call. In a terminal, it asks, for a project you have and for one it creates; with `--yes`, or without a terminal, it leaves agents out unless `--mcp` is passed. See [What agents may call](/docs/agents/overview#what-agents-may-call).
 
 ## Options
 

@@ -6,6 +6,7 @@
  * progress bar wired to either stayed at zero with no error.
  */
 
+import type { PlatformFetch } from "../http-client/source-transport";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
 import { countedStream } from "./counted-stream";
@@ -23,14 +24,18 @@ import { type XhrRequestInit, xhrRequest } from "./xhr-request";
  * @param url - Where to send it
  * @param init - The request, as it would be given to fetch; its body is set
  * @param onProgress - Called as the body is sent
- * @param options - `withinOrigin`: redirects are followed on the request's origin alone
+ * @param options - `withinOrigin`: redirects are followed on the request's origin alone;
+ *   `fetch`: what sends it in place of the platform's `fetch`
  * @returns The answer
  */
 export async function sendWithUploadProgress(
   url: string,
   init: XhrRequestInit & { body: WebBody },
   onProgress: (progress: UploadProgress) => void,
-  { withinOrigin = false }: { withinOrigin?: boolean } = {},
+  {
+    withinOrigin = false,
+    fetch: send,
+  }: { withinOrigin?: boolean; fetch?: PlatformFetch | undefined } = {},
 ): Promise<Response> {
   if (typeof XMLHttpRequest !== "undefined") return xhrRequest(url, init, onProgress);
 
@@ -48,7 +53,7 @@ export async function sendWithUploadProgress(
     request,
     source,
     (stream) => countedStream(stream, source.size, onProgress, init.signal),
-    { withinOrigin },
+    { withinOrigin, fetch: send },
   );
 }
 

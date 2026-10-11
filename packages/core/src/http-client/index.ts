@@ -3,6 +3,7 @@ import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { bindMethod } from "./bind-method";
 import { overlayHeaders, withoutConnectionHeaders } from "./request-headers";
+import { type PlatformFetch, platformFetchOf } from "./source-transport";
 import type {
   BaseOptions,
   BoundMethodOptions,
@@ -29,6 +30,7 @@ export class HttpClient {
   private baseTimeout: number | undefined;
   private baseHeaders: HeadersInit | undefined;
   private baseFetchInit: RequestInit = {};
+  private sourceFetch: PlatformFetch | undefined;
 
   context: Context | undefined;
   pendingRequests: { [key: string]: AbortController } = {};
@@ -59,6 +61,12 @@ export class HttpClient {
          being served; neither is anything `fetch` knows. */
       session: _session,
       forward: _forward,
+      /* What the proxy, the boundary and Studio read; never anything `fetch` is given. */
+      expose: _expose,
+      boundary: _boundary,
+      proxyPath: _proxyPath,
+      webSocket: _webSocket,
+      fetch: sourceFetch,
       timeout,
       headers,
       ...baseFetchInit
@@ -75,6 +83,7 @@ export class HttpClient {
     this.baseTimeout = timeout;
     this.baseHeaders = headers;
     this.baseFetchInit = baseFetchInit as RequestInit;
+    this.sourceFetch = sourceFetch && platformFetchOf(sourceFetch);
 
     if (defaultQueryParams) {
       this.defaultQueryParams = { ...defaultQueryParams };
@@ -124,6 +133,7 @@ export class HttpClient {
       headers: withoutConnectionHeaders(overlayHeaders(this.baseHeaders, fetchOptions.headers)),
       timeout: fetchOptions.timeout ?? this.baseTimeout,
       withinOrigin: withinOrigin === true || this.context?.proxyMethod !== undefined,
+      ...(this.sourceFetch && { fetch: this.sourceFetch }),
     } as CoreFetchInit);
   }
 

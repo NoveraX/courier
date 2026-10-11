@@ -1,4 +1,10 @@
 export type { AgentAccess, AgentOptions } from "../agent/types";
+export type {
+  SourceDispatcher,
+  SourceFetch,
+  SourceSocketOptions,
+  SourceWebSocket,
+} from "../http-client/source-transport";
 /* Named by the types an API's definition infers, so a project that emits declarations can name them too. */
 export type { WebBody, WebCredentials } from "../http-client/web-types";
 export { defineApi, deriveSourceName, getSourceName, setSourceName } from "./api";

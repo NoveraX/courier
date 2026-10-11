@@ -1,3 +1,4 @@
+import { assertSourceTransport } from "../http-client/source-transport";
 import type { BaseOptions } from "../http-client/types";
 import { assertSessionApi } from "../session/assert-session-api";
 import { studioHooks } from "../studio";
@@ -225,6 +226,7 @@ export function defineApi(
   const sourceName = name ?? deriveSourceName(config.baseURL);
   (result as Record<symbol, unknown>)[SOURCE_NAME_KEY] = sourceName;
   assertSessionApi(result, rest, sourceName);
+  assertSourceTransport(rest);
 
   // Dev-only: notify studio of source (re)creation for HMR hot reload
   if (isDevelopment()) {

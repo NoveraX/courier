@@ -26,6 +26,7 @@ const BODY_HEADERS = [
  *
  * @param url - Where to send the request
  * @param init - The request, as it would be given to `fetch`
+ * @param send - What sends each hop: the platform's `fetch`, or the source's own
  * @returns The first answer that is not a redirect this may follow
  *
  * @example
@@ -33,13 +34,17 @@ const BODY_HEADERS = [
  * const response = await fetchWithinOrigin("https://api.example.com/users", { headers });
  * ```
  */
-export async function fetchWithinOrigin(url: string, init: RequestInit): Promise<Response> {
+export async function fetchWithinOrigin(
+  url: string,
+  init: RequestInit,
+  send: (url: string, init: RequestInit) => Promise<Response> = fetch,
+): Promise<Response> {
   const origin = new URL(url).origin;
   let target = url;
   let request: RequestInit = { ...init, redirect: "manual" };
 
   for (let hops = 0; ; hops += 1) {
-    const response = await fetch(target, request);
+    const response = await send(target, request);
     const next = hops < MAX_REDIRECTS ? sameOriginLocation(response, target, origin) : undefined;
     const replay = next ? redirected(request, response.status) : undefined;
     if (!next || !replay) return response;

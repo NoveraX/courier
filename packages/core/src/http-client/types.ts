@@ -4,6 +4,7 @@ import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { IncomingRequest } from "../session/incoming-request";
 import type { ForwardOptions, SessionOptions } from "../session/types";
+import type { SourceDispatcher, SourceFetch, SourceWebSocket } from "./source-transport";
 import type { WebBody } from "./web-types";
 
 export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head" | "options" | "query";
@@ -178,6 +179,31 @@ export type BaseOptions = MergeOptions &
      * defaults and the rationale for the WS field having no default.
      */
     proxyPath?: ProxyPath | undefined;
+    /**
+     * Sends this source's requests and opens its streams in place of the
+     * platform's `fetch` — undici's `fetch`, with the `dispatcher` that
+     * carries a client certificate or a proxy for this source alone; a
+     * Cloudflare service binding's `fetch`; one that records. Whatever else
+     * the source's options give `fetch` — a `dispatcher`, Bun's `proxy` and
+     * `tls`, Deno's `client` — reaches it in its `init`. In a browser and in
+     * React Native an upload that reports its progress goes through
+     * `XMLHttpRequest`, which can report it, instead.
+     */
+    fetch?: SourceFetch | undefined;
+    /**
+     * The `WebSocket` class this source's channels open their sockets with,
+     * in place of the platform's — undici's, constructed with the
+     * `dispatcher` the source's options give.
+     */
+    webSocket?: SourceWebSocket | undefined;
+    /**
+     * The undici `Dispatcher` this source's requests, streams and sockets go
+     * through on Node — an `Agent` holding a client certificate or a CA of
+     * its own, a `ProxyAgent` — given to `fetch` and to the `WebSocket` with
+     * the rest of the source's options. Take `fetch` and `webSocket` from the
+     * same undici: Node's own refuses a dispatcher of another major version.
+     */
+    dispatcher?: SourceDispatcher | undefined;
   };
 
 export type MergeOptions = {

@@ -1,3 +1,4 @@
+import type { PlatformFetch } from "../http-client/source-transport";
 import { fetchFailure } from "../http-client/transport-failure";
 import type { DownloadProgress, UploadProgress } from "../http-client/types";
 import type { WebBody } from "../http-client/web-types";
@@ -28,6 +29,8 @@ export type CoreFetchInit = Omit<RequestInit, "method" | "body" | "signal"> & {
    * to the proxy of the server it runs in, without leaving the process.
    */
   transport?: ((url: string, init: RequestInit) => Promise<Response>) | undefined;
+  /** Sends the request in place of the platform's `fetch`: the source's own. */
+  fetch?: PlatformFetch | undefined;
 };
 
 export async function coreFetch(
@@ -46,6 +49,7 @@ export async function coreFetch(
     onDownloadProgress,
     withinOrigin,
     transport,
+    fetch: send = fetch,
     ...rest
   } = options;
 
@@ -98,11 +102,11 @@ export async function coreFetch(
             fullUrl,
             { ...init, body: requestBody },
             onUploadProgress ?? ignoreProgress,
-            { withinOrigin: withinOrigin === true && rest.redirect === undefined },
+            { withinOrigin: withinOrigin === true && rest.redirect === undefined, fetch: send },
           )
         : withinOrigin && rest.redirect === undefined
-          ? await fetchWithinOrigin(fullUrl, init)
-          : await fetch(fullUrl, init);
+          ? await fetchWithinOrigin(fullUrl, init, send)
+          : await send(fullUrl, init);
   } catch (error) {
     throw fetchFailure(error, signal, { timeout, timedOut: expiry?.aborted === true });
   }

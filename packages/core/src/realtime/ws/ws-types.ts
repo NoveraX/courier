@@ -1,3 +1,4 @@
+import type { SourceWebSocket } from "../../http-client/source-transport";
 import type { RealtimeError } from "../errors";
 import type { BackoffConfig, ConnectionStatus } from "../types";
 import type { HeartbeatConfig } from "./heartbeat";
@@ -89,6 +90,19 @@ export interface WSConnectionConfig {
   maxMessageSize?: number | undefined;
   /** WebSocket factory — override for testing */
   socketFactory?: WSSocketFactory | undefined;
+  /**
+   * The `WebSocket` class each socket is constructed with in place of the
+   * platform's — the source's `webSocket`: undici's on Node, to go with an
+   * undici `dispatcher` of the same version.
+   */
+  webSocket?: SourceWebSocket | undefined;
+  /**
+   * What each socket's options carry besides its protocols and headers, where
+   * the platform's `WebSocket` takes an options object: undici's `dispatcher`
+   * on Node, Bun's `proxy` and `tls`. A browser's socket is opened without
+   * them, as its `fetch` ignores what it does not know.
+   */
+  socketInit?: Readonly<Record<string, unknown>> | undefined;
   /**
    * What decides which subscriptions on one URL share a socket. Options with
    * the same key share one, whatever object they came in; without one, the

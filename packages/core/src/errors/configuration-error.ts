@@ -218,7 +218,13 @@ export type ConfigurationErrorCode =
    * A framework adapter was asked to serve requests with their session at
    * hand, and the framework serves them some way the adapter cannot wrap.
    */
-  | "REQUEST_CONTEXT_UNSUPPORTED";
+  | "REQUEST_CONTEXT_UNSUPPORTED"
+  /**
+   * A source's own transport cannot be used: its `fetch` or `webSocket` is
+   * not a function, or its `fetch` answered with something other than a
+   * `Response`.
+   */
+  | "SOURCE_TRANSPORT_INVALID";
 
 /**
  * Thrown when courier is misconfigured at the boundary between user code and

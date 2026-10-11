@@ -59,6 +59,12 @@ export {
   type FetchClientOptions,
 } from "./fetch";
 export type {
+  SourceDispatcher,
+  SourceFetch,
+  SourceSocketOptions,
+  SourceWebSocket,
+} from "./http-client/source-transport";
+export type {
   BaseOptions,
   CallOptions,
   Context,

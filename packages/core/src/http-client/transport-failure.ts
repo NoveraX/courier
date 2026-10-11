@@ -1,4 +1,5 @@
 import { HTTPError } from "../errors";
+import { ConfigurationError } from "../errors/configuration-error";
 import { isAbortError } from "../utils/abort";
 import { abortReason } from "../utils/abort-reason";
 import { platformError } from "../utils/platform-error";
@@ -45,7 +46,10 @@ export function fetchFailure(
   if (expiry.timedOut || (error instanceof Error && error.name === TIMEOUT_ERROR)) {
     return timeoutFailure(error, expiry.timeout);
   }
-  if (error instanceof HTTPError || isAbortError(error)) return error;
+  /* A misconfiguration found as the request was sent is the application's to fix, not the network's. */
+  if (error instanceof HTTPError || error instanceof ConfigurationError || isAbortError(error)) {
+    return error;
+  }
   return error instanceof Error ? transportFailure(error) : error;
 }
 

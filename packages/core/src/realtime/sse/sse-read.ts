@@ -40,7 +40,8 @@ export async function readConnection<TData>(
 
   try {
     const opened = await ctx.config.beforeConnect?.();
-    const response = await fetch(ctx.url, {
+    const send = ctx.config.fetch ?? fetch;
+    const response = await send(ctx.url, {
       ...opened?.init,
       headers: layerHeaders(opened?.headers, requestHeaders(ctx)),
       signal: connection.signal,

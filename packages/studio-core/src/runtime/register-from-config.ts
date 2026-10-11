@@ -8,24 +8,41 @@ import { readStudioToken } from "./read-studio-token";
 
 const log = createLogger("Runtime");
 
+/** How a server runtime loads its config. */
+export interface ConfigRegistration {
+  /**
+   * Load the config again whenever a file it depends on is saved, and
+   * register its sources anew — for a process no dev server reloads, such
+   * as the MCP server in an editor. In production as in development.
+   */
+  readonly followFiles?: boolean | undefined;
+}
+
 /**
  * Load courier.config from disk for a server runtime: register its sources and
  * set the app origin. Outside production, the sources are registered again
  * from the config whenever the application redefines one, as a dev server
- * does on every edit.
+ * does on every edit; with `followFiles`, whenever a file the config depends
+ * on is saved.
  *
  * Attaching must not take down the host application, so a config that will not
  * load is logged rather than thrown, and the app origin is still detected.
  *
+ * @param registration - Whether the config is loaded again on a save
  * @returns The config's `studio` block, which says where Studio listens, or
  *   `undefined` when there is no usable config.
  */
-export async function registerFromConfig(): Promise<ServerRuntimeSetup | undefined> {
+export async function registerFromConfig(
+  registration: ConfigRegistration = {},
+): Promise<ServerRuntimeSetup | undefined> {
   try {
     /* Loaded on demand, so the loader and the TypeScript loader behind it
        cost nothing until a server attaches. */
     const { loadCourierConfig } = await import("./load-config");
-    const loaded: LoadedCourierConfig | null = await loadCourierConfig();
+    const modules = new Set<string>();
+    const loaded: LoadedCourierConfig | null = await loadCourierConfig(
+      registration.followFiles === true ? { onModule: (file) => modules.add(file) } : {},
+    );
     if (loaded) {
       /* Registration is inside the same try: a config that loads but declares
          no usable `sources` is the same kind of failure as one that will not
@@ -33,10 +50,18 @@ export async function registerFromConfig(): Promise<ServerRuntimeSetup | undefin
       registerSources(loaded.config.sources);
       setAppOrigin(loaded.config.runtime?.appOrigin ?? detectAppOrigin());
       let current = loaded.config;
-      if (process.env.NODE_ENV !== "production") {
-        await followConfig(loadCourierConfig, (config) => {
-          current = config;
+      const reloaded = (config: CourierConfig): void => {
+        current = config;
+      };
+      if (registration.followFiles === true) {
+        const { reloadOnSave } = await import("./reload-on-save");
+        reloadOnSave(loaded.configFile, modules, (config) => {
+          /* The config before the sources: what reads it on their change finds it current. */
+          reloaded(config);
+          registerSources(config.sources);
         });
+      } else if (process.env.NODE_ENV !== "production") {
+        await followConfig(loadCourierConfig, reloaded);
       }
       const projectRoot = dirname(loaded.configFile);
       return {

@@ -16,7 +16,7 @@
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
-    "@next/mdx": "^16.1.6",
+    "@next/mdx": "^16.4.0",
     "@noverax/courier": "file:../packages/core",
     "@noverax/courier-next": "file:../packages/next",
     "@noverax/courier-react": "file:../packages/react",
@@ -28,7 +28,7 @@
     "geist": "^1.7.2",
     "lucide-react": "^1.47.0",
     "multer": "^2.0.1",
-    "next": "^16.3.5",
+    "next": "^16.4.0",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.6.7",
     "react": "^19.3.0",

@@ -117,9 +117,12 @@ describe("create-courier", () => {
       mcpServers: { courier: { command: "npx", args: ["@noverax/courier-mcp"] } },
     });
     expect(readFileSync(join(root, "src/courier/api.ts"), "utf8")).toContain('access: "read"');
+    expect(readFileSync(join(root, "courier.config.ts"), "utf8")).toContain(
+      '  agents: { offer: "reads" },',
+    );
   }, 60_000);
 
-  it("adds agents to a project set up already: the MCP server's entry, and the step that marks its endpoints, without the example's lines", () => {
+  it("adds agents to a project set up already: the MCP server's entry, and the reads offered in its config, without the example's lines", () => {
     const root = projectWith(NEXT_WITH_PACKAGES);
     run([root, "--yes", "--no-install", "--no-mcp"]);
 
@@ -127,11 +130,13 @@ describe("create-courier", () => {
 
     expect(status).toBe(0);
     expect(out).toMatch(/= src\/courier\/api\.ts +Courier's already, yours to change/);
-    expect(out).toContain(
-      "src/courier/api.ts: the MCP server offers only endpoints marked .agent()",
-    );
     expect(out).not.toContain("const users = defineGroup(");
-    expect(out).toContain("Your editor's agent can call the endpoints you mark .agent()");
+    expect(out).toContain(
+      "Your editor's agent can call the API's reads, as courier.config.ts offers them",
+    );
+    expect(readFileSync(join(root, "courier.config.ts"), "utf8")).toContain(
+      '  agents: { offer: "reads" },',
+    );
     expect(existsSync(join(root, ".mcp.json"))).toBe(true);
   }, 60_000);
 

@@ -1,3 +1,4 @@
+import { READS_POLICY } from "../../agents-policy-edit";
 import { STUDIO_DEFAULT_PORT } from "../../project/ports";
 import { importSpecifier } from "../import-specifier";
 
@@ -34,6 +35,13 @@ function studioBlock(ctx: RecipeContext): string {
   return ctx.ports.studio === STUDIO_DEFAULT_PORT
     ? ""
     : `\n  studio: { port: ${ctx.ports.studio} },`;
+}
+
+/* What agents may call, where they were asked for: every read, and a write once it is marked `.agent()`. */
+function agentsBlock(ctx: RecipeContext): string {
+  return ctx.choices.mcp
+    ? `\n  // What agents in your editor may call: every read, and a write marked .agent()\n  ${READS_POLICY},`
+    : "";
 }
 
 /* Where the list is kept: the project's root, or — for a server TypeScript compiles from `src/` alone — beside the server's code. */
@@ -90,7 +98,7 @@ export function courierConfig(
 ${example}
 ${listComment(path)}
 export default defineConfig({
-  sources: ${sources},${studioBlock(ctx)}
+  sources: ${sources},${studioBlock(ctx)}${agentsBlock(ctx)}
 });
 `;
   return { path, content, purpose };
@@ -113,9 +121,9 @@ export default defineConfig({
  */
 export function passOnConfig(ctx: RecipeContext, list: string): RecipeFile {
   const content = `/**
- * The APIs this project calls, as ${list} lists them: the server compiles
- * src/ alone, so the list lives there, and Studio and the MCP server read
- * it through this file.
+ * The APIs this project calls, as ${list} lists them:
+ * the server compiles src/ alone, so the list lives there,
+ * and Studio and the MCP server read it through this file.
  */
 export { default } from "${importSpecifier("courier.config.ts", list, ctx.extension)}";
 `;

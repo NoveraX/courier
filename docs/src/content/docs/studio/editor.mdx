@@ -1,4 +1,4 @@
-export const metadata = { title: "VS Code Extension", description: "The Courier extension for VS Code, Cursor, Windsurf and VSCodium: above each call to an endpoint, how its calls went in Studio — how many, how many failed, how long they took — the rest in a hover, Studio one click away; and from Studio, the code that calls an endpoint, opened in your editor.", mode: "both" }
+export const metadata = { title: "VS Code Extension", description: "The Courier extension for VS Code, Cursor, Windsurf and VSCodium: above each call to an endpoint, how its calls went in Studio; every endpoint in a view of its own, with the code that calls it; the audit's findings at the calls; Studio started in a click; and your API offered to VS Code's agent.", mode: "both" }
 
 Studio knows how every call to each endpoint went; your editor knows where the code makes them. The Courier extension puts the two together, above the call itself, and the figures move as your app runs:
 
@@ -24,37 +24,97 @@ Or from a terminal:
 code --install-extension noverax.courier-vscode
 ```
 
-Then start Studio for your project as you always do — the extension finds it on its own:
+Then start Studio for your project — **Start Studio** in the Courier view or the status bar, or a terminal as you always do — and the extension finds it on its own:
 
 ```bash
 npx @noverax/courier-studio
 ```
 
+**Help → Welcome → Get Started with Courier** walks you through it: setting Courier up, starting Studio, reading the figures and giving your agent the API.
+
 ## What you see
 
 Above each call to an endpoint, how that endpoint's calls went in this session: how many there were, how many failed and how many are still in flight, and how long nineteen in twenty took. A stream or a channel counts its connections, and how many are still open. The figures come up to date every few seconds while the editor has focus, and a click on the line opens the endpoint in Studio's Explorer.
 
-Hover over the call for the rest: the median and the 95th percentile, the statuses the calls ended with, the latest failure with its reason, and a link to the endpoint in Studio.
+Hover over the call for the rest: the median and the 95th percentile, the statuses the calls ended with, and the latest failure with its reason. **Open in Studio** opens the endpoint; **Open the latest failure** opens that request in Studio's inspector — its variables, its response, its timing.
 
 <Screenshot
   src="/images/vscode/hover"
-  alt="The hover over a call to orders.place: its calls and failures in Courier Studio, the median and the 95th percentile, the statuses the calls ended with, the latest failure — a 409 Conflict — and a link that opens the endpoint in Studio"
+  alt="The hover over a call to orders.place: its calls and failures in Courier Studio, the median and the 95th percentile, the statuses the calls ended with, the latest failure — a 409 Conflict — and links that open the endpoint and the failed request in Studio"
   width={940}
   height={620}
 />
 
-The status bar shows **Studio** while a Studio answers for the project of the file in front; a click opens it.
+The status bar shows **Studio** while a Studio answers for the project of the file in front, a click opening it; and **Start Studio** for a Courier project whose Studio does not run.
+
+## The Courier view
+
+The Courier icon in the Activity Bar opens every endpoint of your project and how its calls went, its badge counting the endpoints whose calls failed. Each source holds the groups its calls name and their endpoints; a monorepo lists each project with its own Studio.
+
+<Screenshot
+  src="/images/vscode/view"
+  alt="The Courier view beside the shop's checkout code: its sources, the groups of each with how many endpoints are failing, the orders group open — each endpoint with its calls, failures and p95 — and orders.place open at the line of the checkout that calls it"
+  width={1180}
+  height={700}
+/>
+
+An endpoint shows how its calls went in the colours the editor gives test results — failed, all answered, not called yet — with its figures beside it and its hover as the tooltip. Open it for each place the project's code calls it; a click opens the file at that line.
+
+| Action on an endpoint | What it opens |
+| --- | --- |
+| **Open in Studio** | The endpoint in Studio's Explorer |
+| **Show Failed Calls in Studio** | Studio's Timeline with the endpoint's failed calls |
+| **Open the Latest Failure** | The latest failed request in Studio's inspector |
+
+With no Studio running, the view offers to start one; in a workspace without Courier, to set it up: **Set Up Courier** runs [Create Courier](/docs/create-courier) in a terminal, which shows its plan and changes nothing until you agree.
+
+**Start Studio** runs your project's own `studio` script through the package manager its lockfile names, when that script runs Courier Studio, and `npx @noverax/courier-studio` otherwise — in a terminal of its own, named after the project. Asked again, it shows that terminal.
+
+## The audit at your calls
+
+Studio's [audit](/docs/studio/audit) reads the requests it recorded; the extension marks its findings at the calls they concern, in the files you open and in the Problems panel under **Courier audit**: an N+1 pattern where the code asks for each item and where it lists them, a timeout risk at the slow endpoint's calls, a write retried without an idempotency key where the code writes.
+
+An audit error is a warning in the editor — the code compiles; its traffic needs a look — an audit warning is information, and a hint a hint. Findings of one kind at one call make one mark, at the gravest of them. Each mark links to Studio's Audit page, where the finding reads in full with its fix.
+
+## Your API, for VS Code's agent
+
+VS Code's agent finds Courier's [MCP servers](/docs/agents/editor) on its own — nothing to write in `.vscode/mcp.json`. Each project of the workspace offers the ones it has installed, each run from the project's folder, and started only when the agent first needs it:
+
+| Server | Offered when the project has | What the agent gets |
+| --- | --- | --- |
+| **Courier API** | `@noverax/courier-mcp` | The endpoints marked `.agent()`, and those the [`agents` policy](/docs/agents/overview#what-agents-may-call) offers |
+| **Courier Studio** | `@noverax/courier-studio` | The requests Studio recorded, its audit, its mocks and their scenarios |
+
+The API's server is handed the project's `.env.development.local`, `.env.local`, `.env.development` and `.env` — those that exist, the first one setting a variable winning — so its calls reach your backend. It needs VS Code 1.101 or later; Cursor and Windsurf configure their agent's servers themselves, as [In Your Editor](/docs/agents/editor) shows.
+
+## Snippets
+
+| Type | For |
+| --- | --- |
+| `courier-endpoint` | An endpoint of a group: its method, path, variables and response |
+| `courier-group` | A group of endpoints under one path |
+| `courier-api` | An API: its base address and its groups |
+| `courier-boundary` | The endpoints the browser may call through your server |
+| `courier-query`, `courier-mutation` | A read and a write with React Query |
+| `courier-subscription`, `courier-channel` | A stream followed and a channel joined while a component is mounted |
+| `courier-call` | A call made directly, on the server or in a script |
+
+## Commands and settings
 
 | Command | What it does |
 | --- | --- |
 | **Courier: Open in Courier Studio** | Opens Studio for the project of the file in front |
+| **Courier: Start Studio** | Starts Studio for the project of the file in front, or the one you pick |
+| **Courier: Set Up Courier** | Runs Create Courier in a terminal, in the workspace folder you pick |
 | **Courier: Refresh Endpoint Hints** | Finds the calls again and brings the figures up to date |
 
 | Setting | What it does |
 | --- | --- |
 | `courier.hints.enabled` | Show the figures above endpoint calls (default: on) |
 | `courier.hints.refreshSeconds` | How often the figures are brought up to date while the window has focus (default: 5) |
-| `courier.studio.url` | Studio's address, when it runs for a project outside the workspace |
+| `courier.audit.diagnostics` | Mark the audit's findings at the calls they concern (default: on) |
+| `courier.agents.mcpServers` | Offer VS Code's agent each project's MCP servers (default: on) |
+| `courier.studio.url` | Studio's address, when it runs for a project outside the workspace — on this machine, in your user settings |
 
 ## How a call is found
 
@@ -75,4 +135,6 @@ Every request's **Overview** in the inspector, and every endpoint in the Explore
 
 ## What stays on your machine
 
-The extension talks only to Studio, on this machine: it reads what any page of Studio's reads, and changes nothing, so it needs no token. Studio reads the files you send it and your project's own, and keeps nothing of them. A Studio serving a [public demo](/docs/studio/overview) writes no address file and answers neither the extension nor **Called from**: it reads no project's code for its visitors.
+The extension talks only to Studio, on this machine: it reads what any page of Studio's reads, and changes nothing, so it needs no token. It sends Studio the text of the files you open, so an address naming another host — in a project's `.courier/studio.json`, or in `courier.studio.url` — is ignored, and the setting is read from your user settings alone: a repository you clone cannot point the extension elsewhere. Studio reads the files you send it and your project's own, and keeps nothing of them. A Studio serving a [public demo](/docs/studio/overview) writes no address file and answers neither the extension nor **Called from**: it reads no project's code for its visitors.
+
+The extension starts Studio, Create Courier and the agent's servers from the project's folder, so it stays off in a workspace you have not trusted: VS Code's Restricted Mode turns it off until you trust the folder.

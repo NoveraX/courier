@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /// <reference types="node" />
 /**
- * Photograph the Courier extension at work in VS Code, for its docs page and
- * its README: the figures above the calls in the demo shop's
- * `src/traffic/visit.ts`, and the hover over one, each in a light and a dark
- * theme at twice its size, into `docs/public/images/vscode/`.
+ * Photograph the Courier extension at work in VS Code, for its docs page,
+ * its README and its walkthrough: the figures above the calls in the demo
+ * shop's `src/traffic/visit.ts`, the hover over one, and the Courier view
+ * with the checkout's endpoint open at its call, each in a light and a dark
+ * theme at twice its size, into `docs/public/images/vscode/` — the hover and
+ * the view into the extension's `media/walkthrough/` too.
  *
  * It needs VS Code — `VSCODE_PATH` and `VSCODE_CLI` name its program and its
  * command line, macOS's places by default — the extension packaged, with
@@ -20,7 +22,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { env, platform } from "node:process";
 import { _electron } from "@playwright/test";
@@ -30,7 +32,10 @@ const OUT = join(ROOT, "docs", "public", "images", "vscode");
 const MAC = "/Applications/Visual Studio Code.app/Contents";
 const CODE = env.VSCODE_PATH ?? join(MAC, "MacOS", "Code");
 const CLI = env.VSCODE_CLI ?? join(MAC, "Resources", "app", "bin", "code");
+const WALKTHROUGH = join(ROOT, "packages", "vscode", "media", "walkthrough");
 const SIZE = { width: 940, height: 620 };
+/* The view beside the editor needs the room of both. */
+const VIEW_SIZE = { width: 1180, height: 700 };
 const THEMES = [
   { name: "light", theme: "Default Light Modern" },
   { name: "dark", theme: "Default Dark Modern" },
@@ -102,6 +107,24 @@ async function shoot(page, file) {
   console.log(file.slice(ROOT.length + 1));
 }
 
+/**
+ * Open the Courier view with the checkout's endpoint open at its call and
+ * chosen, so its actions show, the pointer resting below the view's rows.
+ *
+ * @param {import("@playwright/test").Page} page - VS Code's window
+ */
+async function openView(page) {
+  await page.keyboard.press("Escape");
+  /* The count of failing endpoints lies over the icon: the click goes to the item that holds both. */
+  await page.locator('.activitybar .action-item:has(a[aria-label^="Courier"])').first().click();
+  const row = (label) => page.locator(`.monaco-list-row[aria-label^="${label} "]`).first();
+  await row("orders").click();
+  await row("place").click();
+  await page.waitForSelector('.monaco-list-row[aria-label^="src/traffic/visit.ts:"]');
+  await page.mouse.move(200, VIEW_SIZE.height - 120);
+  await page.waitForTimeout(1500);
+}
+
 mkdirSync(OUT, { recursive: true });
 for (const { name, theme } of THEMES) {
   const { root, dirs } = profileFor(theme);
@@ -130,6 +153,14 @@ for (const { name, theme } of THEMES) {
     await page.waitForSelector(".monaco-hover:not(.hidden)", { timeout: 15_000 });
     await page.waitForTimeout(1500);
     await shoot(page, join(OUT, `hover-${name}.png`));
+    await app.evaluate(({ BrowserWindow }, size) => {
+      BrowserWindow.getAllWindows()[0]?.setBounds({ x: 40, y: 40, ...size });
+    }, VIEW_SIZE);
+    await openView(page);
+    await shoot(page, join(OUT, `view-${name}.png`));
+    for (const shot of [`hover-${name}.png`, `view-${name}.png`]) {
+      copyFileSync(join(OUT, shot), join(WALKTHROUGH, shot));
+    }
   } finally {
     await app.close();
     rmSync(root, { recursive: true, force: true });

@@ -1,9 +1,9 @@
 import { LIMITS } from "../../adapter/limits";
 import { createLogger } from "../../logger";
 import { assertAbsoluteUrl } from "../../utils/absolute-url";
-import { isReactNative } from "../../utils/is-react-native";
 import { createConnectionState } from "../connection-state";
 import { createMessageQueue } from "./message-queue";
+import { platformSocketFactory } from "./platform-socket";
 import { createServerSilence } from "./server-silence";
 import {
   sendControl,
@@ -40,7 +40,8 @@ export function createWSConnection(config: WSConnectionConfig): WSConnection {
   });
   const queue = createMessageQueue(config.messageQueue);
   const maxBuffered = config.maxBufferedAmount ?? DEFAULT_MAX_BUFFERED;
-  const factory = config.socketFactory ?? defaultFactory;
+  const factory =
+    config.socketFactory ?? platformSocketFactory(config.webSocket, config.socketInit);
 
   const refs = {
     ws: null as WSClientSocket | null,
@@ -127,19 +128,4 @@ function gracefulClose(lifecycleCtx: LifecycleContext, opsCtx: TopicOpsContext):
   lifecycleCtx.refs.ws?.close(1000, "client close");
   lifecycleCtx.refs.ws = null;
   lifecycleCtx.state.set("disconnected");
-}
-
-/* The platform's WebSocket, with what its handshake takes headers in where it takes them. */
-type HeaderedWebSocket = new (url: string, init?: unknown, options?: unknown) => WSClientSocket;
-
-function defaultFactory(
-  url: string,
-  protocols?: string[],
-  headers?: Readonly<Record<string, string>>,
-): WSClientSocket {
-  if (headers === undefined) return new WebSocket(url, protocols) as unknown as WSClientSocket;
-  const Socket = WebSocket as unknown as HeaderedWebSocket;
-  /* React Native takes them third; Node's WebSocket, undici's, in its options. */
-  if (isReactNative()) return new Socket(url, protocols, { headers });
-  return new Socket(url, { ...(protocols && { protocols }), headers });
 }

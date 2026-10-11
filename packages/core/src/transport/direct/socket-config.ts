@@ -1,6 +1,8 @@
 import { type SocketHeaders, socketOptions } from "../../realtime/ws/ws-credentials";
 import type { CallerWSOptions, WSConnectionConfig } from "../../realtime/ws/ws-types";
 import { layerHeaders } from "../../utils/layer-headers";
+import { socketTransportOf } from "./source-transport";
+import { sourceHeadersOf } from "./stream-request";
 import type { StreamSession } from "./stream-session";
 
 /** What a direct caller's channels open their sockets with. */
@@ -21,24 +23,26 @@ const opened = new WeakMap<DirectSocketDefaults, WeakMap<object, Map<string, Soc
 
 /**
  * The options a direct caller's channel opens its socket with: the caller's
- * `ws`, and the headers its calls send — the API's `headers`, the caller's,
+ * `ws`, the headers its calls send — the API's `headers`, the caller's,
  * the user's session's and `forward`'s — asked for anew before every
- * connect. A socket is kept to whose session it carries: the one user of a
- * browser or an app, the request being served on a server, so two users'
- * channels never share one.
+ * connect, and the API's own `webSocket` and connection options — the
+ * `dispatcher` that carries a client certificate or a proxy on Node, Bun's
+ * `proxy` and `tls`. A socket is kept to whose session it carries: the one
+ * user of a browser or an app, the request being served on a server, so two
+ * users' channels never share one.
  *
+ * @param api - The source
  * @param defaults - The caller's, the same object for all its channels
- * @param sourceHeaders - The API's `headers`
  * @param session - What the user's session gives the channel
  * @returns The options, once whose session it is has been found
  * @example
  * ```ts
- * executeWSChannel(url, topic, variables, directSocketOptions(defaults, sourceHeaders, session));
+ * executeWSChannel(url, topic, variables, directSocketOptions(api, defaults, session));
  * ```
  */
 export async function directSocketOptions(
+  api: object,
   defaults: DirectSocketDefaults,
-  sourceHeaders: Readonly<Record<string, string>>,
   session: StreamSession | undefined,
 ): Promise<SocketOptions> {
   const found = await session?.found;
@@ -46,10 +50,21 @@ export async function directSocketOptions(
   const kind = session?.takes ?? "";
   const byOwner = memo(opened, defaults, () => new WeakMap<object, Map<string, SocketOptions>>());
   const byKind = memo(byOwner, owner, () => new Map<string, SocketOptions>());
-  if (!byKind.has(kind)) {
-    byKind.set(kind, socketOptions(defaults.ws, socketHeaders(defaults, sourceHeaders, session)));
-  }
+  if (!byKind.has(kind)) byKind.set(kind, optionsOf(api, defaults, session));
   return byKind.get(kind);
+}
+
+function optionsOf(
+  api: object,
+  defaults: DirectSocketDefaults,
+  session: StreamSession | undefined,
+): SocketOptions {
+  const options = socketOptions(
+    defaults.ws,
+    socketHeaders(defaults, sourceHeadersOf(api), session),
+  );
+  const transport = socketTransportOf(api);
+  return Object.keys(transport).length === 0 ? options : { ...options, ...transport };
 }
 
 /* The headers a socket's calls would send as it opens: the session's under the API's and the caller's. */

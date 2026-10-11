@@ -1,14 +1,11 @@
-import type { WebCredentials } from "../../http-client/web-types";
 import { createLogger } from "../../logger";
 import type { SSEConnectInit } from "../../realtime/sse/sse-types";
 import type { CallSession } from "../../session/call-session";
 import { keepAnswerCookies } from "../../utils/answer-cookies";
-import { fieldOf, textOf } from "./read-definition";
+import { streamInitOf } from "./source-transport";
 import type { StreamSession } from "./stream-session";
 
 const log = createLogger("SSE");
-
-const CREDENTIALS: ReadonlySet<string> = new Set(["include", "omit", "same-origin"]);
 
 /** What each connection of a direct caller's stream opens with, and what its answer leaves. */
 export interface StreamConnection {
@@ -22,15 +19,17 @@ export interface StreamConnection {
  * What each connection of a direct caller's stream is opened with besides
  * its own headers, as a read over HTTP is: the user's session read anew —
  * its cookies and bearer on a server, `credentials: "include"` in a browser
- * or an app, which send the session's cookies themselves — and the API's
- * own `credentials`, which the session's give way to. The cookies the
- * stream's answer sets are kept as a call's: handed on to the browser from
- * a server, learned in a React Native app.
+ * or an app, which send the session's cookies themselves — and what the
+ * API's own options give a request that stays open, which the session's
+ * give way to: its `credentials`, and the `dispatcher` that carries a
+ * client certificate or a proxy on Node, Bun's `proxy` and `tls`, Deno's
+ * `client`. The cookies the stream's answer sets are kept as a call's:
+ * handed on to the browser from a server, learned in a React Native app.
  *
  * @param api - The source
  * @param session - What the user's session gives the stream
  * @returns How its connections open; `undefined` for a stream that takes
- *   no session, of an API that sets no `credentials`
+ *   no session, of an API whose options give a stream nothing
  * @example
  * ```ts
  * const connection = streamConnection(api, streamSessionOf(options));
@@ -41,15 +40,15 @@ export function streamConnection(
   api: object,
   session: StreamSession | undefined,
 ): StreamConnection | undefined {
-  const credentials = credentialsOf(api);
-  if (session === undefined && credentials === undefined) return undefined;
+  const init = streamInitOf(api);
+  if (session === undefined && Object.keys(init).length === 0) return undefined;
   let connected: CallSession | undefined;
   return {
     async beforeConnect() {
       connected = await session?.current();
       return {
         headers: Object.fromEntries(connected?.headers ?? []),
-        init: { ...connected?.fetchInit, ...(credentials && { credentials }) },
+        init: { ...connected?.fetchInit, ...init },
       };
     },
     keepCookies(response) {
@@ -58,13 +57,4 @@ export function streamConnection(
       );
     },
   };
-}
-
-function credentialsOf(api: object): WebCredentials | undefined {
-  const credentials = textOf(fieldOf(api, "options"), "credentials");
-  return isCredentials(credentials) ? credentials : undefined;
-}
-
-function isCredentials(value: string): value is WebCredentials {
-  return CREDENTIALS.has(value);
 }

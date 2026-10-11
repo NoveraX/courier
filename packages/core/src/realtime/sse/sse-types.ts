@@ -1,3 +1,4 @@
+import type { PlatformFetch } from "../../http-client/source-transport";
 import type { BackoffConfig } from "../types";
 
 /** What one connection of a stream is opened with, besides the stream's own headers. */
@@ -42,4 +43,6 @@ export interface SubscribeSSEOptions {
    * connection, retried as a dropped one is.
    */
   beforeConnect?: (() => SSEConnectInit | Promise<SSEConnectInit>) | undefined;
+  /** Sends each connection's request in place of the platform's `fetch`: the source's own. */
+  fetch?: PlatformFetch | undefined;
 }

@@ -45,6 +45,7 @@ export function subscribeSSE<TData = unknown>(
       parse: options.parse ?? JSON.parse,
       ...(options.onResponse && { onResponse: options.onResponse }),
       ...(options.beforeConnect && { beforeConnect: options.beforeConnect }),
+      ...(options.fetch && { fetch: options.fetch }),
     },
     lastEventId: options.lastEventId,
     serverRetryMs: undefined,

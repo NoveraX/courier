@@ -32,7 +32,8 @@ interface Hop {
  * @param wrap - Turns a stream of the body into the one sent, e.g. to count it
  * @param options - `withinOrigin`: a redirect to another origin is answered
  *   with as it came rather than followed — a call that carries the user's
- *   session from a server never leaves the API's origin
+ *   session from a server never leaves the API's origin; `fetch`: what sends
+ *   each hop in place of the platform's `fetch`
  * @returns The final answer
  *
  * @example
@@ -45,7 +46,13 @@ export async function sendUpload(
   init: RequestInit & { method: string },
   source: UploadSource,
   wrap: (stream: ReadableStream<Uint8Array>) => ReadableStream<Uint8Array>,
-  { withinOrigin = false }: { withinOrigin?: boolean } = {},
+  {
+    withinOrigin = false,
+    fetch: send = fetch,
+  }: {
+    withinOrigin?: boolean;
+    fetch?: ((url: string, init: RequestInit) => Promise<Response>) | undefined;
+  } = {},
 ): Promise<Response> {
   const follows = source.replayable && (init.redirect ?? "follow") === "follow";
   /* Followed by hand, or not at all: fetch's own following goes to any origin. */
@@ -54,7 +61,7 @@ export async function sendUpload(
   let hop: Hop = { url, method: init.method, headers: new Headers(init.headers), withBody: true };
 
   for (let count = 0; ; count++) {
-    const response = await fetch(hop.url, {
+    const response = await send(hop.url, {
       ...init,
       method: hop.method,
       headers: hop.headers,

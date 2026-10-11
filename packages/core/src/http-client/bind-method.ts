@@ -8,6 +8,7 @@ import {
 } from "../utils/deduplicate";
 import { compileUrl, resolveBasePath } from "../utils/helpers";
 import { stripUndefined } from "./body-builder";
+import { type RequestOptions, withCallTransport } from "./call-transport";
 import { buildRequestOptions } from "./request-builder";
 import { getResponse } from "./response";
 import type {
@@ -36,7 +37,7 @@ export type BindMethodDeps = {
   bodySerializer: ((data: Record<string, unknown>) => WebBody) | undefined;
   responseType: ResponseType;
   responseParser: ((response: Response) => Promise<unknown>) | undefined;
-  fetchRequest: (method: string, url: string, options: Partial<FetchOptions>) => Promise<Response>;
+  fetchRequest: (method: string, url: string, options: RequestOptions) => Promise<Response>;
 };
 
 /** A method bound to a client: called with a path and options, it resolves to the answer. */
@@ -50,13 +51,9 @@ export function bindMethod(
   boundOptions?: BoundMethodOptions,
   groupOptions?: GroupOptions,
 ): BoundMethod {
-  const {
-    variables: vars,
-    headers: boundHeaders,
-    stream,
-    ...boundFetchOptions
-  } = boundOptions || {};
+  const { variables: vars, headers: boundHeaders, stream, ...boundRest } = boundOptions || {};
   const { prefix = "", pathOptions } = groupOptions || {};
+  const boundFetchOptions = withCallTransport(boundRest, groupOptions);
   const cleanedVars = stripUndefined(vars);
 
   return async <TResponse>(...arguments_: MethodParameters<HttpMethod>) => {

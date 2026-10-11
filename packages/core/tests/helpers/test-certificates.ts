@@ -14,6 +14,8 @@ export interface TestCertificates {
   server: IssuedCertificate;
   /** A client's, for mutual TLS */
   client: IssuedCertificate;
+  /** Another client certificate the authority issues, under a name of its own: a renewed one, say */
+  issueClient(name: string): IssuedCertificate;
 }
 
 interface Issuer {
@@ -61,6 +63,7 @@ export function testCertificates(
       usage: [SERVER_AUTH],
     }),
     client: issuedFor(authority, { name: "courier-client", usage: [CLIENT_AUTH] }),
+    issueClient: (name) => issuedFor(authority, { name, usage: [CLIENT_AUTH] }),
   };
 }
 

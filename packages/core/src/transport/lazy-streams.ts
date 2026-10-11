@@ -5,10 +5,16 @@ import type { SSEFactory, WSChannelFactory } from "./types";
 
 /**
  * What a call is refused for before anything is loaded or opened — an
- * endpoint this process serves, a path parameter left empty — so it throws
- * where the call is made, as it did before the client was loaded lazily.
+ * endpoint this process serves, a path parameter left empty, an option the
+ * call may not set — so it throws where the call is made, as it did before
+ * the client was loaded lazily.
  */
-type Check = (group: string, method: string, variables: unknown) => void;
+type Check = (
+  group: string,
+  method: string,
+  variables: unknown,
+  options: Readonly<Record<string, unknown>>,
+) => void;
 
 /**
  * A stream factory whose client code is loaded on the first subscription.
@@ -30,7 +36,7 @@ type Check = (group: string, method: string, variables: unknown) => void;
 export function lazySSEFactory(load: () => Promise<SSEFactory>, check?: Check): SSEFactory {
   const factory = once(load);
   return (group, method, variables, options) => {
-    check?.(group, method, variables);
+    check?.(group, method, variables, options);
     return lazySubscription(
       opened(factory(), (create) => create(group, method, variables, options)),
     );
@@ -55,7 +61,7 @@ export function lazyWSChannelFactory(
 ): WSChannelFactory {
   const factory = once(load);
   return (group, method, variables, options) => {
-    check?.(group, method, variables);
+    check?.(group, method, variables, options);
     return lazyChannel(opened(factory(), (create) => create(group, method, variables, options)));
   };
 }

@@ -6,7 +6,7 @@
  */
 
 import type { SSEHandler } from "../realtime/types";
-import { sourceFetchOf, streamInitOf } from "../transport/direct/source-transport";
+import { streamInitOf, transportOf } from "../transport/direct/source-transport";
 import { streamRequest } from "../transport/direct/stream-request";
 import { layerHeaders } from "../utils/layer-headers";
 
@@ -16,9 +16,10 @@ import { layerHeaders } from "../utils/layer-headers";
  * The upstream is opened with the source's `headers`, then what the proxy
  * sends on every call — the request headers its policy lets through and
  * whatever the source's middleware set — and the `Last-Event-ID` the client
- * resumes from; through the source's own `fetch` when it names one, given
- * what its options give a request that stays open — the `dispatcher` that
- * carries a client certificate or a proxy. Its events are handed on as they
+ * resumes from; through the `fetch` the stream's group or its source names,
+ * given what their options give a request that stays open — the
+ * `dispatcher` that carries a client certificate or a proxy, the group's
+ * over the source's. Its events are handed on as they
  * came, ids and names included; a dropped upstream connection is reopened,
  * resuming from the last id, while the client's stays open. The relay ends when the upstream
  * stream ends, fails as it fails, and closes the upstream when the client
@@ -47,8 +48,9 @@ export function relayStream(
       import("../realtime/sse/stream-data"),
     ]);
     const request = streamRequest(api, group, method, ctx.variables);
-    const init = streamInitOf(api);
-    const send = sourceFetchOf(api);
+    const transport = transportOf(api, group);
+    const init = streamInitOf(api, transport);
+    const send = transport.fetch;
     yield* subscribeSSE(request.url, {
       headers: layerHeaders({ Accept: "text/event-stream" }, request.sourceHeaders, ctx.headers),
       parse: readStreamData,

@@ -32,13 +32,13 @@ export {
   shapeOfClient,
 } from "../client";
 export { isDefinedApi } from "../define/api";
+export { groupOptionsOf } from "../define/group-options-of";
 export {
   eachGroup,
   GROUP_PATH_SEPARATOR,
   type GroupNode,
   groupChain,
   groupNames,
-  groupOptionsOf,
   type PlacedGroup,
   subGroupsOf,
 } from "../define/group-tree";

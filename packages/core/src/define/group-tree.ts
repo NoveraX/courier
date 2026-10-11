@@ -1,5 +1,4 @@
-import type { GroupOptions, PathOptions } from "../http-client/types";
-import { pathJoin } from "../utils/url";
+import type { GroupOptions } from "../http-client/types";
 
 /** What separates the names in a group's path: `billing.invoices`. */
 export const GROUP_PATH_SEPARATOR = ".";
@@ -99,40 +98,6 @@ function* groupsBelow(
     yield { path, group, chain };
     yield* groupsBelow(group, path, chain);
   }
-}
-
-/**
- * The settings a group's endpoints take from it and every group above it:
- * the prefixes joined in order, each group's path options merged over the
- * ones above it, and the nearest `expose` that is set.
- *
- * @param chain - The groups from the top one down
- * @returns The settings, as one group's
- * @example
- * ```ts
- * groupOptionsOf(groupChain(api, "billing.invoices") ?? []).prefix; // → "billing/invoices"
- * ```
- */
-export function groupOptionsOf(chain: readonly GroupNode[]): GroupOptions {
-  if (chain.length <= 1) return chain[0]?.options ?? {};
-  const options = chain.map((group) => group.options ?? {});
-  const pathOptions = options.flatMap((o) => (o.pathOptions ? [o.pathOptions] : []));
-  const expose = options.findLast((o) => o.expose !== undefined)?.expose;
-  return {
-    prefix: pathJoin(options.map((o) => o.prefix ?? "")),
-    ...(pathOptions.length > 0 && { pathOptions: mergedPathOptions(pathOptions) }),
-    ...(expose !== undefined && { expose }),
-  };
-}
-
-/* Each group's path options in turn, a lower group's values over a higher one's. */
-function mergedPathOptions(all: readonly PathOptions[]): PathOptions {
-  if (all.length === 1 && all[0]) return all[0];
-  return async (request) => {
-    const merged: Record<string, boolean | number | string | null | undefined> = {};
-    for (const pathOptions of all) Object.assign(merged, await pathOptions(request));
-    return merged;
-  };
 }
 
 function ownField(value: unknown, key: string): unknown {

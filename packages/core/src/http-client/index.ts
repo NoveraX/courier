@@ -2,13 +2,13 @@ import { supportsAbortController } from "../utils/deduplicate";
 import type { CoreFetchInit } from "../utils/fetch";
 import { coreFetch } from "../utils/fetch";
 import { bindMethod } from "./bind-method";
+import type { RequestOptions } from "./call-transport";
 import { overlayHeaders, withoutConnectionHeaders } from "./request-headers";
 import { type PlatformFetch, platformFetchOf } from "./source-transport";
 import type {
   BaseOptions,
   BoundMethodOptions,
   Context,
-  FetchOptions,
   GroupOptions,
   HttpMethods,
   PathOptions,
@@ -93,9 +93,9 @@ export class HttpClient {
   private async fetchRequest(
     method: string,
     url: string,
-    options: Partial<FetchOptions> = {},
+    options: RequestOptions = {},
   ): Promise<Response> {
-    const { prefixUrl: overridePrefixUrl, withinOrigin, ...fetchOptions } = options;
+    const { prefixUrl: overridePrefixUrl, withinOrigin, fetch: send, ...fetchOptions } = options;
 
     const effectivePrefixUrl = overridePrefixUrl !== undefined ? overridePrefixUrl : this.prefixUrl;
     let fullUrl = url;
@@ -133,7 +133,8 @@ export class HttpClient {
       headers: withoutConnectionHeaders(overlayHeaders(this.baseHeaders, fetchOptions.headers)),
       timeout: fetchOptions.timeout ?? this.baseTimeout,
       withinOrigin: withinOrigin === true || this.context?.proxyMethod !== undefined,
-      ...(this.sourceFetch && { fetch: this.sourceFetch }),
+      /* A group's or a call's own `fetch` sends in place of the source's. */
+      ...((send ?? this.sourceFetch) && { fetch: send ?? this.sourceFetch }),
     } as CoreFetchInit);
   }
 

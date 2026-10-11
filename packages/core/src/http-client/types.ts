@@ -4,7 +4,7 @@ import type { Middleware } from "../middleware/types";
 import type { ProxyPath } from "../proxy-caller/proxy-path";
 import type { IncomingRequest } from "../session/incoming-request";
 import type { ForwardOptions, SessionOptions } from "../session/types";
-import type { SourceDispatcher, SourceFetch, SourceWebSocket } from "./source-transport";
+import type { TransportOptions } from "./transport-options";
 import type { WebBody } from "./web-types";
 
 export type HttpMethod = "get" | "post" | "put" | "patch" | "del" | "head" | "options" | "query";
@@ -32,21 +32,28 @@ export type DownloadProgress = {
   totalBytes: number;
 };
 
+/**
+ * A call's options, as `.with()` gives them. Its `fetch`, `webSocket` and
+ * `dispatcher` say how this call alone reaches its server, over its group's
+ * and its source's; a call through the proxy is sent by the server, with
+ * theirs, and is refused them.
+ */
 export type CallOptions<TRaw extends boolean = false> = Omit<
   SimpleOptions,
-  "onUploadProgress" | "method"
-> & {
-  rawData?: TRaw | undefined;
-  forwardVariables?: boolean | undefined;
-  stream?: boolean | undefined;
-  /**
-   * The verb the call goes to the proxy with. A read goes as GET, so its
-   * answer can be cached, and a write as POST; "POST" keeps a read's
-   * variables out of the address.
-   */
-  method?: "GET" | "POST" | undefined;
-  onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
-};
+  "onUploadProgress" | "method" | "dispatcher"
+> &
+  TransportOptions & {
+    rawData?: TRaw | undefined;
+    forwardVariables?: boolean | undefined;
+    stream?: boolean | undefined;
+    /**
+     * The verb the call goes to the proxy with. A read goes as GET, so its
+     * answer can be cached, and a write as POST; "POST" keeps a read's
+     * variables out of the address.
+     */
+    method?: "GET" | "POST" | undefined;
+    onUploadProgress?: ((progress: UploadProgress) => void) | undefined;
+  };
 
 export type HttpResponse<TData = unknown> = {
   status: number;
@@ -114,8 +121,14 @@ export type SearchParamsSerializer = {
   parse: (str: string) => Record<string, unknown>;
 };
 
+/**
+ * A source's options: how its requests are built and read, and — through
+ * its `fetch`, `webSocket` and `dispatcher` — how they reach its server,
+ * unless a group or a call says otherwise.
+ */
 export type BaseOptions = MergeOptions &
-  Omit<FetchOptions, "body" | "json" | "prefixUrl" | "searchParams"> & {
+  Omit<FetchOptions, "body" | "json" | "prefixUrl" | "searchParams" | "dispatcher"> &
+  TransportOptions & {
     /** Base URL for all requests (e.g. "https://api.example.com/v1") */
     baseURL?: string | undefined;
     /** Response body parsing strategy — defaults to "json" */
@@ -179,31 +192,6 @@ export type BaseOptions = MergeOptions &
      * defaults and the rationale for the WS field having no default.
      */
     proxyPath?: ProxyPath | undefined;
-    /**
-     * Sends this source's requests and opens its streams in place of the
-     * platform's `fetch` — undici's `fetch`, with the `dispatcher` that
-     * carries a client certificate or a proxy for this source alone; a
-     * Cloudflare service binding's `fetch`; one that records. Whatever else
-     * the source's options give `fetch` — a `dispatcher`, Bun's `proxy` and
-     * `tls`, Deno's `client` — reaches it in its `init`. In a browser and in
-     * React Native an upload that reports its progress goes through
-     * `XMLHttpRequest`, which can report it, instead.
-     */
-    fetch?: SourceFetch | undefined;
-    /**
-     * The `WebSocket` class this source's channels open their sockets with,
-     * in place of the platform's — undici's, constructed with the
-     * `dispatcher` the source's options give.
-     */
-    webSocket?: SourceWebSocket | undefined;
-    /**
-     * The undici `Dispatcher` this source's requests, streams and sockets go
-     * through on Node — an `Agent` holding a client certificate or a CA of
-     * its own, a `ProxyAgent` — given to `fetch` and to the `WebSocket` with
-     * the rest of the source's options. Take `fetch` and `webSocket` from the
-     * same undici: Node's own refuses a dispatcher of another major version.
-     */
-    dispatcher?: SourceDispatcher | undefined;
   };
 
 export type MergeOptions = {
@@ -211,15 +199,23 @@ export type MergeOptions = {
   pathOptions?: PathOptions | undefined;
 };
 
-export type GroupOptions = MergeOptions & {
-  /** URL prefix prepended to all endpoint paths in this group (e.g. "users" → "/users/:path") */
-  prefix?: string | undefined;
-  /**
-   * Whether the browser may call this group through the proxy. Overrides the
-   * source's own setting; unset means the source decides.
-   */
-  expose?: boolean | undefined;
-};
+/**
+ * A group's options: its prefix and path options, whether the browser may
+ * call it, and — with its `fetch`, `webSocket` and `dispatcher` — how its
+ * endpoints, and those of the groups inside it, reach their server: a
+ * client certificate or a proxy for this group alone. A group inside it
+ * that sets its own takes its own.
+ */
+export type GroupOptions = MergeOptions &
+  TransportOptions & {
+    /** URL prefix prepended to all endpoint paths in this group (e.g. "users" → "/users/:path") */
+    prefix?: string | undefined;
+    /**
+     * Whether the browser may call this group through the proxy. Overrides the
+     * source's own setting; unset means the source decides.
+     */
+    expose?: boolean | undefined;
+  };
 
 export type PathOptions = (request?: Request) => PathOptionsResult | Promise<PathOptionsResult>;
 

@@ -6,7 +6,7 @@ import { layerHeaders } from "../../utils/layer-headers";
 import { beginStream, instrumentSSE } from "../instrument";
 import type { SSEFactory } from "../types";
 import { assertDirectlyReachable } from "./assert-reachable";
-import { sourceFetchOf } from "./source-transport";
+import { transportOf } from "./source-transport";
 import { streamConnection } from "./stream-connection";
 import { streamRequest } from "./stream-request";
 import { streamSessionOf } from "./stream-session";
@@ -75,9 +75,10 @@ export function createDirectSSEFactory(
       requestHeaders,
     };
     const instr = beginStream(meta, studioRequestIdOption(options));
-    const connection = streamConnection(api, streamSessionOf(options));
+    const transport = transportOf(api, group, options);
+    const connection = streamConnection(api, streamSessionOf(options), transport);
 
-    const send = sourceFetchOf(api);
+    const send = transport.fetch;
     const subscription = subscribeSSE(url, {
       headers: requestHeaders,
       parse: readStreamData,

@@ -16,6 +16,7 @@ import type { UploadProgress } from "../http-client/types";
 import type { WebCredentials } from "../http-client/web-types";
 import { isFieldRecord } from "../utils/body-kind";
 import { layerHeaders } from "../utils/layer-headers";
+import { assertNoProxyTransport } from "./assert-no-transport";
 
 const SERVER_KEYS: ReadonlySet<string> = new Set([
   "rawData",
@@ -55,7 +56,8 @@ export interface ProxyCallDefaults {
  * @param options - The options given to `.with()` and `.raw`
  * @param defaults - The caller's own defaults
  * @returns The split options
- * @throws ConfigurationError for `prefixUrl`, which only the server may set
+ * @throws ConfigurationError for `prefixUrl`, which only the server may set, and for
+ *   the options that say how a call reaches its server, which the server's own decide
  */
 export function splitProxyOptions(
   options: Readonly<Record<string, unknown>> | undefined,
@@ -73,6 +75,7 @@ export function splitProxyOptions(
     prefixUrl,
     ...rest
   } = options ?? {};
+  assertNoProxyTransport(options);
   if (prefixUrl !== undefined) {
     throw new ConfigurationError(
       "PROXY_OPTION_NOT_ALLOWED",

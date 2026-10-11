@@ -1,4 +1,5 @@
 import type { WebCredentials } from "../../http-client/web-types";
+import { assertNoProxyTransport } from "../../proxy-caller/assert-no-transport";
 import type { ProxyPath } from "../../proxy-caller/proxy-path";
 import type { ResolveOrigin } from "../../proxy-caller/resolve-path";
 import { resolveProxyPath } from "../../proxy-caller/resolve-path";
@@ -51,6 +52,7 @@ export function createProxySSEFactory(source: string, defaults: ProxySSEDefaults
   const { proxyPath, origin, headers: defaultHeaders, credentials = "include" } = defaults;
 
   return function subscribeSSE(group, method, variables, options) {
+    assertNoProxyTransport(options);
     const headers = layerHeaders(defaultHeaders, options.headers);
     const sseBase = resolveProxyPath("sse", proxyPath, origin);
     const url = buildProxySSEUrl(sseBase, source, group, method, variables);

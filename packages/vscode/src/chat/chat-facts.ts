@@ -1,4 +1,4 @@
-import { ago, figuresOf, formatMs } from "../hints/hint-text";
+import { ago, failureText, figuresOf, formatMs } from "../hints/hint-text";
 import type { RecordedRequest } from "../studio/live-types";
 import type { EndpointStats, Finding } from "../studio/studio-types";
 
@@ -33,7 +33,7 @@ export function statusFacts(stats: readonly EndpointStats[], now: number): strin
   if (called.length > 0) lines.push("");
   for (const each of [...failing, ...slow].slice(0, MOST_ENDPOINTS)) {
     const failure = each.lastFailure
-      ? ` — last failure ${ago(now - each.lastFailure.at)}: ${plain(each.lastFailure.message)}`
+      ? ` — last failure ${ago(now - each.lastFailure.at)}: ${failureText(each.lastFailure)}`
       : "";
     lines.push(`- \`${each.source}.${each.endpoint}\` · ${figuresOf(each)}${failure}`);
   }
@@ -60,10 +60,12 @@ export function endpointFacts(
 ): string {
   const lines = [`**\`${stats.source}.${stats.endpoint}\`** · ${figuresOf(stats)}`];
   if (stats.lastFailure) {
-    const { at, message } = stats.lastFailure;
-    lines.push("", `Last failure ${ago(now - at)}: ${plain(message)}`);
+    lines.push(
+      "",
+      `Last failure ${ago(now - stats.lastFailure.at)}: ${failureText(stats.lastFailure)}`,
+    );
   }
-  if (requests.length > 0) lines.push("", "Latest calls:", requestFacts(requests, now));
+  if (requests.length > 0) lines.push("", "Latest calls:", requestFacts(requests, now, false));
   return lines.join("\n");
 }
 
@@ -85,27 +87,34 @@ export function failureFacts(requests: readonly RecordedRequest[], now: number):
 }
 
 /**
- * Requests, as a chat answer lists them: the endpoint, the method, the
- * status and the time it took, when, and why it failed.
+ * Requests, as a chat answer lists them: the endpoint — left out when the
+ * answer is about one — the method, the status and the time it took, when,
+ * and why it failed.
  *
  * @param requests - The requests, newest first
  * @param now - The time now
+ * @param named - Whether each names its endpoint
  * @returns Markdown
  * @example
  * ```ts
  * requestFacts(requests, Date.now());
  * ```
  */
-export function requestFacts(requests: readonly RecordedRequest[], now: number): string {
+export function requestFacts(
+  requests: readonly RecordedRequest[],
+  now: number,
+  named = true,
+): string {
   return requests
     .slice(0, MOST_REQUESTS)
     .map((request) => {
+      const endpoint = named ? ` \`${request.source}.${request.endpoint}\`` : "";
       const method = request.method ? ` ${request.method}` : "";
       const status = request.state === "pending" ? "pending" : (request.status ?? "no answer");
       const took = request.durationMs !== undefined ? ` in ${formatMs(request.durationMs)}` : "";
       const why =
         request.error && request.error !== `HTTP ${status}` ? `: ${plain(request.error)}` : "";
-      return `- \`${request.source}.${request.endpoint}\`${method} → ${status}${took}, ${ago(now - request.startedAt)}${why}`;
+      return `-${endpoint}${method} → ${status}${took}, ${ago(now - request.startedAt)}${why}`;
     })
     .join("\n");
 }

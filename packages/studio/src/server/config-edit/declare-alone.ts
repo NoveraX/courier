@@ -5,12 +5,11 @@ import type { ExclusiveContext } from "../exclusive-context";
 import type { ProjectState } from "../project-state/types";
 import { resolvedRoot } from "../resolved-root";
 import type { WriteBody } from "../write-types";
-import type { ConfigDeclarationPlan } from "./config-declaration-types";
 import type { DeclareApplyResult } from "./config-declare-types";
 import { ConfigEditRefusal } from "./config-edit-refusal";
+import { type FileChange, listed, writeFileChanges } from "./file-changes";
 import { type PreparedDeclaration, prepareConfigDeclaration } from "./prepare-config-declaration";
 import { previewOf } from "./preview-of";
-import { replaceConfigFile } from "./replace-config-file";
 import { undoDeclaration } from "./undo-declaration";
 
 const log = createLogger("Studio");
@@ -66,27 +65,20 @@ export async function declareAlone(
       declaration: prepared.declaration,
     };
   }
-  try {
-    replaceConfigFile(prepared.parts.configPath, plan.text, {
-      mode: prepared.mode,
-      expectedHash: baseHash,
-    });
-  } catch (error) {
-    if (error instanceof ConfigEditRefusal)
-      return { status: "stale", preview: previewOf(prepared) };
-    const reason = `Studio could not write ${prepared.parts.configFile} (${describeError(error, root)}).`;
-    return { status: "manual", code: "WRITE_FAILED", reason, declaration: prepared.declaration };
+  const outcome = writeFileChanges(plan, tx, root);
+  if (outcome.status === "stale") return { status: "stale", preview: previewOf(prepared) };
+  if (outcome.status === "failed") {
+    const { declaration } = prepared;
+    return { status: "manual", code: "WRITE_FAILED", reason: outcome.reason, declaration };
   }
-  /* Written synchronously just above, so no watcher callback has run yet. */
-  tx.acknowledge([prepared.parts.configPath]);
-  return runChanged(deps, tx, prepared, plan, root);
+  return runChanged(deps, tx, prepared, outcome.written, root);
 }
 
 async function runChanged(
   deps: ConfigEditDeps,
   tx: ExclusiveContext,
   prepared: PreparedDeclaration,
-  plan: ConfigDeclarationPlan,
+  written: readonly FileChange[],
   root: string,
 ): Promise<DeclareApplyResult> {
   const { configFile } = prepared.parts;
@@ -95,21 +87,22 @@ async function runChanged(
     loaded = await tx.load();
   } catch (error) {
     const why = `${configFile} did not load once changed (${describeError(error, root)})`;
-    return undoDeclaration(tx, prepared, plan, { code: "NOT_LOADED", why }, root);
+    return undoDeclaration(tx, prepared, written, { code: "NOT_LOADED", why }, root);
   }
   const missing = missingFrom(loaded, prepared);
   if (missing !== null) {
     const why = `${configFile} loaded without ${missing}`;
-    return undoDeclaration(tx, prepared, plan, { code: "PLAN_REJECTED", why }, root);
+    return undoDeclaration(tx, prepared, written, { code: "PLAN_REJECTED", why }, root);
   }
   tx.apply(loaded);
   if (tx.current() !== loaded) {
     const why = `${configFile} loaded, but Studio could not run it; the terminal says why`;
-    return undoDeclaration(tx, prepared, plan, { code: "NOT_LOADED", why }, root);
+    return undoDeclaration(tx, prepared, written, { code: "NOT_LOADED", why }, root);
   }
   deps.project.importsChanged();
-  log.info(`Studio declared ${prepared.name} in ${configFile}`);
-  return { status: "applied", configFile };
+  const files = written.map((change) => change.file);
+  log.info(`Studio declared ${prepared.name} in ${listed(files)}`);
+  return { status: "applied", files };
 }
 
 /* What the loaded config should declare now and does not, if anything. */

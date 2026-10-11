@@ -136,7 +136,7 @@ describe("declaring an import in courier.config.ts through Studio", () => {
       baseHash: preview.body.baseHash,
     });
 
-    expect(applied.body).toEqual({ status: "applied", configFile: "courier.config.ts" });
+    expect(applied.body).toEqual({ status: "applied", files: ["courier.config.ts"] });
     expect(config()).toContain('import { petstore } from "./src/gen/petstore/source";');
     expect(config()).toContain("  sources: { api, petstore },\n  imports: {\n    petstore: {\n");
     const after = await post(url, "/api/apis/declare/preview", IMPORT);
@@ -163,7 +163,7 @@ describe("declaring an import in courier.config.ts through Studio", () => {
       });
 
       const written = readFileSync(join(root, "src/courier/config.ts"), "utf8");
-      expect(applied.body).toEqual({ status: "applied", configFile: "src/courier/config.ts" });
+      expect(applied.body).toEqual({ status: "applied", files: ["src/courier/config.ts"] });
       expect(written).toContain('import { petstore } from "../gen/petstore/source";');
       expect(written).toContain("sources: { api, petstore },");
       expect(config()).toBe(passing);

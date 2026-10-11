@@ -82,11 +82,16 @@ const DECLARE_PREVIEW = {
   status: "ready",
   configFile: "courier.config.ts",
   baseHash: "config-1",
-  hunks: [
+  files: [
     {
-      lines: [
-        { kind: "context", text: 'import { api } from "./src/api";', oldLine: 1, newLine: 1 },
-        { kind: "add", text: DECLARATION.source.importLine, oldLine: null, newLine: 2 },
+      file: "courier.config.ts",
+      hunks: [
+        {
+          lines: [
+            { kind: "context", text: 'import { api } from "./src/api";', oldLine: 1, newLine: 1 },
+            { kind: "add", text: DECLARATION.source.importLine, oldLine: null, newLine: 2 },
+          ],
+        },
       ],
     },
   ],
@@ -114,7 +119,7 @@ function answers(write: () => unknown): void {
     if (url === "/api/apis/write") return write();
     if (url === "/api/apis/declare/preview") return DECLARE_PREVIEW;
     if (url === "/api/apis/declare/apply")
-      return { status: "applied", configFile: "courier.config.ts" };
+      return { status: "applied", files: ["courier.config.ts"] };
     throw new Error(`unexpected request to ${url}`);
   });
 }

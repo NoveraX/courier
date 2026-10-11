@@ -33,6 +33,12 @@ export interface ImportDeclaration {
   /** The config to edit, relative to the project root. */
   configFile: string;
   /**
+   * The module the config takes its `sources` from, relative to the project
+   * root, when the config does not write the list itself: the import line
+   * and the `sources` entry go there, the `imports` entry in the config.
+   */
+  sourcesFile?: string | undefined;
+  /**
    * Importing the generated source, and naming it under `sources`: Studio
    * lists an API — on the APIs page, in the Explorer and the Playground —
    * only once `sources` declares it.

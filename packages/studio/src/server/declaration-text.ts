@@ -22,6 +22,7 @@ export function declarationText(name: string, parts: ImportDeclarationParts): Im
   const importEntry = parts.importEntry && formatImportSnippet(name, parts.importEntry);
   return {
     configFile: parts.configFile,
+    ...(parts.sourcesModule && source && { sourcesFile: parts.sourcesModule.file }),
     source,
     importEntry,
     ...(parts.leftOut > 0 && { leftOut: parts.leftOut }),

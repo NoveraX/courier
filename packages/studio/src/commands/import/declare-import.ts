@@ -6,6 +6,7 @@ import type {
   ManualDeclaration,
 } from "../../server/config-edit/config-declare-types";
 import type { ConfigEditDeps } from "../../server/config-edit/declare-alone";
+import { listed } from "../../server/config-edit/file-changes";
 import { prepareConfigDeclaration } from "../../server/config-edit/prepare-config-declaration";
 import { previewOf } from "../../server/config-edit/preview-of";
 import { readConfigToAct } from "../../server/project-state/read-config-to-act";
@@ -27,8 +28,12 @@ function leftAsItIs(
   if (result.status === "declared") {
     return { lines: [`The config declares ${name} already.`], status: 0 };
   }
-  const by = result.declaration
-    ? ["Add these lines to it:", ...declarationLines(result.declaration)]
+  const declaration = result.declaration;
+  const by = declaration
+    ? [
+        declaration.sourcesFile ? "Add these lines:" : "Add these lines to it:",
+        ...declarationLines(declaration),
+      ]
     : [];
   return {
     lines: [style.yellow(`The config was left as it is: ${result.reason}`), ...by],
@@ -40,9 +45,11 @@ function leftAsItIs(
  * Declare an import whose files are written in `courier.config.ts`, as
  * Import API's **Add to courier.config.ts** does: the import of the
  * generated source, its `sources` entry and its `imports` entry, written
- * like the rest of the file; the config is then loaded, and put back as it
- * was when it no longer loads. A config written in a way Studio cannot add
- * to safely is left as it is, with the lines to add by hand.
+ * like the rest of the file — the first two in the module the config takes
+ * its `sources` from, when it does. The config is then loaded, and every
+ * file put back as it was when it no longer loads. A config written in a
+ * way Studio cannot add to safely is left as it is, with the lines to add
+ * by hand.
  *
  * @param body - The import as it was written
  * @param deps - The project and its root
@@ -63,10 +70,11 @@ export async function declareImport(
   if (preview.status !== "ready") return leftAsItIs(preview, body.sourceName, style);
   const applied = await applyConfigDeclaration(deps, body, preview.baseHash);
   if (applied.status === "applied") {
-    return { lines: [`Declared ${body.sourceName} in ${applied.configFile}.`], status: 0 };
+    return { lines: [`Declared ${body.sourceName} in ${listed(applied.files)}.`], status: 0 };
   }
   if (applied.status === "stale") {
-    const changed = `${preview.configFile} changed while the import was written; run the command again to declare it.`;
+    const files = preview.files.map((change) => change.file).join(" or ");
+    const changed = `${files} changed while the import was written; run the command again to declare it.`;
     return { lines: [style.yellow(changed)], status: 1 };
   }
   return leftAsItIs(applied, body.sourceName, style);

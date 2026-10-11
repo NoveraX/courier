@@ -4,12 +4,14 @@ import { styleFor, type TerminalStyle } from "@noverax/courier/internal";
 
 import { MINIMAL_CONFIG } from "@/features/apis/minimal-config";
 import type { ConfigEditDeps } from "../../server/config-edit/declare-alone";
+import { listed } from "../../server/config-edit/file-changes";
 import { withImportsLock } from "../../server/imports-lock";
 import { closeFormatterThread } from "../../server/project-format/formatter-host";
 import type { ConfigFailure } from "../../server/project-state/types";
 import { type ImportWritePlan, planImportWrite, writeImport } from "../../server/write-import";
-import type { WriteBody } from "../../server/write-types";
+import type { ImportDeclaration, WriteBody } from "../../server/write-types";
 import { askYesNo, consentTo } from "./consent";
+import { declarationFiles } from "./declaration-files";
 import { declarationLines } from "./declaration-lines";
 import { declareImport } from "./declare-import";
 import { type ImportRun, importRequest } from "./import-request";
@@ -45,10 +47,13 @@ function planShown(
     ...specLines(body.sourceName, from, body.spec, body.options.selectedEndpoints),
     "",
     ...planLines(planned.plan, style),
-    ...(declaration
-      ? ["", `Then ${declaration.configFile} declares it:`, ...declarationLines(declaration)]
-      : []),
+    ...(declaration ? ["", thenDeclared(declaration), ...declarationLines(declaration)] : []),
   ];
+}
+
+function thenDeclared(declaration: ImportDeclaration): string {
+  const files = declarationFiles(declaration);
+  return `Then ${listed(files)} ${files.length > 1 ? "declare" : "declares"} it:`;
 }
 
 async function written(
@@ -110,7 +115,9 @@ async function importInto(
 function finish(found: ImportWritePlan, run: ImportRun, body: WriteBody): number {
   const left = run.declare === false ? found.declaration : undefined;
   print([
-    ...(left ? ["Add these lines to courier.config.ts:", ...declarationLines(left)] : []),
+    ...(left
+      ? [`Add these lines to ${listed(declarationFiles(left))}:`, ...declarationLines(left)]
+      : []),
     ...usageLines(body),
   ]);
   return 0;

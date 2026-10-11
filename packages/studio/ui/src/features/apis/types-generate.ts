@@ -191,6 +191,12 @@ export type ImportSource = "url" | "file" | "raw";
 export interface ImportDeclaration {
   /** The config to edit, relative to the project root. */
   configFile: string;
+  /**
+   * The module the config takes its `sources` from, when the config does not
+   * write the list itself: the import line and the `sources` entry go there,
+   * the `imports` entry in the config. `null` when everything goes in the config.
+   */
+  sourcesFile: string | null;
   /** The import of the generated source, and its entry under `sources`, which Studio lists APIs from. */
   source: { importLine: string; entry: string } | null;
   /** The entry under `imports`, which Studio regenerates, merges and checks the import from. */

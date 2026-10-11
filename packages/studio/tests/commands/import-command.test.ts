@@ -5,12 +5,14 @@
  * declared in courier.config.ts, which then loads — the endpoints
  * `--include` and `--exclude` pick, recorded for updates; a file you changed
  * kept until `--confirm` allows replacing it; a URL on this machine, standard
- * input, `--no-declare`, and a project with no config yet.
+ * input, `--no-declare`, a config that takes its `sources` from a module of
+ * the project, and a project with no config yet.
  */
 import { spawn } from "node:child_process";
 import {
   appendFileSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -81,6 +83,10 @@ function petStore(extra: Record<string, unknown> = {}): string {
 
 const MINIMAL =
   'import { defineConfig } from "@noverax/courier/config";\nexport default defineConfig({ sources: {} });\n';
+
+/* The config as the guides lay a project out: the list of APIs in a module of its own. */
+const FROM_MODULE =
+  'import { defineConfig } from "@noverax/courier/config";\nimport { sources } from "./lib/sources";\nexport default defineConfig({ sources });\n';
 
 let dir: string;
 let spec: string;
@@ -245,6 +251,41 @@ describe("courier-studio import", { timeout: 60_000 }, () => {
     expect(run.stdout).toContain('importType: "raw"');
     expect(existsSync(join(dir, "src/api/pets/source.ts"))).toBe(true);
     expect(read("courier.config.ts")).toBe(MINIMAL);
+  });
+
+  it("lists the source in the module the config takes its sources from, and declares the import in the config", async () => {
+    writeFileSync(join(dir, "courier.config.ts"), FROM_MODULE);
+    mkdirSync(join(dir, "lib"));
+    writeFileSync(join(dir, "lib", "sources.ts"), "export const sources = {};\n");
+
+    const dry = await studioImport([spec, "--dry-run"]);
+    const run = await studioImport([spec, "--yes"]);
+
+    expect(dry.stdout).toContain("Then lib/sources.ts and courier.config.ts declare it:");
+    expect(dry.stdout).toContain(
+      '  in lib/sources.ts:\n  import { petStore } from "../src/api/pet-store/source";',
+    );
+    expect(run.status, run.output).toBe(0);
+    expect(run.stdout).toContain("Declared petStore in lib/sources.ts and courier.config.ts.");
+    expect(read("lib/sources.ts")).toBe(
+      'import { petStore } from "../src/api/pet-store/source";\n\nexport const sources = { petStore };\n',
+    );
+    expect(read("courier.config.ts")).toContain("defineConfig({ sources, imports: {");
+    expect(read("courier.config.ts")).not.toContain("pet-store/source");
+  });
+
+  it("with --no-declare gives each line under the file it goes in", async () => {
+    writeFileSync(join(dir, "courier.config.ts"), FROM_MODULE);
+    mkdirSync(join(dir, "lib"));
+    writeFileSync(join(dir, "lib", "sources.ts"), "export const sources = {};\n");
+
+    const run = await studioImport([spec, "--yes", "--no-declare"]);
+
+    expect(run.status, run.output).toBe(0);
+    expect(run.stdout).toContain("Add these lines to lib/sources.ts and courier.config.ts:");
+    expect(run.stdout).toContain("  in lib/sources.ts:");
+    expect(run.stdout).toContain("  in courier.config.ts:\n  under imports:");
+    expect(read("lib/sources.ts")).toBe("export const sources = {};\n");
   });
 
   it("says how to start a project with no courier.config.ts, and refuses an option it does not take", async () => {

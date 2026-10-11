@@ -1,15 +1,11 @@
-import type { LucideIcon } from "lucide-react";
-import { ArrowRight, Download, FilePlus2, Loader2 } from "lucide-react";
+import { ArrowRight, Download } from "lucide-react";
 import type { UseConfigDeclare } from "@/apis/use-config-declare";
 import type { UseImportReturn } from "@/apis/use-import";
 import { countSelectedEndpoints } from "@/features/apis/helpers";
 import type { ImportState, ImportStep } from "@/features/apis/types";
-import { cn } from "@/lib/utils";
+import { DeclareActions } from "./declare-actions";
+import { FooterAction } from "./footer-action";
 
-const BUTTON =
-  "flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card px-3.5 text-control font-semibold disabled:cursor-default disabled:opacity-50";
-const NEXT = `${BUTTON} bg-fg text-bg hover:bg-fg/90`;
-const OUTLINE = `${BUTTON} border border-line font-normal text-fg-muted hover:border-line-strong hover:text-fg`;
 const BACK: Partial<Record<ImportStep, ImportStep>> = {
   select: "import",
   options: "select",
@@ -32,57 +28,6 @@ function noteOf(state: ImportState): string {
   if (state.step === "preview")
     return `${state.generatedFiles.length} files for ${state.options.sourceName}`;
   return "Written";
-}
-
-function Action({
-  label,
-  icon: Icon,
-  busy = false,
-  className,
-  disabled = false,
-  onClick,
-}: {
-  label: string;
-  icon?: LucideIcon;
-  busy?: boolean;
-  className: string;
-  disabled?: boolean;
-  onClick: () => void;
-}): React.ReactNode {
-  const Shown = busy ? Loader2 : Icon;
-  return (
-    <button type="button" className={className} disabled={disabled} onClick={onClick}>
-      {Shown && <Shown aria-hidden="true" className={cn("size-3.25", busy && "animate-spin")} />}
-      {label}
-    </button>
-  );
-}
-
-/* Adding the import to courier.config while Studio offers the change; Done otherwise. */
-function DeclareActions({
-  declare,
-  onClose,
-}: {
-  declare: UseConfigDeclare;
-  onClose: () => void;
-}): React.ReactNode {
-  if (declare.error !== null || declare.answer?.status !== "ready") {
-    return <Action label="Done" className={NEXT} onClick={onClose} />;
-  }
-  const file = declare.answer.configFile;
-  return (
-    <>
-      <Action label="Not now" className={OUTLINE} disabled={declare.applying} onClick={onClose} />
-      <Action
-        label={`Add to ${file.slice(file.lastIndexOf("/") + 1)}`}
-        icon={FilePlus2}
-        busy={declare.applying}
-        className={`${BUTTON} bg-brand text-bg hover:bg-brand/90`}
-        disabled={declare.applying}
-        onClick={() => void declare.apply()}
-      />
-    </>
-  );
 }
 
 /**
@@ -111,48 +56,48 @@ export function ImportFooter({
       <span className="truncate text-small text-fg-subtle">{noteOf(state)}</span>
       <div className="flex-1" />
       {back && (
-        <Action
+        <FooterAction
           label="Back"
-          className={OUTLINE}
+          tone="outline"
           disabled={state.writing}
           onClick={() => wizard.goToStep(back)}
         />
       )}
       {state.step === "import" && (
-        <Action
+        <FooterAction
           label="Parse spec"
           icon={ArrowRight}
           busy={parsing}
-          className={NEXT}
+          tone="next"
           disabled={!state.content.trim() || parsing}
           onClick={() => void wizard.parse()}
         />
       )}
       {state.step === "select" && (
-        <Action
+        <FooterAction
           label="Continue"
           icon={ArrowRight}
-          className={NEXT}
+          tone="next"
           disabled={countSelectedEndpoints(state.selectedEndpoints) === 0}
           onClick={() => wizard.goToStep("options")}
         />
       )}
       {state.step === "options" && (
-        <Action
+        <FooterAction
           label="Generate preview"
           icon={ArrowRight}
           busy={parsing}
-          className={NEXT}
+          tone="next"
           disabled={parsing || !state.options.sourceName.trim()}
           onClick={() => void wizard.preview()}
         />
       )}
       {state.step === "preview" && (
-        <Action
+        <FooterAction
           label={writeLabel(state)}
           icon={Download}
           busy={state.writing}
-          className={`${BUTTON} bg-brand text-bg hover:bg-brand/90`}
+          tone="brand"
           disabled={state.writing}
           onClick={() => void wizard.write()}
         />

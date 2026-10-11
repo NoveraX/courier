@@ -65,8 +65,24 @@ function holds(property: ObjectExpression["properties"][number], list: ObjectExp
   return property.type === "Property" && unwrapExpression(property.value) === list;
 }
 
-/* A list with only space left between its braces closes up to `{}`. */
-function emptied(text: string, list: ObjectExpression, edits: readonly TextEdit[]): TextEdit[] {
+/**
+ * The removals that empty an object, with what is left between its braces
+ * closed up to `{}` once only space is.
+ *
+ * @param text - The module's text
+ * @param list - The object
+ * @param edits - The removals of its entries
+ * @returns The removals, or one that closes the braces up
+ * @example
+ * ```ts
+ * const edits = emptied(parsed.text, sources, planEntryRemoval(parsed, items, sources.start, going));
+ * ```
+ */
+export function emptied(
+  text: string,
+  list: ObjectExpression,
+  edits: readonly TextEdit[],
+): TextEdit[] {
   const removed = edits.reduce((sum, edit) => sum + edit.end - edit.start, 0);
   const close = list.end - 1;
   const left = applyEdits(text, edits).slice(list.start + 1, close - removed);

@@ -4,6 +4,7 @@ import type { RemovalConfigNotes } from "@/apis/client-file-changes";
 import type { UseRemoveImportReturn } from "@/apis/use-remove-import";
 import { ChangePreview } from "@/design/code/change-preview";
 import { TickBox } from "@/design/tick-box";
+import { formatList } from "@/lib/formatters";
 
 function ConfigNotes({
   name,
@@ -48,9 +49,10 @@ function ConfigNotes({
 
 /**
  * What removing an import does to courier.config: the lines Studio takes
- * out of it before the files go, with a box to leave the config as it is —
- * or, when Studio leaves the config to the developer, why, and what to
- * remove by hand.
+ * out of it — and out of the module the config takes its `sources` from,
+ * when the source is listed there — before the files go, with a box to leave
+ * them as they are; or, when Studio leaves the config to the developer, why,
+ * and what to remove by hand.
  *
  * @param props - The removal from `useRemoveImport`
  * @returns The section; nothing while the config declares nothing of the import
@@ -69,9 +71,10 @@ export function RemoveConfigSection({
   if (change?.status !== "ready") {
     return <ConfigNotes name={name} notes={notes} reason={change?.reason} />;
   }
-  const label = `Also remove ${name} from ${change.configFile}`;
+  const files = change.files.map((file) => file.file);
+  const label = `Also remove ${name} from ${formatList(files)}`;
   return (
-    <section aria-label={`Changes to ${change.configFile}`} className="flex flex-col gap-2.5">
+    <section aria-label={`Changes to ${formatList(files)}`} className="flex flex-col gap-2.5">
       <label className="flex cursor-pointer items-start gap-2">
         <span className="pt-0.5">
           <TickBox
@@ -84,12 +87,17 @@ export function RemoveConfigSection({
           <span className="text-small font-strong">{label}</span>
           <span className="text-small text-fg-subtle">
             Studio removes these lines first and loads the config without them, then removes the
-            files. It changes nothing else in the file.
+            files.{" "}
+            {files.length > 1
+              ? "It changes both files or neither, and nothing else in them."
+              : "It changes nothing else in the file."}
           </span>
         </span>
       </label>
       {undeclare ? (
-        <ChangePreview target={change.configFile} hunks={change.hunks} />
+        change.files.map((file) => (
+          <ChangePreview key={file.file} target={file.file} hunks={file.hunks} />
+        ))
       ) : (
         <ConfigNotes name={name} notes={notes} />
       )}

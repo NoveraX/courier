@@ -12,23 +12,25 @@ import { ConfigUndeclareError } from "./config-undeclare-error";
  *
  * @param deps - The project, and its root
  * @param request - The import, the files the removal may take and takes, and the preview's hash
- * @returns The config Studio changed
+ * @returns The config, and the files Studio changed — the module the config takes its `sources` from among them when the source was listed there
  * @throws {ConfigUndeclareError} `CONFIG_STALE` or `CONFIG_NOT_CHANGED`; the config is as it was
  * @example
  * ```ts
- * const { configFile } = await undeclareForRemoval(deps, { name, mayTake, taking, baseHash });
+ * const { configFile, files } = await undeclareForRemoval(deps, { name, mayTake, taking, baseHash });
  * ```
  */
 export async function undeclareForRemoval(
   deps: ApisRouteDeps,
   request: UndeclareRequest,
-): Promise<{ configFile: string }> {
+): Promise<{ configFile: string; files: string[] }> {
   const result = await runConfigEdit(deps.project, (tx) => undeclareAlone(deps, tx, request));
-  if (result.status === "applied") return { configFile: result.configFile };
+  if (result.status === "applied") return { configFile: result.configFile, files: result.files };
   if (result.status === "stale") {
+    const files = result.preview?.status === "ready" ? result.preview.files : [];
+    const changed = files.length > 1 ? files.map((f) => f.file).join(" or ") : "courier.config";
     throw new ConfigUndeclareError(
       "CONFIG_STALE",
-      "courier.config changed since you saw the change to it, so no file was removed. Look at the removal again.",
+      `${changed} changed since you saw the change, so no file was removed. Look at the removal again.`,
     );
   }
   throw new ConfigUndeclareError("CONFIG_NOT_CHANGED", `${result.reason} No file was removed.`);

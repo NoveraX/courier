@@ -1,4 +1,5 @@
-import type { DiffHunk, TextEdit } from "../mocks-edit/types";
+import type { TextEdit } from "../mocks-edit/types";
+import type { FileHunks } from "./config-declare-types";
 import type { ConfigEditRefusalCode } from "./config-edit-refusal";
 
 /** What taking an import out of the config removes from it. */
@@ -27,9 +28,13 @@ export interface ReadyUndeclaration {
   status: "ready";
   /** The config, relative to the project root. */
   configFile: string;
-  /** Every line the change removes or changes, between the lines around it. */
-  hunks: DiffHunk[];
-  /** sha256 of the config the change was planned against; removing the import quotes it. */
+  /**
+   * Every file the change writes, in the order it writes them — the module
+   * the config takes its `sources` from, when it does, then the config —
+   * each with the lines it removes or changes between the lines around them.
+   */
+  files: FileHunks[];
+  /** sha256 of what the change was planned against — the config, and that module when it writes it; removing the import quotes it. */
   baseHash: string;
 }
 
@@ -45,8 +50,11 @@ export type UndeclarePreview = ReadyUndeclaration | ManualUndeclaration;
 
 /** What asking Studio to take an import out of the config did. */
 export type UndeclareResult =
-  /** The config no longer declares the import, and Studio runs it. */
-  | { status: "applied"; configFile: string }
+  /**
+   * The config no longer declares the import, and Studio runs it: the config,
+   * relative to the project root, and the files the change wrote, in order.
+   */
+  | { status: "applied"; configFile: string; files: string[] }
   /** The config changed since the preview; this is the change against it now. */
   | { status: "stale"; preview: UndeclarePreview | null }
   | ManualUndeclaration;

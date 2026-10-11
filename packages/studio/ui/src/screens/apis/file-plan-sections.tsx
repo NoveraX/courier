@@ -2,6 +2,7 @@ import { Ban } from "lucide-react";
 import { TickBox } from "@/design/tick-box";
 import { KEPT_LABEL, pendingLabel, writeLabel } from "@/features/apis/file-plan-labels";
 import type { FilePlanSummary } from "@/features/apis/types-file-plan";
+import { formatList } from "@/lib/formatters";
 
 function FileList({
   title,
@@ -117,7 +118,7 @@ export function FilePlanSections({
       )}
       {(plan.formatting?.formattedWith.length ?? 0) > 0 && (
         <p className="m-0 text-small text-fg-subtle">
-          Formatted with {toolList(plan.formatting?.formattedWith ?? [])}, as the project formats
+          Formatted with {formatList(plan.formatting?.formattedWith ?? [])}, as the project formats
           its code.
         </p>
       )}
@@ -126,11 +127,4 @@ export function FilePlanSections({
       )}
     </div>
   );
-}
-
-/* The tools as a sentence names them: `Biome`, `ESLint and Prettier`, `Biome, ESLint and Prettier`. */
-function toolList(tools: readonly string[]): string {
-  return tools.length > 1
-    ? `${tools.slice(0, -1).join(", ")} and ${tools.at(-1)}`
-    : (tools[0] ?? "");
 }

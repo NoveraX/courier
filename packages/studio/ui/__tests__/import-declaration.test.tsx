@@ -88,11 +88,31 @@ describe("the wizard once Studio wrote an import's files", () => {
     expect(state.step).toBe("declare");
     expect(state.declaration).toEqual({
       configFile: "courier.config.ts",
+      sourcesFile: null,
       source: SOURCE,
       importEntry: IMPORT_ENTRY,
       leftOut: 0,
     });
     expect(message).toBe("pets: wrote 2 files");
+  });
+
+  it("keeps the module the config takes its sources from, where the source is listed", () => {
+    const { state } = settleWrite(
+      PREVIEWED,
+      answer({
+        configFile: "courier.config.ts",
+        sourcesFile: "lib/sources.ts",
+        source: SOURCE,
+        importEntry: IMPORT_ENTRY,
+      }),
+    );
+    const blank = settleWrite(
+      PREVIEWED,
+      answer({ configFile: "courier.config.ts", sourcesFile: "", source: SOURCE }),
+    );
+
+    expect(state.declaration).toHaveProperty("sourcesFile", "lib/sources.ts");
+    expect(blank.state.declaration).toHaveProperty("sourcesFile", null);
   });
 
   it("says only what was written, never that the API was imported", () => {
@@ -149,6 +169,7 @@ describe("the wizard once Studio wrote an import's files", () => {
 
     expect(onlyEntry.state.declaration).toEqual({
       configFile: "courier.config.ts",
+      sourcesFile: null,
       source: null,
       importEntry: IMPORT_ENTRY,
       leftOut: 0,
@@ -195,6 +216,7 @@ describe("the wizard once Studio wrote an import's files", () => {
 
 const DECLARATION: ImportDeclaration = {
   configFile: "courier.config.ts",
+  sourcesFile: null,
   source: SOURCE,
   importEntry: IMPORT_ENTRY,
   leftOut: 0,
@@ -213,7 +235,7 @@ const HUNKS: DiffHunk[] = [
 const READY: ConfigDeclare = {
   status: "ready",
   configFile: "courier.config.ts",
-  hunks: HUNKS,
+  files: [{ file: "courier.config.ts", hunks: HUNKS }],
   baseHash: "base",
   stale: false,
 };
@@ -251,7 +273,7 @@ describe("the declare step", () => {
   });
 
   it("says the API is in Studio once the change is made", () => {
-    const html = step(declareOf({ status: "applied", configFile: "courier.config.ts" }));
+    const html = step(declareOf({ status: "applied", files: ["courier.config.ts"] }));
 
     expect(html).toContain("is in Studio");
     expect(html).toContain("Studio added it to courier.config.ts and loaded the config");
@@ -289,21 +311,83 @@ describe("the declare step", () => {
   it("says it is reading the config while the change is on its way", () => {
     expect(step(declareOf(null))).toContain("Reading courier.config.ts…");
   });
+
+  it("shows the change to each file when the config takes its sources from a module", () => {
+    const declaration = { ...DECLARATION, sourcesFile: "lib/sources.ts" };
+    const twoFiles: ConfigDeclare = {
+      ...READY,
+      files: [
+        { file: "lib/sources.ts", hunks: HUNKS },
+        { file: "courier.config.ts", hunks: HUNKS },
+      ],
+    };
+
+    const html = step(declareOf(twoFiles), declaration);
+    const stale = step(declareOf({ ...twoFiles, stale: true }), declaration);
+
+    expect(html).toContain(
+      'add <span class="font-mono">pets</span> to lib/sources.ts and courier.config.ts</h3>',
+    );
+    expect(html).toContain('aria-label="Change to lib/sources.ts"');
+    expect(html).toContain('aria-label="Change to courier.config.ts"');
+    expect(html).toContain(
+      "The config takes its sources from lib/sources.ts, so the API is listed there and the import declared in courier.config.ts. Studio writes both files or neither, and changes nothing else in them.",
+    );
+    expect(stale).toContain(
+      "lib/sources.ts or courier.config.ts changed since Studio read them; this is the change against them now.",
+    );
+  });
+
+  it("says which files Studio added the API to once the change is made", () => {
+    const html = step(
+      declareOf({ status: "applied", files: ["lib/sources.ts", "courier.config.ts"] }),
+    );
+
+    expect(html).toContain(
+      "Studio added it to lib/sources.ts and courier.config.ts and loaded the config",
+    );
+  });
+
+  it("names the file each line goes in when the lines are left to add by hand", () => {
+    const declaration = { ...DECLARATION, sourcesFile: "lib/sources.ts" };
+
+    const html = step(
+      declareOf({ status: "manual", code: "WRITE_FAILED", reason: "No write.", declaration }),
+    );
+
+    expect(html).toContain(
+      "In lib/sources.ts, which the config takes its sources from, import the generated source at the top of the file:",
+    );
+    expect(html).toContain("Add it to the sources lib/sources.ts exports:");
+    expect(html).toContain("In courier.config.ts, declare the import under imports");
+  });
 });
 
 describe("Studio's answer about declaring an import", () => {
   it("reads an apply that found the config saved meanwhile as the change against it now", () => {
     const raw = {
       status: "stale",
-      preview: { status: "ready", configFile: "courier.config.ts", hunks: HUNKS, baseHash: "new" },
+      preview: {
+        status: "ready",
+        configFile: "courier.config.ts",
+        files: [{ file: "courier.config.ts", hunks: HUNKS }],
+        baseHash: "new",
+      },
     };
 
     expect(readConfigDeclare(raw)).toEqual({ ...READY, baseHash: "new", stale: true });
   });
 
   it("reads nothing from an answer it does not recognise", () => {
-    expect(readConfigDeclare({ status: "ready", configFile: "courier.config.ts" })).toBeNull();
+    const ready = { status: "ready", configFile: "courier.config.ts", baseHash: "h" };
+
+    expect(readConfigDeclare(ready)).toBeNull();
+    expect(readConfigDeclare({ ...ready, files: [] })).toBeNull();
+    expect(readConfigDeclare({ ...ready, files: [{ file: "", hunks: [] }] })).toBeNull();
+    expect(readConfigDeclare({ ...ready, files: [{ file: "a.ts", hunks: [7] }] })).toBeNull();
     expect(readConfigDeclare({ status: "applied" })).toBeNull();
+    expect(readConfigDeclare({ status: "applied", files: [] })).toBeNull();
+    expect(readConfigDeclare({ status: "applied", files: ["a.ts", 7] })).toBeNull();
     expect(readConfigDeclare("applied")).toBeNull();
   });
 });
@@ -345,7 +429,7 @@ describe("the declare step's footer", () => {
 
   it("offers only Done once the change is made, or when it is left to the developer", () => {
     for (const answer of [
-      { status: "applied", configFile: "courier.config.ts" },
+      { status: "applied", files: ["courier.config.ts"] },
       { status: "manual", code: "LIST_SHAPE", reason: "", declaration: null },
     ] satisfies ConfigDeclare[]) {
       const html = renderToStaticMarkup(

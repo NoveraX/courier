@@ -1,34 +1,20 @@
 import type { ObjectExpression } from "oxc-parser";
 import { applyEdits } from "../mocks-edit/plan/apply-edits";
-import { countLineTerminators } from "../mocks-edit/plan/count-line-terminators";
-import { detectStyle } from "../mocks-edit/plan/detect-style";
-import { planImportLines } from "../mocks-edit/plan/import-lines";
-import { insertion } from "../mocks-edit/plan/insertion";
 import { isPureInsertion } from "../mocks-edit/plan/is-pure-insertion";
-import {
-  type BracedList,
-  type ListSite,
-  planListInsertion,
-} from "../mocks-edit/plan/list-insertion";
-import { collectModuleBindings } from "../mocks-edit/plan/module-bindings";
-import type { ParsedSource } from "../mocks-edit/plan/parse-source";
-import { quoteString } from "../mocks-edit/plan/quote-string";
-import type { FileStyle } from "../mocks-edit/plan/types";
+import { planListInsertion } from "../mocks-edit/plan/list-insertion";
 import type { TextEdit } from "../mocks-edit/types";
 import type { ConfigDeclarationInput, ConfigDeclarationPlan } from "./config-declaration-types";
 import { ConfigEditRefusal } from "./config-edit-refusal";
 import { findConfigList } from "./find-config-list";
+import { importLine, type ListTarget, listOf, listTargetOf, mergeInsertions } from "./list-site";
 import { parseConfigObject } from "./parse-config-object";
 import { importEntry, objectEntry, type RenderEntry, sourceEntry } from "./render-config-entries";
 import { verifyConfigPlan } from "./verify-config-plan";
 
 /** Where a declaration goes in a config, and how the config is written. */
-interface Target {
+interface Target extends ListTarget {
   input: ConfigDeclarationInput;
-  parsed: ParsedSource;
   config: ObjectExpression;
-  style: FileStyle;
-  site: ListSite;
 }
 
 /**
@@ -59,7 +45,7 @@ export function planConfigDeclaration(input: ConfigDeclarationInput): ConfigDecl
   const added: RenderEntry[] = [];
   const { source, importEntry: entry, name } = input;
   if (source) {
-    edits.push(importLine(target, source.binding, source.specifier));
+    edits.push(importLine(target, input.configName, source));
     const render: RenderEntry = () => sourceEntry(name, source.binding, target.style);
     edits.push(...addTo(target, "sources", render, added));
   }
@@ -82,32 +68,7 @@ export function planConfigDeclaration(input: ConfigDeclarationInput): ConfigDecl
 
 function targetOf(input: ConfigDeclarationInput): Target {
   const { parsed, config } = parseConfigObject(input.configName, input.text);
-  const style = detectStyle(parsed, config);
-  const code = parsed.text.trimEnd();
-  const singleLineFile = countLineTerminators(code, 0, code.length) === 0;
-  const site = {
-    text: parsed.text,
-    comments: parsed.comments,
-    commentEnds: parsed.commentEnds,
-    style,
-    singleLineFile,
-  };
-  return { input, parsed, config, style, site };
-}
-
-function importLine(target: Target, binding: string, specifier: string): TextEdit {
-  const { parsed, style, input } = target;
-  if (collectModuleBindings(parsed.program).has(binding)) {
-    throw new ConfigEditRefusal(
-      "NAME_IN_USE",
-      `${input.configName} already uses the name ${binding}, which the generated source is exported as.`,
-    );
-  }
-  const statement = `import { ${binding} } from ${quoteString(specifier, style.quote)}${style.semicolons ? ";" : ""}`;
-  const lines = planImportLines(parsed, [statement], style);
-  if (lines === null)
-    throw new ConfigEditRefusal("PLAN_REJECTED", "Studio planned no import line.");
-  return lines.edit;
+  return { input, config, ...listTargetOf(parsed, config) };
 }
 
 /* An entry goes into the object the config declares under the key, or —
@@ -130,22 +91,4 @@ function addTo(
   }
   if (list.keys.has(input.name)) return [];
   return planListInsertion(listOf(list.object), site, (indent, block) => [render(indent, block)]);
-}
-
-function listOf(object: ObjectExpression): BracedList {
-  return { open: object.start, close: object.end - 1, items: object.properties };
-}
-
-/* Insertions at one offset fold into one, in the order they were planned. */
-function mergeInsertions(edits: readonly TextEdit[]): TextEdit[] {
-  const merged: TextEdit[] = [];
-  for (const edit of [...edits].sort((a, b) => a.start - b.start)) {
-    const previous = merged.at(-1);
-    if (previous !== undefined && previous.start === edit.start) {
-      merged[merged.length - 1] = insertion(edit.start, previous.text + edit.text);
-    } else {
-      merged.push(edit);
-    }
-  }
-  return merged;
 }

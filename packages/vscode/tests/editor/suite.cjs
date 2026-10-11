@@ -1,9 +1,10 @@
 /*
  * Runs inside VS Code: opens the workspace's file, waits for the extension's
  * hints over its call, and checks the line above it, the hover over it, the
- * audit's finding marked at it, the commands the extension offers and its
- * snippets. What it saw is written to COURIER_EDITOR_REPORT; a mismatch
- * fails the run.
+ * audit's finding marked at it, going to the endpoint's declaration and
+ * back, the lines over the declaration, the endpoint in Go to Symbol, the
+ * commands the extension offers and its snippets. What it saw is written to
+ * COURIER_EDITOR_REPORT; a mismatch fails the run.
  */
 const assert = require("node:assert/strict");
 const { writeFileSync } = require("node:fs");
@@ -49,6 +50,25 @@ async function snippetLabels() {
     .sort();
 }
 
+async function codeFeatures(folder, file) {
+  const orders = vscode.Uri.joinPath(folder, "src/api/orders.ts");
+  await vscode.workspace.openTextDocument(orders);
+  const run = (command, ...args) => vscode.commands.executeCommand(command, ...args);
+  const found =
+    (await run("vscode.executeDefinitionProvider", file, new vscode.Position(1, 19))) ?? [];
+  const references =
+    (await run("vscode.executeReferenceProvider", orders, new vscode.Position(2, 6))) ?? [];
+  const lenses = (await run("vscode.executeCodeLensProvider", orders, 10)) ?? [];
+  const symbols = (await run("vscode.executeWorkspaceSymbolProvider", "ordpl")) ?? [];
+  return {
+    definitions: found.map((each) => (each.targetUri ?? each.uri).fsPath),
+    references: references.map((each) => `${each.uri.fsPath}:${each.range.start.line + 1}`),
+    declarationLenses: lenses.map((lens) => lens.command?.title).filter(Boolean),
+    symbols: symbols.map((each) => each.name),
+    ordersPath: orders.fsPath,
+  };
+}
+
 exports.run = async function run() {
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
   assert.ok(folder, "VS Code opened no workspace");
@@ -84,6 +104,7 @@ exports.run = async function run() {
     })),
     commands,
     snippets: await snippetLabels(),
+    code: await codeFeatures(folder, file),
   };
   writeFileSync(process.env.COURIER_EDITOR_REPORT, JSON.stringify(report, null, 2));
 
@@ -108,6 +129,19 @@ exports.run = async function run() {
   for (const name of ["courier.startStudio", "courier.setUp", "courier.view.openLatestFailure"]) {
     assert.ok(commands.includes(name), `${name} is registered`);
   }
+  const { code } = report;
+  assert.deepEqual(
+    code.definitions,
+    [code.ordersPath],
+    "a call goes to its endpoint's declaration",
+  );
+  assert.deepEqual(
+    code.references,
+    [`${code.ordersPath}:3`, `${file.fsPath}:2`],
+    "the declaration lists itself and its call site, once each",
+  );
+  assert.deepEqual(code.declarationLenses, ["3 calls · 1 failed · p95 40 ms", "1 call site"]);
+  assert.deepEqual(code.symbols, ["orders.place"]);
   assert.deepEqual(report.snippets, [
     "courier-api",
     "courier-boundary",

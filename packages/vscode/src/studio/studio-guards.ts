@@ -1,4 +1,11 @@
-import type { CallSite, EndpointCall, EndpointStats, Finding } from "./studio-types";
+import type {
+  CallSite,
+  EndpointCall,
+  EndpointDefinition,
+  EndpointStats,
+  Finding,
+  TextSpan,
+} from "./studio-types";
 
 const SEVERITIES = new Set(["error", "warning", "hint"]);
 
@@ -65,5 +72,27 @@ export function isFinding(value: unknown): value is Finding {
     SEVERITIES.has(value.severity) &&
     Array.isArray(value.endpoints) &&
     value.endpoints.every(isName)
+  );
+}
+
+function isSpan(value: unknown): value is TextSpan {
+  return (
+    isRecord(value) &&
+    typeof value.line === "number" &&
+    typeof value.column === "number" &&
+    typeof value.endLine === "number" &&
+    typeof value.endColumn === "number"
+  );
+}
+
+/** Whether Studio's item is where an endpoint is declared. */
+export function isDefinition(value: unknown): value is EndpointDefinition {
+  return (
+    isRecord(value) &&
+    isName(value) &&
+    isSpan(value) &&
+    isSpan(value.span) &&
+    typeof value.file === "string" &&
+    typeof value.path === "string"
   );
 }

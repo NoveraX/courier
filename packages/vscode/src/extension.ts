@@ -2,6 +2,8 @@ import * as vscode from "vscode";
 
 import { offerMcpServers } from "./agents/mcp-servers";
 import { createAuditDiagnostics } from "./audit/audit-diagnostics";
+import { createDefinitionStore } from "./code/definition-store";
+import { registerCodeFeatures } from "./code/register-code-features";
 import { openInStudio } from "./commands/open-in-studio";
 import { setUpCourier, startStudio } from "./commands/project-commands";
 import { createCallHints } from "./hints/call-hints";
@@ -11,7 +13,7 @@ import { keepFresh } from "./keep-fresh";
 import { createCourierProjects } from "./projects/courier-projects";
 import { createConfiguredStudio } from "./studio/configured-studio";
 import { findStudio } from "./studio/find-studio";
-import { fetchCalls, fetchEndpointStats, fetchSites } from "./studio/studio-api";
+import { fetchCalls, fetchDefinitions, fetchEndpointStats, fetchSites } from "./studio/studio-api";
 import { stateInFront } from "./studio/studio-in-front";
 import { createStudioStatus } from "./studio/studio-status";
 import { createCourierView } from "./view/courier-view";
@@ -19,10 +21,11 @@ import { registerViewCommands } from "./view/view-commands";
 
 /**
  * Start the extension: the hints over each endpoint call and the audit's
- * findings at them, kept up to date while the window has focus; the Courier
- * view of each project's endpoints; the Studio of the file in front in the
- * status bar; the commands that start Studio and set Courier up; and the
- * MCP servers offered to VS Code's agent.
+ * findings at them, kept up to date while the window has focus; going from
+ * a call to its endpoint's declaration and back, with the figures over each
+ * declaration; the Courier view of each project's endpoints; the Studio of
+ * the file in front in the status bar; the commands that start Studio and
+ * set Courier up; and the MCP servers offered to VS Code's agent.
  *
  * @param context - The extension's context, which disposes what it holds
  * @example
@@ -55,22 +58,34 @@ export function activate(context: vscode.ExtensionContext): void {
     settings().get<boolean>("audit.diagnostics", true),
   );
   const status = createStudioStatus();
+  const selector = CALL_LANGUAGES.map((language) => ({ language, scheme: "file" }));
+  const definitions = createDefinitionStore(fetchDefinitions);
+  const code = registerCodeFeatures({
+    selector,
+    store,
+    definitions,
+    fetchSites,
+    targets: view.targets,
+    enabled: () => settings().get<boolean>("hints.enabled", true),
+  });
   const showStatus = () =>
     void stateInFront({ studioFor, projects, answers, targets: view.targets }).then(status.show);
   const redraw = () => {
     hints.refreshed();
+    code.refreshed();
     void view.refresh().then(showStatus);
     void diagnostics.refresh();
   };
   const restart = () => {
     store.forgetCalls();
+    definitions.forget();
     void store.refresh().finally(redraw);
   };
-  const selector = CALL_LANGUAGES.map((language) => ({ language, scheme: "file" }));
   const addresses = vscode.workspace.createFileSystemWatcher("**/.courier/studio.json");
   context.subscriptions.push(
     projects,
     view,
+    code,
     diagnostics,
     status,
     addresses,

@@ -27,9 +27,10 @@ export class Position {
 export class Range {
   readonly start: Position;
   readonly end: Position;
-  constructor(startLine: number, startCharacter: number, endLine: number, endCharacter: number) {
-    this.start = new Position(startLine, startCharacter);
-    this.end = new Position(endLine, endCharacter);
+  constructor(start: number | Position, from: number | Position, endLine?: number, end?: number) {
+    this.start =
+      typeof start === "number" ? new Position(start, typeof from === "number" ? from : 0) : start;
+    this.end = typeof from === "number" ? new Position(endLine ?? 0, end ?? 0) : from;
   }
   contains(position: Position): boolean {
     const after =
@@ -95,6 +96,24 @@ export class Uri {
   toString(): string {
     return this.text;
   }
+}
+
+export class Location {
+  constructor(
+    readonly uri: Uri,
+    readonly range: Range | Position,
+  ) {}
+}
+
+export const SymbolKind = { Method: 5, Function: 11 } as const;
+
+export class SymbolInformation {
+  constructor(
+    readonly name: string,
+    readonly kind: number,
+    readonly containerName: string,
+    readonly location: Location,
+  ) {}
 }
 
 export class TreeItem {

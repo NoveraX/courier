@@ -9,7 +9,15 @@
  * `minimum`, the oldest the extension's engines field takes, as CI runs both
  * ends; or else the one installed on a Mac, or the latest stable.
  */
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -71,23 +79,60 @@ const calls = [
     endpoints: [{ source: "shop", endpoint: "orders.place" }],
   },
 ];
+const scratch = mkdtempSync(join(tmpdir(), "courier-vscode-editor-"));
+/* The workspace by its path with links resolved, as Studio names the files it reads; the profile keeps the short one, as VS Code's socket path must stay under 104 characters. */
+const workspace = join(realpathSync(scratch), "shop");
+const definitions = [
+  {
+    source: "shop",
+    endpoint: "orders.place",
+    file: "src/api/orders.ts",
+    path: join(workspace, "src/api/orders.ts"),
+    line: 3,
+    column: 5,
+    endLine: 3,
+    endColumn: 10,
+    span: { line: 3, column: 5, endLine: 3, endColumn: 29 },
+  },
+];
+const sites = [
+  {
+    file: "src/cart.ts",
+    path: join(workspace, "src/cart.ts"),
+    line: 2,
+    column: 18,
+    endLine: 2,
+    endColumn: 23,
+    code: "await api.orders.place({ sku: 'A' });",
+  },
+];
 const ANSWERS = {
-  "/api/editor/calls": { calls },
   "/api/editor/endpoints": { endpoints: stats },
   "/api/editor/findings": { findings },
-  "/api/editor/sites": { sites: [] },
+  "/api/editor/sites": { sites },
+  "/api/editor/definitions": { definitions },
 };
+/* The calls are those of the checkout alone: the file that declares the endpoint calls none. */
 const studio = createServer((req, res) => {
-  res.setHeader("content-type", "application/json");
-  res.end(JSON.stringify(ANSWERS[req.url] ?? {}));
+  let body = "";
+  req.on("data", (chunk) => {
+    body += chunk;
+  });
+  req.on("end", () => {
+    res.setHeader("content-type", "application/json");
+    if (req.url === "/api/editor/calls") {
+      const { file } = JSON.parse(body || "{}");
+      res.end(JSON.stringify({ calls: String(file).endsWith("cart.ts") ? calls : [] }));
+      return;
+    }
+    res.end(JSON.stringify(ANSWERS[req.url] ?? {}));
+  });
 });
 await new Promise((resolve) => studio.listen(0, "127.0.0.1", resolve));
 const url = `http://127.0.0.1:${studio.address().port}`;
 
-const scratch = mkdtempSync(join(tmpdir(), "courier-vscode-editor-"));
-const workspace = join(scratch, "shop");
 mkdirSync(join(workspace, ".courier"), { recursive: true });
-mkdirSync(join(workspace, "src"), { recursive: true });
+mkdirSync(join(workspace, "src/api"), { recursive: true });
 writeFileSync(
   join(workspace, ".courier/studio.json"),
   JSON.stringify({ url, pid: process.pid, version: "0.0.0" }),
@@ -96,6 +141,10 @@ writeFileSync(join(workspace, "courier.config.ts"), "export default {};\n");
 writeFileSync(
   join(workspace, "src/cart.ts"),
   "// checkout\nawait api.orders.place({ sku: 'A' });\n",
+);
+writeFileSync(
+  join(workspace, "src/api/orders.ts"),
+  'export const orders = defineGroup({\n  endpoints: {\n    place: endpoint.post(""),\n  },\n});\n',
 );
 const report = join(scratch, "report.json");
 

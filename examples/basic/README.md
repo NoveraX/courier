@@ -1,4 +1,36 @@
-# One API, three callers
+<div align="center">
+  <br />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../docs/public/logos/courier-mark-light.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="../../docs/public/logos/courier-mark-dark.svg" />
+    <img alt="Courier" src="../../docs/public/logos/courier-mark-dark.svg" height="40" />
+  </picture>
+
+  <h1>One API, three callers</h1>
+
+  <p><strong>The smallest complete Courier project: a backend, the proxy in front of it, a page's caller and server code.</strong></p>
+
+  <p>
+    <a href="#run-it"><strong>Run it</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs/quick-start">Quick start</a>
+    &nbsp;·&nbsp;
+    <a href="../../README.md">Courier</a>
+  </p>
+
+  <br />
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../.github/assets/architecture-dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset="../../.github/assets/architecture-light.png" />
+    <img alt="Server code, the browser and realtime clients call through Courier — types, validation, middleware, the proxy route and streams — to any REST backend; Studio and the mock servers work from the same definition" src="../../.github/assets/architecture-light.png" width="880" />
+  </picture>
+  <br />
+</div>
+
+<br />
+
+## What it shows
 
 A REST backend that knows nothing of Courier — it could be FastAPI, Rails or
 Go — is defined once in [`src/api.ts`](src/api.ts) and called three ways:
@@ -44,3 +76,9 @@ serves, and its Playground sends the `users` endpoints, subscribes to
 `live.ticks` and joins `live.chat`, through the proxy or directly. In
 production the same proxy runs from [`courier.config.ts`](courier.config.ts)
 with `npx @noverax/courier-server`.
+
+<br />
+
+<div align="center">
+  <sub>Part of <a href="https://github.com/NoveraX/courier">Courier</a> · built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

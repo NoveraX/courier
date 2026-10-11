@@ -1,6 +1,38 @@
-# demo-shop
+<div align="center">
+  <br />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../docs/public/logos/courier-mark-light.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="../../docs/public/logos/courier-mark-dark.svg" />
+    <img alt="Courier" src="../../docs/public/logos/courier-mark-dark.svg" height="40" />
+  </picture>
 
-The project behind Courier Studio's live demo: a small shop and its payments provider, called through Courier, with Studio watching every call. It runs on its own, and in a container on a public address.
+  <h1>Courier demo shop</h1>
+
+  <p><strong>The project behind Courier Studio's live demo: a shop and its payments provider, called through Courier, with Studio watching every call.</strong></p>
+
+  <p>
+    <a href="#run-it"><strong>Run it</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/studio">Courier Studio</a>
+    &nbsp;·&nbsp;
+    <a href="../../README.md">Courier</a>
+  </p>
+
+  <br />
+
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../.github/assets/studio-timeline-dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset="../../.github/assets/studio-timeline-light.png" />
+    <img alt="Courier Studio's Timeline for this demo: calls through the proxy and direct, their statuses, durations and sizes, live SSE and WebSocket streams, and the requests per minute, p95 and error rate above them" src="../../.github/assets/studio-timeline-light.png" width="880" />
+  </picture>
+  <br />
+</div>
+
+<br />
+
+## What is in it
+
+It runs on its own, and in a container on a public address. The Studio screenshots in Courier's READMEs are taken from it, with `node scripts/render-studio-shot.mjs` from the repository's root while `npm run demo` runs.
 
 - **Two backends** in `src/upstream` that know nothing of Courier: the shop — a catalog, carts, orders behind a service key that lasts 45 seconds, and a stream of orders as they move — and a payments provider whose charges take their time and now and then fail.
 - **One definition of each** in `src/api`, with middleware Studio shows in its chains: a request id on every call, the shop's key issued again when it expires, the catalog cached, failed charges retried.
@@ -47,3 +79,9 @@ Build it from the repository's root. The image builds the packages the demo uses
 `compose.yml` also locks the container down. Its file system is read-only but for two memory-backed folders — the demo's state in `.courier`, which each reset empties, and `/tmp` — so nothing a visitor does writes a file. It runs with no capabilities, within fixed memory, CPU and process limits, keeps its logs to 30 MB, and reports its health from Studio's `/api/health`.
 
 The proxy in front must say who each visitor is in `X-Forwarded-For`, as Traefik, Caddy and nginx's usual configuration do. The demo counts each visitor's share by that address — requests, sockets, Playground calls, mock commands — so without it every visitor would share the proxy's.
+
+<br />
+
+<div align="center">
+  <sub>Part of <a href="https://github.com/NoveraX/courier">Courier</a> · built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

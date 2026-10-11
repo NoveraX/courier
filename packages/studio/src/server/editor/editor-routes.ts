@@ -6,6 +6,7 @@ import type { RouteApp } from "../route-types";
 import { codeCalls } from "./calls-in-text";
 import { editorFindings } from "./editor-findings";
 import { type CatalogEndpoint, endpointCatalog } from "./endpoint-catalog";
+import { endpointDefinitions } from "./endpoint-definitions";
 import { endpointStats } from "./endpoint-stats";
 import { matchCalls } from "./match-calls";
 import { createSiteIndex } from "./site-index";
@@ -29,6 +30,7 @@ const LARGEST_TEXT = 1024 * 1024;
  * POST /api/editor/endpoints — how each endpoint's calls went: calls, failures, statuses, p50 and p95
  * POST /api/editor/calls — the endpoint calls in a file the editor sends (`{ file, text }`), each placed
  * POST /api/editor/findings — the findings of Studio's audit that concern endpoints, to place at their calls
+ * POST /api/editor/definitions — where the project's files declare each endpoint
  * POST /api/editor/sites — where the project's code calls one endpoint (`{ source, endpoint }`)
  *
  * They read and change nothing else, so they need no token: a process on
@@ -66,6 +68,14 @@ export function registerEditorRoutes(app: RouteApp, deps: EditorRouteDeps): void
   app.post("/api/editor/findings", (_req, res) => {
     const { audit } = deps;
     res.json({ findings: audit ? editorFindings({ requestLog: deps.requestLog, ...audit }) : [] });
+  });
+
+  app.post("/api/editor/definitions", (_req, res) => {
+    const running = deps.project.snapshot().running;
+    const definitions = running
+      ? endpointDefinitions(deps.root, running.configFile, catalog())
+      : [];
+    res.json({ definitions });
   });
 
   app.post("/api/editor/sites", async (req, res) => {

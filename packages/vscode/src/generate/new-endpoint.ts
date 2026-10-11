@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 
 import type { StudioTarget } from "../projects/studio-targets";
-import { type StudioFinder, studioInFront } from "../studio/studio-in-front";
+import { studioAtHand } from "../studio/studio-at-hand";
+import type { StudioFinder } from "../studio/studio-in-front";
 import type { GroupPlace } from "../studio/studio-types";
 import {
   endpointSnippet,
@@ -58,7 +59,7 @@ export async function newEndpoint(
   deps: NewEndpointDeps,
   known: NewEndpointArgs = {},
 ): Promise<void> {
-  const studio = (await studioInFront(deps.studioFor)) ?? (await onlyStudio(deps.targets));
+  const studio = await studioAtHand(deps.studioFor, deps.targets);
   if (!studio) {
     const start = await vscode.window.showInformationMessage(
       "Courier Studio finds where your groups write their endpoints: start it, then add the endpoint.",
@@ -124,11 +125,4 @@ async function typeIn(place: GroupPlace, wanted: NewEndpoint): Promise<void> {
     undoStopBefore: false,
     undoStopAfter: true,
   });
-}
-
-async function onlyStudio(
-  targets: () => Promise<readonly StudioTarget[]>,
-): Promise<string | undefined> {
-  const running = (await targets()).flatMap((target) => (target.studio ? [target.studio] : []));
-  return running.length === 1 ? running[0] : undefined;
 }

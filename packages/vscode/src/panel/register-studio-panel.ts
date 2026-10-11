@@ -2,7 +2,8 @@ import * as vscode from "vscode";
 
 import type { StudioTarget } from "../projects/studio-targets";
 import { isLocalStudio } from "../studio/local-address";
-import { type StudioFinder, studioInFront } from "../studio/studio-in-front";
+import { studioAtHand } from "../studio/studio-at-hand";
+import type { StudioFinder } from "../studio/studio-in-front";
 import { studioTokenFor } from "../studio/studio-token";
 import { createStudioPanel, type StudioPanel } from "./studio-panel";
 
@@ -53,8 +54,7 @@ export function registerStudioPages(deps: StudioPagesDeps): StudioPages {
     if (where === "browser") await inBrowser(page);
     else await panel.show(page);
   };
-  const home = async () =>
-    (await studioInFront(deps.studioFor)) ?? (await onlyStudio(deps.targets));
+  const home = () => studioAtHand(deps.studioFor, deps.targets);
   /* Where Studio opens once the one started for it answers. */
   let waiting: ((studio: string) => Promise<unknown>) | undefined;
   const openHome = async (show: (studio: string) => Promise<unknown>) => {
@@ -87,11 +87,4 @@ export function registerStudioPages(deps: StudioPagesDeps): StudioPages {
     },
     dispose: () => held.dispose(),
   };
-}
-
-async function onlyStudio(
-  targets: () => Promise<readonly StudioTarget[]>,
-): Promise<string | undefined> {
-  const running = (await targets()).flatMap((target) => (target.studio ? [target.studio] : []));
-  return running.length === 1 ? running[0] : undefined;
 }

@@ -153,7 +153,20 @@ describe("one endpoint, as @courier describes it", () => {
       "Last failure 5 s ago: Ledger unavailable",
       "",
       "Latest calls:",
-      "- `shop.orders.place` POST → 500 in 40 ms, 2 min ago: Ledger unavailable",
+      "- POST → 500 in 40 ms, 2 min ago: Ledger unavailable",
     ]);
+  });
+
+  it("names a failure that says no more than its status by the status and its reason", () => {
+    const facts = endpointFacts(
+      stats("orders.place", {
+        failed: 1,
+        lastFailure: { at: NOW - 5_000, status: 409, message: "HTTP 409" },
+      }),
+      [],
+      NOW,
+    );
+
+    expect(facts).toContain("Last failure 5 s ago: 409 Conflict");
   });
 });

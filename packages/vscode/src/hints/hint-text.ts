@@ -121,12 +121,20 @@ export function hoverText(stats: EndpointStats, studio: string, now: number): st
   return lines.join("\n");
 }
 
-/*
- * The API wrote the message: it is shown as text, never as Markdown that
- * could link anywhere. An error that says no more than its status, as
- * `HTTP 409` does, is named by the status and its reason phrase instead.
+/**
+ * Why an endpoint's latest call failed, as Markdown says it: the API wrote
+ * the message, so it is shown as text, never as Markdown that could link
+ * anywhere; an error that says no more than its status, as `HTTP 409`
+ * does, is named by the status and its reason phrase instead.
+ *
+ * @param failure - The latest failure
+ * @returns Its reason, as Markdown text
+ * @example
+ * ```ts
+ * failureText({ at, status: 409, message: "HTTP 409" }); // "409 Conflict"
+ * ```
  */
-function failureText(failure: NonNullable<EndpointStats["lastFailure"]>): string {
+export function failureText(failure: NonNullable<EndpointStats["lastFailure"]>): string {
   const { status } = failure;
   if (status !== undefined && failure.message.trim() === `HTTP ${status}`) {
     return [status, STATUS_CODES[status]].filter(Boolean).join(" ");

@@ -14,6 +14,9 @@ export interface CallSite {
   readonly path: string;
   readonly line: number;
   readonly column: number;
+  /** Where the call's name ends: an editor marks the name itself */
+  readonly endLine: number;
+  readonly endColumn: number;
   /** The line as written, trimmed and cut at 160 characters */
   readonly code: string;
 }
@@ -115,6 +118,8 @@ function sitesIn(
       path,
       line: call.line,
       column: call.column,
+      endLine: call.endLine,
+      endColumn: call.endColumn,
       code: (lines[call.line - 1] ?? "").trim().slice(0, 160),
     }));
 }

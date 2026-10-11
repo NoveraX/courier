@@ -1,9 +1,10 @@
 /**
  * The routes an editor reads Studio through: how each endpoint's calls went
  * — a webhook delivered to the app left out — the endpoint calls in a file
- * the editor sends, and where the project's code calls one endpoint, files
- * Git ignores and dependencies left out. And the file in `.courier` that
- * tells an editor where Studio runs, there only while it does.
+ * the editor sends, where the project's code calls one endpoint, files
+ * Git ignores and dependencies left out, and where its files declare each
+ * endpoint. And the file in `.courier` that tells an editor where Studio
+ * runs, there only while it does.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -80,8 +81,30 @@ let gitRoot: string;
 let server: Server;
 let base: string;
 
-/* Only what the routes read of a loaded project: its sources. */
-const project = { snapshot: () => ({ running: { config: { sources: { shop } } } }) as never };
+/* Only what the routes read of a loaded project: its sources, and the config that declares them. */
+const project = {
+  snapshot: () =>
+    ({
+      running: { config: { sources: { shop } }, configFile: join(root, "courier.config.ts") },
+    }) as never,
+};
+
+const CONFIG = `import { shop } from "./src/shop";
+
+export default { sources: { shop } };
+`;
+
+const SHOP = `export const shop = defineApi({
+  groups: {
+    orders: defineGroup({
+      endpoints: {
+        place: endpoint.post(""),
+        cancel: endpoint.post(":id/cancel"),
+      },
+    }),
+  },
+});
+`;
 
 async function studioAt(projectRoot: string): Promise<string> {
   const app = express();
@@ -113,6 +136,8 @@ beforeAll(async () => {
     "export async function pay() {\n  return api.orders.place({});\n}\n",
   );
   writeFileSync(join(root, "node_modules/kit/index.ts"), "api.orders.place({});\n");
+  writeFileSync(join(root, "courier.config.ts"), CONFIG);
+  writeFileSync(join(root, "src/shop.ts"), SHOP);
   base = await studioAt(root);
 });
 
@@ -189,8 +214,25 @@ describe("the editor routes", () => {
         path: join(root, "src/checkout.ts"),
         line: 2,
         column: 21,
+        endLine: 2,
+        endColumn: 26,
         code: "return api.orders.place({});",
       },
+    ]);
+  });
+
+  it("say where the project's files declare each endpoint, and nothing of one built elsewhere", async () => {
+    const { body } = await post("/api/editor/definitions");
+
+    expect(body.definitions).toEqual([
+      expect.objectContaining({
+        source: "shop",
+        endpoint: "orders.place",
+        file: "src/shop.ts",
+        line: 5,
+        column: 9,
+      }),
+      expect.objectContaining({ endpoint: "orders.cancel", line: 6, column: 9 }),
     ]);
   });
 

@@ -21,6 +21,7 @@ export {
   type WSHandler,
   type WSHandlerConfig,
 } from "./adapter";
+export type { AgentOffer, AgentPolicy } from "./agent/agent-policy";
 export type {
   AgentAccess,
   AgentCall,

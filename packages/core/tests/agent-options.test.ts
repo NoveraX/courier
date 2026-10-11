@@ -53,8 +53,20 @@ describe(".agent()", () => {
     }
     expect(
       endpoint.get("orders").agent({ description: "Lists", access: "read", name: "list-orders_2" })
-        .options.agent?.name,
-    ).toBe("list-orders_2");
+        .options.agent,
+    ).toMatchObject({ name: "list-orders_2" });
+  });
+
+  it("keeps an endpoint from every agent with false, and says so where an object is refused", () => {
+    const payouts = endpoint.post("payouts").agent(false);
+
+    expect(payouts.options.agent).toBe(false);
+    expect(() => endpoint.post("refunds").agent(true as never)).toThrow(
+      expect.objectContaining({
+        code: "AGENT_OPTIONS_INVALID",
+        message: expect.stringContaining("or false"),
+      }),
+    );
   });
 
   it("keeps a limit of whole calls in a window of at least a second, and refuses any other", () => {
@@ -73,8 +85,9 @@ describe(".agent()", () => {
       { maxCalls: 3, window: 60_000, per: "agent" },
     ];
 
-    expect(refund.options.agent?.limit).toEqual({ maxCalls: 3, window: 60_000 });
-    expect(Object.isFrozen(refund.options.agent?.limit)).toBe(true);
+    const offered = refund.options.agent;
+    expect(offered).toMatchObject({ limit: { maxCalls: 3, window: 60_000 } });
+    expect(offered !== false && Object.isFrozen(offered?.limit)).toBe(true);
     for (const limit of refused) {
       expect(() =>
         endpoint.post("orders").agent({ description: "Places", access: "write", limit } as never),
@@ -89,7 +102,7 @@ describe(".agent()", () => {
 
   it("offers an endpoint that writes as a read only once it says it reads", () => {
     const search = endpoint.post("search").reads().agent({ description: "Search", access: "read" });
-    expect(search.options.agent?.access).toBe("read");
+    expect(search.options.agent).toMatchObject({ access: "read" });
 
     function typedOut(): void {
       // @ts-expect-error an endpoint that writes is not a read to an agent
@@ -100,8 +113,8 @@ describe(".agent()", () => {
     expect(typedOut).toBeTypeOf("function");
     expect(
       endpoint.del("orders/:id").agent({ description: "Cancel", access: "destructive" }).options
-        .agent?.access,
-    ).toBe("destructive");
+        .agent,
+    ).toMatchObject({ access: "destructive" });
   });
 });
 

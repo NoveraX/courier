@@ -156,8 +156,11 @@ export interface ResolvedEndpointOptions {
   readonly forward?: false;
   /** Reads the key a served channel's subscribers share a topic by, from `.topic()`. */
   readonly topicKey?: TopicKeyReader;
-  /** How it is offered to AI agents, from `.agent()`; absent, no agent reaches it. */
-  readonly agent?: AgentOptions;
+  /**
+   * How it is offered to AI agents, from `.agent()`. Absent, the project's
+   * policy decides; `false`, no agent reaches it whatever the policy says.
+   */
+  readonly agent?: AgentOptions | false;
 }
 
 /** Reads a topic key from a subscriber's validated variables. */

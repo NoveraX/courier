@@ -138,7 +138,18 @@ function failureText(failure: NonNullable<EndpointStats["lastFailure"]>): string
   return status === undefined ? message : `${status} ${message}`;
 }
 
-function ago(ms: number): string {
+/**
+ * How long ago something happened, as a hint says it: `12 s ago`,
+ * `3 min ago`, `2 h ago`.
+ *
+ * @param ms - How long ago, in milliseconds
+ * @returns The text
+ * @example
+ * ```ts
+ * ago(125_000); // "2 min ago"
+ * ```
+ */
+export function ago(ms: number): string {
   const seconds = Math.max(0, Math.round(ms / 1000));
   if (seconds < 60) return `${seconds} s ago`;
   const minutes = Math.round(seconds / 60);

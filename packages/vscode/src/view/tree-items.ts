@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import * as vscode from "vscode";
 
 import { figuresOf, hoverText } from "../hints/hint-text";
+import { studioMarkdown } from "../hints/studio-markdown";
 import type { EndpointStats } from "../studio/studio-types";
 import { tallyOf } from "./endpoint-groups";
 import type { CourierNode } from "./tree-nodes";
@@ -85,7 +86,7 @@ function endpointItem(studio: string, stats: EndpointStats, now: number): vscode
   const item = new vscode.TreeItem(stats.endpoint.split(".").at(-1) ?? stats.endpoint, Collapsed);
   item.id = `endpoint:${studio}:${stats.source}.${stats.endpoint}`;
   item.description = figuresOf(stats);
-  item.tooltip = new vscode.MarkdownString(hoverText(stats, studio, now));
+  item.tooltip = studioMarkdown(hoverText(stats, studio, now));
   item.iconPath = stateIcon(stats);
   const flags = [stats.failed > 0 && "failed", stats.lastFailure?.request && "latest"];
   item.contextValue = ["courier.endpoint", ...flags.filter(Boolean)].join(".");

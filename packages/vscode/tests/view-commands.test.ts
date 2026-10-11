@@ -24,7 +24,13 @@ const endpoint = { kind: "endpoint", studio: STUDIO, stats } as const;
 const project = { root: "/work/shop", name: "shop", workspace: "/work" };
 
 async function run(command: string, node: unknown): Promise<string[]> {
-  const commands = registerViewCommands({} as CourierProjects, async () => undefined);
+  const commands = registerViewCommands(
+    {} as CourierProjects,
+    async () => undefined,
+    async (page) => {
+      shown.opened.push(page);
+    },
+  );
   await registered.get(command)?.(node);
   commands.dispose();
   return shown.opened.splice(0);

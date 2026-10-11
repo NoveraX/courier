@@ -50,6 +50,7 @@
   "activationEvents": [
     "workspaceContains:**/.courier/studio.json",
     "workspaceContains:**/courier.config.{ts,mts,cts,js,mjs,cjs}",
+    "onWebviewPanel:courier.studio",
     "onLanguage:typescript",
     "onLanguage:typescriptreact",
     "onLanguage:javascript",
@@ -109,6 +110,18 @@
         "icon": "$(link-external)"
       },
       {
+        "command": "courier.openStudioInEditor",
+        "title": "Open Studio in Editor",
+        "category": "Courier",
+        "icon": "$(window)"
+      },
+      {
+        "command": "courier.openStudioInBrowser",
+        "title": "Open Studio in Browser",
+        "category": "Courier",
+        "icon": "$(globe)"
+      },
+      {
         "command": "courier.startStudio",
         "title": "Start Studio",
         "category": "Courier",
@@ -150,6 +163,10 @@
         "command": "courier.view.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "courier.openStudioPage",
+        "title": "Open a Studio Page"
       }
     ],
     "menus": {
@@ -173,9 +190,18 @@
         {
           "command": "courier.view.refresh",
           "when": "false"
+        },
+        {
+          "command": "courier.openStudioPage",
+          "when": "false"
         }
       ],
       "view/title": [
+        {
+          "command": "courier.openStudioInEditor",
+          "when": "view == courier.endpoints && courier.studioRunning",
+          "group": "navigation@0"
+        },
         {
           "command": "courier.startStudio",
           "when": "view == courier.endpoints && courier.hasProject && !courier.studioRunning",
@@ -244,6 +270,19 @@
           "default": "",
           "scope": "machine",
           "markdownDescription": "Courier Studio's address, when it runs for a project outside this workspace: `http://localhost:6280`. Left empty, the extension finds the Studio each project in the workspace runs. Only an address on this machine is used — the extension sends Studio the text of the files you open — and only from your user settings, never a workspace's."
+        },
+        "courier.studio.openIn": {
+          "type": "string",
+          "enum": [
+            "editor",
+            "browser"
+          ],
+          "enumDescriptions": [
+            "In a tab of the editor's own, beside the code",
+            "In the browser"
+          ],
+          "default": "editor",
+          "description": "Where Courier Studio's pages open — an endpoint, a request, the audit — from the hints, the Courier view and the status bar."
         },
         "courier.audit.diagnostics": {
           "type": "boolean",

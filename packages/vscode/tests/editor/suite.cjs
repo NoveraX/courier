@@ -69,6 +69,24 @@ async function codeFeatures(folder, file) {
   };
 }
 
+async function studioTab() {
+  await vscode.commands.executeCommand(
+    "courier.openStudioPage",
+    `${process.env.COURIER_EDITOR_STUDIO}/audit`,
+  );
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const tabs = vscode.window.tabGroups.all.flatMap((group) => group.tabs);
+    const studio = tabs.find(
+      (tab) =>
+        tab.input instanceof vscode.TabInputWebview &&
+        tab.input.viewType.endsWith("courier.studio"),
+    );
+    if (studio) return studio.label;
+    await sleep(100);
+  }
+  return undefined;
+}
+
 exports.run = async function run() {
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
   assert.ok(folder, "VS Code opened no workspace");
@@ -105,6 +123,7 @@ exports.run = async function run() {
     commands,
     snippets: await snippetLabels(),
     code: await codeFeatures(folder, file),
+    panel: await studioTab(),
   };
   writeFileSync(process.env.COURIER_EDITOR_REPORT, JSON.stringify(report, null, 2));
 
@@ -112,12 +131,15 @@ exports.run = async function run() {
   assert.equal(report.command, "courier.openInStudio");
   assert.deepEqual(report.arguments, [process.env.COURIER_EDITOR_STUDIO, "shop", "orders.place"]);
   assert.match(hover, /3 calls, 1 failed/);
+  const studioLink = (page) =>
+    `command:courier.openStudioPage?${encodeURIComponent(JSON.stringify([page]))}`;
   assert.ok(
     hover.includes(
-      `[Open the latest failure](${process.env.COURIER_EDITOR_STUDIO}/timeline?req=req_9)`,
+      `[Open the latest failure](${studioLink(`${process.env.COURIER_EDITOR_STUDIO}/timeline?req=req_9`)})`,
     ),
     "the hover links the latest failure to Studio's inspector",
   );
+  assert.ok(report.panel, "Studio's page opens in a tab of the editor's own");
   assert.deepEqual(report.marks, [
     {
       message: "Timeout risk — P95 = 6.4s. Add a timeout option to the endpoint.",

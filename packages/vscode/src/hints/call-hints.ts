@@ -4,6 +4,7 @@ import type { EndpointCall } from "../studio/studio-types";
 import { hintDocument } from "./hint-document";
 import type { HintStore } from "./hint-store";
 import { hintTitle, hoverText } from "./hint-text";
+import { studioMarkdown } from "./studio-markdown";
 
 /** The hints over endpoint calls: a line above each, and a hover over it. */
 export interface CallHints extends vscode.CodeLensProvider, vscode.HoverProvider {
@@ -58,7 +59,7 @@ export function createCallHints(store: HintStore, enabled: () => boolean): CallH
         return stats ? [hoverText(stats, placed.studio, Date.now())] : [];
       });
       if (texts.length === 0) return undefined;
-      return new vscode.Hover(new vscode.MarkdownString(texts.join("\n\n---\n\n")), rangeOf(call));
+      return new vscode.Hover(studioMarkdown(texts.join("\n\n---\n\n")), rangeOf(call));
     },
   };
 }

@@ -12,16 +12,21 @@ import type { CourierNode } from "./tree-nodes";
  *
  * @param projects - The workspace's Courier projects
  * @param refresh - What draws the view again
+ * @param openPage - What opens a page of Studio's, where the settings say
  * @returns What unregisters them
  * @example
  * ```ts
- * context.subscriptions.push(registerViewCommands(projects, view.refresh));
+ * context.subscriptions.push(registerViewCommands(projects, view.refresh, pages.open));
  * ```
  */
 export function registerViewCommands(
   projects: CourierProjects,
   refresh: () => Promise<void>,
+  openPage: (page: string) => Promise<void>,
 ): vscode.Disposable {
+  const open = async (page: string | undefined) => {
+    if (page) await openPage(page);
+  };
   return vscode.Disposable.from(
     vscode.commands.registerCommand("courier.view.openInStudio", (node?: CourierNode) =>
       open(node && pageOf(node)),
@@ -56,8 +61,4 @@ function pageOf(node: CourierNode): string | undefined {
     default:
       return undefined;
   }
-}
-
-async function open(page: string | undefined): Promise<void> {
-  if (page) await vscode.env.openExternal(vscode.Uri.parse(page));
 }

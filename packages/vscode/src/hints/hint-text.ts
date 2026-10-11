@@ -80,7 +80,9 @@ export function figuresOf(stats: EndpointStats): string {
 /**
  * The hover over a call: the endpoint, its calls, how long they took, the
  * statuses they ended with, the latest failure and why, and links to the
- * endpoint in Studio and to the failed request in its inspector.
+ * endpoint in Studio and to the failed request in its inspector — which
+ * open where `courier.studio.openIn` says, so the Markdown is shown trusted
+ * to run that one command.
  *
  * @param stats - How the endpoint's calls went
  * @param studio - Studio's address
@@ -110,9 +112,11 @@ export function hoverText(stats: EndpointStats, studio: string, now: number): st
         `Last failure ${ago(now - stats.lastFailure.at)}: ${failureText(stats.lastFailure)}`,
       );
   }
-  const links = [`[Open in Studio](${endpointPage(studio, stats.source, stats.endpoint)})`];
+  const links = [
+    `[Open in Studio](${studioLink(endpointPage(studio, stats.source, stats.endpoint))})`,
+  ];
   const failed = stats.lastFailure?.request;
-  if (failed) links.push(`[Open the latest failure](${requestPage(studio, failed)})`);
+  if (failed) links.push(`[Open the latest failure](${studioLink(requestPage(studio, failed))})`);
   lines.push("", links.join(" · "));
   return lines.join("\n");
 }
@@ -139,4 +143,19 @@ function ago(ms: number): string {
   if (seconds < 60) return `${seconds} s ago`;
   const minutes = Math.round(seconds / 60);
   return minutes < 60 ? `${minutes} min ago` : `${Math.round(minutes / 60)} h ago`;
+}
+
+/**
+ * A link that opens one of Studio's pages where the settings say: the
+ * editor's own tab, or the browser.
+ *
+ * @param page - The page's address
+ * @returns The command link
+ * @example
+ * ```ts
+ * studioLink("http://localhost:6280/audit"); // "command:courier.openStudioPage?%5B%22http…"
+ * ```
+ */
+export function studioLink(page: string): string {
+  return `command:courier.openStudioPage?${encodeURIComponent(JSON.stringify([page]))}`;
 }

@@ -45,6 +45,7 @@
   },
   "activationEvents": [
     "workspaceContains:**/.courier/studio.json",
+    "workspaceContains:**/courier.config.{ts,mts,cts,js,mjs,cjs}",
     "onLanguage:typescript",
     "onLanguage:typescriptreact",
     "onLanguage:javascript",
@@ -65,18 +66,161 @@
     }
   },
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "courier",
+          "title": "Courier",
+          "icon": "media/courier-mark.svg"
+        }
+      ]
+    },
+    "views": {
+      "courier": [
+        {
+          "id": "courier.endpoints",
+          "name": "Endpoints",
+          "icon": "media/courier-mark.svg",
+          "contextualTitle": "Courier"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "courier.endpoints",
+        "contents": "No folder in this workspace has a courier.config yet.\n[Set Up Courier](command:courier.setUp)\nCreate Courier shows its plan first — a typed example API, a mock, and a page that calls it — and changes nothing until you agree. [Read the quick start](https://courier.noverax.cloud/docs/quick-start)",
+        "when": "courier.surveyed && !courier.hasProject"
+      },
+      {
+        "view": "courier.endpoints",
+        "contents": "Courier Studio is not running for this workspace. Start it to see each endpoint, how its calls went, and where your code calls it.\n[Start Studio](command:courier.startStudio)\nStudio runs in a terminal of its own, through your project's package manager.",
+        "when": "courier.surveyed && courier.hasProject && !courier.studioRunning"
+      }
+    ],
     "commands": [
       {
         "command": "courier.openInStudio",
         "title": "Open in Courier Studio",
-        "category": "Courier"
+        "category": "Courier",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "courier.startStudio",
+        "title": "Start Studio",
+        "category": "Courier",
+        "icon": "$(play)"
+      },
+      {
+        "command": "courier.setUp",
+        "title": "Set Up Courier",
+        "category": "Courier",
+        "icon": "$(rocket)"
       },
       {
         "command": "courier.refreshHints",
         "title": "Refresh Endpoint Hints",
-        "category": "Courier"
+        "category": "Courier",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "courier.view.openInStudio",
+        "title": "Open in Studio",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "courier.view.showFailures",
+        "title": "Show Failed Calls in Studio",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "courier.view.openLatestFailure",
+        "title": "Open the Latest Failure",
+        "icon": "$(bug)"
+      },
+      {
+        "command": "courier.view.startStudio",
+        "title": "Start Studio",
+        "icon": "$(play)"
+      },
+      {
+        "command": "courier.view.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
       }
     ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "courier.view.openInStudio",
+          "when": "false"
+        },
+        {
+          "command": "courier.view.showFailures",
+          "when": "false"
+        },
+        {
+          "command": "courier.view.openLatestFailure",
+          "when": "false"
+        },
+        {
+          "command": "courier.view.startStudio",
+          "when": "false"
+        },
+        {
+          "command": "courier.view.refresh",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "courier.startStudio",
+          "when": "view == courier.endpoints && courier.hasProject && !courier.studioRunning",
+          "group": "navigation@1"
+        },
+        {
+          "command": "courier.view.refresh",
+          "when": "view == courier.endpoints",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "courier.view.openLatestFailure",
+          "when": "view == courier.endpoints && viewItem =~ /^courier\\.endpoint.*\\.latest/",
+          "group": "inline@1"
+        },
+        {
+          "command": "courier.view.openInStudio",
+          "when": "view == courier.endpoints && viewItem =~ /^courier\\.(endpoint|project\\.running)/",
+          "group": "inline@2"
+        },
+        {
+          "command": "courier.view.startStudio",
+          "when": "view == courier.endpoints && viewItem == courier.project.stopped",
+          "group": "inline@1"
+        },
+        {
+          "command": "courier.view.openInStudio",
+          "when": "view == courier.endpoints && viewItem =~ /^courier\\.(endpoint|project\\.running)/",
+          "group": "studio@1"
+        },
+        {
+          "command": "courier.view.showFailures",
+          "when": "view == courier.endpoints && viewItem =~ /^courier\\.endpoint\\.failed/",
+          "group": "studio@2"
+        },
+        {
+          "command": "courier.view.openLatestFailure",
+          "when": "view == courier.endpoints && viewItem =~ /^courier\\.endpoint.*\\.latest/",
+          "group": "studio@3"
+        },
+        {
+          "command": "courier.view.startStudio",
+          "when": "view == courier.endpoints && viewItem == courier.project.stopped",
+          "group": "studio@1"
+        }
+      ]
+    },
     "configuration": {
       "title": "Courier",
       "properties": {

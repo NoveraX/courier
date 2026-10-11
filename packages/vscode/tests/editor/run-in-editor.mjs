@@ -43,6 +43,12 @@ const stats = [
     statuses: { 201: 2, 500: 1 },
     p50: 20,
     p95: 40,
+    lastFailure: {
+      at: Date.now() - 4000,
+      status: 500,
+      message: "Payment declined",
+      request: "req_9",
+    },
   },
 ];
 const calls = [
@@ -54,9 +60,14 @@ const calls = [
     endpoints: [{ source: "shop", endpoint: "orders.place" }],
   },
 ];
+const ANSWERS = {
+  "/api/editor/calls": { calls },
+  "/api/editor/endpoints": { endpoints: stats },
+  "/api/editor/sites": { sites: [] },
+};
 const studio = createServer((req, res) => {
   res.setHeader("content-type", "application/json");
-  res.end(JSON.stringify(req.url === "/api/editor/calls" ? { calls } : { endpoints: stats }));
+  res.end(JSON.stringify(ANSWERS[req.url] ?? {}));
 });
 await new Promise((resolve) => studio.listen(0, "127.0.0.1", resolve));
 const url = `http://127.0.0.1:${studio.address().port}`;
@@ -69,6 +80,7 @@ writeFileSync(
   join(workspace, ".courier/studio.json"),
   JSON.stringify({ url, pid: process.pid, version: "0.0.0" }),
 );
+writeFileSync(join(workspace, "courier.config.ts"), "export default {};\n");
 writeFileSync(
   join(workspace, "src/cart.ts"),
   "// checkout\nawait api.orders.place({ sku: 'A' });\n",

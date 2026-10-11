@@ -25,9 +25,14 @@ export interface EndpointStats {
   readonly p95?: number | undefined;
   /** When the latest call started */
   readonly lastAt?: number | undefined;
-  /** The latest failure, and why */
+  /** The latest failure, why, and the request Studio keeps it as — which its inspector opens */
   readonly lastFailure?:
-    | { readonly at: number; readonly status?: number; readonly message: string }
+    | {
+        readonly at: number;
+        readonly status?: number;
+        readonly message: string;
+        readonly request?: string;
+      }
     | undefined;
 }
 
@@ -60,7 +65,7 @@ export function endpointStats(
   catalog: readonly CatalogEndpoint[],
 ): EndpointStats[] {
   const tallies = new Map<string, Tally>();
-  for (const gathered of gatherRequests(events).values()) {
+  for (const [request, gathered] of gatherRequests(events)) {
     const { start } = gathered;
     if (start.mode === "webhook") continue;
     const key = `${String(start.source)}\u0000${idOf(start)}`;
@@ -72,7 +77,7 @@ export function endpointStats(
       durations: [],
     };
     tallies.set(key, tally);
-    count(tally, gathered.end, gathered.error, numberOf(start.timestamp));
+    count(tally, gathered, request, numberOf(start.timestamp));
   }
   const streams = streamTallies(events, (source, endpoint) => `${source}\u0000${endpoint}`);
   return catalog.map(({ source, endpoint, kind }) => {
@@ -111,8 +116,8 @@ function idOf(start: RuntimeEvent): string {
 
 function count(
   tally: Tally,
-  end: RuntimeEvent | undefined,
-  error: RuntimeEvent | undefined,
+  { end, error }: { end?: RuntimeEvent | undefined; error?: RuntimeEvent | undefined },
+  request: string,
   at = 0,
 ): void {
   tally.calls += 1;
@@ -136,7 +141,7 @@ function count(
       ? error.error.message
       : "Failed";
   if (at >= (tally.lastFailure?.at ?? 0))
-    tally.lastFailure = { at, ...(status !== undefined && { status }), message };
+    tally.lastFailure = { at, ...(status !== undefined && { status }), message, request };
 }
 
 function statsOf(

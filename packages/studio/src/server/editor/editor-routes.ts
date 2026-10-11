@@ -1,8 +1,10 @@
+import type { StudioAuditInputs } from "../mcp/audit-tool";
 import { isRecord } from "../mocks-edit/is-record";
 import type { ProjectReads } from "../project-state/types";
 import type { RequestLog } from "../request-log";
 import type { RouteApp } from "../route-types";
 import { codeCalls } from "./calls-in-text";
+import { editorFindings } from "./editor-findings";
 import { type CatalogEndpoint, endpointCatalog } from "./endpoint-catalog";
 import { endpointStats } from "./endpoint-stats";
 import { matchCalls } from "./match-calls";
@@ -13,6 +15,8 @@ export interface EditorRouteDeps {
   project: Pick<ProjectReads, "snapshot">;
   requestLog: Pick<RequestLog, "events">;
   root: string;
+  /** The sources the project declares and the runtimes attached, which Studio's audit reads */
+  audit?: Pick<StudioAuditInputs, "declared" | "runtimes"> | undefined;
 }
 
 /* A file an editor sends to be read: larger ones are generated, and hold no call worth a hint. */
@@ -24,13 +28,14 @@ const LARGEST_TEXT = 1024 * 1024;
  *
  * POST /api/editor/endpoints — how each endpoint's calls went: calls, failures, statuses, p50 and p95
  * POST /api/editor/calls — the endpoint calls in a file the editor sends (`{ file, text }`), each placed
+ * POST /api/editor/findings — the findings of Studio's audit that concern endpoints, to place at their calls
  * POST /api/editor/sites — where the project's code calls one endpoint (`{ source, endpoint }`)
  *
  * They read and change nothing else, so they need no token: a process on
  * this machine reads them as the Studio page does.
  *
  * @param app - The Studio server's Express app
- * @param deps - The project, its requests, and its root
+ * @param deps - The project, its requests, its root, and what Studio's audit reads
  * @example
  * ```ts
  * registerEditorRoutes(app, { project, requestLog, root });
@@ -56,6 +61,11 @@ export function registerEditorRoutes(app: RouteApp, deps: EditorRouteDeps): void
       return;
     }
     res.json({ calls: matchCalls(codeCalls(file, text), catalog(), text) });
+  });
+
+  app.post("/api/editor/findings", (_req, res) => {
+    const { audit } = deps;
+    res.json({ findings: audit ? editorFindings({ requestLog: deps.requestLog, ...audit }) : [] });
   });
 
   app.post("/api/editor/sites", async (req, res) => {

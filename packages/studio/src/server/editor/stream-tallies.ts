@@ -8,10 +8,11 @@ export interface StreamTally {
   open: number;
   failed: number;
   lastAt?: number;
-  lastFailure?: { at: number; message: string };
+  lastFailure?: { at: number; message: string; request: string };
 }
 
 interface Stream {
+  id: string;
   key: string;
   at: number;
   ended: boolean;
@@ -43,6 +44,7 @@ export function streamTallies(
       const group = typeof event.group === "string" && event.group !== "" ? `${event.group}.` : "";
       const key = keyOf(String(event.source), `${group}${String(event.method)}`);
       streams.set(id, {
+        id,
         key,
         at: typeof event.timestamp === "number" ? event.timestamp : 0,
         ended: false,
@@ -76,7 +78,7 @@ function tally(streams: Iterable<Stream>): Map<string, StreamTally> {
     if (stream.failure !== undefined) {
       current.failed += 1;
       if (stream.at >= (current.lastFailure?.at ?? 0))
-        current.lastFailure = { at: stream.at, message: stream.failure };
+        current.lastFailure = { at: stream.at, message: stream.failure, request: stream.id };
     }
     tallies.set(stream.key, current);
   }

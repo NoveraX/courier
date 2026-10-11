@@ -81,7 +81,9 @@ export function mountStudioHttp(
     storage: storage.routes,
     tests: { root, sessions, project },
     contract: { project, answers: stores.answers, root },
-    editor: serving ? undefined : { project, requestLog, root },
+    editor: serving
+      ? undefined
+      : { project, requestLog, root, audit: auditInputsOf(project, root) },
     webhooks: serving ? undefined : parts.webhooks,
     token,
     demo: serving && { limits: serving.limits },

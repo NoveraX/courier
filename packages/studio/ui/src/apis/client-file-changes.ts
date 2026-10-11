@@ -102,7 +102,7 @@ export function removeImport(
   name: string,
   quote: PlanQuote,
   configBaseHash?: string,
-): Promise<AppliedFiles & RemovalConfigNotes & { undeclaredFrom?: string }> {
+): Promise<AppliedFiles & RemovalConfigNotes & { undeclaredFrom?: string[] }> {
   return post("/api/apis/imports/remove", {
     name,
     ...quote,

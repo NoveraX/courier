@@ -1,8 +1,9 @@
 import type { AppliedFiles } from "@/apis/client-file-changes";
+import { formatList } from "@/lib/formatters";
 import { fileCount, unremovedNote } from "./applied-notes";
 
 /**
- * Say what removing an import did: the config Studio took it out of, the
+ * Say what removing an import did: the files Studio took it out of, the
  * files moved into the backup, those left as they were, and the folders
  * Studio could not remove.
  *
@@ -23,10 +24,12 @@ export function removedMessage(
     backupDir,
     pruneFailures,
     undeclaredFrom,
-  }: AppliedFiles & { undeclaredFrom?: string },
+  }: AppliedFiles & { undeclaredFrom?: string[] },
 ): string {
   const notes = [
-    undeclaredFrom ? `took it out of ${undeclaredFrom}` : "",
+    undeclaredFrom && undeclaredFrom.length > 0
+      ? `took it out of ${formatList(undeclaredFrom)}`
+      : "",
     removed.length > 0 ? `moved ${fileCount(removed.length)} into ${backupDir ?? "a backup"}` : "",
     kept.length > 0
       ? `left ${fileCount(kept.length)} as ${kept.length === 1 ? "it was" : "they were"}`

@@ -51,11 +51,22 @@ const WRITTEN: ImportState = {
   selectedEndpoints: {},
   generatedFiles: [],
   writing: false,
-  declaration: { configFile: "courier.config.ts", source: null, importEntry: "x", leftOut: 0 },
+  declaration: {
+    configFile: "courier.config.ts",
+    sourcesFile: null,
+    source: null,
+    importEntry: "x",
+    leftOut: 0,
+  },
   consent: null,
 };
 
-const READY = { status: "ready", configFile: "courier.config.ts", hunks: [], baseHash: "h1" };
+const READY = {
+  status: "ready",
+  configFile: "courier.config.ts",
+  files: [{ file: "courier.config.ts", hunks: [] }],
+  baseHash: "h1",
+};
 
 beforeEach(() => {
   vi.mocked(previewConfigDeclare).mockReset();
@@ -67,7 +78,7 @@ describe("declaring a written import in courier.config", () => {
     vi.mocked(previewConfigDeclare).mockResolvedValue(READY);
     vi.mocked(applyConfigDeclare).mockResolvedValue({
       status: "applied",
-      configFile: "courier.config.ts",
+      files: ["courier.config.ts"],
     });
     const { result, rerender } = renderHook(({ state }) => useConfigDeclare(state), {
       initialProps: { state: WRITTEN },
@@ -82,7 +93,7 @@ describe("declaring a written import in courier.config", () => {
       expect.objectContaining({ sourceName: "pets", specUrl: "https://specs.example/pets.json" }),
       "h1",
     );
-    expect(result.current.answer).toEqual({ status: "applied", configFile: "courier.config.ts" });
+    expect(result.current.answer).toEqual({ status: "applied", files: ["courier.config.ts"] });
   });
 
   it("shows the change against the config as it is now once it was saved after the preview", async () => {

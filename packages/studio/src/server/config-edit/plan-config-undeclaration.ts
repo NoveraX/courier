@@ -47,9 +47,8 @@ export function planConfigUndeclaration(
     .flatMap((key) => listEntryRemovals({ parsed, config, key, configName, name }, locals))
     .sort((a, b) => a.start - b.start);
   if (entries.length === 0) return null;
-  const edits = [...entries, ...unusedImports(input, parsed, entries, locals)].sort(
-    (a, b) => a.start - b.start,
-  );
+  const unused = unusedImports({ fileName: configName, text: input.text, parsed }, entries, locals);
+  const edits = [...entries, ...unused].sort((a, b) => a.start - b.start);
   if (edits.some((edit, at) => at > 0 && edit.start < (edits[at - 1]?.end ?? 0))) {
     throw new ConfigEditRefusal(
       "PLAN_REJECTED",
@@ -61,21 +60,33 @@ export function planConfigUndeclaration(
   return { text, edits };
 }
 
-/* Imports go only for the names nothing but the removed entries mentions. */
-function unusedImports(
-  input: ConfigUndeclarationInput,
-  parsed: ParsedSource,
+/**
+ * The removals of the imports only the removed entries used: a name goes
+ * with its import once nothing left in the module mentions it.
+ *
+ * @param module - The module's name for the messages, its text and its parse
+ * @param entries - The removals of the entries
+ * @param locals - The names the removed entries' values are
+ * @returns The removals of the imports that go
+ * @throws {ConfigEditRefusal} `PLAN_REJECTED` when the module without the entries does not parse
+ * @example
+ * ```ts
+ * unusedImports({ fileName: "lib/sources.ts", text, parsed }, entries, new Set(["pets"]));
+ * ```
+ */
+export function unusedImports(
+  module: { fileName: string; text: string; parsed: ParsedSource },
   entries: readonly TextEdit[],
   locals: ReadonlySet<string>,
 ): TextEdit[] {
   if (locals.size === 0) return [];
-  const without = parseSource(input.configName, applyEdits(input.text, entries));
+  const without = parseSource(module.fileName, applyEdits(module.text, entries));
   if (without.problem !== null) {
     throw new ConfigEditRefusal(
       "PLAN_REJECTED",
-      `Studio planned a change to ${input.configName} that does not parse, so it changed nothing.`,
+      `Studio planned a change to ${module.fileName} that does not parse, so it changed nothing.`,
     );
   }
   const mentions = codeMentions(without);
-  return planImportRemovals(parsed, (name) => locals.has(name) && !mentions(name));
+  return planImportRemovals(module.parsed, (name) => locals.has(name) && !mentions(name));
 }

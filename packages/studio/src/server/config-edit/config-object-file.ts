@@ -1,10 +1,11 @@
 import { readFileSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, relative, sep } from "node:path";
+import { dirname } from "node:path";
 import type { PathAliases } from "@noverax/courier-studio-core/config";
 import type { Program } from "oxc-parser";
 
 import { parseSource } from "../mocks-edit/plan/parse-source";
 import { resolveConfigImport } from "../resolve-config-import";
+import { insideProject } from "./inside-project";
 
 /* A longer chain is no layout a person writes; Studio edits the file it got to. */
 const MAX_HOPS = 4;
@@ -54,16 +55,6 @@ function readText(path: string): string | undefined {
     /* The read that edits the file says what is wrong with it. */
     return undefined;
   }
-}
-
-function insideProject(root: string, file: string): boolean {
-  const path = relative(root, file);
-  return (
-    path !== "" &&
-    !path.startsWith("..") &&
-    !isAbsolute(path) &&
-    !path.split(sep).includes("node_modules")
-  );
 }
 
 /**

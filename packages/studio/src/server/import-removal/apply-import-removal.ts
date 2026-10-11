@@ -16,8 +16,12 @@ export interface RemovalReport
   extends RemovalConfigNotes,
     Pick<ApplyReport, "removed" | "kept" | "backupDir" | "pruneFailures"> {
   success: true;
-  /** The config Studio took the import out of; absent when it was not asked to. */
-  undeclaredFrom?: string | undefined;
+  /**
+   * The files Studio took the import out of — the config, and the module the
+   * config takes its `sources` from when the source was listed there; absent
+   * when it was not asked to.
+   */
+  undeclaredFrom?: string[] | undefined;
 }
 
 /**
@@ -53,7 +57,7 @@ export function applyImportRemoval(
     const root = projectRootAt(projectRoot);
     const planned = planImportRemoval(root, name, importsSnapshotOf(imports, projectRoot));
     if ("error" in planned) return planned;
-    let undeclaredFrom: string | undefined;
+    let undeclared: { configFile: string; files: string[] } | undefined;
     const report = await runPlan(
       root,
       planned,
@@ -64,15 +68,16 @@ export function applyImportRemoval(
         if (configBaseHash === undefined) return;
         const taking = applied.removals.map((removal) => removal.path);
         const request = { name, mayTake: mayTake(planned), taking, baseHash: configBaseHash };
-        undeclaredFrom = (await undeclareForRemoval(deps, request)).configFile;
+        undeclared = await undeclareForRemoval(deps, request);
       },
     );
     project.updateChecks.forget(name);
     project.importsChanged();
     const { removed, kept, backupDir, pruneFailures } = report;
-    const notes = undeclaredFrom
-      ? { configFile: undeclaredFrom, importDeclared: false, configImports: [] }
+    const notes = undeclared
+      ? { configFile: undeclared.configFile, importDeclared: false, configImports: [] }
       : removalConfigNotes(projectRoot, name, running, removed);
+    const undeclaredFrom = undeclared?.files;
     return { success: true, removed, kept, backupDir, pruneFailures, ...notes, undeclaredFrom };
   });
 }

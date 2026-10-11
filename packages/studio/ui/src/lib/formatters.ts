@@ -91,3 +91,18 @@ export function truncate(str: string, maxLen: number): string {
   if (str.length <= maxLen) return str;
   return `${str.slice(0, maxLen - 1)}…`;
 }
+
+/**
+ * Names as a sentence lists them, without a serial comma.
+ *
+ * @param items - The names
+ * @returns `a`, `a and b`, or `a, b and c`; empty for none
+ * @example
+ * ```ts
+ * formatList(["lib/sources.ts", "courier.config.ts"]); // → "lib/sources.ts and courier.config.ts"
+ * ```
+ */
+export function formatList(items: readonly string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}

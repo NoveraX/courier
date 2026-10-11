@@ -43,15 +43,55 @@ const CHANGE = {
   status: "ready",
   configFile: "courier.config.ts",
   baseHash: "config-1",
-  hunks: [
+  files: [
     {
-      lines: [
-        { kind: "context", text: 'import { api } from "./src/api";', oldLine: 1, newLine: 1 },
+      file: "courier.config.ts",
+      hunks: [
         {
-          kind: "remove",
-          text: 'import { pets } from "./src/api/pets/source";',
-          oldLine: 2,
-          newLine: null,
+          lines: [
+            { kind: "context", text: 'import { api } from "./src/api";', oldLine: 1, newLine: 1 },
+            {
+              kind: "remove",
+              text: 'import { pets } from "./src/api/pets/source";',
+              oldLine: 2,
+              newLine: null,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+/* The same removal where the config takes its `sources` from lib/sources.ts. */
+const TWO_FILE_CHANGE = {
+  status: "ready",
+  configFile: "courier.config.ts",
+  baseHash: "config-2",
+  files: [
+    {
+      file: "lib/sources.ts",
+      hunks: [
+        {
+          lines: [
+            {
+              kind: "remove",
+              text: 'import { pets } from "../src/api/pets/source";',
+              oldLine: 2,
+              newLine: null,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      file: "courier.config.ts",
+      hunks: [
+        {
+          lines: [
+            { kind: "remove", text: "    pets: {", oldLine: 7, newLine: null },
+            { kind: "remove", text: "    },", oldLine: 8, newLine: null },
+          ],
         },
       ],
     },
@@ -200,7 +240,7 @@ describe("the remove dialog", () => {
         configFile: "courier.config.ts",
         importDeclared: false,
         configImports: [],
-        undeclaredFrom: "courier.config.ts",
+        undeclaredFrom: ["courier.config.ts"],
       });
     render(<Harness onRemoved={onRemoved} />);
     await act(() => removal.start("pets"));
@@ -220,6 +260,47 @@ describe("the remove dialog", () => {
     expect(onRemoved).toHaveBeenCalledWith(
       "pets",
       "Removed pets: took it out of courier.config.ts; moved 1 file into .courier/backups/1-a",
+    );
+  });
+
+  it("shows the lines it takes out of the module the config takes its sources from, and of the config", async () => {
+    const onRemoved = vi.fn();
+    vi.mocked(post)
+      .mockResolvedValueOnce({ plan: { ...PLAN, pending: [] }, ...NOTES, config: TWO_FILE_CHANGE })
+      .mockResolvedValueOnce({
+        success: true,
+        removed: ["src/api/pets/source.ts"],
+        kept: [],
+        backupDir: ".courier/backups/1-a",
+        pruneFailures: [],
+        configFile: "courier.config.ts",
+        importDeclared: false,
+        configImports: [],
+        undeclaredFrom: ["lib/sources.ts", "courier.config.ts"],
+      });
+    render(<Harness onRemoved={onRemoved} />);
+    await act(() => removal.start("pets"));
+
+    const tick = "Also remove pets from lib/sources.ts and courier.config.ts";
+    expect((screen.getByRole("checkbox", { name: tick }) as HTMLInputElement).checked).toBe(true);
+    expect(
+      screen.getByText(/It changes both files or neither, and nothing else in them\./),
+    ).toBeTruthy();
+    expect(screen.getByLabelText("Change to lib/sources.ts")).toBeTruthy();
+    expect(screen.getByLabelText("Change to courier.config.ts")).toBeTruthy();
+    expect(screen.getByText('import { pets } from "../src/api/pets/source";')).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() => expect(onRemoved).toHaveBeenCalled());
+    expect(vi.mocked(post)).toHaveBeenLastCalledWith("/api/apis/imports/remove", {
+      name: "pets",
+      planDigest: "plan-1",
+      confirm: [],
+      configBaseHash: "config-2",
+    });
+    expect(onRemoved).toHaveBeenCalledWith(
+      "pets",
+      "Removed pets: took it out of lib/sources.ts and courier.config.ts; moved 1 file into .courier/backups/1-a",
     );
   });
 

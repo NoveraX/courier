@@ -150,7 +150,7 @@ describe("removing an import courier.config.ts declares", () => {
 
     expect(removed.status).toBe(200);
     expect(removed.body).toMatchObject({
-      undeclaredFrom: "courier.config.ts",
+      undeclaredFrom: ["courier.config.ts"],
       importDeclared: false,
       configImports: [],
     });
@@ -172,7 +172,7 @@ describe("removing an import courier.config.ts declares", () => {
     });
 
     expect(removed.body).toMatchObject({
-      undeclaredFrom: "src/courier/config.ts",
+      undeclaredFrom: ["src/courier/config.ts"],
       importDeclared: false,
     });
     expect(readFileSync(join(root, "src/courier/config.ts"), "utf8")).toBe(IN_SRC);

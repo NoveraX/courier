@@ -25,16 +25,17 @@ function readCount(raw: unknown): number {
  * @example
  * ```ts
  * readImportDeclaration({ written: ["src/api/pets/source.ts"], declaration: { configFile: "courier.config.ts", importEntry: '  "pets": {…},' } });
- * // → { configFile: "courier.config.ts", source: null, importEntry: '  "pets": {…},', leftOut: 0 }
+ * // → { configFile: "courier.config.ts", sourcesFile: null, source: null, importEntry: '  "pets": {…},', leftOut: 0 }
  * readImportDeclaration({ written: ["src/api/pets/source.ts"] }); // → null
  * ```
  */
 export function readImportDeclaration(raw: unknown): ImportDeclaration | null {
   if (!isPlainObject(raw) || !isPlainObject(raw.declaration)) return null;
-  const { configFile, source, importEntry, leftOut } = raw.declaration;
+  const { configFile, sourcesFile, source, importEntry, leftOut } = raw.declaration;
   if (typeof configFile !== "string" || configFile === "") return null;
   const declaration: ImportDeclaration = {
     configFile,
+    sourcesFile: typeof sourcesFile === "string" && sourcesFile !== "" ? sourcesFile : null,
     source: readSource(source),
     importEntry: typeof importEntry === "string" && importEntry !== "" ? importEntry : null,
     leftOut: readCount(leftOut),

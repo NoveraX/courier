@@ -1,7 +1,9 @@
+import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { freePort } from "../../support/free-port";
+import { answers, settled } from "./answers";
 import { startLogged, stopTree } from "./processes";
 import type { QuickstartTarget } from "./targets";
 
@@ -44,24 +46,28 @@ export function runToEnd(
   });
 }
 
-/* Ask an address until it answers 200, or the time runs out. */
-async function answers(url: string, within: number): Promise<boolean> {
-  const until = Date.now() + within;
-  while (Date.now() < until) {
-    const status = await fetch(url).then(
-      (response) => response.status,
-      () => 0,
-    );
-    if (status === 200) return true;
-    await new Promise((done) => setTimeout(done, 1_000));
-  }
-  return false;
+/* What startApp started and nothing has stopped yet, with the folder it runs in. */
+const started = new Set<{ readonly child: ChildProcess; readonly root: string }>();
+
+function track(child: ChildProcess, root: string): ChildProcess {
+  started.add({ child, root });
+  return child;
 }
 
-/* A dev server may restart once just after it starts — fastify-cli's, as its compiler catches up — so it must answer again a moment later. */
-async function settled(url: string): Promise<boolean> {
-  await new Promise((done) => setTimeout(done, 5_000));
-  return answers(url, 60_000);
+/**
+ * Stop everything `startApp` started and nothing has stopped yet — also
+ * when a test ended before `startApp` returned, which leaves no app to
+ * stop it by, and Studio would hold its port into the next check.
+ *
+ * @example
+ * ```ts
+ * test.afterAll(stopStarted);
+ * ```
+ */
+export async function stopStarted(): Promise<void> {
+  const all = [...started];
+  started.clear();
+  await Promise.all(all.map(({ child, root }) => stopTree(child, root)));
 }
 
 /**
@@ -90,27 +96,24 @@ export async function startApp(
     const file = join(root, target.port.file);
     writeFileSync(file, readFileSync(file, "utf8").replace(target.port.from, target.port.to));
   }
-  const studio = startLogged(["npm", "run", "studio"], root, env, join(logs, "studio.log"));
+  track(startLogged(["npm", "run", "studio"], root, env, join(logs, "studio.log")), root);
   const mocks = join(root, "courier.mocks.ts");
   const mockPort = existsSync(mocks)
     ? /port:\s*(\d+)/.exec(readFileSync(mocks, "utf8"))?.[1]
     : undefined;
   if (mockPort && !(await answers(`http://127.0.0.1:${mockPort}/users`, 120_000))) {
-    await stopTree(studio, root);
+    await stopStarted();
     throw new Error(`The mock did not answer: see ${join(logs, "studio.log")}`);
   }
   const port = await freePort();
   const command = target.start.map((part) => part.replace("{port}", String(port)));
-  const app = startLogged(command, root, { ...env, PORT: String(port) }, join(logs, "app.log"));
+  track(startLogged(command, root, { ...env, PORT: String(port) }, join(logs, "app.log")), root);
   const url = `http://localhost:${port}`;
-  const stop = async () => {
-    await Promise.all([stopTree(app, root), stopTree(studio, root)]);
-  };
   const steady =
     (await answers(`${url}${target.page}`, 300_000)) && (await settled(`${url}${target.page}`));
   if (!steady) {
-    await stop();
+    await stopStarted();
     throw new Error(`${url}${target.page} did not answer: see ${join(logs, "app.log")}`);
   }
-  return { url, stop };
+  return { url, stop: stopStarted };
 }

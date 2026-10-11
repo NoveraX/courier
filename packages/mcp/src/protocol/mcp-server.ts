@@ -11,10 +11,12 @@ import {
   type JsonRpcResponse,
   resultOf,
 } from "./json-rpc";
+import { listen } from "./listen";
 import { McpProtocolError } from "./protocol-error";
 import type { McpServerOptions } from "./server-options";
 import { toolDefinition } from "./tool-definition";
 import { callTool } from "./tools-call";
+import { followToolChanges } from "./tools-changed";
 import { META, MODERN_VERSIONS } from "./versions";
 import { visibleTools } from "./visible-tools";
 
@@ -22,7 +24,6 @@ const log = createLogger("MCP");
 
 /** How long a client may keep the tool list before asking again, in milliseconds. */
 const LIST_TTL = 60_000;
-const CAPABILITIES = { tools: { listChanged: false } } as const;
 
 /** Answers the requests of one MCP server, over whatever carries them. */
 export interface McpServer {
@@ -35,6 +36,11 @@ export interface McpServer {
     connection: Connection,
     signal: AbortSignal,
   ): Promise<JsonRpcResponse | undefined>;
+  /**
+   * Tell a connection's client when the tools it may see change, for as
+   * long as the connection lasts; returns how to stop.
+   */
+  connect(connection: Connection): () => void;
 }
 
 /**
@@ -66,6 +72,14 @@ export function createMcpServer(options: McpServerOptions): McpServer {
         return errorOf(message.id, ERROR_CODE.internal, "Internal error");
       }
     },
+    connect: (connection) => followToolChanges(connection, options),
+  };
+}
+
+/* Whether the server tells a client of a change to its tools: over stdio, where it may speak first, and where its host can tell. */
+function capabilitiesOf(options: McpServerOptions): Record<string, unknown> {
+  return {
+    tools: { listChanged: options.transport === "stdio" && options.onToolsChanged !== undefined },
   };
 }
 
@@ -80,7 +94,12 @@ async function answer(
   const era = eraOf(message.params, connection);
   const result = await methodResult(message, era, connection, signal, options, limits);
   if (era.kind === "legacy") return result;
-  return { resultType: "complete", ...result, _meta: { [META.serverInfo]: options.info } };
+  const own = isRecord(result._meta) ? result._meta : {};
+  return {
+    resultType: "complete",
+    ...result,
+    _meta: { ...own, [META.serverInfo]: options.info },
+  };
 }
 
 async function methodResult(
@@ -95,6 +114,10 @@ async function methodResult(
   if (method === "tools/call") return callTool(params, era, connection, signal, options, limits);
   if (method === "tools/list") return toolsList(params, era, connection, options);
   if (method === "server/discover" && era.kind === "modern") return discover(options);
+  if (method === "subscriptions/listen" && era.kind === "modern") {
+    const { listChanged } = capabilitiesOf(options).tools as { listChanged: boolean };
+    return listen(params, message.id, connection, signal, listChanged);
+  }
   if (method === "ping" && era.kind === "legacy") return {};
   throw new McpProtocolError(ERROR_CODE.methodNotFound, `Method not found: ${method}`);
 }
@@ -121,7 +144,7 @@ function toolsList(
 function discover(options: McpServerOptions): Record<string, unknown> {
   return {
     supportedVersions: [...MODERN_VERSIONS],
-    capabilities: CAPABILITIES,
+    capabilities: capabilitiesOf(options),
     ...(options.instructions !== undefined && { instructions: options.instructions }),
     ttlMs: LIST_TTL,
     cacheScope: "public",
@@ -142,7 +165,7 @@ function initialize(
   }
   return {
     protocolVersion: version,
-    capabilities: CAPABILITIES,
+    capabilities: capabilitiesOf(options),
     serverInfo: options.info,
     ...(options.instructions !== undefined && { instructions: options.instructions }),
   };

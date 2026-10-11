@@ -32,8 +32,14 @@ export interface StdioStreams {
 export async function serveStdio(server: McpServer, streams: StdioStreams): Promise<void> {
   const running = new Map<JsonRpcId, AbortController>();
   const questions: ClientQuestions = clientQuestions(streams.write);
-  const connection: Connection = { transport: "stdio", ask: questions.ask };
   const send = (message: unknown) => streams.write(JSON.stringify(message));
+  const connection: Connection = {
+    transport: "stdio",
+    ask: questions.ask,
+    notify: (method, params) => send({ jsonrpc: "2.0", method, params }),
+    listening: new Map(),
+  };
+  const disconnect = server.connect(connection);
 
   const lines = createInterface({ input: streams.input, crlfDelay: Number.POSITIVE_INFINITY });
   for await (const line of lines) {
@@ -59,6 +65,7 @@ export async function serveStdio(server: McpServer, streams: StdioStreams): Prom
       });
     }
   }
+  disconnect();
   for (const controller of running.values())
     controller.abort(new Error("The client closed the connection"));
   questions.close();

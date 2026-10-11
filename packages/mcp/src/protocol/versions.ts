@@ -16,6 +16,7 @@ export const META = {
   clientInfo: "io.modelcontextprotocol/clientInfo",
   clientCapabilities: "io.modelcontextprotocol/clientCapabilities",
   serverInfo: "io.modelcontextprotocol/serverInfo",
+  subscriptionId: "io.modelcontextprotocol/subscriptionId",
 } as const;
 
 /**

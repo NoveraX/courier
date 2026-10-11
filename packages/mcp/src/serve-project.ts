@@ -1,4 +1,5 @@
 import { createLogger, getSources } from "@noverax/courier";
+import { onSourcesChange } from "@noverax/courier/internal";
 
 import type { Narrowing } from "./policy/checked-policy";
 import { checkSourceNames } from "./project/check-source-names";
@@ -22,6 +23,11 @@ export interface ProjectServer {
   readonly envFiles?: readonly string[] | undefined;
   /** What the start narrows the project's `agents` policy by: never wider than the config. */
   readonly narrowing?: Narrowing | undefined;
+  /**
+   * Load the config again whenever a file it depends on is saved, and tell
+   * the client when the tools it sees change (default `true`).
+   */
+  readonly watch?: boolean | undefined;
   readonly allowDestructive: boolean;
   /** How long a call may take when its endpoint names no timeout, in milliseconds. */
   readonly timeoutMs: number;
@@ -38,8 +44,10 @@ export interface ProjectServer {
  * The project's `courier.config.*` is loaded as the application's runtime
  * loads it, which registers its sources and — outside production, with
  * Studio running — shows every call an agent makes in Studio. Its `agents`
- * policy decides what is offered, as it stands when the server starts,
- * narrowed by `--read-only` and `--deny`.
+ * policy decides what is offered, narrowed by `--read-only` and `--deny`.
+ * A save to the config or a module it reaches loads it again — only what
+ * changed is transformed — and a client is told when the tools it sees
+ * change, unless `watch` is off.
  *
  * @param options - The project, which sources, and the stdio streams
  * @returns Settles once the client closes the connection
@@ -52,8 +60,9 @@ export interface ProjectServer {
 export async function serveProject(options: ProjectServer): Promise<void> {
   loadEnvFiles(options.root, options.envFiles);
   process.chdir(options.root);
+  const watch = options.watch !== false;
   const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
-  const runtime = await attachRuntime("mcp");
+  const runtime = await attachRuntime("mcp", { followFiles: watch });
   checkSourceNames(getSources(), options.root, options.only);
   const tools = toolSource(undefined, {
     only: options.only,
@@ -68,6 +77,8 @@ export async function serveProject(options: ProjectServer): Promise<void> {
   const server = createMcpServer({
     info: options.info,
     tools: courierTools(tools, options.timeoutMs),
+    /* Each reload registers the sources again, after the config: the tools are compared then. */
+    ...(watch && { onToolsChanged: (told: () => void) => onSourcesChange(() => told()) }),
     allowDestructive: options.allowDestructive,
     states: requestStates(crypto.getRandomValues(new Uint8Array(32))),
     maxResultChars: 100_000,

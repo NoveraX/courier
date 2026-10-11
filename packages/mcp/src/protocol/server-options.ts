@@ -14,6 +14,13 @@ export interface McpServerOptions {
   readonly instructions?: string | undefined;
   /** The tools in force: the host rebuilds them when what they come from changes. */
   readonly tools: () => ToolSet;
+  /**
+   * Tells the server when its tools may have changed — the project's config
+   * loaded again after a save — so that a client that asked to hear of it
+   * is told, once the list it sees is really different. Returns how to stop
+   * telling. Absent, the tools stay as they are for the server's life.
+   */
+  readonly onToolsChanged?: ((told: () => void) => () => void) | undefined;
   /** Whether a caller may see and call a tool; every tool, for every caller, when absent. */
   readonly allow?: ((tool: ServedTool, principal: unknown) => boolean) | undefined;
   /**

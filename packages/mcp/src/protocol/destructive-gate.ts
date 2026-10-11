@@ -36,6 +36,24 @@ export interface GatedCall {
 }
 
 /**
+ * Whether the client can put a question to a person: under 2026-07-28 a
+ * request that declares elicitation, under the `initialize` handshake a
+ * connection that carries requests of the server's own.
+ *
+ * @param era - The revision the request is served under
+ * @param connection - What it arrived over
+ * @returns Whether a person can be asked
+ * @example
+ * ```ts
+ * canBeAsked(era, connection); // false for a stdio client that declared no elicitation
+ * ```
+ */
+export function canBeAsked(era: Era, connection: Connection): boolean {
+  if (era.kind === "modern") return canAsk(era.capabilities);
+  return connection.ask !== undefined && canAsk(era.capabilities);
+}
+
+/**
  * Let a call a person confirms through once a person has confirmed it.
  *
  * Under 2026-07-28 the question goes back inside the result, and the client

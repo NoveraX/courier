@@ -273,6 +273,24 @@ describe("a destructive tool", () => {
   });
 });
 
+describe("the operator's switch for clients that cannot ask", () => {
+  it("still has a person asked wherever the client can ask one", async () => {
+    const declined = await legacy("decline", { allowDestructive: true });
+    const result = await declined.callTool({ name: "orders_cancel", arguments: { id: "7" } });
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain("Not run: the person declined orders_cancel");
+    expect((pair?.written ?? []).some((line) => line.includes("elicitation/create"))).toBe(true);
+    await pair?.transport.close();
+
+    const accepted = await modern("accept", { allowDestructive: true });
+    expect(
+      (await accepted.callTool({ name: "orders_cancel", arguments: { id: "7" } })).isError,
+    ).toBe(false);
+    expect((pair?.written ?? []).some((line) => line.includes("input_required"))).toBe(true);
+    expect(upstream.received).toEqual(["DELETE /orders/7"]);
+  });
+});
+
 describe("the project's agents policy", () => {
   it("offers what the policy offers, an unmarked read describing itself from its call", async () => {
     const client = await legacy(undefined, { agents: { offer: "reads" } });

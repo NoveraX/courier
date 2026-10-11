@@ -6,6 +6,7 @@ import * as React from "react";
 
 import type { CourierSubscriptionOptions, SubscriptionResult } from "../types";
 import { consumeStream, toError } from "./consume-stream";
+import { useEffectEvent } from "./effect-event";
 import { useKeyedStatus } from "./keyed-status";
 import { streamKeyOf } from "./stream-key";
 
@@ -73,12 +74,12 @@ export function useSubscription<TData>(
   if (current !== stream) setStream(current);
   const [status, reportStatus] = useKeyedStatus(key, enabled);
 
-  // Stable refs for callbacks — avoids re-subscribing on handler identity change
-  const callbacksRef = React.useRef({ onData, onError, onStatusChange });
-  callbacksRef.current = { onData, onError, onStatusChange };
-  /* Read as each event comes: a new window applies without reopening the stream. */
-  const maxEventsRef = React.useRef(maxEvents);
-  maxEventsRef.current = maxEvents;
+  /* Called as the stream speaks, with what the component last rendered: a new
+     handler, or a new window of events, applies without reopening the stream. */
+  const handleData = useEffectEvent((event: SSEEvent<TData>) => onData?.(event));
+  const handleError = useEffectEvent((error: Error) => onError?.(error));
+  const handleStatus = useEffectEvent((next: ConnectionStatus) => onStatusChange?.(next));
+  const windowOf = useEffectEvent(() => maxEvents);
 
   const subRef = React.useRef<SSESubscription<unknown> | null>(null);
 
@@ -98,25 +99,27 @@ export function useSubscription<TData>(
     const fail = (error: Error) => {
       if (!active) return;
       setStream((prev) => (prev.key === key ? { ...prev, error } : prev));
-      callbacksRef.current.onError?.(error);
+      handleError(error);
     };
     const receive = (event: SSEEvent<TData>) => {
       if (!active) return;
+      /* Read here, not in the update, which React runs as it renders. */
+      const max = windowOf();
       setStream((prev) =>
         prev.key === key
           ? {
               key,
               data: event.data,
-              events: latestOf([...prev.events, event], maxEventsRef.current),
+              events: latestOf([...prev.events, event], max),
               error: undefined,
             }
           : prev,
       );
-      callbacksRef.current.onData?.(event);
+      handleData(event);
     };
     const report = (next: ConnectionStatus) => {
       reportStatus({ key, status: next });
-      callbacksRef.current.onStatusChange?.(next);
+      handleStatus(next);
     };
 
     // Defer the actual subscribe to a microtask so React 19 StrictMode

@@ -6,6 +6,7 @@ import type { ConnectionStatus, WSChannel } from "@noverax/courier/realtime";
 import * as React from "react";
 
 import type { ChannelError, ChannelResult, CourierChannelOptions } from "../types";
+import { useEffectEvent } from "./effect-event";
 import { useKeyedStatus } from "./keyed-status";
 import { streamKeyOf } from "./stream-key";
 
@@ -59,9 +60,11 @@ export function useChannel<TSend, TReceive>(
   if (current !== state) setState(current);
   const [status, reportStatus] = useKeyedStatus(key, enabled);
 
-  // Stable refs for callbacks — avoids re-connecting on handler identity change
-  const callbacksRef = React.useRef({ onData, onError, onStatusChange });
-  callbacksRef.current = { onData, onError, onStatusChange };
+  /* Called as the channel speaks, with what the component last rendered: a new
+     handler applies without reconnecting. */
+  const handleData = useEffectEvent((message: TReceive) => onData?.(message));
+  const handleError = useEffectEvent((error: ChannelError) => onError?.(error));
+  const handleStatus = useEffectEvent((next: ConnectionStatus) => onStatusChange?.(next));
 
   const channelRef = React.useRef<WSChannel<unknown, unknown> | null>(null);
   /** Messages sent while the channel is on its way; null when none is coming. */
@@ -99,14 +102,14 @@ export function useChannel<TSend, TReceive>(
     const fail = (error: ChannelError) => {
       if (!active) return;
       setState((prev) => (prev.key === key ? { ...prev, error } : prev));
-      callbacksRef.current.onError?.(error);
+      handleError(error);
     };
     const report = (next: ConnectionStatus) => {
       reportStatus({ key, status: next });
       if (next === "connected") {
         setState((prev) => (prev.key === key ? { ...prev, error: undefined } : prev));
       }
-      callbacksRef.current.onStatusChange?.(next);
+      handleStatus(next);
     };
 
     // Defer the actual channel creation to a microtask so React 19 StrictMode
@@ -132,7 +135,7 @@ export function useChannel<TSend, TReceive>(
         ch.on("data", (message: unknown) => {
           const typed = message as TReceive;
           setState((prev) => (prev.key === key ? { ...prev, lastMessage: typed } : prev));
-          callbacksRef.current.onData?.(typed);
+          handleData(typed);
         }),
         /* The channel's own error event: a message the server refused, a
            handler that failed, or the channel ending with a reason. */

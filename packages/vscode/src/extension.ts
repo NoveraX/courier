@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { createCallHints } from "./hints/call-hints";
 import { createHintStore } from "./hints/hint-store";
 import { endpointPage } from "./hints/hint-text";
+import { createConfiguredStudio } from "./studio/configured-studio";
 import { findStudio } from "./studio/find-studio";
 import { fetchCalls, fetchEndpointStats } from "./studio/studio-api";
 import { createStudioStatus } from "./studio/studio-status";
@@ -32,10 +33,9 @@ const LANGUAGES = [
  */
 export function activate(context: vscode.ExtensionContext): void {
   const settings = () => vscode.workspace.getConfiguration("courier");
-  const studioFor = (file: string, workspace: string) =>
-    Promise.resolve(settings().get<string>("studio.url")?.trim() || undefined).then(
-      (configured) => configured ?? findStudio(file, workspace),
-    );
+  const configured = createConfiguredStudio();
+  const studioFor = async (file: string, workspace: string) =>
+    configured() ?? findStudio(file, workspace);
   const store = createHintStore({
     findStudio: studioFor,
     fetchStats: fetchEndpointStats,

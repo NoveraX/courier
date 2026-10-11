@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import { isLocalStudio } from "./local-address";
+
 /** The file a running Studio writes into its project's `.courier` folder. */
 export const ADDRESS_FILE = join(".courier", "studio.json");
 
@@ -8,7 +10,8 @@ export const ADDRESS_FILE = join(".courier", "studio.json");
  * The address of the Studio that runs for the project a file belongs to:
  * the nearest `.courier/studio.json` from the file's folder up to the
  * workspace folder — so each project of a monorepo finds its own Studio —
- * or `undefined` when none runs.
+ * or `undefined` when none runs, or the file names an address that is not
+ * on this machine.
  *
  * @param file - The file's path
  * @param workspace - The workspace folder it is in, where the search stops
@@ -30,9 +33,8 @@ async function readAddress(path: string): Promise<string | undefined> {
   try {
     const written: unknown = JSON.parse(await readFile(path, "utf8"));
     if (typeof written !== "object" || written === null || !("url" in written)) return undefined;
-    return typeof written.url === "string" && /^https?:\/\//.test(written.url)
-      ? written.url
-      : undefined;
+    /* The file is the project's: one a repository brings must not send your files to another host. */
+    return typeof written.url === "string" && isLocalStudio(written.url) ? written.url : undefined;
   } catch {
     /* No Studio runs for this folder, or it is writing the file this moment. */
     return undefined;

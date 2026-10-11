@@ -112,7 +112,7 @@ describe("the hints over endpoint calls", () => {
     expect(lenses[0]?.range.start).toEqual({ line: 1, character: 17 });
   });
 
-  it("put the figures at the end of each call's line instead, when the settings say so", async () => {
+  it("put the figures alone at the end of each call's line instead, when the settings say so", async () => {
     const { hints } = hintsFor(() => studio, "inlay");
     const all = new Range(0, 0, 99, 0);
 
@@ -124,9 +124,9 @@ describe("the hints over endpoint calls", () => {
 
     expect(lenses).toEqual([]);
     expect(inlays.map((hint) => (hint.label as InlayHintLabelPart[])[0]?.value)).toEqual([
-      "orders.place · 3 calls · 1 failed · p95 40 ms",
-      "shop account.me · 1 call · p95 9 ms",
-      "payments account.me · no calls yet",
+      "3 calls · 1 failed · p95 40 ms",
+      "shop · 1 call · p95 9 ms",
+      "payments · no calls yet",
     ]);
     expect(first?.position).toEqual({ line: 1, character: 40 });
     expect(part?.command).toMatchObject({

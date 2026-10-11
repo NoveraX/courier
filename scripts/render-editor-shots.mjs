@@ -2,167 +2,152 @@
 /// <reference types="node" />
 /**
  * Photograph the Courier extension at work in VS Code, for its docs page,
- * its README and its walkthrough: the figures above the calls in the demo
- * shop's `src/traffic/visit.ts`, the hover over one, and the Courier view
- * with the checkout's endpoint open at its call, each in a light and a dark
- * theme at twice its size, into `docs/public/images/vscode/` — the hover and
- * the view into the extension's `media/walkthrough/` too.
+ * its README and its walkthrough, each in a light and a dark theme at
+ * twice its size, into `docs/public/images/vscode/`: the figures above the
+ * calls in the demo shop's `src/traffic/visit.ts` and at the end of their
+ * lines, the hover over one, the Courier view with the checkout's endpoint
+ * open at its call, the Requests and Mocks views, Studio in a tab beside
+ * the code, `@courier` answering in the chat, and Courier's icons in
+ * vscode-icons — the shots the walkthrough shows into the extension's
+ * `media/walkthrough/` too.
  *
  * It needs VS Code — `VSCODE_PATH` and `VSCODE_CLI` name its program and its
  * command line, macOS's places by default — the extension packaged, with
  * `npm run package -w courier-vscode`, and Studio running for the demo shop
- * as a project's own Studio, its traffic flowing. `npm run demo` serves a
- * public demo, which writes no address file for an editor to find, so start
- * the parts in examples/demo-shop instead: `npm run upstream`,
- * `npx @noverax/courier-studio`, `npm run app` and `npm run traffic`, each
- * on the ports its environment names (see src/ports.ts).
+ * as a project's own Studio, its traffic flowing, at `STUDIO_PORT` (6280 by
+ * default). `npm run demo` serves a public demo, which writes no address
+ * file for an editor to find, so start the parts in examples/demo-shop
+ * instead: `npm run upstream`, `npx @noverax/courier-studio`, `npm run app`
+ * and `npm run traffic`, each on the ports its environment names (see
+ * src/ports.ts). The icons' shot takes a copy of the vscode-icons your own
+ * VS Code has installed, or the one `VSICONS_PATH` names, and is left out
+ * without one.
  *
- * VS Code runs in a profile of its own, the extension installed there from
- * its .vsix, so the editor you work in is left alone.
+ * VS Code runs in profiles of its own, the extension installed there from
+ * its .vsix, so the editor you work in is left alone. `SHOTS` names the
+ * shots to take again — `SHOTS=inlay,chat` — and the rest are left as they are.
  */
 
-import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { env, platform } from "node:process";
-import { _electron } from "@playwright/test";
+import { copyFileSync, mkdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { env } from "node:process";
+import {
+  hoverPlace,
+  openLiveViews,
+  openStudioTab,
+  openView,
+  openVisit,
+  restPointer,
+} from "./editor-shots/editor-scenes.mjs";
+import {
+  askCourier,
+  explorerPart,
+  LOCAL_MODEL,
+  takeIconOffer,
+  vsiconsCopy,
+} from "./editor-shots/extra-scenes.mjs";
+import {
+  OUT,
+  openEditor,
+  profileFor,
+  STUDIO,
+  shoot,
+  THEMES,
+  WALKTHROUGH,
+} from "./editor-shots/vscode.mjs";
 
-const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
-const OUT = join(ROOT, "docs", "public", "images", "vscode");
-const MAC = "/Applications/Visual Studio Code.app/Contents";
-const CODE = env.VSCODE_PATH ?? join(MAC, "MacOS", "Code");
-const CLI = env.VSCODE_CLI ?? join(MAC, "Resources", "app", "bin", "code");
-const WALKTHROUGH = join(ROOT, "packages", "vscode", "media", "walkthrough");
 const SIZE = { width: 940, height: 620 };
-/* The view beside the editor needs the room of both. */
-const VIEW_SIZE = { width: 1180, height: 700 };
-const THEMES = [
-  { name: "light", theme: "Default Light Modern" },
-  { name: "dark", theme: "Default Dark Modern" },
+/* The views beside the editor, and the figures at the end of the lines, need the room of both. */
+const WIDE = { width: 1180, height: 700 };
+const STUDIO_SIZE = { width: 1440, height: 800 };
+const CHAT_SIZE = { width: 1180, height: 860 };
+const KEYS = [
+  { key: "ctrl+alt+1", command: "workbench.action.splitEditorRight" },
+  {
+    key: "ctrl+alt+2",
+    command: "courier.openStudioPage",
+    args: `${STUDIO}/explorer/endpoints?endpoint=shop.orders.place`,
+  },
+  {
+    key: "ctrl+alt+3",
+    command: "workbench.action.chat.open",
+    args: {
+      query: "@courier /endpoint shop.orders.place",
+      modelSelector: { vendor: "courier-shots", id: "local" },
+    },
+  },
 ];
+const WALKED = ["hover", "view", "live", "studio-tab", "chat", "icons"];
+const ONLY = env.SHOTS ? new Set(env.SHOTS.split(",")) : undefined;
+/* Whether any of these shots is to be taken. */
+const wanted = (...shots) => !ONLY || shots.some((shot) => ONLY.has(shot));
 
-/* A profile in a short folder: VS Code's socket path, inside it, must stay under 104 characters. */
-function profileFor(theme) {
-  const root = mkdtempSync(join(platform === "win32" ? (env.TEMP ?? ".") : "/tmp", "cv-"));
-  mkdirSync(join(root, "user", "User"), { recursive: true });
-  writeFileSync(
-    join(root, "user", "User", "settings.json"),
-    JSON.stringify({
-      "workbench.colorTheme": theme,
-      "workbench.startupEditor": "none",
-      "workbench.secondarySideBar.defaultVisibility": "hidden",
-      "chat.disableAIFeatures": true,
-      "editor.minimap.enabled": false,
-      "editor.fontSize": 15,
-      "editor.lineHeight": 24,
-      "editor.stickyScroll.enabled": false,
-      "update.mode": "none",
-      "extensions.autoUpdate": false,
-      "security.workspace.trust.enabled": false,
-      "telemetry.telemetryLevel": "off",
-      "extensions.ignoreRecommendations": true,
-      /* The demo shop sits inside this repository; VS Code would offer to open it in a notification. */
-      "git.openRepositoryInParentFolders": "never",
-    }),
-  );
-  const dirs = [`--user-data-dir=${join(root, "user")}`, `--extensions-dir=${join(root, "ext")}`];
-  execFileSync(CLI, [
-    ...dirs,
-    "--install-extension",
-    join(ROOT, "packages/vscode/dist/courier.vsix"),
-  ]);
-  return { root, dirs };
-}
-
-/**
- * Open the shopper's visit at its checkout, with the figures above its calls.
- *
- * @param {import("@playwright/test").Page} page - VS Code's window
- */
-async function openVisit(page) {
-  await page.waitForSelector(".monaco-workbench", { timeout: 60_000 });
-  await page.keyboard.press(platform === "darwin" ? "Meta+P" : "Control+P");
-  await page.keyboard.type("visit.ts", { delay: 30 });
-  await page.waitForTimeout(900);
-  await page.keyboard.press("Enter");
-  await page.waitForSelector(".codelens-decoration", { timeout: 60_000 });
-  await page.keyboard.press(platform === "darwin" ? "Meta+B" : "Control+B");
-  await page.keyboard.press("Control+G");
-  await page.keyboard.type("45", { delay: 30 });
-  await page.keyboard.press("Enter");
-  /* The figures come from Studio every few seconds; let them settle. */
-  await page.waitForTimeout(6000);
-}
-
-/**
- * The window as a PNG with an indexed palette, as the README images are.
- *
- * @param {import("@playwright/test").Page} page - VS Code's window
- * @param {string} file - Where it goes
- */
-async function shoot(page, file) {
-  const { default: sharp } = await import("sharp");
-  const png = await page.screenshot({ type: "png" });
-  writeFileSync(file, await sharp(png).png({ palette: true, quality: 92, effort: 10 }).toBuffer());
-  console.log(file.slice(ROOT.length + 1));
-}
-
-/**
- * Open the Courier view with the checkout's endpoint open at its call and
- * chosen, so its actions show, the pointer resting below the view's rows.
- *
- * @param {import("@playwright/test").Page} page - VS Code's window
- */
-async function openView(page) {
-  await page.keyboard.press("Escape");
-  /* The count of failing endpoints lies over the icon: the click goes to the item that holds both. */
-  await page.locator('.activitybar .action-item:has(a[aria-label^="Courier"])').first().click();
-  const row = (label) => page.locator(`.monaco-list-row[aria-label^="${label} "]`).first();
-  await row("orders").click();
-  await row("place").click();
-  await page.waitForSelector('.monaco-list-row[aria-label^="src/traffic/visit.ts:"]');
-  await page.mouse.move(200, VIEW_SIZE.height - 120);
-  await page.waitForTimeout(1500);
+/* One editor's shots, the editor closed after them. */
+async function inEditor(profile, size, develop, shots) {
+  const { app, page } = await openEditor(profile, size, develop);
+  try {
+    await shots(page, (bounds) =>
+      app.evaluate(({ BrowserWindow }, next) => {
+        BrowserWindow.getAllWindows()[0]?.setBounds({ x: 40, y: 40, ...next });
+      }, bounds),
+    );
+  } finally {
+    await app.close();
+  }
 }
 
 mkdirSync(OUT, { recursive: true });
 for (const { name, theme } of THEMES) {
-  const { root, dirs } = profileFor(theme);
-  const app = await _electron.launch({
-    executablePath: CODE,
-    args: [
-      ...dirs,
-      "--disable-workspace-trust",
-      "--skip-welcome",
-      "--new-window",
-      join(ROOT, "examples/demo-shop"),
-    ],
-  });
+  const plain = profileFor(theme, undefined, KEYS);
+  const inlay = profileFor(theme, () => ({ "courier.hints.style": "inlay" }), KEYS);
+  const extras = profileFor(
+    theme,
+    (root) => ({
+      "chat.disableAIFeatures": false,
+      "workbench.iconTheme": "vscode-icons",
+      "vsicons.customIconFolderPath": join(root, "icons-home"),
+      "vsicons.dontShowNewVersionMessage": true,
+    }),
+    KEYS,
+  );
+  const vsicons = vsiconsCopy(extras.root);
+  const develop = [LOCAL_MODEL, ...(vsicons ? [vsicons] : [])];
   try {
-    const page = await app.firstWindow();
-    await app.evaluate(({ BrowserWindow }, size) => {
-      BrowserWindow.getAllWindows()[0]?.setBounds({ x: 40, y: 40, ...size });
-    }, SIZE);
-    await openVisit(page);
-    await page.mouse.move(SIZE.width / 2, 12);
-    await shoot(page, join(OUT, `lens-${name}.png`));
-    const place = page
-      .locator(".view-line", { hasText: "storefront.orders.place" })
-      .locator("span span", { hasText: /^place$/ });
-    await place.first().hover();
-    await page.waitForSelector(".monaco-hover:not(.hidden)", { timeout: 15_000 });
-    await page.waitForTimeout(1500);
-    await shoot(page, join(OUT, `hover-${name}.png`));
-    await app.evaluate(({ BrowserWindow }, size) => {
-      BrowserWindow.getAllWindows()[0]?.setBounds({ x: 40, y: 40, ...size });
-    }, VIEW_SIZE);
-    await openView(page);
-    await shoot(page, join(OUT, `view-${name}.png`));
-    for (const shot of [`hover-${name}.png`, `view-${name}.png`]) {
-      copyFileSync(join(OUT, shot), join(WALKTHROUGH, shot));
+    if (wanted("lens", "hover", "view", "live"))
+      await inEditor(plain, SIZE, [], async (page, resize) => {
+        await openVisit(page);
+        await restPointer(page);
+        if (wanted("lens")) await shoot(page, `lens-${name}`);
+        await hoverPlace(page);
+        if (wanted("hover")) await shoot(page, `hover-${name}`);
+        await resize(WIDE);
+        await openView(page, WIDE.height);
+        if (wanted("view")) await shoot(page, `view-${name}`);
+        if (!wanted("live")) return;
+        await openLiveViews(page);
+        await shoot(page, `live-${name}`);
+      });
+    if (wanted("inlay", "studio-tab"))
+      await inEditor(inlay, STUDIO_SIZE, [], async (page) => {
+        await openVisit(page, "inlay");
+        await restPointer(page);
+        if (wanted("inlay")) await shoot(page, `inlay-${name}`);
+        if (!wanted("studio-tab")) return;
+        await openStudioTab(page);
+        await shoot(page, `studio-tab-${name}`);
+      });
+    if (vsicons && wanted("icons")) await inEditor(extras, WIDE, develop, takeIconOffer);
+    if (wanted("icons", "chat"))
+      await inEditor(extras, CHAT_SIZE, develop, async (page) => {
+        if (vsicons && wanted("icons"))
+          await shoot(page, `icons-${name}`, await explorerPart(page));
+        if (wanted("chat")) await shoot(page, `chat-${name}`, await askCourier(page));
+      });
+    for (const shot of WALKED.filter((each) => wanted(each))) {
+      if (shot !== "icons" || vsicons)
+        copyFileSync(join(OUT, `${shot}-${name}.png`), join(WALKTHROUGH, `${shot}-${name}.png`));
     }
   } finally {
-    await app.close();
-    rmSync(root, { recursive: true, force: true });
+    for (const { root } of [plain, inlay, extras]) rmSync(root, { recursive: true, force: true });
   }
 }

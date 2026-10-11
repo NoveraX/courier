@@ -13,6 +13,7 @@ import { registerCliCommands } from "./generate/cli-commands";
 import { registerFileIcons } from "./icons/register-file-icons";
 import { registerLiveViews } from "./live/register-live-views";
 import { closeCourierLog, courierLog } from "./log/courier-log";
+import { registerFailureNotices } from "./notify/register-failure-notices";
 import { fetchSites } from "./studio/studio-api";
 
 /**
@@ -25,8 +26,9 @@ import { fetchSites } from "./studio/studio-api";
  * that start Studio, set Courier up, add an endpoint, import an API and
  * check what a change breaks; Courier's tasks, and the recorded calls in
  * the Test Explorer; `@courier` in the chat; Courier's own icons in the
- * icon themes that take them; Courier's log in the Output panel; and the
- * MCP servers offered to VS Code's agent.
+ * icon themes that take them; Courier's log in the Output panel; a notice
+ * when a call fails, when asked for; and the MCP servers offered to VS
+ * Code's agent.
  *
  * @param context - The extension's context, which disposes what it holds
  * @example
@@ -57,6 +59,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerChat(core),
     registerFileIcons(core),
     registerStudioLog(core),
+    registerFailureNotices(core),
     vscode.commands.registerCommand("courier.showLog", () => courierLog().show()),
     { dispose: closeCourierLog },
     offerMcpServers(core.projects, () => core.settings().get<boolean>("agents.mcpServers", true)),

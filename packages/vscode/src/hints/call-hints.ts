@@ -74,8 +74,13 @@ export function createCallHints(
         return lensesOf(call).flatMap(({ source, endpoint, withSource }) => {
           const stats = store.statsOf(placed.studio, source, endpoint);
           if (!stats) return [];
-          /* The call names its endpoint; the editor cuts a hint past 43 characters, so the figures go alone. */
-          const label = withSource ? `${stats.source} · ${figuresOf(stats)}` : figuresOf(stats);
+          /*
+           * The call names its endpoint, and the editor cuts a hint past 43 characters: the figures
+           * go alone, a request's calls in flight left to the tooltip — a stream's open ones stay.
+           */
+          const open = stats.kind === "stream" || stats.kind === "channel";
+          const figures = figuresOf(open ? stats : { ...stats, pending: 0 });
+          const label = withSource ? `${stats.source} · ${figures}` : figures;
           const part = new vscode.InlayHintLabelPart(label);
           part.tooltip = studioMarkdown(hoverText(stats, placed.studio, Date.now()));
           part.command = {

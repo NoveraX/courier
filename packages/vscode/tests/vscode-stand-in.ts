@@ -63,8 +63,116 @@ export class Hover {
   }
 }
 
+export class ThemeColor {
+  constructor(readonly id: string) {}
+}
+
+export class ThemeIcon {
+  static readonly File = new ThemeIcon("file");
+  constructor(
+    readonly id: string,
+    readonly color?: ThemeColor,
+  ) {}
+}
+
+export const TreeItemCollapsibleState = { None: 0, Collapsed: 1, Expanded: 2 } as const;
+
+export class Uri {
+  private constructor(
+    readonly scheme: string,
+    readonly fsPath: string,
+    private readonly text: string,
+  ) {}
+  static file(path: string): Uri {
+    return new Uri("file", path, `file://${path}`);
+  }
+  static parse(text: string): Uri {
+    return new Uri(new URL(text).protocol.slice(0, -1), "", text);
+  }
+  with(change: { fragment: string }): Uri {
+    return new Uri(this.scheme, this.fsPath, `${this.text.split("#")[0]}#${change.fragment}`);
+  }
+  toString(): string {
+    return this.text;
+  }
+}
+
+export class TreeItem {
+  id?: string;
+  description?: string;
+  tooltip?: string | MarkdownString;
+  iconPath?: ThemeIcon;
+  contextValue?: string;
+  resourceUri?: Uri;
+  command?: { title: string; command: string; arguments?: unknown[] };
+  constructor(
+    readonly label: string,
+    readonly collapsibleState: number = TreeItemCollapsibleState.None,
+  ) {}
+}
+
+interface Held {
+  dispose(): unknown;
+}
+
+export const Disposable = {
+  from: (...held: Held[]): Held => ({ dispose: () => held.map((each) => each.dispose()) }),
+};
+
+/** The settings the code reads, by their full key: `courier.studio.url`. */
+export const settings = new Map<string, unknown>();
+
 export const workspace = {
   getWorkspaceFolder: (uri: { fsPath: string }) => ({
     uri: { fsPath: dirname(dirname(uri.fsPath)) },
   }),
+  getConfiguration: (section: string) => ({
+    get: (key: string, fallback?: unknown) => settings.get(`${section}.${key}`) ?? fallback,
+  }),
+  onDidChangeConfiguration: () => ({ dispose: () => undefined }),
 };
+
+/** What the code showed the user, and the pages it opened. */
+export const shown = { warnings: [] as string[], opened: [] as string[] };
+
+export const window = {
+  activeTextEditor: undefined as { document: { uri: Uri } } | undefined,
+  showWarningMessage: async (message: string) => {
+    shown.warnings.push(message);
+    return undefined;
+  },
+};
+
+export const env = {
+  openExternal: async (uri: Uri) => {
+    shown.opened.push(uri.toString());
+    return true;
+  },
+};
+
+/** The commands registered, by name, as the code registered them. */
+export const registered = new Map<string, (...args: unknown[]) => unknown>();
+
+export const commands = {
+  registerCommand: (name: string, handler: (...args: unknown[]) => unknown) => {
+    registered.set(name, handler);
+    return { dispose: () => registered.delete(name) };
+  },
+  executeCommand: async () => undefined,
+};
+
+/** VS Code's agent API, which a test fills in as the editor at hand would. */
+export const lm: {
+  registerMcpServerDefinitionProvider?: ((id: string, provider: unknown) => Held) | undefined;
+} = {};
+
+export class McpStdioServerDefinition {
+  cwd?: Uri;
+  constructor(
+    readonly label: string,
+    readonly command: string,
+    readonly args: string[] = [],
+    readonly env: Record<string, string> = {},
+    readonly version?: string,
+  ) {}
+}

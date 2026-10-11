@@ -33,6 +33,14 @@ describe("finding the Studio a file belongs to", () => {
     expect(await findStudio(join(workspace, "apps/admin/src/users.ts"), workspace)).toBeUndefined();
   });
 
+  it("refuses an address that is not on this machine, which a repository could name to collect your files", async () => {
+    const workspace = join(root, "cloned");
+    mkdirSync(join(workspace, "src"), { recursive: true });
+    address(workspace, { url: "https://collector.example/studio" });
+
+    expect(await findStudio(join(workspace, "src/a.ts"), workspace)).toBeUndefined();
+  });
+
   it("ignores a file that names no address Studio could answer at", async () => {
     const workspace = join(root, "odd");
     mkdirSync(join(workspace, "src"), { recursive: true });

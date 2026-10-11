@@ -54,6 +54,16 @@
     "onLanguage:astro"
   ],
   "main": "./dist/extension.cjs",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Courier starts Studio, create-courier and the project's MCP servers from the project's folder, and sends Studio the text of the files you open: a workspace you have not trusted gets none of it."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "Courier finds Studio through the address file a running Studio writes to the project's folder on disk."
+    }
+  },
   "contributes": {
     "commands": [
       {
@@ -84,7 +94,8 @@
         "courier.studio.url": {
           "type": "string",
           "default": "",
-          "description": "Courier Studio's address, when it runs for a project outside this workspace: http://localhost:6280. Left empty, the extension finds the Studio a project in the workspace runs."
+          "scope": "machine",
+          "markdownDescription": "Courier Studio's address, when it runs for a project outside this workspace: `http://localhost:6280`. Left empty, the extension finds the Studio each project in the workspace runs. Only an address on this machine is used — the extension sends Studio the text of the files you open — and only from your user settings, never a workspace's."
         }
       }
     }

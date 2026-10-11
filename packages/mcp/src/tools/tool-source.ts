@@ -66,12 +66,25 @@ export function toolSource(given: Sources | undefined, options: ToolSourceOption
         built = {
           generation,
           policy,
-          catalog: warn(buildCatalog(sources(), { ...options, policy })),
+          catalog: rebuilt(built?.catalog, () =>
+            warn(buildCatalog(sources(), { ...options, policy })),
+          ),
         };
       }
       return built.catalog;
     },
   };
+}
+
+/* The first build stops the server on a tool that cannot be offered; a later one, after a change, keeps the last good tools. */
+function rebuilt(last: Catalog | undefined, build: () => Catalog): Catalog {
+  if (last === undefined) return build();
+  try {
+    return build();
+  } catch (error) {
+    log.error("The tools could not be rebuilt after a change; the ones offered before stay", error);
+    return last;
+  }
 }
 
 /* Each warning is logged when a catalog first brings it, not again on every rebuild that keeps it. */

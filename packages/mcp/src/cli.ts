@@ -46,6 +46,12 @@ const ARGS = {
     type: "boolean",
     description: "Print what is offered to agents and why, and exit without serving",
   },
+  watch: {
+    type: "boolean",
+    default: true,
+    description:
+      "Load courier.config again on a save and tell the client when the tools change (--no-watch turns it off)",
+  },
   "allow-destructive": {
     type: "boolean",
     description:
@@ -108,6 +114,7 @@ const main = defineCommand({
       await serveProject({
         ...project,
         allowDestructive: args["allow-destructive"] === true,
+        watch: args.watch !== false,
         timeoutMs,
         info: { name: args.name ?? "courier", version: mcpVersion() },
         input: process.stdin,

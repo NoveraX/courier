@@ -110,7 +110,7 @@ describe("courier-mcp", () => {
 
     expect(run.status).toBe(0);
     expect(run.stdout).toContain("courier-mcp [options]");
-    for (const option of ["--allow-destructive", "--read-only", "--deny", "--list"]) {
+    for (const option of ["--allow-destructive", "--read-only", "--deny", "--list", "--watch"]) {
       expect(run.stdout).toContain(option);
     }
   });

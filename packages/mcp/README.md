@@ -84,11 +84,12 @@ For Cursor, in `.cursor/mcp.json`:
 | `--read-only` | Offer reads alone, whatever the config's `agents` allows |
 | `--deny <patterns>` | Endpoints to keep from agents as well, comma-separated: `billing.**` |
 | `--list` | Print what is offered to agents and why, and exit |
+| `--no-watch` | Keep the tools the server started with |
 | `--allow-destructive` | For a client that cannot ask a person, leave a call a person confirms to the client's own approval |
 | `--timeout <ms>` | How long a call may take when its endpoint names no timeout (60 000) |
 | `--name <name>` | The name the server gives its client (`courier`) |
 
-`--read-only` and `--deny` only narrow what the config offers. With Studio running, every call an agent makes shows in its timeline.
+`--read-only` and `--deny` only narrow what the config offers. A save to the config, or a module it reaches, loads it again — only what changed is transformed — and the client is told when the tools it sees change: `notifications/tools/list_changed` on the 2025 handshake, the `subscriptions/listen` stream under 2026-07-28. With Studio running, every call an agent makes shows in its timeline.
 
 <br />
 

@@ -2,7 +2,7 @@ export const metadata = { title: "Options", description: "Full reference of sour
 
 ## Overview
 
-Courier options are split into two layers: **BaseOptions** for source-level configuration (applies to all endpoints in a source) and **CallOptions** for per-request overrides. Courier uses native `fetch` under the hood — no third-party HTTP clients.
+Courier options are split into layers: **BaseOptions** for source-level configuration (applies to all endpoints in a source), **GroupOptions** for a group of endpoints, and **CallOptions** for per-request overrides. Courier uses native `fetch` under the hood — no third-party HTTP clients.
 
 ## BaseOptions
 
@@ -31,6 +31,9 @@ type BaseOptions = {
   fetch?: SourceFetch                            // Sends this source's requests and opens its streams (undici's fetch)
   webSocket?: SourceWebSocket                    // Opens its channels' sockets (undici's WebSocket)
   dispatcher?: SourceDispatcher                  // undici Agent or ProxyAgent: a client certificate, an authority, a proxy
+  proxy?: string                                 // Bun: the proxy its requests and sockets go through
+  tls?: object                                   // Bun: the TLS they use (ca, cert, key, passphrase)
+  client?: object                                // Deno: a Deno.HttpClient its requests and streams go through
 
   // Proxy
   expose?: boolean                               // Whether the browser may call this source through the proxy
@@ -42,6 +45,29 @@ type BaseOptions = {
 ```
 
 An endpoint whose `.via()` closure passes its own `responseType` has its successful answer read that way, the source's `responseParser` included; see [Defining APIs](/docs/core-concepts/defining-apis).
+
+## GroupOptions
+
+Set in `defineGroup()`. These apply to the group's endpoints and to those of the groups inside it:
+
+```ts title="types"
+type GroupOptions = {
+  prefix?: string                  // Prepended to every endpoint path in the group
+  pathOptions?: (request?: Request) => Record<string, string | number | undefined> // Path parameters filled in at request time
+  expose?: boolean                 // Whether the browser may call this group through the proxy
+  groups?: Record<string, DefinedGroup> // The groups inside this one
+
+  // Transport, over the source's — see Proxies & Certificates
+  fetch?: SourceFetch
+  webSocket?: SourceWebSocket
+  dispatcher?: SourceDispatcher    // A client certificate or a proxy for this group alone
+  proxy?: string                   // Bun
+  tls?: object                     // Bun
+  client?: object                  // Deno
+}
+```
+
+A group inside another takes each transport option from the nearest group that sets it; see [One group](/docs/advanced/proxies-and-certificates#one-group).
 
 ## CallOptions
 
@@ -66,6 +92,12 @@ type CallOptions = {
     transferredBytes: number
     totalBytes: number
   }) => void                     // Download progress callback
+
+  // Transport for this call alone, over its group's and its source's —
+  // refused through the proxy, which sends the call with the server's own
+  fetch?: SourceFetch
+  webSocket?: SourceWebSocket
+  dispatcher?: SourceDispatcher
 }
 ```
 

@@ -1,25 +1,32 @@
 {
   "name": "@noverax/courier-server",
   "version": "0.0.0",
-  "description": "Standalone HTTP + WebSocket server for @noverax/courier — proxy handler for Next.js and serverless environments",
+  "description": "Standalone server for Courier: your typed API's proxy over HTTP, SSE and WebSocket on its own port — for static and serverless front ends, Docker and Kubernetes",
   "keywords": [
     "courier",
-    "typescript",
-    "type-safe",
-    "api-client",
     "server",
-    "nodejs",
     "standalone",
-    "http-server"
+    "proxy",
+    "bff",
+    "http-server",
+    "sse",
+    "websocket",
+    "docker",
+    "kubernetes",
+    "typescript",
+    "type-safe"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/server"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/deployment/standalone-server",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

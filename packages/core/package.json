@@ -1,21 +1,33 @@
 {
   "name": "@noverax/courier",
   "version": "0.0.0",
-  "description": "Type-safe HTTP client with dual-mode transport, middleware chain, and runtime validation",
+  "description": "Type-safe HTTP for any backend: define your API once in plain TypeScript and call it from server code and the browser — validated, with middleware, SSE, WebSockets and a secure proxy, no codegen",
   "keywords": [
     "courier",
     "typescript",
     "type-safe",
+    "end-to-end-types",
     "api-client",
     "http-client",
+    "rest",
     "fetch",
     "rpc",
+    "bff",
+    "proxy",
     "middleware",
     "validation",
+    "standard-schema",
+    "zod",
     "sse",
-    "websocket"
+    "websocket",
+    "realtime",
+    "server-components",
+    "edge"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",

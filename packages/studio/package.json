@@ -1,25 +1,31 @@
 {
   "name": "@noverax/courier-studio",
   "version": "0.0.0",
-  "description": "Standalone Studio server and UI for @noverax/courier",
+  "description": "Courier Studio: see every request your app makes — a live timeline, inspector, playground, OpenAPI import, audit and mock servers, running locally and off in production builds",
   "keywords": [
     "courier",
-    "typescript",
-    "type-safe",
-    "api-client",
-    "devtools",
     "studio",
+    "devtools",
     "debugging",
-    "inspector"
+    "inspector",
+    "network",
+    "api",
+    "playground",
+    "openapi",
+    "mock-server",
+    "typescript"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/studio"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/studio",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

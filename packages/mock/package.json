@@ -1,25 +1,31 @@
 {
   "name": "@noverax/courier-mock",
   "version": "0.0.0",
-  "description": "Type-safe mock server with stateful store, scenarios, chaos engineering, and visual builder for @noverax/courier",
+  "description": "Mock servers for Courier: typed handlers, a SQLite-backed store, scenarios and network faults, with test utilities, contract tests and fixtures",
   "keywords": [
     "courier",
-    "typescript",
-    "type-safe",
-    "api-client",
     "mock",
+    "mock-server",
     "mocking",
+    "api-mocking",
     "testing",
-    "fixtures"
+    "fixtures",
+    "contract-testing",
+    "sqlite",
+    "typescript",
+    "type-safe"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/mock"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/studio/mock-servers",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

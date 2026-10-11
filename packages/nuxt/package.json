@@ -1,26 +1,32 @@
 {
   "name": "@noverax/courier-nuxt",
   "version": "0.0.0",
-  "description": "Nuxt adapter for @noverax/courier — h3/Nitro event handler",
+  "description": "Nuxt adapter for Courier: a Nitro event handler that proxies typed calls to any backend, with the user's session in server routes and the pages Nuxt renders",
   "keywords": [
     "courier",
-    "typescript",
-    "type-safe",
-    "api-client",
     "nuxt",
     "nitro",
     "h3",
     "vue",
-    "adapter"
+    "ssr",
+    "proxy",
+    "bff",
+    "typescript",
+    "type-safe",
+    "api-client",
+    "session"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/nuxt"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/frameworks/nuxt",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

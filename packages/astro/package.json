@@ -1,23 +1,29 @@
 {
   "name": "@noverax/courier-astro",
   "version": "0.0.0",
-  "description": "Astro adapter for @noverax/courier — Web Standard proxy handler",
+  "description": "Astro adapter for Courier: an API endpoint that proxies typed calls to any backend, with the user's session in pages, endpoints and actions",
   "keywords": [
     "courier",
+    "astro",
+    "ssr",
+    "proxy",
+    "bff",
     "typescript",
     "type-safe",
     "api-client",
-    "astro",
-    "adapter"
+    "session"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/astro"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/frameworks/astro",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

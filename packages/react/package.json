@@ -1,25 +1,33 @@
 {
   "name": "@noverax/courier-react",
   "version": "0.0.0",
-  "description": "React integration for @noverax/courier — hooks, query keys, SSE subscriptions, optimistic updates",
+  "description": "React hooks for Courier on TanStack Query: useQuery, useMutation, useSuspenseQuery and useInfiniteQuery typed from your API definition, with live SSE and WebSocket hooks and optimistic updates",
   "keywords": [
     "courier",
+    "react",
+    "react-query",
+    "tanstack-query",
+    "hooks",
+    "suspense",
+    "data-fetching",
     "typescript",
     "type-safe",
     "api-client",
-    "react",
-    "hooks",
-    "suspense",
-    "data-fetching"
+    "sse",
+    "websocket",
+    "optimistic-updates"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/react"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/react-query/setup",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

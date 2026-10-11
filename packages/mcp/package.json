@@ -1,25 +1,31 @@
 {
   "name": "@noverax/courier-mcp",
   "version": "0.0.0",
-  "description": "MCP server for @noverax/courier — the endpoints you mark .agent(), offered as tools to AI agents over stdio and Streamable HTTP",
+  "description": "Your Courier API as tools for AI agents: an MCP server over stdio and Streamable HTTP that offers only the endpoints you mark, through your middleware, with a person confirming what cannot be undone",
   "keywords": [
     "courier",
     "mcp",
     "model-context-protocol",
+    "mcp-server",
     "ai-agents",
+    "agents",
+    "llm",
+    "tools",
     "typescript",
     "type-safe",
-    "api-client",
-    "tools"
+    "api"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/mcp"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/mcp",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

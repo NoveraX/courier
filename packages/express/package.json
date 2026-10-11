@@ -1,25 +1,33 @@
 {
   "name": "@noverax/courier-express",
   "version": "0.0.0",
-  "description": "Express adapter for @noverax/courier — proxy middleware handler",
+  "description": "Express adapter for Courier: one route that proxies typed calls to any backend, with the user's session, CSRF protection, SSE, WebSockets and graceful shutdown",
   "keywords": [
     "courier",
+    "express",
+    "express-middleware",
+    "nodejs",
+    "proxy",
+    "bff",
     "typescript",
     "type-safe",
     "api-client",
-    "express",
-    "nodejs",
-    "adapter",
-    "middleware"
+    "session",
+    "csrf",
+    "sse",
+    "websocket"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/express"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/frameworks/express",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

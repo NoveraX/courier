@@ -1,25 +1,27 @@
 {
   "name": "@noverax/courier-studio-core",
   "version": "0.0.0",
-  "description": "Studio instrumentation core — EventBus, event types, and Socket.IO connector for @noverax/courier",
+  "description": "Courier Studio's runtime: attachRuntime registers your config's sources and, in development, streams every call your server and browser make to Studio",
   "keywords": [
     "courier",
-    "typescript",
-    "type-safe",
-    "api-client",
-    "devtools",
     "studio",
+    "devtools",
     "instrumentation",
-    "runtime"
+    "runtime",
+    "observability",
+    "typescript"
   ],
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NoveraX/courier.git",
     "directory": "packages/studio-core"
   },
-  "homepage": "https://courier.noverax.cloud",
+  "homepage": "https://courier.noverax.cloud/docs/studio/overview",
   "bugs": {
     "url": "https://github.com/NoveraX/courier/issues"
   },

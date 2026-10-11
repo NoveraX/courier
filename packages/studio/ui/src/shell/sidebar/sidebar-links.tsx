@@ -1,13 +1,16 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, BookOpen, Settings } from "lucide-react";
 
+import { askEditorHost, insideEditor } from "@/features/editor/editor-host";
+
 import { DOCS_URL, SETTINGS_PAGE } from "../nav";
 
 const ROW =
   "flex h-8 items-center gap-2.5 rounded-control px-2.5 text-fg-muted transition-colors hover:bg-raised hover:text-fg";
 
 /**
- * The sidebar's foot: Courier's documentation, in a new tab, and Settings.
+ * The sidebar's foot: Courier's documentation, in a new tab — or, inside an
+ * editor's own tab, in the browser the editor opens it in — and Settings.
  *
  * @returns The two links
  * @example
@@ -18,7 +21,7 @@ const ROW =
 export function SidebarLinks(): React.ReactNode {
   return (
     <div className="flex flex-col gap-px border-t border-line px-2.5 pt-2 pb-2.5">
-      <a href={DOCS_URL} target="_blank" rel="noreferrer" className={ROW}>
+      <a href={DOCS_URL} target="_blank" rel="noreferrer" onClick={openOutside} className={ROW}>
         <BookOpen aria-hidden="true" className="size-3.75 shrink-0 opacity-85" />
         <span>Docs</span>
         <span className="flex-1" />
@@ -30,4 +33,11 @@ export function SidebarLinks(): React.ReactNode {
       </Link>
     </div>
   );
+}
+
+/* A frame opens no window of its own: the editor that shows Studio opens the page instead. */
+function openOutside(event: React.MouseEvent<HTMLAnchorElement>): void {
+  if (!insideEditor()) return;
+  event.preventDefault();
+  askEditorHost({ source: "courier-studio", type: "open-external", url: event.currentTarget.href });
 }

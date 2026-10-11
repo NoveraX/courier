@@ -71,6 +71,7 @@ An editor that starts servers somewhere other than the project names it with `--
 | `--read-only` | Offer reads alone, whatever the config's `agents` allows |
 | `--deny <patterns>` | Endpoints to keep from agents as well as the config's own `deny`, comma-separated: `billing.**,shop.users.*` |
 | `--list` | Print what is offered to agents and why, and exit without serving |
+| `--no-watch` | Keep the tools the server started with: no reload on a save |
 | `--allow-destructive` | For a client that cannot ask a person, leave a call a person confirms to the client's own approval; a client that can ask is asked all the same |
 | `--timeout <ms>` | How long a call may take when its endpoint names no timeout (default: 60 000) |
 | `--name <name>` | The name the server gives its client (default: `courier`) |
@@ -100,7 +101,17 @@ Kept from agents
 
 It takes `--source`, `--read-only` and `--deny` as the server does, so it shows what a start with them would offer — a step a CI job can run, too. Warnings follow the list: a pattern that names no endpoint, a tool left out for its name, more than 40 tools.
 
-The server reads the policy when it starts. After an edit to `agents`, reconnect it — `/mcp` in Claude Code, the server's restart in Cursor's or VS Code's MCP settings.
+## While you edit
+
+The server follows the project: a save to `courier.config.ts`, or to any module of the project it reaches — an API's definition, the `agents` policy — loads the config again, and the client is told when the tools it sees change. Nothing needs restarting:
+
+- **Only what changed is transformed.** A module whose bytes are the same is not compiled again; a burst of saves — a branch checked out — is one reload. From the save to the client being told takes about a tenth of a second on a project of 40 tools, 75 ms of it the wait that gathers a burst.
+- **Told only of a real change.** A save no agent can see — a comment, a formatting pass, a file touched — tells the client nothing.
+- **Both eras.** A client on the 2025 handshake gets `notifications/tools/list_changed`; a 2026-07-28 client gets it on the stream it opened with `subscriptions/listen`. A client that asks for neither sees the new tools the next time it lists them.
+- **A broken save keeps the server serving.** The config or the tools a save breaks are logged, the last good ones stay, and the save that mends them loads them.
+- **Nearly free at rest.** Each directory is watched — saves an editor makes by renaming a file included — and the few files the config reaches are looked at again every two seconds, for a filesystem that announces no saves: about 0.03 % of a core.
+
+`--no-watch` keeps the tools the server started with, for a server that should not change while it runs.
 
 ## What the agent gets
 

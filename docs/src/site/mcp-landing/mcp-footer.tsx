@@ -20,6 +20,7 @@ const COLUMNS: readonly ProductFooterColumn[] = [
     links: [
       { label: "Overview", href: "/" },
       { label: "Courier Studio", href: "/studio" },
+      { label: "VS Code extension", href: "/docs/studio/editor" },
       { label: "Docs", href: "/docs/introduction" },
       { label: "API reference", href: "/reference" },
     ],

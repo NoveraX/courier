@@ -14,7 +14,7 @@ const COLUMNS: readonly ProductFooterColumn[] = [
       { label: "Import an API", href: "/docs/studio/import-api" },
       { label: "Contract drift", href: "/docs/studio/contract-drift" },
       { label: "Session files", href: "/docs/studio/session-files" },
-      { label: "In your editor", href: "/docs/studio/editor" },
+      { label: "VS Code extension", href: "/docs/studio/editor" },
     ],
   },
   {

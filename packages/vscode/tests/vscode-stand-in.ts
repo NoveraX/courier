@@ -141,24 +141,46 @@ export const Disposable = {
   from: (...held: Held[]): Held => ({ dispose: () => held.map((each) => each.dispose()) }),
 };
 
-/** The settings the code reads, by their full key: `courier.studio.url`. */
+/** The settings the code reads — the user's, as a test sets them — by their full key: `courier.studio.url`. */
 export const settings = new Map<string, unknown>();
 
+export const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 } as const;
+
+/** What another extension does when a setting changes, as a test has it react. */
+export const settingsChanged: ((key: string) => void)[] = [];
+
 export const workspace = {
+  workspaceFolders: undefined as { uri: { fsPath: string } }[] | undefined,
   getWorkspaceFolder: (uri: { fsPath: string }) => ({
     uri: { fsPath: dirname(dirname(uri.fsPath)) },
   }),
-  getConfiguration: (section: string) => ({
-    get: (key: string, fallback?: unknown) => settings.get(`${section}.${key}`) ?? fallback,
-  }),
+  getConfiguration: (section?: string) => {
+    const full = (key: string) => (section ? `${section}.${key}` : key);
+    return {
+      get: (key: string, fallback?: unknown) => settings.get(full(key)) ?? fallback,
+      inspect: (key: string) => ({ key: full(key), globalValue: settings.get(full(key)) }),
+      update: async (key: string, value: unknown) => {
+        if (value === undefined) settings.delete(full(key));
+        else settings.set(full(key), value);
+        for (const listener of settingsChanged) listener(full(key));
+      },
+    };
+  },
   onDidChangeConfiguration: () => ({ dispose: () => undefined }),
 };
 
-/** What the code showed the user, and the pages it opened. */
-export const shown = { warnings: [] as string[], opened: [] as string[] };
+/** The extensions installed, by id, as a test installs them. */
+export const installed = new Map<string, { extensionPath: string }>();
 
-/** What the code showed as errors, and the picks a test makes for the user. */
-export const asked = { errors: [] as string[], picks: [] as unknown[] };
+export const extensions = {
+  getExtension: (id: string) => installed.get(id),
+};
+
+/** What the code showed the user, and the pages it opened. */
+export const shown = { warnings: [] as string[], infos: [] as string[], opened: [] as string[] };
+
+/** What the code showed as errors, the picks a test makes for the user, and the buttons they press. */
+export const asked = { errors: [] as string[], picks: [] as unknown[], buttons: [] as string[] };
 
 /** What the code wrote to its log, level and line. */
 export const logged: [string, string][] = [];
@@ -169,13 +191,9 @@ export const window = {
     shown.warnings.push(message);
     return undefined;
   },
-  showErrorMessage: async (message: string) => {
-    asked.errors.push(message);
-    return undefined;
-  },
-  showQuickPick: async <TItem>(items: readonly TItem[]) => {
-    const wanted = asked.picks.shift();
-    return items.find((item) => JSON.stringify(item).includes(String(wanted)));
+  showInformationMessage: async (message: string) => {
+    shown.infos.push(message);
+    return asked.buttons.shift();
   },
   createOutputChannel: () => ({
     trace: (line: string) => logged.push(["trace", line]),
@@ -185,9 +203,18 @@ export const window = {
     show: () => undefined,
     dispose: () => undefined,
   }),
+  showErrorMessage: async (message: string) => {
+    asked.errors.push(message);
+    return undefined;
+  },
+  showQuickPick: async <TItem>(items: readonly TItem[]) => {
+    const wanted = asked.picks.shift();
+    return items.find((item) => JSON.stringify(item).includes(String(wanted)));
+  },
 };
 
 export const env = {
+  appName: "Visual Studio Code",
   openExternal: async (uri: Uri) => {
     shown.opened.push(uri.toString());
     return true;
@@ -202,8 +229,18 @@ export const commands = {
     registered.set(name, handler);
     return { dispose: () => registered.delete(name) };
   },
-  executeCommand: async () => undefined,
+  executeCommand: async (name: string, ...args: unknown[]) => {
+    executed.push([name, ...args]);
+    return undefined;
+  },
+  getCommands: async () => [...registered.keys(), ...elsewhere],
 };
+
+/** The commands the code ran, each with its arguments. */
+export const executed: unknown[][] = [];
+
+/** Commands other extensions registered, as a test has them. */
+export const elsewhere: string[] = [];
 
 /** VS Code's agent API, which a test fills in as the editor at hand would. */
 export const lm: {

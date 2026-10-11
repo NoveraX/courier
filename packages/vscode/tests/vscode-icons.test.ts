@@ -1,0 +1,79 @@
+/**
+ * Courier's icons in vscode-icons: the custom icons folder found as
+ * vscode-icons finds it — the setting's, a relative one from the first
+ * workspace folder, or the user folder of the editor's build — and
+ * Courier's entries put in after the user's own and taken out again.
+ */
+import { describe, expect, it } from "vitest";
+
+import {
+  hasCourierEntries,
+  VSICONS_PLAN,
+  vsiconsFolder,
+  withCourierEntries,
+  withoutCourierEntries,
+} from "../src/icons/vscode-icons";
+
+const home = (change: Partial<Parameters<typeof vsiconsFolder>[0]> = {}) => ({
+  setting: "",
+  workspaces: ["/work/shop"],
+  appName: "Visual Studio Code",
+  platform: "darwin" as const,
+  env: {},
+  home: "/Users/me",
+  ...change,
+});
+
+describe("the folder vscode-icons reads custom icons from", () => {
+  it("is in the user folder of the editor's build", () => {
+    expect(vsiconsFolder(home())).toBe(
+      "/Users/me/Library/Application Support/Code/User/vsicons-custom-icons",
+    );
+    expect(
+      vsiconsFolder(home({ appName: "Visual Studio Code - Insiders", platform: "linux" })),
+    ).toBe("/Users/me/.config/Code - Insiders/User/vsicons-custom-icons");
+    expect(vsiconsFolder(home({ appName: "Code - OSS" }))).toContain("/Code - OSS/User/");
+    expect(vsiconsFolder(home({ appName: "Code - OSS Dev" }))).toContain("/code-oss-dev/User/");
+  });
+
+  it("is under a portable install's data, and under the folder the setting names", () => {
+    expect(vsiconsFolder(home({ env: { VSCODE_PORTABLE: "/apps/code/data" } }))).toBe(
+      "/apps/code/data/user-data/User/vsicons-custom-icons",
+    );
+    expect(vsiconsFolder(home({ setting: "/team/icons" }))).toBe(
+      "/team/icons/vsicons-custom-icons",
+    );
+    expect(vsiconsFolder(home({ setting: ".vscode/icons" }))).toBe(
+      "/work/shop/.vscode/icons/vsicons-custom-icons",
+    );
+  });
+});
+
+describe("Courier's entries among the user's", () => {
+  const mine = { icon: "my-icon", extensions: ["mai"], format: "svg" };
+
+  it("go after the user's own, an older Courier's replaced", () => {
+    const merged = withCourierEntries(
+      [mine, { icon: "courier-config", extensions: ["old"] }],
+      VSICONS_PLAN.files,
+    );
+
+    expect(merged).toEqual([mine, ...VSICONS_PLAN.files]);
+    expect(hasCourierEntries(merged)).toBe(true);
+  });
+
+  it("come out again whole, the user's kept, nothing left as nothing", () => {
+    expect(withoutCourierEntries([mine, ...VSICONS_PLAN.folders])).toEqual([mine]);
+    expect(withoutCourierEntries(VSICONS_PLAN.files)).toBeUndefined();
+    expect(hasCourierEntries([mine])).toBe(false);
+  });
+
+  it("name the folder icon's open look as vscode-icons reads it", () => {
+    expect([...VSICONS_PLAN.copies.values()]).toEqual([
+      "file_type_courier-config.svg",
+      "file_type_courier-mocks.svg",
+      "folder_type_courier.svg",
+      "folder_type_courier_opened.svg",
+    ]);
+  });
+});

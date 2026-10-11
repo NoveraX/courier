@@ -646,6 +646,38 @@
         "id": "courier",
         "label": "Courier"
       }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "courier",
+        "required": [
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "enum": [
+              "studio",
+              "verify",
+              "openapi",
+              "diff",
+              "agents"
+            ],
+            "enumDescriptions": [
+              "Courier Studio, and the mocks it runs",
+              "Check every recorded call against the API as declared now",
+              "Write each source as an OpenAPI document, into openapi/",
+              "Report what a change to the API breaks, against origin/main",
+              "List what the project offers agents, and why"
+            ],
+            "description": "The Courier command the task runs"
+          },
+          "project": {
+            "type": "string",
+            "description": "The project's folder, relative to the workspace folder; the first Courier project when left out"
+          }
+        }
+      }
     ]
   },
   "scripts": {

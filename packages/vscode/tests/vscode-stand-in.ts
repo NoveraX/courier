@@ -154,11 +154,22 @@ export const workspace = {
 /** What the code showed the user, and the pages it opened. */
 export const shown = { warnings: [] as string[], opened: [] as string[] };
 
+/** What the code showed as errors, and the picks a test makes for the user. */
+export const asked = { errors: [] as string[], picks: [] as unknown[] };
+
 export const window = {
   activeTextEditor: undefined as { document: { uri: Uri } } | undefined,
   showWarningMessage: async (message: string) => {
     shown.warnings.push(message);
     return undefined;
+  },
+  showErrorMessage: async (message: string) => {
+    asked.errors.push(message);
+    return undefined;
+  },
+  showQuickPick: async <TItem>(items: readonly TItem[]) => {
+    const wanted = asked.picks.shift();
+    return items.find((item) => JSON.stringify(item).includes(String(wanted)));
   },
 };
 

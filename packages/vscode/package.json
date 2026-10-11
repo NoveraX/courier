@@ -87,6 +87,18 @@
           "name": "Endpoints",
           "icon": "media/courier-mark.svg",
           "contextualTitle": "Courier"
+        },
+        {
+          "id": "courier.requests",
+          "name": "Requests",
+          "icon": "media/courier-mark.svg",
+          "contextualTitle": "Courier"
+        },
+        {
+          "id": "courier.mocks",
+          "name": "Mocks",
+          "icon": "media/courier-mark.svg",
+          "contextualTitle": "Courier"
         }
       ]
     },
@@ -100,6 +112,16 @@
         "view": "courier.endpoints",
         "contents": "Courier Studio is not running for this workspace. Start it to see each endpoint, how its calls went, and where your code calls it.\n[Start Studio](command:courier.startStudio)\nStudio runs in a terminal of its own, through your project's package manager.",
         "when": "courier.surveyed && courier.hasProject && !courier.studioRunning"
+      },
+      {
+        "view": "courier.requests",
+        "contents": "Courier Studio is not running for this workspace. Start it to see the requests your app makes, as it makes them.\n[Start Studio](command:courier.startStudio)",
+        "when": "courier.surveyed && !courier.studioRunning"
+      },
+      {
+        "view": "courier.mocks",
+        "contents": "Courier Studio is not running for this workspace. Start it to see the mocks it runs, their scenarios and the delays and faults set on them.\n[Start Studio](command:courier.startStudio)",
+        "when": "courier.surveyed && !courier.studioRunning"
       }
     ],
     "commands": [
@@ -167,6 +189,51 @@
       {
         "command": "courier.openStudioPage",
         "title": "Open a Studio Page"
+      },
+      {
+        "command": "courier.request.open",
+        "title": "Open in Studio",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "courier.requests.showFailed",
+        "title": "Show Failed Requests Only",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "courier.requests.showAll",
+        "title": "Show All Requests",
+        "icon": "$(filter-filled)"
+      },
+      {
+        "command": "courier.requests.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "courier.mocks.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "courier.mock.scenario",
+        "title": "Switch to This Scenario",
+        "icon": "$(check)"
+      },
+      {
+        "command": "courier.mock.delay",
+        "title": "Delay Answers…",
+        "icon": "$(watch)"
+      },
+      {
+        "command": "courier.mock.faults",
+        "title": "Fail Some Answers…",
+        "icon": "$(flame)"
+      },
+      {
+        "command": "courier.mock.stopFaults",
+        "title": "Stop Delays and Faults",
+        "icon": "$(debug-stop)"
       }
     ],
     "menus": {
@@ -194,6 +261,42 @@
         {
           "command": "courier.openStudioPage",
           "when": "false"
+        },
+        {
+          "command": "courier.request.open",
+          "when": "false"
+        },
+        {
+          "command": "courier.requests.showFailed",
+          "when": "false"
+        },
+        {
+          "command": "courier.requests.showAll",
+          "when": "false"
+        },
+        {
+          "command": "courier.requests.refresh",
+          "when": "false"
+        },
+        {
+          "command": "courier.mocks.refresh",
+          "when": "false"
+        },
+        {
+          "command": "courier.mock.scenario",
+          "when": "false"
+        },
+        {
+          "command": "courier.mock.delay",
+          "when": "false"
+        },
+        {
+          "command": "courier.mock.faults",
+          "when": "false"
+        },
+        {
+          "command": "courier.mock.stopFaults",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -210,6 +313,26 @@
         {
           "command": "courier.view.refresh",
           "when": "view == courier.endpoints",
+          "group": "navigation@2"
+        },
+        {
+          "command": "courier.requests.showFailed",
+          "when": "view == courier.requests && !courier.requests.failedOnly",
+          "group": "navigation@1"
+        },
+        {
+          "command": "courier.requests.showAll",
+          "when": "view == courier.requests && courier.requests.failedOnly",
+          "group": "navigation@1"
+        },
+        {
+          "command": "courier.requests.refresh",
+          "when": "view == courier.requests",
+          "group": "navigation@2"
+        },
+        {
+          "command": "courier.mocks.refresh",
+          "when": "view == courier.mocks",
           "group": "navigation@2"
         }
       ],
@@ -248,6 +371,46 @@
           "command": "courier.view.startStudio",
           "when": "view == courier.endpoints && viewItem == courier.project.stopped",
           "group": "studio@1"
+        },
+        {
+          "command": "courier.mock.delay",
+          "when": "view == courier.mocks && viewItem =~ /^courier\\.mock/",
+          "group": "inline@1"
+        },
+        {
+          "command": "courier.mock.faults",
+          "when": "view == courier.mocks && viewItem =~ /^courier\\.mock/",
+          "group": "inline@2"
+        },
+        {
+          "command": "courier.mock.stopFaults",
+          "when": "view == courier.mocks && viewItem == courier.mock.faulty",
+          "group": "inline@3"
+        },
+        {
+          "command": "courier.mock.delay",
+          "when": "view == courier.mocks && viewItem =~ /^courier\\.mock/",
+          "group": "mock@1"
+        },
+        {
+          "command": "courier.mock.faults",
+          "when": "view == courier.mocks && viewItem =~ /^courier\\.mock/",
+          "group": "mock@2"
+        },
+        {
+          "command": "courier.mock.stopFaults",
+          "when": "view == courier.mocks && viewItem == courier.mock.faulty",
+          "group": "mock@3"
+        },
+        {
+          "command": "courier.mock.scenario",
+          "when": "view == courier.mocks && viewItem == courier.scenario",
+          "group": "inline@1"
+        },
+        {
+          "command": "courier.request.open",
+          "when": "view == courier.requests && viewItem == courier.request",
+          "group": "inline@1"
         }
       ]
     },

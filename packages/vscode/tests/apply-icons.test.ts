@@ -103,7 +103,7 @@ describe("Courier's icons in Material Icon Theme", () => {
       "courier.mocks.ts": "typescript",
     });
     expect(settings.get("material-icon-theme.folders.associations")).toEqual({
-      ".courier": "../../noverax.courier-vscode-1.2.0/media/icons/folder-courier",
+      ".courier": "../../../../noverax.courier-vscode-1.2.0/media/icons/folder-courier",
     });
   });
 

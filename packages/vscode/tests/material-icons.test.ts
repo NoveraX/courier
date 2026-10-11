@@ -1,9 +1,10 @@
 /**
- * Courier's icons in Material Icon Theme: each config and mocks file and
- * the `.courier` folder to Courier's icons, by their path from the theme's
- * `dist` folder; refused for a Courier outside the extensions folder; the
- * user's own associations kept, an older Courier's moved, and Courier's
- * taken out again whole.
+ * Courier's icons in Material Icon Theme: each config and mocks file to
+ * Courier's icons by their path from the theme's `icons` folder, and the
+ * `.courier` folder by the path the theme reads after naming its icon
+ * `folder-` and the path; refused for a Courier outside the extensions
+ * folder; the user's own associations kept, an older Courier's moved, and
+ * Courier's taken out again whole.
  */
 import { describe, expect, it } from "vitest";
 
@@ -19,7 +20,7 @@ const ICONS = `${EXTENSIONS}/noverax.courier-vscode-1.2.0/media/icons`;
 const MATERIAL = `${EXTENSIONS}/pkief.material-icon-theme-5.20.0`;
 
 describe("Courier's associations for Material Icon Theme", () => {
-  it("names each file and the .courier folder by the path from the theme's dist folder", () => {
+  it("names each file by its path from the theme's icons folder, and the folder from one deeper", () => {
     const plan = materialPlan(ICONS, MATERIAL);
 
     expect(plan).toMatchObject({
@@ -28,7 +29,9 @@ describe("Courier's associations for Material Icon Theme", () => {
         "courier.config.cjs": "../../noverax.courier-vscode-1.2.0/media/icons/courier-config",
         "courier.mocks.mts": "../../noverax.courier-vscode-1.2.0/media/icons/courier-mocks",
       },
-      folders: { ".courier": "../../noverax.courier-vscode-1.2.0/media/icons/folder-courier" },
+      folders: {
+        ".courier": "../../../../noverax.courier-vscode-1.2.0/media/icons/folder-courier",
+      },
     });
     expect(Object.keys("files" in plan ? plan.files : {})).toHaveLength(12);
   });

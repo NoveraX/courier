@@ -78,6 +78,8 @@ An editor that starts servers somewhere other than the project names it with `--
 
 Node's own `--env-file` is not one of them: Node takes that flag for itself wherever it appears.
 
+Behind a corporate proxy, or with a certificate authority of your own, give the server `NODE_USE_ENV_PROXY=1`, `HTTPS_PROXY` and `NODE_EXTRA_CA_CERTS` in its `env` in the editor's configuration — Node reads them as it starts, before `--dotenv` loads anything. See [Proxies & Certificates](/docs/advanced/proxies-and-certificates#the-mcp-server).
+
 `--read-only` and `--deny` only ever narrow what the config offers: what an agent may call is widened in code and config, which go through review, never on a command line.
 
 ## What is offered

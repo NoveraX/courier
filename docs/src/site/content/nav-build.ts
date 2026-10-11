@@ -53,6 +53,7 @@ export const BUILD_SECTIONS: NavSection[] = [
       { title: "Raw Data Mode", href: "/docs/advanced/raw-data" },
       { title: "OpenAPI Export", href: "/docs/advanced/openapi" },
       { title: "Webhooks", href: "/docs/advanced/webhooks" },
+      { title: "Proxies & Certificates", href: "/docs/advanced/proxies-and-certificates" },
       { title: "Options Reference", href: "/docs/advanced/options" },
       { title: "Singleton Pattern", href: "/docs/advanced/singleton" },
     ],

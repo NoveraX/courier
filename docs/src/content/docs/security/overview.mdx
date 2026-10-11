@@ -143,7 +143,7 @@ Courier counts as in development wherever `NODE_ENV` is not `production`, so set
 ## In production
 
 - Set `NODE_ENV=production`.
-- Reach your APIs over HTTPS, and leave `allowHttp` unset.
+- Reach your APIs over HTTPS, and leave `allowHttp` unset. Trust an internal certificate authority with `NODE_EXTRA_CA_CERTS` or an API's own `dispatcher`, never by turning the certificate check off — see [Proxies & Certificates](/docs/advanced/proxies-and-certificates).
 - Name the session's cookies exactly, and a prefix only where every cookie under it belongs to the session.
 - List in `allowedOrigins` only pages you serve, and in `allowedHosts` the names your application answers to.
 - Mark `session: "unguarded"` only on writes that do no harm when a stranger sets them off, and never declare a write `.reads()`.

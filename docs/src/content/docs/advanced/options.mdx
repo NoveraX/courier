@@ -27,6 +27,11 @@ type BaseOptions = {
   credentials?: RequestCredentials               // Cookie handling mode
   middleware?: Middleware[]                      // Middleware chain
 
+  // Transport — see Proxies & Certificates
+  fetch?: SourceFetch                            // Sends this source's requests and opens its streams (undici's fetch)
+  webSocket?: SourceWebSocket                    // Opens its channels' sockets (undici's WebSocket)
+  dispatcher?: SourceDispatcher                  // undici Agent or ProxyAgent: a client certificate, an authority, a proxy
+
   // Proxy
   expose?: boolean                               // Whether the browser may call this source through the proxy
   boundary?: ProxyBoundary                       // The endpoints a browser may call, from defineBoundary
@@ -208,3 +213,4 @@ The `credentials` option controls cookie handling:
 - [Raw Data Mode](/docs/advanced/raw-data) — using `.raw` to access status codes and headers
 - [Streaming](/docs/advanced/streaming) — enabling stream mode for ReadableStream responses
 - [Abort & Deduplication](/docs/advanced/abort) — automatic request deduplication with abort signals
+- [Proxies & Certificates](/docs/advanced/proxies-and-certificates) — a corporate proxy, an internal certificate authority, a client certificate

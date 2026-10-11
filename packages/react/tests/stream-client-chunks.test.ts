@@ -8,9 +8,10 @@ import { build, type Metafile } from "esbuild";
 import { describe, expect, it } from "vitest";
 
 const SRC = resolve(import.meta.dirname, "../src");
-/* Code only the SSE client and the WebSocket client run. */
+/* Code only the SSE client and the WebSocket client run: the header a stream resumes
+   with, and the reason a socket is dropped when its server falls silent. */
 const SSE_CLIENT = '"Last-Event-ID"';
-const WS_CLIENT = "new WebSocket(";
+const WS_CLIENT = '"Server silence"';
 
 /* The chunks a page loads with the entry: it and what it imports statically. */
 function loadedWith(entry: string, outputs: Metafile["outputs"]): Set<string> {

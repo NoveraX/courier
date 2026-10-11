@@ -100,7 +100,7 @@ What is offered, and why, is never a guess:
 
 A `deny` or `allow` pattern that names no endpoint is warned of where the server starts — a misspelt `deny` protects nothing — and so are more than 40 tools, past which some clients slow down or leave tools out.
 
-The server in your editor reads the policy when it starts: after an edit, reconnect it, as your editor offers — `/mcp` in Claude Code. An application's own endpoint takes it as `createMcpHandler({ agents: config.agents })` — see [In Your App](/docs/agents/app#what-it-offers).
+The server in your editor follows the project: a save to `courier.config.ts`, or to a module it reaches, loads it again — only what changed is transformed — and the client is told when the tools it sees change, in about a tenth of a second; see [In Your Editor](/docs/agents/editor#while-you-edit). An application's own endpoint takes the policy as `createMcpHandler({ agents: config.agents })` — see [In Your App](/docs/agents/app#what-it-offers).
 
 ## What becomes what
 
@@ -203,4 +203,5 @@ The server speaks both eras of the Model Context Protocol: the **2026-07-28** re
 | Tools and their schemas | ✓ | ✓ | ✓ |
 | Structured answers | any JSON | an object, from 2025-06-18 | an object, from 2025-06-18 |
 | Confirming a destructive call | asked inside the result, signed | asked as a request of its own | not possible: refused |
+| Told when the tools change | on the stream `subscriptions/listen` opens | `notifications/tools/list_changed` | asks again once `ttlMs` has passed |
 | Session between requests | none | the process | none |

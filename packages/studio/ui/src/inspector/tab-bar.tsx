@@ -24,11 +24,12 @@ interface TabBarProps {
  */
 export function TabBar({ tabs, current, onSelect }: TabBarProps): React.ReactNode {
   return (
+    /* The strip reaches one pixel into the header's rule below it, so the chosen tab's mark lies on the rule inside the strip, which would scroll by that pixel otherwise. */
     <motion.div
       layoutScroll
       role="tablist"
       aria-label="Request"
-      className="-mx-1.5 flex overflow-x-auto [scrollbar-width:none]"
+      className="-mx-1.5 -mb-px flex overflow-x-auto overflow-y-hidden pb-px [scrollbar-width:none]"
     >
       {tabs.map((tab) => {
         const on = tab.key === current;

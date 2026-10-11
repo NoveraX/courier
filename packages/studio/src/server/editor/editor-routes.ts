@@ -10,6 +10,7 @@ import { registerEditorLiveRoutes } from "./editor-live-routes";
 import { type CatalogEndpoint, endpointCatalog } from "./endpoint-catalog";
 import { endpointDefinitions } from "./endpoint-definitions";
 import { endpointStats } from "./endpoint-stats";
+import { groupPlaces } from "./group-places";
 import { matchCalls } from "./match-calls";
 import { createSiteIndex } from "./site-index";
 
@@ -35,6 +36,7 @@ const LARGEST_TEXT = 1024 * 1024;
  * POST /api/editor/calls — the endpoint calls in a file the editor sends (`{ file, text }`), each placed
  * POST /api/editor/findings — the findings of Studio's audit that concern endpoints, to place at their calls
  * POST /api/editor/definitions — where the project's files declare each endpoint
+ * POST /api/editor/groups — where each group writes its endpoints, as an editor adds one
  * POST /api/editor/sites — where the project's code calls one endpoint (`{ source, endpoint }`)
  * and those of an editor's live views, the requests and the mocks: see `registerEditorLiveRoutes`
  *
@@ -81,6 +83,11 @@ export function registerEditorRoutes(app: RouteApp, deps: EditorRouteDeps): void
       ? endpointDefinitions(deps.root, running.configFile, catalog())
       : [];
     res.json({ definitions });
+  });
+
+  app.post("/api/editor/groups", (_req, res) => {
+    const running = deps.project.snapshot().running;
+    res.json({ groups: running ? groupPlaces(deps.root, running.configFile, catalog()) : [] });
   });
 
   app.post("/api/editor/sites", async (req, res) => {

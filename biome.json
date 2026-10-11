@@ -177,6 +177,19 @@
       }
     },
     {
+      "includes": ["packages/react/src/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useExhaustiveDependencies": {
+              "level": "error",
+              "options": { "hooks": [{ "name": "useEffectEvent", "stableResult": true }] }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/studio/ui/src/routes/**"],
       "linter": {
         "rules": {

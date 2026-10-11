@@ -7,6 +7,7 @@ import { hashKey, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 
 import type { CourierComputedQueryOptions } from "../types";
+import { useLatest } from "./effect-event";
 import type { SubscribeFn } from "./use-subscription";
 import { useSubscription } from "./use-subscription";
 
@@ -58,14 +59,17 @@ export function useComputedQuery<TQueryData, TStreamData>(
   const queryClient = useQueryClient();
   const queryHash = hashKey(queryKey);
   const held = React.useRef<HeldEvents<TStreamData>>({ queryHash, events: [] });
-  if (held.current.queryHash !== queryHash) held.current = { queryHash, events: [] };
+  /* The events held for this query's key: those held for another are dropped,
+     here rather than as it renders, which React may throw away. */
+  const heldHere = () => {
+    if (held.current.queryHash !== queryHash) held.current = { queryHash, events: [] };
+    return held.current;
+  };
 
-  const mapperRef = React.useRef(options.mapper);
-  mapperRef.current = options.mapper;
+  const mapperRef = useLatest(options.mapper);
   /** The events held for this query's key, handed over once. */
   const take = () => {
-    if (held.current.queryHash !== queryHash) return [];
-    const { events } = held.current;
+    const { events } = heldHere();
     held.current = { queryHash, events: [] };
     return events;
   };
@@ -93,7 +97,7 @@ export function useComputedQuery<TQueryData, TStreamData>(
     onError: options.onStreamError,
     onStatusChange: options.onStreamStatusChange,
     onData: (event) => {
-      const pending = held.current.events;
+      const pending = heldHere().events;
       if (pending.length > 0 || queryClient.getQueryData(queryKey) === undefined) {
         pending.push(event);
         return;
@@ -105,7 +109,7 @@ export function useComputedQuery<TQueryData, TStreamData>(
   /* An event can still slip in after the answer came back but before it
      was cached; it waits here for the next render. */
   React.useEffect(() => {
-    if (queryResult.data === undefined || held.current.events.length === 0) return;
+    if (queryResult.data === undefined || heldHere().events.length === 0) return;
     merge(take());
   });
 

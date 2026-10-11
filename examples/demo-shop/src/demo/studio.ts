@@ -26,8 +26,15 @@ const studio = createStudioServer({
   },
 });
 
+/* A signal passed on again while Studio closes must not end it halfway; asked again later, it ends at once. */
+let closingSince: number | undefined;
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
-  process.once(signal, () => {
+  process.on(signal, () => {
+    if (closingSince !== undefined) {
+      if (Date.now() - closingSince >= 1_000) process.exit(1);
+      return;
+    }
+    closingSince = Date.now();
     studio
       .close()
       .catch((error: unknown) => console.error("Studio did not close cleanly", error))

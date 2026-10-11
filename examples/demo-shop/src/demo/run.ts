@@ -61,8 +61,20 @@ async function runOnce(): Promise<void> {
   if (ended !== null && Date.now() - startedAt < SETTLED_MS) await sleep(10_000);
 }
 
+/*
+ * A terminal's Ctrl+C reaches the demo twice when npm started it, which
+ * passes the signal on: the second must not end it halfway through
+ * stopping its parts, which would leave them running. Asked again a second
+ * or more later, it ends at once.
+ */
+let stoppingSince: number | undefined;
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
-  process.once(signal, () => {
+  process.on(signal, () => {
+    if (stoppingSince !== undefined) {
+      if (Date.now() - stoppingSince >= 1_000) process.exit(1);
+      return;
+    }
+    stoppingSince = Date.now();
     stopping = true;
     stopDemo().finally(() => process.exit(0));
   });

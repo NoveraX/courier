@@ -33,7 +33,9 @@ export function InstallPanel({ picked, onPick }: { picked: string; onPick: (id: 
               on ? "border-brand/45 bg-brand/6" : "border-line bg-inset"
             )}
           >
-            <span className="w-9 shrink-0 text-[11px] text-fg-subtle max-[560px]:hidden">{manager.id}</span>
+            <span className="w-9 shrink-0 text-[11px] text-fg-subtle max-[560px]:hidden">
+              {manager.id}
+            </span>
             <span className="min-w-0 flex-1 leading-normal">
               <span className="text-fg-subtle">$ </span>
               <CommandWords

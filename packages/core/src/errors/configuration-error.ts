@@ -169,6 +169,12 @@ export type ConfigurationErrorCode =
   /** Two endpoints were offered to agents under one tool name. */
   | "AGENT_TOOL_NAME_TAKEN"
   /**
+   * The config's `agents` policy holds what it cannot decide by: an `offer`,
+   * `access` or `confirm` it does not know, a key it does not have, or a
+   * pattern that names no endpoint's call.
+   */
+  | "AGENT_POLICY_INVALID"
+  /**
    * An MCP handler was created without what it cannot work without — an
    * `authorize` deciding who may call the application's tools — or with an
    * option it does not have.

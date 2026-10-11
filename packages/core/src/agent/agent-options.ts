@@ -9,23 +9,26 @@ const TOOL_NAME = /^[A-Za-z0-9_-]{1,64}$/;
 /**
  * Check what `.agent()` was given, where it was written, and keep a copy.
  *
- * The description is what the model decides by, so an empty one is refused,
- * as is an access other than the three a tool can declare. The copy is
- * frozen: a later change to the object passed in cannot widen what an
- * endpoint already offers.
+ * `false` keeps the endpoint from every agent, whatever the project's
+ * policy offers. Otherwise the description is what the model decides by,
+ * so an empty one is refused, as is an access other than the three a tool
+ * can declare. The copy is frozen: a later change to the object passed in
+ * cannot widen what an endpoint already offers.
  *
  * @param value - What `.agent()` was given
  * @param where - The endpoint's address for the message, such as `GET "orders/:id"`
- * @returns The options, checked and frozen
+ * @returns The options, checked and frozen, or `false`
  * @throws ConfigurationError `AGENT_OPTIONS_INVALID` when they cannot describe a tool
  *
  * @example
  * ```ts
  * agentOptions({ description: "One order by its id", access: "read" }, 'GET "orders/:id"');
+ * agentOptions(false, 'POST "payouts"'); // false
  * ```
  */
-export function agentOptions(value: unknown, where: string): AgentOptions {
-  if (!isRecord(value)) refuse(where, "takes an object: { description, access }");
+export function agentOptions(value: unknown, where: string): AgentOptions | false {
+  if (value === false) return false;
+  if (!isRecord(value)) refuse(where, "takes an object: { description, access } — or false");
   const { description, access, name, title, limit, ...unknown } = value;
   const extra = Object.keys(unknown);
   if (extra.length > 0) refuse(where, `has no option ${extra.map((key) => `"${key}"`).join(", ")}`);

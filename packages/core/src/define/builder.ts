@@ -31,8 +31,8 @@ export interface BuilderState {
   readonly meta: Readonly<Record<string, unknown>>;
   /** What a served channel's subscribers share a topic by, from `.topic()`. */
   readonly topicKey?: TopicKeyReader | undefined;
-  /** How the endpoint is offered to AI agents, from `.agent()`. */
-  readonly agent?: AgentOptions | undefined;
+  /** How the endpoint is offered to AI agents, from `.agent()`; `false` keeps it from every one. */
+  readonly agent?: AgentOptions | false | undefined;
 }
 
 /** Start a builder state for a head. */

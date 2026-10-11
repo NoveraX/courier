@@ -1,3 +1,4 @@
+import type { AgentPolicy } from "../agent/agent-policy";
 import type { AnySource } from "../define/types";
 
 /** Spec format for an OpenAPI/GraphQL/etc. import entry */
@@ -249,4 +250,11 @@ export interface CourierConfig<
   studio?: CourierStudioConfig | undefined;
   server?: CourierServerConfig | undefined;
   runtime?: CourierRuntimeConfig | undefined;
+  /**
+   * What the project offers to AI agents: by default the endpoints marked
+   * `.agent()` and nothing else. The MCP server, Studio and
+   * `courier-studio diff` read it here; an application's own MCP endpoint
+   * takes it as `createMcpHandler({ agents: config.agents })`.
+   */
+  agents?: AgentPolicy | undefined;
 }

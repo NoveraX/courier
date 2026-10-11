@@ -218,7 +218,9 @@ export interface HttpAddressed<
   reads(): HttpAddressed<TResponse, TVariables, TVariablesOut, "query", TParams>;
   /**
    * Offer the endpoint to AI agents, as a tool of the application's MCP
-   * server. An endpoint that does not name it is out of every agent's reach.
+   * server — or, with `false`, keep it from every agent whatever the
+   * project's `agents` policy offers. An endpoint that names neither is
+   * offered only when that policy offers it.
    *
    * The description is what the model reads to decide when to call the tool.
    * `access` says what a call does: an endpoint that writes cannot be offered
@@ -232,10 +234,13 @@ export interface HttpAddressed<
    * endpoint
    *   .del("orders/:id")
    *   .agent({ description: "Cancel an order that has not shipped", access: "destructive" });
+   * endpoint.post("payouts").agent(false);
    * ```
    */
   agent(
-    options: AgentOptions<TKind extends "query" ? AgentAccess : Exclude<AgentAccess, "read">>,
+    options:
+      | AgentOptions<TKind extends "query" ? AgentAccess : Exclude<AgentAccess, "read">>
+      | false,
   ): HttpAddressed<TResponse, TVariables, TVariablesOut, TKind, TParams>;
 }
 

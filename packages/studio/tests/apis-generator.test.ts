@@ -264,11 +264,20 @@ describe("generateCode", () => {
     expect(petsFile?.content).toContain("List all pets");
   });
 
-  it("excludes JSDoc comments when includeComments is false", () => {
+  it("excludes JSDoc comments when includeComments is false, and keeps each description in the definition", () => {
     const files = generateCode(MOCK_SPEC, { ...DEFAULT_OPTIONS, includeComments: false });
 
     const petsFile = files.find((f) => f.path.includes("pets/index.ts"));
-    expect(petsFile?.content).not.toContain("List all pets");
+    expect(petsFile?.content).toContain('.meta({ description: "List all pets" })');
+    expect(petsFile?.content).not.toContain("/** List all pets");
+  });
+
+  it("carries each operation's description as the endpoint's, for agents and the OpenAPI it writes", () => {
+    const files = generateCode(MOCK_SPEC, DEFAULT_OPTIONS);
+
+    const petsFile = files.find((f) => f.path.includes("pets/index.ts"));
+    expect(petsFile?.content).toContain("/** List all pets */");
+    expect(petsFile?.content).toContain('.meta({ description: "List all pets" })');
   });
 
   it("generates no schema files when validation is none and generateTypes is false", () => {

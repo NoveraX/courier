@@ -9,12 +9,16 @@ import { buildEndpointChain } from "./build-endpoint-helpers";
 import { declaredSchema } from "./declared-schema";
 import { type EndpointContext, typeName } from "./endpoint-context";
 import { resolveResponseType, resolveVariablesType } from "./endpoint-types";
+import { firstParagraph } from "./first-paragraph";
 import { requestBodyKind } from "./request-body";
 import { isEventStream, type ResponseReading, responseReading } from "./response-reading";
 import { hasStyledQuery } from "./styled-query";
 import { headerParameters } from "./variable-parameters";
 import { variablesSchema } from "./variables-schema";
 import { sendsUrlEncoded, wireClosure } from "./wire-closure";
+
+/* What an endpoint keeps of its operation's description: enough for a model to choose the tool by. */
+const DESCRIPTION_LIMIT = 300;
 
 /** The validators whose generated objects are loose. */
 const LOOSE: ReadonlySet<string> = new Set(["zod", "valibot"]);
@@ -79,6 +83,7 @@ export function buildEndpointDefinition(
     responseSchema: response,
     responseType:
       response && !declared ? null : (READ_TYPES[reading] ?? resolveResponseType(ep, context)),
+    description: firstParagraph(ep.description, DESCRIPTION_LIMIT) || null,
   });
 }
 

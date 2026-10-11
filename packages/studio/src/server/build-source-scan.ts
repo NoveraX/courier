@@ -14,6 +14,7 @@ import type { ProxyPath } from "@noverax/courier";
 import type { SchemaField } from "@noverax/courier-studio-core";
 import { extractSourceMap } from "@noverax/courier-studio-core";
 import { isTopLevel } from "../apis/parser/top-level";
+import { type AgentMark, agentMarks } from "./agent-marks";
 import type { LoadedCourierConfig } from "./config-loader";
 import { findSourceDeclaration } from "./find-source-declaration";
 import { getImportEntry, getImportState, type ImportsSnapshot } from "./imports-bridge";
@@ -50,6 +51,8 @@ export interface ScannedEndpointAnalysis {
   hasReceiveSchema?: true;
   /** A stream or a channel the app serves itself, rather than an upstream. */
   served?: true;
+  /** What the project's `agents` policy decided for it; absent for a stream or a channel. */
+  agent?: AgentMark;
 }
 
 export interface ScannedEndpoint {
@@ -116,6 +119,7 @@ export function buildSourceScan(
   if (!loaded) return { sources: [], scannedFiles: 0 };
   const { config, configFile, deps, depHashes } = loaded;
   const sourceMap = extractSourceMap(config.sources ?? {});
+  const marks = agentMarks(config);
 
   const sources: ScannedSource[] = [];
   for (const [name, source] of Object.entries(sourceMap)) {
@@ -131,9 +135,10 @@ export function buildSourceScan(
     let inlineEndpoints: ScannedEndpoint[] | undefined;
 
     for (const [groupName, group] of Object.entries(source.groups)) {
-      const endpoints = Object.entries(group.endpoints).map(([endpointName, endpoint]) =>
-        describeEndpoint(endpointName, endpoint),
-      );
+      const endpoints = Object.entries(group.endpoints).map(([endpointName, endpoint]) => {
+        const call = isTopLevel(groupName) ? endpointName : `${groupName}.${endpointName}`;
+        return describeEndpoint(endpointName, endpoint, marks.get(`${name}.${call}`));
+      });
       if (isTopLevel(groupName)) {
         inlineEndpoints = endpoints;
         continue;
@@ -169,7 +174,11 @@ type MapEndpoint = ReturnType<
   typeof extractSourceMap
 >[string]["groups"][string]["endpoints"][string];
 
-function describeEndpoint(name: string, endpoint: MapEndpoint): ScannedEndpoint {
+function describeEndpoint(
+  name: string,
+  endpoint: MapEndpoint,
+  agent: AgentMark | undefined,
+): ScannedEndpoint {
   const method = endpoint.httpMethod?.toLowerCase();
   return {
     name,
@@ -186,6 +195,7 @@ function describeEndpoint(name: string, endpoint: MapEndpoint): ScannedEndpoint 
       ...(endpoint.variablesFields && { variablesFields: endpoint.variablesFields }),
       ...(endpoint.hasReceiveSchema && { hasReceiveSchema: true as const }),
       ...(endpoint.served && { served: true as const }),
+      ...(agent && { agent }),
     },
   };
 }

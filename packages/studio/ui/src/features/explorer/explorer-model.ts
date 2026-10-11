@@ -1,3 +1,4 @@
+import type { AgentMark } from "@/features/apis/types";
 import type { Catalog, RequestEntry } from "@/store/types";
 import type { EndpointRef } from "./endpoint-key";
 import { endpointKeyOf } from "./endpoint-key";
@@ -25,6 +26,8 @@ export interface EndpointNode extends EndpointRef {
   trafficOnly: boolean;
   /** Whether any of its calls went through Courier's proxy. */
   proxied: boolean;
+  /** What the project's `agents` policy decided for it; absent where the config does not declare it. */
+  agent?: AgentMark;
   /** Its calls, newest first. */
   requests: RequestEntry[];
   metrics: EndpointMetrics;

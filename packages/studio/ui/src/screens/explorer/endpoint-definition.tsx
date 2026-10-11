@@ -1,3 +1,5 @@
+import type { AgentMark } from "@/features/apis/types";
+import { agentMarkTitle } from "@/features/explorer/agent-mark-title";
 import { lastCallLabel } from "@/features/explorer/endpoint-key";
 import type { EndpointNode } from "@/features/explorer/explorer-model";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,32 @@ function schemaChip(name: string, declared: boolean): React.ReactNode {
   );
 }
 
+const ACCESS_CLASS: Readonly<Record<NonNullable<AgentMark["access"]>, string>> = {
+  read: "bg-raised text-fg-muted",
+  write: "bg-warn-dim text-warn",
+  destructive: "bg-err-dim text-err",
+};
+
+/* The tool an endpoint is offered to agents as, what a call does and why — or why it is not offered. */
+function AgentMarks({ mark }: { mark: AgentMark }): React.ReactNode {
+  return (
+    <>
+      {mark.offered ? (
+        <Chip className="bg-syntax-function/12 text-syntax-function">{mark.tool}</Chip>
+      ) : (
+        <span className="text-small text-fg-muted">not offered</span>
+      )}
+      {mark.offered && mark.access && (
+        <Chip className={ACCESS_CLASS[mark.access]}>{mark.access}</Chip>
+      )}
+      {mark.confirm && <Chip className="bg-raised text-fg-muted">a person confirms</Chip>}
+      <span title={agentMarkTitle(mark)} className="text-small text-fg-subtle">
+        {mark.reason}
+      </span>
+    </>
+  );
+}
+
 function Row({ label, children }: { label: string; children: React.ReactNode }): React.ReactNode {
   return (
     <div className="grid min-h-8 grid-cols-[108px_minmax(0,1fr)] items-center gap-3 border-b border-line">
@@ -33,8 +61,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }):
 
 /**
  * What an endpoint is, as its definition says: its path, its kind and
- * whether it is proxied, which schemas it declares, its middleware and
- * when it was last called.
+ * whether it is proxied, which schemas it declares, its middleware, what
+ * the project offers agents of it, and when it was last called.
  *
  * @param props - The endpoint and the time now
  * @returns The definition
@@ -73,6 +101,11 @@ export function EndpointDefinition({
             </Chip>
           ))}
         </Row>
+        {e.agent && (
+          <Row label="Agents">
+            <AgentMarks mark={e.agent} />
+          </Row>
+        )}
         <Row label="Last call">
           <span className="font-mono text-small text-fg-muted">
             {lastCallLabel(e.metrics.last, now)}

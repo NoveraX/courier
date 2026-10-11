@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { agentMarkTitle } from "@/features/explorer/agent-mark-title";
 import { latencyBars, recentCalls } from "@/features/explorer/endpoint-detail";
 import { endpointKey, keyParts, lastCallLabel, shortAgo } from "@/features/explorer/endpoint-key";
 import { levelOf, metricsOf } from "@/features/explorer/endpoint-metrics";
@@ -373,6 +374,34 @@ describe("an endpoint's panel", () => {
       "query",
       "untyped response",
     ]);
+  });
+
+  it("tags an endpoint the project offers to agents, saying as what and why on hover", () => {
+    const create = endpointNamed("api.orders.create");
+    const offered = {
+      ...create,
+      agent: {
+        offered: true,
+        tool: "orders_create",
+        access: "write",
+        confirm: true,
+        reason: 'offer: "all"',
+      } as const,
+    };
+    const kept = { ...create, agent: { offered: false, reason: "denied by api.orders.*" } };
+
+    expect(endpointTags(offered)).toEqual([
+      { label: "mutation", tone: "mutation" },
+      {
+        label: "agent",
+        tone: "agent",
+        title:
+          'Offered to agents as orders_create: write, a person confirms each call — offer: "all"',
+      },
+      { label: "proxy", tone: "proxy" },
+    ]);
+    expect(endpointTags(kept).map((t) => t.label)).toEqual(["mutation", "proxy"]);
+    expect(agentMarkTitle(kept.agent)).toBe("Not offered to agents — denied by api.orders.*");
   });
 
   it("names it and its method, and says when it was last called", () => {

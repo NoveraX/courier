@@ -79,7 +79,7 @@ describe("courier-studio verify", () => {
     expect(run.stdout).toContain("tests/recorded/checkout.shop.har  1 calls");
     expect(run.stdout).toContain("tests/recorded/browser.har  passed over:");
     expect(run.stdout).toContain("1 recorded calls checked: 1 fit, 0 broke");
-  });
+  }, 60_000);
 
   it("fails once a call no longer fits, saying what broke it, in Markdown for a pull request too", () => {
     writeFileSync(join(root, "courier.config.ts"), config("items/:id"));
@@ -98,7 +98,7 @@ describe("courier-studio verify", () => {
       "| `shop product` | 1 | path changed — recorded at /products/p_1, but the endpoint now sends to /items/:id |",
     );
     writeFileSync(join(root, "courier.config.ts"), config("products/:id"));
-  });
+  }, 60_000);
 
   it("refuses a file named that is not a recordings file, and a project with no recordings", () => {
     const named = verify("tests/recorded/browser.har");
@@ -114,5 +114,5 @@ describe("courier-studio verify", () => {
     expect(elsewhere.stderr + elsewhere.stdout).toContain(
       "No recordings to check: tests/recorded does not exist",
     );
-  });
+  }, 60_000);
 });

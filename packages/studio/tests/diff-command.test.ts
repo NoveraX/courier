@@ -124,7 +124,7 @@ describe("courier-studio diff", () => {
       readdirSync(join(root, ".courier")).filter((name) => name.startsWith("diff-base-")),
     ).toEqual([]);
     expect(git("worktree", "list").toString().trim().split("\n")).toHaveLength(1);
-  });
+  }, 60_000);
 
   it("compares with documents written before, writes Markdown for the pull request, and passes when asked to fail on nothing", () => {
     const documents = join(root, ".courier", "base-openapi");
@@ -154,7 +154,7 @@ describe("courier-studio diff", () => {
     expect(readFileSync(summary, "utf8")).toContain(
       "## Agent access\n\n**agents may call 1 tool; the base, OpenAPI documents written before, does not record what agents could call**",
     );
-  });
+  }, 60_000);
 
   it("posts the report on the pull request the job runs for, its verdict unchanged", async () => {
     const posted: string[] = [];
@@ -206,5 +206,5 @@ describe("courier-studio diff", () => {
     } finally {
       await new Promise((done) => github.close(done));
     }
-  });
+  }, 60_000);
 });

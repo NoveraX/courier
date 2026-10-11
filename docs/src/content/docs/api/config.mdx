@@ -1,4 +1,4 @@
-export const metadata = { title: "courier.config.ts", description: "Every field of courier.config.ts: the sources, the API imports Studio keeps in sync, Studio, the standalone server and the runtime.", mode: "both" }
+export const metadata = { title: "courier.config.ts", description: "Every field of courier.config.ts: the sources, the API imports Studio keeps in sync, Studio, the standalone server, the runtime and what agents may call.", mode: "both" }
 
 ## Overview
 
@@ -42,7 +42,7 @@ The API specifications Studio imported, by key. Studio writes an entry when it i
 | `generateTypes`, `generateSchemas` | `boolean` | Whether types and schemas are written |
 | `generateClient` | `"direct"` \| `"proxy"` \| `"both"` \| `"none"` | Which callers are generated: the direct caller in the import's `index.ts`, the proxy caller in `proxy.ts`, which browser code imports |
 | `addAuthMiddleware` | `boolean` | Whether the specification's security scheme becomes middleware |
-| `includeComments` | `boolean` | Whether descriptions become doc comments |
+| `includeComments` | `boolean` | Whether descriptions become doc comments. Each endpoint keeps its operation's description as `.meta({ description })` either way: an agent's tool describes itself by it, and the OpenAPI written from the definition keeps it |
 | `include`, `exclude` | `{ tags?, paths?, operationIds? }` | The endpoints generated: `include` names the ones kept, then `exclude` the ones left out |
 | `transform` | `(spec) => spec \| void` | Run on a copy of the parsed specification before anything is generated from it |
 
@@ -80,3 +80,17 @@ What `attachRuntime()` needs in the application's process.
 | Field | |
 | --- | --- |
 | `appOrigin` | The origin the application listens on, such as `http://localhost:3000`. Studio's Playground resolves a relative `proxyPath.sse` or `proxyPath.ws` against it. Looked up in turn: this field, `COURIER_APP_URL`, `APP_URL`, then, in development, the origin the framework adapter sees on the first request — a deployed server never takes one from a request, whose `Host` its sender chooses. With none of them, a Playground stream or channel in proxy mode fails with `APP_ORIGIN_NOT_CONFIGURED` |
+
+## agents
+
+What the project offers to AI agents as MCP tools. The server in your editor, Studio and `courier-studio diff` read it here; an application's own MCP endpoint takes it as `createMcpHandler({ agents: config.agents })`. Left out, the endpoints marked `.agent()` are offered and nothing else.
+
+| Field | Default | |
+| --- | --- | --- |
+| `offer` | `"marked"` | Which endpoints are offered without `.agent()`: `"marked"` — none; `"reads"` — every read; `"all"` — every endpoint, with the access its verb implies |
+| `allow` | — | Patterns of endpoints to offer although `offer` leaves them out: `["shop.orders.*"]` |
+| `deny` | — | Patterns of endpoints no agent sees, whatever offers them: `["billing.**"]` |
+| `access` | `"destructive"` | The most a tool may do: `"read"`, `"write"` or `"destructive"`; an endpoint that does more is offered to no agent |
+| `confirm` | `"destructive"` | From which access a person confirms each call: `"destructive"`, or `"write"` for every call that changes something |
+
+A pattern names an endpoint by its call under its source; `*` stands for any part of one name, `**` for any number of names. A key or a value the policy does not know stops the MCP server with `AGENT_POLICY_INVALID` — a misspelt key under `agents` is named when Studio loads the config, too. See [What agents may call](/docs/agents/overview#what-agents-may-call).

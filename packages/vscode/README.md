@@ -14,7 +14,7 @@
   </p>
 
   <p>
-    <a href="https://courier.noverax.cloud/docs/studio/editor"><strong>Studio in your editor</strong></a>
+    <a href="https://courier.noverax.cloud/docs/studio/editor"><strong>Documentation</strong></a>
     &nbsp;·&nbsp;
     <a href="https://courier.noverax.cloud/studio">Courier Studio</a>
     &nbsp;·&nbsp;
@@ -26,8 +26,8 @@
   <br />
 
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/codelens-dark.png" />
-    <img alt="An editor showing, above each call to an endpoint, its calls in Studio: cart.get 128 calls, p95 32 ms; orders.place 34 calls, 1 failed, p95 210 ms; payments.charge 33 calls, 2 in flight, p95 1.4 s; orders.live 3 streams, 1 open" src="https://raw.githubusercontent.com/NoveraX/courier/master/.github/assets/codelens-light.png" width="880" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/lens-dark.png" />
+    <img alt="VS Code with a shop's checkout code open: above each call to an endpoint, a line saying how many calls it had in Courier Studio, how many failed and how long nineteen in twenty took" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/lens-light.png" width="880" />
   </picture>
   <br />
 </div>
@@ -65,6 +65,11 @@ await api.orders.place({ sku, quantity })
 ```
 
 Hover over the call for the rest: the median and the 95th percentile, the statuses the calls ended with, and the latest failure with its reason. A stream or a channel shows how many were opened, and how many are open.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/hover-dark.png" />
+  <img alt="The hover over a call to orders.place: its calls and failures in Courier Studio, the median and the 95th percentile, the statuses the calls ended with, the latest failure — a 409 Conflict — and a link that opens the endpoint in Studio" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/hover-light.png" width="880" />
+</picture>
 
 <br />
 

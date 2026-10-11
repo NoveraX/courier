@@ -106,7 +106,21 @@ const sites = [
     code: "await api.orders.place({ sku: 'A' });",
   },
 ];
+const groups = [
+  {
+    source: "shop",
+    group: "orders",
+    file: "src/api/orders.ts",
+    path: join(workspace, "src/api/orders.ts"),
+    open: { line: 2, column: 14 },
+    close: { line: 4, column: 3 },
+    last: { line: 3, column: 29, comma: true },
+    names: ["place"],
+    builder: "endpoint",
+  },
+];
 const ANSWERS = {
+  "/api/editor/groups": { groups },
   "/api/editor/endpoints": { endpoints: stats },
   "/api/editor/findings": { findings },
   "/api/editor/sites": { sites },

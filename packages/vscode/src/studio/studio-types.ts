@@ -80,3 +80,27 @@ export interface EndpointDefinition extends EndpointName, TextSpan {
   /** The whole declaration: its name, and the chain that builds it */
   readonly span: TextSpan;
 }
+
+/** A place in a file: a line and a column from 1. */
+export interface TextPlace {
+  readonly line: number;
+  readonly column: number;
+}
+
+/** Where a group writes its endpoints, as an editor adds one to them. */
+export interface GroupPlace {
+  readonly source: string;
+  /** The group's names from the source down: `admin.orders`; empty for the source itself */
+  readonly group: string;
+  readonly file: string;
+  readonly path: string;
+  /** The `endpoints` object's braces */
+  readonly open: TextPlace;
+  readonly close: TextPlace;
+  /** The last endpoint written, and whether a comma follows it */
+  readonly last?: (TextPlace & { readonly comma: boolean }) | undefined;
+  /** The endpoints' names already taken */
+  readonly names: readonly string[];
+  /** What the endpoints are built with in that file: `endpoint` */
+  readonly builder?: string | undefined;
+}

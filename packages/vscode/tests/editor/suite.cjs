@@ -87,6 +87,20 @@ async function studioTab() {
   return undefined;
 }
 
+async function addedEndpoint(folder) {
+  const orders = vscode.Uri.joinPath(folder, "src/api/orders.ts");
+  await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(orders));
+  await vscode.commands.executeCommand("courier.newEndpoint", {
+    source: "shop",
+    group: "orders",
+    name: "cancel",
+    method: "post",
+    path: ":id/cancel",
+  });
+  const document = await vscode.workspace.openTextDocument(orders);
+  return document.lineAt(3).text;
+}
+
 exports.run = async function run() {
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
   assert.ok(folder, "VS Code opened no workspace");
@@ -124,6 +138,7 @@ exports.run = async function run() {
     snippets: await snippetLabels(),
     code: await codeFeatures(folder, file),
     panel: await studioTab(),
+    added: await addedEndpoint(folder),
   };
   writeFileSync(process.env.COURIER_EDITOR_REPORT, JSON.stringify(report, null, 2));
 
@@ -164,6 +179,11 @@ exports.run = async function run() {
   );
   assert.deepEqual(code.declarationLenses, ["3 calls · 1 failed · p95 40 ms", "1 call site"]);
   assert.deepEqual(code.symbols, ["orders.place"]);
+  assert.equal(
+    report.added,
+    '    cancel: endpoint.post(":id/cancel").variables<{ id: string }>().response<unknown>(),',
+    "a new endpoint goes after the group's last, its variables and response to fill in",
+  );
   assert.deepEqual(report.snippets, [
     "courier-api",
     "courier-boundary",

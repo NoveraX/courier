@@ -1,10 +1,19 @@
-import { isCall, isDefinition, isFinding, isRecord, isSite, isStats } from "./studio-guards";
+import {
+  isCall,
+  isDefinition,
+  isFinding,
+  isGroupPlace,
+  isRecord,
+  isSite,
+  isStats,
+} from "./studio-guards";
 import type {
   CallSite,
   EndpointCall,
   EndpointDefinition,
   EndpointStats,
   Finding,
+  GroupPlace,
 } from "./studio-types";
 
 /* Studio answers on this machine at once; one that takes longer is not answering. */
@@ -100,6 +109,56 @@ export async function fetchFindings(studio: string): Promise<Finding[]> {
 export async function fetchDefinitions(studio: string): Promise<EndpointDefinition[]> {
   const answer = await postTo(studio, "/api/editor/definitions", {}, [404]);
   return listOf(answer, "definitions", isDefinition);
+}
+
+/**
+ * Ask Studio where each group writes its endpoints, as an editor adds one.
+ * A Studio older than the route answers 404, which reads as none found.
+ *
+ * @param studio - Studio's address
+ * @returns The places
+ * @throws {Error} When Studio does not answer
+ * @example
+ * ```ts
+ * const groups = await fetchGroups(studio);
+ * ```
+ */
+export async function fetchGroups(studio: string): Promise<GroupPlace[]> {
+  const answer = await postTo(studio, "/api/editor/groups", {}, [404]);
+  return listOf(answer, "groups", isGroupPlace);
+}
+
+/** A source as an OpenAPI document, as Studio writes it. */
+export interface OpenApiDocument {
+  readonly text: string;
+  readonly fileName: string;
+  readonly version: string;
+  /** The endpoints it leaves out — a channel has no OpenAPI form — and why */
+  readonly leftOut: readonly unknown[];
+}
+
+/**
+ * Ask Studio to write a source as an OpenAPI document.
+ *
+ * @param studio - Studio's address
+ * @param source - The source's name
+ * @returns The document
+ * @throws {Error} When Studio does not answer, or has no such source
+ * @example
+ * ```ts
+ * (await fetchOpenApi(studio, "shop")).fileName; // "shop.openapi.json"
+ * ```
+ */
+export async function fetchOpenApi(studio: string, source: string): Promise<OpenApiDocument> {
+  const answer = await postTo(studio, "/api/openapi/document", { source });
+  const text = isRecord(answer) && typeof answer.text === "string" ? answer.text : "{}\n";
+  const fileName =
+    isRecord(answer) && typeof answer.fileName === "string"
+      ? answer.fileName
+      : `${source}.openapi.json`;
+  const leftOut = isRecord(answer) && Array.isArray(answer.leftOut) ? answer.leftOut : [];
+  const version = /"openapi":\s*"([^"]+)"/.exec(text)?.[1] ?? "3.1.0";
+  return { text, fileName, version, leftOut };
 }
 
 async function postTo(

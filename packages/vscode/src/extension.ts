@@ -6,6 +6,7 @@ import { createCourierCore } from "./core/courier-core";
 import { registerCommands } from "./core/register-commands";
 import { registerEditorMarks } from "./core/register-editor-marks";
 import { registerStatus } from "./core/register-status";
+import { registerWorkflows } from "./core/register-workflows";
 import { registerCliCommands } from "./generate/cli-commands";
 import { registerLiveViews } from "./live/register-live-views";
 import { fetchSites } from "./studio/studio-api";
@@ -18,8 +19,8 @@ import { fetchSites } from "./studio/studio-api";
  * Studio records and the mocks it runs; Studio in a tab of the editor's
  * own; the Studio of the file in front in the status bar; the commands
  * that start Studio, set Courier up, add an endpoint, import an API and
- * check what a change breaks; and the MCP servers offered to VS Code's
- * agent.
+ * check what a change breaks; Courier's tasks, and the recorded calls in
+ * the Test Explorer; and the MCP servers offered to VS Code's agent.
  *
  * @param context - The extension's context, which disposes what it holds
  * @example
@@ -46,6 +47,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerCommands(core),
     registerLiveViews(core),
     registerCliCommands(core),
+    registerWorkflows(core),
     offerMcpServers(core.projects, () => core.settings().get<boolean>("agents.mcpServers", true)),
   );
   core.start();

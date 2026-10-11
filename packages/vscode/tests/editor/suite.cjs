@@ -139,6 +139,7 @@ exports.run = async function run() {
     code: await codeFeatures(folder, file),
     panel: await studioTab(),
     added: await addedEndpoint(folder),
+    tasks: (await vscode.tasks.fetchTasks({ type: "courier" })).map((task) => task.name),
   };
   writeFileSync(process.env.COURIER_EDITOR_REPORT, JSON.stringify(report, null, 2));
 
@@ -184,6 +185,7 @@ exports.run = async function run() {
     '    cancel: endpoint.post(":id/cancel").variables<{ id: string }>().response<unknown>(),',
     "a new endpoint goes after the group's last, its variables and response to fill in",
   );
+  assert.deepEqual(report.tasks, ["studio", "verify", "openapi", "diff", "agents"]);
   assert.deepEqual(report.snippets, [
     "courier-api",
     "courier-boundary",

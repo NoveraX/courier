@@ -66,9 +66,23 @@ export async function setUpCourier(): Promise<void> {
   terminal.show();
 }
 
-async function chooseProject(
+/**
+ * The project a command acts on: the one named, else the one of the file
+ * in front, else the only one, else the one picked.
+ *
+ * @param projects - The workspace's Courier projects
+ * @param root - The project's folder, when the caller knows it
+ * @param placeHolder - What the pick asks, when there is one to make
+ * @returns The project, or `undefined` when there is none or none is picked
+ * @example
+ * ```ts
+ * const project = await chooseProject(projects, undefined, "Import into which project?");
+ * ```
+ */
+export async function chooseProject(
   projects: CourierProjects,
   root?: string,
+  placeHolder = "Start Courier Studio for which project?",
 ): Promise<CourierProject | undefined> {
   const all = await projects.list();
   const named = all.find((project) => project.root === root);
@@ -83,7 +97,7 @@ async function chooseProject(
       description: vscode.workspace.asRelativePath(project.root),
       project,
     })),
-    { placeHolder: "Start Courier Studio for which project?" },
+    { placeHolder },
   );
   return picked?.project;
 }

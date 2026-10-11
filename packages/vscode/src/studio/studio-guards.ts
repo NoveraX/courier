@@ -4,6 +4,8 @@ import type {
   EndpointDefinition,
   EndpointStats,
   Finding,
+  GroupPlace,
+  TextPlace,
   TextSpan,
 } from "./studio-types";
 
@@ -94,5 +96,26 @@ export function isDefinition(value: unknown): value is EndpointDefinition {
     isSpan(value.span) &&
     typeof value.file === "string" &&
     typeof value.path === "string"
+  );
+}
+
+function isPlace(value: unknown): value is TextPlace {
+  return isRecord(value) && typeof value.line === "number" && typeof value.column === "number";
+}
+
+/** Whether Studio's item is where a group writes its endpoints. */
+export function isGroupPlace(value: unknown): value is GroupPlace {
+  return (
+    isRecord(value) &&
+    typeof value.source === "string" &&
+    typeof value.group === "string" &&
+    typeof value.file === "string" &&
+    typeof value.path === "string" &&
+    isPlace(value.open) &&
+    isPlace(value.close) &&
+    (value.last === undefined ||
+      (isRecord(value.last) && isPlace(value.last) && typeof value.last.comma === "boolean")) &&
+    Array.isArray(value.names) &&
+    value.names.every((name) => typeof name === "string")
   );
 }

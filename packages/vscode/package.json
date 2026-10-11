@@ -156,6 +156,30 @@
         "icon": "$(rocket)"
       },
       {
+        "command": "courier.newEndpoint",
+        "title": "New Endpoint…",
+        "category": "Courier",
+        "icon": "$(add)"
+      },
+      {
+        "command": "courier.importApi",
+        "title": "Import an API…",
+        "category": "Courier",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "courier.showOpenApi",
+        "title": "Show OpenAPI Document…",
+        "category": "Courier",
+        "icon": "$(file-code)"
+      },
+      {
+        "command": "courier.checkApiChanges",
+        "title": "Check API Changes…",
+        "category": "Courier",
+        "icon": "$(git-compare)"
+      },
+      {
         "command": "courier.refreshHints",
         "title": "Refresh Endpoint Hints",
         "category": "Courier",
@@ -234,6 +258,11 @@
         "command": "courier.mock.stopFaults",
         "title": "Stop Delays and Faults",
         "icon": "$(debug-stop)"
+      },
+      {
+        "command": "courier.view.newEndpoint",
+        "title": "New Endpoint…",
+        "icon": "$(add)"
       }
     ],
     "menus": {
@@ -297,6 +326,26 @@
         {
           "command": "courier.mock.stopFaults",
           "when": "false"
+        },
+        {
+          "command": "courier.view.newEndpoint",
+          "when": "false"
+        },
+        {
+          "command": "courier.newEndpoint",
+          "when": "courier.studioRunning"
+        },
+        {
+          "command": "courier.importApi",
+          "when": "courier.hasProject"
+        },
+        {
+          "command": "courier.showOpenApi",
+          "when": "courier.studioRunning"
+        },
+        {
+          "command": "courier.checkApiChanges",
+          "when": "courier.hasProject"
         }
       ],
       "view/title": [
@@ -334,6 +383,31 @@
           "command": "courier.mocks.refresh",
           "when": "view == courier.mocks",
           "group": "navigation@2"
+        },
+        {
+          "command": "courier.newEndpoint",
+          "when": "view == courier.endpoints",
+          "group": "courier@1"
+        },
+        {
+          "command": "courier.importApi",
+          "when": "view == courier.endpoints",
+          "group": "courier@2"
+        },
+        {
+          "command": "courier.showOpenApi",
+          "when": "view == courier.endpoints",
+          "group": "courier@3"
+        },
+        {
+          "command": "courier.checkApiChanges",
+          "when": "view == courier.endpoints",
+          "group": "courier@4"
+        },
+        {
+          "command": "courier.openStudioInBrowser",
+          "when": "view == courier.endpoints",
+          "group": "courier@5"
         }
       ],
       "view/item/context": [
@@ -411,6 +485,23 @@
           "command": "courier.request.open",
           "when": "view == courier.requests && viewItem == courier.request",
           "group": "inline@1"
+        },
+        {
+          "command": "courier.view.newEndpoint",
+          "when": "view == courier.endpoints && viewItem =~ /^courier\\.(source|group)$/",
+          "group": "inline@1"
+        },
+        {
+          "command": "courier.view.newEndpoint",
+          "when": "view == courier.endpoints && viewItem =~ /^courier\\.(source|group)$/",
+          "group": "edit@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "courier.newEndpoint",
+          "when": "courier.studioRunning && resourceLangId =~ /^(typescript|typescriptreact|javascript|javascriptreact)$/",
+          "group": "1_modification@9"
         }
       ]
     },

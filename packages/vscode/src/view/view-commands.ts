@@ -48,6 +48,14 @@ export function registerViewCommands(
       startStudio(projects, node?.kind === "project" ? node.project.root : undefined),
     ),
     vscode.commands.registerCommand("courier.view.refresh", refresh),
+    vscode.commands.registerCommand("courier.view.newEndpoint", (node?: CourierNode) =>
+      vscode.commands.executeCommand(
+        "courier.newEndpoint",
+        node?.kind === "source" || node?.kind === "group"
+          ? { source: node.source, group: node.group.path }
+          : undefined,
+      ),
+    ),
   );
 }
 

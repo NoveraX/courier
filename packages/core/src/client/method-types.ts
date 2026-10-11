@@ -81,7 +81,9 @@ export type WSChannelMethod<TResponse, TReceive, TVariables> = Callable<
  * Method type for an endpoint descriptor.
  *
  * Dispatches on the declared kind through indexed access, so adding a slot to
- * an endpoint never changes how its call signature is resolved.
+ * an endpoint never changes how its call signature is resolved. A channel
+ * nothing can send on is a push: its call returns a subscription, as a
+ * stream's does, which is what a client opens for it.
  */
 type DescriptorMethod<
   TEndpoint extends AnyEndpoint,
@@ -91,7 +93,9 @@ type DescriptorMethod<
   InferKind<TEndpoint> extends "stream"
     ? SSEMethod<InferResponse<TEndpoint>, InferVariables<TEndpoint>>
     : InferKind<TEndpoint> extends "channel"
-      ? WSChannelMethod<InferResponse<TEndpoint>, InferSend<TEndpoint>, InferVariables<TEndpoint>>
+      ? [InferSend<TEndpoint>] extends [never]
+        ? SSEMethod<InferResponse<TEndpoint>, InferVariables<TEndpoint>>
+        : WSChannelMethod<InferResponse<TEndpoint>, InferSend<TEndpoint>, InferVariables<TEndpoint>>
       : EndpointMethod<InferResponse<TEndpoint>, InferVariables<TEndpoint>, TRaw, TStream>;
 
 /** Resolve the method type an endpoint exposes on a group client. */

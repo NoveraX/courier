@@ -1,0 +1,15 @@
+{
+  "name": "courier-shots-model",
+  "displayName": "Local model for Courier's editor shots",
+  "description": "A language model that runs on this machine and answers nothing, so that VS Code's chat hands requests to @courier without an account while its screenshots are taken.",
+  "version": "0.0.0",
+  "private": true,
+  "publisher": "noverax",
+  "license": "MIT",
+  "engines": { "vscode": "^1.104.0" },
+  "main": "./extension.cjs",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "languageModelChatProviders": [{ "vendor": "courier-shots", "displayName": "Local" }]
+  }
+}

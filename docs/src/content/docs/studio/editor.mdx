@@ -1,4 +1,4 @@
-export const metadata = { title: "VS Code Extension", description: "The Courier extension for VS Code, Cursor, Windsurf and VSCodium: above each call to an endpoint, how its calls went in Studio; every endpoint in a view of its own, with the code that calls it; the audit's findings at the calls; Studio started in a click; and your API offered to VS Code's agent.", mode: "both" }
+export const metadata = { title: "VS Code Extension", description: "The Courier extension for VS Code, Cursor, Windsurf and VSCodium: above each call to an endpoint, how its calls went in Studio; Studio in a tab beside your code; from a call to its endpoint and back; the requests Studio records and the mocks it runs, in views of their own; new endpoints written as your files write them; recorded calls in the Test Explorer; @courier in the chat; the audit's findings at the calls; Courier's own file icons; and your API offered to VS Code's agent.", mode: "both" }
 
 Studio knows how every call to each endpoint went; your editor knows where the code makes them. The Courier extension puts the two together, above the call itself, and the figures move as your app runs:
 
@@ -47,6 +47,43 @@ Hover over the call for the rest: the median and the 95th percentile, the status
 
 The status bar shows **Studio** while a Studio answers for the project of the file in front, a click opening it; and **Start Studio** for a Courier project whose Studio does not run.
 
+### At the end of the line instead
+
+A line above each call costs a line of the screen per call. Set `courier.hints.style` to `inlay` and the same figures sit at the end of the call's own line, as an inlay hint: its tooltip holds the figures in full, and a click on it opens the endpoint in Studio. The editor's own **Editor › Inlay Hints: Enabled** setting must leave inlay hints on.
+
+<Screenshot
+  src="/images/vscode/inlay"
+  alt="The shop's checkout code with the figures at the end of each line that calls an endpoint: after the call to orders.place, its calls, failures and p95"
+  width={1440}
+  height={800}
+/>
+
+## Studio in your editor
+
+Every page of Studio's the extension opens — an endpoint from its hint or the Courier view, a request from the Requests view, the audit from a finding — opens in a tab of the editor's own, beside your code, and the next one opens in the same tab without loading Studio again. **Courier: Open Studio in Editor** opens Studio there on its own; **Courier: Open Studio in Browser** opens your browser instead, and `courier.studio.openIn` set to `browser` sends every page there.
+
+<Screenshot
+  src="/images/vscode/studio-tab"
+  alt="VS Code with the shop's checkout code on the left and Courier Studio in a tab on the right, open at the orders.place endpoint in its Explorer, in the editor's theme"
+  width={1440}
+  height={800}
+/>
+
+The tab shows Studio in the editor's theme, light or dark, and follows it when you switch. It opens with your project's token, so what changes things in Studio — a scenario switched, a schema fixed, a mock declared — works there as in the page Studio's own link opens. **Called from**, in the tab, opens the file beside Studio at its line. The editor keeps the tab across restarts, open on the page it showed. In a remote workspace — over SSH, in a container — the tab reaches Studio through the port the editor forwards.
+
+## From a call to its endpoint, and back
+
+The editor reads the project's endpoints from Studio as it reads your code's own:
+
+| Where | What it does |
+| --- | --- |
+| **Go to Definition** on a call | Opens the endpoint's declaration in its group's file — the method, the path, the response |
+| **Find All References** on a call or a declaration | Lists every call to the endpoint the project's code makes |
+| Above a declaration | The endpoint's figures, and how many places call it — a click lists them |
+| **Go to Symbol in Workspace** | Every endpoint by its full name: `#orders.place` finds the declaration |
+
+A hook that names its endpoint as a string, as `q.orders.useQuery("list")` does, goes to the same declaration. A declaration moved in a file you save is found again at once.
+
 ## The Courier view
 
 The Courier icon in the Activity Bar opens every endpoint of your project and how its calls went, its badge counting the endpoints whose calls failed. Each source holds the groups its calls name and their endpoints; a monorepo lists each project with its own Studio.
@@ -66,15 +103,91 @@ An endpoint shows how its calls went in the colours the editor gives test result
 | **Show Failed Calls in Studio** | Studio's Timeline with the endpoint's failed calls |
 | **Open the Latest Failure** | The latest failed request in Studio's inspector |
 
+### Requests and mocks
+
+Below the endpoints, two views follow the session as it runs. **Requests** lists the latest requests Studio recorded, newest first — the endpoint, its method, its status and how long it took — a failed one in the editor's colour for a failed test, and a click opens it in Studio's inspector. **Show Failed Requests Only**, in its title bar, keeps to the failures.
+
+**Mocks** lists each mock server Studio runs, its address, and the delay and faults set on it; open one for its scenarios, the one in force marked, and click another to switch to it. **Delay Answers…** sets one of Studio's delays on a mock — 4G, 3G, satellite — **Fail Some Answers…** one of its fault presets — degraded, unstable, down — and **Stop Delays and Faults** takes both off again. They change the mock with your project's token, as Studio's own Mocks page does.
+
+<Screenshot
+  src="/images/vscode/live"
+  alt="The Courier view's Requests and Mocks views: the shop's latest requests with their methods, statuses and times, failed ones marked; the shop's mock open at its scenarios, the default one in force"
+  width={1180}
+  height={700}
+/>
+
 With no Studio running, the view offers to start one; in a workspace without Courier, to set it up: **Set Up Courier** runs [Create Courier](/docs/create-courier) in a terminal, which shows its plan and changes nothing until you agree.
 
 **Start Studio** runs your project's own `studio` script through the package manager its lockfile names, when that script runs Courier Studio, and `npx @noverax/courier-studio` otherwise — in a terminal of its own, named after the project. Asked again, it shows that terminal.
+
+## Adding to your API
+
+**Courier: New Endpoint…** — from the palette, the Courier view's menu, or the editor's context menu while Studio runs — asks which group, its name, its method and its path, and types the endpoint in after the group's last one, the way that file writes its endpoints: the same builder, the same indentation, a comma where one is needed. Its variables and its response are left for you to fill in, a <kbd>Tab</kbd> apart. With the cursor among a group's endpoints, that group is offered first; a name the group already has is refused as you type it.
+
+| Command | What it does |
+| --- | --- |
+| **Courier: Import an API…** | Runs `courier-studio import` on an OpenAPI, Swagger or Postman document, from an address or a file of the project's |
+| **Courier: Show OpenAPI Document…** | Opens a source's OpenAPI document, as Studio writes it from your config, in an editor tab |
+| **Courier: Check API Changes…** | Runs `courier-studio diff` against a branch, a tag or a commit, and reports what the change breaks |
+
+Each runs in a terminal of its own, named after it and the project, in the project's folder, as `npx @noverax/courier-studio …` — the project's own Studio when it has one installed.
+
+## Tasks and tests
+
+**Terminal › Run Task… › courier** lists Courier's commands for each project of the workspace: `studio` runs Studio in the background, `verify` checks every recorded call against the API as declared now, `openapi` writes each source's OpenAPI document into `openapi/`, `diff` reports what a change breaks against `origin/main`, and `agents` lists what the project offers agents and why. A task of your own names them in `tasks.json`:
+
+```json
+{
+  "type": "courier",
+  "command": "verify",
+  "project": "apps/shop"
+}
+```
+
+The calls Studio recorded as tests — the files under `tests/recorded/` — show in the **Test Explorer**, each file with its calls. Running them checks each call against the API as your code declares it now, through `courier-studio verify`: a call whose answer the declared schema no longer takes fails, with what changed and where.
+
+## Ask @courier
+
+In the editor's chat, `@courier` answers from the Studio of the file in front:
+
+| Command | What it answers |
+| --- | --- |
+| `/status` | How every endpoint is doing: the ones with failed calls first, then the slowest, each with its figures |
+| `/failures` | The latest failed requests and why, with a button to the newest in Studio's inspector |
+| `/audit` | What the audit found in the requests, gravest first |
+| `/endpoint` | One endpoint — named, or the one under the cursor — its figures and latest calls, linked to its declaration and the code that calls it |
+
+<Screenshot
+  src="/images/vscode/chat"
+  alt="The chat with @courier's answer to /endpoint shop.orders.place: its calls, failures and p95, its latest failure, its latest calls with their statuses and times, and an Open in Studio button"
+  width={555}
+  height={671}
+/>
+
+Any other question — *why does checkout fail?* — goes to the model you picked in the chat, with Studio's figures for this session: how the endpoints are doing, the latest failures, the audit's findings, and the latest calls of each endpoint the question names. Each answer offers what to ask next. The chat needs a language model in the editor — GitHub Copilot's, or one an extension provides — and `@courier` shows only in a workspace with a Courier project or a running Studio.
 
 ## The audit at your calls
 
 Studio's [audit](/docs/studio/audit) reads the requests it recorded; the extension marks its findings at the calls they concern, in the files you open and in the Problems panel under **Courier audit**: an N+1 pattern where the code asks for each item and where it lists them, a timeout risk at the slow endpoint's calls, a write retried without an idempotency key where the code writes.
 
 An audit error is a warning in the editor — the code compiles; its traffic needs a look — an audit warning is information, and a hint a hint. Findings of one kind at one call make one mark, at the gravest of them. Each mark links to Studio's Audit page, where the finding reads in full with its fix.
+
+## Told when a call fails
+
+Set `courier.notifications.failures` and a call that fails while you work brings a notice — the endpoint and why — with a button to the failure in Studio's inspector and one to the failed requests. Each endpoint is told of at most once a minute, several failing together share one notice, and the failures already there when you turn it on are not told again. It is off until you turn it on.
+
+## Courier's file icons
+
+Material Icon Theme and vscode-icons take custom icons through their settings, and Courier brings its own for `courier.config.*`, `courier.mocks.*` and the `.courier` folder. With either theme in use in a Courier project, the extension offers once to put them in; **Courier: Show Courier's Icons in the File Icon Theme** does it any time, and **Courier: Remove Courier's Icons from the File Icon Theme** takes them out again.
+
+<Screenshot
+  src="/images/vscode/icons"
+  alt="The Explorer in vscode-icons: the .courier folder with Courier's folder icon, courier.config.ts with Courier's mark in blue and courier.mocks.ts with it in violet"
+  width={295}
+  height={311}
+/>
+
+They go in through your user settings — the associations those themes read — beside your own, which stay as they are; vscode-icons also gets a copy of the icons in its custom icons folder. After an update of Courier, the extension moves them to its new version on its own. Other icon themes take no custom icons; VS Code's own Seti among them.
 
 ## Your API, for VS Code's agent
 
@@ -104,17 +217,32 @@ The API's server is handed the project's `.env.development.local`, `.env.local`,
 | Command | What it does |
 | --- | --- |
 | **Courier: Open in Courier Studio** | Opens Studio for the project of the file in front |
+| **Courier: Open Studio in Editor** | Opens Studio in a tab of the editor's own |
+| **Courier: Open Studio in Browser** | Opens Studio in your browser |
 | **Courier: Start Studio** | Starts Studio for the project of the file in front, or the one you pick |
 | **Courier: Set Up Courier** | Runs Create Courier in a terminal, in the workspace folder you pick |
+| **Courier: New Endpoint…** | Adds an endpoint to a group, as its file writes them |
+| **Courier: Import an API…** | Imports an OpenAPI, Swagger or Postman document into the project |
+| **Courier: Show OpenAPI Document…** | Opens a source's OpenAPI document |
+| **Courier: Check API Changes…** | Reports what a change to the API breaks, against a git ref |
+| **Courier: Show Courier's Icons in the File Icon Theme** | Puts Courier's icons into Material Icon Theme or vscode-icons |
+| **Courier: Remove Courier's Icons from the File Icon Theme** | Takes them out again |
 | **Courier: Refresh Endpoint Hints** | Finds the calls again and brings the figures up to date |
+| **Courier: Show Log** | Opens Courier's log in the Output panel |
 
 | Setting | What it does |
 | --- | --- |
-| `courier.hints.enabled` | Show the figures above endpoint calls (default: on) |
+| `courier.hints.enabled` | Show the figures over endpoint calls (default: on) |
+| `courier.hints.style` | `codeLens`: a line above each call (default); `inlay`: at the end of the call's line |
 | `courier.hints.refreshSeconds` | How often the figures are brought up to date while the window has focus (default: 5) |
+| `courier.studio.openIn` | Where Studio's pages open: `editor`, a tab of the editor's own (default), or `browser` |
 | `courier.audit.diagnostics` | Mark the audit's findings at the calls they concern (default: on) |
+| `courier.notifications.failures` | Tell with a notification when a call fails while you work (default: off) |
 | `courier.agents.mcpServers` | Offer VS Code's agent each project's MCP servers (default: on) |
+| `courier.fileIcons.offer` | Offer once to put Courier's icons into the icon theme in use (default: on) |
 | `courier.studio.url` | Studio's address, when it runs for a project outside the workspace — on this machine, in your user settings |
+
+Courier's log, under **Courier** in the Output panel, says when each project's Studio starts answering or stops, and why a question to Studio found no answer — written once, not again each time the views ask.
 
 ## How a call is found
 
@@ -131,10 +259,16 @@ When two sources define an endpoint of the same name and nothing settles which o
 
 ## From Studio to the code
 
-Every request's **Overview** in the inspector, and every endpoint in the Explorer, has a **Called from** section: the files and lines that call the endpoint, each with its line of code. A click opens the file at that line in your editor — choose which in **Settings → Editor**: VS Code, Cursor, Windsurf, VSCodium, Zed, WebStorm or IntelliJ IDEA. Studio looks through the files Git tracks, so whatever `.gitignore` leaves out is left out; outside Git, everything but dependencies, builds and caches.
+Every request's **Overview** in the inspector, and every endpoint in the Explorer, has a **Called from** section: the files and lines that call the endpoint, each with its line of code. A click opens the file at that line in your editor — choose which in **Settings → Editor**: VS Code, Cursor, Windsurf, VSCodium, Zed, WebStorm or IntelliJ IDEA. In Studio's tab inside the editor, it opens the file beside Studio. Studio looks through the files Git tracks, so whatever `.gitignore` leaves out is left out; outside Git, everything but dependencies, builds and caches.
 
 ## What stays on your machine
 
-The extension talks only to Studio, on this machine: it reads what any page of Studio's reads, and changes nothing, so it needs no token. It sends Studio the text of the files you open, so an address naming another host — in a project's `.courier/studio.json`, or in `courier.studio.url` — is ignored, and the setting is read from your user settings alone: a repository you clone cannot point the extension elsewhere. Studio reads the files you send it and your project's own, and keeps nothing of them. A Studio serving a [public demo](/docs/studio/overview) writes no address file and answers neither the extension nor **Called from**: it reads no project's code for its visitors.
+The extension talks only to Studio, on this machine. What it shows — the figures, the requests, the mocks, the declarations, the audit — it reads as any page of Studio's does. Two things change something, and they use the token Studio keeps in your project's `.courier/studio-token`: switching a mock's scenario or its delays and faults in the Mocks view, and Studio's own tab, which opens with the token as Studio's own link does. The token goes nowhere but to that Studio.
+
+The extension sends Studio the text of the files you open, so an address naming another host — in a project's `.courier/studio.json`, or in `courier.studio.url` — is ignored, and the setting is read from your user settings alone: a repository you clone cannot point the extension elsewhere. Studio reads the files you send it and your project's own, and keeps nothing of them. A Studio serving a [public demo](/docs/studio/overview) writes no address file and answers neither the extension nor **Called from**: it reads no project's code for its visitors.
+
+A question to `@courier` in words goes to the model you picked in the chat, with Studio's figures for this session — endpoint names, statuses, error messages, the audit's findings — as any question in that chat goes to it with your code. The four commands answer from Studio alone, and ask no model.
+
+The extension writes to your user settings only when you ask for Courier's file icons, and takes back what it wrote when you remove them. It sends nothing anywhere else, and keeps no telemetry.
 
 The extension starts Studio, Create Courier and the agent's servers from the project's folder, so it stays off in a workspace you have not trusted: VS Code's Restricted Mode turns it off until you trust the folder.

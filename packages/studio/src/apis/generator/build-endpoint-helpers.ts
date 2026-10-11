@@ -37,6 +37,12 @@ export interface EndpointChain {
   responseType: string | null;
   /** The variables sent as headers, by `headerVariablesMiddleware`. */
   headers?: readonly string[];
+  /**
+   * What the specification says the operation does, which the endpoint
+   * carries as `.meta({ description })`: an agent's tool describes itself
+   * by it, and the OpenAPI written from the definition keeps it.
+   */
+  description?: string | null;
 }
 
 /**
@@ -79,6 +85,7 @@ export function buildEndpointChain(chain: EndpointChain): string {
     const names = chain.headers.map((name) => JSON.stringify(name)).join(", ");
     text += `.use(headerVariablesMiddleware([${names}]))`;
   }
+  if (chain.description) text += `.meta({ description: ${JSON.stringify(chain.description)} })`;
 
   return text;
 }

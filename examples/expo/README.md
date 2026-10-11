@@ -1,4 +1,28 @@
-# Courier on Expo
+<div align="center">
+  <br />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../docs/public/logos/courier-mark-light.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="../../docs/public/logos/courier-mark-dark.svg" />
+    <img alt="Courier" src="../../docs/public/logos/courier-mark-dark.svg" height="40" />
+  </picture>
+
+  <h1>Courier on Expo</h1>
+
+  <p><strong>One API definition, called from a React Native app on Hermes in every way Courier offers.</strong></p>
+
+  <p>
+    <a href="#run-it"><strong>Run it</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs/frameworks/react-native">React Native &amp; Expo</a>
+    &nbsp;·&nbsp;
+    <a href="../../README.md">Courier</a>
+  </p>
+  <br />
+</div>
+
+<br />
+
+## What it shows
 
 A React Native app, built with Expo and run on Hermes, calling one API
 definition — [`src/api.ts`](src/api.ts) — in every way Courier offers:
@@ -81,3 +105,9 @@ for iOS and Android, as CI does.
 
 See [React Native & Expo](https://courier.noverax.cloud/docs/frameworks/react-native)
 for what Courier does on React Native, with Expo and without.
+
+<br />
+
+<div align="center">
+  <sub>Part of <a href="https://github.com/NoveraX/courier">Courier</a> · built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

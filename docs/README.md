@@ -1,6 +1,30 @@
-# @noverax/courier — website
+<div align="center">
+  <br />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../docs/public/logos/courier-mark-light.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="../docs/public/logos/courier-mark-dark.svg" />
+    <img alt="Courier" src="../docs/public/logos/courier-mark-dark.svg" height="40" />
+  </picture>
 
-The website of `@noverax/courier`: the landing page, the documentation with its live examples, the API reference and Courier Studio's page. It is a Next.js app, with a small Express backend the live examples call.
+  <h1>Courier website</h1>
+
+  <p><strong>The landing page, the documentation with its live examples, the API reference and Courier Studio's page.</strong></p>
+
+  <p>
+    <a href="https://courier.noverax.cloud"><strong>courier.noverax.cloud</strong></a>
+    &nbsp;·&nbsp;
+    <a href="https://courier.noverax.cloud/docs">Documentation</a>
+    &nbsp;·&nbsp;
+    <a href="../README.md">Courier</a>
+  </p>
+  <br />
+</div>
+
+<br />
+
+## Overview
+
+A Next.js app, with a small Express backend the live examples call.
 
 ## Pages
 
@@ -94,3 +118,9 @@ npm run check   # biome and TypeScript
 ```
 
 The site's tests run from the repository root in the `docs` Vitest project.
+
+<br />
+
+<div align="center">
+  <sub>Part of <a href="https://github.com/NoveraX/courier">Courier</a> · built by <a href="https://github.com/NoveraX">NoveraX</a></sub>
+</div>

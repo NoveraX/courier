@@ -1,6 +1,7 @@
 **
 !dist/extension.cjs
 !media/**
+!snippets/**
 !package.json
 !README.md
 !LICENSE

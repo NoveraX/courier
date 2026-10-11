@@ -71,9 +71,8 @@ function matchFrom(
     return false;
   }
   const name = path[from];
-  return name !== undefined && part !== undefined && part.test(name)
-    ? matchFrom(parts, at + 1, path, from + 1)
-    : false;
+  if (name === undefined || part?.test(name) !== true) return false;
+  return matchFrom(parts, at + 1, path, from + 1);
 }
 
 function invalid(where: string, problem: string): ConfigurationError {

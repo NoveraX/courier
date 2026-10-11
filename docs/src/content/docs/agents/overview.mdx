@@ -117,6 +117,17 @@ The server in your editor follows the project: a save to `courier.config.ts`, or
 
 Schemas are written as [Standard JSON Schema](https://standardschema.dev): Zod 4 and ArkType describe their own, and `createMcpHandler({ jsonSchema })` takes a converter for any other library, as [the OpenAPI export](/docs/advanced/openapi#schemas) does.
 
+A field's description goes with it into the tool's input schema, where the model reads what to pass — with Zod 4, `.describe()` or `.meta({ description })`. Give one to every field whose name does not say it all:
+
+```ts title="lib/sources.ts"
+import { z } from "zod"
+
+export const Forecast = z.object({
+  city: z.string().describe("The city, by its name in English"),
+  days: z.number().int().min(1).max(14).meta({ description: "How many days ahead, today counted" }),
+})
+```
+
 ## How a call runs
 
 An agent's call goes where your app's own calls go: through the source's middleware and the endpoint's, its variables validated by its schema and its answer by its response schema, and into Studio's timeline marked **agent**, with the tool and the client that called it. There is no second path to forget to protect.

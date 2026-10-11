@@ -17,10 +17,12 @@ export interface MaterialPlan {
 
 /**
  * Courier's associations for Material Icon Theme: each config and mocks
- * file, and the `.courier` folder, to Courier's icon — by its path from the
- * theme's `dist` folder without `.svg`, as the theme takes custom icons.
- * The theme takes them only from the editor's extensions folder, where an
- * installed Courier is; one run from elsewhere gets the reason instead.
+ * file, and the `.courier` folder, to Courier's icon — by its path without
+ * `.svg`, as the theme takes custom icons: from its own `icons` folder for
+ * a file; and for a folder, whose icon the theme names `folder-` and the
+ * path, from one folder deeper, as the theme's own docs write it. The theme
+ * takes them only from the editor's extensions folder, where an installed
+ * Courier is; one run from elsewhere gets the reason instead.
  *
  * @param iconsDir - Courier's `media/icons` folder
  * @param materialDir - Where Material Icon Theme is installed
@@ -28,7 +30,8 @@ export interface MaterialPlan {
  * @example
  * ```ts
  * materialPlan(join(extensionPath, "media", "icons"), material.extensionPath);
- * // { files: { "courier.config.ts": "../../noverax.courier-vscode-1.0.0/media/icons/courier-config", … }, … }
+ * // { files: { "courier.config.ts": "../../noverax.courier-vscode-1.0.0/media/icons/courier-config", … },
+ * //   folders: { ".courier": "../../../../noverax.courier-vscode-1.0.0/media/icons/folder-courier" } }
  * ```
  */
 export function materialPlan(
@@ -40,14 +43,15 @@ export function materialPlan(
       why: "Material Icon Theme takes icons only from the editor's extensions folder, and this Courier runs from elsewhere.",
     };
   }
-  const from = join(materialDir, "dist");
+  const from = join(materialDir, "icons");
   const path = (icon: string) => relative(from, join(iconsDir, icon)).split(sep).join("/");
   return {
     files: Object.fromEntries([
       ...CONFIG_FILES.map((name): [string, string] => [name, path(ICONS.config)]),
       ...MOCKS_FILES.map((name): [string, string] => [name, path(ICONS.mocks)]),
     ]),
-    folders: { [STATE_FOLDER]: path(ICONS.folder) },
+    /* `folder-../` is a folder of its own name, which one more `../` leaves. */
+    folders: { [STATE_FOLDER]: `../../${path(ICONS.folder)}` },
   };
 }
 

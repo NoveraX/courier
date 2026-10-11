@@ -1,8 +1,9 @@
 /**
  * Courier's file icons offered and shown: offered once per icon theme —
  * when it is the theme in use, it takes Courier's icons, and the workspace
- * has a Courier project — never once declined; shown in the theme in use
- * by the command, and taken out of every theme they were put into.
+ * has a Courier project, as Courier starts or when the user picks the
+ * theme later — never once declined; shown in the theme in use by the
+ * command, and taken out of every theme they were put into.
  */
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -11,7 +12,15 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { CourierCore } from "../src/core/courier-core";
 import { registerFileIcons } from "../src/icons/register-file-icons";
-import { asked, executed, registered, settings, shown, workspace } from "./vscode-stand-in";
+import {
+  asked,
+  configurationListeners,
+  executed,
+  registered,
+  settings,
+  shown,
+  workspace,
+} from "./vscode-stand-in";
 
 let restarted: () => unknown;
 let projects: unknown[];
@@ -46,6 +55,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  configurationListeners.clear();
   settings.clear();
   shown.infos.length = 0;
   asked.buttons.length = 0;
@@ -69,6 +79,22 @@ describe("the offer of Courier's file icons", () => {
       "Show Courier's own icons for courier.config.ts, courier.mocks.ts and .courier in vscode-icons?",
     ]);
     expect(executed).toContainEqual(["courier.fileIcons.show", "vsicons"]);
+  });
+
+  it("is made when the user picks a theme that takes Courier's icons later", async () => {
+    settings.set("workbench.iconTheme", "vs-seti");
+    registerFileIcons(core);
+    restarted();
+    await settle();
+
+    settings.set("workbench.iconTheme", "material-icon-theme");
+    for (const listener of configurationListeners)
+      listener({ affectsConfiguration: (key) => key === "workbench.iconTheme" });
+    await settle();
+
+    expect(shown.infos).toEqual([
+      "Show Courier's own icons for courier.config.ts, courier.mocks.ts and .courier in Material Icon Theme?",
+    ]);
   });
 
   it("is not made for a theme that takes no icons, outside a Courier project, or when the settings say no", async () => {

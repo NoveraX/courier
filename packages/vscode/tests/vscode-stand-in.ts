@@ -166,8 +166,18 @@ export const workspace = {
       },
     };
   },
-  onDidChangeConfiguration: () => ({ dispose: () => undefined }),
+  onDidChangeConfiguration: (
+    listener: (change: { affectsConfiguration(key: string): boolean }) => unknown,
+  ) => {
+    configurationListeners.add(listener);
+    return { dispose: () => configurationListeners.delete(listener) };
+  },
 };
+
+/** Who listens for changes of the settings, as the code registered them. */
+export const configurationListeners = new Set<
+  (change: { affectsConfiguration(key: string): boolean }) => unknown
+>();
 
 /** The extensions installed, by id, as a test installs them. */
 export const installed = new Map<string, { extensionPath: string }>();

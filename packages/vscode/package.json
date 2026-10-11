@@ -1,7 +1,7 @@
 {
   "name": "courier-vscode",
   "displayName": "Courier",
-  "description": "Courier Studio in your editor: every endpoint and how its calls went, above each call and in a view of their own; the audit's findings where the code calls; Studio started in a click; and your API offered to VS Code's agent.",
+  "description": "Courier Studio in your editor: every endpoint and how its calls went, above each call and in views of their own; Studio in a tab beside your code; from a call to its endpoint and back; requests and mocks live; new endpoints written for you; recorded calls as tests; @courier in the chat; Courier's own file icons; and your API offered to VS Code's agent.",
   "icon": "media/icon.png",
   "galleryBanner": {
     "color": "#08090a",
@@ -632,7 +632,7 @@
       {
         "id": "courier.start",
         "title": "Get Started with Courier",
-        "description": "From a project without Courier to every endpoint's calls in your editor, and your API in your agent's hands.",
+        "description": "From a project without Courier to every endpoint's calls in your editor, Studio beside your code, @courier in the chat, and your API in your agent's hands.",
         "steps": [
           {
             "id": "setUp",
@@ -677,6 +677,76 @@
             },
             "completionEvents": [
               "onView:courier.endpoints"
+            ]
+          },
+          {
+            "id": "studioTab",
+            "title": "Open Studio beside your code",
+            "description": "Studio's pages open in a tab of the editor's own, in its theme, and Called from opens each call site beside it. Go to Definition on a call opens its endpoint's declaration; Find All References lists every call.\n[Open Studio in Editor](command:courier.openStudioInEditor)",
+            "media": {
+              "image": {
+                "light": "media/walkthrough/studio-tab-light.png",
+                "dark": "media/walkthrough/studio-tab-dark.png",
+                "hc": "media/walkthrough/studio-tab-dark.png",
+                "hcLight": "media/walkthrough/studio-tab-light.png"
+              },
+              "altText": "Courier Studio in a tab beside the shop's checkout code, open at the orders.place endpoint, in the editor's theme."
+            },
+            "completionEvents": [
+              "onCommand:courier.openStudioInEditor",
+              "onCommand:courier.openStudioPage"
+            ]
+          },
+          {
+            "id": "live",
+            "title": "Watch requests, switch mocks",
+            "description": "The Requests view lists what your app sent, newest first; the Mocks view each mock Studio runs, its scenarios a click away, and its delays and faults.\n[Show the Requests](command:courier.requests.focus)",
+            "media": {
+              "image": {
+                "light": "media/walkthrough/live-light.png",
+                "dark": "media/walkthrough/live-dark.png",
+                "hc": "media/walkthrough/live-dark.png",
+                "hcLight": "media/walkthrough/live-light.png"
+              },
+              "altText": "The Requests view with the shop's latest requests, one failed, and the Mocks view with the shop's scenarios, the default one in force."
+            },
+            "completionEvents": [
+              "onView:courier.requests",
+              "onView:courier.mocks"
+            ]
+          },
+          {
+            "id": "chat",
+            "title": "Ask @courier",
+            "description": "In the chat, @courier answers from Studio: /status, /failures, /audit and /endpoint, and any question about your API's calls by the model you picked.\n[Ask @courier](command:workbench.action.chat.open?%7B%22query%22%3A%22%40courier%20/status%22%7D)",
+            "media": {
+              "image": {
+                "light": "media/walkthrough/chat-light.png",
+                "dark": "media/walkthrough/chat-dark.png",
+                "hc": "media/walkthrough/chat-dark.png",
+                "hcLight": "media/walkthrough/chat-light.png"
+              },
+              "altText": "@courier's answer about orders.place in the chat: its figures, its latest failure and calls, and an Open in Studio button."
+            },
+            "completionEvents": [
+              "onCommand:workbench.action.chat.open"
+            ]
+          },
+          {
+            "id": "icons",
+            "title": "Mark Courier's files",
+            "description": "In Material Icon Theme or vscode-icons, courier.config.ts, courier.mocks.ts and the .courier folder can show Courier's own icons, through that theme's settings, and come out again just as easily.\n[Show Courier's Icons](command:courier.fileIcons.show)",
+            "media": {
+              "image": {
+                "light": "media/walkthrough/icons-light.png",
+                "dark": "media/walkthrough/icons-dark.png",
+                "hc": "media/walkthrough/icons-dark.png",
+                "hcLight": "media/walkthrough/icons-light.png"
+              },
+              "altText": "The Explorer in vscode-icons with Courier's icons on .courier, courier.config.ts and courier.mocks.ts."
+            },
+            "completionEvents": [
+              "onCommand:courier.fileIcons.show"
             ]
           },
           {

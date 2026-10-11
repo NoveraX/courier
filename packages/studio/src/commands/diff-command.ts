@@ -3,9 +3,15 @@ import { dirname, resolve } from "node:path";
 import { createLogger } from "@noverax/courier";
 import { type ArgsDef, defineCommand } from "citty";
 import { loadCourierConfig } from "../server/config-loader";
+import { agentChanges, agentSurfaceOf } from "./diff/agent-access";
+import {
+  agentAccessMarkdown,
+  agentAccessText,
+  changesAgentAccess,
+} from "./diff/agent-access-report";
 import { commentOnPullRequest } from "./diff/comment-on-pull-request";
 import { diffDefinitions } from "./diff/definition-diff";
-import { documentsAtRef, documentsInFiles, documentsOf } from "./diff/definition-documents";
+import { definitionAtRef, documentsInFiles, documentsOf } from "./diff/definition-documents";
 import { diffMarkdown, diffText, diffTotals } from "./diff/diff-report";
 import { recordedImpact } from "./diff/recorded-impact";
 
@@ -62,9 +68,10 @@ export const DIFF_ARGS = {
  * callers: an endpoint removed, a route changed, a field the calls must now
  * send, one gone from the answer, a type narrowed — set against the
  * definition at a git ref or in OpenAPI documents written before, with how
- * many recorded calls each changed endpoint has and how many no longer fit.
- * It fails on a breaking change, the CI step for a pull request; with
- * `--comment` the report is posted on the pull request too.
+ * many recorded calls each changed endpoint has and how many no longer fit,
+ * and what the change does to the tools agents may call. It fails on a
+ * breaking change, the CI step for a pull request; with `--comment` the
+ * report is posted on the pull request too.
  *
  * @example
  * ```sh
@@ -102,24 +109,26 @@ async function diff(args: {
     throw new Error(`--fail-on takes breaking, warning or never, not ${failOn}`);
   const root = resolve(args.cwd ?? process.cwd());
   const base = args["base-openapi"]
-    ? documentsInFiles(resolve(root, args["base-openapi"]))
-    : await documentsAtRef(root, args.base ?? "origin/main");
+    ? { documents: documentsInFiles(resolve(root, args["base-openapi"])), agents: undefined }
+    : await definitionAtRef(root, args.base ?? "origin/main");
   const { config } = await loadCourierConfig(root);
-  const changed = diffDefinitions(base, documentsOf(config.sources));
+  const changed = diffDefinitions(base.documents, documentsOf(config.sources));
+  const agents = agentChanges(base.agents, agentSurfaceOf(config));
   const impact = await recordedImpact(root, args.recordings, config.sources);
+  const markdown = () => `${diffMarkdown(changed, impact)}\n${agentAccessMarkdown(agents)}`;
   const report =
     format === "json"
-      ? `${JSON.stringify({ totals: diffTotals(changed), changed, failingRecordings: impact.failing }, null, 2)}\n`
+      ? `${JSON.stringify({ totals: diffTotals(changed), changed, failingRecordings: impact.failing, agents }, null, 2)}\n`
       : format === "markdown"
-        ? diffMarkdown(changed, impact)
-        : diffText(changed, impact);
+        ? markdown()
+        : `${diffText(changed, impact)}\n${agentAccessText(agents)}`;
   process.stdout.write(report);
   if (args.out) {
     mkdirSync(dirname(resolve(args.out)), { recursive: true });
     writeFileSync(resolve(args.out), report);
   }
   if (args.comment)
-    await commentOnPullRequest(root, diffMarkdown(changed, impact), changed.length > 0);
+    await commentOnPullRequest(root, markdown(), changed.length > 0 || changesAgentAccess(agents));
   const { breaking, warnings } = diffTotals(changed);
   return failOn === "never" || (breaking === 0 && (failOn !== "warning" || warnings === 0));
 }

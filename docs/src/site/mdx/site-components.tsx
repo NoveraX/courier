@@ -8,13 +8,14 @@ import { Fence } from "./fence"
 import { Heading } from "./heading"
 import { InlineCode } from "./inline-code"
 import { ModeBadge } from "./mode-badge"
+import { Screenshot } from "./screenshot"
 import { SiteLink } from "./site-link"
 
 /**
  * How a page's MDX renders on the site: headings with links to themselves,
  * text in the site's type, fenced code as code panels, tables, and the
  * components pages use — Callout, CodeGroup, ComparisonTable, ModeBadge,
- * and the upload guide's live UploadLab.
+ * Screenshot, and the upload guide's live UploadLab.
  * Passed to a page's content as `components`, they replace the ones the
  * MDX provider gives.
  *
@@ -78,5 +79,6 @@ export const SITE_COMPONENTS: MDXComponents = {
   CodeGroup,
   ComparisonTable,
   ModeBadge,
+  Screenshot,
   UploadLab,
 }

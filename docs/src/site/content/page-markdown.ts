@@ -1,3 +1,4 @@
+import { SITE_URL } from "@/site/site-url"
 import { jsxCells, jsxObjects, jsxRows, jsxText } from "./jsx-literals"
 
 const CALLOUT_OPEN = /^<Callout\b(.*)>\s*$/
@@ -33,6 +34,16 @@ function codeGroupLines(source: string): string[] {
   })
 }
 
+const SCREENSHOT_SRC = /\bsrc="([^"]*)"/
+const SCREENSHOT_ALT = /\balt="([^"]*)"/
+
+/* A screenshot as an image: the light one, at the site's own address, so it opens wherever the Markdown is read. */
+function screenshotLines(source: string): string[] {
+  const src = SCREENSHOT_SRC.exec(source)?.[1] ?? ""
+  const alt = SCREENSHOT_ALT.exec(source)?.[1] ?? ""
+  return [`![${alt}](${SITE_URL}${src}-light.png)`]
+}
+
 function tableLines(source: string): string[] {
   const headers = jsxCells(source, "headers")
   const rows = jsxRows(source, "rows")
@@ -40,12 +51,19 @@ function tableLines(source: string): string[] {
   return [cells(headers), cells(headers.map(() => "---")), ...rows.map(cells)]
 }
 
+/* The components written as one self-closing tag, each with what it reads as. */
+const BLOCKS: readonly (readonly [string, (source: string) => string[]])[] = [
+  ["<CodeGroup", codeGroupLines],
+  ["<ComparisonTable", tableLines],
+  ["<Screenshot", screenshotLines],
+]
+
 /**
  * A docs page as plain Markdown, to read or hand to an assistant: its title
  * and description on top, its metadata export gone, a callout as a quote
  * under its title, tabbed code as one fence a tab, a comparison as a
- * Markdown table, a mode badge as words, and the upload lab as a line saying
- * what runs there — code fences left as written.
+ * Markdown table, a screenshot as an image, a mode badge as words, and the
+ * upload lab as a line saying what runs there — code fences left as written.
  *
  * @param source - The page's MDX source
  * @param title - The page's title
@@ -74,11 +92,11 @@ export function pageMarkdown(source: string, title: string, description: string)
       i = end < 0 ? lines.length : end
       continue
     }
-    if (line.startsWith("<CodeGroup") || line.startsWith("<ComparisonTable")) {
+    const block = BLOCKS.find(([tag]) => line.startsWith(tag))
+    if (block) {
       let end = i
       while (end < lines.length && !(lines[end] ?? "").trimEnd().endsWith("/>")) end++
-      const block = lines.slice(i, end + 1).join("\n")
-      out.push(...(line.startsWith("<CodeGroup") ? codeGroupLines(block) : tableLines(block)))
+      out.push(...block[1](lines.slice(i, end + 1).join("\n")))
       i = end
       continue
     }

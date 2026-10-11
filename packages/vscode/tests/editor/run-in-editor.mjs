@@ -1,7 +1,8 @@
 /*
  * The extension inside VS Code itself: a stand-in Studio answers as the real
  * one does, a workspace's project says where it runs, and the suite opens a
- * file there and reads the hints the editor shows over its calls.
+ * file there and reads the hints the editor shows over its calls, and the
+ * audit's findings it marks at them.
  *
  * Runs the VS Code at VSCODE_PATH; or the version VSCODE_VERSION names, which
  * @vscode/test-electron downloads — `stable`, `insiders`, a version number, or
@@ -51,6 +52,16 @@ const stats = [
     },
   },
 ];
+const findings = [
+  {
+    id: "err-timeout",
+    severity: "error",
+    title: "Timeout risk",
+    description: "Calls take longer than most clients wait.",
+    suggestion: "Add a timeout option to the endpoint.",
+    endpoints: [{ source: "shop", endpoint: "orders.place", detail: "P95 = 6.4s" }],
+  },
+];
 const calls = [
   {
     line: 2,
@@ -63,6 +74,7 @@ const calls = [
 const ANSWERS = {
   "/api/editor/calls": { calls },
   "/api/editor/endpoints": { endpoints: stats },
+  "/api/editor/findings": { findings },
   "/api/editor/sites": { sites: [] },
 };
 const studio = createServer((req, res) => {

@@ -1,4 +1,6 @@
-import type { CallSite, EndpointCall, EndpointStats } from "./studio-types";
+import type { CallSite, EndpointCall, EndpointStats, Finding } from "./studio-types";
+
+const SEVERITIES = new Set(["error", "warning", "hint"]);
 
 /**
  * Whether a value is a plain object.
@@ -49,5 +51,19 @@ export function isSite(value: unknown): value is CallSite {
     typeof value.line === "number" &&
     typeof value.column === "number" &&
     typeof value.code === "string"
+  );
+}
+
+/** Whether Studio's item is an audit finding that names endpoints. */
+export function isFinding(value: unknown): value is Finding {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.title === "string" &&
+    typeof value.description === "string" &&
+    typeof value.severity === "string" &&
+    SEVERITIES.has(value.severity) &&
+    Array.isArray(value.endpoints) &&
+    value.endpoints.every(isName)
   );
 }

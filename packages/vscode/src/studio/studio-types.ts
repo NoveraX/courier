@@ -49,3 +49,13 @@ export interface CallSite {
   /** The line as written, trimmed */
   readonly code: string;
 }
+
+/** A finding of Studio's audit that concerns endpoints, placed at their calls. */
+export interface Finding {
+  readonly id: string;
+  readonly severity: "error" | "warning" | "hint";
+  readonly title: string;
+  readonly description: string;
+  readonly suggestion?: string | undefined;
+  readonly endpoints: readonly (EndpointName & { readonly detail?: string | undefined })[];
+}

@@ -240,6 +240,11 @@
           "default": "",
           "scope": "machine",
           "markdownDescription": "Courier Studio's address, when it runs for a project outside this workspace: `http://localhost:6280`. Left empty, the extension finds the Studio each project in the workspace runs. Only an address on this machine is used — the extension sends Studio the text of the files you open — and only from your user settings, never a workspace's."
+        },
+        "courier.audit.diagnostics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Mark the findings of Studio's audit — an N+1 pattern, a timeout risk, a write without credentials — at the calls they concern, in the Problems panel too."
         }
       }
     }

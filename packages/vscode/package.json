@@ -245,9 +245,20 @@
           "type": "boolean",
           "default": true,
           "description": "Mark the findings of Studio's audit — an N+1 pattern, a timeout risk, a write without credentials — at the calls they concern, in the Problems panel too."
+        },
+        "courier.agents.mcpServers": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Offer VS Code's agent the MCP servers of each Courier project that has their package installed: its API as tools (`@noverax/courier-mcp`), and its running Studio (`@noverax/courier-studio mcp`)."
         }
       }
-    }
+    },
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "courier",
+        "label": "Courier"
+      }
+    ]
   },
   "scripts": {
     "build": "tsdown",

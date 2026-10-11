@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 
+import { offerMcpServers } from "./agents/mcp-servers";
 import { createAuditDiagnostics } from "./audit/audit-diagnostics";
 import { openInStudio } from "./commands/open-in-studio";
 import { setUpCourier, startStudio } from "./commands/project-commands";
@@ -20,7 +21,8 @@ import { registerViewCommands } from "./view/view-commands";
  * Start the extension: the hints over each endpoint call and the audit's
  * findings at them, kept up to date while the window has focus; the Courier
  * view of each project's endpoints; the Studio of the file in front in the
- * status bar; and the commands that start Studio and set Courier up.
+ * status bar; the commands that start Studio and set Courier up; and the
+ * MCP servers offered to VS Code's agent.
  *
  * @param context - The extension's context, which disposes what it holds
  * @example
@@ -85,6 +87,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand("courier.setUp", setUpCourier),
     registerViewCommands(projects, view.refresh),
+    offerMcpServers(projects, () => settings().get<boolean>("agents.mcpServers", true)),
     addresses.onDidCreate(restart),
     addresses.onDidChange(restart),
     addresses.onDidDelete(restart),

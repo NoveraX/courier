@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { editorThemeInLink } from "@/features/editor/editor-theme";
 import { createActions } from "./actions";
 import { loadSettings } from "./constants";
 import { createInitialState } from "./initial-state";
@@ -52,7 +53,7 @@ export type {
 // ── Initialize appearance from persisted settings ────────────────────────────
 
 const savedSettings = loadSettings();
-applyTheme(savedSettings.theme);
+applyTheme(editorThemeInLink() ?? savedSettings.theme);
 
 // ── Store ───────────────────────────────────────────────────────────────────
 

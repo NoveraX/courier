@@ -2,9 +2,10 @@
  * @vitest-environment jsdom
  *
  * Inside an editor's own tab, Studio shows the page the editor asks for —
- * a page of its own, never another site — heard only from the window that
- * framed it, and tells the editor each page that shows. In a browser tab it
- * does neither.
+ * a page of its own, never another site — in the theme the editor shows,
+ * from the link that opened it and as the editor's theme changes, heard
+ * only from the window that framed it; and it tells the editor each page
+ * that shows. In a browser tab it does none of it.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +16,7 @@ vi.mock("@/features/editor/editor-host", async (importOriginal) => ({
 }));
 
 import { type BridgedRouter, bridgeToEditorHost } from "@/features/editor/editor-bridge";
+import { editorThemeInLink } from "@/features/editor/editor-theme";
 
 function routerSpy() {
   const navigate = vi.fn(async () => undefined);
@@ -39,6 +41,8 @@ afterEach(() => {
   for (const stop of bridges.splice(0)) stop();
   vi.restoreAllMocks();
   host.inside = true;
+  document.documentElement.removeAttribute("data-theme");
+  history.replaceState(null, "", "/");
 });
 
 describe("Studio inside an editor's own tab", () => {
@@ -71,16 +75,37 @@ describe("Studio inside an editor's own tab", () => {
     );
   });
 
-  it("does neither in a browser tab", () => {
+  it("takes the theme the editor shows from the link that opened it, and as it changes", () => {
+    history.replaceState(null, "", "/timeline#theme=light");
+    const fromLink = editorThemeInLink();
+    bridged(routerSpy().router);
+
+    ask({ source: "courier-vscode", type: "theme", theme: "light" });
+    const light = document.documentElement.getAttribute("data-theme");
+    ask({ source: "courier-vscode", type: "theme", theme: "dark" });
+    const dark = document.documentElement.getAttribute("data-theme");
+    ask({ source: "courier-vscode", type: "theme", theme: "light" }, null);
+    ask({ source: "courier-vscode", type: "theme", theme: "sepia" });
+
+    expect(fromLink).toBe("light");
+    expect([light, dark]).toEqual(["light", null]);
+    expect(document.documentElement.getAttribute("data-theme")).toBeNull();
+  });
+
+  it("does none of it in a browser tab", () => {
     host.inside = false;
     const { router, navigate, resolve } = routerSpy();
     const sent = vi.spyOn(window.parent, "postMessage").mockImplementation(() => undefined);
     bridged(router);
 
+    history.replaceState(null, "", "/audit#theme=light");
     ask({ source: "courier-vscode", type: "navigate", path: "/audit" });
+    ask({ source: "courier-vscode", type: "theme", theme: "light" });
     resolve("/audit");
 
     expect(navigate).not.toHaveBeenCalled();
     expect(sent).not.toHaveBeenCalled();
+    expect(editorThemeInLink()).toBeUndefined();
+    expect(document.documentElement.getAttribute("data-theme")).toBeNull();
   });
 });

@@ -2,13 +2,20 @@
  * @vitest-environment node
  */
 
-import { afterEach, describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { resetAnnouncements } from "../../core/src/announce/test-support";
 import { _resetRuntimeHandlesForTests, attachRuntime } from "../src/runtime/attach-runtime";
+
+const projects: string[] = [];
 
 afterEach(() => {
   _resetRuntimeHandlesForTests();
   resetAnnouncements();
+  vi.restoreAllMocks();
+  for (const dir of projects.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
 describe("attachRuntime (server context)", () => {
@@ -43,5 +50,31 @@ describe("attachRuntime (server context)", () => {
     expect(typeof handle.runtimeId).toBe("string");
     expect(handle.runtimeId.length).toBeGreaterThan(0);
     expect(handle.kind).toBe("server");
+  });
+});
+
+describe("the config a server runtime loaded", () => {
+  it("is handed back by its handle, as the project wrote it", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "courier-runtime-config-"));
+    projects.push(dir);
+    writeFileSync(
+      join(dir, "courier.config.mjs"),
+      'export default { sources: {}, agents: { offer: "reads", deny: ["billing.**"] } };\n',
+    );
+    vi.spyOn(process, "cwd").mockReturnValue(dir);
+
+    const handle = await attachRuntime("test-config-1");
+
+    expect(handle.config()?.agents).toEqual({ offer: "reads", deny: ["billing.**"] });
+  });
+
+  it("is undefined where no config loaded", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "courier-runtime-none-"));
+    projects.push(dir);
+    vi.spyOn(process, "cwd").mockReturnValue(dir);
+
+    const handle = await attachRuntime("test-config-2");
+
+    expect(handle.config()).toBeUndefined();
   });
 });

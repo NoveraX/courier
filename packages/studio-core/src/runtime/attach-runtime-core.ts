@@ -4,6 +4,7 @@
  */
 
 import { createLogger, getSources } from "@noverax/courier";
+import type { CourierConfig } from "@noverax/courier/config";
 import { createKeptBodies, KEPT_BODY_BYTES, studioHooks } from "@noverax/courier/internal";
 import { EventBus } from "../event-bus";
 import { type BufferedAnnouncement, consumeAnnouncements } from "./announce-hosting";
@@ -38,6 +39,8 @@ export interface ServerRuntimeSetup {
   studio: ConfiguredStudioAddress;
   /** This project's Studio token, read afresh for each connection */
   readToken: () => string | undefined;
+  /** The config as it stands after the last reload */
+  config: () => CourierConfig;
 }
 
 /**
@@ -99,6 +102,7 @@ async function attachFresh(
   const handle: InternalHandle = {
     runtimeId,
     kind: isBrowser ? "browser" : "server",
+    config: () => setup?.config(),
     detach() {
       if (detached) return;
       detached = true;

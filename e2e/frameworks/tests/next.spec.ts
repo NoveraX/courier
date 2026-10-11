@@ -4,7 +4,7 @@
  * Router, through its proxy route from a client component, and in a page
  * that writes while it renders, whose token its middleware hands over.
  */
-import { type BrowserContext, expect, type Page, test } from "@playwright/test";
+import { type BrowserContext, expect, type Page, type Response, test } from "@playwright/test";
 
 import { browsers } from "../../support/browsers";
 import { clickThrough } from "../support/click-through";
@@ -39,6 +39,11 @@ test.afterAll(async () => {
 /* A click before React hydrates the page may go unheard; the page marks when it has. */
 const hydrated = () => page.locator("html[data-hydrated]").waitFor({ state: "attached" });
 
+/* The browser's call to a Server Action, which Next.js marks with the action's id. */
+const answersServerAction = (response: Response) =>
+  response.request().method() === "POST" &&
+  response.request().headers()["next-action"] !== undefined;
+
 test("the build sends the API no session and no write", async () => {
   /* What the build sent is the same whatever the browser; the first engine reads it, before any page. */
   test.skip(test.info().project.name !== browsers()[0], "read once, by the first browser");
@@ -61,10 +66,19 @@ test("a page renders without a session, sending no cookie", async () => {
 
 test("signing in with a Server Action hands the browser the API's session cookie beside the application's own", async () => {
   await hydrated();
-  await page.click("#login");
-  /* Next.js keeps the old render beside the new one while it swaps them. */
-  await expect(page.locator("#me").filter({ hasText: "s%3Aada.sig" })).toBeVisible();
+  await Promise.all([page.waitForResponse(answersServerAction), page.click("#login")]);
+  /*
+   * The page rendered into the action's answer asks for the session the API
+   * has just set. Swapping that render in is Next.js's own work, which on a
+   * loaded machine the browser has been seen to leave undone, so what the
+   * browser was handed is read from the page drawn afresh.
+   */
+  await expect
+    .poll(async () => (await received("GET", "/me")).map((me) => cookiesIn(me.headers.cookie)))
+    .toContainEqual(["csrftoken=t-ada", "sid=s%3Aada.sig"]);
+  await page.reload();
 
+  expect((await json("#me")).sid).toBe("s%3Aada.sig");
   expect(await cookie("sid")).toMatchObject({ value: "s%3Aada.sig", path: "/", httpOnly: true });
   expect((await cookie("csrftoken"))?.value).toBe("t-ada");
   expect((await cookie("signed_in"))?.value).toBe("yes");

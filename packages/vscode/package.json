@@ -2,10 +2,18 @@
   "name": "courier-vscode",
   "displayName": "Courier",
   "description": "Courier Studio in your editor: above each call to an endpoint, how its calls went — how many, how many failed, how long they took — and the call opens in Studio.",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#08090a",
+    "theme": "dark"
+  },
   "version": "0.0.0",
   "private": true,
   "publisher": "noverax",
-  "author": "NoveraX",
+  "author": {
+    "name": "NoveraX",
+    "url": "https://github.com/NoveraX"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -20,9 +28,13 @@
     "courier",
     "api",
     "http",
+    "rest",
     "typescript",
+    "codelens",
     "latency",
-    "codelens"
+    "observability",
+    "devtools",
+    "studio"
   ],
   "categories": [
     "Visualization",

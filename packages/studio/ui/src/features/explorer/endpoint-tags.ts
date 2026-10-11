@@ -1,22 +1,24 @@
+import { agentMarkTitle } from "./agent-mark-title";
 import type { EndpointNode } from "./explorer-model";
 
-/** What a tag on an endpoint says, and the colour it says it in. */
+/** What a tag on an endpoint says, the colour it says it in, and what it says on hover. */
 export interface EndpointTag {
   label: string;
-  tone: "stream" | "mutation" | "query" | "proxy" | "warn";
+  tone: "stream" | "mutation" | "query" | "agent" | "proxy" | "warn";
+  title?: string;
 }
 
 /**
  * The tags the Endpoints tab gives an endpoint: its kind — `sse` or
- * `websocket`, else `query` or `mutation` — then `proxy` when its calls
- * went through Courier's proxy and `untyped response` when it declares no
- * response schema.
+ * `websocket`, else `query` or `mutation` — then `agent` when the project
+ * offers it to agents, `proxy` when its calls went through Courier's proxy
+ * and `untyped response` when it declares no response schema.
  *
  * @param e - The endpoint
  * @returns Its tags, in that order
  * @example
  * ```ts
- * endpointTags(endpoint).map((t) => t.label); // ["mutation", "proxy"]
+ * endpointTags(endpoint).map((t) => t.label); // ["mutation", "agent", "proxy"]
  * ```
  */
 export function endpointTags(e: EndpointNode): EndpointTag[] {
@@ -25,6 +27,8 @@ export function endpointTags(e: EndpointNode): EndpointTag[] {
       ? { label: e.type ?? "query", tone: e.type === "mutation" ? "mutation" : "query" }
       : { label: e.transport === "ws" ? "websocket" : "sse", tone: "stream" };
   const tags = [kind];
+  if (e.agent?.offered)
+    tags.push({ label: "agent", tone: "agent", title: agentMarkTitle(e.agent) });
   if (e.proxied) tags.push({ label: "proxy", tone: "proxy" });
   if (!e.hasResponseSchema) tags.push({ label: "untyped response", tone: "warn" });
   return tags;

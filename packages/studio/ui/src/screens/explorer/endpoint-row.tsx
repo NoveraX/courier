@@ -12,6 +12,7 @@ const TAG_CLASS: Readonly<Record<EndpointTag["tone"], string>> = {
   stream: "bg-brand-dim text-brand",
   mutation: "bg-syntax-keyword/12 text-syntax-keyword",
   query: "bg-raised text-fg-muted",
+  agent: "bg-syntax-function/12 text-syntax-function",
   proxy: "bg-syntax-type/12 text-syntax-type",
   warn: "bg-warn-dim text-warn",
 };
@@ -111,6 +112,7 @@ export function EndpointRow(props: EndpointRowProps): React.ReactNode {
         {endpointTags(e).map((tag) => (
           <span
             key={tag.label}
+            title={tag.title}
             className={cn(
               "flex h-4.75 items-center rounded-[5px] px-1.5 text-meta font-strong whitespace-nowrap",
               TAG_CLASS[tag.tone],

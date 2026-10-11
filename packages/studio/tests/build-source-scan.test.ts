@@ -261,3 +261,77 @@ describe("an endpoint in the source catalogue", () => {
     ]);
   }, 30_000);
 });
+
+describe("what the source catalogue says of agents", () => {
+  it("marks each endpoint with what the config's agents policy decided, and a stream with nothing", async () => {
+    const config = [
+      `import { courier, defineApi, defineGroup } from "@noverax/courier/define";`,
+      `const { endpoint, stream } = courier();`,
+      `const orders = defineGroup({ prefix: "orders", endpoints: {`,
+      `  list: endpoint.get(""),`,
+      `  create: endpoint.post(""),`,
+      `  cancel: endpoint.del(":id").agent({ description: "Cancel an order", access: "destructive" }),`,
+      `  ticks: stream.response<{ n: number }>().get("sse"),`,
+      `} });`,
+      `const health = endpoint.get("health");`,
+      `export default {`,
+      `  sources: { api: defineApi({ baseURL: "https://api.example", endpoints: { health }, groups: { orders } }) },`,
+      `  agents: { offer: "reads", deny: ["api.health"], confirm: "write" },`,
+      `};`,
+    ].join("\n");
+    writeFileSync(join(root, "courier.config.ts"), config);
+    const loaded = await loadCourierConfig(root);
+
+    const [source] = buildSourceScan(loaded, importsSnapshotOf(undefined, root), root).sources;
+    const marks = Object.fromEntries(
+      (source?.groups[0]?.endpoints ?? []).map((e) => [e.name, e.analysis.agent ?? null]),
+    );
+
+    expect(marks).toEqual({
+      list: {
+        offered: true,
+        tool: "orders_list",
+        access: "read",
+        confirm: false,
+        reason: 'offer: "reads"',
+      },
+      create: { offered: false, reason: "a write not marked .agent()" },
+      cancel: {
+        offered: true,
+        tool: "orders_cancel",
+        access: "destructive",
+        confirm: true,
+        reason: "marked .agent()",
+      },
+      ticks: null,
+    });
+    expect(source?.inlineEndpoints?.[0]?.analysis.agent).toEqual({
+      offered: false,
+      reason: "denied by api.health",
+    });
+  }, 30_000);
+
+  it("marks every endpoint kept out, with why, when the policy cannot be decided by", async () => {
+    writeFileSync(
+      join(root, "courier.config.ts"),
+      [
+        `import { courier, defineApi } from "@noverax/courier/define";`,
+        `const { endpoint } = courier();`,
+        `export default {`,
+        `  sources: { api: defineApi({ baseURL: "https://api.example", endpoints: { list: endpoint.get("") } }) },`,
+        `  agents: { offer: "everything" },`,
+        `};`,
+      ].join("\n"),
+    );
+    const loaded = await loadCourierConfig(root);
+
+    const [source] = buildSourceScan(loaded, importsSnapshotOf(undefined, root), root).sources;
+
+    expect(source?.inlineEndpoints?.[0]?.analysis.agent).toEqual({
+      offered: false,
+      reason: expect.stringMatching(
+        /^the MCP server would not start: \[courier\] agents.offer takes/,
+      ),
+    });
+  }, 30_000);
+});

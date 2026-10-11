@@ -9,6 +9,7 @@
  */
 
 export type {
+  AgentMark,
   BreakingChange,
   BreakingSeverity,
   DiffEndpoint,

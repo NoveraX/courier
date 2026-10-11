@@ -65,6 +65,20 @@ export interface ImportCheck {
 
 // ── Scanner ─────────────────────────────────────────────────────────────────
 
+/** What the project's `agents` policy decided for an endpoint, as Studio's server reports it. */
+export interface AgentMark {
+  /** Whether an agent can call it, as a tool of the project's MCP server. */
+  offered: boolean;
+  /** The tool it is offered as. */
+  tool?: string;
+  /** What a call does — offered, or kept out by the policy's `access`. */
+  access?: "read" | "write" | "destructive";
+  /** Whether a person confirms each call. */
+  confirm?: boolean;
+  /** Why, in the words the config uses: `marked .agent()`, `denied by billing.**`. */
+  reason: string;
+}
+
 export interface EndpointAnalysis {
   hasResponseType: boolean;
   hasVariablesType: boolean;
@@ -84,6 +98,8 @@ export interface EndpointAnalysis {
   hasReceiveSchema?: true;
   /** A stream or a channel the app serves itself, rather than an upstream. */
   served?: true;
+  /** What the project's `agents` policy decided for it; absent for a stream or a channel. */
+  agent?: AgentMark;
 }
 
 export interface ScannedEndpoint {

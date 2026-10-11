@@ -75,6 +75,7 @@ export function endpointOf(
     hasResponseSchema: def.hasResponseSchema,
     trafficOnly: def.origin === "runtime",
     proxied: requests.some((r) => r.mode === "proxy"),
+    ...(def.agent && { agent: def.agent }),
     requests,
     metrics,
     level: levelOf(metrics, ctx.slowMs),

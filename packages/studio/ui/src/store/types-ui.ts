@@ -1,6 +1,6 @@
 import type { ProxyPath } from "@noverax/courier";
 import type { SchemaField } from "@noverax/courier-studio-core";
-
+import type { AgentMark } from "@/features/apis/types";
 import type { ProxyTiming, RequestStatus, RequestTiming } from "./types";
 
 // ── Theme ───────────────────────────────────────────────────────────────────
@@ -32,6 +32,8 @@ export interface CatalogEndpoint {
   hasReceiveSchema?: boolean;
   /** True when the app serves it itself: a stream or a channel it implements */
   served?: boolean;
+  /** What the project's `agents` policy decided for it, as the config declares it. */
+  agent?: AgentMark;
 }
 
 export interface CatalogGroup {

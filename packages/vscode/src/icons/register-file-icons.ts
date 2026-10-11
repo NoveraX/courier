@@ -15,7 +15,8 @@ const OFFERED = "courier.fileIcons.offered";
  * `.courier` folder in the icon themes that take custom icons — Material
  * Icon Theme and vscode-icons: commands that put them in and take them out
  * through the user's settings, offered once per theme when it is the one in
- * use in a Courier project, and kept current as Courier updates.
+ * use in a Courier project — as Courier starts, and when the user picks it
+ * later — and kept current as Courier updates.
  *
  * @param core - The extension's core
  * @returns What removes the commands
@@ -52,6 +53,9 @@ export function registerFileIcons(core: CourierCore): vscode.Disposable {
     vscode.commands.registerCommand("courier.fileIcons.show", show),
     vscode.commands.registerCommand("courier.fileIcons.remove", remove),
     core.onRestart(() => void offerOnce(core, applied)),
+    vscode.workspace.onDidChangeConfiguration((change) => {
+      if (change.affectsConfiguration("workbench.iconTheme")) void offerOnce(core, applied);
+    }),
   );
 }
 

@@ -1,15 +1,19 @@
-export const metadata = { title: "Proxies & Certificates", description: "Reach APIs through a corporate proxy, trust an internal certificate authority and present a client certificate — for the whole process from the environment it starts with, or for one API in its definition — and how Studio, the MCP server and create-courier take the same settings.", mode: "both" }
+export const metadata = { title: "Proxies & Certificates", description: "Reach APIs through a corporate proxy, trust an internal certificate authority and present a client certificate — for the whole process from the environment it starts with, for one API, one group of its endpoints or one call — a bank's mutual TLS step by step, and how Studio, the MCP server and create-courier take the same settings.", mode: "both" }
 
 ## Where they are set
 
-Courier sends every request with the platform's own `fetch` and opens every socket with its own `WebSocket` — Node's, Bun's, Deno's, the browser's — and brings no HTTP client of its own. A proxy and a certificate are set where that platform takes them: for the whole process, in the environment it starts with; or for one API, in its definition.
+Courier sends every request with the platform's own `fetch` and opens every socket with its own `WebSocket` — Node's, Bun's, Deno's, the browser's — and brings no HTTP client of its own. A proxy and a certificate are set where that platform takes them: for the whole process, in the environment it starts with; for one API, in its definition; for one group of its endpoints, in the group's; or for one call.
 
 | You need | Set |
 | --- | --- |
 | Every request through the corporate proxy | [The environment](#the-whole-process): `NODE_USE_ENV_PROXY=1` and `HTTPS_PROXY` |
 | An internal certificate authority trusted, or a TLS-inspecting proxy's | [The environment](#the-whole-process): `NODE_EXTRA_CA_CERTS`, or `NODE_USE_SYSTEM_CA=1` |
 | A client certificate for one API — mutual TLS | [The API's definition](#one-api): a `dispatcher`, with undici's `fetch` and `WebSocket` |
+| A client certificate for some of an API's endpoints — the payments a bank asks a certificate for | [The group's definition](#one-group): its own `dispatcher` |
+| A client certificate, or a proxy, for one call — a certificate per company you call a bank for | [The call](#one-call): `.with({ dispatcher })` |
 | A proxy, or an authority, for one API alone | [The API's definition](#one-api): a `ProxyAgent`, or an `Agent` with its `ca` |
+
+`fetch`, `webSocket` and `dispatcher` — and Bun's `proxy` and `tls`, Deno's `client` — are each taken on their own: from the call when it sets one, else from the nearest group that does, else from the API, else the platform's own. A bank's certificate, step by step, is [below](#a-banks-client-certificate).
 
 ## The whole process
 
@@ -80,7 +84,7 @@ export const payments = defineApi({
 })
 ```
 
-The dispatcher reaches everything the API sends: its calls and uploads, its streams, its channels' sockets, and what a [proxy route](/docs/proxy-mode/api-route) relays to it for the browser. Two APIs with dispatchers of their own never share a socket, though they reach the same host.
+The dispatcher reaches everything the API sends: its calls and uploads, its streams, its channels' sockets, and what a [proxy route](/docs/proxy-mode/api-route) relays to it for the browser — except where a group or a call sets its own. Two APIs with dispatchers of their own never share a socket, though they reach the same host.
 
 `fetch` and `webSocket` are what hand it on. Node's own refuse a dispatcher from another major version of undici with `UND_ERR_INVALID_ARG` — Node 24 is built on undici 7, while `npm install undici` installs 8 — so all three come from the same `undici`.
 
@@ -120,11 +124,190 @@ A definition that reads a key from disk runs wherever it is imported. In proxy m
 
 In a browser and in React Native, an upload that reports its progress goes through `XMLHttpRequest`, which can report it, rather than through an API's `fetch`.
 
+## One group
+
+A group's `dispatcher`, `fetch` and `webSocket` are for its endpoints alone, and for those of the groups inside it. The bank below is reached with the platform's trust for its accounts, while its payments present the company's certificate:
+
+```ts title="lib/sources.ts"
+import { readFileSync } from "node:fs"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+import { Agent, fetch, WebSocket } from "undici"
+
+const { endpoint } = courier()
+
+export const bank = defineApi({
+  name: "bank",
+  baseURL: "https://api.bank.example/v1",
+  fetch,
+  webSocket: WebSocket,
+  groups: {
+    accounts: defineGroup({
+      prefix: "accounts",
+      endpoints: { list: endpoint.get("") },
+    }),
+    payments: defineGroup({
+      prefix: "payments",
+      dispatcher: new Agent({
+        connect: {
+          cert: readFileSync("/etc/bank/company.pem"),
+          key: readFileSync("/etc/bank/company.key"),
+          passphrase: process.env.BANK_KEY_PASSPHRASE,
+        },
+      }),
+      endpoints: { create: endpoint.post("").variables<{ amount: number; to: string }>() },
+    }),
+  },
+})
+```
+
+The group's dispatcher reaches its calls, its streams, its channels' sockets and what a proxy route relays for them; a group inside `payments` takes it too, unless it sets one of its own. The API's `fetch` and `webSocket` hand it on, as they hand on the API's own. Channels of two groups with different dispatchers never share a socket. `defineGroup` refuses a `fetch` or a `webSocket` that is not a function, and a `dispatcher` with no `dispatch` method, with `ConfigurationError("SOURCE_TRANSPORT_INVALID")`.
+
+## One call
+
+`.with()` gives the calls made through what it returns a transport of their own, over their group's and their API's:
+
+```ts title="lib/payments.ts"
+import type { Company } from "./companies"
+import { Agent } from "undici"
+import { createCaller } from "@noverax/courier"
+import { bank } from "./sources"
+
+const client = createCaller(bank)
+const agents = new Map<string, Agent>()
+
+/* One agent for each company's certificate, reused for every call made for it. */
+function agentFor(company: Company): Agent {
+  let agent = agents.get(company.id)
+  if (!agent) {
+    agent = new Agent({
+      connect: { cert: company.cert, key: company.key, passphrase: company.passphrase },
+    })
+    agents.set(company.id, agent)
+  }
+  return agent
+}
+
+export function pay(company: Company, payment: { amount: number; to: string }) {
+  return client.payments.with({ dispatcher: agentFor(company) }).create(payment)
+}
+```
+
+An agent keeps its connections open for the calls after the first, so make one for each certificate and reuse it: one made for every call opens a connection for every call and keeps it until it is closed. A call's `fetch` sends that call alone, and its streams and channels take its `dispatcher` too, each channel on a socket of its own transport.
+
+The call's own transport is for calls sent where it is made — a caller from `createCaller`, on the server, in a script, in the MCP server. A call through the [proxy](/docs/proxy-mode/api-route) is sent by the server, with the API's or the group's own; set on it, `fetch`, `webSocket` or `dispatcher` would reach only the browser's request to the proxy route, so a proxy client refuses them with `ConfigurationError("PROXY_OPTION_NOT_ALLOWED")` before anything is sent.
+
+## A bank's client certificate
+
+A bank's API asks for a client certificate over TLS 1.2, issued from a request the bank's instructions walk through:
+
+- the key, made with `openssl genrsa -des3 -out Company.key 2048`, so it is kept under a passphrase;
+- the certificate the bank issues for it, `Company.cer`, valid for a year, under the bank's own authority — a root and an intermediate;
+- or both in one PKCS#12 bundle with that chain, `openssl pkcs12 -export -out Company.pfx -inkey Company.key -in Company.cer -certfile root.cer -certfile sub.cer`;
+- and an access token, sent as `Authorization: Bearer …` beside the certificate.
+
+Node takes the certificate as it comes. The key and the certificate:
+
+```ts title="lib/bank-agent.ts"
+import { readFileSync } from "node:fs"
+import { Agent } from "undici"
+
+/** An agent presenting the company's certificate, and the bank's intermediate after it. */
+export function bankAgent(): Agent {
+  return new Agent({
+    connect: {
+      cert: Buffer.concat([
+        readFileSync("/etc/bank/Company.cer"),
+        readFileSync("/etc/bank/sub.cer"),
+      ]),
+      key: readFileSync("/etc/bank/Company.key"),
+      passphrase: process.env.BANK_KEY_PASSPHRASE,
+      minVersion: "TLSv1.2",
+    },
+  })
+}
+```
+
+Or the bundle:
+
+```ts title="lib/bank-agent.ts"
+import { readFileSync } from "node:fs"
+import { Agent } from "undici"
+
+export function bankAgent(): Agent {
+  return new Agent({
+    connect: {
+      pfx: readFileSync("/etc/bank/Company.pfx"),
+      passphrase: process.env.BANK_PFX_PASSPHRASE,
+      minVersion: "TLSv1.2",
+    },
+  })
+}
+```
+
+- **The passphrase.** Without it, Node cannot read the key and the connection fails with `bad decrypt`. Keep it where the server's other secrets are, never beside the key or in the repository.
+- **The chain.** `cert` is the company's certificate followed by the bank's intermediate, in one PEM — the bundle already holds the chain. A `.cer` that does not start with `-----BEGIN CERTIFICATE-----` is DER; `openssl x509 -inform der -in Company.cer -out Company.pem` makes it PEM.
+- **The bank's server.** Node checks it against the authorities it trusts. When the bank's server certificate is issued by the bank's own authority, add that authority — `ca` replaces Node's list, so keep the list: `ca: [...rootCertificates, readFileSync("/etc/bank/root.cer")]`, with `rootCertificates` from `node:tls`.
+- **TLS 1.2.** `minVersion: "TLSv1.2"` refuses anything older, and a server that speaks 1.2 alone is reached over 1.2. Pin `maxVersion: "TLSv1.2"` as well only when the bank asks for exactly that version.
+- **An old bundle.** A `.pfx` exported by OpenSSL 1.1 or older, or with `-legacy`, is encrypted with RC2 and 3DES, which Node 17 and later refuse with `Unsupported PKCS12 PFX data`. Export it again with OpenSSL 3, whose `openssl pkcs12 -export` encrypts with AES-256, or give Node the key and the certificate instead.
+
+The access token goes with every request as any API's does, from [`authMiddleware`](/docs/advanced/middleware#authmiddleware):
+
+```ts title="lib/sources.ts"
+import { courier, defineApi, defineGroup } from "@noverax/courier/define"
+import { authMiddleware } from "@noverax/courier/middleware"
+import { fetch, WebSocket } from "undici"
+import { bankAgent } from "./bank-agent"
+import { accessToken } from "./bank-token"
+
+const { endpoint } = courier()
+
+export const bank = defineApi({
+  name: "bank",
+  baseURL: "https://api.bank.example/v1",
+  fetch,
+  webSocket: WebSocket,
+  middleware: [authMiddleware({ getToken: accessToken })],
+  groups: {
+    payments: defineGroup({
+      prefix: "payments",
+      dispatcher: bankAgent(),
+      endpoints: { create: endpoint.post("").variables<{ amount: number; to: string }>() },
+    }),
+  },
+})
+```
+
+### Renewing the certificate
+
+The certificate expires a year after it is issued. A dispatcher that hands each request to the agent of the day presents the renewed certificate from the next connection on, with no restart:
+
+```ts title="lib/bank-dispatcher.ts"
+import type { Dispatcher } from "undici"
+import { bankAgent } from "./bank-agent"
+
+let agent = bankAgent()
+
+/** The bank's dispatcher: each new connection presents the certificate read last. */
+export const bankDispatcher = {
+  dispatch: (options: Dispatcher.DispatchOptions, handler: Dispatcher.DispatchHandler) =>
+    agent.dispatch(options, handler),
+}
+
+/** Read the renewed certificate; requests already sent finish on the old one. */
+export async function renewBankCertificate(): Promise<void> {
+  const retired = agent
+  agent = bankAgent()
+  await retired.close()
+}
+```
+
+Give the group `dispatcher: bankDispatcher`, and call `renewBankCertificate()` once the new files are in place — on `SIGHUP`, from the job that installs them. Watch the date it runs out, `new X509Certificate(readFileSync("/etc/bank/Company.cer")).validTo` from `node:crypto`, so the renewal is asked for before then.
+
 ## Bun and Deno
 
-**Bun** reads `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` by itself, with no switch to turn on. Its `proxy` and `tls` options (`ca`, `cert`, `key`), set in an API's definition, reach the API's calls and streams, and its sockets, whose `WebSocket` takes them too.
+**Bun** reads `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` by itself, with no switch to turn on. Its `proxy` and `tls` options (`ca`, `cert`, `key`, `passphrase`), set in an API's definition, a group's or a call's, reach the calls and streams they are set for, and the sockets, whose `WebSocket` takes them too.
 
-**Deno** reads `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`, and trusts the authorities in `DENO_CERT` (or `--cert`), the system's with `DENO_TLS_CA_STORE=system`, and from Deno 2.8 those in `NODE_EXTRA_CA_CERTS`. A `client` from `Deno.createHttpClient()` in an API's definition reaches its calls and its streams; its channels open with Deno's `WebSocket` as it is.
+**Deno** reads `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`, and trusts the authorities in `DENO_CERT` (or `--cert`), the system's with `DENO_TLS_CA_STORE=system`, and from Deno 2.8 those in `NODE_EXTRA_CA_CERTS`. A `client` from `Deno.createHttpClient()` in an API's definition, a group's or a call's reaches the calls and the streams it is set for; channels open with Deno's `WebSocket` as it is.
 
 ## Browsers and React Native
 
@@ -144,7 +327,7 @@ It still checks each host before the proxy is asked, as it checks a host it conn
 
 When a host cannot be reached, the error says what to set: `NODE_USE_ENV_PROXY=1`, when a proxy is set in the environment but Node was not told to use it; `NODE_EXTRA_CA_CERTS` or `NODE_USE_SYSTEM_CA=1`, when Node does not trust the host's certificate; the proxy's credentials, when the proxy answers `407`. A proxy is named by its origin, never with the credentials in its URL.
 
-Calls Studio's playground sends to your APIs go through their definitions, `dispatcher` and `fetch` included.
+Calls Studio's playground sends to your APIs go through their definitions — the API's and the group's `dispatcher` and `fetch` included.
 
 ## The MCP server
 
@@ -166,7 +349,7 @@ The editor starts the MCP server, so the variables go in the server's `env`:
 }
 ```
 
-VS Code's `.vscode/mcp.json` takes the same `env`. The file `--dotenv` names is loaded too late for these, as an application's `.env` is. The server's tools call your APIs as their definitions say, so an API's `dispatcher` applies to an agent's calls as it does to your app's.
+VS Code's `.vscode/mcp.json` takes the same `env`. The file `--dotenv` names is loaded too late for these, as an application's `.env` is. The server's tools call your APIs as their definitions say, so an API's or a group's `dispatcher` applies to an agent's calls as it does to your app's.
 
 ## create-courier
 
@@ -175,7 +358,7 @@ VS Code's `.vscode/mcp.json` takes the same `env`. The file `--dotenv` names is 
 ## Security
 
 - Use only proxies trusted and authorized for the deployment. A proxy sees where every request goes, and reads what it carries wherever TLS ends at the proxy — a TLS-inspecting proxy reads all of it.
-- Keep a client certificate's key where only the server reads it, and out of the repository.
+- Keep a client certificate's key where only the server reads it, and out of the repository; keep its passphrase with the server's other secrets, never beside the key.
 - `rejectUnauthorized: false` and `NODE_TLS_REJECT_UNAUTHORIZED=0` stop the server's certificate from being checked at all. Trust its authority instead, with `ca` or `NODE_EXTRA_CA_CERTS`.
 
 ## Next steps

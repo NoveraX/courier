@@ -24,7 +24,7 @@ export function Ticker({ symbol }: { symbol: string }) {
 - `error` — why the stream failed or could not be opened; the stream's next event clears it.
 - `close()` — closes the stream before the component unmounts.
 
-A change of method or variables opens another stream. `data`, `events`, `error` and `status` start over with it in the same render, so nothing of the previous stream is ever shown as the new one's. `onData`, `onError` and `onStatusChange` are called as the stream delivers an event, fails and changes status.
+A change of method or variables opens another stream. `data`, `events`, `error` and `status` start over with it in the same render, so nothing of the previous stream is ever shown as the new one's. `onData`, `onError` and `onStatusChange` are called as the stream delivers an event, fails and changes status — the ones the component last rendered with, so a new handler, or a new `maxEvents`, applies without reopening the stream. The hooks write nothing as a component renders, which keeps them right under the React Compiler: from React 19.2 they hand their handlers to React's `useEffectEvent`.
 
 ## Keeping a query up to date
 

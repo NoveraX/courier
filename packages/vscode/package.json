@@ -585,6 +585,11 @@
           "default": true,
           "description": "Mark the findings of Studio's audit — an N+1 pattern, a timeout risk, a write without credentials — at the calls they concern, in the Problems panel too."
         },
+        "courier.notifications.failures": {
+          "type": "boolean",
+          "default": false,
+          "description": "Tell with a notification when a call to an endpoint fails while you work: at most once a minute per endpoint, several failing together in one notice."
+        },
         "courier.agents.mcpServers": {
           "type": "boolean",
           "default": true,

@@ -1,24 +1,12 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 
 import { offerMcpServers } from "./agents/mcp-servers";
-import { createAuditDiagnostics } from "./audit/audit-diagnostics";
-import { createDefinitionStore } from "./code/definition-store";
 import { registerCodeFeatures } from "./code/register-code-features";
-import { openInStudio } from "./commands/open-in-studio";
-import { setUpCourier, startStudio } from "./commands/project-commands";
-import { createCallHints } from "./hints/call-hints";
-import { CALL_LANGUAGES } from "./hints/hint-document";
-import { createHintStore } from "./hints/hint-store";
-import { keepFresh } from "./keep-fresh";
-import { registerStudioPages } from "./panel/register-studio-panel";
-import { createCourierProjects } from "./projects/courier-projects";
-import { createConfiguredStudio } from "./studio/configured-studio";
-import { findStudio } from "./studio/find-studio";
-import { fetchCalls, fetchDefinitions, fetchEndpointStats, fetchSites } from "./studio/studio-api";
-import { stateInFront } from "./studio/studio-in-front";
-import { createStudioStatus } from "./studio/studio-status";
-import { createCourierView } from "./view/courier-view";
-import { registerViewCommands } from "./view/view-commands";
+import { createCourierCore } from "./core/courier-core";
+import { registerCommands } from "./core/register-commands";
+import { registerEditorMarks } from "./core/register-editor-marks";
+import { registerStatus } from "./core/register-status";
+import { fetchSites } from "./studio/studio-api";
 
 /**
  * Start the extension: the hints over each endpoint call and the audit's
@@ -36,94 +24,25 @@ import { registerViewCommands } from "./view/view-commands";
  * ```
  */
 export function activate(context: vscode.ExtensionContext): void {
-  const settings = () => vscode.workspace.getConfiguration("courier");
-  const configured = createConfiguredStudio();
-  const studioFor = async (file: string, workspace: string) =>
-    configured() ?? findStudio(file, workspace);
-  const store = createHintStore({
-    findStudio: studioFor,
-    fetchStats: fetchEndpointStats,
-    fetchCalls,
-  });
-  const answers = async (studio: string) =>
-    store.statsFor(studio) !== undefined || store.answers(studio);
-  const projects = createCourierProjects();
-  const hints = createCallHints(store, () => settings().get<boolean>("hints.enabled", true));
-  const view = createCourierView({
-    projects: projects.list,
-    configured,
-    statsFor: store.statsFor,
-    answers: store.answers,
-    fetchSites,
-  });
-  const diagnostics = createAuditDiagnostics(store, () =>
-    settings().get<boolean>("audit.diagnostics", true),
-  );
-  const status = createStudioStatus();
-  const selector = CALL_LANGUAGES.map((language) => ({ language, scheme: "file" }));
-  const definitions = createDefinitionStore(fetchDefinitions);
+  const core = createCourierCore(context);
   const code = registerCodeFeatures({
-    selector,
-    store,
-    definitions,
+    selector: core.selector,
+    store: core.store,
+    definitions: core.definitions,
     fetchSites,
-    targets: view.targets,
-    enabled: () => settings().get<boolean>("hints.enabled", true),
+    targets: core.view.targets,
+    enabled: () => core.settings().get<boolean>("hints.enabled", true),
   });
-  const pages = registerStudioPages({
-    extensionUri: context.extensionUri,
-    studioFor,
-    answers,
-    targets: view.targets,
-  });
-  const showStatus = () =>
-    void stateInFront({ studioFor, projects, answers, targets: view.targets }).then(status.show);
-  const redraw = () => {
-    hints.refreshed();
-    code.refreshed();
-    void view.refresh().then(showStatus);
-    void diagnostics.refresh();
-  };
-  const restart = () => {
-    store.forgetCalls();
-    definitions.forget();
-    void store.refresh().finally(redraw);
-    void pages.refresh();
-  };
-  const addresses = vscode.workspace.createFileSystemWatcher("**/.courier/studio.json");
   context.subscriptions.push(
-    projects,
-    view,
+    core,
     code,
-    pages,
-    diagnostics,
-    status,
-    addresses,
-    vscode.languages.registerCodeLensProvider(selector, hints),
-    vscode.languages.registerHoverProvider(selector, hints),
-    vscode.commands.registerCommand(
-      "courier.openInStudio",
-      (studio?: string, source?: string, endpoint?: string) =>
-        openInStudio(studioFor, projects, { studio, source, endpoint }, pages.open),
-    ),
-    vscode.commands.registerCommand("courier.refreshHints", restart),
-    vscode.commands.registerCommand("courier.startStudio", (root?: string) =>
-      startStudio(projects, typeof root === "string" ? root : undefined),
-    ),
-    vscode.commands.registerCommand("courier.setUp", setUpCourier),
-    registerViewCommands(projects, view.refresh, pages.open),
-    offerMcpServers(projects, () => settings().get<boolean>("agents.mcpServers", true)),
-    addresses.onDidCreate(restart),
-    addresses.onDidChange(restart),
-    addresses.onDidDelete(restart),
-    projects.onDidChange(restart),
-    vscode.window.onDidChangeActiveTextEditor(showStatus),
-    vscode.workspace.onDidChangeConfiguration((change) => {
-      if (change.affectsConfiguration("courier")) restart();
-    }),
-    keepFresh(() => settings().get<number>("hints.refreshSeconds", 5), store.refresh, redraw),
+    core.onRedraw(code.refreshed),
+    registerEditorMarks(core),
+    registerStatus(core),
+    registerCommands(core),
+    offerMcpServers(core.projects, () => core.settings().get<boolean>("agents.mcpServers", true)),
   );
-  restart();
+  core.start();
 }
 
 /**

@@ -1,9 +1,9 @@
-import { realpathSync } from "node:fs";
 import { relative } from "node:path";
 
 import { declarationOf } from "../contract-drift/schema-edit/endpoint-declaration";
 import { type SourceModules, sourceModules } from "../contract-drift/schema-edit/source-modules";
 import type { CatalogEndpoint } from "./endpoint-catalog";
+import { resolvedPath } from "./resolved-path";
 import { positionsIn, type TextPosition } from "./text-positions";
 
 /** A stretch of a file, as an editor counts: lines and columns from 1, the end just past it. */
@@ -50,7 +50,7 @@ export function endpointDefinitions(
 ): EndpointDefinition[] {
   const modules = sourceModules(root);
   /* The modules are read by their paths with links resolved, the config's too. */
-  const config = resolved(configFile);
+  const config = resolvedPath(configFile);
   const placing = new Map<string, (offset: number) => TextPosition>();
   return catalog.flatMap(({ source, endpoint }) => {
     const declared = declarationOf(modules, config, source, endpoint);
@@ -65,15 +65,6 @@ export function endpointDefinitions(
     const span = spanOf(place, property.start, property.end);
     return [{ source, endpoint, file: relative(modules.root, path), path, ...name, span }];
   });
-}
-
-function resolved(path: string): string {
-  try {
-    return realpathSync(path);
-  } catch {
-    /* The config is gone since it loaded: nothing it declares is found. */
-    return path;
-  }
 }
 
 function textOf(modules: SourceModules, path: string): string {

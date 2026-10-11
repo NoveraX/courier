@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 /// <reference types="node" />
 /**
- * Render the README's images from their HTML sources in `.github/assets/src`,
- * each in a light and a dark variant at twice its size, with a headless
- * Chrome: `node scripts/render-readme-assets.mjs`.
+ * Render the READMEs' images from their HTML sources in `.github/assets/src`,
+ * each in a light and a dark variant at twice its size, with Playwright's
+ * Chromium: `node scripts/render-readme-assets.mjs`, or name the images to
+ * render only those: `node scripts/render-readme-assets.mjs react mcp`.
  *
- * Chrome is taken from `CHROME_PATH`, else from where macOS installs it, else
- * from `google-chrome` or `chromium` on the PATH. The sources load their
- * fonts from Google Fonts, so rendering needs the network.
+ * The sources load their fonts from Google Fonts, so rendering needs the
+ * network; each image is taken once its fonts have loaded. Each is written
+ * with an indexed palette by sharp, which the repository has through
+ * Next.js, at about a third of the size Chromium writes it at.
  */
 
-import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { env, exit } from "node:process";
+import { argv, exit } from "node:process";
 import { pathToFileURL } from "node:url";
+import { chromium } from "@playwright/test";
 
 const ROOT = resolve(new URL(".", import.meta.url).pathname, "..");
 const ASSETS = join(ROOT, ".github", "assets");
@@ -23,51 +25,63 @@ const ASSETS = join(ROOT, ".github", "assets");
 const IMAGES = [
   { name: "hero", width: 1200, height: 600 },
   { name: "architecture", width: 1200, height: 640 },
+  { name: "react", width: 1200, height: 600 },
+  { name: "codelens", width: 1200, height: 600 },
+  { name: "mcp", width: 1200, height: 760 },
+  { name: "create", width: 1200, height: 820 },
 ];
 
 const THEMES = ["light", "dark"];
 
-const MAC_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-
 /**
- * The Chrome to render with.
+ * The images to render: those named on the command line, else every one.
  *
- * @returns {string} Its executable
+ * @param {string[]} named - The names given
+ * @returns {typeof IMAGES}
  */
-function chrome() {
-  if (env.CHROME_PATH) return env.CHROME_PATH;
-  if (existsSync(MAC_CHROME)) return MAC_CHROME;
-  for (const name of ["google-chrome", "chromium"]) {
-    try {
-      return execFileSync("which", [name], { encoding: "utf8" }).trim();
-    } catch {
-      /* Not on the PATH; the next name is tried. */
-    }
+function selected(named) {
+  if (named.length === 0) return IMAGES;
+  const unknown = named.filter((name) => !IMAGES.some((image) => image.name === name));
+  if (unknown.length > 0) {
+    console.error(`No image named ${unknown.join(", ")}: ${IMAGES.map((i) => i.name).join(", ")}`);
+    exit(1);
   }
-  console.error("No Chrome found: set CHROME_PATH to its executable.");
-  exit(1);
+  return IMAGES.filter((image) => named.includes(image.name));
 }
 
-const executable = chrome();
-for (const { name, width, height } of IMAGES) {
-  for (const theme of THEMES) {
-    const page = pathToFileURL(join(ASSETS, "src", `${name}.html`));
-    page.searchParams.set("theme", theme);
-    const output = join(ASSETS, `${name}-${theme}.png`);
-    execFileSync(
-      executable,
-      [
-        "--headless=new",
-        "--disable-gpu",
-        "--hide-scrollbars",
-        "--force-device-scale-factor=2",
-        `--window-size=${width},${height}`,
-        "--virtual-time-budget=8000",
-        `--screenshot=${output}`,
-        page.href,
-      ],
-      { stdio: "ignore" },
-    );
-    console.log(`${output.slice(ROOT.length + 1)}`);
+/**
+ * A PNG written again with an indexed palette, or as it was when sharp
+ * cannot be loaded.
+ *
+ * @param {Buffer} png - The image
+ * @returns {Promise<Buffer>}
+ */
+async function compressed(png) {
+  let sharp;
+  try {
+    ({ default: sharp } = await import("sharp"));
+  } catch {
+    console.warn("sharp could not be loaded; the image stays as Chromium wrote it");
+    return png;
   }
+  return sharp(png).png({ palette: true, quality: 92, effort: 10 }).toBuffer();
+}
+
+const browser = await chromium.launch();
+try {
+  for (const { name, width, height } of selected(argv.slice(2))) {
+    for (const theme of THEMES) {
+      const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 2 });
+      const source = pathToFileURL(join(ASSETS, "src", `${name}.html`));
+      source.searchParams.set("theme", theme);
+      await page.goto(source.href, { waitUntil: "networkidle" });
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      const output = join(ASSETS, `${name}-${theme}.png`);
+      writeFileSync(output, await compressed(await page.screenshot({ type: "png" })));
+      await page.close();
+      console.log(output.slice(ROOT.length + 1));
+    }
+  }
+} finally {
+  await browser.close();
 }

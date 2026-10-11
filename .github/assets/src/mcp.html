@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Courier — MCP README image</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=block">
+<style>
+  :root {
+    --ground: #fbfbfa; --dots: rgba(12, 13, 15, .06);
+    --card: #ffffff; --chrome: #f4f4f2; --border: #e2e2df; --hairline: #ececea;
+    --text: #0c0d0f; --muted: #474c54; --faint: #646a73;
+    --accent: #1c63d6; --accent-soft: rgba(28, 99, 214, .08);
+    --read: #0b6f68; --write: #9a5b00; --danger: #c4314b; --ok: #1d7338;
+    --shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 40px 90px -20px rgba(24, 26, 32, .22), 0 12px 28px -8px rgba(24, 26, 32, .12);
+  }
+  :root[data-theme="dark"] {
+    --ground: #08090a; --dots: rgba(255, 255, 255, .045);
+    --card: #101114; --chrome: #0b0c0e; --border: #26272b; --hairline: #18191c;
+    --text: #f7f8f8; --muted: #a8aeb7; --faint: #858b95;
+    --accent: #7db9ff; --accent-soft: rgba(125, 185, 255, .1);
+    --read: #6fd3c7; --write: #f2c66d; --danger: #ff8a9b; --ok: #9bd68c;
+    --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 40px 90px -20px rgba(0, 0, 0, .7), 0 12px 28px -8px rgba(0, 0, 0, .5);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1200px; height: 760px; background: var(--ground); overflow: hidden; }
+  body {
+    display: grid; place-items: center;
+    background-image: radial-gradient(var(--dots) 1.1px, transparent 1.2px);
+    background-size: 20px 20px;
+    font-family: "Geist", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .glow { position: absolute; inset: 0; background: radial-gradient(640px 320px at 50% 46%, var(--accent-soft), transparent 70%); }
+  .window { position: relative; width: 1000px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+  .bar { height: 42px; display: flex; align-items: center; gap: 8px; padding: 0 16px; background: var(--chrome); border-bottom: 1px solid var(--border); border-radius: 14px 14px 0 0; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
+  .title { margin-left: auto; margin-right: auto; padding-right: 50px; font: 500 12.5px/1 "Geist", sans-serif; color: var(--faint); }
+  pre { margin: 0; padding: 20px 26px 24px; font: 400 13.5px/1.62 "Geist Mono", ui-monospace, monospace; color: var(--muted); font-variant-ligatures: none; white-space: pre; }
+  .prompt { color: var(--accent); }
+  .cmd { color: var(--text); }
+  .head { color: var(--text); font-weight: 500; }
+  .tool { color: var(--text); }
+  .read { color: var(--read); } .write { color: var(--write); } .danger { color: var(--danger); }
+  .why { color: var(--faint); }
+  .section { color: var(--text); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="window">
+  <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="title">shop — zsh</span></div>
+<pre><span class="prompt">$</span> <span class="cmd">npx @noverax/courier-mcp --list</span>
+<span class="head">10 of 18 endpoints offered to agents</span>
+agents: offer "marked", access "destructive", confirm "destructive"
+
+  <span class="tool">shop_products_list  </span>  <span class="read">read</span>                            shop.products.list    <span class="why">marked .agent()</span>
+  <span class="tool">shop_products_search</span>  <span class="read">read</span>                            shop.products.search  <span class="why">marked .agent()</span>
+  <span class="tool">shop_products_get   </span>  <span class="read">read</span>                            shop.products.get     <span class="why">marked .agent()</span>
+  <span class="tool">shop_cart_get       </span>  <span class="read">read</span>                            shop.cart.get         <span class="why">marked .agent()</span>
+  <span class="tool">shop_cart_add       </span>  <span class="write">write</span>                           shop.cart.add         <span class="why">marked .agent()</span>
+  <span class="tool">shop_cart_remove    </span>  <span class="write">write</span>                           shop.cart.remove      <span class="why">marked .agent()</span>
+  <span class="tool">shop_orders_list    </span>  <span class="read">read</span>                            shop.orders.list      <span class="why">marked .agent()</span>
+  <span class="tool">shop_orders_get     </span>  <span class="read">read</span>                            shop.orders.get       <span class="why">marked .agent()</span>
+  <span class="tool">shop_orders_place   </span>  <span class="write">write</span>                           shop.orders.place     <span class="why">marked .agent()</span>
+  <span class="tool">shop_orders_cancel  </span>  <span class="danger">destructive, a person confirms</span>  shop.orders.cancel    <span class="why">marked .agent()</span>
+
+<span class="section">Kept from agents</span>
+  shop.products.reviews    GET products/:id/reviews  <span class="why">not marked .agent()</span>
+  shop.account.me          GET account               <span class="why">not marked .agent()</span>
+  shop.live.orders         GET live/orders           <span class="why">a stream or a channel, which no tool can be</span>
+  shop.live.deals          GET live                  <span class="why">a stream or a channel, which no tool can be</span>
+  shop.live.support        GET live                  <span class="why">a stream or a channel, which no tool can be</span>
+  payments.charges.create  POST charges              <span class="why">not marked .agent()</span>
+  payments.charges.get     GET charges/:id           <span class="why">not marked .agent()</span>
+  payments.refunds.create  POST refunds              <span class="why">not marked .agent()</span></pre>
+</div>
+<script>
+  document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") ?? "dark";
+</script>
+</body>
+</html>

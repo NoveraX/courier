@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Courier — editor hints README image</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=block">
+<style>
+  :root {
+    --ground: #fbfbfa; --dots: rgba(12, 13, 15, .06);
+    --card: #ffffff; --chrome: #f4f4f2; --border: #e2e2df; --hairline: #ececea;
+    --text: #0c0d0f; --muted: #474c54; --faint: #646a73;
+    --accent: #1c63d6; --accent-soft: rgba(28, 99, 214, .08); --err: #c4314b;
+    --kw: #7a3bd6; --fn: #1c63d6; --str: #1d7338; --type: #0b6f68; --punct: #5e646d;
+    --shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 40px 90px -20px rgba(24, 26, 32, .22), 0 12px 28px -8px rgba(24, 26, 32, .12);
+  }
+  :root[data-theme="dark"] {
+    --ground: #08090a; --dots: rgba(255, 255, 255, .045);
+    --card: #101114; --chrome: #0b0c0e; --border: #26272b; --hairline: #18191c;
+    --text: #f7f8f8; --muted: #a8aeb7; --faint: #9096a0;
+    --accent: #7db9ff; --accent-soft: rgba(125, 185, 255, .1); --err: #ff8a9b;
+    --kw: #b8a1f5; --fn: #7db9ff; --str: #9bd68c; --type: #6fd3c7; --punct: #878d97;
+    --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 40px 90px -20px rgba(0, 0, 0, .7), 0 12px 28px -8px rgba(0, 0, 0, .5);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1200px; height: 600px; background: var(--ground); overflow: hidden; }
+  body {
+    display: grid; place-items: center;
+    background-image: radial-gradient(var(--dots) 1.1px, transparent 1.2px);
+    background-size: 20px 20px;
+    font-family: "Geist", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .glow { position: absolute; inset: 0; background: radial-gradient(600px 300px at 50% 46%, var(--accent-soft), transparent 70%); }
+  .window { position: relative; width: 900px; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+  .bar { height: 46px; display: flex; align-items: center; gap: 8px; padding: 0 16px; background: var(--chrome); border-bottom: 1px solid var(--border); border-radius: 14px 14px 0 0; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
+  .tabs { display: flex; gap: 4px; margin-left: 14px; }
+  .tab { font: 500 13px/1 "Geist", sans-serif; color: var(--faint); padding: 8px 12px; border-radius: 7px; border: 1px solid transparent; }
+  .tab.on { color: var(--text); background: var(--card); border-color: var(--border); }
+  pre { margin: 0; padding: 22px 30px 30px; font: 400 15.5px/1.75 "Geist Mono", ui-monospace, monospace; color: var(--text); tab-size: 2; font-variant-ligatures: none; }
+  .ln { display: inline-block; width: 28px; color: var(--faint); user-select: none; }
+  .kw { color: var(--kw); } .fn { color: var(--fn); } .str { color: var(--str); } .ty { color: var(--type); } .p { color: var(--punct); }
+  .lens { display: inline-block; font: 400 12.5px/1.75 "Geist", sans-serif; color: var(--faint); padding-left: 28px; }
+  .lens.in { padding-left: calc(28px + 2 * 0.6em * 15.5 / 12.5); }
+  .lens b { font-weight: 500; color: var(--muted); }
+  .lens .bad { color: var(--err); }
+  .lens .link { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="window">
+  <div class="bar">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    <div class="tabs"><span class="tab on">checkout.ts</span><span class="tab">cart.tsx</span><span class="tab">api/sources.ts</span></div>
+  </div>
+<pre><span class="ln">1</span><span class="kw">import</span> <span class="p">{</span> api <span class="p">}</span> <span class="kw">from</span> <span class="str">"./api"</span>
+<span class="ln">2</span>
+<span class="ln">3</span><span class="kw">export async function</span> <span class="fn">checkout</span><span class="p">(</span>cartId<span class="p">:</span> <span class="ty">string</span><span class="p">) {</span>
+<span class="lens in"><b>cart.get</b> · 128 calls · p95 32 ms</span>
+<span class="ln">4</span>  <span class="kw">const</span> cart <span class="p">=</span> <span class="kw">await</span> api<span class="p">.</span>cart<span class="p">.</span><span class="fn">get</span><span class="p">({</span> cartId <span class="p">})</span>
+<span class="lens in"><b>orders.place</b> · 34 calls · <span class="bad">1 failed</span> · p95 210 ms</span>
+<span class="ln">5</span>  <span class="kw">const</span> order <span class="p">=</span> <span class="kw">await</span> api<span class="p">.</span>orders<span class="p">.</span><span class="fn">place</span><span class="p">({</span> items<span class="p">:</span> cart<span class="p">.</span>items <span class="p">})</span>
+<span class="lens in"><b>payments.charge</b> · 33 calls · 2 in flight · p95 1.4 s</span>
+<span class="ln">6</span>  <span class="kw">await</span> api<span class="p">.</span>payments<span class="p">.</span><span class="fn">charge</span><span class="p">({</span> orderId<span class="p">:</span> order<span class="p">.</span>id<span class="p">,</span> amount<span class="p">:</span> order<span class="p">.</span>total <span class="p">})</span>
+<span class="ln">7</span>  <span class="kw">return</span> order
+<span class="ln">8</span><span class="p">}</span>
+<span class="ln">9</span>
+<span class="lens"><b>orders.live</b> · 3 streams · 1 open</span>
+<span class="ln">10</span><span class="kw">export const</span> updates <span class="p">=</span> api<span class="p">.</span>orders<span class="p">.</span><span class="fn">live</span><span class="p">()</span></pre>
+</div>
+<script>
+  document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") ?? "dark";
+</script>
+</body>
+</html>

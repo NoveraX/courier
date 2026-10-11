@@ -87,6 +87,9 @@ export class Uri {
   static file(path: string): Uri {
     return new Uri("file", path, `file://${path}`);
   }
+  static joinPath(base: Uri, ...parts: string[]): Uri {
+    return Uri.file([base.fsPath, ...parts].join("/"));
+  }
   static parse(text: string): Uri {
     return new Uri(new URL(text).protocol.slice(0, -1), "", text);
   }
@@ -194,7 +197,30 @@ export const commands = {
 /** VS Code's agent API, which a test fills in as the editor at hand would. */
 export const lm: {
   registerMcpServerDefinitionProvider?: ((id: string, provider: unknown) => Held) | undefined;
+  selectChatModels?: (() => Promise<unknown[]>) | undefined;
 } = {};
+
+/** VS Code's chat, which a test fills in as the editor at hand would. */
+export const chat: {
+  createChatParticipant?: ((id: string, handler: unknown) => Held) | undefined;
+} = {};
+
+export class LanguageModelChatMessage {
+  static User(content: string): LanguageModelChatMessage {
+    return new LanguageModelChatMessage("user", content);
+  }
+  static Assistant(content: string): LanguageModelChatMessage {
+    return new LanguageModelChatMessage("assistant", content);
+  }
+  constructor(
+    readonly role: "user" | "assistant",
+    readonly content: string,
+  ) {}
+}
+
+export class ChatResponseMarkdownPart {
+  constructor(readonly value: MarkdownString) {}
+}
 
 export class McpStdioServerDefinition {
   cwd?: Uri;

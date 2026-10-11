@@ -1,4 +1,4 @@
-import type { MockConditions, RecordedRequest, StudioMock } from "./live-types";
+import type { MockConditions, RecordedRequest, RequestQuery, StudioMock } from "./live-types";
 import { isRecord } from "./studio-guards";
 
 /* Studio answers on this machine at once; one that takes longer is not answering. */
@@ -30,7 +30,7 @@ export class StudioRefusal extends Error {
  */
 export async function fetchRequests(
   studio: string,
-  wanted: { failed?: boolean; source?: string; endpoint?: string; limit?: number } = {},
+  wanted: RequestQuery = {},
 ): Promise<RecordedRequest[]> {
   const answer = await call(studio, "/api/editor/requests", wanted, undefined, [404]);
   const list = isRecord(answer) ? answer.requests : undefined;

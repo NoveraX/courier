@@ -13,6 +13,14 @@ export interface RecordedRequest {
   readonly error?: string | undefined;
 }
 
+/** Which recorded requests to list: the failed ones, one endpoint's, and how many. */
+export interface RequestQuery {
+  readonly failed?: boolean | undefined;
+  readonly source?: string | undefined;
+  readonly endpoint?: string | undefined;
+  readonly limit?: number | undefined;
+}
+
 /** A scenario of a mock: the answers it gives together. */
 export interface MockScenario {
   readonly name: string;

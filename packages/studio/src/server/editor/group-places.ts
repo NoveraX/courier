@@ -71,7 +71,7 @@ export function groupPlaces(
         names: literal.properties.flatMap((each) =>
           each.type === "Property" ? (keyName(each) ?? []) : [],
         ),
-        builder: builderOf(last?.value),
+        builder: builderIn(literal, text),
       },
     ];
   });
@@ -101,11 +101,27 @@ function commaAfter(text: string, offset: number): boolean {
   return rest.startsWith(",");
 }
 
-/* The name a builder chain starts from: `endpoint` in `endpoint.post("").response(…)`. */
-function builderOf(node: Expression | undefined): string | undefined {
-  let current: Expression | undefined = node;
-  while (current && (current.type === "CallExpression" || current.type === "MemberExpression")) {
-    current = current.type === "CallExpression" ? current.callee : current.object;
+const HTTP_METHODS = new Set(["get", "post", "put", "patch", "del", "query", "head"]);
+
+/*
+ * What the group's endpoints are built with, as written: what the first HTTP
+ * method of a chain is called on — `endpoint` in `endpoint.get(…)`,
+ * `cached.endpoint` in `cached.endpoint.post(…)` — from the first endpoint
+ * that has one; a stream's or a channel's chain names none.
+ */
+function builderIn(literal: ObjectExpression, text: string): string | undefined {
+  for (const property of literal.properties) {
+    if (property.type !== "Property") continue;
+    let current: Expression = property.value;
+    let builder: string | undefined;
+    while (current.type === "CallExpression" && current.callee.type === "MemberExpression") {
+      const { callee } = current;
+      const name = callee.property.type === "Identifier" ? callee.property.name : "";
+      if (!callee.computed && HTTP_METHODS.has(name))
+        builder = text.slice(callee.object.start, callee.object.end);
+      current = callee.object;
+    }
+    if (builder !== undefined) return builder;
   }
-  return current?.type === "Identifier" ? current.name : undefined;
+  return undefined;
 }

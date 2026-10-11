@@ -173,3 +173,34 @@ describe("a client on the 2025 handshake over HTTP", () => {
     expect(upstream.received).toEqual(["DELETE /orders/7"]);
   });
 });
+
+describe("the application's endpoint under the project's agents policy", () => {
+  it("offers what the policy it is given offers, and keeps out what the policy denies", async () => {
+    const client = await modernClient(
+      await endpoint({ agents: { offer: "reads", deny: ["shop.orders.cancel"] } }),
+      "admin-key",
+      "accept",
+    );
+
+    const { tools } = await client.listTools();
+    const report = tools.find((tool) => tool.name === "orders_report");
+
+    expect(tools.map((tool) => tool.name)).toEqual([
+      "orders_get",
+      "orders_list",
+      "orders_create",
+      "orders_report",
+    ]);
+    expect(report?.description).toBe("GET orders/report — shop.orders.report");
+    await expect(
+      client.callTool({ name: "orders_cancel", arguments: { id: "7" } }),
+    ).rejects.toThrow(/Unknown tool/);
+    expect(upstream.received).toEqual([]);
+  });
+
+  it("refuses a policy it cannot decide by when it is created", async () => {
+    await expect(endpoint({ agents: { offer: "everything" } as never })).rejects.toThrow(
+      expect.objectContaining({ code: "AGENT_POLICY_INVALID" }),
+    );
+  });
+});

@@ -6,6 +6,7 @@ import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { checkedPolicy } from "../../src/policy/checked-policy";
 import { buildCatalog } from "../../src/tools/catalog";
 
 const { endpoint } = courier();
@@ -158,5 +159,135 @@ describe("a tool's schemas", () => {
       required: ["id", "part"],
     });
     expect(byName.get("byPath")?.takesVariables).toBe(false);
+  });
+});
+
+describe("a catalog under the agents policy", () => {
+  const shop = defineApi({
+    name: "shop",
+    baseURL: "https://s.example",
+    groups: {
+      orders: defineGroup({
+        prefix: "orders",
+        endpoints: {
+          get: endpoint.get(":id").meta({ summary: "One order by its id" }),
+          list: endpoint.get(""),
+          create: endpoint.post("").meta({ description: "  Place an order  " }),
+          cancel: endpoint.del(":id"),
+          refund: endpoint
+            .post(":id/refund")
+            .agent({ description: "Refund an order in full", access: "destructive" }),
+          payouts: endpoint.get("payouts").agent(false),
+        },
+      }),
+    },
+  });
+  const billing = defineApi({
+    name: "billing",
+    baseURL: "https://b.example",
+    endpoints: { charge: endpoint.post("charge") },
+  });
+
+  it("offers every read with offer reads, each describing itself from its definition or its call", () => {
+    const { tools } = buildCatalog({ shop }, { policy: checkedPolicy({ offer: "reads" }) });
+
+    expect(
+      tools.map((tool) => [tool.name, tool.offeredBy, tool.agent.access, tool.agent.description]),
+    ).toEqual([
+      ["orders_get", "offer", "read", "One order by its id"],
+      ["orders_list", "offer", "read", "GET orders — shop.orders.list"],
+      ["orders_refund", "marked", "destructive", "Refund an order in full"],
+    ]);
+  });
+
+  it("offers writes with the access their verb implies, and a person confirms as confirm says", () => {
+    const { tools } = buildCatalog(
+      { shop },
+      { policy: checkedPolicy({ offer: "all", confirm: "write" }) },
+    );
+
+    expect(
+      tools.map((tool) => [tool.name, tool.agent.access, tool.confirm, tool.agent.description]),
+    ).toEqual([
+      ["orders_get", "read", false, "One order by its id"],
+      ["orders_list", "read", false, "GET orders — shop.orders.list"],
+      ["orders_create", "write", true, "Place an order"],
+      ["orders_cancel", "destructive", true, "DELETE orders/:id — shop.orders.cancel"],
+      ["orders_refund", "destructive", true, "Refund an order in full"],
+    ]);
+  });
+
+  it("says for every endpoint what decided it, and the tool it became", () => {
+    const { entries } = buildCatalog(
+      { shop },
+      { policy: checkedPolicy({ offer: "reads", deny: ["shop.orders.get"] }) },
+    );
+
+    expect(
+      entries.map((entry) => [entry.path, entry.verb, entry.decision.by, entry.tool ?? null]),
+    ).toEqual([
+      ["shop.orders.get", "GET", "deny", null],
+      ["shop.orders.list", "GET", "offer", "orders_list"],
+      ["shop.orders.create", "POST", "unmarked", null],
+      ["shop.orders.cancel", "DELETE", "unmarked", null],
+      ["shop.orders.refund", "POST", "marked", "orders_refund"],
+      ["shop.orders.payouts", "GET", "opted-out", null],
+    ]);
+  });
+
+  it("leaves out an offered endpoint whose name a marked tool holds, or one too long, saying why", () => {
+    const clash = defineApi({
+      name: "clash",
+      baseURL: "https://c.example",
+      endpoints: {
+        list: endpoint.get("list"),
+        count: endpoint.get("count").agent({ ...read("How many"), name: "list" }),
+        [`a${"x".repeat(70)}`]: endpoint.get("long"),
+      },
+    });
+
+    const catalog = buildCatalog({ clash }, { policy: checkedPolicy({ offer: "reads" }) });
+
+    expect(catalog.tools.map((tool) => tool.name)).toEqual(["list"]);
+    expect(catalog.byName.get("list")?.path).toBe("clash.count");
+    expect(catalog.entries.map((entry) => entry.left ?? null)).toEqual([
+      "its tool name list is clash.count's: mark it .agent({ name })",
+      null,
+      "its tool name would be longer than the 64 characters a client takes: mark it .agent({ name })",
+    ]);
+    expect(catalog.warnings).toEqual([
+      "clash.list is offered, but left out: its tool name list is clash.count's: mark it .agent({ name })",
+      `clash.a${"x".repeat(70)} is offered, but left out: its tool name would be longer than the 64 characters a client takes: mark it .agent({ name })`,
+    ]);
+  });
+
+  it("warns of a pattern that names no endpoint of any source, served or not", () => {
+    const policy = checkedPolicy({ deny: ["billing.**", "payments.**"], allow: ["shop.orderz.*"] });
+
+    const { warnings } = buildCatalog({ shop, billing }, { only: ["shop"], policy });
+
+    expect(warnings).toEqual([
+      'agents.deny has "payments.**", which names no endpoint',
+      'agents.allow has "shop.orderz.*", which names no endpoint',
+    ]);
+  });
+
+  it("warns past 40 tools, where some clients slow down or leave tools out", () => {
+    const wide = defineApi({
+      name: "wide",
+      baseURL: "https://w.example",
+      endpoints: Object.fromEntries(
+        Array.from({ length: 41 }, (_, at) => [`read${at}`, endpoint.get(`r/${at}`)]),
+      ),
+    });
+
+    const { tools, warnings } = buildCatalog(
+      { wide },
+      { policy: checkedPolicy({ offer: "reads" }) },
+    );
+
+    expect(tools).toHaveLength(41);
+    expect(warnings).toEqual([expect.stringMatching(/^41 tools are offered: past 40/)]);
+    expect(buildCatalog({ wide }).warnings).toEqual([]);
   });
 });

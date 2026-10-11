@@ -1,7 +1,9 @@
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
 import { createLogger, getSources } from "@noverax/courier";
 
+import type { Narrowing } from "./policy/checked-policy";
+import { checkSourceNames } from "./project/check-source-names";
+import { loadEnvFiles } from "./project/load-env-files";
+import { projectPolicy } from "./project/project-policy";
 import { createMcpServer } from "./protocol/mcp-server";
 import { requestStates } from "./protocol/request-state";
 import { courierTools } from "./tools/courier-tools";
@@ -18,6 +20,8 @@ export interface ProjectServer {
   readonly only?: readonly string[] | undefined;
   /** Files of environment variables to load first, relative to the root. */
   readonly envFiles?: readonly string[] | undefined;
+  /** What the start narrows the project's `agents` policy by: never wider than the config. */
+  readonly narrowing?: Narrowing | undefined;
   readonly allowDestructive: boolean;
   /** How long a call may take when its endpoint names no timeout, in milliseconds. */
   readonly timeoutMs: number;
@@ -33,7 +37,9 @@ export interface ProjectServer {
  *
  * The project's `courier.config.*` is loaded as the application's runtime
  * loads it, which registers its sources and — outside production, with
- * Studio running — shows every call an agent makes in Studio.
+ * Studio running — shows every call an agent makes in Studio. Its `agents`
+ * policy decides what is offered, as it stands when the server starts,
+ * narrowed by `--read-only` and `--deny`.
  *
  * @param options - The project, which sources, and the stdio streams
  * @returns Settles once the client closes the connection
@@ -44,32 +50,20 @@ export interface ProjectServer {
  * ```
  */
 export async function serveProject(options: ProjectServer): Promise<void> {
-  for (const file of options.envFiles ?? []) {
-    const path = resolve(options.root, file);
-    if (!existsSync(path)) throw new Error(`--dotenv ${file}: there is no file at ${path}`);
-    process.loadEnvFile(path);
-  }
+  loadEnvFiles(options.root, options.envFiles);
   process.chdir(options.root);
   const { attachRuntime } = await import("@noverax/courier-studio-core/runtime");
-  await attachRuntime("mcp");
-  const sources = getSources();
-  if (sources === undefined || Object.keys(sources).length === 0) {
-    throw new Error(
-      `No sources to offer: ${options.root} has no courier.config.* that declares them (see above)`,
-    );
-  }
-  const unknown = options.only?.find((name) => !Object.hasOwn(sources, name));
-  if (unknown !== undefined) {
-    throw new Error(
-      `--source ${unknown}: courier.config has no such source — it has ${Object.keys(sources).join(", ")}`,
-    );
-  }
-  const tools = toolSource(undefined, { only: options.only });
-  const { tools: offered } = tools.catalog();
+  const runtime = await attachRuntime("mcp");
+  checkSourceNames(getSources(), options.root, options.only);
+  const tools = toolSource(undefined, {
+    only: options.only,
+    policy: projectPolicy(() => runtime.config(), options.narrowing ?? {}),
+  });
+  const catalog = tools.catalog();
   log.info(
-    offered.length === 0
-      ? "No endpoint is marked .agent(), so there are no tools to offer"
-      : `${offered.length} tool${offered.length === 1 ? "" : "s"}: ${offered.map((tool) => tool.name).join(", ")}`,
+    catalog.tools.length === 0
+      ? "No endpoint is offered to agents: mark one .agent(), or offer some in courier.config's agents"
+      : `${catalog.tools.length} tool${catalog.tools.length === 1 ? "" : "s"}: ${catalog.tools.map((tool) => tool.name).join(", ")}`,
   );
   const server = createMcpServer({
     info: options.info,

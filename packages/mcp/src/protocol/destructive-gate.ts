@@ -8,6 +8,7 @@ import {
   decisionOf,
   notRun,
   shownCall,
+  whatItDoes,
 } from "./confirmation";
 import type { Connection } from "./connection";
 import type { Era } from "./era";
@@ -35,7 +36,7 @@ export interface GatedCall {
 }
 
 /**
- * Let a destructive call through once a person has confirmed it.
+ * Let a call a person confirms through once a person has confirmed it.
  *
  * Under 2026-07-28 the question goes back inside the result, and the client
  * calls again with the answer and the state it was given. Under the
@@ -94,7 +95,7 @@ async function confirmedByRetry(call: GatedCall): Promise<Gate> {
     if (decision !== undefined) return call.refuse("aborted", notRun(tool, decision, options));
   }
   if (!canAsk(era.capabilities)) {
-    const message = `${tool.name} cannot be undone, so a person confirms each call, and this request declares no elicitation`;
+    const message = `${tool.name} ${whatItDoes(tool)}, so a person confirms each call, and this request declares no elicitation`;
     call.refuse("aborted", message);
     throw new McpProtocolError(ERROR_CODE.missingCapability, message, {
       requiredCapabilities: { elicitation: { form: {} } },

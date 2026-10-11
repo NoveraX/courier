@@ -1,5 +1,11 @@
-import { isCall, isFinding, isRecord, isSite, isStats } from "./studio-guards";
-import type { CallSite, EndpointCall, EndpointStats, Finding } from "./studio-types";
+import { isCall, isDefinition, isFinding, isRecord, isSite, isStats } from "./studio-guards";
+import type {
+  CallSite,
+  EndpointCall,
+  EndpointDefinition,
+  EndpointStats,
+  Finding,
+} from "./studio-types";
 
 /* Studio answers on this machine at once; one that takes longer is not answering. */
 const TIMEOUT_MS = 4_000;
@@ -77,6 +83,23 @@ export async function fetchSites(
 export async function fetchFindings(studio: string): Promise<Finding[]> {
   const answer = await postTo(studio, "/api/editor/findings", {}, [404]);
   return listOf(answer, "findings", isFinding);
+}
+
+/**
+ * Ask Studio where the project's files declare each endpoint. A Studio
+ * older than the route answers 404, which reads as none found.
+ *
+ * @param studio - Studio's address
+ * @returns The declarations
+ * @throws {Error} When Studio does not answer
+ * @example
+ * ```ts
+ * const definitions = await fetchDefinitions(studio);
+ * ```
+ */
+export async function fetchDefinitions(studio: string): Promise<EndpointDefinition[]> {
+  const answer = await postTo(studio, "/api/editor/definitions", {}, [404]);
+  return listOf(answer, "definitions", isDefinition);
 }
 
 async function postTo(

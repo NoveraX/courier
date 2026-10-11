@@ -46,6 +46,9 @@ export interface CallSite {
   readonly path: string;
   readonly line: number;
   readonly column: number;
+  /** Where the call's name ends — an older Studio leaves it out */
+  readonly endLine?: number | undefined;
+  readonly endColumn?: number | undefined;
   /** The line as written, trimmed */
   readonly code: string;
 }
@@ -58,4 +61,22 @@ export interface Finding {
   readonly description: string;
   readonly suggestion?: string | undefined;
   readonly endpoints: readonly (EndpointName & { readonly detail?: string | undefined })[];
+}
+
+/** A stretch of a file: lines and columns from 1, the end just past it. */
+export interface TextSpan {
+  readonly line: number;
+  readonly column: number;
+  readonly endLine: number;
+  readonly endColumn: number;
+}
+
+/** Where the project's files declare an endpoint, as Studio found it. */
+export interface EndpointDefinition extends EndpointName, TextSpan {
+  /** The file, relative to the project's root */
+  readonly file: string;
+  /** Its absolute path, links resolved */
+  readonly path: string;
+  /** The whole declaration: its name, and the chain that builds it */
+  readonly span: TextSpan;
 }

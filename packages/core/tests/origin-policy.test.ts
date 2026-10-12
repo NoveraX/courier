@@ -289,6 +289,62 @@ describe("isOriginAllowed — a wildcard with a scheme", () => {
 });
 
 /**
+ * A pattern without a scheme covers a host's sub-domains over any scheme, as
+ * documented — plain HTTP included — and is matched against the host of an
+ * origin as a browser writes one. Compared as a string, it also matched
+ * values no browser sends, whose host is another site's.
+ */
+describe("isOriginAccepted — a wildcard without a scheme", () => {
+  const allowed = ["*.example.com"];
+  const listed = (origin: string, patterns = allowed) =>
+    isOriginAccepted(origin, APP, patterns, "cross-site");
+
+  it("matches a sub-domain over any scheme on its default port", () => {
+    expect(listed("https://a.example.com")).toBe(true);
+    expect(listed("https://A.B.EXAMPLE.COM")).toBe(true);
+    expect(listed("http://a.example.com")).toBe(true);
+    expect(listed("capacitor://app.example.com")).toBe(true);
+  });
+
+  it("refuses the apex, another port and a host that only ends in the same letters", () => {
+    expect(listed("https://example.com")).toBe(false);
+    expect(listed("https://a.example.com:8443")).toBe(false);
+    expect(listed("https://evilexample.com")).toBe(false);
+    expect(listed("https://example.com.evil.com")).toBe(false);
+  });
+
+  it("matches the port it names over any scheme", () => {
+    const withPort = ["*.example.com:8443"];
+
+    expect(listed("https://a.example.com:8443", withPort)).toBe(true);
+    expect(listed("http://a.example.com:8443", withPort)).toBe(true);
+    expect(listed("https://a.example.com", withPort)).toBe(false);
+  });
+
+  it("refuses a value no browser sends as an origin, whose host is another site's", () => {
+    for (const forged of [
+      "https://evil.com?.example.com",
+      "https://evil.com#.example.com",
+      "https://evil.com/.example.com",
+      "https://evil.com\\.example.com",
+      "https://evil.com@a.example.com",
+      "https://a.example.com/",
+      "https://a.example.com:443",
+    ]) {
+      expect(listed(forged), forged).toBe(false);
+    }
+  });
+
+  it("refuses such a value against a pattern that names its scheme too", () => {
+    const withScheme = ["https://*.example.com"];
+
+    expect(listed("https://evil.com@a.example.com", withScheme)).toBe(false);
+    expect(listed("https://a.example.com:443", withScheme)).toBe(false);
+    expect(listed("https://a.example.com", withScheme)).toBe(true);
+  });
+});
+
+/**
  * An `<img>` or a link on another site sends no `Origin`, so the rule that
  * admits an Origin-less request let any page drive a proxy GET with the
  * user's cookies — including a `.reads()` endpoint that POSTs upstream.

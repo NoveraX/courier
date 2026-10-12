@@ -58,7 +58,9 @@ export function isOriginAllowed(request: Request, allowedOrigins?: readonly stri
  *
  * A pattern is an exact origin, `https://*.example.com` for the sub-domains of
  * a host over one scheme and port, or `*.example.com` for them over any scheme
- * on the default port — `*.example.com:8443` on another.
+ * on the default port — `*.example.com:8443` on another. Any scheme includes
+ * plain HTTP, whose pages anyone on the visitor's network can rewrite, so a
+ * pattern names its scheme unless such a page must call the app.
  *
  * @param origin - The `Origin` header, or null when absent
  * @param self - The origin the request was addressed to
@@ -99,6 +101,8 @@ export function isOriginAccepted(
  * @example
  * ```ts
  * isOriginListed("https://a.example.com", ["https://*.example.com"]); // → true
+ * isOriginListed("http://a.example.com", ["https://*.example.com"]); // → false
+ * isOriginListed("http://a.example.com", ["*.example.com"]); // → true: any scheme
  * ```
  */
 export function isOriginListed(origin: string, allowedOrigins?: readonly string[]): boolean {
@@ -140,25 +144,38 @@ function selfOrigin(request: Request): string | null {
 }
 
 /**
- * Case-insensitive match. A wildcard covers sub-domains but not the apex; with
- * a scheme it also holds the scheme and the port to the ones it names.
+ * Case-insensitive match. A wildcard covers sub-domains but not the apex, on
+ * the port it names or else the default one; with a scheme it holds the
+ * origin to that scheme, and without one it admits any — plain HTTP too. It
+ * is matched against the host of an origin as a browser writes one, so a
+ * value no browser sends — with a path, a query or a user — matches none.
  */
 function matchesOrigin(origin: string, pattern: string): boolean {
   const candidate = origin.toLowerCase();
   const allowed = pattern.toLowerCase();
   if (candidate === allowed) return true;
-  if (allowed.startsWith("*.")) return candidate.endsWith(`.${allowed.slice(2)}`);
+  const anyScheme = allowed.startsWith("*.");
+  if (!anyScheme && !allowed.includes("://*.")) return false;
+  const actual = sentOrigin(candidate);
+  if (!actual) return false;
+  if (anyScheme) return actual.host.endsWith(`.${allowed.slice(2)}`);
 
-  if (!allowed.includes("://*.")) return false;
   const expected = parseOrigin(allowed.replace("://*.", "://"));
-  const actual = parseOrigin(candidate);
   return (
     !!expected &&
-    !!actual &&
     actual.protocol === expected.protocol &&
     actual.port === expected.port &&
     actual.hostname.endsWith(`.${expected.hostname}`)
   );
+}
+
+/**
+ * An origin as a browser writes one — its scheme, its host and a port other
+ * than the scheme's default, nothing more — or nothing for any other value.
+ */
+function sentOrigin(value: string): URL | undefined {
+  const url = parseOrigin(value);
+  return url && `${url.protocol}//${url.host}` === value ? url : undefined;
 }
 
 /** Parse an origin or URL, or nothing when it does not parse. */

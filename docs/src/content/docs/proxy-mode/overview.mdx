@@ -112,7 +112,7 @@ courierHandler({
 })
 ```
 
-`https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme on its default port; name the port to cover another, as in `*.example.com:8443`.
+`https://*.example.com` covers the sub-domains of `example.com` over HTTPS on the default port, not the apex. A pattern without a scheme, `*.example.com`, covers them over any scheme on its default port; name the port to cover another, as in `*.example.com:8443`. Any scheme includes plain HTTP, and anyone on a visitor's network can answer for an HTTP name with a page of their own, which then calls the proxy with the visitor's cookies — so prefer `https://*.example.com` unless a page served over HTTP must call it.
 
 An entry is written as a browser sends an origin — no path, no trailing slash, the scheme's default port left out — since one written otherwise could never match. Such an entry stops the handler from being created, with `INVALID_ALLOWED_ORIGIN` naming the form to use. `null` is refused as well: every sandboxed frame and `data:` page sends it, whatever site it belongs to.
 

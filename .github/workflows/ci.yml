@@ -15,6 +15,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Every job reads the repository and nothing more; the release job asks for
+# what publishing needs on its own.
+permissions:
+  contents: read
+
 jobs:
   ci:
     runs-on: ubuntu-latest

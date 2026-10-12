@@ -9,6 +9,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   # A squash merge writes the title, or a single commit's subject, as the
   # commit header and appends " (#<number>)". Nothing else checks that header

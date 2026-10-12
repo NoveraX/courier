@@ -1,6 +1,8 @@
 # Updates arrive grouped, once a week, as conventional commits the release
 # reads: a runtime dependency as a fix, a dev dependency or an action as a
-# chore.
+# chore. The site is no part of a release, so its updates come as chores.
+# The Expo example follows its SDK, which `npx expo install --fix` keeps it
+# in step with, so it is left out.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -26,3 +28,15 @@ updates:
       interval: weekly
     commit-message:
       prefix: ci
+
+  - package-ecosystem: npm
+    directory: /docs
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      site:
+        update-types: [minor, patch]

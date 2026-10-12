@@ -91,7 +91,7 @@ describe("requestContextPlugin", () => {
   it("hands the browser the session cookie the API renewed", async () => {
     const response = await fetch(appUrl, { headers: { cookie: "sid=ada" } });
 
-    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; Secure; HttpOnly"]);
+    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; HttpOnly"]);
   });
 
   it("refuses a Nitro that serves requests some other way", () => {

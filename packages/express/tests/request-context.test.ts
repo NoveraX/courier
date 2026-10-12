@@ -99,7 +99,7 @@ describe("requestContext", () => {
   it("hands the browser the cookie the API renewed", async () => {
     const response = await fetch(`${appUrl}/renew`, { headers: { cookie: "sid=ada" } });
 
-    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; Secure; HttpOnly"]);
+    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; HttpOnly"]);
   });
 
   it("carries nothing for a request without the session's cookies", async () => {

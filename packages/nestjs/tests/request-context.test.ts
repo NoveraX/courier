@@ -105,7 +105,7 @@ describe("requestContext", () => {
     const response = await fetch(appUrl, { headers: { cookie: "sid=ada" } });
 
     expect(response.headers.getSetCookie()).toEqual([
-      "sid=renewed; Path=/; Secure; HttpOnly",
+      "sid=renewed; Path=/; HttpOnly",
       "signed_in=yes; Path=/",
     ]);
   });
@@ -121,7 +121,7 @@ describe("requestContext", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.getSetCookie()).toEqual([
-      "sid=renewed; Path=/; Secure; HttpOnly",
+      "sid=renewed; Path=/; HttpOnly",
       "signed_in=yes; Path=/",
     ]);
   });

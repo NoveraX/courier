@@ -77,8 +77,9 @@ jobs:
 
       - name: The session in ${{ matrix.target }}
         env:
-          TARGET: ${{ matrix.target }}
-        run: npm run test:frameworks -- "$TARGET"
+          # Not TARGET: vinxi reads that one as SolidStart's Nitro preset
+          FRAMEWORK_TARGET: ${{ matrix.target }}
+        run: npm run test:frameworks -- "$FRAMEWORK_TARGET"
 
       - name: Keep what a failure left
         if: failure()

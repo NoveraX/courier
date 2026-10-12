@@ -77,8 +77,9 @@ jobs:
 
       - name: The quick start with ${{ matrix.target }}
         env:
-          TARGET: ${{ matrix.target }}
-        run: npm run test:quickstart -- "$TARGET"
+          # Not TARGET: vinxi reads that one as SolidStart's Nitro preset
+          QUICKSTART_TARGET: ${{ matrix.target }}
+        run: npm run test:quickstart -- "$QUICKSTART_TARGET"
 
       - name: Keep what a failure left
         if: failure()

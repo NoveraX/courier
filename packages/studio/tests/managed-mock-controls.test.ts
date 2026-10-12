@@ -7,11 +7,11 @@
  * active chaos preset goes on failing requests as the Network view shows.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  type ChildReadyData,
   createProcessManager,
   type ProcessManagerEvents,
 } from "../src/server/mock-manager/process-manager";
@@ -54,22 +54,14 @@ function project(): string {
   return join(root, "courier.mocks.ts");
 }
 
-async function freePort(): Promise<number> {
-  const probe = createServer();
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  const { port } = probe.address() as { port: number };
-  await new Promise<void>((resolve) => probe.close(() => resolve()));
-  return port;
-}
-
 type SentEvent = Record<string, unknown>;
 
 async function startMock() {
   const events = {
-    onReady: vi.fn(),
-    onError: vi.fn(),
+    onReady: vi.fn<(serverId: string, data: ChildReadyData) => void>(),
+    onError: vi.fn<(serverId: string, message: string, fatal: boolean) => void>(),
     onStopped: vi.fn(),
-    onExited: vi.fn(),
+    onExited: vi.fn<(serverId: string, reason: string) => void>(),
     onEvent: vi.fn<(serverId: string, event: SentEvent) => void>(),
   } satisfies ProcessManagerEvents;
   const pm = createProcessManager(events, {
@@ -77,16 +69,26 @@ async function startMock() {
     storeFile: () => null,
   });
   cleanups.push(() => pm.dispose());
-  const port = await freePort();
+  /* Port 0: the system picks one as the worker binds, which no other test can take in between. */
   pm.spawn({
     serverId: "apiMock",
     mocksFile: project(),
     mockKey: "apiMock",
-    port,
+    port: 0,
     strictPort: true,
     avoidPorts: [],
   });
-  await vi.waitFor(() => expect(events.onReady).toHaveBeenCalled(), { timeout: 15_000 });
+  /* Ready, or why not: a start that failed says so at once, not when the wait runs out. */
+  const failed = () => [
+    ...events.onError.mock.calls.filter(([, , fatal]) => fatal).map(([, message]) => message),
+    ...events.onExited.mock.calls.map(([, why]) => why),
+  ];
+  await vi.waitFor(
+    () => expect(events.onReady.mock.calls.length + failed().length).toBeGreaterThan(0),
+    { timeout: 15_000 },
+  );
+  expect(failed()).toEqual([]);
+  const port = events.onReady.mock.calls[0]?.[1].port;
 
   /** Send a command and wait for the network config event it answers with. */
   async function command(action: string, payload: Record<string, unknown>): Promise<SentEvent> {

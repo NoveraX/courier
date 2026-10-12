@@ -4,11 +4,13 @@
  * that changed the mock — unless the mock says `persist: false`.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { createServer } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createProcessManager } from "../src/server/mock-manager/process-manager";
+import {
+  type ChildReadyData,
+  createProcessManager,
+} from "../src/server/mock-manager/process-manager";
 import type { ProcessManager } from "../src/server/mock-manager/types";
 import { mockStoreFile } from "../src/server/mock-store-file";
 
@@ -48,20 +50,12 @@ function project(options: string): { root: string; mocksFile: string } {
   return { root, mocksFile: join(root, "courier.mocks.ts") };
 }
 
-async function freePort(): Promise<number> {
-  const probe = createServer();
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  const { port } = probe.address() as { port: number };
-  await new Promise<void>((resolve) => probe.close(() => resolve()));
-  return port;
-}
-
 function workers(root: string) {
   const events = {
-    onReady: vi.fn(),
-    onError: vi.fn(),
+    onReady: vi.fn<(serverId: string, data: ChildReadyData) => void>(),
+    onError: vi.fn<(serverId: string, message: string, fatal: boolean) => void>(),
     onStopped: vi.fn(),
-    onExited: vi.fn(),
+    onExited: vi.fn<(serverId: string, reason: string) => void>(),
     onEvent: vi.fn(),
   };
   const pm = createProcessManager(events, {
@@ -73,23 +67,30 @@ function workers(root: string) {
 }
 
 async function start(
-  { pm, events }: { pm: ProcessManager; events: { onReady: ReturnType<typeof vi.fn> } },
+  { pm, events }: { pm: ProcessManager; events: ReturnType<typeof workers>["events"] },
   mocksFile: string,
 ): Promise<number> {
-  const port = await freePort();
   const before = events.onReady.mock.calls.length;
+  /* Port 0: the system picks one as the worker binds, which no other test can take in between. */
   pm.spawn({
     serverId: "apiMock",
     mocksFile,
     mockKey: "apiMock",
-    port,
+    port: 0,
     strictPort: true,
     avoidPorts: [],
   });
-  await vi.waitFor(() => expect(events.onReady.mock.calls.length).toBe(before + 1), {
-    timeout: 15_000,
-  });
-  return port;
+  /* Ready, or why not: a start that failed says so at once, not when the wait runs out. */
+  const failed = () => [
+    ...events.onError.mock.calls.filter(([, , fatal]) => fatal).map(([, message]) => message),
+    ...events.onExited.mock.calls.map(([, why]) => why),
+  ];
+  await vi.waitFor(
+    () => expect(events.onReady.mock.calls.length - before + failed().length).toBeGreaterThan(0),
+    { timeout: 15_000 },
+  );
+  expect(failed()).toEqual([]);
+  return events.onReady.mock.calls[before]?.[1].port ?? 0;
 }
 
 async function names(port: number): Promise<string[]> {

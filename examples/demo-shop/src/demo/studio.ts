@@ -7,17 +7,19 @@ const origin = process.env.DEMO_ORIGIN;
 const trustedProxies = (process.env.DEMO_TRUSTED_PROXIES ?? "")
   .split(",")
   .filter((entry) => entry.trim() !== "");
+const addressHeader = process.env.DEMO_ADDRESS_HEADER || undefined;
 
 /* Studio over the shop, as a public demo: a visitor reads everything, sends
    from the Playground and drives the mocks; the link with the token, printed
    here, is the host's. The public origin is the page's when Studio sits
    behind a proxy on a domain of its own; the trusted proxies are a CDN or a
-   DDoS filter in front of that proxy, read past to each visitor's address. */
+   DDoS filter in front of that proxy, read past to each visitor's address,
+   or read in the header they name it in. */
 const studio = createStudioServer({
   host: process.env.STUDIO_HOST ?? "0.0.0.0",
   port: PORTS.studio,
   projectRoot: process.cwd(),
-  demo: { ...(Number.isFinite(resetsAt) ? { resetsAt } : {}), trustedProxies },
+  demo: { ...(Number.isFinite(resetsAt) ? { resetsAt } : {}), trustedProxies, addressHeader },
   extraCorsOrigins: origin ? [origin] : [],
   onStarted: ({ url }) => {
     console.log(`Studio's demo at ${url}`);

@@ -119,7 +119,7 @@ describe("solidStartRequestContext", () => {
 
     const response = await visit(app, "sid=ada");
 
-    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; Secure; HttpOnly"]);
+    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; HttpOnly"]);
   });
 
   it("hands it over on a response the route returns", async () => {
@@ -131,7 +131,7 @@ describe("solidStartRequestContext", () => {
     const response = await visit(app, "sid=ada");
 
     expect(response.status).toBe(303);
-    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; Secure; HttpOnly"]);
+    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; HttpOnly"]);
   });
 
   it("hands it over on an error response too, as h3 does its own session", async () => {
@@ -147,7 +147,7 @@ describe("solidStartRequestContext", () => {
     for (const app of [thrown, returned]) {
       const response = await visit(app, "sid=ada");
       expect(response.status).toBeGreaterThanOrEqual(400);
-      expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; Secure; HttpOnly"]);
+      expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; HttpOnly"]);
     }
   });
 

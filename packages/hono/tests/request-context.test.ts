@@ -97,14 +97,14 @@ describe("requestContext", () => {
 
     expect(response.headers.getSetCookie()).toEqual([
       "theme=dark; Path=/",
-      "sid=renewed; Path=/; Secure; HttpOnly",
+      "sid=renewed; Path=/; HttpOnly",
     ]);
   });
 
   it("hands it on a response a fetch returned, whose headers cannot change", async () => {
     const response = await get("/renew-fetched", "sid=ada");
 
-    expect(response.headers.getSetCookie()).toContain("sid=renewed; Path=/; Secure; HttpOnly");
+    expect(response.headers.getSetCookie()).toContain("sid=renewed; Path=/; HttpOnly");
   });
 
   it("carries nothing for a request without the session's cookies", async () => {

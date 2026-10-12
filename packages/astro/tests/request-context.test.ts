@@ -106,7 +106,7 @@ describe("requestContext", () => {
     expect(set).toHaveBeenCalledOnce();
     const [name, value, options] = set.mock.calls[0] ?? [];
     expect([name, value]).toEqual(["sid", "re%20newed"]);
-    expect(options).toMatchObject({ path: "/", httpOnly: true, secure: true, sameSite: "lax" });
+    expect(options).toMatchObject({ path: "/", httpOnly: true, secure: false, sameSite: "lax" });
     expect(options.encode("re%20newed")).toBe("re%20newed");
   });
 

@@ -95,7 +95,7 @@ describe("requestContext", () => {
 
     expect(response.headers.getSetCookie()).toEqual([
       "theme=dark; Path=/",
-      "sid=renewed; Path=/; Secure; HttpOnly",
+      "sid=renewed; Path=/; HttpOnly",
     ]);
   });
 

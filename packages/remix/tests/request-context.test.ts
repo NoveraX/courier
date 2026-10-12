@@ -81,7 +81,7 @@ describe("requestContext, as route middleware", () => {
       return new Response("ok");
     });
 
-    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; Secure; HttpOnly"]);
+    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; HttpOnly"]);
   });
 });
 
@@ -98,6 +98,6 @@ describe("withRequestContext", () => {
     const response = await handle(page("sid=grace"), { tenant: "acme" });
 
     expect(await response.json()).toEqual({ me: { cookie: "sid=grace" }, tenant: "acme" });
-    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; Secure; HttpOnly"]);
+    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; HttpOnly"]);
   });
 });

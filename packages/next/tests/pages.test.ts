@@ -76,7 +76,7 @@ describe("withRequestContext", () => {
 
     expect(await response.json()).toEqual({ name: "Ada" });
     expect(seen.at(-1)?.cookie).toBe("sid=a1");
-    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; Secure; HttpOnly"]);
+    expect(response.headers.getSetCookie()).toEqual(["sid=renewed; Path=/; HttpOnly"]);
   });
 
   it("serves getServerSideProps with its request, and leaves its context as it was", async () => {

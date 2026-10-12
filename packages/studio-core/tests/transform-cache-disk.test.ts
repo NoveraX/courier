@@ -485,9 +485,9 @@ describe("createTransformCache with a directory it cannot use", () => {
     expect(config).toEqual({ code: `compiled:${optionsFor().source}` });
     expect(sources).toEqual({ code: `compiled:${optionsFor().source}` });
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(String(warn.mock.calls[0]?.[1])).toMatch(
-      new RegExp(`cannot write to ${blocked} \\((EEXIST|ENOTDIR)\\)`),
-    );
+    const message = String(warn.mock.calls[0]?.[1]);
+    expect(message).toContain(`cannot write to ${blocked} (`);
+    expect(message).toMatch(/ \((EEXIST|ENOTDIR)\); /);
   });
 
   it.skipIf(!POSIX)(
@@ -590,6 +590,26 @@ describe("createTransformCache with a directory it cannot use", () => {
       expect(warn).not.toHaveBeenCalled();
     },
   );
+
+  it("stops writing when a folder in an entry's place has the rename refused as Windows refuses one held open", () => {
+    const warn = silenceWarnings();
+    const compute = compiler();
+    createTransformCache({ directory }).transform(optionsFor(), compute);
+    const entry = entryOf(optionsFor());
+    rmSync(entry);
+    mkdirSync(entry);
+    vi.mocked(renameSync).mockImplementationOnce(() => {
+      throw errnoError("EPERM");
+    });
+    const cache = createTransformCache({ directory });
+
+    cache.transform(optionsFor({ source: "export const b = 2;" }), compute);
+    cache.transform(optionsFor({ filename: SOURCES }), compute);
+
+    expect(listing()).toEqual([basename(entry)]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0]?.[1])).toContain(`cannot write to ${directory} (EPERM)`);
+  });
 
   it.skipIf(!POSIX || process.getuid?.() === 0)(
     "warns once when entries cannot be read, transforms them, and replaces them",

@@ -174,7 +174,7 @@ describe("inspectExistingMocks", () => {
     });
   });
 
-  it("refuses a file another user owns", () => {
+  it.skipIf(process.platform === "win32")("refuses a file another user owns", () => {
     writeFileSync(join(root, "courier.mocks.ts"), MOCKS);
     const owner = statSync(join(root, "courier.mocks.ts")).uid;
     vi.spyOn(process, "getuid").mockReturnValue(owner + 1);
@@ -187,18 +187,21 @@ describe("inspectExistingMocks", () => {
     });
   });
 
-  it.skipIf(RUNS_AS_ROOT)("refuses a file another user owns when Studio runs as root", () => {
-    writeFileSync(join(root, "courier.mocks.ts"), MOCKS);
-    const owner = statSync(join(root, "courier.mocks.ts")).uid;
-    vi.spyOn(process, "getuid").mockReturnValue(0);
+  it.skipIf(RUNS_AS_ROOT || process.platform === "win32")(
+    "refuses a file another user owns when Studio runs as root",
+    () => {
+      writeFileSync(join(root, "courier.mocks.ts"), MOCKS);
+      const owner = statSync(join(root, "courier.mocks.ts")).uid;
+      vi.spyOn(process, "getuid").mockReturnValue(0);
 
-    const error = thrownBy(() => inspect());
+      const error = thrownBy(() => inspect());
 
-    expect(error).toMatchObject({
-      code: "MOCKS_NOT_OWNED",
-      message: `courier.mocks.ts belongs to user ${owner}, but Studio runs as user 0. An edited file would belong to user 0, so Studio leaves it to its owner.`,
-    });
-  });
+      expect(error).toMatchObject({
+        code: "MOCKS_NOT_OWNED",
+        message: `courier.mocks.ts belongs to user ${owner}, but Studio runs as user 0. An edited file would belong to user 0, so Studio leaves it to its owner.`,
+      });
+    },
+  );
 
   it.skipIf(RUNS_AS_ROOT)("refuses a read-only file", () => {
     writeFileSync(join(root, "courier.mocks.ts"), MOCKS);

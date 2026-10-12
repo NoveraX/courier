@@ -126,18 +126,22 @@ describe("inspectCreatedMocks", () => {
     });
   });
 
-  it("refuses when another user owns the project's config", () => {
-    const config = writeConfig("courier.config.ts");
-    const owner = statSync(config).uid;
-    vi.spyOn(process, "getuid").mockReturnValue(owner + 1);
+  /* Windows gives a file no owner a process compares its user with. */
+  it.skipIf(process.platform === "win32")(
+    "refuses when another user owns the project's config",
+    () => {
+      const config = writeConfig("courier.config.ts");
+      const owner = statSync(config).uid;
+      vi.spyOn(process, "getuid").mockReturnValue(owner + 1);
 
-    const error = thrownBy(() => inspectCreatedMocks(root, config));
+      const error = thrownBy(() => inspectCreatedMocks(root, config));
 
-    expect(error).toMatchObject({
-      code: "MOCKS_NOT_OWNED",
-      message: `courier.config.ts belongs to user ${owner}, but Studio runs as user ${owner + 1}. A mocks file Studio created would belong to user ${owner + 1}, so Studio leaves creating it to the project's owner.`,
-    });
-  });
+      expect(error).toMatchObject({
+        code: "MOCKS_NOT_OWNED",
+        message: `courier.config.ts belongs to user ${owner}, but Studio runs as user ${owner + 1}. A mocks file Studio created would belong to user ${owner + 1}, so Studio leaves creating it to the project's owner.`,
+      });
+    },
+  );
 
   it.skipIf(RUNS_AS_ROOT)("refuses when the project directory is read-only", () => {
     const config = writeConfig("courier.config.ts");

@@ -58,11 +58,11 @@ async function studio(shown: unknown): Promise<{ url: string; asked: string[] }>
   server = new Server(http);
   const asked: string[] = [];
   server.of("/ui").on("connection", (socket: ServerSocket) => {
-    socket.emit("events:replay", LIVE);
+    socket.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
     if (shown) socket.emit("view:session", shown);
     socket.on("view:live", () => {
       asked.push("view:live");
-      socket.emit("events:replay", LIVE);
+      socket.emit("events:replay", Buffer.from(JSON.stringify(LIVE)));
     });
   });
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));

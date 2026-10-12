@@ -15,7 +15,7 @@ import { isPlainObject } from "./is-plain-object";
  *
  * @example
  * ```ts
- * socket.on("mock:events:replay", (data) => { if (Array.isArray(data)) replayMockEvents(data) })
+ * socket.on("mock:events:replay", (data) => replayMockEvents(replayedEvents(data) ?? []))
  * ```
  */
 export function replayMockEvents(events: readonly unknown[]): void {

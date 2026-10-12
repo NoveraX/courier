@@ -39,6 +39,6 @@ export function bindView(socket: Socket, { sessions, view, requestLog }: ViewDep
   }
   socket.on("view:live", () => {
     view.showLive();
-    if (requestLog) socket.emit("events:replay", requestLog.events());
+    if (requestLog) socket.emit("events:replay", requestLog.replayPayload());
   });
 }

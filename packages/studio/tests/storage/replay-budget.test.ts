@@ -42,6 +42,19 @@ describe("the request log's replay", () => {
     expect(ids).toEqual(["r3", "r3", "r4", "r4"]);
     log.close();
   });
+
+  it("is sent to a page as the JSON the database keeps, the same events", () => {
+    const log = createRequestLog(studio(), 5000);
+    for (const id of ["r1", "r2", "r3", "r4"]) {
+      log.record({ type: "request:start", id, source: "api", method: "list", padding }, "s1");
+      log.record({ type: "request:end", requestId: id, status: 200, padding }, "s1");
+    }
+
+    const sent: unknown = JSON.parse(new TextDecoder().decode(log.replayPayload()));
+
+    expect(sent).toEqual(log.events());
+    log.close();
+  });
 });
 
 describe("the mock log's replay", () => {
@@ -60,6 +73,19 @@ describe("the mock log's replay", () => {
       ["mock:request:start", "m4"],
       ["mock:request:end", "m4"],
     ]);
+    log.close();
+  });
+
+  it("is sent to a page as the JSON the database keeps, the same events", () => {
+    const log = createMockLog(studio(), 5000);
+    for (const id of ["m1", "m2", "m3", "m4"]) {
+      log.record({ type: "mock:request:start", requestId: id, serverId: "shop", padding });
+      log.record({ type: "mock:request:end", requestId: id, serverId: "shop", padding });
+    }
+
+    const sent: unknown = JSON.parse(new TextDecoder().decode(log.replayPayload()));
+
+    expect(sent).toEqual(log.events());
     log.close();
   });
 });

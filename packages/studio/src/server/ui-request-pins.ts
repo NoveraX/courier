@@ -11,7 +11,7 @@ import type { RequestPins } from "./storage/request-pins";
  * @param pins - The pins kept in the project's database
  * @example
  * ```ts
- * socket.emit("events:replay", requestLog.events());
+ * socket.emit("events:replay", requestLog.replayPayload());
  * bindRequestPins(socket, stores.pins);
  * ```
  */

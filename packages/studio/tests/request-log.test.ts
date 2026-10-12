@@ -13,7 +13,7 @@ import { io as connect, type Socket } from "socket.io-client";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createStudioServer } from "../src/server";
-import { sendRuntimeEvents } from "./helpers/runtime-events";
+import { replayed, sendRuntimeEvents } from "./helpers/runtime-events";
 
 type Event = Record<string, unknown>;
 
@@ -91,7 +91,7 @@ async function ui(studio: string, token?: string): Promise<WatchingUi> {
   });
   const seen: WatchingUi = { socket, events: [], replays: [] };
   socket.on("events", (events: Event[]) => seen.events.push(...events));
-  socket.on("events:replay", (events: Event[]) => seen.replays.push(events));
+  socket.on("events:replay", (payload: unknown) => seen.replays.push(replayed(payload)));
   await new Promise<void>((resolve) => socket.once("connect", () => resolve()));
   return seen;
 }

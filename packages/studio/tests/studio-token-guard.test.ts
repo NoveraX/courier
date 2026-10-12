@@ -16,7 +16,7 @@ import { createStudioServer } from "../src/server/create-studio-server";
 import { MAX_MESSAGE_BYTES } from "../src/server/max-message-bytes";
 import { TOKEN_HEADER, TOKEN_REFUSAL, WRITING_ROUTES } from "../src/server/token-guard";
 import type { StudioServer } from "../src/server/types";
-import { sendRuntimeEvents } from "./helpers/runtime-events";
+import { replayed, sendRuntimeEvents } from "./helpers/runtime-events";
 
 const REFUSED = { error: TOKEN_REFUSAL, code: "STUDIO_TOKEN_REQUIRED" };
 
@@ -95,7 +95,9 @@ async function runtime(): Promise<Socket> {
 }
 
 function replayOf(socket: Socket): Promise<unknown> {
-  return new Promise((resolve) => socket.once("events:replay", resolve));
+  return new Promise((resolve) =>
+    socket.once("events:replay", (payload) => resolve(replayed(payload))),
+  );
 }
 
 describe("a route that changes something", () => {

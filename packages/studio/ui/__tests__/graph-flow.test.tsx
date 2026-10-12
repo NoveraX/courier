@@ -9,8 +9,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { flowNodesOf } from "@/features/explorer/flow-nodes";
+import { flowNodesOf, placedNodesOf, wiresNodeOf } from "@/features/explorer/flow-nodes";
 import type { GraphLayout, GraphNode } from "@/features/explorer/graph-types";
+import { keptPlacedNodes } from "@/features/explorer/kept-cards";
 import { GraphFlow } from "@/screens/explorer/graph-flow";
 
 function node(index: number): GraphNode {
@@ -99,6 +100,46 @@ describe("the graph as flow nodes", () => {
 
     expect(cards).toHaveLength(2);
     for (const card of cards) expect(card.style).toEqual({ pointerEvents: "all" });
+  });
+});
+
+describe("the graph laid out again as calls come in", () => {
+  it("keeps every card as the object it was while what it shows stays the same", () => {
+    const actions = { onHover: vi.fn(), onOpen: vi.fn() };
+    const placed = keptPlacedNodes(placedNodesOf);
+
+    const first = placed(layoutOf(3), actions);
+    const changed = layoutOf(3);
+    changed.nodes[1] = { ...node(1), value: { text: "40ms", tone: "warn" } };
+    const second = placed(changed, actions);
+
+    const cards = (nodes: typeof first) => nodes.filter((n) => n.type === "card");
+    expect(cards(second)[0]).toBe(cards(first)[0]);
+    expect(cards(second)[1]).not.toBe(cards(first)[1]);
+    expect(cards(second)[2]).toBe(cards(first)[2]);
+  });
+
+  it("draws every card again once what hovering or opening one does is another function", () => {
+    const placed = keptPlacedNodes(placedNodesOf);
+
+    const first = placed(layoutOf(2), { onHover: vi.fn(), onOpen: vi.fn() });
+    const second = placed(layoutOf(2), { onHover: vi.fn(), onOpen: vi.fn() });
+
+    expect(second.filter((n) => n.type === "card").some((card, at) => card === first[at])).toBe(
+      false,
+    );
+  });
+
+  it("runs the calls on the curves' node alone, leaving the cards as they were", () => {
+    const layout = layoutOf(2);
+    const before = wiresNodeOf(layout, { pulses: [], onPulseDone: vi.fn() });
+    const after = wiresNodeOf(layout, {
+      pulses: [{ id: "p1", path: "M 0 0 L 10 10", duration: 400, tone: "ok" }] as never,
+      onPulseDone: vi.fn(),
+    });
+
+    expect(after).not.toBe(before);
+    expect(after.data.edges).toBe(before.data.edges);
   });
 });
 

@@ -188,6 +188,26 @@ describe("the Explorer's graph", () => {
     expect(screen.getByText("Live call")).toBeTruthy();
   });
 
+  it("runs the calls on a layer of their own, which drawing them leaves the curves out of", async () => {
+    await openShell("/explorer");
+    const graph = region("Endpoint graph");
+
+    await settle(() =>
+      useStudioStore.setState({
+        requests: [
+          call("c9", "orders", "create", { httpMethod: "POST", startedAt: NOW }),
+          ...REQUESTS,
+        ],
+      }),
+    );
+
+    const pulse = graph.querySelector("[data-pulse]");
+    const curve = graph.querySelector('path[fill="none"][stroke-width="1.25"]');
+    expect(curve?.closest("svg")).not.toBeNull();
+    expect(pulse?.closest("svg")).not.toBeNull();
+    expect(pulse?.closest("svg")).not.toBe(curve?.closest("svg"));
+  });
+
   it("shows a node's whole address and figures while it is hovered", async () => {
     await openShell("/explorer");
     const card = screen.getByRole("button", { name: /^api · https:\/\/api\.example\.com · / });

@@ -60,7 +60,25 @@ export function flowNodesOf(
   card: CardActions,
   calls: RunningCalls = NO_CALLS,
 ): FlowNode[] {
-  const wires: WiresNode = {
+  return [wiresNodeOf(layout, calls), ...placedNodesOf(layout, card)];
+}
+
+/**
+ * The curves under every card, with the calls running along them: the one
+ * node a running call changes. The cards are built apart from it, so a call
+ * that starts or ends leaves every card the object it was, and a graph of a
+ * thousand endpoints is not handed to the flow anew for each call.
+ *
+ * @param layout - The graph's layout
+ * @param calls - The calls running along the curves
+ * @returns The curves' node
+ * @example
+ * ```ts
+ * const wires = useMemo(() => wiresNodeOf(layout, calls), [layout, calls]);
+ * ```
+ */
+export function wiresNodeOf(layout: GraphLayout, calls: RunningCalls = NO_CALLS): WiresNode {
+  return {
     id: "wires",
     type: "wires",
     position: { x: 0, y: 0 },
@@ -69,6 +87,20 @@ export function flowNodesOf(
     style: { pointerEvents: "none" },
     ...FIXED,
   };
+}
+
+/**
+ * The columns' headings and a card a node, where the layout places them.
+ *
+ * @param layout - The graph's layout
+ * @param card - What hovering and opening a card do
+ * @returns The headings, then the cards
+ * @example
+ * ```ts
+ * const placed = useMemo(() => placedNodesOf(layout, actions), [layout, actions]);
+ * ```
+ */
+export function placedNodesOf(layout: GraphLayout, card: CardActions): FlowNode[] {
   const headings = layout.columns.map(
     (column, index): HeadingNode => ({
       id: `column:${index}`,
@@ -95,5 +127,5 @@ export function flowNodesOf(
       ...FIXED,
     }),
   );
-  return [wires, ...headings, ...cards];
+  return [...headings, ...cards];
 }

@@ -37,20 +37,31 @@ export function GraphWires({
   width,
   height,
 }: GraphWiresProps): React.ReactNode {
+  /* The calls run on a layer of their own: moving inside the curves' drawing,
+     each frame of theirs drew every curve of the graph again. */
   return (
-    <svg aria-hidden="true" width={width} height={height} className="overflow-visible">
-      {edges.map((edge) => (
-        <path
-          key={edge.id}
-          d={edge.path}
-          fill="none"
-          strokeWidth={1.25}
-          strokeLinecap="round"
-          strokeOpacity={edge.opacity}
-          className={cn("transition-[stroke-opacity] duration-150", EDGE_STROKE[edge.tone])}
-        />
-      ))}
-      <GraphPulses pulses={pulses} onDone={onPulseDone} />
-    </svg>
+    <div className="relative" style={{ width, height }}>
+      <svg aria-hidden="true" width={width} height={height} className="overflow-visible">
+        {edges.map((edge) => (
+          <path
+            key={edge.id}
+            d={edge.path}
+            fill="none"
+            strokeWidth={1.25}
+            strokeLinecap="round"
+            strokeOpacity={edge.opacity}
+            className={cn("transition-[stroke-opacity] duration-150", EDGE_STROKE[edge.tone])}
+          />
+        ))}
+      </svg>
+      <svg
+        aria-hidden="true"
+        width={width}
+        height={height}
+        className="pointer-events-none absolute inset-0 overflow-visible will-change-transform"
+      >
+        <GraphPulses pulses={pulses} onDone={onPulseDone} />
+      </svg>
+    </div>
   );
 }

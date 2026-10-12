@@ -2,6 +2,7 @@ import "@xyflow/react/dist/base.css";
 
 import type { NodeProps } from "@xyflow/react";
 import { Background, BackgroundVariant, MiniMap, ReactFlow } from "@xyflow/react";
+import { useMemo, useState } from "react";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type {
   CardNode,
@@ -10,8 +11,9 @@ import type {
   RunningCalls,
   WiresNode,
 } from "@/features/explorer/flow-nodes";
-import { flowNodesOf } from "@/features/explorer/flow-nodes";
+import { placedNodesOf, wiresNodeOf } from "@/features/explorer/flow-nodes";
 import type { GraphLayout, GraphNode } from "@/features/explorer/graph-types";
+import { keptPlacedNodes } from "@/features/explorer/kept-cards";
 import { GraphControls } from "./graph-controls";
 import { GraphFoldToggle } from "./graph-fold-toggle";
 import { GraphNodeCard } from "./graph-node-card";
@@ -90,7 +92,13 @@ export function GraphFlow({
   onOpen,
   onFold,
 }: GraphFlowProps): React.ReactNode {
-  const nodes = flowNodesOf(layout, { onHover, onOpen, onFold }, calls);
+  const [kept] = useState(() => keptPlacedNodes(placedNodesOf));
+  const placed = useMemo(
+    () => kept(layout, { onHover, onOpen, onFold }),
+    [kept, layout, onHover, onOpen, onFold],
+  );
+  const wires = useMemo(() => wiresNodeOf(layout, calls), [layout, calls]);
+  const nodes = useMemo((): FlowNode[] => [wires, ...placed], [wires, placed]);
   return (
     <section
       aria-label="Endpoint graph"

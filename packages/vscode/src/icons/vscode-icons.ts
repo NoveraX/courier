@@ -1,7 +1,7 @@
 import { isAbsolute, join } from "node:path";
 
 import { isRecord } from "../studio/studio-guards";
-import { CONFIG_FILES, ICONS, MOCKS_FILES, STATE_FOLDER } from "./icon-files";
+import { CONFIG_FILES, ICONS, MOCKS_FILES, STATE_FOLDER, VSICONS_FOLDER_ICON } from "./icon-files";
 
 /** vscode-icons' settings, and its command that applies them. */
 export const VSICONS_FILES = "vsicons.associations.files";
@@ -14,21 +14,25 @@ export interface VsiconsEntry {
   readonly icon: string;
   readonly extensions: readonly string[];
   readonly filename?: boolean;
+  readonly light?: boolean;
   readonly format: "svg";
 }
 
-/** Courier's entries, and its icons by the names vscode-icons reads them under. */
+/** Courier's entries, and its icons by the names vscode-icons reads them under: the folder's drawn as vscode-icons draws its folders. */
 export const VSICONS_PLAN = {
   files: [
     { icon: "courier-config", extensions: CONFIG_FILES, filename: true, format: "svg" },
     { icon: "courier-mocks", extensions: MOCKS_FILES, filename: true, format: "svg" },
   ],
-  folders: [{ icon: "courier", extensions: [STATE_FOLDER], format: "svg" }],
+  /* `light`: vscode-icons shows the folder's light look while the editor's colour theme is light. */
+  folders: [{ icon: "courier", extensions: [STATE_FOLDER], format: "svg", light: true }],
   copies: new Map<string, string>([
     [`${ICONS.config}.svg`, "file_type_courier-config.svg"],
     [`${ICONS.mocks}.svg`, "file_type_courier-mocks.svg"],
-    [`${ICONS.folder}.svg`, "folder_type_courier.svg"],
-    [`${ICONS.folder}-open.svg`, "folder_type_courier_opened.svg"],
+    [`${VSICONS_FOLDER_ICON}.svg`, "folder_type_courier.svg"],
+    [`${VSICONS_FOLDER_ICON}-open.svg`, "folder_type_courier_opened.svg"],
+    [`${VSICONS_FOLDER_ICON}-light.svg`, "folder_type_light_courier.svg"],
+    [`${VSICONS_FOLDER_ICON}-light-open.svg`, "folder_type_light_courier_opened.svg"],
   ]),
 } as const satisfies { files: VsiconsEntry[]; folders: VsiconsEntry[]; copies: unknown };
 

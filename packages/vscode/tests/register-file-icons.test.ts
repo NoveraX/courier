@@ -33,7 +33,16 @@ beforeEach(() => {
   const root = mkdtempSync(join(tmpdir(), "courier-offer-"));
   const icons = join(root, "media", "icons");
   mkdirSync(icons, { recursive: true });
-  for (const name of ["courier-config", "courier-mocks", "folder-courier", "folder-courier-open"]) {
+  for (const name of [
+    "courier-config",
+    "courier-mocks",
+    "folder-courier",
+    "folder-courier-open",
+    "folder-courier-vsicons",
+    "folder-courier-vsicons-open",
+    "folder-courier-vsicons-light",
+    "folder-courier-vsicons-light-open",
+  ]) {
     writeFileSync(join(icons, `${name}.svg`), "<svg/>");
   }
   installed.set("vscode-icons-team.vscode-icons", {

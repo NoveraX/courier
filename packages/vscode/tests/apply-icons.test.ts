@@ -30,6 +30,12 @@ import { elsewhere, executed, installed, settings } from "./vscode-stand-in";
 const FILES = "material-icon-theme.files.associations";
 const FOLDERS = "material-icon-theme.folders.associations";
 const ICONS = ["courier-config", "courier-mocks", "folder-courier", "folder-courier-open"];
+const VSICONS_FOLDERS = [
+  "folder-courier-vsicons",
+  "folder-courier-vsicons-open",
+  "folder-courier-vsicons-light",
+  "folder-courier-vsicons-light-open",
+];
 
 let iconsDir: string;
 let home: string;
@@ -39,7 +45,9 @@ beforeEach(() => {
   const root = mkdtempSync(join(tmpdir(), "courier-icons-"));
   iconsDir = join(root, "extensions", "noverax.courier-vscode-1.2.0", "media", "icons");
   mkdirSync(iconsDir, { recursive: true });
-  for (const name of ICONS) writeFileSync(join(iconsDir, `${name}.svg`), `<svg id="${name}"/>`);
+  for (const name of [...ICONS, ...VSICONS_FOLDERS]) {
+    writeFileSync(join(iconsDir, `${name}.svg`), `<svg id="${name}"/>`);
+  }
   installed.set("PKief.material-icon-theme", {
     extensionPath: join(root, "extensions", "pkief.material-icon-theme-5.39.0"),
   });
@@ -172,6 +180,8 @@ describe("Courier's icons in vscode-icons", () => {
       "file_type_courier-mocks.svg",
       "folder_type_courier.svg",
       "folder_type_courier_opened.svg",
+      "folder_type_light_courier.svg",
+      "folder_type_light_courier_opened.svg",
     ]);
     expect(settings.get("vsicons.associations.files")).toEqual([
       mine,
@@ -179,9 +189,24 @@ describe("Courier's icons in vscode-icons", () => {
       expect.objectContaining({ icon: "courier-mocks" }),
     ]);
     expect(settings.get("vsicons.associations.folders")).toEqual([
-      { icon: "courier", extensions: [".courier"], format: "svg" },
+      { icon: "courier", extensions: [".courier"], format: "svg", light: true },
     ]);
     expect(executed).toContainEqual(["vscode-icons.regenerateIcons"]);
+  });
+
+  it("gives vscode-icons the folder drawn as it draws its own, and Material Icon Theme the one drawn as it does", async () => {
+    await applyIcons(iconsDir, "vsicons");
+    await applyIcons(iconsDir, "material");
+
+    expect(readFileSync(join(custom, "folder_type_courier.svg"), "utf8")).toBe(
+      '<svg id="folder-courier-vsicons"/>',
+    );
+    expect(readFileSync(join(custom, "folder_type_courier_opened.svg"), "utf8")).toBe(
+      '<svg id="folder-courier-vsicons-open"/>',
+    );
+    expect(readFileSync(join(home, "folder-courier.svg"), "utf8")).toBe(
+      '<svg id="folder-courier"/>',
+    );
   });
 
   it("takes them out again, the user's own kept", async () => {
@@ -205,8 +230,22 @@ describe("Courier's icons in vscode-icons", () => {
 
     await keepIconsCurrent(iconsDir);
 
-    expect(readdirSync(custom)).toHaveLength(4);
+    expect(readdirSync(custom)).toHaveLength(6);
     expect(executed).toEqual([["vscode-icons.regenerateIcons"]]);
+  });
+
+  it("brings an older Courier's entries up to this one's, the folder's light look included", async () => {
+    settings.set("vsicons.associations.folders", [
+      { icon: "courier", extensions: [".courier"], format: "svg" },
+    ]);
+    executed.length = 0;
+
+    await keepIconsCurrent(iconsDir);
+
+    expect(settings.get("vsicons.associations.folders")).toEqual([
+      { icon: "courier", extensions: [".courier"], format: "svg", light: true },
+    ]);
+    expect(settings.has("vsicons.associations.files")).toBe(false);
   });
 
   it("copies again after Courier's icons changed, and does nothing while they are current", async () => {

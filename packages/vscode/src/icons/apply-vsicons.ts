@@ -29,11 +29,15 @@ import {
  * ```
  */
 export async function applyVsicons(iconsDir: string): Promise<void> {
-  await copyIcons(copiesFor(iconsDir));
-  await changeThemeSettings(vsiconsTheme(), [
-    [VSICONS_FILES, withCourierEntries(userSetting(VSICONS_FILES), VSICONS_PLAN.files)],
-    [VSICONS_FOLDERS, withCourierEntries(userSetting(VSICONS_FOLDERS), VSICONS_PLAN.folders)],
-  ]);
+  const copied = await copyIcons(copiesFor(iconsDir));
+  await changeThemeSettings(
+    vsiconsTheme(),
+    [
+      [VSICONS_FILES, withCourierEntries(userSetting(VSICONS_FILES), VSICONS_PLAN.files)],
+      [VSICONS_FOLDERS, withCourierEntries(userSetting(VSICONS_FOLDERS), VSICONS_PLAN.folders)],
+    ],
+    copied,
+  );
 }
 
 /**
@@ -57,9 +61,11 @@ export async function removeVsicons(): Promise<void> {
  * Keep Courier's icons in vscode-icons as the user's settings say, on this
  * machine too: while the settings hold Courier's associations — set here,
  * or brought by Settings Sync from another machine — its icons are in the
- * custom icons folder, copied again and applied when they were missing or
- * Courier's changed; once no settings hold them — the user's, nor a
- * workspace's that a team shares its icons by — the copies go too.
+ * custom icons folder, copied again when they were missing or Courier's
+ * changed, and its entries as this Courier writes them, vscode-icons
+ * applying them when anything changed; once no settings hold them — the
+ * user's, nor a workspace's that a team shares its icons by — the copies
+ * go too.
  *
  * @param iconsDir - Courier's `media/icons` folder
  * @example
@@ -69,7 +75,16 @@ export async function removeVsicons(): Promise<void> {
  */
 export async function keepVsiconsCurrent(iconsDir: string): Promise<void> {
   if (hasVsiconsIcons()) {
-    if (await copyIcons(copiesFor(iconsDir))) await vsiconsTheme().apply?.();
+    const copied = await copyIcons(copiesFor(iconsDir));
+    /* Courier's own entries, where the settings hold them, as this Courier writes them: a newer one may add to them. */
+    const current = [
+      [VSICONS_FILES, VSICONS_PLAN.files],
+      [VSICONS_FOLDERS, VSICONS_PLAN.folders],
+    ] as const;
+    const changes = current
+      .filter(([key]) => hasCourierEntries(userSetting(key)))
+      .map(([key, ours]): [string, unknown] => [key, withCourierEntries(userSetting(key), ours)]);
+    await changeThemeSettings(vsiconsTheme(), changes, copied);
     return;
   }
   const anywhere = vscode.workspace.getConfiguration();

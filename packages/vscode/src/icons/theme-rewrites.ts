@@ -21,11 +21,15 @@ export interface RebuiltTheme {
  * both rebuild their theme on every change to their settings without
  * waiting for a rebuild already under way: two at once leave the theme
  * built from settings half changed — or, for vscode-icons, a file it cannot
- * read the next time it starts. When the theme rewrote nothing — it is not
- * running, or told not to react — it is asked to apply the settings, once.
+ * read the next time it starts. A setting that already holds its value is
+ * left alone. When something changed — a setting, or the icons it reads —
+ * and the theme rewrote nothing — it is not running, or told not to react
+ * — it is asked to apply its settings, once; when nothing changed, it is
+ * left alone too.
  *
  * @param theme - The theme's files, and how to ask it to apply its settings
  * @param changes - Each setting's full key and its new value
+ * @param iconsChanged - Whether the icon files the theme reads changed, which it would not notice by itself
  * @example
  * ```ts
  * await changeThemeSettings(vsiconsTheme(), [[VSICONS_FILES, files], [VSICONS_FOLDERS, folders]]);
@@ -34,14 +38,17 @@ export interface RebuiltTheme {
 export async function changeThemeSettings(
   theme: RebuiltTheme,
   changes: readonly (readonly [string, unknown])[],
+  iconsChanged = false,
 ): Promise<void> {
+  let written = false;
   let rewritten = false;
   for (const [key, value] of changes) {
     const before = await timesOf(theme.files);
     if (!(await writeUserSetting(key, value))) continue;
+    written = true;
     rewritten = (await rewriteOf(theme.files, before)) || rewritten;
   }
-  if (!rewritten) await theme.apply?.();
+  if (!rewritten && (written || iconsChanged)) await theme.apply?.();
 }
 
 async function timesOf(files: readonly string[]): Promise<number[]> {

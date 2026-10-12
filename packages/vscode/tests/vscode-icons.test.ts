@@ -68,12 +68,17 @@ describe("Courier's entries among the user's", () => {
     expect(hasCourierEntries([mine])).toBe(false);
   });
 
-  it("name the folder icon's open look as vscode-icons reads it", () => {
-    expect([...VSICONS_PLAN.copies.values()]).toEqual([
-      "file_type_courier-config.svg",
-      "file_type_courier-mocks.svg",
-      "folder_type_courier.svg",
-      "folder_type_courier_opened.svg",
+  it("name the folder's open and light looks as vscode-icons reads them, from the folder drawn in its style", () => {
+    expect([...VSICONS_PLAN.copies]).toEqual([
+      ["courier-config.svg", "file_type_courier-config.svg"],
+      ["courier-mocks.svg", "file_type_courier-mocks.svg"],
+      ["folder-courier-vsicons.svg", "folder_type_courier.svg"],
+      ["folder-courier-vsicons-open.svg", "folder_type_courier_opened.svg"],
+      ["folder-courier-vsicons-light.svg", "folder_type_light_courier.svg"],
+      ["folder-courier-vsicons-light-open.svg", "folder_type_light_courier_opened.svg"],
+    ]);
+    expect(VSICONS_PLAN.folders).toEqual([
+      { icon: "courier", extensions: [".courier"], format: "svg", light: true },
     ]);
   });
 });

@@ -7,7 +7,7 @@ import {
   remember,
   reportCollection,
 } from "./collection-report";
-import { send, sendError } from "./worker-ipc";
+import { sendError, sendEvent } from "./worker-ipc";
 
 /* The changes of a burst of requests travel together: a report follows the
    first of them by this long at least... */
@@ -74,7 +74,7 @@ export function createStoreFeed(store: MockStore): StoreFeed {
       const { now, collections, removed } = survey(whole);
       if (whole || collections.length + removed.length > 0) {
         const event = { type: "mock:store:changes", seq: seq + 1, whole, collections, removed };
-        send({ type: "event", event });
+        sendEvent(event);
         seq += 1;
       }
       reported = now;

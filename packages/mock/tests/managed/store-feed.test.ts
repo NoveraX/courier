@@ -13,8 +13,13 @@ let store: MockStore;
 
 function reports(): Array<Record<string, unknown>> {
   return sent.flatMap((m) =>
-    m.type === "event" && m.event.type === "mock:store:changes" ? [m.event] : [],
+    m.type === "events" ? m.events.filter((event) => event.type === "mock:store:changes") : [],
   );
+}
+
+/* Events leave the worker together once the turn that reported them is over. */
+function turnOver(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
 beforeEach(() => {
@@ -43,7 +48,7 @@ describe("createStoreFeed", () => {
     ]);
   });
 
-  it("reports a burst of writes once, a tenth of a second after the first", () => {
+  it("reports a burst of writes once, a tenth of a second after the first", async () => {
     const feed = createStoreFeed(store);
     feed.start();
     for (let id = 4; id < 54; id++) {
@@ -52,8 +57,10 @@ describe("createStoreFeed", () => {
     }
 
     vi.advanceTimersByTime(99);
+    await turnOver();
     expect(reports()).toEqual([]);
     vi.advanceTimersByTime(1);
+    await turnOver();
 
     expect(reports()).toHaveLength(1);
     expect(reports()[0]).toMatchObject({ seq: 1, whole: false, removed: [] });
@@ -70,7 +77,7 @@ describe("createStoreFeed", () => {
     ]);
   });
 
-  it("sends no report when the writes left the store as it was", () => {
+  it("sends no report when the writes left the store as it was", async () => {
     const feed = createStoreFeed(store);
     feed.start();
     store.collection("users").create({ id: 4 });
@@ -78,11 +85,12 @@ describe("createStoreFeed", () => {
     feed.changed();
 
     vi.advanceTimersByTime(1000);
+    await turnOver();
 
     expect(reports()).toEqual([]);
   });
 
-  it("reports at once when flushed, and numbers each report after the one before", () => {
+  it("reports at once when flushed, and numbers each report after the one before", async () => {
     const feed = createStoreFeed(store);
     feed.start();
 
@@ -90,6 +98,7 @@ describe("createStoreFeed", () => {
     feed.flush();
     store.collection("users").deleteById(1);
     feed.flush();
+    await turnOver();
 
     expect(reports().map((report) => report.seq)).toEqual([1, 2]);
     expect(reports()[1]?.collections).toEqual([
@@ -97,7 +106,7 @@ describe("createStoreFeed", () => {
     ]);
   });
 
-  it("numbers reports from one again once it starts again", () => {
+  it("numbers reports from one again once it starts again", async () => {
     const feed = createStoreFeed(store);
     feed.start();
     store.collection("users").create({ id: 4 });
@@ -106,16 +115,18 @@ describe("createStoreFeed", () => {
     feed.start();
     store.collection("users").create({ id: 5 });
     feed.flush();
+    await turnOver();
 
     expect(reports().map((report) => report.seq)).toEqual([1, 1]);
   });
 
-  it("resends every collection whole, changed or not", () => {
+  it("resends every collection whole, changed or not", async () => {
     const feed = createStoreFeed(store);
     feed.start();
     store.collection("posts").create({ id: 9 });
 
     feed.resend();
+    await turnOver();
 
     expect(reports()).toEqual([
       {
@@ -131,7 +142,7 @@ describe("createStoreFeed", () => {
     ]);
   });
 
-  it("reports a collection the store no longer lists as gone", () => {
+  it("reports a collection the store no longer lists as gone", async () => {
     const names = ["users", "posts"];
     const listed: MockStore = { ...store, list: () => [...names] };
     store.collection("posts");
@@ -140,11 +151,12 @@ describe("createStoreFeed", () => {
 
     names.pop();
     feed.flush();
+    await turnOver();
 
     expect(reports()[0]).toMatchObject({ collections: [], removed: ["posts"] });
   });
 
-  it("waits five times as long as working out its last report took", () => {
+  it("waits five times as long as working out its last report took", async () => {
     const feed = createStoreFeed(store);
     feed.start();
     const now = vi.spyOn(performance, "now");
@@ -156,13 +168,15 @@ describe("createStoreFeed", () => {
     store.collection("users").create({ id: 5 });
     feed.changed();
     vi.advanceTimersByTime(399);
+    await turnOver();
     expect(reports()).toHaveLength(1);
     vi.advanceTimersByTime(1);
+    await turnOver();
 
     expect(reports()).toHaveLength(2);
   });
 
-  it("tells Studio once when a record cannot be sent, and reports again once it can", () => {
+  it("tells Studio once when a record cannot be sent, and reports again once it can", async () => {
     const feed = createStoreFeed(store);
     feed.start();
     store.collection("users").updateById(1, { size: 10n });
@@ -171,6 +185,7 @@ describe("createStoreFeed", () => {
     feed.flush();
     store.collection("users").updateById(1, { size: 10 });
     feed.flush();
+    await turnOver();
 
     const errors = sent.filter((m) => m.type === "error");
     expect(errors).toEqual([
@@ -184,7 +199,7 @@ describe("createStoreFeed", () => {
     expect(reports()[0]).toMatchObject({ seq: 1 });
   });
 
-  it("reports what changed since the last report as it closes, and nothing after", () => {
+  it("reports what changed since the last report as it closes, and nothing after", async () => {
     const feed = createStoreFeed(store);
     feed.start();
     store.collection("users").create({ id: 4 });
@@ -192,6 +207,7 @@ describe("createStoreFeed", () => {
 
     feed.close();
     vi.advanceTimersByTime(1000);
+    await turnOver();
 
     expect(reports()).toHaveLength(1);
   });

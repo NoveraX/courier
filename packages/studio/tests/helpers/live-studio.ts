@@ -13,7 +13,7 @@ export interface LiveStudio {
   root: string;
   /** The UI socket. */
   ui: Socket;
-  /** Every `event` frame the UI received, in order. */
+  /** Every event the UI received, in order, out of the `events` batches it came in. */
   events: Array<Record<string, unknown>>;
   /** Stop the UI socket and Studio, and remove the project. */
   close(): Promise<void>;
@@ -48,7 +48,7 @@ export async function startLiveStudio(files: Record<string, string> = {}): Promi
   });
   const ui = connect(`${url}/ui`, { transports: ["websocket"] });
   const events: Array<Record<string, unknown>> = [];
-  ui.on("event", (event: Record<string, unknown>) => events.push(event));
+  ui.on("events", (batch: Array<Record<string, unknown>>) => events.push(...batch));
   await new Promise<void>((resolve) => {
     ui.on("config:status", (status: { state: string }) => {
       if (status.state !== "starting") resolve();

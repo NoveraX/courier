@@ -13,6 +13,10 @@ export interface DrivenWorker {
   next<TMessage extends ChildMessage>(
     match: (message: ChildMessage) => message is TMessage,
   ): Promise<TMessage>;
+  /** Every event the worker reported, in order, out of the batches it sent them in */
+  events(): Record<string, unknown>[];
+  /** Resolve with the first event reported, now or later, that `match` accepts */
+  nextEvent(match: (event: Record<string, unknown>) => boolean): Promise<Record<string, unknown>>;
   /** Send a command and resolve with its result */
   command(
     command: Record<string, unknown>,
@@ -53,6 +57,14 @@ export function driveWorker(definition: unknown): DrivenWorker {
           return true;
         });
       });
+    },
+    events: () => sent.flatMap((message) => (message.type === "events" ? message.events : [])),
+    async nextEvent(match) {
+      const batch = await worker.next(
+        (m): m is Extract<ChildMessage, { type: "events" }> =>
+          m.type === "events" && m.events.some(match),
+      );
+      return batch.events.find(match) ?? {};
     },
     command(command) {
       const requestId = `r${sent.length}-${Math.random()}`;

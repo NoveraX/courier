@@ -1,11 +1,13 @@
 import type { Namespace, Socket } from "socket.io";
 
-import { emitLiveEvent, emitLiveEventTo } from "../live-events";
+import { emitLiveEvents, emitLiveEventTo } from "../live-events";
 import type { ServerState } from "./types";
 
 /** How the mock manager tells the pages about its mocks. */
 interface UiEmitter {
   emit(type: string, data: Record<string, unknown>): void;
+  /** Tell every page what a worker reported, in one message: each event names its type. */
+  emitAll(events: readonly Record<string, unknown>[]): void;
   /** Tell every page a mock's state. */
   emitServerState(state: ServerState): void;
   /** Tell one page that connects a mock's state. */
@@ -22,7 +24,13 @@ export function createUiEmitter(uiNamespace: Namespace): UiEmitter {
     ...data,
   });
   const emit = (type: string, data: Record<string, unknown>) => {
-    emitLiveEvent(uiNamespace, event(type, data));
+    emitLiveEvents(uiNamespace, [event(type, data)]);
+  };
+  const emitAll = (events: readonly Record<string, unknown>[]) => {
+    emitLiveEvents(
+      uiNamespace,
+      events.map((each) => event(String(each.type), each)),
+    );
   };
 
   /* Request and error counts are the UI's own tally of the events it saw, so
@@ -35,7 +43,7 @@ export function createUiEmitter(uiNamespace: Namespace): UiEmitter {
     emitLiveEventTo(socket, event("mock:server:connect", serverStateData(state)));
   };
 
-  return { emit, emitServerState, sendServerState };
+  return { emit, emitAll, emitServerState, sendServerState };
 }
 
 function serverStateData(state: ServerState): Record<string, unknown> {

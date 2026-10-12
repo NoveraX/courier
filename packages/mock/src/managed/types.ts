@@ -199,7 +199,8 @@ export type ChildMessage =
     }
   | { type: "error"; message: string; fatal: boolean }
   | { type: "stopped" }
-  | { type: "event"; event: Record<string, unknown> }
+  /** Every event a turn of the worker's event loop reported, in order. */
+  | { type: "events"; events: Record<string, unknown>[] }
   | { type: "command-result"; requestId: string; ok: boolean; data?: unknown; error?: string };
 
 // ── Process State ────────────────────────────────────────────────────────────

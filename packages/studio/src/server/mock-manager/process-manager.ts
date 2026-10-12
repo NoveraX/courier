@@ -33,7 +33,8 @@ export interface ProcessManagerEvents {
   onStopped: (serverId: string) => void;
   /** The process ended without Studio asking it to — a crash, a signal, or an exit of its own. */
   onExited: (serverId: string, reason: string) => void;
-  onEvent: (serverId: string, event: Record<string, unknown>) => void;
+  /** The events a turn of the worker's event loop reported, in order. */
+  onEvents: (serverId: string, events: readonly Record<string, unknown>[]) => void;
 }
 
 /** What every worker is told, whichever mock it serves. */
@@ -86,7 +87,7 @@ export function createProcessManager(
     if (msg.type === "ready") events.onReady(serverId, msg);
     else if (msg.type === "error") events.onError(serverId, msg.message, msg.fatal);
     else if (msg.type === "stopped") events.onStopped(serverId);
-    else if (msg.type === "event") events.onEvent(serverId, msg.event);
+    else if (msg.type === "events") events.onEvents(serverId, msg.events);
     else if (msg.type === "command-result") commands.get(child)?.settle(msg);
   }
 

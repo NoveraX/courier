@@ -11,7 +11,7 @@ import { isPlainObject } from "../is-plain-object";
  * credential — `Authorization`, a cookie, an API key — is kept by name with
  * its value replaced, the way a browser's sanitized HAR keeps it. The live
  * view, which nothing writes down, shows it whole to a page that presented
- * Studio's token alone (see `emitLiveEvent`).
+ * Studio's token alone (see `emitLiveEvents`).
  */
 
 /** What a credential's value is replaced with. */

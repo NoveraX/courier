@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 /**
- * A burst of traffic reaches the UI as thousands of socket events within a
+ * A burst of traffic reaches the UI as thousands of events within a
  * second, so the store takes them in batches: one store update per event
  * would re-render every subscriber thousands of times and leave the page so
  * busy that it fell tens of seconds behind and lost its socket.
@@ -72,19 +72,12 @@ describe("a burst of runtime events", () => {
 
     const ui = studio.io.of("/ui");
     for (let i = 0; i < REQUESTS; i++) {
-      ui.emit("event", event("request:start", i, { source: "api", method: "list" }));
-      ui.emit(
-        "event",
+      ui.emit("events", [
+        event("request:start", i, { source: "api", method: "list" }),
         event("middleware:enter", i, { requestId: `r${i}`, name: "auth", index: 0 }),
-      );
-      ui.emit(
-        "event",
         event("middleware:exit", i, { requestId: `r${i}`, name: "auth", index: 0, duration: 1 }),
-      );
-      ui.emit(
-        "event",
         event("request:end", i, { requestId: `r${i}`, status: 200, timing: { total: 1 } }),
-      );
+      ]);
     }
     await expect
       .poll(() => useStudioStore.getState().requests.filter((r) => r.status === "success").length, {

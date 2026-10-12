@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { defineMockServer } from "../../src/managed/define-mock-server";
-import type { ChildMessage } from "../../src/managed/types";
 import type { DrivenWorker } from "./drive-worker";
 import { driveWorker, startWorker, stopWorker } from "./drive-worker";
 
@@ -26,12 +25,8 @@ const api = defineApi({
   },
 });
 
-type Event = Extract<ChildMessage, { type: "event" }>;
-
-const ended = (m: ChildMessage): m is Event =>
-  m.type === "event" && m.event.type === "mock:request:end";
-const started = (m: ChildMessage): m is Event =>
-  m.type === "event" && m.event.type === "mock:request:start";
+const ended = (event: Record<string, unknown>): boolean => event.type === "mock:request:end";
+const started = (event: Record<string, unknown>): boolean => event.type === "mock:request:start";
 
 let worker: DrivenWorker;
 let url: string;
@@ -50,7 +45,7 @@ describe("the bodies of a managed mock's requests", () => {
   it("are carried as a part, with the whole's size, once too large for an event", async () => {
     const answer = await fetch(`${url}/orders`).then((res) => res.text());
 
-    const { event } = await worker.next(ended);
+    const event = await worker.nextEvent(ended);
 
     expect(event.dataCutFrom).toBe(Buffer.byteLength(answer));
     const part = event.data as unknown[];
@@ -61,7 +56,7 @@ describe("the bodies of a managed mock's requests", () => {
 
   it("are sent whole when a page asks for one the event carried a part of", async () => {
     const answer = await fetch(`${url}/orders`).then((res) => res.text());
-    const { event } = await worker.next(ended);
+    const event = await worker.nextEvent(ended);
 
     const reply = await worker.command({
       action: "mock:request:body",
@@ -80,7 +75,7 @@ describe("the bodies of a managed mock's requests", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ note }),
     });
-    const { event } = await worker.next(started);
+    const event = await worker.nextEvent(started);
 
     const reply = await worker.command({
       action: "mock:request:body",
@@ -98,7 +93,7 @@ describe("the bodies of a managed mock's requests", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ note: "short" }),
     });
-    const { event } = await worker.next(started);
+    const event = await worker.nextEvent(started);
 
     const kept = await worker.command({
       action: "mock:request:body",

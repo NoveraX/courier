@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { MAX_MESSAGE_BYTES } from "../src/server/max-message-bytes";
 import type { StudioServer } from "../src/server/types";
+import { sendRuntimeEvents } from "./helpers/runtime-events";
 
 const MB = 1024 * 1024;
 
@@ -86,15 +87,17 @@ describe.each(["websocket", "polling"] as const)(
       runtime.emit("runtime:hello", { runtimeId: "big-app", kind: "server" });
       const body = "x".repeat(3 * MB);
       const received = new Promise<unknown>((resolve) => {
-        ui.on("event", (event: { type?: unknown; id?: unknown; body?: unknown }) => {
-          if (event.type === "request:end" && event.id === "r1") {
-            resolve(typeof event.body === "string" ? event.body.length : event.body);
+        ui.on("events", (events: Array<{ type?: unknown; id?: unknown; body?: unknown }>) => {
+          for (const event of events) {
+            if (event.type === "request:end" && event.id === "r1") {
+              resolve(typeof event.body === "string" ? event.body.length : event.body);
+            }
           }
         });
       });
       const dropped = disconnection(runtime);
 
-      runtime.emit("event", { type: "request:end", id: "r1", body });
+      sendRuntimeEvents(runtime, [{ type: "request:end", id: "r1", body }]);
 
       expect(await within(received, 5_000)).toBe(body.length);
       expect(await within(dropped, 300)).toBe("timeout");
@@ -127,7 +130,9 @@ describe("a message over the limit", () => {
     const runtime = await open("/runtime", "websocket");
     const dropped = disconnection(runtime);
 
-    runtime.emit("event", { type: "request:end", id: "huge", body: "z".repeat(MAX_MESSAGE_BYTES) });
+    sendRuntimeEvents(runtime, [
+      { type: "request:end", id: "huge", body: "z".repeat(MAX_MESSAGE_BYTES) },
+    ]);
 
     expect(await within(dropped, 10_000)).not.toBe("timeout");
     await vi.waitFor(() => {

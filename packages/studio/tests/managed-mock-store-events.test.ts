@@ -57,14 +57,14 @@ async function freePort(): Promise<number> {
 
 async function startMock(): Promise<{
   port: number;
-  events: ProcessManagerEvents & { onEvent: ReturnType<typeof vi.fn> };
+  events: ProcessManagerEvents & { onEvents: ReturnType<typeof vi.fn> };
 }> {
   const events = {
     onReady: vi.fn(),
     onError: vi.fn(),
     onStopped: vi.fn(),
     onExited: vi.fn(),
-    onEvent: vi.fn(),
+    onEvents: vi.fn(),
   };
   const pm = createProcessManager(events, {
     transformCacheDirectory: () => null,
@@ -91,9 +91,9 @@ interface UsersReport {
   edits?: { added: unknown[] };
 }
 
-function usersReports(onEvent: ReturnType<typeof vi.fn>): UsersReport[] {
-  return onEvent.mock.calls
-    .map(([, event]) => event as { type?: string; collections?: UsersReport[] })
+function usersReports(onEvents: ReturnType<typeof vi.fn>): UsersReport[] {
+  return onEvents.mock.calls
+    .flatMap(([, events]) => events as Array<{ type?: string; collections?: UsersReport[] }>)
     .filter((event) => event.type === "mock:store:changes")
     .flatMap(
       (event) => event.collections?.filter((collection) => collection.name === "users") ?? [],
@@ -111,10 +111,10 @@ describe("a managed mock server's store, as Studio sees it", () => {
     });
     expect(created.ok).toBe(true);
 
-    await vi.waitFor(() => expect(usersReports(events.onEvent)).toHaveLength(1), {
+    await vi.waitFor(() => expect(usersReports(events.onEvents)).toHaveLength(1), {
       timeout: 5_000,
     });
-    expect(usersReports(events.onEvent)).toEqual([
+    expect(usersReports(events.onEvents)).toEqual([
       {
         name: "users",
         count: 4,
@@ -128,12 +128,12 @@ describe("a managed mock server's store, as Studio sees it", () => {
 
     await fetch(`http://127.0.0.1:${port}/users`);
     await vi.waitFor(() =>
-      expect(events.onEvent).toHaveBeenCalledWith(
+      expect(events.onEvents).toHaveBeenCalledWith(
         "apiMock",
-        expect.objectContaining({ type: "mock:request:end" }),
+        expect.arrayContaining([expect.objectContaining({ type: "mock:request:end" })]),
       ),
     );
 
-    expect(usersReports(events.onEvent)).toEqual([]);
+    expect(usersReports(events.onEvents)).toEqual([]);
   }, 20_000);
 });

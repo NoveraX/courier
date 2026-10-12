@@ -14,9 +14,10 @@ export type EventsStore = Pick<StudioState, "handleEvents" | "replayEvents" | "s
 type EventPayload = StudioEvent & Record<string, unknown>;
 
 /**
- * Listen for runtime events: each live `event` as it arrives, gathered into
- * batches, and the `events:replay` Studio sends on connect with the requests
- * it captured before. A mock-server event goes to the mock store at once,
+ * Listen for runtime events: the live `events` as they arrive — every
+ * message a batch of them — gathered into batches a frame long, and the
+ * `events:replay` Studio sends on connect with the requests it captured
+ * before. A mock-server event goes to the mock store at once,
  * and a mock whose store the page lost track of is asked for it whole.
  * When the pages show a saved session, Studio sends it after the replay, as
  * `view:session`, and it is shown in place of the live requests. The
@@ -44,6 +45,9 @@ export function bindEvents(socket: Socket, store: () => EventsStore): () => void
       askForStore(event.serverId);
     }
   };
+  const onEvents = (events: unknown): void => {
+    if (Array.isArray(events)) for (const event of events) onEvent(event);
+  };
   /* Live events queued before the replay arrived belong before it. */
   const onReplay = (data: unknown): void => {
     if (!Array.isArray(data)) return;
@@ -64,12 +68,12 @@ export function bindEvents(socket: Socket, store: () => EventsStore): () => void
     if (Array.isArray(data)) replayMockEvents(data);
   };
 
-  socket.on("event", onEvent);
+  socket.on("events", onEvents);
   socket.on("events:replay", onReplay);
   socket.on("view:session", onView);
   socket.on("mock:events:replay", onMockReplay);
   return () => {
-    socket.off("event", onEvent);
+    socket.off("events", onEvents);
     socket.off("events:replay", onReplay);
     socket.off("view:session", onView);
     socket.off("mock:events:replay", onMockReplay);

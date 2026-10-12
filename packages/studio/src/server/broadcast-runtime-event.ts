@@ -13,7 +13,7 @@
 import { RUNTIME_EVENT_TYPES } from "@noverax/courier-studio-core/runtime";
 import type { Namespace } from "socket.io";
 import { isPlainObject } from "./is-plain-object";
-import { emitLiveEvent } from "./live-events";
+import { emitLiveEvents } from "./live-events";
 
 /* Read from the package that emits them, so adding an event type in one
    place cannot silently start dropping it in the other. */
@@ -36,31 +36,36 @@ export function sanitizeRuntimeEvent(raw: unknown): Record<string, unknown> | un
 }
 
 /**
- * Pass a runtime event to every Studio UI, once it is validated.
+ * Pass a runtime's events to every Studio UI, in one message, once each is
+ * validated. One that fails is left out, and said in the log.
  *
  * @param uiNamespace - The UI namespace, when Studio serves one
- * @param raw - The event as the runtime sent it
+ * @param raws - The events as the runtime sent them, in order
  * @param log - Where a rejected event is noted
- * @returns The event as the UI was sent it, or `undefined` when it was not sent
+ * @returns The events as the UI was sent them; none when Studio serves no UI
  *
  * @example
  * ```ts
- * const sent = broadcastRuntimeEvent(uiNamespace, raw, log);
- * if (sent) requestLog.record(sent, socket.id);
+ * const sent = broadcastRuntimeEvents(uiNamespace, raws, log);
+ * for (const event of sent) requestLog.record(event, socket.id);
  * ```
  */
-export function broadcastRuntimeEvent(
+export function broadcastRuntimeEvents(
   uiNamespace: Namespace | undefined,
-  raw: unknown,
+  raws: readonly unknown[],
   log: { warn: (msg: string) => void },
-): Record<string, unknown> | undefined {
-  if (!uiNamespace) return undefined;
-  const event = sanitizeRuntimeEvent(raw);
-  if (!event) {
+): Record<string, unknown>[] {
+  if (!uiNamespace) return [];
+  const sent: Record<string, unknown>[] = [];
+  for (const raw of raws) {
+    const event = sanitizeRuntimeEvent(raw);
+    if (event) {
+      sent.push(event);
+      continue;
+    }
     const type = isPlainObject(raw) ? String(raw.type ?? "undefined") : "non-object";
     log.warn(`Rejected runtime event: type=${type}`);
-    return undefined;
   }
-  emitLiveEvent(uiNamespace, event);
-  return event;
+  emitLiveEvents(uiNamespace, sent);
+  return sent;
 }

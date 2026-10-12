@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { defineMockServer } from "../../src/managed/define-mock-server";
-import type { ChildMessage } from "../../src/managed/types";
 import type { DrivenWorker } from "./drive-worker";
 import { driveWorker, startWorker, stopWorker } from "./drive-worker";
 
@@ -57,10 +56,8 @@ async function count(collection: string): Promise<number> {
   return records.length;
 }
 
-function scenarioEvents(sent: ChildMessage[]): unknown[] {
-  return sent.flatMap((m) =>
-    m.type === "event" && m.event.type === "mock:scenario:active" ? [m.event.scenario] : [],
-  );
+function scenarioEvents(events: Record<string, unknown>[]): unknown[] {
+  return events.flatMap((event) => (event.type === "mock:scenario:active" ? [event.scenario] : []));
 }
 
 describe("mock:server:reset", () => {
@@ -123,7 +120,7 @@ describe("mock:scenario:apply", () => {
     const result = await worker.command({ action: "mock:scenario:apply", scenario: "constructor" });
 
     expect(result).toMatchObject({ ok: false, error: 'Scenario "constructor" not found' });
-    expect(scenarioEvents(worker.sent)).toEqual([]);
+    expect(scenarioEvents(worker.events())).toEqual([]);
     expect(await count("users")).toBe(6);
   });
 
@@ -131,7 +128,7 @@ describe("mock:scenario:apply", () => {
     const result = await worker.command({ action: "mock:scenario:apply", scenario: "outage" });
 
     expect(result.ok).toBe(true);
-    expect(scenarioEvents(worker.sent)).toEqual(["outage"]);
+    expect(scenarioEvents(worker.events())).toEqual(["outage"]);
     expect((await fetch(`${url}/users`)).status).toBe(503);
   });
 });

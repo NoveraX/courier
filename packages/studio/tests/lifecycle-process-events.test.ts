@@ -38,7 +38,12 @@ function events() {
   };
   return {
     state,
-    handlers: createProcessEvents({ servers, emit: vi.fn(), updateAndEmit, resendStore: vi.fn() }),
+    handlers: createProcessEvents({
+      servers,
+      emitAll: vi.fn(),
+      updateAndEmit,
+      resendStore: vi.fn(),
+    }),
   };
 }
 
@@ -187,8 +192,13 @@ function workerEvents() {
   } as unknown as ServerState;
   const servers = new Map([["apiMock", state]]);
   const resendStore = vi.fn();
-  const handlers = createProcessEvents({ servers, emit, updateAndEmit: vi.fn(), resendStore });
-  return { state, emit, resendStore, onEvent: handlers.onEvent };
+  const handlers = createProcessEvents({
+    servers,
+    emitAll: emit,
+    updateAndEmit: vi.fn(),
+    resendStore,
+  });
+  return { state, emit, resendStore, onEvents: handlers.onEvents };
 }
 
 const ADD_ADA = {
@@ -199,11 +209,11 @@ const ADD_ADA = {
 
 describe("what Studio keeps of a managed mock's events", () => {
   it("applies each report of the store's changes, and not one of another shape", () => {
-    const { state, resendStore, onEvent } = workerEvents();
+    const { state, resendStore, onEvents } = workerEvents();
     const report = { type: "mock:store:changes", whole: false, removed: [] };
 
-    onEvent("apiMock", { ...report, seq: 1, collections: [ADD_ADA] });
-    onEvent("apiMock", { ...report, seq: "2", collections: [] });
+    onEvents("apiMock", [{ ...report, seq: 1, collections: [ADD_ADA] }]);
+    onEvents("apiMock", [{ ...report, seq: "2", collections: [] }]);
 
     expect(state.collections).toEqual([
       { name: "users", count: 2, records: [{ id: 1 }, { id: 2, name: "Ada" }] },
@@ -213,77 +223,87 @@ describe("what Studio keeps of a managed mock's events", () => {
   });
 
   it("asks the mock for its store whole when a report skips one", () => {
-    const { state, resendStore, onEvent } = workerEvents();
+    const { state, resendStore, onEvents } = workerEvents();
 
-    onEvent("apiMock", {
-      type: "mock:store:changes",
-      seq: 2,
-      whole: false,
-      collections: [ADD_ADA],
-      removed: [],
-    });
+    onEvents("apiMock", [
+      {
+        type: "mock:store:changes",
+        seq: 2,
+        whole: false,
+        collections: [ADD_ADA],
+        removed: [],
+      },
+    ]);
 
     expect(resendStore).toHaveBeenCalledWith("apiMock");
     expect(state).toMatchObject({ storeSeq: 0, collections: [{ name: "users", count: 1 }] });
   });
 
   it("asks the mock for its store whole when a report's edits do not fit Studio's copy", () => {
-    const { state, resendStore, onEvent } = workerEvents();
+    const { state, resendStore, onEvents } = workerEvents();
     const edits = { removed: [4], changed: [], added: [] };
 
-    onEvent("apiMock", {
-      type: "mock:store:changes",
-      seq: 1,
-      whole: false,
-      collections: [{ name: "users", count: 0, edits }],
-      removed: [],
-    });
+    onEvents("apiMock", [
+      {
+        type: "mock:store:changes",
+        seq: 1,
+        whole: false,
+        collections: [{ name: "users", count: 0, edits }],
+        removed: [],
+      },
+    ]);
 
     expect(resendStore).toHaveBeenCalledWith("apiMock");
     expect(state.storeSeq).toBe(0);
   });
 
   it("passes over a report older than the store Studio holds", () => {
-    const { state, resendStore, onEvent } = workerEvents();
+    const { state, resendStore, onEvents } = workerEvents();
     state.storeSeq = 5;
 
-    onEvent("apiMock", {
-      type: "mock:store:changes",
-      seq: 3,
-      whole: false,
-      collections: [ADD_ADA],
-      removed: [],
-    });
+    onEvents("apiMock", [
+      {
+        type: "mock:store:changes",
+        seq: 3,
+        whole: false,
+        collections: [ADD_ADA],
+        removed: [],
+      },
+    ]);
 
     expect(resendStore).not.toHaveBeenCalled();
     expect(state).toMatchObject({ storeSeq: 5, collections: [{ name: "users", count: 1 }] });
   });
 
   it("takes a whole report, whatever its number, as the store", () => {
-    const { state, onEvent } = workerEvents();
+    const { state, onEvents } = workerEvents();
     state.storeSeq = 5;
     const posts = { name: "posts", count: 1, records: [{ id: 7 }] };
 
-    onEvent("apiMock", {
-      type: "mock:store:changes",
-      seq: 1,
-      whole: true,
-      collections: [posts],
-      removed: [],
-    });
+    onEvents("apiMock", [
+      {
+        type: "mock:store:changes",
+        seq: 1,
+        whole: true,
+        collections: [posts],
+        removed: [],
+      },
+    ]);
 
     expect(state).toMatchObject({ storeSeq: 1, collections: [posts] });
   });
 
   it("keeps the scenario applied with its scenarios and routes, each only of its shape", () => {
-    const { state, onEvent } = workerEvents();
+    const { state, onEvents } = workerEvents();
 
-    onEvent("apiMock", {
-      type: "mock:scenario:active",
-      scenario: "empty",
-      scenarios: [SCENARIO],
-      routes: [{ group: "users", endpoint: "list" }],
-    });
+    onEvents("apiMock", [
+      {
+        type: "mock:scenario:active",
+        scenario: "empty",
+        scenarios: [SCENARIO],
+        routes: [{ group: "users", endpoint: "list" }],
+      },
+    ]);
 
     expect(state.activeScenario).toBe("empty");
     expect(state.scenarios).toEqual([SCENARIO]);
@@ -291,43 +311,49 @@ describe("what Studio keeps of a managed mock's events", () => {
   });
 
   it("keeps the network presets, each only of its type", () => {
-    const { state, onEvent } = workerEvents();
+    const { state, onEvents } = workerEvents();
 
-    onEvent("apiMock", {
-      type: "mock:network:config",
-      config: {
-        latency: 0,
-        errorRate: 0.5,
-        latencyPreset: 7,
-        chaosPreset: "flaky",
-        chaosStartedAt: 99,
+    onEvents("apiMock", [
+      {
+        type: "mock:network:config",
+        config: {
+          latency: 0,
+          errorRate: 0.5,
+          latencyPreset: 7,
+          chaosPreset: "flaky",
+          chaosStartedAt: 99,
+        },
       },
-    });
+    ]);
 
     expect(state).toMatchObject({ chaosPreset: "flaky", chaosStartedAt: 99 });
     expect(state.latencyPreset).toBeUndefined();
   });
 
   it("keeps no network settings once the mock halted its experiment", () => {
-    const { state, onEvent } = workerEvents();
-    onEvent("apiMock", {
-      type: "mock:network:config",
-      config: { latency: 0, errorRate: 0.5, chaosPreset: "flaky", chaosStartedAt: 99 },
-    });
+    const { state, onEvents } = workerEvents();
+    onEvents("apiMock", [
+      {
+        type: "mock:network:config",
+        config: { latency: 0, errorRate: 0.5, chaosPreset: "flaky", chaosStartedAt: 99 },
+      },
+    ]);
 
-    onEvent("apiMock", {
-      type: "mock:network:config",
-      config: { autoHalted: true, haltReason: "error rate over 50%" },
-    });
+    onEvents("apiMock", [
+      {
+        type: "mock:network:config",
+        config: { autoHalted: true, haltReason: "error rate over 50%" },
+      },
+    ]);
 
     expect(state.networkConfig).toBeUndefined();
     expect(state.chaosPreset).toBeUndefined();
   });
 
   it("sends the page no event that names no type", () => {
-    const { emit, onEvent } = workerEvents();
+    const { emit, onEvents } = workerEvents();
 
-    onEvent("apiMock", { type: 7, requestId: "r1" });
+    onEvents("apiMock", [{ type: 7, requestId: "r1" }]);
 
     expect(emit).not.toHaveBeenCalled();
   });
@@ -345,9 +371,9 @@ describe("the requests a managed mock answered", () => {
       forgetAll: vi.fn(),
       close: () => undefined,
     };
-    const { onEvent } = createProcessEvents({
+    const { onEvents } = createProcessEvents({
       servers,
-      emit,
+      emitAll: emit,
       updateAndEmit: vi.fn(),
       mockLog,
       resendStore: vi.fn(),
@@ -360,12 +386,12 @@ describe("the requests a managed mock answered", () => {
     };
     vi.spyOn(Date, "now").mockReturnValue(1_791_100_000_000);
 
-    onEvent("apiMock", start);
+    onEvents("apiMock", [start]);
 
     expect(emit).toHaveBeenCalledTimes(1);
     expect(record).toHaveBeenCalledTimes(1);
     const kept: unknown = record.mock.calls[0]?.[0];
     expect(kept).toEqual({ ...start, serverId: "apiMock", timestamp: 1_791_100_000_000 });
-    expect(emit.mock.calls[0]).toEqual(["mock:request:start", kept]);
+    expect(emit.mock.calls[0]).toEqual([[kept]]);
   });
 });

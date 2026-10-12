@@ -37,7 +37,8 @@ export interface UnsentEvents {
  * const unsent = keepUnsentEvents();
  * unsent.keep(event);
  * socket.on("connect", () => {
- *   for (const kept of unsent.take()) socket.emit("event", kept);
+ *   for (const kept of unsent.take()) batches.add(kept);
+ *   batches.flush();
  * });
  * ```
  */

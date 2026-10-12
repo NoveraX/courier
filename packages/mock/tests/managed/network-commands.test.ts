@@ -11,7 +11,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { defineMockServer } from "../../src/managed/define-mock-server";
-import type { ChildMessage } from "../../src/managed/types";
 import type { DrivenWorker } from "./drive-worker";
 import { driveWorker, startWorker, stopWorker } from "./drive-worker";
 
@@ -42,11 +41,9 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-function lastNetworkConfig(sent: ChildMessage[]): unknown {
-  const configs = sent.flatMap((message) =>
-    message.type === "event" && message.event.type === "mock:network:config"
-      ? [message.event.config]
-      : [],
+function lastNetworkConfig(events: Record<string, unknown>[]): unknown {
+  const configs = events.flatMap((event) =>
+    event.type === "mock:network:config" ? [event.config] : [],
   );
   return configs.at(-1);
 }
@@ -60,7 +57,7 @@ describe("a managed mock whose network a command changed", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(lastNetworkConfig(worker.sent)).toMatchObject({
+    expect(lastNetworkConfig(worker.events())).toMatchObject({
       latency: { min: 300, max: 900, jitter: 150 },
       latencyPreset: "3g",
     });
@@ -72,14 +69,12 @@ describe("a managed mock whose network a command changed", () => {
       config: { latency: { min: 40, max: 60 } },
     });
 
-    expect(lastNetworkConfig(worker.sent)).toMatchObject({ latency: { min: 40, max: 60 } });
+    expect(lastNetworkConfig(worker.events())).toMatchObject({ latency: { min: 40, max: 60 } });
   });
 });
 
-type WorkerEvent = Extract<ChildMessage, { type: "event" }>;
-
-function isHalt(message: ChildMessage): message is WorkerEvent {
-  return message.type === "event" && message.event.eventType === "auto-halted";
+function isHalt(event: Record<string, unknown>): boolean {
+  return event.eventType === "auto-halted";
 }
 
 describe("a managed mock whose run a stop condition halts", () => {
@@ -102,12 +97,12 @@ describe("a managed mock whose run a stop condition halts", () => {
     });
 
     for (let i = 0; i < 5; i++) await fetch(`${url}/users`);
-    const halt = await worker.next(isHalt);
+    const halt = await worker.nextEvent(isHalt);
 
-    expect(halt.event).toMatchObject({ mode: "chaos", reason: "error rate 100% > 50%" });
-    const configs = worker.sent.flatMap((m) =>
-      m.type === "event" && m.event.type === "mock:network:config" ? [m.event.config] : [],
-    );
+    expect(halt).toMatchObject({ mode: "chaos", reason: "error rate 100% > 50%" });
+    const configs = worker
+      .events()
+      .flatMap((event) => (event.type === "mock:network:config" ? [event.config] : []));
     expect(configs.at(-2)).toEqual({ autoHalted: true, haltReason: "error rate 100% > 50%" });
     expect(configs.at(-1)).toMatchObject({
       errorRate: 0,
@@ -145,7 +140,7 @@ describe("a managed mock's route overrides", () => {
       config: { routeOverride: { routeId: "users:list", enabled: false, errorRate: 1 } },
     });
 
-    expect(lastNetworkConfig(worker.sent)).toMatchObject({
+    expect(lastNetworkConfig(worker.events())).toMatchObject({
       routeOverrides: [
         { routeId: "users:list", enabled: false, errorRate: 1 },
         { routeId: "orders:create", enabled: true, latency: { min: 300, max: 300 } },
@@ -164,7 +159,7 @@ describe("a managed mock's route overrides", () => {
       config: { routeOverride: { routeId: "users:list", enabled: false } },
     });
 
-    expect(lastNetworkConfig(worker.sent)).toMatchObject({ routeOverrides: [] });
+    expect(lastNetworkConfig(worker.events())).toMatchObject({ routeOverrides: [] });
   });
 
   it("keeps a route that never fails answering while the mock is down", async () => {
@@ -194,9 +189,9 @@ describe("a managed mock's route overrides", () => {
     });
 
     for (let i = 0; i < 5; i++) await fetch(`${url}/users`);
-    await worker.next(isHalt);
+    await worker.nextEvent(isHalt);
 
-    expect(lastNetworkConfig(worker.sent)).toMatchObject({
+    expect(lastNetworkConfig(worker.events())).toMatchObject({
       errorRate: 0,
       routeOverrides: [{ routeId: "users:list", enabled: false, errorRate: 1 }],
       stopConditions: { enabled: true, errorRateThreshold: 50 },

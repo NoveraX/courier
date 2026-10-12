@@ -122,8 +122,8 @@ describe("asking a mock for its store whole", () => {
     bindEvents(socket, () => store);
     const live = { id: "e1", timestamp: 1, sessionId: "mock-manager" };
 
-    handlers.get("event")?.({ ...live, ...report(5) });
-    handlers.get("event")?.({ ...live, ...report(7) });
+    handlers.get("events")?.([{ ...live, ...report(5) }]);
+    handlers.get("events")?.([{ ...live, ...report(7) }]);
 
     expect(shop()?.storeSeq).toBe(5);
     expect(emitted.map(({ payload }) => payload)).toEqual([

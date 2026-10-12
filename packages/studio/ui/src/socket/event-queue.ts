@@ -22,7 +22,7 @@ export interface EventQueue<TEvent> {
  * @example
  * ```ts
  * const queue = createEventQueue((events) => store().handleEvents(events))
- * socket.on("event", queue.push)
+ * socket.on("events", (events) => events.forEach(queue.push))
  * ```
  */
 export function createEventQueue<TEvent>(

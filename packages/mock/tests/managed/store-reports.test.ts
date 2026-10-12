@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { defineMockServer } from "../../src/managed/define-mock-server";
-import type { ChildMessage } from "../../src/managed/types";
 import type { DrivenWorker } from "./drive-worker";
 import { driveWorker, startWorker, stopWorker } from "./drive-worker";
 
@@ -26,10 +25,7 @@ const api = defineApi({
   },
 });
 
-type Event = Extract<ChildMessage, { type: "event" }>;
-
-const isReport = (m: ChildMessage): m is Event =>
-  m.type === "event" && m.event.type === "mock:store:changes";
+const isReport = (event: Record<string, unknown>): boolean => event.type === "mock:store:changes";
 
 let worker: DrivenWorker;
 let url: string;
@@ -45,7 +41,7 @@ afterEach(async () => {
 });
 
 function reports(): Array<Record<string, unknown>> {
-  return worker.sent.filter(isReport).map((m) => m.event);
+  return worker.events().filter(isReport);
 }
 
 describe("store reports of a managed mock", () => {
@@ -62,7 +58,7 @@ describe("store reports of a managed mock", () => {
       body: JSON.stringify({ name: "Ada" }),
     });
 
-    const { event } = await worker.next(isReport);
+    const event = await worker.nextEvent(isReport);
 
     expect(event).toMatchObject({ seq: 1, whole: false, removed: [] });
     expect(event.collections).toEqual([

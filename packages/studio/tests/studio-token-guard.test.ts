@@ -16,6 +16,7 @@ import { createStudioServer } from "../src/server/create-studio-server";
 import { MAX_MESSAGE_BYTES } from "../src/server/max-message-bytes";
 import { TOKEN_HEADER, TOKEN_REFUSAL, WRITING_ROUTES } from "../src/server/token-guard";
 import type { StudioServer } from "../src/server/types";
+import { sendRuntimeEvents } from "./helpers/runtime-events";
 
 const REFUSED = { error: TOKEN_REFUSAL, code: "STUDIO_TOKEN_REQUIRED" };
 
@@ -189,15 +190,19 @@ describe("a page without the token", () => {
   it("is told that Studio did not clear the log, and the log keeps its requests", async () => {
     const app = await runtime();
     const watching = await page();
-    const seen = new Promise((resolve) => watching.once("event", resolve));
-    app.emit("event", {
-      id: "r1",
-      type: "request:start",
-      timestamp: Date.now(),
-      sessionId: "server",
-      source: "api",
-      method: "list",
-    });
+    const seen = new Promise((resolve) =>
+      watching.once("events", (events: unknown[]) => resolve(events[0])),
+    );
+    sendRuntimeEvents(app, [
+      {
+        id: "r1",
+        type: "request:start",
+        timestamp: Date.now(),
+        sessionId: "server",
+        source: "api",
+        method: "list",
+      },
+    ]);
     await seen;
     const told = new Promise((resolve) => watching.once("studio:read-only", resolve));
 
@@ -219,18 +224,24 @@ describe("the live traffic", () => {
     const app = await runtime();
     const reader = await page();
     const owner = await page(token());
-    const seenByReader = new Promise((resolve) => reader.once("event", resolve));
-    const seenByOwner = new Promise((resolve) => owner.once("event", resolve));
+    const seenByReader = new Promise((resolve) =>
+      reader.once("events", (events: unknown[]) => resolve(events[0])),
+    );
+    const seenByOwner = new Promise((resolve) =>
+      owner.once("events", (events: unknown[]) => resolve(events[0])),
+    );
 
-    app.emit("event", {
-      id: "r1",
-      type: "request:start",
-      timestamp: Date.now(),
-      sessionId: "server",
-      source: "api",
-      method: "list",
-      requestHeaders: { authorization: "Bearer secret", accept: "application/json" },
-    });
+    sendRuntimeEvents(app, [
+      {
+        id: "r1",
+        type: "request:start",
+        timestamp: Date.now(),
+        sessionId: "server",
+        source: "api",
+        method: "list",
+        requestHeaders: { authorization: "Bearer secret", accept: "application/json" },
+      },
+    ]);
 
     expect(await seenByReader).toEqual(
       expect.objectContaining({
@@ -249,15 +260,19 @@ describe("a page with the token", () => {
   it("has the log cleared", async () => {
     const app = await runtime();
     const watching = await page(token());
-    const seen = new Promise((resolve) => watching.once("event", resolve));
-    app.emit("event", {
-      id: "r1",
-      type: "request:start",
-      timestamp: Date.now(),
-      sessionId: "server",
-      source: "api",
-      method: "list",
-    });
+    const seen = new Promise((resolve) =>
+      watching.once("events", (events: unknown[]) => resolve(events[0])),
+    );
+    sendRuntimeEvents(app, [
+      {
+        id: "r1",
+        type: "request:start",
+        timestamp: Date.now(),
+        sessionId: "server",
+        source: "api",
+        method: "list",
+      },
+    ]);
     await seen;
     let told = false;
     watching.once("studio:read-only", () => {

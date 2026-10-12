@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { defineMockServer } from "../../src/managed/define-mock-server";
-import type { ChildMessage } from "../../src/managed/types";
 import type { DrivenWorker } from "./drive-worker";
 import { driveWorker, startWorker, stopWorker } from "./drive-worker";
 
@@ -35,9 +34,9 @@ afterEach(async () => {
 });
 
 function lastNetwork(): Record<string, unknown> | undefined {
-  const events = worker.sent.flatMap((m: ChildMessage) =>
-    m.type === "event" && m.event.type === "mock:network:config" ? [m.event.config] : [],
-  );
+  const events = worker
+    .events()
+    .flatMap((event) => (event.type === "mock:network:config" ? [event.config] : []));
   return events.at(-1) as Record<string, unknown> | undefined;
 }
 

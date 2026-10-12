@@ -62,7 +62,7 @@ async function startMock() {
     onError: vi.fn<(serverId: string, message: string, fatal: boolean) => void>(),
     onStopped: vi.fn(),
     onExited: vi.fn<(serverId: string, reason: string) => void>(),
-    onEvent: vi.fn<(serverId: string, event: SentEvent) => void>(),
+    onEvents: vi.fn<(serverId: string, events: readonly SentEvent[]) => void>(),
   } satisfies ProcessManagerEvents;
   const pm = createProcessManager(events, {
     transformCacheDirectory: () => null,
@@ -100,8 +100,8 @@ async function startMock() {
     return networkEvents().at(-1) ?? {};
   }
   function networkEvents(): SentEvent[] {
-    return events.onEvent.mock.calls
-      .map(([, event]) => event)
+    return events.onEvents.mock.calls
+      .flatMap(([, batch]) => batch)
       .filter((event) => event.type === "mock:network:config");
   }
   async function statuses(path: string, count: number): Promise<number[]> {
@@ -116,11 +116,13 @@ async function startMock() {
     payload: Record<string, unknown> = {},
   ): Promise<SentEvent> {
     const reports = () =>
-      events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:store:changes");
+      events.onEvents.mock.calls
+        .flatMap(([, batch]) => batch)
+        .filter((event) => event.type === "mock:store:changes");
     const before = reports().length;
     pm.sendCommand("apiMock", { action, ...payload });
     await vi.waitFor(() => expect(reports().length).toBeGreaterThan(before), { timeout: 5_000 });
-    return reports().at(-1)?.[1] ?? {};
+    return reports().at(-1) ?? {};
   }
   return { command, storeCommand, statuses, events, pm, url: `http://127.0.0.1:${port}` };
 }
@@ -129,8 +131,8 @@ const DOWN = { errorRate: 1, faultWeights: [{ type: "503", weight: 100 }] };
 
 /** The request starts a mock reported, in order. */
 function starts(mock: Awaited<ReturnType<typeof startMock>>): SentEvent[] {
-  return mock.events.onEvent.mock.calls
-    .map(([, event]) => event)
+  return mock.events.onEvents.mock.calls
+    .flatMap(([, batch]) => batch)
     .filter((event) => event.type === "mock:request:start");
 }
 
@@ -143,10 +145,10 @@ describe("the network controls of a managed mock", () => {
     await vi.waitFor(async () => expect((await fetch(`${mock.url}/users`)).status).toBe(500), {
       timeout: 5_000,
     });
+    /* A request's events reach Studio once the turn that answered it is over. */
+    await vi.waitFor(() => expect(starts(mock).at(-1)?.source).toBe("scenario"));
 
-    const sources = starts(mock).map((event) => event.source);
-    expect(sources[0]).toBe("auto");
-    expect(sources.at(-1)).toBe("scenario");
+    expect(starts(mock)[0]?.source).toBe("auto");
   }, 30_000);
 
   it("says how long a run lasted when it stops", async () => {
@@ -159,8 +161,8 @@ describe("the network controls of a managed mock", () => {
       preset: "none",
     });
 
-    const runs = mock.events.onEvent.mock.calls
-      .map(([, event]) => event)
+    const runs = mock.events.onEvents.mock.calls
+      .flatMap(([, batch]) => batch)
       .filter((event) => event.type === "mock:experiment:event");
     expect(runs.map((event) => [event.eventType, event.mode])).toEqual([
       ["started", "down"],
@@ -239,8 +241,9 @@ describe("the Reset store control of a managed mock", () => {
     });
     await mock.command("mock:chaos:set", { config: DOWN, preset: "down" });
     const networkEvents = () =>
-      mock.events.onEvent.mock.calls.filter(([, event]) => event.type === "mock:network:config")
-        .length;
+      mock.events.onEvents.mock.calls
+        .flatMap(([, batch]) => batch)
+        .filter((event) => event.type === "mock:network:config").length;
     const before = networkEvents();
 
     const report = await mock.storeCommand("mock:server:reset");

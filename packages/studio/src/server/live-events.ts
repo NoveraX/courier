@@ -19,24 +19,33 @@ export const TOKEN_PAGES = "pages:token";
 export const READ_ONLY_PAGES = "pages:read-only";
 
 /**
- * Send an event to every page: whole to the pages with the token, without
- * its credentials to the others.
+ * Send events to every page, in one message: whole to the pages with the
+ * token, without their credentials to the others. A room no page is in is
+ * sent nothing — Studio encodes each message for its room before it looks
+ * who is in it, and most of the time no page is open.
  *
  * @param uiNamespace - The pages' namespace
- * @param event - The event, whole
+ * @param events - The events, whole, in the order they happened
  * @example
  * ```ts
- * emitLiveEvent(uiNamespace, { type: "request:start", id: "r1", headers: { authorization: "Bearer t" } });
+ * emitLiveEvents(uiNamespace, [{ type: "request:start", id: "r1", headers: { authorization: "Bearer t" } }]);
  * ```
  */
-export function emitLiveEvent(uiNamespace: Namespace, event: Record<string, unknown>): void {
-  uiNamespace.to(TOKEN_PAGES).emit("event", event);
-  uiNamespace.to(READ_ONLY_PAGES).emit("event", withoutCredentials(event));
+export function emitLiveEvents(
+  uiNamespace: Namespace,
+  events: readonly Record<string, unknown>[],
+): void {
+  if (events.length === 0) return;
+  if (hasPages(uiNamespace, TOKEN_PAGES)) uiNamespace.to(TOKEN_PAGES).emit("events", events);
+  if (hasPages(uiNamespace, READ_ONLY_PAGES)) {
+    uiNamespace.to(READ_ONLY_PAGES).emit("events", events.map(withoutCredentials));
+  }
 }
 
 /**
- * Send an event to one page, as `emitLiveEvent` sends it to the page's room:
- * whole when the page presented the token, without its credentials otherwise.
+ * Send an event to one page, as `emitLiveEvents` sends it to the page's
+ * room: whole when the page presented the token, without its credentials
+ * otherwise.
  *
  * @param socket - The page's socket
  * @param event - The event, whole
@@ -46,5 +55,9 @@ export function emitLiveEvent(uiNamespace: Namespace, event: Record<string, unkn
  * ```
  */
 export function emitLiveEventTo(socket: Socket, event: Record<string, unknown>): void {
-  socket.emit("event", socket.rooms.has(TOKEN_PAGES) ? event : withoutCredentials(event));
+  socket.emit("events", [socket.rooms.has(TOKEN_PAGES) ? event : withoutCredentials(event)]);
+}
+
+function hasPages(uiNamespace: Namespace, room: string): boolean {
+  return (uiNamespace.adapter.rooms.get(room)?.size ?? 0) > 0;
 }

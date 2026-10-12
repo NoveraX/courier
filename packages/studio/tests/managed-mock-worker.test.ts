@@ -82,7 +82,7 @@ function manager(transformCacheDirectory: string | null = null) {
     onError: vi.fn(),
     onStopped: vi.fn(),
     onExited: vi.fn(),
-    onEvent: vi.fn(),
+    onEvents: vi.fn(),
   } satisfies ProcessManagerEvents;
   const pm = createProcessManager(events, {
     transformCacheDirectory: () => transformCacheDirectory,

@@ -33,7 +33,10 @@ async function studio(): Promise<Studio> {
   const io = new Server(http);
   const received: string[] = [];
   io.of("/runtime").on("connection", (socket) => {
-    socket.on("event", (event: { id: string }) => received.push(event.id));
+    socket.on("events", (batch: Uint8Array) => {
+      const events: Array<{ id: string }> = JSON.parse(new TextDecoder().decode(batch));
+      received.push(...events.map((event) => event.id));
+    });
   });
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
   cleanups.push(() => {

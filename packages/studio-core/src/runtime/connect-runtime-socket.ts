@@ -5,10 +5,11 @@
  *
  *  - `runtime:hello` once on connect, identifies the runtime
  *  - `runtime:announce` for every queued + future `announceHosting` entry
- *  - `event` forwarding from the local `EventBus` (request/middleware/
+ *  - `events` forwarding from the local `EventBus` (request/middleware/
  *    validation/stream/proxy/cache/dedup/upload telemetry) so the Studio
  *    UI can render the timeline + waterfall views, including what was
- *    reported before the socket connected
+ *    reported before the socket connected — in batches, one message for
+ *    every event a turn of the event loop reports
  *  - `playground-responder` setup so the Studio playground can dispatch
  *    `playground:execute` to this runtime via the rid-keyed wire
  *  - `runtime:webhooks` for the webhooks the app defines, and
@@ -28,8 +29,9 @@ import type { BufferedAnnouncement } from "./announce-hosting";
 import { buildAnnouncePayload } from "./announce-payload";
 import type { RuntimeKind } from "./attach-runtime-types";
 import { answerBodyRequests } from "./body-responder";
+import { eventBatches } from "./event-batches";
 import { limitedResponderSocket } from "./limited-responder-socket";
-import { setupPlaygroundResponder } from "./playground-responder";
+import { type ResponderSocket, setupPlaygroundResponder } from "./playground-responder";
 import { timersCanUnref } from "./runtime-environment";
 import { studioMessageLimit } from "./studio-message-limit";
 import { keepUnsentEvents } from "./unsent-events";
@@ -159,6 +161,12 @@ export async function connectRuntimeSocket(
      bodies cut, a stream's messages previewed — but a Playground answer or
      a whole body is as large as the app made it. */
   const limit = studioMessageLimit();
+  const batches = eventBatches({
+    send: (batch) => socket.emit("events", batch),
+    connected: () => socket.connected,
+    keep: unsent.keep,
+    most: limit.most,
+  });
 
   socket.on("connect", () => {
     const hello = {
@@ -174,14 +182,14 @@ export async function connectRuntimeSocket(
     }
     drain();
     webhooks.announce();
-    for (const event of unsent.take()) socket.emit("event", event);
+    for (const event of unsent.take()) batches.add(event);
+    batches.flush();
   });
 
   handle.setAnnouncer(drain);
 
-  // Forward bus events into the socket as `"event"` packets. The Studio
-  // `/runtime` namespace handler dispatches mock-server lifecycle events
-  // into the shared registry and broadcasts everything else to the UI.
+  // Forward bus events into the socket in `"events"` batches. The Studio
+  // `/runtime` namespace handler passes them to the UI and keeps them.
   //
   // An event reported while the socket is not connected — before its first
   // connect, or while Studio restarts — is kept and sent once it connects,
@@ -191,16 +199,25 @@ export async function connectRuntimeSocket(
   if (input.bus) {
     const bus = input.bus;
     unsubBus = bus.on((event) => {
-      if (socket.connected) socket.emit("event", event);
+      if (socket.connected) batches.add(event);
       else unsent.keep(event);
     });
   }
 
   // Wire the rid-keyed playground responder onto this socket so Studio
   // can dispatch `playground:execute` here. The responder reads the live
-  // sources registry on every dispatch.
+  // sources registry on every dispatch. Its answer follows the events of
+  // the call it ran: Studio names the agent a call ran for on its start,
+  // and forgets the call once the answer arrives.
+  const ordered: ResponderSocket = {
+    on: (event, listener) => socket.on(event, listener),
+    emit(event, payload) {
+      batches.flush();
+      socket.emit(event, payload);
+    },
+  };
   const disposeResponder = setupPlaygroundResponder(
-    limitedResponderSocket(socket, limit),
+    limitedResponderSocket(ordered, limit),
     () => getSources() ?? {},
   );
   if (input.bodies) answerBodyRequests(socket, input.bodies, limit);

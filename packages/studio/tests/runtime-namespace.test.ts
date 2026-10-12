@@ -65,6 +65,14 @@ afterEach(() => {
   clearStudioServerState();
 });
 
+/* What a runtime sends: the events of one turn as a JSON array, in UTF-8. */
+function batch(...events: unknown[]): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(events));
+}
+
+/* A page with the token is open: it sees each event whole. */
+const OPEN_PAGES = { rooms: new Map([[TOKEN_PAGES, new Set(["page-1"])]]) };
+
 describe("setupRuntimeNamespace", () => {
   it("registers a runtime on hello and updates the binding table on announce", () => {
     const bindingTable = new BindingTable();
@@ -222,7 +230,11 @@ describe("setupRuntimeNamespace", () => {
     const ns = makeNamespace();
     const ui = { emit: vi.fn() };
     /* The pages with the token, which see each event whole. */
-    const pages = { ...ui, to: (room: string) => (room === TOKEN_PAGES ? ui : { emit: vi.fn() }) };
+    const pages = {
+      ...ui,
+      adapter: OPEN_PAGES,
+      to: (room: string) => (room === TOKEN_PAGES ? ui : { emit: vi.fn() }),
+    };
     setupRuntimeNamespace(ns as unknown as Namespace, {
       token: FIXED_TOKEN,
       bindingTable,
@@ -231,17 +243,28 @@ describe("setupRuntimeNamespace", () => {
 
     const socket = makeSocket();
     ns.connect(socket);
-    socket.emit("event", { type: "mock:server:connect", serverId: "mock-1", port: 7001 });
-    socket.emit("event", { type: "request:start", id: "r1", source: "api" });
+    socket.emit(
+      "events",
+      batch(
+        { type: "mock:server:connect", serverId: "mock-1", port: 7001 },
+        { type: "request:start", id: "r1", source: "api" },
+      ),
+    );
 
-    const sent = ui.emit.mock.calls.filter(([name]) => name === "event").map(([, event]) => event);
+    const sent = ui.emit.mock.calls
+      .filter(([name]) => name === "events")
+      .flatMap(([, events]) => events);
     expect(sent).toEqual([expect.objectContaining({ type: "request:start", id: "r1" })]);
   });
 
   it("names the agent on a request Studio runs for one, in what the pages see and the log keeps", () => {
     const ns = makeNamespace();
     const ui = { emit: vi.fn() };
-    const pages = { ...ui, to: (room: string) => (room === TOKEN_PAGES ? ui : { emit: vi.fn() }) };
+    const pages = {
+      ...ui,
+      adapter: OPEN_PAGES,
+      to: (room: string) => (room === TOKEN_PAGES ? ui : { emit: vi.fn() }),
+    };
     const kept: Record<string, unknown>[] = [];
     const agentCalls = createAgentCalls();
     setupRuntimeNamespace(ns as unknown as Namespace, {
@@ -256,12 +279,19 @@ describe("setupRuntimeNamespace", () => {
 
     const socket = makeSocket();
     ns.connect(socket);
-    socket.emit("event", { type: "request:start", id: "pg_1", source: "api" });
-    socket.emit("event", { type: "request:start", id: "r2", source: "api" });
+    socket.emit(
+      "events",
+      batch(
+        { type: "request:start", id: "pg_1", source: "api" },
+        { type: "request:start", id: "r2", source: "api" },
+      ),
+    );
     agentCalls.forget("pg_1");
-    socket.emit("event", { type: "request:start", id: "pg_1", source: "api" });
+    socket.emit("events", batch({ type: "request:start", id: "pg_1", source: "api" }));
 
-    const sent = ui.emit.mock.calls.filter(([name]) => name === "event").map(([, event]) => event);
+    const sent = ui.emit.mock.calls
+      .filter(([name]) => name === "events")
+      .flatMap(([, events]) => events as Record<string, unknown>[]);
     expect(sent.map((event) => event.agent)).toEqual([agent, undefined, undefined]);
     expect(kept.map((event) => event.agent)).toEqual([agent, undefined, undefined]);
   });

@@ -65,7 +65,7 @@ function manager() {
     onError: vi.fn(),
     onStopped: vi.fn(),
     onExited: vi.fn(),
-    onEvent: vi.fn(),
+    onEvents: vi.fn(),
   };
   return {
     events,

@@ -11,6 +11,9 @@
  *   - `runtime:webhooks` — the webhooks its application defines, which a
  *                          trusted runtime is asked to deliver
  *
+ * Its traffic arrives as `events`: every event a turn of its event loop
+ * reported, in one message.
+ *
  * Studio updates the `BindingTable` on every announce and detaches the
  * runtime from the table on disconnect. The playground router reads
  * `BindingTable.resolveBinding()` to pick the runtime that should serve a
@@ -20,14 +23,15 @@
 import { createLogger } from "@noverax/courier";
 import type { Namespace, Socket } from "socket.io";
 import { attributeEvent } from "./attribute-event";
-import { broadcastRuntimeEvent } from "./broadcast-runtime-event";
+import { broadcastRuntimeEvents } from "./broadcast-runtime-event";
 import type { BindingTable } from "./catalog/binding-table";
 import type { ConfigSourceNamer } from "./catalog/config-source-names";
 import type { AnswerObserver } from "./contract-drift/answer-observer";
-import { emitLiveEvent } from "./live-events";
+import { emitLiveEvents } from "./live-events";
 import type { AgentCalls } from "./mcp/agent-calls";
 import { isRecord } from "./mocks-edit/is-record";
 import type { RequestLog } from "./request-log";
+import { runtimeEventsOf } from "./runtime-events-of";
 import type { RuntimePlaygroundRouter } from "./runtime-playground-router";
 import { handleAnnounce, handleDisconnect, handleHello } from "./runtime-registration";
 import { admitRuntimeSocket } from "./runtime-trust";
@@ -120,9 +124,19 @@ export function setupRuntimeNamespace(
       socket.on("playground:error", (raw: unknown) => router.forwardError(raw, socket.id));
     }
 
-    socket.on("event", (event: unknown) => {
-      const sent = handleRuntimeEvent(event, deps);
-      if (sent) deps.requestLog?.record(sent, socket.id);
+    let unreadable = false;
+    socket.on("events", (raw: unknown) => {
+      const events = runtimeEventsOf(raw);
+      if (events) {
+        for (const event of handleRuntimeEvents(events, deps))
+          deps.requestLog?.record(event, socket.id);
+        return;
+      }
+      if (unreadable) return;
+      unreadable = true;
+      log.warn(
+        `Runtime "${ref.runtimeId ?? socket.id}" sent events Studio could not read; they are not shown.`,
+      );
     });
 
     socket.on("disconnect", () => {
@@ -134,22 +148,26 @@ export function setupRuntimeNamespace(
 }
 
 /**
- * Dispatch a generic `event` payload arriving on the `/runtime` namespace:
- * broadcast it to the UI namespace via `broadcastRuntimeEvent` — the single
- * canonical funnel for every event the UI consumes. Identity and topology
- * information ride on the `runtime:hello` + `runtime:announce` handshake
+ * Pass on the events a `/runtime` message carried: each named after the
+ * config source its call was made against, an answer's shape counted for
+ * its endpoint's contract and going no further, an agent's call named —
+ * then all of them to the UI namespace through `broadcastRuntimeEvents`,
+ * the single canonical funnel for every event the UI consumes. Identity
+ * and topology ride on the `runtime:hello` + `runtime:announce` handshake
  * instead.
  */
-function handleRuntimeEvent(
-  raw: unknown,
+function handleRuntimeEvents(
+  raws: readonly unknown[],
   deps: SetupRuntimeNamespaceDeps,
-): Record<string, unknown> | undefined {
-  if (!isRecord(raw) || Array.isArray(raw)) return undefined;
-  const attributed = attributeEvent(raw, deps.nameSource);
-  /* An answer's shape is counted for its endpoint's contract, and goes no further. */
-  if (deps.answers?.see(attributed)) return undefined;
-  const event = deps.agentCalls?.stamp(attributed) ?? attributed;
-  return broadcastRuntimeEvent(deps.uiNamespace, event, log);
+): Record<string, unknown>[] {
+  const passed: Record<string, unknown>[] = [];
+  for (const raw of raws) {
+    if (!isRecord(raw) || Array.isArray(raw)) continue;
+    const attributed = attributeEvent(raw, deps.nameSource);
+    if (deps.answers?.see(attributed)) continue;
+    passed.push(deps.agentCalls?.stamp(attributed) ?? attributed);
+  }
+  return broadcastRuntimeEvents(deps.uiNamespace, passed, log);
 }
 
 /**
@@ -159,7 +177,5 @@ function handleRuntimeEvent(
  */
 function endOpenRequests(socket: Socket, deps: SetupRuntimeNamespaceDeps): void {
   if (!deps.uiNamespace) return;
-  for (const event of deps.requestLog?.endOpen(socket.id) ?? []) {
-    emitLiveEvent(deps.uiNamespace, event);
-  }
+  emitLiveEvents(deps.uiNamespace, deps.requestLog?.endOpen(socket.id) ?? []);
 }

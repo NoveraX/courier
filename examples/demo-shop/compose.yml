@@ -6,7 +6,11 @@
 # The proxy in front must say who each visitor is in X-Forwarded-For, as
 # Traefik, Caddy and nginx's usual configuration do: the demo counts each
 # visitor's share by that address, and without it every visitor would share
-# the proxy's.
+# the proxy's. Behind a CDN or a DDoS filter as well, set
+# DEMO_TRUSTED_PROXIES to its addresses and ranges, comma-separated, and have
+# the proxy pass on the entries the filter wrote — Traefik's
+# forwardedHeaders.trustedIPs, Caddy's trusted_proxies — or every visitor
+# shares the filter's addresses instead.
 #
 # The container writes nowhere but two memory-backed folders: the demo's
 # state, which each reset empties, and /tmp. It runs unprivileged, with no
@@ -21,6 +25,7 @@ services:
     environment:
       DEMO_ORIGIN: https://demo.courier.noverax.cloud
       DEMO_RESET_MINUTES: "60"
+      DEMO_TRUSTED_PROXIES: ${DEMO_TRUSTED_PROXIES:-}
     expose:
       - "6280"
     read_only: true

@@ -28,9 +28,10 @@ export function createOriginGuard(policy: StudioOriginPolicy): RequestHandler {
       next();
       return;
     }
+    const caller = origin ?? "a caller that names no origin";
     res.status(403).json({
       error:
-        `Studio does not answer ${origin}. Its API is reachable only from the ` +
+        `Studio does not answer ${caller}. Its API is reachable only from the ` +
         "Studio UI itself, so a page on another site cannot use this machine " +
         "to read the project or reach its network.",
     });

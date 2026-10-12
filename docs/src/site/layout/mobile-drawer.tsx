@@ -4,39 +4,50 @@ import { X } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Dialog } from "radix-ui"
+import type { RefObject } from "react"
 
 import { cn } from "@/site/cn"
 import { docsNav } from "@/site/content/docs-nav"
+import { useReturnFocus } from "@/site/use-return-focus"
 import { ThemeSwitch } from "./theme-switch"
 import { useHeadings } from "./use-headings"
 
 interface MobileDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** The header's Menu, which focus goes back to as the sheet closes. */
+  returnTo?: RefObject<HTMLElement | null>
 }
 
 /**
  * The docs on a narrow screen: the theme, the page's outline and every
- * section's pages, in a sheet from the left that any link closes.
+ * section's pages, in a sheet from the left that any link closes. Closed
+ * any other way, it gives focus back to what opened it.
  *
- * @param props - Whether the sheet is open
+ * @param props - Whether the sheet is open, and the Menu that opens it
  * @returns The sheet
  * @example
  * ```tsx
- * <MobileDrawer open={open} onOpenChange={setOpen} />
+ * <MobileDrawer open={open} onOpenChange={setOpen} returnTo={menuButton} />
  * ```
  */
-export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
+export function MobileDrawer({ open, onOpenChange, returnTo }: MobileDrawerProps) {
   const current = usePathname()
   const headings = useHeadings()
-  const close = () => onOpenChange(false)
+  const returnFocus = useReturnFocus(returnTo)
+  const follow = () => {
+    returnFocus.leave()
+    onOpenChange(false)
+  }
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-85 bg-(--site-scrim) backdrop-blur-[3px]" />
+        <Dialog.Overlay className="overlay-scrim fixed inset-0 z-85 bg-(--site-scrim) backdrop-blur-[3px]" />
         <Dialog.Content
           aria-describedby={undefined}
-          className="fixed inset-y-0 left-0 z-86 w-[min(310px,84vw)] animate-site-in overflow-y-auto border-r border-line bg-bg-subtle px-4 pt-4.5 pb-10"
+          onOpenAutoFocus={returnFocus.remember}
+          onCloseAutoFocus={returnFocus.restore}
+          className="overlay-sheet fixed inset-y-0 left-0 z-86 w-[min(310px,84vw)] overflow-y-auto border-r border-line bg-bg-subtle px-4 pt-4.5 pb-10"
         >
           <div className="mb-4 flex items-center justify-between">
             <Dialog.Title className="m-0 text-control font-semibold">Documentation</Dialog.Title>
@@ -58,7 +69,7 @@ export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
                 <a
                   key={heading.id}
                   href={`#${heading.id}`}
-                  onClick={close}
+                  onClick={follow}
                   className="block py-1.25 text-nav text-fg-muted"
                 >
                   {heading.label}
@@ -77,7 +88,7 @@ export function MobileDrawer({ open, onOpenChange }: MobileDrawerProps) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={close}
+                    onClick={follow}
                     aria-current={item.href === current ? "page" : undefined}
                     className={cn(
                       "block rounded-chip px-2.25 py-1.25 text-nav",

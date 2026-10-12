@@ -1,6 +1,6 @@
 "use client"
 
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useRef, useState } from "react"
 
 import { GitHubMark } from "@/site/github-mark"
 import { PageLink } from "@/site/landing/page-link"
@@ -48,6 +48,7 @@ interface PageHeaderProps {
  */
 export function PageHeader({ page, brand, brandLabel, action, install }: PageHeaderProps) {
   const [menu, setMenu] = useState(false)
+  const menuButton = useRef<HTMLButtonElement>(null)
   return (
     <header className="sticky top-0 z-70 border-b border-line bg-(--site-header) backdrop-blur-[14px] backdrop-saturate-160">
       <div className="mx-auto flex h-14 max-w-[1200px] items-center gap-2.5 px-5 min-[600px]:gap-7">
@@ -69,6 +70,7 @@ export function PageHeader({ page, brand, brandLabel, action, install }: PageHea
         <div className="flex-1" />
         {page !== "/" && <LibraryPill className="hidden min-[820px]:flex" />}
         <button
+          ref={menuButton}
           type="button"
           aria-label="Menu"
           aria-expanded={menu}
@@ -102,6 +104,7 @@ export function PageHeader({ page, brand, brandLabel, action, install }: PageHea
         page={page}
         action={action}
         install={install}
+        returnTo={menuButton}
       />
     </header>
   )

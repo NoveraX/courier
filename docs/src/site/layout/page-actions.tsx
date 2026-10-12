@@ -1,7 +1,7 @@
 "use client"
 import { Bot, Check, ChevronDown, Copy, FileText } from "lucide-react"
 import { DropdownMenu } from "radix-ui"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 import { assistantLinks } from "@/site/content/assistant-links"
 import { copyText } from "@/site/copy-text"
@@ -37,6 +37,7 @@ const ITEM =
 export function PageActions({ title, fileName, markdown }: PageActionsProps) {
   const [copied, flash] = useFlash()
   const [reading, setReading] = useState(false)
+  const more = useRef<HTMLButtonElement>(null)
   const links = assistantLinks(title, markdown)
   const copyPage = async () => flash(await copyText(markdown))
   return (
@@ -55,6 +56,7 @@ export function PageActions({ title, fileName, markdown }: PageActionsProps) {
       </button>
       <DropdownMenu.Root modal={false}>
         <DropdownMenu.Trigger
+          ref={more}
           aria-label="More page actions"
           className="group grid w-7.5 cursor-pointer place-items-center border-l border-line text-fg-muted transition-colors hover:bg-bg-subtle hover:text-fg data-[state=open]:bg-bg-subtle"
         >
@@ -67,7 +69,7 @@ export function PageActions({ title, fileName, markdown }: PageActionsProps) {
           <DropdownMenu.Content
             align="end"
             sideOffset={8}
-            className="z-60 w-75 animate-site-in rounded-panel border border-line-strong bg-panel p-1.5 shadow-overlay"
+            className="overlay-menu z-60 w-75 rounded-panel border border-line-strong bg-panel p-1.5 shadow-overlay"
           >
             <DropdownMenu.Item className={ITEM} onSelect={copyPage}>
               <PageActionItem
@@ -121,6 +123,7 @@ export function PageActions({ title, fileName, markdown }: PageActionsProps) {
         markdown={markdown}
         open={reading}
         onOpenChange={setReading}
+        returnTo={more}
       />
     </div>
   )

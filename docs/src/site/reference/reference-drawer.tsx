@@ -3,8 +3,10 @@
 import { X } from "lucide-react"
 import Link from "next/link"
 import { Dialog } from "radix-ui"
+import type { RefObject } from "react"
 
 import { ThemeSwitch } from "@/site/layout/theme-switch"
+import { useReturnFocus } from "@/site/use-return-focus"
 import type { ExportFilterState } from "./export-filter"
 import { ExportFilter } from "./export-filter"
 import { KindMark } from "./kind-mark"
@@ -15,29 +17,44 @@ interface ReferenceDrawerProps {
   filter: ExportFilterState
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** The header's Menu, which focus goes back to as the sheet closes. */
+  returnTo?: RefObject<HTMLElement | null>
 }
 
 /**
  * The API reference on a narrow screen: the theme, a filter over the
  * exports and every export, in a sheet from the left that a link closes —
- * and the way back to the docs.
+ * and the way back to the docs. Closed any other way, it gives focus back
+ * to what opened it.
  *
- * @param props - The exports, their filter, and whether the sheet is open
+ * @param props - The exports, their filter, whether the sheet is open, and the Menu that opens it
  * @returns The sheet
  * @example
  * ```tsx
- * <ReferenceDrawer exports={listed} filter={filter} open={open} onOpenChange={setOpen} />
+ * <ReferenceDrawer exports={listed} filter={filter} open={open} onOpenChange={setOpen} returnTo={menuButton} />
  * ```
  */
-export function ReferenceDrawer({ exports, filter, open, onOpenChange }: ReferenceDrawerProps) {
-  const close = () => onOpenChange(false)
+export function ReferenceDrawer({
+  exports,
+  filter,
+  open,
+  onOpenChange,
+  returnTo,
+}: ReferenceDrawerProps) {
+  const returnFocus = useReturnFocus(returnTo)
+  const follow = () => {
+    returnFocus.leave()
+    onOpenChange(false)
+  }
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-85 bg-(--site-scrim) backdrop-blur-[3px]" />
+        <Dialog.Overlay className="overlay-scrim fixed inset-0 z-85 bg-(--site-scrim) backdrop-blur-[3px]" />
         <Dialog.Content
           aria-describedby={undefined}
-          className="fixed inset-y-0 left-0 z-86 w-[min(300px,84vw)] animate-site-in overflow-y-auto border-r border-line bg-bg-subtle px-4 pt-4.5 pb-10"
+          onOpenAutoFocus={returnFocus.remember}
+          onCloseAutoFocus={returnFocus.restore}
+          className="overlay-sheet fixed inset-y-0 left-0 z-86 w-[min(300px,84vw)] overflow-y-auto border-r border-line bg-bg-subtle px-4 pt-4.5 pb-10"
         >
           <div className="mb-3.5 flex items-center justify-between">
             <Dialog.Title className="m-0 text-control font-semibold">Exports</Dialog.Title>
@@ -57,7 +74,7 @@ export function ReferenceDrawer({ exports, filter, open, onOpenChange }: Referen
             <a
               key={id}
               href={`#${id}`}
-              onClick={close}
+              onClick={follow}
               className="flex items-center gap-2.25 rounded-chip px-2.25 py-1.75 font-mono text-small text-fg-muted"
             >
               <KindMark kind={kind} />
@@ -66,7 +83,7 @@ export function ReferenceDrawer({ exports, filter, open, onOpenChange }: Referen
           ))}
           <Link
             href={"/docs/introduction"}
-            onClick={close}
+            onClick={follow}
             className="mt-3.5 block border-t border-line pt-3.5 text-nav text-brand"
           >
             ← Back to docs

@@ -7,8 +7,6 @@
 @theme {
   --animate-rise: landing-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-rise-quick: landing-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-  --animate-drop: landing-drop 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
-  --animate-fade: landing-fade 0.2s ease both;
   --animate-caret: landing-caret 1s steps(1) infinite;
   --animate-marquee: landing-marquee 44s linear infinite;
   --animate-marquee-reverse: landing-marquee-reverse 52s linear infinite;
@@ -24,26 +22,6 @@
   to {
     opacity: 1;
     transform: none;
-  }
-}
-
-@keyframes landing-drop {
-  from {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes landing-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }
 

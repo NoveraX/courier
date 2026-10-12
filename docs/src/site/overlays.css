@@ -1,0 +1,150 @@
+/*
+ * How the site's dialogs, sheets and menus open and close. Radix marks an
+ * overlay with `data-state` and keeps it on the page until the animation
+ * its closed state starts has ended, so each overlay closes with an
+ * animation named apart from the one it opened with. A reader who asked
+ * for less motion sees every overlay fade where it stands.
+ */
+
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes overlay-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes overlay-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+@keyframes overlay-dialog-out {
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@keyframes overlay-sheet-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes overlay-sheet-out {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes overlay-menu-in {
+  from {
+    opacity: 0;
+    transform: var(--overlay-shift) scale(0.96);
+  }
+}
+
+@keyframes overlay-menu-out {
+  to {
+    opacity: 0;
+    transform: var(--overlay-shift) scale(0.96);
+  }
+}
+
+@keyframes overlay-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes overlay-drop-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@layer components {
+  /* The scrim holds the page's scroll lock while it is on the page, so it
+     leaves no sooner than the slowest overlay above it: a scrollbar back
+     too early would narrow the screen under an overlay still closing and
+     nudge it sideways. */
+  .overlay-scrim[data-state="open"] {
+    animation: overlay-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .overlay-scrim[data-state="closed"] {
+    animation: overlay-fade-out 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .overlay-dialog[data-state="open"] {
+    animation: overlay-dialog-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .overlay-dialog[data-state="closed"] {
+    animation: overlay-dialog-out 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* A sheet travels its whole width; on the site's own curve it would cover
+     a third of the way in its first frame, so it starts more gently. */
+  .overlay-sheet[data-state="open"] {
+    animation: overlay-sheet-in 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+
+  .overlay-sheet[data-state="closed"] {
+    animation: overlay-sheet-out 0.2s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+
+  /* A menu grows out of the control that opened it, on whichever side
+     Radix placed it. */
+  .overlay-menu {
+    --overlay-shift: translateY(-4px);
+    transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+  }
+
+  .overlay-menu[data-side="top"] {
+    --overlay-shift: translateY(4px);
+  }
+
+  .overlay-menu[data-side="left"] {
+    --overlay-shift: translateX(4px);
+  }
+
+  .overlay-menu[data-side="right"] {
+    --overlay-shift: translateX(-4px);
+  }
+
+  .overlay-menu[data-state="open"] {
+    animation: overlay-menu-in 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .overlay-menu[data-state="closed"] {
+    animation: overlay-menu-out 0.12s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .overlay-drop[data-state="open"] {
+    animation: overlay-drop-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .overlay-drop[data-state="closed"] {
+    animation: overlay-drop-out 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :is(.overlay-dialog, .overlay-sheet, .overlay-menu, .overlay-drop)[data-state="open"] {
+      animation-name: overlay-fade-in;
+    }
+
+    :is(.overlay-dialog, .overlay-sheet, .overlay-menu, .overlay-drop)[data-state="closed"] {
+      animation-name: overlay-fade-out;
+    }
+  }
+}

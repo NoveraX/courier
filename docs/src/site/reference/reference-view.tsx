@@ -2,7 +2,7 @@
 
 import { BookMarked, ChevronRight, GitCommitHorizontal, Package } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 import type { BuilderVerb, EntryPoint } from "@/site/content/reference-modules"
 import type { SearchEntry } from "@/site/content/search-index"
@@ -62,6 +62,8 @@ export function ReferenceView({
   const [filter, setFilter] = useState("")
   const [listing, setListing] = useState(false)
   const [searching, setSearching] = useState(false)
+  const searchButton = useRef<HTMLButtonElement>(null)
+  const menuButton = useRef<HTMLButtonElement>(null)
   useSearchShortcut(setSearching)
   const shown = sections.filter((section) => matches(section, filter))
   const listed: ListedExport[] = [
@@ -77,13 +79,25 @@ export function ReferenceView({
   }
   return (
     <div className="min-h-screen bg-bg">
-      <SiteHeader part="api" onSearch={() => setSearching(true)} onMenu={() => setListing(true)} />
-      <SearchPalette entries={searchable} open={searching} onOpenChange={setSearching} />
+      <SiteHeader
+        part="api"
+        onSearch={() => setSearching(true)}
+        onMenu={() => setListing(true)}
+        searchRef={searchButton}
+        menuRef={menuButton}
+      />
+      <SearchPalette
+        entries={searchable}
+        open={searching}
+        onOpenChange={setSearching}
+        returnTo={searchButton}
+      />
       <ReferenceDrawer
         exports={listed}
         filter={exportFilter}
         open={listing}
         onOpenChange={setListing}
+        returnTo={menuButton}
       />
       <div className="mx-auto grid max-w-[1520px] grid-cols-1 gap-10 px-6 min-[1000px]:grid-cols-[252px_minmax(0,1fr)]">
         <ReferenceSidebar

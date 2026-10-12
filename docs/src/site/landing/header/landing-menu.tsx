@@ -1,6 +1,7 @@
 "use client"
 
 import { Dialog } from "radix-ui"
+import type { RefObject } from "react"
 
 import { cn } from "@/site/cn"
 import { GitHubMark } from "@/site/github-mark"
@@ -8,6 +9,7 @@ import { InstallButton } from "@/site/landing/install-button"
 import { NewBadge } from "@/site/landing/new-badge"
 import { PageLink } from "@/site/landing/page-link"
 import { ThemeSwitch } from "@/site/layout/theme-switch"
+import { useReturnFocus } from "@/site/use-return-focus"
 import { type HeaderAction, type HeaderPage, menuLinksFor } from "./menu-links"
 
 interface LandingMenuProps {
@@ -19,6 +21,8 @@ interface LandingMenuProps {
   action: HeaderAction
   /** The install command it offers to copy. */
   install: string
+  /** The header's Menu, which focus goes back to as the sheet closes. */
+  returnTo?: RefObject<HTMLElement | null>
 }
 
 /**
@@ -26,9 +30,10 @@ interface LandingMenuProps {
  * every place to go — Studio and the MCP server first, the page it is on
  * marked, the page's docs, and from a product's page the way back to the
  * library — then the page's install command, its call to action, the
- * repository and the colour theme.
+ * repository and the colour theme. Closed other than by a link into the
+ * site, it gives focus back to what opened it.
  *
- * @param props - Whether the sheet is open and what opens or closes it, the page, its call to action and install command
+ * @param props - Whether the sheet is open and what opens or closes it, the page, its call to action and install command, and the Menu that opens it
  * @returns The sheet
  * @example
  * ```tsx
@@ -38,18 +43,33 @@ interface LandingMenuProps {
  *   page="/"
  *   action={{ label: "Get started", href: "/docs/quick-start" }}
  *   install={START_COMMAND}
+ *   returnTo={menuButton}
  * />
  * ```
  */
-export function LandingMenu({ open, onOpenChange, page, action, install }: LandingMenuProps) {
-  const close = () => onOpenChange(false)
+export function LandingMenu({
+  open,
+  onOpenChange,
+  page,
+  action,
+  install,
+  returnTo,
+}: LandingMenuProps) {
+  const returnFocus = useReturnFocus(returnTo)
+  const follow = (href: string) => () => {
+    /* A link to another site opens in a new tab, and this page stays as it was. */
+    if (!href.startsWith("https://")) returnFocus.leave()
+    onOpenChange(false)
+  }
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-x-0 top-14 bottom-0 z-65 animate-fade bg-[rgb(4_5_6/0.5)] backdrop-blur-[6px]" />
+        <Dialog.Overlay className="overlay-scrim fixed inset-x-0 top-14 bottom-0 z-65 bg-[rgb(4_5_6/0.5)] backdrop-blur-[6px]" />
         <Dialog.Content
           aria-describedby={undefined}
-          className="fixed inset-x-0 top-14 z-66 max-h-[calc(100dvh-56px)] animate-drop overflow-y-auto border-b border-line bg-bg shadow-[0_30px_60px_-20px_rgb(0_0_0/0.5)]"
+          onOpenAutoFocus={returnFocus.remember}
+          onCloseAutoFocus={returnFocus.restore}
+          className="overlay-drop fixed inset-x-0 top-14 z-66 max-h-[calc(100dvh-56px)] overflow-y-auto border-b border-line bg-bg shadow-[0_30px_60px_-20px_rgb(0_0_0/0.5)]"
         >
           <div className="mx-auto max-w-[640px] px-5 pt-3.5 pb-5.5">
             <Dialog.Title className="m-0 px-0.5 pt-1 pb-2.5 font-mono text-micro font-normal tracking-[0.08em] text-fg-subtle">
@@ -61,10 +81,10 @@ export function LandingMenu({ open, onOpenChange, page, action, install }: Landi
                   key={link.href}
                   href={link.href}
                   current={link.href === page}
-                  onClick={close}
+                  onClick={follow(link.href)}
                   style={{ animationDelay: `${40 + at * 35}ms` }}
                   className={cn(
-                    "grid min-h-15.5 animate-rise-quick grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3.5 py-2.5 text-fg hover:bg-panel hover:text-fg",
+                    "grid min-h-15.5 animate-rise-quick grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-3.5 py-2.5 text-fg hover:bg-panel hover:text-fg motion-reduce:animate-none",
                     link.isNew
                       ? cn(
                           "my-2.5 mb-1.5 rounded-panel border-b px-3",
@@ -96,13 +116,13 @@ export function LandingMenu({ open, onOpenChange, page, action, install }: Landi
                 </PageLink>
               ))}
             </nav>
-            <div className="mt-4.5 animate-rise-quick [animation-delay:280ms]">
+            <div className="mt-4.5 animate-rise-quick [animation-delay:280ms] motion-reduce:animate-none">
               <InstallButton look="menu" command={install} />
             </div>
-            <div className="mt-2.5 grid animate-rise-quick grid-cols-[minmax(0,1fr)_auto_auto] gap-2 [animation-delay:320ms]">
+            <div className="mt-2.5 grid animate-rise-quick grid-cols-[minmax(0,1fr)_auto_auto] gap-2 [animation-delay:320ms] motion-reduce:animate-none">
               <PageLink
                 href={action.href}
-                onClick={close}
+                onClick={follow(action.href)}
                 className="flex h-11 items-center justify-center rounded-[10px] bg-fg text-[14px] font-medium text-bg hover:text-bg hover:opacity-86"
               >
                 {action.label}

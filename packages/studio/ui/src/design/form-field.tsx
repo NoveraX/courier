@@ -15,7 +15,8 @@ interface FormFieldProps {
 
 /**
  * A setting in a form: its label and what it does on the left, its
- * control on the right with a hint and, when it has one, its problem.
+ * control on the right with a hint and, when it has one, its problem — on
+ * a phone, the control under the label.
  *
  * @param props - The control's id, the label and what it does, a hint, a problem, and the control
  * @returns The row
@@ -33,7 +34,7 @@ export function FormField({
   children,
 }: FormFieldProps): React.ReactNode {
   return (
-    <div className="grid min-h-12 grid-cols-[160px_minmax(0,1fr)] items-center gap-4 border-b border-line py-2 last:border-b-0">
+    <div className="grid min-h-12 grid-cols-[160px_minmax(0,1fr)] items-center gap-4 border-b border-line py-2 last:border-b-0 max-sm:grid-cols-[minmax(0,1fr)] max-sm:gap-2 max-sm:py-3">
       <div className="flex flex-col gap-0.5">
         <label htmlFor={id} className="text-control font-strong">
           {label}

@@ -26,7 +26,8 @@ interface SegmentedProps<TValue extends string> {
 
 /**
  * A row of choices of which one is on: the Timeline's quick views, a
- * payload's tree or raw view, a snippet's flavour.
+ * payload's tree or raw view, a snippet's flavour — a finger's height on a
+ * touch screen.
  *
  * @param props - The options, the one chosen, what chooses, and how quiet the others are
  * @returns The control
@@ -57,7 +58,7 @@ export function Segmented<TValue extends string>({
             aria-pressed={on}
             onClick={() => onChange(option.value)}
             className={cn(
-              "flex h-6 cursor-pointer items-center gap-1.5 rounded-[6px] px-2.5 text-small font-strong whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-brand",
+              "flex h-6 cursor-pointer items-center gap-1.5 rounded-[6px] px-2.5 text-small font-strong whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-7.5",
               on ? "bg-raised text-fg" : quiet === "muted" ? "text-fg-muted" : "text-fg-subtle",
             )}
           >

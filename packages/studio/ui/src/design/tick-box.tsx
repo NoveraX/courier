@@ -12,7 +12,8 @@ interface TickBoxProps {
 
 /**
  * A tick box as the design draws it, over a native checkbox that does the
- * work — mixed when only some of what it stands for is ticked.
+ * work — mixed when only some of what it stands for is ticked. On a touch
+ * screen the checkbox reaches past the box, for a finger to find.
  *
  * @param props - Whether it is ticked or mixed, what it ticks, and what ticking does
  * @returns The box
@@ -38,7 +39,7 @@ export function TickBox({
           if (el) el.indeterminate = mixed;
         }}
         onChange={onChange}
-        className="peer absolute inset-0 m-0 cursor-pointer opacity-0"
+        className="peer absolute inset-0 m-0 cursor-pointer opacity-0 pointer-coarse:-inset-2.5"
       />
       <span
         aria-hidden="true"

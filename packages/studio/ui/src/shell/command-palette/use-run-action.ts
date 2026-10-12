@@ -8,6 +8,8 @@ import { openWebhookSend } from "@/features/webhooks/webhook-send-store";
 import { useBackToLive } from "@/hooks/use-back-to-live";
 import { useClearRequests } from "@/hooks/use-clear-requests";
 import { useStudioStore } from "@/store";
+import { DOCS_URL } from "../nav";
+import { openOutside } from "../open-outside";
 import { nextTheme } from "../theme-cycle";
 import type { PaletteAction } from "./palette-entries";
 
@@ -31,6 +33,9 @@ export function useRunAction(): (action: PaletteAction) => void {
     switch (action.kind) {
       case "go":
         void navigate({ to: action.to });
+        return;
+      case "open-docs":
+        openOutside(DOCS_URL);
         return;
       case "open-request":
         void navigate({ to: "/timeline", search: { req: action.id } });

@@ -1,16 +1,17 @@
 import type { LinkProps } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { Activity, RadioTower, Rocket } from "lucide-react";
+import { Activity, BookOpen, RadioTower, Rocket, Settings } from "lucide-react";
 
 import { formatDuration } from "@/lib/formatters";
 import type { RequestEntry } from "@/store";
 import type { ExportFormat } from "@/store/types";
-import { SHELL_NAV } from "../nav";
+import { SETTINGS_PAGE, SHELL_NAV } from "../nav";
 import { actionEntries } from "./palette-actions";
 
 /** What an entry does when it is chosen. */
 export type PaletteAction =
   | { kind: "go"; to: NonNullable<LinkProps["to"]> }
+  | { kind: "open-docs" }
   | { kind: "open-request"; id: string }
   | { kind: "show-errors" }
   | { kind: "show-streams" }
@@ -60,6 +61,26 @@ function recentEntries(requests: readonly RequestEntry[]): PaletteEntry[] {
   });
 }
 
+/* Settings and the documentation, which the sidebar keeps at its foot. */
+const FOOT_ENTRIES: readonly PaletteEntry[] = [
+  {
+    id: "view:settings",
+    group: "Go to",
+    label: SETTINGS_PAGE.label,
+    meta: SETTINGS_PAGE.group,
+    icon: Settings,
+    action: { kind: "go", to: SETTINGS_PAGE.to },
+  },
+  {
+    id: "view:docs",
+    group: "Go to",
+    label: "Docs",
+    meta: "Courier's documentation",
+    icon: BookOpen,
+    action: { kind: "open-docs" },
+  },
+];
+
 function goToEntries(): PaletteEntry[] {
   const views = SHELL_NAV.flatMap((group) =>
     group.items.map((item) => ({
@@ -79,15 +100,15 @@ function goToEntries(): PaletteEntry[] {
     icon: Rocket,
     action: { kind: "go", to: "/" },
   };
-  return [setup, ...views];
+  return [setup, ...views, ...FOOT_ENTRIES];
 }
 
 /** Where recording stands, as the palette's first action reads it. */
 export type RecordingState = "recording" | "paused" | "session";
 
 /**
- * Everything the palette offers: the latest calls, every view, and the
- * actions that work from anywhere.
+ * Everything the palette offers: the latest calls, every view, Settings and
+ * the documentation, and the actions that work from anywhere.
  *
  * @param requests - The captured requests, newest first
  * @param recording - Whether Studio records, is paused, or shows a saved session

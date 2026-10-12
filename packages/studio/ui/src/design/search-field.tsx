@@ -15,7 +15,10 @@ interface SearchFieldProps {
 
 /**
  * A toolbar's search field: a magnifier, the text, and a button that
- * clears it once there is any.
+ * clears it once there is any. On a touch screen it is a finger's height,
+ * the clear button takes a wider tap, and the keyboard offers to search
+ * rather than to correct or capitalise what is typed — names and paths,
+ * not prose.
  *
  * @param props - The text, what changes it, its placeholder and label, and what follows it
  * @returns The field
@@ -29,7 +32,7 @@ export function SearchField(props: SearchFieldProps): React.ReactNode {
   return (
     <label
       className={cn(
-        "flex h-7.5 items-center gap-2 rounded-control border border-line bg-panel px-2.5",
+        "flex h-7.5 items-center gap-2 rounded-control border border-line bg-panel px-2.5 pointer-coarse:h-9",
         className,
       )}
     >
@@ -39,6 +42,10 @@ export function SearchField(props: SearchFieldProps): React.ReactNode {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
+        enterKeyHint="search"
+        autoCapitalize="off"
+        autoCorrect="off"
+        spellCheck={false}
         className="min-w-0 flex-1 bg-transparent text-control text-fg outline-none placeholder:text-fg-subtle"
       />
       {value && (
@@ -46,7 +53,7 @@ export function SearchField(props: SearchFieldProps): React.ReactNode {
           type="button"
           aria-label="Clear the search"
           onClick={() => onChange("")}
-          className="flex cursor-pointer text-fg-subtle hover:text-fg"
+          className="hit-area relative flex cursor-pointer text-fg-subtle hover:text-fg"
         >
           <X aria-hidden="true" className="size-3.25" />
         </button>

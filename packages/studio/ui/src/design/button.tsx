@@ -11,7 +11,8 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /**
- * A toolbar-height button with a hairline border.
+ * A toolbar-height button with a hairline border, a finger's height on a
+ * touch screen.
  *
  * @param props - The button's attributes and its variant
  * @returns The button, `type="button"` unless told otherwise
@@ -30,7 +31,7 @@ export function Button({
     <button
       type={type}
       className={cn(
-        "flex h-7.5 shrink-0 cursor-pointer items-center gap-1.5 rounded-control border bg-transparent px-2.5 text-control transition-colors",
+        "flex h-7.5 shrink-0 cursor-pointer items-center gap-1.5 rounded-control border bg-transparent px-2.5 text-control transition-colors pointer-coarse:h-9",
         "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand",
         "disabled:cursor-default disabled:opacity-50",
         VARIANTS[variant],

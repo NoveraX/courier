@@ -1,0 +1,51 @@
+/*
+ * What Studio needs on phones and tablets beyond Tailwind's own breakpoints:
+ * the shell without its sidebar — a narrow window, or a phone held sideways —
+ * a short touch screen, a row of tabs or chips that scrolls sideways without
+ * a scrollbar, a larger tap area around a small control, and a row a long
+ * press opens a menu on without selecting its text. A desktop window with a
+ * mouse matches none of them.
+ */
+
+@custom-variant shell-compact {
+  @media (max-width: 820px), (pointer: coarse) and (max-height: 500px) {
+    @slot;
+  }
+}
+
+@custom-variant short-screen {
+  @media (pointer: coarse) and (max-height: 500px) {
+    @slot;
+  }
+}
+
+@utility scroll-row {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* The control keeps its size; a finger's tap lands on the pseudo-element
+   around it. The element needs a positioning context of its own. */
+@utility hit-area {
+  @media (pointer: coarse) {
+    &::after {
+      content: "";
+      position: absolute;
+      inset: -8px;
+    }
+  }
+}
+
+@utility touch-row {
+  @media (pointer: coarse) {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+}

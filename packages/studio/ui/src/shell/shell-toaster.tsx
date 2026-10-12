@@ -1,6 +1,16 @@
 import { Check, CircleAlert, Info, TriangleAlert } from "lucide-react";
 import { Toaster } from "sonner";
 
+/* Sonner stacks toasts in a list 356 px wide and pins each to its left edge; the list
+   takes the widest toast a message may need, and each toast centres itself in it. */
+const TOASTER_STYLE: React.CSSProperties & Record<"--width", string> = {
+  "--width": "min(560px, calc(100vw - 32px))",
+};
+
+/* Over the status bar, which a phone lifts clear of its home indicator. Sonner takes a
+   window under 600 px for a phone's and keeps a separate offset for it. */
+const OVER_STATUS_BAR = "calc(40px + env(safe-area-inset-bottom))";
+
 /**
  * The new shell's toasts: one line on the page's own colour, low in the
  * middle, over the status bar.
@@ -11,17 +21,12 @@ import { Toaster } from "sonner";
  * <ShellToaster />
  * ```
  */
-/* Sonner stacks toasts in a list 356 px wide and pins each to its left edge; the list
-   takes the widest toast a message may need, and each toast centres itself in it. */
-const TOASTER_STYLE: React.CSSProperties & Record<"--width", string> = {
-  "--width": "min(560px, calc(100vw - 32px))",
-};
-
 export function ShellToaster(): React.ReactNode {
   return (
     <Toaster
       position="bottom-center"
-      offset={40}
+      offset={OVER_STATUS_BAR}
+      mobileOffset={{ bottom: OVER_STATUS_BAR }}
       style={TOASTER_STYLE}
       icons={{
         success: <Check aria-hidden="true" className="size-3.25" />,

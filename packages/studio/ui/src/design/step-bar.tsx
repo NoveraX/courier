@@ -9,9 +9,18 @@ interface StepBarProps<TKey extends string> {
   onBack: (key: TKey) => void;
 }
 
+/* What a phone shows under the bars, which have no room for their labels. */
+function stepSummary(steps: readonly { label: string }[], current: number): string {
+  const step = steps[current];
+  if (!step) return `All ${steps.length} steps done`;
+  return `Step ${current + 1} of ${steps.length} · ${step.label}`;
+}
+
 /**
  * A dialog's steps as a bar each, numbered and filled up to the one in
- * hand; a step done that can be gone back to is a button.
+ * hand; a step done that can be gone back to is a button. On a phone the
+ * bars stand without their labels, and a line under them names the step
+ * in hand.
  *
  * @param props - The steps, the one in hand, which can be gone back to, and what going back does
  * @returns The steps
@@ -27,51 +36,56 @@ export function StepBar<TKey extends string>({
   onBack,
 }: StepBarProps<TKey>): React.ReactNode {
   return (
-    <ol
-      aria-label="Steps"
-      className="m-0 grid list-none gap-2 p-0"
-      style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
-    >
-      {steps.map((step, i) => {
-        const on = i === current;
-        const back = i < current && canGoBack(step.key);
-        return (
-          <li key={step.key}>
-            <button
-              type="button"
-              disabled={!back}
-              aria-current={on ? "step" : undefined}
-              onClick={() => onBack(step.key)}
-              className="flex w-full flex-col gap-1.75 text-left enabled:cursor-pointer disabled:cursor-default"
-            >
-              <span
-                className={cn(
-                  "h-0.75 rounded-full transition-colors duration-200",
-                  i <= current ? "bg-brand" : "bg-raised",
-                )}
-              />
-              <span
-                className={cn(
-                  "flex items-center gap-1.5 text-small",
-                  on
-                    ? "font-semibold text-fg"
-                    : i < current
-                      ? "font-medium text-fg-muted"
-                      : "font-medium text-fg-subtle",
-                )}
+    <div className="flex flex-col gap-2">
+      <ol
+        aria-label="Steps"
+        className="m-0 grid list-none gap-2 p-0"
+        style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }}
+      >
+        {steps.map((step, i) => {
+          const on = i === current;
+          const back = i < current && canGoBack(step.key);
+          return (
+            <li key={step.key}>
+              <button
+                type="button"
+                disabled={!back}
+                aria-current={on ? "step" : undefined}
+                onClick={() => onBack(step.key)}
+                className="flex w-full flex-col gap-1.75 text-left enabled:cursor-pointer disabled:cursor-default max-sm:min-h-6 max-sm:justify-center"
               >
                 <span
                   className={cn(
-                    "font-mono text-meta",
-                    i <= current ? "text-brand" : "text-fg-subtle",
+                    "h-0.75 rounded-full transition-colors duration-200",
+                    i <= current ? "bg-brand" : "bg-raised",
                   )}
-                >{`0${i + 1}`}</span>
-                {step.label}
-              </span>
-            </button>
-          </li>
-        );
-      })}
-    </ol>
+                />
+                <span
+                  className={cn(
+                    "flex items-center gap-1.5 text-small max-sm:sr-only",
+                    on
+                      ? "font-semibold text-fg"
+                      : i < current
+                        ? "font-medium text-fg-muted"
+                        : "font-medium text-fg-subtle",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "font-mono text-meta",
+                      i <= current ? "text-brand" : "text-fg-subtle",
+                    )}
+                  >{`0${i + 1}`}</span>
+                  {step.label}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <p aria-hidden="true" className="hidden text-small font-semibold text-fg max-sm:block">
+        {stepSummary(steps, current)}
+      </p>
+    </div>
   );
 }

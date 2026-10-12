@@ -22,7 +22,8 @@ interface ChoiceMenuProps<TValue extends string> {
 
 /**
  * A toolbar button that names a setting and its current choice, opening a
- * menu of the others with the current one checked.
+ * menu of the others with the current one checked — the button and the
+ * menu's rows a finger's height on a touch screen.
  *
  * @param props - What is chosen, the choices, the current one and what changes it
  * @returns The button and its menu
@@ -36,7 +37,7 @@ export function ChoiceMenu<TValue extends string>(props: ChoiceMenuProps<TValue>
   const current = choices.find((c) => c.value === value)?.label ?? value;
   return (
     <DropdownMenu.Root>
-      <DropdownMenu.Trigger className="flex h-7.5 cursor-pointer items-center gap-1.75 rounded-control border border-line bg-panel px-2.5 text-control whitespace-nowrap text-fg-muted transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand data-[state=open]:border-line-strong">
+      <DropdownMenu.Trigger className="flex h-7.5 cursor-pointer items-center gap-1.75 rounded-control border border-line bg-panel px-2.5 text-control whitespace-nowrap text-fg-muted transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand data-[state=open]:border-line-strong pointer-coarse:h-9">
         <Icon aria-hidden="true" className="size-3.25 text-fg-subtle" />
         <span className="text-fg-subtle">{label}</span>
         <span className="font-strong text-fg">{current}</span>
@@ -46,7 +47,11 @@ export function ChoiceMenu<TValue extends string>(props: ChoiceMenuProps<TValue>
         <DropdownMenu.Content
           align="start"
           sideOffset={6}
-          className={cn("z-50 min-w-45 rounded-panel bg-panel p-1 shadow-overlay", POP_MOTION)}
+          collisionPadding={8}
+          className={cn(
+            "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-45 max-w-[calc(100vw-16px)] overflow-y-auto rounded-panel bg-panel p-1 shadow-overlay",
+            POP_MOTION,
+          )}
         >
           <DropdownMenu.RadioGroup
             value={value}
@@ -57,7 +62,7 @@ export function ChoiceMenu<TValue extends string>(props: ChoiceMenuProps<TValue>
                 key={choice.value}
                 value={choice.value}
                 className={cn(
-                  "flex h-8 cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 text-control outline-none data-[highlighted]:bg-raised data-[highlighted]:text-fg",
+                  "flex h-8 cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 text-control outline-none data-[highlighted]:bg-raised data-[highlighted]:text-fg pointer-coarse:h-10",
                   choice.value === value ? "text-fg" : "text-fg-muted",
                 )}
               >

@@ -14,7 +14,8 @@ interface ToggleSwitchProps {
 
 /**
  * An on/off switch: a pill whose knob slides across and whose track takes
- * the brand colour while it is on.
+ * the brand colour while it is on. On a touch screen a tap just beside it
+ * still flips it.
  *
  * @param props - Whether it is on, what flips it, what it turns on, whether it can be flipped, and its size
  * @returns The switch
@@ -41,7 +42,7 @@ export function ToggleSwitch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative shrink-0 cursor-pointer rounded-full transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-50",
+        "hit-area relative shrink-0 cursor-pointer rounded-full transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-50",
         size === "md" ? "h-5 w-8.5" : "h-5.5 w-9.5",
         checked ? "bg-brand" : "bg-raised",
       )}

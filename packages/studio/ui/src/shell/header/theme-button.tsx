@@ -3,7 +3,8 @@ import { useStudioStore } from "@/store";
 import { nextTheme, themeLabel } from "../theme-cycle";
 
 /**
- * The theme, and a click to the next: dark, light, then the system's.
+ * The theme, and a click to the next: dark, light, then the system's. A
+ * phone's header has no room for it: the navigation drawer has the theme.
  *
  * @returns The button
  * @example
@@ -19,7 +20,7 @@ export function ThemeButton(): React.ReactNode {
     <Button
       onClick={() => setTheme(next)}
       aria-label={`Theme: ${themeLabel(theme)}. Switch to ${themeLabel(next)}`}
-      className="text-small"
+      className="text-small max-sm:hidden"
     >
       <span
         aria-hidden="true"

@@ -29,7 +29,8 @@ interface RangeSliderProps {
 /**
  * A slider drawn as the design draws it — a track, its fill and a round
  * thumb — over a native range input that does the work, so the keyboard,
- * the pointer and assistive technology all reach it.
+ * the pointer and assistive technology all reach it. On a touch screen the
+ * input reaches above and below the track, for a finger to catch.
  *
  * @param props - The value and its bounds, what it sets, what follows a change and a settled value, its fill and size
  * @returns The slider
@@ -69,7 +70,7 @@ export function RangeSlider(props: RangeSliderProps): React.ReactNode {
         onChange={(e) => onChange(Number(e.target.value))}
         onPointerUp={(e) => onCommit?.(Number(e.currentTarget.value))}
         onKeyUp={(e) => onCommit?.(Number(e.currentTarget.value))}
-        className="peer absolute inset-0 m-0 size-full cursor-pointer opacity-0 disabled:cursor-default"
+        className="peer absolute inset-x-0 top-0 m-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-default pointer-coarse:-top-2.5 pointer-coarse:h-[calc(100%+20px)]"
       />
       <div
         className={cn("pointer-events-none absolute inset-x-0 rounded-full bg-raised", look.track)}

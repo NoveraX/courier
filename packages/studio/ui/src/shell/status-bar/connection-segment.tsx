@@ -1,20 +1,15 @@
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
-import { sessionClock } from "../session-clock";
 import { CONNECTION_TITLE, connectionLabel } from "./connection-label";
-
-/* The session's length, ticking while a runtime is attached. */
-function SessionClock({ since }: { since: number }): React.ReactNode {
-  const tick = useStudioStore((s) => s.clientTick);
-  return <span className="opacity-65">{sessionClock(tick >= 0 ? Date.now() - since : 0)}</span>;
-}
+import { SessionLength } from "./session-length";
 
 /**
  * The status bar's first segment — the only place that says how Studio's
  * connection stands: the runtimes and sources while an app is attached, with
  * the session's length and what the counts count when the pointer rests on
  * it; that Studio waits for one; or what the page does about a connection
- * lost.
+ * lost. A phone leaves the session's length to the navigation drawer's
+ * status.
  *
  * @returns The segment
  * @example
@@ -39,7 +34,7 @@ export function ConnectionSegment(): React.ReactNode {
       )}
     >
       <span className="font-medium">{label}</span>
-      {attached && since !== null && <SessionClock since={since} />}
+      {attached && since !== null && <SessionLength since={since} className="max-sm:hidden" />}
     </div>
   );
 }

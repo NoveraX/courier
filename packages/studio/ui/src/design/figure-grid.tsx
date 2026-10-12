@@ -19,7 +19,8 @@ export interface Figure {
 /**
  * A page's key figures in one grid — six across a wide window, three or
  * two on a narrower one — each with its icon, label, value and a line of
- * context.
+ * context; on a phone the values a size smaller and the cells a touch
+ * tighter, so a word fits its cell.
  *
  * @param props - The figures, and what the grid is called
  * @returns The grid
@@ -43,14 +44,17 @@ export function FigureGrid({
       {figures.map((figure) => {
         const Icon = figure.icon;
         return (
-          <div key={figure.key} className="flex min-w-0 flex-col gap-2 bg-panel px-4 py-3.5">
+          <div
+            key={figure.key}
+            className="flex min-w-0 flex-col gap-2 bg-panel px-4 py-3.5 max-sm:px-3.5"
+          >
             <span className="flex items-center gap-1.75 text-small whitespace-nowrap text-fg-muted">
               <Icon aria-hidden="true" className="size-3 text-fg-subtle" />
               {figure.label}
             </span>
             <span
               className={cn(
-                "truncate text-kpi leading-none font-medium tracking-[-0.035em] tabular-nums",
+                "truncate text-kpi leading-none font-medium tracking-[-0.035em] tabular-nums max-sm:text-stat",
                 !figure.text && "font-mono",
                 TONE_TEXT[figure.tone],
               )}

@@ -6,6 +6,7 @@
  */
 
 @theme {
+  /* store/theme.ts gives the browser's own bars each theme's ground as well. */
   --color-bg: #08090a;
   --color-bg-subtle: #0b0c0e;
   --color-panel: #101114;
@@ -101,6 +102,9 @@
   --animate-dialog-out: courier-dialog-out 0.16s cubic-bezier(0.4, 0, 1, 1) both;
   --animate-scrim-in: courier-scrim-in 0.2s ease-out both;
   --animate-scrim-out: courier-scrim-out 0.16s ease-in both;
+  /* The navigation drawer slides in from the window's left edge, and back out to it. */
+  --animate-drawer-in: courier-drawer-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-drawer-out: courier-drawer-out 0.2s cubic-bezier(0.4, 0, 1, 1) both;
   --animate-ripple: courier-ripple 2s ease-out infinite;
   --animate-caret: courier-caret 1s step-end infinite;
 }
@@ -220,6 +224,18 @@
   }
 }
 
+@keyframes courier-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes courier-drawer-out {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
 @keyframes courier-ripple {
   0% {
     transform: scale(0.6);
@@ -251,6 +267,8 @@
     --animate-dialog-out: none;
     --animate-scrim-in: none;
     --animate-scrim-out: none;
+    --animate-drawer-in: none;
+    --animate-drawer-out: none;
     --animate-ripple: none;
     --animate-caret: none;
   }

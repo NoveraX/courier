@@ -4,8 +4,10 @@
  * height `normal`, as the design leaves it — on the page's ground, code in
  * the mono face without ligatures or tracking, borders and outlines in the
  * design's colours unless a class says otherwise, and selections in the
- * brand colour. Overlays portaled to the body inherit all of it. Motion is
- * cut short for a reader who asks for less.
+ * brand colour. Overlays portaled to the body inherit all of it. The page
+ * itself never scrolls or bounces — each view scrolls inside the shell — a
+ * field on a touch screen is never set too small to read without zooming,
+ * and motion is cut short for a reader who asks for less.
  */
 
 @layer base {
@@ -30,6 +32,12 @@
     height: 100%;
   }
 
+  /* A pull past a view's end would otherwise drag the whole page, or reload it. */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
   body {
     margin: 0;
     overflow: hidden;
@@ -52,6 +60,17 @@
 
   ::selection {
     background: color-mix(in srgb, var(--color-brand) 30%, transparent);
+  }
+}
+
+/* iOS zooms into a field whose text is under 16px as it takes focus, and
+   leaves the page zoomed. Outside any layer, so it outranks the size a
+   class gives the field. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]),
+  textarea,
+  select {
+    font-size: 16px;
   }
 }
 

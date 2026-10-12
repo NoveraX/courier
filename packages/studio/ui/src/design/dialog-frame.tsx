@@ -23,10 +23,15 @@ interface DialogFrameProps {
   children: React.ReactNode;
 }
 
+/* Below `sm` a dialog takes the whole screen, clear of a phone's notch and home indicator. */
+const FULL_SCREEN =
+  "max-sm:inset-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none";
+
 /**
  * The frame of the new shell's dialogs: a dimmed backdrop, the header with
  * an icon, the title, what it is for and a close button, the steps when it
- * has some, a body that scrolls, and the footer.
+ * has some, a body that scrolls, and the footer. On a phone it takes the
+ * whole screen.
  *
  * @param props - Whether it is open, what closes it and when it may, its title, icon, width, header extras, footer and body
  * @returns The dialog
@@ -59,12 +64,13 @@ export function DialogFrame({
           onInteractOutside={(event) => keepOpen && event.preventDefault()}
           onEscapeKeyDown={(event) => keepOpen && event.preventDefault()}
           className={cn(
-            "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100vh-48px)] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[16px] bg-panel shadow-overlay outline-none",
+            "fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-48px)] max-w-[calc(100vw-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[16px] bg-panel shadow-overlay outline-none",
             DIALOG_MOTION,
             width,
+            FULL_SCREEN,
           )}
         >
-          <div className="flex shrink-0 flex-col gap-3.5 border-b border-line px-5 pt-4.5 pb-3.5">
+          <div className="flex shrink-0 flex-col gap-3.5 border-b border-line px-5 pt-4.5 pb-3.5 max-sm:pt-[calc(18px+env(safe-area-inset-top))]">
             <div className="flex items-center gap-3">
               {icon && (
                 <span
@@ -87,7 +93,7 @@ export function DialogFrame({
               {closable && (
                 <Dialog.Close
                   aria-label={`Close ${title}`}
-                  className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg"
+                  className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg pointer-coarse:-mr-1 pointer-coarse:size-9"
                 >
                   <X aria-hidden="true" className="size-3.75" />
                 </Dialog.Close>
@@ -95,8 +101,10 @@ export function DialogFrame({
             </div>
             {header}
           </div>
-          <div className="min-h-0 flex-1 overflow-auto p-5">{children}</div>
-          {footer}
+          <div className="min-h-0 flex-1 overflow-auto overscroll-contain p-5">{children}</div>
+          <div className="shrink-0 max-sm:bg-panel-subtle max-sm:pb-[env(safe-area-inset-bottom)]">
+            {footer}
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

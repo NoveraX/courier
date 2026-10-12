@@ -25,7 +25,7 @@ export function crumbsOf(pathname: string): [string, string] {
 }
 
 /**
- * The header's trail to the page shown.
+ * The header's trail to the page shown — on a phone, the page's name alone.
  *
  * @returns The trail
  * @example
@@ -36,12 +36,12 @@ export function crumbsOf(pathname: string): [string, string] {
 export function Breadcrumbs(): React.ReactNode {
   const [group, page] = crumbsOf(useRouterState({ select: (s) => s.location.pathname }));
   return (
-    <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-control">
-      <span className="text-fg-subtle">{group}</span>
-      <span aria-hidden="true" className="text-fg-subtle opacity-60">
+    <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-control">
+      <span className="text-fg-subtle max-sm:hidden">{group}</span>
+      <span aria-hidden="true" className="text-fg-subtle opacity-60 max-sm:hidden">
         /
       </span>
-      <span aria-current="page" className="font-strong text-fg">
+      <span aria-current="page" className="truncate font-strong text-fg">
         {page}
       </span>
     </nav>

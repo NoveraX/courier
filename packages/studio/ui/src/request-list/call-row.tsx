@@ -33,7 +33,8 @@ function durationLabel({ request: r, state }: RecentCall, stream: boolean): stri
 /**
  * One call of an endpoint, as a list of them shows it — when it began, how
  * it went, its status, how long it took against the others and, when
- * asked, its size — opening in the inspector.
+ * asked, its size — opening in the inspector. A row too narrow for the bar
+ * that sets its time against the others keeps the time in words alone.
  *
  * @param props - The call, the slow threshold, what opens it, and its columns and look
  * @returns The row
@@ -58,27 +59,38 @@ export function CallRow({
       type="button"
       onClick={() => onOpen(r.id)}
       className={cn(
-        "grid w-full cursor-pointer items-center gap-2.5 text-left font-mono text-label tabular-nums focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
-        withSize
-          ? "grid-cols-[92px_44px_minmax(0,1fr)_58px_64px]"
-          : "grid-cols-[92px_44px_minmax(0,1fr)_58px]",
+        "@container flex w-full cursor-pointer items-center text-left font-mono text-label tabular-nums focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
         className,
       )}
     >
-      <span className="text-fg-subtle">{formatAbsoluteTime(r.startedAt)}</span>
-      <span className={codeTone(call)}>{codeLabel(r, state)}</span>
-      <span className="h-1 overflow-hidden rounded-[2px] bg-raised">
+      <span
+        className={cn(
+          "grid min-w-0 flex-1 items-center gap-2.5",
+          withSize
+            ? "grid-cols-[92px_44px_minmax(0,1fr)_58px_64px] @max-[23rem]:grid-cols-[minmax(0,1fr)_44px_58px_64px]"
+            : "grid-cols-[92px_44px_minmax(0,1fr)_58px] @max-[18rem]:grid-cols-[minmax(0,1fr)_44px_58px]",
+        )}
+      >
+        <span className="truncate text-fg-subtle">{formatAbsoluteTime(r.startedAt)}</span>
+        <span className={codeTone(call)}>{codeLabel(r, state)}</span>
         <span
-          className={cn("block h-full", stream ? "bg-brand-dim" : BAR_FILL[tone])}
-          style={{ width: `${share * 100}%` }}
-        />
+          className={cn(
+            "h-1 overflow-hidden rounded-[2px] bg-raised",
+            withSize ? "@max-[23rem]:hidden" : "@max-[18rem]:hidden",
+          )}
+        >
+          <span
+            className={cn("block h-full", stream ? "bg-brand-dim" : BAR_FILL[tone])}
+            style={{ width: `${share * 100}%` }}
+          />
+        </span>
+        <span className={cn("text-right", stream ? "text-brand" : DURATION_TEXT[tone])}>
+          {durationLabel(call, stream)}
+        </span>
+        {withSize && (
+          <span className="text-right text-fg-subtle">{r.size ? formatSize(r.size) : "—"}</span>
+        )}
       </span>
-      <span className={cn("text-right", stream ? "text-brand" : DURATION_TEXT[tone])}>
-        {durationLabel(call, stream)}
-      </span>
-      {withSize && (
-        <span className="text-right text-fg-subtle">{r.size ? formatSize(r.size) : "—"}</span>
-      )}
     </button>
   );
 }

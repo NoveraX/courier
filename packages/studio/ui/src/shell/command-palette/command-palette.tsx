@@ -1,40 +1,28 @@
 import { Command, useCommandState } from "cmdk";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Dialog } from "radix-ui";
 
 import { Kbd } from "@/design/kbd";
 import { DIALOG_MOTION, SCRIM_MOTION } from "@/design/overlay-motion";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
-import type { PaletteEntry } from "./palette-entries";
 import { paletteEntries } from "./palette-entries";
+import { PaletteItem } from "./palette-item";
 import { useRunAction } from "./use-run-action";
 
 const GROUPS = ["Recent requests", "Go to", "Actions"] as const;
 
+/* Below `sm` the palette takes the whole screen, clear of a phone's notch and home indicator. */
+const FULL_SCREEN =
+  "max-sm:inset-0 max-sm:flex max-sm:h-dvh max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:flex-col max-sm:rounded-none";
+
+/* On a window too short for the whole list — a phone held sideways — it stops a margin above
+   the window's foot: below the palette's top, less its input and footer (88px). */
+const LIST_HEIGHT = "max-h-[min(420px,calc(87dvh-96px))] max-sm:max-h-none";
+
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function Entry({ entry, onRun }: { entry: PaletteEntry; onRun: () => void }): React.ReactNode {
-  const Icon = entry.icon;
-  return (
-    <Command.Item
-      value={`${entry.label} ${entry.meta} ${entry.id}`}
-      onSelect={onRun}
-      className="group flex h-9 cursor-pointer items-center gap-3 rounded-control px-2.5 text-fg-muted data-[selected=true]:bg-raised data-[selected=true]:text-fg"
-    >
-      <Icon
-        aria-hidden="true"
-        className="size-3.5 shrink-0 text-fg-subtle group-data-[selected=true]:text-brand"
-      />
-      <span className={cn("text-item", entry.mono && "font-mono")}>{entry.label}</span>
-      <span className="truncate text-small text-fg-subtle">{entry.meta}</span>
-      <span className="flex-1" />
-      {entry.hint && <span className="font-mono text-meta text-fg-subtle">{entry.hint}</span>}
-    </Command.Item>
-  );
 }
 
 /* The footer's count follows the filter as it narrows. */
@@ -50,8 +38,11 @@ function NoMatches(): React.ReactNode {
 }
 
 /**
- * The command palette: the latest calls, every view, and Studio's actions,
- * filtered as one types and run from the keyboard.
+ * The command palette: the latest calls, every view, Settings, the
+ * documentation, and Studio's actions, filtered as one types and run from
+ * the keyboard. On a phone it takes the whole screen, with a button to
+ * close it; on a touch screen it leaves out the keys a finger has no use
+ * for.
  *
  * @param props - Whether it is open, and what closes it
  * @returns The palette
@@ -77,21 +68,41 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
         <Dialog.Content
           aria-describedby={undefined}
           className={cn(
-            "fixed top-[13vh] left-1/2 z-50 w-150 max-w-[calc(100vw-40px)] -translate-x-1/2 overflow-hidden rounded-dialog bg-panel shadow-overlay",
+            "fixed top-[13dvh] left-1/2 z-50 w-150 max-w-[calc(100vw-40px)] -translate-x-1/2 overflow-hidden rounded-dialog bg-panel shadow-overlay",
+            FULL_SCREEN,
             DIALOG_MOTION,
           )}
         >
           <Dialog.Title className="sr-only">Search Studio</Dialog.Title>
-          <Command loop label="Search Studio">
-            <div className="flex h-13 items-center gap-3 border-b border-line px-4">
+          <Command
+            loop
+            label="Search Studio"
+            className="max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col"
+          >
+            <div className="flex h-13 items-center gap-3 border-b border-line px-4 max-sm:h-[calc(52px+env(safe-area-inset-top))] max-sm:shrink-0 max-sm:pt-[env(safe-area-inset-top)]">
               <Search aria-hidden="true" className="size-3.75 shrink-0 text-fg-subtle" />
               <Command.Input
                 placeholder="Search views, requests and actions…"
+                enterKeyHint="go"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
                 className="h-full min-w-0 flex-1 bg-transparent text-prompt tracking-[-0.01em] text-fg outline-none placeholder:text-fg-subtle"
               />
-              <Kbd>esc</Kbd>
+              <Kbd className="pointer-coarse:hidden max-sm:hidden">esc</Kbd>
+              <Dialog.Close
+                aria-label="Close the search"
+                className="-mr-2 hidden size-9 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:flex max-sm:flex"
+              >
+                <X aria-hidden="true" className="size-4" />
+              </Dialog.Close>
             </div>
-            <Command.List className="max-h-105 overflow-auto p-1.5">
+            <Command.List
+              className={cn(
+                "overflow-auto overscroll-contain p-1.5 max-sm:min-h-0 max-sm:flex-1",
+                LIST_HEIGHT,
+              )}
+            >
               <Command.Empty className="px-2.5 py-7 text-center text-fg-subtle">
                 <NoMatches />
               </Command.Empty>
@@ -104,7 +115,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
                     className="pb-1 **:[[cmdk-group-heading]]:px-2.5 **:[[cmdk-group-heading]]:pt-2.5 **:[[cmdk-group-heading]]:pb-1.5 **:[[cmdk-group-heading]]:text-label **:[[cmdk-group-heading]]:font-strong **:[[cmdk-group-heading]]:text-fg-subtle"
                   >
                     {members.map((entry) => (
-                      <Entry
+                      <PaletteItem
                         key={entry.id}
                         entry={entry}
                         onRun={() => {
@@ -116,9 +127,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps): Rea
                   </Command.Group>
                 ))}
             </Command.List>
-            <div className="flex h-9 items-center gap-4 border-t border-line bg-panel-subtle px-4 font-mono text-meta text-fg-subtle">
-              <span>↑↓ navigate</span>
-              <span>↵ open</span>
+            <div className="flex h-9 items-center gap-4 border-t border-line bg-panel-subtle px-4 font-mono text-meta text-fg-subtle max-sm:h-[calc(36px+env(safe-area-inset-bottom))] max-sm:shrink-0 max-sm:pb-[env(safe-area-inset-bottom)]">
+              <span className="pointer-coarse:hidden">↑↓ navigate</span>
+              <span className="pointer-coarse:hidden">↵ open</span>
               <span className="flex-1" />
               <ResultCount />
             </div>

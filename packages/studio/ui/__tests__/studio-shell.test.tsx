@@ -14,7 +14,7 @@ import {
   RouterProvider,
 } from "@tanstack/react-router";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StudioShell } from "@/shell/studio-shell";
 import { useStudioStore } from "@/store";
@@ -94,7 +94,10 @@ beforeEach(() => {
   });
 });
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("the shell", () => {
   it("names the project and Studio's version as Studio gives them, and the app attached", async () => {
@@ -230,6 +233,35 @@ describe("the shell", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText("Recent requests")).toBeTruthy();
     expect(within(dialog).getAllByRole("option")[0]?.textContent).toBe("users.listGET · 200");
+  });
+
+  it("reaches Settings and the docs from the palette, the docs in a new tab", async () => {
+    const windowOpen = vi.fn();
+    vi.stubGlobal("open", windowOpen);
+    await open("/view");
+
+    fireEvent.keyDown(window, { key: "k", metaKey: true });
+    const dialog = await screen.findByRole("dialog");
+    const options = within(dialog).getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(
+      expect.arrayContaining(["SettingsSystem", "DocsCourier's documentation"]),
+    );
+    fireEvent.click(within(dialog).getByRole("option", { name: /^Docs/ }));
+
+    expect(windowOpen).toHaveBeenCalledWith(
+      "https://courier.noverax.cloud",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("names the palette's button for what it does, as a phone shows it as a magnifier alone", async () => {
+    await open("/view");
+
+    fireEvent.click(screen.getByRole("button", { name: "Search or jump to…" }));
+
+    expect(await screen.findByRole("dialog", { name: "Search Studio" })).toBeTruthy();
   });
 
   it("pauses recording with ⌘. and changes the theme with ⇧⌘L", async () => {

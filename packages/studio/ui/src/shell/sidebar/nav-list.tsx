@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import type { ShellNavItem } from "../nav";
 import { SHELL_NAV } from "../nav";
 import { NavBadge } from "./nav-badge";
+import { NAV_ROW } from "./nav-row";
 
 function isActive(pathname: string, to: string): boolean {
   return pathname === to || pathname.startsWith(`${to}/`);
@@ -15,10 +16,7 @@ function NavLink({ item, active }: { item: ShellNavItem; active: boolean }): Rea
     <Link
       to={item.to}
       aria-current={active ? "page" : undefined}
-      className={cn(
-        "flex h-8 items-center gap-2.5 rounded-control px-2.5 transition-colors hover:bg-raised hover:text-fg",
-        active ? "bg-raised font-strong text-fg" : "text-fg-muted",
-      )}
+      className={cn(NAV_ROW, active ? "bg-raised font-strong text-fg" : "text-fg-muted")}
     >
       <Icon aria-hidden="true" className={cn("size-3.75 shrink-0", active && "text-brand")} />
       <span>{item.label}</span>

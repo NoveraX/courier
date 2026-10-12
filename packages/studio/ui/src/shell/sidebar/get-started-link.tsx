@@ -6,9 +6,7 @@ import { setupProgress } from "@/features/welcome/setup-progress";
 import { useSetupStore } from "@/features/welcome/setup-store";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
-
-const ROW =
-  "flex h-8 items-center gap-2.5 rounded-control px-2.5 transition-colors hover:bg-raised hover:text-fg";
+import { NAV_ROW } from "./nav-row";
 
 /**
  * The sidebar's way to the setup. While a setup is under way it is a card
@@ -65,7 +63,7 @@ export function GetStartedLink(): React.ReactNode {
       to="/"
       search={{ setup: true }}
       aria-current={active ? "page" : undefined}
-      className={cn(ROW, active ? "bg-raised font-strong text-fg" : "text-fg-muted")}
+      className={cn(NAV_ROW, active ? "bg-raised font-strong text-fg" : "text-fg-muted")}
     >
       <Rocket
         aria-hidden="true"

@@ -53,7 +53,7 @@ function DiffRow({ line }: { line: DiffLine }): React.ReactNode {
  * The exact change Studio will make, as the design previews generated
  * files: the file it writes on the left with how many lines the change adds
  * and removes, every line it changes on the right, between the lines around
- * them.
+ * them — on a phone, the file over the lines.
  *
  * @param props - The file and the change's pieces
  * @returns The preview
@@ -73,7 +73,7 @@ export function ChangePreview({
   const added = countOf(hunks, "add");
   const removed = countOf(hunks, "remove");
   return (
-    <div className="grid min-h-60 grid-cols-[190px_minmax(0,1fr)] gap-3">
+    <div className="grid min-h-60 grid-cols-[190px_minmax(0,1fr)] gap-3 max-sm:grid-cols-[minmax(0,1fr)] max-sm:grid-rows-[auto_minmax(0,1fr)]">
       <div className="flex flex-col gap-px rounded-[11px] border border-line bg-inset p-2 font-mono text-small">
         <span className="flex items-center gap-1.5 px-1.5 py-1.25 text-fg-subtle">
           <FolderOpen aria-hidden="true" className="size-3" />

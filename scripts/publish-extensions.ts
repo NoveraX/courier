@@ -10,10 +10,13 @@
  * packaged at the version the release gave it, and an extension another one
  * installs is published first. The Marketplace is signed in to through
  * Microsoft Entra ID — the workflow has signed in to Azure as the publisher's
- * managed identity — and Open VSX with the token in `OVSX_PAT`. A version a
- * marketplace already has is passed over, so a run that failed half-way is
- * simply run again. `--identify` prints the id the Marketplace knows the
- * managed identity by, which the publisher adds as a member once.
+ * managed identity, and says so with `MARKETPLACE_SIGNED_IN=true` — and Open
+ * VSX with the token in `OVSX_PAT`. A marketplace the run has no way in to
+ * is passed over with a warning, so a release does not wait for both to be
+ * set up; a version a marketplace already has is passed over too, so a run
+ * that failed half-way is simply run again. `--identify` prints the id the
+ * Marketplace knows the managed identity by, which the publisher adds as a
+ * member once.
  */
 import { execFileSync } from "node:child_process";
 import { join, resolve } from "node:path";
@@ -145,11 +148,21 @@ async function main(argv: readonly string[]): Promise<void> {
     for (const extension of ordered) console.log(`would publish ${extension.vsix}`);
     return;
   }
-  if (!process.env.OVSX_PAT) throw new Error("OVSX_PAT holds no Open VSX token");
-  const publishers = new Set(ordered.map((extension) => extension.publisher));
-  for (const publisher of publishers) await ensureNamespace(publisher);
-  const published = [publishTo("marketplace", ordered), publishTo("open-vsx", ordered)];
+  const published: boolean[] = [];
+  if (process.env.MARKETPLACE_SIGNED_IN === "true")
+    published.push(publishTo("marketplace", ordered));
+  else warn("The Visual Studio Marketplace was passed over: no identity signed in to it.");
+  if (process.env.OVSX_PAT) {
+    const publishers = new Set(ordered.map((extension) => extension.publisher));
+    for (const publisher of publishers) await ensureNamespace(publisher);
+    published.push(publishTo("open-vsx", ordered));
+  } else warn("Open VSX was passed over: OVSX_PAT holds no token.");
   if (published.includes(false)) process.exit(1);
+}
+
+/* A warning a workflow run shows on its summary, and a line anywhere else. */
+function warn(message: string): void {
+  console.warn(process.env.GITHUB_ACTIONS === "true" ? `::warning::${message}` : message);
 }
 
 /* Importing this module must not publish anything: the tests import it. */

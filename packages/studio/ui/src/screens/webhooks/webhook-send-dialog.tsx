@@ -5,7 +5,9 @@ import { ChoiceMenu } from "@/design/choice-menu";
 import { DialogFrame } from "@/design/dialog-frame";
 
 const INPUT =
-  "w-full rounded-card border border-line-strong bg-inset px-2.5 font-mono text-control text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand aria-invalid:border-err";
+  "w-full rounded-card border border-line-strong bg-inset px-2.5 font-mono text-control text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand aria-invalid:border-err pointer-coarse:text-figure";
+const BUTTON =
+  "flex h-8 cursor-pointer items-center rounded-card px-3.5 text-control pointer-coarse:h-9";
 
 /**
  * Deliver a webhook to the app: the webhook, the route it goes to and the
@@ -42,7 +44,7 @@ export function WebhookSendDialog(): React.ReactNode {
             type="button"
             disabled={sending}
             onClick={dialog.close}
-            className="flex h-8 cursor-pointer items-center rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+            className={`${BUTTON} border border-line text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50`}
           >
             Cancel
           </button>
@@ -50,7 +52,7 @@ export function WebhookSendDialog(): React.ReactNode {
             type="button"
             disabled={!ready}
             onClick={() => void dialog.send()}
-            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-fg px-3.5 text-control font-semibold text-bg hover:bg-fg/90 disabled:cursor-default disabled:opacity-50"
+            className={`${BUTTON} gap-1.75 bg-fg font-semibold text-bg hover:bg-fg/90 disabled:cursor-default disabled:opacity-50`}
           >
             {sending ? (
               <Loader2 aria-hidden="true" className="size-3.25 animate-spin" />
@@ -102,7 +104,11 @@ export function WebhookSendDialog(): React.ReactNode {
             id="webhook-send-to"
             list="webhook-send-routes"
             aria-describedby="webhook-send-to-hint"
-            className={`${INPUT} h-8`}
+            className={`${INPUT} h-8 pointer-coarse:h-9`}
+            inputMode="url"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="http://localhost:3000/api/webhooks/stripe"
             value={to}
             onChange={(event) => dialog.setTo(event.target.value)}
@@ -123,6 +129,8 @@ export function WebhookSendDialog(): React.ReactNode {
           <textarea
             id="webhook-send-body"
             rows={12}
+            autoCapitalize="none"
+            autoCorrect="off"
             spellCheck={false}
             aria-invalid={invalid !== null}
             aria-describedby={invalid ? "webhook-send-body-problem" : undefined}

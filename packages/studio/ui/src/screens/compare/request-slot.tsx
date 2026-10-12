@@ -38,7 +38,7 @@ function Option({
       onClick={onPick}
       aria-current={chosen}
       className={cn(
-        "grid h-8.5 w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_40px_64px] items-center gap-2.5 rounded-[7px] px-2.5 text-left font-mono text-label hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+        "grid h-8.5 w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_40px_64px] items-center gap-2.5 rounded-[7px] px-2.5 text-left font-mono text-label hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand pointer-coarse:h-11",
         chosen && "bg-brand-dim",
       )}
     >

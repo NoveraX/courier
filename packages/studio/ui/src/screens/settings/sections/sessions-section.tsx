@@ -54,19 +54,20 @@ export function SessionsSection({ history }: SessionsSectionProps): React.ReactN
         label="Current session"
         description={`${requests} request${requests === 1 ? "" : "s"} on this page`}
         control={
-          <span className="flex gap-2">
+          <span className="flex gap-2 @max-[30rem]:w-full">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               aria-label="Name for the session"
               placeholder="Name it, or leave it to the time"
-              className="h-7.5 w-55 min-w-0 rounded-card border border-line bg-inset px-2.5 text-control text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand"
+              autoCorrect="off"
+              className="h-7.5 w-55 min-w-0 rounded-card border border-line bg-inset px-2.5 text-control text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand pointer-coarse:h-9 pointer-coarse:text-figure @max-[30rem]:w-auto @max-[30rem]:flex-1"
             />
             <button
               type="button"
               disabled={requests === 0 || saving}
               onClick={() => void save()}
-              className="flex h-7.5 cursor-pointer items-center gap-1.75 rounded-card border border-line bg-panel px-3 text-control font-strong whitespace-nowrap text-fg hover:border-line-strong disabled:cursor-default disabled:opacity-50"
+              className="flex h-7.5 shrink-0 cursor-pointer items-center gap-1.75 rounded-card border border-line bg-panel px-3 text-control font-strong whitespace-nowrap text-fg hover:border-line-strong disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9"
             >
               <Save aria-hidden="true" className="size-3.25" />
               {saving ? "Saving…" : "Save session"}
@@ -81,7 +82,7 @@ export function SessionsSection({ history }: SessionsSectionProps): React.ReactN
           <button
             type="button"
             onClick={pickSessionFile}
-            className="flex h-7.5 cursor-pointer items-center gap-1.75 rounded-card border border-line bg-panel px-3 text-control font-strong whitespace-nowrap text-fg hover:border-line-strong"
+            className="flex h-7.5 cursor-pointer items-center gap-1.75 rounded-card border border-line bg-panel px-3 text-control font-strong whitespace-nowrap text-fg hover:border-line-strong pointer-coarse:h-9"
           >
             <FileInput aria-hidden="true" className="size-3.25" />
             Open a session file
@@ -95,7 +96,7 @@ export function SessionsSection({ history }: SessionsSectionProps): React.ReactN
         {history.sessions.length > 0 && (
           <ul
             aria-label="Saved sessions"
-            className="m-0 flex list-none flex-col overflow-hidden rounded-panel border border-line p-0"
+            className="@container m-0 flex list-none flex-col overflow-hidden rounded-panel border border-line p-0"
           >
             {history.sessions.map((session) => (
               <SavedSessionRow

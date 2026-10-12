@@ -17,9 +17,10 @@ import { SettingsNav } from "./settings-nav";
 
 /**
  * The Settings page: Studio's settings by section, edited as a draft —
- * each changed row marked, its section dotted in the navigation — and kept
+ * each changed row marked, its section marked in the navigation — and kept
  * on Save; the sessions Studio keeps; and the destructive actions, each
- * asking first.
+ * asking first. From 860px the navigation is a column beside the sections;
+ * narrower, it heads them, and its row of sections stays in view.
  *
  * @returns The page
  * @example
@@ -32,7 +33,7 @@ export function SettingsScreen(): React.ReactNode {
   const history = useSessionHistory();
   const storage = useStorage();
   return (
-    <div className="mx-auto grid w-full max-w-280 grid-cols-1 items-start gap-7 px-6 pt-6 pb-10 min-[860px]:grid-cols-[200px_minmax(0,1fr)]">
+    <div className="mx-auto flex w-full max-w-280 flex-col gap-4 px-6 pt-6 pb-10 max-sm:px-4 max-sm:pt-4 min-[860px]:grid min-[860px]:grid-cols-[200px_minmax(0,1fr)] min-[860px]:items-start min-[860px]:gap-7">
       <SettingsNav changed={settings.changed} />
       <div className="flex min-w-0 flex-col gap-4">
         <AppearanceSection settings={settings} />

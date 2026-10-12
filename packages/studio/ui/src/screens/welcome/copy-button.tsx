@@ -16,7 +16,8 @@ const COPIED_MS = 1500;
 
 /**
  * Copies a command or snippet, and says so on itself for a moment; a copy
- * the browser refuses is said in an error toast.
+ * the browser refuses is said in an error toast. A finger gets a taller
+ * button than a mouse does.
  *
  * @param props - The text, and who to tell once it is copied
  * @returns The button
@@ -44,7 +45,7 @@ export function CopyButton({ text, onCopied, className }: CopyButtonProps): Reac
       type="button"
       onClick={() => void copy()}
       className={cn(
-        "h-6 shrink-0 cursor-pointer rounded-md border border-line-strong bg-panel-subtle px-2.5 text-label font-strong text-fg-muted transition-colors hover:border-fg-subtle hover:text-fg",
+        "h-6 shrink-0 cursor-pointer rounded-md border border-line-strong bg-panel-subtle px-2.5 text-label font-strong text-fg-muted transition-colors hover:border-fg-subtle hover:text-fg pointer-coarse:h-9 pointer-coarse:px-3.5",
         className,
       )}
     >

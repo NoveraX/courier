@@ -48,7 +48,7 @@ export function WelcomeScreen(): React.ReactNode {
   const progress = framework ? setupProgress(framework, copied, attached, false) : null;
   const percent = progress ? (progress.done / progress.total) * 100 : 0;
   return (
-    <div className="mx-auto max-w-310 px-9 pt-10 pb-16">
+    <div className="mx-auto max-w-310 px-9 pt-10 pb-16 max-sm:px-4 max-sm:pt-6">
       <div className="mb-7 flex flex-col gap-3">
         <div className="flex items-center gap-2.5 font-mono text-badge tracking-[0.1em] text-fg-subtle uppercase">
           <span className="text-brand">Setup</span>

@@ -39,7 +39,7 @@ export function InstallStep({ npmCommands, onCopied }: InstallStepProps): React.
             aria-selected={pm === manager}
             onClick={() => setManager(pm)}
             className={cn(
-              "-mb-px h-7 cursor-pointer border-b-[1.5px] px-2.5 font-mono text-label transition-colors",
+              "-mb-px h-7 cursor-pointer border-b-[1.5px] px-2.5 font-mono text-label transition-colors pointer-coarse:h-10",
               pm === manager
                 ? "border-brand text-fg"
                 : "border-transparent text-fg-subtle hover:text-fg-muted",

@@ -68,7 +68,7 @@ export function StorageSection({
             disabled={busy || !report?.persistent || (report?.database.free ?? 0) === 0}
             onClick={() => void storage.compact()}
             title={report ? `${formatSize(report.database.free)} freed inside it` : undefined}
-            className="flex h-7 cursor-pointer items-center gap-1.5 rounded-control border border-line bg-panel px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+            className="flex h-7 cursor-pointer items-center gap-1.5 rounded-control border border-line bg-panel px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9"
           >
             <Minimize2 aria-hidden="true" className="size-3" />
             Compact

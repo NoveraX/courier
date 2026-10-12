@@ -49,7 +49,7 @@ export function AnalyticsSkeleton(): React.ReactNode {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-2.5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-2.5">
         {CHARTS.map((chart) => (
           <ChartSkeleton key={chart} />
         ))}

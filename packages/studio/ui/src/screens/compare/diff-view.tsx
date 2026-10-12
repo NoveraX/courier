@@ -51,25 +51,34 @@ interface DiffViewProps {
   rows: readonly DiffRow[];
   /** What each column is headed with after its tag: the call, or "Variables". */
   titles: Readonly<Record<Side, string>>;
+  /** The side a phone shows, one text being all its width holds. */
+  shown: Side;
 }
 
 /**
  * Two texts side by side, line against line: what A had and B did not in
  * red, what B gained in green, a changed line on one row, the side that
- * lacks a line hatched.
+ * lacks a line hatched. A phone shows only the side chosen, at its full
+ * width, with the same marks.
  *
- * @param props - The rows, and what heads each column
+ * @param props - The rows, what heads each column, and the side a phone shows
  * @returns The diff
  * @example
  * ```tsx
- * <DiffView rows={diffRows(lineDiff(a, b), false)} titles={{ a: "A · 14:02:11", b: "B · 14:02:41" }} />
+ * <DiffView rows={diffRows(lineDiff(a, b), false)} titles={{ a: "A · 14:02:11", b: "B · 14:02:41" }} shown="a" />
  * ```
  */
-export function DiffView({ rows, titles }: DiffViewProps): React.ReactNode {
+export function DiffView({ rows, titles, shown }: DiffViewProps): React.ReactNode {
   return (
-    <div className="grid grid-cols-2 overflow-hidden rounded-sheet border border-line bg-inset">
+    <div className="grid grid-cols-2 overflow-hidden rounded-sheet border border-line bg-inset max-sm:grid-cols-1">
       {(["a", "b"] as const).map((side) => (
-        <div key={side} className="min-w-0 border-line first:border-r">
+        <div
+          key={side}
+          className={cn(
+            "min-w-0 border-line first:border-r max-sm:first:border-r-0",
+            side !== shown && "max-sm:hidden",
+          )}
+        >
           <div className="flex h-9 items-center gap-2 border-b border-line bg-panel-subtle px-3.5">
             <SideTag side={side} />
             <span className="truncate text-small text-fg-muted">{titles[side]}</span>

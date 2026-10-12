@@ -72,7 +72,7 @@ export function AnalyticsScreen(): React.ReactNode {
     plural(endpoints.length, "endpoint"),
   ];
   return (
-    <div className="mx-auto flex w-full max-w-360 flex-col gap-4 px-6 pt-6 pb-10">
+    <div className="mx-auto flex w-full max-w-360 flex-col gap-4 px-6 pt-6 pb-10 max-sm:px-4 max-sm:pt-4">
       <header className="flex flex-wrap items-end gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="m-0 text-page font-semibold tracking-[-0.025em]">Analytics</h1>
@@ -83,22 +83,26 @@ export function AnalyticsScreen(): React.ReactNode {
           )}
         </div>
         <div className="flex-1" />
-        <Segmented
-          label="Range"
-          options={RANGES}
-          value={view.range}
-          onChange={(range) => model.change({ ...view, range })}
-        />
-        <button
-          type="button"
-          title={`Export the requests as ${format.toUpperCase()}`}
-          disabled={total === 0}
-          onClick={() => void exportShownRequests(format)}
-          className="flex h-7.5 cursor-pointer items-center gap-1.75 rounded-control border border-line bg-panel px-2.75 text-control text-fg-muted hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-50"
-        >
-          <Download aria-hidden="true" className="size-3.25" />
-          Export
-        </button>
+        <div className="flex min-w-0 items-end gap-4 max-sm:w-full max-sm:items-center">
+          <div className="scroll-row min-w-0 max-sm:flex-1">
+            <Segmented
+              label="Range"
+              options={RANGES}
+              value={view.range}
+              onChange={(range) => model.change({ ...view, range })}
+            />
+          </div>
+          <button
+            type="button"
+            title={`Export the requests as ${format.toUpperCase()}`}
+            disabled={total === 0}
+            onClick={() => void exportShownRequests(format)}
+            className="flex h-7.5 shrink-0 cursor-pointer items-center gap-1.75 rounded-control border border-line bg-panel px-2.75 text-control text-fg-muted hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9"
+          >
+            <Download aria-hidden="true" className="size-3.25" />
+            Export
+          </button>
+        </div>
       </header>
       {loading.requests ? (
         <AnalyticsSkeleton />
@@ -107,7 +111,7 @@ export function AnalyticsScreen(): React.ReactNode {
       ) : (
         <>
           <KpiStrip figures={model.kpis} />
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-2.5">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),1fr))] gap-2.5">
             <LatencyChart latency={model.latency} />
             <StatusChart
               groups={model.statuses}

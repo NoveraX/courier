@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const SHOWN = 5;
 
 const VIEW =
-  "flex items-center gap-1.25 justify-self-end text-label whitespace-nowrap text-fg-subtle hover:text-fg";
+  "relative flex items-center gap-1.25 justify-self-end text-label whitespace-nowrap text-fg-subtle hit-area hover:text-fg";
 
 interface FindingEndpointsProps {
   endpoints: readonly FindingEndpoint[];
@@ -22,7 +22,9 @@ interface FindingEndpointsProps {
 /**
  * The endpoints a finding names: method, name, what was seen there, and
  * a way to their calls — the Timeline searched for the endpoint, or its
- * first call in the inspector when the finding names no endpoint.
+ * first call in the inspector when the finding names no endpoint. In a
+ * list too narrow for the four columns, what was seen and the way to the
+ * calls take a line under the name.
  *
  * @param props - The endpoints, the finding's colour, and what opens a call
  * @returns The table
@@ -39,13 +41,13 @@ export function FindingEndpoints({
   const [all, setAll] = useState(false);
   const shown = all ? endpoints : endpoints.slice(0, SHOWN);
   return (
-    <div className="flex max-w-190 flex-col gap-1.5">
+    <div className="@container flex max-w-190 flex-col gap-1.5">
       <span className="text-label font-semibold text-fg-muted">Affected endpoints</span>
       <div className="overflow-hidden rounded-panel border border-line bg-panel">
         {shown.map((e) => (
           <div
             key={e.key}
-            className="grid min-h-9.5 grid-cols-[44px_minmax(0,1fr)_auto_120px] items-center gap-3 border-b border-line px-3 last:border-b-0"
+            className="grid min-h-9.5 grid-cols-[44px_minmax(0,1fr)_auto_120px] items-center gap-3 border-b border-line px-3 last:border-b-0 @max-[25rem]:grid-cols-[44px_minmax(0,1fr)_auto] @max-[25rem]:gap-y-1 @max-[25rem]:py-2"
           >
             <span
               className={cn(
@@ -55,11 +57,18 @@ export function FindingEndpoints({
             >
               {e.method ?? "—"}
             </span>
-            <span className="truncate font-mono text-small">
+            <span className="truncate font-mono text-small @max-[25rem]:col-span-2">
               <span className="text-fg-subtle">{e.prefix}</span>
               {e.name}
             </span>
-            <span className={cn("font-mono text-label whitespace-nowrap", tone)}>{e.detail}</span>
+            <span
+              className={cn(
+                "font-mono text-label whitespace-nowrap @max-[25rem]:col-start-2",
+                tone,
+              )}
+            >
+              {e.detail}
+            </span>
             {e.timelineQuery ? (
               <Link to="/timeline" search={{ q: e.timelineQuery }} className={VIEW}>
                 View calls
@@ -83,7 +92,7 @@ export function FindingEndpoints({
           <button
             type="button"
             onClick={() => setAll((on) => !on)}
-            className="w-full cursor-pointer px-3 py-2 text-left text-label text-fg-muted hover:bg-raised hover:text-fg"
+            className="w-full cursor-pointer px-3 py-2 text-left text-label text-fg-muted hover:bg-raised hover:text-fg pointer-coarse:min-h-11"
           >
             {all ? "Show fewer" : `Show ${endpoints.length - SHOWN} more`}
           </button>

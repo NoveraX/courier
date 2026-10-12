@@ -48,7 +48,7 @@ export function AppearanceSection({ settings }: { settings: SettingsDraft }): Re
           <Link
             to="/"
             search={{ setup: true }}
-            className="flex h-7.5 items-center gap-1.75 rounded-card border border-line bg-panel px-3 text-control font-strong text-fg hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand"
+            className="flex h-7.5 items-center gap-1.75 rounded-card border border-line bg-panel px-3 text-control font-strong text-fg hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-9"
           >
             <Rocket aria-hidden="true" className="size-3.25" />
             Open

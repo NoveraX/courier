@@ -38,7 +38,7 @@ function StepBody({
             useSetupStore.getState().complete();
             void navigate({ to: "/timeline" });
           }}
-          className="flex h-8.5 w-max items-center gap-2 rounded-card border border-brand bg-brand px-3.5 font-semibold text-bg transition-all enabled:cursor-pointer disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-fg-subtle"
+          className="flex h-8.5 w-max items-center gap-2 rounded-card border border-brand bg-brand px-3.5 font-semibold text-bg transition-all enabled:cursor-pointer disabled:cursor-not-allowed disabled:border-line disabled:bg-transparent disabled:text-fg-subtle pointer-coarse:h-10"
         >
           {progress.step.actionLabel} <span aria-hidden="true">→</span>
         </button>
@@ -70,7 +70,7 @@ export function StepsCard({ framework }: { framework: FrameworkConfig }): React.
         <li
           key={progress.step.id}
           className={cn(
-            "grid grid-cols-[28px_minmax(0,1fr)] gap-4 border-b border-line px-5 pt-5 pb-5.5 transition-colors duration-300 last:border-b-0",
+            "grid grid-cols-[28px_minmax(0,1fr)] gap-4 border-b border-line px-5 pt-5 pb-5.5 transition-colors duration-300 last:border-b-0 max-sm:gap-3 max-sm:px-4",
             progress.kind === "connect" && progress.current && !progress.failed && "bg-brand-tint",
           )}
         >

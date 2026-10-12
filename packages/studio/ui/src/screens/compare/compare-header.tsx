@@ -40,12 +40,14 @@ export function CompareHeader({ preset, onPreset }: CompareHeaderProps): React.R
       </div>
       <div className="flex-1" />
       {preset !== undefined && (
-        <Segmented
-          label="Ready-made pairs"
-          options={PRESETS}
-          value={preset ?? "own"}
-          onChange={choose}
-        />
+        <div className="scroll-row min-w-0 max-sm:w-full">
+          <Segmented
+            label="Ready-made pairs"
+            options={PRESETS}
+            value={preset ?? "own"}
+            onChange={choose}
+          />
+        </div>
       )}
     </header>
   );

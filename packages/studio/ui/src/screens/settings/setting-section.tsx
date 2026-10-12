@@ -16,7 +16,8 @@ interface SettingSectionProps {
 
 /**
  * One section of Settings: an icon tile, its name and what it covers, and
- * its rows.
+ * its rows — which go by the section's own width, so a section squeezed
+ * beside the navigation stacks them as a phone does.
  *
  * @param props - Its anchor, name, description, icon, tone, whether it is destructive, and its rows
  * @returns The section
@@ -32,11 +33,11 @@ export function SettingSection(props: SettingSectionProps): React.ReactNode {
       id={`settings-${id}`}
       aria-label={label}
       className={cn(
-        "flex scroll-mt-5 flex-col overflow-hidden rounded-sheet border bg-panel",
+        "@container flex scroll-mt-5 flex-col overflow-hidden rounded-sheet border bg-panel max-[859px]:scroll-mt-18",
         danger ? "border-err/30" : "border-line",
       )}
     >
-      <div className="flex items-center gap-3 border-b border-line px-4.5 py-4">
+      <div className="flex items-center gap-3 border-b border-line px-4.5 py-4 @max-[30rem]:px-4">
         <span
           className={cn(
             "flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-[color-mix(in_srgb,currentColor_13%,transparent)]",

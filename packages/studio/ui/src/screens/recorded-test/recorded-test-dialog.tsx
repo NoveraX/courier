@@ -13,6 +13,8 @@ import { PlanDetails } from "./plan-details";
 
 /* Where Studio saves recorded tests unless told otherwise, beside what `courier-studio verify` reads. */
 const DEFAULT_FOLDER = "tests/recorded";
+/* Under a finger the fields grow to a tap's height, and to the size below which a phone zooms in on focus. */
+const TOUCH_INPUT = "pointer-coarse:h-9 pointer-coarse:text-figure";
 
 function Body({ state }: { state: PlanState }): React.ReactNode {
   if (state.kind === "failed") {
@@ -42,7 +44,8 @@ function Body({ state }: { state: PlanState }): React.ReactNode {
  * Save the requests as a test: a name and a folder, the calls checked
  * against the definition as it is now, the recordings and the vitest file
  * Studio writes — the test shown as it will be written — and Write, which
- * replaces a file already there only when that is ticked.
+ * replaces a file already there only when that is ticked. On a phone the
+ * name and folder go one over the other, and the buttons under the tick.
  *
  * @returns The dialog, open while requests are being saved as a test
  * @example
@@ -84,7 +87,7 @@ export function RecordedTestDialog(): React.ReactNode {
       icon={{ icon: FlaskConical, tone: "bg-brand-dim text-brand" }}
       width="w-180"
       footer={
-        <div className="flex shrink-0 items-center gap-3 border-t border-line bg-panel-subtle px-5 py-3">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-line bg-panel-subtle px-5 py-3">
           {replaces && (
             <TickBox
               checked={replace}
@@ -97,7 +100,7 @@ export function RecordedTestDialog(): React.ReactNode {
             type="button"
             disabled={writing}
             onClick={close}
-            className="flex h-8 cursor-pointer items-center rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+            className="flex h-8 cursor-pointer items-center rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9"
           >
             Cancel
           </button>
@@ -105,7 +108,7 @@ export function RecordedTestDialog(): React.ReactNode {
             type="button"
             disabled={!plan || writing || (replaces && !replace)}
             onClick={() => void write()}
-            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-brand px-3.5 text-control font-semibold text-bg hover:bg-brand/90 disabled:cursor-default disabled:opacity-50"
+            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-brand px-3.5 text-control font-semibold text-bg hover:bg-brand/90 disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9"
           >
             {writing && <Loader2 aria-hidden="true" className="size-3.25 animate-spin" />}
             Write the test
@@ -113,8 +116,8 @@ export function RecordedTestDialog(): React.ReactNode {
         </div>
       }
     >
-      <div className="flex flex-col gap-4.5">
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3">
+      <div className="@container flex flex-col gap-4.5">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3 @max-[30rem]:grid-cols-1">
           <label className="flex flex-col gap-1 text-small text-fg-muted">
             Name
             <input
@@ -122,7 +125,7 @@ export function RecordedTestDialog(): React.ReactNode {
               value={title}
               placeholder={plan?.title ?? "Recorded requests"}
               onChange={(event) => setTitle(event.target.value)}
-              className={cn(FIELD_INPUT, "max-w-none font-sans")}
+              className={cn(FIELD_INPUT, "max-w-none font-sans", TOUCH_INPUT)}
             />
           </label>
           <label className="flex flex-col gap-1 text-small text-fg-muted">
@@ -131,7 +134,10 @@ export function RecordedTestDialog(): React.ReactNode {
               id="recorded-test-folder"
               value={folder}
               onChange={(event) => setFolder(event.target.value)}
-              className={cn(FIELD_INPUT, "max-w-none")}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className={cn(FIELD_INPUT, "max-w-none", TOUCH_INPUT)}
             />
           </label>
         </div>

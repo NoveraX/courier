@@ -46,7 +46,7 @@ function IgnorePatterns({ settings }: { settings: SettingsDraft }): React.ReactN
                     draft.ignorePatterns.filter((p) => p !== pattern),
                   )
                 }
-                className="flex size-4.5 cursor-pointer items-center justify-center rounded-chip text-fg-subtle hover:bg-raised hover:text-fg"
+                className="relative flex size-4.5 cursor-pointer items-center justify-center rounded-chip text-fg-subtle hit-area hover:bg-raised hover:text-fg"
               >
                 <X aria-hidden="true" className="size-2.75" />
               </button>
@@ -68,12 +68,15 @@ function IgnorePatterns({ settings }: { settings: SettingsDraft }): React.ReactN
           aria-invalid={problem !== null}
           aria-describedby={problem ? "ignore-problem" : undefined}
           placeholder="^/health, \.png$, analytics"
-          className="h-8 min-w-0 flex-1 rounded-card border border-line-strong bg-inset px-2.5 font-mono text-small text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          className="h-8 min-w-0 flex-1 rounded-card border border-line-strong bg-inset px-2.5 font-mono text-small text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand pointer-coarse:h-9 pointer-coarse:text-figure"
         />
         <button
           type="button"
           onClick={add}
-          className="h-8 cursor-pointer rounded-card border border-line bg-panel-subtle px-3 text-control text-fg hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand"
+          className="h-8 cursor-pointer rounded-card border border-line bg-panel-subtle px-3 text-control text-fg hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-9"
         >
           Add
         </button>

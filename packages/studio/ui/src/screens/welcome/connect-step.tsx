@@ -39,7 +39,7 @@ export function ConnectState(): React.ReactNode {
     );
   }
   return (
-    <div className="flex h-8 w-max max-w-full items-center gap-2.25 rounded-control border border-line bg-inset px-3 font-mono text-small text-fg-muted">
+    <div className="flex min-h-8 w-max max-w-full items-center gap-2.25 rounded-control border border-line bg-inset px-3 py-1.5 font-mono text-small break-all text-fg-muted">
       listening on ws://{window.location.host}/runtime
     </div>
   );

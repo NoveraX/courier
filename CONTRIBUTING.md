@@ -199,6 +199,13 @@ Visual Studio Marketplace and Open VSX, each the environment gives it a way in
 to. The Extensions workflow publishes the extensions by hand at a version
 already released.
 
+The packages are published by `scripts/release.ts` with the npm that comes
+with Node, never by semantic-release's own npm plugin, which `.releaserc.json`
+leaves out of its plugins. That plugin is installed with semantic-release all
+the same, and it would bring a copy of the npm CLI with old dependencies
+bundled inside; `scripts/stubs/npm-cli` stands in for that copy, through the
+`overrides` in `package.json`, so it is not installed.
+
 ## Pull requests
 
 Describe what changes for a user of the library, not only what moved in the

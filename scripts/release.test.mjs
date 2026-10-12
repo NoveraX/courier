@@ -64,3 +64,23 @@ describe("the version a release writes", () => {
     ]);
   });
 });
+
+describe("the npm CLI a release leaves out", () => {
+  it("is never run: the release names its plugins, and semantic-release's npm plugin is not one", () => {
+    const config = JSON.parse(readFileSync(".releaserc.json", "utf8"));
+    const names = config.plugins.map((plugin) => (Array.isArray(plugin) ? plugin[0] : plugin));
+
+    expect(names).toContain("@semantic-release/exec");
+    expect(names).not.toContain("@semantic-release/npm");
+  });
+
+  it("is stood in for by a folder that installs no command, so publishing runs Node's own npm", () => {
+    const manifest = JSON.parse(readFileSync("package.json", "utf8"));
+    const stand = JSON.parse(readFileSync("scripts/stubs/npm-cli/package.json", "utf8"));
+
+    expect(manifest.devDependencies.npm).toBe("file:./scripts/stubs/npm-cli");
+    expect(manifest.overrides).toEqual({ npm: "$npm" });
+    expect(stand).toMatchObject({ name: "npm", private: true });
+    expect(stand).not.toHaveProperty("bin");
+  });
+});

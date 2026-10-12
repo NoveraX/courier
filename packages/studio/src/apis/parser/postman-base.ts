@@ -6,6 +6,8 @@
  * variable often holds a whole base URL, path included.
  */
 
+import { withoutTrailingSlashes } from "@noverax/courier/internal";
+
 import { nodesAt, textAt } from "./spec-node";
 import type { SpecNode } from "./types";
 
@@ -61,7 +63,7 @@ export function requestBase(
   const filled = host ? fill(host, variables) : undefined;
   if (!filled) return undefined;
   const base = ABSOLUTE.test(filled) ? filled : `${scheme ?? "https"}://${filled}`;
-  return base.replace(/\/+$/, "");
+  return withoutTrailingSlashes(base);
 }
 
 /**

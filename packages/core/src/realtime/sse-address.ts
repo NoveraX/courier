@@ -5,10 +5,8 @@
  */
 
 import { appendQuery } from "../utils/query-string";
+import { withoutEdgeSlashes, withoutTrailingSlashes } from "../utils/trim-slashes";
 import { encodeWireVariables, WIRE_VARIABLES_KEY } from "../utils/wire-variables";
-
-const TRAILING_SLASHES = /\/+$/;
-const EDGE_SLASHES = /^\/+|\/+$/g;
 
 /** Build a direct SSE URL: baseURL/prefix/method?variables */
 export function buildDirectSSEUrl(
@@ -19,9 +17,9 @@ export function buildDirectSSEUrl(
 ): string {
   /* One slash between the parts, however each is written: a prefix "/api/"
      and a path "events" join as "/api/events". */
-  const base = baseURL.replace(TRAILING_SLASHES, "");
-  const group = prefix.replace(EDGE_SLASHES, "");
-  const tail = method.replace(EDGE_SLASHES, "");
+  const base = withoutTrailingSlashes(baseURL);
+  const group = withoutEdgeSlashes(prefix);
+  const tail = withoutEdgeSlashes(method);
   const path = `${base}${group ? `/${group}` : ""}${tail ? `/${tail}` : ""}`;
 
   return variables ? appendQuery(path, variables) : path;

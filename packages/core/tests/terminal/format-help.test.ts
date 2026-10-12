@@ -34,6 +34,18 @@ describe("formatHelp", () => {
     expect(text).toContain("    -v, --version    Show the version");
   });
 
+  it("colours an option whose value hint never closes, however long, at once", () => {
+    const long = {
+      ...help,
+      options: helpOptions({
+        port: { type: "string", valueHint: "<".repeat(200_000), description: "Server port" },
+      }),
+    };
+    const coloured = formatHelp(long, createTerminalStyle(8, true));
+
+    expect(coloured.replace(ESCAPE, "")).toBe(formatHelp(long, createTerminalStyle(0, true)));
+  });
+
   it("writes no escape code without colour, and the same text with it", () => {
     const coloured = formatHelp(help, createTerminalStyle(8, true));
 

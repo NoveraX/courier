@@ -21,6 +21,8 @@ export interface MockLog {
   record(event: MockEvent): void;
   /** The kept events a page is sent as it connects, oldest first: the newest requests', each whole, as many as fit the replay. */
   events(): MockEvent[];
+  /** What `events` returns, as the message a page is sent: their JSON array in UTF-8, as the database keeps it — never parsed and written out again. */
+  replayPayload(): Uint8Array;
   /** Forget every request every mock answered, as the Storage settings' Clear does. */
   forgetAll(): void;
   /** Forget every request one mock answered, as its page's Clear does. */
@@ -39,7 +41,7 @@ export interface MockLog {
  * ```ts
  * const mockLog = createMockLog(db);
  * mockLog.record({ type: "mock:request:start", requestId: "req_1", serverId: "petstore" });
- * socket.emit("mock:events:replay", mockLog.events());
+ * socket.emit("mock:events:replay", mockLog.replayPayload());
  * ```
  */
 export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYTES): MockLog {
@@ -59,6 +61,8 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
   /* The mock each kept request was answered by, so one mock's log can be forgotten alone. */
   const owners = new Map<string, string>();
   let pending: Array<{ id: string; event: MockEvent }> = [];
+  /* The requests with events in `pending`: only one of them has any to take back. */
+  const waiting = new Set<string>();
   let dropped: string[] = [];
   let scheduled = false;
   let closed = false;
@@ -75,6 +79,7 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
     if (closed || pending.length + dropped.length === 0) return;
     const [writes, drops] = [pending, dropped];
     pending = [];
+    waiting.clear();
     dropped = [];
     db.exec("BEGIN");
     try {
@@ -96,6 +101,7 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
       if (requests.size > MOCK_LOG_REQUESTS) forgetOldest();
     }
     pending.push({ id, event });
+    waiting.add(id);
     schedule();
   }
 
@@ -108,7 +114,7 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
   function forgetRequest(id: string): void {
     requests.delete(id);
     owners.delete(id);
-    pending = pending.filter((entry) => entry.id !== id);
+    if (waiting.delete(id)) pending = pending.filter((entry) => entry.id !== id);
     dropped.push(id);
   }
 
@@ -123,6 +129,11 @@ export function createMockLog(db: DatabaseSync, replayBytes: number = REPLAY_BYT
       if (typeof event.type !== "string" || !LOGGED.has(event.type) || typeof id !== "string")
         return;
       keep(id, event);
+    },
+    replayPayload() {
+      flush();
+      const bodies = selectReplay.all(replayBytes).map((row) => String(row.body));
+      return Buffer.from(`[${bodies.join(",")}]`, "utf8");
     },
     events() {
       flush();

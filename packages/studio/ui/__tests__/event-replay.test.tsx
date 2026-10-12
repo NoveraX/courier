@@ -52,7 +52,7 @@ async function studio(replay: Event[]): Promise<{ url: string; pages: ServerSock
   const pages: ServerSocket[] = [];
   server.of("/ui").on("connection", (socket) => {
     pages.push(socket);
-    socket.emit("events:replay", replay);
+    socket.emit("events:replay", Buffer.from(JSON.stringify(replay)));
   });
   await new Promise<void>((resolve) => http.listen(0, "127.0.0.1", resolve));
   return { url: `http://127.0.0.1:${(http.address() as AddressInfo).port}/ui`, pages };

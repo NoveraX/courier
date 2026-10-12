@@ -34,6 +34,8 @@ export interface RequestRows {
   openingOf(id: string): RuntimeEvent | undefined;
   /** The kept events a page is sent as it connects: the newest requests', each whole and in the order its events arrived, as many as fit the replay, oldest request first */
   events(): RuntimeEvent[];
+  /** What `events` returns, as the JSON array text the database's rows make, none of them parsed */
+  replayText(): string;
   /** The events that open and end each request, without the bodies and headers they carry, in the order they came */
   keyEvents(): Array<{ id: string; event: RuntimeEvent }>;
   /** One request's events, whole, in the order they came */
@@ -100,6 +102,11 @@ export function requestRows(db: DatabaseSync, replayBytes: number = REPLAY_BYTES
         const event = eventOf(row.body);
         return event ? [event] : [];
       }),
+    replayText: () =>
+      `[${listEvents
+        .all(replayBytes)
+        .map((row) => String(row.body))
+        .join(",")}]`,
     keyEvents: () =>
       listKeyEvents.all().flatMap((row) => {
         const event = eventOf(row.body);

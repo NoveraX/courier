@@ -14,8 +14,9 @@ import type { DatabaseSync } from "node:sqlite";
 
 import { closingEvent, isClosing, isOpening, requestIdOf } from "./request-log-events";
 import type { RequestLog } from "./request-log-types";
-import { createRequestOutline } from "./request-outline";
-import { type RequestBatch, requestRows } from "./storage/request-rows";
+import { requestLogWrites } from "./request-log-writes";
+import { lazyRequestOutline } from "./request-outline";
+import { requestRows, type StoredRequest } from "./storage/request-rows";
 
 export type { RequestLog } from "./request-log-types";
 
@@ -55,7 +56,7 @@ interface LoggedRequest {
  * ```ts
  * const log = createRequestLog(openStudioDb(projectRoot).db);
  * log.record(event, socket.id);
- * uiSocket.emit("events:replay", log.events());
+ * uiSocket.emit("events:replay", log.replayPayload());
  * ```
  */
 export function createRequestLog(
@@ -64,53 +65,27 @@ export function createRequestLog(
   isPinned: (id: string) => boolean = () => false,
 ): RequestLog {
   const rows = requestRows(db, replayBytes);
-  const outline = createRequestOutline(rows.keyEvents());
   const requests = new Map<string, LoggedRequest>();
-  let batch: RequestBatch = { events: [], requests: [], dropped: [] };
-  const changed = new Set<string>();
+  const writes = requestLogWrites(rows, (id) => rowOf(id, requests.get(id)));
+  const outline = lazyRequestOutline(() => {
+    writes.flush();
+    return rows.keyEvents();
+  });
   let next = 0;
   let changes = 0;
-  let scheduled = false;
-  let closed = false;
-
-  function flush(): void {
-    scheduled = false;
-    if (closed) return;
-    for (const id of changed) {
-      const request = requests.get(id);
-      if (request)
-        batch.requests.push({
-          id,
-          position: request.position,
-          open: request.open,
-          events: request.events,
-        });
-    }
-    changed.clear();
-    if (batch.events.length + batch.requests.length + batch.dropped.length === 0) return;
-    const written = batch;
-    batch = { events: [], requests: [], dropped: [] };
-    rows.write(written);
-  }
 
   function append(id: string, request: LoggedRequest, event: RuntimeEvent): void {
-    batch.events.push({ id, event });
+    writes.event(id, event);
     outline.see(id, event);
     changes += 1;
     request.events += 1;
-    changed.add(id);
-    if (scheduled) return;
-    scheduled = true;
-    setImmediate(flush);
   }
 
   function drop(id: string): void {
     requests.delete(id);
     outline.drop(id);
     changes += 1;
-    /* Only a request with events still waiting to be written has any to take back. */
-    if (changed.delete(id)) batch.events = batch.events.filter((entry) => entry.id !== id);
-    batch.dropped.push(id);
+    writes.drop(id);
   }
 
   function start(id: string, event: RuntimeEvent, owner: string): void {
@@ -154,7 +129,7 @@ export function createRequestLog(
     next = stored.position + 1;
   }
   for (const [id, request] of requests) if (request.open) end(id, request);
-  flush();
+  writes.flush();
 
   return {
     record(event, owner) {
@@ -174,14 +149,18 @@ export function createRequestLog(
       append(id, request, event);
     },
     events() {
-      flush();
+      writes.flush();
       return rows.events();
+    },
+    replayPayload() {
+      writes.flush();
+      return Buffer.from(rows.replayText(), "utf8");
     },
     keyEvents: outline.events,
     version: () => changes,
     eventsOf(id) {
       if (!requests.has(id)) return [];
-      flush();
+      writes.flush();
       return rows.eventsOf(id);
     },
     endOpen(owner) {
@@ -193,11 +172,13 @@ export function createRequestLog(
     },
     forget(keep) {
       for (const id of [...requests.keys()]) if (!keep.has(id)) drop(id);
-      flush();
+      writes.flush();
     },
-    close() {
-      flush();
-      closed = true;
-    },
+    close: writes.close,
   };
+}
+
+/* A request's row, as the database keeps it. */
+function rowOf(id: string, request: LoggedRequest | undefined): StoredRequest | undefined {
+  return request && { id, position: request.position, open: request.open, events: request.events };
 }

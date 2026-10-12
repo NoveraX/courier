@@ -25,6 +25,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createStudioServer } from "../src/server/create-studio-server";
 import { MAX_SESSION_REQUESTS } from "../src/server/session-body";
 import type { StudioServer } from "../src/server/types";
+import { replayed } from "./helpers/runtime-events";
 import { tokenHeader } from "./helpers/token-header";
 
 const REQUESTS = [
@@ -329,7 +330,7 @@ async function page(): Promise<{ socket: Socket; shown: unknown[]; replays: unkn
   });
   const seen = { socket, shown: [] as unknown[], replays: [] as unknown[] };
   socket.on("view:session", (session: unknown) => seen.shown.push(session));
-  socket.on("events:replay", (events: unknown) => seen.replays.push(events));
+  socket.on("events:replay", (payload: unknown) => seen.replays.push(replayed(payload)));
   await new Promise<void>((resolve) => socket.once("connect", () => resolve()));
   return seen;
 }

@@ -5,6 +5,7 @@ import type { StudioEvent } from "@/store/types-events";
 import { isStudioEvent } from "./event-guards";
 import { createEventQueue } from "./event-queue";
 import { replayMockEvents } from "./replay-mock-events";
+import { replayedEvents } from "./replayed-events";
 import { shownSessionOf } from "./shown-session-of";
 import { storeResender } from "./store-resender";
 
@@ -50,10 +51,11 @@ export function bindEvents(socket: Socket, store: () => EventsStore): () => void
   };
   /* Live events queued before the replay arrived belong before it. */
   const onReplay = (data: unknown): void => {
-    if (!Array.isArray(data)) return;
+    const events = replayedEvents(data);
+    if (!events) return;
     queue.flush();
     store().replayEvents(
-      data.filter((e): e is EventPayload => isStudioEvent(e) && !isMockEvent(e.type)),
+      events.filter((e): e is EventPayload => isStudioEvent(e) && !isMockEvent(e.type)),
     );
   };
 
@@ -65,7 +67,8 @@ export function bindEvents(socket: Socket, store: () => EventsStore): () => void
   };
 
   const onMockReplay = (data: unknown): void => {
-    if (Array.isArray(data)) replayMockEvents(data);
+    const events = replayedEvents(data);
+    if (events) replayMockEvents(events);
   };
 
   socket.on("events", onEvents);

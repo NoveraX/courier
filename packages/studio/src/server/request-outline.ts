@@ -78,3 +78,33 @@ function withoutBodies(event: RuntimeEvent): RuntimeEvent {
   }
   return kept;
 }
+
+/**
+ * An outline read from the database only when first asked for its events,
+ * not as Studio starts: a full log takes a fifth of a second to go through,
+ * and a Studio whose pages only show the Timeline never asks. Until then
+ * it takes nothing in: what it would, it finds in the database.
+ *
+ * @param stored - Reads the key events the database holds, once everything kept was written
+ * @returns The outline
+ * @example
+ * ```ts
+ * const outline = lazyRequestOutline(() => {
+ *   flush();
+ *   return rows.keyEvents();
+ * });
+ * ```
+ */
+export function lazyRequestOutline(
+  stored: () => Iterable<{ readonly id: string; readonly event: RuntimeEvent }>,
+): RequestOutline {
+  let outline: RequestOutline | undefined;
+  return {
+    see: (requestId, event) => outline?.see(requestId, event),
+    drop: (requestId) => outline?.drop(requestId),
+    events: () => {
+      outline ??= createRequestOutline(stored());
+      return outline.events();
+    },
+  };
+}

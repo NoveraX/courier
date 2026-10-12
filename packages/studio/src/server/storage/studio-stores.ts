@@ -42,7 +42,7 @@ export interface StudioStores {
  * @example
  * ```ts
  * const stores = openStudioStores(root);
- * uiSocket.emit("events:replay", stores.requestLog.events());
+ * uiSocket.emit("events:replay", stores.requestLog.replayPayload());
  * stores.close();
  * ```
  */

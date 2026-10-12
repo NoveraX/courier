@@ -1,4 +1,4 @@
-import { buildSourceScan } from "../build-source-scan";
+import { cachedSourceScan } from "../cached-source-scan";
 import { importsSnapshotOf, summarizeImports } from "../imports-bridge";
 import type { UpdateChecks } from "../update-checks";
 import type { ProjectEventTarget, ProjectSnapshot } from "./types";
@@ -33,7 +33,7 @@ export function sendImportLists(
 ): void {
   const imports = importsSnapshotOf(snapshot.running?.config.imports, root);
   const registry = { sources: summarizeImports(imports, checks) };
-  const scan = buildSourceScan(snapshot.running, imports, root);
+  const scan = cachedSourceScan(snapshot.running, imports, root);
   target.emit("registry:updated", registry);
   target.emit("scan:sources", scan);
 }

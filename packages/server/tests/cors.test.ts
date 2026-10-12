@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import type { AddressInfo } from "node:net";
 
 import { courier, defineApi } from "@noverax/courier/define";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { handleCors } from "../src/cors";
 import { createCourierServer } from "../src/create-server";
@@ -36,6 +36,10 @@ function createMockRes(): ServerResponse & {
     setHeader(name: string, value: string) {
       res._headers[name] = value;
       return res;
+    },
+    getHeader(name: string) {
+      const key = Object.keys(res._headers).find((k) => k.toLowerCase() === name.toLowerCase());
+      return key === undefined ? undefined : res._headers[key];
     },
     end(body?: string) {
       if (body) res._body = body;
@@ -150,6 +154,100 @@ describe("handleCors — the request itself", () => {
   });
 });
 
+/**
+ * In development a page on another port of the local machine is let through,
+ * so the Studio can drive the app. Any local tool or dev server is such a
+ * page, and behind a proxy on the same host the server's own address is a
+ * local one too, so letting it read the answer, with the user's cookies on
+ * the request, handed it the user's data. The core adapters never did.
+ */
+describe("handleCors — a page let through in development", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const fromLocalPage = (origin: string, method = "GET") =>
+    createMockReq({
+      method,
+      headers: {
+        host: "127.0.0.1:3001",
+        origin,
+        "sec-fetch-site": "cross-site",
+        ...(method === "OPTIONS" ? { "access-control-request-method": "POST" } : {}),
+      },
+    });
+
+  it("is served, but may not read the answer", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    for (const origin of ["http://localhost:5173", "http://evil.localhost:8080"]) {
+      const res = createMockRes();
+
+      expect(handleCors(fromLocalPage(origin), res, undefined)).toBe(false);
+      expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
+      expect(res._headers["Access-Control-Allow-Credentials"]).toBeUndefined();
+    }
+  });
+
+  it("may not read it when NODE_ENV is unset either, as a server started without it runs", () => {
+    vi.stubEnv("NODE_ENV", "");
+    const res = createMockRes();
+
+    expect(handleCors(fromLocalPage("http://localhost:5173"), res, [])).toBe(false);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
+  });
+
+  it("has its preflight refused, as the core adapters refuse it", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const res = createMockRes();
+
+    expect(handleCors(fromLocalPage("http://localhost:5173", "OPTIONS"), res, undefined)).toBe(
+      true,
+    );
+    expect(res._status).toBe(403);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBeUndefined();
+  });
+
+  it("reads the answer once it is listed", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const res = createMockRes();
+
+    handleCors(fromLocalPage("http://localhost:5173"), res, ["http://localhost:5173"]);
+
+    expect(res._headers["Access-Control-Allow-Origin"]).toBe("http://localhost:5173");
+    expect(res._headers["Access-Control-Allow-Credentials"]).toBe("true");
+  });
+});
+
+describe("handleCors — Vary", () => {
+  it("names Origin beside what the response already varies by", () => {
+    const res = createMockRes();
+    res.setHeader("Vary", "Accept-Encoding");
+
+    handleCors(
+      createMockReq({ headers: { host: "api.example.com", origin: "http://example.com" } }),
+      res,
+      ["http://example.com"],
+    );
+
+    expect(res._headers.Vary).toBe("Accept-Encoding, Origin");
+  });
+
+  it("names it once, and not beside a Vary of every field", () => {
+    const req = () =>
+      createMockReq({ headers: { host: "api.example.com", origin: "http://example.com" } });
+    const named = createMockRes();
+    const every = createMockRes();
+    named.setHeader("Vary", "origin");
+    every.setHeader("Vary", "*");
+
+    handleCors(req(), named, ["http://example.com"]);
+    handleCors(req(), every, ["http://example.com"]);
+
+    expect(named._headers.Vary).toBe("origin");
+    expect(every._headers.Vary).toBe("*");
+  });
+});
+
 describe("handleCors — the browser's own verdict", () => {
   /**
    * Behind a proxy that terminates TLS on an address the server does not
@@ -225,6 +323,84 @@ describe("the origin gate on a running server", () => {
     expect(await res.json()).toEqual({ ok: true });
     await server.stop();
     await new Promise<void>((resolve) => upstream.close(() => resolve()));
+  });
+});
+
+/**
+ * The server as it runs, started without NODE_ENV and reached on a loopback
+ * address — as behind a proxy on the same host that sends its own `Host`.
+ */
+describe("a running server's answer to a page on another origin", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  async function serve(allowedOrigins?: string[]) {
+    const upstream = createServer((_req, res) => {
+      res.writeHead(200, { "Content-Type": "application/json", Vary: "Accept-Encoding" });
+      res.end(JSON.stringify({ secret: "user-data" }));
+    });
+    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", resolve));
+    const { endpoint } = courier();
+    const api = defineApi({
+      baseURL: `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`,
+      endpoints: { me: endpoint.get("me") },
+    });
+    const server = createCourierServer({
+      sources: { api },
+      port: 0,
+      host: "127.0.0.1",
+      signals: false,
+      ...(allowedOrigins ? { allowedOrigins } : {}),
+    });
+    const url = await server.ready;
+    const stop = async () => {
+      await server.stop();
+      await new Promise<void>((resolve) => upstream.close(() => resolve()));
+    };
+    return { url: `${url}/api/request?_s=api&_m=me`, stop };
+  }
+
+  it("gives a local page let through no permission to read it", async () => {
+    vi.stubEnv("NODE_ENV", "");
+    const { url, stop } = await serve();
+
+    const res = await fetch(url, {
+      headers: { Origin: "http://localhost:5173", "Sec-Fetch-Site": "cross-site", Cookie: "s=1" },
+    });
+    await res.body?.cancel();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBeNull();
+    expect(res.headers.get("access-control-allow-credentials")).toBeNull();
+    await stop();
+  });
+
+  it("grants a listed page, varying by Origin beside the upstream's own Vary", async () => {
+    const { url, stop } = await serve(["https://app.example.com"]);
+
+    const res = await fetch(url, {
+      headers: { Origin: "https://app.example.com", "Sec-Fetch-Site": "cross-site" },
+    });
+    await res.body?.cancel();
+
+    const vary = (res.headers.get("vary") ?? "").split(",").map((name) => name.trim());
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://app.example.com");
+    expect(vary).toEqual(expect.arrayContaining(["Accept-Encoding", "Origin"]));
+    await stop();
+  });
+
+  /* The grant the server makes itself, which the upstream's own Vary replaced. */
+  it("varies by Origin beside the upstream's Vary when it grants its own page", async () => {
+    const { url, stop } = await serve();
+    const own = new URL(url).origin;
+
+    const res = await fetch(url, { headers: { Origin: own, "Sec-Fetch-Site": "same-origin" } });
+    await res.body?.cancel();
+
+    expect(res.headers.get("access-control-allow-origin")).toBe(own);
+    expect(res.headers.get("vary")).toBe("Origin, Accept-Encoding");
+    await stop();
   });
 });
 

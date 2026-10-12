@@ -68,7 +68,7 @@ What the [standalone server](/docs/deployment/standalone-server) reads when its 
 | --- | --- | --- |
 | `port` | `3001` | `--port` overrides it |
 | `host` | `"127.0.0.1"` | `--host` overrides it; `"0.0.0.0"` or `"::"` to accept other machines |
-| `allowedOrigins` | — | The origins of the browser apps that call the server, written as a browser sends them. Left out, only the server's own origin, and loopback ones outside production. `--allowed-origins` overrides it |
+| `allowedOrigins` | — | The origins of the browser apps that call the server, written as a browser sends them. Left out, only the server's own origin; outside production a page on another port of the local machine is let through as well, so Studio can drive the app, but never reads the answers — list the origin of a dev server whose page calls this one. `--allowed-origins` overrides it |
 | `allowedHosts` | — | The host names the server is reached by; a request to another is refused with `421`. `--allowed-hosts` overrides it |
 | `maxBodyBytes` | 1 MB | The largest JSON envelope the proxy reads; a larger one is refused with `413` |
 | `maxUploadBytes` | 10 MB | The largest `multipart/form-data` upload the proxy reads |

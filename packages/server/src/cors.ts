@@ -1,18 +1,22 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { isOriginAccepted } from "@noverax/courier/internal";
+import { isOriginAccepted, isOriginListed } from "@noverax/courier/internal";
 import { extractOriginFromNodeRequest } from "@noverax/courier/node";
 
 import { sendError } from "./send-error";
 
 /**
- * Answer a preflight, refuse a foreign origin, and — on a request that is
- * allowed to proceed — say so on the response itself.
+ * Answer a preflight, refuse a foreign origin, and — on a request from a
+ * page that may read the answer — say so on the response itself.
  *
  * The response carries `Access-Control-Allow-Origin` as the preflight does,
  * so a configured cross-origin caller that passed the check can read the
- * answer. The matcher is the core's, so `*.example.com` means here what it
- * means everywhere else.
+ * answer. As in the core adapters, that is granted to a listed page — and
+ * to the server's own — and to no other: in development a page on another
+ * port of the local machine is let through, so the Studio can drive the
+ * app, but it never reads what it is answered, since any local tool or dev
+ * server is such a page. The matcher is the core's, so `*.example.com`
+ * means here what it means everywhere else.
  *
  * @param req - The incoming request
  * @param res - The response being prepared
@@ -39,10 +43,13 @@ export function handleCors(
      trust with X-Forwarded-* is still its own, and a cross-site request
      without an Origin is still cross-site. */
   const allowed = isOriginAccepted(origin, self, allowedOrigins, req.headers["sec-fetch-site"]);
+  const granted =
+    allowed && !!origin && (origin === self || isOriginListed(origin, allowedOrigins));
 
   if (req.method === "OPTIONS" && origin) {
-    /* Refused as the adapters refuse it, so a client reads one answer. */
-    if (!allowed) {
+    /* Refused as the adapters refuse it, so a client reads one answer: a
+       preflight asks to read, which a page let through is not granted. */
+    if (!granted) {
       sendError(res, 403, "Origin not allowed");
       return true;
     }
@@ -64,14 +71,22 @@ export function handleCors(
     return true;
   }
 
-  if (origin) {
+  if (granted && origin !== undefined) {
     /* The browser needs this on the answer, not only on the preflight. */
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Vary", "Origin");
+    addVary(res, "Origin");
   }
 
   return false;
+}
+
+/* Name a field in `Vary` beside any named there already. */
+function addVary(res: ServerResponse, field: string): void {
+  const named = String(res.getHeader("Vary") ?? "");
+  const fields = named.split(",").map((name) => name.trim().toLowerCase());
+  if (fields.includes("*") || fields.includes(field.toLowerCase())) return;
+  res.setHeader("Vary", named.trim() === "" ? field : `${named}, ${field}`);
 }
 
 /**

@@ -208,3 +208,41 @@ describe("courier-studio diff", () => {
     }
   }, 60_000);
 });
+
+describe("courier-studio diff, for a project in a folder of its repository", () => {
+  it("reads the definition at the ref from the same folder", () => {
+    const repository = mkdtempSync(join(tmpdir(), "courier-diff-repository-"));
+    const project = join(repository, "apps", "shop");
+    mkdirSync(project, { recursive: true });
+    symlinkSync(resolve(__dirname, "../../../node_modules"), join(project, "node_modules"), "dir");
+    writeFileSync(join(project, "package.json"), JSON.stringify({ name: "shop", type: "module" }));
+    writeFileSync(join(repository, ".gitignore"), "node_modules\n");
+    writeFileSync(
+      join(project, "courier.config.ts"),
+      config("z.object({ id: z.string(), total: z.number() })"),
+    );
+    const commit = (...args: string[]) =>
+      execFileSync(
+        "git",
+        ["-c", "user.name=test", "-c", "user.email=test@example.invalid", ...args],
+        {
+          cwd: repository,
+          stdio: "pipe",
+        },
+      );
+    commit("init", "--quiet");
+    commit("add", ".");
+    commit("commit", "--quiet", "-m", "base");
+    writeFileSync(join(project, "courier.config.ts"), config("z.object({ id: z.string() })"));
+
+    const run = spawnSync(
+      process.execPath,
+      ["--import", TSX, CLI, "diff", "--base", "HEAD", "--cwd", project],
+      { encoding: "utf8", timeout: 60_000, env: { ...process.env, NO_COLOR: "1" } },
+    );
+    rmSync(repository, { recursive: true, force: true });
+
+    expect(run.status, run.stderr).toBe(1);
+    expect(run.stdout).toContain("BREAKING  answer.total is no longer in the answer");
+  }, 60_000);
+});

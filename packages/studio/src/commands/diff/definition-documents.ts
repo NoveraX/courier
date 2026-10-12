@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { basename, join, relative, resolve } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, join } from "node:path";
 import { isDefinedApi } from "@noverax/courier/internal";
 import { toOpenAPI } from "@noverax/courier/openapi";
 
@@ -73,12 +73,15 @@ export function documentsOf(sources: Readonly<Record<string, unknown>>): Record<
  * ```
  */
 export async function definitionAtRef(root: string, ref: string): Promise<Definition> {
-  const repository = git(root, ["rev-parse", "--show-toplevel"]).trim();
+  /* Where the project is in the repository, as git itself sees it: comparing
+     paths would not do, for git names the repository by its real path —
+     `/private/var/…` for a project under `/var/…` on macOS, a long name for
+     a short one on Windows. */
+  const project = git(root, ["rev-parse", "--show-prefix"]).trim();
   const worktree = join(ensureCourierDir(root), `diff-base-${randomBytes(4).toString("hex")}`);
   git(root, ["worktree", "add", "--detach", "--quiet", worktree, ref]);
   try {
-    /* git names the repository by its real path: `/private/var/…` for a project under `/var/…` on macOS. */
-    return await definitionAt(join(worktree, relative(repository, realpathSync(resolve(root)))));
+    return await definitionAt(join(worktree, project));
   } finally {
     git(root, ["worktree", "remove", "--force", worktree]);
   }

@@ -188,7 +188,10 @@ describe("a store file's size", () => {
     const old = new DatabaseSync(file);
     old.exec("CREATE TABLE filler (body TEXT)");
     const insert = old.prepare("INSERT INTO filler (body) VALUES (?)");
+    /* One transaction: a flush per row takes seconds on Windows. */
+    old.exec("BEGIN");
     for (let i = 0; i < 200; i++) insert.run("z".repeat(64 * 1024));
+    old.exec("COMMIT");
     old.exec("DELETE FROM filler");
     old.close();
     const before = statSync(file).size;

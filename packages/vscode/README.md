@@ -166,7 +166,7 @@ The calls Studio recorded as tests, under `tests/recorded/`, show in the Test Ex
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/chat-dark.png" />
-  <img alt="The chat with @courier's answer to /endpoint shop.orders.place: its calls, failures and p95, its latest failure, its latest calls with their statuses and times, and an Open in Studio button" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/chat-light.png" width="880" />
+  <img alt="The chat with @courier's answer to /endpoint shop.orders.place: its calls, failures and p95, its latest failure, its latest calls with their statuses and times, and an Open in Studio button" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/chat-light.png" width="555" />
 </picture>
 
 <br />
@@ -179,11 +179,11 @@ Studio's audit reads the requests it recorded; the extension marks its findings 
 
 ## Courier's file icons
 
-With Material Icon Theme or vscode-icons in use in a Courier project, the extension offers once to show its own icons for `courier.config.ts`, `courier.mocks.ts` and the `.courier` folder, through the settings those themes read; **Courier: Remove Courier's Icons from the File Icon Theme** takes them out again.
+With Material Icon Theme or vscode-icons in use in a Courier project, the extension offers once to show its own icons for `courier.config.ts`, `courier.mocks.ts` and the `.courier` folder, through the settings those themes read — one click, no reload. From then on they follow your settings: on your other machines through Settings Sync, across Courier's updates, and out again everywhere with **Courier: Remove Courier's Icons from the File Icon Theme**.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/icons-dark.png" />
-  <img alt="The Explorer in vscode-icons: the .courier folder with Courier's folder icon, courier.config.ts with Courier's mark in blue and courier.mocks.ts with it in violet" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/icons-light.png" width="880" />
+  <img alt="The Explorer in vscode-icons: the .courier folder with Courier's folder icon, courier.config.ts with Courier's mark in blue and courier.mocks.ts with it in violet" src="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/icons-light.png" width="295" />
 </picture>
 
 <br />

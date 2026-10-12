@@ -31,7 +31,7 @@ function loadedWith(entry: string, outputs: Metafile["outputs"]): Set<string> {
 async function bundleOf(caller: string): Promise<{ atOnce: string; all: string }> {
   const { outputFiles, metafile } = await build({
     stdin: {
-      contents: `export { ${caller} } from "${SRC}/index.ts";`,
+      contents: `export { ${caller} } from "./index.ts";`,
       resolveDir: SRC,
       loader: "ts",
     },

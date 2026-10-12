@@ -53,11 +53,12 @@ export function RefactorSection({ lines }: { lines: readonly CodeToken[][] }) {
           {TITLE}
         </h2>
       </div>
+      {/* The section never clips its overflow: Safari then places the pinned stage a frame behind a phone's gliding scroll, and it shakes. */}
       <section
         id="delete"
         ref={sectionRef}
         aria-label={TITLE}
-        className="relative mt-4 h-[260vh] overflow-x-clip min-[980px]:mt-28"
+        className="relative mt-4 h-[260vh] min-[980px]:mt-28"
       >
         <div className="sticky top-14 pb-7">
           <div

@@ -44,7 +44,7 @@ export function FilterOptionRow({
   return (
     <div
       className={cn(
-        "group mt-0.5 flex h-8 items-center gap-2.25 rounded-[6px] px-2 hover:bg-raised",
+        "group mt-0.5 flex h-8 items-center gap-2.25 rounded-[6px] px-2 hover:bg-raised pointer-coarse:h-10",
         state === "on" && "bg-brand-tint",
       )}
     >
@@ -78,7 +78,7 @@ export function FilterOptionRow({
       <button
         type="button"
         onClick={onOnly}
-        className="cursor-pointer rounded-chip px-1.25 py-0.5 text-badge text-brand opacity-55 hover:bg-brand-dim hover:opacity-100"
+        className="relative cursor-pointer rounded-chip px-1.25 py-0.5 text-badge text-brand opacity-55 hit-area hover:bg-brand-dim hover:opacity-100 pointer-coarse:opacity-80"
       >
         only
       </button>

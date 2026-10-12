@@ -46,7 +46,7 @@ export function CutNote({ bytes, onWhole, file }: CutNoteProps): React.ReactNode
         <button
           type="button"
           onClick={onWhole}
-          className="flex h-6.5 shrink-0 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line-strong bg-panel px-2.5 text-label font-strong whitespace-nowrap text-fg-muted transition-colors hover:text-fg"
+          className="flex h-6.5 shrink-0 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line-strong bg-panel px-2.5 text-label font-strong whitespace-nowrap text-fg-muted transition-colors hover:text-fg pointer-coarse:h-9"
         >
           <Download aria-hidden="true" className="size-3" />
           Download whole

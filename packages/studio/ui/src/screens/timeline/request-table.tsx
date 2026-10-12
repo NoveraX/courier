@@ -1,30 +1,36 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { listTierOf, MEDIA } from "@/design/breakpoints";
 import { useSessionEnd } from "@/features/sessions/use-session-end";
 import { useAutoScroll } from "@/hooks/use-auto-scroll";
 import { useElementWidth } from "@/hooks/use-element-width";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useNow } from "@/hooks/use-tick";
 import { useInspector } from "@/inspector/use-inspector";
-import { cn } from "@/lib/utils";
 import { RowMenu } from "@/request-list/row-menu";
 import { useStudioStore } from "@/store";
 import type { RequestEntry } from "@/store/types";
 import { RequestRow } from "./request-row";
-import { columnsOf, WIDE_FROM } from "./table-columns";
-import { GroupHead, HeldPill } from "./table-parts";
+import { StackedRequestRow } from "./request-row-stacked";
+import { GROUP_HEIGHT, rowHeightOf, WIDE_FROM } from "./table-columns";
+import { GroupHead, HeldPill, TableHead } from "./table-parts";
 import { useRowKeys } from "./use-row-keys";
 
 type Item =
   | { kind: "group"; label: "Pinned" | "Live"; count: number }
   | { kind: "row"; request: RequestEntry };
 
-const GROUP_HEIGHT = 28;
-const ROW_HEIGHT = 34;
+/* The list's width until it is measured: the window's, which a phone's list
+   fills, so its rows are stacked from the first frame rather than after it. */
+function firstWidth(): number {
+  return typeof window === "undefined" ? 1200 : window.innerWidth;
+}
 
 /**
  * The requests the Timeline shows, newest first — the pinned ones in a
  * group of their own above the live ones — under the columns' heads; a
- * row opens its request in the inspector, a second click closes it.
+ * row opens its request in the inspector, a second click closes it. A list
+ * too narrow for its columns has no heads, and puts each row on two lines.
  *
  * @param props - The requests shown
  * @returns The table
@@ -41,12 +47,14 @@ export function RequestTable({ requests }: { requests: readonly RequestEntry[] }
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const timestamps = useStudioStore((s) => s.settings.timestampFormat);
   const { requestId, open, close } = useInspector();
-  const wide = useElementWidth(scrollRef, 1200) >= WIDE_FROM;
+  const tier = listTierOf(useElementWidth(scrollRef, firstWidth()), WIDE_FROM);
+  const coarse = useMediaQuery(MEDIA.coarse);
+  const rowHeight = rowHeightOf(tier, coarse);
   const { items, ids } = useMemo(() => itemsOf(requests), [requests]);
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (i) => (items[i]?.kind === "group" ? GROUP_HEIGHT : ROW_HEIGHT),
+    estimateSize: (i) => (items[i]?.kind === "group" ? GROUP_HEIGHT : rowHeight),
     getItemKey: (i) => {
       const item = items[i];
       return item?.kind === "row" ? item.request.id : `group:${item?.label ?? i}`;
@@ -55,6 +63,8 @@ export function RequestTable({ requests }: { requests: readonly RequestEntry[] }
     /* Rows to draw before the list is first measured: a window's worth. */
     initialRect: { width: 0, height: typeof window === "undefined" ? 0 : window.innerHeight },
   });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the virtualizer keeps the sizes it worked out; a row of another height asks it again
+  useEffect(() => virtualizer.measure(), [virtualizer, rowHeight]);
   useAutoScroll(scrollRef, requests.length, following);
   const select = useCallback(
     (id: string) => (id === requestId ? close() : open(id)),
@@ -69,25 +79,11 @@ export function RequestTable({ requests }: { requests: readonly RequestEntry[] }
     [items, open, virtualizer],
   );
   useRowKeys(ids, requestId, move);
-  const context = { now, endedAt, slowMs, timestamps, wide };
+  const context = { now, endedAt, slowMs, timestamps, wide: tier === "wide" };
+  const Row = tier === "stacked" ? StackedRequestRow : RequestRow;
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
-      <div
-        aria-hidden="true"
-        className={cn(
-          "grid h-7.5 shrink-0 items-center gap-3 border-b border-line bg-bg pr-4 pl-5 text-badge text-fg-subtle",
-          columnsOf(wide),
-        )}
-      >
-        <span>Method</span>
-        <span>Endpoint</span>
-        {wide && <span>Mode</span>}
-        <span>Status</span>
-        <span className="text-right">Duration</span>
-        {wide && <span className="text-right">Size</span>}
-        <span className="text-right">Time</span>
-        <span />
-      </div>
+      {tier !== "stacked" && <TableHead wide={tier === "wide"} />}
       <HeldPill />
       <RowMenu>
         <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
@@ -104,7 +100,7 @@ export function RequestTable({ requests }: { requests: readonly RequestEntry[] }
                   {item.kind === "group" ? (
                     <GroupHead label={item.label} count={item.count} />
                   ) : (
-                    <RequestRow
+                    <Row
                       request={item.request}
                       selected={item.request.id === requestId}
                       context={context}

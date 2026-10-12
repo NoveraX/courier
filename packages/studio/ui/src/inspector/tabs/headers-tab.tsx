@@ -16,7 +16,8 @@ interface HeadersTabProps {
 /**
  * A request's headers by side, each side folding, a filter over names and
  * values, credentials hidden until the eye shows them — and, for a direct
- * call, why some headers are missing, named for what sent it.
+ * call, why some headers are missing, named for what sent it. A phone's
+ * keyboard leaves the filter as typed.
  *
  * @param props - The request, and the headers its caller wrote that a proxy did not pass on
  * @returns The tab
@@ -41,13 +42,18 @@ export function HeadersTab({ request, notForwarded }: HeadersTabProps): React.Re
     });
   return (
     <div className="flex flex-col gap-3 px-4.5 pt-4.5 pb-7">
-      <label className="flex h-8 items-center gap-2 rounded-card border border-line bg-inset px-2.5">
+      <label className="flex h-8 items-center gap-2 rounded-card border border-line bg-inset px-2.5 pointer-coarse:h-10">
         <Search aria-hidden="true" className="size-3 text-fg-subtle" />
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter headers by name or value…"
           aria-label="Filter headers"
+          spellCheck={false}
+          autoCorrect="off"
+          autoCapitalize="off"
+          autoComplete="off"
+          enterKeyHint="search"
           className="min-w-0 flex-1 bg-transparent text-control text-fg outline-none placeholder:text-fg-subtle"
         />
       </label>

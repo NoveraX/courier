@@ -15,39 +15,52 @@ export interface RowLabelProps {
   indent: boolean;
   selected: boolean;
   failed: boolean;
+  /** Whether the label is a line of its own over the bar, rather than a column beside it. */
+  stacked: boolean;
 }
 
 /**
  * The part of a Waterfall row that stays in place while the track
- * scrolls: the request's method and endpoint, and how long it took.
+ * scrolls: the request's method and endpoint, and how long it took — in a
+ * column beside the bar, or, on a chart too narrow for one, on a line over
+ * the bar as wide as the chart shows.
  *
- * @param props - The request, how it ended, its columns and how the row is marked
+ * @param props - The request, how it ended, its width, how the row is marked, and where the label sits
  * @returns The label cell
  * @example
  * ```tsx
- * <RowLabel request={r} method="GET" duration="44ms" durationClass="text-fg" width={300} indent={false} selected={false} failed={false} />
+ * <RowLabel request={r} method="GET" duration="44ms" durationClass="text-fg" width={300} indent={false} selected={false} failed={false} stacked={false} />
  * ```
  */
 export function RowLabel(props: RowLabelProps): React.ReactNode {
-  const { request, method, methodClass, duration, durationClass, width, indent, selected, failed } =
-    props;
+  const { request, method, methodClass, duration, durationClass, width, indent } = props;
+  const { selected, failed, stacked } = props;
   const { prefix, name } = endpointParts(request);
   return (
     <span
       style={{ width }}
       className={cn(
-        "sticky left-0 z-3 flex shrink-0 items-center gap-2.25 overflow-hidden border-r border-line pr-3 font-mono text-small",
-        indent ? "pl-8" : "pl-5",
-        selected
-          ? "bg-[color-mix(in_srgb,var(--color-brand)_10%,var(--color-bg))]"
-          : failed
-            ? "bg-[color-mix(in_srgb,var(--color-err)_4%,var(--color-bg))]"
-            : "bg-bg",
+        "sticky left-0 z-3 flex shrink-0 items-center gap-2.25 pr-3 font-mono text-small",
+        stacked
+          ? cn("h-6", indent ? "pl-7" : "pl-4")
+          : cn(
+              "overflow-hidden border-r border-line",
+              indent ? "pl-8" : "pl-5",
+              selected
+                ? "bg-[color-mix(in_srgb,var(--color-brand)_10%,var(--color-bg))]"
+                : failed
+                  ? "bg-[color-mix(in_srgb,var(--color-err)_4%,var(--color-bg))]"
+                  : "bg-bg",
+            ),
       )}
     >
       <span
         aria-hidden="true"
-        className={cn("absolute inset-y-0 left-0 w-0.5", selected ? "bg-brand" : "bg-transparent")}
+        className={cn(
+          "absolute left-0 w-0.5",
+          stacked ? "top-0 h-10.75" : "inset-y-0",
+          selected ? "bg-brand" : "bg-transparent",
+        )}
       />
       <span
         className={cn("w-10 shrink-0 text-meta font-semibold", methodClass ?? methodText(method))}

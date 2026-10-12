@@ -16,9 +16,12 @@ interface SearchFieldProps {
 /**
  * A toolbar's search field: a magnifier, the text, and a button that
  * clears it once there is any. On a touch screen it is a finger's height,
- * the clear button takes a wider tap, and the keyboard offers to search
- * rather than to correct or capitalise what is typed — names and paths,
- * not prose.
+ * the text field itself takes the whole of it — its edge drawn inside it,
+ * not around it — the clear button takes a wider tap, and the keyboard
+ * offers to search rather than to correct or capitalise what is typed —
+ * names and paths, not prose. Its text is never under 16 px there, the
+ * size below which iOS zooms into a field: `design/base.css` holds every
+ * field to it.
  *
  * @param props - The text, what changes it, its placeholder and label, and what follows it
  * @returns The field
@@ -32,7 +35,7 @@ export function SearchField(props: SearchFieldProps): React.ReactNode {
   return (
     <label
       className={cn(
-        "flex h-7.5 items-center gap-2 rounded-control border border-line bg-panel px-2.5 pointer-coarse:h-9",
+        "flex h-7.5 items-center gap-2 rounded-control border border-line bg-panel px-2.5 pointer-coarse:h-9 pointer-coarse:border-0 pointer-coarse:inset-ring pointer-coarse:inset-ring-line",
         className,
       )}
     >
@@ -46,7 +49,7 @@ export function SearchField(props: SearchFieldProps): React.ReactNode {
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
-        className="min-w-0 flex-1 bg-transparent text-control text-fg outline-none placeholder:text-fg-subtle"
+        className="min-w-0 flex-1 bg-transparent text-control text-fg outline-none placeholder:text-fg-subtle pointer-coarse:self-stretch"
       />
       {value && (
         <button

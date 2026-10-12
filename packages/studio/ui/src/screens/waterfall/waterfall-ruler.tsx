@@ -10,8 +10,9 @@ export interface RulerProps {
 
 /**
  * The Waterfall's header, which stays in view as it scrolls: the columns'
- * names over the labels, and over the track its time marks, its idle gaps
- * with how long each lasted, and the time under the pointer.
+ * names over the labels — none when each row names its request over its
+ * bar — and over the track its time marks, its idle gaps with how long
+ * each lasted, and the time under the pointer.
  *
  * @param props - The marks, the gaps, the widths and the cursor
  * @returns The header
@@ -29,14 +30,16 @@ export function WaterfallRuler({
 }: RulerProps): React.ReactNode {
   return (
     <div className="sticky top-0 z-8 flex h-8 border-b border-line bg-bg">
-      <div
-        style={{ width: labelPx }}
-        className="sticky left-0 z-9 flex shrink-0 items-center gap-2 border-r border-line bg-bg pr-3 pl-5 text-badge text-fg-subtle"
-      >
-        <span>Request</span>
-        <span className="flex-1" />
-        <span>Total</span>
-      </div>
+      {labelPx > 0 && (
+        <div
+          style={{ width: labelPx }}
+          className="sticky left-0 z-9 flex shrink-0 items-center gap-2 border-r border-line bg-bg pr-3 pl-5 text-badge text-fg-subtle"
+        >
+          <span>Request</span>
+          <span className="flex-1" />
+          <span>Total</span>
+        </div>
+      )}
       <div className="relative shrink-0" style={{ width: trackPx }}>
         {ticks.map((tick) => (
           <span

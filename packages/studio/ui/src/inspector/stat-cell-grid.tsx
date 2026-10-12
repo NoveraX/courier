@@ -3,7 +3,8 @@ import type { StatCell } from "@/features/requests/stat-cells";
 import { cn } from "@/lib/utils";
 
 /**
- * The four figures over the inspector's tabs, side by side.
+ * The four figures over the inspector's tabs, side by side — two by two on
+ * a phone, where four abreast would cut each short.
  *
  * @param props - The cells
  * @returns The grid
@@ -14,7 +15,7 @@ import { cn } from "@/lib/utils";
  */
 export function StatCellGrid({ cells }: { cells: readonly StatCell[] }): React.ReactNode {
   return (
-    <dl className="m-0 grid grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))] gap-px overflow-hidden rounded-panel border border-line bg-line">
+    <dl className="m-0 grid grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))] gap-px overflow-hidden rounded-panel border border-line bg-line max-sm:grid-cols-2">
       {cells.map((cell) => (
         <div
           key={cell.label}

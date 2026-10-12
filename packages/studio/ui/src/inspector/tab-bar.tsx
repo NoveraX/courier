@@ -1,8 +1,10 @@
 import { motion } from "motion/react";
+import { useEffect, useRef } from "react";
 
 import { INDICATOR_SPRING } from "@/design/motion";
 import type { InspectorTab, InspectorTabInfo } from "@/features/requests/inspector-tabs";
 import { cn } from "@/lib/utils";
+import { scrollToReveal } from "./scroll-to-reveal";
 
 interface TabBarProps {
   tabs: readonly InspectorTabInfo[];
@@ -10,10 +12,14 @@ interface TabBarProps {
   onSelect: (tab: InspectorTab) => void;
 }
 
+/* How much of the next tab shows beside the one brought into view, so the row reads as one that scrolls. */
+const PEEK_PX = 28;
+
 /**
  * The inspector's tabs, the one shown underlined, with their counts, and
  * the failure's named in the error colour. The underline moves across to
- * the tab chosen.
+ * the tab chosen. A row too narrow for every tab scrolls sideways, and
+ * scrolls the tab shown into view — the one it opens on, too.
  *
  * @param props - The tabs, the one shown, and what shows another
  * @returns The bar
@@ -23,13 +29,27 @@ interface TabBarProps {
  * ```
  */
 export function TabBar({ tabs, current, onSelect }: TabBarProps): React.ReactNode {
+  const listRef = useRef<HTMLDivElement>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the tab shown changing is what brings it into view
+  useEffect(() => {
+    const list = listRef.current;
+    const tab = list?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!list || !tab) return;
+    const view = { start: list.scrollLeft, size: list.clientWidth };
+    list.scrollLeft = scrollToReveal(
+      view,
+      { start: tab.offsetLeft, size: tab.offsetWidth },
+      PEEK_PX,
+    );
+  }, [current]);
   return (
     /* The strip reaches one pixel into the header's rule below it, so the chosen tab's mark lies on the rule inside the strip, which would scroll by that pixel otherwise. */
     <motion.div
+      ref={listRef}
       layoutScroll
       role="tablist"
       aria-label="Request"
-      className="-mx-1.5 -mb-px flex overflow-x-auto overflow-y-hidden pb-px [scrollbar-width:none]"
+      className="relative -mx-1.5 -mb-px flex scroll-smooth overflow-x-auto overflow-y-hidden pb-px [scrollbar-width:none]"
     >
       {tabs.map((tab) => {
         const on = tab.key === current;
@@ -41,7 +61,7 @@ export function TabBar({ tabs, current, onSelect }: TabBarProps): React.ReactNod
             aria-selected={on}
             onClick={() => onSelect(tab.key)}
             className={cn(
-              "relative flex h-9.5 shrink-0 cursor-pointer items-center gap-1.5 px-1.5 text-control whitespace-nowrap transition-colors hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand",
+              "relative flex h-9.5 shrink-0 cursor-pointer items-center gap-1.5 px-1.5 text-control whitespace-nowrap transition-colors hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand pointer-coarse:h-11",
               on ? "font-semibold" : "font-medium",
               tab.alert ? "text-err" : on ? "text-fg" : "text-fg-subtle",
             )}

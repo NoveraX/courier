@@ -13,9 +13,9 @@ const KPIS = ["rate", "latency", "errors", "streams"] as const;
 
 function StripSkeleton(): React.ReactNode {
   return (
-    <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-6 border-b border-line pt-3 pr-4 pb-2.5 pl-5">
-      <div className="flex min-w-0 flex-col gap-1.5">
-        <div className="flex h-10 items-end gap-0.5">
+    <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-6 border-b border-line pt-3 pr-4 pb-2.5 pl-5 max-sm:grid-cols-[minmax(88px,1fr)_minmax(0,auto)] max-sm:items-center max-sm:gap-3 max-sm:py-2 max-sm:pl-4 short-screen:items-center short-screen:py-2">
+      <div className="flex min-w-0 flex-col gap-1.5 max-sm:gap-1 short-screen:gap-1">
+        <div className="flex h-10 items-end gap-0.5 max-sm:h-7 max-sm:gap-px short-screen:h-7">
           {BARS.map((bar) => (
             <span key={bar} className="block h-1 min-w-0 flex-1 rounded-[1.5px] bg-raised" />
           ))}
@@ -26,9 +26,9 @@ function StripSkeleton(): React.ReactNode {
           <Skeleton className="h-2 w-6" />
         </div>
       </div>
-      <div className="flex gap-5.5 pb-4">
+      <div className="flex min-w-0 gap-5.5 overflow-hidden pb-4 max-sm:gap-3 max-sm:pb-0 short-screen:pb-0">
         {KPIS.map((kpi) => (
-          <div key={kpi} className="flex flex-col items-end gap-1.5">
+          <div key={kpi} className="flex shrink-0 flex-col items-end gap-1.5">
             <Skeleton className="h-2.5 w-12" />
             <Skeleton className="h-4.5 w-9" />
           </div>
@@ -41,7 +41,8 @@ function StripSkeleton(): React.ReactNode {
 /**
  * The Timeline while Studio has not sent the requests it captured: the
  * throughput strip and request rows in the places and shapes they take once
- * loaded, under the toolbar and the filters, which work as they do then.
+ * loaded, under the toolbar and the filters, which work as they do then —
+ * each row on two lines where the list is too narrow for its columns.
  *
  * @returns The strip and the list, loading
  * @example
@@ -51,21 +52,21 @@ function StripSkeleton(): React.ReactNode {
  */
 export function TimelineSkeleton(): React.ReactNode {
   return (
-    <LoadingRegion label="Loading the requests" className="flex min-h-0 flex-1 flex-col">
+    <LoadingRegion label="Loading the requests" className="@container flex min-h-0 flex-1 flex-col">
       <StripSkeleton />
-      <div className="flex h-7.5 shrink-0 items-center border-b border-line pr-4 pl-5" />
+      <div className="flex h-7.5 shrink-0 items-center border-b border-line pr-4 pl-5 @max-[559px]:hidden" />
       <div className="min-h-0 flex-1 overflow-hidden">
         {ROWS.map((row) => (
           <div
             key={row.id}
-            className="grid h-8.5 grid-cols-[50px_minmax(120px,1fr)_44px_104px_92px_14px] items-center gap-3 border-b border-line pr-4 pl-5"
+            className="grid h-8.5 grid-cols-[50px_minmax(120px,1fr)_44px_104px_92px_14px] items-center gap-3 border-b border-line pr-4 pl-5 pointer-coarse:h-11 max-sm:pl-4 @max-[559px]:h-13 @max-[559px]:grid-cols-[44px_minmax(0,1fr)_auto] @max-[559px]:gap-x-2.5 @max-[559px]:gap-y-2 @max-[559px]:px-4"
           >
             <Skeleton className="h-2.5 w-8" />
-            <Skeleton className={cn("h-3", row.width)} />
-            <Skeleton className="h-2.5 w-7" />
-            <Skeleton className="ml-auto h-2.5 w-14" />
-            <Skeleton className="ml-auto h-2.5 w-12" />
-            <span />
+            <Skeleton className={cn("h-3 max-w-full", row.width)} />
+            <Skeleton className="h-2.5 w-7 @max-[559px]:ml-auto" />
+            <Skeleton className="ml-auto h-2.5 w-14 @max-[559px]:col-start-2 @max-[559px]:ml-0 @max-[559px]:w-32" />
+            <Skeleton className="ml-auto h-2.5 w-12 @max-[559px]:w-20" />
+            <span className="@max-[559px]:hidden" />
           </div>
         ))}
       </div>

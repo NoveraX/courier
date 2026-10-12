@@ -45,30 +45,34 @@ export function GroupRow({ row, width, onToggle }: GroupRowProps): React.ReactNo
       type="button"
       aria-expanded={row.open}
       onClick={() => onToggle(row.key)}
-      className="relative z-2 flex h-8 w-full cursor-pointer border-b border-line text-left"
+      className="relative z-2 flex h-8 w-full cursor-pointer border-b border-line text-left pointer-coarse:h-11"
     >
       <span
         style={{ width }}
-        className="sticky left-0 flex items-center gap-2 bg-bg-subtle pr-3 pl-4 transition-colors hover:bg-raised"
+        className="sticky left-0 flex items-center gap-2 overflow-hidden bg-bg-subtle pr-3 pl-4 transition-colors hover:bg-raised"
       >
-        <Caret aria-hidden="true" className="size-3.25 text-fg-subtle" />
-        <Icon aria-hidden="true" className={cn("size-3", tone)} />
-        <span className={cn("text-control font-semibold", mono && "font-mono")}>{row.label}</span>
-        <span className="inline-flex h-4 min-w-4.5 items-center justify-center rounded-full bg-raised px-1.25 text-meta text-fg-subtle">
+        <Caret aria-hidden="true" className="size-3.25 shrink-0 text-fg-subtle" />
+        <Icon aria-hidden="true" className={cn("size-3 shrink-0", tone)} />
+        <span className={cn("min-w-0 truncate text-control font-semibold", mono && "font-mono")}>
+          {row.label}
+        </span>
+        <span className="inline-flex h-4 min-w-4.5 shrink-0 items-center justify-center rounded-full bg-raised px-1.25 text-meta text-fg-subtle">
           {row.count}
         </span>
         {row.split && (
           <>
-            <span className="flex h-4.5 items-center rounded-chip bg-raised px-1.5 text-meta text-fg-muted">
+            <span className="flex h-4.5 shrink-0 items-center rounded-chip bg-raised px-1.5 text-meta whitespace-nowrap text-fg-muted">
               {row.split.direct} direct
             </span>
-            <span className="flex h-4.5 items-center rounded-chip bg-syntax-type/12 px-1.5 text-meta text-syntax-type">
+            <span className="flex h-4.5 shrink-0 items-center rounded-chip bg-syntax-type/12 px-1.5 text-meta whitespace-nowrap text-syntax-type">
               {row.split.proxy} proxy
             </span>
           </>
         )}
         <span className="flex-1" />
-        <span className="font-mono text-badge whitespace-nowrap text-fg-subtle">{row.aside}</span>
+        <span className="shrink-0 font-mono text-badge whitespace-nowrap text-fg-subtle">
+          {row.aside}
+        </span>
       </span>
     </button>
   );

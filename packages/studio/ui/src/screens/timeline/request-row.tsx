@@ -1,17 +1,17 @@
 import { Pin } from "lucide-react";
 
 import { methodText } from "@/design/method-color";
-import { codeLabel, endpointParts, httpMethodOf, pathOf } from "@/features/requests/request-parts";
-import { isStreamRequest, requestStateOf, STATE_META } from "@/features/requests/request-state";
-import { useSecondNow } from "@/hooks/use-tick";
-import { formatAbsoluteTime, formatRelativeTime } from "@/lib/formatters";
+import { codeLabel, pathOf } from "@/features/requests/request-parts";
+import { STATE_META } from "@/features/requests/request-state";
 import { cn } from "@/lib/utils";
 import type { RequestAgent, RequestEntry } from "@/store/types";
 import type { RowContext } from "./row-values";
-import { codeTone, durationOf, sizeOf } from "./row-values";
+import { codeTone, sizeOf } from "./row-values";
 import { columnsOf } from "./table-columns";
+import { useRowFigures } from "./use-row-figures";
 
-interface RequestRowProps {
+/** What a Timeline row is given, however it lays its request out. */
+export interface RequestRowProps {
   request: RequestEntry;
   selected: boolean;
   context: RowContext;
@@ -36,17 +36,7 @@ export function RequestRow({
   context,
   onSelect,
 }: RequestRowProps): React.ReactNode {
-  const state = requestStateOf(r);
-  const { prefix, name } = endpointParts(r);
-  const pulse = context.endedAt === undefined && (state === "pending" || state === "streaming");
-  const counting = useSecondNow(pulse);
-  const rowContext = counting === null ? context : { ...context, now: counting };
-  const duration = durationOf(r, state, rowContext);
-  const method = isStreamRequest(r) ? "GET" : httpMethodOf(r);
-  const time =
-    context.timestamps === "relative"
-      ? formatRelativeTime(r.startedAt, context.now)
-      : formatAbsoluteTime(r.startedAt);
+  const { state, prefix, name, method, duration, time } = useRowFigures(r, context);
   return (
     <button
       type="button"
@@ -54,7 +44,7 @@ export function RequestRow({
       aria-pressed={selected}
       onClick={() => onSelect(r.id)}
       className={cn(
-        "relative grid h-8.5 w-full cursor-pointer items-center gap-3 border-b border-line pr-4 pl-5 text-left font-mono text-small hover:bg-raised",
+        "relative grid h-8.5 w-full cursor-pointer items-center gap-3 border-b border-line pr-4 pl-5 text-left font-mono text-small hover:bg-raised pointer-coarse:h-11 max-sm:pl-4",
         columnsOf(context.wide),
         selected ? "bg-brand-dim" : state === "error" ? "bg-err-tint" : "bg-transparent",
       )}

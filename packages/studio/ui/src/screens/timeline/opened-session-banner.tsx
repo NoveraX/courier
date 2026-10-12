@@ -56,7 +56,7 @@ export function OpenedSessionBanner(): React.ReactNode {
       aria-label="Opened from a session file"
       className="border-b border-line bg-panel-subtle"
     >
-      <div className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 px-5 py-1.5 text-small">
+      <div className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1 px-5 py-1.5 text-small max-sm:px-4">
         <FileInput aria-hidden="true" className="size-3.5 shrink-0 text-brand" />
         <span className="text-fg">Opened from a session file</span>
         <span className="font-mono text-fg-muted">
@@ -74,7 +74,7 @@ export function OpenedSessionBanner(): React.ReactNode {
           type="button"
           aria-expanded={open}
           onClick={() => setOpen((shown) => !shown)}
-          className="flex h-7 cursor-pointer items-center gap-1 rounded-control px-2 text-fg-muted hover:bg-raised hover:text-fg"
+          className="flex h-7 cursor-pointer items-center gap-1 rounded-control px-2 text-fg-muted hover:bg-raised hover:text-fg pointer-coarse:h-9"
         >
           Environment
           <ChevronDown
@@ -85,13 +85,13 @@ export function OpenedSessionBanner(): React.ReactNode {
         <button
           type="button"
           onClick={backToLive}
-          className="flex h-7 cursor-pointer items-center rounded-control border border-line px-2.5 text-fg-muted hover:border-line-strong hover:text-fg"
+          className="flex h-7 cursor-pointer items-center rounded-control border border-line px-2.5 text-fg-muted hover:border-line-strong hover:text-fg pointer-coarse:h-9"
         >
           Back to live
         </button>
       </div>
       {open && (
-        <div className="max-h-72 overflow-auto px-5 pt-1 pb-3.5">
+        <div className="max-h-72 overflow-auto px-5 pt-1 pb-3.5 max-sm:px-4">
           <EnvironmentList
             environment={recorded}
             other={mine.kind === "known" ? mine.environment : undefined}

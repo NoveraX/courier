@@ -19,7 +19,8 @@ interface HeaderGroupSectionProps {
 /**
  * One side of a request's headers: its title and count, folding, a way to
  * copy them all, what the reader should know about the side, and each
- * header with credentials masked until revealed.
+ * header with credentials masked until revealed. Where the section is
+ * narrow, as on a phone, each value sits under its name, at full width.
  *
  * @param props - The side, whether it is open, whether credentials show, whether a filter is on, and what folds it and reveals credentials
  * @returns The section
@@ -38,8 +39,11 @@ export function HeaderGroupSection({
 }: HeaderGroupSectionProps): React.ReactNode {
   const Caret = open ? ChevronDown : ChevronRight;
   return (
-    <section aria-label={group.title} className="overflow-hidden rounded-panel border border-line">
-      <div className="flex h-9.5 items-center gap-2 bg-panel-subtle pr-2 pl-3">
+    <section
+      aria-label={group.title}
+      className="@container overflow-hidden rounded-panel border border-line"
+    >
+      <div className="flex h-9.5 items-center gap-2 bg-panel-subtle pr-2 pl-3 pointer-coarse:h-11">
         <button
           type="button"
           aria-expanded={open}
@@ -58,7 +62,7 @@ export function HeaderGroupSection({
             onClick={() =>
               void copyToClipboard(headersAsText(group.rows), group.title.toLowerCase())
             }
-            className="flex h-6 cursor-pointer items-center gap-1.25 rounded-[6px] px-2 text-label text-fg-subtle transition-colors hover:bg-panel hover:text-fg"
+            className="flex h-6 cursor-pointer items-center gap-1.25 rounded-[6px] px-2 text-label text-fg-subtle transition-colors hover:bg-panel hover:text-fg pointer-coarse:h-9"
           >
             <Copy aria-hidden="true" className="size-2.75" />
             Copy all
@@ -75,12 +79,12 @@ export function HeaderGroupSection({
           {group.rows.map((row) => (
             <div
               key={row.name}
-              className="grid min-h-8 grid-cols-[minmax(110px,38%)_minmax(0,1fr)_20px] items-center gap-3 border-b border-line px-3 py-1.5 last:border-b-0 hover:bg-raised"
+              className="grid min-h-8 grid-cols-[minmax(110px,38%)_minmax(0,1fr)_20px] items-center gap-3 border-b border-line px-3 py-1.5 last:border-b-0 hover:bg-raised @max-[420px]:grid-cols-[minmax(0,1fr)_20px] @max-[420px]:gap-y-0.5 @max-[420px]:py-2"
             >
               <span className="text-syntax-function [overflow-wrap:anywhere]">{row.name}</span>
               <span
                 className={cn(
-                  "leading-normal [overflow-wrap:anywhere]",
+                  "leading-normal [overflow-wrap:anywhere] @max-[420px]:col-start-1 @max-[420px]:row-start-2",
                   row.secret && !revealed ? "text-fg-subtle" : "text-syntax-plain",
                 )}
               >
@@ -92,7 +96,7 @@ export function HeaderGroupSection({
                   title={revealed ? "Hide credentials" : "Show credentials"}
                   aria-label={revealed ? "Hide credentials" : "Show credentials"}
                   onClick={onReveal}
-                  className="flex cursor-pointer text-fg-subtle hover:text-fg"
+                  className="relative flex cursor-pointer text-fg-subtle hit-area hover:text-fg @max-[420px]:col-start-2 @max-[420px]:row-span-2 @max-[420px]:row-start-1"
                 >
                   {revealed ? (
                     <EyeOff aria-hidden="true" className="size-3.25" />

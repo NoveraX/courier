@@ -151,6 +151,21 @@ describe("the file icon commands", () => {
 });
 
 describe("Courier's icons, once agreed to", () => {
+  it("go into the other theme when the user picks it, in its own style, without asking again", async () => {
+    settings.set("workbench.iconTheme", "vscode-icons");
+    settings.set("material-icon-theme.files.associations", {
+      "courier.config.ts": "../../.noverax-courier-icons/courier-config",
+    });
+    registerFileIcons(core);
+
+    restarted();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(shown.infos).toEqual([]);
+    expect(settings.get("vsicons.associations.files")).toHaveLength(2);
+    expect(existsSync(join(custom, "folder_type_courier.svg"))).toBe(true);
+  });
+
   it("are not offered again where Settings Sync brought them from another machine", async () => {
     settings.set("workbench.iconTheme", "vscode-icons");
     settings.set("vsicons.associations.files", [

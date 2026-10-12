@@ -14,12 +14,35 @@ import {
   scoreLook,
 } from "@/site/studio-landing/chapters/audit-model"
 import { CHAPTERS } from "@/site/studio-landing/chapters/chapters"
-import { edgePath, GRAPH_EDGES, hotEdge } from "@/site/studio-landing/chapters/graph-model"
+import {
+  edgePath,
+  GRAPH_EDGES,
+  graphLayoutFor,
+  hotEdge,
+  NARROW_BELOW,
+  NARROW_GRAPH,
+  WIDE_GRAPH,
+} from "@/site/studio-landing/chapters/graph-model"
 import { callStrip, outcomeOf, presetAt } from "@/site/studio-landing/chapters/mock-model"
 
 describe("the Explorer graph", () => {
   it("draws each edge from its parent's right side to its child's left", () => {
     expect(edgePath([0, 2])).toBe("M150 90 C175 90, 175 55, 200 55")
+  })
+
+  it("draws its columns closer in a phone's frame, so that its labels stay readable", () => {
+    expect(graphLayoutFor(343)).toBe(NARROW_GRAPH)
+    expect(graphLayoutFor(NARROW_BELOW)).toBe(WIDE_GRAPH)
+    expect(graphLayoutFor(0)).toBe(WIDE_GRAPH)
+    expect(edgePath([0, 2], NARROW_GRAPH)).toBe("M92 90 C105 90, 105 55, 118 55")
+  })
+
+  it("keeps every column inside the graph and clear of the next, wide or narrow", () => {
+    for (const { x, nodeWidth, width } of [WIDE_GRAPH, NARROW_GRAPH]) {
+      expect(x.source + nodeWidth.source).toBeLessThan(x.group)
+      expect(x.group + nodeWidth.group).toBeLessThan(x.endpoint)
+      expect(x.endpoint + nodeWidth.endpoint).toBeLessThanOrEqual(width)
+    }
   })
 
   it("lights every edge in turn", () => {

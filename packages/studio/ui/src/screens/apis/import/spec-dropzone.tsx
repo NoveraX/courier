@@ -1,6 +1,8 @@
 import { FileCode2, Upload, X } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { MEDIA } from "@/design/breakpoints";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 
 interface SpecDropzoneProps {
@@ -10,8 +12,9 @@ interface SpecDropzoneProps {
 }
 
 /**
- * Where a spec file is dropped or browsed for, read as text; once one is
- * read, its name with a way to drop it.
+ * Where a spec file is dropped or browsed for, read as text — on a touch
+ * screen, where nothing is dropped, chosen — and once one is read, its name
+ * with a way to drop it.
  *
  * @param props - The file read, if any, and what reading and dropping it do
  * @returns The drop zone
@@ -23,6 +26,7 @@ interface SpecDropzoneProps {
 export function SpecDropzone({ fileName, onFile, onClear }: SpecDropzoneProps): React.ReactNode {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const touch = useMediaQuery(MEDIA.coarse);
   const read = (file: File): void => {
     void file.text().then((text) => onFile(text, file.name));
   };
@@ -35,7 +39,7 @@ export function SpecDropzone({ fileName, onFile, onClear }: SpecDropzoneProps): 
           type="button"
           aria-label="Choose another file"
           onClick={onClear}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg"
+          className="flex size-7 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg pointer-coarse:size-9"
         >
           <X aria-hidden="true" className="size-3.5" />
         </button>
@@ -64,9 +68,12 @@ export function SpecDropzone({ fileName, onFile, onClear }: SpecDropzoneProps): 
         )}
       >
         <Upload aria-hidden="true" className="size-5 text-fg-subtle" />
-        <span className="text-ui font-strong">Drop a spec file here</span>
+        <span className="text-ui font-strong">
+          {touch ? "Choose a spec file" : "Drop a spec file here"}
+        </span>
         <span className="text-small text-fg-subtle">
-          .json · .yaml · .yml — or <span className="text-brand">browse</span>
+          .json · .yaml · .yml{touch ? "" : " — or "}
+          {!touch && <span className="text-brand">browse</span>}
         </span>
       </button>
       <input

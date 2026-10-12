@@ -22,7 +22,7 @@ function folderOf(paths: readonly string[]): string {
 /**
  * Generated files as the design previews them: the folder and its files,
  * each with its line count, on the left; the file picked, numbered and
- * coloured, on the right.
+ * coloured, on the right — on a phone, the files over the one picked.
  *
  * @param props - The files
  * @returns The preview
@@ -36,10 +36,10 @@ export function FilesPreview({ files }: { files: readonly GeneratedFile[] }): Re
   const folder = folderOf(files.map((f) => f.path));
   const file = files.find((f) => f.path === picked) ?? files[0];
   return (
-    <div className="grid min-h-80 grid-cols-[200px_minmax(0,1fr)] gap-3">
+    <div className="grid min-h-80 grid-cols-[200px_minmax(0,1fr)] gap-3 max-sm:min-h-0 max-sm:grid-cols-1">
       <section
         aria-label="Generated files"
-        className="flex flex-col gap-px overflow-auto rounded-[11px] border border-line bg-inset p-2 font-mono text-small"
+        className="flex flex-col gap-px overflow-auto rounded-[11px] border border-line bg-inset p-2 font-mono text-small max-sm:max-h-48"
       >
         <span className="flex items-center gap-1.5 px-1.5 py-1.25 text-fg-subtle">
           <FolderOpen aria-hidden="true" className="size-3" />
@@ -53,7 +53,7 @@ export function FilesPreview({ files }: { files: readonly GeneratedFile[] }): Re
             title={f.path}
             onClick={() => setPicked(f.path)}
             className={cn(
-              "flex h-7 shrink-0 cursor-pointer items-center gap-1.75 rounded-[6px] pr-2 pl-5.5 text-left hover:bg-raised",
+              "flex h-7 shrink-0 cursor-pointer items-center gap-1.75 rounded-[6px] pr-2 pl-5.5 text-left hover:bg-raised pointer-coarse:h-10",
               f.path === file?.path ? "bg-brand-dim text-fg" : "text-fg-muted",
             )}
           >
@@ -63,7 +63,7 @@ export function FilesPreview({ files }: { files: readonly GeneratedFile[] }): Re
           </button>
         ))}
       </section>
-      <div className="max-h-105 overflow-auto rounded-[11px] border border-line bg-inset">
+      <div className="max-h-105 overflow-auto rounded-[11px] border border-line bg-inset max-sm:max-h-[60dvh]">
         {file && (
           <CodeLines
             code={file.content}

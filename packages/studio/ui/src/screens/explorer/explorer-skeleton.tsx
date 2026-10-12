@@ -13,9 +13,9 @@ const nameAt = (i: number): string => NAMES[i % NAMES.length] ?? "w-24";
 function Bar({ wide }: { wide: string }): React.ReactNode {
   return (
     <div className="flex shrink-0 items-center gap-3.5 border-b border-line bg-bg-subtle py-2.5 pr-4 pl-5">
-      <Skeleton className={cn("h-7.5 rounded-control", wide)} />
+      <Skeleton className={cn("h-7.5 min-w-0 rounded-control", wide)} />
       <div className="flex-1" />
-      <Skeleton className="h-2.5 w-56" />
+      <Skeleton className="h-2.5 w-56 max-sm:w-16" />
     </div>
   );
 }
@@ -57,7 +57,7 @@ function Graph(): React.ReactNode {
 
 function Overview(): React.ReactNode {
   return (
-    <div className="mx-auto flex w-full max-w-360 flex-col gap-3.5 px-6 pt-5 pb-10">
+    <div className="mx-auto flex w-full max-w-360 flex-col gap-3.5 px-6 pt-5 pb-10 max-sm:px-4">
       <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3.5">
         {list(4, "figure").map((figure) => (
           <div
@@ -70,7 +70,10 @@ function Overview(): React.ReactNode {
         ))}
       </div>
       {list(2, "pair").map((pair) => (
-        <div key={pair} className="grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-3.5">
+        <div
+          key={pair}
+          className="grid grid-cols-[repeat(auto-fit,minmax(min(360px,100%),1fr))] gap-3.5"
+        >
           <Skeleton className="h-56 rounded-dialog" />
           <Skeleton className="h-56 rounded-dialog" />
         </div>
@@ -90,8 +93,8 @@ function Rows({ height, cells }: { height: string; cells: number }): React.React
           <Skeleton className="h-2.5 w-9" />
           <Skeleton className={cn("h-3", nameAt(i))} />
           <span className="flex-1" />
-          {list(cells, `${row}-cell`).map((cell) => (
-            <Skeleton key={cell} className="h-3 w-12" />
+          {list(cells, `${row}-cell`).map((cell, at) => (
+            <Skeleton key={cell} className={cn("h-3 w-12", at > 1 && "max-sm:hidden")} />
           ))}
         </div>
       ))}

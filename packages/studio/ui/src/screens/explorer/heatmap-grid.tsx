@@ -10,6 +10,10 @@ import { methodClassOf } from "./method-class";
 /* Every fifth span carries a time mark. */
 const MARK_EVERY = 5;
 
+/* The names stay put while the spans scroll under them. A sticky box keeps clear of its
+   scroller's padding, so the name reaches back over that gutter to cover the spans there. */
+const PINNED = "sticky -left-5 z-[1] -ml-5 bg-bg pl-5";
+
 interface HeatmapGridProps {
   heatmap: Heatmap;
   metric: ColorMetric;
@@ -21,7 +25,10 @@ interface HeatmapGridProps {
 
 /**
  * The heatmap's grid: a time axis, then a row per endpoint — its name, a
- * cell per span and its figure over the session.
+ * cell per span and its figure over the session. Where it is wider than
+ * its scroller, as on a phone, the names stay in place while the spans
+ * scroll sideways under them; each row is a finger's height on a touch
+ * screen.
  *
  * @param props - The heatmap, its metric, its scale, and what opens an endpoint
  * @returns The grid
@@ -34,8 +41,8 @@ export function HeatmapGrid(props: HeatmapGridProps): React.ReactNode {
   const { heatmap, metric, stepOf, fills, onOpen } = props;
   const span = heatmap.intervalMs * HEAT_INTERVALS;
   return (
-    <div className="grid min-w-150 grid-cols-[minmax(200px,260px)_repeat(20,minmax(12px,1fr))_60px] items-center gap-0.75">
-      <span className="text-badge text-fg-subtle">Endpoint</span>
+    <div className="grid min-w-150 grid-cols-[minmax(200px,260px)_repeat(20,minmax(12px,1fr))_60px] items-center gap-0.75 max-sm:min-w-143 max-sm:grid-cols-[minmax(176px,200px)_repeat(20,minmax(14px,1fr))_52px]">
+      <span className={cn(PINNED, "text-badge text-fg-subtle")}>Endpoint</span>
       {Array.from({ length: HEAT_INTERVALS }, (_, i) => (
         <span
           // biome-ignore lint/suspicious/noArrayIndexKey: the spans are fixed positions on the axis
@@ -54,7 +61,10 @@ export function HeatmapGrid(props: HeatmapGridProps): React.ReactNode {
             key={`${endpoint.key}:name`}
             type="button"
             onClick={() => onOpen(endpoint.key)}
-            className="flex h-6.5 min-w-0 cursor-pointer items-center gap-2 overflow-hidden text-left font-mono text-label whitespace-nowrap hover:text-brand focus-visible:outline-2 focus-visible:outline-brand"
+            className={cn(
+              PINNED,
+              "flex h-6.5 min-w-0 cursor-pointer items-center gap-2 overflow-hidden text-left font-mono text-label whitespace-nowrap hover:text-brand focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand pointer-coarse:h-9",
+            )}
           >
             <span className={cn("w-9 shrink-0 text-micro font-semibold", methodClassOf(method))}>
               {method}
@@ -70,7 +80,7 @@ export function HeatmapGrid(props: HeatmapGridProps): React.ReactNode {
                 key={`${endpoint.key}:${i}`}
                 title={`${endpoint.key} · ${heatCellText(value, metric)}`}
                 className={cn(
-                  "h-6.5 rounded-chip border",
+                  "h-6.5 rounded-chip border pointer-coarse:h-9",
                   step === null ? "border-line" : cn("border-transparent", fills[step]),
                 )}
               />

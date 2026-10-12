@@ -58,21 +58,21 @@ function CardSkeleton(): React.ReactNode {
 
 function TableSkeleton(): React.ReactNode {
   return (
-    <div className="overflow-hidden rounded-sheet border border-line bg-panel">
-      <div className="flex h-8.5 items-center gap-3 border-b border-line bg-panel-subtle px-4">
+    <div className="@container overflow-hidden rounded-sheet border border-line bg-panel">
+      <div className="flex h-8.5 items-center gap-3 border-b border-line bg-panel-subtle px-4 @max-[560px]:hidden">
         <Skeleton className="h-2.5 w-14" />
       </div>
       {TABLE_ROWS.map((row) => (
         <div
           key={row}
-          className="grid h-10.5 grid-cols-[minmax(0,1fr)_70px_60px_120px] items-center gap-3 border-b border-line px-4 last:border-b-0"
+          className="grid h-10.5 grid-cols-[minmax(0,1fr)_70px_60px_120px] items-center gap-3 border-b border-line px-4 last:border-b-0 @max-[560px]:h-auto @max-[560px]:grid-cols-[auto_auto_minmax(0,1fr)] @max-[560px]:gap-y-2 @max-[560px]:py-2.5"
         >
-          <span className="flex items-center gap-2.5">
+          <span className="flex items-center gap-2.5 @max-[560px]:col-span-full">
             <Skeleton className="size-6 rounded-[7px]" />
             <Skeleton className="h-3 w-28" />
           </span>
-          <Skeleton className="ml-auto h-2.5 w-5" />
-          <Skeleton className="ml-auto h-2.5 w-5" />
+          <Skeleton className="ml-auto h-2.5 w-5 @max-[560px]:ml-8.5 @max-[560px]:w-16" />
+          <Skeleton className="ml-auto h-2.5 w-5 @max-[560px]:ml-0 @max-[560px]:w-12" />
           <Skeleton className="h-1 w-22.5 rounded-full" />
         </div>
       ))}
@@ -96,7 +96,7 @@ export function ApisSkeleton(): React.ReactNode {
     <LoadingRegion label="Loading the APIs" className="flex flex-col gap-5.5">
       <div className="flex flex-col gap-3">
         <SectionHeading />
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(300px,100%),1fr))] gap-3">
           <CardSkeleton />
           <CardSkeleton />
         </div>

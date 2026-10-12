@@ -38,7 +38,8 @@ interface TopEndpointsProps {
 
 /**
  * The seven endpoints that rank highest by p95, by error rate or by calls,
- * each with a bar against the top one; a click opens its panel.
+ * each with a bar against the top one; a click opens its panel. On a phone
+ * the bar gives the name its room.
  *
  * @param props - The model, the slow threshold, and what opens an endpoint
  * @returns The card
@@ -72,7 +73,7 @@ export function TopEndpoints({ model, slowMs, onOpen }: TopEndpointsProps): Reac
               key={endpoint.key}
               type="button"
               onClick={() => onOpen(endpoint.key)}
-              className="grid h-9.5 cursor-pointer grid-cols-[18px_minmax(0,1fr)_minmax(60px,110px)_64px] items-center gap-3 rounded-control px-2.5 text-left font-mono text-small hover:bg-raised focus-visible:outline-2 focus-visible:outline-brand"
+              className="grid h-9.5 cursor-pointer grid-cols-[18px_minmax(0,1fr)_minmax(60px,110px)_64px] items-center gap-3 rounded-control px-2.5 text-left font-mono text-small hover:bg-raised focus-visible:outline-2 focus-visible:outline-brand max-sm:grid-cols-[14px_minmax(0,1fr)_minmax(36px,56px)_56px] max-sm:gap-2 pointer-coarse:h-11"
             >
               <span className="text-badge text-fg-subtle">{index + 1}</span>
               <span className="flex min-w-0 items-center gap-2 whitespace-nowrap">

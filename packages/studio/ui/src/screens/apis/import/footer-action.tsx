@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BUTTON =
-  "flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card px-3.5 text-control font-semibold disabled:cursor-default disabled:opacity-50";
+  "flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card px-3.5 text-control font-semibold disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10";
 const TONES = {
   next: `${BUTTON} bg-fg text-bg hover:bg-fg/90`,
   outline: `${BUTTON} border border-line font-normal text-fg-muted hover:border-line-strong hover:text-fg`,

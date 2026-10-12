@@ -3,6 +3,7 @@ import "@xyflow/react/dist/base.css";
 import type { NodeProps } from "@xyflow/react";
 import { Background, BackgroundVariant, MiniMap, ReactFlow } from "@xyflow/react";
 import { useMemo, useState } from "react";
+import { MEDIA } from "@/design/breakpoints";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type {
   CardNode,
@@ -14,6 +15,7 @@ import type {
 import { placedNodesOf, wiresNodeOf } from "@/features/explorer/flow-nodes";
 import type { GraphLayout, GraphNode } from "@/features/explorer/graph-types";
 import { keptPlacedNodes } from "@/features/explorer/kept-cards";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { GraphControls } from "./graph-controls";
 import { GraphFoldToggle } from "./graph-fold-toggle";
 import { GraphNodeCard } from "./graph-node-card";
@@ -74,9 +76,10 @@ interface GraphFlowProps {
 /**
  * The graph on a dotted ground that pans and zooms — dragged, scrolled with
  * a trackpad, pinched, or from the controls, which also fit it back in view
- * — with a minimap once it holds more than a screenful: column headings
- * over sources, groups and endpoints, the curves between them with the
- * calls running along them, a card a node.
+ * — with a minimap once it holds more than a screenful, except on a phone,
+ * where it would cover half the canvas: column headings over sources,
+ * groups and endpoints, the curves between them with the calls running
+ * along them, a card a node.
  *
  * @param props - The layout, the calls running, and what hovering and opening a node do
  * @returns The canvas
@@ -93,6 +96,7 @@ export function GraphFlow({
   onFold,
 }: GraphFlowProps): React.ReactNode {
   const [kept] = useState(() => keptPlacedNodes(placedNodesOf));
+  const phone = useMediaQuery(MEDIA.phone);
   const placed = useMemo(
     () => kept(layout, { onHover, onOpen, onFold }),
     [kept, layout, onHover, onOpen, onFold],
@@ -127,7 +131,7 @@ export function GraphFlow({
       >
         <Background variant={BackgroundVariant.Dots} gap={18} size={1} />
         <GraphControls />
-        {layout.nodes.length > GRAPH_VIEW.minimapFrom && (
+        {!phone && layout.nodes.length > GRAPH_VIEW.minimapFrom && (
           <MiniMap<FlowNode>
             nodeColor={minimapFill}
             nodeStrokeWidth={0}

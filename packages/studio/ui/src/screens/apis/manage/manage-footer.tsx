@@ -7,7 +7,7 @@ import type { FilePlanSummary } from "@/features/apis/types-file-plan";
 import { cn } from "@/lib/utils";
 
 const BUTTON =
-  "flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card px-3.5 text-control font-semibold disabled:cursor-default disabled:opacity-50";
+  "flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card px-3.5 text-control font-semibold disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10";
 const NEXT = `${BUTTON} bg-fg text-bg hover:bg-fg/90`;
 const OUTLINE = `${BUTTON} border border-line font-normal text-fg-muted hover:border-line-strong hover:text-fg`;
 
@@ -53,7 +53,8 @@ interface ManageFooterProps {
  * The manage dialog's footer: where it stands, Later, Back, and the step's
  * next move — Parse and continue, Preview changes, Regenerate files when no
  * change is picked, Apply them, or Preview again once files Studio cannot
- * write are dealt with.
+ * write are dealt with. On a phone where it stands takes a line over the
+ * buttons.
  *
  * @param props - The manage flow, the spec given again, and what reading it updates
  * @returns The footer
@@ -70,8 +71,10 @@ export function ManageFooter({ manage, reupload, onReupload }: ManageFooterProps
     (manage.step === "inventory" && manage.importType !== "url" && !manage.fromTraffic);
   const blocked = (manage.consent?.plan.blocked.length ?? 0) > 0;
   return (
-    <div className="flex shrink-0 items-center gap-2 border-t border-line bg-panel-subtle px-5 py-3">
-      <span className="truncate text-small text-fg-subtle">{noteOf(manage)}</span>
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line bg-panel-subtle px-5 py-3">
+      <span className="truncate text-small text-fg-subtle max-sm:basis-full max-sm:empty:hidden">
+        {noteOf(manage)}
+      </span>
       <div className="flex-1" />
       <button type="button" className={OUTLINE} disabled={applying} onClick={manage.close}>
         Later

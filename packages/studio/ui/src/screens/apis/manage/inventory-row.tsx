@@ -32,10 +32,11 @@ interface InventoryRowProps {
 }
 
 /**
- * One endpoint of the Endpoints step: its method, name and path, what
- * changed about it — new, removed from the spec, edited or added by hand —
- * and a tick box, unless Studio decides for it: one added by hand stays,
- * one the spec dropped goes with the update.
+ * One endpoint of the Endpoints step: its method, name and path — the path
+ * under the name on a phone — what changed about it — new, removed from
+ * the spec, edited or added by hand — and a tick box, unless Studio decides
+ * for it: one added by hand stays, one the spec dropped goes with the
+ * update.
  *
  * @param props - Its group, the endpoint, whether it is kept, and what ticking does
  * @returns The row
@@ -52,7 +53,7 @@ export function InventoryRow({
 }: InventoryRowProps): React.ReactNode {
   const tag = tagOf(ep);
   const row = cn(
-    "grid min-h-10 grid-cols-[15px_44px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-line px-3",
+    "grid min-h-10 grid-cols-[15px_44px_minmax(0,1fr)_auto] items-center gap-2.5 border-t border-line px-3 max-sm:py-1.5 pointer-coarse:min-h-11",
     !on && "opacity-55",
   );
   const body = (
@@ -65,8 +66,10 @@ export function InventoryRow({
       >
         {ep.httpMethod}
       </span>
-      <span className="flex min-w-0 items-baseline gap-2.5 overflow-hidden whitespace-nowrap">
-        <span className="font-mono text-small">{ep.name}</span>
+      <span className="flex min-w-0 items-baseline gap-2.5 overflow-hidden whitespace-nowrap max-sm:flex-col max-sm:gap-0.5">
+        <span className="shrink-0 font-mono text-small max-sm:max-w-full max-sm:truncate">
+          {ep.name}
+        </span>
         <span className="truncate font-mono text-badge text-fg-subtle">{ep.path}</span>
       </span>
       {tag ? (

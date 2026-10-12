@@ -19,16 +19,17 @@ function Control({
       title={label}
       aria-label={label}
       onClick={onClick}
-      className="flex size-7 cursor-pointer items-center justify-center border-b border-line text-fg-muted transition-colors last:border-b-0 hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand"
+      className="flex size-7 cursor-pointer items-center justify-center border-b border-line text-fg-muted transition-colors last:border-b-0 hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand pointer-coarse:size-10"
     >
-      <Icon aria-hidden="true" className="size-3.5" />
+      <Icon aria-hidden="true" className="size-3.5 pointer-coarse:size-4" />
     </button>
   );
 }
 
 /**
  * Zoom in, zoom out, and fit the whole graph back in view — beside the
- * pan and zoom a trackpad, a mouse or the keyboard gives.
+ * pan and zoom a trackpad, a mouse, a finger or the keyboard gives — each
+ * a finger's size on a touch screen.
  *
  * @returns The controls, at the graph's lower left
  * @example

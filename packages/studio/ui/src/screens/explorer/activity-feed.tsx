@@ -38,7 +38,7 @@ function ActivityRow({ request: r, now, slowMs, onOpen }: ActivityRowProps): Rea
     <button
       type="button"
       onClick={() => onOpen(r.id)}
-      className="grid h-8 cursor-pointer grid-cols-[58px_40px_minmax(0,1fr)_44px_60px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label tabular-nums hover:bg-raised focus-visible:outline-2 focus-visible:outline-brand"
+      className="grid h-8 shrink-0 cursor-pointer grid-cols-[58px_40px_minmax(0,1fr)_44px_60px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label tabular-nums hover:bg-raised focus-visible:outline-2 focus-visible:outline-brand max-sm:grid-cols-[30px_38px_minmax(0,1fr)_30px_48px] max-sm:gap-2 pointer-coarse:h-11"
     >
       <span className="text-fg-subtle">{shortAgo(now - r.startedAt)}</span>
       <span className={cn("text-micro font-semibold", methodClassOf(method))}>{method}</span>
@@ -74,7 +74,8 @@ interface ActivityFeedProps {
 
 /**
  * The newest calls as they come in — when, how each went, which endpoint,
- * its status and duration — each opening in the inspector.
+ * its status and duration — each opening in the inspector. On a phone the
+ * columns close up around the endpoint's name.
  *
  * @param props - The requests, the time now, the slow threshold, whether Studio records, and what opens a call
  * @returns The card

@@ -28,7 +28,8 @@ interface SelectEndpointsStepProps {
 
 /**
  * The Select step: the spec Studio read, the operations it left out, and
- * each group's endpoints to keep or leave out of the import.
+ * each group's endpoints to keep or leave out of the import — on a phone
+ * each endpoint's path under its name.
  *
  * @param props - The spec, the endpoints picked, and what ticking an endpoint, a group or all does
  * @returns The step
@@ -69,7 +70,7 @@ export function SelectEndpointsStep({
         <button
           type="button"
           onClick={onToggleAll}
-          className="flex h-6.5 cursor-pointer items-center rounded-[6px] border border-line px-2.25 text-small text-fg-muted hover:border-line-strong hover:text-fg"
+          className="flex h-6.5 shrink-0 cursor-pointer items-center rounded-[6px] border border-line px-2.25 text-small text-fg-muted hover:border-line-strong hover:text-fg pointer-coarse:h-9 pointer-coarse:px-2.5"
         >
           {count === total ? "Deselect all" : "Select all"}
         </button>
@@ -96,7 +97,7 @@ export function SelectEndpointsStep({
             aria-label={top ? "Top-level endpoints" : `Group ${group.name}`}
             className="overflow-hidden rounded-[11px] border border-line"
           >
-            <label className="flex h-9.5 cursor-pointer items-center gap-2.5 bg-panel-subtle px-3 hover:bg-raised">
+            <label className="flex h-9.5 cursor-pointer items-center gap-2.5 bg-panel-subtle px-3 hover:bg-raised pointer-coarse:h-11">
               <TickBox
                 checked={all}
                 mixed={picked.length > 0 && !all}
@@ -115,7 +116,7 @@ export function SelectEndpointsStep({
                 <label
                   key={op.name}
                   className={cn(
-                    "grid h-8.5 cursor-pointer grid-cols-[15px_46px_minmax(0,1fr)] items-center gap-2.5 border-t border-line px-3 hover:bg-raised",
+                    "grid h-8.5 cursor-pointer grid-cols-[15px_46px_minmax(0,1fr)] items-center gap-2.5 border-t border-line px-3 hover:bg-raised max-sm:h-auto max-sm:min-h-11 max-sm:py-1.5 pointer-coarse:min-h-11",
                     !on && "opacity-55",
                   )}
                 >
@@ -132,8 +133,10 @@ export function SelectEndpointsStep({
                   >
                     {op.httpMethod}
                   </span>
-                  <span className="flex min-w-0 items-baseline gap-2.5 overflow-hidden whitespace-nowrap">
-                    <span className="font-mono text-small">{op.name}</span>
+                  <span className="flex min-w-0 items-baseline gap-2.5 overflow-hidden whitespace-nowrap max-sm:flex-col max-sm:gap-0.5">
+                    <span className="shrink-0 font-mono text-small max-sm:max-w-full max-sm:truncate">
+                      {op.name}
+                    </span>
                     <span className="truncate font-mono text-badge text-fg-subtle">{op.path}</span>
                   </span>
                 </label>

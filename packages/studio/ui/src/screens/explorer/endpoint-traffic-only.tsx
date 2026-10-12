@@ -53,7 +53,7 @@ export function EndpointTrafficOnly({ endpoint }: { endpoint: EndpointNode }): R
         type="button"
         disabled={reading}
         onClick={() => void declare()}
-        className="flex h-7.5 w-max cursor-pointer items-center gap-1.75 rounded-control bg-fg px-3 text-small font-semibold text-bg hover:bg-fg/90 disabled:cursor-default disabled:opacity-50"
+        className="flex h-7.5 w-max max-w-full cursor-pointer items-center gap-1.75 rounded-control bg-fg px-3 text-small font-semibold text-bg hover:bg-fg/90 disabled:cursor-default disabled:opacity-50 pointer-coarse:h-9"
       >
         <FileCode2 aria-hidden="true" className="size-3.25" />
         {reading ? "Reading its traffic…" : `Declare ${endpoint.source} from traffic`}

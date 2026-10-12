@@ -18,7 +18,9 @@ function splitPath(path: string): { parent: string; key: string } {
 
 /**
  * The input schema under the Variables editor: each field the endpoint's
- * schema declares, where it sits, its type and whether it is required.
+ * schema declares, where it sits, its type and whether it is required. A
+ * long type wraps rather than squeezing the field's name, and in a phone's
+ * pane it takes a line of its own under the name.
  *
  * @param props - The endpoint's name, its fields, and whether it declares a schema
  * @returns The table
@@ -51,13 +53,15 @@ export function SchemaTable({ name, fields, declared }: SchemaTableProps): React
           return (
             <div
               key={field.path}
-              className="grid min-h-8 grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2.5 border-b border-line px-3 py-1.25 font-mono text-small last:border-b-0"
+              className="grid min-h-8 grid-cols-[minmax(0,1fr)_fit-content(60%)_auto] items-center gap-2.5 border-b border-line px-3 py-1.25 font-mono text-small last:border-b-0 max-sm:grid-cols-[minmax(0,1fr)_auto] short-screen:grid-cols-[minmax(0,1fr)_auto] max-sm:gap-y-1 short-screen:gap-y-1"
             >
               <span className="truncate">
                 <span className="text-fg-subtle">{parent}</span>
                 <span className="text-syntax-function">{key}</span>
               </span>
-              <span className="text-syntax-type">{field.type}</span>
+              <span className="text-syntax-type [overflow-wrap:anywhere] max-sm:col-span-2 short-screen:col-span-2 max-sm:row-start-2 short-screen:row-start-2">
+                {field.type}
+              </span>
               <span
                 className={cn(
                   "flex h-4.5 items-center rounded-chip px-1.5 font-sans text-meta",

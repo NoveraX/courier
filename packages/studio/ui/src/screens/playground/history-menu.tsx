@@ -46,9 +46,9 @@ export function HistoryMenu({ now, labelOf, onPick }: HistoryMenuProps): React.R
   const [open, setOpen] = useState(false);
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger className="flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card border border-line bg-panel px-2.75 text-control text-fg-muted transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand data-[state=open]:border-line-strong">
+      <Popover.Trigger className="flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card border border-line bg-panel px-2.75 text-control text-fg-muted transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand data-[state=open]:border-line-strong pointer-coarse:h-9">
         <History aria-hidden="true" className="size-3.25" />
-        <span className="max-md:hidden">History</span>
+        <span className="max-md:sr-only">History</span>
         <span className="flex h-4 min-w-4.5 items-center justify-center rounded-full bg-raised px-1.25 text-meta text-fg-subtle tabular-nums">
           {history.length}
         </span>
@@ -57,8 +57,9 @@ export function HistoryMenu({ now, labelOf, onPick }: HistoryMenuProps): React.R
         <Popover.Content
           align="end"
           sideOffset={6}
+          collisionPadding={8}
           className={cn(
-            "z-50 w-90 overflow-hidden rounded-dialog bg-panel shadow-overlay",
+            "z-50 w-[min(360px,calc(100vw-16px))] overflow-hidden rounded-dialog bg-panel shadow-overlay",
             POP_MOTION,
           )}
         >
@@ -68,14 +69,14 @@ export function HistoryMenu({ now, labelOf, onPick }: HistoryMenuProps): React.R
               <button
                 type="button"
                 onClick={clear}
-                className="flex h-6.5 cursor-pointer items-center gap-1.5 rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-err"
+                className="flex h-6.5 cursor-pointer items-center gap-1.5 rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-err pointer-coarse:h-9 pointer-coarse:px-2.5"
               >
                 <Trash2 aria-hidden="true" className="size-3" />
                 Clear
               </button>
             )}
           </div>
-          <div className="max-h-80 overflow-auto p-1">
+          <div className="max-h-[min(320px,50dvh)] overflow-auto p-1">
             {history.length === 0 && (
               <p className="px-3 py-5.5 text-center text-control text-fg-subtle">
                 Nothing sent yet
@@ -92,7 +93,7 @@ export function HistoryMenu({ now, labelOf, onPick }: HistoryMenuProps): React.R
                     onPick(entry);
                     setOpen(false);
                   }}
-                  className="grid h-8.5 w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label hover:bg-raised"
+                  className="grid h-8.5 w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label hover:bg-raised pointer-coarse:h-10"
                 >
                   <span className={cn("text-micro font-semibold", methodClassOf(label))}>
                     {label}

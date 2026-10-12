@@ -7,7 +7,8 @@ import { getSocket } from "@/socket";
 
 /**
  * Sends a message on the open WebSocket the Playground subscribed to: JSON
- * typed in, sent on Enter or with the button.
+ * typed in, sent on Enter — the key a phone's keyboard labels Send — or
+ * with the button.
  *
  * @param props - The run whose channel takes the message
  * @returns The composer
@@ -41,13 +42,18 @@ export function WsComposer({ rid }: { rid: string }): React.ReactNode {
         }}
         aria-label="Message to send"
         placeholder='{ "type": "ping" }'
-        className="h-8 min-w-0 flex-1 rounded-card border border-line bg-inset px-2.5 font-mono text-small text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand/60"
+        enterKeyHint="send"
+        autoCapitalize="off"
+        autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
+        className="h-8 min-w-0 flex-1 rounded-card border border-line bg-inset px-2.5 font-mono text-small text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand/60 pointer-coarse:h-10 pointer-coarse:text-[16px]"
       />
       <button
         type="button"
         onClick={send}
         disabled={text.trim() === ""}
-        className="flex h-8 cursor-pointer items-center gap-1.5 rounded-card bg-brand px-3 text-control font-semibold text-bg disabled:cursor-default disabled:opacity-50"
+        className="flex h-8 cursor-pointer items-center gap-1.5 rounded-card bg-brand px-3 text-control font-semibold text-bg disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10"
       >
         <ArrowUpRight aria-hidden="true" className="size-3" />
         Send

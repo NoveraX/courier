@@ -66,7 +66,7 @@ export function SourceCards({ model }: { model: ExplorerModel }): React.ReactNod
         </span>
       }
     >
-      <div className="grid max-h-105 grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2 overflow-auto p-3">
+      <div className="grid max-h-105 grid-cols-[repeat(auto-fill,minmax(min(200px,100%),1fr))] gap-2 overflow-auto p-3">
         {model.sources.map((source) => (
           <SourceCard key={source.name} source={source} />
         ))}

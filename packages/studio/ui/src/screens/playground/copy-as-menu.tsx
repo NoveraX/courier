@@ -40,7 +40,7 @@ export function CopyAsMenu({ transport, onCopy }: CopyAsMenuProps): React.ReactN
   const choices: readonly CopyChoice[] = ["shell", "browser", "courier", "url"];
   return (
     <DropdownMenu.Root>
-      <DropdownMenu.Trigger className="flex h-6.5 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line px-2.25 text-small text-fg-muted transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand data-[state=open]:border-line-strong">
+      <DropdownMenu.Trigger className="flex h-6.5 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line px-2.25 text-small text-fg-muted transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand data-[state=open]:border-line-strong pointer-coarse:h-9 pointer-coarse:px-2.5">
         <Copy aria-hidden="true" className="size-3" />
         Copy as
         <ChevronDown aria-hidden="true" className="size-2.75 opacity-60" />
@@ -57,7 +57,7 @@ export function CopyAsMenu({ transport, onCopy }: CopyAsMenuProps): React.ReactN
               <DropdownMenu.Item
                 key={choice}
                 onSelect={() => onCopy(choice, labels[choice])}
-                className="flex h-7.5 cursor-pointer items-center gap-2.5 rounded-[6px] px-2.25 text-control text-fg-muted outline-none data-[highlighted]:bg-raised data-[highlighted]:text-fg"
+                className="flex h-7.5 cursor-pointer items-center gap-2.5 rounded-[6px] px-2.25 text-control text-fg-muted outline-none data-[highlighted]:bg-raised data-[highlighted]:text-fg pointer-coarse:h-10"
               >
                 <Icon aria-hidden="true" className="size-3.25" />
                 {labels[choice]}

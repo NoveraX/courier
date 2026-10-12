@@ -213,9 +213,9 @@ code. If it fixes a reported issue, link it. If it changes public API, say so
 explicitly — the export surface is checked.
 
 The title becomes the squash-merge commit's header, so it follows the commit
-convention too, and CI checks it. Dependabot's pull requests are titled
-`fix(deps): Bump …` or `chore(deps): Bump …`; retitle one to the convention
-— `fix(deps): 🐛 bump zod from 4.6.5 to 4.7.0` — before merging it.
+convention too, and CI checks it. Dependabot titles its pull requests in the
+convention itself — `fix(deps): 🐛 bump zod from 4.6.5 to 4.7.0` — as
+`.github/dependabot.yml` tells it to.
 
 ## Reporting a security issue
 

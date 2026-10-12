@@ -10,7 +10,9 @@
 # DEMO_TRUSTED_PROXIES to its addresses and ranges, comma-separated, and have
 # the proxy pass on the entries the filter wrote — Traefik's
 # forwardedHeaders.trustedIPs, Caddy's trusted_proxies — or every visitor
-# shares the filter's addresses instead.
+# shares the filter's addresses instead. A filter that names the visitor in
+# a header of its own needs no change to the proxy: set DEMO_ADDRESS_HEADER
+# to it, such as DDG-Connecting-IP for DDoS-Guard.
 #
 # The container writes nowhere but two memory-backed folders: the demo's
 # state, which each reset empties, and /tmp. It runs unprivileged, with no
@@ -26,6 +28,7 @@ services:
       DEMO_ORIGIN: https://demo.courier.noverax.cloud
       DEMO_RESET_MINUTES: "60"
       DEMO_TRUSTED_PROXIES: ${DEMO_TRUSTED_PROXIES:-}
+      DEMO_ADDRESS_HEADER: ${DEMO_ADDRESS_HEADER:-}
     expose:
       - "6280"
     read_only: true

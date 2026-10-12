@@ -62,6 +62,7 @@ Each part also runs on its own: `npm run upstream`, `npm run app`, `npm run traf
 | `DEMO_RESET_MINUTES` | `60` | How often the demo starts again from a clean state |
 | `DEMO_ORIGIN` | — | The address visitors open, when Studio sits behind a proxy on a domain of its own |
 | `DEMO_TRUSTED_PROXIES` | — | A CDN's or DDoS filter's addresses and CIDR ranges in front of that proxy, comma-separated |
+| `DEMO_ADDRESS_HEADER` | — | The header that filter names the visitor's address in, such as `DDG-Connecting-IP` |
 | `SHOPPERS` | `2` | How many shoppers browse at once, up to 4 |
 
 ## What a visitor may do
@@ -81,7 +82,7 @@ Build it from the repository's root. The image builds the packages the demo uses
 
 The proxy in front must say who each visitor is in `X-Forwarded-For`, as Traefik, Caddy and nginx's usual configuration do. The demo counts each visitor's share by that address — requests, sockets, Playground calls, mock commands — so without it every visitor would share the proxy's.
 
-Behind a CDN or a DDoS filter as well, set `DEMO_TRUSTED_PROXIES` to its published addresses and ranges, and have the proxy pass on the entries the filter wrote instead of replacing them — Traefik's `forwardedHeaders.trustedIPs` on its entry point, Caddy's `trusted_proxies`. The demo then reads past the filter's entries to the address it saw; without both, every visitor shares the filter's addresses.
+Behind a CDN or a DDoS filter as well, set `DEMO_TRUSTED_PROXIES` to its published addresses and ranges, and have the proxy pass on the entries the filter wrote instead of replacing them — Traefik's `forwardedHeaders.trustedIPs` on its entry point, Caddy's `trusted_proxies`. The demo then reads past the filter's entries to the address it saw; without both, every visitor shares the filter's addresses. A filter that names the visitor in a header of its own — DDoS-Guard's `DDG-Connecting-IP`, Cloudflare's `CF-Connecting-IP` — needs no change to the proxy: set `DEMO_ADDRESS_HEADER` to that header as well, and the demo reads it from requests that came through the filter, and from no other.
 
 <br />
 

@@ -64,6 +64,9 @@ async function startMock() {
     onExited: vi.fn<(serverId: string, reason: string) => void>(),
     onEvents: vi.fn<(serverId: string, events: readonly SentEvent[]) => void>(),
   } satisfies ProcessManagerEvents;
+  /* Made first, so the worker has stopped before its folder goes: Windows
+     keeps a folder a running process works in. */
+  const mocksFile = project();
   const pm = createProcessManager(events, {
     transformCacheDirectory: () => null,
     storeFile: () => null,
@@ -72,7 +75,7 @@ async function startMock() {
   /* Port 0: the system picks one as the worker binds, which no other test can take in between. */
   pm.spawn({
     serverId: "apiMock",
-    mocksFile: project(),
+    mocksFile,
     mockKey: "apiMock",
     port: 0,
     strictPort: true,

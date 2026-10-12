@@ -35,7 +35,8 @@ describe("discardTemp", () => {
 
   it("logs a file it cannot remove at warn instead of throwing, and says it is left", () => {
     const unlinkError = Object.assign(new Error("EACCES: injected"), { code: "EACCES" });
-    vi.mocked(unlinkSync).mockImplementationOnce(() => {
+    /* Every time: Windows tries a refused removal again before giving up. */
+    vi.mocked(unlinkSync).mockImplementation(() => {
       throw unlinkError;
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);

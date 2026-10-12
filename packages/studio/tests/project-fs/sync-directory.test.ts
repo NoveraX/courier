@@ -52,6 +52,12 @@ describe("syncDirectory", () => {
   });
 
   it("logs a flush that fails at debug instead of throwing", () => {
+    /* A system that flushes directories, wherever the test runs. */
+    Object.defineProperty(process, "platform", {
+      value: "linux",
+      configurable: true,
+      enumerable: true,
+    });
     const flushError = Object.assign(new Error("EINVAL: injected"), { code: "EINVAL" });
     vi.mocked(openSync).mockImplementationOnce(() => {
       throw flushError;

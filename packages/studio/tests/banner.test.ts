@@ -79,6 +79,8 @@ describe("printBanner", () => {
 
   it("restates a problem met during startup, and keeps the screen", () => {
     process.stdout.isTTY = true;
+    /* A terminal that draws the symbols on Windows too, as Windows Terminal does. */
+    vi.stubEnv("WT_SESSION", "probe");
     recordStartupIssue("courier.config.ts failed to load", new Error("Unexpected token"));
 
     printBanner("1.2.3", { local: "http://localhost:6280", network: [] });

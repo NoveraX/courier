@@ -315,7 +315,8 @@ describe("applyMocksEdit", () => {
     expect(tx.reloadAfter).toHaveBeenCalledWith([file]);
   });
 
-  it.skipIf(process.getuid?.() === 0)(
+  /* Windows keeps no write permission in a folder's mode. */
+  it.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     "says so when it cannot take its edit back, and has the file reloaded",
     async () => {
       const file = join(root, "courier.mocks.ts");
@@ -484,7 +485,8 @@ describe("applyMocksEdit", () => {
     expect(tx.apply).not.toHaveBeenCalled();
   });
 
-  it.skipIf(process.getuid?.() === 0)(
+  /* Windows keeps no read permission in a file's mode. */
+  it.skipIf(process.getuid?.() === 0 || process.platform === "win32")(
     "answers a file that became unreadable after the preview without failing",
     async () => {
       const file = join(root, "courier.mocks.ts");

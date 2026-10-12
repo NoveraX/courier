@@ -22,6 +22,11 @@ import { stageWrites } from "../../src/server/import-files/stage-writes";
 import { type ProjectRoot, projectRootAt } from "../../src/server/project-fs/project-root";
 import { writeTempBeside } from "../../src/server/project-fs/write-temp-beside";
 
+/* A path as these checks spell it, with forward slashes, which Windows does not write. */
+function slashed(path: Fs.PathLike): string {
+  return String(path).replaceAll("\\", "/");
+}
+
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>();
   return { ...actual, renameSync: vi.fn(actual.renameSync) };
@@ -78,7 +83,7 @@ describe("stageWrites", () => {
     saveJournal(root.path, journal);
     const actual = vi.mocked(writeTempBeside).getMockImplementation();
     vi.mocked(writeTempBeside).mockImplementation((path, ...rest) => {
-      if (path.includes(`${DIR}/users`)) throw new Error("killed");
+      if (slashed(path).includes(`${DIR}/users`)) throw new Error("killed");
       return actual ? actual(path, ...rest) : "";
     });
 
@@ -100,7 +105,7 @@ describe("applying many files", () => {
     let saves = 0;
     const actual = vi.mocked(renameSync).getMockImplementation();
     vi.mocked(renameSync).mockImplementation((from, to) => {
-      if (String(to).includes(".courier/journal/")) saves += 1;
+      if (slashed(to).includes(".courier/journal/")) saves += 1;
       actual?.(from, to);
     });
     const paths = Array.from({ length: 12 }, (_, index) => `${DIR}/group${index}/index.ts`);

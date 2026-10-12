@@ -74,7 +74,8 @@ function drained(nodeRes: ServerResponse): Promise<void> {
 
 /**
  * Send a Web Standard Response to a Node.js ServerResponse.
- * Handles streaming bodies and set-cookie headers.
+ * Handles streaming bodies and set-cookie headers, and keeps a `Vary` the
+ * Node response already carries beside the one the answer brings.
  *
  * The body is read no faster than the client reads it: an SSE stream whose
  * client stopped reading would otherwise be buffered in memory without
@@ -99,6 +100,12 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
       headersObj[key] = value;
     }
   }
+  /* writeHead's headers replace the ones set before it, so a `Vary` set
+     before it — the `Origin` a CORS grant depends on — is joined with the
+     answer's own rather than lost to it. */
+  const varied = nodeRes.getHeader("vary");
+  const vary = varied === undefined ? "" : joinedVary(varied, webRes.headers.get("vary"));
+  if (vary !== "") headersObj.vary = vary;
 
   nodeRes.writeHead(webRes.status, headersObj);
 
@@ -132,6 +139,17 @@ export async function sendWebResponse(webRes: Response, nodeRes: ServerResponse)
     reader.releaseLock();
     nodeRes.end();
   }
+}
+
+/* Two `Vary` values as one that names each field once; `*` stands for all of them. */
+function joinedVary(varied: number | string | readonly string[], own: string | null): string {
+  const fields = `${varied},${own ?? ""}`
+    .split(",")
+    .map((field) => field.trim())
+    .filter((field) => field !== "");
+  if (fields.includes("*")) return "*";
+  const named = fields.map((field) => field.toLowerCase());
+  return fields.filter((field, at) => named.indexOf(field.toLowerCase()) === at).join(", ");
 }
 
 /**

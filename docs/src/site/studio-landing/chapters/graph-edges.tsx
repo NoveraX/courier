@@ -1,24 +1,27 @@
 import { cn } from "@/site/cn"
-import { edgePath, GRAPH_EDGES, GRAPH_NODES, GRAPH_SIZE } from "./graph-model"
+import type { GraphLayout } from "./graph-model"
+import { edgePath, GRAPH_EDGES, GRAPH_NODES } from "./graph-model"
 import { stagger } from "./stagger"
 
 /**
  * The graph's edges: each drawn in, the busiest dashed and flowing, red
  * toward a failing endpoint, with calls travelling along them.
  *
+ * @param props - The layout the graph is drawn in
  * @returns The edges
  * @example
  * ```tsx
- * <GraphEdges />
+ * <GraphEdges layout={WIDE_GRAPH} />
  * ```
  */
-export function GraphEdges() {
+export function GraphEdges({ layout }: { layout: GraphLayout }) {
+  const size = { width: layout.width, height: layout.height }
   return (
     <svg
       aria-hidden="true"
-      viewBox={`0 0 ${GRAPH_SIZE.width} ${GRAPH_SIZE.height}`}
+      viewBox={`0 0 ${layout.width} ${layout.height}`}
       className="absolute inset-0"
-      style={GRAPH_SIZE}
+      style={size}
     >
       {GRAPH_EDGES.map((edge, at) => {
         const failing = GRAPH_NODES[edge[1]]?.health === "err"
@@ -31,7 +34,7 @@ export function GraphEdges() {
               data-a={moving ? "flow" : "draw"}
               style={stagger(enter)}
               pathLength={moving ? undefined : 1}
-              d={edgePath(edge)}
+              d={edgePath(edge, layout)}
               className={cn("fill-none", tone)}
               strokeWidth="1.5"
               strokeDasharray={moving ? "5 5" : undefined}
@@ -48,7 +51,7 @@ export function GraphEdges() {
                   dur={`${1.8 + (at % 3) * 0.4}s`}
                   begin={`${at * 0.37 + dot * (0.9 + (at % 3) * 0.2)}s`}
                   repeatCount="indefinite"
-                  path={edgePath(edge)}
+                  path={edgePath(edge, layout)}
                 />
               </circle>
             ))}

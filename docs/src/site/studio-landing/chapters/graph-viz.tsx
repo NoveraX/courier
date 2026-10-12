@@ -9,7 +9,7 @@ import { useElementWidth } from "@/site/studio-landing/use-element-width"
 import { useSeen } from "@/site/studio-landing/use-seen"
 import { GraphEdges } from "./graph-edges"
 import type { GraphNode, Health } from "./graph-model"
-import { GRAPH_EDGES, GRAPH_NODES, GRAPH_SIZE, hotEdge, nodeWidth } from "./graph-model"
+import { GRAPH_EDGES, GRAPH_NODES, graphLayoutFor, hotEdge } from "./graph-model"
 import { stagger } from "./stagger"
 import { VizFrame } from "./viz-frame"
 
@@ -37,7 +37,8 @@ function iconOf(node: GraphNode) {
 /**
  * The Explorer's map of an API: sources, their groups and their endpoints,
  * joined by edges that draw themselves in, with calls flowing along them
- * and one path lit at a time — red where an endpoint is failing.
+ * and one path lit at a time — red where an endpoint is failing. On a
+ * phone its columns draw closer, so that its labels stay readable.
  *
  * @returns The visual
  * @example
@@ -50,7 +51,10 @@ export function GraphViz() {
   const [boxRef, width] = useElementWidth<HTMLDivElement>()
   const still = useReducedMotion()
   const step = useTicker(seen && !still, 1600)
-  const scale = Math.min(1.25, (width || GRAPH_SIZE.width) / GRAPH_SIZE.width)
+  const layout = graphLayoutFor(width)
+  const scale = Math.min(1.25, (width || layout.width) / layout.width)
+  const size = { width: layout.width, height: layout.height }
+  const left = Math.max(0, Math.round((width - layout.width * scale) / 2))
   const lit = GRAPH_EDGES[hotEdge(step)] ?? [0, 0]
   const litTone = GRAPH_NODES[lit[1]]?.health === "err" ? "err" : "brand"
   return (
@@ -60,13 +64,13 @@ export function GraphViz() {
         role="img"
         aria-label="A graph of two sources, their groups and their endpoints, with traffic flowing along it"
         className="relative overflow-hidden bg-[radial-gradient(circle,var(--color-line)_1px,transparent_1.2px)] bg-size-[18px_18px]"
-        style={{ height: `${Math.round(GRAPH_SIZE.height * scale)}px` }}
+        style={{ height: `${Math.round(layout.height * scale)}px` }}
       >
         <div
-          className="absolute top-0 left-0 origin-top-left"
-          style={{ ...GRAPH_SIZE, transform: `scale(${scale})` }}
+          className="absolute top-0 origin-top-left"
+          style={{ ...size, left, transform: `scale(${scale})` }}
         >
-          <GraphEdges />
+          <GraphEdges layout={layout} />
           {GRAPH_NODES.map((node, at) => {
             const hot = lit.includes(at)
             return (
@@ -75,12 +79,13 @@ export function GraphViz() {
                 data-a="pop"
                 style={{
                   ...stagger(ENTER[node.kind] + (at % 3)),
-                  left: node.x,
+                  left: layout.x[node.kind],
                   top: node.y,
-                  width: nodeWidth(node),
+                  width: layout.nodeWidth[node.kind],
                 }}
                 className={cn(
-                  "absolute -mt-4 flex h-8 items-center gap-1.75 overflow-hidden rounded-[9px] border bg-panel px-2.25 font-mono text-[11px] whitespace-nowrap transition-[border-color,box-shadow] duration-400",
+                  "absolute -mt-4 flex h-8 items-center overflow-hidden rounded-[9px] border bg-panel font-mono text-[11px] whitespace-nowrap transition-[border-color,box-shadow] duration-400",
+                  layout.tight ? "gap-1 px-1.5" : "gap-1.75 px-2.25",
                   hot &&
                     litTone === "err" &&
                     "border-err shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-err)_14%,transparent),0_0_20px_color-mix(in_srgb,var(--color-err)_22%,transparent)]",

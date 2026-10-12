@@ -34,7 +34,8 @@ import { dirname, resolve } from "node:path";
 import type { CourierConfig } from "@noverax/courier/config";
 import type { ConfigJitiOptions } from "./config-jiti";
 import { createConfigJiti } from "./config-jiti";
-import type { TransformCache } from "./transform-cache";
+import { createTransformCache, type TransformCache } from "./transform-cache";
+import { findTransformCacheDirectory } from "./transform-cache-directory";
 
 export { type ConfigJitiOptions, createConfigJiti } from "./config-jiti";
 export { findMocksFile, MOCKS_BASENAMES } from "./find-mocks-file";
@@ -101,6 +102,15 @@ export interface LoadCourierConfigOptions {
   transformCache?: TransformCache | undefined;
   /** Told the file of each module the load transforms; see `createConfigJiti`. */
   onModule?: ((filename: string) => void) | undefined;
+  /**
+   * Reuse the transforms kept in the project's `node_modules/.cache`, the
+   * ones Studio keeps, and keep there the ones this load makes: a process
+   * that loads the config beside Studio — an app that attaches, the MCP
+   * server, `courier-server` — transforms only the modules no process has
+   * transformed yet. On a project of a thousand endpoints that is hundreds
+   * of modules, most of a second. Passed over when `transformCache` is given.
+   */
+  projectTransforms?: boolean | undefined;
 }
 
 /**
@@ -159,12 +169,28 @@ export async function loadCourierConfig(
   const startDir = resolve(options.cwd ?? process.cwd());
 
   const found = options.requireAtCwd ? findConfigFileAt(startDir) : findConfigFile(startDir);
-  return found
-    ? loadCourierConfigFile(found, {
-        transformCache: options.transformCache,
-        onModule: options.onModule,
-      })
-    : null;
+  if (!found) return null;
+  const transformCache =
+    options.transformCache ??
+    (options.projectTransforms === true ? projectTransformCache(dirname(found)) : undefined);
+  return loadCourierConfigFile(found, { transformCache, onModule: options.onModule });
+}
+
+/**
+ * The transforms kept in a project's `node_modules/.cache` — the ones Studio
+ * keeps — for a process that loads the project's modules once: it reuses
+ * them, keeps there the ones it makes, and holds none in memory.
+ *
+ * @param projectRoot - The project's root
+ * @returns The cache, or `undefined` when the project has no directory to keep them in
+ * @example
+ * ```ts
+ * await loadCourierConfigFile(file, { transformCache: projectTransformCache(dirname(file)) });
+ * ```
+ */
+export function projectTransformCache(projectRoot: string): TransformCache | undefined {
+  const directory = findTransformCacheDirectory(projectRoot);
+  return directory === null ? undefined : createTransformCache({ directory, maxMemoryChars: 0 });
 }
 
 /**

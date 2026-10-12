@@ -34,7 +34,10 @@ export interface ListedProject {
 export async function listProject(options: ListedProject): Promise<Catalog> {
   loadEnvFiles(options.root, options.envFiles);
   const { loadCourierConfig } = await import("@noverax/courier-studio-core/config");
-  const loaded = await loadCourierConfig({ cwd: options.root });
+  const loaded = await loadCourierConfig({
+    cwd: options.root,
+    projectTransforms: process.env.NODE_ENV !== "production",
+  });
   const sources = loaded?.config.sources;
   checkSourceNames(sources, options.root, options.only);
   const policy = projectPolicy(() => loaded?.config, options.narrowing ?? {});

@@ -264,6 +264,7 @@ describe("courierSSEHandler", () => {
       writeHead: vi.fn(() => callOrder.push("writeHead")),
       write: vi.fn(),
       end: vi.fn(),
+      getHeader: vi.fn(),
       once: vi.fn(),
       off: vi.fn(),
       writableFinished: false,
@@ -309,6 +310,8 @@ function createMockFastifyReply() {
     writeHead: vi.fn(),
     write: vi.fn((chunk: any) => chunks.push(Buffer.from(chunk))),
     end: vi.fn(),
+    /* The adapter keeps a `Vary` set before the answer beside the answer's own. */
+    getHeader: vi.fn(),
     /* A ServerResponse is an event emitter; the adapter listens for an early close. */
     once: vi.fn(),
     off: vi.fn(),

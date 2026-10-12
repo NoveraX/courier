@@ -5,6 +5,9 @@
  * second time from the response side meets the abort that already ended
  * it. That is no failure: a client cancelling a streamed call logs no
  * warning with a full stack.
+ *
+ * And a `Vary` set on the Node response before the answer is sent — the
+ * `Origin` a CORS grant depends on — is kept beside the answer's own.
  */
 import { createServer, type Server } from "node:http";
 import { type AddressInfo, connect } from "node:net";
@@ -110,5 +113,32 @@ describe("a streamed answer the client does not read", () => {
     expect(pulled).toBeGreaterThan(0);
     expect(pulled).toBeLessThan(1_000);
     client.destroy();
+  });
+});
+
+describe("a Vary set before the answer", () => {
+  async function varyOf(before: string, answer?: string): Promise<string | null> {
+    const init = answer === undefined ? {} : { headers: { Vary: answer } };
+    const url = await listen(
+      createServer((_req, res) => {
+        res.setHeader("Vary", before);
+        void sendWebResponse(new Response("{}", init), res);
+      }),
+    );
+    const response = await fetch(url);
+    await response.body?.cancel();
+    return response.headers.get("vary");
+  }
+
+  /* writeHead let the answer's own Vary replace it, so a cache could hand an
+     answer granted to one origin to another. */
+  it("is kept beside the answer's own, each field named once", async () => {
+    expect(await varyOf("Origin", "Accept-Encoding")).toBe("Origin, Accept-Encoding");
+    expect(await varyOf("Origin", "accept-encoding, origin")).toBe("Origin, accept-encoding");
+  });
+
+  it("stands alone when the answer has none, and gives way to a Vary of every field", async () => {
+    expect(await varyOf("Origin")).toBe("Origin");
+    expect(await varyOf("Origin", "*")).toBe("*");
   });
 });

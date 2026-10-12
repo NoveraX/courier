@@ -2,14 +2,23 @@ import { createLogger } from "@noverax/courier";
 
 const log = createLogger("Server");
 
+/* A `kill`, an orchestrator's stop or Ctrl+C everywhere. On Windows also
+   Ctrl+Break, and the console window closing, which the process outlives
+   for a few seconds only. Elsewhere SIGHUP stays the host's: it may reload
+   on it. */
 const SIGNALS = ["SIGTERM", "SIGINT"] as const;
+const WINDOWS_SIGNALS = [...SIGNALS, "SIGBREAK", "SIGHUP"] as const;
 
 /** How each server listening for termination signals stops. */
 const stops = new Set<() => Promise<void>>();
 
+/* The signals the shared listener is on, fixed as the first server attaches. */
+let listening: readonly NodeJS.Signals[] = [];
+
 /**
- * Stop the server on SIGTERM or SIGINT, then end the process — unless
- * something else in it handles the signal too.
+ * Stop the server on SIGTERM or SIGINT — on Windows also on Ctrl+Break
+ * (SIGBREAK) and on its console window closing (SIGHUP) — then end the
+ * process, unless something else in it handles the signal too.
  *
  * A host that listens for the signal has taken the decision to end the
  * process from Node, and keeps it: ending the process when the server's own
@@ -34,12 +43,15 @@ const stops = new Set<() => Promise<void>>();
 export function setupSignalHandlers(stop: () => Promise<void>): () => void {
   /* Prepended so it runs before any other listener, while a host's `once`
      handler is still registered and can be counted. */
-  if (stops.size === 0) for (const signal of SIGNALS) process.prependListener(signal, onSignal);
+  if (stops.size === 0) {
+    listening = process.platform === "win32" ? WINDOWS_SIGNALS : SIGNALS;
+    for (const signal of listening) process.prependListener(signal, onSignal);
+  }
   stops.add(stop);
 
   return () => {
     if (!stops.delete(stop) || stops.size > 0) return;
-    for (const signal of SIGNALS) process.off(signal, onSignal);
+    for (const signal of listening) process.off(signal, onSignal);
   };
 }
 

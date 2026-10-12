@@ -106,6 +106,31 @@ describe.skipIf(process.platform === "win32")("a server with default signal hand
   }, 30_000);
 });
 
+/* The listeners one server adds on a system while it listens, and those its detach leaves behind. */
+function listenersOn(platform: NodeJS.Platform): {
+  added: Record<string, number>;
+  left: Record<string, number>;
+} {
+  const signals = ["SIGTERM", "SIGINT", "SIGBREAK", "SIGHUP"] as const;
+  const counts = () => signals.map((signal) => process.listenerCount(signal));
+  const delta = (from: number[]) =>
+    Object.fromEntries(
+      signals.map((signal, at) => [signal, (counts()[at] ?? 0) - (from[at] ?? 0)]),
+    );
+  const before = counts();
+  const real = process.platform;
+  Object.defineProperty(process, "platform", { value: platform, configurable: true });
+  let detach: () => void = () => undefined;
+  try {
+    detach = setupSignalHandlers(async () => {});
+  } finally {
+    Object.defineProperty(process, "platform", { value: real, configurable: true });
+  }
+  const added = delta(before);
+  detach();
+  return { added, left: delta(before) };
+}
+
 describe("setupSignalHandlers", () => {
   it("listens for SIGTERM and SIGINT once, however many servers ask", () => {
     const before = { term: process.listenerCount("SIGTERM"), int: process.listenerCount("SIGINT") };
@@ -129,5 +154,19 @@ describe("setupSignalHandlers", () => {
     detachSecond();
 
     expect(process.listenerCount("SIGTERM")).toBe(before);
+  });
+
+  it("on Windows, drains on Ctrl+Break and on its console window closing too", () => {
+    const { added, left } = listenersOn("win32");
+
+    expect(added).toEqual({ SIGTERM: 1, SIGINT: 1, SIGBREAK: 1, SIGHUP: 1 });
+    expect(left).toEqual({ SIGTERM: 0, SIGINT: 0, SIGBREAK: 0, SIGHUP: 0 });
+  });
+
+  it("elsewhere, leaves SIGHUP to the host, which may reload on it", () => {
+    const { added, left } = listenersOn("linux");
+
+    expect(added).toEqual({ SIGTERM: 1, SIGINT: 1, SIGBREAK: 0, SIGHUP: 0 });
+    expect(left).toEqual({ SIGTERM: 0, SIGINT: 0, SIGBREAK: 0, SIGHUP: 0 });
   });
 });

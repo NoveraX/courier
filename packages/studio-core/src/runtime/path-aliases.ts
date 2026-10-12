@@ -113,7 +113,8 @@ function candidatesOf(
   if (name !== null && installed.has(name)) return [];
 
   const matched = specifier.slice(best.prefix.length, specifier.length - best.suffix.length);
-  /* The matched part keeps the specifier's forward slashes: each candidate is named as the system names files. */
+  /* The matched part keeps the specifier's forward slashes: each candidate is named as the system names files.
+     A target holds one `*` at most, as TypeScript requires, and that one is filled, as TypeScript fills it. */
   return best.targets.map((target) => normalize(target.replace("*", matched)));
 }
 

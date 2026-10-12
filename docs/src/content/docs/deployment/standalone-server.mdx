@@ -120,7 +120,7 @@ const server = await createCourierServer({
   maxPayload: 1_048_576,             // larger frames close the socket with 1009, unbuffered (default: 1MB, or 2× maxMessageSize)
 
   // Lifecycle
-  signals: true,                     // handle SIGTERM/SIGINT (default: true)
+  signals: true,                     // handle SIGTERM/SIGINT, and Ctrl+Break and the console closing on Windows (default: true)
   onReady: (url) => console.log(`Ready: ${url}`), // announces the address in place of the server's "Listening on" line
 })
 ```
@@ -239,7 +239,7 @@ curl http://localhost:3001/readyz
 
 ## Graceful Shutdown
 
-When `signals: true` (default), the server handles `SIGTERM` and `SIGINT`:
+When `signals: true` (default), the server handles `SIGTERM` and `SIGINT` — and on Windows also Ctrl+Break (`SIGBREAK`) and its console window closing (`SIGHUP`), which Windows follows a few seconds later by ending the process:
 
 1. **Readiness probe** flips to `503` immediately
 2. **SSE streams** receive a retry hint and close gracefully (3s window)
@@ -248,7 +248,7 @@ When `signals: true` (default), the server handles `SIGTERM` and `SIGINT`:
 5. The process exits with code `0` — or `1` if a server failed to stop cleanly
 6. Second signal forces immediate exit
 
-If your application handles `SIGTERM` or `SIGINT` itself, the server still drains on the signal but leaves ending the process to your handler, so your own cleanup runs to completion. To decide the order yourself, pass `signals: false` and call `server.stop()` from your handler.
+Elsewhere `SIGHUP` is left to your application, which may reload on it, as the [certificate renewal](/docs/advanced/proxies-and-certificates#renewing-the-certificate) does. If your application handles `SIGTERM` or `SIGINT` itself, the server still drains on the signal but leaves ending the process to your handler, so your own cleanup runs to completion. To decide the order yourself, pass `signals: false` and call `server.stop()` from your handler.
 
 Programmatic shutdown:
 

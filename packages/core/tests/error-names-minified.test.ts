@@ -16,9 +16,9 @@ import { describe, expect, it } from "vitest";
 const SRC = resolve(import.meta.dirname, "../src");
 
 const ENTRY = `
-import { ConfigurationError, CourierError, HTTPError } from "${SRC}/errors/index.ts";
-import { ValidationError } from "${SRC}/validation/index.ts";
-import { AuthError, RealtimeError } from "${SRC}/realtime/errors.ts";
+import { ConfigurationError, CourierError, HTTPError } from "./errors/index.ts";
+import { ValidationError } from "./validation/index.ts";
+import { AuthError, RealtimeError } from "./realtime/errors.ts";
 
 export const names = [
   new HTTPError({ status: 404, headers: new Headers(), data: null }).name,

@@ -14,6 +14,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { inspect } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -77,13 +78,13 @@ describe("where a line goes", () => {
   it("writes warnings and errors to stderr and the rest to stdout, in a real process", () => {
     const dir = mkdtempSync(join(tmpdir(), "courier-logger-"));
     const script = join(dir, "log.mts");
-    const source = join(__dirname, "../src/logger/index.ts").replaceAll("\\", "/");
+    const source = pathToFileURL(join(__dirname, "../src/logger/index.ts")).href;
     writeFileSync(
       script,
       `import { createLogger } from "${source}";\n` +
         'const log = createLogger("Probe");\nlog.info("to stdout");\nlog.warn("to stderr");\nlog.error("also stderr");\n',
     );
-    const tsx = createRequire(import.meta.url).resolve("tsx");
+    const tsx = pathToFileURL(createRequire(import.meta.url).resolve("tsx")).href;
 
     const run = spawnSync(process.execPath, ["--import", tsx, script], {
       encoding: "utf8",
@@ -328,6 +329,8 @@ describe("the prefix", () => {
   });
 
   it("marks the level with a symbol in its colour on a terminal", () => {
+    /* One that draws the symbols on Windows too, as Windows Terminal does. */
+    vi.stubEnv("WT_SESSION", "probe");
     const restore = setTty(process.stderr, true, 24);
 
     createLogger("Proxy").warn("slow");

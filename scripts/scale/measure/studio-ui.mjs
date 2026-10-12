@@ -2,8 +2,10 @@
  * Studio's pages on the enterprise project, in a real browser: how soon the
  * Explorer shows a thousand endpoints and the Timeline the requests Studio
  * kept, and what the page's main thread and memory go through while an
- * attached app's traffic streams in. The page is opened with Studio's
- * token, read from the project and never printed.
+ * attached app's traffic streams in; what the page is sent of the mocks as
+ * it opens, and how soon the Mocks section's Store tab shows a mock's
+ * records, which only a page that shows them is sent. The page is opened
+ * with Studio's token, read from the project and never printed.
  */
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -44,12 +46,14 @@ export async function measureStudioUi(fixture, studio, traffic) {
         .first()
         .waitFor({ timeout: 60_000 }),
     );
+    const mockStates = frames.mockStates;
     const onTimeline = await whileTrafficFlows(page, frames, traffic);
     const explorer = await timed(page, "Explorer", /\/explorer/, () =>
       page.getByRole("list", { name: "Legend" }).waitFor({ timeout: 60_000 }),
     );
     const onExplorer = await whileTrafficFlows(page, frames, traffic);
     const heap = await page.evaluate(() => performance.memory?.usedJSHeapSize ?? 0);
+    const store = await mockStore(page, frames);
     return [
       measured("ui.shell", shellMs, "ms", 3_000, { note: "page load to Studio's navigation" }),
       measured("ui.timeline", timeline, "ms", 3_000, {
@@ -61,7 +65,13 @@ export async function measureStudioUi(fixture, studio, traffic) {
       }),
       ...liveFigures("ui.explorerLive", onExplorer),
       measured("ui.heap", heap / 2 ** 20, "MB", 300, {
-        note: "the page's JavaScript heap at the end",
+        note: "the page's JavaScript heap with the Explorer open",
+      }),
+      measured("ui.mockStates", mockStates / 1024, "KB", 2_048, {
+        note: "the mocks' states a page is sent as it opens: no records",
+      }),
+      measured("ui.mockStore", store.ms, "ms", 1_000, {
+        note: `the Store tab, ${(store.bytes / 2 ** 20).toFixed(1)} MB of the mock's records asked for as the Mocks section opened`,
       }),
     ];
   } finally {
@@ -98,13 +108,33 @@ function liveFigures(name, { tasks, seconds, messages, bytes }) {
   ];
 }
 
-/* Every WebSocket frame the page receives, counted with its bytes. */
+/* The Mocks section, a moment, as a person takes, then its Store tab: until the mock's records show. */
+async function mockStore(page, frames) {
+  await page.getByRole("link", { name: "Mocks" }).first().click();
+  await page.waitForURL(/\/mocks/);
+  const before = frames.bytes;
+  await page
+    .getByText(/records?$/)
+    .first()
+    .waitFor({ timeout: 60_000 });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  const ms = await timed(page, "Store", /\/mocks\/store/, () =>
+    page.getByRole("region", { name: /^Collection / }).waitFor({ timeout: 60_000 }),
+  );
+  return { ms, bytes: frames.bytes - before };
+}
+
+/* Every WebSocket frame the page receives, counted with its bytes, and those of the mocks' states. */
 function countFrames(page) {
-  const frames = { count: 0, bytes: 0 };
+  const frames = { count: 0, bytes: 0, mockStates: 0 };
   page.on("websocket", (socket) => {
     socket.on("framereceived", ({ payload }) => {
+      const size = typeof payload === "string" ? payload.length : payload.byteLength;
       frames.count += 1;
-      frames.bytes += typeof payload === "string" ? payload.length : payload.byteLength;
+      frames.bytes += size;
+      if (typeof payload === "string" && payload.includes('"type":"mock:server:connect"')) {
+        frames.mockStates += size;
+      }
     });
   });
   return frames;

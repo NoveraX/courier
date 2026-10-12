@@ -97,6 +97,10 @@ export interface ExistingEndpointInfo {
   code: string;
   /** JSDoc comment above the endpoint (if any) */
   comment?: string | undefined;
+  /** Comments the user wrote above the endpoint and its doc comment — a heading, a reminder. */
+  note?: string | undefined;
+  /** The comments written inside the endpoint, or at the end of one of its lines. */
+  inlineComments?: readonly string[] | undefined;
 }
 
 export interface ExistingGroupInfo {

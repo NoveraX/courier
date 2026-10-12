@@ -24,7 +24,7 @@ export interface DeclarationLayout {
   preamble: string[];
   /** The declaration from the start of its first line to the `{` opening its endpoints. */
   header: string[];
-  /** Each endpoint, with the doc comment right above it, as whole lines. */
+  /** Each endpoint, with the doc comment and any note right above it, as whole lines. */
   endpoints: ExistingEndpointInfo[];
   /** From the `}` closing the endpoints to the end of the declaration's last line. */
   footer: string[];
@@ -96,10 +96,17 @@ function ownedEntries(
   let previous = lineOf(endpoints.start);
   const entries: ExistingEndpointInfo[] = [];
   for (const entry of entryLines(parsed.text, parsed.comments, endpoints, lineOf)) {
-    if (entry.name === null || entry.commentStart <= previous) return null;
+    if (entry.name === null || entry.noteStart <= previous) return null;
+    const note = lines.slice(entry.noteStart, entry.commentStart).join("\n");
     const comment = lines.slice(entry.commentStart, entry.start).join("\n");
     const code = lines.slice(entry.start, entry.end + 1).join("\n");
-    entries.push({ name: entry.name, code, comment: comment === "" ? undefined : comment });
+    entries.push({
+      name: entry.name,
+      code,
+      comment: comment === "" ? undefined : comment,
+      note: note === "" ? undefined : note,
+      inlineComments: entry.comments,
+    });
     previous = entry.end;
   }
   return entries.length === 0 || previous < lineOf(endpoints.end - 1) ? entries : null;

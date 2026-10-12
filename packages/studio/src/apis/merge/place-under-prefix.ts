@@ -4,6 +4,8 @@ import { pathSegments, rebaseEntryPath } from "../manage/rebase-entry-path";
 export interface MergedEntry {
   /** The key it is declared under. */
   name: string;
+  /** The comments the user wrote above it, which a merge keeps whatever becomes of its code. */
+  note?: string | undefined;
   comment?: string | undefined;
   code: string;
   kept: boolean;

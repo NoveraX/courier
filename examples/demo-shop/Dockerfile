@@ -17,7 +17,7 @@ COPY . .
 RUN npm ci
 RUN npx turbo run build --filter=demo-shop...
 RUN mkdir /packs \
- && for pkg in core mock server studio-core studio; do \
+ && for pkg in core mcp mock server studio-core studio; do \
       (cd "packages/$pkg" && npm pack --pack-destination /packs --ignore-scripts --silent); \
     done
 
@@ -32,8 +32,9 @@ COPY --from=build /packs /packs
 COPY --from=build /repo/examples/demo-shop/package.json /repo/examples/demo-shop/tsconfig.json ./
 COPY --from=build /repo/examples/demo-shop/courier.config.ts /repo/examples/demo-shop/courier.mocks.ts ./
 COPY --from=build /repo/examples/demo-shop/src ./src
-# Each Courier package from its tarball; the rest resolve as a project's install would.
-RUN for pkg in courier courier-mock courier-server courier-studio courier-studio-core; do \
+# Each Courier package from its tarball, the ones they need among them; the
+# rest resolve as a project's install would.
+RUN for pkg in courier courier-mcp courier-mock courier-server courier-studio courier-studio-core; do \
       npm pkg set "dependencies.@noverax/$pkg=file:$(ls /packs/noverax-$pkg-[0-9]*.tgz)"; \
     done \
  && npm install --omit=dev --ignore-scripts --no-audit --no-fund \

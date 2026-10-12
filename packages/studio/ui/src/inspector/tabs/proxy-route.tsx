@@ -16,7 +16,9 @@ const NODE_ICON = {
 
 /**
  * The way a proxied call went — from the app to Courier's proxy and on to
- * the API — with each leg's time out and back.
+ * the API — with each leg's time out and back. Where the route is narrow,
+ * as on a small phone, the names of its stops take two lines, so the legs
+ * keep room for their times.
  *
  * @param props - The request
  * @returns The section, or nothing for a call not proxied or not timed
@@ -35,9 +37,9 @@ export function ProxyRoute({ request }: { request: RequestEntry }): React.ReactN
   const [app, proxy, source] = route.nodes;
   const [first, second] = route.legs;
   return (
-    <section className="flex flex-col gap-3">
+    <section className="@container flex flex-col gap-3">
       <h3 className="m-0 text-label font-semibold text-fg-muted">Proxy route</h3>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-panel border border-line bg-inset px-3.5 py-4">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-panel border border-line bg-inset px-3.5 py-4 @max-[360px]:gap-1.5 @max-[360px]:px-2.5">
         <Node node={app} />
         <Leg out={first.out} back={first.back} />
         <Node node={proxy} />
@@ -55,7 +57,9 @@ function Node({ node }: { node: RouteNode }): React.ReactNode {
       <span className="flex size-9 items-center justify-center rounded-panel border border-line-strong bg-panel text-fg-muted">
         <Icon aria-hidden="true" className="size-3.75" />
       </span>
-      <span className="text-badge whitespace-nowrap text-fg-muted">{node.label}</span>
+      <span className="text-badge whitespace-nowrap text-fg-muted @max-[360px]:max-w-16 @max-[360px]:text-center @max-[360px]:whitespace-normal">
+        {node.label}
+      </span>
     </div>
   );
 }

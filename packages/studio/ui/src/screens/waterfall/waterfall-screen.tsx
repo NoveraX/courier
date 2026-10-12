@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { useElementWidth } from "@/hooks/use-element-width";
 import { useFirstLoad } from "@/hooks/use-first-load";
 import { useInspector } from "@/inspector/use-inspector";
 import { InsightStrip } from "./insight-strip";
+import { useChartWidth } from "./use-chart-width";
 import { useWaterfall } from "./use-waterfall";
 import { useWaterfallView } from "./use-waterfall-view";
 import { WaterfallChart } from "./waterfall-chart";
@@ -13,6 +13,13 @@ import { WaterfallToolbar } from "./waterfall-toolbar";
 
 /* A zoom step multiplies or divides the zoom by this, between 1× and 10×. */
 const ZOOM_STEP = 1.5;
+
+/* The chart's width until it is measured: no wider than the window, which a
+   phone's chart fills, so its rows name their requests over their bars from
+   the first frame. */
+function firstWidth(): number {
+  return typeof window === "undefined" ? 1180 : Math.min(1180, window.innerWidth);
+}
 
 function isTyping(target: EventTarget | null): boolean {
   return (
@@ -37,8 +44,7 @@ function isTyping(target: EventTarget | null): boolean {
 export function WaterfallScreen(): React.ReactNode {
   const { view, setView } = useWaterfallView();
   const { requestId, open, close } = useInspector();
-  const chartRef = useRef<HTMLElement>(null);
-  const width = useElementWidth(chartRef, 1180);
+  const [width, chartRef] = useChartWidth(firstWidth());
   const [held, setHeld] = useState<ReadonlySet<string> | undefined>(undefined);
   const [zoom, setZoom] = useState<number | null>(null);
   const [closed, setClosed] = useState<ReadonlySet<string>>(() => new Set());

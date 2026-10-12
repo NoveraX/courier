@@ -1,12 +1,13 @@
-import { History, Pin, SlidersHorizontal, Trash2 } from "lucide-react";
+import { History, SlidersHorizontal, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { OverflowMenu } from "@/design/overflow-menu";
 import { SearchField } from "@/design/search-field";
-import { Skeleton } from "@/design/skeleton";
 import { useClearRequests } from "@/hooks/use-clear-requests";
-import { useFirstLoad } from "@/hooks/use-first-load";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
+import { TimelineCount } from "./timeline-count";
+import { timelineMenu } from "./timeline-menu";
 import { TimelineOutputs } from "./timeline-outputs";
 import { TOOL } from "./toolbar-tool";
 
@@ -17,37 +18,42 @@ interface TimelineToolbarProps {
   onToggleFilters: () => void;
   activeFilters: number;
   shown: number;
+  /** Whether the bar shows how many requests show: a phone's shows it at the filters' end. */
+  counted: boolean;
 }
 
 /**
  * The bar over the Timeline: the search, the filters' switch, Preserve log
  * and Clear, how many requests show, and what the requests become — an
- * export, a session file, a test.
+ * export, a session file, a test. A phone's bar keeps the search and the
+ * filters' switch, and the rest in its "⋯" menu.
  *
- * @param props - The search, the filters' state, and how many requests show
+ * @param props - The search, the filters' state, how many requests show, and whether the bar counts them
  * @returns The bar
  * @example
  * ```tsx
- * <TimelineToolbar search={q} onSearch={setQ} filtersShown onToggleFilters={toggle} activeFilters={2} shown={40} />
+ * <TimelineToolbar search={q} onSearch={setQ} filtersShown onToggleFilters={toggle} activeFilters={2} shown={40} counted />
  * ```
  */
 export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
-  const { search, onSearch, filtersShown, onToggleFilters, activeFilters, shown } = props;
+  const { search, onSearch, filtersShown, onToggleFilters, activeFilters, shown, counted } = props;
   const total = useStudioStore((s) => s.requests.length);
-  const loading = useFirstLoad();
-  const pinned = useStudioStore((s) => s.requests.filter((r) => r.pinned).length);
   const preserve = useStudioStore((s) => s.settings.preserveLog);
   const togglePreserve = useStudioStore((s) => s.togglePreserveLog);
   const format = useStudioStore((s) => s.settings.defaultExportFormat);
-  const clear = useClearRequests();
+  const clearRequests = useClearRequests();
+  const clear = () => {
+    clearRequests();
+    toast.success(preserve ? "Cleared · pinned kept" : "Cleared");
+  };
   return (
-    <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line pr-4 pl-5">
+    <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line pr-4 pl-5 max-sm:pl-4">
       <SearchField
         value={search}
         onChange={onSearch}
         placeholder="Filter by endpoint, path or status…"
         label="Filter requests"
-        className="w-80 max-w-[34%]"
+        className="w-80 max-w-[34%] max-sm:w-auto max-sm:max-w-none max-sm:min-w-0 max-sm:flex-1"
       />
       <button
         type="button"
@@ -66,7 +72,7 @@ export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
           </span>
         )}
       </button>
-      <span aria-hidden="true" className="mx-1 h-4.5 w-px bg-line" />
+      <span aria-hidden="true" className="mx-1 h-4.5 w-px bg-line max-sm:hidden" />
       <button
         type="button"
         aria-pressed={preserve}
@@ -74,6 +80,7 @@ export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
         onClick={togglePreserve}
         className={cn(
           TOOL,
+          "max-sm:hidden",
           preserve ? "border-brand/40 bg-brand-dim text-brand" : "border-line text-fg-muted",
         )}
       >
@@ -83,38 +90,26 @@ export function TimelineToolbar(props: TimelineToolbarProps): React.ReactNode {
       <button
         type="button"
         title="Clear the requests"
-        onClick={() => {
-          clear();
-          toast.success(preserve ? "Cleared · pinned kept" : "Cleared");
-        }}
-        className={cn(TOOL, "border-line text-fg-muted hover:text-fg")}
+        onClick={clear}
+        className={cn(TOOL, "border-line text-fg-muted hover:text-fg max-sm:hidden")}
       >
         <Trash2 aria-hidden="true" className="size-3.25" />
         <span className="max-[1100px]:hidden">Clear</span>
       </button>
-      <span className="flex-1" />
-      {pinned > 0 && (
-        <span className="flex h-5.5 items-center gap-1.25 rounded-full bg-syntax-keyword/12 px-2 text-label font-strong text-syntax-keyword">
-          <Pin aria-hidden="true" className="size-2.75" />
-          {pinned}
-        </span>
-      )}
-      {loading.requests ? (
-        <Skeleton className="h-3 w-20" />
-      ) : (
-        <span className="text-control whitespace-nowrap text-fg-subtle tabular-nums">
-          {shown === total ? (
-            <>
-              <span className="font-strong text-fg">{total}</span> requests
-            </>
-          ) : (
-            <>
-              <span className="font-strong text-fg">{shown}</span> of {total} requests
-            </>
-          )}
-        </span>
-      )}
+      <span className="flex-1 max-sm:hidden" />
+      {counted && <TimelineCount shown={shown} />}
       <TimelineOutputs total={total} format={format} />
+      <OverflowMenu
+        label="More actions"
+        className="sm:hidden"
+        actions={timelineMenu({
+          preserve,
+          onPreserve: togglePreserve,
+          onClear: clear,
+          total,
+          format,
+        })}
+      />
     </div>
   );
 }

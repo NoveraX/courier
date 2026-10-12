@@ -61,6 +61,8 @@ function insightsOf(figures: WaterfallInsights): Insight[] {
 /**
  * The four figures over the Waterfall: the window it covers, how many
  * requests ran at once at most, the slowest, and the share spent fetching.
+ * On a phone they stay on one row, which scrolls sideways, and on a short
+ * screen they take less height, so the chart keeps it.
  *
  * @param props - The figures
  * @returns The strip
@@ -71,11 +73,11 @@ function insightsOf(figures: WaterfallInsights): Insight[] {
  */
 export function InsightStrip({ figures }: { figures: WaterfallInsights }): React.ReactNode {
   return (
-    <div className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(170px,1fr))] border-b border-line">
+    <div className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(170px,1fr))] border-b border-line max-sm:scroll-row">
       {insightsOf(figures).map(({ icon: Icon, ...insight }) => (
         <div
           key={insight.label}
-          className="flex min-w-0 items-center gap-3 border-r border-line py-3 pr-4 pl-5"
+          className="flex min-w-0 items-center gap-3 border-r border-line py-3 pr-4 pl-5 max-sm:w-44 max-sm:shrink-0 max-sm:gap-2.5 max-sm:py-2.5 max-sm:pr-3 max-sm:pl-4 short-screen:py-2"
         >
           <span
             className={cn(

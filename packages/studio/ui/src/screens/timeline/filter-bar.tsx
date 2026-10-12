@@ -46,20 +46,23 @@ const VIEW_LABELS: Readonly<Record<TimelineView, string>> = {
 interface FilterBarProps {
   filter: TimelineFilter;
   onChange: (next: TimelineFilter) => void;
+  /** What ends the row: on a phone, how many requests show. */
+  aside?: React.ReactNode;
 }
 
 /**
  * The Timeline's filters: the quick views with their counts, a menu per
- * filter, and Reset all once anything is chosen.
+ * filter, and Reset all once anything is chosen. On a phone they stay on
+ * one row, which scrolls sideways.
  *
- * @param props - What the Timeline shows, and what changes it
+ * @param props - What the Timeline shows, what changes it, and what ends the row
  * @returns The bar
  * @example
  * ```tsx
  * <FilterBar filter={filter} onChange={setFilter} />
  * ```
  */
-export function FilterBar({ filter, onChange }: FilterBarProps): React.ReactNode {
+export function FilterBar({ filter, onChange, aside }: FilterBarProps): React.ReactNode {
   const requests = useStudioStore((s) => s.requests);
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const counts = viewCounts(requests, filter, slowMs);
@@ -80,14 +83,14 @@ export function FilterBar({ filter, onChange }: FilterBarProps): React.ReactNode
     onChange({ ...filter, selected: { ...filter.selected, [dimension]: chosen } });
   const changed = activeFilterCount(filter) > 0;
   return (
-    <div className="flex min-h-11.5 shrink-0 flex-wrap items-center gap-1.5 border-b border-line bg-bg-subtle py-2 pr-4 pl-5">
+    <div className="flex min-h-11.5 shrink-0 flex-wrap items-center gap-1.5 border-b border-line bg-bg-subtle py-2 pr-4 pl-5 max-sm:scroll-row max-sm:flex-nowrap max-sm:pl-4">
       <Segmented
         label="View"
         options={views}
         value={filter.view}
         onChange={(view) => onChange({ ...filter, view })}
       />
-      <span aria-hidden="true" className="mx-1.5 h-4.5 w-px bg-line" />
+      <span aria-hidden="true" className="mx-1.5 h-4.5 w-px shrink-0 bg-line" />
       {FILTER_DIMENSIONS.map((dimension) => (
         <FilterMenu
           key={dimension}
@@ -103,11 +106,12 @@ export function FilterBar({ filter, onChange }: FilterBarProps): React.ReactNode
         <button
           type="button"
           onClick={() => onChange({ ...filter, view: "all", selected: NO_SELECTION })}
-          className="h-7 cursor-pointer px-2 text-small font-strong text-brand"
+          className="h-7 shrink-0 cursor-pointer px-2 text-small font-strong whitespace-nowrap text-brand pointer-coarse:h-9"
         >
           Reset all
         </button>
       )}
+      {aside}
     </div>
   );
 }

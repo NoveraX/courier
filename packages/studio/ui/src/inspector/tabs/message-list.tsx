@@ -19,7 +19,9 @@ interface MessageListProps {
 
 /**
  * A stream's messages, newest first — a WebSocket's marked sent or
- * received — the one chosen highlighted.
+ * received — the one chosen highlighted. Where the list is narrow, as on a
+ * phone, each message puts its type over its preview, so the preview keeps
+ * the row's width.
  *
  * @param props - The stream, its messages, the one chosen, and what chooses
  * @returns The list
@@ -37,8 +39,8 @@ export function MessageList({
   const total = Math.max(request.streamEventCount ?? 0, messages.length);
   const ws = request.transport === "ws";
   return (
-    <section className="overflow-hidden rounded-panel border border-line">
-      <div className="flex h-9 items-center gap-2.5 border-b border-line bg-panel-subtle px-3">
+    <section className="@container overflow-hidden rounded-panel border border-line">
+      <div className="flex min-h-9 flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-line bg-panel-subtle px-3 py-1.5">
         <h3 className="m-0 text-control font-semibold">Messages</h3>
         <span className="inline-flex h-4 min-w-4.5 items-center justify-center rounded-full bg-raised px-1.25 text-meta text-fg-subtle tabular-nums">
           {total}
@@ -74,7 +76,8 @@ export function MessageList({
               aria-pressed={on}
               onClick={() => onChoose(message.seq)}
               className={cn(
-                "relative grid h-7.75 w-full cursor-pointer grid-cols-[14px_38px_118px_minmax(0,1fr)_52px] items-center gap-2.5 border-b border-line px-3 text-left last:border-b-0 hover:bg-raised",
+                "relative grid h-7.75 w-full cursor-pointer grid-cols-[14px_38px_118px_minmax(0,1fr)_52px] items-center gap-2.5 border-b border-line px-3 text-left last:border-b-0 hover:bg-raised pointer-coarse:h-11",
+                "@max-[420px]:h-11 @max-[420px]:grid-cols-[12px_34px_minmax(0,1fr)_48px] @max-[420px]:gap-x-2 @max-[420px]:gap-y-0.5",
                 on && "bg-brand-dim",
               )}
             >
@@ -85,14 +88,18 @@ export function MessageList({
                   on ? "bg-brand" : "bg-transparent",
                 )}
               />
-              <span className="flex">
+              <span className="flex @max-[420px]:row-span-2">
                 <Icon aria-hidden="true" className={cn("size-2.75", tone)} />
                 <span className="sr-only">{message.direction}</span>
               </span>
-              <span className="text-fg-subtle">#{message.seq}</span>
-              <span className="truncate text-syntax-keyword">{message.type}</span>
-              <span className="truncate text-fg-muted">{message.preview}</span>
-              <span className="text-right text-fg-subtle">
+              <span className="text-fg-subtle @max-[420px]:row-span-2">#{message.seq}</span>
+              <span className="truncate text-syntax-keyword @max-[420px]:col-start-3 @max-[420px]:row-start-1">
+                {message.type}
+              </span>
+              <span className="truncate text-fg-muted @max-[420px]:col-start-3 @max-[420px]:row-start-2">
+                {message.preview}
+              </span>
+              <span className="text-right text-fg-subtle @max-[420px]:col-start-4 @max-[420px]:row-span-2 @max-[420px]:row-start-1">
                 +{(message.offset / 1000).toFixed(1)}s
               </span>
             </button>

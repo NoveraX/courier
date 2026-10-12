@@ -76,7 +76,7 @@ export function CodeToolbar<TMode extends string>({
         <button
           type="button"
           onClick={folding.onClick}
-          className="h-6.5 shrink-0 cursor-pointer rounded-[6px] px-2 text-label whitespace-nowrap text-fg-subtle transition-colors hover:bg-raised hover:text-fg"
+          className="h-6.5 shrink-0 cursor-pointer rounded-[6px] px-2 text-label whitespace-nowrap text-fg-subtle transition-colors hover:bg-raised hover:text-fg pointer-coarse:h-9"
         >
           {folding.label}
         </button>
@@ -85,7 +85,7 @@ export function CodeToolbar<TMode extends string>({
         <button
           type="button"
           onClick={onCopy}
-          className="flex h-6.5 shrink-0 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line-strong bg-panel-subtle px-2.5 text-label font-strong text-fg-muted transition-colors hover:text-fg"
+          className="flex h-6.5 shrink-0 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line-strong bg-panel-subtle px-2.5 text-label font-strong text-fg-muted transition-colors hover:text-fg pointer-coarse:h-9"
         >
           <Copy aria-hidden="true" className="size-3" />
           Copy

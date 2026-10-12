@@ -13,6 +13,7 @@ import { waterfallRows } from "@/features/waterfall/waterfall-rows";
 import type { WaterfallView } from "@/features/waterfall/waterfall-search";
 import { useNow } from "@/hooks/use-tick";
 import { useStudioStore } from "@/store";
+import { labelWidthOf } from "./track-layout";
 
 /** Everything the Waterfall draws, worked out from the requests and the view. */
 export interface WaterfallModel {
@@ -25,7 +26,10 @@ export interface WaterfallModel {
   /** The requests and streams in view, and all the requests captured. */
   shown: number;
   total: number;
+  /** The width of the column of labels; 0 where each row names its request over its bar. */
   labelPx: number;
+  /** Whether each row names its request over its bar, the chart too narrow for a column of labels. */
+  stacked: boolean;
   zoom: number;
   /** The ids of the requests in view, which the Waterfall holds when it stops following. */
   inView: string[];
@@ -72,7 +76,7 @@ export function useWaterfall(input: WaterfallInput): WaterfallModel {
     }));
     const window = timeWindowOf(spans, now);
     const streams = streamsInView(requests, scope, window.start, now);
-    const labelPx = Math.round(Math.min(320, Math.max(240, width * 0.32)));
+    const labelPx = labelWidthOf(width);
     const contentPx = Math.max(280, width - labelPx);
     const zoom = asked ?? autoZoomOf(spans, contentPx);
     const scale = trackScaleOf(window, Math.round(contentPx * zoom));
@@ -86,6 +90,7 @@ export function useWaterfall(input: WaterfallInput): WaterfallModel {
       shown: items.length + streams.length,
       total: requests.length,
       labelPx,
+      stacked: labelPx === 0,
       zoom,
       inView: items.map((i) => i.request.id),
       webhooks: items.some((i) => i.request.mode === "webhook"),

@@ -4,15 +4,18 @@ import { relativeTime } from "@/features/waterfall/time-ticks";
 import { RowMenu } from "@/request-list/row-menu";
 import { useStudioStore } from "@/store";
 import { GroupRow } from "./group-row";
+import { mouseOnly } from "./mouse-only";
 import { RequestBarRow } from "./request-bar-row";
 import type { SegmentTip } from "./segment-tip";
 import { SegmentTooltip } from "./segment-tooltip";
 import { StreamBarRow } from "./stream-bar-row";
+import { labelWidthIn } from "./track-layout";
 import type { WaterfallModel } from "./use-waterfall";
 import { WaterfallGrid, WaterfallRuler } from "./waterfall-ruler";
 
 export interface WaterfallChartProps {
-  ref: React.RefObject<HTMLElement | null>;
+  /** Takes the chart's element, which the screen measures. */
+  ref: React.Ref<HTMLElement>;
   model: WaterfallModel;
   /** The width the chart shows without scrolling. */
   visiblePx: number;
@@ -24,7 +27,10 @@ export interface WaterfallChartProps {
 /**
  * The Waterfall's chart: a header with the time scale, then a row per
  * request and stream, scrolling both ways with the labels kept in place,
- * the time under the pointer marked, and each part of a bar named on hover.
+ * the time under a mouse marked, and each part of a bar named when a mouse
+ * points at it — a finger's tap opens the request instead, and leaves
+ * neither behind. On a chart too narrow for a column of labels, each row
+ * names its request over its bar.
  *
  * @param props - The model, the visible width, the selection and what changes it
  * @returns The chart
@@ -39,11 +45,13 @@ export function WaterfallChart(props: WaterfallChartProps): React.ReactNode {
   const [cursorPx, setCursorPx] = useState<number | null>(null);
   const [tip, setTip] = useState<SegmentTip | null>(null);
   const { scale, labelPx, window } = model;
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const onMove = mouseOnly<HTMLElement>((e) => {
     const box = e.currentTarget.getBoundingClientRect();
     const x = Math.round(e.clientX - box.left + e.currentTarget.scrollLeft - labelPx);
     setCursorPx(x >= 0 && x <= scale.trackPx ? x : null);
-  };
+  });
+  const layout = model.stacked ? "stacked" : "columns";
+  const rowLabelPx = labelWidthIn(model.stacked, labelPx, visiblePx, scale.trackPx);
   const at = cursorPx === null ? null : scale.fromPx(cursorPx);
   const cursor =
     at === null || cursorPx === null
@@ -54,8 +62,8 @@ export function WaterfallChart(props: WaterfallChartProps): React.ReactNode {
     <section
       ref={ref}
       aria-label="Waterfall"
-      onMouseMove={onMove}
-      onMouseLeave={() => {
+      onPointerMove={onMove}
+      onPointerLeave={() => {
         setCursorPx(null);
         setTip(null);
       }}
@@ -80,7 +88,8 @@ export function WaterfallChart(props: WaterfallChartProps): React.ReactNode {
                   request={row.request}
                   window={window}
                   scale={scale}
-                  labelPx={labelPx}
+                  labelPx={rowLabelPx}
+                  layout={layout}
                   now={model.now}
                   selected={row.request.id === selectedId}
                   onSelect={onSelect}
@@ -91,7 +100,8 @@ export function WaterfallChart(props: WaterfallChartProps): React.ReactNode {
                   item={row.item}
                   indent={row.indent}
                   scale={scale}
-                  labelPx={labelPx}
+                  labelPx={rowLabelPx}
+                  layout={layout}
                   slowMs={slowMs}
                   selected={row.item.request.id === selectedId}
                   onSelect={onSelect}

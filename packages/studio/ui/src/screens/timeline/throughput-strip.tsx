@@ -11,7 +11,9 @@ const DURATION_TEXT = { normal: "text-fg", warn: "text-warn", err: "text-err" } 
 /**
  * The last minute over the Timeline: a bar a second — what failed on top —
  * and the requests a minute, the p95, the error rate and the streams open.
- * A saved session's last minute is the minute before it ended.
+ * A saved session's last minute is the minute before it ended. On a phone
+ * the bars shrink and the figures beside them scroll sideways when there is
+ * no room for all four.
  *
  * @returns The strip
  * @example
@@ -47,9 +49,9 @@ export function ThroughputStrip(): React.ReactNode {
     },
   ];
   return (
-    <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-6 border-b border-line pt-3 pr-4 pb-2.5 pl-5">
-      <div className="flex min-w-0 flex-col gap-1.5">
-        <div className="flex h-10 items-end gap-0.5">
+    <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-6 border-b border-line pt-3 pr-4 pb-2.5 pl-5 max-sm:grid-cols-[minmax(88px,1fr)_minmax(0,auto)] max-sm:items-center max-sm:gap-3 max-sm:py-2 max-sm:pl-4 short-screen:items-center short-screen:py-2">
+      <div className="flex min-w-0 flex-col gap-1.5 max-sm:gap-1 short-screen:gap-1">
+        <div className="flex h-10 items-end gap-0.5 max-sm:h-7 max-sm:gap-px short-screen:h-7">
           {bars.map((bar, i) => (
             <div
               key={bar.secondsAgo}
@@ -76,9 +78,9 @@ export function ThroughputStrip(): React.ReactNode {
           <span>{saved ? "end" : "now"}</span>
         </div>
       </div>
-      <dl className="m-0 flex gap-5.5 pb-4">
+      <dl className="m-0 flex gap-5.5 pb-4 max-sm:min-w-0 max-sm:scroll-row max-sm:gap-3 max-sm:pb-0 short-screen:pb-0">
         {kpiList.map((kpi) => (
-          <div key={kpi.label} className="flex flex-col items-end gap-0.75">
+          <div key={kpi.label} className="flex shrink-0 flex-col items-end gap-0.75">
             <dt className="text-badge whitespace-nowrap text-fg-subtle">{kpi.label}</dt>
             <dd
               className={cn(

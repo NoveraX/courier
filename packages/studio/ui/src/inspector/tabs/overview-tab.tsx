@@ -46,7 +46,7 @@ export function OverviewTab({ request }: { request: RequestEntry }): React.React
             type="button"
             title="Click to copy"
             onClick={() => void copyToClipboard(property.value, property.label)}
-            className="-mx-2 grid min-h-8 cursor-copy grid-cols-[108px_minmax(0,1fr)_14px] items-center gap-3 rounded-[6px] px-2 text-left transition-colors hover:bg-raised"
+            className="-mx-2 grid min-h-8 cursor-copy grid-cols-[108px_minmax(0,1fr)_14px] items-center gap-3 rounded-[6px] px-2 text-left transition-colors hover:bg-raised pointer-coarse:min-h-11"
           >
             <span className="text-control text-fg-subtle">{property.label}</span>
             <span className={cn("truncate text-control text-fg", property.mono && "font-mono")}>

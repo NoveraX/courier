@@ -1,24 +1,31 @@
 import { Activity, FileInput } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { MEDIA } from "@/design/breakpoints";
 import { activeFilterCount, matchesFilter } from "@/features/requests/timeline-filter";
 import { pickSessionFile } from "@/features/sessions/open-session-file";
 import { useSessionFileDrop } from "@/features/sessions/use-session-file-drop";
 import { useFirstLoad } from "@/hooks/use-first-load";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useStudioStore } from "@/store";
 import { FilterBar } from "./filter-bar";
 import { OpenedSessionBanner } from "./opened-session-banner";
 import { RequestTable } from "./request-table";
 import { ThroughputStrip } from "./throughput-strip";
+import { TimelineCount } from "./timeline-count";
 import { TimelineSkeleton } from "./timeline-skeleton";
 import { TimelineToolbar } from "./timeline-toolbar";
 import { useTimelineFilter } from "./use-timeline-filter";
+
+/* Where the filters would take the room the requests need: a phone, upright or on its side. */
+const FILTERS_CLOSED = `${MEDIA.phone}, ${MEDIA.shortScreen}`;
 
 /**
  * The Timeline: every request Studio recorded, newest first, filtered by
  * the views, filters and search its address keeps, under the last
  * minute's throughput — a request opens in the inspector. A session file
- * dropped on it opens in place of the live requests.
+ * dropped on it opens in place of the live requests. On a phone the
+ * filters start closed, and their row ends with how many requests show.
  *
  * @returns The screen
  * @example
@@ -28,7 +35,9 @@ import { useTimelineFilter } from "./use-timeline-filter";
  */
 export function TimelineScreen(): React.ReactNode {
   const { filter, setFilter, reset } = useTimelineFilter();
-  const [filtersShown, setFiltersShown] = useState(true);
+  const phone = useMediaQuery(MEDIA.phone);
+  const cramped = useMediaQuery(FILTERS_CLOSED);
+  const [filtersShown, setFiltersShown] = useState(!cramped);
   const requests = useStudioStore((s) => s.requests);
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const loading = useFirstLoad();
@@ -46,9 +55,18 @@ export function TimelineScreen(): React.ReactNode {
         onToggleFilters={() => setFiltersShown((shownNow) => !shownNow)}
         activeFilters={activeFilterCount(filter)}
         shown={shown.length}
+        counted={!phone}
       />
       <OpenedSessionBanner />
-      {filtersShown && <FilterBar filter={filter} onChange={setFilter} />}
+      {filtersShown && (
+        <FilterBar
+          filter={filter}
+          onChange={setFilter}
+          aside={
+            phone ? <TimelineCount shown={shown.length} className="ml-auto pl-1" /> : undefined
+          }
+        />
+      )}
       {loading.requests ? (
         <TimelineSkeleton />
       ) : (
@@ -90,7 +108,7 @@ function Waiting(): React.ReactNode {
         <button
           type="button"
           onClick={pickSessionFile}
-          className="cursor-pointer text-brand underline-offset-2 hover:underline"
+          className="relative cursor-pointer text-brand underline-offset-2 hit-area hover:underline"
         >
           open it
         </button>
@@ -109,7 +127,7 @@ function NoMatches({ onReset }: { onReset: () => void }): React.ReactNode {
       <button
         type="button"
         onClick={onReset}
-        className="h-7.5 cursor-pointer rounded-control border border-line-strong bg-panel px-3 text-control text-fg hover:border-fg-subtle"
+        className="h-7.5 cursor-pointer rounded-control border border-line-strong bg-panel px-3 text-control text-fg hover:border-fg-subtle pointer-coarse:h-9"
       >
         Reset filters
       </button>

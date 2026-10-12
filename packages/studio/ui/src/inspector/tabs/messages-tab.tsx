@@ -60,7 +60,7 @@ export function MessagesTab({ request }: { request: RequestEntry }): React.React
           <span className="truncate text-fg-muted">{ending.detail}</span>
         </div>
       )}
-      <dl className="m-0 grid grid-cols-4 gap-px overflow-hidden rounded-panel border border-line bg-line">
+      <dl className="m-0 grid grid-cols-4 gap-px overflow-hidden rounded-panel border border-line bg-line max-sm:grid-cols-2">
         {streamStats(request, now).map((stat) => (
           <div key={stat.label} className="flex flex-col gap-1.25 bg-inset px-3 py-2.5">
             <dt className="text-meta text-fg-subtle">{stat.label}</dt>

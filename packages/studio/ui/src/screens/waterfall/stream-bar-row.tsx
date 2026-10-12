@@ -7,6 +7,8 @@ import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
 import { RowLabel } from "./row-label";
+import type { TrackLayout } from "./track-layout";
+import { TRACK_LAYOUT } from "./track-layout";
 
 /* The newest messages a stream's bar marks; more would only blur together. */
 const MAX_TICKS = 80;
@@ -15,7 +17,10 @@ export interface StreamBarRowProps {
   request: RequestEntry;
   window: TimeWindow;
   scale: TrackScale;
+  /** The label's width: its column's, or the chart's in view when it sits over the bar. */
   labelPx: number;
+  /** Whether the label is a column beside the bar, or a line over it. */
+  layout: TrackLayout;
   now: number;
   selected: boolean;
   onSelect: (id: string) => void;
@@ -39,11 +44,12 @@ function ticksOf(r: RequestEntry, from: number, to: number, scale: TrackScale) {
  * @returns The row
  * @example
  * ```tsx
- * <StreamBarRow request={stream} window={window} scale={scale} labelPx={300} now={now} selected={false} onSelect={open} />
+ * <StreamBarRow request={stream} window={window} scale={scale} labelPx={300} layout="columns" now={now} selected={false} onSelect={open} />
  * ```
  */
 export function StreamBarRow(props: StreamBarRowProps): React.ReactNode {
-  const { request: r, window, scale, labelPx, now, selected, onSelect } = props;
+  const { request: r, window, scale, labelPx, layout, now, selected, onSelect } = props;
+  const place = TRACK_LAYOUT[layout];
   const state = requestStateOf(r);
   const live = state === "streaming";
   const ws = r.transport === "ws";
@@ -59,7 +65,8 @@ export function StreamBarRow(props: StreamBarRowProps): React.ReactNode {
       aria-pressed={selected}
       onClick={() => onSelect(r.id)}
       className={cn(
-        "relative z-1 flex h-8 w-full cursor-pointer border-b border-line text-left transition-colors",
+        "relative z-1 flex w-full cursor-pointer border-b border-line text-left transition-colors",
+        place.row,
         selected ? "bg-brand-dim" : "hover:bg-brand-tint",
       )}
     >
@@ -73,12 +80,14 @@ export function StreamBarRow(props: StreamBarRowProps): React.ReactNode {
         indent
         selected={selected}
         failed={false}
+        stacked={layout === "stacked"}
       />
-      <span className="relative block shrink-0" style={{ width: scale.trackPx }}>
+      <span className={cn("relative block shrink-0", place.track)} style={{ width: scale.trackPx }}>
         <span
           style={{ left: x, width }}
           className={cn(
-            "absolute top-2.25 h-3.5 rounded-chip",
+            "absolute h-3.5 rounded-chip",
+            place.bar,
             ws
               ? "bg-syntax-keyword/10 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-syntax-keyword)_40%,transparent)]"
               : "bg-brand/10 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-brand)_40%,transparent)]",
@@ -89,7 +98,8 @@ export function StreamBarRow(props: StreamBarRowProps): React.ReactNode {
             key={tick.seq}
             style={{ left: tick.x }}
             className={cn(
-              "absolute top-2.75 h-2.5 w-0.5 rounded-[1px]",
+              "absolute h-2.5 w-0.5 rounded-[1px]",
+              place.tick,
               tick.sent || !ws ? "bg-brand" : "bg-ok",
             )}
           />

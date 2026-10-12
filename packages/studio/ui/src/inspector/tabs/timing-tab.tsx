@@ -33,7 +33,8 @@ const TREND = {
 /**
  * How a call spent its time: the total against its endpoint's p95, phase
  * by phase on one scale, the middleware chain step by step, and — for a
- * proxied call — the route it took.
+ * proxied call — the route it took. Where the phases are narrow, as on a
+ * phone, each names itself over its bar, so the bars keep the full width.
  *
  * @param props - The request
  * @returns The tab
@@ -75,21 +76,21 @@ export function TimingTab({ request }: { request: RequestEntry }): React.ReactNo
         </div>
         {comparison && <Comparison {...comparison} />}
       </div>
-      <div className="overflow-hidden rounded-panel border border-line">
-        <div className="grid h-7.5 grid-cols-[118px_minmax(0,1fr)_52px] items-center gap-3 border-b border-line bg-panel-subtle px-3 font-mono text-micro text-fg-subtle">
-          <span className="font-sans text-badge">Phase</span>
+      <div className="@container overflow-hidden rounded-panel border border-line">
+        <div className="grid h-7.5 grid-cols-[118px_minmax(0,1fr)_52px] items-center gap-3 border-b border-line bg-panel-subtle px-3 font-mono text-micro text-fg-subtle @max-[420px]:grid-cols-1">
+          <span className="font-sans text-badge @max-[420px]:hidden">Phase</span>
           <span className="flex justify-between">
             {timeTicks(timing.total).map((tick, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: five fixed marks; two may read the same
               <span key={i}>{tick}</span>
             ))}
           </span>
-          <span />
+          <span className="@max-[420px]:hidden" />
         </div>
         {timing.phases.map((phase) => (
           <div
             key={phase.key}
-            className="grid h-9.5 grid-cols-[118px_minmax(0,1fr)_52px] items-center gap-3 border-b border-line px-3 last:border-b-0"
+            className="grid h-9.5 grid-cols-[118px_minmax(0,1fr)_52px] items-center gap-3 border-b border-line px-3 last:border-b-0 @max-[420px]:h-auto @max-[420px]:grid-cols-[minmax(0,1fr)_auto] @max-[420px]:gap-y-1.5 @max-[420px]:py-2.5"
           >
             <span className="flex items-center gap-2 text-small whitespace-nowrap text-fg-muted">
               <span
@@ -98,7 +99,7 @@ export function TimingTab({ request }: { request: RequestEntry }): React.ReactNo
               />
               {phase.label}
             </span>
-            <span className="relative h-2.5 rounded-[3px] bg-[repeating-linear-gradient(90deg,var(--color-line)_0_1px,transparent_1px_25%)]">
+            <span className="relative h-2.5 rounded-[3px] bg-[repeating-linear-gradient(90deg,var(--color-line)_0_1px,transparent_1px_25%)] @max-[420px]:col-span-2 @max-[420px]:row-start-2">
               <span
                 className={cn("absolute inset-y-0 min-w-0.75 rounded-[3px]", PHASE_FILL[phase.key])}
                 style={{
@@ -107,7 +108,7 @@ export function TimingTab({ request }: { request: RequestEntry }): React.ReactNo
                 }}
               />
             </span>
-            <span className="text-right font-mono text-label">
+            <span className="text-right font-mono text-label @max-[420px]:col-start-2 @max-[420px]:row-start-1">
               {formatDuration(phase.duration)}
             </span>
           </div>

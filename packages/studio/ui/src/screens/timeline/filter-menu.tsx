@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { Popover } from "radix-ui";
 import { useState } from "react";
 import { POP_MOTION } from "@/design/overlay-motion";
@@ -8,6 +8,7 @@ import { selectionSummary } from "@/features/requests/filter-options";
 import { selectionState, toggleValues } from "@/features/requests/tree-selection";
 import { cn } from "@/lib/utils";
 import { FilterOptionRow } from "./filter-option-row";
+import { FilterSearch } from "./filter-search";
 
 interface FilterMenuProps {
   label: string;
@@ -58,10 +59,10 @@ export function FilterMenu({
         setQuery("");
       }}
     >
-      <div className="relative flex">
+      <div className="relative flex shrink-0">
         <Popover.Trigger
           className={cn(
-            "flex h-7 cursor-pointer items-center gap-1.5 rounded-control border pr-1.75 pl-2.25 text-small whitespace-nowrap transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand",
+            "flex h-7 cursor-pointer items-center gap-1.5 rounded-control border pr-1.75 pl-2.25 text-small whitespace-nowrap transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-9",
             active
               ? "border-solid border-brand/45 bg-brand-dim pr-6 text-brand"
               : "border-dashed border-line-strong text-fg-muted",
@@ -87,7 +88,7 @@ export function FilterMenu({
             title={`Clear ${label.toLowerCase()}`}
             aria-label={`Clear ${label.toLowerCase()}`}
             onClick={() => onChange([])}
-            className="absolute top-1/2 right-1 flex size-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded-chip text-fg-muted hover:bg-raised hover:text-fg"
+            className="absolute top-1/2 right-1 flex size-4 -translate-y-1/2 cursor-pointer items-center justify-center rounded-chip text-fg-muted hit-area hover:bg-raised hover:text-fg"
           >
             <X aria-hidden="true" className="size-2.75" />
           </button>
@@ -97,30 +98,20 @@ export function FilterMenu({
         <Popover.Content
           align="start"
           sideOffset={6}
+          collisionPadding={8}
           className={cn(
-            "z-50 w-68 overflow-hidden rounded-[11px] bg-panel shadow-overlay",
+            "z-50 flex max-h-(--radix-popover-content-available-height) w-68 max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-[11px] bg-panel shadow-overlay",
             POP_MOTION,
           )}
         >
-          <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
+          <div className="flex shrink-0 items-center justify-between px-3 pt-2.5 pb-2">
             <span className="text-small font-semibold">{label}</span>
             <span className="text-badge text-fg-subtle tabular-nums">{options.length} values</span>
           </div>
           {options.length > SEARCH_FROM && (
-            <div className="px-2 pb-1.5">
-              <label className="flex h-7.5 items-center gap-2 rounded-control border border-line bg-inset px-2.25">
-                <Search aria-hidden="true" className="size-3 text-fg-subtle" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder={`Search ${label.toLowerCase()}…`}
-                  aria-label={`Search ${label.toLowerCase()}`}
-                  className="min-w-0 flex-1 bg-transparent text-control text-fg outline-none placeholder:text-fg-subtle"
-                />
-              </label>
-            </div>
+            <FilterSearch value={query} onChange={setQuery} label={label} />
           )}
-          <div className="max-h-66 overflow-auto border-t border-line px-1 pb-1">
+          <div className="max-h-66 min-h-0 overflow-auto border-t border-line px-1 pb-1">
             {shown.map((option) => (
               <FilterOptionRow
                 key={option.value}
@@ -138,7 +129,7 @@ export function FilterMenu({
               </p>
             )}
           </div>
-          <div className="flex h-10 items-center gap-2 border-t border-line bg-panel-subtle pr-2 pl-3">
+          <div className="flex h-10 shrink-0 items-center gap-2 border-t border-line bg-panel-subtle pr-2 pl-3 pointer-coarse:h-12">
             <span className="text-label text-fg-subtle">
               {active ? `${chosen.length} selected` : `Any ${label.toLowerCase()}`}
             </span>
@@ -146,11 +137,11 @@ export function FilterMenu({
             <button
               type="button"
               onClick={() => onChange([])}
-              className="h-6.5 cursor-pointer rounded-[6px] px-2.25 text-small text-fg-muted hover:bg-raised hover:text-fg"
+              className="h-6.5 cursor-pointer rounded-[6px] px-2.25 text-small text-fg-muted hover:bg-raised hover:text-fg pointer-coarse:h-9 pointer-coarse:px-3"
             >
               Clear
             </button>
-            <Popover.Close className="h-6.5 cursor-pointer rounded-[6px] bg-fg px-2.75 text-small font-semibold text-bg">
+            <Popover.Close className="h-6.5 cursor-pointer rounded-[6px] bg-fg px-2.75 text-small font-semibold text-bg pointer-coarse:h-9 pointer-coarse:px-3.5">
               Done
             </Popover.Close>
           </div>

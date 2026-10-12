@@ -77,7 +77,7 @@ function TreeRow({
     </>
   );
   const className = cn(
-    "flex min-h-6.25 w-full items-center gap-0.5 pr-3 font-mono text-small whitespace-nowrap hover:bg-raised",
+    "flex min-h-6.25 w-full items-center gap-0.5 pr-3 font-mono text-small whitespace-nowrap hover:bg-raised pointer-coarse:min-h-8",
     row.issue && "bg-warn-dim",
   );
   const style = { paddingLeft: `${12 + row.depth * 16}px` };

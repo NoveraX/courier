@@ -1,13 +1,14 @@
 import { Copy, Pin, RotateCcw, Square, Terminal, X } from "lucide-react";
 
 import { methodChip } from "@/design/method-color";
+import { OverflowMenu } from "@/design/overflow-menu";
 import { endpointParts, httpMethodOf } from "@/features/requests/request-parts";
-import { requestSnippet } from "@/features/requests/request-snippets";
 import { isStreamRequest } from "@/features/requests/request-state";
 import { useTogglePin } from "@/hooks/use-toggle-pin";
 import { copyToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 import type { RequestEntry } from "@/store/types";
+import { requestCopyActions } from "./request-copy-actions";
 import type { Replay } from "./use-replay";
 
 const TRANSPORT_CHIP: Readonly<Record<"http" | "sse" | "ws", string>> = {
@@ -17,7 +18,7 @@ const TRANSPORT_CHIP: Readonly<Record<"http" | "sse" | "ws", string>> = {
 };
 
 const ACTION =
-  "flex h-7 w-7.5 cursor-pointer items-center justify-center border-r border-line text-fg-muted transition-colors last:border-r-0 hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-40";
+  "flex h-7 w-7.5 cursor-pointer items-center justify-center border-r border-line text-fg-muted transition-colors last:border-r-0 hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-40 pointer-coarse:h-9 pointer-coarse:w-9";
 
 interface InspectorHeaderProps {
   request: RequestEntry;
@@ -30,7 +31,9 @@ interface InspectorHeaderProps {
 /**
  * The inspector's head: the request's method, transport and mode, its
  * endpoint and URL — a click copies it — and its actions: pin it, replay
- * it when it can be, copy it as cURL, close the inspector.
+ * it when it can be, copy it as cURL, close the inspector, and the "⋯"
+ * menu with every way to copy or download it. A phone's head copies it as
+ * cURL from that menu alone, and lets a long name take a second line.
  *
  * @param props - The request, its replay, and what closes the inspector
  * @returns The head
@@ -49,7 +52,7 @@ export function InspectorHeader({
   const method = isStreamRequest(request) ? "GET" : httpMethodOf(request);
   const transport = request.transport ?? "http";
   const { prefix, name } = endpointParts(request);
-  const copyCurl = () => void copyToClipboard(requestSnippet(request, "shell").code, "as cURL");
+  const copies = requestCopyActions(request);
   return (
     <div className="flex items-start gap-3">
       <div className="flex min-w-0 flex-1 flex-col gap-1.75">
@@ -68,7 +71,7 @@ export function InspectorHeader({
                   : "direct"}
           </span>
         </div>
-        <h2 className="m-0 truncate font-mono text-heading font-medium tracking-[-0.015em]">
+        <h2 className="m-0 truncate font-mono text-heading font-medium tracking-[-0.015em] max-sm:line-clamp-2 max-sm:whitespace-normal max-sm:[overflow-wrap:anywhere]">
           <span className="text-fg-subtle">{prefix}</span>
           {name}
         </h2>
@@ -77,7 +80,7 @@ export function InspectorHeader({
             type="button"
             title="Copy URL"
             onClick={() => void copyToClipboard(request.url ?? "", "the URL")}
-            className="flex min-w-0 cursor-copy items-center gap-1.5 text-left text-fg-subtle transition-colors hover:text-fg-muted"
+            className="relative flex min-w-0 cursor-copy items-center gap-1.5 text-left text-fg-subtle transition-colors hit-area hover:text-fg-muted"
           >
             <span className="truncate font-mono text-label">{request.url}</span>
             <Copy aria-hidden="true" className="size-2.75 shrink-0" />
@@ -109,20 +112,26 @@ export function InspectorHeader({
             aria-label={replay.label}
             disabled={!replay.run}
             onClick={replay.run}
-            className={ACTION}
+            className={cn(ACTION, "max-sm:border-r-0")}
           >
             <RotateCcw aria-hidden="true" className="size-3.25" />
           </button>
-          <button type="button" title="Copy as cURL" onClick={copyCurl} className={ACTION}>
+          <button
+            type="button"
+            title="Copy as cURL"
+            onClick={copies[0].onSelect}
+            className={cn(ACTION, "max-sm:hidden")}
+          >
             <Terminal aria-hidden="true" className="size-3.25" />
           </button>
         </div>
+        <OverflowMenu label="Copy or download the request" actions={copies} />
         <button
           type="button"
           title="Close · Esc"
           aria-label="Close the inspector"
           onClick={onClose}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"
+          className="flex size-7 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:size-9"
         >
           <X aria-hidden="true" className="size-3.75" />
         </button>

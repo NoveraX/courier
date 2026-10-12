@@ -3,7 +3,7 @@
  */
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, normalize } from "node:path";
 import { pathToFileURL } from "node:url";
 import type * as JitiModule from "jiti";
 import type { TransformOptions } from "jiti";
@@ -158,7 +158,13 @@ describe("createConfigJiti with a transform cache", () => {
       return own.transform({ filename, source, ts: true, async: true, jsx: false });
     });
     expect(handed.map(({ code }) => code)).toStrictEqual(ownCode);
-    expect(loaded).toEqual({ url: pathToFileURL(file).href, dir: root, dep: "dep", late: "late" });
+    /* jiti names a module's folder with forward slashes on Windows. */
+    expect({ ...loaded, dir: normalize(String(loaded.dir)) }).toEqual({
+      url: pathToFileURL(file).href,
+      dir: root,
+      dep: "dep",
+      late: "late",
+    });
   });
 
   it("keeps jiti's own file and module caches off", async () => {

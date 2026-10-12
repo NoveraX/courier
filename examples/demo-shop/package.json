@@ -11,15 +11,15 @@
     "traffic": "tsx src/traffic/main.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^2.1.1",
+    "@hono/node-server": "^2.1.4",
     "@noverax/courier": "*",
     "@noverax/courier-mock": "*",
     "@noverax/courier-server": "*",
     "@noverax/courier-studio": "*",
     "@noverax/courier-studio-core": "*",
-    "hono": "^4.13.8",
+    "hono": "^4.13.13",
     "tsx": "^4.23.15",
-    "ws": "^8.21.3",
+    "ws": "^8.22.0",
     "zod": "^4.6.5"
   }
 }

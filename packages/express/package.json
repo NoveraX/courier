@@ -63,7 +63,7 @@
   },
   "peerDependencies": {
     "@noverax/courier": "*",
-    "ws": ">=8"
+    "ws": "^8.22.0"
   },
   "peerDependenciesMeta": {
     "ws": {

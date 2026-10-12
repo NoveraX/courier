@@ -14,7 +14,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
-const ENTRY = resolve(__dirname, "../src/runtime/attach-runtime.ts");
+const ENTRY = pathToFileURL(resolve(__dirname, "../src/runtime/attach-runtime.ts")).href;
 const ROOT_MODULES = resolve(__dirname, "../../../node_modules");
 
 const API = `

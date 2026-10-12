@@ -76,7 +76,7 @@ describe("a process that attached", () => {
   it("exits when its work is done, with no Studio running", () => {
     const dir = mkdtempSync(join(tmpdir(), "courier-attach-"));
     const script = join(dir, "task.mts");
-    const entry = resolve(__dirname, "../src/runtime/attach-runtime.ts");
+    const entry = pathToFileURL(resolve(__dirname, "../src/runtime/attach-runtime.ts")).href;
     writeFileSync(
       script,
       `process.env.COURIER_STUDIO_URL = "http://127.0.0.1:1";\n` +

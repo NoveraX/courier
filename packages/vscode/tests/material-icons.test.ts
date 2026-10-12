@@ -7,6 +7,8 @@
  * user's own associations kept, an older Courier's moved, and Courier's
  * taken out again whole.
  */
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -33,8 +35,10 @@ describe("Courier's associations for Material Icon Theme", () => {
   });
 
   it("keeps the icons beside the theme, in the editor's extensions folder", () => {
-    expect(iconsHomeOf("/opt/editor/extensions/pkief.material-icon-theme-5.39.0")).toBe(
-      "/opt/editor/extensions/.noverax-courier-icons",
+    const extensions = join(tmpdir(), "editor", "extensions");
+
+    expect(iconsHomeOf(join(extensions, "pkief.material-icon-theme-5.39.0"))).toBe(
+      join(extensions, ".noverax-courier-icons"),
     );
   });
 });

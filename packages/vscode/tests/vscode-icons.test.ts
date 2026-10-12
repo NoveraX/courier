@@ -47,6 +47,30 @@ describe("the folder vscode-icons reads custom icons from", () => {
       "/work/shop/.vscode/icons/vsicons-custom-icons",
     );
   });
+
+  it("is written as Windows writes paths when the editor runs there, whichever system works it out", () => {
+    const windows = (change: Partial<Parameters<typeof vsiconsFolder>[0]> = {}) =>
+      home({
+        platform: "win32",
+        home: "D:\\Profiles\\me",
+        workspaces: ["D:\\work\\shop"],
+        env: { APPDATA: "D:\\Profiles\\me\\AppData\\Roaming" },
+        ...change,
+      });
+
+    expect(vsiconsFolder(windows())).toBe(
+      "D:\\Profiles\\me\\AppData\\Roaming\\Code\\User\\vsicons-custom-icons",
+    );
+    expect(vsiconsFolder(windows({ env: {} }))).toBe(
+      "D:\\Profiles\\me\\AppData\\Roaming\\Code\\User\\vsicons-custom-icons",
+    );
+    expect(vsiconsFolder(windows({ setting: "E:\\team\\icons" }))).toBe(
+      "E:\\team\\icons\\vsicons-custom-icons",
+    );
+    expect(vsiconsFolder(windows({ setting: ".vscode\\icons" }))).toBe(
+      "D:\\work\\shop\\.vscode\\icons\\vsicons-custom-icons",
+    );
+  });
 });
 
 describe("Courier's entries among the user's", () => {

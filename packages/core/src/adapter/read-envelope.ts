@@ -86,14 +86,21 @@ async function readSent(request: Request, limit: number): Promise<BoundedBody | 
   }
 }
 
+/* What a read fails with when the connection went from under it; Windows
+   names one it aborted ECONNABORTED. */
+const CONNECTION_GONE: ReadonlySet<unknown> = new Set(["ECONNRESET", "ECONNABORTED"]);
+
 /**
  * Whether a failed read means the client went away: the request's signal
- * says so, or Node reset the connection under it.
+ * says so, or the connection went from under it.
  */
 function clientLeft(request: Request, error: unknown): boolean {
   if (request.signal.aborted) return true;
   return (
-    typeof error === "object" && error !== null && "code" in error && error.code === "ECONNRESET"
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    CONNECTION_GONE.has(error.code)
   );
 }
 

@@ -1,0 +1,62 @@
+name: Scale
+
+# Courier on a large company's project: five APIs with a thousand
+# endpoints, the hundreds of files that call them, their libraries, the
+# mocks and Studio — every figure scripts/scale measures, each held to its
+# budget: the type check, the client, the import of an OpenAPI document,
+# large answers, Studio and its mocks under load, the app's server with
+# Studio attached, the editor's questions, the VS Code extension and
+# Studio's pages in Chromium.
+# Every night, and by hand at another size. Each run keeps its report.
+on:
+  workflow_dispatch:
+    inputs:
+      endpoints:
+        description: How many endpoints the project has
+        type: string
+        default: "1000"
+      only:
+        description: The steps to measure, separated by commas; all when empty
+        type: string
+        default: ""
+  schedule:
+    - cron: "0 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  scale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build packages
+        run: npm run build
+
+      # Studio's pages are measured in Chrome's engine
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # VS Code, whose extension is measured, needs a display
+      - name: Measure
+        env:
+          ENDPOINTS: ${{ inputs.endpoints || '1000' }}
+          ONLY: ${{ inputs.only }}
+        run: xvfb-run -a node scripts/scale/run.mjs --endpoints "$ENDPOINTS" ${ONLY:+--only "$ONLY"} --json scale-report.json
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scale-report
+          path: scale-report.json
+          retention-days: 30

@@ -213,6 +213,19 @@
       }
     },
     {
+      "includes": ["scripts/scale/measure/extension*"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUndeclaredEnvVars": {
+              "level": "error",
+              "options": { "allowedEnvVars": ["COURIER_SCALE_REPORT", "VSCODE_PATH"] }
+            }
+          }
+        }
+      }
+    },
+    {
       "includes": ["packages/studio/ui/src/**"],
       "linter": {
         "rules": {

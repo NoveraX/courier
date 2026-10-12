@@ -15,7 +15,13 @@ import { sharedTestOptions } from "../../vitest.shared.ts";
  * the server's build resolves them by the same path in `tsconfig.json`.
  */
 export default defineProject({
-  test: { ...sharedTestOptions },
+  test: {
+    ...sharedTestOptions,
+    /* A generator suite compiles the code it generates with TypeScript, and
+       a CLI suite starts Studio's command: seconds on a developer's machine,
+       several times that on a CI runner measuring coverage. */
+    testTimeout: 30_000,
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./ui/src"),

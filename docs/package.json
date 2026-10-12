@@ -53,7 +53,7 @@
     "postcss": "^8.5.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "shell-quote": "^1.12.0"

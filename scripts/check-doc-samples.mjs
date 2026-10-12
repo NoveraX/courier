@@ -22,7 +22,7 @@
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join, relative, resolve } from "node:path";
+import { join, normalize, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { fileURLToPath } from "node:url";
 
@@ -102,7 +102,8 @@ export function checkSamples(samples) {
   const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram(roots, OPTIONS));
   const leavingOut = samplesLeavingOut(diagnostics);
   for (const diagnostic of diagnostics) {
-    const sample = diagnostic.file && files.get(diagnostic.file.fileName);
+    /* TypeScript names files with forward slashes, Windows ones too. */
+    const sample = diagnostic.file && files.get(normalize(diagnostic.file.fileName));
     if (!sample) continue;
     const text = ts.flattenDiagnosticMessageText(diagnostic.messageText, " ");
     const standIn = sample.unresolved || leavingOut.has(diagnostic.file.fileName);

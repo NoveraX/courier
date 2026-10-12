@@ -123,6 +123,8 @@ export interface ExistingGroupInfo {
   streamBaseName: string | null;
   imports: ParsedImport[];
   endpoints: ExistingEndpointInfo[];
+  /** The lines above the first import, as written: a directive, a licence comment. */
+  head: string[];
   /** Code lines between the imports and the defineGroup block (builder heads) */
   preamble: string[];
   /** Code lines after the defineGroup block (user's helpers, constants) */

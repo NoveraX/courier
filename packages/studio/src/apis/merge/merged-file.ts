@@ -1,54 +1,50 @@
-import type { parseExistingGroup } from "./parse-existing";
 import type { MergeChange, MergeStatus } from "./types";
 
+/** The parts of a merged group file, each as lines. */
+export interface MergedParts {
+  /** What sat above the file's imports. */
+  head: readonly string[];
+  /** The merged import statements. */
+  imports: readonly string[];
+  /** What sat between the imports and the declaration. */
+  preamble: readonly string[];
+  /** The declaration down to the `{` opening its endpoints. */
+  header: readonly string[];
+  /** The merged endpoints, each after its doc comment. */
+  endpoints: readonly string[];
+  /** From the `}` closing the endpoints to the declaration's end. */
+  footer: readonly string[];
+  /** What sat after the declaration, and the helpers the spec brought. */
+  trailing: readonly string[];
+}
+
 /**
- * The merged group file: the merged imports, the preamble the user kept, the
- * generated declaration with the merged endpoints inside, and the code the
- * user kept after it.
+ * The merged group file: what sat above the imports, the merged imports, the
+ * preamble the user kept, the declaration with the merged endpoints inside,
+ * and the code the user kept after it.
  *
- * @param importLines - The merged import statements
- * @param preamble - What sat between the imports and the declaration
- * @param generated - The freshly generated file, whose declaration is used
- * @param endpointLines - The merged endpoints
- * @param trailingCode - What sat after the declaration
+ * @param parts - The file's parts
  * @returns The file's text
  * @example
  * ```ts
- * const content = buildFile(imports, preamble, parseExistingGroup(generated), endpoints, trailing);
+ * const content = buildFile({ head, imports, preamble, header, endpoints, footer, trailing });
  * ```
  */
-export function buildFile(
-  importLines: string[],
-  preamble: string[],
-  generated: ReturnType<typeof parseExistingGroup>,
-  endpointLines: string[],
-  trailingCode: string[],
-): string {
-  /* The declaration is taken from the freshly generated file — that is where a
-     changed baseURL or prefix arrives — and only the endpoints between are
-     merged. A group and a flat source differ only in what that shell says. */
-  const header =
-    generated.header.length > 0
-      ? generated.header
-      : [
-          `export const ${generated.groupName} = defineGroup({`,
-          `  prefix: "${generated.prefix}",`,
-          "  endpoints: {",
-        ];
-  const footer = generated.footer.length > 0 ? generated.footer : ["  },", "});"];
-
+export function buildFile(parts: MergedParts): string {
+  const { head, imports, preamble, header, endpoints, footer, trailing } = parts;
   const lines = [
-    ...importLines,
+    ...head,
+    ...imports,
     "",
     ...(preamble.length > 0 ? [...preamble, ""] : []),
     ...header,
-    ...endpointLines,
+    ...endpoints,
     ...footer,
     "",
   ];
 
-  if (trailingCode.length > 0) {
-    lines.push(...trailingCode, "");
+  if (trailing.length > 0) {
+    lines.push(...trailing, "");
   }
 
   return lines.join("\n");

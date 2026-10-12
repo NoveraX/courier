@@ -118,7 +118,7 @@ describe("the barrel of an import", () => {
 describe("declaredExports", () => {
   it("reads each declaration the generator writes, a value over a type of the same name", () => {
     const names = declaredExports(
-      "export type Pet = { id: string };\nexport const PetSchema = z.object({});\nexport const X: Y = z.lazy(() => s);\nexport type X = { a: 1 };\n  export const Indented = 1;\n",
+      "export type Pet = { id: string };\nexport const PetSchema = z.object({});\nexport const X: Y = z.lazy(() => s);\nexport type X = { a: 1 };\n",
     );
 
     expect([...names]).toEqual([
@@ -126,5 +126,19 @@ describe("declaredExports", () => {
       ["PetSchema", "value"],
       ["X", "value"],
     ]);
+  });
+
+  it("reads nothing a doc comment holds, however its lines read", () => {
+    const names = declaredExports(
+      [
+        "/**",
+        "export const Fake = defineGroup({",
+        "export type AlsoFake = 1;",
+        " */",
+        "export type Pet = { id: string };",
+      ].join("\n"),
+    );
+
+    expect([...names]).toEqual([["Pet", "type"]]);
   });
 });

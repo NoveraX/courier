@@ -81,3 +81,60 @@ describe("a source with its endpoints inline", () => {
     });
   });
 });
+
+describe("a source whose spec gained auth since it was written", () => {
+  const WITHOUT_AUTH = `import { courier, defineApi } from "@noverax/courier/define";
+
+const { endpoint } = courier();
+
+export const api = defineApi({
+  baseURL: "https://api.example.com",
+  endpoints: {
+    getAll: endpoint.get("archive"),
+  },
+});
+`;
+  const HELPER = `/** Read a variable this client cannot work without. */
+function requireEnv(name: string): string {
+  return name;
+}`;
+  const WITH_AUTH = `import { courier, defineApi } from "@noverax/courier/define";
+import { authMiddleware } from "@noverax/courier/middleware";
+
+const { endpoint } = courier();
+
+export const api = defineApi({
+  baseURL: "https://api.example.com",
+  middleware: [authMiddleware({ getToken: () => requireEnv("API_TOKEN") })],
+  endpoints: {
+    getAll: endpoint.get(""),
+  },
+});
+
+${HELPER}
+`;
+  const fingerprints: FingerprintResult = { endpoints: { getAll: "modified" }, existingCode: {} };
+
+  it("gets the helper its merged middleware calls, with its comment", () => {
+    const { content, changes } = mergeGroupFile(WITHOUT_AUTH, WITH_AUTH, fingerprints);
+
+    expect(content).toContain(
+      'middleware: [authMiddleware({ getToken: () => requireEnv("API_TOKEN") })],',
+    );
+    expect(content).toContain(HELPER);
+    expect(changes).toContainEqual({
+      type: "added",
+      target: "helper:requireEnv",
+      detail: "from spec",
+    });
+  });
+
+  it("keeps a helper of that name the file has already, and adds no second one", () => {
+    const own = `${WITHOUT_AUTH}\nfunction requireEnv(name: string): string {\n  return name.trim();\n}\n`;
+
+    const { content } = mergeGroupFile(own, WITH_AUTH, fingerprints);
+
+    expect(content.match(/function requireEnv/g)).toHaveLength(1);
+    expect(content).toContain("return name.trim();");
+  });
+});

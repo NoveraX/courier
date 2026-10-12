@@ -103,3 +103,19 @@ describe("an endpoint that does not start from the file's builder", () => {
     });
   });
 });
+
+describe("an entry the merge cannot name", () => {
+  it.each([
+    ["a spread", "    ...legacyEndpoints,\n"],
+    ["a computed key", '    [legacyName]: endpoint.get("legacy"),\n'],
+  ])("makes the file a conflict, so %s is never dropped quietly", (_shape, entry) => {
+    const file = existing(`    listUsers: endpoint.get("").response<string[]>(),
+    createUser: endpoint.post("").response<string>(),
+${entry}`);
+
+    const merged = mergeGroupFile(file, GENERATED, SAFE);
+
+    expect(merged.status).toBe("conflict");
+    expect(merged.content).toBe(GENERATED);
+  });
+});

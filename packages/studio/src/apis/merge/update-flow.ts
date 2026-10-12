@@ -22,7 +22,10 @@ import { readsAsDeclaration } from "./reads-as-declaration";
  *
  * A file on disk that does not read as code declaring endpoints — one saved
  * mid-edit — cannot be merged. It comes back as a `conflict` holding the
- * generated file, which replaces it only once the user allows that.
+ * generated file, which replaces it only once the user allows that. So does
+ * a file the merge cannot cut into whole-line parts, and one whose merge
+ * does not read back as the code it meant to write: a comment or a string
+ * the specification wrote is never taken for code and written out as such.
  *
  * @param fingerprints - Stored fingerprints for the source (endpoint name → hash)
  * @param generated - Freshly generated files from the new spec

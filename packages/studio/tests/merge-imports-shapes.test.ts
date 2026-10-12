@@ -153,3 +153,46 @@ ${GROUP}`);
     expect(merged).not.toContain("OrderSchema");
   });
 });
+
+describe("imports read by their syntax", () => {
+  it("reads an import that follows a blank line, and keeps it through a merge", () => {
+    const existing =
+      parseExistingGroup(`import { courier, defineGroup } from "@noverax/courier/define";
+
+import { helper } from "../helper";
+${GROUP}`);
+    const generated =
+      parseExistingGroup(`import { courier, defineGroup } from "@noverax/courier/define";
+${GROUP}`);
+
+    const merged = mergeImports(existing.imports, generated.imports, [], "").join("\n");
+
+    expect(existing.imports.map((i) => i.source)).toEqual(["@noverax/courier/define", "../helper"]);
+    expect(merged).toContain('import { helper } from "../helper";');
+  });
+
+  it("takes no import from a comment that reads like one", () => {
+    const parsed = parseExistingGroup(`/*
+import { ghost } from "./ghost";
+*/
+import { z } from "zod";
+${GROUP}`);
+
+    expect(parsed.imports.map((i) => i.source)).toEqual(["zod"]);
+  });
+
+  it("keeps no name alive that only a comment or a string mentions", () => {
+    const existing = parseExistingGroup(`import { InventorySchema, OrderSchema } from "./schemas";
+${GROUP}`);
+    const generated = parseExistingGroup(`import { InventorySchema } from "./schemas";
+${GROUP}`);
+    const code = [
+      "/** Returns an OrderSchema, as the description says. */",
+      'endpoint.get("orders").response(InventorySchema).meta({ description: "OrderSchema" })',
+    ].join("\n");
+
+    const merged = mergeImports(existing.imports, generated.imports, [], code).join("\n");
+
+    expect(merged).toBe('import { InventorySchema } from "./schemas";');
+  });
+});

@@ -201,10 +201,11 @@ already released.
 
 The packages are published by `scripts/release.ts` with the npm that comes
 with Node, never by semantic-release's own npm plugin, which `.releaserc.json`
-leaves out of its plugins. That plugin is installed with semantic-release all
-the same, and it would bring a copy of the npm CLI with old dependencies
-bundled inside; `scripts/stubs/npm-cli` stands in for that copy, through the
-`overrides` in `package.json`, so it is not installed.
+leaves out of its plugins. semantic-release installs that plugin all the same,
+and with it a copy of the npm CLI with old dependencies bundled inside;
+`scripts/stubs/semantic-release-npm` stands in for the plugin, through the
+`overrides` in `package.json`, so neither is installed. A release that names
+no plugins of its own would load the stand-in, which stops it.
 
 ## Pull requests
 

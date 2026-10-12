@@ -65,8 +65,8 @@ describe("the version a release writes", () => {
   });
 });
 
-describe("the npm CLI a release leaves out", () => {
-  it("is never run: the release names its plugins, and semantic-release's npm plugin is not one", () => {
+describe("semantic-release's npm plugin, which a release leaves out", () => {
+  it("is never run: the release names its plugins, and that one is not among them", () => {
     const config = JSON.parse(readFileSync(".releaserc.json", "utf8"));
     const names = config.plugins.map((plugin) => (Array.isArray(plugin) ? plugin[0] : plugin));
 
@@ -74,14 +74,21 @@ describe("the npm CLI a release leaves out", () => {
     expect(names).not.toContain("@semantic-release/npm");
   });
 
-  it("is stood in for by a folder that installs no command, so publishing runs Node's own npm", () => {
+  it("is stood in for by a folder that installs nothing and stops a release that loads it", async () => {
     const manifest = JSON.parse(readFileSync("package.json", "utf8"));
-    const stand = JSON.parse(readFileSync("scripts/stubs/npm-cli/package.json", "utf8"));
+    const stand = JSON.parse(
+      readFileSync("scripts/stubs/semantic-release-npm/package.json", "utf8"),
+    );
 
-    expect(manifest.devDependencies.npm).toBe("file:./scripts/stubs/npm-cli");
-    expect(manifest.overrides).toEqual({ npm: "$npm" });
-    expect(stand).toMatchObject({ name: "npm", private: true });
-    expect(stand).not.toHaveProperty("bin");
+    expect(manifest.devDependencies["@semantic-release/npm"]).toBe(
+      "file:./scripts/stubs/semantic-release-npm",
+    );
+    expect(manifest.overrides).toEqual({ "@semantic-release/npm": "$@semantic-release/npm" });
+    expect(stand).toMatchObject({ name: "@semantic-release/npm", private: true });
+    expect(stand).not.toHaveProperty("dependencies");
+    await expect(import("@semantic-release/npm")).rejects.toThrow(
+      "Courier publishes with scripts/release.ts",
+    );
   });
 });
 

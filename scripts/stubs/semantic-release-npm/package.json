@@ -1,0 +1,8 @@
+{
+  "name": "@semantic-release/npm",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": "./index.js",
+  "description": "Takes the place of semantic-release's npm plugin, which it installs whatever plugins a release names, with a copy of the npm CLI and the old dependencies bundled inside. Courier's release never runs the plugin — scripts/release.ts publishes with the npm that comes with Node — so neither is installed."
+}

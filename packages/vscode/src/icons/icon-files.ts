@@ -52,5 +52,13 @@ export const ICON_THEMES = {
 /** An icon theme that takes Courier's icons. */
 export type IconTheme = keyof typeof ICON_THEMES;
 
+/** Courier's icons as this profile puts them in. */
+export interface CourierIcons {
+  /** Courier's `media/icons` folder */
+  readonly dir: string;
+  /** What tells this profile from the editor's others, which share the copies: its storage folder */
+  readonly profile: string;
+}
+
 /** Every icon theme that takes Courier's icons. */
 export const ICON_THEME_IDS: readonly IconTheme[] = ["material", "vsicons"];

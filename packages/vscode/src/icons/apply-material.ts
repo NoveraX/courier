@@ -1,9 +1,10 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import * as vscode from "vscode";
 
 import { isRecord } from "../studio/studio-guards";
 import { copyIcons, removeCopies } from "./icon-copies";
-import { ICON_FILES, ICON_THEMES } from "./icon-files";
+import { type CourierIcons, ICON_FILES, ICON_THEMES } from "./icon-files";
+import { type IconUsers, iconUsers } from "./icon-users";
 import {
   type Associations,
   iconsHomeOf,
@@ -19,21 +20,23 @@ import { userSetting } from "./user-settings";
 
 /**
  * Put Courier's icons into Material Icon Theme: copied into their folder
- * beside the theme, then the theme's associations to them, by file and by
- * folder, the user's own kept. The theme reads its settings again by
- * itself, each change once it has rebuilt itself for the one before.
+ * beside the theme, this profile counted among those that use them, then
+ * the theme's associations to them, by file and by folder, the user's own
+ * kept. The theme reads its settings again by itself, each change once it
+ * has rebuilt itself for the one before.
  *
- * @param iconsDir - Courier's `media/icons` folder
+ * @param icons - Courier's icons, and the profile that puts them in
  * @returns Why the theme cannot take them, or `undefined` once they are in
  * @example
  * ```ts
- * await applyMaterial(iconsDir);
+ * await applyMaterial(icons);
  * ```
  */
-export async function applyMaterial(iconsDir: string): Promise<string | undefined> {
+export async function applyMaterial(icons: CourierIcons): Promise<string | undefined> {
   const material = vscode.extensions.getExtension(ICON_THEMES.material.extension);
   if (!material) return `${ICON_THEMES.material.label} is not installed.`;
-  await copyIcons(copiesFor(iconsDir, material.extensionPath));
+  await copyIcons(copiesFor(icons.dir, material.extensionPath));
+  await usersOf(material.extensionPath, icons).add();
   const plan = materialPlan();
   await changeThemeSettings(materialTheme(material.extensionPath), [
     [MATERIAL_FILES, withCourier(associations(MATERIAL_FILES), plan.files)],
@@ -44,20 +47,22 @@ export async function applyMaterial(iconsDir: string): Promise<string | undefine
 
 /**
  * Take Courier's icons out of Material Icon Theme: its associations, the
- * user's own kept, then the icons' folder beside the theme.
+ * user's own kept, then the icons' folder beside the theme — unless
+ * another profile on this computer still uses it.
  *
+ * @param icons - Courier's icons, and the profile that takes them out
  * @example
  * ```ts
- * await removeMaterial();
+ * await removeMaterial(icons);
  * ```
  */
-export async function removeMaterial(): Promise<void> {
+export async function removeMaterial(icons: CourierIcons): Promise<void> {
   const material = vscode.extensions.getExtension(ICON_THEMES.material.extension);
   await changeThemeSettings(materialTheme(material?.extensionPath), [
     [MATERIAL_FILES, withoutCourier(associations(MATERIAL_FILES))],
     [MATERIAL_FOLDERS, withoutCourier(associations(MATERIAL_FOLDERS))],
   ]);
-  if (material)
+  if (material && (await usersOf(material.extensionPath, icons).release()))
     await removeCopies(homeFiles(material.extensionPath), iconsHomeOf(material.extensionPath));
 }
 
@@ -67,22 +72,28 @@ export async function removeMaterial(): Promise<void> {
  * set here, or brought by Settings Sync from another machine — the icons
  * are copied beside the theme and every path Courier wrote points there,
  * one an older Courier wrote included; once they hold none — taken out
- * here or elsewhere — the copies go too.
+ * here or elsewhere — the copies go too, when this profile put them in and
+ * no other profile on this computer uses them. A profile that never put
+ * them in leaves them alone: the copies are every profile's, the settings
+ * each its own.
  *
- * @param iconsDir - Courier's `media/icons` folder
+ * @param icons - Courier's icons, and the profile that keeps them
  * @example
  * ```ts
- * await keepMaterialCurrent(iconsDir);
+ * await keepMaterialCurrent(icons);
  * ```
  */
-export async function keepMaterialCurrent(iconsDir: string): Promise<void> {
+export async function keepMaterialCurrent(icons: CourierIcons): Promise<void> {
   const material = vscode.extensions.getExtension(ICON_THEMES.material.extension);
   if (!material) return;
+  const users = usersOf(material.extensionPath, icons);
   if (!hasMaterialIcons()) {
-    await removeCopies(homeFiles(material.extensionPath), iconsHomeOf(material.extensionPath));
+    if ((await users.has()) && (await users.release()))
+      await removeCopies(homeFiles(material.extensionPath), iconsHomeOf(material.extensionPath));
     return;
   }
-  await copyIcons(copiesFor(iconsDir, material.extensionPath));
+  await copyIcons(copiesFor(icons.dir, material.extensionPath));
+  await users.add();
   const plan = materialPlan();
   await changeThemeSettings(materialTheme(material.extensionPath), [
     moved(MATERIAL_FILES, plan.files),
@@ -110,6 +121,11 @@ export function hasMaterialIcons(): boolean {
 function copiesFor(iconsDir: string, materialDir: string): Map<string, string> {
   const home = iconsHomeOf(materialDir);
   return new Map(ICON_FILES.map((file) => [join(home, file), join(iconsDir, file)]));
+}
+
+/* The profiles on this computer that use the copies beside the theme. */
+function usersOf(materialDir: string, icons: CourierIcons): IconUsers {
+  return iconUsers(dirname(materialDir), iconsHomeOf(materialDir), icons.profile);
 }
 
 /* The copies beside the theme. */

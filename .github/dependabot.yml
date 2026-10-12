@@ -19,6 +19,9 @@ updates:
       prefix: "fix(deps): 🐛 "
       prefix-development: "chore(deps): 🔧 "
     groups:
+      # Studio parses and transforms with oxc, whose packages move together.
+      oxc:
+        patterns: [oxc-parser, oxc-transform-react]
       development:
         dependency-type: development
         update-types: [minor, patch]
@@ -30,6 +33,9 @@ updates:
       # the repository's checks load.
       - dependency-name: typescript
         update-types: [version-update:semver-major]
+      # The editor extensions' types are those of the oldest VS Code they
+      # support, engines.vscode; they move when that does.
+      - dependency-name: "@types/vscode"
       # semantic-release's plugins write notes with conventional-changelog-writer 8,
       # which the preset refuses from version 10 on; the release tests say when it may move.
       - dependency-name: conventional-changelog-conventionalcommits

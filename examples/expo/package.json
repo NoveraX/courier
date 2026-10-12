@@ -29,5 +29,10 @@
     "@noverax/courier-studio-core": "file:../../packages/studio-core",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "^11.1.1"
+    }
   }
 }

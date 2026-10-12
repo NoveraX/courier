@@ -1,5 +1,6 @@
 import { Menu, Search } from "lucide-react"
 import Link from "next/link"
+import type { Ref } from "react"
 
 import { cn } from "@/site/cn"
 import { CourierMark } from "@/site/courier-mark"
@@ -19,6 +20,10 @@ interface SiteHeaderProps {
   part: SitePart
   onSearch: () => void
   onMenu: () => void
+  /** The Search button, which search gives focus back to as it closes. */
+  searchRef?: Ref<HTMLButtonElement>
+  /** The Menu button, which the menu gives focus back to as it closes. */
+  menuRef?: Ref<HTMLButtonElement>
 }
 
 /**
@@ -26,14 +31,14 @@ interface SiteHeaderProps {
  * switch between the two parts beside it, the current one lit, then search
  * over both, the theme and GitHub — and, on a narrow screen, the menu.
  *
- * @param props - The part the page is in, and what Search and Menu open
+ * @param props - The part the page is in, what Search and Menu open, and the buttons themselves
  * @returns The header
  * @example
  * ```tsx
- * <SiteHeader part="docs" onSearch={openSearch} onMenu={openMenu} />
+ * <SiteHeader part="docs" onSearch={openSearch} onMenu={openMenu} searchRef={searchButton} menuRef={menuButton} />
  * ```
  */
-export function SiteHeader({ part, onSearch, onMenu }: SiteHeaderProps) {
+export function SiteHeader({ part, onSearch, onMenu, searchRef, menuRef }: SiteHeaderProps) {
   return (
     <header className="sticky top-0 z-70 border-b border-line bg-(--site-header) backdrop-blur-[14px] backdrop-saturate-150">
       <div className="mx-auto flex h-14 max-w-[1520px] items-center gap-3.5 px-6 min-[640px]:gap-5">
@@ -63,6 +68,7 @@ export function SiteHeader({ part, onSearch, onMenu }: SiteHeaderProps) {
         </nav>
         <div className="flex-1" />
         <button
+          ref={searchRef}
           type="button"
           aria-label="Search the docs and the API"
           onClick={onSearch}
@@ -87,6 +93,7 @@ export function SiteHeader({ part, onSearch, onMenu }: SiteHeaderProps) {
           <GitHubMark />
         </a>
         <button
+          ref={menuRef}
           type="button"
           aria-label="Menu"
           onClick={onMenu}

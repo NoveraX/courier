@@ -2,38 +2,46 @@
 
 import { useRouter } from "next/navigation"
 import { Dialog } from "radix-ui"
-import { useId, useState } from "react"
+import type { RefObject } from "react"
+import { useId, useRef, useState } from "react"
 
 import { cn } from "@/site/cn"
 import type { SearchEntry } from "@/site/content/search-index"
 import { searchDocs } from "@/site/content/search-index"
+import { useReturnFocus } from "@/site/use-return-focus"
 
 interface SearchPaletteProps {
   entries: readonly SearchEntry[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** The header's Search, which focus goes back to when nothing else had it. */
+  returnTo?: RefObject<HTMLElement | null>
 }
 
 /**
  * Search over the docs and the API reference, as ⌘K or the header's
  * Search opens it: typed words narrow the pages and exports, ↑ ↓ move
- * through them, ↵ opens one.
+ * through them, ↵ opens one. Closed without opening one, it gives focus
+ * back to where it was.
  *
- * @param props - The pages and exports, and whether the palette is open
+ * @param props - The pages and exports, whether the palette is open, and the Search that opens it
  * @returns The palette
  * @example
  * ```tsx
- * <SearchPalette entries={entries} open={open} onOpenChange={setOpen} />
+ * <SearchPalette entries={entries} open={open} onOpenChange={setOpen} returnTo={searchButton} />
  * ```
  */
-export function SearchPalette({ entries, open, onOpenChange }: SearchPaletteProps) {
+export function SearchPalette({ entries, open, onOpenChange, returnTo }: SearchPaletteProps) {
   const router = useRouter()
   const id = useId()
   const [query, setQuery] = useState("")
   const [chosen, setChosen] = useState(0)
+  const dismissed = useRef(false)
+  const returnFocus = useReturnFocus(returnTo, { shortcut: true })
   const results = searchDocs(entries, query)
   const go = (entry: SearchEntry | undefined) => {
     if (!entry) return
+    returnFocus.leave()
     onOpenChange(false)
     router.push(entry.href)
   }
@@ -44,15 +52,24 @@ export function SearchPalette({ entries, open, onOpenChange }: SearchPaletteProp
       open={open}
       onOpenChange={(next) => {
         onOpenChange(next)
-        setQuery("")
-        setChosen(0)
+        dismissed.current = !next
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-90 bg-(--site-scrim) backdrop-blur-xs" />
+        <Dialog.Overlay className="overlay-scrim fixed inset-0 z-90 bg-(--site-scrim) backdrop-blur-xs" />
         <Dialog.Content
           aria-describedby={undefined}
-          className="fixed top-[13vh] left-1/2 z-91 w-[min(540px,calc(100vw-40px))] -translate-x-1/2 animate-site-in overflow-hidden rounded-panel border border-line-strong bg-panel shadow-dialog"
+          onOpenAutoFocus={returnFocus.remember}
+          onCloseAutoFocus={(event) => {
+            returnFocus.restore(event)
+            /* A dismissed search starts afresh, but only once the palette has
+               gone: cleared sooner, its list would change while it closes. */
+            if (!dismissed.current) return
+            dismissed.current = false
+            setQuery("")
+            setChosen(0)
+          }}
+          className="overlay-dialog fixed top-[13dvh] left-1/2 z-91 w-[min(540px,calc(100vw-40px))] -translate-x-1/2 overflow-hidden rounded-panel border border-line-strong bg-panel shadow-dialog"
         >
           <Dialog.Title className="sr-only">Search the docs and the API</Dialog.Title>
           <input
@@ -78,7 +95,7 @@ export function SearchPalette({ entries, open, onOpenChange }: SearchPaletteProp
             id={`${id}-results`}
             role="listbox"
             aria-label="Pages and exports"
-            className="max-h-80 overflow-y-auto p-1.5"
+            className="max-h-[min(20rem,40dvh)] overflow-y-auto p-1.5"
           >
             {results.map((entry, at) => (
               // biome-ignore lint/a11y/useKeyWithClickEvents: the combobox's ↑ ↓ ↵ drive the options

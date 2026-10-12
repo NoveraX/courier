@@ -179,7 +179,7 @@ Studio's audit reads the requests it recorded; the extension marks its findings 
 
 ## Courier's file icons
 
-With Material Icon Theme or vscode-icons in use in a Courier project, the extension offers once to show its own icons for `courier.config.ts`, `courier.mocks.ts` and the `.courier` folder, through the settings those themes read — one click, no reload. From then on they follow your settings: on your other machines through Settings Sync, across Courier's updates, and out again everywhere with **Courier: Remove Courier's Icons from the File Icon Theme**.
+With Material Icon Theme or vscode-icons in use in a Courier project, the extension offers once to show its own icons for `courier.config.ts`, `courier.mocks.ts` and the `.courier` folder, through the settings those themes read — one click, no reload. The folder is drawn in each theme's own style. From then on they follow you: into the other theme when you pick it, onto your other machines through Settings Sync, across Courier's updates, and out again everywhere with **Courier: Remove Courier's Icons from the File Icon Theme**.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/NoveraX/courier/master/docs/public/images/vscode/icons-dark.png" />

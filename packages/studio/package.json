@@ -175,6 +175,6 @@
     "@types/compression": "^1.8.1",
     "esbuild": "^0.28.2",
     "eslint": "^10.12.0",
-    "rollup": "^4.63.4"
+    "rollup": "^4.64.3"
   }
 }

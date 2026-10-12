@@ -231,7 +231,9 @@ describe("Courier's icons, once agreed to", () => {
 
   it("are copied once the settings Settings Sync brings have settled", async () => {
     registerFileIcons(context);
-    await settle();
+    /* Activation runs a pass of its own, which reads the settings too: on a
+       slow machine it would meet the ones synced below and copy at once. */
+    await new Promise((resolve) => setTimeout(resolve, 500));
     settings.set("vsicons.associations.files", [
       { icon: "courier-config", extensions: ["courier.config.ts"] },
     ]);

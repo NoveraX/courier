@@ -1,4 +1,6 @@
 import { posix } from "node:path";
+import { withoutTrailingSlashes } from "@noverax/courier/internal";
+
 import { MAX_NAME_LENGTH } from "./check-import-name";
 import { hasControlCharacter } from "./has-control-character";
 import { InvalidImportError } from "./invalid-import-error";
@@ -38,7 +40,7 @@ export function canonicalOutputDir(raw: string): string {
   const slashed = raw.normalize("NFC").replaceAll("\\", "/").trim();
   const problem = problemWith(slashed);
   if (problem !== null) throw new InvalidImportError("outputDir", raw, problem);
-  const normal = posix.normalize(slashed).replace(/\/+$/, "");
+  const normal = withoutTrailingSlashes(posix.normalize(slashed));
   if (normal === ".." || normal.startsWith("../")) {
     throw new InvalidImportError("outputDir", raw, "it leaves the project");
   }

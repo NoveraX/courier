@@ -1,3 +1,4 @@
+import { withoutTrailingSlashes } from "@noverax/courier/internal";
 import { Copy } from "lucide-react";
 
 import { CodeLines } from "@/design/code/code-lines";
@@ -39,7 +40,7 @@ export function RouteDetail({
   route: MockRouteEntry;
   serverUrl: string;
 }): React.ReactNode {
-  const url = `${serverUrl.replace(/\/+$/, "")}${route.fullPath}`;
+  const url = `${withoutTrailingSlashes(serverUrl)}${route.fullPath}`;
   const schema = Object.entries(route.responseSchema ?? {});
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3 bg-bg-subtle pt-1 pr-4 pb-4 pl-10">

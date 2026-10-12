@@ -1,3 +1,5 @@
+import { withoutTrailingSlashes } from "@noverax/courier/internal";
+
 import type { SnippetFlavor } from "@/features/requests/request-snippets";
 import { requestSnippet } from "@/features/requests/request-snippets";
 import { buildCurlSnippet, buildFetchSnippet } from "@/lib/snippets";
@@ -26,7 +28,7 @@ export function draftSnippet(
   flavor: SnippetFlavor,
 ): string {
   if (endpoint.transport === "http" && flavor !== "courier") {
-    const template = `${endpoint.entry.baseURL.replace(/\/+$/, "")}${endpoint.path}`;
+    const template = `${withoutTrailingSlashes(endpoint.entry.baseURL)}${endpoint.path}`;
     const input = snippetInput(template, endpoint.def, values);
     return flavor === "shell" ? buildCurlSnippet(input) : buildFetchSnippet(input);
   }

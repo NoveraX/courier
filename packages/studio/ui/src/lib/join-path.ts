@@ -1,3 +1,5 @@
+import { withoutEdgeSlashes } from "@noverax/courier/internal";
+
 /**
  * An endpoint's path joined from its group's prefix and its own path, with
  * one slash between the parts and one in front.
@@ -11,9 +13,6 @@
  * ```
  */
 export function joinPath(prefix: string, path: string): string {
-  const joined = [prefix, path]
-    .map((part) => part.replace(/^\/+|\/+$/g, ""))
-    .filter(Boolean)
-    .join("/");
+  const joined = [prefix, path].map(withoutEdgeSlashes).filter(Boolean).join("/");
   return `/${joined}`;
 }

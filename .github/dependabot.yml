@@ -1,8 +1,9 @@
-# Updates arrive grouped, once a week, as conventional commits the release
-# reads: a runtime dependency as a fix, a dev dependency or an action as a
-# chore. The site is no part of a release, so its updates come as chores.
-# The Expo example follows its SDK, which `npx expo install --fix` keeps it
-# in step with, so it is left out.
+# Updates arrive grouped, once a week, as commits in the repository's own
+# convention, so their titles pass the checks and the release reads them: a
+# runtime dependency as a fix, a dev dependency or an action as a chore. The
+# site is no part of a release, so its updates come as chores. The Expo
+# example follows its SDK, which `npx expo install --fix` keeps it in step
+# with, so it is left out.
 version: 2
 updates:
   - package-ecosystem: npm
@@ -11,9 +12,8 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     commit-message:
-      prefix: fix
-      prefix-development: chore
-      include: scope
+      prefix: "fix(deps): 🐛 "
+      prefix-development: "chore(deps): 🔧 "
     groups:
       development:
         dependency-type: development
@@ -22,6 +22,10 @@ updates:
         dependency-type: production
         update-types: [minor, patch]
     ignore:
+      # TypeScript 7 ships no compiler API, which the docs site's build and
+      # the repository's checks load.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
       # semantic-release's plugins write notes with conventional-changelog-writer 8,
       # which the preset refuses from version 10 on; the release tests say when it may move.
       - dependency-name: conventional-changelog-conventionalcommits
@@ -32,7 +36,7 @@ updates:
     schedule:
       interval: weekly
     commit-message:
-      prefix: ci
+      prefix: "ci(deps): 👷 "
 
   - package-ecosystem: npm
     directory: /docs
@@ -40,8 +44,11 @@ updates:
       interval: weekly
     open-pull-requests-limit: 5
     commit-message:
-      prefix: chore
-      include: scope
+      prefix: "chore(deps): 🔧 "
     groups:
       site:
         update-types: [minor, patch]
+    ignore:
+      # TypeScript 7 ships no compiler API, which Next.js type-checks the site with.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]

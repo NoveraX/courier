@@ -5,13 +5,14 @@
  * the host's failure, naming the URL, and a body cut off fails at once
  * whatever its encoding.
  */
-import { createServer, type Server, type Socket } from "node:net";
+import { IncomingMessage } from "node:http";
+import { createServer, type Server, Socket } from "node:net";
 import { brotliCompressSync, deflateSync, gzipSync } from "node:zlib";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { DEMO_MAX_BODY } from "../src/server/demo/demo-rest-guard";
 import { fetchSpec } from "../src/server/fetch-spec";
-import { PUBLIC_SPEC_MAX_BYTES } from "../src/server/read-spec-body";
+import { PUBLIC_SPEC_MAX_BYTES, readSpecBody } from "../src/server/read-spec-body";
 import { SpecFetchError } from "../src/server/spec-fetch-error";
 import type { SpecHostAllowlist } from "../src/server/spec-host-allowlist";
 import { requestSpec } from "../src/server/spec-request";
@@ -125,7 +126,10 @@ describe("readSpecBody", () => {
   it.each(["identity", "gzip"])(
     "reports a connection reset partway through a %s body as a body cut off",
     async (encoding) => {
-      const url = await serveRaw(halfThen(encoding, (socket) => socket.resetAndDestroy()));
+      /* Reset once the client has read what came: Windows drops the data a reset finds unread. */
+      const url = await serveRaw(
+        halfThen(encoding, (socket) => setTimeout(() => socket.resetAndDestroy(), 200)),
+      );
 
       const { error } = await failure(() => fetchSpec(url, NOTHING_LISTED));
 
@@ -133,6 +137,23 @@ describe("readSpecBody", () => {
         code: "SPEC_UNREACHABLE",
         refused: false,
         message: `${url} closed the connection before the whole specification arrived (ECONNRESET).`,
+      });
+    },
+  );
+
+  it.each(["gzip", "deflate", "br"])(
+    "reports a %s body whose connection Windows aborted partway as a body cut off",
+    async (encoding) => {
+      const url = new URL("http://127.0.0.1:1/spec.json");
+      const response = new IncomingMessage(new Socket());
+      response.headers = { "content-encoding": encoding };
+      const reading = readSpecBody(response, url);
+      response.push(firstHalf(encoded(encoding)));
+      response.destroy(Object.assign(new Error("read ECONNABORTED"), { code: "ECONNABORTED" }));
+
+      await expect(reading).rejects.toMatchObject({
+        code: "SPEC_UNREACHABLE",
+        message: `${url.href} closed the connection before the whole specification arrived (ECONNABORTED).`,
       });
     },
   );

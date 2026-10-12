@@ -95,14 +95,15 @@ describe("answeringAddress", () => {
     const closed = closeOf(client).then(() => "closed");
     await delay(1000);
     /* A probe that closed its socket answers data with a reset, which ends
-       this side too; a probe still open reads the data and drops it. */
+       this side too — Windows names it an abort; a probe still open reads
+       the data and drops it. */
     client.write("late\n");
     await delay(50);
     client.write("late\n");
 
     try {
       expect(await Promise.race([closed, delay(1000, "open")])).toBe("closed");
-      expect(errors).toEqual([expect.stringMatching(/^(EPIPE|ECONNRESET)$/)]);
+      expect(errors).toEqual([expect.stringMatching(/^(EPIPE|ECONNRESET|ECONNABORTED)$/)]);
     } finally {
       client.destroy();
     }

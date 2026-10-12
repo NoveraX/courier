@@ -18,8 +18,13 @@ const DECODERS: ReadonlyMap<string, () => Transform> = new Map([
   ["br", createBrotliDecompress],
 ]);
 
-/* What a response fails with when its connection closes before the body is complete. */
-const CUT_OFF: ReadonlySet<string> = new Set(["ECONNRESET", "ERR_STREAM_PREMATURE_CLOSE"]);
+/* What a response fails with when its connection closes before the body is
+   complete; Windows names a connection it aborted ECONNABORTED. */
+const CUT_OFF: ReadonlySet<string> = new Set([
+  "ECONNRESET",
+  "ECONNABORTED",
+  "ERR_STREAM_PREMATURE_CLOSE",
+]);
 
 /**
  * Read a specification's body as text: decompressed as the server encoded

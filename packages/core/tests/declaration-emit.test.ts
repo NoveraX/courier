@@ -35,7 +35,8 @@ beforeAll(() => {
   /* An ES module, as NestJS 12 and most new projects are: TypeScript names a type there only through the package's exports. */
   writeFileSync(join(consumer, "package.json"), '{ "type": "module" }\n');
   cpSync(join(PACKAGE, "tests/fixtures/declaration-consumer.ts"), join(consumer, "api.ts"));
-});
+  /* Copying thousands of files takes Windows far longer under a full run. */
+}, 60_000);
 
 afterAll(() => {
   rmSync(consumer, { recursive: true, force: true });

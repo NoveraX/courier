@@ -90,7 +90,7 @@ Every call the proxy serves — GET and POST here, and the SSE and WebSocket rou
 - A request with **neither header** — a server, a CDN, a script — is not a browser's cross-origin request, and is served.
 - In **development**, while `allowedOrigins` is empty, a page on another port of the local machine is admitted when the app itself is served from that machine, so Studio can inspect the app. An app on any other address never admits one — a server started without `NODE_ENV` counts as in development, and a page on a visitor's own machine, a local tool or another dev server, is not the application's. Configuring `allowedOrigins` replaces the allowance with the list.
 
-A refused call is answered `403` with `{ "success": false, "message": "Origin not allowed" }`; a refused socket is closed with `4403`. A pattern is an exact origin, `https://*.example.com` for the sub-domains of a host over one scheme and port, or `*.example.com` for them over any scheme on its default port:
+A refused call is answered `403` with `{ "success": false, "message": "Origin not allowed" }`; a refused socket is closed with `4403`. A pattern is an exact origin, `https://*.example.com` for the sub-domains of a host over one scheme and port, or `*.example.com` for them over any scheme on its default port — plain HTTP included, whose pages anyone on a visitor's network can stand in for, so name the scheme unless such a page must call the proxy:
 
 ```ts
 import { createHandler } from "@noverax/courier"

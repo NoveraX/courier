@@ -2,7 +2,7 @@ import { relative } from "node:path";
 import type { Expression, ObjectExpression } from "oxc-parser";
 
 import { endpointsOf } from "../contract-drift/schema-edit/endpoint-declaration";
-import { sourceModules } from "../contract-drift/schema-edit/source-modules";
+import { type SourceModules, sourceModules } from "../contract-drift/schema-edit/source-modules";
 import { keyName } from "../contract-drift/schema-edit/written-schema";
 import type { CatalogEndpoint } from "./endpoint-catalog";
 import { resolvedPath } from "./resolved-path";
@@ -38,6 +38,7 @@ export interface GroupPlace {
  * @param root - The project's root
  * @param configFile - The running config's path
  * @param catalog - The endpoints the running config defines
+ * @param modules - The project's files as they are read and parsed; read afresh when not given
  * @returns The places, source by source
  * @example
  * ```ts
@@ -48,8 +49,8 @@ export function groupPlaces(
   root: string,
   configFile: string,
   catalog: readonly CatalogEndpoint[],
+  modules: SourceModules = sourceModules(root),
 ): GroupPlace[] {
-  const modules = sourceModules(root);
   const config = resolvedPath(configFile);
   return groupsOf(catalog).flatMap(({ source, groups }) => {
     const found = endpointsOf(modules, config, source, groups);

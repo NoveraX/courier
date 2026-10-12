@@ -34,6 +34,10 @@ export interface RequestRows {
   openingOf(id: string): RuntimeEvent | undefined;
   /** The kept events a page is sent as it connects: the newest requests', each whole and in the order its events arrived, as many as fit the replay, oldest request first */
   events(): RuntimeEvent[];
+  /** The events that open and end each request, without the bodies and headers they carry, in the order they came */
+  keyEvents(): Array<{ id: string; event: RuntimeEvent }>;
+  /** One request's events, whole, in the order they came */
+  eventsOf(id: string): RuntimeEvent[];
   write(batch: RequestBatch): void;
 }
 
@@ -64,6 +68,16 @@ export function requestRows(db: DatabaseSync, replayBytes: number = REPLAY_BYTES
       "SELECT e.body FROM request_events e JOIN kept k ON k.id = e.request_id " +
       "WHERE k.upto <= ? ORDER BY k.position, e.seq",
   );
+  /* The database reads each event's type and leaves out its bodies, so a list never parses an answer. */
+  const listKeyEvents = db.prepare(
+    "SELECT request_id, json_remove(body, '$.data', '$.variables', '$.headers', '$.requestHeaders') AS body " +
+      "FROM request_events WHERE json_extract(body, '$.type') IN " +
+      "('request:start', 'request:end', 'request:error', 'stream:open', 'stream:close', 'stream:error') " +
+      "ORDER BY seq",
+  );
+  const eventsOfRequest = db.prepare(
+    "SELECT body FROM request_events WHERE request_id = ? ORDER BY seq",
+  );
   const insertEvent = db.prepare("INSERT INTO request_events (request_id, body) VALUES (?, ?)");
   const upsertRequest = db.prepare(
     "INSERT INTO requests (id, position, open, events) VALUES (?, ?, ?, ?) " +
@@ -83,6 +97,16 @@ export function requestRows(db: DatabaseSync, replayBytes: number = REPLAY_BYTES
     openingOf: (id) => eventOf(firstEvent.get(id)?.body),
     events: () =>
       listEvents.all(replayBytes).flatMap((row): RuntimeEvent[] => {
+        const event = eventOf(row.body);
+        return event ? [event] : [];
+      }),
+    keyEvents: () =>
+      listKeyEvents.all().flatMap((row) => {
+        const event = eventOf(row.body);
+        return event ? [{ id: String(row.request_id), event }] : [];
+      }),
+    eventsOf: (id) =>
+      eventsOfRequest.all(id).flatMap((row): RuntimeEvent[] => {
         const event = eventOf(row.body);
         return event ? [event] : [];
       }),

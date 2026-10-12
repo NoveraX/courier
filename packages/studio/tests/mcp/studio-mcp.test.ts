@@ -165,7 +165,14 @@ beforeAll(async () => {
   mountStudioMcp(app, {
     token,
     version: "test",
-    requestLog: { events: () => EVENTS },
+    requestLog: {
+      events: () => EVENTS,
+      keyEvents: () => EVENTS,
+      eventsOf: (id: string) =>
+        EVENTS.filter(
+          (event) => (event.type === "request:start" ? event.id : event.requestId) === id,
+        ),
+    },
     mocks: mocks as never,
     replays,
     agentCalls,

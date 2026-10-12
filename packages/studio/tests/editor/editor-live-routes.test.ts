@@ -76,7 +76,7 @@ async function post(path: string, body: unknown = {}) {
 beforeAll(async () => {
   const app = express();
   app.use(express.json());
-  registerEditorLiveRoutes(app, { requestLog: { events: () => EVENTS }, mocks });
+  registerEditorLiveRoutes(app, { requestLog: { keyEvents: () => EVENTS }, mocks });
   server = createServer(app);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

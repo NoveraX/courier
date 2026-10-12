@@ -37,6 +37,7 @@ export interface EndpointDefinition extends TextSpan {
  * @param root - The project's root
  * @param configFile - The running config's path
  * @param catalog - The endpoints the running config defines
+ * @param modules - The project's files as they are read and parsed; read afresh when not given
  * @returns The declarations found, in the catalog's order
  * @example
  * ```ts
@@ -47,8 +48,8 @@ export function endpointDefinitions(
   root: string,
   configFile: string,
   catalog: readonly CatalogEndpoint[],
+  modules: SourceModules = sourceModules(root),
 ): EndpointDefinition[] {
-  const modules = sourceModules(root);
   /* The modules are read by their paths with links resolved, the config's too. */
   const config = resolvedPath(configFile);
   const placing = new Map<string, (offset: number) => TextPosition>();

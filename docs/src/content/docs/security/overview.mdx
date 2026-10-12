@@ -48,7 +48,7 @@ An API's answer can renew the session, hand out a double-submit token, or sign t
 - Only the cookies the session names, the double-submit cookie and the bearer cookie; any other cookie stays with the API.
 - `Path=/`, since the API's path names its own routes, not your pages.
 - A `Domain` only where it covers your application's host; otherwise the cookie stays with that host alone.
-- `Secure` where your application is served over HTTPS or from the local machine. Elsewhere it is dropped, and `SameSite=None` becomes `Lax`; a `__Host-` or `__Secure-` cookie, which cannot exist without it, is refused.
+- `Secure` where your application is served over HTTPS; on the local machine over plain HTTP, only where the API set it, as WebKit on Linux keeps no secure cookie there. Elsewhere it is dropped, and `SameSite=None` becomes `Lax`; a `__Host-` or `__Secure-` cookie, which cannot exist without it, is refused.
 - `session.relay: false` keeps even the session's own cookies within the request: the calls made for it still send them, and the browser is not handed them.
 
 A page that has already started streaming can no longer set a cookie, and the log says so. Where each framework can and cannot set one is on its page and in [User Sessions](/docs/server-side/session).

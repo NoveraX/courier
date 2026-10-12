@@ -129,7 +129,7 @@ describe("a server's write that finds no double-submit token", () => {
       "POST /me/name",
     ]);
     expect(upstream.seen[1]?.headers["x-csrftoken"]).toBe("t-fresh");
-    expect(response.headers.getSetCookie()).toEqual(["csrftoken=t-fresh; Path=/; Secure"]);
+    expect(response.headers.getSetCookie()).toEqual(["csrftoken=t-fresh; Path=/"]);
   });
 
   it("asks once for the writes made together while one request is served", async () => {

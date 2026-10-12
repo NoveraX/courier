@@ -90,7 +90,7 @@ describe("the proxy, for an API that keeps a session", () => {
     expect(upstream.seen[0]?.headers["x-csrftoken"]).toBe("c1");
     expect(upstream.seen[0]?.headers.cookie).toBe("csrftoken=c1");
     expect(response.headers.getSetCookie()).toEqual([
-      "sid=s3cr3t; Path=/; Secure; HttpOnly; SameSite=Strict",
+      "sid=s3cr3t; Path=/; HttpOnly; SameSite=Strict",
     ]);
   });
 });

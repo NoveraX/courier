@@ -14,10 +14,13 @@ export type AppCookie =
  * server sees it again. A `Domain` is kept only where it covers the
  * application's host, which a browser would refuse otherwise; without one
  * the cookie stays with that host alone. `Secure` follows the application:
- * set when it is served over HTTPS or from the local machine, where browsers
- * keep secure cookies, and dropped elsewhere, together with what needs it —
- * `Partitioned`, and `SameSite=None`, which becomes `Lax`. A `__Secure-` or
- * `__Host-` cookie cannot exist without it, and is refused instead.
+ * set when it is served over HTTPS; kept as the API set it on the local
+ * machine over plain HTTP, where browsers differ — Chrome, Firefox and
+ * Safari keep a secure cookie for `localhost`, WebKit on Linux does not, so
+ * none is made secure there that the API did not; and dropped elsewhere,
+ * together with what needs it — `Partitioned`, and `SameSite=None`, which
+ * becomes `Lax`. A `__Secure-` or `__Host-` cookie cannot exist without it,
+ * and is refused where it is dropped.
  *
  * @param cookie - The cookie as the API set it
  * @param origin - The application's origin, as its user addressed it; unknown, the cookie keeps its own `Secure`
@@ -30,8 +33,8 @@ export type AppCookie =
  */
 export function cookieForApp(cookie: SetCookie, origin: string | undefined): AppCookie {
   const app = origin !== undefined && URL.canParse(origin) ? new URL(origin) : undefined;
-  const secure = app ? isSecureContext(app) : cookie.secure === true;
   const prefixed = /^__(Secure|Host)-/.test(cookie.name);
+  const secure = secureFor(app, cookie.secure === true || prefixed);
   if (prefixed && !secure) {
     return { refused: `${cookie.name} needs a secure origin, and ${origin} is not one` };
   }
@@ -48,10 +51,14 @@ export function cookieForApp(cookie: SetCookie, origin: string | undefined): App
   return { cookie: made };
 }
 
-/* Browsers keep a secure cookie for HTTPS, and for the local machine over plain HTTP. */
-function isSecureContext(url: URL): boolean {
-  if (url.protocol === "https:") return true;
-  const host = url.hostname;
+/* Secure over HTTPS; on the local machine, only where the API asked for it; never elsewhere. */
+function secureFor(app: URL | undefined, asked: boolean): boolean {
+  if (app === undefined) return asked;
+  if (app.protocol === "https:") return true;
+  return asked && isLocalMachine(app.hostname);
+}
+
+function isLocalMachine(host: string): boolean {
   return (
     host === "localhost" ||
     host.endsWith(".localhost") ||

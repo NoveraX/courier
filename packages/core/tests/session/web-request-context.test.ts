@@ -77,8 +77,8 @@ describe("a request served with withWebRequestContext", () => {
     });
 
     /* Made for the application's origin: secure on the local machine, as over HTTPS. */
-    expect(own.headers.getSetCookie()).toEqual(["sid=a2; Path=/; Secure; HttpOnly"]);
-    expect(fetched.headers.getSetCookie()).toContain("sid=a2; Path=/; Secure; HttpOnly");
+    expect(own.headers.getSetCookie()).toEqual(["sid=a2; Path=/; HttpOnly"]);
+    expect(fetched.headers.getSetCookie()).toContain("sid=a2; Path=/; HttpOnly");
   });
 
   it("says why a cookie set after the response was handed back cannot reach the browser", async () => {

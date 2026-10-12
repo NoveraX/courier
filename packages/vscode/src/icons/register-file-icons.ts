@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import type { CourierCore } from "../core/courier-core";
 import { courierLog, logFailure } from "../log/courier-log";
 import { applyIcons, hasCourierIcons, keepIconsCurrent, removeIcons } from "./apply-icons";
-import { ICON_THEME_IDS, ICON_THEMES, type IconTheme } from "./icon-files";
+import { type CourierIcons, ICON_THEME_IDS, ICON_THEMES, type IconTheme } from "./icon-files";
 import { MATERIAL_FILES, MATERIAL_FOLDERS } from "./material-icons";
 import { VSICONS_FILES, VSICONS_FOLDERS } from "./vscode-icons";
 
@@ -34,7 +34,10 @@ const SETTLE_MS = 1_500;
  * ```
  */
 export function registerFileIcons(core: CourierCore): vscode.Disposable {
-  const iconsDir = join(core.context.extensionPath, "media", "icons");
+  const icons: CourierIcons = {
+    dir: join(core.context.extensionPath, "media", "icons"),
+    profile: core.context.globalStorageUri.toString(),
+  };
   /* One change to the icons at a time: the themes rebuild on each, and an offer, a command and a sync may come together. */
   let queue: Promise<unknown> = Promise.resolve();
   const inTurn = (what: string, change: () => Promise<unknown>) => {
@@ -45,7 +48,7 @@ export function registerFileIcons(core: CourierCore): vscode.Disposable {
     const theme = isTheme(asked) ? asked : await chooseTheme();
     if (!theme) return;
     await inTurn("Courier could not put its file icons in", async () => {
-      const why = await applyIcons(iconsDir, theme);
+      const why = await applyIcons(icons, theme);
       if (why) void vscode.window.showWarningMessage(why);
       else
         void vscode.window.showInformationMessage(
@@ -55,15 +58,15 @@ export function registerFileIcons(core: CourierCore): vscode.Disposable {
   };
   const remove = () =>
     inTurn("Courier could not take its file icons out", async () => {
-      await removeIcons();
+      await removeIcons(icons);
       void vscode.window.showInformationMessage("Courier's icons are out of the file icon themes.");
     });
   const keep = () =>
-    inTurn("Courier could not keep its file icons current", () => keepIconsCurrent(iconsDir));
+    inTurn("Courier could not keep its file icons current", () => keepIconsCurrent(icons));
   /* Agreed to in one theme, the icons go into the one picked next, in its own style, without asking again. */
   const carry = (theme: IconTheme) =>
     inTurn("Courier could not put its file icons in", async () => {
-      const why = await applyIcons(iconsDir, theme);
+      const why = await applyIcons(icons, theme);
       courierLog().info(
         why ?? `Courier's icons went into ${ICON_THEMES[theme].label}, the icon theme in use`,
       );

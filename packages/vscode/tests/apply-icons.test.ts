@@ -25,6 +25,7 @@ import {
   keepIconsCurrent,
   removeIcons,
 } from "../src/icons/apply-icons";
+import type { CourierIcons } from "../src/icons/icon-files";
 import { elsewhere, executed, installed, settings } from "./vscode-stand-in";
 
 const FILES = "material-icon-theme.files.associations";
@@ -37,7 +38,14 @@ const VSICONS_FOLDERS = [
   "folder-courier-vsicons-light-open",
 ];
 
+/* The icons in a folder of copies, without what Courier keeps beside them. */
+const copiesIn = (folder: string) =>
+  readdirSync(folder)
+    .filter((name) => name.endsWith(".svg"))
+    .sort();
+
 let iconsDir: string;
+let icons: CourierIcons;
 let home: string;
 let custom: string;
 
@@ -45,6 +53,7 @@ beforeEach(() => {
   const root = mkdtempSync(join(tmpdir(), "courier-icons-"));
   iconsDir = join(root, "extensions", "noverax.courier-vscode-1.2.0", "media", "icons");
   mkdirSync(iconsDir, { recursive: true });
+  icons = { dir: iconsDir, profile: "profile-a" };
   for (const name of [...ICONS, ...VSICONS_FOLDERS]) {
     writeFileSync(join(iconsDir, `${name}.svg`), `<svg id="${name}"/>`);
   }
@@ -72,9 +81,9 @@ describe("Courier's icons in Material Icon Theme", () => {
   it("copies the icons beside the theme and adds paths to them, keeping the user's own for a Courier file", async () => {
     settings.set(FILES, { "courier.mocks.ts": "typescript" });
 
-    expect(await applyIcons(iconsDir, "material")).toBeUndefined();
+    expect(await applyIcons(icons, "material")).toBeUndefined();
 
-    expect(readdirSync(home).sort()).toEqual(ICONS.map((name) => `${name}.svg`).sort());
+    expect(copiesIn(home)).toEqual(ICONS.map((name) => `${name}.svg`).sort());
     expect(settings.get(FILES)).toMatchObject({
       "courier.config.ts": "../../.noverax-courier-icons/courier-config",
       "courier.mocks.ts": "typescript",
@@ -87,9 +96,9 @@ describe("Courier's icons in Material Icon Theme", () => {
 
   it("takes the paths out, the user's kept, and the icons' folder with them", async () => {
     settings.set(FILES, { "*.sample": "../../icons/sample" });
-    await applyIcons(iconsDir, "material");
+    await applyIcons(icons, "material");
 
-    await removeIcons();
+    await removeIcons(icons);
 
     expect(settings.get(FILES)).toEqual({ "*.sample": "../../icons/sample" });
     expect(settings.has(FOLDERS)).toBe(false);
@@ -97,15 +106,15 @@ describe("Courier's icons in Material Icon Theme", () => {
   });
 
   it("copies the icons on a machine Settings Sync brought the paths to, the paths left as they are", async () => {
-    await applyIcons(iconsDir, "material");
+    await applyIcons(icons, "material");
     const synced = { files: settings.get(FILES), folders: settings.get(FOLDERS) };
-    await removeIcons();
+    await removeIcons(icons);
     settings.set(FILES, synced.files);
     settings.set(FOLDERS, synced.folders);
 
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
 
-    expect(readdirSync(home)).toHaveLength(4);
+    expect(copiesIn(home)).toHaveLength(4);
     expect(settings.get(FILES)).toEqual(synced.files);
     expect(settings.get(FOLDERS)).toEqual(synced.folders);
   });
@@ -119,7 +128,7 @@ describe("Courier's icons in Material Icon Theme", () => {
       ".courier": "../../noverax.courier-vscode-1.1.0/media/icons/folder-courier",
     });
 
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
 
     expect(settings.get(FILES)).toEqual({
       "courier.config.ts": "../../.noverax-courier-icons/courier-config",
@@ -128,15 +137,15 @@ describe("Courier's icons in Material Icon Theme", () => {
     expect(settings.get(FOLDERS)).toEqual({
       ".courier": "../../../../.noverax-courier-icons/folder-courier",
     });
-    expect(readdirSync(home)).toHaveLength(4);
+    expect(copiesIn(home)).toHaveLength(4);
   });
 
   it("takes the copies away once the settings hold none, as when they were taken out on another machine", async () => {
-    await applyIcons(iconsDir, "material");
+    await applyIcons(icons, "material");
     settings.delete(FILES);
     settings.delete(FOLDERS);
 
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
 
     expect(existsSync(home)).toBe(false);
   });
@@ -144,7 +153,7 @@ describe("Courier's icons in Material Icon Theme", () => {
   it("says when the theme is not installed", async () => {
     installed.clear();
 
-    expect(await applyIcons(iconsDir, "material")).toBe("Material Icon Theme is not installed.");
+    expect(await applyIcons(icons, "material")).toBe("Material Icon Theme is not installed.");
   });
 });
 
@@ -163,7 +172,7 @@ describe("Courier's icons in vscode-icons", () => {
       { icon: "courier-config", extensions: ["courier.config.ts"] },
     ]);
 
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
 
     expect(started).toEqual(["activated"]);
     expect(executed).toEqual([["vscode-icons.regenerateIcons"]]);
@@ -173,7 +182,7 @@ describe("Courier's icons in vscode-icons", () => {
     const mine = { icon: "my-icon", extensions: ["mai"], format: "svg" };
     settings.set("vsicons.associations.files", [mine]);
 
-    expect(await applyIcons(iconsDir, "vsicons")).toBeUndefined();
+    expect(await applyIcons(icons, "vsicons")).toBeUndefined();
 
     expect(readdirSync(custom).sort()).toEqual([
       "file_type_courier-config.svg",
@@ -195,8 +204,8 @@ describe("Courier's icons in vscode-icons", () => {
   });
 
   it("gives vscode-icons the folder drawn as it draws its own, and Material Icon Theme the one drawn as it does", async () => {
-    await applyIcons(iconsDir, "vsicons");
-    await applyIcons(iconsDir, "material");
+    await applyIcons(icons, "vsicons");
+    await applyIcons(icons, "material");
 
     expect(readFileSync(join(custom, "folder_type_courier.svg"), "utf8")).toBe(
       '<svg id="folder-courier-vsicons"/>',
@@ -212,9 +221,9 @@ describe("Courier's icons in vscode-icons", () => {
   it("takes them out again, the user's own kept", async () => {
     const mine = { icon: "my-icon", extensions: ["mai"], format: "svg" };
     settings.set("vsicons.associations.files", [mine]);
-    await applyIcons(iconsDir, "vsicons");
+    await applyIcons(icons, "vsicons");
 
-    await removeIcons();
+    await removeIcons(icons);
 
     expect(settings.get("vsicons.associations.files")).toEqual([mine]);
     expect(settings.has("vsicons.associations.folders")).toBe(false);
@@ -222,13 +231,13 @@ describe("Courier's icons in vscode-icons", () => {
   });
 
   it("copies the icons and applies them on a machine Settings Sync brought the entries to", async () => {
-    await applyIcons(iconsDir, "vsicons");
+    await applyIcons(icons, "vsicons");
     const synced = settings.get("vsicons.associations.files");
-    await removeIcons();
+    await removeIcons(icons);
     settings.set("vsicons.associations.files", synced);
     executed.length = 0;
 
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
 
     expect(readdirSync(custom)).toHaveLength(6);
     expect(executed).toEqual([["vscode-icons.regenerateIcons"]]);
@@ -240,7 +249,7 @@ describe("Courier's icons in vscode-icons", () => {
     ]);
     executed.length = 0;
 
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
 
     expect(settings.get("vsicons.associations.folders")).toEqual([
       { icon: "courier", extensions: [".courier"], format: "svg", light: true },
@@ -249,13 +258,13 @@ describe("Courier's icons in vscode-icons", () => {
   });
 
   it("copies again after Courier's icons changed, and does nothing while they are current", async () => {
-    await applyIcons(iconsDir, "vsicons");
+    await applyIcons(icons, "vsicons");
     executed.length = 0;
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
     const idle = executed.length;
     writeFileSync(join(iconsDir, "courier-config.svg"), "<svg id='redrawn'/>");
 
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
 
     expect(idle).toBe(0);
     expect(readFileSync(join(custom, "file_type_courier-config.svg"), "utf8")).toBe(
@@ -265,18 +274,54 @@ describe("Courier's icons in vscode-icons", () => {
   });
 
   it("takes the copies away once no settings hold the entries, and has vscode-icons rebuild without them", async () => {
-    await applyIcons(iconsDir, "vsicons");
+    await applyIcons(icons, "vsicons");
     settings.delete("vsicons.associations.files");
     settings.delete("vsicons.associations.folders");
     executed.length = 0;
 
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
     const rebuilt = [...executed];
-    await keepIconsCurrent(iconsDir);
+    await keepIconsCurrent(icons);
 
     expect(readdirSync(custom)).toEqual([]);
     expect(hasCourierIcons("vsicons")).toBe(false);
     expect(rebuilt).toEqual([["vscode-icons.regenerateIcons"]]);
     expect(executed).toEqual(rebuilt);
+  });
+});
+
+describe("Courier's icons in several profiles on one computer", () => {
+  it("leaves the copies another profile uses alone in a profile that never put them in", async () => {
+    await applyIcons(icons, "material");
+    await applyIcons(icons, "vsicons");
+    /* The other profile's settings are its own, without Courier's associations. */
+    for (const key of [
+      FILES,
+      FOLDERS,
+      "vsicons.associations.files",
+      "vsicons.associations.folders",
+    ]) {
+      settings.delete(key);
+    }
+    executed.length = 0;
+
+    await keepIconsCurrent({ dir: iconsDir, profile: "profile-b" });
+
+    expect(copiesIn(home)).toHaveLength(4);
+    expect(copiesIn(custom)).toHaveLength(6);
+    expect(executed).toEqual([]);
+  });
+
+  it("keeps the copies while another profile still uses them, and takes them with the last", async () => {
+    const other = { dir: iconsDir, profile: "profile-b" };
+    await applyIcons(icons, "material");
+    await applyIcons(other, "material");
+
+    await removeIcons(other);
+    const kept = copiesIn(home);
+    await removeIcons(icons);
+
+    expect(kept).toHaveLength(4);
+    expect(existsSync(home)).toBe(false);
   });
 });

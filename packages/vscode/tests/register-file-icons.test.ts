@@ -20,6 +20,7 @@ import {
   registered,
   settings,
   shown,
+  Uri,
   workspace,
 } from "./vscode-stand-in";
 
@@ -56,6 +57,7 @@ beforeEach(() => {
   core = {
     context: {
       extensionPath: root,
+      globalStorageUri: Uri.file(join(root, "storage")),
       globalState: {
         get: (key: string, fallback?: unknown) => state.get(key) ?? fallback,
         update: async (key: string, value: unknown) => void state.set(key, value),

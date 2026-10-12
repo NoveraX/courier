@@ -178,7 +178,7 @@ Set `courier.notifications.failures` and a call that fails while you work brings
 
 ## Courier's file icons
 
-Material Icon Theme and vscode-icons take custom icons through their settings, and Courier brings its own for `courier.config.*`, `courier.mocks.*` and the `.courier` folder. With either theme in use in a Courier project, the extension offers once to put them in; **Courier: Show Courier's Icons in the File Icon Theme** does it any time, and **Courier: Remove Courier's Icons from the File Icon Theme** takes them out again.
+Material Icon Theme and vscode-icons take custom icons through their settings, and Courier brings its own for `courier.config.*`, `courier.mocks.*` and the `.courier` folder. You agree once: with either theme in use in a Courier project — when Courier starts, or when you pick the theme later — the extension offers to put them in, and one click shows them, no reload needed. **Courier: Show Courier's Icons in the File Icon Theme** does it any time, and **Courier: Remove Courier's Icons from the File Icon Theme** takes them out again.
 
 <Screenshot
   src="/images/vscode/icons"
@@ -187,7 +187,16 @@ Material Icon Theme and vscode-icons take custom icons through their settings, a
   height={311}
 />
 
-They go in through your user settings — the associations those themes read — beside your own, which stay as they are; vscode-icons also gets a copy of the icons in its custom icons folder. After an update of Courier, the extension moves them to its new version on its own. Other icon themes take no custom icons; VS Code's own Seti among them.
+From then on they follow your settings by themselves:
+
+| When | What happens |
+| --- | --- |
+| You open another machine Settings Sync brings your settings to | Courier there puts the icons in place on its own, without asking again |
+| Courier updates | Nothing changes: the settings name no version of Courier |
+| You take them out, on any machine | They go on every machine Settings Sync reaches, and Courier clears its copies there |
+| You uninstall Courier | They keep showing; take them out first to leave nothing behind |
+
+They go in through your user settings — the associations those themes read — beside your own, which stay as they are. The icons themselves sit in a folder of their own beside Material Icon Theme, `.noverax-courier-icons` in the editor's extensions folder — its dot keeps the editor from reading it as an extension — and in vscode-icons' custom icons folder. Other icon themes take no custom icons; VS Code's own Seti among them.
 
 ## Your API, for VS Code's agent
 
@@ -269,6 +278,6 @@ The extension sends Studio the text of the files you open, so an address naming 
 
 A question to `@courier` in words goes to the model you picked in the chat, with Studio's figures for this session — endpoint names, statuses, error messages, the audit's findings — as any question in that chat goes to it with your code. The four commands answer from Studio alone, and ask no model.
 
-The extension writes to your user settings only when you ask for Courier's file icons, and takes back what it wrote when you remove them. It sends nothing anywhere else, and keeps no telemetry.
+The extension writes to your user settings only when you ask for Courier's file icons — and keeps them as you left them on your other machines — and takes back what it wrote when you remove them. It sends nothing anywhere else, and keeps no telemetry.
 
 The extension starts Studio, Create Courier and the agent's servers from the project's folder, so it stays off in a workspace you have not trusted: VS Code's Restricted Mode turns it off until you trust the folder.

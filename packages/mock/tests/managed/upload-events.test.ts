@@ -9,7 +9,6 @@ import { courier, defineApi, defineGroup } from "@noverax/courier/define";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { defineMockServer } from "../../src/managed/define-mock-server";
-import type { ChildMessage } from "../../src/managed/types";
 import type { DrivenWorker } from "./drive-worker";
 import { driveWorker, startWorker, stopWorker } from "./drive-worker";
 
@@ -25,12 +24,9 @@ const api = defineApi({
   },
 });
 
-type Event = Extract<ChildMessage, { type: "event" }>;
-
-const isRequestEvent = (m: ChildMessage): m is Event =>
-  m.type === "event" && String(m.event.type).startsWith("mock:request:");
-const ended = (m: ChildMessage): m is Event =>
-  m.type === "event" && m.event.type === "mock:request:end";
+const isRequestEvent = (event: Record<string, unknown>): boolean =>
+  String(event.type).startsWith("mock:request:");
+const ended = (event: Record<string, unknown>): boolean => event.type === "mock:request:end";
 
 let worker: DrivenWorker;
 let url: string;
@@ -54,8 +50,8 @@ describe("a slow upload to a managed mock", () => {
     const size = (await new Response(form).blob()).size;
 
     await fetch(`${url}/files`, { method: "POST", body: form });
-    await worker.next(ended);
-    const events = worker.sent.filter(isRequestEvent).map((m) => m.event);
+    await worker.nextEvent(ended);
+    const events = worker.events().filter(isRequestEvent);
 
     const kinds = events.map((event) => event.type);
     const uploads = events.filter((event) => event.type === "mock:request:upload");

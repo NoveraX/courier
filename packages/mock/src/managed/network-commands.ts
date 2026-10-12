@@ -7,7 +7,7 @@ import { networkConfigOnWire } from "../network/network-config-on-wire";
 import { recordPresets } from "../network/record-presets";
 import { routeOverridePatch } from "../network/route-override-list";
 import type { MockServer } from "../server/create-mock-server";
-import { send } from "./worker-ipc";
+import { sendEvent } from "./worker-ipc";
 
 type CmdResult = { ok: boolean; data?: unknown; error?: string };
 
@@ -78,21 +78,15 @@ export function handleChaosCommand(server: MockServer, cmd: Record<string, unkno
  */
 export function reportHalts(server: MockServer): void {
   server.networkState.onHalt = ({ reason, durationMs }) => {
-    send({
-      type: "event",
-      event: {
-        type: "mock:experiment:event",
-        eventType: "auto-halted",
-        mode: "chaos",
-        reason,
-        errorRate: 0,
-        ...(durationMs === undefined ? {} : { durationMs }),
-      },
+    sendEvent({
+      type: "mock:experiment:event",
+      eventType: "auto-halted",
+      mode: "chaos",
+      reason,
+      errorRate: 0,
+      ...(durationMs === undefined ? {} : { durationMs }),
     });
-    send({
-      type: "event",
-      event: { type: "mock:network:config", config: { autoHalted: true, haltReason: reason } },
-    });
+    sendEvent({ type: "mock:network:config", config: { autoHalted: true, haltReason: reason } });
     emitNetworkState(server);
   };
 }
@@ -117,22 +111,16 @@ function emitPresetTransition(
   const isActive = next !== offValue && next !== "none" && next !== "stable";
 
   if (wasActive) {
-    send({
-      type: "event",
-      event: {
-        type: "mock:experiment:event",
-        eventType: "stopped",
-        mode: prev.preset,
-        errorRate: 0,
-        ...lengthSince(prev.startedAt),
-      },
+    sendEvent({
+      type: "mock:experiment:event",
+      eventType: "stopped",
+      mode: prev.preset,
+      errorRate: 0,
+      ...lengthSince(prev.startedAt),
     });
   }
   if (isActive) {
-    send({
-      type: "event",
-      event: { type: "mock:experiment:event", eventType: "started", mode: next, errorRate: 0 },
-    });
+    sendEvent({ type: "mock:experiment:event", eventType: "started", mode: next, errorRate: 0 });
   }
 }
 
@@ -147,8 +135,5 @@ function emitPresetTransition(
  * ```
  */
 export function emitNetworkState(server: MockServer): void {
-  send({
-    type: "event",
-    event: { type: "mock:network:config", config: networkConfigOnWire(server.networkState) },
-  });
+  sendEvent({ type: "mock:network:config", config: networkConfigOnWire(server.networkState) });
 }

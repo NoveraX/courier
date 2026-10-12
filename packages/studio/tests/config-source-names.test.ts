@@ -131,7 +131,7 @@ beforeAll(async () => {
       if (status.state === "loaded") resolve();
     });
   });
-  ui.on("event", (event: Record<string, unknown>) => events.push(event));
+  ui.on("events", (batch: Array<Record<string, unknown>>) => events.push(...batch));
   await loaded;
 
   process.env.COURIER_STUDIO_URL = url;

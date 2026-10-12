@@ -13,7 +13,7 @@ import type { NetworkState } from "./state";
  * @returns The settings, with the presets the page restores on reconnect
  * @example
  * ```ts
- * send({ type: "event", event: { type: "mock:network:config", config: networkConfigOnWire(state) } });
+ * sendEvent({ type: "mock:network:config", config: networkConfigOnWire(state) });
  * ```
  */
 export function networkConfigOnWire(state: NetworkState): Record<string, unknown> {

@@ -10,7 +10,7 @@ import { restoreNetwork } from "./restore-network";
 import { buildScenarioMeta } from "./scenario-meta";
 import { handleStoreCommand } from "./store-commands";
 import type { ParentMessage, ServedMock } from "./types";
-import { send } from "./worker-ipc";
+import { send, sendEvent } from "./worker-ipc";
 
 export function handleCommand(
   served: ServedMock,
@@ -52,14 +52,14 @@ export function handleCommand(
   }
 
   const result = handleStoreCommand(served, msg.command);
-  send({ type: "command-result", requestId: msg.requestId, ...result });
-
   if (action === "mock:scenario:apply") {
     emitScenarioApplied(server, analyzedRoutes, result, buildUiRoutes);
   }
   /* A command changes the store outside any request, which reports and
-     saves it otherwise: the page that sent it is shown the change at once. */
+     saves it otherwise: the page that sent it is shown the change at once,
+     ahead of the result it waits for. */
   feed.flush();
+  send({ type: "command-result", requestId: msg.requestId, ...result });
   void server.saveStore();
 }
 
@@ -73,14 +73,11 @@ function emitScenarioApplied(
   if (!appliedName) return;
 
   const updated = buildScenarioMeta(server.scenarios, analyzedRoutes, appliedName);
-  send({
-    type: "event",
-    event: {
-      type: "mock:scenario:active",
-      scenario: appliedName,
-      scenarios: updated,
-      routes: buildUiRoutes(),
-    },
+  sendEvent({
+    type: "mock:scenario:active",
+    scenario: appliedName,
+    scenarios: updated,
+    routes: buildUiRoutes(),
   });
 }
 

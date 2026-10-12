@@ -101,6 +101,7 @@ function studio() {
     /* The pages with the token, which see each event whole. */
     uiNamespace: {
       emit,
+      adapter: { rooms: new Map([[TOKEN_PAGES, new Set(["page-1"])]]) },
       to: (room: string) => ({ emit: room === TOKEN_PAGES ? emit : vi.fn() }),
     } as unknown as Namespace,
     transformCacheDirectory: () => STUDIO_TRANSFORMS,
@@ -108,7 +109,9 @@ function studio() {
   });
   coordinator.setMocksFile({ file: MOCKS_FILE, error: null });
   const emitted = (): Emitted[] =>
-    emit.mock.calls.filter(([name]) => name === "event").map(([, event]) => event as Emitted);
+    emit.mock.calls
+      .filter(([name]) => name === "events")
+      .flatMap(([, events]) => events as Emitted[]);
   const statuses = () =>
     emit.mock.calls.filter(([name]) => name === "mocks:status").map(([, status]) => status);
   const last = (serverId: string) =>
@@ -516,8 +519,10 @@ describe("the mocks file's status", () => {
 
     coordinator.sendSnapshot(page as unknown as Socket);
 
-    const sent = page.emit.mock.calls.filter(([name]) => name === "event");
-    expect(sent.map(([, event]) => event.type)).toEqual(["mock:server:connect"]);
+    const sent = page.emit.mock.calls
+      .filter(([name]) => name === "events")
+      .flatMap(([, events]) => events as Emitted[]);
+    expect(sent.map((event) => event.type)).toEqual(["mock:server:connect"]);
     expect(emitted()).toHaveLength(before);
     await coordinator.stop();
   });

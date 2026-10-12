@@ -75,7 +75,7 @@ export const READ_ONLY_VISITORS: VisitorPolicy = {
  * when it waits for one, as the end of its call when it sends a Playground
  * call — so the call stops waiting — and as `studio:read-only` otherwise.
  * The page still receives everything it shows, live traffic without its
- * credentials (see `emitLiveEvent`).
+ * credentials (see `emitLiveEvents`).
  *
  * @param socket - The page's socket, just connected
  * @param token - The project's token

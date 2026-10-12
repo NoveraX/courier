@@ -108,7 +108,7 @@ async function started(): Promise<string> {
     onError: vi.fn<(serverId: string, message: string, fatal: boolean) => void>(),
     onStopped: vi.fn(),
     onExited: vi.fn<(serverId: string, reason: string) => void>(),
-    onEvent: vi.fn(),
+    onEvents: vi.fn(),
   } satisfies ProcessManagerEvents;
   const pm = createProcessManager(events, {
     transformCacheDirectory: () => null,

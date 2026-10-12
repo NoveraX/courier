@@ -8,26 +8,23 @@
 import { carriedBody } from "@noverax/courier/internal";
 import { describedUploads } from "../described-uploads";
 import type { ServedMock } from "./types";
-import { send } from "./worker-ipc";
+import { sendEvent } from "./worker-ipc";
 import { trackWritesInFlight } from "./writes-in-flight";
 
 export function wireRequestHooks({ server, feed, bodies }: ServedMock): void {
   const writes = trackWritesInFlight();
   /* A slow body shows in Studio's log as it arrives; its `start` follows under the same id. */
   server.requestHooks.onUpload = (id, { httpMethod, path, group, endpoint, received, total }) => {
-    send({
-      type: "event",
-      event: {
-        type: "mock:request:upload",
-        requestId: id,
-        httpMethod,
-        path,
-        group,
-        endpoint,
-        source: server.getRouteSource(group, endpoint),
-        received,
-        ...(total !== undefined && { total }),
-      },
+    sendEvent({
+      type: "mock:request:upload",
+      requestId: id,
+      httpMethod,
+      path,
+      group,
+      endpoint,
+      source: server.getRouteSource(group, endpoint),
+      received,
+      ...(total !== undefined && { total }),
     });
   };
   server.requestHooks.onStart = (
@@ -42,21 +39,18 @@ export function wireRequestHooks({ server, feed, bodies }: ServedMock): void {
     writes.start(id, httpMethod);
     const sent = carriedBody(describedUploads(variables));
     bodies.keep(id, "request", sent);
-    send({
-      type: "event",
-      event: {
-        type: "mock:request:start",
-        requestId: id,
-        httpMethod,
-        path,
-        group,
-        endpoint,
-        /* What answers it, read as it arrives: a later scenario does not rewrite it. */
-        source: server.getRouteSource(group, endpoint),
-        variables: sent.value,
-        ...(sent.whole && { variablesCutFrom: sent.whole.bytes }),
-        requestHeaders,
-      },
+    sendEvent({
+      type: "mock:request:start",
+      requestId: id,
+      httpMethod,
+      path,
+      group,
+      endpoint,
+      /* What answers it, read as it arrives: a later scenario does not rewrite it. */
+      source: server.getRouteSource(group, endpoint),
+      variables: sent.value,
+      ...(sent.whole && { variablesCutFrom: sent.whole.bytes }),
+      requestHeaders,
     });
   };
   server.requestHooks.onEnd = (
@@ -70,27 +64,21 @@ export function wireRequestHooks({ server, feed, bodies }: ServedMock): void {
   ) => {
     const answered = carriedBody(data);
     bodies.keep(id, "response", answered);
-    send({
-      type: "event",
-      event: {
-        type: "mock:request:end",
-        requestId: id,
-        status,
-        data: answered.value,
-        ...(answered.whole && { dataCutFrom: answered.whole.bytes }),
-        duration,
-        latencyInjected,
-        scenarioState,
-        responseHeaders,
-      },
+    sendEvent({
+      type: "mock:request:end",
+      requestId: id,
+      status,
+      data: answered.value,
+      ...(answered.whole && { dataCutFrom: answered.whole.bytes }),
+      duration,
+      latencyInjected,
+      scenarioState,
+      responseHeaders,
     });
     if (writes.end(id)) feed.changed();
   };
   server.requestHooks.onError = (id, status, message, duration) => {
-    send({
-      type: "event",
-      event: { type: "mock:request:error", requestId: id, status, message, duration },
-    });
+    sendEvent({ type: "mock:request:error", requestId: id, status, message, duration });
     if (writes.end(id)) feed.changed();
   };
 }

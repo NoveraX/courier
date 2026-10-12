@@ -13,6 +13,7 @@ import { io as connect, type Socket } from "socket.io-client";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { createStudioServer } from "../src/server";
+import { sendRuntimeEvents } from "./helpers/runtime-events";
 
 type Event = Record<string, unknown>;
 
@@ -89,7 +90,7 @@ async function ui(studio: string, token?: string): Promise<WatchingUi> {
     socket.disconnect();
   });
   const seen: WatchingUi = { socket, events: [], replays: [] };
-  socket.on("event", (event: Event) => seen.events.push(event));
+  socket.on("events", (events: Event[]) => seen.events.push(...events));
   socket.on("events:replay", (events: Event[]) => seen.replays.push(events));
   await new Promise<void>((resolve) => socket.once("connect", () => resolve()));
   return seen;
@@ -110,8 +111,8 @@ describe("a Studio page that connects after traffic", () => {
     const studio = await startStudio();
     const app = await runtime(studio);
     const watching = await ui(studio);
-    app.emit("event", event("request:start", { id: "r1", source: "api", method: "list" }));
-    app.emit("event", event("request:end", { requestId: "r1", status: 200 }));
+    sendRuntimeEvents(app, [event("request:start", { id: "r1", source: "api", method: "list" })]);
+    sendRuntimeEvents(app, [event("request:end", { requestId: "r1", status: 200 })]);
     await expect.poll(() => watching.events.length).toBe(2);
 
     const reloaded = await ui(studio);
@@ -127,8 +128,8 @@ describe("a Studio that restarts", () => {
     const first = await runStudio(root);
     const app = await runtime(first.url);
     const watching = await ui(first.url);
-    app.emit("event", event("request:start", { id: "r1", source: "api", method: "list" }));
-    app.emit("event", event("request:end", { requestId: "r1", status: 200 }));
+    sendRuntimeEvents(app, [event("request:start", { id: "r1", source: "api", method: "list" })]);
+    sendRuntimeEvents(app, [event("request:end", { requestId: "r1", status: 200 })]);
     await expect.poll(() => watching.events.length).toBe(2);
     app.disconnect();
     watching.socket.disconnect();
@@ -151,7 +152,7 @@ describe("a Studio page that clears its log", () => {
     const app = await runtime(studio.url);
     const watching = await ui(studio.url, studio.token);
     for (const id of ["r1", "r2"]) {
-      app.emit("event", event("request:start", { id, source: "api", method: "list" }));
+      sendRuntimeEvents(app, [event("request:start", { id, source: "api", method: "list" })]);
     }
     await expect.poll(() => watching.events.length).toBe(2);
 
@@ -169,13 +170,12 @@ describe("a runtime that goes away", () => {
     const studio = await startStudio();
     const app = await runtime(studio);
     const watching = await ui(studio);
-    app.emit(
-      "event",
+    sendRuntimeEvents(app, [
       event("stream:open", { requestId: "s1", source: "api", method: "ticks", transport: "sse" }),
-    );
-    app.emit("event", event("request:start", { id: "r1", source: "api", method: "slow" }));
-    app.emit("event", event("request:start", { id: "r2", source: "api", method: "list" }));
-    app.emit("event", event("request:end", { requestId: "r2", status: 200 }));
+    ]);
+    sendRuntimeEvents(app, [event("request:start", { id: "r1", source: "api", method: "slow" })]);
+    sendRuntimeEvents(app, [event("request:start", { id: "r2", source: "api", method: "list" })]);
+    sendRuntimeEvents(app, [event("request:end", { requestId: "r2", status: 200 })]);
     await expect.poll(() => watching.events.length).toBe(4);
 
     app.disconnect();

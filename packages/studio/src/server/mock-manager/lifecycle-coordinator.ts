@@ -55,7 +55,7 @@ export interface LifecycleCoordinator {
 
 export function createLifecycleCoordinator(config: CoordinatorConfig): LifecycleCoordinator {
   const servers = new Map<string, ServerState>();
-  const { emit, emitServerState, sendServerState } = createUiEmitter(config.uiNamespace);
+  const { emit, emitAll, emitServerState, sendServerState } = createUiEmitter(config.uiNamespace);
   let closed = false;
 
   const updateAndEmit = (serverId: string, patch: Partial<ServerState>) => {
@@ -68,7 +68,7 @@ export function createLifecycleCoordinator(config: CoordinatorConfig): Lifecycle
   const processManager = createProcessManager(
     createProcessEvents({
       servers,
-      emit,
+      emitAll,
       updateAndEmit,
       mockLog: config.mockLog,
       conditions:

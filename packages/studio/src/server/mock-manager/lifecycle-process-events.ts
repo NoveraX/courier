@@ -22,7 +22,8 @@ const GONE: Partial<ServerState> = { pid: undefined, actualPort: undefined, url:
 
 export interface ProcessEventsContext {
   servers: Map<string, ServerState>;
-  emit: (type: string, payload: Record<string, unknown>) => void;
+  /** Tell every page what a worker reported, in one message: each event names its type. */
+  emitAll: (events: readonly Record<string, unknown>[]) => void;
   updateAndEmit: (serverId: string, patch: Partial<ServerState>) => void;
   /** Keeps the requests each mock answered, for the pages that connect later. */
   mockLog?: MockLog | undefined;
@@ -33,7 +34,7 @@ export interface ProcessEventsContext {
 }
 
 export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEvents {
-  const { servers, emit, updateAndEmit } = ctx;
+  const { servers, emitAll, updateAndEmit } = ctx;
   const nameOf = (serverId: string): string => servers.get(serverId)?.name ?? serverId;
 
   return {
@@ -98,21 +99,27 @@ export function createProcessEvents(ctx: ProcessEventsContext): ProcessManagerEv
       updateAndEmit(serverId, { status: "crashed", lastError: reason, ...GONE });
     },
 
-    /* Every event the worker sends names its type; the page is sent each one
-       as it came, and Studio keeps what it changed for pages that connect
-       later. It is stamped once, so a page that reloads is shown each request
-       at the time a page was shown it live. */
-    onEvent(serverId, event) {
-      const { type } = event;
-      if (typeof type !== "string") return;
-      const shown = { ...event, serverId, timestamp: Date.now() };
-      emit(type, shown);
-      ctx.mockLog?.record(shown);
-      const state = servers.get(serverId);
-      if (state && !applyWorkerEvent(state, event)) ctx.resendStore(serverId);
-      if (type === "mock:network:config" || type === "mock:scenario:active") {
-        ctx.conditions?.keep(serverId);
+    /* Every event the worker sends names its type; the pages are sent the
+       ones that came together in one message, each as it came, and Studio
+       keeps what they changed for pages that connect later. Each is stamped
+       once, so a page that reloads is shown each request at the time a page
+       was shown it live. */
+    onEvents(serverId, events) {
+      const shown: Record<string, unknown>[] = [];
+      let resend = false;
+      for (const event of events) {
+        if (typeof event.type !== "string") continue;
+        const stamped = { ...event, serverId, timestamp: Date.now() };
+        shown.push(stamped);
+        ctx.mockLog?.record(stamped);
+        const state = servers.get(serverId);
+        if (state && !applyWorkerEvent(state, event)) resend = true;
+        if (event.type === "mock:network:config" || event.type === "mock:scenario:active") {
+          ctx.conditions?.keep(serverId);
+        }
       }
+      if (shown.length > 0) emitAll(shown);
+      if (resend) ctx.resendStore(serverId);
     },
   };
 }

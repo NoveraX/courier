@@ -15,6 +15,8 @@ export interface StudioMessageLimit {
    * @param payload - The message, as it would be sent
    */
   refusal(what: string, payload: unknown): string | null;
+  /** The most bytes one message may hold: `Infinity` while Studio has not said. */
+  most(): number;
   /** Take what Studio said when the runtime said hello. */
   welcome(said: unknown): void;
 }
@@ -41,6 +43,7 @@ export function studioMessageLimit(): StudioMessageLimit {
           : undefined;
       if (typeof told === "number" && told > ENVELOPE_BYTES) max = told - ENVELOPE_BYTES;
     },
+    most: () => max,
     refusal(what, payload) {
       if (!Number.isFinite(max)) return null;
       const size = jsonBytes(payload, max);

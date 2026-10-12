@@ -1,11 +1,12 @@
 import { dirname, join } from "node:path";
 import * as vscode from "vscode";
 
+import { builtWithCourier } from "./built-theme";
 import { copyIcons, removeCopies } from "./icon-copies";
 import { type CourierIcons, ICON_THEMES } from "./icon-files";
 import { type IconUsers, iconUsers } from "./icon-users";
 import { notHere } from "./theme-reach";
-import { changeThemeSettings } from "./theme-rewrites";
+import { changeThemeSettings, type RebuiltTheme } from "./theme-rewrites";
 import { settingIn, userSetting } from "./user-settings";
 import {
   hasCourierEntries,
@@ -16,6 +17,9 @@ import {
   withoutCourierEntries,
 } from "./vscode-icons";
 import { customFolder, vsiconsTheme } from "./vsicons-theme";
+
+/* What names Courier's icons in vscode-icons' built theme: its copy of the config's icon. */
+const BUILT_MARK = VSICONS_PLAN.copies.get("courier-config.svg") ?? "file_type_courier-config.svg";
 
 /**
  * Put Courier's icons into vscode-icons: copied into its custom icons
@@ -87,6 +91,7 @@ export async function removeVsicons(icons: CourierIcons): Promise<void> {
 export async function keepVsiconsCurrent(icons: CourierIcons): Promise<void> {
   const vsicons = vscode.extensions.getExtension(ICON_THEMES.vsicons.extension);
   if (!vsicons) return;
+  const theme = vsiconsTheme(vsicons);
   const users = usersOf(vsicons.extensionPath, icons);
   if (hasVsiconsIcons()) {
     const copied = await copyIcons(copiesFor(icons.dir));
@@ -99,19 +104,31 @@ export async function keepVsiconsCurrent(icons: CourierIcons): Promise<void> {
     const changes = current
       .filter(([key]) => hasCourierEntries(userSetting(key)))
       .map(([key, ours]): [string, unknown] => [key, withCourierEntries(userSetting(key), ours)]);
-    await changeThemeSettings(vsiconsTheme(vsicons), changes, copied);
+    await changeThemeSettings(theme, changes, copied);
+    await builtAsWanted(theme, true);
     return;
   }
   /* A team's own settings may name Courier's icons for its workspace: in one trusted, they are copied for it. */
   if (sharedHere()) {
-    if (await copyIcons(copiesFor(icons.dir))) await vsiconsTheme(vsicons).apply?.();
+    if (await copyIcons(copiesFor(icons.dir))) await theme.apply?.();
+    else await builtAsWanted(theme, true);
     return;
   }
-  if (!(await users.has()) || !(await users.release())) return;
   const anywhere = vscode.workspace.getConfiguration();
   const used = [VSICONS_FILES, VSICONS_FOLDERS].some((key) => hasCourierEntries(anywhere.get(key)));
+  const last = (await users.has()) && (await users.release());
   /* vscode-icons rebuilds only when its settings change while it runs: taken out while the editor was closed, it is asked. */
-  if (!used && (await removeCopies(copyPaths()))) await vsiconsTheme(vsicons).apply?.();
+  if (last && !used && (await removeCopies(copyPaths()))) await theme.apply?.();
+  else await builtAsWanted(theme, false);
+}
+
+/*
+ * vscode-icons' built theme, every profile's, as this profile's settings want it: built for another profile with
+ * Courier's icons or without them, it is built again — vscode-icons does not look at its settings as it starts.
+ */
+async function builtAsWanted(theme: RebuiltTheme, wanted: boolean): Promise<void> {
+  const built = await builtWithCourier(theme.files[0] ?? "", BUILT_MARK);
+  if (built !== undefined && built !== wanted) await theme.apply?.();
 }
 
 /**

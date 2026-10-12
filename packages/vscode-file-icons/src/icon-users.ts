@@ -1,8 +1,15 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readdir, rm, rmdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import type * as vscode from "vscode";
 
 import { ICONS_HOME } from "./icon-files";
+import { logFailure } from "./icons-log";
+
+/* The key of this profile's own id in its state. */
+const PROFILE = "courier.fileIcons.profile";
+/* A profile not started for this long — deleted, or a temporary one gone — no longer keeps the copies. */
+const GONE_MS = 90 * 24 * 60 * 60 * 1000;
 
 /** The profiles on this computer that use one folder of Courier's icon copies. */
 export interface IconUsers {
@@ -22,13 +29,17 @@ export interface IconUsers {
  * the copies go only once no profile that put them in uses them, never
  * because a profile that never did lacks them.
  *
+ * Each profile's file is written again whenever it keeps the icons, and
+ * one not written for ninety days — a profile deleted, or a temporary one
+ * gone — no longer counts.
+ *
  * @param extensionsDir - The editor's extensions folder, the theme's parent
  * @param copies - The folder that holds the copies
- * @param profile - What tells this profile from the others: its storage folder
+ * @param profile - What tells this profile from the others: its own id, from {@link profileOf}
  * @returns The profiles that use the copies
  * @example
  * ```ts
- * const users = iconUsers(dirname(material.extensionPath), home, context.globalStorageUri.toString());
+ * const users = iconUsers(dirname(material.extensionPath), home, profileOf(context.globalState));
  * if (await users.release()) await removeCopies(files, home);
  * ```
  */
@@ -44,12 +55,46 @@ export function iconUsers(extensionsDir: string, copies: string, profile: string
     },
     async release() {
       await rm(mark, { force: true });
-      const left = await readdir(folder).catch(() => []);
-      if (left.length > 0) return false;
+      if ((await countIn(folder)) > 0) return false;
       await removeEmpty([folder, users, dirname(users)]);
       return true;
     },
   };
+}
+
+/**
+ * What tells this profile from the editor's others: an id it keeps in its
+ * own state, made the first time it is asked for. Every profile has state
+ * of its own, while an extension's storage folder is one for all of them.
+ *
+ * @param state - The profile's state: the extension's global state
+ * @returns The id
+ * @example
+ * ```ts
+ * const icons = { dir, profile: profileOf(context.globalState) };
+ * ```
+ */
+export function profileOf(state: vscode.Memento): string {
+  const kept = state.get<string>(PROFILE);
+  if (kept) return kept;
+  const made = randomUUID();
+  state.update(PROFILE, made).then(undefined, (error: unknown) => {
+    logFailure("Courier could not keep this profile's id: it counts as a new one next time", error);
+  });
+  return made;
+}
+
+/* The profiles counted in a folder, those gone for good taken away. */
+async function countIn(folder: string): Promise<number> {
+  const marks = await readdir(folder).catch(() => []);
+  let count = 0;
+  for (const name of marks) {
+    const mark = join(folder, name);
+    const written = (await stat(mark).catch(() => undefined))?.mtimeMs ?? 0;
+    if (Date.now() - written < GONE_MS) count += 1;
+    else await rm(mark, { force: true });
+  }
+  return count;
 }
 
 /* Each folder, innermost first, while it is there and empty. */

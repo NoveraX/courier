@@ -5,6 +5,7 @@ import { applyIcons, hasCourierIcons, keepIconsCurrent, removeIcons } from "./ap
 import { type CourierWorkspace, watchCourierWorkspace } from "./courier-workspace";
 import { showHere, tellHiddenHere } from "./hidden-here";
 import { type CourierIcons, ICON_THEME_IDS, ICON_THEMES, type IconTheme } from "./icon-files";
+import { profileOf } from "./icon-users";
 import { iconsLog, logFailure } from "./icons-log";
 import { MATERIAL_FILES, MATERIAL_FOLDERS } from "./material-icons";
 import { notHere, themeInUse } from "./theme-reach";
@@ -38,7 +39,7 @@ const SETTLE_MS = 1_500;
 export function registerFileIcons(context: vscode.ExtensionContext): vscode.Disposable {
   const icons: CourierIcons = {
     dir: join(context.extensionPath, "media", "icons"),
-    profile: context.globalStorageUri.toString(),
+    profile: profileOf(context.globalState),
   };
   const workspace = watchCourierWorkspace();
   /* One change to the icons at a time: the themes rebuild on each, and an offer, a command and a sync may come together. */

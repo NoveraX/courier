@@ -56,7 +56,7 @@ export type IconTheme = keyof typeof ICON_THEMES;
 export interface CourierIcons {
   /** Courier's `media/icons` folder */
   readonly dir: string;
-  /** What tells this profile from the editor's others, which share the copies: its storage folder */
+  /** What tells this profile from the editor's others, which share the copies: its own id */
   readonly profile: string;
 }
 

@@ -23,7 +23,7 @@ interface RouteFaultsRowProps {
  */
 export function RouteFaultsRow({ faults, onFaults }: RouteFaultsRowProps): React.ReactNode {
   return (
-    <div className="grid grid-cols-[72px_minmax(0,1fr)_24px] items-center gap-3">
+    <div className="grid grid-cols-[72px_minmax(0,1fr)_24px] items-center gap-3 @max-[30rem]:grid-cols-[72px_minmax(0,1fr)]">
       <span className="text-small text-fg-subtle">Fails with</span>
       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
         {faults.length === 0 && (
@@ -42,7 +42,7 @@ export function RouteFaultsRow({ faults, onFaults }: RouteFaultsRowProps): React
                 type="button"
                 aria-label={`Take ${look.label} out`}
                 onClick={() => onFaults(faults.filter((other) => other !== type))}
-                className="flex size-5 cursor-pointer items-center justify-center rounded-[4px] text-fg-subtle hover:bg-raised hover:text-fg"
+                className="hit-area relative flex size-5 cursor-pointer items-center justify-center rounded-[4px] text-fg-subtle hover:bg-raised hover:text-fg"
               >
                 <X aria-hidden="true" className="size-2.75" />
               </button>
@@ -55,7 +55,7 @@ export function RouteFaultsRow({ faults, onFaults }: RouteFaultsRowProps): React
           onAdd={(type) => onFaults([...faults, type])}
         />
       </div>
-      <span />
+      <span className="@max-[30rem]:hidden" />
     </div>
   );
 }

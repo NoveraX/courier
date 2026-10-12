@@ -22,6 +22,8 @@ interface TypesFieldProps {
  * Enter is pressed, and only when it names other types than the field held
  * as typing began, so types set elsewhere meanwhile — by Stop, say — are
  * not put back by a field merely left; Escape puts back the types in force.
+ * A phone's keyboard leaves what is typed as typed — no capitals, no
+ * corrections — and offers Done for Enter.
  *
  * @param props - The types in force, the placeholder and label, and what follows a settled change
  * @returns The field
@@ -52,6 +54,10 @@ export function TypesField({
       aria-label={label}
       placeholder={placeholder}
       spellCheck={false}
+      autoCorrect="off"
+      autoCapitalize="off"
+      autoComplete="off"
+      enterKeyHint="done"
       disabled={disabled}
       value={draft?.text ?? typesText(value)}
       onFocus={() => setDraft({ text: typesText(value), from: typesText(value) })}
@@ -68,7 +74,7 @@ export function TypesField({
         }
       }}
       className={cn(
-        "h-7.5 min-w-0 rounded-control border border-line bg-inset px-2.5 font-mono text-small text-fg outline-none placeholder:font-sans placeholder:text-fg-subtle focus-visible:border-brand/60 disabled:opacity-50",
+        "h-7.5 min-w-0 rounded-control border border-line bg-inset px-2.5 font-mono text-small text-fg outline-none placeholder:font-sans placeholder:text-fg-subtle focus-visible:border-brand/60 disabled:opacity-50 pointer-coarse:h-10 pointer-coarse:text-base",
         className,
       )}
     />

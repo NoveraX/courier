@@ -29,9 +29,9 @@ export function RouteUploadRows({ override, onCommit }: RouteUploadRowsProps): R
   const presets = SIZE_LIMITS.filter((bytes) => bytes > 0);
   return (
     <>
-      <div className="grid grid-cols-[72px_minmax(0,1fr)_24px] items-center gap-3">
+      <div className="grid grid-cols-[72px_minmax(0,1fr)_24px] items-center gap-3 @max-[30rem]:grid-cols-[72px_minmax(0,1fr)]">
         <span className="text-small text-fg-subtle">Size limit</span>
-        <div className="min-w-0">
+        <div className="scroll-row min-w-0">
           <Segmented
             label="Route size limit"
             quiet="subtle"
@@ -50,9 +50,9 @@ export function RouteUploadRows({ override, onCommit }: RouteUploadRowsProps): R
             }
           />
         </div>
-        <span />
+        <span className="@max-[30rem]:hidden" />
       </div>
-      <div className="grid grid-cols-[72px_minmax(0,1fr)_24px] items-center gap-3">
+      <div className="grid grid-cols-[72px_minmax(0,1fr)_24px] items-center gap-3 @max-[30rem]:grid-cols-[72px_minmax(0,1fr)]">
         <span className="text-small text-fg-subtle">File types</span>
         <TypesField
           label="Route file types"
@@ -62,7 +62,7 @@ export function RouteUploadRows({ override, onCommit }: RouteUploadRowsProps): R
             onCommit(withUploadRule(override, "accept", types.length > 0 ? types : undefined))
           }
         />
-        <span />
+        <span className="@max-[30rem]:hidden" />
       </div>
     </>
   );

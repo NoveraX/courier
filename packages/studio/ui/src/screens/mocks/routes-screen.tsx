@@ -4,19 +4,12 @@ import { SearchField } from "@/design/search-field";
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import type { MockRoutesSearch, RouteKind } from "@/features/mocks/routes-view";
-import {
-  filterRoutes,
-  ROUTE_KINDS,
-  routeKeyOf,
-  routeKindCounts,
-} from "@/features/mocks/routes-view";
+import { filterRoutes, ROUTE_KINDS, routeKindCounts } from "@/features/mocks/routes-view";
 import { inspectorOf } from "@/features/requests/inspector-of";
 import { useFirstLoad } from "@/hooks/use-first-load";
-import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { MocksSkeleton } from "./mocks-skeleton";
-import { ROUTE_COLUMNS } from "./route-columns";
-import { RouteRow } from "./route-row";
+import { RoutesList } from "./routes-list";
 import { useMockServer } from "./use-mock-server";
 
 const KIND_LABELS: Readonly<Record<RouteKind, string>> = {
@@ -66,57 +59,32 @@ export function MockRoutesScreen(): React.ReactNode {
   }));
   const routes = filterRoutes(server.routes, search.q ?? "", kind);
   return (
-    <div className="flex flex-col gap-3 px-5 pt-4 pb-8">
+    <div className="flex flex-col gap-3 px-5 pt-4 pb-8 max-sm:px-4">
       <div className="flex flex-wrap items-center gap-2.5">
         <SearchField
           value={search.q ?? ""}
           onChange={(q) => set({ q: q || undefined })}
           placeholder="Filter routes…"
           label="Filter routes"
-          className="w-70 max-w-full"
+          className="w-70 max-w-full max-sm:w-full"
         />
-        <Segmented
-          label="Handler"
-          options={kinds}
-          value={kind}
-          onChange={(next) => set({ kind: next === "all" ? undefined : next })}
-          quiet="subtle"
-        />
-      </div>
-      <section
-        aria-label="Routes"
-        className="overflow-hidden rounded-dialog border border-line bg-panel"
-      >
-        <div
-          aria-hidden="true"
-          className={cn(
-            "grid h-8.5 items-center gap-3 border-b border-line bg-panel-subtle px-4 text-label text-fg-subtle",
-            ROUTE_COLUMNS,
-          )}
-        >
-          <span>Route</span>
-          <span>Handler</span>
-          <span className="text-right">Avg</span>
-          <span className="text-right">Hits</span>
+        <div className="scroll-row max-w-full min-w-0">
+          <Segmented
+            label="Handler"
+            options={kinds}
+            value={kind}
+            onChange={(next) => set({ kind: next === "all" ? undefined : next })}
+            quiet="subtle"
+          />
         </div>
-        {routes.length === 0 && (
-          <p className="px-4 py-8 text-center text-control text-fg-subtle">No routes match</p>
-        )}
-        {routes.map((route) => {
-          const key = routeKeyOf(route);
-          const open = search.open === key;
-          return (
-            <RouteRow
-              key={key}
-              route={route}
-              open={open}
-              serverUrl={server.url}
-              slowMs={slowMs}
-              onToggle={() => set({ open: open ? undefined : key })}
-            />
-          );
-        })}
-      </section>
+      </div>
+      <RoutesList
+        routes={routes}
+        open={search.open}
+        serverUrl={server.url}
+        slowMs={slowMs}
+        onOpen={(open) => set({ open })}
+      />
     </div>
   );
 }

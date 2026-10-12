@@ -44,7 +44,8 @@ function conditionOf(server: MockServerInfo): { title: string; sub: string; acti
  * The network condition the mock serves under — its chaos, its added
  * delay, its bandwidth cap, how it takes uploads and the routes
  * overridden, drawn in the chaos mode's colour, with a Stop for all of
- * them — and four live figures with their sparklines.
+ * them — and four live figures with their sparklines, two by two on a
+ * phone.
  *
  * @param props - The mock server, and its live figures
  * @returns The hero
@@ -66,14 +67,14 @@ export function NetworkHero({
     <section
       aria-label="Network condition"
       className={cn(
-        "grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] overflow-hidden rounded-[16px] border bg-panel",
+        "grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] overflow-hidden rounded-[16px] border bg-panel",
         look.tone,
         active ? "border-[color-mix(in_srgb,currentColor_30%,transparent)]" : "border-line",
       )}
     >
       <div
         className={cn(
-          "-mb-px flex items-center gap-3.5 border-r border-b border-line px-5 py-4.5",
+          "-mb-px flex items-center gap-3.5 border-r border-b border-line px-5 py-4.5 max-sm:border-r-0",
           active && "bg-[color-mix(in_srgb,currentColor_6%,transparent)]",
         )}
       >
@@ -97,11 +98,11 @@ export function NetworkHero({
           </button>
         )}
       </div>
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-4 max-sm:grid-cols-2">
         {figures.map((figure) => (
           <div
             key={figure.label}
-            className="flex min-w-0 flex-col justify-center gap-1.5 border-r border-line px-4 py-3.5 last:border-r-0"
+            className="flex min-w-0 flex-col justify-center gap-1.5 border-r border-line px-4 py-3.5 last:border-r-0 max-sm:even:border-r-0 max-sm:nth-[-n+2]:border-b"
           >
             <span className="text-badge whitespace-nowrap text-fg-subtle">{figure.label}</span>
             <span

@@ -17,7 +17,8 @@ interface MockRequestHeaderProps {
 /**
  * The head of a mock request's sheet: its method, the mock that answered
  * it, the endpoint and the address it was called at — copied on a click —
- * a way to copy it as cURL, and Close.
+ * a way to copy it as cURL, and Close; its buttons are a finger's size on a
+ * touch screen.
  *
  * @param props - The request, the mock's name, its address, its cURL, and what closes the sheet
  * @returns The head
@@ -56,7 +57,7 @@ export function MockRequestHeader({
           type="button"
           title="Copy URL"
           onClick={() => void copyToClipboard(url, "the URL")}
-          className="flex min-w-0 cursor-copy items-center gap-1.5 text-left text-fg-subtle transition-colors hover:text-fg-muted"
+          className="hit-area relative flex min-w-0 cursor-copy items-center gap-1.5 text-left text-fg-subtle transition-colors hover:text-fg-muted"
         >
           <span className="truncate font-mono text-label">{url}</span>
           <Copy aria-hidden="true" className="size-2.75 shrink-0" />
@@ -67,7 +68,7 @@ export function MockRequestHeader({
           type="button"
           title="Copy as cURL"
           onClick={() => void copyToClipboard(curl, "as cURL")}
-          className="flex h-7 w-7.5 cursor-pointer items-center justify-center rounded-card border border-line bg-panel-subtle text-fg-muted transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"
+          className="flex h-7 w-7.5 cursor-pointer items-center justify-center rounded-card border border-line bg-panel-subtle text-fg-muted transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:size-9"
         >
           <Terminal aria-hidden="true" className="size-3.25" />
         </button>
@@ -76,7 +77,7 @@ export function MockRequestHeader({
           title="Close · Esc"
           aria-label="Close the request"
           onClick={onClose}
-          className="flex size-7 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"
+          className="flex size-7 cursor-pointer items-center justify-center rounded-control text-fg-subtle transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:size-9"
         >
           <X aria-hidden="true" className="size-3.75" />
         </button>

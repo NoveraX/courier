@@ -27,6 +27,8 @@ const AVG_TEXT = { normal: "text-fg", warn: "text-warn", err: "text-err" } as co
 interface RouteRowProps {
   route: MockRouteEntry;
   open: boolean;
+  /** Two lines in place of the table's columns, in a list too narrow for them. */
+  stacked: boolean;
   serverUrl: string;
   slowMs: number;
   onToggle: () => void;
@@ -34,24 +36,42 @@ interface RouteRowProps {
 
 /**
  * A route of the mock: its method, path and endpoint, what answers it, its
- * average time against the slow threshold and its hits — opened, what
- * answers it in words, how to call it and a sample answer.
+ * average time against the slow threshold and its hits — in the table's
+ * columns, or on two lines in a narrow list — opened, what answers it in
+ * words, how to call it and a sample answer.
  *
- * @param props - The route, whether it is open, the mock's address, the slow threshold, and what opening does
+ * @param props - The route, whether it is open and stacked, the mock's address, the slow threshold, and what opening does
  * @returns The row
  * @example
  * ```tsx
- * <RouteRow route={route} open={false} serverUrl={server.url} slowMs={500} onToggle={toggle} />
+ * <RouteRow route={route} open={false} stacked={false} serverUrl={server.url} slowMs={500} onToggle={toggle} />
  * ```
  */
-export function RouteRow({
-  route,
-  open,
-  serverUrl,
-  slowMs,
-  onToggle,
-}: RouteRowProps): React.ReactNode {
+export function RouteRow(props: RouteRowProps): React.ReactNode {
+  const { route, open, stacked, serverUrl, slowMs, onToggle } = props;
   const Caret = open ? ChevronDown : ChevronRight;
+  const method = route.httpMethod.toUpperCase();
+  const avg = !route.hits ? "—" : route.avgLatency >= 1 ? formatDuration(route.avgLatency) : "<1ms";
+  const avgText = route.hits ? AVG_TEXT[durationTone(route.avgLatency, slowMs)] : "text-fg-subtle";
+  const endpoint = `${route.group}.${route.endpoint}`;
+  const tag = (
+    <span
+      className={cn(
+        "flex h-5 shrink-0 items-center justify-self-start rounded-[5px] px-1.75 text-badge font-strong whitespace-nowrap",
+        KIND_TAG[route.source],
+      )}
+    >
+      {KIND_WORD[route.source]}
+    </span>
+  );
+  const head = (
+    <>
+      <Caret aria-hidden="true" className="size-3 shrink-0 text-fg-subtle" />
+      <span className={cn("w-11 shrink-0 font-mono text-meta font-semibold", methodText(method))}>
+        {method}
+      </span>
+    </>
+  );
   return (
     <div className="border-b border-line last:border-b-0">
       <button
@@ -59,49 +79,57 @@ export function RouteRow({
         aria-expanded={open}
         onClick={onToggle}
         className={cn(
-          "grid min-h-10.5 w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-left hover:bg-raised",
-          ROUTE_COLUMNS,
+          "w-full cursor-pointer px-4 text-left hover:bg-raised",
+          stacked
+            ? "flex min-h-13 flex-col justify-center gap-1 py-2"
+            : cn(
+                "grid min-h-10.5 items-center gap-3 py-1.5 pointer-coarse:min-h-11",
+                ROUTE_COLUMNS,
+              ),
           open && "bg-brand-tint",
         )}
       >
-        <span className="flex min-w-0 items-center gap-2.5">
-          <Caret aria-hidden="true" className="size-3 shrink-0 text-fg-subtle" />
-          <span
-            className={cn(
-              "w-11 shrink-0 font-mono text-meta font-semibold",
-              methodText(route.httpMethod.toUpperCase()),
-            )}
-          >
-            {route.httpMethod.toUpperCase()}
-          </span>
-          <span className="flex min-w-0 flex-col gap-px">
-            <span className="truncate font-mono text-control">{route.fullPath}</span>
-            <span className="font-mono text-meta text-fg-subtle">
-              {route.group}.{route.endpoint}
+        {stacked ? (
+          <>
+            <span className="flex min-w-0 items-center gap-2.5">
+              {head}
+              <span className="min-w-0 flex-1 truncate font-mono text-control">
+                {route.fullPath}
+              </span>
+              {tag}
             </span>
-          </span>
-        </span>
-        <span
-          className={cn(
-            "flex h-5 items-center justify-self-start rounded-[5px] px-1.75 text-badge font-strong",
-            KIND_TAG[route.source],
-          )}
-        >
-          {KIND_WORD[route.source]}
-        </span>
-        <span
-          className={cn(
-            "text-right font-mono text-small",
-            route.hits ? AVG_TEXT[durationTone(route.avgLatency, slowMs)] : "text-fg-subtle",
-          )}
-        >
-          {!route.hits ? "—" : route.avgLatency >= 1 ? formatDuration(route.avgLatency) : "<1ms"}
-        </span>
-        <span className="text-right font-mono text-small text-fg-muted tabular-nums">
-          {route.hits}
-        </span>
+            <span className="flex min-w-0 items-baseline gap-2.5 pl-5.5 font-mono">
+              <span className="min-w-0 flex-1 truncate text-meta text-fg-subtle">{endpoint}</span>
+              <span className="shrink-0 text-small whitespace-nowrap text-fg-muted tabular-nums">
+                {route.hits ? (
+                  <>
+                    <span className={avgText}>{avg}</span> avg · {route.hits}{" "}
+                    {route.hits === 1 ? "hit" : "hits"}
+                  </>
+                ) : (
+                  "no hits"
+                )}
+              </span>
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="flex min-w-0 items-center gap-2.5">
+              {head}
+              <span className="flex min-w-0 flex-col gap-px">
+                <span className="truncate font-mono text-control">{route.fullPath}</span>
+                <span className="font-mono text-meta text-fg-subtle">{endpoint}</span>
+              </span>
+            </span>
+            {tag}
+            <span className={cn("text-right font-mono text-small", avgText)}>{avg}</span>
+            <span className="text-right font-mono text-small text-fg-muted tabular-nums">
+              {route.hits}
+            </span>
+          </>
+        )}
       </button>
-      {open && <RouteDetail route={route} serverUrl={serverUrl} />}
+      {open && <RouteDetail route={route} serverUrl={serverUrl} stacked={stacked} />}
     </div>
   );
 }

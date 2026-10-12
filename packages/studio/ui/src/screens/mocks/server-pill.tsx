@@ -8,7 +8,7 @@ import { useMockStore } from "@/store/mock-slice";
 import { PROCESS_STATUS } from "./process-status";
 
 const BUTTON =
-  "flex h-full w-8 cursor-pointer items-center justify-center border-l border-line hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-40";
+  "flex h-full w-8 shrink-0 cursor-pointer items-center justify-center border-l border-line hover:bg-raised focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-40 pointer-coarse:w-10";
 
 /**
  * The mock server in use: its state, name and port — a menu of the others
@@ -33,21 +33,21 @@ export function ServerPill({
   const running = server.processStatus === "running";
   const busy = status.changing;
   const name = (
-    <span className="flex h-full items-center gap-2 border-r border-line px-2.75">
-      <span className="font-mono text-small font-medium">{server.name}</span>
+    <span className="flex h-full min-w-0 items-center gap-2 border-r border-line px-2.75">
+      <span className="truncate font-mono text-small font-medium">{server.name}</span>
       <span className="font-mono text-badge text-fg-subtle max-md:hidden">:{server.port}</span>
       {servers.length > 1 && (
-        <ChevronsUpDown aria-hidden="true" className="size-3 text-fg-subtle" />
+        <ChevronsUpDown aria-hidden="true" className="size-3 shrink-0 text-fg-subtle" />
       )}
     </span>
   );
   return (
-    <div className="flex h-8 items-center overflow-hidden rounded-card border border-line bg-panel">
+    <div className="flex h-8 max-w-full min-w-0 items-center overflow-hidden rounded-card border border-line bg-panel pointer-coarse:h-10">
       {servers.length > 1 ? (
         <DropdownMenu.Root>
           <DropdownMenu.Trigger
             aria-label={`Mock server: ${server.name}`}
-            className="flex h-full cursor-pointer hover:bg-raised"
+            className="flex h-full min-w-0 cursor-pointer hover:bg-raised"
           >
             {name}
           </DropdownMenu.Trigger>
@@ -55,7 +55,11 @@ export function ServerPill({
             <DropdownMenu.Content
               align="end"
               sideOffset={6}
-              className={cn("z-50 min-w-52 rounded-panel bg-panel p-1 shadow-overlay", POP_MOTION)}
+              collisionPadding={8}
+              className={cn(
+                "z-50 max-w-[calc(100vw-16px)] min-w-52 rounded-panel bg-panel p-1 shadow-overlay",
+                POP_MOTION,
+              )}
             >
               <DropdownMenu.RadioGroup
                 value={server.serverId}
@@ -65,7 +69,7 @@ export function ServerPill({
                   <DropdownMenu.RadioItem
                     key={s.serverId}
                     value={s.serverId}
-                    className="flex h-8 cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 font-mono text-control text-fg-muted outline-none data-[highlighted]:bg-raised data-[highlighted]:text-fg data-[state=checked]:text-fg"
+                    className="flex h-8 cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 font-mono text-control text-fg-muted outline-none data-[highlighted]:bg-raised data-[highlighted]:text-fg data-[state=checked]:text-fg pointer-coarse:h-10"
                   >
                     <span className="flex-1">{s.name}</span>
                     <span className="text-badge text-fg-subtle">:{s.port}</span>

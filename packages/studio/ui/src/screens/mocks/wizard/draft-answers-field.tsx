@@ -55,13 +55,15 @@ export function DraftAnswersField(props: DraftAnswersFieldProps): React.ReactNod
       hint={hint}
       error={error}
     >
-      <Segmented
-        label="Answers"
-        quiet="subtle"
-        options={MODES}
-        value={draft.answers}
-        onChange={(answers) => onEdit({ answers })}
-      />
+      <div className="scroll-row max-w-full min-w-0">
+        <Segmented
+          label="Answers"
+          quiet="subtle"
+          options={MODES}
+          value={draft.answers}
+          onChange={(answers) => onEdit({ answers })}
+        />
+      </div>
       {draft.answers === "some" && (
         <fieldset
           aria-label="Endpoints the mock answers"
@@ -75,7 +77,7 @@ export function DraftAnswersField(props: DraftAnswersFieldProps): React.ReactNod
               {group.endpoints.map((endpoint) => (
                 <label
                   key={endpoint.name}
-                  className="flex cursor-pointer items-center gap-2 font-mono text-small"
+                  className="flex cursor-pointer items-center gap-2 font-mono text-small pointer-coarse:min-h-10"
                 >
                   <TickBox
                     checked={draft.endpoints.includes(endpoint.name)}

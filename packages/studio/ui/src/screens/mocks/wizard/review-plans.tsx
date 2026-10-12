@@ -87,11 +87,11 @@ export function ManualPlan({ outcome }: { outcome: ManualOutcome }): React.React
       <div className="max-h-80 overflow-auto rounded-[11px] border border-line bg-inset">
         <CodeLines code={outcome.snippet} variant="panel" />
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 max-sm:flex-col max-sm:items-start max-sm:gap-2">
         <button
           type="button"
           onClick={() => void copyToClipboard(outcome.snippet, "snippet")}
-          className="flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-control border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg"
+          className="flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-control border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg pointer-coarse:h-9"
         >
           <Copy aria-hidden="true" className="size-3" />
           Copy snippet

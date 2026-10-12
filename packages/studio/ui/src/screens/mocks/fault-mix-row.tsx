@@ -56,7 +56,7 @@ export function FaultMixRow(props: FaultMixRowProps): React.ReactNode {
           aria-label={`Take ${look.label} out of the mix`}
           title="Take it out of the mix"
           onClick={onRemove}
-          className="flex size-6 cursor-pointer items-center justify-center rounded-[6px] text-fg-subtle hover:bg-raised hover:text-fg"
+          className="hit-area relative flex size-6 cursor-pointer items-center justify-center rounded-[6px] text-fg-subtle hover:bg-raised hover:text-fg"
         >
           <X aria-hidden="true" className="size-3" />
         </button>

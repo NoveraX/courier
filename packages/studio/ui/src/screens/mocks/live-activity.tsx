@@ -15,6 +15,19 @@ import type { MockRequestLog } from "@/store/mock-slice";
 const SHOWN = 14;
 const DURATION_TEXT = { normal: "text-fg-muted", warn: "text-warn", err: "text-err" } as const;
 
+/* A card too narrow for the five columns gives each answer two lines: the method, path and
+   status over when it came and how long it took. Every row keeps its full height where the
+   list would squeeze it, and the list scrolls instead. */
+const ROW =
+  "grid h-8 w-full shrink-0 cursor-pointer grid-cols-[64px_44px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label tabular-nums hover:bg-raised pointer-coarse:h-11 @max-[25rem]:h-11 @max-[25rem]:grid-cols-[40px_minmax(0,1fr)_auto] @max-[25rem]:content-center @max-[25rem]:gap-x-2 @max-[25rem]:gap-y-0.5";
+const CELL = {
+  when: "whitespace-nowrap text-fg-subtle @max-[25rem]:col-[1/3] @max-[25rem]:row-start-2",
+  method: "text-micro font-semibold @max-[25rem]:col-start-1 @max-[25rem]:row-start-1",
+  path: "truncate @max-[25rem]:col-start-2 @max-[25rem]:row-start-1",
+  status: "@max-[25rem]:col-start-3 @max-[25rem]:row-start-1 @max-[25rem]:text-right",
+  duration: "text-right @max-[25rem]:col-start-3 @max-[25rem]:row-start-2",
+} as const;
+
 interface LiveActivityProps {
   logs: readonly MockRequestLog[];
   running: boolean;
@@ -27,7 +40,8 @@ interface LiveActivityProps {
 /**
  * The mock server's newest answers as they come: when, how each went, the
  * method and path, the status and how long it took — each opening its
- * request's sheet.
+ * request's sheet. In a narrow card each answer takes two lines, so its
+ * path keeps the room it needs.
  *
  * @param props - The server's logged requests, whether it runs, the time, the slow threshold, and what opens a request
  * @returns The card
@@ -62,14 +76,14 @@ export function LiveActivity({
             from="/mocks"
             to="/mocks/logs"
             search={(prev) => ({ ...inspectorOf(prev) })}
-            className="flex h-6.5 items-center rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg"
+            className="flex h-6.5 items-center rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg pointer-coarse:h-9"
           >
             All logs →
           </Link>
         </>
       }
     >
-      <div className="flex max-h-95 flex-col overflow-auto p-1.5">
+      <div className="@container flex max-h-95 flex-col overflow-auto p-1.5">
         {latest.length === 0 && (
           <p className="p-7 text-center text-control text-fg-subtle">
             {running
@@ -84,24 +98,19 @@ export function LiveActivity({
               type="button"
               key={log.id}
               onClick={() => onOpen(log.id)}
-              className={cn(
-                "grid h-8 w-full cursor-pointer grid-cols-[64px_44px_minmax(0,1fr)_40px_56px] items-center gap-2.5 rounded-control px-2.5 text-left font-mono text-label tabular-nums hover:bg-raised",
-                index === 0 && running && "bg-brand-tint",
-              )}
+              className={cn(ROW, index === 0 && running && "bg-brand-tint")}
             >
-              <span className="whitespace-nowrap text-fg-subtle">
+              <span className={CELL.when}>
                 {now - log.timestamp < 1_000 ? "now" : shortAgo(now - log.timestamp)}
               </span>
-              <span
-                className={cn("text-micro font-semibold", methodText(log.httpMethod.toUpperCase()))}
-              >
+              <span className={cn(CELL.method, methodText(log.httpMethod.toUpperCase()))}>
                 {log.httpMethod.toUpperCase()}
               </span>
-              <span className="truncate">{log.path}</span>
-              <span className={TONE_TEXT[tone]}>{mockLogCode(log)}</span>
+              <span className={CELL.path}>{log.path}</span>
+              <span className={cn(CELL.status, TONE_TEXT[tone])}>{mockLogCode(log)}</span>
               <span
                 className={cn(
-                  "text-right",
+                  CELL.duration,
                   log.duration === undefined
                     ? "text-fg-subtle"
                     : DURATION_TEXT[durationTone(log.duration, slowMs)],

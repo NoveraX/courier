@@ -8,7 +8,7 @@ import type { MockWizardHandle } from "@/mocks/wizard/use-mock-wizard";
 import { useTimeReached } from "@/mocks/wizard/use-time-reached";
 
 const BUTTON =
-  "flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card px-3.5 text-control font-semibold disabled:cursor-default disabled:opacity-50";
+  "flex h-8 shrink-0 cursor-pointer items-center gap-1.75 rounded-card px-3.5 text-control font-semibold disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10";
 const NEXT = `${BUTTON} bg-fg text-bg hover:bg-fg/90`;
 const OUTLINE = `${BUTTON} border border-line font-normal text-fg-muted hover:border-line-strong hover:text-fg`;
 

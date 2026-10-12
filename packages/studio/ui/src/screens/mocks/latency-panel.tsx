@@ -79,7 +79,7 @@ export function LatencyPanel({
       tone="text-warn"
       title="Latency"
       aside={
-        <fieldset disabled={disabled} className="m-0 min-w-0 border-0 p-0">
+        <fieldset disabled={disabled} className="m-0 border-0 p-0">
           <Segmented
             label="Latency preset"
             quiet="subtle"
@@ -132,13 +132,15 @@ export function LatencyPanel({
         )}
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <span className="text-control font-strong">Download speed</span>
-          <Segmented
-            label="Download speed"
-            quiet="subtle"
-            options={optionsWith(BANDWIDTHS, server.networkConfig?.bandwidth ?? 0, speedLabel)}
-            value={String(server.networkConfig?.bandwidth ?? 0)}
-            onChange={(kbps) => setBandwidth(server, Number(kbps))}
-          />
+          <div className="scroll-row max-w-full min-w-0">
+            <Segmented
+              label="Download speed"
+              quiet="subtle"
+              options={optionsWith(BANDWIDTHS, server.networkConfig?.bandwidth ?? 0, speedLabel)}
+              value={String(server.networkConfig?.bandwidth ?? 0)}
+              onChange={(kbps) => setBandwidth(server, Number(kbps))}
+            />
+          </div>
         </div>
       </fieldset>
     </NetworkCard>

@@ -26,9 +26,14 @@ function ArrivedRow({ server }: { server: MockServerInfo }): React.ReactNode {
     server.processStatus === "declared" ||
     server.processStatus === "crashed";
   return (
-    <li className="flex h-10 items-center gap-2.5 border-b border-line px-3 last:border-b-0">
-      <span className="font-mono text-control">mocks.{server.serverId}</span>
-      <span className={cn("flex items-center gap-1.5 text-small font-medium", status.className)}>
+    <li className="flex h-10 items-center gap-2.5 border-b border-line px-3 last:border-b-0 pointer-coarse:h-12">
+      <span className="min-w-0 truncate font-mono text-control">mocks.{server.serverId}</span>
+      <span
+        className={cn(
+          "flex shrink-0 items-center gap-1.5 text-small font-medium whitespace-nowrap",
+          status.className,
+        )}
+      >
         {status.label}
       </span>
       {running && server.url && (
@@ -39,7 +44,7 @@ function ArrivedRow({ server }: { server: MockServerInfo }): React.ReactNode {
           type="button"
           disabled={!settled}
           onClick={() => manageMock(server.serverId, running ? "stop" : "start")}
-          className="ml-auto flex h-6.5 shrink-0 cursor-pointer items-center rounded-[6px] border border-line px-2.25 text-small text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-40"
+          className="ml-auto flex h-6.5 shrink-0 cursor-pointer items-center rounded-[6px] border border-line px-2.25 text-small text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-40 pointer-coarse:h-9 pointer-coarse:px-3"
         >
           {running ? "Stop" : "Start"}
         </button>
@@ -85,11 +90,11 @@ export function DoneStep({
         {pending.map((key) => (
           <li
             key={key}
-            className="flex h-10 items-center gap-2.5 border-b border-line px-3 text-fg-subtle last:border-b-0"
+            className="flex h-10 items-center gap-2.5 border-b border-line px-3 text-fg-subtle last:border-b-0 pointer-coarse:h-12"
           >
-            <span className="font-mono text-control">mocks.{key}</span>
-            <Loader2 aria-hidden="true" className="size-3 animate-spin" />
-            <span className="text-small">Waiting for Studio to list it</span>
+            <span className="min-w-0 truncate font-mono text-control">mocks.{key}</span>
+            <Loader2 aria-hidden="true" className="size-3 shrink-0 animate-spin" />
+            <span className="truncate text-small">Waiting for Studio to list it</span>
           </li>
         ))}
       </ul>

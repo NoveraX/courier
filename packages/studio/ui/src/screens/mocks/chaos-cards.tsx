@@ -39,7 +39,7 @@ export function ChaosCards({
     <fieldset
       aria-label="Chaos"
       disabled={disabled}
-      className="m-0 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(118px,1fr))] gap-2.5 border-0 p-0"
+      className="m-0 grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(118px,100%),1fr))] gap-2.5 border-0 p-0"
     >
       {MODES.map((card) => {
         const look = CHAOS_LOOK[card];

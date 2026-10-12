@@ -69,7 +69,7 @@ export function ObservedPanel({
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
             <span className="text-small text-fg-subtle">Status timeline</span>
             <span className="flex gap-2.5 text-badge text-fg-subtle">
               {LEGEND.map(([label, fill]) => (

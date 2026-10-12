@@ -40,7 +40,7 @@ export function AddFaultMenu({
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
         disabled={disabled || left.length === 0}
-        className="flex h-7 w-fit cursor-pointer items-center gap-1.5 rounded-control px-2 text-small text-fg-muted hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-50 data-[state=open]:bg-raised"
+        className="flex h-7 w-fit cursor-pointer items-center gap-1.5 rounded-control px-2 text-small text-fg-muted hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand disabled:cursor-default disabled:opacity-50 data-[state=open]:bg-raised pointer-coarse:h-9"
       >
         <Plus aria-hidden="true" className="size-3" />
         {label}
@@ -49,8 +49,9 @@ export function AddFaultMenu({
         <DropdownMenu.Content
           align="start"
           sideOffset={6}
+          collisionPadding={8}
           className={cn(
-            "z-50 max-h-[min(420px,var(--radix-dropdown-menu-content-available-height))] min-w-60 overflow-y-auto rounded-panel bg-panel p-1 shadow-overlay",
+            "z-50 max-h-[min(420px,var(--radix-dropdown-menu-content-available-height))] max-w-[calc(100vw-16px)] min-w-60 overflow-y-auto rounded-panel bg-panel p-1 shadow-overlay",
             POP_MOTION,
           )}
         >
@@ -66,7 +67,7 @@ export function AddFaultMenu({
                   <DropdownMenu.Item
                     key={look.type}
                     onSelect={() => onAdd(look.type)}
-                    className="flex h-8 cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 text-control text-fg-muted outline-none data-[highlighted]:bg-raised data-[highlighted]:text-fg"
+                    className="flex h-8 cursor-pointer items-center gap-2.5 rounded-[6px] px-2.5 text-control text-fg-muted outline-none data-[highlighted]:bg-raised data-[highlighted]:text-fg pointer-coarse:h-10"
                   >
                     <span className="w-17 shrink-0 font-mono text-small text-fg">{look.label}</span>
                     <span className="truncate text-small text-fg-subtle">{look.sub}</span>

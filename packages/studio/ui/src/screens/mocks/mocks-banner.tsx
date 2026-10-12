@@ -28,7 +28,7 @@ function iconOf(banner: MockBanner): React.ReactNode {
 /**
  * The line under the Mocks bar that says what is not as written — the
  * mocks file, a stopped or crashed server, chaos, a scenario — with the
- * button that sets it right.
+ * button that sets it right. On a phone the detail goes under the title.
  *
  * @param props - The banner, and the server it is about
  * @returns The banner
@@ -63,21 +63,22 @@ export function MocksBanner({
     <div
       role={banner.tone === "err" ? "alert" : "status"}
       className={cn(
-        "flex shrink-0 items-center gap-2.5 border-b border-line px-5 py-2.25 text-control",
+        "flex shrink-0 items-center gap-2.5 border-b border-line px-5 py-2.25 text-control max-sm:px-4",
         LOOK[banner.tone].className,
       )}
     >
       {iconOf(banner)}
-      <span className="font-semibold">{banner.title}</span>
-      <span className="min-w-0 truncate text-fg-muted" title={banner.detail}>
-        {banner.detail}
+      <span className="flex min-w-0 flex-1 items-center gap-2.5 max-sm:flex-col max-sm:items-start max-sm:gap-0.5">
+        <span className="font-semibold">{banner.title}</span>
+        <span className="max-w-full min-w-0 truncate text-fg-muted" title={banner.detail}>
+          {banner.detail}
+        </span>
       </span>
-      <div className="flex-1" />
       {banner.action && server && (
         <button
           type="button"
           onClick={act}
-          className="h-6.5 shrink-0 cursor-pointer rounded-[6px] border border-line-strong bg-panel px-2.5 text-small text-fg hover:bg-raised"
+          className="h-6.5 shrink-0 cursor-pointer rounded-[6px] border border-line-strong bg-panel px-2.5 text-small text-fg hover:bg-raised pointer-coarse:h-9"
         >
           {banner.action.label}
         </button>

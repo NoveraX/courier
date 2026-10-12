@@ -30,7 +30,7 @@ export function CollectionCards({
             from="/mocks"
             to="/mocks/store"
             search={(prev) => ({ ...inspectorOf(prev) })}
-            className="flex h-6.5 items-center rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg"
+            className="flex h-6.5 items-center rounded-[6px] px-2 text-small text-fg-subtle hover:bg-raised hover:text-fg pointer-coarse:h-9"
           >
             Open store →
           </Link>

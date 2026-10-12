@@ -16,7 +16,9 @@ interface EditableCellProps {
 
 /**
  * A cell of a collection's table: its value, and on a click an input that
- * saves on Enter or when it loses focus, and gives up on Escape.
+ * saves on Enter or when it loses focus, and gives up on Escape. A phone's
+ * keyboard leaves what is typed as typed — no capitals, no corrections —
+ * and offers Done for Enter.
  *
  * @param props - The value, its type, whether it is locked or an enum, and what saves it
  * @returns The cell
@@ -45,13 +47,18 @@ export function EditableCell({
         autoFocus
         value={draft}
         aria-label="Edit value"
+        spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="off"
+        autoComplete="off"
+        enterKeyHint="done"
         onChange={(e) => setDraft(e.target.value)}
         onBlur={() => finish(true)}
         onKeyDown={(e) => {
           if (e.key === "Enter") finish(true);
           else if (e.key === "Escape") finish(false);
         }}
-        className="h-7 w-full min-w-0 rounded-[6px] border border-brand/60 bg-inset px-2 font-mono text-control text-fg outline-none"
+        className="h-7 w-full min-w-0 rounded-[6px] border border-brand/60 bg-inset px-2 font-mono text-control text-fg outline-none pointer-coarse:h-9 pointer-coarse:text-base"
       />
     );
   }
@@ -62,7 +69,7 @@ export function EditableCell({
       onClick={() => setDraft(text)}
       title={locked ? undefined : "Click to edit"}
       className={cn(
-        "flex h-7 w-full min-w-0 items-center truncate rounded-[6px] px-2 text-left font-mono text-control enabled:cursor-text enabled:hover:bg-raised disabled:cursor-default",
+        "flex h-7 w-full min-w-0 items-center truncate rounded-[6px] px-2 text-left font-mono text-control enabled:cursor-text enabled:hover:bg-raised disabled:cursor-default pointer-coarse:h-9",
         value === null || value === undefined
           ? "text-fg-subtle"
           : enumLike

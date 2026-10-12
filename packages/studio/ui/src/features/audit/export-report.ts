@@ -1,3 +1,5 @@
+import { markdownCode, markdownText } from "@/lib/markdown-escape";
+
 import { CATEGORY_LABEL, CATEGORY_ORDER } from "./audit-meta";
 import type { AuditItem, AuditResult } from "./types";
 
@@ -42,7 +44,7 @@ export function exportAsMarkdown(result: AuditResult): string {
         lines.push("| Endpoint | Detail |");
         lines.push("|----------|--------|");
         for (const ep of item.endpoints) {
-          lines.push(`| \`${escapeMd(ep.label)}\` | ${escapeMd(ep.detail ?? "—")} |`);
+          lines.push(`| \`${markdownCode(ep.label)}\` | ${markdownText(ep.detail ?? "—")} |`);
         }
       }
 
@@ -59,8 +61,4 @@ export function exportAsMarkdown(result: AuditResult): string {
 function severityIcon(item: AuditItem): string {
   const map = { error: "🔴", warning: "🟡", hint: "🔵", pass: "🟢" };
   return map[item.severity];
-}
-
-function escapeMd(str: string): string {
-  return str.replace(/\|/g, "\\|").replace(/`/g, "\\`");
 }

@@ -8,6 +8,9 @@ import { SpecFetchError } from "./spec-fetch-error";
 /** The most a specification's text may be: far past the largest public one seen (Stripe's is 8 MB). */
 export const SPEC_MAX_BYTES = 64 * 1024 * 1024;
 
+/** The most a public demo's visitor may have Studio read from a URL: what the demo takes pasted in. */
+export const PUBLIC_SPEC_MAX_BYTES = 16 * 1024 * 1024;
+
 const DECODERS: ReadonlyMap<string, () => Transform> = new Map([
   ["gzip", createGunzip],
   ["x-gzip", createGunzip],
@@ -20,9 +23,9 @@ const CUT_OFF: ReadonlySet<string> = new Set(["ECONNRESET", "ERR_STREAM_PREMATUR
 
 /**
  * Read a specification's body as text: decompressed as the server encoded
- * it, at most 64 MB once decompressed — so a small compressed body cannot
- * unfold into an unbounded one — and without a leading byte-order mark,
- * which JSON parsers refuse.
+ * it, at most 64 MB once decompressed, or the limit given — so a small
+ * compressed body cannot unfold into an unbounded one — and without a
+ * leading byte-order mark, which JSON parsers refuse.
  *
  * The response and its decompressor fail together: a connection that closes
  * partway fails the read at once, whatever the encoding, rather than leave
@@ -30,6 +33,7 @@ const CUT_OFF: ReadonlySet<string> = new Set(["ECONNRESET", "ERR_STREAM_PREMATUR
  *
  * @param response - The server's answer, status already checked
  * @param url - What was fetched, for messages
+ * @param maxBytes - The most the text may be, decompressed
  * @returns The body as text
  * @throws {SpecFetchError} `SPEC_TOO_LARGE`, or `SPEC_UNREACHABLE` for a body cut off, one that does not decompress, or an encoding Studio cannot read
  *
@@ -38,11 +42,15 @@ const CUT_OFF: ReadonlySet<string> = new Set(["ECONNRESET", "ERR_STREAM_PREMATUR
  * const text = await readSpecBody(response, url);
  * ```
  */
-export async function readSpecBody(response: IncomingMessage, url: URL): Promise<string> {
+export async function readSpecBody(
+  response: IncomingMessage,
+  url: URL,
+  maxBytes: number = SPEC_MAX_BYTES,
+): Promise<string> {
   const encoding = contentEncoding(response);
   let chunks: Buffer[];
   try {
-    chunks = await collect(decoded(response, encoding, url), url);
+    chunks = await collect(decoded(response, encoding, url), url, maxBytes);
   } catch (cause) {
     /* Whatever failed, the connection is not left open behind it. */
     response.destroy();
@@ -53,17 +61,17 @@ export async function readSpecBody(response: IncomingMessage, url: URL): Promise
 }
 
 /* Every chunk of the body, until together they pass the limit. */
-async function collect(body: Readable, url: URL): Promise<Buffer[]> {
+async function collect(body: Readable, url: URL, maxBytes: number): Promise<Buffer[]> {
   const chunks: Buffer[] = [];
   let size = 0;
   const read: AsyncIterable<unknown> = body;
   for await (const chunk of read) {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
     size += bytes.length;
-    if (size > SPEC_MAX_BYTES) {
+    if (size > maxBytes) {
       throw new SpecFetchError(
         "SPEC_TOO_LARGE",
-        `${url.href} is larger than ${SPEC_MAX_BYTES / 1024 / 1024} MB.`,
+        `${url.href} is larger than ${maxBytes / 1024 / 1024} MB.`,
       );
     }
     chunks.push(bytes);

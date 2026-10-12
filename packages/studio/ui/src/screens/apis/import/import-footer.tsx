@@ -34,6 +34,7 @@ function noteOf(state: ImportState): string {
  * The import's footer: where it stands, Back, and the step's next move —
  * Parse spec, Continue, Generate preview, the write (or its retry once
  * Studio refused it), then adding the import to courier.config, or Done.
+ * On a phone where it stands takes a line over the buttons.
  *
  * @param props - The import, and declaring it in courier.config
  * @returns The footer
@@ -52,8 +53,8 @@ export function ImportFooter({
   const { state, parsing } = wizard;
   const back = BACK[state.step];
   return (
-    <div className="flex shrink-0 items-center gap-2 border-t border-line bg-panel-subtle px-5 py-3">
-      <span className="truncate text-small text-fg-subtle">{noteOf(state)}</span>
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-line bg-panel-subtle px-5 py-3">
+      <span className="truncate text-small text-fg-subtle max-sm:basis-full">{noteOf(state)}</span>
       <div className="flex-1" />
       {back && (
         <FooterAction

@@ -24,7 +24,8 @@ interface SendButtonProps {
 /**
  * The Playground's primary button: Send, then Sending while a call is in
  * flight; Subscribe for a stream, Unsubscribe while it is open. ⌘↵ does
- * what it says.
+ * what it says, which the button shows where there is a keyboard to press
+ * it on.
  *
  * @param props - What it does now, the endpoint's transport, and what a click does
  * @returns The button
@@ -54,7 +55,7 @@ export function SendButton({
       disabled={disabled || action === "sending"}
       aria-keyshortcuts="Meta+Enter Control+Enter"
       className={cn(
-        "flex h-8.5 shrink-0 cursor-pointer items-center gap-2 rounded-[9px] pr-3.5 pl-3 text-ui font-semibold whitespace-nowrap shadow-[inset_0_1px_0_rgb(255_255_255/0.08)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-default",
+        "flex h-8.5 shrink-0 cursor-pointer items-center gap-2 rounded-[9px] pr-3.5 pl-3 text-ui font-semibold whitespace-nowrap shadow-[inset_0_1px_0_rgb(255_255_255/0.08)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-default max-sm:ml-auto pointer-coarse:h-9",
         look.className,
       )}
     >
@@ -64,7 +65,7 @@ export function SendButton({
       />
       {look.label}
       {action !== "sending" && (
-        <span aria-hidden="true" className="ml-1 flex items-center gap-0.5">
+        <span aria-hidden="true" className="ml-1 flex items-center gap-0.5 pointer-coarse:hidden">
           <span className="flex h-4.5 min-w-4.5 items-center justify-center rounded-chip bg-current/16 px-1 text-badge leading-none font-semibold">
             ⌘
           </span>

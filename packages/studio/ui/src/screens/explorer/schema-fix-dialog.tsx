@@ -122,8 +122,8 @@ export function SchemaFixDialog(): React.ReactNode {
       icon={{ icon: Wand2, tone: "bg-brand-dim text-brand" }}
       width="w-180"
       footer={
-        <div className="flex shrink-0 items-center gap-3 border-t border-line bg-panel-subtle px-5 py-3">
-          <span className="flex-1 text-small text-fg-subtle">
+        <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-line bg-panel-subtle px-5 py-3">
+          <span className="flex-1 text-small text-fg-subtle max-sm:basis-full max-sm:empty:hidden">
             {ready &&
               "Studio runs the config again once it is written, and puts it back if it does not load."}
           </span>
@@ -131,7 +131,7 @@ export function SchemaFixDialog(): React.ReactNode {
             type="button"
             disabled={applying}
             onClick={close}
-            className="flex h-8 cursor-pointer items-center rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+            className="ml-auto flex h-8 cursor-pointer items-center rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10"
           >
             Cancel
           </button>
@@ -139,7 +139,7 @@ export function SchemaFixDialog(): React.ReactNode {
             type="button"
             disabled={!ready || applying}
             onClick={() => void apply()}
-            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-brand px-3.5 text-control font-semibold text-bg hover:bg-brand/90 disabled:cursor-default disabled:opacity-50"
+            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-brand px-3.5 text-control font-semibold text-bg hover:bg-brand/90 disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10"
           >
             {applying && <Loader2 aria-hidden="true" className="size-3.25 animate-spin" />}
             Apply the change

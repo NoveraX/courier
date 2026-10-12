@@ -22,7 +22,7 @@ interface SpecSourceStepProps {
 /**
  * The Import step: where the spec comes from — a URL, a file or a paste —
  * and the spec itself, with why Studio could not read it when it could
- * not.
+ * not. On a phone the three sources are rows, one over another.
  *
  * @param props - Where the spec comes from, the spec, Studio's error, and what changing them does
  * @returns The step
@@ -49,7 +49,7 @@ export function SpecSourceStep({
       </div>
       <fieldset
         aria-label="Spec source"
-        className="m-0 grid min-w-0 grid-cols-3 gap-2 border-0 p-0"
+        className="m-0 grid min-w-0 grid-cols-3 gap-2 border-0 p-0 max-sm:grid-cols-1"
       >
         {SOURCES.map((option) => {
           const on = option.value === source;
@@ -60,7 +60,7 @@ export function SpecSourceStep({
               aria-pressed={on}
               onClick={() => onSourceChange(option.value)}
               className={cn(
-                "flex cursor-pointer flex-col items-start gap-2 rounded-[11px] border p-3 text-left hover:border-line-strong",
+                "flex cursor-pointer flex-col items-start gap-2 rounded-[11px] border p-3 text-left hover:border-line-strong max-sm:flex-row max-sm:items-center max-sm:gap-3 max-sm:py-2.5",
                 on ? "border-brand bg-brand-tint" : "border-line bg-inset",
               )}
             >
@@ -77,15 +77,18 @@ export function SpecSourceStep({
         })}
       </fieldset>
       {source === "url" && (
-        <label className="flex h-9.5 items-center gap-2 rounded-[9px] border border-line-strong bg-inset px-3 focus-within:border-brand">
+        <label className="flex h-9.5 items-center gap-2 rounded-[9px] border border-line-strong bg-inset px-3 focus-within:border-brand pointer-coarse:h-11">
           <Link2 aria-hidden="true" className="size-3.25 text-fg-subtle" />
           <input
             value={content}
             onChange={(e) => onContentChange(e.target.value)}
             placeholder="https://api.example.com/openapi.json"
             aria-label="Spec URL"
+            inputMode="url"
+            autoCapitalize="off"
+            autoCorrect="off"
             spellCheck={false}
-            className="min-w-0 flex-1 bg-transparent font-mono text-control text-fg outline-none placeholder:text-fg-subtle"
+            className="min-w-0 flex-1 bg-transparent font-mono text-control text-fg outline-none placeholder:text-fg-subtle pointer-coarse:text-[16px]"
           />
         </label>
       )}
@@ -108,8 +111,10 @@ export function SpecSourceStep({
           onChange={(e) => onContentChange(e.target.value)}
           placeholder='{ "openapi": "3.1.0", … }'
           aria-label="Spec text"
+          autoCapitalize="off"
+          autoCorrect="off"
           spellCheck={false}
-          className="h-37.5 resize-y rounded-panel border border-line-strong bg-inset p-3 font-mono text-small leading-[1.6] text-syntax-plain outline-none focus:border-brand"
+          className="h-37.5 resize-y rounded-panel border border-line-strong bg-inset p-3 font-mono text-small leading-[1.6] text-syntax-plain outline-none focus:border-brand pointer-coarse:text-[16px]"
         />
       )}
       {error && (

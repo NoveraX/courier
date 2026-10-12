@@ -19,7 +19,7 @@ function qualityIcon(row: QualityRow): LucideIcon {
 /**
  * How much of an imported API is typed: a bar a measure — response types,
  * variables types, schemas — with its count of the total and a tip saying
- * what it counts.
+ * what it counts. In a narrow card each measure's name sits over its bar.
  *
  * @param props - The measures
  * @returns The bars
@@ -30,7 +30,7 @@ function qualityIcon(row: QualityRow): LucideIcon {
  */
 export function ApiQualityRows({ rows }: { rows: readonly QualityRow[] }): React.ReactNode {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="@container flex flex-col gap-2">
       {rows.map((row) => {
         const tone = TONE[row.tone];
         const Icon = qualityIcon(row);
@@ -38,9 +38,9 @@ export function ApiQualityRows({ rows }: { rows: readonly QualityRow[] }): React
           <div
             key={row.kind}
             title={row.tip}
-            className="grid grid-cols-[120px_minmax(0,1fr)_44px] items-center gap-2.5"
+            className="grid grid-cols-[120px_minmax(0,1fr)_44px] items-center gap-2.5 @max-[260px]:grid-cols-[minmax(0,1fr)_44px] @max-[260px]:gap-y-1"
           >
-            <span className="flex items-center gap-1.5 text-label whitespace-nowrap text-fg-muted">
+            <span className="flex items-center gap-1.5 text-label whitespace-nowrap text-fg-muted @max-[260px]:col-span-2">
               <Icon aria-hidden="true" className={cn("size-2.75", tone.icon)} />
               {row.label}
             </span>

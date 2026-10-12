@@ -1,5 +1,6 @@
 import { CircleCheck, CircleX, TriangleAlert } from "lucide-react";
 
+import { MEDIA } from "@/design/breakpoints";
 import type { SegmentedOption } from "@/design/segmented";
 import { Segmented } from "@/design/segmented";
 import type { PlaygroundEndpoint } from "@/features/playground/endpoint-choices";
@@ -7,10 +8,12 @@ import type { FormBodyField } from "@/features/playground/form-body";
 import type { InputCheck } from "@/features/playground/input-check";
 import type { ProxyRoute } from "@/features/playground/proxy-route";
 import type { UrlPart } from "@/features/playground/request-url";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { CodeEditor } from "./code-editor";
 import type { CopyChoice } from "./copy-as-menu";
 import { CopyAsMenu } from "./copy-as-menu";
+import { EditorActions } from "./editor-actions";
 import { FormEditor } from "./form-editor";
 import { SchemaTable } from "./schema-table";
 import { UrlBar } from "./url-bar";
@@ -28,9 +31,6 @@ const BODY_KINDS: readonly SegmentedOption<BodyKind>[] = [
   { value: "json", label: "JSON" },
   { value: "form", label: "Form" },
 ];
-
-const TEXT_BUTTON =
-  "h-6.5 cursor-pointer rounded-[6px] px-2.25 text-small text-fg-subtle hover:bg-raised hover:text-fg";
 
 /** One of the two editors: its text, whether it was changed, and what edits and resets it. */
 export interface EditorText {
@@ -61,7 +61,9 @@ interface RequestPaneProps {
 /**
  * The request half of the Playground: copying the call as code, its URL,
  * the Variables (Params for a stream) and Headers editors — or the body as
- * a form — with the editor's status, and the endpoint's input schema.
+ * a form — with the editor's status, and the endpoint's input schema. On a
+ * phone Prettify and Reset join the pane's title, leaving the editor's
+ * choices a row of their own.
  *
  * @param props - The endpoint, its URL, the editors and their status, and what the buttons do
  * @returns The pane
@@ -83,6 +85,10 @@ export function RequestPane(props: RequestPaneProps): React.ReactNode {
     { value: "headers", label: "Headers", changed: headers.changed },
   ];
   const look = CHECK_LOOK[check.tone];
+  const phone = useMediaQuery(MEDIA.phone);
+  const actions = asForm ? null : (
+    <EditorActions changed={editor.changed} onPrettify={onPrettify} onReset={editor.onReset} />
+  );
   return (
     <section
       aria-label="Request"
@@ -92,6 +98,7 @@ export function RequestPane(props: RequestPaneProps): React.ReactNode {
         <div className="flex items-center gap-2">
           <h2 className="text-ui font-semibold">Request</h2>
           <div className="flex-1" />
+          {phone && actions}
           <CopyAsMenu transport={endpoint.transport} onCopy={onCopy} />
         </div>
         <UrlBar
@@ -111,22 +118,8 @@ export function RequestPane(props: RequestPaneProps): React.ReactNode {
               quiet="subtle"
             />
           )}
-          <div className="flex-1" />
-          {!asForm && (
-            <button type="button" onClick={onPrettify} className={TEXT_BUTTON}>
-              Prettify
-            </button>
-          )}
-          {!asForm && (
-            <button
-              type="button"
-              onClick={editor.onReset}
-              disabled={!editor.changed}
-              className={cn(TEXT_BUTTON, "disabled:cursor-default disabled:opacity-50")}
-            >
-              Reset
-            </button>
-          )}
+          {!phone && <div className="flex-1" />}
+          {!phone && actions}
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">

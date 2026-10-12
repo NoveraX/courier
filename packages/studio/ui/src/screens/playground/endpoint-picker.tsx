@@ -55,7 +55,7 @@ export function EndpointPicker({
     >
       <Popover.Trigger
         aria-label={`Endpoint: ${current.key}`}
-        className="flex h-8.5 min-w-0 flex-[1_1_200px] cursor-pointer items-center gap-2.5 rounded-[9px] border border-line bg-panel pr-2.5 pl-1.5 text-left transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand data-[state=open]:border-line-strong"
+        className="flex h-8.5 min-w-0 flex-[1_1_200px] cursor-pointer items-center gap-2.5 rounded-[9px] border border-line bg-panel pr-2.5 pl-1.5 text-left transition-colors hover:border-line-strong focus-visible:outline-2 focus-visible:outline-brand data-[state=open]:border-line-strong max-sm:basis-full pointer-coarse:h-9"
       >
         <span
           className={cn(
@@ -77,6 +77,7 @@ export function EndpointPicker({
         <Popover.Content
           align="start"
           sideOffset={6}
+          collisionPadding={8}
           className={cn(
             "z-50 w-[min(460px,calc(100vw-40px))] overflow-hidden rounded-dialog bg-panel shadow-overlay",
             POP_MOTION,
@@ -89,10 +90,14 @@ export function EndpointPicker({
                 value={query}
                 onValueChange={setQuery}
                 placeholder={`Search ${choices.length} endpoints…`}
-                className="h-full min-w-0 flex-1 bg-transparent text-ui text-fg outline-none placeholder:text-fg-subtle"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="go"
+                className="h-full min-w-0 flex-1 bg-transparent text-ui text-fg outline-none placeholder:text-fg-subtle pointer-coarse:text-[16px]"
               />
             </div>
-            <Command.List className="max-h-90 overflow-auto p-1">
+            <Command.List className="max-h-[min(360px,50dvh)] overflow-auto p-1">
               <Command.Empty className="px-3 py-6 text-center text-control text-fg-subtle">
                 No endpoint matches
               </Command.Empty>
@@ -116,7 +121,7 @@ export function EndpointPicker({
                         setOpen(false);
                       }}
                       className={cn(
-                        "flex h-8.5 cursor-pointer items-center gap-2.5 rounded-control px-2.5 data-[selected=true]:bg-raised",
+                        "flex h-8.5 cursor-pointer items-center gap-2.5 rounded-control px-2.5 data-[selected=true]:bg-raised pointer-coarse:h-10",
                         endpoint.key === current.key && "bg-brand-tint",
                       )}
                     >

@@ -16,7 +16,7 @@ const VERSIONS = [
 const SHOWN_LINES = 400;
 
 const INPUT =
-  "h-8 w-full rounded-card border border-line-strong bg-inset px-2.5 font-mono text-control text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand";
+  "h-8 w-full rounded-card border border-line-strong bg-inset px-2.5 font-mono text-control text-fg outline-none placeholder:text-fg-subtle focus-visible:border-brand pointer-coarse:h-10 pointer-coarse:text-[16px]";
 
 /**
  * What the OpenAPI export writes: the source, the OpenAPI version, the
@@ -62,7 +62,7 @@ export function ExportOpenApiForm({
             : "what most tools read"}
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
         <label
           htmlFor="openapi-export-title"
           className="flex flex-col gap-1.5 text-label text-fg-muted"
@@ -85,6 +85,9 @@ export function ExportOpenApiForm({
             id="openapi-export-version"
             className={INPUT}
             placeholder="0.0.0"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
             value={request.version}
             onChange={(event) => change({ version: event.target.value })}
           />

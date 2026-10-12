@@ -4,11 +4,12 @@
  * The Explorer's graph on a canvas that pans and zooms: its layout as flow
  * nodes in the layout's own coordinates — the curves lowest and never in
  * the way, the headings, a card a node — controls to zoom and fit, and a
- * minimap once the graph outgrows a screenful.
+ * minimap once the graph outgrows a screenful, except on a phone.
  */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { MEDIA } from "@/design/breakpoints";
 import { flowNodesOf, placedNodesOf, wiresNodeOf } from "@/features/explorer/flow-nodes";
 import type { GraphLayout, GraphNode } from "@/features/explorer/graph-types";
 import { keptPlacedNodes } from "@/features/explorer/kept-cards";
@@ -67,7 +68,10 @@ globalThis.ResizeObserver ??= class {
   disconnect(): void {}
 };
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe("the graph as flow nodes", () => {
   it("puts the curves lowest and out of the way, then the headings, then a card a node where the layout has it", () => {
@@ -170,5 +174,26 @@ describe("the graph's canvas", () => {
     );
 
     expect(document.querySelector(".react-flow__minimap")).not.toBeNull();
+  });
+
+  it("leaves the minimap off a phone, where it would cover half the canvas", () => {
+    vi.stubGlobal("matchMedia", (media: string) => ({
+      media,
+      matches: media === MEDIA.phone,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+
+    render(
+      <GraphFlow
+        calls={{ pulses: [], onPulseDone: vi.fn() }}
+        layout={layoutOf(30)}
+        onHover={vi.fn()}
+        onOpen={vi.fn()}
+      />,
+    );
+
+    expect(document.querySelector(".react-flow__minimap")).toBeNull();
+    expect(screen.getByRole("button", { name: "Fit the graph" })).toBeTruthy();
   });
 });

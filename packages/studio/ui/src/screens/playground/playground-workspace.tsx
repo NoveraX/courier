@@ -1,6 +1,7 @@
 import { playgroundRequestId } from "@noverax/courier-studio-core";
 import { useState } from "react";
 
+import { MEDIA } from "@/design/breakpoints";
 import { endpointKey } from "@/features/explorer/endpoint-key";
 import type { PlaygroundEndpoint } from "@/features/playground/endpoint-choices";
 import type { FormBodyField } from "@/features/playground/form-body";
@@ -11,10 +12,14 @@ import { parseJsonc } from "@/features/playground/jsonc-helpers";
 import { proxyRouteOf } from "@/features/playground/proxy-route";
 import { requestUrlParts } from "@/features/playground/request-url";
 import { useLiveNow } from "@/hooks/use-live-now";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { useNow } from "@/hooks/use-tick";
 import type { PayloadMode } from "@/inspector/tabs/payload-tab";
 import { useInspector } from "@/inspector/use-inspector";
 import { useStudioStore } from "@/store";
+import { answerMark } from "./answer-mark";
+import type { PaneView } from "./pane-switch";
+import { PlaygroundPanes } from "./playground-panes";
 import { PlaygroundToolbar } from "./playground-toolbar";
 import type { BodyKind, EditorTab } from "./request-pane";
 import { RequestPane } from "./request-pane";
@@ -32,8 +37,10 @@ interface PlaygroundWorkspaceProps {
 
 /**
  * The Playground at work: the bar over the request and the response, side
- * by side — stacked on a narrow window — for the endpoint chosen, its last
- * run shown until another endpoint is chosen.
+ * by side — stacked on a narrow window, one at a time on a phone, where a
+ * send or a recent send brought back shows the response and choosing
+ * another endpoint its request — for the endpoint chosen, its last run
+ * shown until another endpoint is chosen.
  *
  * @param props - The endpoints, the one chosen, and what chooses another
  * @returns The workspace
@@ -53,6 +60,13 @@ export function PlaygroundWorkspace({
   const [fields, setFields] = useState<FormBodyField[]>(() => [emptyField()]);
   const [responseTab, setResponseTab] = useState<ResponseTab>("body");
   const [payloadMode, setPayloadMode] = useState<PayloadMode>("tree");
+  const [view, setView] = useState<PaneView>("request");
+  const phone = useMediaQuery(MEDIA.phone);
+  const short = useMediaQuery(MEDIA.shortScreen);
+  const showResponse = (next: ResponseTab) => {
+    setResponseTab(next);
+    setView("response");
+  };
   const active = useStudioStore((s) => s.playgroundActiveResponse);
   const shown = active && endpointKey(active) === endpoint.key ? active : null;
   const row = useStudioStore((s) =>
@@ -80,7 +94,7 @@ export function PlaygroundWorkspace({
     mode: editors.mode,
     body: { kind: bodyKind, fields },
     shown,
-    onSent: (stream) => setResponseTab(stream ? "messages" : "body"),
+    onSent: (stream) => showResponse(stream ? "messages" : "body"),
   });
   const actions = usePlaygroundActions({
     endpoint,
@@ -88,52 +102,63 @@ export function PlaygroundWorkspace({
     tab,
     choices,
     onChoose,
-    onShow: setResponseTab,
+    onShow: showResponse,
   });
   return (
     <div className="flex h-full min-h-0 flex-col">
       <PlaygroundToolbar
         choices={choices}
         endpoint={endpoint}
-        onChoose={onChoose}
+        onChoose={(next) => {
+          setView("request");
+          onChoose(next);
+        }}
         mode={editors.mode}
         onMode={editors.setMode}
         history={{ now, labelOf: actions.labelOf, onPick: actions.restore }}
         action={run.action}
         onPrimary={run.primary}
       />
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] max-[900px]:auto-rows-[minmax(420px,auto)] max-[900px]:grid-cols-1 max-[900px]:overflow-auto">
-        <RequestPane
-          endpoint={endpoint}
-          url={{
-            parts,
-            proxy:
-              editors.mode === "proxy"
-                ? (proxyRouteOf(endpoint.transport, endpoint.entry) ?? null)
-                : undefined,
-          }}
-          tab={tab}
-          onTab={setTab}
-          variables={editors.variables}
-          headers={editors.headers}
-          body={{ kind: bodyKind, onKind: setBodyKind, fields, onFields: setFields }}
-          check={check}
-          onPrettify={actions.prettify}
-          onCopy={actions.copy}
-        />
-        <ResponsePane
-          entry={shown}
-          row={row}
-          tab={responseTab}
-          onTab={setResponseTab}
-          payload={{ mode: payloadMode, onMode: setPayloadMode }}
-          now={now}
-          slowMs={slowMs}
-          sendingLabel={`${endpoint.label} ${parts.map((p) => p.text).join("")}`}
-          onInspect={open}
-          onCancel={run.cancel}
-        />
-      </div>
+      <PlaygroundPanes
+        layout={phone ? "single" : short ? "split" : "auto"}
+        view={view}
+        onView={setView}
+        mark={answerMark(shown, row)}
+        request={
+          <RequestPane
+            endpoint={endpoint}
+            url={{
+              parts,
+              proxy:
+                editors.mode === "proxy"
+                  ? (proxyRouteOf(endpoint.transport, endpoint.entry) ?? null)
+                  : undefined,
+            }}
+            tab={tab}
+            onTab={setTab}
+            variables={editors.variables}
+            headers={editors.headers}
+            body={{ kind: bodyKind, onKind: setBodyKind, fields, onFields: setFields }}
+            check={check}
+            onPrettify={actions.prettify}
+            onCopy={actions.copy}
+          />
+        }
+        response={
+          <ResponsePane
+            entry={shown}
+            row={row}
+            tab={responseTab}
+            onTab={setResponseTab}
+            payload={{ mode: payloadMode, onMode: setPayloadMode }}
+            now={now}
+            slowMs={slowMs}
+            sendingLabel={`${endpoint.label} ${parts.map((p) => p.text).join("")}`}
+            onInspect={open}
+            onCancel={run.cancel}
+          />
+        }
+      />
     </div>
   );
 }

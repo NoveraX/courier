@@ -69,7 +69,7 @@ export function ResponsePane(props: ResponsePaneProps): React.ReactNode {
             <button
               type="button"
               onClick={() => onInspect(row.id)}
-              className="flex h-6.5 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line px-2.25 text-small text-fg-muted transition-colors hover:border-line-strong hover:text-fg"
+              className="flex h-6.5 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line px-2.25 text-small text-fg-muted transition-colors hover:border-line-strong hover:text-fg pointer-coarse:h-9 pointer-coarse:px-2.5"
             >
               <PanelRight aria-hidden="true" className="size-3" />
               Inspect

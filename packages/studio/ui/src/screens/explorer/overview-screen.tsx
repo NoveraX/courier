@@ -17,7 +17,8 @@ import { useExplorerSearch } from "./use-explorer-search";
 /**
  * The Explorer's overview: six figures over the project's API surface, the
  * health of every group, the endpoints that rank highest, a card per source
- * and the newest calls as they come in.
+ * and the newest calls as they come in — two cards a row where they fit,
+ * one a row on a phone.
  *
  * @returns The Overview tab
  * @example
@@ -42,16 +43,16 @@ export function OverviewScreen(): React.ReactNode {
   }
   return (
     <div className="min-h-0 flex-1 overflow-auto">
-      <div className="mx-auto flex max-w-360 flex-col gap-3.5 px-6 pt-5 pb-10">
+      <div className="mx-auto flex max-w-360 flex-col gap-3.5 px-6 pt-5 pb-10 max-sm:px-4">
         <OverviewFigures figures={overviewFigures(model, requests, configFile)} />
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-3.5">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(360px,100%),1fr))] gap-3.5">
           <HealthMatrix
             model={model}
             onGroup={(key) => set({ q: `${key}.` }, "/explorer/endpoints")}
           />
           <TopEndpoints model={model} slowMs={slowMs} onOpen={(key) => set({ endpoint: key })} />
         </div>
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(360px,1fr))] gap-3.5">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(360px,100%),1fr))] gap-3.5">
           <SourceCards model={model} />
           <ActivityFeed requests={requests} now={now} slowMs={slowMs} live={live} onOpen={open} />
         </div>

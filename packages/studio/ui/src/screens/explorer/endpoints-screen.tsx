@@ -1,9 +1,9 @@
 import { useRef } from "react";
 
-import { SearchField } from "@/design/search-field";
+import { listTierOf } from "@/design/breakpoints";
 import type { SegmentedOption } from "@/design/segmented";
-import { Segmented } from "@/design/segmented";
 import { endpointRows, kindCounts } from "@/features/explorer/endpoints-table";
+import type { ExplorerModel } from "@/features/explorer/explorer-model";
 import type { EndpointKind } from "@/features/explorer/explorer-search";
 import { useElementWidth } from "@/hooks/use-element-width";
 import { useFirstLoad } from "@/hooks/use-first-load";
@@ -11,12 +11,13 @@ import { useNow } from "@/hooks/use-tick";
 import { cn } from "@/lib/utils";
 import { useStudioStore } from "@/store";
 import { EndpointList } from "./endpoint-list";
+import { EndpointsBar } from "./endpoints-bar";
 import { ExplorerEmpty } from "./explorer-empty";
 import { ExplorerSkeleton } from "./explorer-skeleton";
 import { useExplorerModel } from "./use-explorer-model";
 import { useExplorerSearch } from "./use-explorer-search";
 
-/* Below this width the list drops its middleware and last-call columns. */
+/* From this width the list shows its middleware and last-call columns. */
 const WIDE_PX = 980;
 const WIDE = "minmax(260px,2fr) minmax(120px,1fr) minmax(120px,1fr) 56px 72px 64px 80px";
 const NARROW = "minmax(0,2fr) minmax(90px,1fr) 44px 64px 56px";
@@ -37,10 +38,15 @@ const KIND_LABELS: Readonly<Record<EndpointKind, string>> = {
   stream: "Streams",
 };
 
+const HEAD_CLASS =
+  "sticky top-0 z-[2] h-8.5 items-center border-b border-line bg-bg text-label whitespace-nowrap text-fg-subtle";
+
 /**
  * The Explorer's list of endpoints under their sources — searchable, and
  * narrowed to queries, mutations or streams — with each one's kind,
  * middleware, calls, p95, error rate and last call; a row opens its panel.
+ * A list too narrow for its columns, as on a phone, puts each endpoint on
+ * two lines under a bar of one row.
  *
  * @returns The Endpoints tab
  * @example
@@ -51,14 +57,20 @@ const KIND_LABELS: Readonly<Record<EndpointKind, string>> = {
 export function EndpointsScreen(): React.ReactNode {
   const model = useExplorerModel();
   const loading = useFirstLoad();
+  if (!model.endpoints.length) {
+    return loading.sources ? <ExplorerSkeleton view="endpoints" /> : <ExplorerEmpty />;
+  }
+  return <EndpointsView model={model} />;
+}
+
+/* Mounted with its list, so the list is measured from the first frame it is drawn in. */
+function EndpointsView({ model }: { model: ExplorerModel }): React.ReactNode {
   const { q, kind, endpoint, set } = useExplorerSearch();
   const slowMs = useStudioStore((s) => s.settings.slowRequestThreshold);
   const now = useNow();
   const listRef = useRef<HTMLElement>(null);
-  const wide = useElementWidth(listRef, 1200) >= WIDE_PX;
-  if (!model.endpoints.length) {
-    return loading.sources ? <ExplorerSkeleton view="endpoints" /> : <ExplorerEmpty />;
-  }
+  const width = useElementWidth(listRef, typeof window === "undefined" ? 1200 : window.innerWidth);
+  const tier = listTierOf(width, WIDE_PX);
   const rows = endpointRows(model, q, kind);
   const shown = rows.flatMap((row) => (row.kind === "endpoint" ? [row.endpoint] : []));
   const counts = kindCounts(model);
@@ -70,51 +82,51 @@ export function EndpointsScreen(): React.ReactNode {
     count: counts[value],
     countTone: "subtle",
   }));
-  const columns = wide ? WIDE : NARROW;
+  const summary = (
+    <>
+      <span className="font-strong text-fg tabular-nums">{shown.length}</span>{" "}
+      {shown.length === 1 ? "endpoint" : "endpoints"} ·{" "}
+      {shown.filter((e) => !e.metrics.calls).length} never called
+    </>
+  );
+  const columns = tier === "wide" ? WIDE : NARROW;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-2.5 border-b border-line bg-bg-subtle py-2.5 pr-4 pl-5">
-        <SearchField
-          value={q}
-          onChange={(next) => set({ q: next })}
-          placeholder="Search endpoints…"
-          label="Search endpoints"
-          className="w-70 max-w-full"
-        />
-        <Segmented
-          label="Kind"
-          options={kinds}
-          value={kind}
-          onChange={(next) => set({ kind: next })}
-          quiet="subtle"
-        />
-        <div className="flex-1" />
-        <span className="text-control text-fg-subtle">
-          <span className="font-strong text-fg tabular-nums">{shown.length}</span>{" "}
-          {shown.length === 1 ? "endpoint" : "endpoints"} ·{" "}
-          {shown.filter((e) => !e.metrics.calls).length} never called
-        </span>
-      </div>
+      <EndpointsBar
+        q={q}
+        onSearch={(next) => set({ q: next })}
+        kinds={kinds}
+        kind={kind}
+        onKind={(next) => set({ kind: next })}
+        summary={summary}
+        compact={tier === "stacked"}
+      />
       <section ref={listRef} aria-label="Endpoints" className="min-h-0 flex-1 overflow-auto">
-        <div
-          aria-hidden="true"
-          style={{ gridTemplateColumns: columns }}
-          className="sticky top-0 z-[2] grid h-8.5 items-center gap-3 border-b border-line bg-bg px-5 text-label whitespace-nowrap text-fg-subtle"
-        >
-          {HEAD.filter((h) => wide || !h.wideOnly).map((h) => (
-            <span key={h.label} className={cn(h.right && "text-right")}>
-              {h.label}
-            </span>
-          ))}
-        </div>
+        {tier === "stacked" ? (
+          <p className={cn(HEAD_CLASS, "m-0 flex pr-4 pl-5 text-control")}>
+            <span>{summary}</span>
+          </p>
+        ) : (
+          <div
+            aria-hidden="true"
+            style={{ gridTemplateColumns: columns }}
+            className={cn(HEAD_CLASS, "grid gap-3 px-5")}
+          >
+            {HEAD.filter((h) => tier === "wide" || !h.wideOnly).map((h) => (
+              <span key={h.label} className={cn(h.right && "text-right")}>
+                {h.label}
+              </span>
+            ))}
+          </div>
+        )}
         {rows.length === 0 && (
           <p className="px-5 py-10 text-center text-control text-fg-subtle">No endpoints match</p>
         )}
         <EndpointList
           rows={rows}
           scroller={listRef}
+          tier={tier}
           columns={columns}
-          wide={wide}
           selected={endpoint}
           now={now}
           slowMs={slowMs}

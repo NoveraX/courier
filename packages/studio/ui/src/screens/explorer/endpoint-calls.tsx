@@ -1,5 +1,7 @@
+import { MEDIA } from "@/design/breakpoints";
 import { recentCalls } from "@/features/explorer/endpoint-detail";
 import type { EndpointNode } from "@/features/explorer/explorer-model";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { CallRow } from "@/request-list/call-row";
 
 interface EndpointCallsProps {
@@ -21,11 +23,14 @@ interface EndpointCallsProps {
  */
 export function EndpointCalls({ endpoint, slowMs, onOpen }: EndpointCallsProps): React.ReactNode {
   const calls = recentCalls(endpoint);
+  const touch = useMediaQuery(MEDIA.coarse);
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline gap-2">
         <h3 className="text-label font-semibold text-fg-muted">Recent calls</h3>
-        {calls.length > 0 && <span className="text-label text-fg-subtle">click to inspect</span>}
+        {calls.length > 0 && (
+          <span className="text-label text-fg-subtle">{touch ? "tap" : "click"} to inspect</span>
+        )}
       </div>
       <div className="overflow-hidden rounded-panel border border-line">
         {calls.length === 0 && (
@@ -39,7 +44,7 @@ export function EndpointCalls({ endpoint, slowMs, onOpen }: EndpointCallsProps):
             call={call}
             slowMs={slowMs}
             onOpen={onOpen}
-            className="h-8 border-b border-line px-3 last:border-b-0 hover:bg-raised"
+            className="h-8 border-b border-line px-3 last:border-b-0 hover:bg-raised pointer-coarse:h-11"
           />
         ))}
       </div>

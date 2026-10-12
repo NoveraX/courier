@@ -106,7 +106,7 @@ export function EndpointContract({
               onClick={() =>
                 openSchemaFix({ source: contract.source, endpoint: contract.endpoint })
               }
-              className="h-7 w-max cursor-pointer rounded-control bg-brand px-2.5 text-small font-semibold text-bg hover:bg-brand/90"
+              className="h-7 w-max cursor-pointer rounded-control bg-brand px-2.5 text-small font-semibold text-bg hover:bg-brand/90 pointer-coarse:h-9 pointer-coarse:px-3"
             >
               Fix the schema…
             </button>
@@ -122,7 +122,7 @@ export function EndpointContract({
         <button
           type="button"
           onClick={() => void forget(contract)}
-          className="h-7 w-max cursor-pointer rounded-control border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg"
+          className="h-7 w-max cursor-pointer rounded-control border border-line px-2.5 text-small text-fg-muted hover:border-line-strong hover:text-fg pointer-coarse:h-9 pointer-coarse:px-3"
         >
           Forget what was seen
         </button>

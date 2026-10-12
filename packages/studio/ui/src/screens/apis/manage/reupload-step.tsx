@@ -45,7 +45,7 @@ export function ReuploadStep({
             aria-pressed={option.value === source}
             onClick={() => setSource(option.value)}
             className={cn(
-              "flex h-8 cursor-pointer items-center gap-1.75 rounded-card border px-3 text-control",
+              "flex h-8 cursor-pointer items-center gap-1.75 rounded-card border px-3 text-control pointer-coarse:h-10",
               option.value === source
                 ? "border-brand bg-brand-tint text-fg"
                 : "border-line text-fg-muted hover:border-line-strong",
@@ -74,8 +74,10 @@ export function ReuploadStep({
           onChange={(e) => onContentChange(e.target.value)}
           placeholder='{ "openapi": "3.1.0", … }'
           aria-label="Spec text"
+          autoCapitalize="off"
+          autoCorrect="off"
           spellCheck={false}
-          className="h-37.5 resize-y rounded-panel border border-line-strong bg-inset p-3 font-mono text-small leading-[1.6] text-syntax-plain outline-none focus:border-brand"
+          className="h-37.5 resize-y rounded-panel border border-line-strong bg-inset p-3 font-mono text-small leading-[1.6] text-syntax-plain outline-none focus:border-brand pointer-coarse:text-[16px]"
         />
       )}
       {state.error && (

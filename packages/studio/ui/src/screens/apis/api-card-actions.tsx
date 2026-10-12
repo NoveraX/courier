@@ -34,7 +34,7 @@ export function ApiCardActions({
         type="button"
         onClick={onManage}
         className={cn(
-          "flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-2.5 text-small font-semibold whitespace-nowrap",
+          "flex h-7 shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-2.5 text-small font-semibold whitespace-nowrap pointer-coarse:h-9 pointer-coarse:px-3",
           card.update
             ? "bg-warn text-bg hover:bg-warn/90"
             : "border border-line-strong bg-panel text-fg hover:bg-raised",
@@ -55,7 +55,7 @@ export function ApiCardActions({
         disabled={!card.check.can || card.status.kind === "checking"}
         title={card.check.can ? "Check for updates" : card.check.why}
         aria-label={`Check ${card.name} for updates`}
-        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control border border-line text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control border border-line text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50 pointer-coarse:size-9"
       >
         <RefreshCw aria-hidden="true" className="size-3" />
       </button>
@@ -64,7 +64,7 @@ export function ApiCardActions({
         onClick={onRemove}
         title="Remove"
         aria-label={`Remove ${card.name}`}
-        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-err-dim hover:text-err"
+        className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-err-dim hover:text-err pointer-coarse:size-9"
       >
         <Trash2 aria-hidden="true" className="size-3.25" />
       </button>

@@ -43,6 +43,8 @@ export function GenerationStep({
           value={options.sourceName}
           spellCheck={false}
           autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
           onChange={(e) => onChange({ sourceName: e.target.value })}
           className={`${FIELD_INPUT} max-w-80`}
         />
@@ -58,6 +60,8 @@ export function GenerationStep({
           value={options.outputDir}
           spellCheck={false}
           autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
           onChange={(e) => onChange({ outputDir: e.target.value })}
           className={`${FIELD_INPUT} max-w-80`}
         />

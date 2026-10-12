@@ -70,12 +70,12 @@ export function RemoveImportDialog({
       icon={{ icon: Trash2, tone: "bg-err-dim text-err" }}
       width="w-160"
       footer={
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-line bg-panel-subtle px-5 py-3">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-line bg-panel-subtle px-5 py-3">
           <button
             type="button"
             disabled={removal.removing}
             onClick={removal.close}
-            className="flex h-8 cursor-pointer items-center rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+            className="flex h-8 cursor-pointer items-center rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10"
           >
             Cancel
           </button>
@@ -83,7 +83,7 @@ export function RemoveImportDialog({
             type="button"
             disabled={!ready}
             onClick={() => void removal.confirm()}
-            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-err px-3.5 text-control font-semibold text-bg hover:bg-err/90 disabled:cursor-default disabled:opacity-50"
+            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-err px-3.5 text-control font-semibold text-bg hover:bg-err/90 disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10"
           >
             {removal.removing && <Loader2 aria-hidden="true" className="size-3.25 animate-spin" />}
             Remove

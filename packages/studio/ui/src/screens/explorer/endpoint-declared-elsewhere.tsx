@@ -66,7 +66,7 @@ export function EndpointDeclaredElsewhere({
       <button
         type="button"
         onClick={add}
-        className="flex h-7.5 w-max cursor-pointer items-center gap-1.75 rounded-control bg-fg px-3 text-small font-semibold text-bg hover:bg-fg/90"
+        className="flex h-7.5 w-max max-w-full cursor-pointer items-center gap-1.75 rounded-control bg-fg px-3 text-small font-semibold text-bg hover:bg-fg/90 pointer-coarse:h-9"
       >
         <FilePlus2 aria-hidden="true" className="size-3.25" />
         {`Add ${name} from traffic`}

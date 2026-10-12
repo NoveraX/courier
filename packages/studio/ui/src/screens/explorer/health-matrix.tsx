@@ -27,7 +27,7 @@ interface HealthMatrixProps {
 /**
  * Every group of every source as a chip coloured by its health with its
  * calls — a critical group on a red tint — each opening the Endpoints list
- * narrowed to it.
+ * narrowed to it. On a phone a source's name sits over its groups.
  *
  * @param props - The model, and what opens a group
  * @returns The card
@@ -47,10 +47,13 @@ export function HealthMatrix({ model, onGroup }: HealthMatrixProps): React.React
         {sources.map((source) => (
           <div
             key={source.name}
-            className="grid grid-cols-[132px_minmax(0,1fr)] items-start gap-3 rounded-card p-2 hover:bg-bg-subtle"
+            className="grid grid-cols-[132px_minmax(0,1fr)] items-start gap-3 rounded-card p-2 hover:bg-bg-subtle max-sm:grid-cols-1 max-sm:gap-1.5"
           >
             <span
-              className={cn("min-w-0 truncate pt-1 font-mono text-small", LEVEL_TEXT[source.level])}
+              className={cn(
+                "min-w-0 truncate pt-1 font-mono text-small max-sm:pt-0",
+                LEVEL_TEXT[source.level],
+              )}
             >
               {source.name}
               <span className="sr-only">{`, ${LEVEL_META[source.level].label}`}</span>
@@ -63,7 +66,7 @@ export function HealthMatrix({ model, onGroup }: HealthMatrixProps): React.React
                   title={tipOf(group)}
                   onClick={() => onGroup(group.key)}
                   className={cn(
-                    "flex h-6 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line px-2 text-label text-fg-muted transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand",
+                    "flex h-6 cursor-pointer items-center gap-1.5 rounded-[6px] border border-line px-2 text-label text-fg-muted transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-9 pointer-coarse:px-2.5",
                     group.level === "critical" ? "bg-err-tint" : "bg-inset",
                     LEVEL_TEXT[group.level],
                   )}

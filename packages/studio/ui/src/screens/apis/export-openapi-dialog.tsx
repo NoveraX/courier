@@ -49,12 +49,12 @@ export function ExportOpenApiDialog({
       icon={{ icon: FileJson, tone: "bg-brand-dim text-brand" }}
       width="w-180"
       footer={
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-line bg-panel-subtle px-5 py-3">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-line bg-panel-subtle px-5 py-3">
           <button
             type="button"
             disabled={!ready}
             onClick={() => void copy()}
-            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50"
+            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card border border-line px-3.5 text-control text-fg-muted hover:border-line-strong hover:text-fg disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10"
           >
             <Copy aria-hidden="true" className="size-3.25" />
             Copy
@@ -63,10 +63,10 @@ export function ExportOpenApiDialog({
             type="button"
             disabled={!ready}
             onClick={() => result && downloadFile(result.text, result.fileName)}
-            className="flex h-8 cursor-pointer items-center gap-1.75 rounded-card bg-fg px-3.5 text-control font-semibold text-bg hover:bg-fg/90 disabled:cursor-default disabled:opacity-50"
+            className="flex h-8 min-w-0 cursor-pointer items-center gap-1.75 rounded-card bg-fg px-3.5 text-control font-semibold text-bg hover:bg-fg/90 disabled:cursor-default disabled:opacity-50 pointer-coarse:h-10"
           >
-            <Download aria-hidden="true" className="size-3.25" />
-            {result ? `Download ${result.fileName}` : "Download"}
+            <Download aria-hidden="true" className="size-3.25 shrink-0" />
+            <span className="truncate">{result ? `Download ${result.fileName}` : "Download"}</span>
           </button>
         </div>
       }

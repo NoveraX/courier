@@ -36,7 +36,7 @@ export function GraphFoldToggle({
       aria-expanded={!fold.folded}
       title={label}
       className={cn(
-        "absolute top-1/2 -right-2.5 flex h-5 min-w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-line bg-panel px-1 font-mono text-badge text-fg-muted shadow-node transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand",
+        "hit-area absolute top-1/2 -right-2.5 flex h-5 min-w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-line bg-panel px-1 font-mono text-badge text-fg-muted shadow-node transition-colors hover:border-line-strong hover:text-fg focus-visible:outline-2 focus-visible:outline-brand",
         fold.folded && "border-brand/45 text-brand",
         node.dim && "opacity-30",
       )}

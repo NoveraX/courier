@@ -20,7 +20,7 @@ import { EndpointTrafficOnly } from "./endpoint-traffic-only";
 import { methodChipOf } from "./method-class";
 
 const ACTION =
-  "flex h-8 flex-1 items-center justify-center gap-1.75 rounded-card text-control focus-visible:outline-2 focus-visible:outline-brand";
+  "flex h-8 flex-1 items-center justify-center gap-1.75 rounded-card text-control focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:h-10";
 
 interface EndpointSheetProps {
   endpoint: EndpointNode;
@@ -83,7 +83,7 @@ export function EndpointSheet(props: EndpointSheetProps): React.ReactNode {
             onClick={onClose}
             title="Close · Esc"
             aria-label="Close"
-            className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand"
+            className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-subtle hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-brand pointer-coarse:size-10"
           >
             <X aria-hidden="true" className="size-3.75" />
           </button>

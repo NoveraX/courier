@@ -122,7 +122,7 @@ export function InventoryStep({
   ];
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-4 gap-px overflow-hidden rounded-panel border border-line bg-line">
+      <div className="grid grid-cols-4 gap-px overflow-hidden rounded-panel border border-line bg-line max-sm:grid-cols-2">
         {figures.map((f) => (
           <div key={f.label} className="flex flex-col gap-0.75 bg-inset px-3 py-2.25">
             <span className="text-meta text-fg-subtle">{f.label}</span>
@@ -141,7 +141,7 @@ export function InventoryStep({
         <button
           type="button"
           onClick={onToggleAll}
-          className="flex h-6.5 cursor-pointer items-center rounded-[6px] border border-line px-2.25 text-small text-fg-muted hover:border-line-strong hover:text-fg"
+          className="flex h-6.5 cursor-pointer items-center rounded-[6px] border border-line px-2.25 text-small text-fg-muted hover:border-line-strong hover:text-fg pointer-coarse:h-9 pointer-coarse:px-2.5"
         >
           {all ? "Deselect all" : "Select all"}
         </button>

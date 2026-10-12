@@ -1,57 +1,10 @@
-import { contractKey, useContractStore } from "@/features/contract/contract-store";
 import { lastCallLabel } from "@/features/explorer/endpoint-key";
-import type { EndpointTag } from "@/features/explorer/endpoint-tags";
-import { endpointTags } from "@/features/explorer/endpoint-tags";
 import type { EndpointNode } from "@/features/explorer/explorer-model";
 import { methodLabelOf } from "@/features/explorer/method-label";
-import { formatDuration } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { EndpointTagChips } from "./endpoint-tag-chips";
 import { methodClassOf } from "./method-class";
-
-const TAG_CLASS: Readonly<Record<EndpointTag["tone"], string>> = {
-  stream: "bg-brand-dim text-brand",
-  mutation: "bg-syntax-keyword/12 text-syntax-keyword",
-  query: "bg-raised text-fg-muted",
-  agent: "bg-syntax-function/12 text-syntax-function",
-  proxy: "bg-syntax-type/12 text-syntax-type",
-  warn: "bg-warn-dim text-warn",
-};
-
-function p95Of(e: EndpointNode, slowMs: number): { text: string; className: string } {
-  const { p95, calls } = e.metrics;
-  if (p95 === null) {
-    return { text: e.transport !== "http" && calls ? "stream" : "—", className: "text-fg-subtle" };
-  }
-  const className = p95 > slowMs * 2 ? "text-err" : p95 > slowMs ? "text-warn" : "text-fg";
-  return { text: formatDuration(p95), className };
-}
-
-function errorsOf(e: EndpointNode): { text: string; className: string } {
-  const { calls, errorRate } = e.metrics;
-  if (!calls) return { text: "—", className: "text-fg-subtle" };
-  const className = errorRate >= 20 ? "text-err" : errorRate >= 5 ? "text-warn" : "text-fg-subtle";
-  return { text: `${errorRate.toFixed(1)}%`, className };
-}
-
-/* An endpoint whose real answers differ from its response schema says so in its row. */
-function DriftTag({ endpoint: e }: { endpoint: EndpointNode }): React.ReactNode {
-  const id = e.group ? `${e.group}.${e.method}` : e.method;
-  const drifted = useContractStore(
-    (s) => s.byEndpoint.get(contractKey(e.source, id))?.state === "drifted",
-  );
-  if (!drifted) return null;
-  return (
-    <span
-      title="Its answers differ from its response schema"
-      className={cn(
-        "flex h-4.75 items-center rounded-[5px] px-1.5 text-meta font-strong whitespace-nowrap",
-        TAG_CLASS.warn,
-      )}
-    >
-      drifted
-    </span>
-  );
-}
+import { rowFiguresOf } from "./row-figures-of";
 
 interface EndpointRowProps {
   endpoint: EndpointNode;
@@ -79,8 +32,7 @@ interface EndpointRowProps {
 export function EndpointRow(props: EndpointRowProps): React.ReactNode {
   const { endpoint: e, columns, wide, selected, now, slowMs, onOpen } = props;
   const method = methodLabelOf(e);
-  const p95 = p95Of(e, slowMs);
-  const errors = errorsOf(e);
+  const { p95, errors } = rowFiguresOf(e, slowMs);
   return (
     <button
       type="button"
@@ -108,19 +60,7 @@ export function EndpointRow(props: EndpointRowProps): React.ReactNode {
         </span>
       </span>
       <span className="flex flex-wrap gap-1.25">
-        <DriftTag endpoint={e} />
-        {endpointTags(e).map((tag) => (
-          <span
-            key={tag.label}
-            title={tag.title}
-            className={cn(
-              "flex h-4.75 items-center rounded-[5px] px-1.5 text-meta font-strong whitespace-nowrap",
-              TAG_CLASS[tag.tone],
-            )}
-          >
-            {tag.label}
-          </span>
-        ))}
+        <EndpointTagChips endpoint={e} />
       </span>
       {wide && (
         <span className="flex flex-wrap gap-1">

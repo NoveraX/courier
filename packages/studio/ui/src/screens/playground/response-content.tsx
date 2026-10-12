@@ -1,10 +1,12 @@
 import { LoaderCircle, Send } from "lucide-react";
 
+import { MEDIA } from "@/design/breakpoints";
 import { Kbd } from "@/design/kbd";
 import { entryPayloadView } from "@/features/playground/entry-view";
 import { notForwardedOf } from "@/features/playground/not-forwarded";
 import { responseView } from "@/features/requests/payload-view";
 import { requestStateOf } from "@/features/requests/request-state";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { HeadersTab } from "@/inspector/tabs/headers-tab";
 import { MessagesTab } from "@/inspector/tabs/messages-tab";
 import type { PayloadMode } from "@/inspector/tabs/payload-tab";
@@ -29,6 +31,28 @@ function Waiting({ text }: { text: string }): React.ReactNode {
   return (
     <Centered>
       <span className="text-control text-fg-subtle">{text}</span>
+    </Centered>
+  );
+}
+
+/* A touch screen has no ⌘↵ to press: it is told of the button alone. */
+function Invitation(): React.ReactNode {
+  const touch = useMediaQuery(MEDIA.coarse);
+  return (
+    <Centered>
+      <span className="flex size-11 items-center justify-center rounded-dialog border border-line-strong bg-panel text-fg-subtle">
+        <Send aria-hidden="true" className="size-4.5" />
+      </span>
+      <span className="text-title font-semibold">Send a request to see the response</span>
+      <span className="flex items-center gap-1.5 text-control text-fg-subtle">
+        {touch ? (
+          "Use the Send button"
+        ) : (
+          <>
+            Press <Kbd>⌘ ↵</Kbd> or use the Send button
+          </>
+        )}
+      </span>
     </Centered>
   );
 }
@@ -71,19 +95,7 @@ interface ResponseContentProps {
  */
 export function ResponseContent(props: ResponseContentProps): React.ReactNode {
   const { entry, row, tab, payload, now, sendingLabel, onCancel } = props;
-  if (!entry) {
-    return (
-      <Centered>
-        <span className="flex size-11 items-center justify-center rounded-dialog border border-line-strong bg-panel text-fg-subtle">
-          <Send aria-hidden="true" className="size-4.5" />
-        </span>
-        <span className="text-title font-semibold">Send a request to see the response</span>
-        <span className="flex items-center gap-1.5 text-control text-fg-subtle">
-          Press <Kbd>⌘ ↵</Kbd> or use the Send button
-        </span>
-      </Centered>
-    );
-  }
+  if (!entry) return <Invitation />;
   const stream = entry.transport !== undefined;
   if (!stream && entry.status === "pending" && (!row || requestStateOf(row) === "pending")) {
     return (
@@ -98,7 +110,7 @@ export function ResponseContent(props: ResponseContentProps): React.ReactNode {
         <button
           type="button"
           onClick={onCancel}
-          className="h-6.5 cursor-pointer rounded-[6px] px-2.25 text-small text-fg-subtle hover:bg-raised hover:text-fg"
+          className="h-6.5 cursor-pointer rounded-[6px] px-2.25 text-small text-fg-subtle hover:bg-raised hover:text-fg pointer-coarse:h-9 pointer-coarse:px-3"
         >
           Cancel
         </button>

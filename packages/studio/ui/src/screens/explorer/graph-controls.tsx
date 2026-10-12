@@ -1,8 +1,23 @@
+import type { FitViewOptions } from "@xyflow/react";
 import { Panel, useReactFlow } from "@xyflow/react";
 import type { LucideIcon } from "lucide-react";
 import { Maximize, Minus, Plus } from "lucide-react";
 
-import { GRAPH_VIEW } from "./graph-view-options";
+/* The flow's margin around a panel, and the gap a fit keeps from a node. */
+const PANEL_MARGIN = 15;
+const GAP = 8;
+
+/* Three buttons in a bordered column: 28 px each with a mouse, 40 with a finger. */
+function roomFor(button: number): { width: number; height: number } {
+  return { width: PANEL_MARGIN + button + 2 + GAP, height: PANEL_MARGIN + 3 * button + 2 + GAP };
+}
+
+/**
+ * The room the controls take from the graph's lower left corner, with a
+ * mouse and with a finger, the panel's margin and a gap before a node
+ * included — what a fit keeps clear of the graph.
+ */
+export const CONTROLS_ROOM = { fine: roomFor(28), coarse: roomFor(40) } as const;
 
 function Control({
   icon: Icon,
@@ -31,13 +46,14 @@ function Control({
  * pan and zoom a trackpad, a mouse, a finger or the keyboard gives — each
  * a finger's size on a touch screen.
  *
+ * @param props - The fit the graph was first shown with, which the fit button repeats
  * @returns The controls, at the graph's lower left
  * @example
  * ```tsx
- * <ReactFlow nodes={nodes}><GraphControls /></ReactFlow>
+ * <ReactFlow nodes={nodes}><GraphControls fit={fit} /></ReactFlow>
  * ```
  */
-export function GraphControls(): React.ReactNode {
+export function GraphControls({ fit }: { fit: FitViewOptions }): React.ReactNode {
   const flow = useReactFlow();
   return (
     <Panel position="bottom-left">
@@ -51,7 +67,7 @@ export function GraphControls(): React.ReactNode {
         <Control
           icon={Maximize}
           label="Fit the graph"
-          onClick={() => void flow.fitView({ ...GRAPH_VIEW.fit, duration: 240 })}
+          onClick={() => void flow.fitView({ ...fit, duration: 240 })}
         />
       </div>
     </Panel>

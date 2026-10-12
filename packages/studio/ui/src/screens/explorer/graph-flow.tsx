@@ -2,7 +2,7 @@ import "@xyflow/react/dist/base.css";
 
 import type { NodeProps } from "@xyflow/react";
 import { Background, BackgroundVariant, MiniMap, ReactFlow } from "@xyflow/react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { MEDIA } from "@/design/breakpoints";
 import { LEVEL_META } from "@/features/explorer/endpoint-metrics";
 import type {
@@ -21,6 +21,7 @@ import { GraphFoldToggle } from "./graph-fold-toggle";
 import { GraphNodeCard } from "./graph-node-card";
 import { GRAPH_VIEW } from "./graph-view-options";
 import { GraphWires } from "./graph-wires";
+import { useGraphFit } from "./use-graph-fit";
 
 function Card({ data }: NodeProps<CardNode>): React.ReactNode {
   return (
@@ -75,8 +76,8 @@ interface GraphFlowProps {
 
 /**
  * The graph on a dotted ground that pans and zooms — dragged, scrolled with
- * a trackpad, pinched, or from the controls, which also fit it back in view
- * — with a minimap once it holds more than a screenful, except on a phone,
+ * a trackpad, pinched, or from the controls, which also fit it back in view,
+ * clear of the corner they take — with a minimap once it holds more than a screenful, except on a phone,
  * where it would cover half the canvas: column headings over sources,
  * groups and endpoints, the curves between them with the calls running
  * along them, a card a node.
@@ -96,6 +97,8 @@ export function GraphFlow({
   onFold,
 }: GraphFlowProps): React.ReactNode {
   const [kept] = useState(() => keptPlacedNodes(placedNodesOf));
+  const pane = useRef<HTMLElement>(null);
+  const fit = useGraphFit(pane, layout);
   const phone = useMediaQuery(MEDIA.phone);
   const placed = useMemo(
     () => kept(layout, { onHover, onOpen, onFold }),
@@ -105,6 +108,7 @@ export function GraphFlow({
   const nodes = useMemo((): FlowNode[] => [wires, ...placed], [wires, placed]);
   return (
     <section
+      ref={pane}
       aria-label="Endpoint graph"
       className="relative min-h-0 flex-1 [--xy-background-pattern-dots-color:var(--color-line)] [--xy-minimap-background-color:var(--color-panel)] [--xy-minimap-mask-background-color:color-mix(in_srgb,var(--color-bg)_55%,transparent)]"
     >
@@ -113,7 +117,7 @@ export function GraphFlow({
         edges={[]}
         nodeTypes={NODE_TYPES}
         fitView
-        fitViewOptions={GRAPH_VIEW.fit}
+        fitViewOptions={fit}
         minZoom={GRAPH_VIEW.zoom.min}
         maxZoom={GRAPH_VIEW.zoom.max}
         panOnScroll
@@ -130,7 +134,7 @@ export function GraphFlow({
         colorMode="system"
       >
         <Background variant={BackgroundVariant.Dots} gap={18} size={1} />
-        <GraphControls />
+        <GraphControls fit={fit} />
         {!phone && layout.nodes.length > GRAPH_VIEW.minimapFrom && (
           <MiniMap<FlowNode>
             nodeColor={minimapFill}

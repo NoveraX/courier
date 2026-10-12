@@ -34,6 +34,20 @@ describe("an answer's shape", () => {
     });
   });
 
+  it("lists the places in the order the walk first reached them", () => {
+    const { shape } = answerShapeOf([{ a: { c: 1 } }, { b: 1, a: { d: 1 } }]);
+
+    expect(Object.keys(shape)).toEqual(["", "[]", "[].a", "[].a.c", "[].b", "[].a.d"]);
+  });
+
+  it("counts two places a name cannot tell apart as one, with the types of both", () => {
+    expect(answerShapeOf({ "": 1, "a.b": "x", a: { b: true } }).shape).toEqual({
+      "": "number|object",
+      "a.b": "boolean|string",
+      a: "object",
+    });
+  });
+
   it("reads an array's first items, and stops short of an answer too large or too deep", () => {
     const items = Array.from({ length: 500 }, (_, at) => ({ id: at, [`only${at}`]: true }));
     const deep = JSON.parse(`${"[".repeat(40)}1${"]".repeat(40)}`);

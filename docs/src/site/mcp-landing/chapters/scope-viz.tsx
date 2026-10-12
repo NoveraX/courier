@@ -24,8 +24,8 @@ const HINT = {
 
 /**
  * What becomes a tool: the API's endpoints on the left, the tools an agent
- * is offered on the right — the marked ones with their hint, the rest
- * offered to no one.
+ * is offered on the right — the marked ones with their hint, under the
+ * tool's name where the frame is narrow, the rest offered to no one.
  *
  * @returns The visual
  * @example
@@ -63,7 +63,7 @@ export function ScopeViz() {
               className={cn("size-3.5", row.tool ? "text-(--tone)" : "text-line-strong")}
             />
             {row.tool && row.access ? (
-              <span className="flex min-w-0 items-center justify-between gap-2 rounded-[7px] border border-[rgb(var(--tone-rgb)/0.35)] bg-[rgb(var(--tone-rgb)/0.08)] px-2.5 py-1.5">
+              <span className="flex min-w-0 items-center justify-between gap-2 rounded-[7px] border border-[rgb(var(--tone-rgb)/0.35)] bg-[rgb(var(--tone-rgb)/0.08)] px-2.5 py-1.5 @max-[440px]:flex-col @max-[440px]:items-start @max-[440px]:gap-1">
                 <span className="truncate text-fg">{row.tool}</span>
                 <span
                   className={cn(

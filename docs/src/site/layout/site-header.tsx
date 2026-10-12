@@ -42,7 +42,7 @@ export function SiteHeader({ part, onSearch, onMenu, searchRef, menuRef }: SiteH
   return (
     <header className="sticky top-0 z-70 border-b border-line bg-(--site-header) backdrop-blur-[14px] backdrop-saturate-150">
       <div className="mx-auto flex h-14 max-w-[1520px] items-center gap-3.5 px-6 min-[640px]:gap-5">
-        <Link href={"/"} className="flex items-center gap-2.25 text-fg">
+        <Link href={"/"} className="-mx-2.5 flex items-center gap-2.25 self-stretch px-2.5 text-fg">
           <CourierMark width={19} />
           <span className="hidden text-[14.5px] font-semibold tracking-[-0.02em] min-[400px]:inline">
             courier
@@ -88,7 +88,7 @@ export function SiteHeader({ part, onSearch, onMenu, searchRef, menuRef }: SiteH
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Courier on GitHub"
-          className="hidden text-fg-muted transition-colors hover:text-fg min-[480px]:flex"
+          className="-m-1.5 hidden p-1.5 text-fg-muted transition-colors hover:text-fg min-[480px]:flex"
         >
           <GitHubMark />
         </a>

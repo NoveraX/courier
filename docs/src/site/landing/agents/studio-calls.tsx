@@ -9,7 +9,8 @@ const VERB_TONE = { GET: "text-verb-get", POST: "text-verb-post" } as const
 /**
  * Studio beside the agent's terminal: each call the agent made, as Studio's
  * Timeline records it — marked `agent` — with the middleware it runs
- * through lit as the call reaches each, and its status once answered.
+ * through lit as the call reaches each, and its status once answered. On a
+ * phone each call's endpoint takes a line of its own, so it shows whole.
  *
  * @param props - The calls, and how far each has gone
  * @returns The panel
@@ -26,7 +27,7 @@ export function StudioCalls({
   progress: readonly CallProgress[]
 }) {
   return (
-    <div className="rounded-[12px] border border-line bg-panel px-4 pt-3 pb-3.5">
+    <div className="@container rounded-[12px] border border-line bg-panel px-4 pt-3 pb-3.5">
       <p className="m-0 mb-2 flex items-center gap-1.75 font-mono text-[10px] tracking-[0.08em] text-fg-subtle">
         <Activity aria-hidden="true" className="size-3 text-brand" />
         STUDIO · TIMELINE
@@ -45,10 +46,10 @@ export function StudioCalls({
                   : "opacity-100"
               )}
             >
-              <div className="grid grid-cols-[42px_minmax(0,1fr)_auto_auto_auto] items-center gap-2.5 font-mono text-[11px]">
+              <div className="grid grid-cols-[42px_minmax(0,1fr)_auto_auto_auto] items-center gap-2.5 font-mono text-[11px] @max-[330px]:grid-cols-[42px_auto_minmax(0,1fr)_auto] @max-[330px]:gap-y-1">
                 <span className={VERB_TONE[call.verb]}>{call.verb}</span>
-                <span className="truncate text-fg">{call.endpoint}</span>
-                <span className="rounded-chip bg-tone-blue/12 px-1.5 py-px font-sans text-[10px] font-medium text-tone-blue">
+                <span className="truncate text-fg @max-[330px]:col-span-3">{call.endpoint}</span>
+                <span className="rounded-chip bg-tone-blue/12 px-1.5 py-px font-sans text-[10px] font-medium text-tone-blue @max-[330px]:col-start-2">
                   agent
                 </span>
                 <span className={cn("tabular-nums", answered ? "text-ok" : "text-fg-subtle")}>

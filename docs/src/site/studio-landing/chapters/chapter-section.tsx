@@ -74,7 +74,7 @@ export function ChapterSection({
 }
 
 const CTA_LOOK =
-  "mt-2 flex items-center gap-1.75 self-start text-[14px] font-[550] text-(--tone) hover:text-(--tone) hover:underline"
+  "mt-1 -mb-1 flex items-center gap-1.75 self-start py-1 text-[14px] font-[550] text-(--tone) hover:text-(--tone) hover:underline"
 
 /* Another site opens in a tab of its own; a page of this one stays in the tab. */
 function ChapterLink({ cta }: { cta: ChapterContent["cta"] }) {

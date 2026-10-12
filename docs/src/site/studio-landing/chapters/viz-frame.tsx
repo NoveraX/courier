@@ -2,7 +2,8 @@ import type { ReactNode } from "react"
 
 /**
  * The frame a chapter's visual sits in: it marks the visual so its parts
- * animate in once it has been seen.
+ * animate in once it has been seen, and its parts lay themselves out by its
+ * width — narrower on a phone — rather than by the window's.
  *
  * @param props - The visual's name, a ref to watch it by, whether it has been seen, and the visual
  * @returns The frame
@@ -27,7 +28,7 @@ export function VizFrame({
       ref={frameRef}
       data-viz={name}
       data-in={seen ? "" : undefined}
-      className="relative overflow-hidden rounded-2xl border border-line bg-panel shadow-(--studio-shadow)"
+      className="@container relative overflow-hidden rounded-2xl border border-line bg-panel shadow-(--studio-shadow)"
     >
       {children}
     </div>

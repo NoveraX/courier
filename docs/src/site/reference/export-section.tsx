@@ -59,7 +59,7 @@ export function ExportSection({ section }: { section: ReferenceSection }) {
         <a
           href={`#${section.id}`}
           aria-label={`Link to ${section.name}`}
-          className="flex text-fg-subtle hover:text-fg"
+          className="-m-1.5 flex p-1.5 text-fg-subtle hover:text-fg"
         >
           <Link2 aria-hidden="true" className="size-3.5" />
         </a>
@@ -79,7 +79,7 @@ export function ExportSection({ section }: { section: ReferenceSection }) {
       </div>
       <Link
         href={section.page}
-        className="mt-4 inline-flex items-center gap-1.5 text-control text-brand hover:underline"
+        className="mt-3 -mb-1 inline-flex items-center gap-1.5 py-1 text-control text-brand hover:underline"
       >
         The full page
         <ArrowRight aria-hidden="true" className="size-3" />

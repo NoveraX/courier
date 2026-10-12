@@ -110,7 +110,7 @@ export function ReferenceView({
         <main id="main-content" className="min-w-0 max-w-[900px] pt-10 pb-30">
           <p className="m-0 mb-5 flex items-center gap-2 text-control text-fg-subtle">
             <BookMarked aria-hidden="true" className="size-3.25 text-brand" />
-            <Link href={"/docs/introduction"} className="hover:text-fg">
+            <Link href={"/docs/introduction"} className="-my-1.5 py-1.5 hover:text-fg">
               Docs
             </Link>
             <ChevronRight aria-hidden="true" className="size-3" />

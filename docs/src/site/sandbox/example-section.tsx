@@ -57,7 +57,7 @@ export function ExampleSection({
       {learnMore && (
         <Link
           href={learnMore.href}
-          className="mt-3.5 inline-flex items-center gap-1.5 text-control text-brand hover:underline"
+          className="mt-2.5 -mb-1 inline-flex items-center gap-1.5 py-1 text-control text-brand hover:underline"
         >
           {learnMore.label}
           <ArrowRight aria-hidden="true" className="size-3" />

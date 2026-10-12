@@ -3,7 +3,8 @@ import { COMPLETIONS } from "./hero-code"
 
 /**
  * The editor's completion list on `caller.users.`: every endpoint of the
- * group with the type the definition gives it, one picked.
+ * group with the type the definition gives it, one picked — moved left as
+ * far as it must be to show whole in the editor's width, on a phone too.
  *
  * @param props - Where it opens, in lines and characters, and the entry picked
  * @returns The list
@@ -24,8 +25,11 @@ export function CompletionPopup({
   return (
     <div
       aria-hidden="true"
-      className="absolute z-3 w-[min(360px,calc(100%-18px))] min-w-[260px] animate-[landing-rise_0.16s_ease_both] overflow-hidden rounded-[9px] border border-line-strong bg-raised shadow-overlay"
-      style={{ top: `${line * 23}px`, left: `calc(18px + ${column}ch)` }}
+      className="absolute z-3 w-(--width) min-w-[260px] animate-[landing-rise_0.16s_ease_both] overflow-hidden rounded-[9px] border border-line-strong bg-raised shadow-overlay [--width:min(360px,calc(100cqw-24px))]"
+      style={{
+        top: `${line * 23}px`,
+        left: `min(calc(18px + ${column}ch), calc(100cqw - var(--width) - 12px))`,
+      }}
     >
       {COMPLETIONS.map(({ name, sig }, at) => (
         <div

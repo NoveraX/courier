@@ -8,7 +8,8 @@ export interface ProductFooterColumn {
   links: readonly { label: string; href: string }[]
 }
 
-const LINK = "text-control text-fg-subtle hover:text-fg"
+/* The gap between links is shared out to them, so a finger has more to land on. */
+const LINK = "-my-1 py-1 text-control text-fg-subtle hover:text-fg"
 
 /**
  * A product page's footer — Studio's, the MCP server's: the product's

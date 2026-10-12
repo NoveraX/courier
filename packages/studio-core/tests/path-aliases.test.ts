@@ -1,7 +1,7 @@
 import { execFileSync, spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readPathAliases } from "../src/runtime/path-aliases";
@@ -270,7 +270,7 @@ describe("readPathAliases", () => {
     });
 
     expect(readPathAliases(root).loader).toEqual({
-      "@/": `${join(root, "src")}/`,
+      "@/": `${join(root, "src")}${sep}`,
       "@config": join(root, "config.ts"),
     });
   });

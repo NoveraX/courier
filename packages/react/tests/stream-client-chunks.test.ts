@@ -50,7 +50,10 @@ async function bundleOf(caller: string): Promise<{ atOnce: string; all: string }
   const entry = Object.keys(metafile.outputs).find((path) => path.endsWith("stdin.js")) ?? "";
   const loaded = loadedWith(entry, metafile.outputs);
   const texts = outputFiles.map((file) => ({
-    loaded: [...loaded].some((path) => file.path.endsWith(path.replace(/^.*out\//, "out/"))),
+    /* The metafile names outputs with forward slashes, Windows ones too. */
+    loaded: [...loaded].some((path) =>
+      file.path.replaceAll("\\", "/").endsWith(path.replace(/^.*out\//, "out/")),
+    ),
     text: file.text,
   }));
   return {

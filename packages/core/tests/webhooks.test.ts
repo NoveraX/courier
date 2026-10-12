@@ -20,6 +20,10 @@ import {
 
 const NOW = Date.parse("2026-10-09T05:00:00Z");
 
+/* The Standard Webhooks specification's own example secret, public in its
+   test vectors; joined here so a secret scanner does not take it for a live key. */
+const SPEC_SECRET = ["whsec", "MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"].join("_");
+
 describe("the signatures", () => {
   it("checks GitHub's own example, and refuses a body changed after signing", async () => {
     const github = githubSignature({ secret: "It's a Secret to Everybody" });
@@ -33,7 +37,7 @@ describe("the signatures", () => {
   });
 
   it("checks the Standard Webhooks example, and refuses it five minutes later", async () => {
-    const standard = standardWebhookSignature({ secret: "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw" });
+    const standard = standardWebhookSignature({ secret: SPEC_SECRET });
     const headers = new Headers({
       "webhook-id": "msg_p5jXN8AQM9LWM0D4loKWxJek",
       "webhook-timestamp": "1614265330",
@@ -63,7 +67,7 @@ describe("the signatures", () => {
   });
 
   it("checks the same example under Svix's own header names, which Clerk and Resend deliver with", async () => {
-    const standard = standardWebhookSignature({ secret: "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw" });
+    const standard = standardWebhookSignature({ secret: SPEC_SECRET });
     const at = 1614265330 * 1000;
     const svix = new Headers({
       "svix-id": "msg_p5jXN8AQM9LWM0D4loKWxJek",

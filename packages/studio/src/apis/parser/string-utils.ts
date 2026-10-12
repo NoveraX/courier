@@ -2,28 +2,51 @@
  * String manipulation utilities: HTML stripping, entity decoding.
  */
 
-/** Strip HTML tags and decode basic entities from tag descriptions */
-export function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
+/* A tag holds no `<` of its own, so a run of them is passed over in linear time. */
+const TAG = /<[^<>]*>/g;
+const ENTITY = /&(amp|lt|gt|quot|#39);/g;
+const ENTITIES: Readonly<Record<string, string>> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  "#39": "'",
+};
+
+/* Each entity read once: `&amp;lt;` is the text `&lt;`, not `<`. The text is
+   prose for comments and the page, never HTML again. */
+function plainText(html: string): string {
+  return html.replace(TAG, "").replace(ENTITY, (entity, name: string) => ENTITIES[name] ?? entity);
 }
 
-/** Strip HTML but preserve newlines (for multi-line descriptions) */
+/**
+ * A description written in HTML as plain text on one line: tags dropped,
+ * the common entities read, white space collapsed.
+ *
+ * @param html - A tag's description, as the specification has it
+ * @returns The text
+ * @example
+ * ```ts
+ * stripHtml("<p>Pets &amp; <b>owners</b></p>"); // "Pets & owners"
+ * ```
+ */
+export function stripHtml(html: string): string {
+  return plainText(html).replace(/\s+/g, " ").trim();
+}
+
+/**
+ * A description written in HTML as plain text, its lines kept: tags
+ * dropped, the common entities read, other white space collapsed.
+ *
+ * @param html - An API's description, as the specification has it
+ * @returns The text
+ * @example
+ * ```ts
+ * stripHtmlPreserveNewlines("A <i>pet</i>  store\nfor &quot;all&quot;"); // 'A pet store\nfor "all"'
+ * ```
+ */
 export function stripHtmlPreserveNewlines(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+  return plainText(html)
     .replace(/[^\S\n]+/g, " ")
     .trim();
 }

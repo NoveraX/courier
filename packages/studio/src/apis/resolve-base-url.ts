@@ -1,3 +1,5 @@
+import { withoutTrailingSlashes } from "@noverax/courier/internal";
+
 import type { ParsedSpec } from "./parser/types";
 
 /* A URL with a scheme of its own is absolute. */
@@ -21,6 +23,6 @@ const ABSOLUTE = /^[a-z][a-z0-9+.-]*:/i;
  */
 export function resolveBaseURL(spec: ParsedSpec, specUrl: string): ParsedSpec {
   if (ABSOLUTE.test(spec.baseURL)) return spec;
-  const resolved = new URL(spec.baseURL || "/", specUrl).href.replace(/\/+$/, "");
+  const resolved = withoutTrailingSlashes(new URL(spec.baseURL || "/", specUrl).href);
   return { ...spec, baseURL: resolved };
 }

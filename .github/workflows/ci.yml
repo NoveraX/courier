@@ -88,6 +88,11 @@ jobs:
       - name: Check for values typed any
         run: npm run check:any
 
+      # The site's own suite runs with the rest, from the site's own lockfile.
+      - name: Install the site's dependencies
+        run: npm ci
+        working-directory: docs
+
       - name: Test
         if: matrix.node-version != 24
         run: npm test
@@ -144,6 +149,10 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Install the site's dependencies
+        run: npm ci
+        working-directory: docs
 
       - name: Test
         run: npm test

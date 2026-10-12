@@ -3,10 +3,11 @@ import * as vscode from "vscode";
 
 import { applyIcons, hasCourierIcons, keepIconsCurrent, removeIcons } from "./apply-icons";
 import { type CourierWorkspace, watchCourierWorkspace } from "./courier-workspace";
+import { showHere, tellHiddenHere } from "./hidden-here";
 import { type CourierIcons, ICON_THEME_IDS, ICON_THEMES, type IconTheme } from "./icon-files";
 import { iconsLog, logFailure } from "./icons-log";
 import { MATERIAL_FILES, MATERIAL_FOLDERS } from "./material-icons";
-import { notHere } from "./theme-reach";
+import { notHere, themeInUse } from "./theme-reach";
 import { VSICONS_FILES, VSICONS_FOLDERS } from "./vscode-icons";
 
 /* The themes Courier's icons were offered for on this machine, as its state keeps them. */
@@ -74,7 +75,22 @@ export function registerFileIcons(context: vscode.ExtensionContext): vscode.Disp
       );
     });
   const following: Following = { state: context.globalState, workspace, carry, told: new Set() };
-  const follow = () => void followThemeInUse(following);
+  /* The workspace's own vscode-icons settings may hide them: Courier's entries go there too, when the user says so. */
+  const addHere = (keys: Parameters<typeof showHere>[0]) =>
+    inTurn("Courier could not add its file icons to this folder's settings", async () => {
+      await showHere(keys);
+      void vscode.window.showInformationMessage(
+        "Courier's icons are in this folder's settings too.",
+      );
+    });
+  const follow = () => {
+    followThemeInUse(following).catch((error: unknown) =>
+      logFailure("Courier could not follow the icon theme in use", error),
+    );
+    tellHiddenHere(context.workspaceState, addHere).catch((error: unknown) =>
+      logFailure("Courier could not read this folder's settings for its file icons", error),
+    );
+  };
   let settling: ReturnType<typeof setTimeout> | undefined;
   void keep();
   follow();
@@ -154,11 +170,6 @@ async function chooseTheme(): Promise<IconTheme | undefined> {
     { title: "Show Courier's icons in" },
   );
   return picked?.theme;
-}
-
-function themeInUse(): IconTheme | undefined {
-  const id = vscode.workspace.getConfiguration("workbench").get<string>("iconTheme");
-  return ICON_THEME_IDS.find((theme) => ICON_THEMES[theme].theme === id);
 }
 
 function isTheme(value: unknown): value is IconTheme {

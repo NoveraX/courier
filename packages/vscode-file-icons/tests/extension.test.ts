@@ -18,6 +18,10 @@ describe("Courier File Icons started", () => {
       extensionPath: root,
       globalStorageUri: Uri.file(join(root, "storage")),
       globalState: { get: (_key: string, fallback?: unknown) => fallback, update: async () => {} },
+      workspaceState: {
+        get: (_key: string, fallback?: unknown) => fallback,
+        update: async () => {},
+      },
       subscriptions: [] as { dispose(): unknown }[],
     };
 

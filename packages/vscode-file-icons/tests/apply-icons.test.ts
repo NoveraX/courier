@@ -357,6 +357,24 @@ describe("an icon theme that does not run here", () => {
   });
 });
 
+describe("Courier's icons a workspace's own settings name", () => {
+  it("are copied for a workspace the user trusts, as a team shares its icons, and not for one not trusted", async () => {
+    workspaceSettings.set("vsicons.associations.files", [
+      { icon: "courier-config", extensions: ["courier.config.ts"], filename: true, format: "svg" },
+    ]);
+    workspace.isTrusted = false;
+    await keepIconsCurrent(icons);
+    const untrusted = existsSync(custom);
+    workspace.isTrusted = true;
+
+    await keepIconsCurrent(icons);
+
+    expect(untrusted).toBe(false);
+    expect(copiesIn(custom)).toHaveLength(6);
+    expect(executed).toEqual([["vscode-icons.regenerateIcons"]]);
+  });
+});
+
 describe("vscode-icons' custom icons folder in a workspace not trusted", () => {
   it("comes from the user's settings alone, so the workspace cannot choose where Courier writes", async () => {
     const chosen = join(custom, "..", "..", "chosen-by-workspace");

@@ -67,6 +67,10 @@ beforeEach(() => {
       get: (key: string, fallback?: unknown) => state.get(key) ?? fallback,
       update: async (key: string, value: unknown) => void state.set(key, value),
     },
+    workspaceState: {
+      get: (_key: string, fallback?: unknown) => fallback,
+      update: async () => undefined,
+    },
   } as unknown as vscode.ExtensionContext;
 });
 

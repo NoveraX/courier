@@ -61,6 +61,8 @@ With either theme in use in a Courier project — as the editor starts, when a C
 
 The icons go in through your user settings — the associations those themes read — beside your own, which stay as they are. The icons themselves sit in a folder of their own beside Material Icon Theme, `.noverax-courier-icons` in the editor's extensions folder — its dot keeps the editor from reading it as an extension — and in vscode-icons' custom icons folder. Every profile shares both folders: an empty file for each profile that put the icons in, named by a digest that says nothing of whose it is, keeps the copies until the last of them takes the icons out.
 
+A list of vscode-icons associations in a folder's own settings takes the place of yours there, so Courier's icons would not show in it: the extension says so once per folder and, when you agree, adds Courier's icons after the folder's own — in the folder's settings file, which your team may share. A folder you trust whose settings name Courier's icons gets their copies, whoever put them there.
+
 In a workspace you have not trusted, the folder vscode-icons reads custom icons from comes from your own settings alone: the workspace cannot choose where Courier's icons are written. A theme that does not run beside the extension takes no icons from it, and is said so — in a remote window, one installed on the remote machine only; install it on this computer too, and VS Code runs it here.
 
 Other icon themes take no custom icons; VS Code's own Seti among them.

@@ -735,7 +735,7 @@
           {
             "id": "icons",
             "title": "Mark Courier's files",
-            "description": "In Material Icon Theme or vscode-icons, courier.config.ts, courier.mocks.ts and the .courier folder can show Courier's own icons, through that theme's settings. Agree once: they follow you to your other machines through Settings Sync, stay through Courier's updates, and come out again everywhere just as easily.\n[Show Courier's Icons](command:courier.fileIcons.show)",
+            "description": "In Material Icon Theme or vscode-icons, courier.config.ts, courier.mocks.ts and the .courier folder can show Courier's own icons, the folder drawn in each theme's own style. Agree once: they follow you into the other theme, to your other machines through Settings Sync, through Courier's updates, and come out again everywhere just as easily.\n[Show Courier's Icons](command:courier.fileIcons.show)",
             "media": {
               "image": {
                 "light": "media/walkthrough/icons-light.png",
